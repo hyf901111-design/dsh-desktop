@@ -50,6 +50,11 @@ describe('workbench common records at the real tool boundary',()=>{
    try{expect(restored.tasks.size).toBe(3);const first=plan.panels[0];const retry=await restored.start({parentSessionId:'parent',canvasNodeId:first.nodeId,kind:'container',prompt:first.prompt});expect(retry.state).toBe('completed');expect(readTemplateModel(JSON.parse(retry.finalOutput)).data).toEqual(first.artifact);expect(f.adapter.start).not.toHaveBeenCalled()}finally{await restored.dispose()}
   }finally{await f.close()}
  });
+ it('passes every resolved common fact to mixed deferred cards as data, not just verbal context',()=>{
+  const raw={...input(),generationMode:'deferred',sharedContext:'全部为虚构演练。'};raw.sharedDatasets[0].records[0].moisture=77.4321;raw.sharedDatasets[0].records[0].owner='唯一共同负责人';raw.panels.push({title:'共同含水率解释',type:'html',size:'large',prompt:'基于共同8册的实际演练含水率与负责人，解释交接。'});
+  const value=validateWorkbench(raw),prompt=workbenchPanelPrompt(value,value.panels.at(-1));expect(prompt).toContain(JSON.stringify(value.sharedDatasets));expect(prompt).toContain('77.4321');expect(prompt).toContain('唯一共同负责人');
+  const missing=structuredClone(raw);delete missing.generationMode;delete missing.sharedContext;expect(()=>validateWorkbench(missing)).toThrow(/共同|deferred/);
+ });
  it('does not discard changed requirements or regenerate facts without the current snapshot',async()=>{
   const f=await setup();try{
    await f.tool.execute(input(),f.exec);const first=[...f.runtime.tasks.values()][0];
@@ -57,6 +62,14 @@ describe('workbench common records at the real tool boundary',()=>{
    const receipt=await f.runtime.start({parentSessionId:'parent',canvasNodeId:first.canvasNodeId,kind:'container',prompt:changed});
    expect(receipt.state).not.toBe('completed');await vi.waitFor(()=>expect(f.adapter.start).toHaveBeenCalled());
    const call=f.adapter.start.mock.calls[0][0];expect(call.query).toBe(changed);expect(call.prompt).toContain(JSON.stringify(bookDataset()));expect(call.prompt).toContain('不退回旧需求');
+  }finally{await f.close()}
+ });
+ it('retries an unstarted fully prepared plan instead of returning a false prepared receipt',async()=>{
+  const f=await setup();try{
+   const start=vi.spyOn(f.runtime,'startPreparedBatch').mockRejectedValueOnce(Error('temporary persistence failure'));
+   await expect(f.tool.execute(input(),f.exec)).rejects.toThrow('temporary persistence');expect(f.runtime.tasks.size).toBe(0);
+   const receipt=await f.tool.execute(input(),f.exec);expect(receipt.status).toBe('prepared');expect(start).toHaveBeenCalledTimes(2);expect(f.runtime.tasks.size).toBe(3);
+   const saved=JSON.parse(await readFile(f.filePath,'utf8'))[0];expect(saved.panels.every(p=>p.taskId&&!p.error)).toBe(true);
   }finally{await f.close()}
  });
  it('does not duplicate prepared tasks after a partial mixed-batch failure',async()=>{

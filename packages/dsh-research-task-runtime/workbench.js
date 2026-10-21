@@ -150,8 +150,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 if (JSON.stringify(withoutScope(previous)) !== JSON.stringify(withoutScope(input)) ||
                     previous.originalRequest && input.originalRequest && previous.originalRequest !== input.originalRequest)
                     throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
-                if (input.generationMode === 'deferred' && old.ready && old.panels.some(p => !p.taskId)) { await startDeferred(old); await persist(); }
-                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? preparedWorkbench(input) ? 'prepared' : 'accepted' : 'preparing' };
+                if (old.ready && old.panels.some(p=>!p.taskId) && (input.generationMode==='deferred'||old.panels.every(p=>p.artifact))) { await startDeferred(old); await persist(); }
+                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? preparedWorkbench(input) && old.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' : 'preparing' };
             }
             const id = randomUUID();
             const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), ready: false,
@@ -223,7 +223,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             plan.ready = true;
             mountedPlans.delete(id);
             await persist();
-            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: preparedWorkbench(input) ? 'prepared' : 'accepted' };
+            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: preparedWorkbench(input) && plan.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' };
         };
         const pending = chain.then(run);
         chain = pending.catch(() => { });

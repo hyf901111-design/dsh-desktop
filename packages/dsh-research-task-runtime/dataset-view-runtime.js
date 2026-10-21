@@ -7,9 +7,9 @@ export function datasetViewValue(value,field){
 }
 export function datasetViewSchedule(dataset,section){
  const entries=dataset.records.map(record=>({record,a:record[section.start]===null?NaN:Date.parse(record[section.start]),b:record[section.end]===null?NaN:Date.parse(record[section.end])}))
- const timed=entries.filter(e=>Number.isFinite(e.a)&&Number.isFinite(e.b)),first=timed.length?Math.min(...timed.map(e=>e.a)):0,last=timed.length?Math.max(...timed.map(e=>e.b)):0,span=Math.max(3600000,last-first)
+ const timed=entries.filter(e=>Number.isFinite(e.a)&&Number.isFinite(e.b)),first=timed.length?Math.min(...timed.map(e=>e.a)):0,last=timed.length?Math.max(...timed.map(e=>e.b)):0,span=Math.max(1,last-first)
  const sample=timed[0]?.record[section.start]??'',zone=sample.match(/([+-])(\d{2}):(\d{2})$/),offset=zone?(zone[1]==='-'?-1:1)*(Number(zone[2])*60+Number(zone[3])):0
- const ticks=timed.length?Array.from({length:5},(_,i)=>{const d=new Date(first+(last-first)*i/4+offset*60000).toISOString();return {time:new Date(first+(last-first)*i/4).toISOString(),label:d.slice(5,10)+(sample.includes('T')?' '+d.slice(11,16):'')}}):[]
+ const ticks=timed.length?Array.from({length:last>first?5:1},(_,i)=>{const d=new Date(first+(last-first)*i/4+offset*60000).toISOString();return {time:new Date(first+(last-first)*i/4).toISOString(),label:d.slice(5,10)+(sample.includes('T')?' '+d.slice(11,16):'')}}):[]
  const rows=entries.map(e=>{
   const missing=!Number.isFinite(e.a)||!Number.isFinite(e.b),resource=section.resource?e.record[section.resource]:null
   const conflicts=missing||!section.resource||resource===null||resource===''?[]:entries.filter(other=>other!==e&&other.record[section.resource]===resource&&Number.isFinite(other.a)&&Number.isFinite(other.b)&&e.a<e.b&&other.a<other.b&&e.a<other.b&&e.b>other.a).map(other=>other.record.id)

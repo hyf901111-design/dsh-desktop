@@ -1,3 +1,4 @@
+import {datasetViewSchedule} from '../packages/dsh-research-task-runtime/dataset-view-runtime.js'
 import {expect,it} from 'vitest'
 import {Window} from 'happy-dom'
 import {renderDatasetViewArtifact} from '../packages/dsh-research-task-runtime/dataset-view-artifact.js'
@@ -26,4 +27,14 @@ it('preserves all fields, list values, zero, null and literal markup safely',()=
 it('does not invent records or render invalid references as successful content',()=>{
  expect(renderDatasetViewArtifact({type:'html'})).toBeNull()
  const value=spec(archiveView());value.view.details=['missing'];expect(renderDatasetViewArtifact(value)).toBeNull()
+})
+
+it('keeps sub-hour bars and axis ticks on the identical time scale',()=>{
+ const dataset=bookDataset();dataset.records=dataset.records.slice(0,1);dataset.records[0].start='2026-10-22T09:00:00+08:00';dataset.records[0].end='2026-10-22T09:20:00+08:00';
+ const value=datasetViewSchedule(dataset,scheduleView().sections[0]);expect(value.rows[0].left).toBe(0);expect(value.rows[0].width).toBe(100);expect(value.ticks[0].label).toContain('09:00');expect(value.ticks.at(-1).label).toContain('09:20');
+})
+
+it('preserves zero-duration instants without a fabricated interval or invalid geometry',()=>{
+ const dataset=bookDataset();dataset.records=dataset.records.slice(0,1);dataset.records[0].end=dataset.records[0].start;
+ const value=datasetViewSchedule(dataset,scheduleView().sections[0]);expect(value.rows[0]).toMatchObject({missing:false,left:0,conflicts:[]});expect(Number.isFinite(value.rows[0].width)).toBe(true);expect(value.ticks).toHaveLength(1);expect(Date.parse(value.ticks[0].time)).toBe(Date.parse(dataset.records[0].start));
 })

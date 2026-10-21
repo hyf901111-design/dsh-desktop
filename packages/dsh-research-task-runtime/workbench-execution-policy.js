@@ -120,7 +120,7 @@ const CREATE_TOOL = 'research_workbench_create'
 const MAX_PLANNING_DISCOVERIES = 2
 const SOURCE_MODE_GUIDANCE = '真实数据模式使用 dataMode:"source"（也可省略），必须省略 generationMode、sharedContext、originalRequest，这三项仅适用于模拟。已有真实记录直接保留完整 artifact 及来源、日期、单位；未取到的面板省略 artifact，把待取字段、来源和缺失处理写入 panel.prompt，由独立面板取数，不补模拟值。'
 const SOURCE_PLANNING_TOOL_GUIDANCE = '新增1–10个独立面板，保留用户指定的数量、领域、来源和范围；先理解需求、拆解每卡内容和可视化，立即一次提交 title 与完整 panels，不先取整套数据、写报告或读取 skill/源码。'+SOURCE_MODE_GUIDANCE+'按内容选择 table/chart/news/reports/calendar/timeline/gantt/tasks/alerts/note 等模板，复杂交互保留 html，不能套固定金融样例。publicData 可交给宿主取真实来源；preset 仅在用户需求匹配真实预设时使用。requestId 重试保持一致。accepted 表示已受理并生成中，prepared 才表示已准备好，随后简短交付并结束本轮。'
-const PLAN_FIRST_GUIDANCE = '【先规划再取数】当前只理解需求、拆解组件、明确每卡内容与可视化，再调用 research_workbench_create。真实来源尚缺资料时，保留用户指定的来源、字段、日期与缺失说明，省略 artifact，由各独立面板发现接口并取数；不在主会话写整卡、报告、代码或读取完整 skill。来源名称/代码确需确认时，最多合计两次 public_data_query catalog 或 financial_query resolve/catalog；目录和名称确认不是实际数据。无需确认则立即提交规划，不先查询行情、历史、财报、新闻或网页。工具成功返回 accepted/prepared 后恢复其余工具。'
+const PLAN_FIRST_GUIDANCE = '【先规划再取数】当前理解需求、拆解组件并选择可视化后调用 research_workbench_create。模拟场景的同批对象可一次提供完整sharedDatasets及各卡view，由宿主直接准备；其他情况沿原规划路径。真实来源尚缺资料时，保留用户指定的来源、字段、日期与缺失说明，省略 artifact，由各独立面板发现接口并取数；不在主会话写整卡、报告、代码或读取完整 skill。来源名称/代码确需确认时，最多合计两次 public_data_query catalog 或 financial_query resolve/catalog；目录和名称确认不是实际数据。无需确认则立即提交规划，不先查询行情、历史、财报、新闻或网页。工具成功返回 accepted/prepared 后恢复其余工具。'
 const PLAN_FIRST_DENIAL = '首次规划阶段只允许有限来源发现和 research_workbench_create；请把待取字段与真实来源约束写进各 panel.prompt，省略未取得的 artifact，立即提交规划。'
 export function planningDataIntent(text) {
   // Negated simulation is a source requirement, not permission to simulate.
