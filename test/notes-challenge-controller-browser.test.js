@@ -172,6 +172,90 @@ it('orders reverse-arriving threads by real document and quote positions even fo
  }finally{await context.close()}
 },15000)
 
+it('reuses the same highlighted passage across review categories and preserves its discussion and unsent reply',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await start(page,'reply','请解释这项提醒');await finish(page)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const discussion=await page.evaluate(()=>window.messages())
+  await page.evaluate(id=>window.challenge.setDraft(id,'这条回复还没有发送'),id)
+  await page.clock.install()
+  await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
+  await page.clock.fastForward(5100)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  const issue={blockId:'p',quote:'成度',category:'question',message:'请核对“成度”是否应为“程度”。',evidence:[]}
+  await finish(page,{...answer,reply:undefined,issues:[issue],coveredBlockIds:['p']},1)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  expect(await page.evaluate(()=>window.challenge.threads.map(t=>t.id))).toEqual([id])
+  expect(await page.evaluate(()=>window.messages())).toEqual([...discussion,issue.message])
+  expect(await page.evaluate(()=>window.challenge.threads[0].metadata.draft)).toBe('这条回复还没有发送')
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-recheck',{detail:{sessionId:'note-a'}})))
+  await page.clock.fastForward(31000)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(3)
+  await finish(page,{...answer,reply:undefined,issues:[{...issue,category:'uncertain'}],coveredBlockIds:['p']},2)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  expect(await page.evaluate(()=>window.challenge.threads.map(t=>t.id))).toEqual([id])
+  expect(await page.evaluate(()=>window.messages())).toEqual([...discussion,issue.message])
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('retains separate findings for different passages when a review changes the category of an existing passage',async()=>{
+ const{context,page,errors,id}=await fixture('成度不应替代程度，另一处判断也需要核对。');try{
+  await page.clock.install()
+  await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
+  await page.clock.fastForward(5100)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{...answer,reply:undefined,coveredBlockIds:['p'],issues:[
+   {blockId:'p',quote:'成度',category:'question',message:'请核对这段用字。',evidence:[]},
+   {blockId:'p',quote:'另一处判断',category:'question',message:'这项判断还需要依据。',evidence:[]}
+  ]})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  expect(await page.evaluate(()=>window.challenge.threads.map(t=>t.metadata.issue.quote))).toEqual(['成度','另一处判断'])
+  expect(await page.evaluate(()=>window.challenge.threads[0].id)).toBe(id)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('keeps a resolved finding acknowledged while allowing a new category on that same passage',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(id=>window.challenge.resolve(id),id)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(0)
+  await page.clock.install()
+  await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
+  await page.clock.fastForward(5100)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{...answer,reply:undefined,coveredBlockIds:['p'],issues:[
+   {blockId:'p',quote:'成度',category:'typo',message:'同一用字提醒。',evidence:[]},
+   {blockId:'p',quote:'成度',category:'fact',message:'这个词所指的指标还需要核对。',evidence:[]}
+  ]})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  expect(await page.evaluate(()=>window.challenge.threads.map(t=>t.metadata.issue.category))).toEqual(['fact'])
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('does not reintroduce an acknowledged finding into a different older discussion on the same passage',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  const other=await page.evaluate(()=>window.seed({category:'question',message:'这个术语的定义是什么？'}))
+  await page.evaluate(id=>window.challenge.resolve(id),id)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1)
+  await page.clock.install()
+  await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
+  await page.clock.fastForward(5100)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{...answer,reply:undefined,coveredBlockIds:['p'],issues:[
+   {blockId:'p',quote:'成度',category:'typo',message:'同一用字提醒再次出现。',evidence:[]}
+  ]})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  expect(await page.evaluate(()=>window.challenge.threads.map(t=>t.id))).toEqual([other])
+  expect(await page.evaluate(()=>window.challenge.threads[0].metadata.issue.category)).toBe('question')
+  expect(await page.evaluate(()=>window.messages())).toEqual(['这个术语的定义是什么？'])
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
 it('includes the persisted proposed wording in later discussion context without authorizing its application',async()=>{
  const{context,page,errors}=await fixture();try{
   await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'这项结论的程度较高。'}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
