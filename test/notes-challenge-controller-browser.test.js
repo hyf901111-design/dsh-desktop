@@ -172,6 +172,32 @@ it('orders reverse-arriving threads by real document and quote positions even fo
  }finally{await context.close()}
 },15000)
 
+it('sends only live review anchor locations while preserving discussion and unsent replies',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await start(page,'reply','PRIVATE-USER-DISCUSSION');await finish(page)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const discussion=await page.evaluate(()=>window.messages())
+  await page.evaluate(async id=>{
+   window.challenge.setDraft(id,'PRIVATE-UNSENT-DRAFT')
+   const resolved=await window.seed({quote:'结论'});await window.challenge.resolve(resolved)
+   const orphan=await window.seed({quote:'较高'}),item=window.noteDoc.getMap('threads').get(orphan),metadata=item.get('metadata')
+   item.set('metadata',{...metadata,issue:{...metadata.issue,quote:'已消失的文字'}})
+  },id)
+  await page.clock.install();await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
+  await page.clock.fastForward(5100);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  const input=await page.evaluate(()=>window.jobs[1].input)
+  expect(input.existingAnchors).toEqual([{blockId:'p',quote:'成度'}])
+  expect(JSON.stringify(input)).not.toContain('PRIVATE')
+  expect(JSON.stringify(input)).not.toContain('请核对这段用字')
+  await finish(page,{...answer,reply:undefined,issues:[],coveredBlockIds:['p']},1)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  expect(await page.evaluate(()=>window.messages())).toEqual(discussion)
+  expect(await page.evaluate(()=>window.challenge.threads[0].metadata.draft)).toBe('PRIVATE-UNSENT-DRAFT')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
 it('reuses the same highlighted passage across review categories and preserves its discussion and unsent reply',async()=>{
  const{context,page,errors,id}=await fixture();try{
   await start(page,'reply','请解释这项提醒');await finish(page)

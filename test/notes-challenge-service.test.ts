@@ -35,6 +35,15 @@ const settled=(promise:Promise<unknown>)=>promise.then(value=>({value,error:unde
 const tick=()=>new Promise<void>(resolve=>setImmediate(resolve))
 const disk=(root:string)=>Object.fromEntries(readdirSync(root).map(file=>[file,readFileSync(join(root,file),'utf8')]))
 
+it('forwards review anchor location context without adding renderer capabilities',async()=>{
+ const s=fixture();let body:any
+ vi.stubGlobal('fetch',async(_url:any,options:any)=>{body=JSON.parse(options.body);return new Response(JSON.stringify(result))})
+ const existingAnchors=[{blockId:'body',quote:'2026年收入为100亿元'}]
+ await s.challenge('anchor-context',{existingAnchors,commentHistory:'PRIVATE',draft:'PRIVATE'})
+ expect(body).toEqual({sessionId:'session',requestId:'anchor-context',...request,existingAnchors})
+ expect(JSON.stringify(body)).not.toContain('PRIVATE')
+})
+
 it('forwards only the fixed challenge fields and keeps renderer owner and unrelated capabilities out of HTTP',async()=>{
  const s=fixture();let sent:{url:string;options:any;body:any}|undefined
  const thread={blockId:'body',quote:'2026年收入为100亿元。',category:'research',message:'口径是否一致',messages:[{role:'user',text:'请说明依据'}]}

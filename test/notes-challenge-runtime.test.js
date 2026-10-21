@@ -43,6 +43,36 @@ it('runs an independent short review with the parent selected model and no paren
   expect(JSON.stringify(result)).not.toContain('PRIVATE REASONING')
 })
 
+it('uses review anchor context only for current targets without changing independent findings', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture({ reviews: [{ blockId: 'a', issues: [
+    { quote: '收入增长10%', category: 'question', basis: 'note', message: '请确认统计期间。', evidence: [] },
+    { quote: '增长10%', category: 'question', basis: 'note', message: '请说明计算基准。', evidence: [] }
+  ] }] })
+  const existingAnchors = [{ blockId: 'a', quote: '收入' }, { blockId: 'b', quote: '收入减少10%' }]
+  const result = await generateNoteChallenge(f.ctx, { ...input, existingAnchors })
+  expect(JSON.parse(f.calls[0].messages[0].content[0].text).existingAnchors).toEqual([existingAnchors[0]])
+  expect(result.issues.map(issue => issue.quote)).toEqual(['收入增长10%', '增长10%'])
+  expect(result.coveredBlockIds).toEqual(['a'])
+  expect(f.events).toEqual([])
+})
+
+it('rejects invalid review anchor context before calling a provider', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  for (const existingAnchors of [null, {}, [{ blockId: 'a', quote: '不存在' }], [{ blockId: 'unknown', quote: '收入' }], [{ blockId: 'a', quote: '收入', text: 'PRIVATE' }], [{ blockId: 'a', quote: '收入' }, { blockId: 'a', quote: '收入' }]]) {
+    await expect(generateNoteChallenge(f.ctx, { ...input, existingAnchors })).rejects.toThrow('参数无效')
+  }
+  const blocks = Array.from({ length: 65 }, (_, n) => ({ id: String(n), type: 'paragraph', text: '段落' + n + '。' }))
+  await expect(generateNoteChallenge(f.ctx, { ...input, blocks, changedIds: blocks.map(b => b.id), existingAnchors: blocks.map(b => ({ blockId: b.id, quote: b.text })) })).rejects.toThrow('参数无效')
+  const long = Array.from({ length: 6 }, (_, n) => ({ id: String(n), type: 'paragraph', text: String(n) + '文'.repeat(1499) }))
+  await expect(generateNoteChallenge(f.ctx, { ...input, blocks: long, changedIds: long.map(b => b.id), existingAnchors: long.map(b => ({ blockId: b.id, quote: b.text })) })).rejects.toThrow('参数无效')
+  await expect(generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text: '收入收入。' }], existingAnchors: [{ blockId: 'a', quote: '收入' }] })).rejects.toThrow('参数无效')
+  const oversizedQuote = '文'.repeat(2001)
+  await expect(generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text: oversizedQuote }], existingAnchors: [{ blockId: 'a', quote: oversizedQuote }] })).rejects.toThrow('参数无效')
+  const thread = { blockId: 'a', quote: '收入增长10%', category: 'question', message: '期间？', messages: [] }
+  await expect(generateNoteChallenge(f.ctx, { ...input, action: 'reply', thread, existingAnchors: [{ blockId: 'a', quote: '收入' }] })).rejects.toThrow('参数无效')
+  expect(f.calls).toHaveLength(0)
+})
+
 for (const text of ['这一段讨论写作方法，先提出观点，再解释理由。', '12 + 8 = 20，总数应为20。', '预计2026年项目收入50万元，用于场地和设备预算。']) it('omits unrelated consensus checks for an ordinary note: ' + text, async () => {
   const { generateNoteChallenge } = await load(), f = fixture()
   const reviewed = await generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text }] })
