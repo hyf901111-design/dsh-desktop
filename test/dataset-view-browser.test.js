@@ -9,9 +9,9 @@ beforeAll(async()=>{
  browser=await pw.chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },20000)
 afterAll(async()=>{await browser?.close()})
-async function open(view,{dataset=bookDataset(),saved,width=900,mode='openterminal',readOnly=false}={}){
+async function open(view,{dataset=bookDataset(),context,saved,width=900,mode='openterminal',readOnly=false}={}){
  const page=await browser.newPage({viewport:{width,height:720}})
- const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'view',title:'演练组合组件',dataset,view})))
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'view',title:'演练组合组件',dataset,view,...(context?{context}:{})})))
  const preview=buildResearchHtmlPreview(spec.html,spec.title,mode==='light'?'light':'dark',{workbench:true,notoFont:'runtime'})
  await page.setContent('<iframe id=preview style="width:100%;height:700px;border:0" sandbox="allow-scripts" srcdoc="'+preview.replaceAll('&','&amp;').replaceAll('"','&quot;')+'"></iframe>')
  const frame=page.frameLocator('#preview').frameLocator('iframe');await frame.locator('.dv-shell').waitFor()
@@ -24,6 +24,11 @@ async function open(view,{dataset=bookDataset(),saved,width=900,mode='opentermin
  return {page,frame,close:()=>page.close(),saved:()=>page.evaluate(()=>window.viewEvents.filter(e=>e.message?.op==='localCommit').at(-1)?.message)}
 }
 const order=frame=>frame.locator('tbody tr:not([hidden])').evaluateAll(rows=>rows.map(r=>r.dataset.recordId))
+it('uses Chinese field references in real host filters while preserving plain scenario notes safely',async()=>{
+ const dataset=bookDataset();dataset.fields.find(f=>f.key==='owner').key='负责人';for(const r of dataset.records){r['负责人']=r.owner;delete r.owner;}
+ const c=await open({dataset:dataset.id,filters:['负责人'],details:['负责人'],sections:[{kind:'records',fields:['负责人']}]},{dataset,width:400,context:'演练说明：<script>window.unsafeContext=true</script>三日窗口不延长。'})
+ try{await c.frame.getByRole('combobox',{name:'负责人',exact:true}).selectOption({label:'修复师甲'});expect(await order(c.frame)).toEqual(['B01','B03','B05','B07']);await c.frame.getByRole('button',{name:'查看B01完整详情',exact:true}).click();expect(await c.frame.locator('.dv-detail').textContent()).toContain('修复师甲');expect(await c.frame.locator('[data-view-context]').textContent()).toContain('<script>window.unsafeContext=true</script>');expect(await c.frame.locator('html').evaluate(()=>window.unsafeContext)).toBeUndefined();}finally{await c.close()}
+})
 it('filters and reorders visible records while keeping hidden identities and all source values intact',async()=>{
  const view=priorityView();view.sections[0].fields=view.sections[0].fields.filter(key=>key!=='id');
  const c=await open(view)

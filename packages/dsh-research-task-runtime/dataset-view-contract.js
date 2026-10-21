@@ -5,7 +5,7 @@ const forbidden=new Set(['__proto__','prototype','constructor'])
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&[null,Object.prototype].includes(Object.getPrototypeOf(value))
 const text=(v,max,empty=false)=>typeof v==='string'&&v.length<=max&&(empty||v.trim().length>0)
 const id=v=>text(v,128)&&v.trim()===v&&!forbidden.has(v)
-const fieldKey=v=>typeof v==='string'&&/^[a-zA-Z][\w-]{0,63}$/.test(v)&&!forbidden.has(v)
+const fieldKey=v=>typeof v==='string'&&/^\p{L}[\p{L}\p{N}\p{M}_-]{0,63}$/u.test(v)&&!forbidden.has(v)
 function check(condition,message){if(!condition)throw Error(message)}
 function exact(value,required,optional=[]){return object(value)&&required.every(k=>Object.hasOwn(value,k))&&Object.keys(value).every(k=>required.includes(k)||optional.includes(k))}
 function freeze(value){if(value&&typeof value==='object'){for(const item of Object.values(value))freeze(item);Object.freeze(value)}return value}
@@ -118,12 +118,12 @@ export function validateDatasetView(config,datasets){
  return freeze({dataset,view})
 }
 export function parseDatasetViewArtifact(value){
- check(exact(value,['version','type','title','dataset','view'])&&value.version===1&&value.type==='view'&&text(value.title,256),'组合组件格式无效。')
+ check(exact(value,['version','type','title','dataset','view'],['context'])&&value.version===1&&value.type==='view'&&text(value.title,256)&&(value.context===undefined||text(value.context,3000)),'组合组件格式无效。')
  const {dataset,view}=validateDatasetView(value.view,[value.dataset])
- return freeze({version:1,type:'view',title:value.title,dataset,view})
+ return freeze({version:1,type:'view',title:value.title,dataset,view,...(value.context===undefined?{}:{context:value.context})})
 }
 export function datasetViewDataIssue(value){try{parseDatasetViewArtifact(value)}catch(error){return error.message}}
-export const DATASET_VIEW_GUIDANCE='同一批对象用一个完整主数据集，各卡view.dataset均引用该主数据集，不复制为排程/验收的另一份相同编号记录。每份数据必须有实际组件引用；跨数据集确为同批对象时显式给dataset相同recordScope，该范围内同一id的同名字段值与单位须一致，null也必须一致；不同实体保留各自业务编号，不推断跨表身份。panels完整清单与sharedDatasets必须一次调用同时提供：先列清单及各卡view，再填写共同记录，不先单独提交sharedDatasets。records每条必须有稳定id，直接用业务编号如B01，不另造r-B01或重复编号字段；宿主可补id的显示标签，不能推断记录编号。reorder由上移/下移按钮调整本卡顺序，不支持拖动，不另造会过时的priority数值列。同一批对象的负责人、作业起止时间、等待原因、验收等共同事实放在同一个主数据集，各卡view引用它；确有独立事件才另建数据集，不能重复独立填写相同事实。未排期应同时在列表与排程保留null，不得一处已排另一处缺项。同一工作台多卡复用记录时可提供sharedDatasets:[{id,label,asOf,note,fields:[{key,label,unit?}],records:[{id,...各字段原值}]}]，共同事实只确定一次。面板type:view，提供view:{dataset:"数据集id",filters:[字段键],details:[字段键],reorder:false,navigation:"flow|tabs",layout:"stack|split",sections:[{kind:"records|compare",fields:[字段键]}或{kind:"schedule",label:字段键,start:字段键,end:字段键,owner?:字段键,resource?:字段键}]}。由宿主直接生成不同组合和可靠交互，不编写HTML/JS、不重复填写各卡数据。仅明确模拟数据工作台支持sharedDatasets；已有真实资料仍沿原数据来源与artifact流程。缺失填null，日内排程使用含时区的ISO时间；不能为满足组件而删改业务、缩小用户范围或改称模拟。'
+export const DATASET_VIEW_GUIDANCE='字段键可直接用中英文名称，引用保持一致，无需翻译键名。完整sharedDatasets可直接生成，同时允许sharedContext作为备注；不必为它切到deferred。用户明确结束日期后不可延长窗口；容量不足保留未排期与等待原因。同一批对象用一个完整主数据集，各卡view.dataset均引用该主数据集，不复制为排程/验收的另一份相同编号记录。每份数据必须有实际组件引用；跨数据集确为同批对象时显式给dataset相同recordScope，该范围内同一id的同名字段值与单位须一致，null也必须一致；不同实体保留各自业务编号，不推断跨表身份。panels完整清单与sharedDatasets必须一次调用同时提供：先列清单及各卡view，再填写共同记录，不先单独提交sharedDatasets。records每条必须有稳定id，直接用业务编号如B01，不另造r-B01或重复编号字段；宿主可补id的显示标签，不能推断记录编号。reorder由上移/下移按钮调整本卡顺序，不支持拖动，不另造会过时的priority数值列。同一批对象的负责人、作业起止时间、等待原因、验收等共同事实放在同一个主数据集，各卡view引用它；确有独立事件才另建数据集，不能重复独立填写相同事实。未排期应同时在列表与排程保留null，不得一处已排另一处缺项。同一工作台多卡复用记录时可提供sharedDatasets:[{id,label,asOf,note,fields:[{key,label,unit?}],records:[{id,...各字段原值}]}]，共同事实只确定一次。面板type:view，提供view:{dataset:"数据集id",filters:[字段键],details:[字段键],reorder:false,navigation:"flow|tabs",layout:"stack|split",sections:[{kind:"records|compare",fields:[字段键]}或{kind:"schedule",label:字段键,start:字段键,end:字段键,owner?:字段键,resource?:字段键}]}。由宿主直接生成不同组合和可靠交互，不编写HTML/JS、不重复填写各卡数据。仅明确模拟数据工作台支持sharedDatasets；已有真实资料仍沿原数据来源与artifact流程。缺失填null，日内排程使用含时区的ISO时间；不能为满足组件而删改业务、缩小用户范围或改称模拟。'
 
 const fieldKeysSchema={type:'array',items:{type:'string'}};
 export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,properties:{

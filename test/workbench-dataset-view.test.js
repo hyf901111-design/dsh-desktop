@@ -30,6 +30,15 @@ describe('workbench common records at the real tool boundary',()=>{
   const f=await setup();const plan=input();plan.sharedDatasets[0].fields=plan.sharedDatasets[0].fields.filter(field=>field.key!=='id');
   try{const receipt=await f.tool.execute(plan,f.exec);expect(receipt.status).toBe('prepared');expect(f.adapter.start).not.toHaveBeenCalled();const saved=JSON.parse(await readFile(f.filePath,'utf8'))[0];expect(saved.input.sharedDatasets[0].records).toEqual(plan.sharedDatasets[0].records);expect((await f.tool.execute(plan,f.exec)).planId).toBe(receipt.planId);expect(f.runtime.tasks.size).toBe(3)}finally{await f.close()}
  });
+ it('prepares complete views with shared scenario notes directly and retains those notes in every visible artifact',async()=>{
+  const f=await setup(),plan=input();plan.sharedContext='全部为虚构演练；两位修复师，一台干燥柜。<说明>不能延长三日窗口。';
+  try{expect((await f.tool.execute(plan,f.exec)).status).toBe('prepared');expect(f.adapter.start).not.toHaveBeenCalled();const saved=JSON.parse(await readFile(f.filePath,'utf8'))[0];expect(saved.input.sharedContext).toBe(plan.sharedContext);expect(validateWorkbench(saved.input)).toEqual(saved.input);for(const task of f.runtime.tasks.values()){const spec=JSON.parse(task.finalOutput);expect(readTemplateModel(spec).data.context).toBe(plan.sharedContext);expect(spec.html).toContain('&lt;说明&gt;不能延长三日窗口。')}}finally{await f.close()}
+ });
+ it('keeps Chinese field keys and their filter/detail references without model-side translation',async()=>{
+  const f=await setup(),plan=input(),dataset=plan.sharedDatasets[0];dataset.fields.find(field=>field.key==='owner').key='负责人';for(const record of dataset.records){record['负责人']=record.owner;delete record.owner;}
+  plan.panels=[{title:'中文字段档案',prompt:'按负责人筛选，点选查看负责人，保留原始编号和中文字段。',type:'view',size:'large',view:{dataset:dataset.id,filters:['负责人'],details:['负责人'],sections:[{kind:'records',fields:['负责人']}]}}];
+  try{expect((await f.tool.execute(plan,f.exec)).status).toBe('prepared');const spec=JSON.parse([...f.runtime.tasks.values()][0].finalOutput);expect(readTemplateModel(spec).data.dataset).toEqual(dataset);expect(spec.html).toContain('data-view-filter="负责人"');expect(f.adapter.start).not.toHaveBeenCalled()}finally{await f.close()}
+ });
  it('retains the canonical source through acceptance and readback, never degrading to generic HTML data',()=>{
   const value=validateWorkbench(input());for(const p of value.panels){const accepted=acceptArtifactOutput(JSON.stringify(p.artifact));expect(accepted).toBeTruthy();const spec=JSON.parse(accepted),model=readTemplateModel(spec);expect(model.templateId).toBe('view');expect(model.data).toEqual(p.artifact);expect(spec.html).toContain('B08');expect(templateSummary(spec).message).toContain('组合')}
  });
