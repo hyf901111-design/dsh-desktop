@@ -67,6 +67,7 @@ export function buildHarnessSpawnOptions(
     env: {
       ...parentEnvironment,
       DSH_HOME: dshHome,
+      SHERLOCK_DESKTOP_PARENT_PID: String(process.pid),
       ...(bundledSkillDirectory
         ? { DSH_BUNDLED_SKILL_DIR: bundledSkillDirectory }
         : {}),

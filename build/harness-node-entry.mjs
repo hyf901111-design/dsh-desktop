@@ -3,6 +3,47 @@ import { pathToFileURL } from 'node:url'
 
 const [dshEntryPath, ...dshArguments] = process.argv.slice(2)
 
+function superviseDesktopParent() {
+  const value = process.env.SHERLOCK_DESKTOP_PARENT_PID
+  if (!/^\d+$/.test(value ?? '')) return true
+  const parentPid = Number(value)
+  if (!Number.isSafeInteger(parentPid) || parentPid <= 1) return true
+
+  let stopping = false
+  let timer
+  const parentIsAlive = () => {
+    // Reparenting also detects a dead owner whose PID has already been reused.
+    if (process.ppid !== parentPid) return false
+    try {
+      process.kill(parentPid, 0)
+      return true
+    } catch (error) {
+      return error?.code === 'EPERM'
+    }
+  }
+  const stop = () => {
+    if (stopping) return
+    stopping = true
+    clearInterval(timer)
+    // Use the CLI's normal shutdown handler, with a bounded fallback if it hangs.
+    // The desktop's pipes may already be closed, so do not write to them here.
+    setTimeout(() => process.exit(0), 4000).unref()
+    process.kill(process.pid, 'SIGTERM')
+  }
+  if (!parentIsAlive()) {
+    stop()
+    return false
+  }
+  timer = setInterval(() => {
+    if (!parentIsAlive()) stop()
+  }, 1000)
+  timer.unref()
+  process.once('exit', () => clearInterval(timer))
+  return true
+}
+
+const desktopParentAlive = superviseDesktopParent()
+
 function report(label, value) {
   process.stderr.write(`[harness-node] ${label}: ${value}\n`)
 }
@@ -61,7 +102,9 @@ if (bundledFundResearchEntry) {
   process.stdout.write('[harness-node] bundled fund research runtime mapped\n')
 }
 
-if (!dshEntryPath) {
+if (!desktopParentAlive) {
+  // The owning desktop exited before this entry was ready; do not start work.
+} else if (!dshEntryPath) {
   report('startup error', 'missing DSH entry path')
   process.exitCode = 1
 } else {
