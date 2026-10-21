@@ -9,10 +9,22 @@ import {challengeDocumentBlocks,NoteChallengeScheduler} from './challenge-schedu
 import {findChallengeQuote,replaceChallengeQuote} from './challenge-anchors'
 
 export const CHALLENGE_KIND='ework-challenge-v1',CHALLENGE_USER='ework-ai-challenge'
-export type ChallengeThread={id:string;metadata:{kind:string;issue:ChallengeIssue;sourceText:string;draft?:string};comments:any[];createdAt:Date;resolved:boolean}
+type ChallengeAnchor={quote:string;sourceText:string}
+export type ChallengeThread={id:string;metadata:{kind:string;issue:ChallengeIssue;sourceText:string;draft?:string;anchorHistory?:ChallengeAnchor[]};comments:any[];createdAt:Date;resolved:boolean}
 const body=(text:string)=>[{type:'paragraph',content:[{type:'text',text,styles:{}}]}]
 const fingerprint=(title:string,blocks:any[])=>JSON.stringify([title,blocks])
 const send=(name:string,detail:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-'+name,{detail}))
+// Retain only explicit replacement snapshots, bounded even for long paragraphs.
+const anchorHistory=(prior:unknown,...added:ChallengeAnchor[]):ChallengeAnchor[]=>{
+ const result:ChallengeAnchor[]=[];let size=0
+ for(const value of [...(Array.isArray(prior)?prior:[]),...added].reverse()){
+  if(typeof value?.quote!=='string'||!value.quote.trim()||typeof value.sourceText!=='string'||value.quote.length>12000||value.sourceText.length>12000||result.some(item=>item.quote===value.quote&&item.sourceText===value.sourceText))continue
+  const length=value.quote.length+value.sourceText.length
+  if(result.length>=8||size+length>64000)break
+  result.unshift({quote:value.quote,sourceText:value.sourceText});size+=length
+ }
+ return result
+}
 export function challengeThreadMessages(comments:any[],budget=10000):Array<{role:'assistant'|'user';text:string}>{
  const result:Array<{role:'assistant'|'user';text:string}>=[];let size=0
  for(const c of comments.filter(c=>!c.deletedAt).slice(-20).reverse()){
@@ -83,7 +95,24 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   },onState:value=>{state.current.checks=value.checks;setChecks(value.checks);publish()}})
   scheduler.current=s;sync();s.setLevel(readLevel())
   const pref=()=>{setLevelState(readLevel());s.setLevel(readLevel());latest.current.persist();publish()}
-  const off=editor.onChange(()=>{sync();refresh()}),offSelection=editor.onSelectionChange(sync)
+  const off=editor.onChange((_editor:any,{getChanges}:any)=>{
+   // BlockNote attributes native Yjs history changes to "undo-redo". Only
+   // remap blocks whose text this history action actually restored; ordinary
+   // rewrites and undo in another paragraph cannot revive an old anchor.
+   const restoredBlocks=new Map<string,string>()
+   for(const change of getChanges()){
+    if(change.source.type!=='undo-redo'||change.type==='delete')continue
+    const current=challengeDocumentBlocks([change.block]).find(block=>block.id===change.block.id),previous=change.prevBlock&&challengeDocumentBlocks([change.prevBlock]).find(block=>block.id===change.block.id)
+    if(current&&current.text!==previous?.text)restoredBlocks.set(current.id,current.text)
+   }
+   if(restoredBlocks.size)for(const thread of ai.getThreads().values()){
+    const data=thread.metadata as ChallengeThread['metadata']|undefined
+    if(data?.kind!==CHALLENGE_KIND||thread.resolved||thread.deletedAt)continue
+    const restored=anchorHistory(data.anchorHistory).find(value=>value.sourceText===restoredBlocks.get(data.issue.blockId)&&findChallengeQuote(editor,data.issue.blockId,value.quote))
+    if(restored&&(data.issue.quote!==restored.quote||data.sourceText!==restored.sourceText))metadata(thread.id,{issue:{...data.issue,quote:restored.quote},sourceText:restored.sourceText})
+   }
+   sync();refresh()
+  }),offSelection=editor.onSelectionChange(sync)
   const offThreads=ai.subscribe(refresh),offComments=comments.store.subscribe(()=>{const id=comments.store.state.selectedThreadId;if(id)dismissed.current.delete(id);setSelected(id)})
   prefs.observe(pref)
   const visibility=()=>{if(!active()){action.current?.abort();action.current=undefined;setBusyId(undefined)}sync()}
@@ -92,7 +121,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   const pasted=()=>{settle.current=Date.now()+10000;sync();clearTimeout(settleTimer);settleTimer=setTimeout(sync,10010)}
   const locate=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.sessionId!==sessionId||typeof value.blockId!=='string')return;const el=latest.current.scroll.current?.querySelector<HTMLElement>('[data-id="'+CSS.escape(value.blockId)+'"]');el?.scrollIntoView({block:'center',behavior:'smooth'});const thread=visibleThreads().find(t=>t.metadata.issue.blockId===value.blockId&&(!value.quote||t.metadata.issue.quote===value.quote));if(thread)comments.selectThread(thread.id,false)}
   const recheck=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===sessionId)s.recheck()}
-  const markClick=(event:Event)=>{const target=(event.target as HTMLElement).closest<HTMLElement>('[data-bn-thread-id]'),id=target?.dataset.bnThreadId;if(!id||ai.getThreads().get(id)?.metadata?.kind!==CHALLENGE_KIND)return;event.preventDefault();event.stopPropagation();dismissed.current.delete(id);comments.selectThread(id,false);setSelected(id);setRevision(v=>v+1)}
+  const markClick=(event:Event)=>{const target=(event.target as HTMLElement).closest<HTMLElement>('[data-bn-thread-id]:not([data-orphan="true"])'),id=target?.dataset.bnThreadId,thread=id&&ai.getThreads().get(id);if(!id||!thread||thread.metadata?.kind!==CHALLENGE_KIND||thread.resolved||thread.deletedAt)return;event.preventDefault();event.stopPropagation();dismissed.current.delete(id);comments.selectThread(id,false);setSelected(id);setRevision(v=>v+1)}
   document.addEventListener('visibilitychange',visibility);document.addEventListener('sherlock:workspace-surface-change',visibility);window.addEventListener('focus',visibility);window.addEventListener('blur',visibility)
   document.addEventListener('compositionstart',composition,true);document.addEventListener('compositionend',composition,true);latest.current.scroll.current?.addEventListener('paste',pasted,true)
   document.addEventListener('sherlock:notes-challenge-locate',locate);document.addEventListener('sherlock:notes-challenge-recheck',recheck)
@@ -129,7 +158,8 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     const currentBlock=blocks().find(b=>b.id===issue.blockId)
     if(!currentBlock||currentBlock.text.length-issue.quote.length+result.reply.replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
     if(fingerprint(latest.current.title,blocks())===captured&&findChallengeQuote(editor,issue.blockId,issue.quote)&&replaceChallengeQuote(editor,issue.blockId,issue.quote,result.reply.replacement)){
-     metadata(thread.id,{issue:{...issue,quote:result.reply.replacement},sourceText:blocks().find(b=>b.id===issue.blockId)?.text})
+     const sourceText=blocks().find(b=>b.id===issue.blockId)!.text
+     metadata(thread.id,{issue:{...issue,quote:result.reply.replacement},sourceText,anchorHistory:anchorHistory(current.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote:result.reply.replacement,sourceText})})
      settle.current=Date.now()+10000
      window.setTimeout(()=>{if(live.current)sync()},10010)
      await append(result.reply.text||'已优化这段表达，并保留原有研究立场。')
