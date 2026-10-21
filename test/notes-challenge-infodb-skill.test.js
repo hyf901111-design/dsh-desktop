@@ -111,3 +111,15 @@ it.each(['before-query','after-query'])('rechecks live agent identity after an a
   if(phase==='before-query')await expect(readFile(f.marker)).rejects.toMatchObject({code:'ENOENT'})
   else expect((await readFile(f.marker,'utf8')).length).toBeGreaterThan(0)
 })
+
+it('reports only bounded source failure stages and driver codes for native diagnosis',async()=>{
+  const f=await fixture({script:`class DriverError(Exception):\n pass\nclass Detail:\n full_code='ORA-12514'\n def __str__(self): return 'private-user:private-password@private-host'\ndef get_connection():\n raise DriverError(Detail())\n`}),warn=vi.spyOn(console,'warn').mockImplementation(()=>{})
+  try{
+    const result=await (await load()).reviewNoteConsensus(f.ctx,input,new AbortController().signal)
+    expect(result.issues).toEqual([])
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"phase":"connection"'))
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"driverCode":"ORA-12514"'))
+    expect(JSON.stringify(warn.mock.calls)).not.toMatch(/private-user|private-password|private-host/)
+    expect(JSON.stringify(result)).not.toContain('ORA-12514')
+  }finally{warn.mockRestore()}
+})

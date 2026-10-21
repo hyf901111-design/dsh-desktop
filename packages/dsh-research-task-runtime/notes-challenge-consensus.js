@@ -191,6 +191,7 @@ export async function reviewNoteConsensus(ctx, input, signal) {
     const key = keyFor(claim)
     if (!cache.has(key)) {
       if (groups++ >= 3) { checks.push({ kind: 'consensus', status: 'partial', detail: '本批已达到3组证券/年度/基准日查询预算，剩余预测未查。' }); break }
+      let phase='discovery'
       try {
         const discovery=deadline(signal,4000)
         let source
@@ -198,9 +199,11 @@ export async function reviewNoteConsensus(ctx, input, signal) {
         try {source=sourceFor(ctx,agent,queryClaim)??await abortable(managedInfodbSource(ctx,agent,discovery.signal),discovery.signal)}finally{discovery.dispose()}
         if (!source) return { issues, checks: [...checks, { kind: 'consensus', status: 'unavailable', detail: '当前会话没有可用的已授权infodb只读SQL工具或已启用的infodb读取技能；未查询、未使用其他来源替代。' }] }
         const query = async mode => {
+          phase='read'
           const budget = deadline(signal, 4000)
           try {
             const response = await abortable(source.query(queryClaim,mode,budget.signal), budget.signal)
+            phase='response'
             const rows = sourceRows(response)
             if (mode!=='coverage'&&rows.some(row => row.S_INFO_WINDCODE !== claim.windCode || String(row.EST_REPORT_DT) !== `${claim.year}1231` || row.CONSEN_DATA_CYCLE_TYP!==policy.cycle || !date(row.EST_DT) || mode==='historical' && date(row.EST_DT) > claim.baseDate)) throw Error('来源返回的代码、报告期、统计周期或预测日期不符合查询条件。')
             return rows
@@ -214,8 +217,9 @@ export async function reviewNoteConsensus(ctx, input, signal) {
           if(value.length===1&&period(value[0].FIRST_PERIOD)&&period(value[0].LAST_PERIOD)&&value[0].FIRST_PERIOD<=value[0].LAST_PERIOD)coverage=value[0]
         }
         cache.set(key, { rows, coverage, toolName: source.name, kind:source.kind })
-      } catch {
+      } catch(error) {
         signal?.throwIfAborted()
+        console.warn(JSON.stringify({event:'notes-consensus-source-failed',phase:['module','connection','transaction','query','fetch'].includes(error?.phase)?error.phase:phase,...typeof error?.driverCode==='string'&&/^[A-Z]{2,6}-[0-9]{3,6}$/.test(error.driverCode)?{driverCode:error.driverCode}:{}}))
         cache.set(key, { error: true })
       }
     }
