@@ -7,7 +7,7 @@ import {renderInputArtifact} from './input-artifact.js';
 import {renderAdvancedChart} from './advanced-chart-artifact.js';
 import {renderSpecialChart} from './special-chart-artifact.js';
 import { renderCartesianChart } from './cartesian-chart-artifact.js';
-import { normalizeIndexedTableRows } from './template-data-contract.js';
+import { normalizeIndexedTableRows, templateDataIssue } from './template-data-contract.js';
 import { normalizeChartMetadata } from './chart-template-contract.js';
 import {retainTemplateModel,readTemplateModel} from './component-template-registry.js';
 import { renderMarketArtifact } from './market-artifact.js';
@@ -122,8 +122,7 @@ function normalizeTemplateAliases(value) {
  if(value?.type==='table'&&(typeof value.asOf==='string'&&value.asOf.trim()||value.asOf===undefined&&typeof value.note==='string'&&value.note.trim())&&
    Object.keys(value).every(key=>['version','type','title','columns','rows','asOf','note'].includes(key))&&
    (value.note===undefined||typeof value.note==='string'&&value.note.trim())) {
-  const {asOf,note,...core}=value;
-  if(parseResearchContainerSpec(core))return {...value,type:'market',variant:'table',asOf:asOf??'静态快照 · 来源与时点见表格及说明'};
+  if(!templateDataIssue(value))return {...value,type:'market',variant:'table',asOf:value.asOf??'静态快照 · 来源与时点见表格及说明'};
  }
  if(value?.type!=='market')return value;
  if(value.variant==='metrics'&&Array.isArray(value.items))return {...value,items:value.items.map(item=>
