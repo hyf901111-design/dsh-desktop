@@ -1,5 +1,6 @@
+import {evidenceWindows} from './workbench-explicit-scope.js'
 import {extractArtifactObjects} from './artifact-output.js'
-import {explicitWindows,noticeDay} from './announcement-provenance.js'
+import {noticeDay} from './announcement-provenance.js'
 
 // Only internal captured human context establishes real/simulated mode. Artifact
 // titles, notes, and prompt markers cannot grant or remove source obligations.
@@ -18,7 +19,7 @@ export function articleTimelineDay(value) {
  return noticeDay(match?`${match[1]}-${match[2].padStart(2,'0')}-${match[3].padStart(2,'0')}`:value)
 }
 export function articleTimelineWindowIssue(data,item,options={}) {
- const windows=[...explicitWindows(options.workbenchRequest?.originalRequest),...explicitWindows(options.panelRequest),...explicitWindows(data.range)]
+ const windows=evidenceWindows(options,data.range)
  if(windows.some(w=>!noticeDay(w.start)||!noticeDay(w.end)||w.start>w.end))return '明确日期窗口无效；不修改原始请求范围'
  const day=articleTimelineDay(item?.time)
  if(!day)return '缺少可核验的明确原文日期'

@@ -218,3 +218,16 @@ it('reports actual refresh facts rather than the minute plan, including unmounte
  expect(state.refreshDetail).not.toContain('正在自动')
  expect(JSON.stringify(store.snapshotSession('s'))).not.toContain('PRIVATE')
 })
+
+it('final historical refresh groups use one qualifier while mixed current and retired facts stay local',()=>{
+ const target=new EventTarget(),snapshot=publishResearchWorkbenchProgress(target,'s',done())
+ const rows=[{nodeId:'card-0',enabled:true,intervalMinutes:1,lastSuccess:10},{nodeId:'card-1',enabled:false,intervalMinutes:0},{nodeId:'card-2',enabled:false,intervalMinutes:5},{nodeId:'card-3',enabled:true,intervalMinutes:5,lastRefreshFailed:true}]
+ const stale=workbenchProgressState(plans,{...snapshot,active:false},false,{ready:false,observed:true,complete:true,rows})
+ expect(stale.refreshDetail.match(/上次观察：/g)).toHaveLength(1)
+ expect(stale.refreshLines).toHaveLength(4)
+ expect(stale.refreshLines.join(' ')).toContain('仅手动刷新 1')
+ const mixed=workbenchProgressState(plans,snapshot,false,{ready:true,observed:true,complete:true,rows:rows.map((row,i)=>i===3?{...row,lastObserved:true}:row)})
+ expect(mixed.refreshHistory).toBe('')
+ expect(mixed.refreshDetail).toContain('上次观察：已配置每 5 分钟刷新，最近刷新失败 1')
+ expect(mixed.refreshDetail).not.toContain('上次观察：已配置每分钟刷新')
+})

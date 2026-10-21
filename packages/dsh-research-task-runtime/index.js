@@ -1,3 +1,4 @@
+import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
 import {calendarEventEvidenceIssue,calendarEventRepairEvidence} from './calendar-event-evidence.js'
 import {articleTimelineRequired,restoreArticleTimelineScope} from './article-timeline-provenance.js'
 import {restoreWorkbenchHostContext} from './workbench-source-policy.js'
@@ -1496,11 +1497,19 @@ export class ResearchTaskRuntime {
   async run(task) {
     let handle, readableFallback, statementIssue, statementRepairData, calendarIssue, calendarRepairData
     const sourceRecords=[],sourceAttempts=[]
-    const feedOptions={panelRequest:workbenchPanelIntent(task.prompt),workbenchRequest:task.hostContext?.workbenchRequest}
+    const feedOptions={panelRequest:workbenchPanelIntent(task.prompt),workbenchRequest:task.hostContext?.workbenchRequest,explicitScope:task.hostContext?.explicitScope,panelType:workbenchPanelFormat(task.prompt)}
     let articleTimeline=workbenchPanelFormat(task.prompt)==='timeline'&&articleTimelineRequired({type:'timeline'},feedOptions),originalArticleTimeline
     const calendarIssueFor = value => extractArtifactObjects(value).map(data=>calendarEventEvidenceIssue(data,feedOptions,sourceRecords,{now:new Date(this.now()),requiredData:calendarRepairData??(workbenchPanelFormat(task.prompt)==='calendar'?{type:'calendar'}:undefined)})).find(Boolean)
+    const articleIssueFor = value => articleTimeline && componentFeedEvidenceIssue(value,sourceRecords,{...feedOptions,articleTimelineRequired:true})
     const startingEvents = []
     try {
+      // Human scope ambiguity cannot be repaired by another model generation.
+      if(task.hostContext?.workbenchRequest&&usesHumanSourceScope(task.hostContext.workbenchRequest)){
+        try{
+          feedOptions.explicitScope=applicableExplicitScope(feedOptions)
+          if(task.hostContext.explicitScope===undefined)task.hostContext=restoreWorkbenchHostContext({...task.hostContext,explicitScope:feedOptions.explicitScope})
+        }catch(error){throw new ResearchTaskError('GENERATION_FAILED',error.message)}
+      }
       const executionPrompt = (await buildResearchTaskExecutionPrompt(taskRequest(task), {
         signal: task.controller.signal,
         onResolvedSources: async (sources) => {
@@ -1606,13 +1615,16 @@ export class ResearchTaskRuntime {
         if(restoredType)deliveredText=restoredType
         let restoredArticleScope
         if(task.kind==='container'&&!calendarRepairData)calendarRepairData=extractArtifactObjects(deliveredText).map(data=>readTemplateModel(data)?.data??data).find(data=>data?.type==='calendar')
-        const articleCandidate=extractArtifactObjects(deliveredText)
+        const articleCandidate=extractArtifactObjects(deliveredText).map(data=>readTemplateModel(data)?.data??data)
         if(articleCandidate.length===1&&articleTimelineRequired(articleCandidate[0],feedOptions)){
           articleTimeline=true
+          // The retained model is evidence input only. Rebuild visible HTML via the host.
+          deliveredText=JSON.stringify(articleCandidate[0])
           if(!originalArticleTimeline&&Array.isArray(articleCandidate[0].items)&&articleCandidate[0].items.length<=60)originalArticleTimeline=articleCandidate[0]
           if(attempt===1)restoredArticleScope=restoreArticleTimelineScope(deliveredText,originalArticleTimeline,feedOptions,item=>articleTimelineSourceProven(originalArticleTimeline,item,sourceRecords,feedOptions))
           if(restoredArticleScope)deliveredText=restoredArticleScope.text
         }
+        feedOptions.articleTimelineRequired=articleTimeline
         // Capture the original table before any validator can spend the sole
         // repair attempt (including source/binding/operating failures).
         if(task.kind==='container'&&!statementRepairData){
@@ -1710,7 +1722,7 @@ export class ResearchTaskRuntime {
                 '该组件指定通联 DataYes 来源，必须实际取得业务响应；需要刷新时提交可刷新映射，不能用其他网站的静态行情或接口目录代替。')
             }
           }
-          output = finalText(mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
+          output = finalText(mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', bindingRequested
@@ -1813,7 +1825,10 @@ export class ResearchTaskRuntime {
         output = readableFallback ?? (task.kind !== 'container' && recoveryEvidence ? JSON.stringify({ version: 1, type: 'markdown', title: '已取得的研究资料', content: ('> 已保留相关来源摘要，完整分析暂未完成。请结合来源原文核实。\n\n' + recoveryEvidence).slice(0, 32000) }) : undefined)
       }
       if(output!==undefined&&task.kind==='container'){
-        const eventIssue=calendarIssueFor(output)
+        const articleIssue=articleIssueFor(output)
+        if(articleIssue){output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',articleIssue)}
+        else if(articleTimeline)output=acceptArtifactOutput(JSON.stringify(readTemplateModel(JSON.parse(output))?.data))
+        const eventIssue=output&&calendarIssueFor(output)
         if(eventIssue){calendarIssue=eventIssue;output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',eventIssue)}
         const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
         if (policyIssue) {output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',policyIssue)}
@@ -1864,7 +1879,7 @@ export class ResearchTaskRuntime {
     } catch (error) {
       console.warn('[research-task] execution failed', task.taskId, error instanceof Error ? error.message : String(error))
       const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
-      if (!policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
+      if (!policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
         await this.finish(task, 'completed', { finalOutput: readableFallback })
       } else if (!terminalState(task.state)) {
         await this.finish(
@@ -2463,7 +2478,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         result: Promise.resolve(boundedResult).then(result => {
           const researchEvidence=collectedEvidence()
           const acquireFeedEvidence = kind==='container' && childTools.includes('web_fetch') && typeof ctx.web?.fetch === 'function' ? (text,records) => acquireFeedSourceEvidence({
-            text,records,observedUrls:[...feedSearchUrls],signal,onProgress,panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,
+            text,records,observedUrls:[...feedSearchUrls],signal,onProgress,panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,explicitScope:hostContext?.explicitScope,
             readPage:async(url,readSignal)=>{
               const page=await withParentInitiator(parent,()=>ctx.web.fetch({url},readSignal))
               if(!Number.isInteger(page?.statusCode)||page.statusCode<200||page.statusCode>=300||!['html','text'].includes(page?.body?.kind)||typeof page.body.content!=='string')return

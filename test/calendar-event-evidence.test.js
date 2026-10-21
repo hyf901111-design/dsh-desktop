@@ -268,3 +268,24 @@ it('review1 does not infer a report period from unrelated business-year and quar
  const data=corrected();data.items[0].title='中际旭创（300308）定期报告披露';data.items[0].summary+='；公司另有2027年业务目标，第一季度发展计划。'
  const f=await run([data]);expect(f.result.state).toBe('completed');expect(f.calls).toHaveLength(1)
 })
+
+it.each([false,true])('final independent human news and future meeting windows accept actual matching event (captured=%s)',async captured=>{
+ const originalRequest='创建真实工作台：相关新闻2026-09-21至2026-10-20；未来行业会议2026-10-21至2026-10-31。'
+ const {workbenchExplicitScope}=await import('../packages/dsh-research-task-runtime/workbench-explicit-scope.js')
+ const hostContext={...context,sourceRequirement:'查询行业会议。',workbenchRequest:{originalRequest,dataMode:'source'},...(captured?{explicitScope:workbenchExplicitScope(originalRequest,{type:'calendar',title:'行业会议',prompt:'查询行业会议。'})}:{})}
+ const data={version:1,type:'calendar',title:'行业会议',items:[{title:'光通信行业会议',summary:'合成来源会议记录',date:'2026-10-24',category:'行业会议'}]}
+ const sources=[{tool:'web_fetch',purpose:'snapshot',args:{url:'https://example.org/conference'},response:{data:[{title:'光通信行业会议',eventDate:'2026-10-24',category:'行业会议'}]}}]
+ const f=await run([data],{hostContext,sources})
+ expect(f.result.state,f.result.error).toBe('completed');expect(f.calls).toHaveLength(1)
+ expect(rendered(f.result.finalOutput).body.textContent).toContain('2026-10-24')
+ const outside=await run([{...data,items:[{...data.items[0],date:'2026-11-01'}]}],{hostContext,sources:[{...sources[0],response:{data:[{...sources[0].response.data[0],eventDate:'2026-11-01'}]}}]})
+ expect(outside.result.state).toBe('failed');expect(outside.calls).toHaveLength(2)
+})
+it('final historical calendar qualifier is not changed by a separately requested future conference card',async()=>{
+ const originalRequest='创建真实工作台：历史行业会议2026-09-01至2026-09-30；未来行业会议2026-10-21至2026-10-31。'
+ const {workbenchExplicitScope}=await import('../packages/dsh-research-task-runtime/workbench-explicit-scope.js')
+ const hostContext={...context,sourceRequirement:'查询历史行业会议。',workbenchRequest:{originalRequest,dataMode:'source'},explicitScope:workbenchExplicitScope(originalRequest,{type:'calendar',title:'历史会议',prompt:'查询历史会议。'})}
+ const data={version:1,type:'calendar',title:'历史行业会议',items:[{title:'历史光通信会议',summary:'合成来源会议记录',date:'2026-09-24',category:'行业会议'}]}
+ const f=await run([data],{hostContext,sources:[{tool:'web_fetch',purpose:'snapshot',args:{url:'https://example.org/history'},response:{data:[{title:'历史光通信会议',eventDate:'2026-09-24',category:'行业会议'}]}}]})
+ expect(f.result.state,f.result.error).toBe('completed');expect(f.calls).toHaveLength(1)
+})

@@ -65,8 +65,11 @@ export function workbenchProgressState(plans,snapshot,english=false,refreshSnaps
   if(lastObserved&&(row||refreshSnapshot?.observed))label=say('上次观察：','Last observed: ')+label
   refreshGroups.set(label,(refreshGroups.get(label)??0)+1)
  }
- const refreshDetail=[...refreshGroups].map(([label,count])=>`${label} ${count}`).join(' · ')
- return {phase,title,detail,total,planned,completed,pending,failed,cancelled,unknown,refreshDetail}
+ const historical=say('上次观察：','Last observed: '),allHistorical=refreshGroups.size>0&&[...refreshGroups.keys()].every(label=>label.startsWith(historical))
+ const refreshHistory=allHistorical?historical:''
+ const refreshLines=[...refreshGroups].map(([label,count])=>`${allHistorical?label.slice(historical.length):label} ${count}`)
+ const refreshDetail=refreshHistory+refreshLines.join(' · ')
+ return {phase,title,detail,total,planned,completed,pending,failed,cancelled,unknown,refreshDetail,refreshHistory,refreshLines}
 }
 
 export function researchWorkbenchReceiptPlans(order,nodeStore,readMetadata) {
@@ -181,7 +184,7 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  }
  return react_jsx_runtime.jsxs('div',{'data-research-workbench-progress':state.phase,...(footer?{'data-research-workbench-footer':true}:{}),style:{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto',columnGap:12,margin:footer?'8px 0 12px':'4px 0 8px 20px',padding:'8px 10px',...(footer?{border:'1px solid var(--dsw-alias-border-l2)',borderRadius:8,background:'var(--dsw-alias-bg-l2)'}:{borderLeft:'2px solid var(--dsw-alias-border-l2)'}),fontSize:12,lineHeight:1.65,color:'var(--dsw-alias-label-secondary)',overflowWrap:'anywhere'},children:[
   react_jsx_runtime.jsx('div',{role:'status','aria-live':'polite',style:{gridColumn:1,fontWeight:500,color:'var(--dsw-alias-label-primary)'},children:state.title}),
-  react_jsx_runtime.jsx('div',{style:{gridColumn:1,minWidth:0},children:[footer&&complete?'':state.detail,state.refreshDetail].filter(Boolean).join(' ')}),
+  react_jsx_runtime.jsxs('div',{style:{gridColumn:1,minWidth:0},children:[footer&&complete?null:react_jsx_runtime.jsx('div',{children:state.detail}),state.refreshHistory?react_jsx_runtime.jsx('div',{'data-refresh-history':true,children:state.refreshHistory}):null,react_jsx_runtime.jsx('div',{'data-refresh-groups':true,style:{display:'flex',flexWrap:'wrap',columnGap:14,rowGap:2},children:state.refreshLines.map((line,index)=>react_jsx_runtime.jsx('span',{'data-refresh-group':true,style:{display:'block',maxWidth:'100%'},children:line},index))})]}),
   react_jsx_runtime.jsxs('div',{style:{gridColumn:2,gridRow:'1 / span 2',alignSelf:'center',display:'flex',alignItems:'center',gap:10,flexShrink:0,whiteSpace:'nowrap'},children:[
    generating?react_jsx_runtime.jsxs('svg',{width:18,height:18,viewBox:'0 0 20 20',role:'img','aria-label':say('正在生成组件','Generating components'),style:{display:'block',width:18,height:18,flexShrink:0},children:[
     react_jsx_runtime.jsx('circle',{cx:10,cy:10,r:7,fill:'none',stroke:'currentColor',strokeWidth:2,opacity:.2}),

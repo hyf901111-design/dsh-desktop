@@ -258,3 +258,43 @@ it.each(['只使用腾讯','仅用新浪','只调用public_data_query'])('fix ro
  await expect(f.tool.execute({requestId:'strict-provider',title:'估值',dataMode:'source',panels:[{title:'估值',type:'table',size:'large',prompt:'使用DataYes查询市盈率、市净率。'}]},f.exec)).rejects.toThrow(/来源约束/)
  expect(f.runtime.startBatch).not.toHaveBeenCalled()
 })
+
+it.each([true,false])('final human capture assigns independent windows before batch/start (%s)',async batch=>{
+ const f=await fixture(batch,[human('创建真实工作台：相关新闻 2026-09-21至2026-10-20；未来行业会议 2026-10-21至2026-10-31。')])
+ await f.tool.execute({requestId:'separate-windows',title:'研究',dataMode:'source',panels:[{title:'相关新闻',type:'timeline',size:'large',prompt:'查询公司真实新闻。'},{title:'行业会议',type:'calendar',size:'large',prompt:'查询行业会议。'}]},f.exec)
+ const contexts=batch?f.runtime.startBatch.mock.calls[0][1].panels:f.runtime.start.mock.calls.map(call=>call[1])
+ expect(contexts.map(c=>c.explicitScope)).toEqual([{windows:[{start:'2026-09-21',end:'2026-10-20'}],future:false},{windows:[{start:'2026-10-21',end:'2026-10-31'}],future:true}])
+})
+it('final ambiguous human windows fail before scheduling',async()=>{
+ const f=await fixture(true,[human('创建真实工作台：2026-09-21至2026-10-20；2026-10-21至2026-10-31。')])
+ await expect(f.tool.execute({requestId:'ambiguous-dates',title:'研究',dataMode:'source',panels:[{title:'公司新闻',type:'timeline',size:'large',prompt:'查询公司新闻。'}]},f.exec)).rejects.toThrow(/日期.*歧义|日期.*适用/)
+ expect(f.runtime.startBatch).not.toHaveBeenCalled()
+})
+
+it('final captured scope survives real persistence restore and unchanged retry and is cleared by manual edits',async()=>{
+ const initial=await policyCreation('创建真实公司新闻工作台，窗口2026-10-01至2026-10-21。','查询公司真实新闻。')
+ const expected={windows:[{start:'2026-10-01',end:'2026-10-21'}],future:false}
+ expect(initial.task.hostContext.explicitScope).toEqual(expected)
+ const stored=JSON.parse(JSON.stringify(initial.runtime.persistedDocument()))
+ const start=vi.fn(async()=>({childSessionId:'scope-retry',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(policyNews)}],sourceRecords:policyWebRecords}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{load:async()=>stored,save:async()=>{}}});cleanup.push(()=>runtime.dispose());await runtime.restore()
+ const request={kind:'container',parentSessionId:initial.task.parentSessionId,canvasNodeId:initial.task.canvasNodeId}
+ const same=await runtime.start({...request,prompt:'查询公司真实新闻。'})
+ await vi.waitFor(()=>expect(runtime.tasks.get(same.taskId).state).toBe('completed'))
+ expect(start.mock.calls[0][0].hostContext.explicitScope).toEqual(expected)
+ expect(Object.isFrozen(start.mock.calls[0][0].hostContext.explicitScope.windows[0])).toBe(true)
+ const edited=await runtime.start({...request,prompt:'改查公司新闻，自选日期。'})
+ await vi.waitFor(()=>expect(runtime.tasks.get(edited.taskId).state).toBe('completed'))
+ expect(start.mock.calls.at(-1)[0].hostContext).toBeUndefined()
+ for(const extra of [{explicitScope:expected},{hostContext:{explicitScope:expected}},{workbenchRequest:{originalRequest:'2020-01-01至2030-01-01'}}])expect(()=>validateResearchTaskStart({...request,prompt:'新闻',...extra})).toThrow()
+})
+it('final ambiguous legacy scope fails without starting a synthesis repair',async()=>{
+ const start=vi.fn(),runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}}});cleanup.push(()=>runtime.dispose())
+ const task=await runtime.start({kind:'container',parentSessionId:'p',canvasNodeId:'legacy',prompt:'工作台：研究\n本面板：新闻\n查询真实新闻。仅生成本面板，优先使用 timeline 类型。'},{sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:'新闻'},sourceRequirement:'查询真实新闻。',workbenchRequest:{originalRequest:'创建新闻工作台。窗口2026-09-01至2026-09-30；窗口2026-10-01至2026-10-21。',dataMode:'source'}})
+ await vi.waitFor(()=>expect(runtime.tasks.get(task.taskId).state).toBe('failed'))
+ expect(runtime.tasks.get(task.taskId).error).toMatch(/歧义/);expect(start).not.toHaveBeenCalled()
+})
+it('final generic sourced news also obeys the original-only human window',async()=>{
+ const f=await policyCreation('创建公司真实新闻工作台，窗口2026-10-01至2026-10-10。','查询公司真实新闻，保留标题、日期、原文。')
+ expect(f.task.state).toBe('failed');expect(f.task.error).toMatch(/窗口|范围/);expect(f.start).toHaveBeenCalledTimes(2)
+})

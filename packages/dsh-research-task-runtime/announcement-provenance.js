@@ -1,3 +1,5 @@
+import {evidenceWindows} from './workbench-explicit-scope.js'
+export {explicitWindows} from './workbench-explicit-scope.js'
 // Only the fixed adapter's observed business responses can restore announcement
 // metadata. A URL identifies a candidate; it never resolves conflicting facts.
 function sources(records=[]) {
@@ -60,17 +62,11 @@ export function announcementItemRequired(data,item,records=[],options={}) {
  const url=safeUrl(item?.url)
  return ['news','reports'].includes(data?.type)&&Boolean(url&&/^\/notices\/detail\//u.test(new URL(url).pathname))
 }
-export function explicitWindows(value) {
- if(typeof value!=='string')return []
- // Deliberately bounded grammar: no dates inferred from “recent”, month lengths,
- // retrieval timestamps, URL identifiers, or model-supplied asOf metadata.
- return [...value.matchAll(/(?<!\d)(\d{4}-\d{2}-\d{2})\s*(?:至|到|[~～—–])\s*(\d{4}-\d{2}-\d{2})(?!\d)/gu)].map(m=>({start:m[1],end:m[2]}))
-}
 export function announcementEvidenceIssue(data,records=[],options={}) {
  const items=Array.isArray(data?.items)?data.items:[]
  if(!items.length&&announcementItemRequired(data,null,records,options))return '公告时间线至少需要1条已核验记录；没有有效记录不能伪装为成功快照。'
  if(!items.some(item=>announcementItemRequired(data,item,records,options)))return null
- const windows=[...explicitWindows(options.panelRequest),...explicitWindows(data.range)]
+ const windows=evidenceWindows(options,data.range)
  if(windows.some(w=>!noticeDay(w.start)||!noticeDay(w.end)||w.start>w.end))return '公告日期窗口无效；请保留真实请求范围，不补造日期。'
  const invalid=[],outside=[]
  items.forEach((item,index)=>{

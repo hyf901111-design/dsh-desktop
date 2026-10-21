@@ -144,3 +144,13 @@ it('does not stringify a malformed article time into a successful gap note',()=>
  const candidate={...data,items:[item,{...item,id:'bad',time:{date:'2026-10-15'},url:'https://example.org/bad'}]}
  expect(retainVerifiedFeedItems(text(candidate),[record()],options)).toBeUndefined()
 })
+it('final generic article dates preserve timestamp compatibility and invalidate counts after scoped exclusions',()=>{
+ const items=[{title:'甲公司发布产品',date:'2026-10-15T10:00:00+08:00',summary:'来源记录',url},{title:'乙公司历史政策',date:'2026-09-10',summary:'来源记录',url:'https://example.org/old'}]
+ const data={version:1,type:'news',title:'2条已核验新闻',items}
+ const records=[{tool:'public_data_query',args:{operation:'query',source:'sina-news'},response:{records:items}}]
+ const scope={panelRequest:'公司新闻',workbenchRequest:{dataMode:'source',originalRequest:'创建公司真实新闻工作台，窗口2026-10-01至2026-10-21。'}}
+ expect(componentFeedEvidenceIssue(JSON.stringify({...data,items:[items[0]]}),records,scope)).toBeNull()
+ const retained=JSON.parse(retainVerifiedFeedItems(JSON.stringify(data),records,scope))
+ expect(retained.items).toEqual([items[0]]);expect(retained.title).not.toContain('2条')
+ expect(retained.note).toContain('超出明确日期窗口');expect(retained.note).toContain('乙公司历史政策');expect(retained.note).toContain('已失效')
+})

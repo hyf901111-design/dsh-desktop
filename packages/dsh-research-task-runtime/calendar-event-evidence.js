@@ -1,5 +1,5 @@
 import {calendarDate,calendarToday} from './calendar-template-contract.js'
-import {explicitWindows} from './announcement-provenance.js'
+import {applicableExplicitScope,evidenceWindows} from './workbench-explicit-scope.js'
 import {readTemplateModel} from './component-template-registry.js'
 
 const text=value=>typeof value==='string'?value:''
@@ -20,11 +20,11 @@ function contextFor(request,now){
  if(human?.dataMode!=='source'||typeof human.originalRequest!=='string')return
  const original=human.originalRequest
  if(/(?:只|仅)?(?:用|使用|依据|根据)\s*(?:我|用户)(?:已)?(?:提供|上传)的?(?:日历|日程|事件)?(?:原文|资料|内容)/u.test(original))return
- const windows=explicitWindows(original),future=/未来|今后|接下来|即将|\bfuture\b|\bupcoming\b/iu.test(original),today=calendarToday(undefined,now)
+ const scope=applicableExplicitScope({...request,panelType:'calendar'}),windows=scope.windows,future=scope.future,today=calendarToday(undefined,now)
  // Historical and ordinary calendars retain their existing permissive contract.
  if(!future&&!windows.length)return
  if(!future&&windows.every(w=>calendarDate(w.start)&&calendarDate(w.end)&&w.start<=w.end&&w.end<today))return
- return {original,future,today,windows:[...windows,...explicitWindows(request.panelRequest)]}
+ return {original,future,today,windows:evidenceWindows({...request,panelType:'calendar'})}
 }
 function eventsFrom(records){
  const disclosures=disclosureRows(records).map(row=>({kind:'定期报告',day:row.preDate,row,entity:entityFor(row)}))
@@ -82,7 +82,8 @@ function eventCount(value){
 // Undefined means this narrow evidence guard found no issue, not that arbitrary
 // event APIs or prose have been exhaustively verified.
 export function calendarEventEvidenceIssue(spec,request={},records=[],{now=new Date(),requiredData}={}){
- const context=contextFor(request,now)
+ let context
+ try{context=contextFor(request,now)}catch(error){return error.message}
  if(!context)return
  const data=readTemplateModel(spec)?.data??spec,previous=readTemplateModel(requiredData)?.data??requiredData
  if(data?.type==='error')return

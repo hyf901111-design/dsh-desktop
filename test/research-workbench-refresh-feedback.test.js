@@ -56,8 +56,10 @@ it('mounts the injected feedback with the native workspace, host bridge and buil
   expect(document.body.textContent).toContain('上次观察：已配置每分钟刷新，最近刷新成功 1')
   expect(document.body.textContent).toContain('静态内容 6')
   await react.act(async()=>{push({sessionId:'s',rows});visible=false;await monitor.refresh();stopWatch();monitor.dispose();monitor=null;stopWatch=null})
-  expect(document.body.textContent).toContain('上次观察：仅手动刷新 1')
-  expect(document.body.textContent).toContain('上次观察：已配置每 5 分钟刷新，最近刷新成功 1')
+  expect(document.querySelectorAll('[data-refresh-history]')).toHaveLength(1)
+  expect(document.body.textContent.match(/上次观察：/g)).toHaveLength(1)
+  expect(document.body.textContent).toContain('仅手动刷新 1')
+  expect(document.body.textContent).toContain('已配置每 5 分钟刷新，最近刷新成功 1')
   expect(document.body.textContent).toContain('已完成')
   expect(document.querySelector('svg')).toBeNull()
   // A cold restored Notes session has generation facts but no refresh facts.

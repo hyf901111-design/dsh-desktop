@@ -1,3 +1,5 @@
+import {evidenceWindows,usesHumanSourceScope} from './workbench-explicit-scope.js'
+import {readTemplateModel} from './component-template-registry.js'
 import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} from './article-timeline-provenance.js'
 import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
@@ -252,7 +254,9 @@ export function articleTimelineSourceProven(data,item,records,options={}) {
 // A feed is accepted per record. A valid quote or one valid headline cannot
 // establish the identity of another article in the same generated component.
 export function componentFeedEvidenceIssue(text,records,options={}) {
-  const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null
+  const candidates=extractArtifactObjects(text),candidate=candidates.length===1?candidates[0]:null
+  const data=options.articleTimelineRequired?(readTemplateModel(candidate)?.data??candidate):candidate
+  if(options.articleTimelineRequired&&data?.type!=='timeline')return '文章时间线逐条原文核验：必须保留可核验的时间线数据，不能以文字或自定义 HTML 取消来源义务。'
   const announcementIssue=announcementEvidenceIssue(data,records,options)
   if(announcementIssue)return announcementIssue
   const articleTimeline=articleTimelineRequired(data,options)
@@ -267,6 +271,12 @@ export function componentFeedEvidenceIssue(text,records,options={}) {
     })
     return issues.length?`文章时间线逐条原文核验：${issues.join('；')}。保留已核验记录与全部研究对象，缺口和窗口外背景放入 note，不计入有效条目；不得猜测日期、原文链接或删去研究范围。`:null
   }
+  const windowIssues=options.workbenchRequest?.dataMode==='source'&&usesHumanSourceScope(options.workbenchRequest)?data.items.flatMap((item,index)=>{
+    if(announcementItemRequired(data,item,records,options))return []
+    const issue=articleTimelineWindowIssue(data,{time:snapshotDate(item.date)},options)
+    return issue?[`第${index+1}条：${issue}`]:[]
+  }):[]
+  if(windowIssues.length)return '文章逐条日期核验：'+windowIssues.join('；')
   const missing=data.items.flatMap((item,index)=>announcementItemRequired(data,item,records,options)||sources.some(record=>snapshotRecordMatches(item,record))?[]:[index+1])
   return missing.length?`资讯第 ${missing.join('、')} 条的标题、日期与原文链接未能对应同一条已取得记录。逐条复用网页主文记录或链接记录的原始字段，不能借用另一条新闻的网址或日期。已取得的有效条目保留；未取得的研究对象、政策维度及原因放入 note，不以缺失说明伪装新闻，也不能静默缩小原研究范围。`:null
 }
@@ -279,6 +289,7 @@ export function retainVerifiedFeedItems(text,records,options={}) {
  if(data?.version!==1||!['news','reports','timeline'].includes(data.type)||!Array.isArray(data.items)||!data.items.length||data.items.length>(data.type==='timeline'?60:40)||data.note!==undefined&&typeof data.note!=='string')return
  const announcements=data.items.some(item=>announcementItemRequired(data,item,records,options))
  const articleTimeline=articleTimelineRequired(data,options)
+ const scopedFeed=articleTimeline||options.workbenchRequest?.dataMode==='source'&&usesHumanSourceScope(options.workbenchRequest)&&evidenceWindows(options,data.range).length>0
  if(data.type==='timeline'&&!announcements&&!articleTimeline)return
  const kept=[],gaps=[],sources=articleTimeline?feedSnapshotSources(records):[]
  const scopeGaps=articleTimeline&&Array.isArray(options.articleScopeGaps)?options.articleScopeGaps:[]
@@ -293,18 +304,19 @@ export function retainVerifiedFeedItems(text,records,options={}) {
   }
   if(announcementItemRequired(data,item,records,options)){
    const reason=announcementEvidenceIssue({...data,items:[item]},records,options)
-   gaps.push(`第${index+1}条 ${item.object??item.actor??item.publisher??'公告公司见原始标题'} ${data.type==='timeline'?item.time??'公告日期未知':item.date??'公告日期未知'}：${item.title}。${articleTimeline?`原链接：${item.url??'未取得'}。`:''}原因：${reason?.includes('的公告日期未知或超出明确日期窗口')?'超出明确日期窗口或公告日期未知':'同条来源身份或日期未核验'}。`);continue
+   gaps.push(`第${index+1}条 ${item.object??item.actor??item.publisher??'公告公司见原始标题'} ${data.type==='timeline'?item.time??'公告日期未知':item.date??'公告日期未知'}：${item.title}。${scopedFeed?`原链接：${item.url??'未取得'}。`:''}原因：${reason?.includes('的公告日期未知或超出明确日期窗口')?'超出明确日期窗口或公告日期未知':'同条来源身份或日期未核验'}。`);continue
   }
-  const reason=!snapshotDate(item.date)||!snapshotUrl(item.url)?'缺少可核验日期或原文链接':'标题、日期与原文链接未能对应同一条已取得记录'
+  const windowIssue=scopedFeed?articleTimelineWindowIssue(data,{time:snapshotDate(item.date)},options):null
+  const reason=windowIssue||(!snapshotDate(item.date)||!snapshotUrl(item.url)?'缺少可核验日期或原文链接':'标题、日期与原文链接未能对应同一条已取得记录')
   gaps.push(`第${index+1}条：${item.title}；日期：${item.date??'未取得'}；链接：${item.url??'未取得'}。原因：${reason}。`)
  }
  if(!kept.length||!gaps.length&&!scopeGaps.length)return
- const prior=(announcements||articleTimeline)&&data.note?`原模型说明（其中计数与覆盖声明已失效，仅保留原研究范围和缺口上下文）：${data.note}`:data.note
- const staleHeading=articleTimeline&&/(?:\d+|[零一二两三四五六七八九十百]+)\s*(?:条|篇|项)|完整覆盖|全部/u.test(data.title)
- const metadata=articleTimeline?[staleHeading?`原标题（计数与覆盖声明已失效）：${data.title}`:null,data.asOf?`原时点与来源声明（覆盖声明未经逐条核验，以本次核验为准）：${data.asOf}`:null].filter(Boolean).join('\n'):null
- const coverage=articleTimeline?(gaps.length?`以下 ${gaps.length} 条未计入有效资讯或判断依据；原研究范围的缺失项和背景继续保留：`:'修复省略的候选不计入有效记录；原研究范围的缺口继续保留：'):`以下 ${gaps.length} 条未通过原文核验，未作为已验证资讯或判断依据；原研究范围的缺失项继续保留：`
+ const prior=(announcements||scopedFeed)&&data.note?`原模型说明（其中计数与覆盖声明已失效，仅保留原研究范围和缺口上下文）：${data.note}`:data.note
+ const staleHeading=scopedFeed&&/(?:\d+|[零一二两三四五六七八九十百]+)\s*(?:条|篇|项)|完整覆盖|全部/u.test(data.title)
+ const metadata=scopedFeed?[staleHeading?`原标题（计数与覆盖声明已失效）：${data.title}`:null,data.asOf?`原时点与来源声明（覆盖声明未经逐条核验，以本次核验为准）：${data.asOf}`:null].filter(Boolean).join('\n'):null
+ const coverage=scopedFeed?(gaps.length?`以下 ${gaps.length} 条未计入有效资讯或判断依据；原研究范围的缺失项和背景继续保留：`:'修复省略的候选不计入有效记录；原研究范围的缺口继续保留：'):`以下 ${gaps.length} 条未通过原文核验，未作为已验证资讯或判断依据；原研究范围的缺失项继续保留：`
  const note=[metadata,prior,`宿主原文核验：展示 ${kept.length} 条已核验记录。${coverage}`,...gaps,...scopeGaps].filter(Boolean).join('\n')
- const result=JSON.stringify({...data,...(articleTimeline?{...(staleHeading?{title:'文章时间线（部分已核验）'}:{}),asOf:'已核验原文静态快照；仅计入窗口内有效条目，日期见原记录'}:{}),items:kept,note})
+ const result=JSON.stringify({...data,...(scopedFeed?{...(staleHeading?{title:articleTimeline?'文章时间线（部分已核验）':'资讯（部分已核验）'}:{}),asOf:'已核验原文静态快照；仅计入窗口内有效条目，日期见原记录'}:{}),items:kept,note})
  if(componentFeedEvidenceIssue(result,records,options))return
  try{if(acceptArtifactOutput(result))return result}catch{}
 }

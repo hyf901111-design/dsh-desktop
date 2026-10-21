@@ -7,7 +7,7 @@ import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workben
 import {patchComponentDataRefresh} from '../scripts/lib/component-data-refresh.mjs'
 import {planningResponseMetadata,researchPlanningRequest} from '../scripts/lib/research-planning-feedback.mjs'
 let browser,script
-const evidence='/tmp/workbench-feedback-task9-20261021'
+const evidence=process.env.SHERLOCK_FEEDBACK_EVIDENCE||'/tmp/workbench-feedback-task9-20261021'
 beforeAll(async()=>{
  const source=patchComponentDataRefresh(patchResearchCreationProgress(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
  const storeStart=source.indexOf('/* ODYSSEY_COMPONENT_DATA_START */'),storeEnd=source.indexOf('function openComponentData(',storeStart)
@@ -223,6 +223,7 @@ it('renders real refresh states without crowding actions in light/dark narrow/wi
    expect(button.x).toBeGreaterThanOrEqual(title.x+title.width)
    expect(button.x+button.width).toBeLessThanOrEqual(bounds.x+bounds.width)
    expect(await card.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true)
+   for(const group of await card.locator('[data-refresh-group]').all()){const rect=await group.boundingBox();expect(rect.x+rect.width).toBeLessThanOrEqual(button.x);expect(await group.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true)}
    expect(await page.locator('body').textContent()).not.toMatch(/PRIVATE|Error overlay|Vite Error/)
   }
   await assertLayout();await page.screenshot({path:evidence+'/refresh-mixed-light-narrow.png'})
@@ -241,7 +242,9 @@ it('renders real refresh states without crowding actions in light/dark narrow/wi
   await page.getByText(/静态内容 1/).waitFor()
   await page.evaluate(()=>window.leaveRefresh())
   await page.evaluate(value=>window.showConversation(value),{sessionId:'refresh',rows:[...first.rows,{key:'new-message',kind:'user'}],flow:[...first.flow,{kind:'node',key:'new-message'}],artifacts,active:false})
-  await page.getByText(/上次观察：仅手动刷新 1/).waitFor()
+  await page.locator('[data-refresh-history]').waitFor()
+  expect((await card.textContent()).match(/上次观察：/g)).toHaveLength(1)
+  expect(await card.locator('[data-refresh-group]').count()).toBe(7)
   expect(await positions(page)).toEqual(['user-1','execution:1','assistant-1','progress','new-message'])
   expect(await card.getByRole('button').isDisabled()).toBe(true)
   expect(await page.locator('svg').count()).toBe(0)

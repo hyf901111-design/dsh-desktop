@@ -1,3 +1,4 @@
+import {restoreExplicitScope} from './workbench-explicit-scope.js'
 import { componentPluginSourceRequired, componentPluginSourceProhibited, componentSourceAllowsAlternatives } from './component-source-tools.js'
 
 const webOnly = /(?:(?:只|仅)(?:能|可)?(?:使用|用)|走|使用|用)\s*(?:公开)?网页/u
@@ -66,6 +67,7 @@ export function restoreWorkbenchHostContext(value) {
   if (!policy || typeof policy.pluginRequired !== 'boolean' || typeof policy.pluginProhibited !== 'boolean' ||
       policy.pluginRequired && policy.pluginProhibited || typeof policy.preferenceRequest !== 'string' || policy.preferenceRequest.length > 16000 ||
       typeof value.sourceRequirement !== 'string' || !value.sourceRequirement || value.sourceRequirement.length > 5000) ambiguous()
+  if(value.explicitScope!==undefined&&value.workbenchRequest===undefined)ambiguous()
   let workbenchRequest
   if (value.workbenchRequest !== undefined) {
     const request = value.workbenchRequest
@@ -73,5 +75,5 @@ export function restoreWorkbenchHostContext(value) {
         request.dataMode !== undefined && !['source','simulated'].includes(request.dataMode)) ambiguous()
     workbenchRequest = Object.freeze({originalRequest:request.originalRequest,dataMode:request.dataMode ?? 'source'})
   }
-  return Object.freeze({...(workbenchRequest ? {workbenchRequest} : {}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest}),sourceRequirement:value.sourceRequirement})
+  return Object.freeze({...(value.explicitScope === undefined ? {} : {explicitScope:restoreExplicitScope(value.explicitScope)}),...(workbenchRequest ? {workbenchRequest} : {}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest}),sourceRequirement:value.sourceRequirement})
 }

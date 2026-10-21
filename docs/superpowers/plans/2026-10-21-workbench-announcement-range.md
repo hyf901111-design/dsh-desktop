@@ -156,3 +156,11 @@
 ## 后续执行顺序与交付门禁
 
 Task6 → Task7 → Task8 → Task9，各自实现提交后独立复审；只读上一任务复审可与下一源码writer并行，一个源码writer。Task1/3/4/5已闭环，不重复派发。Task9接口已沿generation-watch→feedback与componentDataStatusStore窄查，派发时同时读取task-9-interface-prebrief-draft.md中的actual接口证据与上述正式约束。全部来源/日历/UI修复审阅后统一交接到现有集成，按Task2/本地runbook构建、真实六项复测与完整画布整理/滚动。仍有缺口继续记录，不把测试通过改成全目标完成。
+
+## 最终整分支审查修复接口（I1/I2/I3 + M1）
+
+- 内部单卡字段 `hostContext.explicitScope = {windows:[{start,end}],future:boolean}` 由 `workbench-explicit-scope.js` 统一解析、验证和冻结。workbench真人捕获→Runtime持久化→restore→未改需求retry→每次adapter/原文补读保持同一适用窗口；人工改写清除，公开参数不能携带权限。旧捕获上下文在调用adapter前保守恢复并持久化；歧义直接失败，不能由模型修复人类范围。
+- 用有限新闻/公告/会议/日历等主题及ISO窗口语法区分独立卡片；共享窗口仍共享。同主题历史/未来仅在真人确实给出两组时分配，模型限定词不能移除唯一窗口。无法可靠确定时返回明确日期适用歧义，不猜更宽窗口，不做通用NLU。
+- Runtime保持已规划/首次确立的真实文章timeline义务，拒绝以markdown/custom HTML改变证据边界；保留模型经过同条证据核验后宿主重渲染，最终和outer fallback再检查。一次修复、来源权限、取数预算、财务/表格/Notes边界不变。
+- M1使用独立刷新状态组和单次全历史标记；当前/退役混合时逐组保留历史性。只复测受影响反馈注入/store/renderer与深浅、窄宽浏览器几何及截图。
+- 直接回归与RED→GREEN、接口取舍、实际/合成边界、原始日志及本地提交记录见ignored `.superpowers/sdd/2026-10-21-workbench-announcement-range/final-fix-report.md`。本轮不运行全套、不构建/发布/推送，Task2原生验收仍由root在唯一scoped复审后执行。

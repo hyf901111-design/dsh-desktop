@@ -1,5 +1,6 @@
 import {afterEach,expect,it,vi} from 'vitest'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {fetchedWebPageRecord} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {acquireFeedSourceEvidence} from '../packages/dsh-research-task-runtime/component-feed-acquisition.js'
@@ -20,7 +21,7 @@ async function run(outputs,{read=async()=>page,records=[],hostContext=context}={
   return {childSessionId:'offline-article',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(output)}],sourceRecords:records[start.mock.calls.length-1]??[],acquireFeedEvidence:acquire}),dispose:async()=>{}}
  })
  const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}}});cleanup.push(()=>runtime.dispose())
- const task=await runtime.start({kind:'container',parentSessionId:'p',canvasNodeId:'news',prompt:'工作台：公司研究\n本面板：公司新闻\n查询公司真实新闻和来源链接。仅生成本面板，优先使用 timeline 类型。'},hostContext)
+ const task=await runtime.start({kind:'container',parentSessionId:'p',canvasNodeId:'news',prompt:'工作台：公司研究\n本面板：公司新闻\n查询公司真实新闻和来源链接。仅生成本面板，优先使用 timeline 类型。'},hostContext??undefined)
  await vi.waitFor(()=>expect(['completed','failed']).toContain(runtime.tasks.get(task.taskId).state))
  const result=runtime.tasks.get(task.taskId)
  return {result,start,reads,acquire,model:result.finalOutput?readTemplateModel(JSON.parse(result.finalOutput))?.data:undefined}
@@ -134,4 +135,46 @@ it('keeps the original URL of an omitted source-proven announcement background t
  expect(f.result.state).toBe('completed');expect(f.model.items).toHaveLength(1)
  expect(f.model.items[0]).toMatchObject({title:current.title,time:current.time,url:current.url})
  for(const value of [background.title,background.time,background.url])expect(f.model.note).toContain(value)
+})
+
+// Final I1/I2/I3 counterexamples: fake model/transport, production Runtime.
+it.each(['markdown','html','retained'])('final obligation survives second %s envelope with no originals',async type=>{
+ const replacement=type==='markdown'?{version:1,type,title:'已核验新闻',content:'甲公司发布产品，乙公司已完成政策调整，全部新闻已核验。'}:type==='retained'?JSON.parse(acceptArtifactOutput(JSON.stringify(artifact))):{version:1,type:'html',title:'已核验新闻',html:'<article>甲公司发布产品，全部新闻已核验。</article>'}
+ const f=await run([artifact,replacement],{read:async()=>{throw Error('no original')}})
+ expect(f.result.state).toBe('failed');expect(f.result.finalOutput).toBeUndefined();expect(f.start).toHaveBeenCalledTimes(2);expect(f.result.error).toMatch(/原文|来源/)
+})
+it('final planned article obligation rejects a first markdown attempt too',async()=>{
+ const f=await run([{version:1,type:'markdown',title:'公司新闻',content:'甲公司发布产品，乙公司已完成政策调整，全部新闻已核验。'}],{read:async()=>{throw Error('no original')}})
+ expect(f.result.state).toBe('failed');expect(f.start).toHaveBeenCalledTimes(2)
+})
+it('final canonical sourced retained timeline is rendered by the trusted host',async()=>{
+ const retained=JSON.parse(acceptArtifactOutput(JSON.stringify(artifact)))
+ retained.html='<p>FAKE VISIBLE FACT</p>'+retained.html
+ expect(retained.html).toContain('FAKE VISIBLE FACT')
+ const f=await run([retained],{records:[[fetchedWebPageRecord(url,page.content)]]})
+ expect(f.result.state,f.result.error).toBe('completed');expect(f.start).toHaveBeenCalledOnce();expect(f.model.items).toEqual([item]);expect(f.result.finalOutput).not.toContain('FAKE VISIBLE FACT')
+})
+it('final original-only announcement scope rejects a widened model range',async()=>{
+ const notice={...item,time:'2026-09-10',title:'甲公司产品公告',url:'https://data.eastmoney.com/notices/detail/300308/AN202609100000000001.html'}
+ const source={tool:'public_data_query',args:{operation:'query',source:'eastmoney-announcements'},response:{sourceId:'eastmoney-announcements',records:[{name:'甲公司',code:'300308',title:notice.title,noticeDate:notice.time,time:notice.time+'T08:00:00.000+08:00',url:notice.url}]}}
+ const f=await run([{...artifact,range:'2026-09-01至2026-10-21',items:[notice]}],{records:[[source]],hostContext:{...context,workbenchRequest:{originalRequest:'创建甲公司真实新闻和公告工作台，窗口2026-10-01至2026-10-21。',dataMode:'source'}}})
+ expect(f.result.state).toBe('failed');expect(f.start).toHaveBeenCalledTimes(2)
+})
+it('final legacy news scope is separate from a future meeting scope',async()=>{
+ const f=await run([{...artifact,range:'2026-09-21至2026-10-20'}],{hostContext:{...context,workbenchRequest:{originalRequest:'创建甲公司真实工作台：相关新闻 2026-09-21 至 2026-10-20；未来行业会议 2026-10-21 至 2026-10-31。',dataMode:'source'}}})
+ expect(f.result.state).toBe('completed');expect(f.start).toHaveBeenCalledOnce();expect(f.model.items).toEqual([item])
+})
+
+it.each(['standalone','simulated','supplied'])('final sticky source obligation preserves %s compatibility',async mode=>{
+ const hostContext=mode==='standalone'?null:{...context,workbenchRequest:{originalRequest:mode==='supplied'?'仅用我提供的新闻原文创建新闻工作台。':'创建模拟新闻工作台。',dataMode:mode==='simulated'?'simulated':'source'}}
+ const f=await run([{version:1,type:'markdown',title:'整理内容',content:'这里是用户允许的普通说明文字，保留原始材料和演示内容。'}],{hostContext})
+ expect(f.result.state,f.result.error).toBe('completed');expect(f.start).toHaveBeenCalledOnce();expect(f.reads).not.toHaveBeenCalled()
+})
+it('final original-only announcement window keeps a valid record and an excluded proven background without false counts',async()=>{
+ const notices=['2026-10-15','2026-09-10'].map((time,index)=>({id:'notice-'+index,title:index?'甲公司历史公告':'甲公司产品公告',actor:'甲公司',time,url:`https://data.eastmoney.com/notices/detail/300308/AN${time.replaceAll('-','')}0000000001.html`}))
+ const source={tool:'public_data_query',args:{operation:'query',source:'eastmoney-announcements'},response:{sourceId:'eastmoney-announcements',records:notices.map(n=>({name:'甲公司',code:'300308',title:n.title,noticeDate:n.time,time:n.time+'T08:00:00.000+08:00',url:n.url}))}}
+ const f=await run([{...artifact,title:'2条已核验公告',range:'2026-09-01至2026-10-21',items:notices}],{records:[[source]],hostContext:{...context,workbenchRequest:{originalRequest:'创建甲公司真实新闻和公告工作台，窗口2026-10-01至2026-10-21。',dataMode:'source'}}})
+ expect(f.result.state,f.result.error).toBe('completed');expect(f.start).toHaveBeenCalledTimes(2)
+ expect(f.model.items).toHaveLength(1);expect(f.model.items[0].time).toBe('2026-10-15');expect(f.model.title).not.toContain('2条')
+ for(const value of [notices[1].title,notices[1].time,notices[1].url,'展示 1 条','未计入'])expect(f.model.note).toContain(value)
 })

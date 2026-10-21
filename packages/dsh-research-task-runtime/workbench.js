@@ -1,3 +1,4 @@
+import {workbenchExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js';
 import {workbenchSourcePolicy} from './workbench-source-policy.js';
 import {ATTACHMENT_GUIDANCE} from './attachment-template-contract.js';
 import {AUDIO_GUIDANCE} from './audio-template-contract.js';
@@ -117,7 +118,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         const run = async () => {
             const input = validateWorkbench(args);
             // Resolve before queuing so ambiguous human restrictions remain explicit.
-            const contexts = new Map(originalRequest ? input.panels.filter(p => !p.artifact && !p.publicData).map(panel => [JSON.stringify([panel.title,panel.type,panel.prompt]), {sourcePolicy:input.dataMode !== 'simulated' ? workbenchSourcePolicy(originalRequest, panel) : {pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt},sourceRequirement:panel.prompt,workbenchRequest:{originalRequest:input.originalRequest,dataMode:input.dataMode ?? 'source'}}]) : []);
+            const contexts = new Map(originalRequest ? input.panels.filter(p => !p.artifact && !p.publicData).map(panel => [JSON.stringify([panel.title,panel.type,panel.prompt]), {sourcePolicy:input.dataMode !== 'simulated' ? workbenchSourcePolicy(originalRequest, panel) : {pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt},sourceRequirement:panel.prompt,...(usesHumanSourceScope({originalRequest,dataMode:input.dataMode}) ? {explicitScope:workbenchExplicitScope(originalRequest,panel)} : {}),workbenchRequest:{originalRequest:input.originalRequest,dataMode:input.dataMode ?? 'source'}}]) : []);
             const panelContext = panel => contexts.get(JSON.stringify([panel.title,panel.type,panel.prompt]));
             const parentSessionId = exec.agent?.session?.id;
             if (!str(parentSessionId, 256) || !ctx.agents.get(parentSessionId))
