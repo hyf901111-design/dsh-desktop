@@ -24,6 +24,33 @@ it('runs an independent short review with the parent selected model and no paren
   expect(JSON.stringify(result)).not.toContain('PRIVATE REASONING')
 })
 
+for (const text of ['这一段讨论写作方法，先提出观点，再解释理由。', '12 + 8 = 20，总数应为20。', '预计2026年项目收入50万元，用于场地和设备预算。']) it('omits unrelated consensus checks for an ordinary note: ' + text, async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  const reviewed = await generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text }] })
+  expect(reviewed.checks).toEqual([expect.objectContaining({ kind: 'review', status: 'completed' })])
+})
+
+it('keeps an honest unavailable consensus check for a reliably extracted securities forecast with no actual source', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  const reviewed = await generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text: '600519.SH 报告基准日20261020。预计2026年EPS 76元。' }] })
+  expect(reviewed.issues).toEqual([])
+  expect(reviewed.checks).toContainEqual(expect.objectContaining({ kind: 'consensus', status: 'unavailable' }))
+})
+
+it('reports a skipped consensus check only for clear securities annual forecast intent with missing comparison fields', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  const reviewed = await generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text: '600519.SH 预计2026年EPS 76元，但尚未明确报告基准日。' }] })
+  expect(reviewed.issues).toEqual([])
+  expect(reviewed.checks).toContainEqual(expect.objectContaining({ kind: 'consensus', status: 'skipped', detail: expect.stringContaining('基准日') }))
+})
+
+it('does not add a financial check to ordinary changed paragraphs because an uncovered section contains a forecast', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  const reviewed = await generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text: '先分析原因，再提出解决办法。' }, { id: 'b', type: 'paragraph', text: '600519.SH 预计2026年EPS 76元。' }] })
+  expect(reviewed.coveredBlockIds).toEqual(['a'])
+  expect(reviewed.checks.some(check => check.kind === 'consensus')).toBe(false)
+})
+
 it('only accepts unique target quotes and evidence whose actual note text is present', async () => {
   const { generateNoteChallenge } = await load()
   const valid = { blockId: 'a', quote: '收入增长10%', category: 'contradiction', message: '两处收入方向相反，请核对是否同一期间。', evidence: [{ kind: 'note', label: '另一段原文', blockId: 'b', quote: '收入减少10%' }] }

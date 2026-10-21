@@ -149,8 +149,8 @@ export function NotesChallengeTab({scope,controller,react:runtime}) {
   const box={margin:0,padding:'10px 0',borderBottom:'1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.22))'}
   const label={margin:'0 0 8px',fontSize:12,fontWeight:600}
   if(!snapshot || snapshot.sessionId!==scope.sessionId)return h('div',{'data-notes-challenge-panel':'',style:{padding:16},children:'尚无可查看的挑战依据。'})
-  const incomplete=snapshot.checks.filter(check=>check.status!=='completed')
-  const status={completed:'已完成',unavailable:'不可用',skipped:'未检查',partial:'部分完成'}
+  const incomplete=snapshot.checks.filter(check=>['partial','unavailable'].includes(check.status))
+  const status={completed:'已完成',unavailable:'不可用',skipped:'已跳过',partial:'部分完成'}
   return h('section',{'data-notes-challenge-panel':'','aria-label':'挑战依据',style:{height:'100%',boxSizing:'border-box',minHeight:0,overflow:'auto',padding:'8px 16px 20px',color:'inherit',fontSize:13,lineHeight:1.65,overflowWrap:'anywhere'}},
     snapshot.quote&&h('section',{style:box},h('h3',{style:label},'原文'),h('blockquote',{style:{margin:0,paddingLeft:10,borderLeft:'2px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35))',whiteSpace:'pre-wrap'}},snapshot.quote)),
     h('section',{style:box},h('h3',{style:label},'依据'),snapshot.evidence.length?snapshot.evidence.map((item,index)=>h('article',{key:index,style:{marginBottom:index<snapshot.evidence.length-1?16:0}},h('h4',{style:{...label,fontWeight:500}},item.label),

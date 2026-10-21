@@ -102,6 +102,22 @@ it('renders text and data through React escaping with coverage and incomplete ch
  const html=renderToStaticMarkup(React.createElement(NotesChallengeTab,{scope:{sessionId:'s'},controller:{storeFor:()=>store},react:React}))
  expect(html).toContain('&lt;img');expect(html).not.toContain('<img');expect(html).toContain('2 / 5');expect(html).toContain('infodb 暂不可用')
 })
+it.each([
+ {checks:[{kind:'review',status:'completed',detail:'正文4段检查完成'},{kind:'consensus',status:'skipped',detail:'非金融笔记，不适用一致预期专项'}],pending:[]},
+ {checks:[{kind:'review',status:'completed',detail:'正文4段检查完成'},{kind:'consensus',status:'skipped',detail:'非金融笔记，不适用一致预期专项'},{kind:'history',status:'partial',detail:'历史快照仅覆盖部分时期'},{kind:'data',status:'unavailable',detail:'行情来源当前不可用'}],pending:['历史快照仅覆盖部分时期','行情来源当前不可用']}
+])('keeps skipped checks visible without counting them as completed or incomplete ($pending.length pending)',async({checks,pending})=>{
+ const snapshot={sessionId:'s',quote:'普通笔记',evidence:[evidence],checks,coverage:{checked:4,total:4},issues:[]},before=JSON.stringify(snapshot)
+ const store={subscribe:()=>()=>{},getSnapshot:()=>snapshot},window=new Window()
+ try{
+  window.document.body.innerHTML=renderToStaticMarkup(React.createElement(NotesChallengeTab,{scope:{sessionId:'s'},controller:{storeFor:()=>store},react:React}))
+  const text=window.document.body.textContent
+  expect(text).toContain('consensus · 已跳过');expect(text).not.toContain('consensus · 已完成')
+  expect(text).toContain('非金融笔记，不适用一致预期专项');expect(text).toContain('4 / 4 段')
+  const section=[...window.document.querySelectorAll('h3')].find(heading=>heading.textContent==='未完成项')?.parentElement
+  if(pending.length){expect([...section.querySelectorAll('p')].map(item=>item.textContent)).toEqual(pending)}else expect(section).toBeUndefined()
+  expect(JSON.stringify(snapshot)).toBe(before)
+ }finally{await window.happyDOM.abort()}
+})
 it('installs the controller inside the real coordinator attach scope and upgrades definitions idempotently',async()=>{
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const patched=patchNotesChallengeClient(source);expect(patchNotesChallengeClient(patched)).toBe(patched)

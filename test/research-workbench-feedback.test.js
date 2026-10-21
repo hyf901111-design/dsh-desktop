@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
-import {publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,patchResearchWorkbenchFeedback,researchWorkbenchReceiptPlans} from '../scripts/lib/research-workbench-feedback.mjs'
+import {publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,patchResearchWorkbenchFeedback,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors} from '../scripts/lib/research-workbench-feedback.mjs'
 import {planningResponseMetadata} from '../scripts/lib/research-planning-feedback.mjs'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
@@ -98,19 +98,37 @@ it('keeps successful creation receipts for a visible footer after a long final a
  expect(researchWorkbenchReceiptPlans([...nodes.keys()],nodes,planningResponseMetadata)).toEqual([{id:'first-plan',count:2},{id:'second-plan',count:2}])
 })
 
+it('anchors each persisted plan to its first actual receipt and keeps retries on that turn',()=>{
+ const tool=(id,count)=>({kind:'tool-call',data:{root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:JSON.stringify({planId:id,status:'accepted',panelCount:count})}]}}})
+ const nodes=new Map([['original',tool('first-plan',2)],['second',tool('second-plan',1)],['retry',tool('first-plan',3)],['prose',{kind:'assistant-step',data:{text:'first-plan'}}]])
+ const flow=[{kind:'execution',key:'execution:1',nodeKeys:['original']},{kind:'node',key:'prose'},{kind:'execution',key:'execution:2',nodeKeys:['second','retry']},{kind:'node',key:'new-user'}]
+ expect([...researchWorkbenchReceiptAnchors(flow,nodes,planningResponseMetadata)]).toEqual([['execution:1',[{id:'first-plan',count:3}]],['execution:2',[{id:'second-plan',count:1}]]])
+ // A fresh restored session with a reused plan ID has its own receipt location.
+ expect([...researchWorkbenchReceiptAnchors([{kind:'node',key:'retry'}],nodes,planningResponseMetadata)]).toEqual([['retry',[{id:'first-plan',count:3}]]])
+ expect([...researchWorkbenchReceiptAnchors([{kind:'node',key:'prose'}],nodes,planningResponseMetadata)]).toEqual([])
+})
+
+it('places feedback after the owning turn answer and falls back to the receipt when turn metadata is absent',()=>{
+ const tool=(id,turn)=>({kind:'tool-call',data:{turn,root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:JSON.stringify({planId:id,status:'accepted',panelCount:1})}]}}})
+ const nodes=new Map([['receipt',tool('first',1)],['answer',{kind:'assistant-step',data:{turn:1}}],['tail',{kind:'turn-tail',data:{turn:1}}],['hello',{kind:'user',data:{turn:1}}],['later-answer',{kind:'assistant-step',data:{turn:2}}],['unknown',tool('second',undefined)]])
+ const flow=[{kind:'execution',key:'execution:1',turn:1,nodeKeys:['receipt']},...['answer','tail','hello','later-answer','unknown'].map(key=>({kind:'node',key}))]
+ expect([...researchWorkbenchReceiptAnchors(flow,nodes,planningResponseMetadata,node=>node?.data?.turn??null)]).toEqual([['tail',[{id:'first',count:1}]],['unknown',[{id:'second',count:1}]]])
+})
+
 it('installs a live status for settled creation turns while preserving the existing planning-only feedback',()=>{
  const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const source=patchResearchCreationProgress(original)
  expect(source).toContain('data-research-workbench-progress')
  expect(source).toContain('const workbenchMeta=planningResponseMetadata(activityNodes)')
- expect(source).toContain('sessionId, plans:workbenchMeta.plans')
+ expect(source).not.toContain('sessionId, plans:workbenchMeta.plans')
  expect(source.indexOf('footer:true')).toBeGreaterThan(source.indexOf('function ChatView('))
- expect(source).toContain('researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata)')
+ expect(source).toContain('researchWorkbenchReceiptAnchors(renderFlow,nodeStore,planningResponseMetadata,conversationNodeTurn)')
+ expect(source).not.toContain('ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}')
  expect(source.includes('publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)')).toBe(true)
  expect(source).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber')
  expect(patchResearchWorkbenchFeedback(source)).toBe(source)
  expect(patchResearchCreationProgress(source)).toBe(source)
- const start=source.indexOf('/* ework:workbench-feedback:v4 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const start=source.indexOf('/* ework:workbench-feedback:v5 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
  const element=(type,props)=>({type,props})
  let snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
  const Component=runInNewContext(source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[snapshot,()=>{}],useEffect:()=>{}},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
@@ -127,9 +145,18 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('上次状态')
  snapshot={...snapshot,active:true,nodes:[{id:'other',planId:'other-plan',status:'completed'}]}
  expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
- const legacy=source.replace('/* ework:workbench-feedback:v4 */','/* ework:workbench-feedback:v1 */')
+ const legacy=source.replace('/* ework:workbench-feedback:v5 */','/* ework:workbench-feedback:v1 */')
   .replace('\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);','')
   .replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
   .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
  expect(patchResearchWorkbenchFeedback(legacy)).toBe(source)
+ // Simulate the installed v4 wiring, including its global footer and duplicate
+ // execution status, so an existing client patch upgrades to the same output.
+ const v4=source.replace('/* ework:workbench-feedback:v5 */','/* ework:workbench-feedback:v4 */')
+  .replace('/* ework:workbench-flow:v1 */\nconst workbenchReceiptAnchors=researchWorkbenchReceiptAnchors(renderFlow,nodeStore,planningResponseMetadata,conversationNodeTurn);\n','')
+  .replace('const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);')
+  .replace('renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{','renderFlow.map((entry) => {')
+  .replace('};const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];})','}), workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null')
+  .replace('planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,','workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,')
+ expect(patchResearchWorkbenchFeedback(v4)).toBe(source)
 })

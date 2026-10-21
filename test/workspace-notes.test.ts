@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from 'vitest'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import * as Y from 'yjs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { NotesStore } from '../src/main/notes/store'
@@ -100,4 +101,63 @@ it('keeps the original selection baseline when a component request falls back to
   const preview = noteSuggestionPreview({ kind: 'text', markdown: '资料不足' }, captured)
   expect(preview).toMatchObject({ from: 12, to: 14, selectedText: '选区' })
   expect(canApplySuggestion({ documentId: 'session', fingerprint: preview.fingerprint }, { documentId: 'session', fingerprint: 'edited while creating component' })).toBe(false)
+})
+
+function challengeMetadataSnapshots() {
+  const doc = new Y.Doc(), threads = doc.getMap<Y.Map<any>>('threads'), thread = new Y.Map<any>()
+  doc.getMap('note-challenge').set('level', 2)
+  thread.set('metadata', { kind:'ework-challenge-v1', draft:'' }); threads.set('math', thread)
+  let observed = ''
+  const encode = () => Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64')
+  const collect = () => { observed = encode() }
+  threads.observeDeep(collect)
+  thread.set('metadata', { kind:'ework-challenge-v1', draft:'保留这份未发送回复' })
+  threads.unobserveDeep(collect)
+  const settled = encode()
+  return { doc, thread, observed, settled, encode }
+}
+
+it('clears a matching comment draft after autosave even when observer and settled Yjs encodings differ', () => {
+  const { root, store } = setup(), state = challengeMetadataSnapshots()
+  try {
+    expect(state.observed).not.toBe(state.settled)
+    store.draft('owner','session','window-a',0,{...content('正文未改变'),yjs:state.observed})
+    store.save('owner','session',0,{...content('正文未改变'),yjs:state.settled},'window-a')
+    const persisted = JSON.parse(readFileSync(join(root,readdirSync(root)[0]!), 'utf8'))
+    expect(persisted.drafts).toEqual([])
+    expect(new NotesStore(root).load('owner','session').draft).toBeUndefined()
+    expect(persisted.saved.yjs).toBe(state.settled)
+  } finally { state.doc.destroy() }
+})
+
+it('ignores an older equivalent raw Yjs draft on restart without rewriting stored notes', () => {
+  const { root, store } = setup(), state = challengeMetadataSnapshots()
+  try {
+    store.save('owner','session',0,{...content('正文未改变'),yjs:state.settled})
+    store.draft('owner','session','old-window',0,{...content('正文未改变'),yjs:state.observed})
+    const path = join(root,readdirSync(root)[0]!), before = readFileSync(path, 'utf8')
+    const loaded = new NotesStore(root).load('owner','session')
+    expect(loaded.draft).toBeUndefined()
+    expect(loaded.saved.yjs).toBe(state.settled)
+    expect(readFileSync(path, 'utf8')).toBe(before)
+  } finally { state.doc.destroy() }
+})
+
+it.each(['reply','level','body'] as const)('retains genuine %s changes in a recovery draft despite matching other note state', change => {
+  const { root, store } = setup(), state = challengeMetadataSnapshots()
+  try {
+    store.save('owner','session',0,{...content('正文未改变'),yjs:state.settled})
+    if (change === 'reply') state.thread.set('metadata',{kind:'ework-challenge-v1',draft:'另一份不能丢失的回复'})
+    if (change === 'level') state.doc.getMap('note-challenge').set('level',3)
+    const changed = {...content(change === 'body' ? '正文真实改变' : '正文未改变'), yjs:state.encode()}
+    store.draft('owner','session','window-a',1,changed)
+    expect(new NotesStore(root).load('owner','session').draft).toMatchObject(changed)
+  } finally { state.doc.destroy() }
+})
+
+it('preserves a differing opaque Yjs draft if its update cannot be decoded safely', () => {
+  const { store } = setup()
+  store.save('owner','session',0,{...content('正文未改变'),yjs:'AQID'})
+  store.draft('owner','session','window-a',1,{...content('正文未改变'),yjs:'BAUG'})
+  expect(store.load('owner','session').draft?.yjs).toBe('BAUG')
 })
