@@ -26,10 +26,19 @@ export function ChallengePicker({value,onChange,disabled=false,dark=false}:{valu
  useLayoutEffect(()=>{
   if(!open)return
   const trigger=root.current?.querySelector('button');if(!trigger)return
-  const measure=()=>{if(!trigger.isConnected||!trigger.getClientRects().length||getComputedStyle(trigger).visibility==='hidden'){setOpen(false);return}const r=trigger.getBoundingClientRect(),next={left:Math.max(8,Math.min(r.right-280,window.innerWidth-288)),top:Math.max(8,Math.min(r.bottom+6,window.innerHeight-120))};setPosition(old=>old.left===next.left&&old.top===next.top?old:next)}
-  const resize=new ResizeObserver(measure);resize.observe(trigger);const header=trigger.closest('[data-ework-notes-session]');if(header)resize.observe(header)
-  window.addEventListener('resize',measure);window.addEventListener('scroll',measure,true);measure()
-  return()=>{resize.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('scroll',measure,true)}
+  const header=trigger.closest<HTMLElement>('[data-ework-notes-session]'),sessionId=header?.dataset.eworkNotesSession,surface=(sessionId?document.querySelector('[data-note-source-session="'+CSS.escape(sessionId)+'"]'):root.current)?.closest<HTMLElement>('.en-root')
+  const visible=()=>trigger.isConnected&&trigger.getClientRects().length>0&&getComputedStyle(trigger).visibility!=='hidden'&&!trigger.closest('[hidden],[aria-hidden="true"],[inert]')&&surface?.dataset.settingsOpen!=='true'&&(!surface||!surface.hidden&&getComputedStyle(surface).display!=='none'&&getComputedStyle(surface).visibility!=='hidden')&&!document.querySelector('.VOzbGW_overlay:not([hidden])')&&(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')
+  const measure=()=>{if(!visible()){drag.current=false;setPressed(false);setOpen(false);return false}const r=trigger.getBoundingClientRect(),next={left:Math.max(8,Math.min(r.right-280,window.innerWidth-288)),top:Math.max(8,Math.min(r.bottom+6,window.innerHeight-120))};setPosition(old=>old.left===next.left&&old.top===next.top?old:next);return true}
+  const resize=new ResizeObserver(measure);resize.observe(trigger);if(header)resize.observe(header)
+  // Observe only the resident surface and trigger ancestors; native settings
+  // portals are direct body children. No observer follows editor mutations.
+  const visibility=new MutationObserver(measure),attributes={attributes:true,attributeFilter:['class','style','hidden','aria-hidden','inert','data-settings-open','data-workspace-surface']}
+  for(let ancestor=trigger.parentElement;ancestor&&ancestor!==document.body;ancestor=ancestor.parentElement)visibility.observe(ancestor,attributes)
+  if(surface)visibility.observe(surface,attributes)
+  visibility.observe(document.body,{...attributes,childList:true})
+  window.addEventListener('resize',measure);window.addEventListener('scroll',measure,true);document.addEventListener('sherlock:workspace-surface-change',measure)
+  if(measure())track.current?.focus({preventScroll:true})
+  return()=>{resize.disconnect();visibility.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('scroll',measure,true);document.removeEventListener('sherlock:workspace-surface-change',measure)}
  },[open])
  useEffect(()=>{
   if(!open)return
