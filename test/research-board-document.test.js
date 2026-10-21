@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as Y from 'yjs'
+import {layoutWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import {researchWorkbenchMatrixNodes} from '../scripts/lib/research-workbench-growth.mjs'
 import {
   createDocument,
   encodeDocument,
@@ -23,6 +25,13 @@ const initial = {
   ]
 }
 describe('shared research document', () => {
+  it('preserves semantic wide layout across a frozen share snapshot and document reload',()=>{
+    const artifacts=layoutWorkbench([{type:'html',title:'交接比较',prompt:'演练记录',size:'large',layout:'wide'},{type:'tasks',title:'执行清单',prompt:'演练任务',size:'large'}]).map((p,i)=>({id:'wide-'+i,kind:'generated-container',title:p.title,workbenchId:'w',workbenchIndex:i,x:p.x+p.width/2,y:p.y+p.height/2,width:p.width,height:p.height,...(p.workbenchSpan?{workbenchSpan:true,workbenchLayoutVersion:1}:{})}));
+    const original={files:[],artifacts},frozen=freezeSnapshot({canvas:original}).canvas;
+    expect(frozen.artifacts[0]).toMatchObject({workbenchSpan:true,workbenchLayoutVersion:1});
+    const doc=createDocument(original),restored=decodeDocument(encodeDocument(doc));
+    try{const projected=projectDocument(restored);expect(projected).toEqual(original);expect(researchWorkbenchMatrixNodes(projected.artifacts,0,0)).toEqual(researchWorkbenchMatrixNodes(artifacts,0,0))}finally{doc.destroy();restored.destroy()}
+  });
   it('merges independent geometry and collaborative text in both delivery orders', () => {
     for (const reverse of [false, true]) {
       const state = encodeDocument(createDocument(initial))

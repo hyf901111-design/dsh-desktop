@@ -40,6 +40,10 @@ async function setup(start) {
 }
 
 describe('领域自适应模拟工作台延后生成', () => {
+  it('keeps the type parameter aligned with the shared-context custom interaction route',async()=>{
+    const f=await setup(()=>{throw Error('metadata only')});
+    try{const schema=JSON.stringify(f.tool.parameters);expect(schema).not.toContain('省略dataMode/generationMode/sharedContext/originalRequest');expect(schema).toContain('保留deferred与sharedContext')}finally{await f.close()}
+  });
   it('keeps offline custom content separate from invented links and external resources',()=>{
     const prepare=html=>prepareSimulatedArtifact({type:'html',title:'演练交互',artifact:{version:1,type:'html',title:'演练交互',html}});
     expect(prepare('<main><svg xmlns="http://www.w3.org/2000/svg"><circle r="3"/></svg><p>演练记录</p><a href="#detail">详情</a><section id="detail">原有说明</section></main>').html).toContain('原有说明');

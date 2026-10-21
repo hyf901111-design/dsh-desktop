@@ -3,6 +3,7 @@ import {pathToFileURL} from 'node:url'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {refineStoredTemplateHtml} from '../packages/dsh-research-task-runtime/stored-template-refinements.js'
+import {buildResearchHtmlPreview} from '../packages/dsh-research-task-runtime/html-artifact.js'
 let browser
 beforeAll(async()=>{
  const pw=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -11,6 +12,21 @@ beforeAll(async()=>{
 afterAll(async()=>{await browser?.close()})
 const rendered=data=>JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
 const strip=html=>html.replace(/\/\* reading-layout-v1 \*\/[^]*?\/\* reading-layout-end \*\//u,'')
+it('keeps the entire schedule label and owner visible inside the real themed host preview',async()=>{
+ const data={version:1,type:'gantt',title:'海上作业排程',asOf:'演练记录',items:[{label:'【绞车泳道】S2 绞车占用·沉积物柱状取样与采水交接',owner:'B 大副/绞车操作员',start:'2026-10-22',end:'2026-10-23',detail:'完整说明',progress:0}]},spec=rendered(data);
+ for(const mode of ['light','dark','openterminal','enterprise']){
+  const page=await browser.newPage({viewport:{width:656,height:480}});
+  try{
+   await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,mode==='light'?'light':'dark',{workbench:true,notoFont:'runtime'}));
+   const frame=page.frameLocator('iframe');await frame.locator('.gantt-task').waitFor();
+   await frame.locator('html').evaluate((el,mode)=>el.dataset.workbenchStyle=mode,mode);
+   const box=await frame.locator('.gantt-task').boundingBox(),owner=await frame.locator('.gantt-task small').boundingBox();
+   expect(owner.y+owner.height).toBeLessThanOrEqual(box.y+box.height+.5);
+   expect(await frame.locator('.gantt-task').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
+   await frame.locator('.gantt-task').click();expect(await frame.locator('.gantt-readout').textContent()).toContain('完整说明');
+  }finally{await page.close()}
+ }
+},20000)
 it('keeps a long checklist subject above the filters in current and saved narrow components',async()=>{
  const data={version:1,type:'tasks',title:'出航准备',subject:'极夜科考·出航演练｜离港倒计时18小时（锚点2026-10-22 12:00 Asia/Shanghai）',asOf:'演练记录',mode:'local',items:[{id:'a',title:'检查设备',owner:'采样与实验室负责人',status:'进行中',completed:false}]},spec=rendered(data)
  for(const html of [spec.html,refineStoredTemplateHtml(strip(spec.html))]){

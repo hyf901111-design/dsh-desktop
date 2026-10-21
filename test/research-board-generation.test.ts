@@ -307,6 +307,16 @@ it('workbench component signals are independent of the planning conversation', a
   boardLifetime.abort()
   for (const [request] of submit.mock.calls) expect(request.signal.aborted).toBe(true)
 })
+it('keeps the planner wide-reading contract on newly created shared workbench nodes',async()=>{
+  const {integration,service,canvas}=await fixture();
+  service.taskAuthority=()=>({localSessionId:'local',signal:new AbortController().signal,snapshot:{board:{sharingEpoch:1},tasks:[],snapshot:{canvas}}} as any);
+  vi.spyOn(integration,'submit').mockResolvedValue({} as any);
+  const key=integration.journal.prepare('user','board','wide-scope',{text:'宽比较'},1);
+  await (integration as any).createSharedWorkbench(key,'request',{requestId:'wide',title:'交接分析',panels:[{title:'交接比较',prompt:'演练对象比较',type:'html',size:'large',layout:'wide'},{title:'执行清单',prompt:'演练任务',type:'html',size:'small'}]},{references:[]},new AbortController().signal);
+  const nodes=integration.journal.get(key).workbench.panels.map((p:any)=>p.node);
+  expect(nodes[0]).toMatchObject({workbenchSpan:true,workbenchLayoutVersion:1});expect(nodes[1].y-nodes[1].height/2).toBeGreaterThan(nodes[0].y+nodes[0].height/2);
+  integration.stop();
+});
 it.each([[undefined, 0], ['interrupted', 0], ['paused', 0], [undefined, 1], ['interrupted', 1], ['paused', 1]])('recovers a drained yield after reconnect (state=%s, attempt=%s)', async (runtimeState, attempt) => {
   const task: any = { taskId: 'original', requestMessageId: 'message', initiatorId: 'user', status: 'running', conversation: true, yieldRequested: true, executorId: 'original-executor' }
   const { integration, service, runtimeRequest, commands } = await fixture([task])

@@ -1481,6 +1481,7 @@ export class ResearchBoardIntegration {
           containerSizePreset: p.size, sizeMode: 'auto', generationStatus: 'queued',
           stackOrder: Math.max(0, ...[...canvas.files, ...canvas.artifacts].map(n => Number(n.stackOrder) || 0)) + index + 1,
           workbenchId: id, workbenchIndex: index, workbenchColumns: plan.panels.length === 2 || plan.panels.length === 4 ? 2 : 3,
+          ...(p.workbenchSpan===true&&p.workbenchLayoutVersion===1?{workbenchSpan:true,workbenchLayoutVersion:1}:{}),
           workbenchRevealAt: Date.now() + index * 500
         }
       }))
