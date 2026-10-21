@@ -9,96 +9,281 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "减少中文字段与场景备注的无效规划重试",
+        "featureName": "笔记五档AI挑战与原文评论、回复、优化和证据侧栏",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "317143c43400348c15c68c563f019d3a30ad0e48",
-        "tipCommit": "e204b7303d0a54913213db6e7630e420007238f9",
+        "baseCommit": "e204b7303d0a54913213db6e7630e420007238f9",
+        "tipCommit": "1ae96fca73a6c8cca32f177caa9c5cf61b4f8741",
         "commits": [
           {
-            "commit": "e204b7303d0a54913213db6e7630e420007238f9",
+            "commit": "f7fa7381ff23a0006a3df1ba550a4dc8bd58b323",
             "parents": [
-              "317143c43400348c15c68c563f019d3a30ad0e48"
+              "e204b7303d0a54913213db6e7630e420007238f9"
             ],
-            "subject": "支持中文业务字段与完整记录场景备注以减少规划返工"
+            "subject": "恢复笔记和对话模式冷启动时的组件生成反馈"
+          },
+          {
+            "commit": "ce19775fb45d14683d2dc3fe9fcf3d5606727ecb",
+            "parents": [
+              "f7fa7381ff23a0006a3df1ba550a4dc8bd58b323"
+            ],
+            "subject": "减少不可达数据源重复等待并优先获取政策原文"
+          },
+          {
+            "commit": "03bb42dcd5532fe89e394c2d0ca7be96e5fb7b6c",
+            "parents": [
+              "ce19775fb45d14683d2dc3fe9fcf3d5606727ecb"
+            ],
+            "subject": "新增笔记挑战独立审查运行时和一致预期核验"
+          },
+          {
+            "commit": "a0a44617e33b9ef11f477d9391c3b943d0516599",
+            "parents": [
+              "03bb42dcd5532fe89e394c2d0ca7be96e5fb7b6c"
+            ],
+            "subject": "新增笔记挑战右侧证据页签与会话隔离"
+          },
+          {
+            "commit": "dfddbae75502d2de682c727756bbcbe69b3cc6fb",
+            "parents": [
+              "a0a44617e33b9ef11f477d9391c3b943d0516599"
+            ],
+            "subject": "补充笔记挑战IPC隔离取消与无副作用验证"
+          },
+          {
+            "commit": "16eba9baec2635757c7f1e12ce23d221d8081d41",
+            "parents": [
+              "dfddbae75502d2de682c727756bbcbe69b3cc6fb"
+            ],
+            "subject": "修正笔记挑战停顿限频预算与换行锚点"
+          },
+          {
+            "commit": "d07cbdbd5f904c33a15d6ab75cd05f756e51008e",
+            "parents": [
+              "16eba9baec2635757c7f1e12ce23d221d8081d41"
+            ],
+            "subject": "避免将季度及调整口径预测误判为全年一致预期偏离"
+          },
+          {
+            "commit": "a790e1ac8264ad5d2858f2169782616492dd147d",
+            "parents": [
+              "d07cbdbd5f904c33a15d6ab75cd05f756e51008e"
+            ],
+            "subject": "补充笔记预测月度区间和半年口径别名校验"
+          },
+          {
+            "commit": "3fdc1e8314b305a24c68a6c946881a505b107b51",
+            "parents": [
+              "a790e1ac8264ad5d2858f2169782616492dd147d"
+            ],
+            "subject": "限制笔记挑战失败重试并修正严格类型检查"
+          },
+          {
+            "commit": "1ae96fca73a6c8cca32f177caa9c5cf61b4f8741",
+            "parents": [
+              "3fdc1e8314b305a24c68a6c946881a505b107b51"
+            ],
+            "subject": "在笔记中实现五档AI挑战与原文评论回复和优化交互"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "docs/superpowers/plans/2026-10-21-workbench-shared-data-views.md"
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-21-notes-challenge-implementation.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-21-workbench-source-latency-followup.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-21-notes-challenge-implementation.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/dataset-view-artifact.js"
+            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/notes-challenge-bounds.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/notes-challenge-consensus.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/notes-challenge-runtime.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/notes-challenge-runtime.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/notes-challenge-client.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "path": "scripts/lib/notes-client.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
+            "path": "scripts/lib/research-workbench-feedback.mjs"
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
+            "path": "skills/ework-free-data-sources/SKILL.md"
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/references/shared-data-views.md"
+            "path": "skills/ework-free-data-sources/_meta.json"
           },
           {
             "status": "M",
-            "path": "test/bundled-component-skill.test.js"
+            "path": "skills/ework-free-data-sources/references/generation.md"
           },
           {
             "status": "M",
-            "path": "test/dataset-view-browser.test.js"
+            "path": "skills/ework-free-data-sources/scripts/query.mjs"
           },
           {
             "status": "M",
-            "path": "test/integration-bundled-skill.test.js"
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-close.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-focus.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-review.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-stop-active.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-stop.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-thumb.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/challenge-anchors.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/challenge-controller.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/challenge-scheduler.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/challenge-ui.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/challenge.css"
           },
           {
             "status": "M",
-            "path": "test/workbench-dataset-view.test.js"
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/mount.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/notes-challenge.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/free-data-sources.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-anchors.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-client-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-consensus.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-editor-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-scheduler.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
+              "env",
+              "SHERLOCK_TEST_SIDEBAR_SOURCE=/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js",
               "./node_modules/.bin/vitest",
               "run",
               "--maxWorkers=1",
-              "test/dataset-view-contract.test.js",
-              "test/workbench-dataset-view.test.js",
-              "test/dataset-view-artifact.test.js",
-              "test/dataset-view-browser.test.js",
-              "test/workbench-deferred.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js"
+              "test/notes-challenge-runtime.test.js",
+              "test/notes-challenge-consensus.test.js",
+              "test/notes-challenge-scheduler.test.ts",
+              "test/notes-challenge-anchors.test.ts",
+              "test/notes-challenge-service.test.ts",
+              "test/notes-service.test.ts",
+              "test/notes-stream.test.ts",
+              "test/notes-challenge-client.test.js",
+              "test/notes-challenge-client-browser.test.js",
+              "test/notes-client.test.js",
+              "test/notes-challenge-editor-browser.test.js",
+              "test/notes-inline-generation-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "116项相关检查通过；/tmp/workbench-dataset-native-parameter-green-20261021.log；新增浏览器用例另有下项最终验证",
-            "verifiedCommit": "e204b7303d0a54913213db6e7630e420007238f9",
-            "completedAt": "2026-10-21T05:41:56.607431+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "--maxWorkers=1",
-              "test/dataset-view-browser.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "最终8项实际宿主浏览器检查通过，含中文筛选/详情和安全场景备注；/tmp/workbench-dataset-native-parameter-browser-20261021.log",
-            "verifiedCommit": "e204b7303d0a54913213db6e7630e420007238f9",
-            "completedAt": "2026-10-21T05:41:56.607431+00:00",
+            "summary": "12文件113项聚焦验证通过；最后CSS滚轮修正后真实mountNotes浏览器4/4再次通过；日志/tmp/notes-challenge-focused-final-20261021.log及/tmp/notes-challenge-editor-browser-final-20261021.log",
+            "verifiedCommit": "1ae96fca73a6c8cca32f177caa9c5cf61b4f8741",
+            "completedAt": "2026-10-21T06:39:45.179812+00:00",
             "timeoutMs": 180000
           },
           {
@@ -108,115 +293,30 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/workbench-dataset-native-parameter-typecheck-20261021.log",
-            "verifiedCommit": "e204b7303d0a54913213db6e7630e420007238f9",
-            "completedAt": "2026-10-21T05:41:56.607431+00:00",
+            "summary": "完整node tsconfig类型检查退出0；/tmp/notes-challenge-typecheck-final-20261021.log",
+            "verifiedCommit": "1ae96fca73a6c8cca32f177caa9c5cf61b4f8741",
+            "completedAt": "2026-10-21T06:39:45.179812+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "原生第四轮205.786秒三卡就绪，4调用3错误；最终越过用户三日窗口。当前tip针对中文字段/场景备注不必要拒绝完成真实边界及浏览器复核，仍需签名包原生复测。"
+          "outcome": "passed",
+          "summary": "真实mountNotes/BlockNote/Better Sidebar浏览器覆盖宽窄浅深、原文锚点/替换、原生手动评论、Yjs恢复、多条评论滚动与回复；仍需签名客户端真实模型验收。"
         },
         "acceptanceCriteria": [
-          "中文业务字段键与筛选/详情引用保持原文，仍拒绝危险键和非法语法。",
-          "完整共同记录可直接携带有界场景备注，input/prompt/可见artifact保留，安全转义。",
-          "旧deferred artifact和同requestId幂等行为不变。",
-          "不放宽真实来源、记录、视图引用或容量门禁，不把rendered当作业务完整。"
+          "默认关闭并按笔记保存五档强度；关闭暂停自动检查但保留已有讨论。",
+          "停顿后增量、单任务可取消、有界预算，不重复因样式/保存/评论触发。",
+          "独立模型路径不写主对话；精确唯一锚点、实际原文证据和程序计算，缺失诚实降级。",
+          "常驻多行回复、显式AI优化、已解决、可滚动宽屏旁注和窄屏气泡；人工写作优先。",
+          "显式查看依据才打开右侧挑战页签，账户重置/关闭清空状态。"
         ],
         "risks": [
-          "实际耗时和用户指定时间窗口仍需下一轮原生复测。",
-          "指导不能替代任意业务语义验证；不宣称零失败或整体金融取数性能达标。",
-          "只做既有批次本地预览，不推送、不发布、不晋升main。"
+          "实际模型效果与响应时间待本地原生验证，不宣称零误报。",
+          "infodb只识别实际授权只读SQL schema；API发现式来源未识别时unavailable；滚动数据/C4暂未启用。",
+          "单段超过12000字符保留partial；实际token缺失时仅用保守字符预算，不声称费用精确。",
+          "沿既有未验收批次本地预览，不推送/发布/晋升main；两项前序工作台修复独立提交随同分支。"
         ],
-        "generatedAt": "2026-10-21T05:41:56.607431+00:00"
-      },
-      "merged": {
-        "mergeCommit": "58e70073e35c95064d6e09d25d02dde7655f1450",
-        "verificationCommit": "58e70073e35c95064d6e09d25d02dde7655f1450",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "58e70073e35c95064d6e09d25d02dde7655f1450",
-            "completedAt": "2026-10-21T05:42:54.825Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "58e70073e35c95064d6e09d25d02dde7655f1450",
-            "completedAt": "2026-10-21T05:42:54.825Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "58e70073e35c95064d6e09d25d02dde7655f1450",
-            "completedAt": "2026-10-21T05:42:54.825Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "58e70073e35c95064d6e09d25d02dde7655f1450",
-            "completedAt": "2026-10-21T05:42:54.825Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "58e70073e35c95064d6e09d25d02dde7655f1450",
-            "completedAt": "2026-10-21T05:42:54.825Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T05:42:54.825Z"
+        "generatedAt": "2026-10-21T06:39:45.179812+00:00"
       }
     },
     {
