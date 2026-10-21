@@ -127,7 +127,7 @@ export class BrowserSearchController {
         // Serializing our promises does not stop scripts/redirects in a loaded
         // search page. Retire that renderer before the next request can start.
         // The next window keeps the same partition and verification cookies.
-        this.destroyWindow()
+        await this.destroyWindow()
       }
     })
     this.tail = operation.then(
@@ -137,15 +137,21 @@ export class BrowserSearchController {
     return operation
   }
 
-  dispose(): void {
+  dispose(): Promise<void> {
     this.disposed = true
-    this.destroyWindow()
+    return this.destroyWindow()
   }
 
-  private destroyWindow(): void {
-    if (!this.window.isDestroyed()) {
-      this.window.webContents.stop()
-      this.window.destroy()
+  private async destroyWindow(): Promise<void> {
+    const retiring = this.window
+    if (retiring.isDestroyed()) return
+    // Navigation observers can settle our promises while Chromium still holds
+    // its navigation reentrancy guard. Promise microtasks are too early to stop
+    // or destroy that page; retire this exact window on a new event-loop turn.
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    if (!retiring.isDestroyed()) {
+      retiring.webContents.stop()
+      retiring.destroy()
     }
   }
 
@@ -200,7 +206,7 @@ export class BrowserSearchController {
             // previous document's rows. A hydration probe reuses the existing
             // four-probe budget; it neither navigates nor expands the deadline.
             if (!isAllowedSearchLocation(engine, documentUrl) || new URL(documentUrl).searchParams.get('q') !== query || sameQuery(documentQuery) !== sameQuery(query)) {
-              if (attempt < 3) { await this.abortable(this.sleep(250), signal, window); continue }
+              if (attempt < 3) { await this.abortable(this.sleep(250), signal); continue }
               throw new Error('搜索结果文档尚未对应当前查询。')
             }
             const candidates = Array.isArray(snapshot?.candidates) ? (snapshot.candidates as SearchResultCandidate[]) : []
@@ -212,7 +218,7 @@ export class BrowserSearchController {
               engineHasNoResults = true
               break
             }
-            if (attempt < 3) await this.abortable(this.sleep(250), signal, window)
+            if (attempt < 3) await this.abortable(this.sleep(250), signal)
           }
           // A completed no-results page is conclusive for this engine. Its
           // regional entry is not a new search provider, so do not repeat it.
@@ -281,7 +287,7 @@ export class BrowserSearchController {
       timeout = setTimeout(() => reject(new Error('读取搜索页面超时。')), this.options.scriptTimeoutMs ?? 3_000)
     })
     try {
-      return await this.abortable(Promise.race([window.webContents.executeJavaScript(script), deadline]), signal, window)
+      return await this.abortable(Promise.race([window.webContents.executeJavaScript(script), deadline]), signal)
     } finally {
       if (timeout) clearTimeout(timeout)
     }
@@ -306,7 +312,7 @@ export class BrowserSearchController {
       }, timeoutMs)
     })
     try {
-      await this.abortable(Promise.race([window.loadURL(url), navigationTimeout]), signal, window)
+      await this.abortable(Promise.race([window.loadURL(url), navigationTimeout]), signal)
     } finally {
       if (timeout) clearTimeout(timeout)
     }
@@ -328,14 +334,13 @@ export class BrowserSearchController {
 
   private async abortable<T>(
     operation: Promise<T>,
-    signal?: AbortSignal,
-    window: BrowserSearchWindow = this.window
+    signal?: AbortSignal
   ): Promise<T> {
     if (!signal) return operation
     if (signal.aborted) throw abortError(signal)
     return new Promise<T>((resolve, reject) => {
       const onAbort = (): void => {
-        window.webContents.stop()
+        // Reject promptly; search() retires the renderer at the safe boundary.
         reject(abortError(signal))
       }
       signal.addEventListener('abort', onAbort, { once: true })

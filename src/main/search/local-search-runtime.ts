@@ -39,12 +39,12 @@ export async function startLocalSearchRuntime(
         if (stopped) return
         stopped = true
         await bridge.stop()
-        browser.dispose()
+        await browser.dispose()
       }
     }
   } catch (error) {
     await bridge.stop()
-    browser.dispose()
+    await browser.dispose()
     throw error
   }
 }

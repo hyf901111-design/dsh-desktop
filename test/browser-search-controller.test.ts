@@ -464,19 +464,19 @@ describe('BrowserSearchController', () => {
     expect(listeners).toBe(1)
   })
 
-  it('destroys its isolated window when disposed', () => {
+  it('destroys its isolated window when disposed', async () => {
     const window = new FakeSearchWindow()
     const controller = new BrowserSearchController({ createWindow: () => window })
-    controller.dispose()
+    await controller.dispose()
     expect(window.destroyed).toBe(true)
   })
 
-  it('can be disposed after its isolated window was already destroyed', () => {
+  it('can be disposed after its isolated window was already destroyed', async () => {
     const window = new FakeSearchWindow()
     const controller = new BrowserSearchController({ createWindow: () => window })
     window.destroy()
 
-    expect(() => controller.dispose()).not.toThrow()
+    await expect(controller.dispose()).resolves.toBeUndefined()
   })
 
   it('recreates the isolated window after the main-window lifecycle destroys it', async () => {
