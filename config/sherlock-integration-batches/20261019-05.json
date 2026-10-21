@@ -9,440 +9,54 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "工作台来源日期核验、完整表格与真实刷新反馈",
+        "featureName": "修复工作台回执与真实SDK严格输出协议",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "a33d8b7b5e8dec2726450d0088f3b37c92f87ad7",
-        "tipCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
+        "baseCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
+        "tipCommit": "b8b8a00285006f5f9bdc45c7ac806ff50e0d309a",
         "commits": [
           {
-            "commit": "3655c8f3ea048a0643b0a70a5d3d6761452ef1b5",
+            "commit": "07504604a8389e94a34de06f00e6976c756b1c70",
             "parents": [
-              "a33d8b7b5e8dec2726450d0088f3b37c92f87ad7"
+              "798c5cbef04ddac3e660fc60e31df58af01925f1"
             ],
-            "subject": "记录笔记新版日期菜单与实际挑战回复验收"
+            "subject": "补充真实SDK工作台回执协议回归修复计划"
           },
           {
-            "commit": "7b8758ae31b3fefc19ffbfb9651a6b3831ed50b4",
+            "commit": "b8b8a00285006f5f9bdc45c7ac806ff50e0d309a",
             "parents": [
-              "3655c8f3ea048a0643b0a70a5d3d6761452ef1b5"
+              "07504604a8389e94a34de06f00e6976c756b1c70"
             ],
-            "subject": "补充真实公告来源日期范围修复与工作台复测方案"
-          },
-          {
-            "commit": "931a378dbcd7cc22b1bba2108796a06f192bd54a",
-            "parents": [
-              "7b8758ae31b3fefc19ffbfb9651a6b3831ed50b4"
-            ],
-            "subject": "修复公告时间线来源身份与明确日期范围接纳"
-          },
-          {
-            "commit": "afa9b454c15723d1c01c6db85d688f646a80d0a7",
-            "parents": [
-              "931a378dbcd7cc22b1bba2108796a06f192bd54a"
-            ],
-            "subject": "补充完整行情宽表修复与真实复测缺口"
-          },
-          {
-            "commit": "181d44823cf45c4dc2a06ae40bc2924e7791a071",
-            "parents": [
-              "afa9b454c15723d1c01c6db85d688f646a80d0a7"
-            ],
-            "subject": "记录真实财务错期与缺少现金流来源的修复要求"
-          },
-          {
-            "commit": "938499cd8ffb568f75eebfc3b57966819631ecb2",
-            "parents": [
-              "181d44823cf45c4dc2a06ae40bc2924e7791a071"
-            ],
-            "subject": "修复带来源行情宽表接纳并保留完整字段"
-          },
-          {
-            "commit": "a409caa1b02a61f7c515de9041b714c2d5239a9c",
-            "parents": [
-              "938499cd8ffb568f75eebfc3b57966819631ecb2"
-            ],
-            "subject": "修复公告标题恢复前的同条业务身份核验"
-          },
-          {
-            "commit": "5742c74908f5938704b8f522e961c40552f70704",
-            "parents": [
-              "a409caa1b02a61f7c515de9041b714c2d5239a9c"
-            ],
-            "subject": "核验财务表同公司同期间字段并阻止错误来源降级交付"
-          },
-          {
-            "commit": "da057cf370bfaa49c7b255a8346ea783b50e7044",
-            "parents": [
-              "5742c74908f5938704b8f522e961c40552f70704"
-            ],
-            "subject": "补充原生表格来源日期备注完整显示验收要求"
-          },
-          {
-            "commit": "8202be792c35be3d233f4f2774a5e08297a8f38c",
-            "parents": [
-              "da057cf370bfaa49c7b255a8346ea783b50e7044"
-            ],
-            "subject": "封堵财务表可见内容与修复约束校验绕过"
-          },
-          {
-            "commit": "1c406e9ece8609451ed9df611853c2c7c3e896a0",
-            "parents": [
-              "8202be792c35be3d233f4f2774a5e08297a8f38c"
-            ],
-            "subject": "修复原生行情表日期来源备注和安全链接保留"
-          },
-          {
-            "commit": "0433a47ded20fa64c2221dacfda165860b79412f",
-            "parents": [
-              "1c406e9ece8609451ed9df611853c2c7c3e896a0"
-            ],
-            "subject": "保留财务表修复中的独立报表口径行"
-          },
-          {
-            "commit": "1392bd01861ac4240c16d91f8c4c1cab0157594d",
-            "parents": [
-              "0433a47ded20fa64c2221dacfda165860b79412f"
-            ],
-            "subject": "修复原生表格结构回退并兼容持久化惰性数据"
-          },
-          {
-            "commit": "f531d13aa206968400e7e3617b85497d1f717e8a",
-            "parents": [
-              "1392bd01861ac4240c16d91f8c4c1cab0157594d"
-            ],
-            "subject": "规划真实资讯来源与未来事件及刷新反馈的后续修复"
-          },
-          {
-            "commit": "5c49158f764535a6b505f788b3fefab7cb196058",
-            "parents": [
-              "f531d13aa206968400e7e3617b85497d1f717e8a"
-            ],
-            "subject": "修复工作台子卡对可信人类来源约束的遵循"
-          },
-          {
-            "commit": "89b95da18e3742b93011b8d6b1fe30a2fe69f8f5",
-            "parents": [
-              "5c49158f764535a6b505f788b3fefab7cb196058"
-            ],
-            "subject": "细化文章时间线取证与真实刷新反馈的内部接口"
-          },
-          {
-            "commit": "3d520efca7c9772953b9f0d50a98cb7026a7f23f",
-            "parents": [
-              "89b95da18e3742b93011b8d6b1fe30a2fe69f8f5"
-            ],
-            "subject": "修复真实文章时间线逐条取证与有界补读并保留研究缺口"
-          },
-          {
-            "commit": "5aee80f4e74fe2025dfe1095d5bc20aaa956697d",
-            "parents": [
-              "3d520efca7c9772953b9f0d50a98cb7026a7f23f"
-            ],
-            "subject": "修复来源短否定识别并拒绝不支持的排他来源约束"
-          },
-          {
-            "commit": "daebe1774c6ddf4e9a3bcfe86f5f70d69271e161",
-            "parents": [
-              "5aee80f4e74fe2025dfe1095d5bc20aaa956697d"
-            ],
-            "subject": "细化未来事件证据语义与刷新反馈的真实状态边界"
-          },
-          {
-            "commit": "ee7eb02a361c7d8d7e1ed36695012786a603a9eb",
-            "parents": [
-              "daebe1774c6ddf4e9a3bcfe86f5f70d69271e161"
-            ],
-            "subject": "修复文章时间线修复省略后的覆盖声明与背景证据保留"
-          },
-          {
-            "commit": "3c4cae22a750909f401f40d2a1b88221cff13f99",
-            "parents": [
-              "ee7eb02a361c7d8d7e1ed36695012786a603a9eb"
-            ],
-            "subject": "修复未来日历事件证据与背景缺口混计问题"
-          },
-          {
-            "commit": "9065524268e90202c032047fe47e71bc9c54a241",
-            "parents": [
-              "3c4cae22a750909f401f40d2a1b88221cff13f99"
-            ],
-            "subject": "完成卡显示真实刷新状态并保留上次观察"
-          },
-          {
-            "commit": "469128b0dd21d689418f3609620da5f78c8176f8",
-            "parents": [
-              "9065524268e90202c032047fe47e71bc9c54a241"
-            ],
-            "subject": "修复日历事件保留和披露期间及解禁覆盖核验"
-          },
-          {
-            "commit": "5395fb50fe8204ea03e05da7c1e84ea304d884f3",
-            "parents": [
-              "469128b0dd21d689418f3609620da5f78c8176f8"
-            ],
-            "subject": "修复刷新摘要截断误判与退休内置状态覆盖"
-          },
-          {
-            "commit": "19810fdfefaf33ca1c52f6763ac522c6f9e6dea2",
-            "parents": [
-              "5395fb50fe8204ea03e05da7c1e84ea304d884f3"
-            ],
-            "subject": "修复工作台文章证据绕过并固化单卡日期范围与刷新反馈"
-          },
-          {
-            "commit": "3f975e470fa4e7d6984f67d63ed3fd9a457e824c",
-            "parents": [
-              "19810fdfefaf33ca1c52f6763ac522c6f9e6dea2"
-            ],
-            "subject": "补充集成单卡提示词长度兼容修复计划"
-          },
-          {
-            "commit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
-            "parents": [
-              "3f975e470fa4e7d6984f67d63ed3fd9a457e824c"
-            ],
-            "subject": "压缩单卡技能摘要并保留完整提示词合同"
+            "subject": "修复工作台回执的真实SDK输出契约并补充边界回归"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": ".superpowers/sdd/2026-10-21-workbench-announcement-range/task-4-report.md"
-          },
-          {
             "status": "M",
-            "path": "docs/superpowers/plans/2026-10-21-notes-challenge-v15.md"
-          },
-          {
-            "status": "A",
             "path": "docs/superpowers/plans/2026-10-21-workbench-announcement-range.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/superpowers/specs/2026-10-21-workbench-announcement-range.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/announcement-provenance.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/article-timeline-provenance.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/calendar-event-evidence.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-feed-acquisition.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/observed-statement-growth.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/statement-table-evidence.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-explicit-scope.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-source-policy.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-generation-watch.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-market-native-table.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-workbench-feedback.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/panel-runtime.md"
-          },
-          {
             "status": "A",
-            "path": "test/calendar-event-evidence.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-announcement-provenance.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-announcement-range.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-article-timeline.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-status.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/announcement-range-observed-20261021.json"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/calendar-event-evidence/compute-b-observed.json"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/statement-table-evidence/README.md"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/statement-table-evidence/compute-b-observed.json"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/workbench-article-timeline-observed.json"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/workbench-native-valuation-observed.json"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/workbench-quote-13-columns.json"
-          },
-          {
-            "status": "M",
-            "path": "test/research-component-source-tools.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-generation-watch.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-market-native-context-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-market-native-table.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench-feedback-actions.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench-feedback-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench-feedback.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-workbench-refresh-feedback.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/statement-table-evidence.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-article-timeline-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-dataset-view.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-execution-policy.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-explicit-scope.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-source-context.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-source-policy.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-sourced-wide-table-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-sourced-wide-table.test.js"
+            "path": "test/workbench-sdk-receipt.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/bundled-component-skill.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/workbench-source-context.test.js",
-              "test/workbench-deferred.test.js",
-              "test/integration-bundled-skill.test.js",
-              "--reporter=verbose"
+              "npx",
+              "vitest",
+              "run",
+              "test/workbench-sdk-receipt.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/research-workbench-feedback.test.js"
             ],
             "outcome": "passed",
-            "summary": "Task10直接相关5文件99项通过，当前源码的单卡摘要精简后4971字，完整384字需求、单技能和摘要外逐字一致；/tmp/task-10-prompt-final-green-20261021.log与独立Task10审阅Approved。",
-            "verifiedCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
-            "completedAt": "2026-10-21T14:25:33.461Z",
+            "summary": "最终3文件44项通过，真实SDK新增4项RED→GREEN；Task11独立Spec/QualityPASS。日志/tmp/task11-receipt-final.log、task11-sdk-red.log、task11-sdk-green.log。",
+            "verifiedCommit": "b8b8a00285006f5f9bdc45c7ac806ff50e0d309a",
+            "completedAt": "2026-10-21T14:49:54.450Z",
             "timeoutMs": 180000
           },
           {
@@ -452,9 +66,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "根agent最终干净提交798c5cbe typecheck通过；/tmp/workbench-final-798c5cbe-typecheck-20261021.log。",
-            "verifiedCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
-            "completedAt": "2026-10-21T14:25:33.461Z",
+            "summary": "根agent最终提交类型检查通过；/tmp/workbench-final-b8b8a002-typecheck-20261021.log。",
+            "verifiedCommit": "b8b8a00285006f5f9bdc45c7ac806ff50e0d309a",
+            "completedAt": "2026-10-21T14:49:54.450Z",
             "timeoutMs": 180000
           },
           {
@@ -462,151 +76,32 @@
               "git",
               "diff",
               "--check",
-              "a33d8b7b5e8dec2726450d0088f3b37c92f87ad7..798c5cbef04ddac3e660fc60e31df58af01925f1"
+              "798c5cbef04ddac3e660fc60e31df58af01925f1..b8b8a00285006f5f9bdc45c7ac806ff50e0d309a"
             ],
             "outcome": "passed",
-            "summary": "完整交接增量差异检查通过；/tmp/workbench-final-798c5cbe-diffcheck-20261021.log。",
-            "verifiedCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
-            "completedAt": "2026-10-21T14:25:33.461Z",
+            "summary": "完整交接增量差异检查通过；/tmp/workbench-final-b8b8a002-diffcheck-20261021.log。",
+            "verifiedCommit": "b8b8a00285006f5f9bdc45c7ac806ff50e0d309a",
+            "completedAt": "2026-10-21T14:49:54.450Z",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "生产renderer/store隔离浏览器已验证13列宽表、原生表日期备注、真实刷新摘要与五张深浅窄宽/历史状态图；最终原始日志与不可变diff经唯一scoped复审PASS。此为已观察夹具/合成边界证据，尚无本轮六卡新原生验收；仅integration本地构建后Task2核验。"
+          "outcome": "not-applicable",
+          "summary": "仅补严格工具返回schema两字段，无UI实现修改。实际原生C暴露错误并保持failed留档，24卡记录及停止18项证据保留；修复真实SDK离线边界通过，尚待新签名包原生D验证，不以mock或首卡速度冒称完成。"
         },
         "acceptanceCriteria": [
-          "公告/新闻按原始人类来源和单卡日期范围核验，单次修复及最终fallback不能因换格式绕过；来源不明保持缺口。",
-          "财务按证券、期间、字段与实际取得记录匹配；未取到的公司/字段保留，不能造经营现金流或跨期同比。",
-          "来源宽表保留1至32列/100行全部值、日期和说明，原生12列合同不放宽；列宽/横滚/选择/备注可用。",
-          "未来日历保留有依据事件，期间/更新日/缺失说明不算未来安排；多卡独立窗口与人类公共窗口正确。",
-          "原回合反馈卡显示当前或上次观察的真实刷新状态，静态/手动/配置/失败/未核验分开，不声称静态卡已自动刷新。",
-          "保留已集成Notes9e49及文章/日期/历史/未发送草稿；集成后真实六卡及全画布整理滚动验收，不运行全套。"
+          "refreshStatus与refreshGuidance按既有真实未验证语义返回，通过SDK validate及生产render；additionalProperties:false不放宽。",
+          "accepted首次实际创建一规划一任务并产生模型可读JSON；相同完整请求幂等，改内容复用requestId仍拒绝。",
+          "prepared正常路径及preparing既有状态的合成SDK契约保持；未知额外输出仍INVALID_TOOL_OUTPUT。",
+          "不改来源/日期/权限/预算/Notes或requestId语义，不删除C失败内容；集成后新D验证不再因回执错误重复建卡。"
         ],
         "risks": [
-          "Task2真实六卡内容/来源/布局/计时尚待本地签名构建后完成，不能以ready或聚焦检查冒称完整交付。",
-          "七项已在冻结基线复现的旧测试失败保留为既有债务，未改成通过、未全套运行。",
-          "有限明确ISO范围和已知主题/来源schema；歧义显式失败，不宣称任意自然语言或任意HTML事实通用核验。",
-          "最终修复review I1/I2/I3/M1全部ADDRESSED，无新增阻塞；报告与证据位于该计划SDD目录，原tracked task4报告保留。",
-          "仅本地未验收集成批次20261019-05；不accept/promote/main/发布/推送。",
-          "Task10观察到TABLE_GUIDANCE新增183字令既有长需求组合超5000；仅单卡摘要等价压缩5行，现4971，剩29字预算；不提高断言/删需求。此前集成检查失败未合并，需执行同批次全声明检查。"
+          "Task2仍未通过。原生C因输出协议错误生成4套24卡，已停止父及剩余18测试任务，5completed/1failed/18cancelled保留；不能记成功或比较全程速度。",
+          "Task11扩展planning-phase有3项在BASE075也失败：2365<2200、1792<1500、source panels schema投影/引用期望。未解决，未标绿，与此前7项冻结legacy分开；后续规划合同调查待续。",
+          "preparing以SDKpostexecute替换值验证契约，不声称自然并发业务分支已覆盖。",
+          "未运行全套；仅未验收批次20261019-05本地构建/新原生D，保留Notes9e49与用户正文日期草稿；不发布/accept/promote/push。"
         ],
-        "generatedAt": "2026-10-21T14:25:33.461Z"
-      },
-      "merged": {
-        "mergeCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-        "verificationCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-            "completedAt": "2026-10-21T14:26:33.660Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-            "completedAt": "2026-10-21T14:26:33.660Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-            "completedAt": "2026-10-21T14:26:33.660Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-            "completedAt": "2026-10-21T14:26:33.660Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-            "completedAt": "2026-10-21T14:26:33.660Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-            "completedAt": "2026-10-21T14:26:33.660Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
-            "completedAt": "2026-10-21T14:26:33.660Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-21T14:26:33.660Z"
+        "generatedAt": "2026-10-21T14:49:54.450Z"
       }
     },
     {
