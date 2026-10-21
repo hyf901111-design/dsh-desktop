@@ -1304,12 +1304,42 @@ describe('Research task Subagent adapter', () => {
     const ctx = sessionEventContext(parent, child, run)
     ctx.agents.withInitiator = vi.fn((_parent, operation) => operation())
     ctx.web = { search: vi.fn(), fetch: vi.fn() }
-    return { ctx, start: async (query, onProgress) => {
+    return { ctx, start: async (query, onProgress, hostContext) => {
       const runtime = await runtimeModule()
       const prompt = runtime.buildResearchTaskPrompt({ ...containerRequest(), prompt: query })
-      return runtime.createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query, prompt, signal: new AbortController().signal, onSessionEvent: vi.fn(), onProgress })
+      return runtime.createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query, prompt, hostContext, signal: new AbortController().signal, onSessionEvent: vi.fn(), onProgress })
     } }
   }
+
+  it('uses trusted host source policy rather than the planner route in the SDK child',async()=>{
+    const fixture=containerAdapterFixture()
+    const names=['public_data_query','financial_query','web_search','web_fetch','ework__datayes']
+    fixture.ctx.tools={schemas:()=>names.map(name=>({name,description:name.startsWith('ework__')?'通联 DataYes API':''}))}
+    const query='工作台：公司研究\n本面板：近期新闻\n使用通联DataYes查询真实新闻，保留日期和原文。\n仅生成本面板，优先使用 news 类型。'
+    const handle=await fixture.start(query,undefined,{sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:'近期新闻，查询真实新闻，保留日期和原文。'}})
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的金融工具')
+      expect(child.toolFilter.allow).toContain('web_fetch')
+      expect(child.toolFilter.allow).toContain('public_data_query')
+    }finally{await handle.dispose()}
+  })
+
+  it.each([true,false])('keeps the host human plugin restriction in SDK routing (required=%s)',async required=>{
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'web_fetch'},{name:'ework__datayes',description:'通联 DataYes API'}]}
+    const query='工作台：研究\n本面板：新闻\n'+(required?'不要使用DataYes，检索真实新闻。':'使用DataYes，检索真实新闻。')+'\n仅生成本面板，优先使用 news 类型。'
+    const policy={pluginRequired:required,pluginProhibited:!required,preferenceRequest:required?'真实新闻，使用DataYes。':'真实新闻，禁止使用插件。'}
+    const handle=await fixture.start(query,undefined,{sourcePolicy:policy})
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow.includes('ework__datayes')).toBe(required)
+      expect(child.toolFilter.allow.includes('public_data_query')).toBe(!required)
+      expect(child.prompt[0].text.includes('本面板已指定使用配置的插件')).toBe(required)
+      expect(child.toolFilter.allow).not.toContain('ework__invisible')
+    }finally{await handle.dispose()}
+  })
 
   it.each(['html','gantt'])('generates a deferred offline %s panel directly without rediscovering skills or files',async type=>{
     const panel={title:'古籍修复交接',type,size:'large',prompt:'B01和B02两册演练记录，保留负责人、步骤和交接事项。'}

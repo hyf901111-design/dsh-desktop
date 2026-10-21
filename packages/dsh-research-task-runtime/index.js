@@ -1,3 +1,4 @@
+import {restoreWorkbenchHostContext} from './workbench-source-policy.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
 import {operationsTemplateSchema,requestedOperationsType} from './operations-template-contract.js'
@@ -900,9 +901,19 @@ function terminalState(state) {
   return TERMINAL_STATES.has(state)
 }
 
+// Every completion path, including readable recovery, obeys the same trusted
+// source policy. This checks evidence, never grants access to a tool.
+function workbenchSourceEvidenceIssue(policy, records) {
+  if (!policy) return undefined
+  const pluginRecords = records.filter(record => record.tool?.startsWith('ework__'))
+  if (policy.pluginProhibited && pluginRecords.length) return '人类来源约束禁止使用插件；不能接纳插件业务数据。'
+  if (policy.pluginRequired && !componentBindingEvidence(pluginRecords)) return '该组件指定通联 DataYes 来源，必须实际取得业务响应；不能用其他网站的静态记录或接口目录代替。'
+}
+
 function taskDocument(task) {
   return {
     ...(task.kind === 'create' && task.resolvedSources ? { resolvedSources: task.resolvedSources } : {}),
+    ...(task.hostContext ? {hostContext:task.hostContext} : {}),
     taskId: task.taskId,
     parentSessionId: task.parentSessionId,
     canvasNodeId: task.canvasNodeId,
@@ -1041,6 +1052,7 @@ function restoredTask(raw, now) {
   const task = {
     taskId: requiredString(stored.taskId, MAX_ID_LENGTH, '任务标识无效'),
     ...request,
+    ...(stored.hostContext === undefined ? {} : {hostContext:restoreWorkbenchHostContext(stored.hostContext)}),
     state: interrupted ? 'interrupted' : originalState,
     createdAt: timestamp(stored.createdAt, now),
     lastSeq: interrupted
@@ -1191,9 +1203,22 @@ export class ResearchTaskRuntime {
     return task
   }
 
-  async start(raw) {
+  async start(raw, hostContext) {
     if (this.disposed) throw new ResearchTaskError('RUNTIME_DISPOSED', '任务服务已停止')
     let request = validateResearchTaskStart(raw)
+    hostContext = restoreWorkbenchHostContext(hostContext)
+    let changedWorkbenchRequirement = false
+    if (!hostContext && request.kind === 'container') {
+      const requirement = sourceRetryPrompt(request.prompt)
+      const history = [...this.tasks.values()].reverse().filter(task => task.parentSessionId === request.parentSessionId && task.canvasNodeId === request.canvasNodeId && task.kind === 'container')
+      const latest = history[0]
+      changedWorkbenchRequirement = history.some(task => task.hostContext)
+      if (latest?.hostContext && [latest.hostContext.sourceRequirement, sourceRetryPrompt(latest.prompt)].includes(requirement)) {
+        hostContext = latest.hostContext
+        changedWorkbenchRequirement = false
+        request = Object.freeze({...request, prompt:sourceRetryPrompt(latest.prompt) + request.prompt.slice(requirement.length)})
+      }
+    }
     let viewEditSource
     await this.authorizeParent?.(request.parentSessionId)
     if(request.kind==='container'){
@@ -1241,7 +1266,7 @@ export class ResearchTaskRuntime {
     // Older workbench cards saved the panel content prompt, while their first
     // task carried the full format and visual contract. Restore only a complete
     // unchanged saved requirement; matching its first line would discard edits.
-    if (request.kind === 'container' && !deferredHistory && !workbenchPanelFormat(sourceRetryPrompt(request.prompt))) {
+    if (request.kind === 'container' && !changedWorkbenchRequirement && !deferredHistory && !workbenchPanelFormat(sourceRetryPrompt(request.prompt))) {
       const requirement = sourceRetryPrompt(request.prompt)
       const firstLine = requirement.split('\n')[0].trim()
       if (firstLine.length >= 16) {
@@ -1261,6 +1286,7 @@ export class ResearchTaskRuntime {
       taskId,
       ...request,
       ...(viewEditSource ? {viewEditSource} : {}),
+      ...(hostContext ? {hostContext} : {}),
       state: 'queued',
       createdAt,
       lastSeq: 0,
@@ -1280,7 +1306,7 @@ export class ResearchTaskRuntime {
   // Reserve a planned workbench with one durable write. All task identities
   // become available together, while the existing queue still runs each
   // source-backed panel independently and reports its actual events.
-  async startBatch({ parentSessionId, panels }) {
+  async startBatch({ parentSessionId, panels }, hostContext) {
     if (this.disposed) throw new ResearchTaskError('RUNTIME_DISPOSED', '任务服务已停止')
     if (!Array.isArray(panels) || panels.length < 1 || panels.length > 10) throw new ResearchTaskError('INVALID_REQUEST', '面板数量无效')
     const parent = requiredString(parentSessionId, MAX_ID_LENGTH, '研究会话标识无效')
@@ -1289,10 +1315,11 @@ export class ResearchTaskRuntime {
     if (requests.some(request => request.kind !== 'container') || new Set(requests.map(request => request.canvasNodeId)).size !== requests.length)
       throw new ResearchTaskError('INVALID_REQUEST', '工作台面板任务无效或标识重复')
     const createdAt = this.now()
-    const tasks = requests.map(request => {
+    const tasks = requests.map((request, index) => {
       const taskId = requiredString(this.createId(), MAX_ID_LENGTH, '任务标识无效')
       if (this.tasks.has(taskId)) throw new ResearchTaskError('TASK_EXISTS', '任务标识重复')
-      const task = { taskId, ...request, state: 'queued', createdAt, lastSeq: 0, events: [],
+      const context = restoreWorkbenchHostContext(hostContext?.panels?.[index])
+      const task = { taskId, ...request, ...(context ? {hostContext:context} : {}), state: 'queued', createdAt, lastSeq: 0, events: [],
         cancelRequested: false, controller: new AbortController(), runPromise: undefined }
       this.appendEvent(task, { type: 'queued' })
       return task
@@ -1483,6 +1510,7 @@ export class ResearchTaskRuntime {
       const startHandle = (prompt, synthesisOnly = false, preservePrompt = false) => this.adapter.start({
         synthesisOnly,
         preservePrompt,
+        ...(task.hostContext ? {hostContext:task.hostContext} : {}),
         taskId: task.taskId,
         parentSessionId: task.parentSessionId,
         kind: task.kind,
@@ -1650,7 +1678,10 @@ export class ResearchTaskRuntime {
           // A named connected source is part of the requested result. Static
           // quotes from a different website cannot satisfy it, even if the
           // model writes the unavailable-source disclaimer into metadata.
-          if(plannedFormat&&componentPluginSourceRequired(panelRequest)){
+          const sourcePolicy = task.hostContext?.sourcePolicy
+          const policyIssue = workbenchSourceEvidenceIssue(sourcePolicy, sourceRecords)
+          if (policyIssue) throw new ResearchTaskError('GENERATION_FAILED',policyIssue)
+          if(plannedFormat&&(sourcePolicy?.pluginRequired ?? componentPluginSourceRequired(panelRequest))){
             const observedBusiness = componentBindingEvidence(sourceRecords.filter(record=>record.tool?.startsWith('ework__')))
             // Custom pages are snapshots, not registered native mapping
             // templates. They still require an actual business response.
@@ -1764,7 +1795,9 @@ export class ResearchTaskRuntime {
         output = readableFallback ?? (task.kind !== 'container' && recoveryEvidence ? JSON.stringify({ version: 1, type: 'markdown', title: '已取得的研究资料', content: ('> 已保留相关来源摘要，完整分析暂未完成。请结合来源原文核实。\n\n' + recoveryEvidence).slice(0, 32000) }) : undefined)
       }
       if(output!==undefined&&task.kind==='container'){
-        const issue=extractArtifactObjects(output).map(data=>statementTableEvidenceIssue(data,panelRequest,sourceRecords,{requiredData:statementRepairData})).find(Boolean)
+        const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
+        if (policyIssue) {output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',policyIssue)}
+        const issue=output && extractArtifactObjects(output).map(data=>statementTableEvidenceIssue(data,panelRequest,sourceRecords,{requiredData:statementRepairData})).find(Boolean)
         if(issue){statementIssue=issue;output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',issue)}
       }
       if (output !== undefined && canSynthesizeResult(result)) result = { ...result, stopReason: 'completed' }
@@ -1810,7 +1843,8 @@ export class ResearchTaskRuntime {
       }
     } catch (error) {
       console.warn('[research-task] execution failed', task.taskId, error instanceof Error ? error.message : String(error))
-      if (!terminalState(task.state) && !task.cancelRequested && !statementIssue && readableFallback && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
+      const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
+      if (!policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && readableFallback && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
         await this.finish(task, 'completed', { finalOutput: readableFallback })
       } else if (!terminalState(task.state)) {
         await this.finish(
@@ -1819,9 +1853,9 @@ export class ResearchTaskRuntime {
           {
             error: task.cancelRequested
               ? '任务已取消，可重试。'
-              : error instanceof ResearchTaskError
+              : policyIssue ?? (error instanceof ResearchTaskError
                 ? error.message
-                : task.modelFailureMessage ?? '生成失败，请重试。'
+                : task.modelFailureMessage ?? '生成失败，请重试。')
           }
         )
       }
@@ -2043,7 +2077,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       if(!process.env.SHERLOCK_RESEARCH_CONTEXT_URL){if(task.publicData)throw Error('宿主自动刷新绑定不可用');return}
       return callCanvas(task.parentSessionId,'data',{action:'bind-generated',nodeId:task.canvasNodeId,recipe,initialSpec:JSON.parse(output)},signal)
     },
-    async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent, onProgress, synthesisOnly = false, preservePrompt = false, onWorkbenchPlan, imageContent = [], executionContext = '' }) {
+    async start({ parentSessionId, kind, query, prompt, hostContext, signal, onSessionEvent, onProgress, synthesisOnly = false, preservePrompt = false, onWorkbenchPlan, imageContent = [], executionContext = '' }) {
       const parent = await resolveParent(parentSessionId)
       await ctx.get?.('eworkIntegrations')?.sync()
       const bundledSkills = { component: bundledSkillEnabled(ctx, 'ework-workbench-components'), data: bundledSkillEnabled(ctx, 'ework-free-data-sources') }
@@ -2077,15 +2111,16 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       const scopedSchemas = surface === 'note'
         ? (Array.isArray(visibleSchemas) ? visibleSchemas.filter(tool => ['public_data_query','financial_query','web_search','web_fetch'].includes(tool.name) || readPluginTools.has(tool.name)) : [])
         : visibleSchemas
-      const sourceRequest = workbenchPanelIntent(query)
-      const preferredSources = (kind === 'container' || kind === 'board') && permitsTools ? preferredComponentSourceTools(scopedSchemas, sourceRequest) : []
+      const sourcePolicy = kind === 'container' ? hostContext?.sourcePolicy : undefined
+      const sourceRequest = sourcePolicy?.preferenceRequest ?? workbenchPanelIntent(query)
+      const preferredSources = (kind === 'container' || kind === 'board') && permitsTools ? preferredComponentSourceTools(scopedSchemas, sourceRequest, sourcePolicy) : []
       const preferredSourceNames = preferredSources.map(tool => tool.name)
       const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(sourceRequest ?? '')
       const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(sourceRequest ?? '') && (surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_search'))
       if (signal.aborted) throw signal.reason
       const boundTemplate = kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__') || tool.name === 'public_data_query')
-      const pluginRequired = boundTemplate && componentPluginSourceRequired(sourceRequest ?? '')
-      const pluginProhibited = componentPluginSourceProhibited(sourceRequest ?? '')
+      const pluginRequired = boundTemplate && (sourcePolicy?.pluginRequired ?? componentPluginSourceRequired(sourceRequest ?? ''))
+      const pluginProhibited = sourcePolicy?.pluginProhibited ?? componentPluginSourceProhibited(sourceRequest ?? '')
       const bindingRequested = componentBindingRequested(sourceRequest)
       // Compact the initial typed task, but retain a recovery's concrete error,
       // prior response and evidence instead of restarting the original request.
@@ -2094,6 +2129,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         const {end}=chinaMarketWindow(new Date()),today=`${end.slice(0,4)}-${end.slice(4,6)}-${end.slice(6,8)}`
         effectivePrompt+=`\n当前运行时日期：${today}（Asia/Shanghai）。近期、最新、今年等相对时间以此为锚，不能凭训练记忆选择过去年份或旧季度作为近期。用户明确指定的历史日期、区间或虚构场景仍按原需求；获取时间不等于来源数据日期，不把来源旧数据改写成今天。`
       }
+      if (sourcePolicy) effectivePrompt += '\n宿主人类来源策略：'+(sourcePolicy.pluginRequired?'本卡必须使用指定插件。':sourcePolicy.pluginProhibited?'本卡禁止使用插件。':'本卡没有强制插件来源要求；可使用已授权且能证明本卡事实的真实来源。')+'规划面板中的取数路线仅是模型建议，不能覆盖本策略。保留原实体、字段、日期、单位与唯一交付格式。'
       if (pluginRequired) effectivePrompt += '\n本面板已指定使用配置的插件：使用当前可见 ework__ 工具发现接口并取数，'+(bindingRequested?'交付可自动刷新映射。':'直接交付真实静态数据、来源和数据时点，不要求建立自动更新绑定。')+'通用 financial_query 不属于该插件绑定通道；不要把该工具的结果标为指定插件数据。插件不可用时如实保留错误和已有内容。'
       let hostEvidence = ''
       // Typed workbench panels already carry one exact host template schema.

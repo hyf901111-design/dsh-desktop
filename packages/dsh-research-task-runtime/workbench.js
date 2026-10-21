@@ -1,3 +1,4 @@
+import {workbenchSourcePolicy} from './workbench-source-policy.js';
 import {ATTACHMENT_GUIDANCE} from './attachment-template-contract.js';
 import {AUDIO_GUIDANCE} from './audio-template-contract.js';
 import {DERIVED_GUIDANCE} from './derived-template-contract.js';
@@ -114,6 +115,9 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         }
         const run = async () => {
             const input = validateWorkbench(args);
+            // Resolve before queuing so ambiguous human restrictions remain explicit.
+            const contexts = new Map(originalRequest ? input.panels.filter(p => !p.artifact && !p.publicData && input.dataMode === 'source').map(panel => [JSON.stringify([panel.title,panel.type,panel.prompt]), {sourcePolicy:workbenchSourcePolicy(originalRequest, panel),sourceRequirement:panel.prompt}]) : []);
+            const panelContext = panel => contexts.get(JSON.stringify([panel.title,panel.type,panel.prompt]));
             const parentSessionId = exec.agent?.session?.id;
             if (!str(parentSessionId, 256) || !ctx.agents.get(parentSessionId))
                 throw Error('研究会话不可用');
@@ -135,7 +139,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         prepared.forEach((p,i)=>{p.taskId=receipts[i].taskId;p.prepared=true;delete p.error});
                     }
                     if(generated.length){
-                        const receipts = await runtime.startBatch({ parentSessionId, panels: generated.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) })) });
+                        const receipts = await runtime.startBatch({ parentSessionId, panels: generated.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) })) }, {panels:generated.map(panelContext)});
                         generated.forEach((p, i) => { p.taskId = receipts[i].taskId; delete p.error; });
                     }
                 } catch (error) {
@@ -212,10 +216,10 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         prepared.forEach((p,i) => {p.taskId=receipts[i].taskId;p.prepared=true;});
                     }
                     if (pending.length && typeof runtime.startBatch === 'function') {
-                        const receipts = await runtime.startBatch({parentSessionId, panels:pending.map(p => ({canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p)}))});
+                        const receipts = await runtime.startBatch({parentSessionId, panels:pending.map(p => ({canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p)}))}, {panels:pending.map(panelContext)});
                         pending.forEach((p,i) => {p.taskId=receipts[i].taskId;});
                     } else for (const p of pending) {
-                        try { p.taskId=(await runtime.start({parentSessionId,canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p)})).taskId; } catch { p.error='面板任务未能启动，请重试。'; }
+                        try { p.taskId=(await runtime.start({parentSessionId,canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p)}, panelContext(p))).taskId; } catch { p.error='面板任务未能启动，请重试。'; }
                     }
                 } catch(error) {
                     for(const p of plan.panels) if(!p.taskId)p.error='面板任务未能启动，请重试。';
