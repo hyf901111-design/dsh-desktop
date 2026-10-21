@@ -178,8 +178,9 @@ it('keeps rejection diagnostics cumulative across format regeneration and preser
   }
   await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('挑战检查返回内容超出边界')
   expect(f.calls).toHaveLength(2)
-  expect(warn).toHaveBeenCalledTimes(1)
-  const report = JSON.parse(warn.mock.calls[0][0])
+  const reports = warn.mock.calls.map(([text]) => JSON.parse(text))
+  expect(reports.map(report => report.event)).toEqual(['notes-challenge-format-rejected', 'notes-challenge-stream-rejected'])
+  const report = reports[1]
   expect(report).toMatchObject({ reason: 'payload-limit', attempt: 2, textDeltaChars: 12 })
   expect(report.payloadChars).toBeGreaterThan(100000)
   expect(report.eventCounts['reasoning-delta']).toBe(2)
@@ -205,7 +206,8 @@ it('accepts a fragmented short review across format recovery without charging re
   expect(result).toMatchObject({ issues: [], coveredBlockIds: ['a'] })
   expect(f.calls).toHaveLength(2)
   expect(f.calls.every(call => call.signal.aborted)).toBe(true)
-  expect(warn).not.toHaveBeenCalled()
+  expect(warn).toHaveBeenCalledTimes(1)
+  expect(JSON.parse(warn.mock.calls[0][0])).toMatchObject({ event:'notes-challenge-format-rejected', reason:'json-invalid', attempt:1 })
   expect(JSON.stringify(result)).not.toContain('PRIVATE')
 })
 
@@ -240,8 +242,9 @@ it('bounds empty-delta work cumulatively across the one format recovery', async 
   await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('挑战检查返回内容超出边界')
   expect(f.calls).toHaveLength(2)
   expect(f.calls.every(call => call.signal.aborted)).toBe(true)
-  expect(warn).toHaveBeenCalledTimes(1)
-  const report = JSON.parse(warn.mock.calls[0][0])
+  const reports = warn.mock.calls.map(([text]) => JSON.parse(text))
+  expect(reports.map(report => report.event)).toEqual(['notes-challenge-format-rejected', 'notes-challenge-stream-rejected'])
+  const report = reports[1]
   expect(report).toMatchObject({ reason: 'event-limit', attempt: 2, eventCount: 32769 })
   expect(report.payloadChars).toBeLessThan(1000)
 })
@@ -358,6 +361,50 @@ it('does not retry a syntactically valid result that fails the reply schema', as
   const thread = { blockId: 'a', quote: '收入增长10%', category: 'question', message: '请核对来源。', messages: [{ role: 'user', text: '依据是什么？' }] }
   await expect(generateNoteChallenge(f.ctx, { ...input, action: 'reply', thread })).rejects.toThrow('格式不完整')
   expect(f.calls).toHaveLength(1)
+})
+
+for (const [value, expected] of [
+  [{ privateField: 'PRIVATE-MODEL-TEXT' }, { valueKind: 'object', reviewsKind: 'missing', reviewCount: 0, unreviewedTargets: 2 }],
+  [{ reviews: { 'PRIVATE-ID': [] } }, { valueKind: 'object', reviewsKind: 'object', reviewCount: 0, unreviewedTargets: 2 }],
+  [null, { valueKind: 'null', reviewsKind: 'missing', reviewCount: 0, unreviewedTargets: 2 }],
+  [[{ blockId: 'PRIVATE-ID' }], { valueKind: 'array', reviewsKind: 'missing', reviewCount: 0, unreviewedTargets: 2 }],
+  [{ reviews: [null, { blockId: 'PRIVATE-ID', issues: { text: 'PRIVATE-TEXT' } }, { blockId: 'a', issues: [], 'PRIVATE-FIELD': 'PRIVATE-VALUE' }, { blockId: 'a', issues: [] }] }, { valueKind: 'object', reviewsKind: 'array', reviewCount: 4, nonObjectReviews: 1, unexpectedReviewFields: 1, unknownBlockIds: 1, duplicateBlockIds: 1, nonArrayIssues: 1, unreviewedTargets: 1 }]
+]) it('reports private-safe review format diagnostics for '+JSON.stringify(expected), async () => {
+  const { generateNoteChallenge } = await load(), f = textFixture(JSON.stringify(value)), warn = vi.mocked(console.warn)
+  await expect(generateNoteChallenge(f.ctx, { ...input, requestId: 'PRIVATE-REQUEST', changedIds: ['a', 'b'], existingAnchors: [{ blockId: 'a', quote: '收入' }] })).rejects.toThrow('格式不完整')
+  expect(f.calls).toHaveLength(2)
+  const reports = warn.mock.calls.map(([text]) => JSON.parse(text))
+  expect(reports).toHaveLength(2)
+  for (const [index, report] of reports.entries()) {
+    expect(report).toMatchObject({ event: 'notes-challenge-format-rejected', action: 'review', reason: 'review-envelope', attempt: index + 1, targetCount: 2, anchorCount: 1, ...expected })
+    expect(report.requestKey).toMatch(/^[a-f0-9]{12}$/u)
+    expect(report.jsonChars).toBe(JSON.stringify(value).length)
+    expect(Object.keys(report).sort()).toEqual(['event','requestKey','action','reason','attempt','jsonChars','targetCount','anchorCount','valueKind','reviewsKind','reviewCount','nonObjectReviews','unexpectedReviewFields','unknownBlockIds','duplicateBlockIds','nonArrayIssues','unreviewedTargets'].sort())
+    const text = JSON.stringify(report)
+    for (const privateText of ['PRIVATE', input.sessionId, input.blocks[0].text, '收入']) expect(text).not.toContain(privateText)
+    expect(text.length).toBeLessThan(700)
+  }
+  expect(f.events).toEqual([])
+})
+
+it('reports JSON format failure counts without logging content or changing a successful recovery', async () => {
+  const { generateNoteChallenge } = await load(), bad = '{"PRIVATE-SECRET":"', f = textFixture([bad, '{"reviews":[{"blockId":"a","issues":[]}]}']), warn = vi.mocked(console.warn)
+  expect((await generateNoteChallenge(f.ctx, input)).coveredBlockIds).toEqual(['a'])
+  expect(f.calls).toHaveLength(2)
+  expect(warn).toHaveBeenCalledTimes(1)
+  expect(JSON.parse(warn.mock.calls[0][0])).toEqual({ event:'notes-challenge-format-rejected', action:'review', reason:'json-invalid', attempt:1, targetCount:1, anchorCount:0, jsonChars:bad.length, requestKey:expect.stringMatching(/^[a-f0-9]{12}$/u) })
+  expect(f.calls[1].system).not.toContain('PRIVATE')
+})
+
+it('keeps format recovery and terminal rejection unchanged if its diagnostic sink throws', async () => {
+  const { generateNoteChallenge } = await load(), warn = vi.mocked(console.warn)
+  warn.mockImplementation(text => { if (typeof text === 'string' && text.includes('notes-challenge-format-rejected')) throw Error('PRIVATE-LOGGER') })
+  const recovery = textFixture(['{"PRIVATE":"', '{"reviews":[{"blockId":"a","issues":[]}]}'])
+  expect((await generateNoteChallenge(recovery.ctx, input)).coveredBlockIds).toEqual(['a'])
+  const rejected = textFixture('{"PRIVATE":"')
+  await expect(generateNoteChallenge(rejected.ctx, input)).rejects.toThrow('格式无效')
+  expect(recovery.calls).toHaveLength(2); expect(rejected.calls).toHaveLength(2)
+  expect(warn.mock.calls.filter(([text]) => String(text).includes('notes-challenge-format-rejected'))).toHaveLength(3)
 })
 
 it('regenerates a malformed review envelope once without reusing its contents or bypassing issue validation', async () => {
