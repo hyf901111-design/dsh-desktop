@@ -448,3 +448,38 @@ it('keeps the existing model thread-context bound after adding a long host scope
  expect(payload.allowReplacement).toBe(true)
  expect(f.calls).toHaveLength(1)
 })
+
+it('lets a multi-paragraph review finish beyond the short single-block deadline without raising its token budget', async () => {
+  vi.useFakeTimers()
+  const { generateNoteChallenge } = await load(), f = fixture()
+  let started
+  const ready = new Promise(resolve => { started = resolve })
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options); started()
+    await new Promise(resolve => setTimeout(resolve, 25000))
+    yield { type: 'text-delta', index: 0, text: JSON.stringify({ reviews: input.blocks.map(b => ({ blockId: b.id, issues: [] })) }) }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  const observed = generateNoteChallenge(f.ctx, { ...input, changedIds: ['a', 'b'], level: 1 }).then(result => ({result}), error => ({error}))
+  await ready; await vi.advanceTimersByTimeAsync(25001)
+  const value = await observed
+  expect(value.error).toBeUndefined()
+  expect(value.result.coveredBlockIds).toEqual(['a','b'])
+  expect(f.calls).toHaveLength(1)
+  expect(f.calls[0].maxTokens).toBe(3000)
+})
+
+it('caps the whole dense review at sixty seconds even when its provider ignores cancellation', async () => {
+  vi.useFakeTimers()
+  const { generateNoteChallenge } = await load(), f = fixture()
+  let started
+  const ready = new Promise(resolve => { started = resolve })
+  f.ctx.llm.stream = async function* () { started(); await new Promise(() => {}); yield { type: 'text-delta', text: '{}' } }
+  const blocks = Array.from({length:6}, (_,i) => ({id:'dense-'+i,type:'paragraph',text:'独立正文段落。'}))
+  const observed = generateNoteChallenge(f.ctx, {...input, blocks, changedIds:blocks.map(b=>b.id),level:1}).then(result=>({result}),error=>({error}))
+  await ready; await vi.advanceTimersByTimeAsync(20001)
+  let settled = false; observed.then(()=>{settled=true}); await Promise.resolve()
+  expect(settled).toBe(false)
+  await vi.advanceTimersByTimeAsync(40000)
+  expect((await observed).error.message).toMatch(/超时|timeout/i)
+})
