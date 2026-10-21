@@ -24,6 +24,7 @@ describe('Figma cartesian templates',()=>{
    ['近一月走势；格式示例：普通柱状图，使用 chart.bar','line'],
    ['近一月走势，普通柱状图用 chart 并可声明 chart.bar','line'],
    ['季度收入柱状图\n语法示例：chart.line','bar'],
+   ['季度收入柱状图；例如 chart.line / chart.area','bar'],
    ['本面板：季度收入结构饼图\n例如 chart.bar','pie'],
    ['近月累计涨跌幅对比曲线；图表类型可声明 chart.bar','line'],
    ['近一月走势；格式示例 chart.line；必须使用 chart.bar','bar'],
@@ -35,6 +36,7 @@ describe('Figma cartesian templates',()=>{
    ['近一月收益比较，使用 chart.bar 绘制收益柱状图','bar'],
    ['近一月走势，必须 chart.bar','bar'],
    ['近一月走势；格式示例 chart.line，但本面板必须使用 chart.bar','bar'],
+   ['近一月走势；格式示例 chart.line，随后使用 chart.bar','bar'],
    ['近一月走势：使用 chart.bar 并可声明 chart.line 作为格式示例','bar'],
    ['近一月走势：使用 chart.bar 并可声明 chart.line','bar'],
    ['示例公司近一月走势，使用 chart.bar','bar'],
@@ -47,6 +49,18 @@ describe('Figma cartesian templates',()=>{
  });
  it.each(CHART_VARIANTS)('keeps an explicit %s selection beside optional format guidance',variant=>{
    expect(requestedChartVariant(`必须使用 chart.${variant}；普通柱状/折线用 chart 并可声明 chart.bar`)).toBe(variant);
+   expect(requestedChartVariant(`例如三家公司的收益数据，使用 chart.${variant} 展示`)).toBe(variant);
+ });
+ it.each([
+   ['近一月走势，例如展示三家公司收益，使用 chart.bar','bar'],
+   ['请画每月销量，例如一月、二月的数据使用 chart.groupedBar 展示','groupedBar'],
+   ['近一月走势，比如展示三家公司收益，采用 chart.bar','bar'],
+   ['请画每月销量，举例选取一月、二月的数据，必须使用 chart.groupedBar 展示','groupedBar']
+ ])('keeps a chart selection following a business-data example in %s',(prompt,variant)=>{
+   expect(requestedChartVariant(prompt)).toBe(variant);
+   const panel={title:'按要求展示数据',type:'chart',size:'large',prompt};
+   expect(workbenchDesignTemplate(panel).id).toBe('research.chart.'+variant);
+   expect(workbenchPanelPrompt({title:'经营分析',dataMode:'source'},panel)).toContain('必须输出 chart.'+variant+' 的结构化数据');
  });
  it('keeps a long source/date explanation in the native chart note instead of rejecting or truncating the chart',()=>{
    const asOf='腾讯财经公开日K，数据日期2026-09-01至2026-10-20；'+('各公司保留原始证券代码、日期、前复权口径、价格单位和区间首尾收盘价。').repeat(9)

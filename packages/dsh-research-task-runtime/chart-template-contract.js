@@ -24,20 +24,29 @@ export function normalizeChartMetadata(data) {
   return {...data,asOf:first&&first.length<=256?first:'数据时点与来源详见完整说明',note};
 }
 export function requestedChartVariant(text = '') {
-  // A syntax example is not a chart selection. Keep the business text before
-  // an example, and scope optional declarations to their own technical clause.
-  // Explicit selections in neighbouring clauses (or before an example) survive.
-  const intent = text.split(/[。；;\n]|[，,](?=但|不过|本面板|本图|必须|务必|实际|最终)/u).map(clause => {
-    if (!/\bchart\.[a-zA-Z]+\b/u.test(clause)) return clause;
-    const example = clause.search(/(?:语法|格式|结构|写法).{0,12}(?:示例|举例)|示例(?=[：:\s（(])|例如|比如|譬如|举例/u);
-    const selection = example >= 0 ? clause.slice(0, example) : clause;
-    return selection.split(/[，,]/u).map(part => {
-      const optional = part.search(/(?:可以|允许|支持|可)(?:声明|写为|写作)/u);
-      if (optional < 0) return part;
-      const prefix = part.slice(0, optional);
-      return /\bchart\b/u.test(prefix) && !/\bchart\.[a-zA-Z]+\b/u.test(prefix) ? '' : prefix;
-    }).join('\n');
-  }).join('\n');
+  // Ignore only chart syntax examples, through the example token itself.
+  // A business-data example must not hide a later explicit chart selection.
+  let intent = '', consumed = 0, previousEnd = 0, previousExample = false;
+  for (const match of text.matchAll(/\bchart\.[a-zA-Z]+\b/gu)) {
+    const between = text.slice(previousEnd, match.index);
+    const context = between.split(/[。；;\n]|[，,](?=但|不过|本面板|本图|必须|务必|实际|最终)/u).at(-1);
+    const format = context.search(/(?:语法|格式|结构|写法).{0,12}(?:示例|举例)|示例(?=[：:\s（(])/u);
+    const example = context.search(/(?:例如|比如|譬如|举例)[：:\s（(]*(?:(?:使用|采用|输出|声明)\s*)?$/u);
+    const optional = context.search(/(?:可以|允许|支持|可)(?:声明(?:为)?|写为|写作)\s*$/u);
+    let omit = format >= 0 ? format : example;
+    if (optional >= 0 && omit < 0) {
+      const clauseStart = Math.max(context.lastIndexOf('，'),context.lastIndexOf(',')) + 1;
+      omit = /\bchart\b/u.test(context.slice(clauseStart, optional)) ? clauseStart : optional;
+    }
+    if (omit < 0 && previousExample && context === between && /^[\s/／、|]*(?:(?:或|和|与|及)(?:使用|采用|声明)?\s*)?$/u.test(context)) omit = 0;
+    if (omit >= 0) {
+      intent += text.slice(consumed, match.index - context.length + omit);
+      consumed = match.index + match[0].length;
+    }
+    previousEnd = match.index + match[0].length;
+    previousExample = omit >= 0;
+  }
+  intent += text.slice(consumed);
   const explicit = intent.match(/\bchart\.([a-zA-Z]+)\b/u)?.[1];
   if (CHART_VARIANTS.includes(explicit)) return explicit;
   const rules = [['waterfall',/瀑布图/u],['funnel',/漏斗图/u],['sankey',/桑基图/u],['bubble',/气泡图/u],['scatter',/散点图/u],['heatmap',/相关性热力图|相关矩阵/u],['calendar',/日历热力图/u],['ohlc',/OHLC图|OHLC 图/iu],['candlestick',/K线图|K 线图|蜡烛图/u],['sunburst', /旭日图/u], ['treemap', /矩形树图|树矩图/u], ['donut', /环形图|环图/u], ['pie', /饼图/u], ['radar', /雷达图/u], ['histogram', /直方图/u], ['box', /箱线图|箱形图/u], ['bullet', /子弹图|靶心图/u], ['gauge', /仪表图|仪表盘/u], ['percentBar', /百分比.*(?:柱|条)|百分比堆叠/u], ['stackedArea', /堆叠面积/u],
