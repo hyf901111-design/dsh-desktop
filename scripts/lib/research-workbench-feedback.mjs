@@ -23,6 +23,14 @@ export function publishResearchWorkbenchProgress(target,sessionId,artifacts,acti
  return snapshot
 }
 
+// Chat and notes restore the same durable workspace even when no canvas is
+// mounted. Seed last-observed state without overwriting a live canvas owner.
+export function publishInactiveResearchWorkbenchProgress(target,sessionId,artifacts) {
+ const current=target?.__sherlockWorkbenchGenerationV1?.get?.(sessionId)
+ if(current?.active===true)return current
+ return publishResearchWorkbenchProgress(target,sessionId,artifacts,false,false)
+}
+
 export function observeResearchWorkbenchProgress(target,sessionId,listener) {
  const accept=value=>value?.version===1&&value.sessionId===sessionId&&Array.isArray(value.nodes)
  const read=target?.__sherlockWorkbenchGenerationV1?.get?.(sessionId)
@@ -131,11 +139,11 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
 }
 
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v3 */'
+ const marker='/* ework:workbench-feedback:v4 */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
- const helpers=marker+'\n'+[observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v[12] \*\//)
+ const helpers=marker+'\n'+[publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
+ const previous=source.search(/\/\* ework:workbench-feedback:v[123] \*\//)
  if(previous>=0){
   const end=source.indexOf('const ExecutionStatusGroup =',previous)
   if(end<0)throw Error('Workbench feedback upgrade anchor missing')
@@ -168,5 +176,7 @@ export function patchResearchWorkbenchFeedback(source) {
   chat=chat.replace(tail,'$1, workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null$2')
  }
  source=source.slice(0,start)+chat+source.slice(end)
+ const persisted='const researchWorkspaceSnapshot2 = (0, react.useSyncExternalStore)(researchWorkspace.subscribe, researchWorkspace.getSnapshot, researchWorkspace.getSnapshot);'
+ exact(persisted,persisted+'\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);')
  return source
 }

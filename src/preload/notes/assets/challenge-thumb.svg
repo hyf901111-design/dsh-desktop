@@ -1,0 +1,21 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Slider / thumb">
+<circle id="Thumb / halo" opacity="0" cx="16" cy="16" r="16" fill="#477EF3"/>
+<g id="Thumb / body" filter="url(#filter0_d_0_11)">
+<circle cx="16" cy="16" r="12" fill="white"/>
+<circle cx="16" cy="16" r="11.65" stroke="#D6DBE6" stroke-opacity="0.85" stroke-width="0.7"/>
+</g>
+<circle id="Thumb / indicator" cx="16" cy="16" r="1.5" fill="#477EF3"/>
+</g>
+<defs>
+<filter id="filter0_d_0_11" x="2.5" y="3.2" width="27" height="27" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="0.7"/>
+<feGaussianBlur stdDeviation="0.75"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_11"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_11" result="shape"/>
+</filter>
+</defs>
+</svg>

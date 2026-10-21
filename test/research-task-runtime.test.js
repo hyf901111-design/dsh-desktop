@@ -1482,6 +1482,18 @@ describe('Research task Subagent adapter', () => {
       expect(child.toolFilter.allow).toContain('public_data_query')
     }finally{await handle.dispose()}
   })
+  it('gives policy children official-source routing without repeating the full bundled free-data instructions',async()=>{
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'web_search'},{name:'web_fetch'}]}
+    const handle=await fixture.start('工作台：煤电政策\n本面板：容量电价与燃料成本\n检索近期部委政策原文，未取得的维度明确说明。\n仅生成本面板，优先使用 news 类型。')
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1],prompt=child.prompt[0].text
+      expect(prompt).toContain('政策、法规或部委通知优先')
+      expect(prompt.split('【EWork 内置基础数据源】')).toHaveLength(2)
+      expect(child.toolFilter.allow).toEqual(expect.arrayContaining(['web_search','web_fetch']))
+      expect(prompt).toContain('不能伪装成新闻或静默删去')
+    }finally{await handle.dispose()}
+  })
   it('does not grant the free data tool to offline or explicitly plugin-bound children', async () => {
     const schemas = [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'ework__call', description: '调用通联 DataYes API' }, { name: 'web_search' }, { name: 'web_fetch' }, { name: 'read' }];
     for (const query of ['不要联网，只用已有资料制作图表', '工作台：投资\n本面板：行情\n使用通联MCP取最新股票行情，优先使用 market 类型。']) {
@@ -1547,7 +1559,8 @@ describe('Research task Subagent adapter', () => {
     expect(prompt).toContain('window.sherlockShared.register')
     expect(prompt).toContain('自包含 HTML')
     const native = workbenchPanelPrompt({ title: '工作管理' }, { title: '任务', type: 'tasks', prompt: '任务清单' })
-    expect(native).toContain('仅提交数据，不自造视觉样式')
+    expect(native).toContain('宿主负责模板样式')
+    expect(native).toContain('仅提交数据')
   })
 
   it.each([

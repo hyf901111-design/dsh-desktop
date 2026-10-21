@@ -1,4 +1,5 @@
 import { patchCanvasSessionActivity } from './sidebar-session-recency.mjs'
+import { patchNotesChallengeClient } from './notes-challenge-client.mjs'
 import { patchNotesExportMenu } from './notes-export-menu.mjs'
 /** Bind notes to the native session/view ledger, keeping one resident header. */
 export function patchNotesClient(source) {
@@ -42,6 +43,6 @@ children: [active?.id === 'notes' && (0, react_jsx_runtime.jsxs)('button', {
 }), renderSlot("conversation.session.header.utilities", {})]`)
   }
   source=source.replace("label:()=> '笔记'", "label:()=> document.documentElement.dataset.odysseyLocale==='en'?'Notes':'笔记'")
-  source=patchNotesExportMenu(source)
+  source=patchNotesChallengeClient(patchNotesExportMenu(source))
   return source.includes('function createResearchWorkspaceSession(') ? patchCanvasSessionActivity(source) : source
 }

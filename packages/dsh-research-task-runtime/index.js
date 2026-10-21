@@ -20,6 +20,7 @@ import { registerSessionCompletionNotifications } from './session-completion-not
 import { registerScheduledTitle } from './scheduled-title.js'
 import {registerScheduledTaskTool,SCHEDULED_TASK_TOOL} from './scheduled-task-tools.js'
 import { registerNotesAi } from './notes-ai.js'
+import { registerNotesChallenge } from './notes-challenge-runtime.js'
 import { registerNoteSessions } from './notes-session.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
@@ -31,7 +32,7 @@ import { createSharedMainAgentAdapter } from './shared-main-agent.js'
 import { registerCanvasTools, bindCanvasChild, CANVAS_TOOL_NAMES, callCanvas } from './canvas-tools.js'
 import { registerCanvasUseTool } from './canvas-use-tools.js'
 import { registerCanvasUseTasks } from './canvas-use-tasks.js'
-import { freeDataInstruction } from './free-data-skill.js'
+import { freeDataInstruction, POLICY_SOURCE_GUIDANCE } from './free-data-skill.js'
 import { registerPublicDataTool } from './public-data-tool.js'
 import { createPublicDataClient } from './public-data-client.js'
 import { preparePublicDataPanel, validatePublicDataPanel, publicDataNewsTaskRequirement } from './workbench-public-data.js'
@@ -637,7 +638,7 @@ export function buildResearchTaskPrompt(request) {
       allowsWeb
         ? '只有用户明确提供的 http 或 https 网址才能用于 web；不得把用户没有提供的网址替换成自行猜测的网站。'
         : '用户未提供明确网址时，不得生成 web，也不得自行猜测或推荐外部网站；这不限制使用 html 创建自包含页面。',
-      '当需求涉及实时、监控或最新数据时，用户指定来源优先；未指定来源时先使用当前可见的 public_data_query 获取适用的免费数据；未覆盖时再使用获授权的专业工具或 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。',
+      '当需求涉及实时、监控或最新数据时，用户指定来源优先；行情、宏观、天气等已有适配的数据先使用当前可见的 public_data_query 获取适用的免费数据；未覆盖时再使用获授权的专业工具或 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。'+POLICY_SOURCE_GUIDANCE,
       '不要输出代码围栏、解释、前言或 JSON 之外的文字；HTML/CSS/JavaScript 只能放在 html 字段内。',
       '图表容量遵守上方对应变体的 schema；表格最多 12 列和 100 行；KPI 最多 12 项。',
       '表格表头及所有单元格默认单行显示，列宽由完整内容决定，超宽时横向滚动；只有用户手动调整列宽后才允许该列换行。HTML 表格使用标准 table/thead/tbody，宿主提供拖动列宽。组合图表遵循自然内容高度，标准数据图表必须复用宿主market/chart模板，不能另写同类SVG或canvas。只有模板确实无法表达的自定义图形才使用HTML：监听实际绘图区ResizeObserver，按新宽高重算几何，字号保持CSS像素大小；禁止preserveAspectRatio="none"和scaleX/scaleY压缩含文字的图表。静态SVG保持自身宽高比，不用height:100%、100vh或flex:1撑高图表及竖向容器。',
@@ -2084,10 +2085,13 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       if (kind === 'create' || kind === 'container' && !workbenchPanelFormat(query ?? '')) effectivePrompt += '\n趋势图优先使用宿主 chart 格式的 labels/series，直接交付已有真实数据，不编写冗长的 SVG 坐标或重复的 HTML 图表代码。历史记录很多时可选取有明确日期的代表数据点，并注明采样和覆盖范围；无法取得的区间保留缺失说明，不要为凑齐数据持续查询。'
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
       if (deferredSynthesis) effectivePrompt += '\n当前为无工具的离线组件生成。所需组件技能、交付格式、宿主交互接口、原始需求和共同事实均已附在本请求；直接生成本组件，不再读取技能、文件或应用实现。保留要求的业务交互与全部记录，不以静态说明替代。'
-      if (bundledSkills.data && permitsTools && scopedSchemas?.some(tool => tool.name === 'public_data_query')) effectivePrompt += '\n' + freeDataInstruction()
+      if (bundledSkills.data && permitsTools && scopedSchemas?.some(tool => tool.name === 'public_data_query')) {
+        const guidance=freeDataInstruction()
+        if(!effectivePrompt.includes(guidance))effectivePrompt += '\n' + guidance
+      }
       if (permitsTools) effectivePrompt += preferredSources.length
         ? `\n${componentSourceInstruction(preferredSources, sourceRequest)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。`
-        : '\n用户指定来源优先；未指定来源时先用当前可见 public_data_query 读取适用免费源。股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
+        : '\n用户指定来源优先；行情、宏观、天气等已有适配的数据先用当前可见 public_data_query 读取适用免费源。'+POLICY_SOURCE_GUIDANCE+'股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
@@ -2772,6 +2776,7 @@ export async function apply(ctx) {
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
     const disposeScheduledTaskTool = registerScheduledTaskTool(ctx)
     const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText})
+    const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     let context
@@ -2787,6 +2792,7 @@ export async function apply(ctx) {
       disposeScheduledTitle()
       disposeScheduledTaskTool()
       disposeNotesAi()
+      disposeNotesChallenge()
       disposeNoteSessions()
       throw error
     }
@@ -2807,6 +2813,7 @@ export async function apply(ctx) {
       disposeScheduledTitle()
       disposeScheduledTaskTool()
       disposeNotesAi()
+      disposeNotesChallenge()
       disposeNoteSessions()
       await runtime.dispose()
     }

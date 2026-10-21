@@ -150,7 +150,7 @@ async function waitForTurn(promise, signal) {
   try { return await Promise.race([promise, aborted]); } finally { signal.removeEventListener('abort', abort); }
 }
 export function createQueryClient({ fetcher = globalThis.fetch, now = Date.now, timeoutMs = 20000 } = {}) {
-  const cache = new Map(), queues = new Map(), lastCall = new Map(), cooldown = new Map();
+  const cache = new Map(), queues = new Map(), lastCall = new Map(), cooldown = new Map(), unavailable = new Map();
   async function request(args, signal) {
     const { source, endpoint, normalize, headers } = prepareRequest(args.source, args.parameters ?? {});
     const providerId = new URL(endpoint).hostname;
@@ -161,6 +161,7 @@ export function createQueryClient({ fetcher = globalThis.fetch, now = Date.now, 
       const hit = cache.get(key);
       if (hit && hit.expiresAt > now()) return { ...structuredClone(hit.result), cacheHit: true, nextRefreshSeconds: Math.ceil((hit.expiresAt - now()) / 1000) };
       if ((cooldown.get(providerId) ?? 0) > now()) throw new PublicDataError('RATE_LIMITED', '来源暂时限流，请在退避期结束后再查询', Math.ceil((cooldown.get(providerId) - now()) / 1000));
+      if ((unavailable.get(providerId) ?? 0) > now()) throw new PublicDataError('SOURCE_UNAVAILABLE', '来源最近一次连接失败，正在短暂退避；不要换词重试，可改用其他适用来源并如实保留缺失', Math.ceil((unavailable.get(providerId) - now()) / 1000));
       const spacing = source.id === 'github-repo' ? 60000 : source.id === 'crossref' ? 250 : 1000;
       const delay = (lastCall.get(providerId) ?? 0) + spacing - now();
       if (delay > 0) await new Promise((resolve, reject) => { const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, delay); const abort = () => { clearTimeout(timer); reject(signal.reason); }; signal?.addEventListener('abort', abort, { once: true }); });
@@ -190,7 +191,15 @@ export function createQueryClient({ fetcher = globalThis.fetch, now = Date.now, 
         const result = { version: 1, source: source.name, sourceId: source.id, sourceUrl: endpoint, documentation: source.documentation, ...normalized, receivedAt: new Date(now()).toISOString(), cacheHit: false, nextRefreshSeconds: Math.ceil(ttl), limitations: source.limitations, rights: source.rights, quality: normalized.records.length ? 'source-response' : 'empty-result', delivery: 'snapshot; no automatic component refresh binding' };
         cache.set(key, { result: structuredClone(result), expiresAt: now() + ttl * 1000 }); while (cache.size > 128) cache.delete(cache.keys().next().value);
         return result;
-      } catch (error) { if (signal?.aborted) throw signal.reason; if (controller.signal.aborted && controller.signal.reason instanceof PublicDataError && error.code !== 'RESPONSE_TOO_LARGE') throw controller.signal.reason; if (error instanceof PublicDataError) throw error; throw new PublicDataError('NETWORK_ERROR', '无法连接来源，请检查网络或换用适用来源'); }
+      } catch (error) {
+        if (signal?.aborted) throw signal.reason;
+        const failure = controller.signal.aborted && controller.signal.reason instanceof PublicDataError && error?.code !== 'RESPONSE_TOO_LARGE'
+          ? controller.signal.reason : error instanceof PublicDataError ? error : new PublicDataError('NETWORK_ERROR', '无法连接来源，请检查网络或换用适用来源');
+        // Connectivity failures affect the provider, not the search wording.
+        // Keep valid cached records available and let another provider proceed.
+        if (['NETWORK_ERROR','TIMEOUT'].includes(failure.code)) unavailable.set(providerId, now() + 60000);
+        throw failure;
+      }
       finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
     } finally { release(); }
   }
