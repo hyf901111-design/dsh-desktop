@@ -167,7 +167,7 @@ function boundedIssues(issues, blocks, limit) {
 
 async function modelResult(ctx, route, system, payload, signal, reasoningEffort, reviewTargets, requestId) {
   const messages = [createUserMessage({ content: [{ type: 'text', text: JSON.stringify(payload) }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime' } })]
-  let outputSize = 0, totalSize = 0, usage = { inputTokens: 0, outputTokens: 0 }
+  let outputSize = 0, totalSize = 0, payloadSize = 0, eventCount = 0, usage = { inputTokens: 0, outputTokens: 0 }
   const knownEvents = new Set(['block-start', 'text-delta', 'reasoning-delta', 'tool-call-delta', 'block-end', 'usage', 'finish', 'tool-call', 'tool-call-start'])
   const streamStats = { eventCounts: {}, serializedByKind: {}, textDeltaChars: 0, reasoningDeltaChars: 0, textSnapshotChars: 0, reasoningSnapshotChars: 0 }
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -184,6 +184,14 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
         const chunk = step.value
         const serializedChars = JSON.stringify(chunk).length, kind = knownEvents.has(chunk.type) ? chunk.type : 'other'
         totalSize += serializedChars
+        eventCount++
+        // Tiny provider deltas can repeat the same fixed envelope thousands of
+        // times. Charge their JSON-encoded payload and any additional fields,
+        // not that envelope. Snapshots, replay state and unknown events remain
+        // fully charged; an independent event cap bounds empty-fragment work.
+        const deltaFrame = ['text-delta', 'reasoning-delta'].includes(chunk.type) && typeof chunk.text === 'string' && Number.isSafeInteger(chunk.index) && chunk.index >= 0
+          ? JSON.stringify({ type: chunk.type, index: chunk.index, text: '' }).length : 0
+        payloadSize += Math.max(0, serializedChars - deltaFrame)
         streamStats.eventCounts[kind] = (streamStats.eventCounts[kind] ?? 0) + 1
         streamStats.serializedByKind[kind] = (streamStats.serializedByKind[kind] ?? 0) + serializedChars
         if (chunk.type === 'text-delta' && typeof chunk.text === 'string') streamStats.textDeltaChars += chunk.text.length
@@ -192,8 +200,8 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
           if (chunk.block.type === 'text') streamStats.textSnapshotChars += chunk.block.text.length
           if (chunk.block.type === 'reasoning') streamStats.reasoningSnapshotChars += chunk.block.text.length
         }
-        if (totalSize > 100000 || chunk.type === 'tool-call' || chunk.type === 'tool-call-start' || chunk.block?.type === 'tool-call') {
-          diagnostic(requestId, { event: 'notes-challenge-stream-rejected', action: payload.action, reason: totalSize > 100000 ? 'serialized-limit' : 'tool-call', attempt: attempt + 1, serializedChars: totalSize, lastEventKind: kind, lastEventChars: serializedChars, ...streamStats })
+        if (payloadSize > 100000 || eventCount > 32768 || chunk.type === 'tool-call' || chunk.type === 'tool-call-start' || chunk.block?.type === 'tool-call') {
+          diagnostic(requestId, { event: 'notes-challenge-stream-rejected', action: payload.action, reason: payloadSize > 100000 ? 'payload-limit' : eventCount > 32768 ? 'event-limit' : 'tool-call', attempt: attempt + 1, serializedChars: totalSize, payloadChars: payloadSize, eventCount, lastEventKind: kind, lastEventChars: serializedChars, ...streamStats })
           throw Error('挑战检查返回内容超出边界。')
         }
         if (chunk.type === 'text-delta') { outputSize += chunk.text.length; attemptOutputSize += chunk.text.length }
