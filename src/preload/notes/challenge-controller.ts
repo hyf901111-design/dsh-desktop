@@ -82,7 +82,10 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  }
  useEffect(()=>{
   live.current=true
-  const s=new NoteChallengeScheduler({sessionId,run:request,onResult:async(result,captured)=>{
+  const s=new NoteChallengeScheduler({sessionId,run:request,getReviewAnchors:()=>[...ai.getThreads().values()].flatMap((thread:any)=>{
+   const issue=thread.metadata?.issue
+   return thread.metadata?.kind===CHALLENGE_KIND&&!thread.resolved&&!thread.deletedAt&&issue?[{blockId:issue.blockId,quote:issue.quote}]:[]
+  }),onResult:async(result,captured)=>{
    for(const id of result.coveredBlockIds){const b=captured.blocks.find(v=>v.id===id);if(b)covered.current.set(id,b.text)}
    for(const issue of result.issues){
     if(!live.current||!active()||readLevel()===0||fingerprint(latest.current.title,blocks())!==captured.key)break

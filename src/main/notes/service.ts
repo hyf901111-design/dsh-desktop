@@ -92,7 +92,7 @@ export function installNotesService(options: {
         const controller=new AbortController(),job={owner,sessionId:session,controller};challenges.set(input.requestId,job)
         try{
           const url=new URL('/sherlock/notes/challenge',base)
-          const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.any([controller.signal,AbortSignal.timeout(65000)]),body:JSON.stringify({sessionId:session,requestId:input.requestId,action:input.action,level:input.level,title:input.title,blocks:input.blocks,...input.changedIds===undefined?{}:{changedIds:input.changedIds},...input.thread===undefined?{}:{thread:input.thread}})})
+          const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.any([controller.signal,AbortSignal.timeout(65000)]),body:JSON.stringify({sessionId:session,requestId:input.requestId,action:input.action,level:input.level,title:input.title,blocks:input.blocks,...input.changedIds===undefined?{}:{changedIds:input.changedIds},...input.action==='review'&&input.existingAnchors!==undefined?{existingAnchors:input.existingAnchors}:{},...input.thread===undefined?{}:{thread:input.thread}})})
           const result=await response.json()
           if(!response.ok)throw Error(typeof result.error==='string'?result.error:'本轮检查未完成。')
           if(controller.signal.aborted||options.owner()!==owner||!options.canRead(session))throw Error('笔记状态已变化，本轮结果未应用。')

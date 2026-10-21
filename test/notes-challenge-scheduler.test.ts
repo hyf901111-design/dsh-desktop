@@ -4,6 +4,35 @@ import type {ChallengeRequest} from '../src/shared/notes-challenge'
 const blocks=(text='这是一段已经完成的研究判断。')=>[{id:'p',type:'paragraph',text}]
 const result={version:1 as const,issues:[],coveredBlockIds:['p'],checks:[]}
 afterEach(()=>vi.useRealTimers())
+it('includes current review anchor context and charges its rolling character cost',async()=>{
+ vi.useFakeTimers();const text='甲'.repeat(1899)+'乙'+'丙'.repeat(1899)+'丁'+'戊'.repeat(99)+'。',anchors=[{blockId:'p',quote:text.slice(0,1900)},{blockId:'p',quote:text.slice(1900,3800)}]
+ const run=vi.fn(async(_r:ChallengeRequest)=>result),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),onState:v=>states.push(v),getReviewAnchors:()=>anchors})
+ s.update({title:'文稿',blocks:blocks(text),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(2000)
+ expect(run.mock.calls[0]![0].existingAnchors).toEqual(anchors)
+ for(let n=0;n<4;n++){s.recheck();await vi.advanceTimersByTimeAsync(30000)}
+ expect(run).toHaveBeenCalledTimes(5)
+ s.recheck();await vi.advanceTimersByTimeAsync(30000)
+ expect(run).toHaveBeenCalledTimes(5);expect(states.at(-1)).toMatchObject({phase:'limited',pending:1});s.dispose()
+})
+it('limits review anchor hints to reviewed targets even when adjacent context has its own marks',async()=>{
+ vi.useFakeTimers();const anchors=[{blockId:'p',quote:'已有问题'},{blockId:'q',quote:'邻段'}]
+ const run=vi.fn(async(r:ChallengeRequest)=>({...result,coveredBlockIds:r.changedIds!})),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),getReviewAnchors:()=>anchors})
+ const document=(n:number)=>[{id:'p',type:'paragraph',text:'已有问题。'+n},{id:'q',type:'paragraph',text:'邻段注释。'}]
+ s.update({title:'',blocks:document(0),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(2000)
+ s.update({title:'',blocks:document(1),active:true});await vi.advanceTimersByTimeAsync(30000)
+ expect(run.mock.calls[1]![0].blocks.map(b=>b.id)).toEqual(['p','q'])
+ expect(run.mock.calls[1]![0].existingAnchors).toEqual([anchors[0]])
+ s.dispose()
+})
+it('reads the latest review anchors on recheck without treating annotation changes as body edits',async()=>{
+ vi.useFakeTimers();let anchors=[{blockId:'p',quote:'已有问题'}]
+ const document=blocks('已有问题。另一个问题。'),run=vi.fn(async(_r:ChallengeRequest)=>result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),getReviewAnchors:()=>anchors})
+ s.update({title:'',blocks:document,active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(2000)
+ expect(run.mock.calls[0]![0].existingAnchors).toEqual([{blockId:'p',quote:'已有问题'}])
+ anchors=[{blockId:'p',quote:'另一个问题'}]
+ s.update({title:'',blocks:document,active:true});await vi.advanceTimersByTimeAsync(60000);expect(run).toHaveBeenCalledOnce()
+ s.recheck();await vi.advanceTimersByTimeAsync(1);expect(run.mock.calls[1]![0].existingAnchors).toEqual(anchors);s.dispose()
+})
 it('defaults off, waits for a stable pause and does not review formatting, comments or saves again',async()=>{
  vi.useFakeTimers();const run=vi.fn(async()=>result),onResult=vi.fn(),s=new NoteChallengeScheduler({sessionId:'s',run,onResult})
  s.update({title:'文稿',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(20000);expect(run).not.toHaveBeenCalled()

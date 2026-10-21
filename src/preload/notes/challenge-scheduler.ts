@@ -1,4 +1,4 @@
-import type {ChallengeBlock,ChallengeCheck,ChallengeLevel,ChallengeRequest,ChallengeResult} from '../../shared/notes-challenge'
+import {challengeReviewAnchors,type ChallengeBlock,type ChallengeCheck,type ChallengeLevel,type ChallengeRequest,type ChallengeResult,type ChallengeReviewAnchor} from '../../shared/notes-challenge'
 
 export const CHALLENGE_LEVELS=[
  {name:'关闭',description:'专注写作，暂停自动挑战',pause:0,interval:0,deep:0},
@@ -41,7 +41,7 @@ export class NoteChallengeScheduler{
  private disposed=false
  private usage:Array<{at:number;chars:number;input:number;output:number}>=[]
  private checks:ChallengeCheck[]=[]
- constructor(private options:{sessionId:string;run:(request:ChallengeRequest,signal:AbortSignal)=>Promise<ChallengeResult>;onResult:(result:ChallengeResult,captured:Captured)=>void|Promise<void>;onState?:(value:ChallengeScheduleState)=>void;now?:()=>number}){}
+ constructor(private options:{sessionId:string;run:(request:ChallengeRequest,signal:AbortSignal)=>Promise<ChallengeResult>;onResult:(result:ChallengeResult,captured:Captured)=>void|Promise<void>;onState?:(value:ChallengeScheduleState)=>void;now?:()=>number;getReviewAnchors?:()=>ChallengeReviewAnchor[]}){}
  private now(){return this.options.now?.()??Date.now()}
  private emit(phase:ChallengeScheduleState['phase']){this.options.onState?.({phase,pending:this.pending.size,checks:this.checks})}
  setLevel(level:ChallengeLevel){
@@ -89,7 +89,9 @@ export class NoteChallengeScheduler{
    for(const {b,score} of related)if(score>0)context.add(b.id)
   }
   for(const id of context){const b=this.value.blocks.find(b=>b.id===id)!;if(ids.includes(id)||b.text.length>MAX_BLOCK_CHARS||chosen.length>=MAX_BLOCKS||chars+b.text.length>MAX_CHARS)continue;chosen.push(b);chars+=b.text.length;if(!adjacent.has(id))deep=true}
-  return{chosen,ids,chars,oversized,deep}
+  const existingAnchors=challengeReviewAnchors(this.options.getReviewAnchors?.()??[],chosen.filter(block=>ids.includes(block.id)))
+  // Repeated location hints consume the same rolling input budget as body text.
+  return{chosen,ids,chars:chars+(existingAnchors.length?JSON.stringify(existingAnchors).length:0),existingAnchors,oversized,deep}
  }
  private budgetWait(chars:number){
   this.usage=this.usage.filter(v=>v.at>this.now()-WINDOW)
@@ -115,7 +117,7 @@ export class NoteChallengeScheduler{
  }
  private async execute(){
   if(this.disposed||!this.level||this.flight||!this.value.active||this.value.busy||this.value.composing)return
-  const {chosen,ids,chars,deep}=this.batch()
+  const {chosen,ids,chars,deep,existingAnchors}=this.batch()
   if(!ids.length||this.budgetWait(chars)!==undefined){this.schedule();return}
   for(const id of ids)this.pending.delete(id)
   const captured:Captured={key:key(this.value),title:this.value.title,blocks:this.value.blocks.map(b=>({...b}))},controller=new AbortController(),job={controller,ids}
@@ -123,7 +125,7 @@ export class NoteChallengeScheduler{
   let onAbort:()=>void=()=>{}
   try{
    const aborted=new Promise<never>((_,reject)=>{onAbort=()=>reject(controller.signal.reason);controller.signal.addEventListener('abort',onAbort,{once:true})})
-   const response=await Promise.race([this.options.run({sessionId:this.options.sessionId,requestId:crypto.randomUUID(),action:'review',level:this.level,title:this.value.title,blocks:chosen,changedIds:ids},controller.signal),aborted])
+   const response=await Promise.race([this.options.run({sessionId:this.options.sessionId,requestId:crypto.randomUUID(),action:'review',level:this.level,title:this.value.title,blocks:chosen,changedIds:ids,...existingAnchors.length?{existingAnchors}:{}},controller.signal),aborted])
    const madeProgress=ids.some(id=>response.coveredBlockIds.includes(id)),unchanged=key(this.value)===captured.key
    for(const id of ids)if(!response.coveredBlockIds.includes(id)&&this.value.blocks.some(b=>b.id===id)){this.pending.add(id);if(!madeProgress&&unchanged)this.failed.add(id)}
    if(response.usage){usage.input=response.usage.inputTokens;usage.output=response.usage.outputTokens}
