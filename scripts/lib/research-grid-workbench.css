@@ -1,4 +1,7 @@
 /* The scroll viewport starts below the shared workspace header. */
+/* Square-grid heights depend on the available width. Keep that width stable
+   when toolbar clearance crosses the scroll threshold, avoiding a resize loop. */
+body [data-research-canvas][data-ework-grid]{scrollbar-gutter:stable}
 body [data-research-canvas][data-ework-grid]{margin-top:var(--odyssey-workspace-header-height,44px)!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;box-sizing:border-box;--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:var(--ework-scroll-thumb,#0000001a) transparent}
 /* Keep the full canvas visible; reserve toolbar clearance in scrollable content. */
 body [data-research-canvas][data-ework-grid][data-workbench-toolbar-space]{flex:none!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;scroll-padding-bottom:80px}
