@@ -44,6 +44,7 @@ body [data-ework-notes-session]:has(.en-challenge-tools) [data-srb-utilities]{fl
 /* Native shell buttons impose padding and min-width: reset geometry explicitly. */
 .en-root .en-challenge-card .en-challenge-close{box-sizing:border-box;min-width:0;min-height:0;width:24px;height:24px;padding:0;margin:0;border-radius:6px;line-height:0;display:grid;place-items:center}
 .en-root .en-challenge-card .en-challenge-close img{display:block;flex:none;margin:0;padding:0}
+.en-root .en-challenge-card[data-popup] .en-challenge-close{z-index:3;background:var(--en-challenge-bg)}
 .en-root .en-challenge-card .en-challenge-close:hover{background:var(--en-challenge-action)}
 .en-root .en-challenge-card .en-challenge-reply>button{box-sizing:border-box;min-width:0;min-height:0;width:36px;height:32px;padding:0;line-height:19px;color:var(--en-challenge-action-ink)}
 .en-root .en-challenge-card .en-challenge-reply>button:disabled{color:var(--en-challenge-muted);opacity:1}

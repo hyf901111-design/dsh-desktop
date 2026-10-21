@@ -405,7 +405,7 @@ it('returns replacement text for explicit direct editing requests, but never tre
 
 it('keeps consequence inquiries as preview-capable replies without weakening the shared execution predicate',async()=>{
  const{generateNoteChallenge}=await load(),f=fixture({reply:{text:'建议先保留格式。',replacement:'本期收入增长10%。'}})
- for(const text of ['直接修改原文会丢格式吗？','直接替换原文会影响已有评论吗？']){
+ for(const text of ['直接修改原文会丢格式吗？','直接替换原文会影响已有评论吗？','直接修改原文能保留格式吗？','直接替换原文有格式丢失的问题吗？','修改建议看起来很生硬']){
   const thread={blockId:'a',quote:'收入增长10%',category:'grammar',message:'请明确表达。',messages:[{role:'user',text}]}
   expect((await generateNoteChallenge(f.ctx,{...input,action:'reply',thread})).reply.replacement).toBe('本期收入增长10%。')
  }
