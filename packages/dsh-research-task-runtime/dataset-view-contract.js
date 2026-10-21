@@ -48,6 +48,28 @@ export function validateWorkbenchDatasets(value){
  check(bytes(result)<=DATASET_VIEW_LIMITS.totalBytes,'共同数据总量超过192000字节。')
  return freeze(result)
 }
+// Creation-time checks only: old saved documents remain readable. Within one
+// workbench, the same stable record id and field key denote the same fact.
+// Different event grains must use their own event ids / semantic field keys.
+export function assertWorkbenchViewSources(input){
+ const datasets=input.sharedDatasets;if(!datasets)return
+ const facts=new Map()
+ for(const dataset of datasets)for(const record of dataset.records){
+  if(!facts.has(record.id))facts.set(record.id,new Map())
+  const fields=facts.get(record.id)
+  for(const field of dataset.fields){
+   if(field.key==='id')continue
+   const previous=fields.get(field.key),encoded=JSON.stringify(record[field.key])
+   check(!previous||previous.value===encoded&&previous.unit===field.unit,`共同记录${record.id}的${field.key}在数据集${previous?.dataset}与${dataset.id}中不一致；请将同一事实放入同一主记录，由各卡引用，不要猜测、覆盖或把null当成另一份已知值。`)
+   fields.set(field.key,{value:encoded,unit:field.unit,dataset:dataset.id})
+  }
+ }
+ // A remaining generated child receives all snapshots as source context.
+ // Fully prepared cards, however, cannot use an orphaned data set implicitly.
+ if(input.panels.some(panel=>panel.type!=='view'&&!panel.artifact))return
+ const used=new Set(input.panels.filter(panel=>panel.type==='view').map(panel=>panel.view.dataset))
+ for(const dataset of datasets)check(used.has(dataset.id),`共同数据集${dataset.id}没有任何组件引用；请修正view.dataset或合入实际使用的主记录，不能把未展示的数据算作组件已完成。`)
+}
 // Naive timestamps are intentionally rejected: different cards must not infer
 // different time zones. Date-only values remain valid all-day scheduling data.
 export function datasetScheduleTime(value){
@@ -99,14 +121,14 @@ export function parseDatasetViewArtifact(value){
  return freeze({version:1,type:'view',title:value.title,dataset,view})
 }
 export function datasetViewDataIssue(value){try{parseDatasetViewArtifact(value)}catch(error){return error.message}}
-export const DATASET_VIEW_GUIDANCE='panels完整清单与sharedDatasets必须一次调用同时提供：先列清单及各卡view，再填写共同记录，不先单独提交sharedDatasets。records每条必须有稳定id，直接用业务编号如B01，不另造r-B01或重复编号字段；宿主可补id的显示标签，不能推断记录编号。reorder由上移/下移按钮调整本卡顺序，不支持拖动，不另造会过时的priority数值列。同一批对象的负责人、作业起止时间、等待原因、验收等共同事实放在同一个主数据集，各卡view引用它；确有独立事件才另建数据集，不能重复独立填写相同事实。未排期应同时在列表与排程保留null，不得一处已排另一处缺项。同一工作台多卡复用记录时可提供sharedDatasets:[{id,label,asOf,note,fields:[{key,label,unit?}],records:[{id,...各字段原值}]}]，共同事实只确定一次。面板type:view，提供view:{dataset:"数据集id",filters:[字段键],details:[字段键],reorder:false,navigation:"flow|tabs",layout:"stack|split",sections:[{kind:"records|compare",fields:[字段键]}或{kind:"schedule",label:字段键,start:字段键,end:字段键,owner?:字段键,resource?:字段键}]}。由宿主直接生成不同组合和可靠交互，不编写HTML/JS、不重复填写各卡数据。仅明确模拟数据工作台支持sharedDatasets；已有真实资料仍沿原数据来源与artifact流程。缺失填null，日内排程使用含时区的ISO时间；不能为满足组件而删改业务、缩小用户范围或改称模拟。'
+export const DATASET_VIEW_GUIDANCE='同一批对象用一个完整主数据集，各卡view.dataset均引用该主数据集，不复制为排程/验收的另一份相同编号记录。每份数据必须有实际组件引用；同一记录id的同名字段在所有数据集中值与单位须一致，null也必须一致；独立事件使用独立事件id。panels完整清单与sharedDatasets必须一次调用同时提供：先列清单及各卡view，再填写共同记录，不先单独提交sharedDatasets。records每条必须有稳定id，直接用业务编号如B01，不另造r-B01或重复编号字段；宿主可补id的显示标签，不能推断记录编号。reorder由上移/下移按钮调整本卡顺序，不支持拖动，不另造会过时的priority数值列。同一批对象的负责人、作业起止时间、等待原因、验收等共同事实放在同一个主数据集，各卡view引用它；确有独立事件才另建数据集，不能重复独立填写相同事实。未排期应同时在列表与排程保留null，不得一处已排另一处缺项。同一工作台多卡复用记录时可提供sharedDatasets:[{id,label,asOf,note,fields:[{key,label,unit?}],records:[{id,...各字段原值}]}]，共同事实只确定一次。面板type:view，提供view:{dataset:"数据集id",filters:[字段键],details:[字段键],reorder:false,navigation:"flow|tabs",layout:"stack|split",sections:[{kind:"records|compare",fields:[字段键]}或{kind:"schedule",label:字段键,start:字段键,end:字段键,owner?:字段键,resource?:字段键}]}。由宿主直接生成不同组合和可靠交互，不编写HTML/JS、不重复填写各卡数据。仅明确模拟数据工作台支持sharedDatasets；已有真实资料仍沿原数据来源与artifact流程。缺失填null，日内排程使用含时区的ISO时间；不能为满足组件而删改业务、缩小用户范围或改称模拟。'
 
 const fieldKeysSchema={type:'array',items:{type:'string'}};
 export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,properties:{
  dataset:{type:'string',required:true},subject:{type:'string'},filters:fieldKeysSchema,details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs']},layout:{type:'string',enum:['stack','split']},
  sections:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}
 }};
-export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'仅明确模拟场景，多卡共用记录只写一次；每条记录有稳定id并完整填写所有声明字段，缺失null。记录必须含id，id显示字段省略时由宿主补标签。最多5组，每组200条/24字段/48KB，总192KB；不截取记录，不猜共同值。',items:{type:'object',additionalProperties:false,properties:{
+export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'仅明确模拟场景，同一批对象只写一个主记录集，排程/对比/列表均引用它；每份数据必须有组件引用，同一记录id的同名事实及单位不得矛盾。独立事件另设事件id；每条记录有稳定id并完整填写所有声明字段，缺失null。记录必须含id，id显示字段省略时由宿主补标签。最多5组，每组200条/24字段/48KB，总192KB；不截取记录，不猜共同值。',items:{type:'object',additionalProperties:false,properties:{
  id:{type:'string',required:true},label:{type:'string',required:true},asOf:{type:'string',required:true},note:{type:'string',required:true},
  fields:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},unit:{type:'string'}}}},
  records:{type:'array',required:true,items:{type:'object',additionalProperties:true,properties:{id:{type:'string',required:true,description:'直接使用稳定业务编号，如B01；每条必填且唯一。其他字段必须与fields声明一致。'}}}}

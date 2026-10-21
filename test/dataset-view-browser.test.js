@@ -25,8 +25,10 @@ async function open(view,{dataset=bookDataset(),saved,width=900,mode='opentermin
 }
 const order=frame=>frame.locator('tbody tr:not([hidden])').evaluateAll(rows=>rows.map(r=>r.dataset.recordId))
 it('filters and reorders visible records while keeping hidden identities and all source values intact',async()=>{
- const c=await open(priorityView())
+ const view=priorityView();view.sections[0].fields=view.sections[0].fields.filter(key=>key!=='id');
+ const c=await open(view)
  try{
+  expect(await c.frame.getByRole('button',{name:'查看B01完整详情',exact:true}).textContent()).toBe('B01')
   expect(await order(c.frame)).toEqual(['B01','B02','B03','B04','B05','B06','B07','B08'])
   await c.frame.getByRole('button',{name:'上移B03',exact:true}).click()
   expect(await order(c.frame)).toEqual(['B01','B03','B02','B04','B05','B06','B07','B08'])
@@ -39,7 +41,7 @@ it('filters and reorders visible records while keeping hidden identities and all
   await c.frame.getByRole('button',{name:'查看B05完整详情',exact:true}).click()
   expect(await c.frame.locator('.dv-detail').textContent()).toContain('11.6 %')
   expect(await c.frame.locator('#dataset-view-source').evaluate(el=>JSON.parse(el.textContent).dataset)).toEqual(bookDataset())
-  const saved=await c.saved();const reopened=await open(priorityView(),{saved})
+  const saved=await c.saved();const reopened=await open(view,{saved})
   try{
    expect(await order(reopened.frame)).toEqual(['B01','B05','B03','B07'])
    expect(await reopened.frame.getByRole('combobox',{name:'负责人',exact:true}).inputValue()).toBe(JSON.stringify('修复师甲'))

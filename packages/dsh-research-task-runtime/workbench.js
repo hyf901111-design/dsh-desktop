@@ -32,7 +32,7 @@ import {generateSimulatedPanel} from './simulated-workbench-generator.js';
 import {marketVariant} from './workbench-design-contract.js';
 import { PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js';
-import {DATASET_VIEW_GUIDANCE,DATASET_VIEW_SCHEMA,WORKBENCH_DATASETS_SCHEMA} from './dataset-view-contract.js';
+import {DATASET_VIEW_GUIDANCE,DATASET_VIEW_SCHEMA,WORKBENCH_DATASETS_SCHEMA,assertWorkbenchViewSources} from './dataset-view-contract.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
 const publicDataRequestsSchema = { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
     source: { type: 'string', required: true, enum: ['tencent-quotes','tencent-history','kraken-ticker','kraken-candles','sina-news'] },
@@ -114,6 +114,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         }
         const run = async () => {
             const input = validateWorkbench(args);
+            assertWorkbenchViewSources(input);
             const parentSessionId = exec.agent?.session?.id;
             if (!str(parentSessionId, 256) || !ctx.agents.get(parentSessionId))
                 throw Error('研究会话不可用');

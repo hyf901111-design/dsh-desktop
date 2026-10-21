@@ -33,8 +33,15 @@ describe('workbench common records at the real tool boundary',()=>{
  it('retains the canonical source through acceptance and readback, never degrading to generic HTML data',()=>{
   const value=validateWorkbench(input());for(const p of value.panels){const accepted=acceptArtifactOutput(JSON.stringify(p.artifact));expect(accepted).toBeTruthy();const spec=JSON.parse(accepted),model=readTemplateModel(spec);expect(model.templateId).toBe('view');expect(model.data).toEqual(p.artifact);expect(spec.html).toContain('B08');expect(templateSummary(spec).message).toContain('组合')}
  });
- it.each(['source','parallel','unknown-field','conflicting-view','missing-data','render-budget'])('rejects %s before starting tasks or persisting a partial plan',async kind=>{
+ it.each(['source','parallel','unknown-field','conflicting-view','missing-data','render-budget','unused-dataset','conflicting-record-facts','conflicting-null','conflicting-unit'])('rejects %s before starting tasks or persisting a partial plan',async kind=>{
   const f=await setup(),plan=input();
+  if(['unused-dataset','conflicting-record-facts','conflicting-null','conflicting-unit'].includes(kind)){
+   const other=structuredClone(plan.sharedDatasets[0]);other.id='drying-events';plan.sharedDatasets.push(other);
+   if(kind!=='unused-dataset')plan.panels[2].view.dataset=other.id;
+   if(kind==='conflicting-record-facts')other.records[0].moisture=999;
+   if(kind==='conflicting-null')other.records[0].moisture=null;
+   if(kind==='conflicting-unit')other.fields.find(f=>f.key==='moisture').unit='ratio';
+  }
   if(kind==='render-budget'){
    plan.sharedDatasets=[{id:'books',label:'大记录',asOf:'模拟',note:'完整记录',fields:[{key:'id',label:'编号'},{key:'description',label:'完整描述'}],records:Array.from({length:6},(_,i)=>({id:'B'+i,description:'x'.repeat(7000)}))}];
    plan.panels=[{title:'完整列表',prompt:'保留全部长记录与四个对照区域。',type:'view',size:'large',view:{dataset:'books',sections:Array.from({length:4},()=>({kind:'records',fields:['id','description']}))}}];
@@ -43,6 +50,12 @@ describe('workbench common records at the real tool boundary',()=>{
   if(kind==='unknown-field')plan.panels[0].view.details=['unknown'];
   if(kind==='conflicting-view')plan.panels[0].type='html';if(kind==='missing-data')delete plan.sharedDatasets;
   try{await expect(f.tool.execute(plan,f.exec)).rejects.toThrow();expect(f.runtime.tasks.size).toBe(0);expect(f.adapter.start).not.toHaveBeenCalled();await expect(readFile(f.filePath,'utf8')).rejects.toMatchObject({code:'ENOENT'})}finally{await f.close()}
+ });
+ it.each(['consistent-snapshot','independent-events'])('preserves valid multiple datasets with %s without guessing shared values',async kind=>{
+  const f=await setup(),plan=input(),other=structuredClone(plan.sharedDatasets[0]);other.id='events';
+  if(kind==='independent-events')for(const record of other.records){record.id='event-'+record.id;record.moisture=99;}
+  plan.sharedDatasets.push(other);plan.panels[2].view.dataset=other.id;const before=structuredClone(plan);
+  try{expect((await f.tool.execute(plan,f.exec)).status).toBe('prepared');expect(plan).toEqual(before);expect(f.adapter.start).not.toHaveBeenCalled();const tasks=[...f.runtime.tasks.values()];expect(readTemplateModel(JSON.parse(tasks[2].finalOutput)).data.dataset).toEqual(other);expect(readTemplateModel(JSON.parse(tasks[0].finalOutput)).data.dataset).toEqual(plan.sharedDatasets[0]);}finally{await f.close()}
  });
  it('creates all complete views immediately, deduplicates both live and restored tool retries',async()=>{
   const f=await setup();try{

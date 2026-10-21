@@ -104,16 +104,16 @@ describe('client-owned bundled PPT skill integration', () => {
     expect(reply.content).toContain('assets/efund-template-v6.pptx')
   })
 
-  it('projects the shipped component skill as an client-owned v1.39.1 skill beside PPT', async () => {
+  it('projects the shipped component skill as an client-owned v1.39.2 skill beside PPT', async () => {
     const root = await mkdtemp(join(tmpdir(), 'ework-real-component-skill-')), bundledSkillDirectory = resolve('skills')
     const service = await IntegrationService.open({ root, encryption, getOwnerId: () => 'account-one', bundledSkillDirectory })
     cleanups.push(async () => { await service.dispose(); await rm(root, { recursive: true, force: true }) })
     const rows = (await service.request({ type: 'snapshot' })).snapshot.rows
     expect(rows.find(item => item.id === builtinId)).toBeDefined()
     const id = 'builtin:ework-workbench-components', row = rows.find(item => item.id === id)
-    expect(row).toMatchObject({ kind: 'skill', tab: 'skills', name: '工作台组件生成', source: 'EWork 内置 · v1.39.1', enabled: true, toggleable: true, removable: false })
+    expect(row).toMatchObject({ kind: 'skill', tab: 'skills', name: '工作台组件生成', source: 'EWork 内置 · v1.39.2', enabled: true, toggleable: true, removable: false })
     const skill = service.runtimeSnapshot().skills.find(item => item.id === id)
-    expect(skill).toMatchObject({ provider: 'bundled', version: 'v1.39.1', enabled: true, sourceId: 'bundled:ework-workbench-components' })
+    expect(skill).toMatchObject({ provider: 'bundled', version: 'v1.39.2', enabled: true, sourceId: 'bundled:ework-workbench-components' })
     const reply = await service.request({ type: 'skill-detail', id, revision: row.revision })
     expect(reply.content).toBe(await readFile(join(bundledSkillDirectory, 'ework-workbench-components/SKILL.md'), 'utf8'))
     for (const command of [{ type: 'uninstall' }])
