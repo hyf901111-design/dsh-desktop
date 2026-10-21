@@ -54,7 +54,7 @@ function ChallengeCard({thread,controller,style,cardRef}:{thread:ChallengeThread
 }
 
 export function ChallengeComments({controller,editor,scroll}:{controller:Controller;editor:any;scroll:React.RefObject<HTMLDivElement>}){
- const root=useRef<HTMLDivElement>(null),cards=useRef(new Map<string,HTMLElement>()),[layout,setLayout]=useState<{wide:boolean;columnLeft:number;items:Array<{id:string;style:React.CSSProperties}>}>({wide:false,columnLeft:0,items:[]})
+ const root=useRef<HTMLDivElement>(null),cards=useRef(new Map<string,HTMLElement>()),resize=useRef<ResizeObserver>(),[layout,setLayout]=useState<{wide:boolean;columnLeft:number;items:Array<{id:string;style:React.CSSProperties}>}>({wide:false,columnLeft:0,items:[]})
  useLayoutEffect(()=>{
   const host=root.current?.parentElement,scroller=scroll.current;if(!host||!scroller)return
   let frame=0
@@ -62,28 +62,31 @@ export function ChallengeComments({controller,editor,scroll}:{controller:Control
    cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
     const area=host.getBoundingClientRect(),wide=area.width>=1180&&controller.threads.length>0
     if(host.dataset.challengeWide!==(wide?'true':'false'))host.dataset.challengeWide=wide?'true':'false'
-    const doc=scroller.querySelector<HTMLElement>('.en-document')?.getBoundingClientRect();if(!doc)return
-    let bottom=8
-    const columnLeft=wide?Math.max(0,Math.min(area.width-336,doc.right-area.left+20)-8):0
-    const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const start=editor._tiptapEditor.view.coordsAtPos(range.from),end=editor._tiptapEditor.view.coordsAtPos(range.to),rect={...start,bottom:end.bottom};if(wide&&(rect.bottom<area.top+36||rect.top>area.bottom-12))return;return {thread:t,rect}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number}}>
+    // Keep the note centered in its own region; the global sidebar is outside it.
+    const focused=document.activeElement,focusedId=!wide&&layout.wide&&focused?.matches('.en-challenge-reply textarea')?focused.closest<HTMLElement>('.en-challenge-card')?.dataset.threadId:undefined
+    const editingId=focusedId&&!controller.isDismissed(focusedId)?focusedId:undefined
+    if(!wide&&editingId&&editingId!==controller.selected)controller.select(editingId)
+    let bottom=16
+    const columnLeft=wide?Math.max(0,area.width-352):0
+    const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected||t.id===editingId)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const start=editor._tiptapEditor.view.coordsAtPos(range.from),end=editor._tiptapEditor.view.coordsAtPos(range.to),rect={...start,bottom:end.bottom};if(wide&&(rect.bottom<area.top+36||rect.top>area.bottom-12))return;return {thread:t,rect}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number}}>
     candidates.sort((a,b)=>a.rect.top-b.rect.top)
     const items=candidates.map(({thread,rect})=>{
-     const height=cards.current.get(thread.id)?.getBoundingClientRect().height||260,maxHeight=Math.max(120,area.height-24)
+     const height=cards.current.get(thread.id)?.getBoundingClientRect().height||260,maxHeight=Math.max(120,area.height-32)
      let top=rect.top-area.top
      if(wide){top=Math.max(top,bottom);bottom=top+Math.min(height,maxHeight)+12}
-     else top=Math.max(8,Math.min(rect.bottom-area.top+10,area.height-Math.min(height,maxHeight)-8))
-     return {id:thread.id,style:{top,left:wide?8:Math.max(8,Math.min(area.width-328,rect.left-area.left)),maxHeight,width:Math.min(320,area.width-16)}}
+     else top=Math.max(16,Math.min(rect.bottom-area.top+10,area.height-Math.min(height,maxHeight)-16))
+     return {id:thread.id,style:{top,left:wide?16:Math.max(16,area.width-336),maxHeight,width:Math.min(320,area.width-32)}}
     })
     setLayout(old=>JSON.stringify(old)==JSON.stringify({wide,columnLeft,items})?old:{wide,columnLeft,items})
    })
   }
-  const observer=new ResizeObserver(measure);observer.observe(host);observer.observe(scroller);for(const el of cards.current.values())observer.observe(el)
+  const observer=new ResizeObserver(measure);resize.current=observer;observer.observe(host);observer.observe(scroller);for(const el of cards.current.values())observer.observe(el)
   const documentScroll=()=>{if(root.current)root.current.scrollTop=0;measure()}
   scroller.addEventListener('scroll',documentScroll);window.addEventListener('resize',measure);measure()
   const outside=(e:Event)=>{if(!layout.wide&&controller.selected&&!(e.target as HTMLElement).closest('.en-challenge-card,[data-bn-thread-id]'))controller.close(controller.selected)}
   const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'&&controller.selected)controller.close(controller.selected)}
   document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape)
-  return()=>{cancelAnimationFrame(frame);observer.disconnect();scroller.removeEventListener('scroll',documentScroll);window.removeEventListener('resize',measure);document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)}
+  return()=>{cancelAnimationFrame(frame);if(resize.current===observer)resize.current=undefined;observer.disconnect();scroller.removeEventListener('scroll',documentScroll);window.removeEventListener('resize',measure);document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)}
  },[controller.revision,controller.selected,controller.level,layout.wide])
- return <div className="en-challenge-comments" ref={root} data-wide={layout.wide||undefined} style={{left:layout.columnLeft}}>{layout.items.map(item=>{const thread=controller.threads.find(t=>t.id===item.id);return thread?<ChallengeCard key={thread.id} thread={thread} controller={controller} style={item.style} cardRef={el=>{if(el)cards.current.set(thread.id,el);else cards.current.delete(thread.id)}}/>:null})}</div>
+ return <div className="en-challenge-comments" ref={root} data-wide={layout.wide||undefined} style={{left:layout.columnLeft}}>{layout.items.map(item=>{const thread=controller.threads.find(t=>t.id===item.id);return thread?<ChallengeCard key={thread.id} thread={thread} controller={controller} style={item.style} cardRef={el=>{const prior=cards.current.get(thread.id);if(prior&&prior!==el)resize.current?.unobserve(prior);if(el){cards.current.set(thread.id,el);resize.current?.observe(el)}else cards.current.delete(thread.id)}}/>:null})}</div>
 }
