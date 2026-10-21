@@ -15,6 +15,40 @@ export function sharedComponentRuntime() {
     config.render(clone(state), status())
     for (const listener of listeners) listener(clone(state), status())
   }
+  function operationError(message) {
+    // Retain the interactive view and last valid state. Generated exception
+    // text can contain source data, so only show a fixed host message.
+    let notice = document.querySelector('[data-sherlock-operation-error]')
+    if (!notice && document.body) {
+      notice = document.createElement('div')
+      notice.setAttribute('data-sherlock-operation-error', '')
+      notice.setAttribute('role', 'alert')
+      notice.style.cssText = 'padding:8px 12px;border-bottom:1px solid var(--sherlock-border);color:var(--sherlock-text);background:var(--sherlock-surface-muted);font:12px/18px var(--sherlock-font-sans)'
+      document.body.prepend(notice)
+    }
+    if (notice) notice.textContent = message
+    try { config?.onStatus?.({ ...status(), error: message }) } catch {}
+    window.dispatchEvent(new CustomEvent('sherlock-shared-status', { detail: { ...status(), error: message } }))
+    return false
+  }
+  function clearOperationError() { document.querySelector('[data-sherlock-operation-error]')?.remove() }
+  function localUpdate(next) {
+    const previous = state, previousRevision = revision
+    try {
+      if (!valid(next)) throw Error('Invalid component state')
+      state = clone(next); revision++
+      // A reducer can return JSON which the component cannot render. Persist
+      // only after rendering succeeds, otherwise reopening poisons the frame.
+      paint()
+    } catch {
+      state = previous; revision = previousRevision
+      try { paint() } catch {}
+      return operationError('本次操作未完成，已保留之前的内容。可重试或重新生成组件。')
+    }
+    clearOperationError()
+    post({ op: 'localCommit', state: clone(state), revision })
+    return true
+  }
   function fail(message) {
     waiting = false; proposal = undefined; host = false; connected = false; pending = []
     try { paint() } catch {}
@@ -40,9 +74,13 @@ export function sharedComponentRuntime() {
         next = config.tick(next, { dtMs, now })
       }
       if (!ack.length && JSON.stringify(next) === JSON.stringify(state)) return
-      if (local) { state = clone(next); revision++; post({op:'localCommit',state,revision}); paint(); return }
+      if (local) return localUpdate(next)
       if (ack.length || JSON.stringify(next) !== JSON.stringify(state)) commit(next, ack)
-    } catch (error) { fail('组件状态更新失败：' + String(error.message).slice(0, 160)) }
+    } catch (error) {
+      pending = []
+      if (local) return operationError('本次操作未完成，已保留之前的内容。可重试或重新生成组件。')
+      fail('组件状态更新失败：' + String(error.message).slice(0, 160))
+    }
   }
   const handle = Object.freeze({
     getState: () => clone(state),
@@ -51,7 +89,7 @@ export function sharedComponentRuntime() {
       if (!connected || readOnly || stopped) return false
       if (!valid(action, 4096)) return false
       const inputId = uuid()
-      if (local) { pending.push({ id: inputId, payload: clone(action), userId: identity }); run() }
+      if (local) { pending.push({ id: inputId, payload: clone(action), userId: identity }); return run() === true }
       else {
         if (outgoing.size >= 32) return false
         const message = { op: 'input', inputId, sequence: ++inputSequence, payload: clone(action) }
@@ -80,8 +118,16 @@ export function sharedComponentRuntime() {
       identity = data.userId || 'local'
       readOnly = data.readOnly !== false
       if (!data.shared) {
-        if (!local && data.saved && Number.isSafeInteger(data.saved.revision) && valid(data.saved.state)) { state=clone(data.saved.state);revision=data.saved.revision }
-        local = true; connected = true; host = !readOnly; paint(); return
+        const previous = state
+        const restoring = !local && data.saved && Number.isSafeInteger(data.saved.revision) && valid(data.saved.state)
+        if (restoring) { state=clone(data.saved.state);revision=data.saved.revision }
+        local = true; connected = true; host = !readOnly
+        try { paint() } catch {
+          state = previous
+          try { paint() } catch {}
+          operationError(restoring ? '先前交互记录暂时无法恢复，正在显示初始内容。原记录仍保留，可重新生成组件。' : '本次操作未完成，已保留之前的内容。可重试或重新生成组件。')
+        }
+        return
       }
       local = false
       if (!data.online) { fail('连接中断，组件同步已暂停'); return }
