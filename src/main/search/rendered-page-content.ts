@@ -19,6 +19,9 @@ async function collectRenderedPage(maxMilliseconds: number) {
     let node: Element | null = element
     for (let depth = 0; node; depth++, node = node.parentElement) {
       if (depth > 32 || node.matches('[hidden],[aria-hidden="true"],script,style,template,noscript')) return true
+      // Closed details expose only their first summary, even when computed
+      // styles and textContent still include the collapsed descendants.
+      if (node.matches('details:not([open])') && node !== element && !node.querySelector(':scope > summary')?.contains(element)) return true
       const style = getComputedStyle(node)
       if (style.display === 'none' || /^(hidden|collapse)$/.test(style.visibility) || style.opacity === '0' || style.contentVisibility === 'hidden') return true
     }
@@ -37,6 +40,10 @@ async function collectRenderedPage(maxMilliseconds: number) {
         return value
       }
       if (node.nodeType !== 1 || hidden(node as Element)) return ''
+      if ((node as Element).matches('details:not([open])')) {
+        const summary = (node as Element).querySelector(':scope > summary')
+        return summary ? visit(summary, depth + 1) : ''
+      }
       const values: string[] = []
       for (const child of node.childNodes) {
         values.push(visit(child, depth + 1))
@@ -84,6 +91,9 @@ async function collectRenderedPage(maxMilliseconds: number) {
           if (branch.querySelector('div,section,article,li,tr,p,ul,ol,table,h1,h2,h3,h4,h5,h6')) break
           const ownTitle = localText(branch), value = localText(card)
           if (ownTitle?.replace(/\s+/g, '') !== title.replace(/\s+/g, '') || value === undefined) { context = ''; break }
+          // Other semantic sections or headings describe independent content,
+          // even when they contain no link. Ordinary div metadata is allowed.
+          if ([...card.querySelectorAll('section,article,details,h1,h2,h3,h4,h5,h6')].some(node => node !== branch && !branch.contains(node))) { context = ''; break }
           const titleOnly = value.replace(/\s+/g, '') === title.replace(/\s+/g, '')
           if (titleOnly && !branch.matches('div,section,article,h1,h2,h3,h4,h5,h6')) { branch = card; continue }
           context = ''

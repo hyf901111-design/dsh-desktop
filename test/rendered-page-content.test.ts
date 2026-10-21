@@ -100,6 +100,10 @@ it.each([
   ['footer date','<div><h2><a href="/story">新闻标题</a></h2><footer><span>2026-10-20</span></footer></div>'],
   ['adjacent footer','<a href="/story">新闻标题</a><footer><span>2026-10-20</span></footer>'],
   ['adjacent section','<a href="/story">新闻标题</a><section><span>2026-10-20</span></section>'],
+  ['nested independent section','<div><h2><a href="/story">新闻标题</a></h2><section><h3>另一条无链接的新闻</h3><span>2026-10-20</span></section></div>'],
+  ['nested independent article','<div><h2><a href="/story">新闻标题</a></h2><article><h3>另一条无链接的新闻</h3><span>2026-10-20</span></article></div>'],
+  ['nested independent heading','<div><h2><a href="/story">新闻标题</a></h2><div><h3>另一条无链接的新闻</h3><span>2026-10-20</span></div></div>'],
+  ['closed details','<div><h2><a href="/story">新闻标题</a></h2><details><summary>展开历史信息</summary><span>2026-10-20</span></details></div>'],
   ['heading date','<div><h2><span>2026-10-20</span><a href="/story">新闻标题</a></h2><div>4小时前</div></div>'],
   ['multiple dates','<div><h2><a href="/story">新闻标题</a></h2><span>2026-10-20</span><span>2026-10-19</span></div>'],
   ['multiple records','<div><h2><a href="/story">新闻标题</a></h2><span>2026-10-20</span><a href="/other">另一条新闻</a></div>'],
@@ -120,6 +124,20 @@ it.each([
   window.document.body.innerHTML='<main>'+html+'</main>'
   const pending=window.eval(renderedPageContentScript(400))
   expect((await pending).links.find((link:{title:string})=>link.title==='新闻标题')).toEqual({title:'新闻标题',url:'https://example.org/story'})
+})
+
+it.each([false,true])('excludes closed details content from legacy rows while preserving a visible date: %s',async visibleDate=>{
+  window=new Window({url:'https://example.org/search'})
+  window.document.body.innerHTML=`<main><li><a href="/story">旧列表新闻</a><details><summary>展开历史信息</summary><span>2026-10-19</span><a href="/hidden">折叠内容的隐藏新闻</a></details>${visibleDate?'<span>2026-10-20</span>':''}</li></main>`
+  const result=await window.eval(renderedPageContentScript(400))
+  expect(result.links).toEqual([{title:'旧列表新闻',url:'https://example.org/story',...(visibleDate?{date:'2026-10-20'}:{})}])
+})
+
+it('retains a closed details summary date without reading its collapsed unwrapped text',async()=>{
+  window=new Window({url:'https://example.org/search'})
+  window.document.body.innerHTML='<main><li><details><summary><a href="/story">摘要中的可见新闻</a>2026-10-20</summary>2026-10-19</details></li></main>'
+  const result=await window.eval(renderedPageContentScript(400))
+  expect(result.links).toEqual([{title:'摘要中的可见新闻',url:'https://example.org/story',date:'2026-10-20'}])
 })
 
 it.each(['hidden','aria-hidden="true"','style="display:none"','style="visibility:hidden"'])('excludes %s dates from legacy rows and card captions',async hidden=>{

@@ -20,6 +20,10 @@ describe('Figma cartesian templates',()=>{
    expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(data('bar'))),prompt)).toContain('chart.line');
  });
  it.each([
+   ['近一月走势；格式示例：chart.bar 绘制普通柱状图','line'],
+   ['近一月走势；语法示例：chart.pie（饼图）','line'],
+   ['近一月走势；模块格式示例：chart.bar（柱状图）/ chart.pie（饼图）','line'],
+   ['近一月走势；普通柱状图用 chart 并可声明 chart.bar（柱状图）','line'],
    ['近一月走势\n格式示例：普通柱状图用 chart.bar','line'],
    ['近一月走势；格式示例：普通柱状图，使用 chart.bar','line'],
    ['近一月走势，普通柱状图用 chart 并可声明 chart.bar','line'],
@@ -37,6 +41,9 @@ describe('Figma cartesian templates',()=>{
    ['近一月走势，必须 chart.bar','bar'],
    ['近一月走势；格式示例 chart.line，但本面板必须使用 chart.bar','bar'],
    ['近一月走势；格式示例 chart.line，随后使用 chart.bar','bar'],
+   ['近一月走势；格式示例 chart.pie（饼图），随后使用 chart.bar','bar'],
+   ['近一月走势；格式示例 chart.pie（饼图），使用 chart.bar','bar'],
+   ['近一月走势；格式示例 chart.pie（饼图）但本面板必须使用 chart.bar','bar'],
    ['近一月走势：使用 chart.bar 并可声明 chart.line 作为格式示例','bar'],
    ['近一月走势：使用 chart.bar 并可声明 chart.line','bar'],
    ['示例公司近一月走势，使用 chart.bar','bar'],

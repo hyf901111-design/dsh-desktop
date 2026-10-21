@@ -24,10 +24,11 @@ export function normalizeChartMetadata(data) {
   return {...data,asOf:first&&first.length<=256?first:'数据时点与来源详见完整说明',note};
 }
 export function requestedChartVariant(text = '') {
-  // Ignore only chart syntax examples, through the example token itself.
+  // Ignore chart syntax examples together with their human-readable labels.
   // A business-data example must not hide a later explicit chart selection.
   let intent = '', consumed = 0, previousEnd = 0, previousExample = false;
   for (const match of text.matchAll(/\bchart\.[a-zA-Z]+\b/gu)) {
+    if (match.index < consumed) { previousEnd = match.index + match[0].length; previousExample = true; continue; }
     const between = text.slice(previousEnd, match.index);
     const context = between.split(/[。；;\n]|[，,](?=但|不过|本面板|本图|必须|务必|实际|最终)/u).at(-1);
     const format = context.search(/(?:语法|格式|结构|写法).{0,12}(?:示例|举例)|示例(?=[：:\s（(])/u);
@@ -41,7 +42,11 @@ export function requestedChartVariant(text = '') {
     if (omit < 0 && previousExample && context === between && /^[\s/／、|]*(?:(?:或|和|与|及)(?:使用|采用|声明)?\s*)?$/u.test(context)) omit = 0;
     if (omit >= 0) {
       intent += text.slice(consumed, match.index - context.length + omit);
-      consumed = match.index + match[0].length;
+      const tokenEnd = match.index + match[0].length;
+      // A suffix such as “绘制普通柱状图” or “（饼图）” is still part of
+      // the syntax example. Stop before a new clause or business instruction.
+      const boundary = text.slice(tokenEnd).search(/[。；;\n]|[，,]?(?=但|不过|本面板|本图|必须|务必|实际|最终|随后)|[，,](?=(?:使用|采用|输出|声明|选择)\s*chart\.)/u);
+      consumed = boundary < 0 ? text.length : tokenEnd + boundary;
     }
     previousEnd = match.index + match[0].length;
     previousExample = omit >= 0;
