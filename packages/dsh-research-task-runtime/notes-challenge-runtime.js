@@ -204,7 +204,8 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
   let outputSize = 0, totalSize = 0, payloadSize = 0, eventCount = 0, usage = { inputTokens: 0, outputTokens: 0 }
   const knownEvents = new Set(['block-start', 'text-delta', 'reasoning-delta', 'tool-call-delta', 'block-end', 'usage', 'finish', 'tool-call', 'tool-call-start'])
   const streamStats = { eventCounts: {}, serializedByKind: {}, textDeltaChars: 0, reasoningDeltaChars: 0, textSnapshotChars: 0, reasoningSnapshotChars: 0 }
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const attempts = payload.action === 'consistency' ? 1 : 2
+  for (let attempt = 0; attempt < attempts; attempt++) {
     signal.throwIfAborted()
     const transport = new AbortController(), streamSignal = AbortSignal.any([signal, transport.signal])
     const requestSystem = attempt ? system + '\n输出必须是一个闭合完整的JSON对象，包括所有结束大括号；不要解释或Markdown代码围栏。' + (reviewTargets ? '检查结果必须使用reviews数组，每项只含blockId与issues；blockId必须精确复制targets中的id，不得重复，issues必须为数组。' : '') : system
@@ -263,9 +264,10 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
       catch {
         diagnostic(requestId, { event: 'notes-challenge-format-rejected', action: payload.action, attempt: attempt + 1, reason: parsedJSON ? 'review-envelope' : 'json-invalid', jsonChars: json.length, targetCount: reviewTargets?.length ?? 0, anchorCount: payload.existingAnchors?.length ?? 0, ...parsedJSON && reviewTargets ? reviewShapeStats(value, reviewTargets) : {} })
         // A stop response can contain malformed JSON or a malformed review envelope.
-        // They share one regeneration allowance, deadline and size budgets; never repair
-        // partial output, send it back, or retry a valid but empty/filtered review.
-        if (attempt) throw Error(parsedJSON ? '挑战检查结果格式不完整。' : '挑战检查结果格式无效。')
+        // Primary/reply operations share one regeneration allowance and budgets.
+        // Optional consistency fails closed on its first invalid response so a
+        // later regeneration cannot authorize removal after a protocol failure.
+        if (attempt + 1 === attempts) throw Error(parsedJSON ? '挑战检查结果格式不完整。' : '挑战检查结果格式无效。')
       }
     } finally {
       // Count all reported usage, including a malformed optional review whose

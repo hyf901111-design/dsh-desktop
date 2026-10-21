@@ -100,11 +100,19 @@ it('keeps primary findings after a provider failure and does not expose its erro
   expect(JSON.stringify(result) + JSON.stringify(console.warn.mock.calls)).not.toContain('PRIVATE PROVIDER ERROR')
 })
 
-it('accounts for usage consumed by two malformed consistency outputs while retaining primary findings', async () => {
+it('accounts for a malformed consistency output without regenerating it or losing primary findings', async () => {
   const f = fixture([primary, '{"decisions":', '{"decisions":']), result = await generateNoteChallenge(f.ctx, input)
   expect(result.issues).toHaveLength(2)
-  expect(f.calls).toHaveLength(3)
-  expect(result.usage).toEqual({ inputTokens: 90, outputTokens: 30 })
+  expect(f.calls).toHaveLength(2)
+  expect(result.usage).toEqual({ inputTokens: 60, outputTokens: 20 })
+})
+
+it('preserves a true numeric correction after malformed secondary JSON even if a retry would delete it', async () => {
+  const f = fixture([{ reviews: [{ blockId: 'a', issues: [real] }] }, '{"decisions":', { decisions: [{ candidateId: 'c0', keep: false, reason: 'no-conflict' }] }])
+  const result = await generateNoteChallenge(f.ctx, input)
+  expect(result.issues.map(i => i.quote)).toEqual([real.quote])
+  expect(result.coveredBlockIds).toEqual(['a'])
+  expect(f.calls).toHaveLength(2)
 })
 
 it('times out an uncooperative secondary stream without losing primary results or accepting a late answer', async () => {
