@@ -97,3 +97,61 @@ it('personal boards persist semantic state and restore without replaying actions
  const saved=a.out.at(-1).message;expect(saved.op).toBe('localCommit');expect(saved.state.count).toBe(2)
  const b=create(saved);expect(b.h.getState()).toEqual({count:2});b.h.dispatch({type:'increment'});expect(b.h.getState()).toEqual({count:3})
 })
+
+function localSdk(options, saved) {
+ const w=new Window({settings:{disableJavaScriptEvaluation:true}}),out=[],parent={postMessage:m=>out.push(clone(m))}
+ vm.runInNewContext('('+sharedComponentRuntime.toString()+')()', {window:w,document:w.document,parent,crypto:{randomUUID:()=>crypto.randomUUID()},TextEncoder,Date,CustomEvent:w.CustomEvent,addEventListener:w.addEventListener.bind(w),setInterval:()=>0,clearInterval:()=>{}})
+ const h=w.sherlockShared.register(options)
+ const context=()=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-component-context',shared:false,readOnly:false,saved}}))
+ context()
+ return {w,out,h,context}
+}
+it('does not persist an operation whose rendered state fails and allows a later valid operation',()=>{
+ let displayed=''
+ const sdk=localSdk({initialState:{order:['B01','B02'],selected:null},reduce:(s,a)=>a.type==='brokenMove'?{...s,order:[null,'B01']}:{...s,selected:a.id},render:s=>{displayed=s.order.map(id=>({B01:'一',B02:'二'})[id].toString()).join('')}})
+ expect(sdk.h.dispatch({type:'select',id:'B01'})).toBe(true)
+ const successful=clone(sdk.out.at(-1))
+ expect(sdk.h.dispatch({type:'brokenMove'})).toBe(false)
+ expect(sdk.h.getState()).toEqual({order:['B01','B02'],selected:'B01'})
+ expect(sdk.h.getStatus()).toMatchObject({connected:true,readOnly:false,revision:1})
+ expect(displayed).toBe('一二')
+ expect(sdk.out.at(-1)).toEqual(successful)
+ expect(sdk.w.document.querySelector('[data-sherlock-operation-error]')?.textContent).toContain('已保留')
+ expect(sdk.h.dispatch({type:'select',id:'B02'})).toBe(true)
+ expect(sdk.out.at(-1).message).toMatchObject({op:'localCommit',revision:2,state:{order:['B01','B02'],selected:'B02'}})
+ expect(sdk.w.document.querySelector('[data-sherlock-operation-error]')).toBeNull()
+})
+it('rejects reducer errors without disabling otherwise valid local interactions',()=>{
+ const sdk=localSdk({initialState:{count:1},reduce:(s,a)=>{if(a.type==='broken')throw Error('private source details');return {count:s.count+1}},render:()=>{}})
+ expect(sdk.h.dispatch({type:'broken'})).toBe(false)
+ expect(sdk.h.getState()).toEqual({count:1})
+ expect(sdk.h.getStatus()).toMatchObject({connected:true,readOnly:false,revision:0})
+ expect(sdk.w.document.body.textContent).not.toContain('private source details')
+ expect(sdk.out.some(m=>m.message?.op==='localCommit')).toBe(false)
+ expect(sdk.h.dispatch({type:'increment'})).toBe(true)
+ expect(sdk.h.getState()).toEqual({count:2})
+})
+it('keeps an unreadable saved snapshot intact and shows recoverable initial content',()=>{
+ const saved={revision:7,state:{order:[null,'B01']}}
+ let displayed=''
+ const sdk=localSdk({initialState:{order:['B01','B02']},reduce:s=>({order:[...s.order].reverse()}),render:s=>{displayed=s.order.map(id=>id.toLowerCase()).join(',')}},saved)
+ expect(sdk.h.getState()).toEqual({order:['B01','B02']})
+ expect(sdk.h.getStatus()).toMatchObject({connected:true,readOnly:false,revision:7})
+ expect(displayed).toBe('b01,b02')
+ expect(saved).toEqual({revision:7,state:{order:[null,'B01']}})
+ expect(sdk.out.some(m=>m.message?.op==='localCommit')).toBe(false)
+ expect(sdk.w.document.querySelector('[data-sherlock-operation-error]')?.textContent).toContain('先前')
+ expect(sdk.h.dispatch({type:'reverse'})).toBe(true)
+ expect(sdk.out.at(-1).message).toMatchObject({op:'localCommit',revision:8,state:{order:['B02','B01']}})
+})
+it('never writes oversized or undefined local reducer output and preserves the last rendered state',()=>{
+ for(const bad of [undefined,{text:'x'.repeat(65537)}]){
+  let displayed=''
+  const sdk=localSdk({initialState:{text:'原始内容'},reduce:()=>bad,render:s=>{displayed=s.text}})
+  expect(sdk.h.dispatch({type:'edit'})).toBe(false)
+  expect(sdk.h.getState()).toEqual({text:'原始内容'})
+  expect(displayed).toBe('原始内容')
+  expect(sdk.h.getStatus()).toMatchObject({connected:true,readOnly:false,revision:0})
+  expect(sdk.out.some(m=>m.message?.op==='localCommit')).toBe(false)
+ }
+})
