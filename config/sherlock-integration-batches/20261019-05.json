@@ -12,7 +12,7 @@
         "featureName": "工作台来源日期核验、完整表格与真实刷新反馈",
         "branch": "codex/feat/openterminal-style-20261019",
         "baseCommit": "a33d8b7b5e8dec2726450d0088f3b37c92f87ad7",
-        "tipCommit": "19810fdfefaf33ca1c52f6763ac522c6f9e6dea2",
+        "tipCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
         "commits": [
           {
             "commit": "3655c8f3ea048a0643b0a70a5d3d6761452ef1b5",
@@ -188,6 +188,20 @@
               "5395fb50fe8204ea03e05da7c1e84ea304d884f3"
             ],
             "subject": "修复工作台文章证据绕过并固化单卡日期范围与刷新反馈"
+          },
+          {
+            "commit": "3f975e470fa4e7d6984f67d63ed3fd9a457e824c",
+            "parents": [
+              "19810fdfefaf33ca1c52f6763ac522c6f9e6dea2"
+            ],
+            "subject": "补充集成单卡提示词长度兼容修复计划"
+          },
+          {
+            "commit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
+            "parents": [
+              "3f975e470fa4e7d6984f67d63ed3fd9a457e824c"
+            ],
+            "subject": "压缩单卡技能摘要并保留完整提示词合同"
           }
         ],
         "files": [
@@ -286,6 +300,10 @@
           {
             "status": "M",
             "path": "scripts/lib/research-workbench-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
           },
           {
             "status": "A",
@@ -412,13 +430,31 @@
           {
             "argv": [
               "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/workbench-design-contract.test.js",
+              "test/workbench-source-context.test.js",
+              "test/workbench-deferred.test.js",
+              "test/integration-bundled-skill.test.js",
+              "--reporter=verbose"
+            ],
+            "outcome": "passed",
+            "summary": "Task10直接相关5文件99项通过，当前源码的单卡摘要精简后4971字，完整384字需求、单技能和摘要外逐字一致；/tmp/task-10-prompt-final-green-20261021.log与独立Task10审阅Approved。",
+            "verifiedCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
+            "completedAt": "2026-10-21T14:25:33.461Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
               "run",
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "根agent在最终干净提交19810fdf运行，tsc noEmit通过；/tmp/workbench-final-19810fdf-typecheck-20261021.log。任务级与最终修复聚焦结果分别保留报告和raw logs，242/136/24/4等有重叠，不冒称全部在最终提交全量重跑。",
-            "verifiedCommit": "19810fdfefaf33ca1c52f6763ac522c6f9e6dea2",
-            "completedAt": "2026-10-21T14:16:52.625Z",
+            "summary": "根agent最终干净提交798c5cbe typecheck通过；/tmp/workbench-final-798c5cbe-typecheck-20261021.log。",
+            "verifiedCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
+            "completedAt": "2026-10-21T14:25:33.461Z",
             "timeoutMs": 180000
           },
           {
@@ -426,12 +462,12 @@
               "git",
               "diff",
               "--check",
-              "a33d8b7b5e8dec2726450d0088f3b37c92f87ad7..19810fdfefaf33ca1c52f6763ac522c6f9e6dea2"
+              "a33d8b7b5e8dec2726450d0088f3b37c92f87ad7..798c5cbef04ddac3e660fc60e31df58af01925f1"
             ],
             "outcome": "passed",
-            "summary": "完整交接增量差异检查通过；/tmp/workbench-final-19810fdf-diffcheck-20261021.log。",
-            "verifiedCommit": "19810fdfefaf33ca1c52f6763ac522c6f9e6dea2",
-            "completedAt": "2026-10-21T14:16:52.625Z",
+            "summary": "完整交接增量差异检查通过；/tmp/workbench-final-798c5cbe-diffcheck-20261021.log。",
+            "verifiedCommit": "798c5cbef04ddac3e660fc60e31df58af01925f1",
+            "completedAt": "2026-10-21T14:25:33.461Z",
             "timeoutMs": 30000
           }
         ],
@@ -452,9 +488,10 @@
           "七项已在冻结基线复现的旧测试失败保留为既有债务，未改成通过、未全套运行。",
           "有限明确ISO范围和已知主题/来源schema；歧义显式失败，不宣称任意自然语言或任意HTML事实通用核验。",
           "最终修复review I1/I2/I3/M1全部ADDRESSED，无新增阻塞；报告与证据位于该计划SDD目录，原tracked task4报告保留。",
-          "仅本地未验收集成批次20261019-05；不accept/promote/main/发布/推送。"
+          "仅本地未验收集成批次20261019-05；不accept/promote/main/发布/推送。",
+          "Task10观察到TABLE_GUIDANCE新增183字令既有长需求组合超5000；仅单卡摘要等价压缩5行，现4971，剩29字预算；不提高断言/删需求。此前集成检查失败未合并，需执行同批次全声明检查。"
         ],
-        "generatedAt": "2026-10-21T14:16:52.625Z"
+        "generatedAt": "2026-10-21T14:25:33.461Z"
       }
     },
     {
