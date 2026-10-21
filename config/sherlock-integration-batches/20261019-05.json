@@ -9,68 +9,89 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补齐真实资讯原文读取与执行失败反馈",
+        "featureName": "优化反馈卡重试状态与锦鲤转向并防止后台进程残留",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "bf55d39738b29595c8989779b738b01638b468b9",
-        "tipCommit": "b6033f33eba6f81ba001f856dc3ffb7ff1de6cd6",
+        "baseCommit": "b6033f33eba6f81ba001f856dc3ffb7ff1de6cd6",
+        "tipCommit": "8671cbd51dcb45433c030ba5cc4168e05957542c",
         "commits": [
           {
-            "commit": "e7e5953cdde10b39a0db9d4ae81b8ce34bd10eac",
+            "commit": "940e37198a7e67acf570b2479a975d7606344553",
             "parents": [
-              "bf55d39738b29595c8989779b738b01638b468b9"
+              "b6033f33eba6f81ba001f856dc3ffb7ff1de6cd6"
             ],
-            "subject": "修复组件执行进度漏报工具失败状态"
+            "subject": "修复客户端异常退出后后台任务进程残留"
           },
           {
-            "commit": "c138ffe14c0fbe6da1c9babb13e72546e7221f99",
+            "commit": "f5be4e27fe6961135bc17fc201a51c55ae45f2cb",
             "parents": [
-              "e7e5953cdde10b39a0db9d4ae81b8ce34bd10eac"
+              "940e37198a7e67acf570b2479a975d7606344553"
             ],
-            "subject": "识别与页面元数据匹配的政策原文二级标题"
+            "subject": "完善工作台反馈卡的圆环进度完成状态与失败重试"
           },
           {
-            "commit": "77d92b0e8bd516b6d0d932af0ac9ff0c85a0522f",
+            "commit": "8671cbd51dcb45433c030ba5cc4168e05957542c",
             "parents": [
-              "c138ffe14c0fbe6da1c9babb13e72546e7221f99"
+              "f5be4e27fe6961135bc17fc201a51c55ae45f2cb"
             ],
-            "subject": "限时并行补读资讯候选中已观察到的原文链接"
-          },
-          {
-            "commit": "b6033f33eba6f81ba001f856dc3ffb7ff1de6cd6",
-            "parents": [
-              "77d92b0e8bd516b6d0d932af0ac9ff0c85a0522f"
-            ],
-            "subject": "均衡原文证据预算并避免导航链接挤掉正文"
+            "subject": "修正锦鲤转弯时躯干侧移并保持连续摆尾轨迹"
           }
         ],
         "files": [
           {
+            "status": "M",
+            "path": "build/harness-node-entry.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-generation-watch.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-workbench-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/runtime/harness-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-koi/README.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-koi/spine.js"
+          },
+          {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-feed-acquisition.js"
+            "path": "test/harness-parent-lifetime.test.ts"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+            "path": "test/home-koi-simulation.test.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "test/home-theme-motion-browser.test.js"
           },
           {
             "status": "M",
-            "path": "src/main/search/rendered-page-content.ts"
+            "path": "test/research-generation-watch.test.js"
           },
           {
             "status": "A",
-            "path": "test/component-feed-acquisition.test.js"
+            "path": "test/research-workbench-feedback-actions.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-workbench-feedback-browser.test.js"
           },
           {
             "status": "M",
-            "path": "test/rendered-page-content.test.ts"
+            "path": "test/research-workbench-feedback.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/runtime.test.ts"
           }
         ],
         "checks": [
@@ -78,17 +99,39 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/component-feed-acquisition.test.js",
-              "test/component-source-binding.test.js",
-              "test/research-task-runtime.test.js",
-              "test/component-web-snapshot-evidence.test.js",
-              "test/rendered-page-content.test.ts",
-              "test/browser-page-reader.test.ts"
+              "--maxWorkers=3",
+              "test/harness-parent-lifetime.test.ts",
+              "test/runtime.test.ts",
+              "test/harness-bundled-package-resolution.test.ts",
+              "test/research-workbench-feedback.test.js",
+              "test/research-workbench-feedback-actions.test.js",
+              "test/research-workbench-feedback-browser.test.js",
+              "test/research-generation-watch.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/research-creation-progress.test.js",
+              "test/home-koi-simulation.test.js",
+              "test/home-theme-renderer-browser.test.js",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-preferences.test.ts"
             ],
             "outcome": "passed",
-            "summary": "416项聚焦检查通过；/tmp/feed-acquisition-delivery-final-20261021.log",
-            "verifiedCommit": "b6033f33eba6f81ba001f856dc3ffb7ff1de6cd6",
-            "completedAt": "2026-10-20T23:47:55.486373+00:00",
+            "summary": "192项直接相关检查通过；/tmp/koi-feedback-lifetime-delivery-20261021.log",
+            "verifiedCommit": "8671cbd51dcb45433c030ba5cc4168e05957542c",
+            "completedAt": "2026-10-21T00:17:08.831125+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/home-theme-motion-browser.test.js",
+              "-t",
+              "cycles every theme"
+            ],
+            "outcome": "passed",
+            "summary": "15个主题实际切换与快速切换一致性通过；原测试漏算锦鲤，现验证完整循环。/tmp/koi-full-theme-cycle-20261021.log",
+            "verifiedCommit": "8671cbd51dcb45433c030ba5cc4168e05957542c",
+            "completedAt": "2026-10-21T00:17:08.831125+00:00",
             "timeoutMs": 180000
           },
           {
@@ -98,117 +141,30 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/feed-acquisition-delivery-typecheck-20261021.log",
-            "verifiedCommit": "b6033f33eba6f81ba001f856dc3ffb7ff1de6cd6",
-            "completedAt": "2026-10-20T23:47:55.486373+00:00",
+            "summary": "类型检查通过；/tmp/koi-feedback-delivery-typecheck-20261021.log",
+            "verifiedCommit": "8671cbd51dcb45433c030ba5cc4168e05957542c",
+            "completedAt": "2026-10-21T00:17:08.831125+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "当前745c9c02真实客户端原始资讯请求107.085秒失败；已取得搜索与2篇网页，但候选多条未实际读取原文。原生失败记录与真实发改委DOM构成修复依据；本次新代码尚待官方本地构建和原始需求复验，不能作成功率验收。"
+          "summary": "已使用实际注入的React反馈卡和真实浏览器验证浅深色、英文、窄卡片右侧排版、失败组件单独重试和完成状态。当前原生客户端57590尚未装入本次3个提交，须官方本地构建后核对反馈卡和锦鲤动态，不能提前宣称原生验收。"
         },
         "acceptanceCriteria": [
-          "执行结果逐块识别结构化isError与error，进度不再把工具失败当作成功，不暴露返回正文。",
-          "ArticleTitle明确元数据匹配无链接可见H2时，使用同页PubDate形成原文记录；不取推荐标题、隐藏标题或正文日期。",
-          "资讯候选缺少逐条来源时，仅按原子任务实际拥有的web_fetch权限，补读已经出现在成功搜索Sources或实际网页链接记录中的URL；不猜链接、不读取凭据URL或本地服务。",
-          "宿主补读每任务最多一次，默认6页、并行3页、总计20秒，取消贯穿；继续使用原逐条标题/日期/URL核验和最多一次模型修复。",
-          "新原文资料共享30000字节预算保留每源摘要和全部身份，和旧证据合并仍保持48000字节；仅明确主文摘录移除导航记录，列表页保留链接资料。"
+          "右侧反馈卡根据画布真实组件状态显示无箭头圆环loading、全部完成标签与失败重试按钮，保留真实计数及计划差异。",
+          "重试通过原有组件生成入口，重新检查当前会话、计划、组件、任务ID、失败状态与编辑权限，保留成功和运行中的组件，防重复提交。",
+          "英文和主题颜色配套，窄卡片右侧控制不与计数重叠。",
+          "鱼身沿实际头部轨迹推进，后部行波渐强；水面、尺寸、配色和原有导航避让保持；无强制平移分离。",
+          "显式绑定桌面父进程的Harness在父进程失联后触发正常退出并有4秒兜底；无绑定的独立入口不受影响，完成的短程序不被计时器留住。"
         ],
         "risks": [
-          "原生主进程在2026-10-21 07:12:57发生SIGTRAP，与旧任务首次搜索连接丢失吻合；当前相同两条查询1.5秒内成功，崩溃触发因素仍未稳定复现，不声称已修复原生崩溃。",
-          "本次只修复已证明的来源读取和进度问题；搜索结果语义偏题、财务输入参数混淆、完整经营字段、整体工作台时间与多样性仍待验证。",
-          "宿主补读超限、未观察到URL、原文不可访问或元数据有歧义时仍须保留缺失说明并接受原核验；不把静默删除候选作为成功。",
-          "仅本地测试，不接受或晋升main，不发布、推送、递增版本或修改外部更新源。"
+          "原生主进程SIGTRAP已两次观测，触发因素仍未证实；父进程退出保护只防止残留，不声称修复主进程崩溃。需带原生文件日志复测原始政策需求。",
+          "锦鲤12组各3分钟几何检查中近距离重叠0/10800采样，转向躯干滑移p95最高15.97度；这不是任意尺寸种子永不重叠的保证，仍须真实客户端观察自然度。",
+          "整体真实数据工作台速度、完整性与多样性仍未全量验收；本次用户反馈卡和锦鲤优化不替代目标验收。",
+          "只做本地测试；不接受或晋升main，不发布、推送、递增版本或修改公开更新源。"
         ],
-        "generatedAt": "2026-10-20T23:47:55.486373+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2308bf8e430a9e7e65ed66a3ca7d306cdd39bc08",
-        "verificationCommit": "2308bf8e430a9e7e65ed66a3ca7d306cdd39bc08",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "2308bf8e430a9e7e65ed66a3ca7d306cdd39bc08",
-            "completedAt": "2026-10-20T23:49:37.020Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2308bf8e430a9e7e65ed66a3ca7d306cdd39bc08",
-            "completedAt": "2026-10-20T23:49:37.020Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "2308bf8e430a9e7e65ed66a3ca7d306cdd39bc08",
-            "completedAt": "2026-10-20T23:49:37.020Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "2308bf8e430a9e7e65ed66a3ca7d306cdd39bc08",
-            "completedAt": "2026-10-20T23:49:37.020Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2308bf8e430a9e7e65ed66a3ca7d306cdd39bc08",
-            "completedAt": "2026-10-20T23:49:37.020Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T23:49:37.020Z"
+        "generatedAt": "2026-10-21T00:17:08.831125+00:00"
       }
     },
     {
