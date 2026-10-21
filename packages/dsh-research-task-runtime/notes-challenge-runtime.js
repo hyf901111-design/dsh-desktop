@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { challengeReplacementScope } from './notes-challenge-scope.js'
 import { challengeReplacementRequested } from './notes-challenge-intent.js'
 import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -121,6 +121,24 @@ function issuesFrom(value, targets, available, limits) {
   return { issues: result, coveredBlockIds: targets.filter(block => reviewed.has(block.id)).map(block => block.id) }
 }
 
+// Diagnose a silent all-filtered response without recording note text, model
+// messages, arbitrary labels, or reasoning. A hashed request key correlates QA.
+function filteredReviewStats(value, targets) {
+  const byId = new Map(targets.map(block => [block.id, block.text]))
+  const stats = { candidates: 0, categories: {}, bases: {}, uniqueAnchors: 0, emptyEvidence: 0, acknowledgedAgreement: 0 }
+  for (const review of value.reviews) for (const item of review.issues) {
+    stats.candidates++
+    const category = categories.has(item?.category) ? item.category : 'other'
+    const basis = ['note', 'general-knowledge'].includes(item?.basis) ? item.basis : 'other'
+    stats.categories[category] = (stats.categories[category] ?? 0) + 1
+    stats.bases[basis] = (stats.bases[basis] ?? 0) + 1
+    if (string(item?.quote, 2000, true) && uniqueQuote(byId.get(review.blockId), item.quote)) stats.uniqueAnchors++
+    if (item?.evidence === undefined || Array.isArray(item.evidence) && !item.evidence.length) stats.emptyEvidence++
+    if (string(item?.message, 600, true) && acknowledgesNoConflict(item.message)) stats.acknowledgedAgreement++
+  }
+  return stats
+}
+
 function boundedIssues(issues, blocks, limit) {
   // Reserve the next slot for each paragraph before taking another from an early one.
   const groups = blocks.map(block => issues.filter(issue => issue.blockId === block.id))
@@ -213,6 +231,12 @@ async function run(ctx, input, signal, modelMilliseconds = 20000) {
       for (const key of ['inputTokens', 'outputTokens']) usage[key] += generated.usage[key]
       if (input.action === 'review') {
         const reviewed = issuesFrom(generated.value, targets, available, issueLimits)
+        if (!reviewed.issues.length) {
+          const stats = filteredReviewStats(generated.value, targets)
+          if (stats.candidates) try {
+            ctx.logger?.warn?.(JSON.stringify({ event: 'notes-challenge-review-filtered', requestKey: createHash('sha256').update(input.requestId).digest('hex').slice(0, 12), ...stats, accepted: 0 }))
+          } catch { /* Diagnostics must not affect review availability. */ }
+        }
         result.issues.push(...reviewed.issues)
         result.coveredBlockIds.push(...reviewed.coveredBlockIds)
       }

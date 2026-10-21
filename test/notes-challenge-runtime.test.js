@@ -87,6 +87,31 @@ it('keeps unsupported factual verdicts out of comments and never accepts model-g
   expect(JSON.stringify(result)).not.toContain('假数据')
 })
 
+it('reports only bounded validation counts when every provider candidate is discarded', async () => {
+  const { generateNoteChallenge } = await load(), warn = vi.fn()
+  const candidate = { quote: '收入增长10%', basis: 'general-knowledge', category: 'fact', message: 'PRIVATE-MODEL-NOTE-TEXT', evidence: [] }
+  const f = fixture({ reviews: [{ blockId: 'a', issues: [candidate, { ...candidate, category: 'research' }, { ...candidate, category: 'PRIVATE-CATEGORY', basis: 'PRIVATE-BASIS' }, { ...candidate, category: 'uncertain', quote: 'PRIVATE-INVALID-QUOTE' }] }] })
+  f.ctx.logger = { warn }
+  const result = await generateNoteChallenge(f.ctx, input)
+  expect(result.issues).toEqual([])
+  expect(warn).toHaveBeenCalledTimes(1)
+  const logged = warn.mock.calls[0][0], report = JSON.parse(logged)
+  expect(report).toMatchObject({ event: 'notes-challenge-review-filtered', candidates: 4, accepted: 0, categories: { fact: 1, research: 1, other: 1, uncertain: 1 }, bases: { 'general-knowledge': 3, other: 1 }, uniqueAnchors: 3, emptyEvidence: 4, acknowledgedAgreement: 0 })
+  expect(report.requestKey).toMatch(/^[a-f0-9]{12}$/u)
+  for (const privateText of ['PRIVATE-', input.requestId, input.sessionId, input.blocks[0].text]) expect(logged).not.toContain(privateText)
+  expect(f.events).toEqual([])
+})
+
+it('does not emit filtered-candidate diagnostics for an ordinary empty review or let a logging failure break a review', async () => {
+  const { generateNoteChallenge } = await load(), warn = vi.fn()
+  const empty = fixture(); empty.ctx.logger = { warn }
+  expect((await generateNoteChallenge(empty.ctx, input)).issues).toEqual([])
+  expect(warn).not.toHaveBeenCalled()
+  const rejected = fixture({ reviews: [{ blockId: 'a', issues: [{ quote: '收入增长10%', basis: 'general-knowledge', category: 'fact', message: '请核对。', evidence: [] }] }] })
+  rejected.ctx.logger = { warn: () => { throw Error('logger unavailable') } }
+  expect((await generateNoteChallenge(rejected.ctx, input)).issues).toEqual([])
+})
+
 it('does not turn the unfinished current sentence into a grammar comment', async () => {
   const { generateNoteChallenge } = await load()
   const f = fixture({ reviews: [{ blockId: 'a', issues: [{ quote: '预计收入将', basis: 'note', category: 'grammar', message: '句子缺少宾语。', evidence: [] }] }] })
