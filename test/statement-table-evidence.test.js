@@ -328,3 +328,70 @@ it('round1: early repair retains constraints from every original financial table
  expect(result.error).toContain('300308.XSHE：修复不得删除公司')
  expect(result.error).toContain('300308.XSHE 2025-06-30：修复不得删除或切换原报告期')
 })
+
+// Round 2: 12.34 is a synthetic parent-scope row; actual fixture is unchanged.
+const mixedScopeRequest='DataYes 300502.SZ 同时比较合并口径和母公司口径毛利率，保留两种口径和全部行，不得删除。'
+function mixedScopeCase(){
+ const sources=singleSources();sources[0].response.data.push({...sources[0].response.data[0],mergedFlag:'2',grossMargin:12.34})
+ const first={...table('毛利率'),note:'来源：DataYes',columns:['公司','报告期','报表口径','毛利率'],rows:[['300502.SZ','2026-06-30','合并口径','48.44%'],['300502.SZ','2026-06-30','母公司口径','99.99%']]}
+ const good=clone(first);good.rows[1][3]='12.34%'
+ return {sources,first,good}
+}
+it.each(['母公司口径','合并口径'])('round2: bounded repair cannot delete the compared %s row',async scope=>{
+ const {sources,first,good}=mixedScopeCase();good.rows=good.rows.filter(row=>row[2]!==scope)
+ const {result,calls}=await run([first,good],{sources,prompt:mixedScopeRequest})
+ expect(result.state).toBe('failed');expect(result.finalOutput).toBeUndefined();expect(calls).toHaveLength(2)
+ expect(result.error).toContain(scope);expect(result.error).toContain('保留')
+})
+it('round2: changing a compared parent row into another consolidated row cannot satisfy preservation',async()=>{
+ const {sources,first,good}=mixedScopeCase();good.rows[1]=clone(good.rows[0])
+ const {result,calls}=await run([first,good],{sources,prompt:mixedScopeRequest})
+ expect(result.state).toBe('failed');expect(calls).toHaveLength(2);expect(result.error).toContain('母公司口径')
+})
+it('round2: corrected mixed scopes complete in the original second attempt with both visible rows',async()=>{
+ const {sources,first,good}=mixedScopeCase()
+ const {result,calls}=await run([first,good],{sources,prompt:mixedScopeRequest})
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(2)
+ expect(visibleCells(result)).toMatch(/合并口径[\s\S]*48\.44%[\s\S]*母公司口径[\s\S]*12\.34%/u)
+ expect(visibleCells(result)).not.toContain('99.99%')
+})
+it('round2: one wrong label may be corrected but an explicitly requested parent scope may not be substituted',async()=>{
+ const {sources,first,good}=mixedScopeCase();first.rows=first.rows.slice(1);good.rows=good.rows.slice(0,1)
+ const {result,calls}=await run([first,good],{sources,prompt:'DataYes 300502.SZ 母公司口径毛利率，保留该口径。'})
+ expect(result.state).toBe('failed');expect(calls).toHaveLength(2);expect(result.error).toContain('母公司口径')
+})
+it('round2: compared scopes in separate original tables remain independent research rows',async()=>{
+ const {sources,first,good}=mixedScopeCase(),parent={...first,rows:first.rows.slice(1)},merged={...first,rows:first.rows.slice(0,1)}
+ good.rows=good.rows.slice(0,1)
+ const {result,calls}=await run([JSON.stringify(merged)+'\n'+JSON.stringify(parent),good],{sources,prompt:mixedScopeRequest})
+ expect(result.state).toBe('failed');expect(calls).toHaveLength(2);expect(result.error).toContain('母公司口径')
+})
+it.each(['keep','drop'])('round2: compared scope preservation survives conflicting metadata repair (%s)',async mode=>{
+ const {sources,first,good}=mixedScopeCase();first.note='来源：DataYes；合并口径'
+ if(mode==='drop')good.rows=good.rows.slice(0,1)
+ const {result,calls}=await run([first,good],{sources,prompt:mixedScopeRequest})
+ expect(calls).toHaveLength(2)
+ if(mode==='drop'){expect(result.state).toBe('failed');expect(result.error).toContain('母公司口径')}
+ else{expect(result.state,result.error).toBe('completed');expect(visibleCells(result)).toMatch(/合并口径[\s\S]*48\.44%[\s\S]*母公司口径[\s\S]*12\.34%/u)}
+})
+it('round2: scope retention permits correction of wrong disclosure dates and equivalent scope labels',async()=>{
+ const {sources,first,good}=mixedScopeCase()
+ first.columns.splice(2,0,'披露日期');first.rows.forEach(row=>row.splice(2,0,'2026-09-99'))
+ good.columns.splice(2,0,'披露日期');good.rows.forEach(row=>row.splice(2,0,'2026-08-25'));good.rows[1][3]='非合并口径'
+ const {result,calls}=await run([first,good],{sources,prompt:mixedScopeRequest})
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(2)
+ expect(visibleCells(result)).toMatch(/2026-08-25[\s\S]*合并口径[\s\S]*48\.44%[\s\S]*2026-08-25[\s\S]*非合并口径[\s\S]*12\.34%/u)
+ expect(visibleCells(result)).not.toContain('2026-09-99')
+})
+it.each(['DataYes 300502.SZ 合并口径毛利率','DataYes 300502.SZ 毛利率，不要母公司口径'])('round2: corrects a lone wrong scope label for host request %s',async prompt=>{
+ const {first,good}=mixedScopeCase();first.rows=[['300502.SZ','2026-06-30','母公司口径','48.44%']];good.rows=good.rows.slice(0,1)
+ const {result,calls}=await run([first,good],{sources:singleSources(),prompt})
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(2)
+ expect(visibleCells(result)).toContain('合并口径');expect(visibleCells(result)).not.toContain('母公司口径')
+})
+it('round2: an explicitly requested unavailable parent scope stays as an honest missing row',async()=>{
+ const {first,good}=mixedScopeCase();first.rows=first.rows.slice(1);good.rows=good.rows.slice(1);good.rows[0][3]='本次未取得'
+ const {result,calls}=await run([first,good],{sources:singleSources(),prompt:'DataYes 300502.SZ 母公司口径毛利率，保留该口径。'})
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(2)
+ expect(visibleCells(result)).toMatch(/母公司口径[\s\S]*本次未取得/u);expect(visibleCells(result)).not.toContain('48.44%')
+})

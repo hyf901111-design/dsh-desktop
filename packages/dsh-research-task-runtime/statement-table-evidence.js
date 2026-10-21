@@ -150,12 +150,33 @@ export function statementTableEvidenceIssue(spec,request='',records=[],{required
  const requestedCodes=security(request).filter(code=>sources.some(source=>source.response.data.some(row=>rowCode(row)===code)))
  const outputCodes=data.rows.flatMap(row=>Array.isArray(row)?row.flatMap(security):[])
  for(const code of new Set([...requestedCodes,...previousCodes]))if(!outputCodes.includes(code))add(`${code}：修复不得删除公司`)
- const currentIdentities=data.rows.filter(Array.isArray).map(row=>correspondence(row,data.columns)).filter(Boolean)
+ const tableScope=scopeFlag([metadata,...data.columns].join('\n'))
+ const currentIdentities=data.rows.filter(Array.isArray).map(row=>{
+  const id=correspondence(row,data.columns)
+  return id&&{...id,scope:rowScope(row,data.columns,tableScope)}
+ }).filter(Boolean)
+ const comparedScopes=new Map()
  for(const table of previousTables)for(const row of table.rows??[]){
   const prior=Array.isArray(row)&&correspondence(row,table.columns)
-  if(prior&&!currentIdentities.some(current=>current.code===prior.code&&current.date===prior.date))add(`${prior.code} ${prior.date}：修复不得删除或切换原报告期`)
+  if(!prior)continue
+  if(!currentIdentities.some(current=>current.code===prior.code&&current.date===prior.date))add(`${prior.code} ${prior.date}：修复不得删除或切换原报告期`)
+  // Explicit row labels define a comparison even when table-level metadata
+  // needs repair. Do not freeze a lone erroneous label or disclosure date.
+  const scope=rowScope(row,table.columns)??scopeFlag([textOf(table),...table.columns].join('\n'))
+  if(!['1','2'].includes(scope))continue
+  const key=`${prior.code} ${prior.date}`
+  if(!comparedScopes.has(key))comparedScopes.set(key,{...prior,scopes:new Set()})
+  comparedScopes.get(key).scopes.add(scope)
  }
- const tableScope=scopeFlag([metadata,...data.columns].join('\n'))
+ const positiveScopeRequest=request.split(/[。；;\n]/u).filter(part=>!/(?:不要|不比较|不使用|无需|不用|排除|禁止).{0,16}(?:合并|母公司|非合并)/u.test(part)).join('\n')
+ const requestedScope=scopeFlag(positiveScopeRequest)
+ for(const prior of comparedScopes.values()){
+  // Two explicit scopes are two research rows, not interchangeable copies
+  // of one code/date. A single label remains correctable unless the host
+  // explicitly requested that scope.
+  const requiredScopes=prior.scopes.size>1?prior.scopes:['1','2'].includes(requestedScope)?[requestedScope]:[]
+  for(const scope of requiredScopes)if(!currentIdentities.some(current=>current.code===prior.code&&current.date===prior.date&&current.scope===scope))add(`${prior.code} ${prior.date}：修复须保留${scope==='1'?'合并口径':'母公司口径'}研究行，不得删除或用另一口径替代`)
+ }
  for(const row of data.rows){
   if(!Array.isArray(row)||row.length!==data.columns.length){add('财务表行结构无法核验，请保留字段并使用明确单元格');continue}
   const id=correspondence(row,data.columns),label=id?`${id.code} ${id.date}`:'证券/报告期不明确'

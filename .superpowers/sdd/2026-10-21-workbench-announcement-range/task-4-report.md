@@ -124,3 +124,49 @@ npx vitest run test/statement-table-evidence.test.js test/observed-statement-gro
 Git 实际状态纠正：本报告虽匹配 `.superpowers/sdd/.gitignore` 的 `*`，但 `git ls-files` 确认它早已被跟踪。root 在本轮明确指示将该已跟踪 ownscope 报告正常 `git add` 随源码提交，保持 feature 干净；不 force-add 任何其他未跟踪报告。本轮将按此最新指示创建中文本地提交，不 push。
 
 提交前普通 `git add` 因忽略的父目录提示退出 1，但 `git ls-files --error-unmatch` 退出 0，且 `git diff --cached --name-only` 确认上述 4 个源码/测试文件及本报告均已正确暂存。未 force-add；随后仅用 `git add -u` 更新已跟踪报告，并再次核对暂存范围。
+
+## Task 4 fix round2（多口径研究行保留，2026-10-21）
+
+状态：新增 I1 已修复并完成聚焦验证，等待 root 独立复审。精确起点 `1c406e9ece8609451ed9df611853c2c7c3e896a0`，开始时工作区干净；Task5 writer 已停止并提交。本轮仅修改 `statement-table-evidence.js`、专用 `statement-table-evidence.test.js` 与本已跟踪报告，不修改 caller、Task5/native、Notes、collector 或预算；未派 agents、未构建/操作共享客户端、未调用真实 SDK/模型/网络、未读凭据或 private reasoning、未运行全功能测试。
+
+### 根因与最小修复
+
+原原表约束虽然已完整捕获，但逐行保留仅以证券代码与报告期匹配。同公司同期间的合并与母公司研究行能被一条剩余合并行同时满足，删掉错误母公司行便消除了唯一数值错误。新逻辑在这些既有 code/date 约束外，聚合原全部相关表内明确的行级 scope：同 code/date 下原本同时存在合并和母公司时，最终必须分别有对应 scope 的行，不能删除或改成另一条重复口径。当前行仍按原表级/同行 scope 合并规则核验；最终 metadata 与 row scope 冲突仍拒绝。
+
+单个首次错误标签并不自动变成不可更改对象：没有明确 host scope 约束时，仍可将仅一行的错误母公司标签修正为实际合并来源，原 I4 正例继续完成。宿主请求中明确、无歧义的已支持口径也不能被改成另一口径；否定口径语句不作肯定要求。没有引入任意散文理解或通用表格审计。原明确多口径行即使原 table metadata 写错，保留身份仍从明确同行标签得到，允许修正 metadata 而不允许趁机删掉另一口径；错误/冲突同行标签不机械冻结。披露日期不加入永久保留身份，错误日期和等义“母公司口径”→“非合并口径”仍可按实际来源纠正。
+
+### RED / GREEN、命令和退出码
+
+使用现有本地 `./node_modules/.bin/vitest`，没有在线安装。
+
+```sh
+./node_modules/.bin/vitest run test/statement-table-evidence.test.js -t 'round2:'
+```
+
+生产修改前 RED：`/tmp/task4-round2-red.log`，**退出 1；5 失败、1 通过，108 跳过**。五项失败均为旧 Runtime 错误 `completed`：删除母公司行、删除合并行、把母公司行改成第二条合并行、宿主明确母公司但交付合并行、两份原表中删掉一种 scope。审查指定的“合并 48.44% 正确 / 母公司 99.99% 错误 → 删除母公司”的输入完全保留；修成两行 48.44% / 12.34% 的正例原本通过。
+
+最小修复后的第一轮聚焦：
+
+```sh
+./node_modules/.bin/vitest run test/statement-table-evidence.test.js -t 'round2:|rejects parent-company label|rejects .* row scope|different row scopes|disclosure|original .*after supplement|every original financial table'
+```
+
+`/tmp/task4-round2-green.log`，**退出 0；22 通过、92 跳过**。没有新增调用或修复次数。
+
+加入同一交互边界的正反例后最终聚焦：
+
+```sh
+./node_modules/.bin/vitest run test/statement-table-evidence.test.js -t 'round2:|scope|disclosure|parent-company label|preserv|dropping|delete|period|cancellation|fallback|third generation|repairs once|second .*bypass'
+```
+
+`/tmp/task4-round2-final.log`，**退出 0；51 通过、69 跳过（总专用文件 120 项）**。本轮新增 **12 项**：五种拒绝、保留两行修正完成、metadata 冲突纠正的保留/删除对照、错误披露日期及等义口径标签纠正、宿主要求合并/否定母公司时单行误标签纠正、明确请求母公司但无其来源时保留“本次未取得”。全部失败终态断言仍至多 2 次 adapter start，没有第三次生成；全部成功修复仍第二次完成。旧取消、异常 fallback、删公司/列/期间及预算回归在这一选择范围内通过。最终仅调整一个测试标题措辞，不改变用例或断言。
+
+`node --check` 检查 helper 与专用测试、`git diff --check` 均 **退出 0**。没有 TypeScript/声明修改，项目 tsconfig 不覆盖这两个 JS 的类型检查，不额外执行无关项目 typecheck。未重跑任何已登记无关失败文件：前轮报告所列全分支 6 个既有失败依然保留，不宣称全分支全绿。
+
+### 可见结果与事实边界
+
+成功用例从最终 `finalOutput.html` 剔除 script 后检查 `<th>/<td>`：两行仍分别显示 **合并口径 48.44%**、**母公司口径 12.34%**，不再包含 99.99%；错误日期修复后两行均为 **2026-08-25**，等义非合并标签保留 **12.34%**。这些断言读取实际交付 HTML 单元格，而不是只读 retained model。删除任意一种明确比较 scope 的用例终态 failed、无 finalOutput，并指出具体必须保留的 scope。缺源正例保留母公司口径和“本次未取得”，不会偷偷换成合并 48.44%。
+
+所有 12.34 值只来自测试内明确合成的 `mergedFlag:'2'` 行，不是 actual fixture 或新在线取数。actual 六响应 fixture、原错表和人工 corrected 期望均未修改；本轮重新 SHA-256 校验 fixture 与原 `/tmp/compute-b-finance-observed-business-20261021.json` 仍同为 `9d2199213832a0788914f531b937884f6d9af48a14783400652d336947cb780c`。无浏览器/客户端/SDK/线上验收主张。
+
+自审确认：不同 scope 不互相替代；同 scope 的任意重复行/任意维度审计不在本轮范围；只对已有明确口径及 host 明确口径施加保留。原公司/列/期间、最终逐字段事实核验和单次 repair 路径均保持。将按 root 授权用 `git add -u` 正常提交上述两个源码/测试文件及已跟踪报告，中文本地提交题为“保留财务表修复中的独立报表口径行”，不 force-add 其他 SDD、不 push。
