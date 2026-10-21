@@ -1,9 +1,26 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdirSync, existsSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync } from 'node:fs'
 import { join } from 'node:path'
+import * as Y from 'yjs'
 import type { NoteContent, NoteLoad, NoteSave, SavedNote, DraftNote } from '../../shared/workspace-notes'
 const empty = (): SavedNote => ({ title: '', blocks: [], yjs: '', revision: 0, updatedAt: 0 })
 type FileNote = { version: 1; saved: SavedNote; drafts: DraftNote[] }
+
+/** Yjs observers run before transaction GC; equivalent updates can encode differently. */
+function sameNoteContent(left: NoteContent, right: NoteContent): boolean {
+  if (left.title !== right.title || JSON.stringify(left.blocks) !== JSON.stringify(right.blocks)) return false
+  if (left.yjs === right.yjs) return true
+  if (typeof left.yjs !== 'string' || typeof right.yjs !== 'string') return false
+  const canonical = (update: string): string => {
+    const doc = new Y.Doc()
+    try {
+      if (update) Y.applyUpdate(doc, Buffer.from(update, 'base64'))
+      return Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64')
+    } finally { doc.destroy() }
+  }
+  try { return canonical(left.yjs) === canonical(right.yjs) }
+  catch { return false } // An undecodable recovery draft must remain available.
+}
 export function validateNoteContent(value: unknown): NoteContent {
   const c = value as NoteContent
   if (!c || typeof c.title !== 'string' || c.title.length > 1000 || !Array.isArray(c.blocks) || c.blocks.length > 10000 || typeof c.yjs !== 'string' || !/^[a-zA-Z0-9+/=]*$/.test(c.yjs)) throw Error('笔记格式无效。')
@@ -41,14 +58,14 @@ export class NotesStore {
   }
   load(owner: string, session: string): NoteLoad {
     const file = this.read(owner, session)
-    const draft = file.drafts.filter(d => JSON.stringify({ title: d.title, blocks: d.blocks, yjs: d.yjs }) !== JSON.stringify({ title: file.saved.title, blocks: file.saved.blocks, yjs: file.saved.yjs })).sort((a, b) => b.updatedAt - a.updatedAt).at(0)
+    const draft = file.drafts.filter(d => !sameNoteContent(d, file.saved)).sort((a, b) => b.updatedAt - a.updatedAt).at(0)
     return { saved: file.saved, ...(draft ? { draft } : {}) }
   }
   save(owner: string, session: string, revision: number, content: NoteContent, client?: string): NoteSave {
     const normalized = validateNoteContent(content), file = this.read(owner, session)
     if (revision !== file.saved.revision) return { status: 'conflict', saved: file.saved }
     file.saved = { ...normalized, revision: revision + 1, updatedAt: Date.now() }
-    file.drafts = file.drafts.filter(d => d.clientId !== client || JSON.stringify({ title: d.title, blocks: d.blocks, yjs: d.yjs }) !== JSON.stringify(normalized))
+    file.drafts = file.drafts.filter(d => d.clientId !== client || !sameNoteContent(d, normalized))
     this.write(owner, session, file)
     return { status: 'saved', saved: file.saved }
   }
