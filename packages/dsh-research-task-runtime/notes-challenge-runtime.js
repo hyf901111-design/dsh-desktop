@@ -152,10 +152,39 @@ function diagnostic(requestId, counts) {
 
 // Classify rejected JSON by fixed structure only. Never record model keys,
 // paragraph IDs, content, or parser exception messages.
-function reviewShapeStats(value, targets) {
+function withinOneEdit(left, right) {
+  const a = [...left], b = [...right]
+  if (Math.abs(a.length - b.length) > 1) return false
+  let i = 0, j = 0, edits = 0
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue }
+    if (++edits > 1) return false
+    if (a.length >= b.length) i++
+    if (a.length <= b.length) j++
+  }
+  return edits + Number(i < a.length || j < b.length) <= 1
+}
+
+function unknownReviewStats(value, targets, payload) {
+  const stats = { unknownTitleIds: 0, unknownContextIds: 0, unknownNearTargetIds: 0, unknownEmptyGroups: 0, unknownNonStringIds: 0 }
+  if (!Array.isArray(value?.reviews)) return stats
+  const targetIds = new Set(targets.map(block => block.id)), contextIds = new Set(payload.context.map(block => block.id))
+  for (const review of value.reviews) {
+    if (!record(review) || targetIds.has(review.blockId)) continue
+    if (Array.isArray(review.issues) && !review.issues.length) stats.unknownEmptyGroups++
+    if (typeof review.blockId !== 'string') { stats.unknownNonStringIds++; continue }
+    if (review.blockId === payload.title || ['title', '标题'].includes(review.blockId.toLowerCase())) stats.unknownTitleIds++
+    if (contextIds.has(review.blockId)) stats.unknownContextIds++
+    // Similarity is diagnostic only. Never guess or rewrite a foreign ID.
+    if (review.blockId.length <= 256 && targets.some(block => withinOneEdit(review.blockId, block.id))) stats.unknownNearTargetIds++
+  }
+  return stats
+}
+
+function reviewShapeStats(value, targets, payload) {
   const kind = value => value === undefined ? 'missing' : value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value
   const reviews = value?.reviews, targetIds = new Set(targets.map(block => block.id)), seen = new Set()
-  const stats = { valueKind: kind(value), reviewsKind: kind(reviews), reviewCount: Array.isArray(reviews) ? reviews.length : 0, nonObjectReviews: 0, unexpectedReviewFields: 0, unknownBlockIds: 0, duplicateBlockIds: 0, nonArrayIssues: 0, unreviewedTargets: targets.length }
+  const stats = { valueKind: kind(value), reviewsKind: kind(reviews), reviewCount: Array.isArray(reviews) ? reviews.length : 0, nonObjectReviews: 0, unexpectedReviewFields: 0, unknownBlockIds: 0, duplicateBlockIds: 0, nonArrayIssues: 0, unreviewedTargets: targets.length, ...unknownReviewStats(value, targets, payload) }
   if (!Array.isArray(reviews)) return stats
   for (const review of reviews) {
     if (!record(review)) { stats.nonObjectReviews++; continue }
@@ -257,12 +286,12 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
         parsedJSON = true
         if (reviewTargets) {
           const reviewed = reviewEntries(value, reviewTargets), ignoredGroups = value.reviews.length - reviewed.size
-          if (ignoredGroups) diagnostic(requestId, { event: 'notes-challenge-review-extra-groups', action: payload.action, attempt: attempt + 1, targetCount: reviewTargets.length, reviewCount: value.reviews.length, ignoredGroups })
+          if (ignoredGroups) diagnostic(requestId, { event: 'notes-challenge-review-extra-groups', action: payload.action, attempt: attempt + 1, targetCount: reviewTargets.length, reviewCount: value.reviews.length, ignoredGroups, ...unknownReviewStats(value, reviewTargets, payload) })
         }
         return { value, usage }
       }
       catch {
-        diagnostic(requestId, { event: 'notes-challenge-format-rejected', action: payload.action, attempt: attempt + 1, reason: parsedJSON ? 'review-envelope' : 'json-invalid', jsonChars: json.length, targetCount: reviewTargets?.length ?? 0, anchorCount: payload.existingAnchors?.length ?? 0, ...parsedJSON && reviewTargets ? reviewShapeStats(value, reviewTargets) : {} })
+        diagnostic(requestId, { event: 'notes-challenge-format-rejected', action: payload.action, attempt: attempt + 1, reason: parsedJSON ? 'review-envelope' : 'json-invalid', jsonChars: json.length, targetCount: reviewTargets?.length ?? 0, anchorCount: payload.existingAnchors?.length ?? 0, ...parsedJSON && reviewTargets ? reviewShapeStats(value, reviewTargets, payload) : {} })
         // A stop response can contain malformed JSON or a malformed review envelope.
         // Primary/reply operations share one regeneration allowance and budgets.
         // Optional consistency fails closed on its first invalid response so a
