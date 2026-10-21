@@ -88,6 +88,11 @@ it('keeps real canvas connection endpoints on visible circles across themes, scr
   }
   await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');await expect.poll(()=>basedFooter.textContent()).toBe('Source components: 1')
   await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await expect.poll(()=>basedFooter.textContent()).toBe('基于 1 个组件')
+  await page.evaluate(({source})=>window.__workspace.setArtifacts(window.__workspace.getSnapshot().artifacts.map(n=>n.id===source?{...n,generationStatus:'completed',containerSpec:{version:1,type:'table',title:'普通生成的分析表',columns:['项目'],rows:[['用户生成的内容']]}}:n)),based)
+  const generated=page.locator('[data-research-node-id="'+based.source+'"]')
+  await expect.poll(()=>generated.textContent()).toContain('用户生成的内容')
+  expect(await generated.locator('[data-financial-port]').count()).toBe(0);expect(await basedCard.locator('[data-financial-port]').count()).toBe(0)
+  expect(await basedFooter.textContent()).toBe('基于 1 个组件');expect(await output.count()).toBe(1)
   expect(errors).toEqual([]);await page.screenshot({path:'/tmp/smart-container-ports-20261021/no-source-output.png'})
  }finally{await page.close()}
 },20000)

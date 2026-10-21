@@ -43,7 +43,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
  react.useLayoutEffect(()=>{
   const root=rootRef.current;if(!root)return
   root.toggleAttribute('data-financial-connecting',Boolean(draft))
-  const sources=new Set([...snapshot.artifacts.map(n=>financialLinkSourceId(n.containerSpec)).filter(Boolean),...snapshot.artifacts.filter(n=>n.creationMode==='selection').flatMap(n=>n.sourceNodeIds||[])])
+  const sources=new Set([...snapshot.artifacts.map(n=>financialLinkSourceId(n.containerSpec)).filter(Boolean),...snapshot.artifacts.filter(n=>workbenchSmartCreateTarget(n)&&n.creationMode==='selection').flatMap(n=>n.sourceNodeIds||[])])
   for(const port of root.querySelectorAll('[data-financial-port]')){
    const id=port.dataset.financialPortNode,side=port.dataset.financialPort
    if(side==='output')port.dataset.connected=String(sources.has(id))
@@ -117,8 +117,8 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   return `M ${from.x} ${from.y} C ${exit} ${from.y} ${exit} ${from.y} ${exit} ${from.y+12} C ${exit} ${from.y+12} ${exit} ${bottom-radius} ${exit} ${bottom-radius} C ${exit} ${bottom} ${exit} ${bottom} ${exit-radius} ${bottom} C ${exit-radius} ${bottom} ${entry+radius} ${bottom} ${entry+radius} ${bottom} C ${entry} ${bottom} ${entry} ${bottom} ${entry} ${bottom-radius} C ${entry} ${bottom-radius} ${entry} ${to.y+12} ${entry} ${to.y+12} C ${entry} ${to.y} ${entry} ${to.y} ${to.x} ${to.y}`
  }
  const selected=new Set(snapshot.selection.selectedNodeIds),input=id=>geometry.ports[portKey(id,'input')],output=id=>geometry.ports[portKey(id,'output')],links=snapshot.artifacts.flatMap(n=>{
-  const sources=n.creationMode==='selection'?n.sourceNodeIds||[]:[financialLinkSourceId(n.containerSpec)]
-  return sources.filter(source=>source&&n.id!==draft?.previousTargetId&&(selected.has(n.id)||selected.has(source))&&input(n.id)&&output(source)).map(sourceId=>({node:n,sourceId,creation:n.creationMode==='selection'}))
+  const creation=workbenchSmartCreateTarget(n)&&n.creationMode==='selection',sources=creation?n.sourceNodeIds||[]:[financialLinkSourceId(n.containerSpec)]
+  return sources.filter(source=>source&&n.id!==draft?.previousTargetId&&(selected.has(n.id)||selected.has(source))&&input(n.id)&&output(source)).map(sourceId=>({node:n,sourceId,creation}))
  })
  return rootRef.current&&react_dom.createPortal(jsxs('svg',{className:'ew-financial-connections',width:geometry.width,height:geometry.height,'aria-label':'个股数据联动',children:[...links.map(({node:n,sourceId,creation})=>{
   const from=output(sourceId),to=input(n.id),d=path(from,to),hit=path({...from,x:from.right+1},{...to,x:to.left-1}),editable=!readOnly&&(!creation||workbenchSmartCreateTarget(n))
