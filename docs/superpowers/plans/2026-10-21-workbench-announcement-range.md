@@ -47,3 +47,19 @@
 - [ ] 逐卡核对公司、期次、单位、来源、走势曲线与相对强弱、日期范围、新闻同条对应、静态／绑定状态和标题／筛选／详情／布局。安排覆盖画布全体组件的整理和滚动检查。
 - [ ] Task 1 与其审阅完成后，按运行手册交接到现有未验收集成批次，通过清单检查，从集成 worktree 本地签名构建／包检查，真实客户端复测受影响组件；必要时再做新完整任务，保留此前结果便于比较。
 - [ ] 记录证明的改进与仍未取得的数据／未达成的耗时目标。未通过的完整研究范围不能因单卡 ready 或窄测试而改记完成。
+
+### Task 3: 保留完整字段的有界交互行情宽表
+
+**依赖：** Task 1 已提交后可实现，独立审阅可同时进行；必须在 Task 2 最终本地交付前完成。
+
+**Files:** `packages/dsh-research-task-runtime/artifact-output.js`（sourced table路由）、`template-data-contract.js`（共享tableColumns=32、tableRows=100及提示/shape校验）、`market-artifact.js`（同限验证，必要的表格内容区样式）；扩充 `test/research-artifact-resilience.test.js` 或新建专用宽表回归及浏览器测试。不改原生 `artifact-validator.js` 或客户端原生table schema，不修改公告或笔记。
+
+**Interfaces:** `acceptArtifactOutput(text)` 对合法带asOf或note的generic table路由为保留model的 `market/table` HTML；模板共享限制与拒绝原因供接纳、renderer、模型生成/修复提示使用；现有market table也使用同一列/行上限。依据实际13列产物构建fixture，明确为渲染证据，不是新一次在线取数。
+
+- [ ] 先用 `/tmp/compute-b-quote-raw-artifact-20261021.json` 固定真实13列、4行产物，建立red：accept为interactive HTML、retained model所有值/列/asOf/note完全一致；当前应失败而非仅断言常量。
+- [ ] 最小实现1–32列、1–100行的共享可信表格shape限制；sourced generic route不再先过native12列parser，但version/title/columns/rows/cell/extra/asOf/note仍严格验证，不能因新分支接受既有非法输入。无来源表格native12列规则保持不变。
+- [ ] 边界测试32通过、33拒绝、100行通过/101拒绝、无来源13列仍按native拒绝、空/错宽行、布尔/对象/null/NaN等非法cell、超长title/label/cell/metadata、额外字段拒绝、原有三列表和两种合法object-row规范化行为保持；共享合同提示明确列/行上限。所有值含零/负数/精度/长报价时间原样保留。
+- [ ] 使用现有隔离headless浏览器测试模式，在窄/宽尺寸和深/浅主题验证真实13列：首屏有正文、表头/单元格默认单行、表格横向滚动能到最后报价时间列，搜索/排序有效，列宽pointer/keyboard调整及手动缩窄后的换行仍可用，工具栏/备注不因表宽横向溢出。浏览器用独立fixture，不能操作运行中客户端。
+- [ ] 运行直接相关artifact-resilience、table contract/market renderer和新增浏览器回归及diff check，记录真实fixture与合成边界的区别，自审后仅提交本任务文件，中文本地提交。禁止构建、启动、重启共享应用或派生agent；写task-3-report.md交root审阅。
+
+**Binding constraints and review focus:** 保留全部字段和原始数值，不能静默删列／截断；原生12列合同保持不变；1–32列/1–100行只在可信交互模板路径放宽，shape、字节/文字容量和来源校验不削弱；水平滚动只在表格区；普通/来源表分别验证；相关聚焦测试，不运行全功能测试、不修改共享客户端。未绑定表格不能声称自动刷新。
