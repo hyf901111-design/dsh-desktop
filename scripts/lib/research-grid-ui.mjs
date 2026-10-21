@@ -26,6 +26,12 @@ export function workbenchRefreshState(node,binding,{rss=null,reload=false,error=
 export function workbenchSmartCreateTarget(node){
  return node?.kind==='generated-container'&&!node.containerSpec&&node.generationStatus==='draft'&&node.containerPrompt!=='odyssey:link-draft'
 }
+export function workbenchHasCreateOutput(node){
+ return node?.kind==='generated-container'&&Boolean(node.containerSpec)&&(node.containerSpec.type!=='financial-widget'||['watchlist','quote'].includes(node.containerSpec.widget))
+}
+export function workbenchCreateSourceCount(node,nodes){
+ return (node.sourceNodeIds||[]).filter(id=>workbenchHasCreateOutput(nodes.find(source=>source.id===id))).length
+}
 export function workbenchCanCreateFrom(source,target,nodes){
  if(!source||!workbenchSmartCreateTarget(target)||source.id===target.id||source.kind==='generated-container'&&!source.containerSpec||!source.containerSpec&&!(source.excerpt||source.name))return false
  const seen=new Set(),reachesTarget=node=>{if(node.id===target.id)return true;if(seen.has(node.id))return false;seen.add(node.id);return (node.sourceNodeIds||[]).some(id=>{const parent=nodes.find(n=>n.id===id);return parent&&reachesTarget(parent)})}
@@ -35,9 +41,9 @@ export function WorkbenchCreatePort({node,side,readOnly}){
  const input=side==='input',editable=workbenchSmartCreateTarget(node),connected=input&&node.sourceNodeIds?.length>0
  return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port ew-create-source-port','data-financial-port':side,'data-financial-port-node':node.id,'data-workbench-create-port':side,'data-create-draft':editable||undefined,'data-connected':connected||undefined,disabled:readOnly||input&&!editable,'aria-label':workbenchText(input?'接收组件作为创建基准':'输出组件内容'),'title':workbenchText(input?'拖到组件输出节点连接基准，拖到空白处断开':'拖到智能容器左侧节点，基于此组件创建'),children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
 }
-export function WorkbenchSmartCreateFooter({node,readOnly}){
- const count=node.sourceNodeIds?.length||0,status=count?workbenchText('已连接 {count} 个组件').replace('{count}',String(count)):workbenchText('待创建')
- return react_jsx_runtime.jsxs('footer',{className:'ew-smart-create-footer','data-workbench-smart-footer':'','aria-label':workbenchText('智能容器底栏'),children:[react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'input',readOnly}),react_jsx_runtime.jsx('span',{className:'ew-smart-create-status',role:'status','aria-live':'polite',children:status})]})
+export function WorkbenchSmartCreateFooter({node,readOnly,createSourceCount}){
+ const count=node.sourceNodeIds?.length||0,showInput=node.creationMode!=='selection'||createSourceCount>0,status=count?workbenchText(createSourceCount?'已连接 {count} 个组件':'基于 {count} 个组件').replace('{count}',String(createSourceCount||count)):workbenchText('待创建')
+ return react_jsx_runtime.jsxs('footer',{className:'ew-smart-create-footer','data-workbench-smart-footer':'','aria-label':workbenchText('智能容器底栏'),children:[showInput&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'input',readOnly}),react_jsx_runtime.jsx('span',{className:'ew-smart-create-status',role:'status','aria-live':'polite',children:status})]})
 }
 export function controlWorkbenchWebZoom(card,step) {
   const native=card?.querySelector('[data-research-native-web]')
@@ -92,7 +98,7 @@ export function WorkbenchTitle({title,systemTitle=false}){
   const ref=react.useRef(null);react.useEffect(()=>installWorkbenchTitle(ref.current),[title]);
   return react_jsx_runtime.jsx('span',{ref,className:'ew-grid-title',title,tabIndex:0,'data-ui-system-title':systemTitle||undefined,'data-ui-preserve':systemTitle?undefined:true,children:react_jsx_runtime.jsx('span',{className:'ew-grid-title-copy',children:title})});
 }
-export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand,onReload,titleExtra}) {
+export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand,onReload,titleExtra,createSourceCount=0}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
   const [busy,setBusy]=react.useState(false),[error,setError]=react.useState(''),[now,setNow]=react.useState(Date.now()),[tip,setTip]=react.useState(null)
   // A later automatic success also clears a previous header-click failure.
@@ -135,8 +141,8 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   const button=(name,label,onClick,extra={})=>react_jsx_runtime.jsx('button',{type:'button','aria-label':label,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();onClick?.(e)},...extra,children:react_jsx_runtime.jsx(WorkbenchIcon,{name})})
   const hover=kind=>e=>{setNow(Date.now());const r=e.currentTarget.getBoundingClientRect();setTip({kind,left:Math.min(r.left,window.innerWidth-340),top:r.bottom+6})}
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
-    workbenchSmartCreateTarget(node)?react_jsx_runtime.jsx(WorkbenchSmartCreateFooter,{node,readOnly}):node.creationMode==='selection'&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'input',readOnly}),
-    node.kind==='generated-container'&&node.containerSpec&&node.containerSpec.type!=='financial-widget'&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'output',readOnly}),
+    workbenchSmartCreateTarget(node)?react_jsx_runtime.jsx(WorkbenchSmartCreateFooter,{node,readOnly,createSourceCount}):node.creationMode==='selection'&&createSourceCount>0&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'input',readOnly}),
+    workbenchHasCreateOutput(node)&&node.containerSpec.type!=='financial-widget'&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'output',readOnly}),
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
       refreshState&&react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button(refreshState.icon,'刷新组件',refresh,{disabled:readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':refreshing||undefined,'data-refresh-state':refreshState.state})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),
@@ -300,7 +306,7 @@ export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readO
   const corner=workspace.getWorkbenchStyle?.()==='openterminal'
   const resizable=readOnly?[]:[...hosts.filter(n=>!n.expanded&&!n.blocked&&(corner||snapshot.selection.selectedNodeIds.includes(n.node.id))).map(n=>n.node),...selectedPlanning]
   const visibleHeight=rootRef.current?.clientHeight||snapshot.canvasSize.visibleHeight||0,contentBottom=Math.max(0,...[...snapshot.files,...snapshot.artifacts,...planningNodes].map(n=>n.y+n.height/2)),resizeBottom=visibleHeight>0&&contentBottom<=visibleHeight?visibleHeight:Infinity
-  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(CalendarSessionReminders,{rootRef,workspace,sessionId}),...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000,bottom:resizeBottom,corner}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected,onConfigureIndices:setIndicesId}),indicesNode&&react_jsx_runtime.jsx(FinancialIndicesSettings,{node:indicesNode,sessionId,rootRef,readOnly,onClose:closeIndices},'indices-settings:'+indicesId)]})
+  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(CalendarSessionReminders,{rootRef,workspace,sessionId}),...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,createSourceCount:workbenchCreateSourceCount(node,[...snapshot.files,...snapshot.artifacts]),selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000,bottom:resizeBottom,corner}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected,onConfigureIndices:setIndicesId}),indicesNode&&react_jsx_runtime.jsx(FinancialIndicesSettings,{node:indicesNode,sessionId,rootRef,readOnly,onClose:closeIndices},'indices-settings:'+indicesId)]})
 }
 export function WorkbenchResizeControls({nodes,width,bottom=Infinity,corner=false}) {
   const gap=createResearchGrid().metrics(width).gap
