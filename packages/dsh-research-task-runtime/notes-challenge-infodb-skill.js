@@ -8,17 +8,22 @@ import { consensusSql } from './notes-challenge-consensus-query.js'
 // All module/driver stdout is suppressed, and no exception text leaves the child.
 const PYTHON = `import contextlib,importlib.util,io,json,sys
 conn=None
+phase='module'
 try:
  with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
   path,sql=sys.argv[1:3]
   spec=importlib.util.spec_from_file_location('ework_infodb_connection',path)
   module=importlib.util.module_from_spec(spec)
   spec.loader.exec_module(module)
+  phase='connection'
   conn=module.get_connection()
   conn.call_timeout=2500
   cursor=conn.cursor()
+  phase='transaction'
   cursor.execute('SET TRANSACTION READ ONLY')
+  phase='query'
   cursor.execute(sql)
+  phase='fetch'
   rows=cursor.fetchmany(201)
   if len(rows)>200: raise ValueError('too many rows')
   columns=[item[0] for item in cursor.description]
@@ -26,8 +31,10 @@ try:
   cursor.close()
 except ModuleNotFoundError as e:
  result={'error':'missing-driver' if e.name in ('oracledb','cryptography') else 'source-unavailable'}
-except Exception:
- result={'error':'source-unavailable'}
+except Exception as e:
+ detail=e.args[0] if e.args else None
+ code=getattr(detail,'full_code',None)
+ result={'error':'source-unavailable','phase':phase,'driverCode':code if isinstance(code,str) and __import__('re').fullmatch(r'[A-Z]{2,6}-[0-9]{3,6}',code) else None}
 finally:
  if conn is not None:
   with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
@@ -84,7 +91,12 @@ export async function managedInfodbSource(ctx,agent,signal) {
       let result
       try {result=await readProcess(executable,path,sql,querySignal)}catch(error){if(error.code==='ENOENT'&&!configured)continue;throw error}
       if(result.error==='missing-driver'&&!configured)continue
-      if(result.error)throw Error('infodb技能未取得有效数据。')
+      if(result.error){
+        const error=Error('infodb技能未取得有效数据。')
+        if(['module','connection','transaction','query','fetch'].includes(result.phase))error.phase=result.phase
+        if(typeof result.driverCode==='string'&&/^[A-Z]{2,6}-[0-9]{3,6}$/.test(result.driverCode))error.driverCode=result.driverCode
+        throw error
+      }
       await authorize();querySignal?.throwIfAborted()
       if(!live(ctx,agent))throw Error('infodb读取会话已变化。')
       return {content:[{type:'text',text:JSON.stringify(result)}]}
