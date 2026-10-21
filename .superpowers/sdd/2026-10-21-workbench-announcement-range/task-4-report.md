@@ -69,3 +69,58 @@ npx vitest run test/statement-table-evidence.test.js test/observed-statement-gro
 - Task 3 已报告的 6 个既有非本任务失败未修复、未隐去；本任务没有重跑其无关失败文件，详情保留于 `task-3-report.md`，本报告不宣称全套测试通过。
 
 本地中文提交只包含本任务 helper、最小 index/精度接口修改、专用测试、fixture/README和本报告。提交后停止源码编辑，交 root 独立审阅。
+
+## Task 4 fix round1（恢复轮，2026-10-21）
+
+状态：五项 Important 已修复并完成本轮聚焦验证；等待 root 独立审阅。本轮起点为干净的 `da057cf370bfaa49c7b255a8346ea783b50e7044`，branch `codex/feat/openterminal-style-20261019`。在同一功能 worktree 中由唯一源码 writer 完成；没有混入另一 worktree 的 Notes 源码，没有派生 agent，没有构建、启动或操作共享客户端，没有真实 SDK/模型/网络调用，没有读取凭据或 private reasoning，没有运行全功能测试。
+
+### 五项根因与修复
+
+1. **retained 模型与可见 HTML 脱节。** 原接纳路径会原样保留 HTML，模型中的正确值不能证明正文。`artifact-output.js` 现在仅对 retained `table` / `market.table` 读取结构化数据，经过原有 normalize/parser/可信 renderer 重新生成整个输出，不保留模型提供的旧 HTML。`finalText` 对这条确定已重建的表格路径按宿主 renderer 处理；其他自定义 HTML 仍走原共享状态/设计校验。第一次实现只重建而仍按原 custom HTML 校验时，新可信脚本被误判缺共享状态（`/tmp/task4-round1-retained-diagnostic.log`），已按实际内容来源修正；没有扩大到其他 retained 模板。
+2. **raw 字段未进入门禁。** 为已知 `grossMargin`、`revenueYoy`、`niAttrPYoy`、`roeW`、`nCFOpa`、`revenue`、`nIncomeAttrP` 提供精确映射，支持已有单位标签。可辨识但不能映射的财务字段、raw 长表结构返回明确“含糊/无法核验”，不能静默判作普通表。提前捕获原表后，unsupported 长表检查仍须运行，不能因 `requiredData` 存在而跳过。数量/行情、宿主模拟许可及明确其他来源的旧边界保持；不把仅有中文金额列的普通旧路径整体扩为新门禁。
+3. **独立披露日期未纳入身份。** 独立的披露/发布/公告日期列需为合法 ISO 日期，并与同公司、报告期、口径的源披露对应；嵌入与独立日期矛盾拒绝。逐字段 candidates 仍要求所选来源的 publishDate 对应。不把披露日期作为 endDate。原 fixture 的“报告期 / 披露日期”组合列保留原解析：扩展检查曾发现组合列被误认成纯披露列而产生 6 项失败（`/tmp/task4-round1-statement.log`），修正分类后原 actual 正确表及其 retained 表全部通过，未改 fixture/期望数据。
+4. **同行口径未参与选源。** 逐行识别合并、母公司/非合并以及明确 `mergedFlag`，与表级口径合并；冲突或显式未知口径拒绝，即使单元格写成缺失也不豁免。不同口径的行分别按源行 mergedFlag 校验；没有选第一条来源值。合成的合并 48.44% / 母公司 12.34% 双行表可完成，交换值则失败。
+5. **只有财务校验先失败才保存约束。** 在所有 source/binding/operating 等可触发 repair 的校验前捕获相关表数据；保留当次全部相关表（不只第一个）的全部列、公司及各自原报告期。最终门禁、snapshot/fallback 继续使用原约束。实际 finance + 明示合成 operating 补充的反例现在无法删除财务列/公司/期间；保留并修正的表仍在第二次完成。单次 repair 预算和工具权限不变，取消/error/异常 fallback 旧回归保留。
+
+### RED / GREEN 与命令、退出码
+
+所有命令均直接使用现有 `./node_modules/.bin/vitest`，没有 npx 安装或在线取数。
+
+- `./node_modules/.bin/vitest run test/statement-table-evidence.test.js -t 'round1:'`：初始 **退出 1，8 项全部按预期失败**，日志 `/tmp/task4-round1-red.log`。包括可见单元格仍为 99.99%；三个 raw 字段、非法与错误披露日期、母公司口径均一轮通过；operating-first 补充后删财务列两轮通过。五项生产修改前完成 RED。
+- 同命令在初始修复后 **退出 0，8 项通过**，日志 `/tmp/task4-round1-green.log`。第一个 HTML 反例一轮完成且最终单元格为 48.44%，其余错误均触发一次修复后正确完成。
+- `./node_modules/.bin/vitest run test/statement-table-evidence.test.js -t 'round1: runtime preserves unsupported|round1: raw amount'`：**退出 1，2 失败 / 1 通过**，日志 `/tmp/task4-round1-structure-red.log`。证明 runtime 长表因提前 anchor 跳过原检测，以及 raw revenue 带元单位漏判；随后修复并纳入最终 GREEN。
+- `./node_modules/.bin/vitest run test/statement-table-evidence.test.js -t 'round1: early repair retains'`：**退出 1，1 项失败**，日志 `/tmp/task4-round1-all-tables-red.log`。证明只捕获首表时第二个原财务表的列/公司/报告期仍可消失；随后改为全部相关表并纳入最终 GREEN。
+- 中间单文件 `/tmp/task4-round1-statement-final.log`：**退出 0，107 项通过**，之后补充上述多表约束回归。最终专用文件共 **108 项**，相对原 73 项新增 **35 项**，均包括在下列最终命令中。
+
+最终直接相关命令：
+
+```sh
+./node_modules/.bin/vitest run test/statement-table-evidence.test.js test/observed-statement-growth.test.js test/statement-evidence.test.js test/statement-operating-coverage.test.js test/component-source-binding.test.js test/research-task-runtime.test.js test/component-source-projection.test.js test/research-artifact-resilience.test.js test/workbench-sourced-table-delivery.test.js
+```
+
+**退出 0，9 文件 / 568 项通过**，日志 `/tmp/task4-round1-final.log`。涵盖新五项、原实际错误及正确表、取消/预算/异常 fallback、源绑定、growth、operating、来源投影和表格交付。不是全功能测试。
+
+本轮因触及 renderer 接纳，另在较早的同批核心测试中加入 `test/component-template-registry.test.js test/research-market-artifact.test.js`，命令为上述九文件再追加这两文件，日志 `/tmp/task4-round1-focused.log`：**退出 1，11 文件 / 623 通过、2 既有失败**。两项与 `task-3-report.md` 已归档基线失败一致，不改断言、不吞并修复：
+
+- `component-template-registry.test.js` → `identifies the failing sourced panel and asks only for a field correction`：旧 `artifact:null` 必须抛错断言。
+- `research-market-artifact.test.js` → `preserves sourced KPI details through the host metrics template`：`.market-detail` 为 null。
+
+其余四项已登记的 `research-market-layout.test.js` 失败仍保留，不重跑：`upgrades an already patched client so fund cards keep a content-sized resize minimum`、`keeps later workbench cards fixed when a source card is manually enlarged`、`persists the source dimensions through the real workspace normalization and arrange path`、`keeps the six source panels at their source dimensions and 12px gaps`。不宣称全分支全绿。
+
+`node --check` 逐一检查本轮三个 JS 生产文件与专用测试，**退出 0**。`git diff --check` **退出 0**。本轮没有 TypeScript / 声明文件变更，当前 tsconfig 未启用 allowJs/checkJs，项目 typecheck 不覆盖这些 JS，故以语法检查与运行时聚焦测试为适用验证，没有运行无关全项目 typecheck。
+
+### 可见交付证明与事实边界
+
+- 所有新增 Runtime 成功断言都从 `finalOutput.html` 提取实际 `<th>/<td>` 单元格，并先剔除 script；不以 retained JSON 中出现正确值代替可见内容证明。
+- 独立的本地 in-memory Runtime 输出已留 `/tmp/task4-round1-visible-output.html`、`/tmp/task4-round1-visible-proof.json`。输入 HTML 明写 99.99%，模型写真实 fixture 对应值；结果 `completed`、1 次 adapter start，最终单元格依次为：公司 / 报告期 / 披露日期 / 报表口径 / grossMargin / 300502.SZ 新易盛 / 2026-06-30 / 2026-08-25 / 合并口径 / **48.44%**；`containsWrongValue:false`。该命令退出 0。没有操作浏览器/客户端，不主张在线成功率或实际客户端验收。
+- 原三公司整表在 generic/market retained 两条路径均有可见输出断言：全部公司、48.44%、7.15%、34.86%、13.36% 及未取得现金流说明保留。原金额、同比精度及现金流缺口的人工期望完全未修改。
+- actual 六响应 fixture 与 `/tmp/compute-b-finance-observed-business-20261021.json` 的 SHA-256 仍同为 `9d2199213832a0788914f531b937884f6d9af48a14783400652d336947cb780c`。其字节、原错表、来源记录均未修改。新增 operating record、不同 scope/修订行是测试内显式合成，绝非在线取数。
+- 未支持长表、含糊口径或非法日期采用明确拒绝；不自动猜测字段、选择修订、改写原研究对象或扩大查询预算。已知字段覆盖不等于任意财务散文/其他来源已审计。
+
+### 自审与提交范围
+
+已逐项对照五条审查及补充反例：错误 retained HTML 重建可见值；三个 raw 及含单位金额识别；日期合法且对应源；混合行口径逐行选择且冲突拒绝；提前捕获全部原约束；正确表仍完成；一次 repair / 取消 / fallback 旧边界通过。源码 ownfiles 为 `artifact-output.js`、`index.js`、`statement-table-evidence.js`、`test/statement-table-evidence.test.js`。
+
+Git 实际状态纠正：本报告虽匹配 `.superpowers/sdd/.gitignore` 的 `*`，但 `git ls-files` 确认它早已被跟踪。root 在本轮明确指示将该已跟踪 ownscope 报告正常 `git add` 随源码提交，保持 feature 干净；不 force-add 任何其他未跟踪报告。本轮将按此最新指示创建中文本地提交，不 push。
+
+提交前普通 `git add` 因忽略的父目录提示退出 1，但 `git ls-files --error-unmatch` 退出 0，且 `git diff --cached --name-only` 确认上述 4 个源码/测试文件及本报告均已正确暂存。未 force-add；随后仅用 `git add -u` 更新已跟踪报告，并再次核对暂存范围。

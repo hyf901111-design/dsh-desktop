@@ -11,6 +11,8 @@ const textOf=data=>[data.title,data.asOf,data.note,data.source].filter(v=>typeof
 const missing=value=>value===null||typeof value==='string'&&/^(?:—|--|N\/A|本次未取得|未取得|来源未提供|来源缺失|来源返回null|来源返回 null|未披露|不适用)(?:[（(：:].*)?$/iu.test(value.trim())
 function columnMetric(header){
  const label=header.replace(/\s/gu,'').replace(/[（(](?:亿元|万元|元|%|％|计算值)[）)]/gu,'')
+ const raw=fields.find(field=>field.toLowerCase()===label.toLowerCase())
+ if(raw)return {fields:[raw]}
  const names=[['营业收入|营收','revenue','revenueYoy'],['归母净利润|归母净利','nIncomeAttrP','niAttrPYoy']]
  for(const [name,amount,yoy] of names){
   if(new RegExp(`^(?:${name})$`,'u').test(label))return {fields:[amount]}
@@ -20,11 +22,14 @@ function columnMetric(header){
  if(/^(?:销售)?毛利率$/u.test(label))return {fields:['grossMargin']}
  if(/^(?:加权(?:平均)?ROE|加权平均净资产收益率|roeW)$/iu.test(label))return {fields:['roeW']}
  if(/^(?:经营活动(?:产生的)?现金流(?:量)?净额|经营现金流净额|nCFOpa)$/u.test(label))return {fields:['nCFOpa']}
- if(/毛利率|ROE|净资产收益率|经营.*现金流|(?:营业收入|营收|归母净利).*同比/iu.test(label))return {ambiguous:true}
+ if(financialFieldText(label))return {ambiguous:true}
 }
+const financialFieldText=text=>/grossMargin|revenueYoy|niAttrPYoy|roeW|nCFOpa|nIncomeAttrP|(?:^|[^A-Za-z])revenue(?:$|[^A-Za-z])|毛利率|ROE|净资产收益率|经营.*现金流|(?:营业收入|营收|归母净利).*同比/iu.test(text)
 function correspondence(row,columns){
  const codes=[...new Set(row.flatMap(security))]
- const periodColumns=columns.flatMap((column,i)=>/报告期|会计期间|财报期间|^期间$/u.test(column)&&!/经营/u.test(column)?[i]:[])
+ const disclosureColumn=column=>/披露(?:日期|日)|发布(?:日期|日)|公告日期|^publishDate$/iu.test(column)
+ const periodColumn=column=>/报告期|会计期间|财报期间|^期间$/u.test(column)&&!/经营/u.test(column)
+ const periodColumns=columns.flatMap((column,i)=>periodColumn(column)?[i]:[])
  const periods=[],publications=[]
  for(const i of periodColumns){
   const text=typeof row[i]==='string'?row[i]:''
@@ -35,13 +40,33 @@ function correspondence(row,columns){
   periods.push(...(text.match(/20\d{2}-\d{2}-\d{2}/gu)??[]).filter(date=>!pub.includes(date)))
   if(/至|到|~|～/u.test(text))return
  }
+ let publicationIssue
+ for(let i=0;i<columns.length;i++)if(disclosureColumn(columns[i])&&!periodColumn(columns[i])){
+  const value=typeof row[i]==='string'?row[i].trim():''
+  if(!iso(value))publicationIssue='披露日期必须为合法的 YYYY-MM-DD 日期，并对应实际来源记录'
+  else publications.push(value)
+ }
+ if(publications.some(date=>!iso(date))||new Set(publications).size>1)publicationIssue='披露日期无效或相互冲突，请明确同一披露记录'
  const unique=[...new Set(periods)]
- if(codes.length!==1||unique.length!==1||!iso(unique[0])||publications.some(date=>!iso(date)))return
- return {code:codes[0],date:unique[0],publications}
+ if(codes.length!==1||unique.length!==1||!iso(unique[0]))return
+ return {code:codes[0],date:unique[0],publications,publicationIssue}
 }
 function scopeFlag(text){
- const parent=/母公司(?:口径|利润表|报表)|非合并(?:口径|利润表)/u.test(text),merged=/(?<!非)合并(?:口径|利润表|报表)/u.test(text)
+ const parent=/母公司(?:口径|利润表|报表)|非合并(?:口径|利润表|报表)|^(?:母公司|非合并)$/u.test(text),merged=/(?<!非)合并(?:口径|利润表|报表)|^合并$/u.test(text)
  return parent&&merged?'conflict':parent?'2':merged?'1':undefined
+}
+function rowScope(row,columns,tableScope){
+ const scopes=new Set(tableScope?[tableScope]:[])
+ for(let i=0;i<columns.length;i++){
+  const text=typeof row[i]==='string'?row[i]:''
+  let flag=scopeFlag(text)
+  if(/报表口径|^口径$|^mergedFlag$/iu.test(columns[i])){
+   if(/^mergedFlag$/iu.test(columns[i])&&['1','2'].includes(String(row[i])))flag=String(row[i])
+   if(!flag)return 'unknown'
+  }
+  if(flag)scopes.add(flag)
+ }
+ return scopes.has('conflict')||scopes.size>1?'conflict':[...scopes][0]
 }
 function candidates(records,id,field,scope){
  const api=['revenue','nIncomeAttrP'].includes(field)?'getFdmtISLT2018':field==='nCFOpa'?'getFdmtCFLT':'getFdmtMainDataLt'
@@ -89,39 +114,55 @@ function computedGrowth(records,id,field,scope,cell){
  return Number.isFinite(value)?value:undefined
 }
 
+function statementContext(spec,request,records){
+ const data=readTemplateModel(spec)?.data??spec
+ const simulated=request.split(/[。；;\n]/u).some(part=>!/(?:不要|禁止|不用|不使用|无需|不得).{0,16}(?:模拟|演示|示例)/u.test(part)&&/(?:仅|只|全部)(?:用|使用).{0,4}模拟数据|^(?:模拟|演示|示例)数据/iu.test(part))
+ const sources=sourceRecords(records)
+ const otherSource=!/DataYes|通联/iu.test(request)&&/东方财富|Wind|同花顺|公司公告|交易所/iu.test(request)&&/(?:数据来源|来源)[:：]\s*(?:东方财富|Wind|同花顺|公司公告|交易所)/iu.test(textOf(data??{}))&&!/DataYes|通联/iu.test(textOf(data??{}))
+ return {data,sources,simulated,otherSource}
+}
+const financialColumn=column=>{const metric=columnMetric(column);return metric?.ambiguous||metric?.fields.some(field=>!['revenue','nIncomeAttrP'].includes(field))||financialFieldText(column)}
+const financialTable=data=>Array.isArray(data?.columns)&&data.columns.some(column=>typeof column==='string'&&financialColumn(column))||Array.isArray(data?.rows)&&data.rows.some(row=>Array.isArray(row)&&row.some(cell=>typeof cell==='string'&&financialFieldText(cell)))
+export function statementTableRequiredData(spec,request='',records=[]){
+ const {data,sources,simulated,otherSource}=statementContext(spec,request,records)
+ if(!simulated&&!otherSource&&sources.length&&(data?.type==='table'||data?.type==='market'&&data.variant==='table')&&financialTable(data))return data
+}
+
 // Undefined means no issue in this deliberately narrow guard, not an audit of
 // arbitrary prose, other providers, or unrelated table fields.
 export function statementTableEvidenceIssue(spec,request='',records=[],{requiredData}={}){
- const data=readTemplateModel(spec)?.data??spec
- const previous=readTemplateModel(requiredData)?.data??requiredData
+ const {data,sources,simulated,otherSource}=statementContext(spec,request,records)
+ const previousTables=(Array.isArray(requiredData)?requiredData:requiredData?[requiredData]:[]).map(value=>readTemplateModel(value)?.data??value)
+ const previous=previousTables.length>0
  if(data?.type==='error')return
  if(!data||!(data.type==='table'||data.type==='market'&&data.variant==='table'))return previous?'财务表来源核验未通过：修复不得替换为文字或无可核验表模型的 HTML；保留原有公司与全部财务字段。':undefined
- const simulated=request.split(/[。；;\n]/u).some(part=>!/(?:不要|禁止|不用|不使用|无需|不得).{0,16}(?:模拟|演示|示例)/u.test(part)&&/(?:仅|只|全部)(?:用|使用).{0,4}模拟数据|^(?:模拟|演示|示例)数据/iu.test(part))
- if(simulated)return
- const sources=sourceRecords(records);if(!sources.length)return
+ if(simulated||!sources.length||!previous&&otherSource)return
  const metadata=textOf(data)
- if(!previous&&!/DataYes|通联/iu.test(request)&&/东方财富|Wind|同花顺|公司公告|交易所/iu.test(request)&&/(?:数据来源|来源)[:：]\s*(?:东方财富|Wind|同花顺|公司公告|交易所)/iu.test(metadata)&&!/DataYes|通联/iu.test(metadata))return
  if(!Array.isArray(data.columns)||!data.columns.every(c=>typeof c==='string')||!Array.isArray(data.rows))return previous?'财务表来源核验未通过：修复后表格结构无法核验，请保留全部列与公司。':undefined
  const metrics=data.columns.map(columnMetric)
- if(!previous&&!metrics.some(metric=>metric?.ambiguous||metric?.fields.some(field=>!['revenue','nIncomeAttrP'].includes(field)))){
-  const financialRows=data.rows.some(row=>Array.isArray(row)&&row.some(cell=>typeof cell==='string'&&/毛利率|ROE|经营.*现金流|(?:营业收入|营收|归母净利).*同比/iu.test(cell)))
-  return financialRows?'财务表来源核验未通过：当前财务字段位于未支持的行结构，无法逐字段核验；请明确证券、报告期和指标字段，不将未知结构标为已证明。':undefined
+ if(!data.columns.some(financialColumn)){
+  if(financialTable(data))return '财务表来源核验未通过：当前财务字段位于未支持的行结构，无法逐字段核验；请明确证券、报告期和指标字段，不将未知结构标为已证明。'
+  if(!previous)return
  }
  const issues=[],add=message=>{if(issues.length<24)issues.push(message)}
- if(previous?.columns&&previous.columns.some(column=>!data.columns.includes(column)))add('修复不得删除原有财务字段/列；缺失需保留并说明')
- const previousCodes=previous?.rows?.flatMap(row=>Array.isArray(row)?row.flatMap(security):[])??[]
+ if(previousTables.some(table=>Array.isArray(table.columns)&&table.columns.some(column=>!data.columns.includes(column))))add('修复不得删除原有财务字段/列；缺失需保留并说明')
+ const previousCodes=previousTables.flatMap(table=>table.rows?.flatMap(row=>Array.isArray(row)?row.flatMap(security):[])??[])
  const requestedCodes=security(request).filter(code=>sources.some(source=>source.response.data.some(row=>rowCode(row)===code)))
  const outputCodes=data.rows.flatMap(row=>Array.isArray(row)?row.flatMap(security):[])
  for(const code of new Set([...requestedCodes,...previousCodes]))if(!outputCodes.includes(code))add(`${code}：修复不得删除公司`)
  const currentIdentities=data.rows.filter(Array.isArray).map(row=>correspondence(row,data.columns)).filter(Boolean)
- for(const row of previous?.rows??[]){
-  const prior=Array.isArray(row)&&correspondence(row,previous.columns)
+ for(const table of previousTables)for(const row of table.rows??[]){
+  const prior=Array.isArray(row)&&correspondence(row,table.columns)
   if(prior&&!currentIdentities.some(current=>current.code===prior.code&&current.date===prior.date))add(`${prior.code} ${prior.date}：修复不得删除或切换原报告期`)
  }
- const scope=scopeFlag([metadata,...data.columns].join('\n'))
+ const tableScope=scopeFlag([metadata,...data.columns].join('\n'))
  for(const row of data.rows){
   if(!Array.isArray(row)||row.length!==data.columns.length){add('财务表行结构无法核验，请保留字段并使用明确单元格');continue}
   const id=correspondence(row,data.columns),label=id?`${id.code} ${id.date}`:'证券/报告期不明确'
+  const scope=rowScope(row,data.columns,tableScope)
+  if(scope==='conflict'||scope==='unknown'){add(`${label}：报表口径${scope==='conflict'?'冲突':'含糊，无法核验'}`);continue}
+  if(id?.publicationIssue){add(`${label}：${id.publicationIssue}`);continue}
+  if(id?.publications.length&&!sources.some(record=>record.response.data.some(source=>rowCode(source)===id.code&&source.endDate===id.date&&(!scope||source.mergedFlag===scope)&&id.publications.every(date=>date===source.publishDate)))){add(`${label}：披露日期与同公司同期间来源记录不符`);continue}
   for(let i=0;i<metrics.length;i++){
    const metric=metrics[i];if(!metric)continue
    if(metric.ambiguous){add(`${label} ${data.columns[i]}：字段口径含糊，无法核验`);continue}
@@ -129,11 +170,10 @@ export function statementTableEvidenceIssue(spec,request='',records=[],{required
    for(let j=0;j<metric.fields.length;j++){
     const field=metric.fields[j],cell=cells[j]
     if(missing(cell)){
-     if(id&&scope!=='conflict'&&expectedValue(candidates(sources,id,field,scope),field).value!==undefined)add(`${label} ${field}：同期间来源已取得，不能改成缺失来规避核验`)
+     if(id&&expectedValue(candidates(sources,id,field,scope),field).value!==undefined)add(`${label} ${field}：同期间来源已取得，不能改成缺失来规避核验`)
      continue
     }
     if(!id){add(`${label} ${field}：需明确证券代码与实际报告期，不能按名称或发布日期猜测`);continue}
-    if(scope==='conflict'){add(`${label} ${field}：报表口径冲突`);continue}
     if(cells.length!==metric.fields.length){add(`${label} ${field}：金额/同比单元格结构无法核验`);continue}
     const selected=candidates(sources,id,field,scope),expected=expectedValue(selected,field)
     if(['revenueYoy','niAttrPYoy'].includes(field)&&(/计算值/u.test(data.columns[i]+String(cell))||!selected.length&&!/披露值|接口值|直接取/u.test(data.columns[i]+String(cell)))){

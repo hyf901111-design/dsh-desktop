@@ -11,7 +11,7 @@ import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.j
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
 import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, retainVerifiedFeedItems, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import {compactStatementEvidence,truncatedStatementEvidence} from './statement-evidence.js'
-import {statementTableEvidenceIssue,statementTableRepairEvidence} from './statement-table-evidence.js'
+import {statementTableEvidenceIssue,statementTableRepairEvidence,statementTableRequiredData} from './statement-table-evidence.js'
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
 import {acquireFeedSourceEvidence,observedFeedSearchUrls,compactFetchedPageText} from './component-feed-acquisition.js'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
@@ -46,7 +46,7 @@ import { applyBundledSkillPreferences, bundledSkillEnabled } from './bundled-ski
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
 import {createFrozenResearchFileLoader} from './context-runtime.js'
 import { registerWorkbench, captureSharedWorkbenchPlan } from './workbench.js'
-import { acceptArtifactOutput, artifactReadableFallback, extractArtifactObjects, restoreArtifactStringQuotes, restoreDeclaredArtifactType, workbenchMarketVariantIssue, workbenchMarketRecencyIssue } from './artifact-output.js'
+import { acceptArtifactOutput, retainedTableData, artifactReadableFallback, extractArtifactObjects, restoreArtifactStringQuotes, restoreDeclaredArtifactType, workbenchMarketVariantIssue, workbenchMarketRecencyIssue } from './artifact-output.js'
 import { parseResearchContainerSpec } from './artifact-validator.js'
 import { INTERACTIVE_ARTIFACT_PROMPT } from './interactive-artifact.js'
 import { randomUUID } from 'node:crypto'
@@ -941,7 +941,7 @@ function finalText(output, kind, requireSharedState = false, validateSharedState
   const accepted = acceptArtifactOutput(text)
   if (accepted !== undefined) {
     let spec = JSON.parse(accepted)
-    if (spec.type === 'html' && candidates.some(candidate => candidate.type === 'html') && !titleRepairSnapshot) {
+    if (spec.type === 'html' && candidates.some(candidate => candidate.type === 'html' && !retainedTableData(candidate)) && !titleRepairSnapshot) {
       const normalized = normalizeGeneratedHostStyles(spec.html)
       if (normalized !== spec.html) {
         const normalizedSpec = parseResearchContainerSpec({ ...spec, html: normalized })
@@ -953,7 +953,7 @@ function finalText(output, kind, requireSharedState = false, validateSharedState
     const repairIssue = duplicateTitleRepairIssue(titleRepairSnapshot, spec)
     if (repairIssue) throw new ResearchTaskError(DESIGN_POLICY_ERROR, repairIssue)
     // Validate raw model HTML only; native formats have trusted host renderers.
-    if (validateSharedState && spec.type === 'html' && candidates.some(candidate => candidate.type === 'html')) {
+    if (validateSharedState && spec.type === 'html' && candidates.some(candidate => candidate.type === 'html' && !retainedTableData(candidate))) {
       const issue = sharedComponentIssue(spec.html, { required: requireSharedState })
       if (issue) throw new ResearchTaskError('SHARED_STATE_REQUIRED', issue)
       const designIssue = designPolicyIssue(spec.html, { title: spec.title })
@@ -1571,6 +1571,12 @@ export class ResearchTaskRuntime {
         if(restoredQuotes)deliveredText=restoredQuotes
         const restoredType=/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(task.prompt??'')?restoreDeclaredArtifactType(deliveredText,plannedFormat):undefined
         if(restoredType)deliveredText=restoredType
+        // Capture the original table before any validator can spend the sole
+        // repair attempt (including source/binding/operating failures).
+        if(task.kind==='container'&&!statementRepairData){
+          const requiredTables=extractArtifactObjects(deliveredText).map(data=>statementTableRequiredData(data,panelRequest,sourceRecords)).filter(Boolean)
+          if(requiredTables.length)statementRepairData=requiredTables
+        }
         if (!feedAcquired && task.kind === 'container' && typeof acquireFeedEvidence === 'function' && componentFeedEvidenceIssue(deliveredText,sourceRecords,{panelRequest})) {
           feedAcquired = true
           const supplement = await acquireFeedEvidence(deliveredText,sourceRecords)
@@ -1638,7 +1644,7 @@ export class ResearchTaskRuntime {
           operatingIssue=!deferredPanel&&task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>statementOperatingCoverageIssue(data,panelRequest,sourceRecords,sourceAttempts)).find(Boolean)
           if(operatingIssue)throw new ResearchTaskError('GENERATION_FAILED',operatingIssue)
           statementIssue=task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>statementTableEvidenceIssue(data,panelRequest,sourceRecords,{requiredData:statementRepairData})).find(Boolean)
-          if(statementIssue){statementRepairData??=extractArtifactObjects(deliveredText)[0];throw new ResearchTaskError('GENERATION_FAILED',statementIssue)}
+          if(statementIssue)throw new ResearchTaskError('GENERATION_FAILED',statementIssue)
           const templateIssue=extractArtifactObjects(deliveredText).filter(data=>data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)).map(templateDataIssue).find(Boolean)
           if(templateIssue)throw new ResearchTaskError('INVALID_OUTPUT',templateIssue)
           // A named connected source is part of the requested result. Static

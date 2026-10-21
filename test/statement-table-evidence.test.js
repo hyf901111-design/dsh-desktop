@@ -7,14 +7,14 @@ const observed=JSON.parse(readFileSync(new URL('./fixtures/statement-table-evide
 const records=observed.records.map(record=>({...record,response:expandBusinessEvidence(record.response)}))
 const request='工作台：算力产业链观察\n本面板：最新已披露财务经营指标\n使用实际 DataYes 财务响应比较300308.SZ、300502.SZ、601138.SH的营业收入和同比、归母净利润和同比、销售毛利率、加权平均ROE、经营活动现金流净额。保持三家公司与全部指标，未取得如实说明。\n仅生成本面板，优先使用 market 类型，variant 为 table。'
 const clone=value=>structuredClone(value)
-async function run(outputs,{sources=records,secondThrows=false}={}){
+async function run(outputs,{sources=records,secondThrows=false,prompt=request,secondSources=[]}={}){
  const calls=[]
  const runtime=new ResearchTaskRuntime({adapter:{start:async options=>{
   calls.push(options)
   if(secondThrows&&calls.length===2)throw new Error('repair transport failed')
-  return {childSessionId:'evidence-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(outputs[Math.min(calls.length-1,outputs.length-1)])}],sourceRecords:calls.length===1?sources:[]})}
+  return {childSessionId:'evidence-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:typeof outputs[Math.min(calls.length-1,outputs.length-1)]==='string'?outputs[Math.min(calls.length-1,outputs.length-1)]:JSON.stringify(outputs[Math.min(calls.length-1,outputs.length-1)])}],sourceRecords:calls.length===1?sources:secondSources})}
  },dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task'})
- await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:request})
+ await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt})
  await vi.waitFor(()=>expect(['completed','failed','cancelled']).toContain(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state))
  const result=runtime.inspect({parentSessionId:'parent',taskId:'task'}); await runtime.dispose();return {result,calls}
 }
@@ -206,4 +206,125 @@ it.each(['accoutingStandards','reportType','fiscalPeriod'])('does not compute gr
  const sources=clone(records);for(const source of sources)if(source.args.nameEn==='getFdmtISLT2018')source.response.data.forEach(row=>{delete row[key]})
  const data=table('营业收入同比（计算值）','54.63%');data.rows[0][0]='601138.SH 工业富联'
  expect(issue(data,'DataYes 601138.SH 财务指标',sources)).toMatch(/计算同比|口径/u)
+})
+
+// Round 1 regressions: real six-response evidence remains unchanged; additional
+// operating records and alternative scope rows below are explicitly synthetic.
+const visibleCells=result=>JSON.parse(result.finalOutput).html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu,'').match(/<t[dh]\b[^>]*>[\s\S]*?<\/t[dh]>/giu)?.join('')??''
+it('round1: replaces contradictory retained HTML with visible trusted table cells',async()=>{
+ const bad=retainTemplateModel({version:1,type:'html',title:'财务指标',html:'<table><tr><td>300502.SZ 新易盛 2026-06-30 毛利率 99.99%</td></tr></table>'},table('毛利率'))
+ const {result,calls}=await run([bad],{prompt:singleRequest})
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(1)
+ expect(visibleCells(result)).toContain('48.44%');expect(visibleCells(result)).not.toContain('99.99%')
+})
+it.each([['grossMargin','48.44%'],['revenueYoy','100.34%'],['niAttrPYoy','90.98%']])('round1: rejects wrong raw %s and delivers corrected visible cells',async(header,correct)=>{
+ const {result,calls}=await run([table(header,'99.99%'),table(header,correct)],{prompt:singleRequest})
+ expect(result.state).toBe('completed');expect(calls).toHaveLength(2)
+ expect(visibleCells(result)).toContain(correct);expect(visibleCells(result)).not.toContain('99.99%')
+})
+it.each(['2026-09-99','2026-08-24'])('round1: validates separate disclosure date %s against the actual row',async(date)=>{
+ const bad=table('毛利率');bad.columns.splice(2,0,'披露日期');bad.rows[0].splice(2,0,date)
+ const good=clone(bad);good.rows[0][2]='2026-08-25'
+ const {result,calls}=await run([bad,good],{prompt:singleRequest})
+ expect(result.state).toBe('completed');expect(calls).toHaveLength(2)
+ expect(visibleCells(result)).toContain('2026-08-25');expect(visibleCells(result)).not.toContain(date)
+})
+it('round1: rejects parent-company label for actual consolidated values',async()=>{
+ const bad=table('毛利率');bad.note='来源：DataYes';bad.columns.splice(2,0,'报表口径');bad.rows[0].splice(2,0,'母公司口径')
+ const good=clone(bad);good.rows[0][2]='合并口径'
+ const {result,calls}=await run([bad,good],{prompt:singleRequest})
+ expect(result.state).toBe('completed');expect(calls).toHaveLength(2)
+ expect(visibleCells(result)).toContain('合并口径');expect(visibleCells(result)).not.toContain('母公司口径')
+})
+const operatingPrompt='使用实际 DataYes 300502.SZ 毛利率、营业收入和发电量，保留全部字段。'
+const syntheticOperating={tool:'ework__business',args:{http_method:'GET',nameEn:'getEquOperData',url_params:{ticker:'300502'}},response:{retCode:1,data:[{secID:'300502.XSHE',ticker:'300502',exchangeCD:'XSHE',endDate:'2026-06-30',generation:88}]}}
+const firstOperatingTable=()=>({...table('毛利率','99.99%'),columns:['公司','报告期','毛利率','营业收入（元）'],rows:[['300502.SZ','2026-06-30','99.99%','20909746962.20']]})
+it('round1: operating-first repair cannot delete original financial columns after supplement',async()=>{
+ const second={...table(),columns:['公司','报告期','发电量（亿千瓦时）'],rows:[['300502.SZ','2026-06-30','88']]}
+ const {result,calls}=await run([firstOperatingTable(),second],{prompt:operatingPrompt,secondSources:[syntheticOperating]})
+ expect(calls).toHaveLength(2);expect(calls[1].prompt).toContain('经营数据尚未实际查询')
+ expect(result.state).toBe('failed');expect(result.error).toContain('不得删除')
+})
+it.each(['grossMargin','revenueYoy','niAttrPYoy','nCFOpaYoy'])('round1: raw long-form %s is explicitly unsupported',field=>{
+ const data={...table(),columns:['公司','报告期','指标','值'],rows:[['300502.SZ','2026-06-30',field,'99.99%']]}
+ expect(issue(data,singleRequest,records)).toMatch(/结构|核验/u)
+})
+it.each(['grossMargin同比','revenueYoy净额','niAttrPYoy修正值'])('round1: unmapped known financial header %s cannot silently pass',header=>expect(issue(table(header,'99.99%'),singleRequest,records)).toContain('含糊'))
+it.each(['table','market'])('round1: correct retained %s after repair delivers all actual visible values',async type=>{
+ const good=corrected();if(type==='table'){good.type='table';delete good.variant}
+ const retained=retainTemplateModel({version:1,type:'html',title:'财务',html:'<table><tr><td>错误旧毛利率 99.99%</td></tr></table>'},good)
+ const {result,calls}=await run([observed.artifact,retained])
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(2)
+ const cells=visibleCells(result)
+ for(const value of ['300308','300502','601138','48.44%','7.15%','34.86%','13.36%','本次未取得'])expect(cells).toContain(value)
+ expect(cells).not.toContain('99.99%')
+})
+it.each(['conflict','unknown'])('round1: rejects %s row scope even when the numeric field is missing',mode=>{
+ const data=table('毛利率','本次未取得');data.columns.splice(2,0,'报表口径');data.rows[0].splice(2,0,mode==='conflict'?'母公司口径':'调整口径')
+ expect(issue(data,singleRequest,records)).toMatch(/口径.*(?:冲突|含糊)/u)
+})
+it('round1: supports different row scopes using synthetic distinct source rows',async()=>{
+ const sources=singleSources(),parent={...sources[0].response.data[0],mergedFlag:'2',grossMargin:12.34}
+ sources[0].response.data.push(parent)
+ const data={...table(),note:'来源：DataYes',columns:['公司','报告期','报表口径','毛利率'],rows:[['300502.SZ','2026-06-30','合并口径','48.44%'],['300502.SZ','2026-06-30','母公司口径','12.34%']]}
+ const {result,calls}=await run([data],{sources,prompt:singleRequest})
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(1)
+ expect(visibleCells(result)).toMatch(/合并口径[\s\S]*48\.44%[\s\S]*母公司口径[\s\S]*12\.34%/u)
+ const swapped=clone(data);swapped.rows[0][3]='12.34%';swapped.rows[1][3]='48.44%'
+ expect(issue(swapped,singleRequest,sources)).toContain('grossMargin')
+})
+it('round1: separates explicit disclosure selection from the report period in synthetic revisions',()=>{
+ const sources=singleSources();sources[0].response.data.push({...sources[0].response.data[0],publishDate:'2026-09-01',grossMargin:50})
+ const data=table();data.columns.splice(2,0,'披露日期');data.rows[0].splice(2,0,'2026-08-25')
+ expect(issue(data,singleRequest,sources)).toBeUndefined()
+ data.rows[0][2]='2026-09-01';expect(issue(data,singleRequest,sources)).toContain('grossMargin')
+ data.rows[0][3]='50.00%';expect(issue(data,singleRequest,sources)).toBeUndefined()
+})
+it.each(['invalid','mismatch','contradiction'])('round1: missing metric cannot hide %s disclosure',mode=>{
+ const data=table('毛利率','本次未取得');data.columns.splice(2,0,'披露日期');data.rows[0].splice(2,0,mode==='invalid'?'2026-02-30':'2026-08-24')
+ if(mode==='contradiction')data.rows[0][1]='2026-06-30 / 2026-08-25 披露'
+ expect(issue(data,singleRequest,records)).toContain('披露日期')
+})
+it.each(['company','period'])('round1: operating-first repair preserves original %s after supplement',async mode=>{
+ const first=firstOperatingTable();first.rows[0][2]='48.44%'
+ const second=clone(first)
+ if(mode==='company'){first.rows.push(['300308.SZ','2026-06-30','46.25%','41778098097.24'])}
+ else second.rows[0][1]='2025-06-30'
+ const {result,calls}=await run([first,second],{prompt:operatingPrompt,secondSources:[syntheticOperating]})
+ expect(result.state).toBe('failed');expect(calls).toHaveLength(2)
+ expect(result.error).toMatch(mode==='company'?/不得删除公司/u:/不得删除或切换原报告期/u)
+})
+it('round1: operating-first repair succeeds with original financial fields and visible corrected cells',async()=>{
+ const first=firstOperatingTable(),good=clone(first);good.rows[0][2]='48.44%'
+ good.columns.push('发电量（亿千瓦时）');good.rows[0].push('88')
+ const {result,calls}=await run([first,good],{prompt:operatingPrompt,secondSources:[syntheticOperating]})
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(2)
+ expect(calls[1].synthesisOnly).toBe(false)
+ for(const value of ['毛利率','营业收入','2026-06-30','48.44%','20909746962.20','88'])expect(visibleCells(result)).toContain(value)
+})
+it.each(['ordinary','quotes','other-source','simulation'])('round1: early capture keeps %s tables outside financial repair retention',async mode=>{
+ const bad=table('grossMargin','99.99%');let prompt=singleRequest
+ if(mode==='ordinary'){bad.columns=['公司','期间','数量'];bad.rows[0][2]='88'}
+ if(mode==='quotes'){bad.columns=['公司','交易日期','现价'];bad.rows[0][2]='88'}
+ if(mode==='other-source'){bad.note='来源：东方财富';prompt='东方财富财务指标'}
+ if(mode==='simulation')prompt='仅使用模拟数据，比较财务指标'
+ const {result,calls}=await run([bad],{prompt})
+ expect(result.state,result.error).toBe('completed');expect(calls).toHaveLength(1)
+})
+it('round1: runtime preserves unsupported raw financial structures as errors across repair',async()=>{
+ const data={...table(),columns:['公司','报告期','指标','值'],rows:[['300502.SZ','2026-06-30','grossMargin','99.99%']]}
+ const {result,calls}=await run([data],{prompt:singleRequest})
+ expect(result.state).toBe('failed');expect(calls).toHaveLength(2);expect(result.error).toContain('结构')
+})
+it.each(['revenue（元）','nIncomeAttrP（元）'])('round1: raw amount %s remains evidence-bound when units are supplied',header=>{
+ expect(issue(table(header,'999.99'),singleRequest,records)).toContain(header.split('（')[0])
+})
+
+it('round1: early repair retains constraints from every original financial table',async()=>{
+ const first=table('毛利率'),other={...table('加权ROE'),rows:[['300308.SZ','2025-06-30','99.99%']]}
+ const {result,calls}=await run([JSON.stringify(first)+'\n'+JSON.stringify(other),first],{prompt:operatingPrompt,secondSources:[syntheticOperating]})
+ expect(result.state).toBe('failed');expect(calls).toHaveLength(2)
+ expect(result.error).toContain('不得删除原有财务字段/列')
+ expect(result.error).toContain('300308.XSHE：修复不得删除公司')
+ expect(result.error).toContain('300308.XSHE 2025-06-30：修复不得删除或切换原报告期')
 })

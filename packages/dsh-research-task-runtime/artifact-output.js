@@ -84,10 +84,17 @@ export function restoreDeclaredArtifactType(text,type) {
  if(model.type!==type&&!(type==='table'&&model.type==='market'&&model.variant==='table'))return;
  return encoded;
 }
+export function retainedTableData(spec) {
+ const data=spec?.type==='html'?readTemplateModel(spec)?.data:undefined;
+ return data?.type==='table'||data?.type==='market'&&data.variant==='table'?data:undefined;
+}
 export function acceptArtifactOutput(text) {
  const candidates=extractArtifactObjects(text);
  for(const original of candidates.reverse()) {
-  const candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(original)));
+  // Retained JSON is data, not proof that model-supplied HTML displays it.
+  // Rebuild tables with the same trusted renderer used for structured output.
+  const tableData=retainedTableData(original)??original;
+  const candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(tableData)));
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
   const chartWithNotes=renderAdvancedChart(candidate) ?? renderSpecialChart(candidate) ?? renderCartesianChart(candidate) ?? preserveLongChartCaption(candidate);
