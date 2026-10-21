@@ -187,3 +187,33 @@ it('keeps the close control reachable while a long pending conversation scrolls 
   const value=await page.locator('.en-challenge-card').first().evaluate(el=>{const close=el.querySelector('.en-challenge-close').getBoundingClientRect(),card=el.getBoundingClientRect(),area=document.querySelector('.en-main').getBoundingClientRect();return{closeVisible:close.top>=card.top&&close.bottom<=Math.min(card.bottom,area.bottom),selected:el.dataset.selected==='true'}});expect(value.closeVisible).toBe(true);await expect.poll(()=>page.locator('.en-challenge-card[data-selected=true]').count()).toBe(0)
  }finally{await context.close()}
 },15000)
+
+async function nativeHeaderAncestors(page){
+ for(const file of ['figma-final-shell.css','figma-panels.css','figma-refinements.css'])await page.addStyleTag({content:await readFile('src/preload/'+file,'utf8')})
+ await page.evaluate(()=>{
+  const header=document.querySelector('.wSkVaW_header'),frame=document.createElement('div'),center=document.createElement('div'),root=document.createElement('div');frame.className='pI_x6G_frame';frame.style.cssText='position:fixed;inset:0;display:flex';center.className='pI_x6G_centerCol';center.style.cssText='position:absolute;left:240px;right:0;top:0;bottom:0;isolation:isolate';root.className='wSkVaW_root';root.dataset.odysseyPage='conversation';root.style.height='100%';header.style.cssText='position:absolute;left:0;right:0;top:0;z-index:8;display:flex;align-items:center;gap:12px;height:44px;padding:0 20px';root.append(header);center.append(root);frame.append(center);document.body.prepend(frame);document.body.dataset.workspaceSurface='notes'
+ })
+}
+it('keeps the picker above the real isolated native header stack with keyboard, drag, resize and session cleanup',async()=>{
+ const {context,page,errors}=await fixture(2000,true);try{
+  await nativeHeaderAncestors(page);await page.evaluate(()=>window.seed());await page.evaluate(()=>window.challenge.setMarginExpanded(false));await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('调整等级不能中断这份回复');await page.getByRole('button',{name:'发送挑战回复'}).click();await page.locator('.en-challenge-thinking').waitFor()
+  await page.getByRole('button',{name:'挑战模式，当前关闭'}).click();const popup=page.locator('.en-challenge-popover'),slider=page.getByRole('slider',{name:'挑战强度'});await popup.waitFor()
+  expect(await popup.evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('.en-challenge-popover')===el})).toBe(true)
+  expect(await popup.evaluate(el=>el.parentElement===document.body)).toBe(true);expect(await popup.locator('.en-challenge-track').evaluate(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}))).toEqual({width:252,height:24});await slider.focus();await slider.press('ArrowRight');await expect.poll(()=>page.evaluate(()=>window.challenge.level)).toBe(1)
+  const track=await slider.boundingBox();await page.mouse.move(track.x+12,track.y+13);await page.mouse.down();await page.mouse.move(track.x+240,track.y+13);await page.mouse.up();await expect.poll(()=>page.evaluate(()=>window.challenge.level)).toBe(4);expect(await page.evaluate(()=>window.stops.length)).toBe(0)
+  await page.setViewportSize({width:1900,height:900});await expect.poll(()=>popup.evaluate(el=>Math.abs(el.getBoundingClientRect().right-document.querySelector('.en-challenge-trigger').getBoundingClientRect().right))).toBeLessThanOrEqual(1)
+  await page.screenshot({path:'/tmp/notes-challenge-v15-native-portal-open.png'});await slider.press('Escape');expect(await popup.count()).toBe(0);expect(await page.evaluate(()=>window.challenge.actionKind)).toBe('reply');expect(await page.evaluate(()=>window.stops.length)).toBe(0)
+  await page.getByRole('button',{name:'挑战模式，当前抬杠'}).click();await popup.waitFor();await page.evaluate(()=>window.switchNote('another-note'));await page.locator('[data-note-source-session="another-note"]').waitFor();expect(await popup.count()).toBe(0);expect(errors).toEqual([])
+  await page.screenshot({path:'/tmp/notes-challenge-v15-native-portal-cleanup.png'})
+ }finally{await context.close()}
+},15000)
+for(const readingOlder of [false,true])it(`follows a completed reply in a long thread ${readingOlder?'without interrupting a reader who scrolled upward':'when the reader was following its bottom'}`,async()=>{
+ const {context,page}=await fixture(900);try{
+  await page.evaluate(()=>window.seed(1,true));await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('请继续核对');await page.getByRole('button',{name:'发送挑战回复'}).click();await page.locator('.en-challenge-thinking').waitFor();const messages=page.locator('.en-challenge-messages');await expect.poll(()=>messages.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
+  if(readingOlder){await messages.evaluate(el=>el.scrollTop=0);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))}
+  await page.evaluate(()=>Object.values(window.jobs).at(-1).resolve({version:1,issues:[],checks:[],coveredBlockIds:[],reply:{text:'还需要补充同周期和渠道数据，再判断这份结论。'.repeat(3)}}));await expect.poll(()=>page.locator('.en-challenge-thinking').count()).toBe(0)
+  if(readingOlder)expect(await messages.evaluate(el=>el.scrollTop)).toBeLessThanOrEqual(1)
+  else await expect.poll(()=>messages.evaluate(el=>{const reply=el.querySelector('.en-challenge-message:last-of-type .en-challenge-text').getBoundingClientRect(),area=el.getBoundingClientRect();return reply.top>=area.top&&reply.bottom<=area.bottom})).toBe(true)
+  await page.screenshot({path:'/tmp/notes-challenge-v15-long-reply-'+(readingOlder?'older':'following')+'.png'})
+ }finally{await context.close()}
+},15000)
