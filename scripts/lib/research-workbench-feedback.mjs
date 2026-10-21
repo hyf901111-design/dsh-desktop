@@ -64,15 +64,24 @@ export function researchWorkbenchReceiptPlans(order,nodeStore,readMetadata) {
  return [...plans.values()]
 }
 
-// The first durable receipt proves which turn owns each plan. Native turn
-// metadata places its feedback after that turn's answer, never after new users.
+// The first durable receipt owns a plan. Only follow its native turn up to the
+// next user input, including steering that continues within the same turn.
 export function researchWorkbenchReceiptAnchors(flow,nodeStore,readMetadata,readTurn=()=>null) {
- const anchors=new Map(),owners=new Map(),turnTails=new Map()
+ const anchors=new Map(),owners=new Map(),turnTails=new Map(),scopes=new Map()
+ let scope=0
  for(const entry of flow??[]){
   const node=entry.kind==='node'?nodeStore?.get?.(entry.key):null
+  if(entry.kind==='pending-steering'||['user','steering'].includes(node?.kind))scope++
+  scopes.set(entry.key,scope)
   if(entry.kind!=='execution'&&!['assistant-step','turn-tail','turn-error','turn-max-tokens'].includes(node?.kind))continue
+  // An empty running execution is a transient activity indicator, not content
+  // that can relocate feedback from the preceding answer when steering arrives.
+  if(entry.kind==='execution'&&!entry.nodeKeys?.length)continue
   const turn=entry.kind==='execution'?entry.turn:readTurn(node)
-  if(typeof turn==='number'&&Number.isFinite(turn))turnTails.set(turn,entry.key)
+  if(typeof turn==='number'&&Number.isFinite(turn)){
+   const tails=turnTails.get(scope)??new Map()
+   tails.set(turn,entry.key);turnTails.set(scope,tails)
+  }
  }
  for(const entry of flow??[]){
   const keys=entry.kind==='execution'?entry.nodeKeys:entry.kind==='node'?[entry.key]:[]
@@ -83,7 +92,7 @@ export function researchWorkbenchReceiptAnchors(flow,nodeStore,readMetadata,read
     const owner=owners.get(plan.id)
     if(owner){anchors.get(owner.key)[owner.index]=plan;continue}
     const turn=entry.kind==='execution'&&typeof entry.turn==='number'?entry.turn:readTurn(node)
-    const anchor=turnTails.get(turn)??entry.key,plans=anchors.get(anchor)??[]
+    const anchor=turnTails.get(scopes.get(entry.key))?.get(turn)??entry.key,plans=anchors.get(anchor)??[]
     owners.set(plan.id,{key:anchor,index:plans.length})
     plans.push(plan);anchors.set(anchor,plans)
    }
@@ -167,11 +176,11 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
 }
 
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v5 */'
+ const marker='/* ework:workbench-feedback:v6 */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+[publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v[1234] \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v[12345] \*\//)
  if(previous>=0){
   const end=source.indexOf('const ExecutionStatusGroup =',previous)
   if(end<0)throw Error('Workbench feedback upgrade anchor missing')
