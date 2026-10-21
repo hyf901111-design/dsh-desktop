@@ -27,7 +27,7 @@ export function workbenchSmartCreateTarget(node){
  return node?.kind==='generated-container'&&!node.containerSpec&&node.generationStatus==='draft'&&node.containerPrompt!=='odyssey:link-draft'
 }
 export function workbenchHasCreateOutput(node){
- return node?.kind==='generated-container'&&Boolean(node.containerSpec)&&(node.containerSpec.type!=='financial-widget'||['watchlist','quote'].includes(node.containerSpec.widget))
+ return node?.kind==='generated-container'&&node.containerSpec?.type==='financial-widget'&&['watchlist','quote'].includes(node.containerSpec.widget)
 }
 export function workbenchCreateSourceCount(node,nodes){
  return (node.sourceNodeIds||[]).filter(id=>workbenchHasCreateOutput(nodes.find(source=>source.id===id))).length
@@ -141,8 +141,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   const button=(name,label,onClick,extra={})=>react_jsx_runtime.jsx('button',{type:'button','aria-label':label,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();onClick?.(e)},...extra,children:react_jsx_runtime.jsx(WorkbenchIcon,{name})})
   const hover=kind=>e=>{setNow(Date.now());const r=e.currentTarget.getBoundingClientRect();setTip({kind,left:Math.min(r.left,window.innerWidth-340),top:r.bottom+6})}
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
-    workbenchSmartCreateTarget(node)?react_jsx_runtime.jsx(WorkbenchSmartCreateFooter,{node,readOnly,createSourceCount}):node.creationMode==='selection'&&createSourceCount>0&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'input',readOnly}),
-    workbenchHasCreateOutput(node)&&node.containerSpec.type!=='financial-widget'&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'output',readOnly}),
+    workbenchSmartCreateTarget(node)&&react_jsx_runtime.jsx(WorkbenchSmartCreateFooter,{node,readOnly,createSourceCount}),
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
       refreshState&&react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button(refreshState.icon,'刷新组件',refresh,{disabled:readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':refreshing||undefined,'data-refresh-state':refreshState.state})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),

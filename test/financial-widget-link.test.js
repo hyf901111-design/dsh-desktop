@@ -37,10 +37,21 @@ it('基于无输出节点的组件创建时隐藏接收节点，来源能力改�
  expect(f.port(target.id,'input')).toBeNull();expect(footer().textContent).toBe('基于 1 个组件')
  expect(card().querySelector('textarea').value).toBe('保留我的需求');expect(card().textContent).toContain('基于：智能容器')
  await f.act(async()=>f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(n=>n.id===source.id?{...n,generationStatus:'completed',containerSpec:{version:1,type:'table',title:'来源结果',columns:['项'],rows:[['内容']]}}:n)))
+ expect(f.port(source.id,'output')).toBeNull();expect(f.port(target.id,'input')).toBeNull();expect(footer().textContent).toBe('基于 1 个组件')
+ await f.act(async()=>f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(n=>n.id===source.id?{...n,containerSpec:f.spec(f.quote.id)}:n)))
  expect(f.port(source.id,'output')).not.toBeNull();expect(f.port(target.id,'input')).not.toBeNull();expect(footer().textContent).toBe('已连接 1 个组件')
  await f.act(async()=>f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.filter(n=>n.id!==source.id)))
  expect(f.port(target.id,'input')).toBeNull();expect(footer().textContent).toBe('基于 1 个组件')
  expect(card().querySelector('textarea').value).toBe('保留我的需求');expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===target.id).sourceNodeIds).toEqual([source.id])
+},15000)
+it('基于行情生成普通结果后不保留连接节点，来源内容和来源行情的联动节点仍保留',async()=>{
+ const f=await setup();let draft
+ await f.act(async()=>draft=f.workspace.beginSelectedCreateDraft([f.quote.id]))
+ expect(f.port(draft.id,'input')).not.toBeNull()
+ await f.act(async()=>f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(n=>n.id===draft.id?{...n,generationStatus:'completed',containerSpec:{version:1,type:'table',title:'用户生成结果',columns:['项目'],rows:[['保留内容']]}}:n)))
+ const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]')
+ expect(card.querySelector('[data-financial-port]')).toBeNull();expect(card.textContent).toContain('保留内容');expect(card.querySelector('[data-workbench-selected-create-context]')).not.toBeNull()
+ expect(f.port(f.quote.id,'output')).not.toBeNull();expect(f.port(f.quote.id,'output').getAttribute('data-connected')).toBe('false')
 },15000)
 it('连接智能容器原位切换为基于所选创建，保留输入尺寸与真实来源并支持撤销',async()=>{
  const f=await setup();let draft;await f.act(async()=>draft=f.workspace.createContainerDraft())
@@ -59,14 +70,13 @@ it('连接智能容器原位切换为基于所选创建，保留输入尺寸与�
  expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id)).toMatchObject({containerPrompt:input.value,generationStatus:'draft'})
  expect(card().querySelector('[data-workbench-selected-create-context]')).toBeNull()
 },15000)
-it('连接后的命令回车使用原有基准生成通路和目标节点，非金融输出也能成为基准',async()=>{
+it('普通生成组件不显示节点，菜单基于所选创建仍保留内容证据和命令回车通路',async()=>{
  const f=await setup();let draft,source
  await f.act(async()=>{
-  draft=f.workspace.createContainerDraft();source={id:'own-table',kind:'generated-container',messageId:'own-table',title:'本人记录',excerpt:'本人原始记录',containerPrompt:'本人记录',refreshMinutes:0,generationStatus:'completed',generationLastSeq:1,x:100,y:100,width:400,height:300,sizeMode:'manual',containerSpec:{version:1,type:'table',title:'本人记录',columns:['项目','金额'],rows:[['收入','0万元'],['变化','-120万元']]}}
-  f.workspace.setArtifacts([...f.workspace.getSnapshot().artifacts,source])
+  source={id:'own-table',kind:'generated-container',messageId:'own-table',title:'本人记录',excerpt:'本人原始记录',containerPrompt:'本人记录',refreshMinutes:0,generationStatus:'completed',generationLastSeq:1,x:100,y:100,width:400,height:300,sizeMode:'manual',containerSpec:{version:1,type:'table',title:'本人记录',columns:['项目','金额'],rows:[['收入','0万元'],['变化','-120万元']]}}
+  f.workspace.setArtifacts([...f.workspace.getSnapshot().artifacts,source]);draft=f.workspace.beginSelectedCreateDraft([source.id])
  })
- const card=()=>f.host.querySelector('[data-research-node-id="'+draft.id+'"]'),output=f.port(source.id,'output');expect(output).not.toBeNull()
- await f.dragPort(output,card().querySelector('[data-financial-port=input]'))
+ const card=()=>f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(f.port(source.id,'output')).toBeNull();expect(f.port(draft.id,'input')).toBeNull()
  const input=card().querySelector('textarea');input.value='保留零值和负值并做对比';await f.event('input',input)
  await f.event('keydown',input,{key:'Enter',metaKey:false,keyCode:13});expect(f.generation.generate).not.toHaveBeenCalled()
  await f.event('keydown',input,{key:'Enter',metaKey:true,keyCode:13})
