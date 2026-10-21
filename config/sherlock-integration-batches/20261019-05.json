@@ -9,30 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修正智能容器连接节点对齐和已连接状态",
+        "featureName": "为智能容器增加与组件一致的独立底栏",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "ae24ac30e9e35e7f8d3289c9d61dd2d3751ec29f",
-        "tipCommit": "e2f20743d53c58ca40a45cc9c5b9b48d91b0c1c3",
+        "baseCommit": "e2f20743d53c58ca40a45cc9c5b9b48d91b0c1c3",
+        "tipCommit": "79c4df7ecea79896b1263247842e1aaa1ba58386",
         "commits": [
           {
-            "commit": "e2f20743d53c58ca40a45cc9c5b9b48d91b0c1c3",
+            "commit": "79c4df7ecea79896b1263247842e1aaa1ba58386",
             "parents": [
-              "ae24ac30e9e35e7f8d3289c9d61dd2d3751ec29f"
+              "e2f20743d53c58ca40a45cc9c5b9b48d91b0c1c3"
             ],
-            "subject": "修正智能容器连接节点对齐和连接后填充状态"
+            "subject": "为智能容器增加统一底栏并对齐底部连接节点"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/financial-widget-link.mjs"
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
             "path": "scripts/lib/research-grid-workbench.css"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/smart-container-connections-browser.test.js"
           }
         ],
@@ -47,12 +51,13 @@
               "test/smart-container-connections-browser.test.js",
               "test/smart-container-create-browser.test.js",
               "test/research-selected-create.test.js",
+              "test/financial-widget-localization.test.js",
               "test/workbench-layout-stability-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "40项直接相关检查通过；真实浏览器另行重跑最终工具栏四主题、滚动和尺寸变化，/tmp/smart-ports-correction-delivery-20261021.log 与 /tmp/smart-container-ports-final-20261021.log",
-            "verifiedCommit": "e2f20743d53c58ca40a45cc9c5b9b48d91b0c1c3",
-            "completedAt": "2026-10-21T01:16:01.277474+00:00",
+            "summary": "43项直接相关回归通过；最终中英文底栏另跑通过，/tmp/smart-container-footer-delivery-20261021.log 和 /tmp/smart-container-footer-locale-final-20261021.log",
+            "verifiedCommit": "79c4df7ecea79896b1263247842e1aaa1ba58386",
+            "completedAt": "2026-10-21T01:23:21.602243+00:00",
             "timeoutMs": 180000
           },
           {
@@ -62,114 +67,28 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/smart-ports-correction-typecheck-20261021.log",
-            "verifiedCommit": "e2f20743d53c58ca40a45cc9c5b9b48d91b0c1c3",
-            "completedAt": "2026-10-21T01:16:01.277474+00:00",
+            "summary": "类型检查通过；/tmp/smart-container-footer-typecheck-20261021.log",
+            "verifiedCommit": "79c4df7ecea79896b1263247842e1aaa1ba58386",
+            "completedAt": "2026-10-21T01:23:21.602243+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "真实浏览器已核对四种看板主题下输入框焦点边框、创建布局、键盘动作及滚动阈值稳定；仍须官方本地构建后验证原生主界面，不提前宣称原生验收。"
+          "summary": "完整ResearchCanvas在真实浏览器通过实际工具栏切换四种主题，验证24px底栏、底部节点基线、连线圆心、连接状态、中英文、创建按钮避让、滚动和宽度变化。原生完整底栏包须官方构建后核验。"
         },
         "acceptanceCriteria": [
-          "SVG连线和拖拽预览坐标以滚动视口内边缘为原点，扣除画布边框后与可见圆环中心对齐。",
-          "智能容器节点复用共有已连接填充状态，连接后来源端与接收端均为主题强调色实心，不再被卡片背景覆盖。",
-          "保留同容器基准信息、需求、回车换行、命令回车创建以及原有金融连线；实际工具栏切换四种主题、滚动和调整宽度后均保持端点对齐。"
+          "智能容器和基于所选创建均有独立24px底栏，与行情面板底栏高度一致；节点位于底栏中央，两组件底边对齐时节点同高。",
+          "创建按钮保留在内容区，内容区为底栏保留空间；底栏保持可见且不覆盖输入或按钮。",
+          "底栏未连接时显示待创建，连接后显示组件数量；切换英文即时更新且不改动用户输入。",
+          "保留上一提交的端点圆心修正和实心连接状态、同节点来源绑定、回车换行、命令回车创建。"
         ],
         "risks": [
           "原生主进程导航时的SIGTRAP触发点仍待定位，本次不声称修复原生崩溃。",
           "真实数据工作台速度、完整性与多样性仍需继续原始场景验收，本次界面回归不替代整体目标。",
           "只更新本地测试集成包，不接受或晋升main，不发布、推送、递增版本或修改公开更新源。"
         ],
-        "generatedAt": "2026-10-21T01:16:01.277474+00:00"
-      },
-      "merged": {
-        "mergeCommit": "956f2288bb4fb840366cc1d4f909e4f038c2f364",
-        "verificationCommit": "956f2288bb4fb840366cc1d4f909e4f038c2f364",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "956f2288bb4fb840366cc1d4f909e4f038c2f364",
-            "completedAt": "2026-10-21T01:16:38.163Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "956f2288bb4fb840366cc1d4f909e4f038c2f364",
-            "completedAt": "2026-10-21T01:16:38.163Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "956f2288bb4fb840366cc1d4f909e4f038c2f364",
-            "completedAt": "2026-10-21T01:16:38.163Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "956f2288bb4fb840366cc1d4f909e4f038c2f364",
-            "completedAt": "2026-10-21T01:16:38.163Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "956f2288bb4fb840366cc1d4f909e4f038c2f364",
-            "completedAt": "2026-10-21T01:16:38.163Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T01:16:38.163Z"
+        "generatedAt": "2026-10-21T01:23:21.602243+00:00"
       }
     },
     {
