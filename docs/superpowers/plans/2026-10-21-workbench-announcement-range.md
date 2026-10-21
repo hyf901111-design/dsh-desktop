@@ -122,12 +122,13 @@
 
 ### Task 7: 真实文章时间线复用逐条核验与有界补读
 
-**Files:** `component-feed-acquisition.js`、`component-source-binding.js`及最小`index.js`接线；必要新增小型文章投影helper。扩充 `test/component-feed-acquisition.test.js`、web-snapshot/source-binding与专用Runtime测试，不改Task6来源策略/Notes/native/calendar。
+**Files:** `component-feed-acquisition.js`、`component-source-binding.js`及最小`index.js`接线；必要新增小型文章投影helper；`workbench.js`仅为已有内部hostContext增加可信原始需求/数据模式。扩充 `test/component-feed-acquisition.test.js`、web-snapshot/source-binding与专用Runtime测试，不改Task6来源策略/Notes/native/calendar。
 
-**Interfaces:** 现有 `componentFeedEvidenceIssue(text,records,options)`、`componentSnapshotEvidence`、`retainVerifiedFeedItems`与`acquireFeedSourceEvidence`在host options内识别真实文章类timeline；time只做明确原文日期的等价比较，不修改原值。与Task6内部来源策略共同工作，但不以source选择代替每条证据。
+**Interfaces:** 现有 `componentFeedEvidenceIssue(text,records,options)`、`componentSnapshotEvidence`、`retainVerifiedFeedItems`与`acquireFeedSourceEvidence`在host options内识别真实文章类timeline；time只做明确原文日期的等价比较，不修改原值。与Task6内部来源策略共同工作，但不以source选择代替每条证据。Task6的hostContext增加可选 `workbenchRequest:{originalRequest,dataMode}`：由真人创建捕获+validated input产生，originalRequest≤8000，dataMode为source/simulated（默认source），验证/持久化/恢复/每次adapter传播/未改需求retry保留，真正改需求则清除；不增加公开start参数或marker推断，Task8复用此接口。
 
 - [ ] 先RED：真实新闻子卡返回timeline，同条标题/时间/URL尚未取得原文不得直接接受；已发现Sources URL应触发一次补读并交原记录门禁。显式区别B安全journal/未核验输出与合成网页fixture，不读private reasoning。
 - [ ] 实现已观察安全链接补读与同条身份核验，保留6页/并发3/20秒/30KB及一次repair。未知/约日期、公司/标题/URL冲突拒绝，Task1公告窗口不弱化。无有效条目失败，有效条目和完整缺口可沿既有fallback保留；不得静默删公司/类别或留错误计数。
+- [ ] 真实文章timeline仍遵守明确原始/声明日期窗口：有来源的窗口外背景不能计作近期记录，保留到完整note且说明不计入；不改人类窗口、不猜相对日期。沿既有明确窗口工具最小复用，不新增任意时间NLP。
 - [ ] 对照普通活动timeline、模拟、用户提供原文timeline、既有news/reports；覆盖已读不重复、未知/私网/凭据URL不补读、取消/超时/部分来源、第一次取证第二次完成与错误终态。最终可见标题/原日期/原URL/note证据与已核验来源相同。
 - [ ] 跑直接受影响feed/web-snapshot/announcement与专用Runtime聚焦文件、syntax/diff，自审中文本地提交ownfiles，报告task-7-report.md；不全套/在线/构建/操作客户端/派agent。
 
@@ -144,12 +145,14 @@
 
 ### Task 9: 生成完成卡反映实际刷新状态
 
-**Files:** `scripts/lib/research-workbench-feedback.mjs`、`research-creation-progress.mjs`、必要的workspace任务/recipe摘要读取接线，以及对应现有progress/feedback浏览器测试。具体接口先在本任务沿真实终态链窄查后补入brief；不得以计划prompt或asOf文字替代实际recipe事实，不改旧用户消息。
+**Files:** `scripts/lib/research-workbench-feedback.mjs`、`component-data-status.mjs`，必要`research-generation-watch.mjs`/`component-data-refresh.mjs`接线；`workbench.js`/`workbench-execution-policy.js`仅accepted receipt与短提示。扩充对应workbench-feedback/actions/browser、component-data-status/monitor与直接generation-watch测试，不改creation布局/分类或旧用户消息。
 
-- [ ] 先追踪并RED：计划每分钟但实际静态完整表时，反馈不能声称已自动更新；已保存recipe/成功或失败则分别显示。原“生成中/已完成/重试”、新消息后的归属与Notes复用保持。
-- [ ] 最小加入真实组件终态/recipe摘要及补充文字，区别静态、已配置未成功、最新成功/失败，不新增高频轮询或模型调用。原会话历史不重写，相关卡片随所属轮次留位。
+**Interfaces:** 现有 `createComponentDataStatusStore`增加稳定只读` snapshotSession(sessionId):{ready,rows}`和`subscribeSession(sessionId,listener)`（名称可等价，语义不可变）；复用其原host list/push与publishNative数据，不新增poll。`workbenchProgressState`/React通过该真实摘要补充状态，不把敏感来源内容写入generation snapshot。原publisher/receiptAnchors身份与归属保持。
+
+- [ ] 先RED：计划每分钟但实际静态完整表时，反馈不能声称已自动更新；已保存recipe/成功或失败则分别显示。null/尚未载入不是未绑定；builtin未挂载不是静态；inactive/Notes显示上次观察。原“生成中/已完成/重试”、新消息后的归属与Notes复用保持。
+- [ ] 最小加入真实组件终态/recipe摘要及补充文字，区别静态、手动、暂停、已配置未成功、最新成功/失败；保留读取就绪与last-observed，不新增轮询或模型调用。accepted receipt/短提示明确刷新配置待确认，不能由计划承诺已生效；prepared/accepted原含义与重试幂等保持。原会话历史不重写，相关卡片随所属轮次留位。
 - [ ] 使用真实workspace/feedback挂载、fake transport测试混合静态/绑定、停止/部分失败重试、新消息和切Notes；深浅/窄宽状态文案不挤坏动作区。聚焦检查、中文commit、报告task-9-report.md，不全套/在线/构建/派agent；root另做Task2真实客户端验收。
 
 ## 后续执行顺序与交付门禁
 
-Task6 → Task7 → Task8 → Task9，各自实现提交后独立复审；只读上一任务复审可与下一源码writer并行，一个源码writer。Task1/3/4/5已闭环，不重复派发。Task9接口调研尚未开展，因此不可从本文直接派实现；先沿真实feedback/recipe链补精确brief。全部来源/日历/UI修复审阅后统一交接到现有集成，按Task2/本地runbook构建、真实六项复测与完整画布整理/滚动。仍有缺口继续记录，不把测试通过改成全目标完成。
+Task6 → Task7 → Task8 → Task9，各自实现提交后独立复审；只读上一任务复审可与下一源码writer并行，一个源码writer。Task1/3/4/5已闭环，不重复派发。Task9接口已沿generation-watch→feedback与componentDataStatusStore窄查，派发时同时读取task-9-interface-prebrief-draft.md中的actual接口证据与上述正式约束。全部来源/日历/UI修复审阅后统一交接到现有集成，按Task2/本地runbook构建、真实六项复测与完整画布整理/滚动。仍有缺口继续记录，不把测试通过改成全目标完成。
