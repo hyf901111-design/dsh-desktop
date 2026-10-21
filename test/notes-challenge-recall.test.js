@@ -109,16 +109,47 @@ it('does not flag correct arithmetic merely to request intermediate steps or gua
 })
 
 for (const message of [
+  '红薯传入中国的时间有不同说法（约万历年间，明代），该句大体相符，请问是否需要核实具体传入年代？',
+  '该表述基本一致，仅建议补充更详细的年代。'
+]) it('drops an explicit admission of agreement while retaining an independent erroneous paragraph: ' + message, async () => {
+  const result = await run(note([block('correct', '红薯也要到明代才传入中国。'), block('error', '水在100摄氏度时一定结冰。')]), {
+    reviews: [
+      { blockId: 'correct', issues: [issue('红薯也要到明代才传入中国', { message })] },
+      { blockId: 'error', issues: [issue('水在100摄氏度时一定结冰', { message: '常压下水的冰点约为0摄氏度，是否需修正？' })] }
+    ]
+  })
+  expect(result.issues.map(item => item.blockId)).toEqual(['error'])
+  expect(result.coveredBlockIds).toEqual(['correct', 'error'])
+})
+
+for (const message of [
   '原文与常见结论并不相符，是否需要核对？',
   '原文是否正确？请核对分母是否包括未完成者。',
   '计算结果与原文相符，但后续结论与给定人数冲突。',
-  '原文数字正确，不过样本范围与上下文不一致。'
+  '原文数字正确，不过样本范围与上下文不一致。',
+  '该句并不相符，是否应核对样本范围？',
+  '该句大体相符吗？分母是否包括未完成者？',
+  '该句是否基本一致？需要核对。',
+  '该句大体相符，但后续结论与给定人数矛盾。',
+  '该表述基本一致，然而其适用条件不成立。'
 ]) it('retains an actual or unresolved conflict rather than interpreting negation, questions or a contrasting clause as agreement: ' + message, async () => {
   const result = await run(note([block('a', '有15人完成任务，所以所有人都完成了。')]), {
     reviews: [{ blockId: 'a', issues: [issue('所以所有人都完成了', { message })] }]
   })
   expect(result.issues).toHaveLength(1)
   expect(result.issues[0].category).toBe('uncertain')
+})
+
+for (const message of [
+  '该句大体相符，但结冰温度应为0℃而非10℃，是否需修正？',
+  '该句看似相符，实际并非如此：结冰温度应为0℃而非10℃，是否需修正？',
+  '该表述基本一致，不过结冰温度应为0℃，是否需要改正？'
+]) it('retains a qualified agreement with a concrete correction even without error vocabulary: ' + message, async () => {
+  const result = await run(note([block('a', '水在标准大气压下100℃沸腾、10℃结冰。')]), {
+    reviews: [{ blockId: 'a', issues: [issue('水在标准大气压下100℃沸腾、10℃结冰', { message })] }]
+  })
+  expect(result.issues).toHaveLength(1)
+  expect(result.coveredBlockIds).toEqual(['a'])
 })
 
 it('does not claim missing blocks were reviewed and accepts an explicit empty record as a completed check', async () => {
