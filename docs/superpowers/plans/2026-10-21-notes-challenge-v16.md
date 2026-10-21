@@ -13,3 +13,9 @@ Spec: docs/superpowers/specs/2026-10-21-notes-challenge-v16.md
 
 ## Task 4: 集成与客户端验收
 主agent完成独立任务审查、全分支审查、必要修复与相关聚焦验证，再生成新功能交接卡，append到未验收20261019-05批次并按手册预检、合并。集成checkout ./script/build_and_run.sh --verify，无公证/发布/版本变化。核验真实客户端当前文章标记、评论预览/替换/直接编辑/样式/排序/滚动/Enter，不覆盖用户正在编辑的笔记。保留证据，应用保持打开。
+
+## Task 5: 修复原生模型半句引用与整句替换的范围错位
+Task4原生验收发现阻塞：半句quote+整句优化文本会残留错误尾句。完整需求见 .superpowers/sdd/2026-10-21-notes-challenge-v16/task-5-scope-brief.md。实现由宿主确定完整句编辑范围、保持原quote授权上下文、预览/应用/直接路径相同范围契约、仅写差异保留格式、过长/过期/旧建议守卫。用已捕获的真实模型形状与真实mountNotes验证，再聚焦测试/中文提交/独立审查，不构建app。
+
+## Task 6: 补丁再集成与原生复验
+Task5审查通过后refresh仅本notes功能交接卡，预检/merge/continue声明检查；仍仅integration构建 --verify，重验相同两段真实模型/CTA与直接回复/双剑，原文章内容及未发送草稿保留，app保持打开。
