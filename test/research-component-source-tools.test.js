@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from '../packages/dsh-research-task-runtime/component-source-tools.js'
+import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, componentPluginSourceRequired, componentPluginSourceProhibited } from '../packages/dsh-research-task-runtime/component-source-tools.js'
 import officialSchemas from './fixtures/official-mcp-source-schemas.json'
 
 it('recognizes the current official financial MCP tools even when descriptions no longer use the old vendor name',()=>{
@@ -206,4 +206,10 @@ it('keeps professional-field preference when an untrusted model source label rem
  const schemas=[{name:'public_data_query'},...officialSchemas]
  const policy={pluginRequired:false,pluginProhibited:false,preferenceRequest:'估值。来源： 取得市盈率与市净率。'}
  expect(preferredComponentSourceTools(schemas,policy.preferenceRequest,policy).map(t=>t.name)).toEqual(officialSchemas.map(t=>t.name))
+})
+
+it.each(['不用DataYes','不要用插件','禁止用MCP','不再用通联'])('fix round1 shared source semantics recognize short prohibition: %s',request=>{
+ expect(componentPluginSourceProhibited(request)).toBe(true)
+ expect(componentPluginSourceRequired(request)).toBe(false)
+ expect(preferredComponentSourceTools([{name:'public_data_query'},...officialSchemas],'估值市盈率，'+request)).toEqual([])
 })

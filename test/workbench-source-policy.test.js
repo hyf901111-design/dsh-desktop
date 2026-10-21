@@ -41,3 +41,21 @@ it.each(['创建工作台，必须DataYes。','创建工作台，来源仅限Dat
 it.each(['创建工作台，引文‘使用DataYes’，查询真实新闻。','创建工作台。\n> 使用DataYes\n检索真实资料。'])('does not promote quoted instructions: %s',request=>{
  expect(workbenchSourcePolicy(request,news).pluginRequired).toBe(false)
 })
+it.each(['不用DataYes','不要用插件','禁止用MCP','不再用通联'])('fix round1 keeps short plugin prohibition: %s',restriction=>{
+ const policy=workbenchSourcePolicy('创建真实工作台，'+restriction+'。',news)
+ expect(policy.pluginRequired).toBe(false)
+ expect(policy.pluginProhibited).toBe(true)
+})
+it.each(['只使用腾讯','仅用新浪','只调用public_data_query','只用“腾讯”'])('fix round1 rejects unsupported exclusive provider before dropping it: %s',restriction=>{
+ expect(()=>workbenchSourcePolicy('创建真实工作台，'+restriction+'。',news)).toThrow(/来源约束/)
+})
+it.each(['允许使用腾讯','优先使用新浪','可以调用public_data_query','参考引文“只使用腾讯”'])('fix round1 does not force optional or quoted public provider: %s',source=>{
+ const policy=workbenchSourcePolicy('创建真实工作台，'+source+'。',news)
+ expect(policy.pluginRequired).toBe(false)
+ expect(policy.pluginProhibited).toBe(false)
+})
+it('fix round1 keeps an unsupported exclusive provider local to its card',()=>{
+ const request='创建真实工作台，估值卡只使用腾讯，新闻检索原文。'
+ expect(workbenchSourcePolicy(request,news).pluginRequired).toBe(false)
+ expect(()=>workbenchSourcePolicy(request,{title:'估值',type:'table',prompt:'查询市盈率'})).toThrow(/来源约束/)
+})

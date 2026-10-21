@@ -2,13 +2,16 @@ import { componentPluginSourceRequired, componentPluginSourceProhibited, compone
 
 const webOnly = /(?:(?:只|仅)(?:能|可)?(?:使用|用)|走|使用|用)\s*(?:公开)?网页/u
 const plugin = /通联|datayes|萝卜投研|\bMCP\b|插件/iu
+// These providers have distinct identities beyond this policy's plugin flags.
+// Do not turn a human's exclusive provider into a generic plugin prohibition.
+const exclusivePublicSource = /(?:仅|只)(?:能|可)?(?:使用|用|调用|通过|接入|从)[^。；;，,\n]{0,24}(?:腾讯|新浪|tencent|sina|public_data_query)|(?:来源|数据源)\s*(?:仅限|限定为)[^。；;，,\n]{0,24}(?:腾讯|新浪|tencent|sina|public_data_query)/iu
 const groups = [
   /估值|市盈率|市净率/u, /财务|财报|经营|利润/u, /新闻|资讯/u,
   /公告/u, /行情|报价|价格/u, /走势|趋势|历史|相对强弱/u,
   /未来|事件|日历/u, /研报|报告/u
 ]
 const typeTopics = {news:'新闻资讯', reports:'研报报告', calendar:'未来事件日历'}
-const unquoted = text => text.replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|「[^」]*」|"[^"\n]*"|‘[^’]*’|'[^'\n]*'|^\s*>[^\n]*/gmu, quote => /^(?:通联|datayes|萝卜投研|MCP|插件)$/iu.test(quote.slice(1,-1).trim()) ? quote.slice(1,-1).trim() : '')
+const unquoted = text => text.replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|「[^」]*」|"[^"\n]*"|‘[^’]*’|'[^'\n]*'|^\s*>[^\n]*/gmu, quote => /^(?:通联|datayes|萝卜投研|MCP|插件|腾讯|新浪|tencent|sina|public_data_query)$/iu.test(quote.slice(1,-1).trim()) ? quote.slice(1,-1).trim() : '')
 const ambiguous = () => { throw Error('无法可靠确定本面板的人类来源约束，请明确来源适用的卡片及是否允许替代。') }
 
 // This parser takes an authored request, never a prompt marker. Only the
@@ -21,10 +24,11 @@ export function workbenchSourcePolicy(originalRequest, panel) {
     // Keep fallback language attached to the preceding source requirement.
     const clauses = sentence.split(/[，,](?!\s*(?:不可用时|失败时|否则|或|允许.{0,8}替代))/u)
     for (const clause of clauses.flatMap(part => part.split('、'))) {
-      if (!plugin.test(clause) && !webOnly.test(clause)) continue
+      const unsupportedProvider = exclusivePublicSource.test(clause)
+      if (!unsupportedProvider && !plugin.test(clause) && !webOnly.test(clause)) continue
       if (!plugin.test(clause) && /(?:不要|禁止|不得|无需|不用|不使用).{0,6}网页/u.test(clause)) ambiguous()
       const required = componentPluginSourceRequired(clause), prohibited = componentPluginSourceProhibited(clause) || !componentSourceAllowsAlternatives(clause) && !plugin.test(clause) && webOnly.test(clause)
-      if (!required && !prohibited) {
+      if (!unsupportedProvider && !required && !prohibited) {
         if (!componentSourceAllowsAlternatives(clause) && /必须|只能|仅限|强制|唯一|禁止|禁用|不得/u.test(clause)) ambiguous()
         continue
       }
@@ -40,6 +44,7 @@ export function workbenchSourcePolicy(originalRequest, panel) {
         const targets = groups.filter(group => group.test(prefix))
         if (targets.length && !/创建|工作台|所有|全部/u.test(prefix) && !targets.some(group => group.test(identity))) continue
       }
+      if (unsupportedProvider) throw Error('当前工作台暂不支持准确执行此排他来源约束（腾讯、新浪或 public_data_query）；未启动面板任务，不能改用其他来源。')
       relevant.push(clause)
     }
   }

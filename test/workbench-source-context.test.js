@@ -242,3 +242,19 @@ it.each(['source','simulated'])('captures validated workbench mode in private co
  await f.tool.execute({requestId:'mode-'+mode,title:'公司新闻',...(mode==='simulated'?{dataMode:mode,generationMode:'deferred',sharedContext:'虚构公司新闻演示。'}:{}),panels:[{title:'新闻',type:'timeline',size:'large',prompt:'整理公司新闻时间线。'}]},f.exec)
  expect(f.runtime.startBatch.mock.calls[0][1].panels[0].workbenchRequest).toEqual({originalRequest:request,dataMode:mode})
 })
+it.each(['不用DataYes','不要用插件'])('fix round1 rejects observed plugin business under short human prohibition: %s',async restriction=>{
+ const request='创建公司真实新闻工作台，'+restriction+'。'
+ const f=await policyCreation(request,'使用DataYes检索真实公司新闻。',true,[{tool:'ework__t_abc123',args:{},response:{records:policyNews.items}}])
+ expect(f.task.state).toBe('failed')
+ expect(f.task.finalOutput).toBeUndefined()
+ expect(f.task.error).toMatch(/禁止|不允许/)
+ expect(f.task.hostContext.workbenchRequest).toEqual({originalRequest:request,dataMode:'source'})
+ const web=await policyCreation(request,'使用DataYes检索真实公司新闻。')
+ expect(web.task.state).toBe('completed')
+ expect(web.task.finalOutput).toContain('公司发布新产品')
+})
+it.each(['只使用腾讯','仅用新浪','只调用public_data_query'])('fix round1 rejects unsupported strict provider before any child can accept plugin data: %s',async restriction=>{
+ const f=await fixture(true,[human('创建真实估值工作台，'+restriction+'。')])
+ await expect(f.tool.execute({requestId:'strict-provider',title:'估值',dataMode:'source',panels:[{title:'估值',type:'table',size:'large',prompt:'使用DataYes查询市盈率、市净率。'}]},f.exec)).rejects.toThrow(/来源约束/)
+ expect(f.runtime.startBatch).not.toHaveBeenCalled()
+})

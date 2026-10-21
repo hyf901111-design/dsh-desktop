@@ -11,7 +11,7 @@ const recentMarketRequest = /最近|最新|今日|当前|实时|日行情/iu
 const pluginName=String.raw`(?:通联|datayes|萝卜投研|\bMCP\b|插件)`
 
 export function componentPluginSourceProhibited(request='') {
-  return new RegExp(`(?:(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用|通过|接入)[^。；;，,\\n]{0,24}|\\b(?:do\\s+not|don't|never)\\s+(?:use|call|query)\\s+)${pluginName}`,'iu').test(request)
+  return new RegExp(`(?:(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用|用|通过|接入)[^。；;，,\\n]{0,24}|\\b(?:do\\s+not|don't|never)\\s+(?:use|call|query)\\s+)${pluginName}`,'iu').test(request)
 }
 export function componentSourceAllowsAlternatives(request='') {
   return /可经|可(?:以)?(?:通过|使用|用|调用|接入)|可选|例如|比如|优先|建议|来源不限|\b(?:may|optional|prefer|for example)\b/iu.test(request) ||

@@ -1341,6 +1341,22 @@ describe('Research task Subagent adapter', () => {
     }finally{await handle.dispose()}
   })
 
+  it.each(['不用DataYes','不要用插件'])('fix round1 SDK obeys parsed short human prohibition: %s',async restriction=>{
+    const {workbenchSourcePolicy}=await import('../packages/dsh-research-task-runtime/workbench-source-policy.js')
+    const panel={title:'新闻',type:'news',prompt:'使用DataYes检索真实新闻。'}
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'web_fetch'},{name:'ework__datayes',description:'通联 DataYes API'}]}
+    const query=workbenchPanelPrompt({title:'研究',dataMode:'source'},panel)
+    const handle=await fixture.start(query,undefined,{sourcePolicy:workbenchSourcePolicy('创建真实新闻工作台，'+restriction+'。',panel)})
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow).not.toContain('ework__datayes')
+      expect(child.toolFilter.allow).toContain('web_fetch')
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      expect(child.prompt[0].text).toContain('本卡禁止使用插件')
+    }finally{await handle.dispose()}
+  })
+
   it.each(['html','gantt'])('generates a deferred offline %s panel directly without rediscovering skills or files',async type=>{
     const panel={title:'古籍修复交接',type,size:'large',prompt:'B01和B02两册演练记录，保留负责人、步骤和交接事项。'}
     const plan={title:'工坊演练',dataMode:'simulated',generationMode:'deferred',originalRequest:'用两册古籍创建演练工作台，禁止联网。',sharedContext:'B01和B02；修复师甲；2026-10-22T08:00:00+08:00至12:00:00+08:00。'}
