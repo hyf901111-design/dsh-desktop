@@ -528,6 +528,121 @@
           "旧缺范围版本的pending建议保留历史，需要重新优化；新包原生CTA和direct复验待执行。"
         ],
         "generatedAt": "2026-10-21T12:11:48.658Z"
+      },
+      "merged": {
+        "mergeCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+        "verificationCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-layout.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-canvas-tools.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-generation-controls.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
+            "verifiedCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+            "completedAt": "2026-10-21T12:14:37.958Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+            "completedAt": "2026-10-21T12:14:37.958Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+            "completedAt": "2026-10-21T12:14:37.958Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-runtime.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
+            "verifiedCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+            "completedAt": "2026-10-21T12:14:37.958Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+            "completedAt": "2026-10-21T12:14:37.958Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-challenge-intent.test.ts",
+              "test/notes-challenge-runtime.test.js",
+              "test/notes-challenge-controller-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+            "completedAt": "2026-10-21T12:14:37.958Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "b034d2ea6161ad660277eb6402c950ac27dac054",
+            "completedAt": "2026-10-21T12:14:37.958Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-10-21T12:14:37.958Z"
       }
     }
   ],
