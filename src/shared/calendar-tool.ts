@@ -2,7 +2,7 @@ export type CalendarTarget = {sessionId:string;nodeId:string}
 export type CalendarInput = {title:string;date:string;time:string|null;timezone:string;notes:string;repeat:'none'|'daily'|'weekly'|'monthly';reminderMinutes:number|null}
 export type CalendarEvent = CalendarInput & CalendarTarget & {id:string;createdAt:number;updatedAt:number;completedDates:string[];nextReminder:{date:string;at:number}|null}
 export type CalendarNotice = CalendarTarget & {id:string;eventId:string;title:string;notes:string;date:string;time:string|null;timezone:string;dueAt:number;deliveredAt:number;dismissedAt?:number}
-export type CalendarSnapshot = {events:CalendarEvent[];notices:CalendarNotice[]}
+export type CalendarSnapshot = {events:CalendarEvent[];notices:CalendarNotice[];shared?:{canEdit:boolean;connected:boolean;pending:boolean}}
 
 export function calendarValidDate(value:unknown):value is string {
  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||value<'1900-01-01'||value>'2199-12-31')return false

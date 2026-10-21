@@ -1,6 +1,6 @@
 import {afterEach,it,expect} from 'vitest'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
-import {calendarToolEditorPosition,calendarToolAgenda} from '../scripts/lib/calendar-tool-client.mjs'
+import {calendarToolEditorPosition,calendarToolAgenda,calendarToolSpec} from '../scripts/lib/calendar-tool-client.mjs'
 let f
 afterEach(async()=>{await f?.dispose();f=undefined})
 it('creates the calendar from the library, saves inline events, completes and edits them, and localizes live',async()=>{
@@ -202,4 +202,77 @@ it('keeps keyboard End on the last supported date and disables navigation beyond
  await f.event('keydown',f.document.activeElement,{key:'Enter'})
  expect(trigger.dataset.calendarValue).toBe('2199-12-31')
  expect(f.document.querySelector('.ew-calendar-picker')).toBeNull()
+})
+
+it('preserves validated per-event shared fields through calendar canonicalization',()=>{
+ const event={id:'event-a',title:'共享会议',date:'2026-10-21',time:null,timezone:'Asia/Shanghai',notes:'',repeat:'none',reminderMinutes:null,createdAt:1,updatedAt:1,completed:{}}
+ const spec={version:1,type:'calendar-tool',title:'日历','calendarEvent:event-a':event}
+ expect(calendarToolSpec(spec)).toEqual(spec)
+ expect(calendarToolSpec({...spec,privateSession:'local'})).toBeNull()
+ expect(calendarToolSpec({...spec,'calendarEvent:event-a':{...event,sessionId:'private'}})).toBeNull()
+ expect(calendarToolSpec({...spec,'calendarEvent:event-a':{...event,date:'2026-02-30'}})).toBeNull()
+})
+
+it('lets shared editors create calendars, retains remote events through geometry updates and shows sync status',async()=>{
+ let events=[],listeners=[],shared={canEdit:true,connected:true,pending:true}
+ const boardView={permissions:{read:true,edit:true,execute:true}}
+ f=await financialClientFixture({researchBoards:{isSharedSession:()=>true},calendarTool:{request:async v=>{if(v.action==='save'){events=[{...v.input,id:'event-a',createdAt:1,updatedAt:1,completedDates:[],nextReminder:null}];return events[0]}return {events,notices:[],shared}},subscribe:l=>{listeners.push(l);return()=>listeners=listeners.filter(x=>x!==l)}}},{boardView})
+ await f.event('click',f.document.querySelector('[data-financial-library]'))
+ const item=f.document.querySelector('[data-financial-place=calendar]');expect(item.disabled).toBe(false);await f.event('click',item)
+ const node=f.workspace.getSnapshot().artifacts.find(n=>n.containerSpec.type==='calendar-tool');expect(node).toBeTruthy()
+ expect(f.host.querySelector('[data-calendar-add]').disabled).toBe(false)
+ await f.event('click',f.host.querySelector('[data-calendar-add]'))
+ const editor=f.document.querySelector('.ew-calendar-editor');expect(editor.querySelector('[name=reminder]').disabled).toBe(true);expect(editor.textContent).toContain('共享日历暂不支持提醒')
+ await f.input(editor.querySelector('[name=title]'),'共享会议');await f.event('submit',editor)
+ expect(f.host.querySelector('.ew-calendar-event-title').textContent).toBe('共享会议')
+ expect(f.host.querySelector('.ew-calendar-footer').textContent).toContain('待同步');expect(f.host.querySelector('.ew-calendar-footer').textContent).not.toContain('本机保存')
+ const stored={id:'event-a',title:'远端日程',date:events[0].date,time:null,timezone:'Asia/Shanghai',notes:'',repeat:'none',reminderMinutes:null,createdAt:1,updatedAt:1,completed:{}}
+ await f.act(async()=>f.workspace.applyRemoteCanvas({files:[],artifacts:[{...node,containerSpec:{...node.containerSpec,'calendarEvent:event-a':stored}}]}))
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec['calendarEvent:event-a']).toEqual(stored)
+ await f.act(async()=>{f.workspace.applyPointerGeometry([{...f.workspace.getSnapshot().artifacts[0],x:100,y:70,width:500,height:400}]);f.workspace.persist();f.workspace.renameNode(node.id,'团队日历');f.workspace.organizeCanvas()})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec['calendarEvent:event-a']).toEqual(stored)
+ shared={canEdit:false,connected:true,pending:false};events=[{...events[0],title:'远端日程'}]
+ await f.act(async()=>{listeners.forEach(l=>l({kind:'changed',sessionId:'financial-test'}));await new Promise(r=>setTimeout(r,20))})
+ expect(f.host.querySelector('.ew-calendar-event-title').textContent).toBe('远端日程');expect(f.host.querySelector('[data-calendar-add]').disabled).toBe(true)
+})
+
+it('retains an editor draft on shared save and reload failure',async()=>{
+ let fail=false,listener
+ f=await financialClientFixture({researchBoards:{isSharedSession:()=>true},calendarTool:{request:async v=>{if(fail)throw Error('共享保存失败');return {events:[],notices:[],shared:{canEdit:true,connected:true,pending:false}}},subscribe:l=>{listener=l;return()=>{}}}},{boardView:{permissions:{read:true,edit:true,execute:true}}})
+ await f.act(async()=>f.workspace.createCalendarTool())
+ await f.event('click',f.host.querySelector('[data-calendar-add]'));let editor=f.document.querySelector('.ew-calendar-editor');await f.input(editor.querySelector('[name=title]'),'不可丢失的草稿');fail=true
+ await f.event('submit',editor);expect(editor.querySelector('[name=title]').value).toBe('不可丢失的草稿');expect(editor.querySelector('[role=alert]').textContent).toContain('共享保存失败')
+ await f.act(async()=>{listener({kind:'changed'});await new Promise(r=>setTimeout(r,20))})
+ expect(f.document.querySelector('.ew-calendar-editor [name=title]').value).toBe('不可丢失的草稿')
+ expect(f.document.querySelector('.ew-calendar-editor [name=title]').readOnly).toBe(true)
+ expect(f.document.querySelector('.ew-calendar-editor [type=submit]')).toBeNull()
+ fail=false;await f.act(async()=>{listener({kind:'changed'});await new Promise(r=>setTimeout(r,20))})
+ expect(f.document.querySelector('.ew-calendar-editor [name=title]').value).toBe('不可丢失的草稿')
+ expect(f.document.querySelector('.ew-calendar-editor [name=title]').readOnly).toBe(false)
+})
+
+it.each([
+ {name:'viewer',edit:false,connected:true},
+ {name:'offline editor',edit:true,connected:false}
+])('opens full read-only event details for a compact shared $name without mutation requests',async({edit,connected})=>{
+ const title='共享研究会议完整标题与准备要求'.repeat(8),notes=('会议背景与材料清单。\n').repeat(120)+'末尾地点：纽约会议室；请携带全部资料。'
+ const event={id:'readonly-event',title,date:'2026-01-01',time:'15:45',timezone:'America/New_York',notes,repeat:'daily',reminderMinutes:null,completedDates:[],nextReminder:null},calls=[]
+ f=await financialClientFixture({researchBoards:{isSharedSession:()=>true},calendarTool:{request:async v=>{calls.push(v);return {events:[event],notices:[],shared:{canEdit:false,connected,pending:false}}},subscribe:()=>()=>{}}},{boardView:{permissions:{read:true,edit,execute:false}}})
+ const node={id:'readonly-calendar',messageId:'readonly-calendar',kind:'generated-container',title:'日历',excerpt:'日历',containerSpec:{version:1,type:'calendar-tool',title:'日历'},containerPrompt:'共享日历工具',generationStatus:'completed',generationLastSeq:0,refreshMinutes:0,x:300,y:200,width:300,height:200,sizeMode:'manual'}
+ await f.act(async()=>f.workspace.applyRemoteCanvas({files:[],artifacts:[node]}))
+ expect(f.host.querySelector('[data-calendar-compact]')).toBeTruthy()
+ const open=f.host.querySelector('.ew-calendar-event-title');expect(open.disabled).toBe(false)
+ expect(f.host.querySelector('[data-calendar-complete]').disabled).toBe(true)
+ expect(f.host.querySelector('[data-calendar-add]').disabled).toBe(true)
+ await f.event('click',open)
+ const details=f.document.querySelector('.ew-calendar-editor[role=dialog]');expect(details).toBeTruthy()
+ expect(details.getAttribute('aria-label')).toBe('事项详情')
+ expect(details.querySelector('[data-calendar-detail=title]').textContent).toBe(title)
+ expect(details.querySelector('[data-calendar-detail=notes]').textContent).toBe(notes)
+ expect(details.textContent).toContain('2026-01-01');expect(details.textContent).toContain('15:45');expect(details.textContent).toContain('America/New_York');expect(details.textContent).toContain('每天')
+ expect(details.querySelector('input,textarea,select,[type=submit],.ew-calendar-danger')).toBeNull()
+ await f.event('submit',details);await f.event('click',f.host.querySelector('[data-calendar-complete]'))
+ expect(calls.filter(v=>['save','delete','complete'].includes(v.action))).toEqual([])
+ await f.event('click',details.querySelector('[data-calendar-cancel]'))
+ expect(f.document.querySelector('.ew-calendar-editor')).toBeNull()
 })

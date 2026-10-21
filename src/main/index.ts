@@ -1,6 +1,7 @@
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import {installCalendarService} from './calendar/calendar-service'
+import {SharedCalendarStore} from './calendar/shared-calendar-store'
 import {installComponentLibrary} from './state/component-library'
 import { createComponentDataService } from './component-data/service'
 import { legacyConnectionSources } from './integrations/legacy-connections'
@@ -1493,7 +1494,7 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
   registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openClientLink(mainWindow,url))
   noteComponentLibrary=await installComponentLibrary({ipcMain,getWindow:()=>mainWindow,file:join(app.getPath('userData'),'component-library.json'),readCanvas:id=>researchBoardsService?.isSharedSession(id)?researchBoardsService.readSharedCanvas(id):readStoredResearchCanvas(researchCanvasStorage,id),getBinding:(sessionId,nodeId)=>componentDataService?.engine.list(sessionId).find((b:any)=>b.nodeId===nodeId),owner:integrationOwner})
-  await installCalendarService({getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>{
+  await installCalendarService({shared:researchBoardsService?new SharedCalendarStore(researchBoardsService):undefined,getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>{
     if(readStoredResearchCanvas(researchCanvasStorage,target.sessionId).artifacts.some((n:any)=>n.id===target.nodeId&&n.containerSpec?.type==='calendar-tool'))return true
     try{return canReadNoteSession(target.sessionId)&&findNoteComponent(calendarNotes.load(integrationOwner()||'local',target.sessionId).saved.blocks,target.nodeId)?.containerSpec?.type==='calendar-tool'}catch{return false}
   }})

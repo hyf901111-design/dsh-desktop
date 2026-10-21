@@ -1,10 +1,11 @@
 import {app,Notification,powerMonitor,type BrowserWindow,ipcMain} from 'electron'
 import {join} from 'node:path'
 import {CalendarStore} from './calendar-store'
+import type {SharedCalendarStore} from './shared-calendar-store'
 import {validateCalendarTarget,type CalendarTarget,type CalendarNotice} from '../../shared/calendar-tool'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
 
-export async function installCalendarService(options:{getWindow:()=>BrowserWindow|undefined;ensureWindow:()=>Promise<void>;exists:(target:CalendarTarget)=>boolean;isShared:(sessionId:string)=>boolean;english:()=>boolean}){
+export async function installCalendarService(options:{getWindow:()=>BrowserWindow|undefined;ensureWindow:()=>Promise<void>;exists:(target:CalendarTarget)=>boolean;isShared:(sessionId:string)=>boolean;english:()=>boolean;shared?:Pick<SharedCalendarStore,'request'|'subscribe'>}){
  const send=(value:unknown)=>{const w=options.getWindow();if(w&&!w.isDestroyed())w.webContents.send('research:calendar:event',value)}
  const store=new CalendarStore(join(app.getPath('userData'),'calendar-events.json'),Date.now,()=>send({kind:'changed'}))
  let loadError=false
@@ -12,12 +13,12 @@ export async function installCalendarService(options:{getWindow:()=>BrowserWindo
  let pendingOpen:{kind:'open';sessionId:string;nodeId:string;date:string}|null=null
  try{await store.load()}catch(e){loadError=true;console.error('[calendar] original data preserved',e)}
  registerTrustedMainWindowHandler(ipcMain,'research:calendar:request',options.getWindow,async(_event,v:any)=>{
-  if(loadError)throw Error('日历数据读取失败，原文件已保留')
   if(!v||typeof v!=='object')throw Error('日历操作无效')
   if(v.action==='pending')return pendingOpen
-  if(v.action==='session'){if(typeof v.sessionId!=='string'||!v.sessionId||v.sessionId.length>200||options.isShared(v.sessionId))throw Error('日历会话无效');return {notices:store.list({sessionId:v.sessionId}).notices.filter(n=>options.exists(n))}}
+  if(v.action==='session'){if(typeof v.sessionId!=='string'||!v.sessionId||v.sessionId.length>200)throw Error('日历会话无效');if(options.isShared(v.sessionId)){if(!options.shared)throw Error('共享日历服务不可用');return options.shared.request(v)};if(loadError)throw Error('日历数据读取失败，原文件已保留');return {notices:store.list({sessionId:v.sessionId}).notices.filter(n=>options.exists(n))}}
   const target=validateCalendarTarget(v)
-  if(options.isShared(target.sessionId))throw Error('个人日历暂不支持协作看板')
+  if(options.isShared(target.sessionId)){if(!options.shared)throw Error('共享日历服务不可用');return options.shared.request(v)}
+  if(loadError)throw Error('日历数据读取失败，原文件已保留')
   if(!options.exists(target))throw Error('日历组件不存在')
   if(v.action==='opened'){if(pendingOpen?.sessionId===target.sessionId&&pendingOpen.nodeId===target.nodeId)pendingOpen=null;return {ok:true}}
   if(v.action==='list')return store.list(target)
@@ -28,6 +29,7 @@ export async function installCalendarService(options:{getWindow:()=>BrowserWindo
   if(v.action==='dismiss')return store.dismiss(target.sessionId,v.id)
   throw Error('未知日历操作')
  })
+ const stopShared=options.shared?.subscribe(value=>{if(value.type==='board'||value.type==='access')send({kind:'changed',sessionId:value.localSessionId});else if(value.type==='state')send({kind:'changed'})})
  const notify=(n:CalendarNotice)=>{
   send({kind:'reminder',sessionId:n.sessionId,nodeId:n.nodeId,date:n.date})
   if(!Notification.isSupported())return
@@ -41,6 +43,6 @@ export async function installCalendarService(options:{getWindow:()=>BrowserWindo
  }
  const tick=()=>{if(!loadError)void store.tick(t=>!options.isShared(t.sessionId)&&options.exists(t),notify).catch(e=>console.warn('[calendar] reminder check failed',e))}
  const timer=setInterval(tick,5000);timer.unref();powerMonitor.on('resume',tick);tick()
- app.once('before-quit',()=>{clearInterval(timer);powerMonitor.removeListener('resume',tick);notifications.clear()})
+ app.once('before-quit',()=>{clearInterval(timer);powerMonitor.removeListener('resume',tick);notifications.clear();stopShared?.()})
  return store
 }

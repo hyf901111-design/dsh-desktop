@@ -34,7 +34,22 @@ it('rejects shared or absent calendars without saving personal data into them',a
  mock.directory=await mkdtemp(join(tmpdir(),'ework-calendar-permissions-'))
  const window:any={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:1},send:vi.fn()}},store=await installCalendarService({getWindow:()=>window,ensureWindow:async()=>{},exists:t=>t.nodeId==='calendar',isShared:id=>id==='shared',english:()=>false})
  const request=mock.handlers.get('research:calendar:request')!,trusted={sender:window.webContents,senderFrame:window.webContents.mainFrame}
- await expect(request(trusted,{action:'list',sessionId:'shared',nodeId:'calendar'})).rejects.toThrow('协作')
+ await expect(request(trusted,{action:'list',sessionId:'shared',nodeId:'calendar'})).rejects.toThrow('共享日历服务不可用')
  await expect(request(trusted,{action:'list',sessionId:'session',nodeId:'missing'})).rejects.toThrow('不存在')
  expect(store.list().events).toHaveLength(0)
+})
+
+// A shared board must never fall back to the owner's personal calendar file.
+it('routes shared calendars independently of private data and reloads on remote board changes',async()=>{
+ mock.directory=await mkdtemp(join(tmpdir(),'ework-calendar-shared-'))
+ let listener:Function|undefined
+ const sent:any[]=[],snapshot={events:[],notices:[],shared:{canEdit:true,connected:true,pending:false}}
+ const window:any={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:1},send:(_n:string,v:any)=>sent.push(v)}}
+ const shared={request:async(v:any)=>v.action==='list'?snapshot:v.action==='session'?{notices:[]}:{ok:true},subscribe:(fn:Function)=>{listener=fn;return()=>{listener=undefined}}}
+ const store=await installCalendarService({getWindow:()=>window,ensureWindow:async()=>{},exists:()=>false,isShared:(id:string)=>id==='shared',english:()=>false,shared} as any)
+ const request=mock.handlers.get('research:calendar:request')!,trusted={sender:window.webContents,senderFrame:window.webContents.mainFrame}
+ await expect(request(trusted,{action:'list',sessionId:'shared',nodeId:'calendar'})).resolves.toEqual(snapshot)
+ await expect(request(trusted,{action:'session',sessionId:'shared'})).resolves.toEqual({notices:[]})
+ listener?.({type:'board',localSessionId:'shared'});expect(sent.at(-1)).toMatchObject({kind:'changed',sessionId:'shared'})
+ expect(store.list()).toEqual({events:[],notices:[]})
 })
