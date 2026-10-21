@@ -11,7 +11,7 @@ import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
-import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, retainVerifiedFeedItems, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
+import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, articleTimelineSourceProven, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, retainVerifiedFeedItems, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import {compactStatementEvidence,truncatedStatementEvidence} from './statement-evidence.js'
 import {statementTableEvidenceIssue,statementTableRepairEvidence,statementTableRequiredData} from './statement-table-evidence.js'
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
@@ -1607,8 +1607,8 @@ export class ResearchTaskRuntime {
         if(articleCandidate.length===1&&articleTimelineRequired(articleCandidate[0],feedOptions)){
           articleTimeline=true
           if(!originalArticleTimeline&&Array.isArray(articleCandidate[0].items)&&articleCandidate[0].items.length<=60)originalArticleTimeline=articleCandidate[0]
-          if(attempt===1)restoredArticleScope=restoreArticleTimelineScope(deliveredText,originalArticleTimeline,feedOptions,item=>!componentFeedEvidenceIssue(JSON.stringify({...originalArticleTimeline,items:[item]}),sourceRecords,feedOptions))
-          if(restoredArticleScope)deliveredText=restoredArticleScope
+          if(attempt===1)restoredArticleScope=restoreArticleTimelineScope(deliveredText,originalArticleTimeline,feedOptions,item=>articleTimelineSourceProven(originalArticleTimeline,item,sourceRecords,feedOptions))
+          if(restoredArticleScope)deliveredText=restoredArticleScope.text
         }
         // Capture the original table before any validator can spend the sole
         // repair attempt (including source/binding/operating failures).
@@ -1626,10 +1626,11 @@ export class ResearchTaskRuntime {
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
         const restoredSnapshot=task.kind==='container'&&(restoreSnapshotMarketHistory(deliveredText,sourceRecords,historyOptions)||(!bindingRequested&&restoreSnapshotStatementGrowth(deliveredText,sourceRecords))||restoreSnapshotFeedHeadlines(deliveredText,sourceRecords))
         if(restoredSnapshot)deliveredText=recoveryText=restoredSnapshot
-        const retainedFeed=attempt===1&&task.kind==='container'&&workbenchPanelFormat(task.prompt)?retainVerifiedFeedItems(deliveredText,sourceRecords,feedOptions):undefined
+        const retainedFeed=attempt===1&&task.kind==='container'&&workbenchPanelFormat(task.prompt)?retainVerifiedFeedItems(deliveredText,sourceRecords,{...feedOptions,articleScopeGaps:restoredArticleScope?.gaps}):undefined
         if(retainedFeed)deliveredText=recoveryText=retainedFeed
         if (structured && !articleTimeline) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
+          if(restoredArticleScope?.gaps.length&&!retainedFeed)throw new ResearchTaskError('GENERATION_FAILED','修复省略的研究范围缺口无法完整保留，不能以部分记录和旧覆盖声明伪装成功。')
           // A retrieval handoff is not a failed model artifact. Preserve its
           // evidence and enter the existing single synthesis attempt directly;
           // running source validation on an absent draft would reopen research.

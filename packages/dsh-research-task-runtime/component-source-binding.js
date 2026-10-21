@@ -215,7 +215,7 @@ export function restoreSnapshotFeedHeadlines(text,records) {
 function feedSnapshotSources(records) {
  return records.filter(record=>record.purpose!=='discovery').map(record=>record.snapshotRows?record:{...record,snapshotRows:record.response&&componentMappableSource(record)?webSnapshotRows(JSON.stringify(record.response)):[]})
 }
-function articleTimelineItemIssue(data,item,sources,options) {
+function articleTimelineIdentityIssue(item,sources,options) {
  const date=articleTimelineDay(item?.time),url=snapshotUrl(item?.url),title=snapshotTitle(item?.title)
  if(!date||!url||!title)return '缺少可核验的明确原文日期、标题或链接'
  const matches=sources.flatMap(record=>(record.snapshotRows??[]).filter(row=>snapshotLinkMatches(url,record,row)).map(row=>({record,row})))
@@ -237,7 +237,17 @@ function articleTimelineItemIssue(data,item,sources,options) {
   return originalCode[2]===objectCode[2]&&(!a||!b||a===b)
  })
  if([item.actor,item.object].some((value,index)=>value!==undefined&&(typeof value!=='string'||!snapshotTitle(value)||!identity.includes(snapshotTitle(value))&&!(index===1&&knownPair))))return '展示公司或研究对象未对应同条已取得原文身份'
- return articleTimelineWindowIssue(data,item,options)
+ return null
+}
+function articleTimelineItemIssue(data,item,sources,options) {
+ return articleTimelineIdentityIssue(item,sources,options)||articleTimelineWindowIssue(data,item,options)
+}
+// Source identity and window eligibility are separate. This recovery predicate
+// never grants acceptance: restored records still pass the full feed gate.
+export function articleTimelineSourceProven(data,item,records,options={}) {
+ if(!articleTimelineRequired(data,options))return false
+ if(announcementItemRequired(data,item,records,options))return !announcementEvidenceIssue({...data,range:undefined,items:[item]},records,{panelRequest:'公告'})
+ return !articleTimelineIdentityIssue(item,feedSnapshotSources(records),options)
 }
 // A feed is accepted per record. A valid quote or one valid headline cannot
 // establish the identity of another article in the same generated component.
@@ -271,26 +281,29 @@ export function retainVerifiedFeedItems(text,records,options={}) {
  const articleTimeline=articleTimelineRequired(data,options)
  if(data.type==='timeline'&&!announcements&&!articleTimeline)return
  const kept=[],gaps=[],sources=articleTimeline?feedSnapshotSources(records):[]
+ const scopeGaps=articleTimeline&&Array.isArray(options.articleScopeGaps)?options.articleScopeGaps:[]
  for(const [index,item] of data.items.entries()){
   if(!componentFeedEvidenceIssue(JSON.stringify({...data,items:[item]}),records,options)){kept.push(item);continue}
   if(typeof item?.title!=='string'||!item.title.trim()||item.title.length>256||item.url!==undefined&&(typeof item.url!=='string'||item.url.length>2048)||item.date!==undefined&&(typeof item.date!=='string'||item.date.length>100))return
   if(articleTimeline&&!announcementItemRequired(data,item,records,options)){
    if(item.time!==undefined&&item.time!==null&&(typeof item.time!=='string'||item.time.length>256))return
    const reason=articleTimelineItemIssue(data,item,sources,options)
-   gaps.push(`第${index+1}条（未计入有效记录）对象：${[item.actor,item.object].filter(Boolean).join(' · ')||'见原始标题'}；标题（待核验）：${item.title}；原日期：${item.time??'未取得'}；原链接：${item.url??'未取得'}。原因：${reason}`);continue
+   const identityLabel=articleTimelineIdentityIssue(item,sources,options)?'标题（待核验）':'原文标题（身份已核验，窗口外背景）'
+   gaps.push(`第${index+1}条（未计入有效记录）对象：${[item.actor,item.object].filter(Boolean).join(' · ')||'见原始标题'}；${identityLabel}：${item.title}；原日期：${item.time??'未取得'}；原链接：${item.url??'未取得'}。原因：${reason}`);continue
   }
   if(announcementItemRequired(data,item,records,options)){
    const reason=announcementEvidenceIssue({...data,items:[item]},records,options)
-   gaps.push(`第${index+1}条 ${item.object??item.actor??item.publisher??'公告公司见原始标题'} ${data.type==='timeline'?item.time??'公告日期未知':item.date??'公告日期未知'}：${item.title}。原因：${reason?.includes('的公告日期未知或超出明确日期窗口')?'超出明确日期窗口或公告日期未知':'同条来源身份或日期未核验'}。`);continue
+   gaps.push(`第${index+1}条 ${item.object??item.actor??item.publisher??'公告公司见原始标题'} ${data.type==='timeline'?item.time??'公告日期未知':item.date??'公告日期未知'}：${item.title}。${articleTimeline?`原链接：${item.url??'未取得'}。`:''}原因：${reason?.includes('的公告日期未知或超出明确日期窗口')?'超出明确日期窗口或公告日期未知':'同条来源身份或日期未核验'}。`);continue
   }
   const reason=!snapshotDate(item.date)||!snapshotUrl(item.url)?'缺少可核验日期或原文链接':'标题、日期与原文链接未能对应同一条已取得记录'
   gaps.push(`第${index+1}条：${item.title}；日期：${item.date??'未取得'}；链接：${item.url??'未取得'}。原因：${reason}。`)
  }
- if(!kept.length||!gaps.length)return
+ if(!kept.length||!gaps.length&&!scopeGaps.length)return
  const prior=(announcements||articleTimeline)&&data.note?`原模型说明（其中计数与覆盖声明已失效，仅保留原研究范围和缺口上下文）：${data.note}`:data.note
- const staleHeading=articleTimeline&&/\d+\s*条|完整覆盖|全部/u.test(data.title)
+ const staleHeading=articleTimeline&&/(?:\d+|[零一二两三四五六七八九十百]+)\s*(?:条|篇|项)|完整覆盖|全部/u.test(data.title)
  const metadata=articleTimeline?[staleHeading?`原标题（计数与覆盖声明已失效）：${data.title}`:null,data.asOf?`原时点与来源声明（覆盖声明未经逐条核验，以本次核验为准）：${data.asOf}`:null].filter(Boolean).join('\n'):null
- const note=[metadata,prior,`宿主原文核验：展示 ${kept.length} 条已核验记录。以下 ${gaps.length} 条未通过原文核验，未作为已验证资讯或判断依据；原研究范围的缺失项继续保留：`,...gaps].filter(Boolean).join('\n')
+ const coverage=articleTimeline?(gaps.length?`以下 ${gaps.length} 条未计入有效资讯或判断依据；原研究范围的缺失项和背景继续保留：`:'修复省略的候选不计入有效记录；原研究范围的缺口继续保留：'):`以下 ${gaps.length} 条未通过原文核验，未作为已验证资讯或判断依据；原研究范围的缺失项继续保留：`
+ const note=[metadata,prior,`宿主原文核验：展示 ${kept.length} 条已核验记录。${coverage}`,...gaps,...scopeGaps].filter(Boolean).join('\n')
  const result=JSON.stringify({...data,...(articleTimeline?{...(staleHeading?{title:'文章时间线（部分已核验）'}:{}),asOf:'已核验原文静态快照；仅计入窗口内有效条目，日期见原记录'}:{}),items:kept,note})
  if(componentFeedEvidenceIssue(result,records,options))return
  try{if(acceptArtifactOutput(result))return result}catch{}
