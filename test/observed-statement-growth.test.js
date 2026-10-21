@@ -11,6 +11,44 @@ const restore=(input=model,sources=[record])=>binding.restoreSnapshotStatementGr
 
 const inlineNative=()=>({version:1,type:'market',variant:'table',title:'财务与经营对比',columns:['公司（代码）','最新报告期（披露日）','营业收入','归母净利润','收入同比（计算值）','归母净利同比（计算值）','经营数据（另行披露口径）'],rows:[['华能国际 600011.SH','2026年半年报（2026-08-19披露，合并口径）','1,069.09亿元（106,909,025,871元）','65.86亿元（6,585,729,326元）','-4.57%（上年同期1,120.32亿元）','-28.91%（上年同期92.62亿元）','2026H1境内上网电量1,995.78亿千瓦时；截至2026-06-30可控装机158,779兆瓦（2026-07-16公告），2026-08-19补充经营披露']],note:'财务为2026年半年报，经营披露日期另行保留。'})
 
+const longNative=()=>({version:1,type:'market',variant:'table',asOf:'2026-10-21',title:'财务与经营',columns:['公司（代码）','指标','数值','同比','报告期 / 披露日期','来源与口径'],rows:[
+ ['华能国际（600011.SH）','营业收入','1,069.09亿元','-4.57%（计算值）','2026年半年报（2026-06-30），披露2026-08-19','通联合并利润表，合并口径，人民币'],
+ ['华能国际（600011.SH）','归母净利润','65.86亿元','-28.90%（计算值，基期2025H1为92.62亿元）','2026年半年报（2026-06-30），披露2026-08-19','同上；基本EPS 0.35元'],
+ ['华能国际（600011.SH）','上网电量','1,995.78亿千瓦时','-2.97%（公司披露）','2026年上半年；2026-07-16发布','公司经营公告']
+],note:'保留经营数据的单独日期、原文口径和缺失说明。'})
+const withParent=()=>({...record,response:{retCode:1,data:[...record.response.data,{...report,mergedFlag:'0',revenue:11867042695,nIncomeAttrP:8085574406},{...previous,mergedFlag:'0',revenue:12652570323,nIncomeAttrP:3648679963}]}})
+
+it('corrects the observed long-form metric rows and distinguishes same-date parent and consolidated statements by their unchanged amounts',()=>{
+ const input=longNative(),source=withParent(),before=JSON.stringify({input,source}),text=restore(input,[source])
+ expect(text).toBeTypeOf('string');const corrected=JSON.parse(text)
+ expect(corrected.rows[1][3]).toBe('-28.89%（计算值，基期2025H1为92.62亿元）')
+ expect(corrected.rows[0]).toEqual(input.rows[0]);expect(corrected.rows[2]).toEqual(input.rows[2])
+ expect(corrected.rows[1].filter((_,i)=>i!==3)).toEqual(input.rows[1].filter((_,i)=>i!==3))
+ expect(corrected.note).toContain('9261884951');expect(JSON.stringify({input,source})).toBe(before)
+ expect(restore(corrected,[source])).toBeUndefined()
+})
+
+it('still corrects the wide layout when an observed response includes both parent and consolidated rows',()=>{
+ expect(JSON.parse(restore(model,[withParent()])).rows[0][5]).toContain('-28.89%')
+})
+
+it.each(['wrong-disclosure','swapped-date-labels','wrong-labelled-period','wrong-labelled-disclosure','date-range','wrong-amount','unknown-unit','reported','ambiguous-value','ambiguous-metric','ambiguous-statement','conflicting-scope'])('keeps ambiguous or conflicting long-form financial evidence untouched: %s',mode=>{
+ const input=longNative(),source=withParent();input.rows=[input.rows[1]]
+ if(mode==='wrong-disclosure')input.rows[0][4]='2026年半年报（2026-06-30），披露2026-08-20'
+ if(mode==='swapped-date-labels')input.rows[0][4]='2026年半年报（2026-08-19），披露2026-06-30'
+ if(mode==='wrong-labelled-period')input.rows[0][4]='2026年半年报，截至2026-08-19'
+ if(mode==='wrong-labelled-disclosure')input.rows[0][4]='2026年半年报，披露2026-06-30'
+ if(mode==='date-range')input.rows[0][4]='2026-06-30 至 2026-08-19'
+ if(mode==='wrong-amount')input.rows[0][2]='66.86亿元'
+ if(mode==='unknown-unit')input.rows[0][2]='65.86'
+ if(mode==='reported')input.rows[0][3]='-28.90%（公司披露）'
+ if(mode==='ambiguous-value'){input.columns.push('金额');input.rows[0].push('65.86亿元')}
+ if(mode==='ambiguous-metric'){input.columns.push('财务指标');input.rows[0].push('归母净利润')}
+ if(mode==='ambiguous-statement')source.response.data[2].nIncomeAttrP=report.nIncomeAttrP
+ if(mode==='conflicting-scope')input.rows[0][5]='母公司利润表，非合并口径'
+ expect(restore(input,[source])).toBeUndefined()
+})
+
 it('corrects the actual native period-label and inline-unit layout without treating distinct operating dates as statement dates',()=>{
  const input=inlineNative(),before=JSON.stringify(input),text=restore(input)
  expect(text).toBeTypeOf('string')

@@ -41,6 +41,18 @@ function financialAmountMatches(value,raw,header){
 const metricName=header=>header.replaceAll(/\s/gu,'').replace(/[（(](?:亿元|万元|元)[）)]$/u,'')
 const metrics=[{names:['营业收入','营收','收入'],field:'revenue'},{names:['归母净利润','归母净利','归母'],field:'nIncomeAttrP'}]
 const securityCodes=value=>typeof value==='string'?value.match(/(?<![A-Z0-9])\d{6}\.(?:SH|SZ|BJ)(?![A-Z0-9])/gu)??[]:[]
+function longMetric(row,columns,metric){
+ const labels=columns.flatMap((column,i)=>/^(?:指标|财务指标|项目|科目)$/u.test(column)?[i]:[])
+ return labels.length===1&&typeof row[labels[0]]==='string'&&metric.names.includes(metricName(row[labels[0]]))
+}
+function amountColumns(row,columns,metric){
+ return columns.flatMap((column,i)=>metric.names.includes(metricName(column))||longMetric(row,columns,metric)&&/^(?:数值|金额|本期(?:数值|金额|值)?)(?:[（(](?:亿元|万元|元)[）)])?$/u.test(column)?[i]:[])
+}
+function growthColumn(row,columns,metric){
+ const specific=new RegExp(`^(?:${metric.names.join('|')})同比(?:增速|增长率)?(?:[（(]计算值[）)])?$`,'u')
+ const found=columns.flatMap((column,i)=>specific.test(column)||longMetric(row,columns,metric)&&/^同比(?:增速|增长率)?(?:[（(]计算值[）)])?$/u.test(column)?[i]:[])
+ return found.length===1?found[0]:-1
+}
 function matchingPairs(records,code,date){
  const [ticker,exchange]=code.split('.'),exchangeCD={SH:'XSHG',SZ:'XSHE',BJ:'XBEI'}[exchange],pairs=new Map()
  for(const source of records??[]){
@@ -56,12 +68,12 @@ function matchingPairs(records,code,date){
    pairs.set(key,pair)
   }
  }
- return pairs.size===1?[...pairs.values()][0]:undefined
+ return [...pairs.values()]
 }
 // Presentation headers are not evidence. Locate the single full security code
 // and source report date across the row, then reject any other displayed date
-// except that same disclosure's publication date. Two dates in one cell remain
-// ambiguous (a range or a different comparative period), never first-date wins.
+// except that same disclosure's publication date. A combined period/disclosure
+// field needs an explicitly labelled publication date; ranges remain ambiguous.
 function rowCorrespondence(row,records,columns){
  const codes=row.flatMap(securityCodes)
  // Financial and operating disclosures can legitimately have different dates.
@@ -69,7 +81,12 @@ function rowCorrespondence(row,records,columns){
  // ambiguity check when presentation columns do not identify that field.
  const periodColumns=columns.flatMap((column,i)=>!/经营|来源/u.test(column)&&/报告期|会计期间|财报期间|^期间$/u.test(column)?[i]:[])
  const timingColumns=periodColumns.length?[...new Set([...periodColumns,...columns.flatMap((column,i)=>/^(?:财报|报告)?(?:披露日期|披露日|发布日期)$/u.test(column)?[i]:[])])]:row.map((_,i)=>i)
- const dateCells=timingColumns.map(i=>typeof row[i]==='string'?row[i].match(/\d{4}-\d{2}-\d{2}/gu)??[]:[]),declared=[]
+ const dateCells=timingColumns.map(i=>typeof row[i]==='string'?row[i].match(/\d{4}-\d{2}-\d{2}/gu)??[]:[]),declared=[],publications=[],periods=[]
+ for(const i of timingColumns){
+  if(typeof row[i]!=='string')continue
+  for(const match of row[i].matchAll(/(?:披露|发布)(?:日期|日)?\s*[:：]?\s*(\d{4}-\d{2}-\d{2})|(\d{4}-\d{2}-\d{2})\s*(?:披露|发布)/gu))publications.push(match[1]??match[2])
+  for(const match of row[i].matchAll(/(?:截至|截止|报告期|期末)\s*[:：]?\s*(\d{4}-\d{2}-\d{2})/gu))periods.push(match[1])
+ }
  for(const i of periodColumns){
   if(typeof row[i]!=='string')continue
   // A stated calendar reporting period is exact evidence, never an inference
@@ -77,11 +94,25 @@ function rowCorrespondence(row,records,columns){
   for(const match of row[i].matchAll(/(20\d{2})\s*年?\s*(?:上半年|半年报|半年度(?:报告)?|中报|H1)(?![A-Z0-9])/giu))declared.push({date:match[1]+'-06-30',span:6,type:'S1'})
   for(const match of row[i].matchAll(/(20\d{2})\s*年?\s*(?:年度报告|年报)(?![A-Z0-9])/giu))declared.push({date:match[1]+'-12-31',span:12,type:'A'})
  }
- if(codes.length!==1||dateCells.some(dates=>dates.length>1))return
+ if(codes.length!==1||dateCells.some((dates,index)=>{
+  if(dates.length<=1)return false
+  const column=timingColumns[index],value=row[column],publication=typeof value==='string'?[...value.matchAll(/(?:披露|发布)(?:日期|日)?\s*[:：]?\s*(\d{4}-\d{2}-\d{2})/gu)]:[]
+  return dates.length!==2||!periodColumns.includes(column)||!/披露|发布/u.test(columns[column])||publication.length!==1||!dates.includes(publication[0][1])||/至|到|~|～|—|–/u.test(value)
+ }))return
  const dates=[...new Set(dateCells.flat())]
  if(!dates.length&&!declared.length||dates.some(date=>!iso(date)))return
- const candidates=[...new Set([...dates,...declared.map(period=>period.date)])],pairs=candidates.map(date=>matchingPairs(records,codes[0],date)).filter(Boolean)
- if(pairs.length!==1||dates.some(date=>date!==pairs[0].current.endDate&&date!==pairs[0].current.publishDate)||declared.some(period=>period.date!==pairs[0].current.endDate||period.span!==pairs[0].current.fiscalPeriod||period.type!==pairs[0].current.reportType))return
+ const scope=[...columns,...row].filter(value=>typeof value==='string').join('\n'),parent=/母公司(?:口径|利润表)|非合并(?:口径|利润表)|个别(?:口径|报表)/u.test(scope),merged=/(?<!非)合并(?:口径|利润表)/u.test(scope)
+ if(parent&&merged)return
+ const amounts=metrics.flatMap(metric=>amountColumns(row,columns,metric).map(column=>({metric,column})))
+ const candidates=[...new Set([...dates,...declared.map(period=>period.date)])],pairs=candidates.flatMap(date=>matchingPairs(records,codes[0],date)).filter(pair=>
+  !dates.some(date=>date!==pair.current.endDate&&date!==pair.current.publishDate)&&
+  !publications.some(date=>date!==pair.current.publishDate)&&!periods.some(date=>date!==pair.current.endDate)&&
+  !declared.some(period=>period.date!==pair.current.endDate||period.span!==pair.current.fiscalPeriod||period.type!==pair.current.reportType)&&
+  (!parent&&!merged||pair.current.mergedFlag===(parent?'0':'1'))&&
+  amounts.some(({metric,column})=>financialAmountMatches(row[column],pair.current[metric.field],columns[column])))
+ // Displayed values can distinguish parent/consolidated rows returned together;
+ // identical amounts with different comparative records stay unresolved.
+ if(pairs.length!==1)return
  const identity=row.find(value=>securityCodes(value).length),name=identity.replace(codes[0],'').replace(/[\s()（）/·]/gu,'')
  return {code:codes[0],name,...pairs[0]}
 }
@@ -110,16 +141,16 @@ function computedNarrative(note,facts){
 }
 export function observedStatementGrowth(data,records){
  if(data?.version!==1||!(data.type==='table'||data.type==='market'&&data.variant==='table')||!Array.isArray(data.columns)||data.columns.length>40||!data.columns.every(c=>typeof c==='string')||!Array.isArray(data.rows)||data.rows.length>1000)return
- const find=re=>{const found=data.columns.flatMap((c,i)=>re.test(c)?[i]:[]);return found.length===1?found[0]:-1},facts=[]
+ const facts=[]
  let changed=false
  const rows=data.rows.map(row=>{
   if(!Array.isArray(row)||row.length!==data.columns.length)return row
   const pair=rowCorrespondence(row,records,data.columns);if(!pair)return row
   const output=[...row]
   for(const metric of metrics){
-   const growth=find(new RegExp(`^(?:${metric.names.join('|')})同比(?:增速|增长率)?(?:[（(]计算值[）)])?$`,'u'))
-   const amountColumns=data.columns.flatMap((c,i)=>metric.names.includes(metricName(c))&&financialAmountMatches(row[i],pair.current[metric.field],c)?[i]:[])
-   if(growth<0||amountColumns.length!==1)continue
+   const growth=growthColumn(row,data.columns,metric)
+   const amounts=amountColumns(row,data.columns,metric).filter(i=>financialAmountMatches(row[i],pair.current[metric.field],data.columns[i]))
+   if(growth<0||amounts.length!==1)continue
    const computed=/[（(]计算值[）)]$/u.test(data.columns[growth])||typeof row[growth]==='string'&&/[（(]\s*计算值(?:[，,；;：:\s）)]|$)/u.test(row[growth])
    if(!computed||/披露值|非计算值|未计算/u.test(data.columns[growth]+row[growth]))continue
    const {current,prior,code,name}=pair
@@ -137,7 +168,7 @@ export function observedStatementGrowth(data,records){
  const correctedNote=computedNarrative(data.note,facts)
  if(!changed&&correctedNote===data.note)return
  const changedFacts=facts.filter(fact=>fact.changed)
- const provenance=changedFacts.length?'宿主使用同份利润表、同币种和合并口径的原始金额计算同比，最后保留两位小数。'+changedFacts.map(fact=>fact.text).join(''):''
+ const provenance=changedFacts.length?'宿主使用同份利润表、同币种和相同报表口径的原始金额计算同比，最后保留两位小数。'+changedFacts.map(fact=>fact.text).join(''):''
  const note=[correctedNote,provenance].filter(Boolean).join('\n')
  // Keep the user's source/limitation text intact, including on a long note.
  if(note.length>2000){
