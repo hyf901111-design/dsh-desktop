@@ -20,6 +20,7 @@ import { registerSessionCompletionNotifications } from './session-completion-not
 import { registerScheduledTitle } from './scheduled-title.js'
 import {registerScheduledTaskTool,SCHEDULED_TASK_TOOL} from './scheduled-task-tools.js'
 import { registerNotesAi } from './notes-ai.js'
+import { registerNotesChallenge } from './notes-challenge-runtime.js'
 import { registerNoteSessions } from './notes-session.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
@@ -2775,6 +2776,7 @@ export async function apply(ctx) {
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
     const disposeScheduledTaskTool = registerScheduledTaskTool(ctx)
     const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText})
+    const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     let context
@@ -2790,6 +2792,7 @@ export async function apply(ctx) {
       disposeScheduledTitle()
       disposeScheduledTaskTool()
       disposeNotesAi()
+      disposeNotesChallenge()
       disposeNoteSessions()
       throw error
     }
@@ -2810,6 +2813,7 @@ export async function apply(ctx) {
       disposeScheduledTitle()
       disposeScheduledTaskTool()
       disposeNotesAi()
+      disposeNotesChallenge()
       disposeNoteSessions()
       await runtime.dispose()
     }

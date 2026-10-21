@@ -25,6 +25,7 @@ export function installNotesService(options: {
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   const generations=new Map<string,{owner:string;sessionId:string;cardLocal:boolean}>()
+  const challenges=new Map<string,{owner:string;sessionId:string;controller:AbortController}>()
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
     if (!input || typeof input.sessionId !== 'string' || input.sessionId.length > 256 || !options.canRead(input.sessionId)) throw Error('笔记会话不可用。')
     const owner = options.owner(), session = input.sessionId
@@ -80,6 +81,24 @@ export function installNotesService(options: {
       case 'model': return rpc('session.selectModel', { sessionId: session, provider: input.provider, model: input.model })
       case 'clipboard': return options.clipboard()?.read() ?? { kind: 'empty' }
       case 'stop': {const job=generations.get(input.requestId);if(job?.owner===owner&&job.sessionId===session)active.get(input.requestId)?.abort();return {ok:true}}
+      case 'challenge-stop': {const job=challenges.get(input.requestId);if(job?.owner===owner&&job.sessionId===session)job.controller.abort();return {ok:true}}
+      case 'challenge': {
+        if(typeof input.requestId!=='string'||!input.requestId||input.requestId.length>128||!['review','optimize','reply'].includes(input.action))throw Error('挑战请求无效。')
+        const base=options.runtimeUrl();if(!base)throw Error('检查服务尚未就绪。')
+        // A user action replaces an automatic review in this note. A different
+        // note/account cannot cancel or receive its results.
+        for(const job of challenges.values())if(job.owner===owner&&job.sessionId===session)job.controller.abort()
+        if(challenges.has(input.requestId)||challenges.size>=4)throw Error('请等待当前检查结束。')
+        const controller=new AbortController(),job={owner,sessionId:session,controller};challenges.set(input.requestId,job)
+        try{
+          const url=new URL('/sherlock/notes/challenge',base)
+          const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.any([controller.signal,AbortSignal.timeout(65000)]),body:JSON.stringify({sessionId:session,requestId:input.requestId,action:input.action,level:input.level,title:input.title,blocks:input.blocks,...input.changedIds===undefined?{}:{changedIds:input.changedIds},...input.thread===undefined?{}:{thread:input.thread}})})
+          const result=await response.json()
+          if(!response.ok)throw Error(typeof result.error==='string'?result.error:'本轮检查未完成。')
+          if(controller.signal.aborted||options.owner()!==owner||!options.canRead(session))throw Error('笔记状态已变化，本轮结果未应用。')
+          return result
+        }finally{if(challenges.get(input.requestId)===job)challenges.delete(input.requestId)}
+      }
       case 'render': {
         const spec = parseResearchContainerSpec(input.spec)
         if (!spec) throw Error('研究组件格式无效。')
@@ -91,6 +110,7 @@ export function installNotesService(options: {
         return { html, document:html?buildResearchHtmlPreview(html,spec.title,input.dark?'dark':'light',{workbench:true}):'',title:spec.title }
       }
       case 'generate': {
+        for(const job of challenges.values())if(job.owner===owner&&job.sessionId===session)job.controller.abort()
         const cardLocal=input.mode==='component'&&input.entryPoint==='component'
         if (typeof input.requestId !== 'string' || !input.requestId || input.requestId.length > 128 || active.has(input.requestId) || [...generations.values()].filter(job=>job.cardLocal===cardLocal).length >= (cardLocal?3:1)) throw Error('请等待当前笔记生成完成。')
         const base = options.runtimeUrl(); if (!base) throw Error('模型服务尚未就绪，请稍后重试。')
@@ -113,5 +133,5 @@ export function installNotesService(options: {
       default: throw Error('不支持的笔记操作。')
     }
   })
-  return () => { options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear();generations.clear(); options.ipcMain.removeHandler('notes:request') }
+  return () => { options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear();generations.clear();for(const job of challenges.values())job.controller.abort();challenges.clear(); options.ipcMain.removeHandler('notes:request') }
 }

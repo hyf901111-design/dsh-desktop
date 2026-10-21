@@ -6,9 +6,10 @@ import type { NotesBridge } from '../../shared/workspace-notes'
 import { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import blockStyles from '@blocknote/mantine/style.css?inline'
 import noteStyles from './style.css?inline'
+import challengeStyles from './challenge.css?inline'
 
 export function mountNotes(document: Document, bridge: NotesBridge, host: WorkspaceSurfaceHost) {
-  const style = document.createElement('style'); style.id = 'ework-notes-style'; style.textContent = blockStyles + '\n' + noteStyles; document.head.append(style)
+  const style = document.createElement('style'); style.id = 'ework-notes-style'; style.textContent = blockStyles + '\n' + noteStyles + '\n' + challengeStyles; document.head.append(style)
   const surface = document.createElement('section'); surface.className = 'en-root'; surface.setAttribute('aria-label', t("工作区笔记")); host.register('notes', surface)
   const editorHost = document.createElement('div'); editorHost.className = 'en-editor-host'
   surface.append(editorHost)
