@@ -67,6 +67,20 @@ it('does not run a second call for findings without consistency warning cues', a
   expect(f.calls).toHaveLength(1)
 })
 
+it('checks a vague controversy claim that restates the same correct source fact', async () => {
+  const text='红薯也要到明代才传入中国。', issue={...bad,quote:text,message:'常识疑问（未联网核验）：是否需要核对这一说法？红薯传入中国时间有争议，一般认为约明代万历年间，但常被视为传入存在不同说法，建议核对。'}
+  const f=fixture([{reviews:[{blockId:'a',issues:[issue]}]},{decisions:[{candidateId:'c0',keep:false,reason:'no-conflict'}]}])
+  const result=await generateNoteChallenge(f.ctx,{...input,blocks:[{id:'a',type:'paragraph',text}]})
+  expect(result.issues).toEqual([]);expect(f.calls).toHaveLength(2)
+})
+
+it('routes controversy wording for judgment without automatically removing a real correction', async () => {
+  const issue={...real,message:'此处冰点存在争议：标准气压下通常认为冰点为0℃而非10℃，是否需要修正？'}
+  const f=fixture([{reviews:[{blockId:'a',issues:[issue]}]},{decisions:[{candidateId:'c0',keep:true,reason:'retain'}]}])
+  const result=await generateNoteChallenge(f.ctx,input)
+  expect(result.issues[0].quote).toBe(real.quote);expect(f.calls).toHaveLength(2)
+})
+
 it('finishes every primary batch before consistency review and preserves later-block coverage', async () => {
   const many = Array.from({ length: 13 }, (_, n) => ({ id: 'b' + n, type: 'paragraph', text: n ? '普通正文' + n + '。' : blocks[0].text }))
   const f = fixture([options => ({ reviews: JSON.parse(options.messages[0].content[0].text).targets.map((b, n) => ({ blockId: b.id, issues: n ? [] : [bad] })) }), { reviews: [{ blockId: 'b12', issues: [] }] }, { decisions: [{ candidateId: 'c0', keep: false, reason: 'outside-body' }] }])

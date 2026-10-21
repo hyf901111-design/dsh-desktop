@@ -1,7 +1,7 @@
 import { uniqueQuote } from './notes-challenge-bounds.js'
 
 // These cues route a candidate for review; they never decide whether a fact is true.
-const cue = /标题|正确|准确|无误|相符|一致/u
+const cue = /标题|正确|准确|无误|相符|一致|争议|一般认为|不同说法/u
 const dropReasons = new Set(['outside-body', 'no-conflict', 'already-qualified'])
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value)
 const fields = (value, allowed) => record(value) && Object.keys(value).every(key => allowed.includes(key))
