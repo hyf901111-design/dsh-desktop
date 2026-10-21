@@ -20,7 +20,9 @@ const one=()=>({...restored(),items:[restored().items[2]]})
 it('rejects the actual 21-item timeline with 11 dates outside its declared range after restoring original facts',()=>{
  const data=restored(),issue=componentFeedEvidenceIssue(text(data),records)
  expect(issue).toMatch(/范围|窗口/)
- expect(issue).toContain('11、12、13、14、15、16、17、18、19、20、21')
+ expect(data.items.filter(item=>item.time<'2026-09-21'||item.time>'2026-10-21')).toHaveLength(11)
+ expect(issue).toContain('11、12、13、14、15、16、17、18、20、21')
+ expect(issue).toContain('第19条：标题未对应同条已取得公告')
  expect(componentSnapshotEvidence(text(data),records)).toBe(false)
  expect(data.items).toHaveLength(21)
 })
@@ -152,4 +154,48 @@ it('keeps a different Eastmoney feed on its original web-record identity boundar
  const web=fetchedWebPageRecord('https://data.eastmoney.com/report/',JSON.stringify({records:[item]}))
  const data={version:1,type:'news',title:'市场资讯',items:[item]}
  expect(componentFeedEvidenceIssue(text(data),[...records,web])).toBeNull()
+})
+it.each(['same-company-other-notice','unknown-company','changed-business-number'])('does not rewrite a %s headline into the URL candidate before source acceptance',mode=>{
+ const data={...restored(),items:[restored().items[0]]}
+ const title=mode==='same-company-other-notice'?observed.calls[0].response.records[1].title:mode==='unknown-company'?'腾讯控股：关于公司经营的公告':'中际旭创：关于拟投资1亿元的公告'
+ data.items[0].title=title;delete data.items[0].actor;delete data.items[0].object
+ const before=text(data)
+ expect(componentFeedEvidenceIssue(before,records,trusted)).toMatch(/标题|公司/)
+ expect(restoreSnapshotFeedHeadlines(before,records)).toBeUndefined()
+ expect(normalizeAnnouncementFeed(data,records)).toBe(data)
+ expect(componentFeedEvidenceIssue(text(normalizeAnnouncementFeed(data,records)),records,trusted)).toMatch(/标题|公司/)
+})
+it('keeps another event and unknown company visible as identity gaps after one bounded repair',async()=>{
+ const data={...restored(),items:[restored().items[0],{...restored().items[0],id:'other-event',title:observed.calls[0].response.records[1].title},{...restored().items[0],id:'unknown-company',title:'腾讯控股：关于公司经营的公告'}]}
+ delete data.items[1].actor;delete data.items[1].object;delete data.items[2].actor;delete data.items[2].object
+ const start=vi.fn(async()=>({childSessionId:'identity-repair',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:text(data)}],sourceRecords:records}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'identity-repair'})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'ann',kind:'container',prompt:'工作台：公告身份\n本面板：公司公告\n'+trusted.panelRequest+'\n仅生成本面板，优先使用 timeline 类型。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'identity-repair'}).state).toBe('completed'))
+  const kept=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'identity-repair'}).finalOutput)).data
+  expect(start).toHaveBeenCalledTimes(2)
+  expect(kept.items).toHaveLength(1)
+  expect(kept.note).toContain(data.items[1].title)
+  expect(kept.note).toContain('腾讯控股')
+  expect(kept.note).toContain('同条来源身份或日期未核验')
+ }finally{await runtime.dispose()}
+})
+it('does not let generic web headline recovery bypass fixed-adapter announcement identity',()=>{
+ const row=observed.calls[0].response.records[0],item={title:'腾讯控股：关于公司经营的公告',date:row.noticeDate,url:row.url}
+ const web=fetchedWebPageRecord('https://data.eastmoney.com/notices/',JSON.stringify({records:[{title:row.title,date:row.noticeDate,url:row.url}]}))
+ const data={version:1,type:'news',title:'公司公告',items:[item]}
+ expect(restoreSnapshotFeedHeadlines(text(data),[...records,web])).toBeUndefined()
+})
+
+it.each(['中际旭创 : H股公告 （董事会会议日期）','H股公告（董事会会议日期）','H股公告（董事会会议日期）（类型：其他）'])('retains only proven display-metadata headline recovery: %s',title=>{
+ const data={...restored(),items:[{...restored().items[0],title}]}
+ const fixed=JSON.parse(restoreSnapshotFeedHeadlines(text(data),records))
+ expect(fixed.items[0].title).toBe(observed.calls[0].response.records[0].title)
+ expect(componentFeedEvidenceIssue(text(fixed),records,trusted)).toBeNull()
+})
+it('does not delete business words inside a source title to claim title equivalence',()=>{
+ const data={...restored(),items:[restored().items[18]]}
+ expect(restoreSnapshotFeedHeadlines(text(data),records)).toBeUndefined()
+ expect(componentFeedEvidenceIssue(text(data),records,trusted)).toMatch(/标题未对应/)
 })

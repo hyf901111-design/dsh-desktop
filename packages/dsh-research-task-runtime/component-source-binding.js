@@ -197,7 +197,7 @@ export function restoreSnapshotFeedHeadlines(text,records) {
   let changed=false
   const items=data.items.map(item=>{
     const url=snapshotUrl(item?.url),date=snapshotDate(item?.date)
-    if(data.type==='timeline'||!url||!date)return item
+    if(data.type==='timeline'||announcementItemRequired(data,item,records)||!url||!date)return item
     const matches=records.filter(record=>record.tool==='web_fetch'&&record.purpose==='snapshot').flatMap(record=>(record.snapshotRows??[]).filter(row=>(row.dates??[row.date]).includes(date)&&typeof row.sourceTitle==='string'&&row.sourceTitle.trim()&&row.sourceTitle.length<=256&&snapshotLinkMatches(url,record,row)))
     if(!matches.length||new Set(matches.map(row=>row.sourceTitle)).size!==1)return item
     const title=matches[0].sourceTitle,subjects=[...new Set(matches.flatMap(row=>row.subjects??[]))]

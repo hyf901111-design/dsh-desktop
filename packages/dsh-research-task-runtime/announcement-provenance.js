@@ -13,6 +13,31 @@ function noticeDay(value) {
 function displayTime(row) {
  return typeof row.time==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}\+08:00$/u.test(row.time)&&noticeDay(row.time.slice(0,10))&&Number.isFinite(Date.parse(row.time))?row.time:null
 }
+function announcementTitle(value) {
+ return typeof value==='string'?value.normalize('NFKC').replace(/\s/gu,'').toLowerCase():''
+}
+function sameAnnouncementTitle(value,row) {
+ // Prove the business heading before restoring anything. Only explicit display
+ // metadata can differ: width/spacing, this issuer's prefix, its legal company
+ // header, and a category annotation that matches the observed category.
+ const category=value=>announcementTitle(value).split('·').map(part=>part.replace(/(?:公告|情况)$/u,'')).join('·')
+ const heading=value=>{
+  let title=announcementTitle(value),issuer=announcementTitle(row.name)+':'
+  if(title.startsWith(issuer))title=title.slice(issuer.length)
+  const codedIssuer=announcementTitle(row.code+row.name)
+  if(title.startsWith(codedIssuer))title=title.slice(codedIssuer.length)
+  const annotation=title.match(/\(类型:([^()]*)\)$/u)
+  if(annotation&&category(annotation[1])===category(row.category))title=title.slice(0,annotation.index)
+  return title
+ }
+ const title=heading(value),original=heading(row.title)
+ if(!title)return false
+ if(title===original)return true
+ // The source itself may prefix the heading with a formal issuer designation.
+ // Never strip arbitrary title words or a company prefix supplied by the model.
+ const legal=original.match(/^([^:()\d]{2,64}股份有限公司)(?=关于|20\d{2}年)/u)
+ return Boolean(legal&&!/关于|收购|出售|投资|计划|公告|报告|未|不/u.test(legal[1])&&title===original.slice(legal[1].length))
+}
 function observed(item,records) {
  const url=safeUrl(item?.url)
  if(!url)return {issue:'原文链接未对应已取得公告'}
@@ -26,6 +51,7 @@ function observed(item,records) {
  const otherNames=sources(records).flatMap(s=>s.response.records).filter(r=>r.code!==row.code).map(r=>r.name).filter(Boolean)
  const wrongHeadlineCompany=typeof item.title==='string'&&otherNames.some(name=>item.title.normalize('NFKC').startsWith(name+':')&&!row.title.normalize('NFKC').startsWith(name+':'))
  if(wrongHeadlineCompany||(item.actor!==undefined&&item.actor!==row.name)||companyFields.some(v=>(v.match(/(?<!\d)\d{6}(?!\d)/gu)??[]).some(code=>code!==row.code)||otherNames.some(name=>v.includes(name))))return {issue:'展示公司与同条已取得公告公司不一致'}
+ if(!sameAnnouncementTitle(item.title,row))return {issue:'标题未对应同条已取得公告，不能用原文链接替换另一事件或公司'}
  return {row,source}
 }
 export function announcementItemRequired(data,item,records=[],options={}) {

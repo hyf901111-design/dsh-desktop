@@ -6,7 +6,7 @@ import {readTemplateModel} from '../packages/dsh-research-task-runtime/component
 
 const row={symbol:'sh600011',code:'600011',name:'华能国际',title:'华能国际:华能国际关于第十四期超短期融资券发行的公告',time:'2026-10-20T17:34:18.892+08:00',displayTime:'2026-10-20 17:34:18:892',noticeDate:'2026-10-21',category:'其他',publisher:'华能国际 · 600011',summary:null,url:'https://data.eastmoney.com/notices/detail/600011/AN202610201830720785.html'}
 const record={tool:'public_data_query',args:{operation:'query',source:'eastmoney-announcements',parameters_json:'{"symbol":"sh600011","limit":14}'},response:{sourceId:'eastmoney-announcements',source:'东方财富证券公告列表',receivedAt:'2026-10-21T00:00:00.000Z',records:[row],coverage:{symbol:'sh600011',scope:'first-page',returned:1}}}
-const feed={version:1,type:'news',title:'近期公司公告',note:'煤价长协数据本次未取得。',items:[{title:'华能国际发行1亿元融资券',summary:'巨潮转载的原文摘要：公司盈利大增。',date:'2026-10-21',category:'融资',url:row.url}]}
+const feed={version:1,type:'news',title:'近期公司公告',note:'煤价长协数据本次未取得。',items:[{title:row.title,summary:'巨潮转载的原文摘要：公司盈利大增。',date:'2026-10-21',category:'融资',url:row.url}]}
 
 it('uses the exact observed announcement and separates source display time from its disclosure date',()=>{
  const before=JSON.stringify(feed),data=JSON.parse(restoreSnapshotFeedHeadlines(before,[record]))
@@ -39,7 +39,7 @@ it('retains an absent source timestamp as unknown instead of borrowing the notic
 })
 
 it('keeps the same source-derived headline and dates during initial mapping and a later refresh',()=>{
- const mapping={version:1,type:'news',title:'公告',items:{$from:'q',$each:'records',$map:{title:'错误的手写标题',date:{$path:'noticeDate'},summary:'未核实的盈利大增解读',url:{$path:'url'}}}}
+ const mapping={version:1,type:'news',title:'公告',items:{$from:'q',$each:'records',$map:{title:{$path:'title'},date:{$path:'noticeDate'},summary:'未核实的盈利大增解读',url:{$path:'url'}}}}
  const result=resolveBoundComponent(JSON.stringify({version:1,type:'data-bound',requests:[{key:'q',tool:record.tool,args:record.args}],mapping}),[record])
  expect(result.data.items[0].title).toBe(row.title)
  expect(result.data.items[0].summary).not.toContain('盈利大增')
