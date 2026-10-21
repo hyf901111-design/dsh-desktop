@@ -45,6 +45,24 @@ it('preserves captured no-issue reviews for correct arithmetic, explicit fiction
   expect(result.coveredBlockIds).toEqual(['correct-math', 'fiction', 'quotation', 'incomplete'])
 })
 
+it('does not silently discard the five later paragraphs when actual runtime mislabels unsupported knowledge as note contradictions', async () => {
+  const input = captured('captured-six-blocks').input
+  const result = await generateNoteChallenge(provider(captured('captured-category-noise').visibleText), input)
+  const knowledge = result.issues.filter(item => item.blockId !== 'initialBlockId')
+  expect(knowledge).toHaveLength(10)
+  expect(new Set(knowledge.map(item => item.blockId)).size).toBe(5)
+  expect(knowledge.every(item => item.category === 'uncertain' && item.evidence.length === 0 && item.message.startsWith('常识疑问（未联网核验）：') && /[?？]/u.test(item.message))).toBe(true)
+})
+
+it('tolerates absent or noisy basis labels only by downgrading unsupported reasoning verdicts to unverified questions', async () => {
+  const result = await run(note([block('a', '第一句。第二句。')]), { reviews: [{ blockId: 'a', issues: [
+    issue('第一句', { basis: undefined, category: 'logic', message: '这里一定不成立。' }),
+    issue('第二句', { basis: 'incorrect-label', category: 'contradiction', message: '这与常识不符。' })
+  ] }] })
+  expect(result.issues).toHaveLength(2)
+  expect(result.issues.every(item => item.category === 'uncertain' && item.message.startsWith('常识疑问（未联网核验）：是否需要核对这一说法？') && item.evidence.length === 0)).toBe(true)
+})
+
 it('does not claim missing blocks were reviewed and accepts an explicit empty record as a completed check', async () => {
   const input = note([block('a', '第一段。'), block('b', '第二段。'), block('c', '第三段。')])
   const result = await run(input, { reviews: [{ blockId: 'b', issues: [] }], coveredBlockIds: ['a', 'b', 'c'], checks: [{ status: 'completed' }] })
@@ -69,7 +87,7 @@ it('normalizes explicit general knowledge to unverified questions but rejects in
     issue('第一句', { category: 'logic' }),
     issue('第二句', { evidence: [{ kind: 'note', label: '伪造', blockId: 'a', quote: '第二句' }] }),
     issue('第三句', { category: 'fact' }),
-    issue('第四句', { basis: undefined }),
+    issue('第四句', { basis: undefined, evidence: [{ kind: 'note', label: '来源', blockId: 'a', quote: '第四句' }] }),
     issue('不存在')
   ] }] })
   expect(result.issues).toEqual([{ blockId: 'a', quote: '第一句', category: 'uncertain', message: '常识疑问（未联网核验）：是否需要核对这个判断？', evidence: [] }])

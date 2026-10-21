@@ -330,11 +330,11 @@ it('coalesces simultaneous replacement requests so only the newest review starts
   expect(f.calls).toHaveLength(2)
 })
 
-it('requires note evidence for a logic verdict and degrades model metadata failures without changing selection', async () => {
+it('downgrades an unsupported logic verdict to an unverified question and tolerates metadata failures without changing selection', async () => {
   const { generateNoteChallenge } = await load()
   const f = fixture({ reviews: [{ blockId: 'a', issues: [{ quote: '收入增长10%', basis: 'note', category: 'logic', message: '这是错误数据。', evidence: [] }] }] })
   f.ctx.llm.resolveModelInfo = async () => { throw Error('metadata temporarily unavailable') }
-  expect((await generateNoteChallenge(f.ctx, input)).issues).toEqual([])
+  expect((await generateNoteChallenge(f.ctx, input)).issues).toEqual([{ blockId: 'a', quote: '收入增长10%', category: 'uncertain', message: '常识疑问（未联网核验）：是否需要核对这一说法？这是错误数据。', evidence: [] }])
   expect(f.calls[0]).toMatchObject({ provider: 'selected-provider', model: 'selected-model' })
 })
 
