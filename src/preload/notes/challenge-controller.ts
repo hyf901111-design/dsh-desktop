@@ -5,7 +5,8 @@ import {YjsThreadStore} from '@blocknote/core/yjs'
 import type {NotesBridge} from '../../shared/workspace-notes'
 import {noteText} from '../../shared/workspace-notes'
 import type {ChallengeIssue,ChallengeLevel,ChallengeRequest,ChallengeResult,ChallengeCheck} from '../../shared/notes-challenge'
-import {challengeDocumentBlocks,NoteChallengeScheduler} from './challenge-scheduler'
+import {challengeDirectReplacement,type ChallengeReplacement} from '../../shared/notes-challenge'
+import {challengeDocumentBlocks,NoteChallengeScheduler,type ChallengeScheduleState} from './challenge-scheduler'
 import {findChallengeQuote,replaceChallengeQuote} from './challenge-anchors'
 
 export const CHALLENGE_KIND='ework-challenge-v1',CHALLENGE_USER='ework-ai-challenge'
@@ -29,7 +30,9 @@ const anchorHistory=(prior:unknown,...added:ChallengeAnchor[]):ChallengeAnchor[]
 export function challengeThreadMessages(comments:any[],budget=10000):Array<{role:'assistant'|'user';text:string}>{
  const result:Array<{role:'assistant'|'user';text:string}>=[];let size=0
  for(const c of comments.filter(c=>!c.deletedAt).slice(-20).reverse()){
-  const text=noteText(c.body);if(!text.trim()||text.length>4000)continue
+  let text=noteText(c.body);if(!text.trim()||text.length>4000)continue
+  const suggestion=c.userId===CHALLENGE_USER&&c.metadata?.challengeReplacement
+  if(typeof suggestion?.replacement==='string'&&text.length<3800){const available=3900-text.length;text+='\n建议替换文本：'+suggestion.replacement.slice(0,available)+(suggestion.replacement.length>available?'（上下文长度有限，建议文字已截断）':'')}
   const message={role:c.userId===CHALLENGE_USER?'assistant' as const:'user' as const,text},length=JSON.stringify(message).length
   if(size+length>budget)break
   result.unshift(message);size+=length
@@ -47,6 +50,8 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const readMarginExpanded=()=>prefs.get('marginExpanded')!==false
  const [level,setLevelState]=useState<ChallengeLevel>(readLevel),[marginExpanded,setMarginExpandedState]=useState(readMarginExpanded),[threads,setThreads]=useState<ChallengeThread[]>([]),[selected,setSelected]=useState<string>(),[pending,setPending]=useState<Pick<ChallengeAction,'threadId'|'kind'>>(),[revision,setRevision]=useState(0)
  const busyId=pending?.threadId,actionKind=pending?.kind
+ const [phase,setPhase]=useState<ChallengeScheduleState['phase']>('off')
+ const running=phase==='running'||!!pending
  const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,string>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0)
  const cancelAction=(id?:string)=>{const current=action.current;if(!current||id&&current.threadId!==id)return;action.current=undefined;current.controller.abort();if(live.current)setPending(undefined)}
  const blocks=()=>challengeDocumentBlocks(editor.document)
@@ -58,7 +63,11 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   try{const result=await Promise.race([bridge.request('challenge',input),cancelled]);signal.throwIfAborted();return result}finally{signal.removeEventListener('abort',abort)}
  }
  const metadata=(id:string,patch:Record<string,unknown>)=>{const item=doc.getMap<any>('threads').get(id);if(item)doc.transact(()=>item.set('metadata',{...item.get('metadata'),...patch}))}
- const visibleThreads=()=>[...ai.getThreads().values()].filter((thread:any)=>thread.metadata?.kind===CHALLENGE_KIND&&!thread.resolved&&!thread.deletedAt&&findChallengeQuote(editor,thread.metadata.issue.blockId,thread.metadata.issue.quote)) as ChallengeThread[]
+ const visibleThreads=()=>[...ai.getThreads().values()].flatMap((thread:any)=>{
+  if(thread.metadata?.kind!==CHALLENGE_KIND||thread.resolved||thread.deletedAt)return[]
+  const range=findChallengeQuote(editor,thread.metadata.issue.blockId,thread.metadata.issue.quote)
+  return range?[{thread:thread as ChallengeThread,position:range.from}]:[]
+ }).sort((a,b)=>a.position-b.position).map(item=>item.thread)
  const publish=()=>{
   const current=blocks(),valid=visibleThreads()
   send('state',{sessionId,level:readLevel(),checks:state.current.checks,coverage:{checked:current.filter(b=>covered.current.get(b.id)===b.text).length,total:current.length},issues:valid.map(thread=>({threadId:thread.id,...thread.metadata.issue}))})
@@ -96,7 +105,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     editor.transact((tr:any)=>tr.setMeta('addToHistory',false).addMark(current.from,current.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})))
    }
    refresh()
-  },onState:value=>{state.current.checks=value.checks;setChecks(value.checks);publish()}})
+  },onState:value=>{if(!live.current)return;setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish()}})
   scheduler.current=s;sync();s.setLevel(readLevel())
   const pref=(event:Y.YMapEvent<unknown>)=>{setLevelState(readLevel());setMarginExpandedState(readMarginExpanded());if(event.keysChanged.has('level')){if(!readLevel())cancelAction();s.setLevel(readLevel())}latest.current.persist();publish()}
   const off=editor.onChange((_editor:any,{getChanges}:any)=>{
@@ -138,6 +147,19 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const setMarginExpanded=(value:boolean)=>{dismissed.current.clear();comments.selectThread(undefined,false);setSelected(undefined);prefs.set('marginExpanded',value);setRevision(v=>v+1)}
  const close=(id:string)=>{cancelAction(id);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
  const resolve=async(id:string)=>{cancelAction(id);comments.selectThread(undefined,false);setSelected(undefined);await comments.threadStore.resolveThread({threadId:id});sync();refresh()}
+ const applyReplacement=async(threadId:string,commentId:string)=>{
+  if(action.current||latest.current.busy||!active()||dismissed.current.has(threadId))return
+  const thread=ai.getThreads().get(threadId),comment=thread?.comments.find(c=>c.id===commentId&&!c.deletedAt),suggestion=comment?.metadata?.challengeReplacement as ChallengeReplacement|undefined
+  if(!thread||thread.resolved||thread.deletedAt||thread.metadata?.kind!==CHALLENGE_KIND||!comment||!suggestion||suggestion.status!=='pending')return
+  const issue=thread.metadata.issue,currentBlock=blocks().find(b=>b.id===issue.blockId)
+  const valid=issue.quote===suggestion.quote&&currentBlock?.text===suggestion.sourceText&&fingerprint(latest.current.title,blocks())===suggestion.documentKey&&currentBlock.text.length-suggestion.quote.length+suggestion.replacement.length<=12000&&findChallengeQuote(editor,issue.blockId,suggestion.quote)
+  if(!valid){await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'stale'}}}});latest.current.persist();refresh();return}
+  if(!replaceChallengeQuote(editor,issue.blockId,suggestion.quote,suggestion.replacement))return
+  const sourceText=blocks().find(b=>b.id===issue.blockId)!.text
+  metadata(threadId,{issue:{...issue,quote:suggestion.replacement},sourceText,anchorHistory:anchorHistory(thread.metadata.anchorHistory,{quote:suggestion.quote,sourceText:suggestion.sourceText},{quote:suggestion.replacement,sourceText})})
+  await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'applied'}}}})
+  settle.current=Date.now()+10000;window.setTimeout(()=>{if(live.current)sync()},10010);latest.current.persist();refresh()
+ }
  const runAction=async(thread:ChallengeThread,kind:'optimize'|'reply',text='')=>{
   if(action.current||latest.current.busy||!active())return
   const currentThread=ai.getThreads().get(thread.id)
@@ -146,7 +168,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   if(!range)return
   const controller=new AbortController(),job:ChallengeAction={controller,threadId:thread.id,kind};action.current=job;setPending({threadId:thread.id,kind});sync()
   const current=()=>{const saved=ai.getThreads().get(thread.id);return live.current&&action.current===job&&!controller.signal.aborted&&active()&&!!saved&&!saved.resolved&&!saved.deletedAt}
-  const append=async(text:string)=>{if(current())await ai.addComment({threadId:thread.id,comment:{body:body(text)}})}
+  const append=async(text:string,suggestion?:ChallengeReplacement)=>{if(current()){await ai.addComment({threadId:thread.id,comment:{body:body(text),...(suggestion?{metadata:{challengeReplacement:suggestion}}:{})}});latest.current.persist()}}
   try{
    if(kind==='reply'){
     await comments.threadStore.addComment({threadId:thread.id,comment:{body:body(text.trim())}})
@@ -166,6 +188,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    if(result.reply?.replacement){
     const currentBlock=blocks().find(b=>b.id===issue.blockId)
     if(!currentBlock||currentBlock.text.length-issue.quote.length+result.reply.replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
+    if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||'建议如下，可确认后替换到原文。',{quote:issue.quote,sourceText:currentBlock.text,documentKey:captured,replacement:result.reply.replacement,status:'pending'});return}
     if(fingerprint(latest.current.title,blocks())===captured&&findChallengeQuote(editor,issue.blockId,issue.quote)&&replaceChallengeQuote(editor,issue.blockId,issue.quote,result.reply.replacement)){
      const sourceText=blocks().find(b=>b.id===issue.blockId)!.text
      metadata(thread.id,{issue:{...issue,quote:result.reply.replacement},sourceText,anchorHistory:anchorHistory(savedThread.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote:result.reply.replacement,sourceText})})
@@ -177,5 +200,5 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   }catch{await append('没能完成，请重试')}
   finally{if(action.current===job){action.current=undefined;if(live.current){setPending(undefined);sync();refresh()}}}
  }
- return {level,marginExpanded,threads,selected,busyId,actionKind,revision,checks,setLevel:levelChange,setMarginExpanded,close,resolve,runAction,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
+ return {level,marginExpanded,threads,selected,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
 }

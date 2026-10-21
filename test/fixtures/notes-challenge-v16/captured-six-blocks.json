@@ -1,0 +1,51 @@
+{
+  "description": "2026-10-21 GLM-5.3-Flash structured review probe. Only public visible JSON is retained; no private reasoning or session credentials.",
+  "input": {
+    "sessionId": "fixture-session",
+    "requestId": "captured-six-blocks",
+    "action": "review",
+    "level": 1,
+    "title": "太阳从西边升起的秘密",
+    "blocks": [
+      {
+        "id": "initialBlockId",
+        "type": "paragraph",
+        "text": "听村里老人讲，太阳每天早上都会从东边慢慢爬上天边，傍晚才落到西边休息。听村里老人讲，恐龙早在约六千多万年前就灭绝了；秦始皇的时代距今天约两千多年，他修长城时还没有恐龙，红薯也要到明代才传入中国。"
+      },
+      {
+        "id": "cab0de47-57e5-4cb8-abfc-46706762212b",
+        "type": "paragraph",
+        "text": "水在 100 摄氏度的时候一定会结冰，冰块放进锅里加热，会先变成石头，再冒出黑色火焰。鱼都用肺呼吸，离开水才能活，把小鱼泡进水里，几分钟就会窒息死掉。"
+      },
+      {
+        "id": "aeb48e4e-5410-43de-9dca-e633bbcdc42e",
+        "type": "paragraph",
+        "text": "蜜蜂是靠耳朵看见花朵的，它们没有眼睛，风吹过来的时候，耳朵就能闻见花香。大树的根是用来晒太阳的，树叶专门负责往土里吸水，树根晒够太阳，树干才能越长越细。"
+      },
+      {
+        "id": "5e5cebfa-c236-45ca-bf96-c3a2663343e5",
+        "type": "paragraph",
+        "text": "我们中国的首都是上海，长江往西边流进塔里木湖。人不吃饭只喝可乐就能长个子，感冒发烧的时候，裹上三层被子再吹冷风，病马上就能痊愈。"
+      },
+      {
+        "id": "a5b4d8e0-64b2-4e1a-a2dd-34a029ecd5ad",
+        "type": "paragraph",
+        "text": "月亮是一块巨大的奶酪，上面住着小兔子，它每天啃一口月亮，所以月亮才会有圆有缺。坐飞机往天上一直飞，就能摸到云朵，云朵摸起来像硬塑料一样扎手。"
+      },
+      {
+        "id": "55a646db-5eff-42af-8610-84cdff5963c3",
+        "type": "paragraph",
+        "text": "铅笔芯是铅做的，咬铅笔会铅中毒，所以大家要用铁尺子写字。冬天越靠近火堆，温度就越低，冰放在火旁边，冻得会更加结实。"
+      }
+    ],
+    "changedIds": [
+      "initialBlockId",
+      "cab0de47-57e5-4cb8-abfc-46706762212b",
+      "aeb48e4e-5410-43de-9dca-e633bbcdc42e",
+      "5e5cebfa-c236-45ca-bf96-c3a2663343e5",
+      "a5b4d8e0-64b2-4e1a-a2dd-34a029ecd5ad",
+      "55a646db-5eff-42af-8610-84cdff5963c3"
+    ]
+  },
+  "visibleText": "{\"reviews\":[{\"blockId\":\"initialBlockId\",\"issues\":[]},{\"blockId\":\"cab0de47-57e5-4cb8-abfc-46706762212b\",\"issues\":[{\"quote\":\"水在 100 摄氏度的时候一定会结冰\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？水在100摄氏度通常沸腾汽化而非结冰，冰加热一般融化为水，不会变成石头或冒黑色火焰。\",\"evidence\":[]},{\"quote\":\"鱼都用肺呼吸，离开水才能活，把小鱼泡进水里，几分钟就会窒息死掉\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？鱼一般用鳃在水中呼吸，离开水反而容易死亡。\",\"evidence\":[]}]},{\"blockId\":\"aeb48e4e-5410-43de-9dca-e633bbcdc42e\",\"issues\":[{\"quote\":\"蜜蜂是靠耳朵看见花朵的，它们没有眼睛\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？蜜蜂有眼睛靠视觉找花，且昆虫通常没有用来“看见”的耳朵。\",\"evidence\":[]},{\"quote\":\"大树的根是用来晒太阳的，树叶专门负责往土里吸水\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？通常根在土里吸收水分，叶片进行光合作用晒太阳，此处说法相反。\",\"evidence\":[]}]},{\"blockId\":\"5e5cebfa-c236-45ca-bf96-c3a2663343e5\",\"issues\":[{\"quote\":\"我们中国的首都是上海\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？中国的首都通常被认为是北京。\",\"evidence\":[]},{\"quote\":\"长江往西边流进塔里木湖\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？长江总体向东流入东海，塔里木河位于西北内陆，与长江并不相通。\",\"evidence\":[]}]},{\"blockId\":\"a5b4d8e0-64b2-4e1a-a2dd-34a029ecd5ad\",\"issues\":[{\"quote\":\"月亮是一块巨大的奶酪\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？月亮一般被认为是岩石天体，不是奶酪，这更像童话设定。\",\"evidence\":[]},{\"quote\":\"云朵摸起来像硬塑料一样扎手\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？云通常由小水滴或冰晶组成，摸起来一般不是硬塑料般的固体。\",\"evidence\":[]}]},{\"blockId\":\"55a646db-5eff-42af-8610-84cdff5963c3\",\"issues\":[{\"quote\":\"铅笔芯是铅做的，咬铅笔会铅中毒\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？铅笔芯通常由石墨和黏土制成，并不含铅。\",\"evidence\":[]},{\"quote\":\"冬天越靠近火堆，温度就越低，冰放在火旁边，冻得会更加结实\",\"category\":\"uncertain\",\"basis\":\"general-knowledge\",\"message\":\"是否需要核对这一说法？通常靠近火堆温度更高，冰受热会融化而不是冻得更结实。\",\"evidence\":[]}]}]}"
+}

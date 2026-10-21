@@ -1,0 +1,21 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<style>
+.sword { transform-origin: 8px 8px; animation: sword-cross 1.1s ease-in-out infinite; }
+.sword-back { animation-name: sword-counter-cross; }
+@keyframes sword-cross { 0%, 50%, 100% { transform: rotate(0deg); } 25% { transform: rotate(7deg); } 75% { transform: rotate(-7deg); } }
+@keyframes sword-counter-cross { 0%, 50%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-7deg); } 75% { transform: rotate(7deg); } }
+@media (prefers-reduced-motion: reduce) { .sword { animation: none; } }
+</style>
+<g class="sword sword-front">
+<path id="Vector" d="M8.66667 12.6667L12.6667 8.66667" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="#E5E5E5"/>
+<path id="Vector_2" d="M9.66667 11.6667L2.39067 4.39067C2.1406 4.14068 2.00008 3.80159 2 3.448V2H3.448C3.80159 2.00008 4.14068 2.1406 4.39067 2.39067L11.6667 9.66667" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="#E5E5E5"/>
+<path id="Vector_4" d="M10.6667 10.6667L13.3333 13.3333" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="#E5E5E5"/>
+<path id="Vector_5" d="M12.6667 14L14 12.6667" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="#E5E5E5"/>
+</g>
+<g class="sword sword-back">
+<path id="Vector_3" d="M9.88533 4.11467L11.6093 2.39067C11.8593 2.1406 12.1984 2.00008 12.552 2H14V3.448C13.9999 3.80159 13.8594 4.14068 13.6093 4.39067L11.8853 6.11467" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="#E5E5E5"/>
+<path id="Vector_6" d="M3.33333 9.33333L6 12" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="#E5E5E5"/>
+<path id="Vector_7" d="M3.33333 14L2 12.6667" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="#E5E5E5"/>
+<path id="Vector_8" d="M5 11L2.66667 13.3333" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="#E5E5E5"/>
+</g>
+</svg>
