@@ -92,6 +92,7 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort)
     const transport = new AbortController(), streamSignal = AbortSignal.any([signal, transport.signal])
     const requestSystem = attempt ? system + '\n输出必须是一个闭合完整的JSON对象，包括所有结束大括号；不要解释或Markdown代码围栏。' : system
     const assembler = new BlockAssembler(), attemptUsage = { inputTokens: 0, outputTokens: 0 }, iterator = ctx.llm.stream({ provider: route.provider, model: route.model, purpose: 'workspace-note-challenge', signal: streamSignal, maxTokens: 2400, ...reasoningEffort ? { reasoningEffort } : {}, system: requestSystem, messages })[Symbol.asyncIterator]()
+    let attemptOutputSize = 0
     try {
       while (true) {
         const step = await abortable(iterator.next(), signal)
@@ -100,14 +101,16 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort)
         const chunk = step.value
         totalSize += JSON.stringify(chunk).length
         if (totalSize > 100000 || chunk.type === 'tool-call' || chunk.type === 'tool-call-start' || chunk.block?.type === 'tool-call') throw Error('挑战检查返回内容超出边界。')
-        if (chunk.type === 'text-delta') outputSize += chunk.text.length
+        if (chunk.type === 'text-delta') { outputSize += chunk.text.length; attemptOutputSize += chunk.text.length }
         if (outputSize > 16000) throw Error('挑战检查输出过长。')
         if (chunk.type === 'usage') for (const key of ['inputTokens', 'outputTokens']) if (Number.isFinite(chunk.usage?.[key]) && chunk.usage[key] >= 0) attemptUsage[key] = chunk.usage[key]
         assembler.push(chunk)
       }
       if (assembler.finish.kind !== 'stop' || assembler.blocks().some(block => block.type === 'tool-call')) throw Error('挑战检查未完整结束。')
-      const text = assembler.blocks().filter(block => block.type === 'text').map(block => block.text).join('').trim()
-      if (text.length > 16000) throw Error('挑战检查输出过长。')
+      const visibleText = assembler.blocks().filter(block => block.type === 'text').map(block => block.text).join('')
+      outputSize += Math.max(0, visibleText.length - attemptOutputSize)
+      if (outputSize > 16000) throw Error('挑战检查输出过长。')
+      const text = visibleText.trim()
       for (const key of ['inputTokens', 'outputTokens']) usage[key] += attemptUsage[key]
       // Only a complete, sole JSON fence is an envelope; never scan prose or reasoning for objects.
       const json = /^```json[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu.exec(text)?.[1] ?? text

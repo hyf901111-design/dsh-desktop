@@ -206,6 +206,30 @@ it('shares the original output size limit across a malformed response and its re
   expect(f.calls).toHaveLength(2)
 })
 
+it('counts block-end-only visible text toward the shared retry output limit', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    yield { type: 'block-end', index: 0, block: { type: 'text', text: f.calls.length === 1 ? '{"issues":[]' + ' '.repeat(15988) : '{"issues":[]}' } }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('输出过长')
+  expect(f.calls).toHaveLength(2)
+})
+
+it('does not double count matching text deltas and block-end snapshots', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    const text = f.calls.length === 1 ? '{"issues":[]' + ' '.repeat(8988) : '{"issues":[]}'
+    yield { type: 'text-delta', index: 0, text }
+    yield { type: 'block-end', index: 0, block: { type: 'text', text } }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  expect((await generateNoteChallenge(f.ctx, input)).issues).toEqual([])
+  expect(f.calls).toHaveLength(2)
+})
+
 it('keeps a format retry inside the original 20 second budget', async () => {
   vi.useFakeTimers()
   const { generateNoteChallenge } = await load(), f = fixture()
