@@ -9,24 +9,150 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "窄屏笔记挑战气泡贴近原文与滚动边界修复",
+        "featureName": "笔记挑战v15设计交互、菜单模糊与真实编辑日期",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "ddfe0a5a27a9ab3a5e1fbaf4a2693dbcc8cf2881",
-        "tipCommit": "21a44a61068578cac57f1c8984d1f45ff5d2e786",
+        "baseCommit": "21a44a61068578cac57f1c8984d1f45ff5d2e786",
+        "tipCommit": "2f7d70499012bd3041e7ab5e7d0a991e75fc29a7",
         "commits": [
           {
-            "commit": "39f09e379a86a839210ada35ff605a07e2145667",
+            "commit": "bce01379f25a413e5f8ec4ceb4cda2c2ba39a3a9",
             "parents": [
-              "ddfe0a5a27a9ab3a5e1fbaf4a2693dbcc8cf2881"
+              "21a44a61068578cac57f1c8984d1f45ff5d2e786"
             ],
-            "subject": "记录笔记居中与右侧评论的客户端验收通过"
+            "subject": "记录窄屏挑战气泡贴近原文的客户端验收"
           },
           {
-            "commit": "21a44a61068578cac57f1c8984d1f45ff5d2e786",
+            "commit": "06d1d98dd5a26d0365416fe4c640192ba28dc2df",
             "parents": [
-              "39f09e379a86a839210ada35ff605a07e2145667"
+              "bce01379f25a413e5f8ec4ceb4cda2c2ba39a3a9"
             ],
-            "subject": "修复窄屏挑战评论远离标记文字的问题"
+            "subject": "记录完整算力工作台实测耗时与图表生成问题"
+          },
+          {
+            "commit": "3d71acd8452d94940f4282fb2e87d9bab3575ed7",
+            "parents": [
+              "06d1d98dd5a26d0365416fe4c640192ba28dc2df"
+            ],
+            "subject": "修复图表格式示例覆盖业务选型的问题"
+          },
+          {
+            "commit": "419b54cc93202debb49671771ec42236ce51ef91",
+            "parents": [
+              "3d71acd8452d94940f4282fb2e87d9bab3575ed7"
+            ],
+            "subject": "修复工作台快照标题补全并精确计算基准强弱"
+          },
+          {
+            "commit": "9a4ea31f713c1d686106e27bb03ac2f9063c565b",
+            "parents": [
+              "419b54cc93202debb49671771ec42236ce51ef91"
+            ],
+            "subject": "修复新浪搜索跟踪参数造成同条资讯来源错配"
+          },
+          {
+            "commit": "ea264de0cb7e27d02a266b8296583786ab9f24f9",
+            "parents": [
+              "9a4ea31f713c1d686106e27bb03ac2f9063c565b"
+            ],
+            "subject": "保留业务举例后的明确图表选型"
+          },
+          {
+            "commit": "c2957eacfcdf8d3e12c47eed6059a988f6c25102",
+            "parents": [
+              "ea264de0cb7e27d02a266b8296583786ab9f24f9"
+            ],
+            "subject": "修复网页新闻卡片的局部发布日期关联"
+          },
+          {
+            "commit": "be0ebc991202565f5e32892b806ab907628a7a96",
+            "parents": [
+              "c2957eacfcdf8d3e12c47eed6059a988f6c25102"
+            ],
+            "subject": "补充笔记挑战最新设计与聚焦验收方案"
+          },
+          {
+            "commit": "6279e52d557fc6269a08d2035266fb05dfcefc89",
+            "parents": [
+              "be0ebc991202565f5e32892b806ab907628a7a96"
+            ],
+            "subject": "完善笔记挑战回复等待取消与评论偏好持久化"
+          },
+          {
+            "commit": "77c68ad50b3b6b882929c18b9b108d604bf32fa1",
+            "parents": [
+              "6279e52d557fc6269a08d2035266fb05dfcefc89"
+            ],
+            "subject": "修复图表语法示例与新闻日期可见边界"
+          },
+          {
+            "commit": "017bae4205722980699ba150ad556355c954cd4f",
+            "parents": [
+              "77c68ad50b3b6b882929c18b9b108d604bf32fa1"
+            ],
+            "subject": "补充设计稿严格对齐与颜色子菜单材质要求"
+          },
+          {
+            "commit": "d88d19f537182d666afb4b34835784cbd3172a34",
+            "parents": [
+              "017bae4205722980699ba150ad556355c954cd4f"
+            ],
+            "subject": "修复图表格式示例后礼貌指令的选型识别"
+          },
+          {
+            "commit": "b80fc1d79c3d16bd2a08ab53496f9f40a4367bee",
+            "parents": [
+              "d88d19f537182d666afb4b34835784cbd3172a34"
+            ],
+            "subject": "落实笔记挑战v15稳定正文与中性评论界面"
+          },
+          {
+            "commit": "3fd8ca5980edf0483df86484167d8514fc39a626",
+            "parents": [
+              "b80fc1d79c3d16bd2a08ab53496f9f40a4367bee"
+            ],
+            "subject": "修复笔记颜色子菜单的半透明模糊材质"
+          },
+          {
+            "commit": "2eafe99f7c925fcc88a18f213033a75f932eb5ee",
+            "parents": [
+              "3fd8ca5980edf0483df86484167d8514fc39a626"
+            ],
+            "subject": "修复挑战浮层原生层级遮挡与长回复跟随显示"
+          },
+          {
+            "commit": "6fbdb7be90f15180910375cb2dc4f4122f4fde49",
+            "parents": [
+              "2eafe99f7c925fcc88a18f213033a75f932eb5ee"
+            ],
+            "subject": "补充笔记标题下方的编辑日期需求"
+          },
+          {
+            "commit": "c5b09d66ffb4d4a71faa0f1da77237ba97df00c5",
+            "parents": [
+              "6fbdb7be90f15180910375cb2dc4f4122f4fde49"
+            ],
+            "subject": "在笔记标题下显示并持久保存真实编辑日期"
+          },
+          {
+            "commit": "38edac3bbf31cd5d3132cdc91dbed1690940bc6a",
+            "parents": [
+              "c5b09d66ffb4d4a71faa0f1da77237ba97df00c5"
+            ],
+            "subject": "修复挑战浮层键盘焦点与设置界面生命周期"
+          },
+          {
+            "commit": "294dc51cb7be7c3cceab6cf66728f0977fdcd531",
+            "parents": [
+              "38edac3bbf31cd5d3132cdc91dbed1690940bc6a"
+            ],
+            "subject": "补全无标题结构化旧笔记的编辑日期识别"
+          },
+          {
+            "commit": "2f7d70499012bd3041e7ab5e7d0a991e75fc29a7",
+            "parents": [
+              "294dc51cb7be7c3cceab6cf66728f0977fdcd531"
+            ],
+            "subject": "记录笔记挑战新版审阅修复与日期验证"
           }
         ],
         "files": [
@@ -35,8 +161,60 @@
             "path": "docs/superpowers/plans/2026-10-21-notes-challenge-implementation.md"
           },
           {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-21-notes-challenge-v15.md"
+          },
+          {
             "status": "M",
-            "path": "docs/superpowers/specs/2026-10-21-notes-challenge-implementation.md"
+            "path": "docs/superpowers/plans/2026-10-21-workbench-source-latency-followup.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-21-notes-challenge-v15.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-challenge-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-export-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/rendered-page-content.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-chevron.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-margin-collapse.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-margin-expand.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-swords.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/challenge-controller.ts"
           },
           {
             "status": "M",
@@ -44,7 +222,63 @@
           },
           {
             "status": "M",
+            "path": "src/preload/notes/challenge.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/edit-date.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/cartesian-chart-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-web-snapshot-evidence.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-controller-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-editor-browser.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/notes-challenge-layout-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-undo-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-color-menu-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-edit-date-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-market-history.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/rendered-page-content.test.ts"
           }
         ],
         "checks": [
@@ -58,122 +292,22 @@
               "test/notes-challenge-layout-browser.test.js",
               "test/notes-challenge-editor-browser.test.js",
               "test/notes-challenge-undo-browser.test.js",
-              "test/notes-inline-generation-browser.test.js"
+              "test/notes-challenge-client-browser.test.js",
+              "test/notes-challenge-controller-browser.test.js",
+              "test/notes-challenge-runtime.test.js",
+              "test/notes-challenge-scheduler.test.ts",
+              "test/notes-challenge-anchors.test.ts",
+              "test/notes-inline-generation-browser.test.js",
+              "test/notes-color-menu-browser.test.js",
+              "test/slash-menu-expanded.test.js",
+              "test/slash-menu-locale.test.ts",
+              "test/notes-edit-date-browser.test.js",
+              "test/workspace-notes.test.ts"
             ],
             "outcome": "passed",
-            "summary": "4文件24项相关浏览器回归通过；/tmp/notes-challenge-nearby-delivery-focused-20261021.log。真实mountNotes覆盖1157/900贴近原文、底部翻转、上下滚出视口仍可回复、右边界、宽屏右侧栏/正文居中、草稿/焦点/关闭/撤销/内联生成。",
-            "verifiedCommit": "21a44a61068578cac57f1c8984d1f45ff5d2e786",
-            "completedAt": "2026-10-21T08:08:26.764303+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "npm run typecheck通过；/tmp/notes-challenge-nearby-delivery-typecheck-20261021.log",
-            "verifiedCommit": "21a44a61068578cac57f1c8984d1f45ff5d2e786",
-            "completedAt": "2026-10-21T08:08:26.764303+00:00",
-            "timeoutMs": 180000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "root已目视1157主区域下方气泡和900底部翻转截图。实际旧包复现同一条真实模型评论远在右侧；新原文附近位置待本地签名包验证。独立审查捕获滚动裁剪后已修复并复核通过。"
-        },
-        "acceptanceCriteria": [
-          "默认关闭并按笔记保存五档强度；关闭暂停自动检查但保留已有讨论。",
-          "停顿后增量、单任务可取消、有界预算，不重复因样式/保存/评论触发。",
-          "独立模型路径不写主对话；精确唯一锚点、实际原文证据和程序计算，缺失诚实降级。",
-          "常驻多行回复、显式AI优化、已解决、可滚动宽屏旁注和窄屏气泡；人工写作优先。",
-          "显式查看依据才打开右侧挑战页签，账户重置/关闭清空状态。",
-          "AI优化原生撤销重做保留独立操作边界、同线程评论和草稿；重叠已解决标记不挡有效评论。",
-          "GC前后等价Yjs不会误报恢复，真实正文/档位/回复差异仍保留；不重写原始已存Yjs。",
-          "状态卡固定在首回执所属原轮最终回复之后，后续消息与重试不迁移，plan/session隔离。",
-          "同一turn插队时以user/steering/pending-steering切分位置范围，空临时execution不重挂旧卡；pending→落盘→继续回复保留原卡DOM。",
-          "按用户最新截图，窄屏单个评论气泡贴近标记原文，优先下方，底部不足时上方，水平与纵向均限制在可见笔记区域。",
-          "正文保持相对笔记主区域居中，宽屏评论列继续固定最右侧；宽窄切换、滚动、关闭/ESC保留草稿和焦点且不复活已收起评论。"
-        ],
-        "risks": [
-          "窄屏气泡修复待本地签名包点击现有真实模型评论核验；此前宽屏原生验证不替代此项。",
-          "infodb只识别实际授权只读SQL schema；API发现式来源未识别时unavailable；滚动数据/C4暂未启用。",
-          "单段超过12000字符保留partial；实际token缺失时仅用保守字符预算，不声称费用精确。",
-          "沿既有未验收批次本地预览，不推送/发布/晋升main；两项前序工作台修复独立提交随同分支。"
-        ],
-        "generatedAt": "2026-10-21T08:08:26.764303+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e31036d09b30108024a6e8f5abc2cd84b7d76138",
-        "verificationCommit": "e31036d09b30108024a6e8f5abc2cd84b7d76138",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "e31036d09b30108024a6e8f5abc2cd84b7d76138",
-            "completedAt": "2026-10-21T08:08:59.983Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e31036d09b30108024a6e8f5abc2cd84b7d76138",
-            "completedAt": "2026-10-21T08:08:59.983Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e31036d09b30108024a6e8f5abc2cd84b7d76138",
-            "completedAt": "2026-10-21T08:08:59.983Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "e31036d09b30108024a6e8f5abc2cd84b7d76138",
-            "completedAt": "2026-10-21T08:08:59.983Z",
+            "summary": "14个直接相关文件138项通过，日志 /tmp/notes-challenge-v15-final-focused-20261021.log；涵盖v15设计、正文稳定、窄屏、真实层级picker焦点与隐藏生命周期、回复取消、草稿、历史撤销、颜色菜单、日期及旧笔记恢复。",
+            "verifiedCommit": "2f7d70499012bd3041e7ab5e7d0a991e75fc29a7",
+            "completedAt": "2026-10-21T09:27:23.939166+00:00",
             "timeoutMs": 300000
           },
           {
@@ -183,13 +317,44 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e31036d09b30108024a6e8f5abc2cd84b7d76138",
-            "completedAt": "2026-10-21T08:08:59.983Z",
-            "timeoutMs": 120000
+            "summary": "类型检查通过，日志 /tmp/notes-challenge-v15-final-typecheck-20261021.log。",
+            "verifiedCommit": "2f7d70499012bd3041e7ab5e7d0a991e75fc29a7",
+            "completedAt": "2026-10-21T09:27:23.939166+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "工作区补丁空白检查通过，源码干净。",
+            "verifiedCommit": "2f7d70499012bd3041e7ab5e7d0a991e75fc29a7",
+            "completedAt": "2026-10-21T09:27:23.939166+00:00",
+            "timeoutMs": 30000
           }
         ],
-        "recordedAt": "2026-10-21T08:08:59.983Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已读取最新设计session和Figma v15并逐项对照真实mountNotes渲染，独立审阅全部通过；修复原生层级遮挡、Tab焦点与设置隐藏生命周期。新签名本地包的原生验收将在本次集成构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "按最新Figma实现中性AI挑战选择器、菜单图标、按钮、灰色评论卡和发送控件。",
+          "正文820px布局保持稳定，自然右侧空间充足显示旁注，不足时贴近标记原文显示受边界约束的气泡。",
+          "收起评论只改变显示，不取消任务、不丢草稿；回复立即落盘、等待圆环、取消与过期结果隔离。",
+          "评论色与选中态按明暗主题对齐设计；真实Mantine颜色子菜单沿用统一背景模糊，键盘与点击选择正常。",
+          "笔记标题下显示编辑于年月日；真实内容修改更新日期，打开、光标、评论、后台刷新不更新。",
+          "旧结构化笔记及恢复草稿保留其真实已知编辑时间，不凭打开时间伪造编辑。",
+          "同分支金融图表意图、唯一标题和来源日期边界修复已有独立审阅和8文件415项验证，后续笔记提交未改变其源码。"
+        ],
+        "risks": [
+          "新本地签名包仍需原生窗口验收，不以源码和独立预览代替。",
+          "真实金融工作台此前5/6完成；本次修复不等同于新的完整真实任务验收通过。",
+          "infodb实际授权SQL来源未发现时诚实显示unavailable；滚动数据/C4未启用。",
+          "沿既有未验收集成批次本地预览；不接受批次、不晋升main、不推送或公开发布。"
+        ],
+        "generatedAt": "2026-10-21T09:27:23.939166+00:00"
       }
     },
     {
