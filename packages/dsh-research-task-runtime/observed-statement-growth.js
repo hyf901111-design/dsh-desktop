@@ -14,16 +14,17 @@ function rounded(n,d){
  const negative=n<0n; if(negative)n=-n
  return (negative?-1n:1n)*(n/d+(n%d*2n>=d?1n:0n))
 }
-function percent(current,prior){
+function percent(current,prior,digits=2){
+ if(!Number.isInteger(digits)||digits<0||digits>12)return
  const a=decimal(current),b=decimal(prior)
  if(!a||!b)return
  if(b.n<=0n)return `不适用（上年同期原始金额 ${prior} 元，零或负基期不作普通同比）`
- const basisPoints=rounded((a.n*pow(b.scale)-b.n*pow(a.scale))*10000n,b.n*pow(a.scale)),absolute=basisPoints<0n?-basisPoints:basisPoints
- return `${basisPoints<0n?'-':basisPoints>0n?'+':''}${absolute/100n}.${String(absolute%100n).padStart(2,'0')}%`
+ const factor=pow(digits),basisPoints=rounded((a.n*pow(b.scale)-b.n*pow(a.scale))*100n*factor,b.n*pow(a.scale)),absolute=basisPoints<0n?-basisPoints:basisPoints
+ return `${basisPoints<0n?'-':basisPoints>0n?'+':''}${absolute/factor}${digits?'.'+String(absolute%factor).padStart(digits,'0'):''}%`
 }
-function displayedAmountMatches(value,raw,unit){
+export function displayedAmountMatches(value,raw,unit){
  const text=typeof value==='number'?String(value):value
- if(typeof text!=='string'||text.length>40||!/^[-+]?\d+(?:,\d{3})*(?:\.\d{1,6})?$/u.test(text))return false
+ if(typeof text!=='string'||text.length>40||!/^[-+]?\d+(?:,\d{3})*(?:\.\d{1,12})?$/u.test(text))return false
  const clean=text.replaceAll(',',''),digits=clean.split('.')[1]?.length??0,a=decimal(raw)
  if(!a)return false
  const shown=BigInt(clean.replace('.','').replace(/^\+/,'')),scale=unit==='亿元'?8:unit==='万元'?4:0
@@ -179,3 +180,5 @@ export function observedStatementGrowth(data,records){
  }
  return {...data,rows,note}
 }
+
+export {percent as statementGrowthPercent}
