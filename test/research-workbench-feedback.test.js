@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
-import {publishResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,patchResearchWorkbenchFeedback,researchWorkbenchReceiptPlans} from '../scripts/lib/research-workbench-feedback.mjs'
+import {publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,patchResearchWorkbenchFeedback,researchWorkbenchReceiptPlans} from '../scripts/lib/research-workbench-feedback.mjs'
 import {planningResponseMetadata} from '../scripts/lib/research-planning-feedback.mjs'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
@@ -54,6 +54,36 @@ it('observes the current session only, including a snapshot published before the
  stop();publishResearchWorkbenchProgress(target,'s',done());expect(listen).toHaveBeenCalledTimes(2)
 })
 
+it('restores saved card feedback on a cold notes/chat entry without claiming a live inspection',()=>{
+ const target=new EventTarget(),listen=vi.fn(),nodes=done()
+ nodes[3]=card('card-3','failed')
+ const stop=observeResearchWorkbenchProgress(target,'s',listen)
+ expect(listen).toHaveBeenLastCalledWith(null)
+ const snapshot=publishInactiveResearchWorkbenchProgress(target,'s',nodes)
+ expect(snapshot).toMatchObject({sessionId:'s',active:false,retryAvailable:false})
+ expect(workbenchProgressState(plans,snapshot)).toMatchObject({phase:'partial',completed:3,failed:1})
+ expect(workbenchProgressState(plans,snapshot).detail).toContain('以上为上次状态')
+ expect(listen).toHaveBeenLastCalledWith(snapshot)
+ expect(JSON.stringify(snapshot)).not.toContain('PRIVATE')
+ expect(publishInactiveResearchWorkbenchProgress(target,'s',nodes)).toBe(snapshot)
+ stop()
+})
+
+it('never replaces the mounted canvas state with saved feedback, and follows saved changes after it unmounts',()=>{
+ const target=new EventTarget(),nodes=done()
+ nodes[3]=card('card-3','running')
+ const live=publishResearchWorkbenchProgress(target,'s',nodes,true,true)
+ expect(publishInactiveResearchWorkbenchProgress(target,'s',done())).toBe(live)
+ expect(workbenchProgressState(plans,live).phase).toBe('running')
+ publishResearchWorkbenchProgress(target,'s',nodes,false,false)
+ const saved=publishInactiveResearchWorkbenchProgress(target,'s',done())
+ expect(workbenchProgressState(plans,saved)).toMatchObject({phase:'completed',completed:4})
+ const invalid=card('invalid');delete invalid.containerSpec
+ const other=publishInactiveResearchWorkbenchProgress(target,'other',[invalid])
+ expect(other.nodes[0].status).toBe('unknown')
+ expect(target.__sherlockWorkbenchGenerationV1.get('s')).toBe(saved)
+})
+
 it('deduplicates actual plan receipts, rejects unrelated nodes, and translates real completion counts',()=>{
  const target=new EventTarget(),snapshot=publishResearchWorkbenchProgress(target,'s',[...done(),card('unrelated','failed',{workbenchId:'another-plan'})])
  const state=workbenchProgressState([...plans,...plans],snapshot,true)
@@ -76,10 +106,11 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(source).toContain('sessionId, plans:workbenchMeta.plans')
  expect(source.indexOf('footer:true')).toBeGreaterThan(source.indexOf('function ChatView('))
  expect(source).toContain('researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata)')
+ expect(source.includes('publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)')).toBe(true)
  expect(source).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber')
  expect(patchResearchWorkbenchFeedback(source)).toBe(source)
  expect(patchResearchCreationProgress(source)).toBe(source)
- const start=source.indexOf('/* ework:workbench-feedback:v3 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const start=source.indexOf('/* ework:workbench-feedback:v4 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
  const element=(type,props)=>({type,props})
  let snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
  const Component=runInNewContext(source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[snapshot,()=>{}],useEffect:()=>{}},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
@@ -96,7 +127,8 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('上次状态')
  snapshot={...snapshot,active:true,nodes:[{id:'other',planId:'other-plan',status:'completed'}]}
  expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
- const legacy=source.replace('/* ework:workbench-feedback:v3 */','/* ework:workbench-feedback:v1 */')
+ const legacy=source.replace('/* ework:workbench-feedback:v4 */','/* ework:workbench-feedback:v1 */')
+  .replace('\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);','')
   .replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
   .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
  expect(patchResearchWorkbenchFeedback(legacy)).toBe(source)
