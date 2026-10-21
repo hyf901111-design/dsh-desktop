@@ -410,3 +410,10 @@ it('keeps consequence inquiries as preview-capable replies without weakening the
   expect((await generateNoteChallenge(f.ctx,{...input,action:'reply',thread})).reply.replacement).toBe('本期收入增长10%。')
  }
 })
+
+for(const text of ['请把建议改为“更谨慎的表达”','请把这条评论改为“是否需要核对”','请把原文改为“程度”的理由说明一下','请把原文改为“程度”的方案给我看看','请把收入增长替换为收入增加'])it('keeps assignment discussions preview-capable using the current anchor: '+text,async()=>{
+ const{generateNoteChallenge}=await load(),f=fixture({reply:{text:'模型声称已修改原文',replacement:'本期收入增加10%。'}})
+ const thread={blockId:'a',quote:'收入增长10%',category:'grammar',message:'请明确表达。',messages:[{role:'user',text}]}
+ expect((await generateNoteChallenge(f.ctx,{...input,action:'reply',thread})).reply.replacement).toBe('本期收入增加10%。')
+ expect(JSON.parse(f.calls[0].messages[0].content[0].text).allowReplacement).toBe(true)
+})

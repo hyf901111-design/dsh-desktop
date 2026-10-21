@@ -58,7 +58,7 @@ const THREAD_SYSTEM = `你是独立的笔记挑战审查员，保持低打扰。
 optimize返回 {"reply":{"text":"简短解释","replacement":"仅替换thread.quote的完整建议文字"}}；不得修改选区之外内容。保留用户的研究立场，不因偏离一致预期强制将预测改成市场中值；研究分歧不等于事实错误。不得补造解释或事实，缺乏依据时只能改善表达或补充“待核实/假设”限定。reply返回 {"reply":{"text":"就同一评论简短回复"}}；text用一两句自然语言回应当前问题，不展示审查步骤、上下文准备、日志、工具细节或私有推理。没有实际来源时直接简短说明，不能假装已核验。只有payload.allowReplacement=true时允许附带replacement。allowReplacement为true时应提供完整replacement，由宿主按用户当前明确指令执行，其他建议仅供预览；不能假称没有替换权限，也不能在没有宿主实际写入结果时声称已修改笔记。`
 
 function requestedReplacement(input) {
-  return input.action === 'optimize' || challengeReplacementRequested(input.thread?.messages.findLast(message => message.role === 'user')?.text ?? '')
+  return input.action === 'optimize' || challengeReplacementRequested(input.thread?.messages.findLast(message => message.role === 'user')?.text ?? '', input.thread && { quote: input.thread.quote })
 }
 
 function acknowledgesNoConflict(message) {

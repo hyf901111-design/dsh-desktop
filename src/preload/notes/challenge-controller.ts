@@ -188,7 +188,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    if(result.reply?.replacement){
     const currentBlock=blocks().find(b=>b.id===issue.blockId)
     if(!currentBlock||currentBlock.text.length-issue.quote.length+result.reply.replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
-    if(kind==='optimize'||!challengeDirectReplacement(text)){await append(result.reply.text||'建议如下，可确认后替换到原文。',{quote:issue.quote,sourceText:currentBlock.text,documentKey:captured,replacement:result.reply.replacement,status:'pending'});return}
+    if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||'建议如下，可确认后替换到原文。',{quote:issue.quote,sourceText:currentBlock.text,documentKey:captured,replacement:result.reply.replacement,status:'pending'});return}
     if(fingerprint(latest.current.title,blocks())===captured&&findChallengeQuote(editor,issue.blockId,issue.quote)&&replaceChallengeQuote(editor,issue.blockId,issue.quote,result.reply.replacement)){
      const sourceText=blocks().find(b=>b.id===issue.blockId)!.text
      metadata(thread.id,{issue:{...issue,quote:result.reply.replacement},sourceText,anchorHistory:anchorHistory(savedThread.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote:result.reply.replacement,sourceText})})
