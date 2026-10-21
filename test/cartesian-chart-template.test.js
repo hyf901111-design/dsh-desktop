@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {CARTESIAN_CHART_TEMPLATES,chartDataIssue,requestedChartVariant} from '../packages/dsh-research-task-runtime/chart-template-contract.js';
+import {CARTESIAN_CHART_TEMPLATES,CHART_VARIANTS,chartDataIssue,requestedChartVariant} from '../packages/dsh-research-task-runtime/chart-template-contract.js';
 import {cartesianChartSvg,renderCartesianChart} from '../packages/dsh-research-task-runtime/cartesian-chart-artifact.js';
 import {acceptArtifactOutput,workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js';
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js';
@@ -9,6 +9,45 @@ import {generateSimulatedPanel} from '../packages/dsh-research-task-runtime/simu
 
 const data=(variant,more={})=>({version:1,type:'chart',title:'经营分析',variant,labels:['一季度','二季度','三季度'],series:[{name:'产品',values:[20,35,50]},{name:'服务',values:[10,25,30]}],asOf:'2026-09-30 · 模拟数据',unit:'万元',...more});
 describe('Figma cartesian templates',()=>{
+ it('keeps a real monthly comparison curve when a panel includes an optional chart syntax example',()=>{
+   const panel={title:'近一月走势对比与相对沪深300强弱',type:'chart',size:'large',prompt:'取中际旭创(300308)、新易盛(300502)、工业富联(601138)及沪深300(000300)近一个月的日收盘价，统一归一化为近一月起点=100的累计涨跌幅对比曲线；并在附表中给出各标的近一月累计涨跌幅、相对沪深300超额收益（相对强弱），单位%。使用 financial_query 按确认后的代码取日线历史，注明来源与日期区间；普通柱状/折线用 chart 并可声明 chart.bar。数据取不到的标的明确标注缺失，不缩小研究范围。'};
+   expect(requestedChartVariant(panel.title+'\n'+panel.prompt)).toBe('line');
+   expect(workbenchDesignTemplate(panel).id).toBe('research.chart.line');
+   const prompt=workbenchPanelPrompt({title:'算力产业链真实金融研究',dataMode:'source'},panel);
+   expect(prompt).toContain('必须输出 chart.line 的结构化数据');
+   const output=acceptArtifactOutput(JSON.stringify(data('line')));
+   expect(workbenchMarketVariantIssue(output,prompt)).toBeNull();
+   expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(data('bar'))),prompt)).toContain('chart.line');
+ });
+ it.each([
+   ['近一月走势\n格式示例：普通柱状图用 chart.bar','line'],
+   ['近一月走势；格式示例：普通柱状图，使用 chart.bar','line'],
+   ['近一月走势，普通柱状图用 chart 并可声明 chart.bar','line'],
+   ['季度收入柱状图\n语法示例：chart.line','bar'],
+   ['本面板：季度收入结构饼图\n例如 chart.bar','pie'],
+   ['近月累计涨跌幅对比曲线；图表类型可声明 chart.bar','line'],
+   ['近一月走势；格式示例 chart.line；必须使用 chart.bar','bar'],
+   ['近一月走势；普通柱状/折线用 chart 并可声明 chart.bar；本面板使用 chart.groupedBar','groupedBar']
+ ])('resolves the business chart intent in %s', (prompt,variant)=>{
+   expect(requestedChartVariant(prompt)).toBe(variant);
+ });
+ it.each([
+   ['近一月收益比较，使用 chart.bar 绘制收益柱状图','bar'],
+   ['近一月走势，必须 chart.bar','bar'],
+   ['近一月走势；格式示例 chart.line，但本面板必须使用 chart.bar','bar'],
+   ['近一月走势：使用 chart.bar 并可声明 chart.line 作为格式示例','bar'],
+   ['近一月走势：使用 chart.bar 并可声明 chart.line','bar'],
+   ['示例公司近一月走势，使用 chart.bar','bar'],
+   ['示例公司近一月走势使用 chart.bar','bar'],
+   ['chart.bar','bar'],
+   ['季度收入对比柱状图','bar'],
+   ['月度收益比较',undefined]
+ ])('retains explicit selection and magnitude-comparison intent in %s',(prompt,variant)=>{
+   expect(requestedChartVariant(prompt)).toBe(variant);
+ });
+ it.each(CHART_VARIANTS)('keeps an explicit %s selection beside optional format guidance',variant=>{
+   expect(requestedChartVariant(`必须使用 chart.${variant}；普通柱状/折线用 chart 并可声明 chart.bar`)).toBe(variant);
+ });
  it('keeps a long source/date explanation in the native chart note instead of rejecting or truncating the chart',()=>{
    const asOf='腾讯财经公开日K，数据日期2026-09-01至2026-10-20；'+('各公司保留原始证券代码、日期、前复权口径、价格单位和区间首尾收盘价。').repeat(9)
    const input=data('line',{asOf,note:'原有解读说明：统一基期100，不能将元与点直接同轴比较。'}),before=JSON.stringify(input)
