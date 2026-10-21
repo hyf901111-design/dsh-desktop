@@ -182,7 +182,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    const target=all.find(b=>b.id===issue.blockId),others=all.filter(b=>b.id!==issue.blockId);if(!target||target.text.length>12000){await append('当前段落过长或已不存在，请分段并重新定位后继续。');return}let size=target.text.length
    const chosen=[target];for(const b of others){if(chosen.length>=24||size+b.text.length>24000)continue;chosen.push(b);size+=b.text.length}
    const scope=challengeReplacementScope(target.text,issue.quote)
-   if(savedThread.metadata.sourceText!==target.text){await append('正文已变化，请重新定位后继续。');return}
+   if(savedThread.metadata.sourceText!==target.text&&(kind==='optimize'||challengeDirectReplacement(text,{quote:issue.quote}))){await append('正文已变化，请重新定位后继续。');return}
    if('error' in scope&&(kind==='optimize'||challengeDirectReplacement(text,{quote:issue.quote}))){await append(scope.error==='too-long'?'完整句优化范围超过6000字，请缩小或分段后重新优化。':'正文已变化或范围不唯一，请重新定位后继续。');return}
    const threadInput={blockId:issue.blockId,quote:issue.quote,category:issue.category,message:issue.message,messages:[] as Array<{role:'assistant'|'user';text:string}>}
    threadInput.messages=challengeThreadMessages(savedThread.comments,Math.min(10000,15000-JSON.stringify(threadInput).length))
@@ -192,7 +192,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    state.current.checks=result.checks;setChecks(result.checks)
    if(result.reply?.replacement){
     const currentBlock=blocks().find(b=>b.id===issue.blockId),currentScope=currentBlock&&challengeReplacementScope(currentBlock.text,issue.quote),replacement=result.reply.replacement
-    if(!current()||!currentBlock||'error' in scope||!currentScope||'error' in currentScope||currentScope.quote!==scope.quote||!findChallengeQuote(editor,issue.blockId,issue.quote)||!findChallengeQuote(editor,issue.blockId,scope.quote)){await append('正文已变化或范围不唯一，这次建议未替换原文。请重新优化。');return}
+    if(!current()||!currentBlock||savedThread.metadata.sourceText!==currentBlock.text||'error' in scope||!currentScope||'error' in currentScope||currentScope.quote!==scope.quote||!findChallengeQuote(editor,issue.blockId,issue.quote)||!findChallengeQuote(editor,issue.blockId,scope.quote)){await append('正文已变化或范围不唯一，这次建议未替换原文。请重新优化。');return}
     if(!replacement.trim()||replacement.length>6000||currentBlock.text.length-scope.quote.length+replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
     if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||'建议如下，可确认后替换到原文。',{scopeVersion:2,anchorQuote:issue.quote,blockId:issue.blockId,quote:scope.quote,sourceText:currentBlock.text,documentKey:captured,replacement,status:'pending'});return}
     if(current()&&fingerprint(latest.current.title,blocks())===captured&&replaceChallengeQuote(editor,issue.blockId,scope.quote,replacement,thread.id)){
