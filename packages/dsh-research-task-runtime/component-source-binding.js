@@ -209,6 +209,26 @@ export function componentFeedEvidenceIssue(text,records) {
   const missing=data.items.flatMap((item,index)=>sources.some(record=>snapshotRecordMatches(item,record))?[]:[index+1])
   return missing.length?`资讯第 ${missing.join('、')} 条的标题、日期与原文链接未能对应同一条已取得记录。逐条复用网页主文记录或链接记录的原始字段，不能借用另一条新闻的网址或日期。已取得的有效条目保留；未取得的研究对象、政策维度及原因放入 note，不以缺失说明伪装新闻，也不能静默缩小原研究范围。`:null
 }
+// After the bounded synthesis attempt, preserve proven records instead of
+// losing the whole feed to one unavailable page or a missing-data placeholder.
+// Every excluded identity remains visible as a gap; its unverified summary is
+// never promoted to a fact. No proven record means no successful fallback.
+export function retainVerifiedFeedItems(text,records) {
+ const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null
+ if(data?.version!==1||!['news','reports'].includes(data.type)||!Array.isArray(data.items)||!data.items.length||data.items.length>40||data.note!==undefined&&typeof data.note!=='string')return
+ const kept=[],gaps=[]
+ for(const [index,item] of data.items.entries()){
+  if(!componentFeedEvidenceIssue(JSON.stringify({...data,items:[item]}),records)){kept.push(item);continue}
+  if(typeof item?.title!=='string'||!item.title.trim()||item.title.length>256||item.url!==undefined&&(typeof item.url!=='string'||item.url.length>2048)||item.date!==undefined&&(typeof item.date!=='string'||item.date.length>100))return
+  const reason=!snapshotDate(item.date)||!snapshotUrl(item.url)?'缺少可核验日期或原文链接':'标题、日期与原文链接未能对应同一条已取得记录'
+  gaps.push(`第${index+1}条：${item.title}；日期：${item.date??'未取得'}；链接：${item.url??'未取得'}。原因：${reason}。`)
+ }
+ if(!kept.length||!gaps.length)return
+ const note=[data.note,`宿主原文核验：展示 ${kept.length} 条已核验记录。以下 ${gaps.length} 条未通过原文核验，未作为已验证资讯或判断依据；原研究范围的缺失项继续保留：`,...gaps].filter(Boolean).join('\n')
+ const result=JSON.stringify({...data,items:kept,note})
+ if(componentFeedEvidenceIssue(result,records))return
+ try{if(acceptArtifactOutput(result))return result}catch{}
+}
 export function componentSnapshotEvidence(text,records) {
   const candidates=extractArtifactObjects(text)
   if(candidates.some(data=>['news','reports'].includes(data?.type)))return candidates.length===1&&!componentFeedEvidenceIssue(text,records)

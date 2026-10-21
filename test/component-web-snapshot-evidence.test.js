@@ -251,17 +251,19 @@ it('keeps a directly fetched article fingerprint separate from recommended links
  expect(JSON.stringify(records)).not.toContain('主文正文已经由网页工具返回')
 })
 
-it('rejects a mixed feed through runtime acceptance and performs only the existing bounded repair, retaining missing scope in the repair contract',async()=>{
+it('quarantines a mismatched item after the bounded repair, preserving proven news and every missing scope item',async()=>{
  const feed={version:1,type:'news',title:'行业资讯',items:[renderedNews,{...renderedNews,date:'2026-10-19',title:'标题日期链接错配，不能作为另一条资讯交付'}],note:'上网电价政策未取得，不能缩小研究范围。'}
  const start=vi.fn(async()=>({childSessionId:'mixed-news-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(feed)}],sourceRecords:collectRenderedNews()}),dispose:async()=>{}}))
  const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'mixed-feed'})
  try{
   await runtime.start({parentSessionId:'parent',canvasNodeId:'news',kind:'container',prompt:'工作台：真实行业研究\n本面板：煤电政策及行业资讯\n优先使用 news 类型；保留每条真实标题、日期和原文链接及未取得的研究范围，静态快照。'})
-  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'mixed-feed'}).state).toBe('failed'))
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'mixed-feed'}).state).toBe('completed'))
   expect(start).toHaveBeenCalledTimes(2)
   expect(start.mock.calls[1][0].prompt).toContain('上网电价政策未取得')
   expect(start.mock.calls[1][0].prompt).toContain('资讯第 2 条')
-  expect(runtime.inspect({parentSessionId:'parent',taskId:'mixed-feed'}).finalOutput).toBeUndefined()
+  const model=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'mixed-feed'}).finalOutput)).data
+  expect(model.items).toEqual([renderedNews]);expect(proof(model,collectRenderedNews())).toBe(true)
+  expect(model.note).toContain('上网电价政策未取得');expect(model.note).toContain(feed.items[1].title);expect(model.note).toContain('未通过原文核验')
  }finally{await runtime.dispose()}
 })
 

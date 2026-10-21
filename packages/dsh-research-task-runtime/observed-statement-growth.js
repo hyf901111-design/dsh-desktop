@@ -29,16 +29,18 @@ function displayedAmountMatches(value,raw,unit){
  const shown=BigInt(clean.replace('.','').replace(/^\+/,'')),scale=unit==='亿元'?8:unit==='万元'?4:0
  return rounded(a.n*pow(digits),pow(a.scale+scale))===shown
 }
-function financialAmountMatches(value,raw,header){
+function financialAmountMatches(value,raw,header,metric){
  const headerUnit=header.match(/[（(](亿元|万元|元)[）)]$/u)?.[1]
  if(headerUnit&&displayedAmountMatches(value,raw,headerUnit))return true
  if(typeof value!=='string'||value.length>120)return false
+ const label=metric.names.toSorted((a,b)=>b.length-a.length).find(name=>value.startsWith(name))
+ if(label)value=value.slice(label.length).trim().replace(/^[:：]\s*/u,'')
  const amount='([-+]?\\d+(?:,\\d{3})*(?:\\.\\d{1,6})?)'
- const inline=value.trim().match(new RegExp(`^${amount}\\s*(亿元|万元|元)(?:\\s*[（(]\\s*${amount}\\s*(亿元|万元|元)\\s*[）)])?$`,'u'))
+ const inline=value.trim().match(new RegExp(`^${amount}\\s*(亿元|万元|元)(?:\\s*[（(]\\s*${amount}\\s*(亿元|万元|元)(?:[，,]\\s*(?:人民币|CNY))?\\s*[）)])?$`,'u'))
  if(!inline||headerUnit&&headerUnit!==inline[2]||!displayedAmountMatches(inline[1],raw,inline[2]))return false
  return inline[3]===undefined||displayedAmountMatches(inline[3],raw,inline[4])
 }
-const metricName=header=>header.replaceAll(/\s/gu,'').replace(/[（(](?:亿元|万元|元)[）)]$/u,'')
+const metricName=header=>header.replaceAll(/\s/gu,'').replace(/[（(](?:亿元|万元|元|原始值|原始金额|原始数值)[）)]$/u,'')
 const metrics=[{names:['营业收入','营收','收入'],field:'revenue'},{names:['归母净利润','归母净利','归母'],field:'nIncomeAttrP'}]
 const securityCodes=value=>typeof value==='string'?value.match(/(?<![A-Z0-9])\d{6}\.(?:SH|SZ|BJ)(?![A-Z0-9])/gu)??[]:[]
 function longMetric(row,columns,metric){
@@ -109,7 +111,7 @@ function rowCorrespondence(row,records,columns){
   !publications.some(date=>date!==pair.current.publishDate)&&!periods.some(date=>date!==pair.current.endDate)&&
   !declared.some(period=>period.date!==pair.current.endDate||period.span!==pair.current.fiscalPeriod||period.type!==pair.current.reportType)&&
   (!parent&&!merged||pair.current.mergedFlag===(parent?'0':'1'))&&
-  amounts.some(({metric,column})=>financialAmountMatches(row[column],pair.current[metric.field],columns[column])))
+  amounts.some(({metric,column})=>financialAmountMatches(row[column],pair.current[metric.field],columns[column],metric)))
  // Displayed values can distinguish parent/consolidated rows returned together;
  // identical amounts with different comparative records stay unresolved.
  if(pairs.length!==1)return
@@ -149,7 +151,7 @@ export function observedStatementGrowth(data,records){
   const output=[...row]
   for(const metric of metrics){
    const growth=growthColumn(row,data.columns,metric)
-   const amounts=amountColumns(row,data.columns,metric).filter(i=>financialAmountMatches(row[i],pair.current[metric.field],data.columns[i]))
+   const amounts=amountColumns(row,data.columns,metric).filter(i=>financialAmountMatches(row[i],pair.current[metric.field],data.columns[i],metric))
    if(growth<0||amounts.length!==1)continue
    const computed=/[（(]计算值[）)]$/u.test(data.columns[growth])||typeof row[growth]==='string'&&/[（(]\s*计算值(?:[，,；;：:\s）)]|$)/u.test(row[growth])
    if(!computed||/披露值|非计算值|未计算/u.test(data.columns[growth]+row[growth]))continue

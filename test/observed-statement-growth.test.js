@@ -18,6 +18,21 @@ const longNative=()=>({version:1,type:'market',variant:'table',asOf:'2026-10-21'
 ],note:'保留经营数据的单独日期、原文口径和缺失说明。'})
 const withParent=()=>({...record,response:{retCode:1,data:[...record.response.data,{...report,mergedFlag:'0',revenue:11867042695,nIncomeAttrP:8085574406},{...previous,mergedFlag:'0',revenue:12652570323,nIncomeAttrP:3648679963}]}})
 
+it.each(['same-amounts','wrong-raw-amount','wrong-rounded-amount','wrong-metric-label'])('matches the observed original-value headers and repeated inline metric labels conservatively: %s',mode=>{
+ const input=inlineNative()
+ input.columns[2]='营业收入（原始值）';input.columns[3]='归母净利润（原始值）'
+ input.rows[0][2]='营业收入 1,069.09亿元（106,909,025,871元，人民币）'
+ input.rows[0][3]='归母净利润 65.86亿元（6,585,729,326元）'
+ if(mode==='wrong-raw-amount')input.rows[0][3]='归母净利润 65.86亿元（6,585,729,325元）'
+ if(mode==='wrong-rounded-amount')input.rows[0][3]='归母净利润 66.86亿元（6,585,729,326元）'
+ if(mode==='wrong-metric-label')input.rows[0][3]='营业收入 65.86亿元（6,585,729,326元）'
+ const text=restore(input,[withParent()])
+ if(mode==='same-amounts'){
+  expect(text).toBeTypeOf('string');const corrected=JSON.parse(text)
+  expect(corrected.rows[0][5]).toBe('-28.89%（上年同期92.62亿元）');expect(corrected.rows[0].slice(0,5)).toEqual(input.rows[0].slice(0,5))
+ }else expect(text).toBeUndefined()
+})
+
 it('corrects the observed long-form metric rows and distinguishes same-date parent and consolidated statements by their unchanged amounts',()=>{
  const input=longNative(),source=withParent(),before=JSON.stringify({input,source}),text=restore(input,[source])
  expect(text).toBeTypeOf('string');const corrected=JSON.parse(text)
