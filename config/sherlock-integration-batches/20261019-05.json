@@ -9,30 +9,48 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "恢复已声明组件类型并校准原始财务同比",
+        "featureName": "修复资讯交付、财务同比与告警布局并细化共同记录规划",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "f21caa8b4dce357d17c7fa111451893dce4665e0",
-        "tipCommit": "4082fe7de60e309616214b5fc9578d67def4d05e",
+        "baseCommit": "4082fe7de60e309616214b5fc9578d67def4d05e",
+        "tipCommit": "5bcb3757865d1d94dd945738cde41c1690b7efc3",
         "commits": [
           {
-            "commit": "e40fe19f15a5cf457970086bb7dbd32ef99f4617",
+            "commit": "d967b36316f630cce4c9adea98764b67ff7a0756",
             "parents": [
-              "f21caa8b4dce357d17c7fa111451893dce4665e0"
+              "4082fe7de60e309616214b5fc9578d67def4d05e"
             ],
-            "subject": "按已声明组件类型恢复缺失字段并保留来源校验"
+            "subject": "恢复资讯字符串引号并保留已核验内容和缺失说明"
           },
           {
-            "commit": "4082fe7de60e309616214b5fc9578d67def4d05e",
+            "commit": "b23374313f9233fce93fdb469eda76a6b049cd1b",
             "parents": [
-              "e40fe19f15a5cf457970086bb7dbd32ef99f4617"
+              "d967b36316f630cce4c9adea98764b67ff7a0756"
             ],
-            "subject": "校正纵向财务表同比并区分同日合并与母公司报表"
+            "subject": "识别财务原始值列及带指标名称的金额校准同比"
+          },
+          {
+            "commit": "121ee1a8e02d68d80dd49edc57645fd567614ea9",
+            "parents": [
+              "b23374313f9233fce93fdb469eda76a6b049cd1b"
+            ],
+            "subject": "修复告警组件窄宽度标题竖排并兼容已保存组件"
+          },
+          {
+            "commit": "5bcb3757865d1d94dd945738cde41c1690b7efc3",
+            "parents": [
+              "121ee1a8e02d68d80dd49edc57645fd567614ea9"
+            ],
+            "subject": "在工作台规划中先确定跨组件共用记录与时间口径"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
@@ -43,12 +61,36 @@
             "path": "packages/dsh-research-task-runtime/observed-statement-growth.js"
           },
           {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workflow-artifact.js"
+          },
+          {
             "status": "A",
-            "path": "test/declared-component-type.test.js"
+            "path": "test/artifact-string-quotes.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-web-snapshot-evidence.test.js"
           },
           {
             "status": "M",
             "path": "test/observed-statement-growth.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/verified-feed-recovery.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workflow-layout-browser.test.js"
           }
         ],
         "checks": [
@@ -57,14 +99,25 @@
               "./node_modules/.bin/vitest",
               "run",
               "--maxWorkers=1",
+              "test/verified-feed-recovery.test.js",
+              "test/artifact-string-quotes.test.js",
               "test/observed-statement-growth.test.js",
               "test/declared-component-type.test.js",
-              "test/research-artifact-resilience.test.js"
+              "test/research-artifact-resilience.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/component-feed-acquisition.test.js",
+              "test/component-source-binding.test.js",
+              "test/workflow-layout-browser.test.js",
+              "test/workflow-template.test.js",
+              "test/stored-template-refinements.test.js",
+              "test/workbench-deferred.test.js",
+              "test/workbench-planning-session.test.js",
+              "test/workbench-planning-phase.test.js"
             ],
             "outcome": "passed",
-            "summary": "103项直接相关测试通过，含缺失类型无损恢复、来源不匹配仍拦截、纵向财务表、同日母公司/合并报表消歧、明确披露日期与报告期校验。/tmp/workbench-known-output-repairs-focus-20261021.log",
-            "verifiedCommit": "4082fe7de60e309616214b5fc9578d67def4d05e",
-            "completedAt": "2026-10-21T02:34:39.284336+00:00",
+            "summary": "393项直接相关检查通过，含资讯来源、格式恢复、财务、告警新旧布局及规划传递；/tmp/workbench-final-repairs-focus-20261021.log",
+            "verifiedCommit": "5bcb3757865d1d94dd945738cde41c1690b7efc3",
+            "completedAt": "2026-10-21T02:59:38.805662+00:00",
             "timeoutMs": 180000
           },
           {
@@ -74,115 +127,31 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/workbench-known-output-repairs-typecheck-20261021.log",
-            "verifiedCommit": "4082fe7de60e309616214b5fc9578d67def4d05e",
-            "completedAt": "2026-10-21T02:34:39.284336+00:00",
+            "summary": "类型检查通过；/tmp/workbench-final-repairs-typecheck-20261021.log",
+            "verifiedCommit": "5bcb3757865d1d94dd945738cde41c1690b7efc3",
+            "completedAt": "2026-10-21T02:59:38.805662+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "已离线重放本次真实模型输出与原始工具来源，原始字段保持不变；新本地包中的原始金融与政策组件仍待实际验收。"
+          "summary": "本轮真实政策、财务输出及来源已离线重放；政策恢复为两条可核验资讯和两条明确缺失，不再整卡失败；财务原始金额与报告日期不变，仅校准计算同比。新包实际验收待进行。"
         },
         "acceptanceCriteria": [
-          "仅对工作台显式声明类型且缺失type的单个合法JSON补齐已声明类型，不推断自由组件样式。",
-          "类型恢复发生于来源采集与严格校验之前；不以缺失类型绕过来源证据。",
-          "按原始全精度金额校正计算同比，兼容纵向表格并唯一匹配合并/母公司报表。",
-          "日期、口径、证券、币种、单位或来源不明确时保持拦截或不改写，不缩小用户研究范围。"
+          "仅给完整合法组件JSON字符串值中的未转义句内引号补转义，不补字段、数字或结构。",
+          "仅在既有单次模型恢复仍不合格时保留通过原有来源门禁的资讯，逐条公开未核验标题、日期、链接和缺失原因，不携带未核验摘要作为事实。",
+          "没有任何可核验资讯时继续失败，不用空卡或模拟内容冒充成功。",
+          "支持原始值列名及重复指标名称的金额；原始金额、单位、币种、报告期和证券身份必须唯一匹配后才校准计算同比。",
+          "告警组件标题独占一行，分类和状态控件另行布局，400/656px下不挤成竖排；兼容已保存组件并保留数据与交互路径。",
+          "规划先确定最小跨卡共用对象、数量、时间、负责人和资源，子卡复用共同事实；仍需新实际生成验证一致性。"
         ],
         "risks": [
-          "模型输出恢复和离线重放通过不代表原始真实数据工作台已经全部成功。",
-          "政策页证据采集是否成功、实际耗时仍需在新本地包复测。",
-          "只本地集成测试；不发布、不推送、不晋升main。"
+          "最新源修复尚未在新本地包中实测。",
+          "保留可核验部分同时公开研究缺失，不代表所有原始需求数据均已取得。",
+          "只本地验证，不发布、不推送、不晋升main。",
+          "共同记录规划只更新生成指引，科考样本数量与跨卡排程一致性仍需新一轮实际生成验证。"
         ],
-        "generatedAt": "2026-10-21T02:34:39.284336+00:00"
-      },
-      "merged": {
-        "mergeCommit": "af109d3cc2bc3f0c521f04425f6eedd19be55882",
-        "verificationCommit": "af109d3cc2bc3f0c521f04425f6eedd19be55882",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "af109d3cc2bc3f0c521f04425f6eedd19be55882",
-            "completedAt": "2026-10-21T02:35:23.985Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "af109d3cc2bc3f0c521f04425f6eedd19be55882",
-            "completedAt": "2026-10-21T02:35:23.985Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "af109d3cc2bc3f0c521f04425f6eedd19be55882",
-            "completedAt": "2026-10-21T02:35:23.985Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "af109d3cc2bc3f0c521f04425f6eedd19be55882",
-            "completedAt": "2026-10-21T02:35:23.985Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "af109d3cc2bc3f0c521f04425f6eedd19be55882",
-            "completedAt": "2026-10-21T02:35:23.985Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T02:35:23.985Z"
+        "generatedAt": "2026-10-21T02:59:38.805662+00:00"
       }
     },
     {
