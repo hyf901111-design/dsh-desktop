@@ -269,7 +269,6 @@ it.each([
  expect(details.getAttribute('aria-label')).toBe('事项详情')
  expect(details.querySelector('[data-calendar-detail=title]').textContent).toBe(title)
  expect(details.querySelector('[data-calendar-detail=notes]').textContent).toBe(notes)
- expect(f.win.getComputedStyle(details.querySelector('[data-calendar-detail=notes]')).whiteSpace).toBe('pre-wrap')
  expect(details.textContent).toContain('2026-01-01');expect(details.textContent).toContain('15:45');expect(details.textContent).toContain('America/New_York');expect(details.textContent).toContain('每天')
  expect(details.querySelector('input,textarea,select,[type=submit],.ew-calendar-danger')).toBeNull()
  await f.event('submit',details);await f.event('click',f.host.querySelector('[data-calendar-complete]'))

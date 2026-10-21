@@ -226,5 +226,5 @@
  .ew-calendar-details{display:flex;flex-direction:column;gap:12px;min-width:0;margin:0}
  .ew-calendar-details>div{min-width:0}
  .ew-calendar-details dt{font-size:11px;color:var(--fw-muted);margin-bottom:4px}
- body .ew-calendar-details dd{margin:0;user-select:text}
+ body .ew-calendar-details dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
 }
