@@ -9,52 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记AI挑战交付修复及组件状态卡按原轮次定位",
+        "featureName": "固定组件状态卡在普通及插队消息前的原回复下方",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "9be65f15e53a985c447d16389e93c49479973d05",
-        "tipCommit": "f2e974af24b897973385adf7fb08df204d1b7ed2",
+        "baseCommit": "f2e974af24b897973385adf7fb08df204d1b7ed2",
+        "tipCommit": "0e564bb21fea89d03c14979781632772a1990070",
         "commits": [
           {
-            "commit": "4f7893e7d274d6827cda48cf4f8824a371e84131",
+            "commit": "1c2414b8c7e735d86e2dfa4615375442d2b50841",
             "parents": [
-              "9be65f15e53a985c447d16389e93c49479973d05"
+              "f2e974af24b897973385adf7fb08df204d1b7ed2"
             ],
-            "subject": "区分挑战检查已跳过与未完成状态"
+            "subject": "修复插队消息导致旧组件状态卡下移的问题"
           },
           {
-            "commit": "1fcbfd6a0d7e770509cab965e11b1ffadeb85d4f",
+            "commit": "0e564bb21fea89d03c14979781632772a1990070",
             "parents": [
-              "4f7893e7d274d6827cda48cf4f8824a371e84131"
+              "1c2414b8c7e735d86e2dfa4615375442d2b50841"
             ],
-            "subject": "仅在明确证券预测相关时显示一致预期检查"
-          },
-          {
-            "commit": "c3ee2a1c33edab7c2fddd84a46077b1513aaf712",
-            "parents": [
-              "1fcbfd6a0d7e770509cab965e11b1ffadeb85d4f"
-            ],
-            "subject": "修复Yjs事务回收编码差异引起的笔记草稿误报"
-          },
-          {
-            "commit": "dfcec5ac3832b8759b5ba0a1d1b7f16a71f05a61",
-            "parents": [
-              "c3ee2a1c33edab7c2fddd84a46077b1513aaf712"
-            ],
-            "subject": "修复挑战讨论撤销回映和重叠划标点击"
-          },
-          {
-            "commit": "fbc07cf379f81f4afb5afdeef79feefa736a5e20",
-            "parents": [
-              "dfcec5ac3832b8759b5ba0a1d1b7f16a71f05a61"
-            ],
-            "subject": "修复组件生成状态卡随新消息移动的问题"
-          },
-          {
-            "commit": "f2e974af24b897973385adf7fb08df204d1b7ed2",
-            "parents": [
-              "fbc07cf379f81f4afb5afdeef79feefa736a5e20"
-            ],
-            "subject": "记录笔记挑战原生验收与交付前修复门禁"
+            "subject": "记录笔记挑战原生验收通过与状态卡插队回归"
           }
         ],
         "files": [
@@ -64,35 +36,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-challenge-runtime.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-challenge-client.mjs"
+            "path": "docs/superpowers/plans/2026-10-21-workbench-source-latency-followup.md"
           },
           {
             "status": "M",
             "path": "scripts/lib/research-workbench-feedback.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/challenge-controller.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-challenge-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-challenge-runtime.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-challenge-undo-browser.test.js"
           },
           {
             "status": "M",
@@ -101,45 +49,22 @@
           {
             "status": "M",
             "path": "test/research-workbench-feedback.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workspace-notes.test.ts"
           }
         ],
         "checks": [
           {
             "argv": [
-              "env",
-              "SHERLOCK_TEST_SIDEBAR_SOURCE=/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js",
               "./node_modules/.bin/vitest",
               "run",
               "--maxWorkers=1",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-anchors.test.ts",
-              "test/notes-challenge-service.test.ts",
-              "test/notes-service.test.ts",
-              "test/notes-stream.test.ts",
-              "test/notes-challenge-client.test.js",
-              "test/notes-challenge-client-browser.test.js",
-              "test/notes-client.test.js",
-              "test/notes-challenge-editor-browser.test.js",
-              "test/notes-challenge-undo-browser.test.js",
-              "test/notes-inline-generation-browser.test.js",
-              "test/workspace-notes.test.ts",
               "test/research-workbench-feedback.test.js",
               "test/research-workbench-feedback-actions.test.js",
-              "test/research-workbench-feedback-browser.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/free-data-sources.test.js"
+              "test/research-workbench-feedback-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "20文件213项相关聚焦验证通过；/tmp/notes-challenge-delivery-focused-20261021.log。新增真实BlockNote/Yjs优化撤销回映、重叠已解决标记、GC前后草稿判等、真实ChatView原轮次最终回复后卡片及原位重试。",
-            "verifiedCommit": "f2e974af24b897973385adf7fb08df204d1b7ed2",
-            "completedAt": "2026-10-21T07:16:43.101078+00:00",
+            "summary": "追加3文件20项聚焦验证通过；/tmp/workbench-feedback-steering-delivery-focused-20261021.log。真实native compactConversationFlow/mergePendingSteeringFlow与实际ChatView渲染，覆盖pending插队、落盘、同轮继续、重复回执及原位重试；此前notes20文件213项记录在前批交接。",
+            "verifiedCommit": "0e564bb21fea89d03c14979781632772a1990070",
+            "completedAt": "2026-10-21T07:29:15.418857+00:00",
             "timeoutMs": 180000
           },
           {
@@ -149,15 +74,15 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "npm run typecheck退出0；/tmp/notes-challenge-delivery-typecheck-20261021.log。",
-            "verifiedCommit": "f2e974af24b897973385adf7fb08df204d1b7ed2",
-            "completedAt": "2026-10-21T07:16:43.101078+00:00",
+            "summary": "npm run typecheck通过；/tmp/workbench-feedback-steering-delivery-typecheck-20261021.log",
+            "verifiedCommit": "0e564bb21fea89d03c14979781632772a1990070",
+            "completedAt": "2026-10-21T07:29:15.418857+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生abcc023包真实模型发现三类问题、同线程回复/显式优化/右栏依据已核验；当前修复经真实BlockNote/Yjs与真实ChatView浏览器路径验证，需新包复核撤销、重启无伪草稿和卡片原位。"
+          "summary": "b74964签名本地包已实机通过笔记恢复、同线程回复草稿、优化/撤销/重做、解决重叠标记和右栏依据；当前追加状态卡scope边界经真实flow/ChatView浏览器验证，待最终包确认。"
         },
         "acceptanceCriteria": [
           "默认关闭并按笔记保存五档强度；关闭暂停自动检查但保留已有讨论。",
@@ -167,102 +92,16 @@
           "显式查看依据才打开右侧挑战页签，账户重置/关闭清空状态。",
           "AI优化原生撤销重做保留独立操作边界、同线程评论和草稿；重叠已解决标记不挡有效评论。",
           "GC前后等价Yjs不会误报恢复，真实正文/档位/回复差异仍保留；不重写原始已存Yjs。",
-          "状态卡固定在首回执所属原轮最终回复之后，后续消息与重试不迁移，plan/session隔离。"
+          "状态卡固定在首回执所属原轮最终回复之后，后续消息与重试不迁移，plan/session隔离。",
+          "同一turn插队时以user/steering/pending-steering切分位置范围，空临时execution不重挂旧卡；pending→落盘→继续回复保留原卡DOM。"
         ],
         "risks": [
-          "真实GLM模型基础功能在前一原生包已验证；当前修复仍需新原生包验收，不宣称零误报或生产infodb已可用。",
+          "笔记已真实模型和原生验收；追加状态卡插队修复待最终包确认，不以浏览器fixture冒充原生。",
           "infodb只识别实际授权只读SQL schema；API发现式来源未识别时unavailable；滚动数据/C4暂未启用。",
           "单段超过12000字符保留partial；实际token缺失时仅用保守字符预算，不声称费用精确。",
           "沿既有未验收批次本地预览，不推送/发布/晋升main；两项前序工作台修复独立提交随同分支。"
         ],
-        "generatedAt": "2026-10-21T07:16:43.101078+00:00"
-      },
-      "merged": {
-        "mergeCommit": "baf81368a9fb217a15b2af6a17374c8e27c26821",
-        "verificationCommit": "baf81368a9fb217a15b2af6a17374c8e27c26821",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "baf81368a9fb217a15b2af6a17374c8e27c26821",
-            "completedAt": "2026-10-21T07:17:23.983Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "baf81368a9fb217a15b2af6a17374c8e27c26821",
-            "completedAt": "2026-10-21T07:17:23.983Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "baf81368a9fb217a15b2af6a17374c8e27c26821",
-            "completedAt": "2026-10-21T07:17:23.983Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "baf81368a9fb217a15b2af6a17374c8e27c26821",
-            "completedAt": "2026-10-21T07:17:23.983Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "baf81368a9fb217a15b2af6a17374c8e27c26821",
-            "completedAt": "2026-10-21T07:17:23.983Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T07:17:23.983Z"
+        "generatedAt": "2026-10-21T07:29:15.418857+00:00"
       }
     },
     {
