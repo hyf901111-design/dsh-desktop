@@ -95,6 +95,16 @@ it('returns optimize and reply suggestions only for a still-valid thread anchor 
   await expect(generateNoteChallenge(f.ctx, { ...input, action: 'optimize', thread: { ...thread, quote: '已删除的原文' } })).rejects.toThrow('原文')
 })
 
+it('requests a natural short thread reply without logs and preserves an honest missing-source explanation', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture({ reply: { text: '目前没有可用的实际来源，无法核实这项判断。' } })
+  const thread = { blockId: 'a', quote: '收入增长10%', category: 'question', message: '请核对来源。', messages: [{ role: 'user', text: '依据是什么？' }] }
+  const result = await generateNoteChallenge(f.ctx, { ...input, action: 'reply', thread })
+  expect(f.calls[0].system).toContain('一两句自然语言')
+  expect(f.calls[0].system).toContain('日志、工具')
+  expect(result.reply).toEqual({ text: '目前没有可用的实际来源，无法核实这项判断。' })
+  expect(JSON.stringify(result.reply)).not.toContain('PRIVATE REASONING')
+})
+
 it('continues a thread after an accepted 6000-character replacement becomes its exact quote', async () => {
   const { generateNoteChallenge } = await load(), quote = '首' + '文'.repeat(5998) + '尾'
   const answer = { reply: { text: '保留原立场，明确表述。', replacement: quote } }, f = fixture(answer)
