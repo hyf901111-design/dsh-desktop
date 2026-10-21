@@ -165,6 +165,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   const scope=currentBlock&&challengeReplacementScope(currentBlock.text,issue.quote)
   const valid=suggestion.scopeVersion===2&&suggestion.anchorQuote===issue.quote&&suggestion.blockId===issue.blockId&&thread.metadata.sourceText===suggestion.sourceText&&scope&&!('error' in scope)&&scope.quote===suggestion.quote&&typeof suggestion.replacement==='string'&&!!suggestion.replacement.trim()&&suggestion.replacement.length<=6000&&currentBlock?.text===suggestion.sourceText&&fingerprint(latest.current.title,blocks())===suggestion.documentKey&&currentBlock.text.length-suggestion.quote.length+suggestion.replacement.length<=12000&&findChallengeQuote(editor,issue.blockId,suggestion.quote)
   if(!valid){await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'stale'}}}});latest.current.persist();refresh();return}
+  if(suggestion.replacement===scope.quote)return
   if(!replaceChallengeQuote(editor,issue.blockId,suggestion.quote,suggestion.replacement,threadId))return
   const sourceText=blocks().find(b=>b.id===issue.blockId)!.text,quote=challengeThreadQuote(editor,issue.blockId,threadId)??suggestion.replacement
   if(sourceText!==suggestion.sourceText)metadata(threadId,{issue:{...issue,quote},sourceText,anchorHistory:anchorHistory(thread.metadata.anchorHistory,{quote:issue.quote,sourceText:suggestion.sourceText},{quote,sourceText})})
@@ -203,6 +204,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     const currentBlock=blocks().find(b=>b.id===issue.blockId),currentScope=currentBlock&&challengeReplacementScope(currentBlock.text,issue.quote),replacement=result.reply.replacement
     if(!current()||!currentBlock||savedThread.metadata.sourceText!==currentBlock.text||'error' in scope||!currentScope||'error' in currentScope||currentScope.quote!==scope.quote||!findChallengeQuote(editor,issue.blockId,issue.quote)||!findChallengeQuote(editor,issue.blockId,scope.quote)){await append('正文已变化或范围不唯一，这次建议未替换原文。请重新优化。');return}
     if(!replacement.trim()||replacement.length>6000||currentBlock.text.length-scope.quote.length+replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
+    if(replacement===scope.quote){await append(result.reply.text||'原文与建议一致，无需替换。');return}
     if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||'建议如下，可确认后替换到原文。',{scopeVersion:2,anchorQuote:issue.quote,blockId:issue.blockId,quote:scope.quote,sourceText:currentBlock.text,documentKey:captured,replacement,status:'pending'});return}
     if(current()&&fingerprint(latest.current.title,blocks())===captured&&replaceChallengeQuote(editor,issue.blockId,scope.quote,replacement,thread.id)){
      const sourceText=blocks().find(b=>b.id===issue.blockId)!.text,quote=challengeThreadQuote(editor,issue.blockId,thread.id)??replacement
