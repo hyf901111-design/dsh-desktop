@@ -11,6 +11,7 @@ import {CHART_TEMPLATES,chartTemplateSchema} from './chart-template-contract.js'
 import {MARKET_DESIGN_TEMPLATES,TERMINAL_GENERIC_TEMPLATES,WORKBENCH_DESIGN_VERSION} from './workbench-design-contract.js'
 import {applyTerminalPresentation} from './terminal-presentation.js'
 import {OPERATIONS_TEMPLATES,operationsTemplateSchema} from './operations-template-contract.js'
+import {DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js'
 
 const interactions = {
  charting:['已取得证券周期','K线OHLC收盘线','独立量纲比较','本地技术指标参数','绘图与锁定撤销','范围及视图恢复','完整来源记录'],
@@ -31,6 +32,7 @@ const generic=[
  ['reports','研报',['搜索','分类','展开','来源'],656,352],['gantt','甘特图',['日期及日内时间轴','任务详情','键盘导航'],656,352]
 ]
 export const COMPONENT_TEMPLATES=Object.freeze([
+ {id:'view',type:'view',title:'共用记录组合视图',version:'dataset-view-v1',schema:DATASET_VIEW_GUIDANCE,width:656,height:620,figma:'现有控件规范组合扩展',interactions:['字段筛选','记录详情','两项比较','资源排程','本地优先级','状态恢复']},
  ...ATTACHMENT_TEMPLATES.map(t=>({...t,schema:ATTACHMENT_GUIDANCE})),
  ...AUDIO_TEMPLATES.map(t=>({...t,schema:AUDIO_GUIDANCE})),
  ...DERIVED_TEMPLATES.map(t=>({...t,schema:DERIVED_GUIDANCE})),
@@ -68,5 +70,5 @@ export function templateSummary(spec){
  const model=readTemplateModel(spec)
  if(!model)return null
  const t=templates.get(model.templateId)
- return {templateId:t.id,templateVersion:model.version,data:model.data,interactions:t.interactions,message:'已保留结构化数据。更新只提交此数据对象，不读取或重写 HTML；样式由宿主固定模板提供。'}
+ return {templateId:t.id,templateVersion:model.version,data:model.data,interactions:t.interactions,message:t.id==='view'?'已保留共同记录与组合视图配置。更新提交结构化数据和视图配置，不读取或重写HTML；保留原记录、单位、缺失值与说明。':'已保留结构化数据。更新只提交此数据对象，不读取或重写 HTML；样式由宿主固定模板提供。'}
 }

@@ -32,6 +32,7 @@ import {generateSimulatedPanel} from './simulated-workbench-generator.js';
 import {marketVariant} from './workbench-design-contract.js';
 import { PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js';
+import {DATASET_VIEW_GUIDANCE,DATASET_VIEW_SCHEMA,WORKBENCH_DATASETS_SCHEMA} from './dataset-view-contract.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
 const publicDataRequestsSchema = { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
     source: { type: 'string', required: true, enum: ['tencent-quotes','tencent-history','kraken-ticker','kraken-candles','sina-news'] },
@@ -124,14 +125,21 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 /禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(canvasHumanRequest(exec.agent?.session)?.text ?? '')))
                 throw Error('当前任务未授权内置免费来源取数；请使用已有资料或正常面板流程。');
             if (direct.length && typeof runtime.startPublicDataBatch !== 'function') throw Error('免费源组件直通服务不可用。');
-            if (input.generationMode === 'deferred' && typeof runtime.startBatch !== 'function') throw Error('延后模拟面板生成服务不可用。');
+            if (input.generationMode === 'deferred' && input.panels.some(p=>!p.artifact) && typeof runtime.startBatch !== 'function') throw Error('延后模拟面板生成服务不可用。');
             const startDeferred = async plan => {
                 const pending = plan.panels.filter(p => !p.taskId);
                 try {
-                    const receipts = await runtime.startBatch({ parentSessionId, panels: pending.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) })) });
-                    pending.forEach((p, i) => { p.taskId = receipts[i].taskId; delete p.error; });
+                    const prepared=pending.filter(p=>p.artifact),generated=pending.filter(p=>!p.artifact);
+                    if(prepared.length){
+                        const receipts=await runtime.startPreparedBatch({parentSessionId,panels:prepared.map(p=>({canvasNodeId:p.nodeId,prompt:workbenchPanelPrompt(input,p),preparedRequirement:p.prompt,artifact:p.artifact}))});
+                        prepared.forEach((p,i)=>{p.taskId=receipts[i].taskId;p.prepared=true;delete p.error});
+                    }
+                    if(generated.length){
+                        const receipts = await runtime.startBatch({ parentSessionId, panels: generated.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) })) });
+                        generated.forEach((p, i) => { p.taskId = receipts[i].taskId; delete p.error; });
+                    }
                 } catch (error) {
-                    for (const p of pending) p.error = '面板任务未能启动，请重试。';
+                    for (const p of pending) if(!p.taskId)p.error = '面板任务未能启动，请重试。';
                     plan.ready = true; await persist(); throw error;
                 }
             };
@@ -142,8 +150,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 if (JSON.stringify(withoutScope(previous)) !== JSON.stringify(withoutScope(input)) ||
                     previous.originalRequest && input.originalRequest && previous.originalRequest !== input.originalRequest)
                     throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
-                if (input.generationMode === 'deferred' && old.ready && old.panels.some(p => !p.taskId)) { await startDeferred(old); await persist(); }
-                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? preparedWorkbench(input) ? 'prepared' : 'accepted' : 'preparing' };
+                if (old.ready && old.panels.some(p=>!p.taskId) && (input.generationMode==='deferred'||old.panels.every(p=>p.artifact))) { await startDeferred(old); await persist(); }
+                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? preparedWorkbench(input) && old.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' : 'preparing' };
             }
             const id = randomUUID();
             const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), ready: false,
@@ -181,7 +189,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                                 prompt: content.panels[index].prompt, type: content.panels[index].type,
                                 artifact: content.panels[index].artifact });
                     }
-                    const receipts = await runtime.startPreparedBatch({ parentSessionId, panels: plan.panels.map(p => ({ canvasNodeId: p.nodeId, prompt: workbenchPanelPrompt(input, p), artifact: p.artifact })) });
+                    const receipts = await runtime.startPreparedBatch({ parentSessionId, panels: plan.panels.map(p => ({ canvasNodeId: p.nodeId, prompt: workbenchPanelPrompt(input, p), preparedRequirement:p.prompt, artifact: p.artifact })) });
                     for (let index = 0; index < plan.panels.length; index++) plan.panels[index].taskId = receipts[index].taskId;
                 } catch (error) {
                     for (const panel of plan.panels) panel.error = `模拟数据准备失败：${error.message}`;
@@ -215,7 +223,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             plan.ready = true;
             mountedPlans.delete(id);
             await persist();
-            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: preparedWorkbench(input) ? 'prepared' : 'accepted' };
+            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: preparedWorkbench(input) && plan.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' };
         };
         const pending = chain.then(run);
         chain = pending.catch(() => { });
@@ -223,18 +231,20 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
     };
     const disposeTool = ctx.tools.register(defineTool({
         name: 'research_workbench_create',
-        description: '国内热门基金ETF综合行情优先一次提交 {"title":"国内热门基金ETF行情研究工作台","dataMode":"source","preset":"cn-hot-etf-live","panels":[]}，宿主固定8卡、真实取数并保存刷新，不先query或抄写数据；具体数量/标的/数据源要求用自定义panels。'+FINANCIAL_WIDGET_GUIDANCE+'在研究画布新增 1–10 个独立面板；此工具不会替换、刷新或删除已有组件。用户要求更新已有组件时，先 research_canvas_inspect；金融模板用 research_canvas_update_market 直接提交结构化数据，其他组件用 research_canvas_apply 修改其 containerSpec；不要把新增结果称为替换。用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 与 panels。用户已经指定数值的指标卡、表格和图表必须在 panel.artifact 中逐项提交原值，不能只传标题/说明让宿主填通用模拟样本。每个 type=chart 面板必须同时附 artifact:{version:1,type:"chart",title,variant,unit,asOf及对应图表数据字段；坐标图使用labels和series:[{name,values}]}；按需求一次生成虚构数据，季度/产品/系列名称与单位准确，百分比图复用原值，禁止用通用行业样例替代。直方图与箱线图共用样本时只在箱线图groups填写原样本；直方图面板设置samplesFromPanel为箱线图完整标题，artifact省略samples/bins，宿主自动合并。已有完整artifact由宿主直接渲染；未提供完整模拟记录用deferred先提交规划。业务交互超出现有模板时选type:html，由受限子卡离线生成自包含交互内容，仍保留deferred/sharedContext。标题、独立筛选栏、内容/图表、点选详情、底部备注来源分区合理，不强行套同一正文布局。progress/tasks/approval/alerts/form/code/clock 必须同次提交完整 artifact；clock 的 live 设备时钟也必须提供 locations 时区配置，不能让宿主猜城市。 金融简介使用market.ticker-information（symbol/name/price/priceUnit/dayChange/dayChangePercent/info/sparkline，缺历史提供sparklineMissing）；逐项核心指标使用market.key-metrics（symbol/items的label/value/period）；管理团队使用market.management-team（symbol/period/members的name/role/compensation/currency）。这三类自定义模拟模板首次调用必须同时附完整artifact，不能填通用金融样本；未知数字保留null并说明missing，不合计不同币种报酬。未指定具体数值的其余模拟面板可只含 title/prompt/type/size。OpenTerminal 专用布局试用使用preset:"openterminal-research"、dataMode:"simulated"、panels:[]，一次生成行情、量价图、新闻与明细四组件。组合/事件密集表试用用preset:"openterminal-portfolio"，能源简报用preset:"openterminal-briefing"；这两个同样使用dataMode:"simulated"与panels:[]。自定义OpenTerminal四类数据在artifact添加layoutProfile:"openterminal"；由宿主生成独立报价主区、双列指标、图表读数带、固定表头和完整摘要信息流，不是换主题色。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，提交preset与panels:[]。已有完整模拟数据时可提交 artifact。真实数据首次规划尚未实际取数时，各 panel 仅传 title/prompt/type/size，省略 artifact，不填样例、记忆行情或占位值；真实数据已由用户提供或业务取数工具返回时，直接将完整结构化数据放入各 panel.artifact，宿主即刻填充预置模板，不启动逐卡模型；仅尚未取到数据的面板走子任务。不可把模拟数据标为真实来源。面板子任务不继承主对话的工具返回；如果主对话已取数，必须在对应 prompt 中传递实际数值、日期、单位及真实调用来源，不能只列待查字段或说“已取得”，否则子任务会重复检索。仅调用 financial_query 的记录不得标为通联；不同来源分别标注。返回 accepted 仅表示面板任务已启动，回复应说生成中，不能声称全部完成；prepared 才表示宿主已准备好内容。同一请求重试保持 requestId。返回的 templateIds 与 panels 按顺序对应，回复用户时以最终 templateIds 为准。所有模拟值显著标注；不可虚构链接或声称连接真实行情。'+ATTACHMENT_GUIDANCE+AUDIO_GUIDANCE+DERIVED_GUIDANCE+YOUTUBE_GUIDANCE+IFRAME_GUIDANCE+TIMELINE_GUIDANCE+KPI_GUIDANCE+CALENDAR_GUIDANCE+NOTE_WORKBENCH_GUIDANCE+RSS_WORKBENCH_GUIDANCE+FINANCIAL_SNAPSHOT_GUIDANCE+FINANCIAL_SERIES_GUIDANCE+FINANCIAL_FUNDAMENTAL_GUIDANCE+FINANCIAL_REVENUE_GUIDANCE+FINANCIAL_ACTION_GUIDANCE+FINANCIAL_OWNERSHIP_GUIDANCE+FINANCIAL_RECORDS_GUIDANCE+FINANCIAL_CHARTING_GUIDANCE,
+        description: DATASET_VIEW_GUIDANCE+'国内热门基金ETF综合行情优先一次提交 {"title":"国内热门基金ETF行情研究工作台","dataMode":"source","preset":"cn-hot-etf-live","panels":[]}，宿主固定8卡、真实取数并保存刷新，不先query或抄写数据；具体数量/标的/数据源要求用自定义panels。'+FINANCIAL_WIDGET_GUIDANCE+'在研究画布新增 1–10 个独立面板；此工具不会替换、刷新或删除已有组件。用户要求更新已有组件时，先 research_canvas_inspect；金融模板用 research_canvas_update_market 直接提交结构化数据，其他组件用 research_canvas_apply 修改其 containerSpec；不要把新增结果称为替换。用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 与 panels。用户已经指定数值的指标卡、表格和图表必须在 panel.artifact 中逐项提交原值，不能只传标题/说明让宿主填通用模拟样本。每个 type=chart 面板必须同时附 artifact:{version:1,type:"chart",title,variant,unit,asOf及对应图表数据字段；坐标图使用labels和series:[{name,values}]}；按需求一次生成虚构数据，季度/产品/系列名称与单位准确，百分比图复用原值，禁止用通用行业样例替代。直方图与箱线图共用样本时只在箱线图groups填写原样本；直方图面板设置samplesFromPanel为箱线图完整标题，artifact省略samples/bins，宿主自动合并。已有完整artifact由宿主直接渲染；未提供完整模拟记录用deferred先提交规划。业务交互超出现有模板时选type:html，由受限子卡离线生成自包含交互内容，仍保留deferred/sharedContext。标题、独立筛选栏、内容/图表、点选详情、底部备注来源分区合理，不强行套同一正文布局。progress/tasks/approval/alerts/form/code/clock 必须同次提交完整 artifact；clock 的 live 设备时钟也必须提供 locations 时区配置，不能让宿主猜城市。 金融简介使用market.ticker-information（symbol/name/price/priceUnit/dayChange/dayChangePercent/info/sparkline，缺历史提供sparklineMissing）；逐项核心指标使用market.key-metrics（symbol/items的label/value/period）；管理团队使用market.management-team（symbol/period/members的name/role/compensation/currency）。这三类自定义模拟模板首次调用必须同时附完整artifact，不能填通用金融样本；未知数字保留null并说明missing，不合计不同币种报酬。未指定具体数值的其余模拟面板可只含 title/prompt/type/size。OpenTerminal 专用布局试用使用preset:"openterminal-research"、dataMode:"simulated"、panels:[]，一次生成行情、量价图、新闻与明细四组件。组合/事件密集表试用用preset:"openterminal-portfolio"，能源简报用preset:"openterminal-briefing"；这两个同样使用dataMode:"simulated"与panels:[]。自定义OpenTerminal四类数据在artifact添加layoutProfile:"openterminal"；由宿主生成独立报价主区、双列指标、图表读数带、固定表头和完整摘要信息流，不是换主题色。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，提交preset与panels:[]。已有完整模拟数据时可提交 artifact。真实数据首次规划尚未实际取数时，各 panel 仅传 title/prompt/type/size，省略 artifact，不填样例、记忆行情或占位值；真实数据已由用户提供或业务取数工具返回时，直接将完整结构化数据放入各 panel.artifact，宿主即刻填充预置模板，不启动逐卡模型；仅尚未取到数据的面板走子任务。不可把模拟数据标为真实来源。面板子任务不继承主对话的工具返回；如果主对话已取数，必须在对应 prompt 中传递实际数值、日期、单位及真实调用来源，不能只列待查字段或说“已取得”，否则子任务会重复检索。仅调用 financial_query 的记录不得标为通联；不同来源分别标注。返回 accepted 仅表示面板任务已启动，回复应说生成中，不能声称全部完成；prepared 才表示宿主已准备好内容。同一请求重试保持 requestId。返回的 templateIds 与 panels 按顺序对应，回复用户时以最终 templateIds 为准。所有模拟值显著标注；不可虚构链接或声称连接真实行情。'+ATTACHMENT_GUIDANCE+AUDIO_GUIDANCE+DERIVED_GUIDANCE+YOUTUBE_GUIDANCE+IFRAME_GUIDANCE+TIMELINE_GUIDANCE+KPI_GUIDANCE+CALENDAR_GUIDANCE+NOTE_WORKBENCH_GUIDANCE+RSS_WORKBENCH_GUIDANCE+FINANCIAL_SNAPSHOT_GUIDANCE+FINANCIAL_SERIES_GUIDANCE+FINANCIAL_FUNDAMENTAL_GUIDANCE+FINANCIAL_REVENUE_GUIDANCE+FINANCIAL_ACTION_GUIDANCE+FINANCIAL_OWNERSHIP_GUIDANCE+FINANCIAL_RECORDS_GUIDANCE+FINANCIAL_CHARTING_GUIDANCE,
         parameters: {
             requestId: { type: 'string', description: '可选。本轮需求的稳定标识，重试保持一致；省略时宿主根据当前用户消息生成，重复调用不会重复建卡。' },
             title: { type: 'string', required: true, description: '工作台标题。必须同时提供panels完整清单；不能仅提交title。使用preset时panels填空数组。' },
             dataMode: { type: 'string', enum: ['simulated', 'source'], description: '真实来源使用source（也可省略）；用户允许演示数据且个人看板时使用simulated。实时预设cn-hot-etf-live不可使用simulated。' },
-            generationMode: { type: 'string', enum: ['parallel','deferred'], description: '用户允许模拟且未提供完整数据时优先deferred：首轮只提交面板规划和sharedContext，受理后由受限子卡生成完整记录；不混用artifact/preset。parallel保留旧本地固定样例行为。真实来源省略。' },
+            generationMode: { type: 'string', enum: ['parallel','deferred'], description: '用户允许模拟时，多卡同一对象优先sharedDatasets+type:view直接准备；模板能力之外且未提供完整数据才用deferred：首轮只提交面板规划和sharedContext，受理后由受限子卡生成完整记录；普通延后卡不混用artifact/preset，已解析的view直接准备。parallel保留旧本地固定样例行为。真实来源省略。' },
             sharedContext: { type: 'string', description: '仅deferred。最多3000字符，跨卡共用的事实、总额及紧凑分配、日期、容量、单位和口径；不填逐行明细或完整图表序列。原始用户需求由宿主自动保留，用户明确约束优先。' },
+            sharedDatasets: WORKBENCH_DATASETS_SCHEMA,
             preset: { type: 'string', enum: [...LIVE_WORKBENCH_PRESETS, ...SIMULATED_WORKBENCH_PRESETS], description: 'cn-hot-etf-live为国内代表性基金ETF真实行情8卡，dataMode:source、panels:[]，无需先query或抄写数据，由宿主取数并自动刷新。其余为模拟预设，须dataMode:simulated。预设不能混用自定义面板。' },
             panels: { type: 'array', required: true, description: '必填。自定义工作台提交1–10个含title/prompt/type/size的完整面板；已提供内容必须附对应artifact。仅内置preset使用空数组[]。', items: { type: 'object', additionalProperties: false, properties: {
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题与内容边界；主对话已有的数据必须完整带入实际记录、日期、单位与来源，子任务看不到主对话工具返回。以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
                         type: { type: 'string', enum: types, required: true, description: 'table仅支持平面行、排序和搜索，不能逐条展开详情。时序记录可用timeline/calendar等合适模板；明确需要可展开表格或独特业务交互时用html；模拟场景保留deferred与sharedContext，由受限子卡离线生成自包含HTML；真实记录保持原数据性质和来源约束，不改称模拟。散点图用 market 且 prompt 声明 variant: scatter；普通柱状图用 chart 并声明 chart.bar；指标卡 metrics 只显示数值，不会渲染散点或柱状图。' }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
                         layout: {type:'string',enum:['standard','wide'],description:'可选的语义阅读布局；排程、宽对照、图表与独立详情并排时用wide跨整行，其余standard。不要所有面板选同一宽度；手动尺寸优先。'},
+                        view: {...DATASET_VIEW_SCHEMA,description:'type:view的共同记录引用与组合配置；records/compare填fields，schedule填label/start/end及可选owner/resource。无需artifact或生成代码。'},
                         samplesFromPanel: { type: 'string', description: '仅直方图：引用本工作台一个箱线图面板的完整标题，其artifact.groups必须含原始samples。直方图artifact省略samples/bins，unit与来源一致；宿主自动合并并保留重复观测。' },
                         intervalMinutes: { type: 'number', description: '仅publicData面板的可选兼容写法；规范写在publicData.intervalMinutes。两处同时提供须一致，否则拒绝。' },
                         profile: { type: 'string', enum: Object.keys(PUBLIC_DATA_PROFILES), description: '兼容平铺写法，必须同时提供requests；优先写入publicData.profile，不与嵌套配置冲突。' },

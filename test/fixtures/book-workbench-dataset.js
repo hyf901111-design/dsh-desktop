@@ -1,0 +1,8 @@
+export const bookDataset=()=>({
+ id:'books',label:'古籍修复工坊·交接演练',asOf:'虚构演练快照：2026-10-25（Asia/Shanghai）',note:'全部为虚构演练记录，不联网；人员、时段、含水率和验收只采用本份记录。',
+ fields:[['id','册号'],['title','书名'],['owner','负责人'],['stage','阶段'],['disease','病害'],['steps','修复步骤'],['handover','交接事项'],['start','入柜时间'],['end','出柜时间'],['moisture','复检含水率','%'],['result','验收结果'],['wait','等待原因'],['resource','设备']].map(([key,label,unit])=>({key,label,...(unit?{unit}:{})})),
+ records:Array.from({length:8},(_,i)=>{const day=22+Math.floor(i/3),hour=[8,11,14][i%3];return {id:`B0${i+1}`,title:`演练古籍${i+1}`,owner:i%2?'修复师乙':'修复师甲',stage:'复检',disease:i%2?'书口开裂与页角破损':'水渍及纸纤维脆化',steps:['检查登记','清洁','修补','干燥','复检'],handover:'保持恒湿；随册交接编号和温度记录。',start:`2026-10-${day}T${String(hour).padStart(2,'0')}:00:00+08:00`,end:`2026-10-${day}T${String(hour+2).padStart(2,'0')}:00:00+08:00`,moisture:i===7?null:10+i*.4,result:i===7?'待复检':'通过',wait:i%3?'等待前一册完成干燥':'前序修补完成后入柜',resource:'干燥柜1'};})
+})
+export const archiveView=()=>({dataset:'books',subject:'逐册档案与任意两册比较',filters:['owner','stage'],details:['disease','steps','handover'],navigation:'tabs',sections:[{kind:'records',title:'修复档案',fields:['id','title','owner','stage','moisture','result']},{kind:'compare',title:'两册对比',fields:['owner','disease','steps','handover','start','end','moisture','result']}]})
+export const scheduleView=()=>({dataset:'books',subject:'三日设备占用与等待原因',details:['id','owner','start','end','wait'],sections:[{kind:'schedule',label:'id',start:'start',end:'end',owner:'owner',resource:'resource'}]})
+export const priorityView=()=>({dataset:'books',filters:['owner','result'],details:['id','moisture','result','handover'],reorder:true,layout:'split',sections:[{kind:'records',fields:['id','owner','moisture','result']}]})

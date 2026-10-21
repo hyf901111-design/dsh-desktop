@@ -27,6 +27,8 @@ body button[aria-pressed="true"]{background-color:var(--sherlock-control-primary
 body .series-controls button[aria-pressed="true"]{background:var(--sherlock-row-selected)!important;color:var(--sherlock-control-text)!important}
 /* Schedule rows are record selectors, not fixed-height toolbar controls. */
 body[data-research-kind="gantt"] .gantt-task{height:auto!important;min-height:0!important;max-height:none!important;white-space:normal!important;overflow:visible!important;padding:3px 0!important;border:0!important;border-radius:0!important;background-color:transparent!important;color:var(--sherlock-text)!important;text-align:left!important}
+body[data-research-kind="view"] :is(.dv-record-select,.dv-schedule-select){height:auto!important;min-height:0!important;max-height:none!important;padding:3px 0!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--sherlock-text)!important;text-align:left!important}
+body[data-research-kind="view"] .dv-schedule-select{white-space:normal!important;overflow:visible!important}
 body .series-legend button{background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border-color:var(--sherlock-control-border)!important}
 body button.fund-industry{background:var(--sherlock-row-alternate)!important;color:var(--sherlock-text)!important;border:0!important;border-radius:0!important;outline:0!important;min-height:30px!important;padding:4px 8px!important;grid-template-columns:minmax(72px,90px) minmax(0,1fr) 48px!important;gap:8px!important}
 body button.fund-industry:is(:hover,[aria-pressed="true"]){background:var(--sherlock-row-selected)!important;color:var(--sherlock-text)!important;border:0!important;outline:0!important}
