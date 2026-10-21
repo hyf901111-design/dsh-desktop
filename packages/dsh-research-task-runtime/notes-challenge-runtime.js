@@ -126,6 +126,13 @@ function issuesFrom(value, targets, available, limits) {
   return { issues: result, coveredBlockIds: targets.filter(block => reviewed.has(block.id)).map(block => block.id) }
 }
 
+// Harness persists subprocess stderr. Cordis' default logger only keeps an
+// in-memory buffer, so fixed count diagnostics must use this captured sink.
+function diagnostic(requestId, counts) {
+  try { console.warn(JSON.stringify({ ...counts, requestKey: createHash('sha256').update(requestId).digest('hex').slice(0, 12) })) }
+  catch { /* Diagnostics must not affect generation or its existing rejection. */ }
+}
+
 // Diagnose a silent all-filtered response without recording note text, model
 // messages, arbitrary labels, or reasoning. A hashed request key correlates QA.
 function filteredReviewStats(value, targets) {
@@ -157,9 +164,11 @@ function boundedIssues(issues, blocks, limit) {
   return blocks.flatMap((block, index) => groups[index].filter(issue => selected.has(issue)).sort((a, b) => block.text.indexOf(a.quote) - block.text.indexOf(b.quote)))
 }
 
-async function modelResult(ctx, route, system, payload, signal, reasoningEffort, reviewTargets) {
+async function modelResult(ctx, route, system, payload, signal, reasoningEffort, reviewTargets, requestId) {
   const messages = [createUserMessage({ content: [{ type: 'text', text: JSON.stringify(payload) }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime' } })]
   let outputSize = 0, totalSize = 0, usage = { inputTokens: 0, outputTokens: 0 }
+  const knownEvents = new Set(['block-start', 'text-delta', 'reasoning-delta', 'tool-call-delta', 'block-end', 'usage', 'finish', 'tool-call', 'tool-call-start'])
+  const streamStats = { eventCounts: {}, serializedByKind: {}, textDeltaChars: 0, reasoningDeltaChars: 0, textSnapshotChars: 0, reasoningSnapshotChars: 0 }
   for (let attempt = 0; attempt < 2; attempt++) {
     signal.throwIfAborted()
     const transport = new AbortController(), streamSignal = AbortSignal.any([signal, transport.signal])
@@ -172,8 +181,20 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
         signal.throwIfAborted()
         if (step.done) break
         const chunk = step.value
-        totalSize += JSON.stringify(chunk).length
-        if (totalSize > 100000 || chunk.type === 'tool-call' || chunk.type === 'tool-call-start' || chunk.block?.type === 'tool-call') throw Error('挑战检查返回内容超出边界。')
+        const serializedChars = JSON.stringify(chunk).length, kind = knownEvents.has(chunk.type) ? chunk.type : 'other'
+        totalSize += serializedChars
+        streamStats.eventCounts[kind] = (streamStats.eventCounts[kind] ?? 0) + 1
+        streamStats.serializedByKind[kind] = (streamStats.serializedByKind[kind] ?? 0) + serializedChars
+        if (chunk.type === 'text-delta' && typeof chunk.text === 'string') streamStats.textDeltaChars += chunk.text.length
+        if (chunk.type === 'reasoning-delta' && typeof chunk.text === 'string') streamStats.reasoningDeltaChars += chunk.text.length
+        if (chunk.type === 'block-end' && typeof chunk.block?.text === 'string') {
+          if (chunk.block.type === 'text') streamStats.textSnapshotChars += chunk.block.text.length
+          if (chunk.block.type === 'reasoning') streamStats.reasoningSnapshotChars += chunk.block.text.length
+        }
+        if (totalSize > 100000 || chunk.type === 'tool-call' || chunk.type === 'tool-call-start' || chunk.block?.type === 'tool-call') {
+          diagnostic(requestId, { event: 'notes-challenge-stream-rejected', action: payload.action, reason: totalSize > 100000 ? 'serialized-limit' : 'tool-call', attempt: attempt + 1, serializedChars: totalSize, lastEventKind: kind, lastEventChars: serializedChars, ...streamStats })
+          throw Error('挑战检查返回内容超出边界。')
+        }
         if (chunk.type === 'text-delta') { outputSize += chunk.text.length; attemptOutputSize += chunk.text.length }
         if (outputSize > 16000) throw Error('挑战检查输出过长。')
         if (chunk.type === 'usage') for (const key of ['inputTokens', 'outputTokens']) if (Number.isFinite(chunk.usage?.[key]) && chunk.usage[key] >= 0) attemptUsage[key] = chunk.usage[key]
@@ -239,15 +260,13 @@ async function run(ctx, input, signal, modelMilliseconds = 20000) {
         while (thread.messages.length > 1 && JSON.stringify(thread).length > 16000) thread.messages = thread.messages.slice(1)
         if (JSON.stringify(thread).length > 16000) throw Error('完整句与讨论上下文过长，请缩小或分段后重试。')
       }
-      const generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits } : {}, ...thread ? { thread, allowReplacement } : {} }, modelBudget.signal, reasoningEffort, input.action === 'review' ? targets : undefined)
+      const generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits } : {}, ...thread ? { thread, allowReplacement } : {} }, modelBudget.signal, reasoningEffort, input.action === 'review' ? targets : undefined, input.requestId)
       for (const key of ['inputTokens', 'outputTokens']) usage[key] += generated.usage[key]
       if (input.action === 'review') {
         const reviewed = issuesFrom(generated.value, targets, available, issueLimits)
         if (!reviewed.issues.length) {
           const stats = filteredReviewStats(generated.value, targets)
-          if (stats.candidates) try {
-            ctx.logger?.warn?.(JSON.stringify({ event: 'notes-challenge-review-filtered', requestKey: createHash('sha256').update(input.requestId).digest('hex').slice(0, 12), ...stats, accepted: 0 }))
-          } catch { /* Diagnostics must not affect review availability. */ }
+          if (stats.candidates) diagnostic(input.requestId, { event: 'notes-challenge-review-filtered', ...stats, accepted: 0 })
         }
         result.issues.push(...reviewed.issues)
         result.coveredBlockIds.push(...reviewed.coveredBlockIds)
