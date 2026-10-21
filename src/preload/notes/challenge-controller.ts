@@ -5,9 +5,9 @@ import {YjsThreadStore} from '@blocknote/core/yjs'
 import type {NotesBridge} from '../../shared/workspace-notes'
 import {noteText} from '../../shared/workspace-notes'
 import type {ChallengeIssue,ChallengeLevel,ChallengeRequest,ChallengeResult,ChallengeCheck} from '../../shared/notes-challenge'
-import {challengeDirectReplacement,type ChallengeReplacement} from '../../shared/notes-challenge'
+import {challengeDirectReplacement,challengeReplacementScope,type ChallengeReplacement} from '../../shared/notes-challenge'
 import {challengeDocumentBlocks,NoteChallengeScheduler,type ChallengeScheduleState} from './challenge-scheduler'
-import {findChallengeQuote,replaceChallengeQuote} from './challenge-anchors'
+import {findChallengeQuote,replaceChallengeQuote,challengeThreadQuote} from './challenge-anchors'
 
 export const CHALLENGE_KIND='ework-challenge-v1',CHALLENGE_USER='ework-ai-challenge'
 type ChallengeAnchor={quote:string;sourceText:string}
@@ -151,23 +151,25 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   if(action.current||latest.current.busy||!active()||dismissed.current.has(threadId))return
   const thread=ai.getThreads().get(threadId),comment=thread?.comments.find(c=>c.id===commentId&&!c.deletedAt),suggestion=comment?.metadata?.challengeReplacement as ChallengeReplacement|undefined
   if(!thread||thread.resolved||thread.deletedAt||thread.metadata?.kind!==CHALLENGE_KIND||!comment||!suggestion||suggestion.status!=='pending')return
+  if(suggestion.scopeVersion!==2){await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'stale'}}}});await ai.addComment({threadId,comment:{body:body('这条历史建议没有完整句编辑范围，请重新优化后再替换。')}});latest.current.persist();refresh();return}
   const issue=thread.metadata.issue,currentBlock=blocks().find(b=>b.id===issue.blockId)
-  const valid=issue.quote===suggestion.quote&&currentBlock?.text===suggestion.sourceText&&fingerprint(latest.current.title,blocks())===suggestion.documentKey&&currentBlock.text.length-suggestion.quote.length+suggestion.replacement.length<=12000&&findChallengeQuote(editor,issue.blockId,suggestion.quote)
+  const scope=currentBlock&&challengeReplacementScope(currentBlock.text,issue.quote)
+  const valid=suggestion.scopeVersion===2&&suggestion.anchorQuote===issue.quote&&suggestion.blockId===issue.blockId&&thread.metadata.sourceText===suggestion.sourceText&&scope&&!('error' in scope)&&scope.quote===suggestion.quote&&typeof suggestion.replacement==='string'&&!!suggestion.replacement.trim()&&suggestion.replacement.length<=6000&&currentBlock?.text===suggestion.sourceText&&fingerprint(latest.current.title,blocks())===suggestion.documentKey&&currentBlock.text.length-suggestion.quote.length+suggestion.replacement.length<=12000&&findChallengeQuote(editor,issue.blockId,suggestion.quote)
   if(!valid){await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'stale'}}}});latest.current.persist();refresh();return}
-  if(!replaceChallengeQuote(editor,issue.blockId,suggestion.quote,suggestion.replacement))return
-  const sourceText=blocks().find(b=>b.id===issue.blockId)!.text
-  metadata(threadId,{issue:{...issue,quote:suggestion.replacement},sourceText,anchorHistory:anchorHistory(thread.metadata.anchorHistory,{quote:suggestion.quote,sourceText:suggestion.sourceText},{quote:suggestion.replacement,sourceText})})
+  if(!replaceChallengeQuote(editor,issue.blockId,suggestion.quote,suggestion.replacement,threadId))return
+  const sourceText=blocks().find(b=>b.id===issue.blockId)!.text,quote=challengeThreadQuote(editor,issue.blockId,threadId)??suggestion.replacement
+  if(sourceText!==suggestion.sourceText)metadata(threadId,{issue:{...issue,quote},sourceText,anchorHistory:anchorHistory(thread.metadata.anchorHistory,{quote:issue.quote,sourceText:suggestion.sourceText},{quote,sourceText})})
   await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'applied'}}}})
   settle.current=Date.now()+10000;window.setTimeout(()=>{if(live.current)sync()},10010);latest.current.persist();refresh()
  }
  const runAction=async(thread:ChallengeThread,kind:'optimize'|'reply',text='')=>{
-  if(action.current||latest.current.busy||!active())return
+  if(action.current||latest.current.busy||!active()||dismissed.current.has(thread.id))return
   const currentThread=ai.getThreads().get(thread.id)
   if(!currentThread||currentThread.resolved||currentThread.deletedAt||currentThread.metadata?.kind!==CHALLENGE_KIND||kind==='reply'&&(!text.trim()||text.trim().length>4000))return
   const issue=currentThread.metadata.issue,range=findChallengeQuote(editor,issue.blockId,issue.quote)
   if(!range)return
   const controller=new AbortController(),job:ChallengeAction={controller,threadId:thread.id,kind};action.current=job;setPending({threadId:thread.id,kind});sync()
-  const current=()=>{const saved=ai.getThreads().get(thread.id);return live.current&&action.current===job&&!controller.signal.aborted&&active()&&!!saved&&!saved.resolved&&!saved.deletedAt}
+  const current=()=>{const saved=ai.getThreads().get(thread.id);return live.current&&action.current===job&&!controller.signal.aborted&&active()&&!dismissed.current.has(thread.id)&&!!saved&&!saved.resolved&&!saved.deletedAt&&saved.metadata?.kind===CHALLENGE_KIND&&JSON.stringify(saved.metadata.issue)===JSON.stringify(issue)&&saved.metadata.sourceText===currentThread.metadata.sourceText}
   const append=async(text:string,suggestion?:ChallengeReplacement)=>{if(current()){await ai.addComment({threadId:thread.id,comment:{body:body(text),...(suggestion?{metadata:{challengeReplacement:suggestion}}:{})}});latest.current.persist()}}
   try{
    if(kind==='reply'){
@@ -179,6 +181,9 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    const all=blocks(),captured=fingerprint(latest.current.title,all),savedThread=ai.getThreads().get(thread.id)!
    const target=all.find(b=>b.id===issue.blockId),others=all.filter(b=>b.id!==issue.blockId);if(!target||target.text.length>12000){await append('当前段落过长或已不存在，请分段并重新定位后继续。');return}let size=target.text.length
    const chosen=[target];for(const b of others){if(chosen.length>=24||size+b.text.length>24000)continue;chosen.push(b);size+=b.text.length}
+   const scope=challengeReplacementScope(target.text,issue.quote)
+   if(savedThread.metadata.sourceText!==target.text){await append('正文已变化，请重新定位后继续。');return}
+   if('error' in scope&&(kind==='optimize'||challengeDirectReplacement(text,{quote:issue.quote}))){await append(scope.error==='too-long'?'完整句优化范围超过6000字，请缩小或分段后重新优化。':'正文已变化或范围不唯一，请重新定位后继续。');return}
    const threadInput={blockId:issue.blockId,quote:issue.quote,category:issue.category,message:issue.message,messages:[] as Array<{role:'assistant'|'user';text:string}>}
    threadInput.messages=challengeThreadMessages(savedThread.comments,Math.min(10000,15000-JSON.stringify(threadInput).length))
    const result=await request({sessionId,requestId:crypto.randomUUID(),action:kind,level:readLevel()||2,title:latest.current.title,blocks:chosen,thread:threadInput},controller.signal)
@@ -186,15 +191,16 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    if(fingerprint(latest.current.title,blocks())!==captured){await append('正文已变化，这次回复未应用到当前原文。请基于当前文字继续讨论。');return}
    state.current.checks=result.checks;setChecks(result.checks)
    if(result.reply?.replacement){
-    const currentBlock=blocks().find(b=>b.id===issue.blockId)
-    if(!currentBlock||currentBlock.text.length-issue.quote.length+result.reply.replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
-    if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||'建议如下，可确认后替换到原文。',{quote:issue.quote,sourceText:currentBlock.text,documentKey:captured,replacement:result.reply.replacement,status:'pending'});return}
-    if(fingerprint(latest.current.title,blocks())===captured&&findChallengeQuote(editor,issue.blockId,issue.quote)&&replaceChallengeQuote(editor,issue.blockId,issue.quote,result.reply.replacement)){
-     const sourceText=blocks().find(b=>b.id===issue.blockId)!.text
-     metadata(thread.id,{issue:{...issue,quote:result.reply.replacement},sourceText,anchorHistory:anchorHistory(savedThread.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote:result.reply.replacement,sourceText})})
+    const currentBlock=blocks().find(b=>b.id===issue.blockId),currentScope=currentBlock&&challengeReplacementScope(currentBlock.text,issue.quote),replacement=result.reply.replacement
+    if(!current()||!currentBlock||'error' in scope||!currentScope||'error' in currentScope||currentScope.quote!==scope.quote||!findChallengeQuote(editor,issue.blockId,issue.quote)||!findChallengeQuote(editor,issue.blockId,scope.quote)){await append('正文已变化或范围不唯一，这次建议未替换原文。请重新优化。');return}
+    if(!replacement.trim()||replacement.length>6000||currentBlock.text.length-scope.quote.length+replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
+    if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||'建议如下，可确认后替换到原文。',{scopeVersion:2,anchorQuote:issue.quote,blockId:issue.blockId,quote:scope.quote,sourceText:currentBlock.text,documentKey:captured,replacement,status:'pending'});return}
+    if(current()&&fingerprint(latest.current.title,blocks())===captured&&replaceChallengeQuote(editor,issue.blockId,scope.quote,replacement,thread.id)){
+     const sourceText=blocks().find(b=>b.id===issue.blockId)!.text,quote=challengeThreadQuote(editor,issue.blockId,thread.id)??replacement
+     if(sourceText!==currentBlock.text)metadata(thread.id,{issue:{...issue,quote},sourceText,anchorHistory:anchorHistory(savedThread.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote,sourceText})})
      settle.current=Date.now()+10000
      window.setTimeout(()=>{if(live.current)sync()},10010)
-     await append(result.reply.text||'已优化这段表达，并保留原有研究立场。')
+     await ai.addComment({threadId:thread.id,comment:{body:body(result.reply.text||'已优化这段表达，并保留原有研究立场。')}});latest.current.persist()
     }else await append('正文已变化，这次建议未替换原文。请基于当前文字继续讨论。')
    }else await append(result.reply?.text||'本轮未形成可核验的修改建议，原文保持不变。')
   }catch{await append('没能完成，请重试')}

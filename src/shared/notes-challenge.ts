@@ -9,5 +9,7 @@ export type ChallengeResult = { version: 1; issues: ChallengeIssue[]; coveredBlo
 export type ChallengeRequest = { sessionId: string; requestId: string; action: 'review' | 'optimize' | 'reply'; level: ChallengeLevel; title: string; blocks: ChallengeBlock[]; changedIds?: string[]; thread?: { blockId: string; quote: string; category: ChallengeCategory; message: string; messages: Array<{ role: 'user' | 'assistant'; text: string }> } }
 
 /** Stored on the native AI comment, so suggestions survive reopening the note. */
-export type ChallengeReplacement = { quote: string; sourceText: string; documentKey: string; replacement: string; status: 'pending' | 'applied' | 'stale' }
+export type ChallengeReplacement = { scopeVersion?: 2; anchorQuote?: string; blockId?: string; quote: string; sourceText: string; documentKey: string; replacement: string; status: 'pending' | 'applied' | 'stale' }
 export {challengeDirectReplacement} from '../../packages/dsh-research-task-runtime/notes-challenge-intent.js'
+
+export {challengeReplacementScope} from '../../packages/dsh-research-task-runtime/notes-challenge-scope.js'
