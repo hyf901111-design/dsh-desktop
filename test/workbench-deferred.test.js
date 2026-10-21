@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { componentPromptSource } from '../scripts/lib/figma-generation-client.mjs'
-import { validateWorkbench, workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import { validateWorkbench, workbenchPanelPrompt,prepareSimulatedArtifact } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import { registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
 import { ResearchTaskRuntime, buildResearchTaskPrompt } from '../packages/dsh-research-task-runtime/index.js'
 import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
@@ -40,6 +40,21 @@ async function setup(start) {
 }
 
 describe('领域自适应模拟工作台延后生成', () => {
+  it('keeps offline custom content separate from invented links and external resources',()=>{
+    const prepare=html=>prepareSimulatedArtifact({type:'html',title:'演练交互',artifact:{version:1,type:'html',title:'演练交互',html}});
+    expect(prepare('<main><svg xmlns="http://www.w3.org/2000/svg"><circle r="3"/></svg><p>演练记录</p><a href="#detail">详情</a><section id="detail">原有说明</section></main>').html).toContain('原有说明');
+    for(const html of ['<a href="https://example.com/fake">虚构出处</a>','<img src="//example.com/image.png">','<a href="&#104;ttps://example.com/fake">出处</a>','<style>div{background:url(https://example.com/image.png)}</style>'])expect(()=>prepare(html)).toThrow(/离线模拟HTML/);
+  });
+  it('creates a declared custom interaction without discarding shared facts or making another planning round',async()=>{
+    const html='<main><p>演练记录 · 两舞台</p><label>场地<select id="venue"><option>全部</option><option>舞台A</option></select></label><details><summary>场地交接</summary><p>每日2500人，备用金100000元，完整交接说明。</p></details></main>';
+    const f=await setup(async request=>({childSessionId:request.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'html',title:'场地交接（模拟）',html})}]}),dispose:async()=>{}}));
+    try{
+      await f.tool.execute({...input(),panels:[{...panels[0],title:'场地交接',type:'html',layout:'wide',prompt:'按场地筛选并逐项展开完整交接，不联网。'}]},f.exec);
+      await vi.waitFor(()=>expect([...f.runtime.tasks.values()][0].state).toBe('completed'));
+      expect(f.adapter.start).toHaveBeenCalledTimes(1);expect(f.adapter.start.mock.calls[0][0].query).toContain(common);
+      const output=JSON.parse([...f.runtime.tasks.values()][0].finalOutput);expect(output.type).toBe('html');expect(output.html).toContain('完整交接说明');expect(output.title).toContain('模拟');
+    }finally{await f.close()}
+  });
   it('accepts the observed same-type artifact envelope without a second generation and preserves all timeline records', async () => {
     const f=await setup(async request=>{const data=artifact(request.query);return {childSessionId:request.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:data.type,title:data.title,artifact:data})}]}),dispose:async()=>{}}})
     try{
@@ -142,7 +157,7 @@ describe('领域自适应模拟工作台延后生成', () => {
     expect(validateWorkbench(plan)).toEqual(plan)
     for (const invalid of [
       { ...input(), dataMode: 'source' }, { ...input(), generationMode: 'unknown' }, { ...input(), preset: 'medical-21h', panels: [] },
-      ...['html', 'financial-widget', 'gallery', 'unknown'].map(type => ({ ...input(), panels: [{ ...panels[0], type }] })),
+      ...['financial-widget', 'gallery', 'unknown'].map(type => ({ ...input(), panels: [{ ...panels[0], type }] })),
       { ...input(), panels: [{ ...panels[0], artifact: { version: 1, type: 'table', title: '已有记录', columns: ['a'], rows: [['b']] } }] },
       { ...input(), sharedContext: 'x'.repeat(3001) }
     ]) expect(() => validateWorkbench(invalid)).toThrow()

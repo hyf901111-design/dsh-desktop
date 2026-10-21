@@ -425,7 +425,7 @@ describe('工作台首次规划阶段预算', () => {
       expect(planned.tools[0].parameters.properties.panels.items.properties.type.enum).toContain('html')
     }
     const text = h.text({ session: session('创建古籍交接工作台，允许模拟，点击行展开详情') })
-    expect(text).toContain('普通自定义HTML回退')
+    expect(text).toContain('模拟场景仍保留deferred和sharedContext')
     expect(text).toContain('dataMode:"simulated"、generationMode:"deferred"')
     expect(text).not.toContain('仅原请求为模拟数据时，省略dataMode')
   })

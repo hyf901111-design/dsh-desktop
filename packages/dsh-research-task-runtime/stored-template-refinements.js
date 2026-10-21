@@ -13,6 +13,10 @@ import {refineTrendPresentation} from './market-trend-presentation.js';
 import {marketSeriesViewport,observeMarketSeries} from './market-series-viewport.js';
 import {FEED_CONTEXT_CSS as FEED_CONTEXT_STYLE} from './feed-context.js';
 import {cartesianChartRuntime,cartesianChartSvg} from './cartesian-chart-artifact.js';
+import {OPERATIONS_HEADER_CSS,GANTT_READING_CSS as GANTT_READING_STYLE} from './workbench-reading-layout.js';
+import {GANTT_SELECTION_RUNTIME as GANTT_SELECTION_SOURCE} from './gantt-artifact.js';
+export const GANTT_READING_CSS=GANTT_READING_STYLE;
+export const GANTT_SELECTION_RUNTIME=GANTT_SELECTION_SOURCE;
 export const FEED_CONTEXT_CSS=FEED_CONTEXT_STYLE;
 export const CARTESIAN_RUNTIME=cartesianChartRuntime.toString();
 export const CARTESIAN_GEOMETRY=cartesianChartSvg.toString();
@@ -25,7 +29,7 @@ export {FINANCIAL_PERFORMANCE_RUNTIME};
 
 export const ADVANCED_VISUAL_RUNTIME=specialChartRuntime.toString();
 export const ADVANCED_VISUAL_VIEW=advancedChartView.toString();
-export const OPERATIONS_DENSITY_CSS='.task-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;flex:1;min-width:0;overflow-wrap:anywhere}.task-copy strong{min-width:0}body:has(#task-filter option[value=""]:checked) #task-visible{display:none!important}';
+export const OPERATIONS_DENSITY_CSS='.task-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;flex:1;min-width:0;overflow-wrap:anywhere}.task-copy strong{min-width:0}body:has(#task-filter option[value=""]:checked) #task-visible{display:none!important}'+OPERATIONS_HEADER_CSS;
 
 // Preview refinements leave source records and control ancestry untouched so
 // existing interaction journals can replay after a client update.
@@ -116,11 +120,15 @@ export function refineStoredTemplateHtml(html){
   // Append presentation only; keep saved controls and interaction routes.
   return html+'<style data-workflow-tools="v1">.workflow-tools h2{flex:1 0 100%}.workflow-tools>*{max-width:100%}</style>';
  }
- if(model.templateId==='tasks'&&model.data.type==='tasks'&&model.version==='21z-20260930'&&html.includes('<body data-research-kind="tasks" data-sherlock-template="tasks">')&&!html.includes('data-operations-density="v2"')){
+ if(model.templateId==='gantt'&&model.data.type==='gantt'&&model.version==='21m-20260923-v1'&&html.includes('data-research-kind="gantt"')&&!html.includes('data-gantt-reading="v1"')){
+  const next=html.replace(/<script>\(function ganttRuntime\(\)\s*\{[\s\S]*?<\/script>/,()=>`<script>(${GANTT_SELECTION_RUNTIME})();</script>`);
+  return next+`<style data-gantt-reading="v1">${GANTT_READING_CSS}</style>`;
+ }
+ if(model.templateId==='tasks'&&model.data.type==='tasks'&&model.version==='21z-20260930'&&html.includes('<body data-research-kind="tasks" data-sherlock-template="tasks">')&&!html.includes('data-operations-density="v3"')){
   // The production preview embeds the saved document inside its own body.
   // A style added to the saved head becomes a body child in Chromium and
   // shifts every recorded route. Append it after all existing controls.
-  return html+`<style data-operations-density="v2">${OPERATIONS_DENSITY_CSS}</style>`;
+  return html+`<style data-operations-density="v3">${OPERATIONS_DENSITY_CSS}</style>`;
  }
  const body=html.match(/<body data-research-kind="chart" data-chart-template="(waterfall|candlestick|ohlc)" data-chart-layout="centered-v2">/);
  if(!body||html.includes('data-chart-visual="v2"')||model.version!=='22a-20260930'||model.templateId!=='chart.'+body[1]||model.data.type!=='chart'||model.data.variant!==body[1])return html;

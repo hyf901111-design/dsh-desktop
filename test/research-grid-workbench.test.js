@@ -3,6 +3,16 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('新规划的宽排程跨整行，支持卡片分列且手动缩放仍可用',()=>{
+ const g=createResearchGrid(),state=createWorkbenchGridState(null,'semantic-wide');state.enable(1104);
+ let snap=state.reconcile({files:[],artifacts:[],viewport:{y:0}});
+ const nodes=['schedule','tasks','alerts'].map((id,i)=>({id,kind:'generated-container',workbenchId:'semantic',workbenchIndex:i,sizeMode:'auto',x:330,y:170,width:656,height:340,...(i===0?{workbenchSpan:true,workbenchLayoutVersion:1}:{})}));
+ snap=state.reconcile({...snap,artifacts:nodes});const cells=state.get();
+ expect(cells[0]).toMatchObject({x:0,y:0,w:40});expect(cells[1].y).toBeGreaterThanOrEqual(cells[0].h);expect(cells[2].y).toBe(cells[1].y);expect(cells[1].w).toBe(20);
+ expect(cells.every((a,i)=>cells.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true);
+ expect(g.minimum(nodes[0],g.metrics(1104)).w).toBeLessThan(40);
+ expect(g.minimum(nodes[0],g.metrics(1104),true).w).toBe(40);
+});
 it('撤下工作台规划占位后，生成中的整组组件立即上移填补顶部空白',()=>{
  const state=createWorkbenchGridState(null,'planning-gap'),g=createResearchGrid();state.enable(1104)
  let snap=state.reconcile({files:[],artifacts:[],viewport:{x:0,y:0,scale:1}})
