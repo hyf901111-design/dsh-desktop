@@ -475,3 +475,11 @@ describe('Harness window activation', () => {
     )
   })
 })
+
+it('binds the Harness lifetime to this desktop process instead of an inherited stale parent', () => {
+  const options = buildHarnessSpawnOptions('/tmp/launch', '/tmp/harness', 'darwin', {
+    PATH: '/usr/bin',
+    SHERLOCK_DESKTOP_PARENT_PID: '123'
+  })
+  expect(options.env?.SHERLOCK_DESKTOP_PARENT_PID).toBe(String(process.pid))
+})

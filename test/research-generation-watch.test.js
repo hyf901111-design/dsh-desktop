@@ -55,8 +55,8 @@ describe('任务检查切板恢复', () => {
     const patched = patchResearchGenerationWatch(source)
     expect(createSourceFile('client.js', patched, ScriptTarget.Latest, false, ScriptKind.JS).parseDiagnostics).toHaveLength(0)
     expect(patchResearchGenerationWatch(patched)).toBe(patched)
-    for(const version of ['V1','V2']){
-      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V3 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
+    for(const version of ['V1','V2','V3']){
+      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V4 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
       expect(patchResearchGenerationWatch(previous)).toBe(patched)
     }
     expect(patched).toContain("if (boundedString(request?.parentSessionId) !== session.sessionId) return Promise.reject(new Error('研究会话已失效'))")
