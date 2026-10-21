@@ -379,7 +379,7 @@ for (const [value, expected] of [
     expect(report).toMatchObject({ event: 'notes-challenge-format-rejected', action: 'review', reason: 'review-envelope', attempt: index + 1, targetCount: 2, anchorCount: 1, ...expected })
     expect(report.requestKey).toMatch(/^[a-f0-9]{12}$/u)
     expect(report.jsonChars).toBe(JSON.stringify(value).length)
-    expect(Object.keys(report).sort()).toEqual(['event','requestKey','action','reason','attempt','jsonChars','targetCount','anchorCount','valueKind','reviewsKind','reviewCount','nonObjectReviews','unexpectedReviewFields','unknownBlockIds','duplicateBlockIds','nonArrayIssues','unreviewedTargets'].sort())
+    expect(Object.keys(report).sort()).toEqual(['event','requestKey','action','reason','attempt','jsonChars','targetCount','anchorCount','valueKind','reviewsKind','reviewCount','nonObjectReviews','unexpectedReviewFields','unknownBlockIds','duplicateBlockIds','nonArrayIssues','unreviewedTargets','unknownTitleIds','unknownContextIds','unknownNearTargetIds','unknownEmptyGroups','unknownNonStringIds'].sort())
     const text = JSON.stringify(report)
     for (const privateText of ['PRIVATE', input.sessionId, input.blocks[0].text, '收入']) expect(text).not.toContain(privateText)
     expect(text.length).toBeLessThan(700)
@@ -418,7 +418,7 @@ it('preserves every valid target review in one call while discarding extra unkno
   expect(f.calls).toHaveLength(1);expect(f.events).toEqual([])
   expect(warn).toHaveBeenCalledTimes(1)
   const logged=warn.mock.calls[0][0]
-  expect(JSON.parse(logged)).toEqual({event:'notes-challenge-review-extra-groups',action:'review',attempt:1,targetCount:2,reviewCount:4,ignoredGroups:2,requestKey:expect.stringMatching(/^[a-f0-9]{12}$/u)})
+  expect(JSON.parse(logged)).toEqual({event:'notes-challenge-review-extra-groups',action:'review',attempt:1,targetCount:2,reviewCount:4,ignoredGroups:2,unknownTitleIds:0,unknownContextIds:0,unknownNearTargetIds:0,unknownEmptyGroups:0,unknownNonStringIds:0,requestKey:expect.stringMatching(/^[a-f0-9]{12}$/u)})
   for(const privateText of ['PRIVATE',input.requestId,input.sessionId,input.blocks[0].text])expect(logged).not.toContain(privateText)
 })
 
