@@ -109,15 +109,32 @@ function ChallengeCard({thread,controller,style,cardRef,selected,popup}:{thread:
 }
 
 export function ChallengeComments({controller,editor,scroll,onMarginAvailableChange}:{controller:Controller;editor:any;scroll:React.RefObject<HTMLDivElement>;onMarginAvailableChange(value:boolean):void}){
- const root=useRef<HTMLDivElement>(null),cards=useRef(new Map<string,HTMLElement>()),resize=useRef<ResizeObserver>(),[layout,setLayout]=useState<{wide:boolean;multiple:boolean;columnLeft:number;items:Array<{id:string;style:React.CSSProperties}>}>({wide:false,multiple:false,columnLeft:0,items:[]})
+ type Layout={wide:boolean;multiple:boolean;columnLeft:number;items:Array<{id:string;style:React.CSSProperties}>}
+ const root=useRef<HTMLDivElement>(null),cards=useRef(new Map<string,HTMLElement>()),resize=useRef<ResizeObserver>(),[layout,setLayout]=useState<Layout>({wide:false,multiple:false,columnLeft:0,items:[]})
+ const [presentation,setPresentation]=useState(layout),[exiting,setExiting]=useState(false),target=useRef(layout),exitTimer=useRef<ReturnType<typeof setTimeout>>()
+ const [reducedMotion,setReducedMotion]=useState(()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+ target.current=layout
+ useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)'),update=()=>setReducedMotion(media.matches);media.addEventListener('change',update);return()=>media.removeEventListener('change',update)},[])
+ useLayoutEffect(()=>{
+  // Keep the existing cards and their drafts mounted until the rail finishes fading.
+  // A new visible target cancels this exit, so rapid toggles reverse the transition.
+  if(presentation.wide&&!layout.wide&&!layout.items.length&&!reducedMotion){
+   if(!exitTimer.current){setExiting(true);exitTimer.current=setTimeout(()=>{exitTimer.current=undefined;setPresentation(target.current);setExiting(false)},180)}
+   return
+  }
+  clearTimeout(exitTimer.current);exitTimer.current=undefined;setExiting(false);setPresentation(layout)
+ },[layout,reducedMotion])
+ useLayoutEffect(()=>{if(root.current)root.current.inert=exiting},[exiting])
+ useEffect(()=>()=>clearTimeout(exitTimer.current),[])
+
  useLayoutEffect(()=>{
   const host=root.current?.parentElement,scroller=scroll.current;if(!host||!scroller)return
   let frame=0
   const measure=()=>{
    cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
-    const area=host.getBoundingClientRect(),body=scroller.querySelector<HTMLElement>('.en-document')?.getBoundingClientRect(),sessionId=scroller.closest<HTMLElement>('[data-note-source-session]')?.dataset.noteSourceSession,trigger=(sessionId?document.querySelector<HTMLElement>('[data-en-challenge-tools="'+CSS.escape(sessionId)+'"] .en-challenge-trigger'):null)||scroller.closest('.en-body')?.querySelector<HTMLElement>('.en-challenge-trigger'),triggerRight=trigger?.getBoundingClientRect().right??area.right-18
+    const area=host.getBoundingClientRect(),body=scroller.querySelector<HTMLElement>('.en-document')?.getBoundingClientRect(),sessionId=scroller.closest<HTMLElement>('[data-note-source-session]')?.dataset.noteSourceSession,trigger=(sessionId?document.querySelector<HTMLElement>('[data-en-challenge-tools="'+CSS.escape(sessionId)+'"] .en-challenge-trigger'):null)||scroller.closest('.en-body')?.querySelector<HTMLElement>('.en-challenge-trigger'),exportButton=trigger?.closest('[data-ework-notes-session]')?.querySelector<HTMLElement>('.en-header-export'),alignmentRight=(exportButton||trigger)?.getBoundingClientRect().right??area.right-18
     // The original document is measured as-is. Comments never reserve writing space.
-    const marginAvailable=!!body&&triggerRight<=area.right&&triggerRight-body.right>=320+24,wide=marginAvailable&&controller.marginExpanded
+    const marginAvailable=!!body&&alignmentRight<=area.right&&alignmentRight-body.right>=320+24,wide=marginAvailable&&controller.marginExpanded
     onMarginAvailableChange(marginAvailable)
     if(host.dataset.challengeWide!==(wide?'true':'false'))host.dataset.challengeWide=wide?'true':'false'
     // Keep the note centered in its own region; the global sidebar is outside it.
@@ -125,7 +142,7 @@ export function ChallengeComments({controller,editor,scroll,onMarginAvailableCha
     const editingId=focusedId&&!controller.isDismissed(focusedId)?focusedId:undefined
     if(!wide&&editingId&&editingId!==controller.selected)controller.select(editingId)
     let bottom=Number.NEGATIVE_INFINITY
-    const columnLeft=wide?triggerRight-area.left-320-16:0
+    const columnLeft=wide?alignmentRight-area.left-320-16:0
     const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected||t.id===editingId)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const start=editor._tiptapEditor.view.coordsAtPos(range.from),end=editor._tiptapEditor.view.coordsAtPos(range.to),rect={...start,bottom:end.bottom};return {thread:t,rect,position:range.from}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number};position:number}>
     candidates.sort((a,b)=>a.position-b.position)
     const items=candidates.map(({thread,rect})=>{
@@ -160,5 +177,5 @@ export function ChallengeComments({controller,editor,scroll,onMarginAvailableCha
   return()=>{cancelAnimationFrame(frame);if(resize.current===observer)resize.current=undefined;observer.disconnect();margin?.removeEventListener('scroll',measure);scroller.removeEventListener('scroll',documentScroll);window.removeEventListener('resize',measure);document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)}
  },[controller.revision,controller.selected,controller.level,controller.marginExpanded,layout.wide,onMarginAvailableChange])
  const markStyles=controller.threads.map(thread=>'.en-root [data-bn-thread-id="'+CSS.escape(thread.id)+'"]:not([data-orphan="true"]){background:var('+(thread.id===controller.selected?'--en-challenge-mark-selected':'--en-challenge-mark')+');border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone}').join('')
- return <><style>{markStyles}</style><div className="en-challenge-comments" ref={root} data-wide={layout.wide||undefined} style={{left:layout.columnLeft}}>{layout.items.map(item=>{const thread=controller.threads.find(t=>t.id===item.id);return thread?<ChallengeCard key={thread.id} thread={thread} controller={controller} popup={!layout.wide} selected={layout.multiple&&thread.id===controller.selected} style={item.style} cardRef={el=>{const prior=cards.current.get(thread.id);if(prior&&prior!==el)resize.current?.unobserve(prior);if(el){cards.current.set(thread.id,el);resize.current?.observe(el)}else cards.current.delete(thread.id)}}/>:null})}</div></>
+ return <><style>{markStyles}</style><div className="en-challenge-comments" ref={root} data-wide={presentation.wide||undefined} data-empty={!presentation.items.length||undefined} data-exiting={exiting||undefined} aria-hidden={exiting||undefined} style={{left:presentation.columnLeft}}>{presentation.items.map(item=>{const thread=controller.threads.find(t=>t.id===item.id);return thread?<ChallengeCard key={thread.id} thread={thread} controller={controller} popup={!presentation.wide} selected={presentation.multiple&&thread.id===controller.selected} style={item.style} cardRef={el=>{const prior=cards.current.get(thread.id);if(prior&&prior!==el)resize.current?.unobserve(prior);if(el){cards.current.set(thread.id,el);resize.current?.observe(el)}else cards.current.delete(thread.id)}}/>:null})}</div></>
 }

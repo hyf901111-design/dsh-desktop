@@ -24,9 +24,9 @@ async function fixture(width,noteRegion=false){
  await page.route('http://127.0.0.1/challenge-layout',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><header class="wSkVaW_header" data-srb-session-header data-ework-notes-session="layout-note" style="position:fixed;top:10px;left:240px;right:10px;z-index:80;display:flex;align-items:center;gap:12px;height:44px;padding:0 20px"><div class="wSkVaW_crumbs" style="flex:0 1 200px;min-width:0;overflow:hidden"><span class="wSkVaW_crumb" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">很长的笔记会话标题需要收窄但保留对话研究笔记轨迹页签</span></div><nav data-srb-tabs style="display:flex;flex:none;gap:4px"><button>对话</button><button>研究</button><button>笔记</button><button>轨迹</button></nav><div data-srb-utilities style="display:flex;align-items:center;margin-left:auto;flex:none"></div></header><div data-ework-note-view="layout-note"></div><aside id="evidence" style="position:fixed;right:10px;top:10px;height:880px;width:0"></aside>'}))
  await page.goto('http://127.0.0.1/challenge-layout');if(css)await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.bn-editor').waitFor();await page.evaluate(()=>window.editor.replaceBlocks(window.editor.document,Array.from({length:14},(_,i)=>({id:'body-'+i,type:'paragraph',content:'第'+i+'段判断需要更多依据。'}))));await page.locator('.bn-editor .bn-block-outer[data-id="body-0"]').waitFor();return {context,page,errors}
 }
-async function dimensions(page){return page.evaluate(()=>{const area=document.querySelector('.en-main').getBoundingClientRect(),body=document.querySelector('.en-document').getBoundingClientRect(),card=document.querySelector('.en-challenge-card')?.getBoundingClientRect(),scroller=document.querySelector('.en-document-scroll');return {center:body.x+body.width/2,areaCenter:area.x+area.width/2,areaLeft:area.left,areaWidth:area.width,areaRight:area.right,areaBottom:area.bottom,bodyLeft:body.left,bodyRight:body.right,bodyWidth:body.width,triggerRight:document.querySelector('.en-challenge-trigger')?.getBoundingClientRect().right,wide:document.querySelector('.en-main').dataset.challengeWide==='true',cardRight:card?.right,cardLeft:card?.left,cardBottom:card?.bottom,overflow:scroller.scrollWidth>scroller.clientWidth+1||document.documentElement.scrollWidth>innerWidth+1}})}
-async function assertHorizontalPlacement(page){const value=await dimensions(page);if(value.wide){expect(Math.abs(value.triggerRight-value.cardRight)).toBeLessThanOrEqual(1)}else{const mark=await page.locator('.bn-editor [data-bn-thread-id]').first().boundingBox();expect(Math.abs(value.cardLeft-mark.x)).toBeLessThanOrEqual(2)}}
-async function openSelected(page){if(!await page.locator('.en-challenge-card').count())await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.locator('.en-challenge-card').first().waitFor()}
+async function dimensions(page){return page.evaluate(()=>{const area=document.querySelector('.en-main').getBoundingClientRect(),body=document.querySelector('.en-document').getBoundingClientRect(),card=document.querySelector('.en-challenge-card')?.getBoundingClientRect(),scroller=document.querySelector('.en-document-scroll');return {center:body.x+body.width/2,areaCenter:area.x+area.width/2,areaLeft:area.left,areaWidth:area.width,areaRight:area.right,areaBottom:area.bottom,bodyLeft:body.left,bodyRight:body.right,bodyWidth:body.width,triggerRight:document.querySelector('.en-challenge-trigger')?.getBoundingClientRect().right,exportRight:document.querySelector('.en-header-export')?.getBoundingClientRect().right,wide:document.querySelector('.en-main').dataset.challengeWide==='true',cardRight:card?.right,cardLeft:card?.left,cardBottom:card?.bottom,overflow:scroller.scrollWidth>scroller.clientWidth+1||document.documentElement.scrollWidth>innerWidth+1}})}
+async function assertHorizontalPlacement(page){const value=await dimensions(page);if(value.wide){expect(Math.abs(value.exportRight-value.cardRight)).toBeLessThanOrEqual(1)}else{const mark=await page.locator('.bn-editor [data-bn-thread-id]').first().boundingBox();expect(Math.abs(value.cardLeft-mark.x)).toBeLessThanOrEqual(2)}}
+async function openSelected(page){const rail=page.locator('.en-challenge-comments');if(!await page.locator('.en-challenge-card').count()||await rail.getAttribute('aria-hidden')==='true')await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.locator('.en-challenge-card').first().waitFor();await expect.poll(()=>rail.getAttribute('aria-hidden')).not.toBe('true');await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await expect.poll(()=>rail.evaluate(el=>el.getAnimations().filter(animation=>animation.playState==='running').length)).toBe(0)}
 for(const width of [3440,1600,1180,900])it(`keeps the note centered with right-side wide comments and nearby narrow bubbles at ${width}px`,async()=>{
  const {context,page,errors}=await fixture(width,true);try{
   const before=await dimensions(page);await page.evaluate(()=>window.seed());await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1);await openSelected(page)
@@ -56,7 +56,7 @@ it('keeps stacked right-edge comments scrollable and follows original paragraphs
   const last=await page.locator('.en-challenge-card').last().boundingBox(),outer=await gutter.boundingBox();expect(last.y+last.height).toBeLessThanOrEqual(outer.y+outer.height+1)
   await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop=180);await expect.poll(()=>gutter.evaluate(el=>el.scrollTop)).toBe(0)
   expect(await page.locator('.en-challenge-close').count()).toBe(0)
-  const value=await dimensions(page);expect(Math.abs(value.center-value.areaCenter)).toBeLessThanOrEqual(1);expect(Math.abs(value.triggerRight-value.cardRight)).toBeLessThanOrEqual(1);expect(errors).toEqual([])
+  const value=await dimensions(page);expect(Math.abs(value.center-value.areaCenter)).toBeLessThanOrEqual(1);expect(Math.abs(value.exportRight-value.cardRight)).toBeLessThanOrEqual(1);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 it('keeps a long nearby narrow reply reachable and closes it without reopening or losing its draft',async()=>{
@@ -289,5 +289,29 @@ it('shows no margin close control but preserves draft when the toolbar changes t
   expect(await page.locator('.en-challenge-quote').evaluate(el=>getComputedStyle(el).paddingRight)).toBe('16px')
   await page.getByRole('button',{name:'收起挑战评论'}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('常驻与浮层切换保留草稿')
   await page.getByRole('button',{name:'展开评论',exact:true}).click();await expect.poll(()=>page.locator('.en-challenge-close').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
+
+for(const reducedMotion of [false,true])it(`aligns margin comments to export and ${reducedMotion?'hides immediately for reduced motion':'fades out and reverses a rapid collapse without losing drafts'}`,async()=>{
+ const {context,page,errors}=await fixture(2000,true);try{
+  await page.emulateMedia({reducedMotion:reducedMotion?'reduce':'no-preference'});await page.evaluate(()=>window.seed(2));await openSelected(page)
+  const rail=page.locator('.en-challenge-comments'),input=page.getByRole('textbox',{name:'回复AI挑战'}).first();await input.fill('展开收起不能丢失的草稿。')
+  await expect.poll(()=>rail.evaluate(el=>Number(getComputedStyle(el).opacity))).toBe(1)
+  const before=await dimensions(page);expect(Math.abs(before.exportRight-before.cardRight)).toBeLessThanOrEqual(1);expect(before.exportRight-before.triggerRight).toBeGreaterThan(20)
+  await page.getByRole('button',{name:'收起评论',exact:true}).click()
+  if(!reducedMotion){
+   await expect.poll(()=>rail.evaluate(el=>Number(getComputedStyle(el).opacity))).toBeLessThan(1)
+   expect(await page.locator('.en-challenge-card').count()).toBe(2);expect(await rail.evaluate(el=>el.inert)).toBe(true)
+   await page.getByRole('button',{name:'展开评论',exact:true}).click();await expect.poll(()=>rail.evaluate(el=>Number(getComputedStyle(el).opacity))).toBe(1)
+   expect(await input.inputValue()).toBe('展开收起不能丢失的草稿。');expect(await rail.evaluate(el=>el.inert)).toBe(false)
+   await page.getByRole('button',{name:'收起评论',exact:true}).click()
+  }else await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
+  await page.getByRole('button',{name:'展开评论',exact:true}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(2)
+  await expect.poll(()=>rail.evaluate(el=>Number(getComputedStyle(el).opacity))).toBe(1)
+  expect(await input.inputValue()).toBe('展开收起不能丢失的草稿。');expect((await dimensions(page)).bodyLeft).toBe(before.bodyLeft)
+  if(reducedMotion)expect(await rail.evaluate(el=>el.getAnimations().length)).toBe(0)
+  expect(errors).toEqual([])
+  await page.screenshot({path:'/tmp/notes-comment-export-'+(reducedMotion?'reduced':'animated')+'-20261021.png'})
  }finally{await context.close()}
 },15000)
