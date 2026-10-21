@@ -104,7 +104,7 @@ export function createWorkbenchGridState(storage,sessionId) {
       if(group.length<2||nodes.some(n=>n.workbenchId===id&&known.has(n.id)))continue
       const lanes=width-2*m.inset>=650?2:1,span=40/lanes,bottom=Math.max(0,...cells.map(c=>c.y+c.h)),tails=Array(lanes).fill(bottom)
       for(const n of group.sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0))){
-        if(grid.minimum(n,m,true).w>span){
+        if(n.workbenchSpan===true&&n.workbenchLayoutVersion===1||grid.minimum(n,m,true).w>span){
           const y=Math.max(...tails),h=Math.max(grid.minimum(n,m).h,Math.ceil((Math.max(320,n.height)+m.gap)/m.rowStep))
           cells.push(grid.bounded({id:n.id,x:0,y,w:40,h}));tails.fill(y+h);known.add(n.id);continue
         }

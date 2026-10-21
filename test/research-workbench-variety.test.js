@@ -34,7 +34,7 @@ describe('complete simulated workbenches', () => {
     const gantt = JSON.parse(acceptArtifactOutput(JSON.stringify(panels[2].artifact)));
     expect(gantt.type).toBe('html');
     expect(gantt.html).toContain('data-research-kind="gantt"');
-    expect(gantt.html).toContain('研究计划');
+    expect(gantt.html).toContain('作业 / 负责人');
     expect(gantt.html).toContain('2026-07-');
     expect(gantt.html).toContain('class="gantt-bar"');
     expect(panels[3].artifact.items.length).toBeGreaterThanOrEqual(5);
@@ -76,9 +76,9 @@ describe('complete simulated workbenches', () => {
     doc.defaultView.eval(doc.querySelector('script').textContent);
     const tasks = [...doc.querySelectorAll('.gantt-task')];
     expect(tasks).toHaveLength(2);
-    expect(doc.querySelector('.gantt-readout').textContent).toBe('资料梳理 · 2026-07-01 至 2026-07-10 · 完成 75% · 负责人 行业组');
+    expect(doc.querySelector('.gantt-readout').textContent).toBe('资料梳理\n2026-07-01 至 2026-07-10\n完成 75% · 负责人 行业组');
     tasks[0].dispatchEvent(new doc.defaultView.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
     expect(tasks[1].getAttribute('aria-pressed')).toBe('true');
-    expect(doc.querySelector('.gantt-readout').textContent).toBe('报告复核 · 2026-07-11 至 2026-07-20 · 完成 30% · 负责人 复核组');
+    expect(doc.querySelector('.gantt-readout').textContent).toBe('报告复核\n2026-07-11 至 2026-07-20\n完成 30% · 负责人 复核组');
   });
 });

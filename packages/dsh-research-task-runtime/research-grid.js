@@ -7,6 +7,7 @@ export function createResearchGrid() {
     // Manual resizing uses one base frame for every component. Readable
     // template widths guide Arrange only; titles never constrain the frame.
     if(!arranging)return {w:m.minColumns,h:m.minRows}
+    if(node?.workbenchSpan===true&&node.workbenchLayoutVersion===1||/<body\b[^>]*data-research-kind="gantt"/.test(node?.containerSpec?.html??''))return {w:columns,h:m.minRows}
     // Wide quote templates need their first identifying and value columns.
     // Only the current body's kind establishes this; shared CSS lists every kind.
     const kind=node?.containerSpec?.type==='html'&&node.containerSpec.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1]

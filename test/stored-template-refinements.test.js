@@ -47,7 +47,8 @@ it('ships saved feed and trend refinements through the serialized client factory
  const shipped=patchLegacyDashboardPreview(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
  const start=shipped.indexOf('const MARKET_PRESENTATION_CSS = '),end=shipped.indexOf('const TERMINAL_PRESENTATION_CSS = ',start);
  const serialized=vm.runInNewContext(shipped.slice(start,end)+'\nrefineStoredTemplateHtml');
- for(const old of [savedFeed(),savedTrend()])expect(serialized(old)).toBe(refineStoredTemplateHtml(old));
+ const gantt=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'gantt',title:'排程',asOf:'演练记录',items:[{label:'采样',start:'2026-10-22',end:'2026-10-23',progress:0}]}))).html.replace(/\/\* reading-layout-v1 \*\/[^]*?\/\* reading-layout-end \*\//u,'');
+ for(const old of [savedFeed(),savedTrend(),gantt])expect(serialized(old)).toBe(refineStoredTemplateHtml(old));
 });
 it('leaves unknown feed versions and invalid saved trend data untouched',()=>{
  const feed=savedFeed().replace('"version":"21m-20260923-v1"','"version":"future"');
@@ -107,7 +108,7 @@ describe('saved host template display refinements',()=>{
  it('refines saved task density without replacing owner records, controls or their replay routes',()=>{
   const data={version:1,type:'tasks',title:'本周任务',asOf:'2026-09-30 模拟',mode:'local',items:[{id:'a',title:'原有任务',owner:'研究组',completed:false}]};
   const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),next=refineStoredTemplateHtml(spec.html);
-  expect(next).toContain('data-operations-density="v2"');expect(next).toContain('研究组');
+  expect(next).toContain('data-operations-density="v3"');expect(next).toContain('研究组');
   expect(routes(next)).toEqual(routes(spec.html));expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(spec.html));
   // The secure preview wraps a saved full document in its own body. Its HTML
   // parser treats the saved head styles as body siblings of the controls.

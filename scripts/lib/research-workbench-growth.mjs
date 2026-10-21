@@ -1,3 +1,5 @@
+import {workbenchLayoutFrames as layoutFrames} from '../../packages/dsh-research-task-runtime/workbench-layout.js';
+const workbenchLayoutFrames=layoutFrames;
 // A whole-board fit makes ten Figma-sized cards unreadable. Fit a useful
 // opening group and leave later cards on the pannable canvas at their real size.
 export function readableWorkbenchViewport(nodes, viewport, canvasSize) {
@@ -39,14 +41,7 @@ export function readableWorkbenchViewport(nodes, viewport, canvasSize) {
 export function researchWorkbenchMatrixNodes(nodes, left, top) {
   const ordered = [...nodes].sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0));
   const gap=ordered.some(node=>node.containerSpec?.html?.includes('data-sherlock-market="events"'))?12:16;
-  const leftWidth = Math.max(0,...ordered.filter((_,i)=>i%2===0).map(n=>n.width));
-  let y = top;
-  const positions = new Map();
-  for (let i=0;i<ordered.length;i++) {
-    if (i && i%2===0) y += Math.max(ordered[i-2].height,ordered[i-1].height)+gap;
-    const node=ordered[i];
-    positions.set(node.id,{...node,workbenchSpan:false,x:left+(i%2?leftWidth+gap:0)+node.width/2,y:y+node.height/2});
-  }
+  const positions=new Map(workbenchLayoutFrames(ordered,left,top,gap).map(node=>[node.id,{...node,x:node.x+node.width/2,y:node.y+node.height/2}]));
   return nodes.map(n=>positions.get(n.id));
 }
 
@@ -73,11 +68,12 @@ export function settleWorkbenchLayout(before, next) {
 }
 
 export function patchResearchWorkbenchGrowth(source) {
+  const helper=workbenchLayoutFrames.toString();
   const existingMatrix = source.indexOf('function researchWorkbenchMatrixNodes(')
   if (existingMatrix >= 0) {
     const existingEnd = source.indexOf('function researchCanvasReflowGrowth(', existingMatrix)
     if (existingEnd < 0) throw Error('Workbench matrix helper anchor missing')
-    source = source.slice(0, existingMatrix) + researchWorkbenchMatrixNodes.toString() + '\n' + source.slice(existingEnd)
+    source = source.slice(0, existingMatrix) + (source.includes('function workbenchLayoutFrames(')?'':helper+'\n') + researchWorkbenchMatrixNodes.toString() + '\n' + source.slice(existingEnd)
   }
   const viewportStart = source.indexOf('function researchWorkbenchViewport(');
   const viewportEnd = source.indexOf('function researchCanvasReturnViewport(', viewportStart);
@@ -86,7 +82,7 @@ export function patchResearchWorkbenchGrowth(source) {
   const start = source.indexOf('function researchCanvasReflowGrowth(')
   const end = source.indexOf('function researchGenerationSizedNode(', start)
   if (start < 0 || end < start) throw Error('Workbench growth anchor missing')
-  source = source.slice(0, start) + `${source.includes('function researchWorkbenchMatrixNodes(') ? '' : researchWorkbenchMatrixNodes.toString() + '\n'}function researchCanvasReflowGrowth(before, after, nodeId) {
+  source = source.slice(0, start) + `${source.includes('function researchWorkbenchMatrixNodes(') ? '' : helper+'\n'+researchWorkbenchMatrixNodes.toString() + '\n'}function researchCanvasReflowGrowth(before, after, nodeId) {
     const old=before.find(n=>n.id===nodeId), current=after.find(n=>n.id===nodeId);
     if(!old||!current||!old.containerSizePreset&&!old.workbenchId)return after;
     if(old.workbenchId&&after.filter(n=>n.workbenchId===old.workbenchId).every(n=>n.sizeMode!=='manual'))return after;
@@ -141,10 +137,8 @@ function researchWorkbenchGrowthViewport(before,next) {
                         nodes=packed.nodes.map(n=>({...n,x:n.x+n.width/2,y:bottom+n.y+n.height/2}));`
   if (source.includes(preparedPack)) source = source.replace(preparedPack, '')
   source = source.replace('workbenchColumns: plan.panels.length === 2 || plan.panels.length === 4 ? 2 : 3', 'workbenchColumns: 2')
-  source = source.replace('workbenchIndex: plan.panels.indexOf(p), workbenchRevealAt:', 'workbenchIndex: plan.panels.indexOf(p), workbenchSpan: p.workbenchSpan === true, workbenchRevealAt:')
-  if (!source.includes('workbenchColumns: value.workbenchColumns === 2 ? 2 : 3, workbenchSpan: value.workbenchSpan === true'))
-    source = source.replace('workbenchColumns: value.workbenchColumns === 2 ? 2 : 3',
-      'workbenchColumns: value.workbenchColumns === 2 ? 2 : 3, workbenchSpan: value.workbenchSpan === true')
+  source=source.replace(/workbenchIndex: plan\.panels\.indexOf\(p\),(?: workbenchSpan: p\.workbenchSpan === true,)?(?: workbenchLayoutVersion:p\.workbenchLayoutVersion===1\?1:undefined,)? workbenchRevealAt:/g,'workbenchIndex: plan.panels.indexOf(p), workbenchSpan: p.workbenchSpan === true, workbenchLayoutVersion:p.workbenchLayoutVersion===1?1:undefined, workbenchRevealAt:');
+  source=source.replace(/workbenchColumns: value\.workbenchColumns === 2 \? 2 : 3(?:, workbenchSpan: value\.workbenchSpan === true)?(?:, workbenchLayoutVersion:value\.workbenchLayoutVersion===1\?1:undefined)?/g,'workbenchColumns: value.workbenchColumns === 2 ? 2 : 3, workbenchSpan: value.workbenchSpan === true, workbenchLayoutVersion:value.workbenchLayoutVersion===1?1:undefined');
   const anchor = 'snapshot = researchWorkspaceSnapshot(next);'
   const replacement = 'snapshot = researchWorkspaceSnapshot(researchWorkbenchGrowthViewport(snapshot,next));'
   if (!source.includes(replacement)) {
