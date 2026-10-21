@@ -54,3 +54,11 @@ it('validates the actual retained artifact envelope and all dataset references',
  expect(datasetViewDataIssue(value)).toBeUndefined();expect(parseDatasetViewArtifact(value).dataset).toEqual(dataset)
  for(const bad of [{...value,type:'html'},{...value,html:'x'},{...value,view:{...view,dataset:'other'}},{...value,title:''}])expect(datasetViewDataIssue(bad)).toBeTypeOf('string')
 })
+it('adds only id presentation metadata when records already carry explicit stable identities',()=>{
+ const raw=bookDataset();raw.fields=raw.fields.filter(f=>f.key!=='id');const before=clone(raw);
+ const normalized=validateWorkbenchDatasets([raw])[0];
+ expect(normalized.fields[0]).toEqual({key:'id',label:'记录编号'});expect(normalized.fields.slice(1)).toEqual(raw.fields);expect(normalized.records).toEqual(raw.records);expect(raw).toEqual(before);
+ expect(JSON.stringify(validateWorkbenchDatasets([normalized])[0])).toBe(JSON.stringify(normalized));
+ const missing=clone(raw);delete missing.records[0].id;expect(()=>validateWorkbenchDatasets([missing])).toThrow();
+ const duplicate=clone(raw);duplicate.records[1].id=duplicate.records[0].id;expect(()=>validateWorkbenchDatasets([duplicate])).toThrow();
+})
