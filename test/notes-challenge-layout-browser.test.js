@@ -230,3 +230,28 @@ for(const settingsRoute of ['keyboard-overlay','surface-state'])it(`closes the r
   await page.evaluate(()=>{document.querySelector('.VOzbGW_overlay')?.remove();document.querySelector('.en-root').dataset.settingsOpen='false'});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));expect(await page.locator('.en-challenge-popover').count()).toBe(0);expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('设置期间保留的新草稿。');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+
+it('keeps wide comments mounted and focused while their original anchors scroll out of view',async()=>{
+ const{context,page,errors}=await fixture(3440);try{
+  await page.evaluate(()=>window.seed(10));await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(10)
+  const input=page.getByRole('textbox',{name:'回复AI挑战'}).first();await input.fill('滚动保留这份草稿');await input.evaluate(el=>window.retainedInput=el)
+  await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop=500)
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  expect(await page.locator('.en-challenge-card').count()).toBe(10)
+  expect(await input.evaluate(el=>el===window.retainedInput&&document.activeElement===el)).toBe(true)
+  expect(await input.inputValue()).toBe('滚动保留这份草稿');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('sends with Enter while preserving Shift+Enter and IME composition, and uses exact v16 geometry under native host CSS',async()=>{
+ const{context,page,errors}=await fixture(2000,true);try{
+  await nativeHeaderAncestors(page);await page.evaluate(()=>window.seed());await openSelected(page)
+  const input=page.getByRole('textbox',{name:'回复AI挑战'});await input.fill('第一行');await page.keyboard.press('Shift+Enter');expect(await input.inputValue()).toBe('第一行\n')
+  await input.dispatchEvent('keydown',{key:'Enter',code:'Enter',isComposing:true});expect(await page.evaluate(()=>Object.keys(window.jobs).length)).toBe(0)
+  await input.fill('发送中文');await page.keyboard.press('Enter');await page.locator('.en-challenge-thinking').waitFor()
+  expect(await page.evaluate(()=>Object.keys(window.jobs).length)).toBe(1)
+  expect(await page.locator('.en-challenge-author strong').allTextContents()).toEqual(['AI挑战者','我'])
+  const geometry=await page.locator('.en-challenge-card').evaluate(card=>{const box=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return{width:r.width,height:r.height,padding:s.padding,minWidth:s.minWidth,bg:s.backgroundColor}},close=card.querySelector('.en-challenge-close'),icon=close.querySelector('img'),c=close.getBoundingClientRect(),i=icon.getBoundingClientRect();return{card:box(card),close:box(close),send:box(card.querySelector('.en-challenge-reply>button')),input:box(card.querySelector('textarea')),iconCentered:Math.abs(c.x+c.width/2-i.x-i.width/2)<.1&&Math.abs(c.y+c.height/2-i.y-i.height/2)<.1}})
+  expect(geometry.card.width).toBe(320);expect(geometry.close.width).toBe(24);expect(geometry.close.height).toBe(24);expect(geometry.close.padding).toBe('0px');expect(geometry.send.width).toBe(36);expect(geometry.send.height).toBe(32);expect(geometry.input.width).toBe(244);expect(geometry.input.height).toBe(36);expect(geometry.iconCentered).toBe(true)
+  await page.screenshot({path:'/tmp/notes-challenge-v16-native-geometry.png'});await page.locator('.en-root').evaluate(el=>el.dataset.dark='true');await page.locator('.en-challenge-close').hover();await page.screenshot({path:'/tmp/notes-challenge-v16-native-geometry-dark.png'});console.log('v16 geometry',JSON.stringify(geometry));expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)

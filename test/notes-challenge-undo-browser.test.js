@@ -36,6 +36,7 @@ async function optimize(page,value=replacement){
  const count=await page.evaluate(()=>Object.keys(window.jobs).length)
  await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(count+1)
  await page.evaluate(replacement=>Object.values(window.jobs).at(-1).resolve({version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'只优化这段用字。',replacement}}),value)
+ await page.getByRole('button',{name:'替换到原文',exact:true}).click()
  await expect.poll(()=>page.locator('.en-challenge-quote').textContent()).toBe(value)
  await expect.poll(()=>page.getByRole('button',{name:'AI优化',exact:true}).isEnabled()).toBe(true)
 }

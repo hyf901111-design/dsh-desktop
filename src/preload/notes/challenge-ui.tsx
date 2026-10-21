@@ -11,7 +11,7 @@ import swordsIcon from './assets/challenge-swords.svg?inline'
 import collapseIcon from './assets/challenge-margin-collapse.svg?inline'
 import expandIcon from './assets/challenge-margin-expand.svg?inline'
 import chevronIcon from './assets/challenge-chevron.svg?inline'
-import reviewIcon from './assets/challenge-review.svg?inline'
+import reviewIcon from './assets/challenge-comment-swords.svg?inline'
 import stopIcon from './assets/challenge-stop.svg?inline'
 import stopActiveIcon from './assets/challenge-stop-active.svg?inline'
 import thumbIcon from './assets/challenge-thumb.svg?inline'
@@ -92,14 +92,15 @@ function ChallengeCard({thread,controller,style,cardRef,selected}:{thread:Challe
   <div className="en-challenge-messages" ref={messages} onScroll={e=>{const el=e.currentTarget;followEnd.current=el.scrollHeight-el.clientHeight-el.scrollTop<=24}}>
    <div className="en-challenge-quote">{thread.metadata.issue.quote}</div>
    {thread.comments.filter(c=>!c.deletedAt).map((comment,index)=><div className="en-challenge-message" key={comment.id}>
-    <div className="en-challenge-author">{comment.userId===CHALLENGE_USER?<><img src={reviewIcon} alt=""/><strong>AI 挑战</strong></>:<strong>我</strong>}<time>{new Date(comment.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</time></div>
+    <div className="en-challenge-author">{comment.userId===CHALLENGE_USER?<><img src={reviewIcon} alt=""/><strong>AI挑战者</strong></>:<strong>我</strong>}<time>{new Date(comment.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</time></div>
     {index===0?<div className="en-challenge-category">{names[thread.metadata.issue.category]||'挑战'}</div>:null}<div className="en-challenge-text">{noteText(comment.body)}</div>
+    {comment.metadata?.challengeReplacement?<div className="en-challenge-suggestion"><div className="en-challenge-replacement-text">{comment.metadata.challengeReplacement.replacement}</div><button className="en-challenge-replace" disabled={!!controller.busyId||comment.metadata.challengeReplacement.status!=='pending'} onClick={()=>void controller.applyReplacement(thread.id,comment.id)}>{comment.metadata.challengeReplacement.status==='applied'?'已替换到原文':comment.metadata.challengeReplacement.status==='stale'?'原文已变化':'替换到原文'}</button></div>:null}
     {index===0?<div className="en-challenge-actions"><button className="en-challenge-optimize" disabled={!!controller.busyId} onClick={()=>void controller.runAction(thread,'optimize')}>{busy&&controller.actionKind==='optimize'?'处理中…':'AI优化'}</button>{thread.metadata.issue.evidence.length?<button onClick={()=>controller.openEvidence(thread)}>查看依据</button>:null}<span/><button onClick={()=>void controller.resolve(thread.id)}>已解决</button></div>:null}
    </div>)}
    {replyPending?<div className="en-challenge-thinking" role="status" aria-live="polite"><span aria-hidden="true"/>思考回复中…</div>:null}
   </div>
 
-  <div className="en-challenge-reply"><textarea ref={input} value={text} rows={1} maxLength={4000} aria-label="回复AI挑战" placeholder="回复 AI，继续处理这段文字…" onChange={e=>{setText(e.target.value);controller.setDraft(thread.id,e.target.value)}} onKeyDown={e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)&&!e.nativeEvent.isComposing){e.preventDefault();send()}}}/><button disabled={!text.trim()||!!controller.busyId} aria-label="发送挑战回复" onClick={send}>发送</button></div>
+  <div className="en-challenge-reply"><textarea ref={input} value={text} rows={1} maxLength={4000} aria-label="回复AI挑战" placeholder="回复 AI，继续处理这段文字…" onChange={e=>{setText(e.target.value);controller.setDraft(thread.id,e.target.value)}} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&e.nativeEvent.keyCode!==229){e.preventDefault();send()}}}/><button disabled={!text.trim()||!!controller.busyId} aria-label="发送挑战回复" onClick={send}>发送</button></div>
  </article>
 }
 
@@ -119,10 +120,10 @@ export function ChallengeComments({controller,editor,scroll,onMarginAvailableCha
     const focused=document.activeElement,focusedId=controller.marginExpanded&&!wide&&layout.wide&&focused?.matches('.en-challenge-reply textarea')?focused.closest<HTMLElement>('.en-challenge-card')?.dataset.threadId:undefined
     const editingId=focusedId&&!controller.isDismissed(focusedId)?focusedId:undefined
     if(!wide&&editingId&&editingId!==controller.selected)controller.select(editingId)
-    let bottom=16
+    let bottom=Number.NEGATIVE_INFINITY
     const columnLeft=wide?triggerRight-area.left-320-16:0
-    const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected||t.id===editingId)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const start=editor._tiptapEditor.view.coordsAtPos(range.from),end=editor._tiptapEditor.view.coordsAtPos(range.to),rect={...start,bottom:end.bottom};if(wide&&(rect.bottom<area.top+36||rect.top>area.bottom-12))return;return {thread:t,rect}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number}}>
-    candidates.sort((a,b)=>a.rect.top-b.rect.top)
+    const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected||t.id===editingId)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const start=editor._tiptapEditor.view.coordsAtPos(range.from),end=editor._tiptapEditor.view.coordsAtPos(range.to),rect={...start,bottom:end.bottom};return {thread:t,rect,position:range.from}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number};position:number}>
+    candidates.sort((a,b)=>a.position-b.position)
     const items=candidates.map(({thread,rect})=>{
      const height=cards.current.get(thread.id)?.getBoundingClientRect().height||260,maxHeight=Math.max(120,area.height-32)
      let top=rect.top-area.top

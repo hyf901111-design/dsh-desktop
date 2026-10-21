@@ -389,3 +389,10 @@ it('registers a trusted bounded POST route with cancellation and a disposable li
   expect(res.status).toBe(200); expect(res.body).toMatchObject({ version: 1, issues: [] })
   dispose(); expect(unregister).toHaveBeenCalledOnce()
 })
+
+it('returns replacement text for explicit direct editing requests, but never treats a discussion question as editing authorization',async()=>{
+ const{generateNoteChallenge}=await load(),f=fixture({reply:{text:'调整用字。',replacement:'本期收入增长10%。'}})
+ const thread={blockId:'a',quote:'收入增长10%',category:'grammar',message:'请明确表达。',messages:[]}
+ for(const text of ['请直接修改原文','现在就把这段替换成清晰的表达','请帮我直接改写这段','不用问我，直接修改原文','请替换到原文','你直接帮我改好替换上去','不用解释，直接替换到原文','不要解释，直接替换'])expect((await generateNoteChallenge(f.ctx,{...input,action:'reply',thread:{...thread,messages:[{role:'user',text}]}})).reply.replacement).toBe('本期收入增长10%。')
+ for(const text of ['不要直接修改原文','请解释为什么直接修改原文','能否说明改写的原因'])expect((await generateNoteChallenge(f.ctx,{...input,action:'reply',thread:{...thread,messages:[{role:'user',text}]}})).reply.replacement).toBeUndefined()
+})

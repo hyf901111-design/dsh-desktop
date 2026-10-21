@@ -16,7 +16,7 @@ beforeAll(async()=>{
  window.messages=()=>window.challenge.threads[0]?.comments.filter(c=>!c.deletedAt).map(c=>noteText(c.body))||[];
  window.savedMessages=()=>{const doc=new Y.Doc();Y.applyUpdate(doc,Uint8Array.from(atob(window.drafts['note-a'].yjs),c=>c.charCodeAt(0)));return[...doc.getMap('threads').values()].flatMap(thread=>thread.get('comments').toArray().map(comment=>noteText(comment.get('body'))))};
  window.start=(kind='reply',text='请核实来源')=>{window.challenge.runAction(window.challenge.threads[0],kind,text).then(()=>window.completed++)};
- window.seed=async()=>{const issue={blockId:'p',quote:'成度',category:'typo',message:'请核对这段用字。',evidence:[]},store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));const thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue,sourceText:${JSON.stringify(original)}},initialComment:{body:[{type:'paragraph',content:[{type:'text',text:issue.message,styles:{}}]}]}});const range=findChallengeQuote(window.editor,'p','成度');window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return thread.id};
+ window.seed=async(override={})=>{const issue={blockId:'p',quote:'成度',category:'typo',message:'请核对这段用字。',evidence:[],...override},store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));const thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue,sourceText:window.editor.getBlock(issue.blockId).content.map(c=>c.text||'').join('')},initialComment:{body:[{type:'paragraph',content:[{type:'text',text:issue.message,styles:{}}]}]}});const range=findChallengeQuote(window.editor,issue.blockId,issue.quote);window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return thread.id};
  `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-styles',setup(b){b.onResolve({filter:/\.css\?inline$/},async args=>{const found=await b.resolve(args.path.slice(0,-7),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-controller',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.challenge=challenge;window.noteDoc=doc; const slashMenu = useMemo'),loader:'tsx'}))}}]})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -114,5 +114,60 @@ it('persists margin preference per note across resize, reload and switching with
   expect(await page.evaluate(()=>window.challenge.marginExpanded)).toBe(false)
   expect(await page.evaluate(()=>window.challenge.threads[0].metadata.draft)).toBe('我的草稿')
   expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('persists an optimization preview without editing and applies it only through the explicit replacement action',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(id=>window.challenge.select(id),await page.evaluate(()=>window.challenge.threads[0].id));await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'程度'}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
+  await expect.poll(()=>page.locator('.en-challenge-replacement-text').allTextContents()).toEqual(['程度'])
+  await expect.poll(()=>page.evaluate(()=>Object.keys(window.saved).length)).toBe(1);await page.evaluate(()=>window.remount());await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1);await page.evaluate(()=>window.challenge.select(window.challenge.threads[0].id));await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(1)
+  await page.locator('.en-challenge-card').screenshot({path:'/tmp/notes-challenge-v16-replacement-preview.png'});await page.locator('.en-challenge-replace').click()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
+  expect(await page.locator('.en-challenge-replace').isDisabled()).toBe(true)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+for(const [text,direct] of [['请帮我优化一下表达，先给建议',false],['请直接修改原文，把成度替换为程度',true],['你直接帮我改好替换上去',true],['不用解释，直接替换到原文',true],['不要解释，直接替换',true],['不要替换，只解释',false],['请解释为什么直接修改原文',false]])it(`uses human intent to ${direct?'execute':'preview'} a reply replacement: ${text}`,async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>window.challenge.select(window.challenge.threads[0].id));await start(page,'reply',text)
+  await finish(page,{...answer,reply:{text:'模型声称已修改原文',replacement:'程度'}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(direct?'这项结论的程度较高。':original)
+  await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(direct?0:1)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('rejects a persisted replacement when its captured source has changed',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(id=>window.challenge.select(id),await page.evaluate(()=>window.challenge.threads[0].id));await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'程度'}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await page.evaluate(()=>window.editor.updateBlock('p',{content:'新上下文。'+window.editor.getBlock('p').content.map(c=>c.text).join('')}))
+  await page.locator('.en-challenge-replace').click()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('新上下文。'+original)
+  expect(await page.locator('.en-challenge-replace').textContent()).toBe('原文已变化')
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('orders reverse-arriving threads by real document and quote positions even for multiple sentences on one line',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.setViewportSize({width:2400,height:900})
+  await page.evaluate(async()=>{window.editor.replaceBlocks(window.editor.document,[{id:'p',type:'paragraph',content:'第一句方向错误。第二句物态错误。'},{id:'q',type:'paragraph',content:'后段呼吸错误。'}]);await window.seed({blockId:'q',quote:'呼吸错误'});await window.seed({blockId:'p',quote:'物态错误'});await window.seed({blockId:'p',quote:'方向错误'})})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads.map(t=>t.metadata.issue.quote))).toEqual(['方向错误','物态错误','呼吸错误'])
+  await expect.poll(()=>page.locator('.en-challenge-quote').allTextContents()).toEqual(['方向错误','物态错误','呼吸错误'])
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('includes the persisted proposed wording in later discussion context without authorizing its application',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'程度'}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await page.evaluate(()=>window.start('reply','为什么这样表达更合适？'));await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  expect(await page.evaluate(()=>window.jobs[1].input.thread.messages.some(message=>message.role==='assistant'&&message.text.includes('程度')))).toBe(true)
+  await finish(page,answer,1);await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
