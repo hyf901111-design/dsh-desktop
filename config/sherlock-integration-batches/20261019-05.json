@@ -12,7 +12,7 @@
         "featureName": "笔记五档AI挑战与原文评论、回复、优化和证据侧栏",
         "branch": "codex/feat/openterminal-style-20261019",
         "baseCommit": "e204b7303d0a54913213db6e7630e420007238f9",
-        "tipCommit": "1ae96fca73a6c8cca32f177caa9c5cf61b4f8741",
+        "tipCommit": "9be65f15e53a985c447d16389e93c49479973d05",
         "commits": [
           {
             "commit": "f7fa7381ff23a0006a3df1ba550a4dc8bd58b323",
@@ -83,6 +83,27 @@
               "3fdc1e8314b305a24c68a6c946881a505b107b51"
             ],
             "subject": "在笔记中实现五档AI挑战与原文评论回复和优化交互"
+          },
+          {
+            "commit": "0fe9a3af7ccf7270c7a948d408ecfeb905bb85b4",
+            "parents": [
+              "1ae96fca73a6c8cca32f177caa9c5cf61b4f8741"
+            ],
+            "subject": "压缩重复数据源目录并同步内置技能版本断言"
+          },
+          {
+            "commit": "6f39a6cc17122a9a9687fc1c5d2806b3cac65f26",
+            "parents": [
+              "0fe9a3af7ccf7270c7a948d408ecfeb905bb85b4"
+            ],
+            "subject": "对齐挑战优化后长引用的后续回复上限"
+          },
+          {
+            "commit": "9be65f15e53a985c447d16389e93c49479973d05",
+            "parents": [
+              "6f39a6cc17122a9a9687fc1c5d2806b3cac65f26"
+            ],
+            "subject": "保障长引用优化后的连续讨论与可见评论定位"
           }
         ],
         "files": [
@@ -215,6 +236,10 @@
             "path": "test/free-data-sources.test.js"
           },
           {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
             "status": "A",
             "path": "test/notes-challenge-anchors.test.ts"
           },
@@ -278,12 +303,15 @@
               "test/notes-challenge-client-browser.test.js",
               "test/notes-client.test.js",
               "test/notes-challenge-editor-browser.test.js",
-              "test/notes-inline-generation-browser.test.js"
+              "test/notes-inline-generation-browser.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/free-data-sources.test.js"
             ],
             "outcome": "passed",
-            "summary": "12文件113项聚焦验证通过；最后CSS滚轮修正后真实mountNotes浏览器4/4再次通过；日志/tmp/notes-challenge-focused-final-20261021.log及/tmp/notes-challenge-editor-browser-final-20261021.log",
-            "verifiedCommit": "1ae96fca73a6c8cca32f177caa9c5cf61b4f8741",
-            "completedAt": "2026-10-21T06:39:45.179812+00:00",
+            "summary": "15文件164项直接相关聚焦验证全部通过；/tmp/notes-challenge-focused-current-20261021.log。真实mountNotes路径包含长优化引用、长线程有界历史、超容量不替换与多评论滚轮。",
+            "verifiedCommit": "9be65f15e53a985c447d16389e93c49479973d05",
+            "completedAt": "2026-10-21T06:45:42.638880+00:00",
             "timeoutMs": 180000
           },
           {
@@ -294,8 +322,8 @@
             ],
             "outcome": "passed",
             "summary": "完整node tsconfig类型检查退出0；/tmp/notes-challenge-typecheck-final-20261021.log",
-            "verifiedCommit": "1ae96fca73a6c8cca32f177caa9c5cf61b4f8741",
-            "completedAt": "2026-10-21T06:39:45.179812+00:00",
+            "verifiedCommit": "9be65f15e53a985c447d16389e93c49479973d05",
+            "completedAt": "2026-10-21T06:45:42.638880+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -316,7 +344,7 @@
           "单段超过12000字符保留partial；实际token缺失时仅用保守字符预算，不声称费用精确。",
           "沿既有未验收批次本地预览，不推送/发布/晋升main；两项前序工作台修复独立提交随同分支。"
         ],
-        "generatedAt": "2026-10-21T06:39:45.179812+00:00"
+        "generatedAt": "2026-10-21T06:45:42.638880+00:00"
       }
     },
     {
