@@ -72,6 +72,32 @@ it('excludes a captured knowledge question that explicitly admits agreement whil
   expect(result.coveredBlockIds).toEqual(input.changedIds)
 })
 
+it('accepts captured knowledge questions with omitted empty evidence without inventing sources', async () => {
+  const input = captured('captured-six-blocks').input
+  const result = await generateNoteChallenge(provider(captured('captured-omitted-evidence').visibleText), input)
+  expect(result.issues).toHaveLength(10)
+  expect(result.issues.some(item => item.blockId === 'initialBlockId')).toBe(false)
+  expect(new Set(result.issues.map(item => item.blockId)).size).toBe(5)
+  expect(result.issues.every(item => item.category === 'uncertain' && item.evidence.length === 0 && item.message.startsWith('常识疑问（未联网核验）：'))).toBe(true)
+  expect(result.coveredBlockIds).toEqual(input.changedIds)
+})
+
+it('only downgrades unsupported reasoning when evidence is omitted and still rejects malformed evidence or factual verdicts', async () => {
+  const result = await run(note([block('a', '甲句。乙句。丙句。丁句。戊句。己句。')]), { reviews: [{ blockId: 'a', issues: [
+    issue('甲句', { category: 'logic', basis: 'note', evidence: undefined }),
+    issue('乙句', { evidence: null }),
+    issue('丙句', { evidence: {} }),
+    issue('丁句', { evidence: [{ kind: 'note', label: '伪来源', blockId: 'a', quote: '不存在' }] }),
+    issue('戊句', { category: 'fact', evidence: undefined }),
+    issue('己句', { category: 'research', evidence: undefined })
+  ] }] })
+  expect(result.issues).toEqual([{ blockId: 'a', quote: '甲句', category: 'uncertain', message: '常识疑问（未联网核验）：是否需要核对这个判断？', evidence: [] }])
+})
+
+it('rejects translated protocol keys instead of inferring review coverage', async () => {
+  await expect(run(note([block('a', '正确正文。')]), { 审查: [{ 段落编号: 'a', 问题: [] }] })).rejects.toThrow('格式不完整')
+})
+
 it('does not flag correct arithmetic merely to request intermediate steps or guard against possible misunderstanding', async () => {
   const result = await run(note([block('math', '20名参与者中有15人完成任务，因此完成率为75%。')]), {
     reviews: [{ blockId: 'math', issues: [
