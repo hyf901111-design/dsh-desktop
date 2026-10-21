@@ -114,7 +114,6 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         }
         const run = async () => {
             const input = validateWorkbench(args);
-            assertWorkbenchViewSources(input);
             const parentSessionId = exec.agent?.session?.id;
             if (!str(parentSessionId, 256) || !ctx.agents.get(parentSessionId))
                 throw Error('研究会话不可用');
@@ -154,6 +153,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 if (old.ready && old.panels.some(p=>!p.taskId) && (input.generationMode==='deferred'||old.panels.every(p=>p.artifact))) { await startDeferred(old); await persist(); }
                 return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? preparedWorkbench(input) && old.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' : 'preparing' };
             }
+            assertWorkbenchViewSources(input);
             const id = randomUUID();
             const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), ready: false,
                 panels: layoutWorkbench(input.panels).map((p, i) => ({ ...p, nodeId: `${id}-${i}` })) };
