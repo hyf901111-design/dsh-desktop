@@ -12,7 +12,7 @@
         "featureName": "共同记录一次生成并组合为可靠的列表对比排程视图",
         "branch": "codex/feat/openterminal-style-20261019",
         "baseCommit": "edda791f35333ae73412478bfe33d77b888fe795",
-        "tipCommit": "1b6b27d2e9c069728b2d54104a9485de386789dd",
+        "tipCommit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
         "commits": [
           {
             "commit": "2a8e01b253b0700fc7e372a4300beb6543a9f12f",
@@ -48,6 +48,13 @@
               "7c4d08fa6573ac7941e968436da0b4924249a52e"
             ],
             "subject": "修复组合视图准备失败重试短时排程及共同记录传递"
+          },
+          {
+            "commit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
+            "parents": [
+              "1b6b27d2e9c069728b2d54104a9485de386789dd"
+            ],
+            "subject": "同步工作台组合视图技能的随包版本校验"
           }
         ],
         "files": [
@@ -117,6 +124,10 @@
           },
           {
             "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/component-template-registry.test.js"
           },
           {
@@ -136,6 +147,10 @@
             "path": "test/fixtures/book-workbench-dataset.js"
           },
           {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
             "status": "A",
             "path": "test/workbench-dataset-view.test.js"
           }
@@ -150,12 +165,14 @@
               "test/dataset-view-artifact.test.js",
               "test/workbench-deferred.test.js",
               "test/workbench-execution-policy.test.js",
-              "test/dataset-view-browser.test.js"
+              "test/dataset-view-browser.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js"
             ],
             "outcome": "passed",
-            "summary": "57项直接相关检查通过；/tmp/workbench-dataset-tip-focused-20261021.log",
-            "verifiedCommit": "1b6b27d2e9c069728b2d54104a9485de386789dd",
-            "completedAt": "2026-10-21T04:42:56.261814+00:00",
+            "summary": "80项直接相关检查通过；/tmp/workbench-dataset-tip-focused-20261021.log",
+            "verifiedCommit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
+            "completedAt": "2026-10-21T04:46:11.038978+00:00",
             "timeoutMs": 180000
           },
           {
@@ -166,8 +183,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过；/tmp/workbench-dataset-tip-typecheck-20261021.log",
-            "verifiedCommit": "1b6b27d2e9c069728b2d54104a9485de386789dd",
-            "completedAt": "2026-10-21T04:42:56.261814+00:00",
+            "verifiedCommit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
+            "completedAt": "2026-10-21T04:46:11.038978+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -188,7 +205,7 @@
           "独立审查三项Important已由1b6b27d2修复并复核；本地预览建议不等于用户接受。",
           "只在既有集成批次本地预览，不推送、不发布、不晋升main。"
         ],
-        "generatedAt": "2026-10-21T04:42:56.261814+00:00"
+        "generatedAt": "2026-10-21T04:46:11.038978+00:00"
       }
     },
     {
