@@ -61,5 +61,12 @@ export function restoreWorkbenchHostContext(value) {
   if (!policy || typeof policy.pluginRequired !== 'boolean' || typeof policy.pluginProhibited !== 'boolean' ||
       policy.pluginRequired && policy.pluginProhibited || typeof policy.preferenceRequest !== 'string' || policy.preferenceRequest.length > 16000 ||
       typeof value.sourceRequirement !== 'string' || !value.sourceRequirement || value.sourceRequirement.length > 5000) ambiguous()
-  return Object.freeze({sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest}),sourceRequirement:value.sourceRequirement})
+  let workbenchRequest
+  if (value.workbenchRequest !== undefined) {
+    const request = value.workbenchRequest
+    if (!request || typeof request.originalRequest !== 'string' || !request.originalRequest.trim() || request.originalRequest.length > 8000 ||
+        request.dataMode !== undefined && !['source','simulated'].includes(request.dataMode)) ambiguous()
+    workbenchRequest = Object.freeze({originalRequest:request.originalRequest,dataMode:request.dataMode ?? 'source'})
+  }
+  return Object.freeze({...(workbenchRequest ? {workbenchRequest} : {}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest}),sourceRequirement:value.sourceRequirement})
 }

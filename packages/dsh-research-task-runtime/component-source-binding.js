@@ -1,3 +1,4 @@
+import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} from './article-timeline-provenance.js'
 import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
 import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from './component-data-refresh.js'
@@ -211,15 +212,51 @@ export function restoreSnapshotFeedHeadlines(text,records) {
   const restored=normalizeAnnouncementFeed(changed?{...data,items}:data,records)
   if(changed||restored!==data)return JSON.stringify(restored)
 }
+function feedSnapshotSources(records) {
+ return records.filter(record=>record.purpose!=='discovery').map(record=>record.snapshotRows?record:{...record,snapshotRows:record.response&&componentMappableSource(record)?webSnapshotRows(JSON.stringify(record.response)):[]})
+}
+function articleTimelineItemIssue(data,item,sources,options) {
+ const date=articleTimelineDay(item?.time),url=snapshotUrl(item?.url),title=snapshotTitle(item?.title)
+ if(!date||!url||!title)return '缺少可核验的明确原文日期、标题或链接'
+ const matches=sources.flatMap(record=>(record.snapshotRows??[]).filter(row=>snapshotLinkMatches(url,record,row)).map(row=>({record,row})))
+ // Conflicting observations of the same link remain ambiguous; never pick a
+ // convenient title/date from one source and a company from another.
+ if(new Set(matches.map(({row})=>JSON.stringify([row.title,[...(row.dates??[row.date])].sort(),row.subjects??[]]))).size>1)return '同条原文链接的来源身份或日期存在冲突歧义'
+ const matched=matches.find(({row})=>row.title===title&&(row.dates??[row.date]).includes(date))
+ if(!matched)return '标题、日期与原文链接未能对应同一条已取得记录'
+ const identity=snapshotTitle([matched.row.sourceTitle??matched.row.title,...(matched.row.subjects??[])].join(' '))
+ const actor=snapshotTitle(item.actor)
+ const code=value=>typeof value==='string'?snapshotTitle(value).match(/^(?:(sh|sz))?(\d{6})(?:\.(sh|sz))?$/u):null
+ const objectCode=code(item.object)
+ const human=snapshotTitle(options.workbenchRequest?.originalRequest)
+ // An explicitly authored name(ticker) pair can identify the same company;
+ // never require a stock code in every headline or invent name aliases.
+ const knownPair=actor&&identity.includes(actor)&&objectCode&&[...human.matchAll(/\((?:(?:sh|sz))?\d{6}(?:\.(?:sh|sz))?\)/gu)].some(match=>{
+  if(!human.slice(0,match.index).endsWith(actor))return false
+  const originalCode=code(match[0].slice(1,-1)),a=originalCode[1]??originalCode[3],b=objectCode[1]??objectCode[3]
+  return originalCode[2]===objectCode[2]&&(!a||!b||a===b)
+ })
+ if([item.actor,item.object].some((value,index)=>value!==undefined&&(typeof value!=='string'||!snapshotTitle(value)||!identity.includes(snapshotTitle(value))&&!(index===1&&knownPair))))return '展示公司或研究对象未对应同条已取得原文身份'
+ return articleTimelineWindowIssue(data,item,options)
+}
 // A feed is accepted per record. A valid quote or one valid headline cannot
 // establish the identity of another article in the same generated component.
 export function componentFeedEvidenceIssue(text,records,options={}) {
   const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null
   const announcementIssue=announcementEvidenceIssue(data,records,options)
   if(announcementIssue)return announcementIssue
-  if(!['news','reports'].includes(data?.type))return null
-  if(data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>40)return '资讯列表必须包含1–40条已取得的实际记录。'
-  const sources=records.filter(record=>record.purpose!=='discovery').map(record=>record.snapshotRows?record:{...record,snapshotRows:record.response&&componentMappableSource(record)?webSnapshotRows(JSON.stringify(record.response)):[]})
+  const articleTimeline=articleTimelineRequired(data,options)
+  if(!['news','reports'].includes(data?.type)&&!articleTimeline)return null
+  if(data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>(articleTimeline?60:40))return articleTimeline?'文章时间线必须包含1–60条已取得的实际记录。':'资讯列表必须包含1–40条已取得的实际记录。'
+  const sources=feedSnapshotSources(records)
+  if(articleTimeline){
+    const issues=data.items.flatMap((item,index)=>{
+      if(announcementItemRequired(data,item,records,options))return []
+      const issue=articleTimelineItemIssue(data,item,sources,options)
+      return issue?[`第${index+1}条：${issue}`]:[]
+    })
+    return issues.length?`文章时间线逐条原文核验：${issues.join('；')}。保留已核验记录与全部研究对象，缺口和窗口外背景放入 note，不计入有效条目；不得猜测日期、原文链接或删去研究范围。`:null
+  }
   const missing=data.items.flatMap((item,index)=>announcementItemRequired(data,item,records,options)||sources.some(record=>snapshotRecordMatches(item,record))?[]:[index+1])
   return missing.length?`资讯第 ${missing.join('、')} 条的标题、日期与原文链接未能对应同一条已取得记录。逐条复用网页主文记录或链接记录的原始字段，不能借用另一条新闻的网址或日期。已取得的有效条目保留；未取得的研究对象、政策维度及原因放入 note，不以缺失说明伪装新闻，也不能静默缩小原研究范围。`:null
 }
@@ -231,11 +268,17 @@ export function retainVerifiedFeedItems(text,records,options={}) {
  const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null
  if(data?.version!==1||!['news','reports','timeline'].includes(data.type)||!Array.isArray(data.items)||!data.items.length||data.items.length>(data.type==='timeline'?60:40)||data.note!==undefined&&typeof data.note!=='string')return
  const announcements=data.items.some(item=>announcementItemRequired(data,item,records,options))
- if(data.type==='timeline'&&!announcements)return
- const kept=[],gaps=[]
+ const articleTimeline=articleTimelineRequired(data,options)
+ if(data.type==='timeline'&&!announcements&&!articleTimeline)return
+ const kept=[],gaps=[],sources=articleTimeline?feedSnapshotSources(records):[]
  for(const [index,item] of data.items.entries()){
   if(!componentFeedEvidenceIssue(JSON.stringify({...data,items:[item]}),records,options)){kept.push(item);continue}
   if(typeof item?.title!=='string'||!item.title.trim()||item.title.length>256||item.url!==undefined&&(typeof item.url!=='string'||item.url.length>2048)||item.date!==undefined&&(typeof item.date!=='string'||item.date.length>100))return
+  if(articleTimeline&&!announcementItemRequired(data,item,records,options)){
+   if(item.time!==undefined&&item.time!==null&&(typeof item.time!=='string'||item.time.length>256))return
+   const reason=articleTimelineItemIssue(data,item,sources,options)
+   gaps.push(`第${index+1}条（未计入有效记录）对象：${[item.actor,item.object].filter(Boolean).join(' · ')||'见原始标题'}；标题（待核验）：${item.title}；原日期：${item.time??'未取得'}；原链接：${item.url??'未取得'}。原因：${reason}`);continue
+  }
   if(announcementItemRequired(data,item,records,options)){
    const reason=announcementEvidenceIssue({...data,items:[item]},records,options)
    gaps.push(`第${index+1}条 ${item.object??item.actor??item.publisher??'公告公司见原始标题'} ${data.type==='timeline'?item.time??'公告日期未知':item.date??'公告日期未知'}：${item.title}。原因：${reason?.includes('的公告日期未知或超出明确日期窗口')?'超出明确日期窗口或公告日期未知':'同条来源身份或日期未核验'}。`);continue
@@ -244,14 +287,17 @@ export function retainVerifiedFeedItems(text,records,options={}) {
   gaps.push(`第${index+1}条：${item.title}；日期：${item.date??'未取得'}；链接：${item.url??'未取得'}。原因：${reason}。`)
  }
  if(!kept.length||!gaps.length)return
- const prior=announcements&&data.note?`原模型说明（其中计数与覆盖声明已失效，仅保留原研究范围和缺口上下文）：${data.note}`:data.note
- const note=[prior,`宿主原文核验：展示 ${kept.length} 条已核验记录。以下 ${gaps.length} 条未通过原文核验，未作为已验证资讯或判断依据；原研究范围的缺失项继续保留：`,...gaps].filter(Boolean).join('\n')
- const result=JSON.stringify({...data,items:kept,note})
+ const prior=(announcements||articleTimeline)&&data.note?`原模型说明（其中计数与覆盖声明已失效，仅保留原研究范围和缺口上下文）：${data.note}`:data.note
+ const staleHeading=articleTimeline&&/\d+\s*条|完整覆盖|全部/u.test(data.title)
+ const metadata=articleTimeline?[staleHeading?`原标题（计数与覆盖声明已失效）：${data.title}`:null,data.asOf?`原时点与来源声明（覆盖声明未经逐条核验，以本次核验为准）：${data.asOf}`:null].filter(Boolean).join('\n'):null
+ const note=[metadata,prior,`宿主原文核验：展示 ${kept.length} 条已核验记录。以下 ${gaps.length} 条未通过原文核验，未作为已验证资讯或判断依据；原研究范围的缺失项继续保留：`,...gaps].filter(Boolean).join('\n')
+ const result=JSON.stringify({...data,...(articleTimeline?{...(staleHeading?{title:'文章时间线（部分已核验）'}:{}),asOf:'已核验原文静态快照；仅计入窗口内有效条目，日期见原记录'}:{}),items:kept,note})
  if(componentFeedEvidenceIssue(result,records,options))return
  try{if(acceptArtifactOutput(result))return result}catch{}
 }
 export function componentSnapshotEvidence(text,records,options={}) {
   const candidates=extractArtifactObjects(text)
+  if(candidates.some(data=>articleTimelineRequired(data,options)))return candidates.length===1&&!componentFeedEvidenceIssue(text,records,options)
   if(candidates.some(data=>announcementEvidenceIssue(data,records,options)))return false
   if(candidates.length===1&&candidates[0]?.type==='timeline'&&candidates[0].items?.some(item=>announcementItemRequired(candidates[0],item,records,options)))return true
   if(candidates.some(data=>['news','reports'].includes(data?.type)))return candidates.length===1&&!componentFeedEvidenceIssue(text,records,options)

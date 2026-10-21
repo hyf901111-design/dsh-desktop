@@ -3322,7 +3322,7 @@ it('supplements observed news originals before rejection without generating a se
  }finally{await runtime.dispose()}
 })
 
-it.each(['allowed','no-fetch-tool','offline'])('keeps host feed reads within the actual child web permission and observed search sources: %s',async mode=>{
+it.each(['allowed','timeline','no-fetch-tool','offline'])('keeps host feed reads within the actual child web permission and observed search sources: %s',async mode=>{
  const {createSubagentAdapter}=await runtimeModule()
  const parent={id:'parent-1',session:{events:[]}},child={id:'child-1',session:{events:[]}},done=Promise.withResolvers()
  const run={id:child.id,localAgent:child,result:done.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run)
@@ -3330,15 +3330,15 @@ it.each(['allowed','no-fetch-tool','offline'])('keeps host feed reads within the
  ctx.agents.withInitiator=vi.fn((_parent,operation)=>operation())
  ctx.tools={schemas:()=>mode==='no-fetch-tool'?[{name:'web_search'}]:[{name:'web_search'},{name:'web_fetch'}]}
  ctx.web={fetch:vi.fn(async()=>({statusCode:200,body:{kind:'text',content:`${title}\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页主文记录]\n${JSON.stringify({articles:[{title,date:'2026-01-30',url}]})}\n[/网页主文记录]\n\n原文内容。`}}))}
- const query=`工作台：政策研究\n本面板：煤电政策\n${mode==='offline'?'不要联网，只用已有资料':'检索实际政策原文'}，优先使用 news 类型。`
- const handle=await createSubagentAdapter(ctx).start({parentSessionId:parent.id,kind:'container',query,prompt:query,signal:new AbortController().signal,onSessionEvent:()=>{}})
+ const query=`工作台：政策研究\n本面板：煤电政策\n${mode==='offline'?'不要联网，只用已有资料':'检索实际政策新闻原文'}，优先使用 news 类型。`
+ const handle=await createSubagentAdapter(ctx).start({parentSessionId:parent.id,kind:'container',query,prompt:query,...(mode==='timeline'?{hostContext:{sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:'新闻'},sourceRequirement:'检索政策新闻',workbenchRequest:{originalRequest:'创建真实政策新闻工作台。',dataMode:'source'}}}:{}),signal:new AbortController().signal,onSessionEvent:()=>{}})
  try{
   ctx.emit(child,{type:'tool/call',data:{name:'web_search',callId:'found-policy',arguments:'{"query":"煤电政策"}'}})
   ctx.emit(child,{type:'tool/result',data:{message:{source:{callId:'found-policy'},content:[{type:'tool-result',toolCallId:'found-policy',content:[{type:'text',text:`Sources:\n- [${title}](${url}) — 原文摘要\n\nCite the relevant URLs above as markdown links in your answer.`}]}]}}})
-  const model={version:1,type:'news',title:'政策',items:[{title,date:'2026-01-30',url,summary:'原文摘要'}]}
+  const model=mode==='timeline'?{version:1,type:'timeline',title:'政策',items:[{id:'policy',title,time:'2026-01-30',url,summary:'原文摘要'}]}:{version:1,type:'news',title:'政策',items:[{title,date:'2026-01-30',url,summary:'原文摘要'}]}
   done.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(model)}]})
   const result=await handle.result
-  if(mode==='allowed'){
+  if(mode==='allowed'||mode==='timeline'){
    const supplement=await result.acquireFeedEvidence(JSON.stringify(model),[])
    expect(supplement.records).toHaveLength(1)
    expect(ctx.web.fetch).toHaveBeenCalledOnce()

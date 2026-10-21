@@ -40,6 +40,8 @@ it.each([true, false])('passes the current original scope through real creation 
     expect(built.split('唯一交付格式：')[1].split('\n')[0]).toContain(panels[index].type === 'timeline' ? 'type:"timeline"' : `"type":"${panels[index].type}"`)
     expect(built).toContain('只完成本面板')
   }
+  const contexts=batch?f.runtime.startBatch.mock.calls[0][1].panels:f.runtime.start.mock.calls.map(call=>call[1])
+  for(const context of contexts)expect(context.workbenchRequest).toEqual({originalRequest:original,dataMode:'source'})
   expect(f.tool.parameters.properties).not.toHaveProperty('originalRequest')
   expect((await f.tool.execute(args, f.exec)).planId).toBe(receipt.planId)
   expect(batch ? f.runtime.startBatch.mock.calls.length : f.runtime.start.mock.calls.length).toBe(batch ? 1 : 3)
@@ -171,6 +173,7 @@ it('preserves trusted policy through durable restore and unchanged retry but dro
   await vi.waitFor(()=>expect(runtime.tasks.get(unchanged.taskId).state).toBe('failed'))
   expect(runtime.tasks.get(unchanged.taskId).error).toContain('DataYes')
   expect(start.mock.calls[0][0].hostContext.sourcePolicy.pluginRequired).toBe(true)
+  expect(start.mock.calls[0][0].hostContext.workbenchRequest).toEqual({originalRequest:'创建公司真实工作台，所有卡使用DataYes。',dataMode:'source'})
   // Even a strict substring of the old prompt is a changed requirement.
   const changed=await runtime.start({...request,prompt:'检索公司真实新闻，保留日期、原文链接'})
   await vi.waitFor(()=>expect(runtime.tasks.get(changed.taskId).state).toBe('completed'))
@@ -232,4 +235,10 @@ it('cannot publish a readable fallback that violates the human source policy whe
  expect(runtime.tasks.get(task.taskId).state).toBe('failed')
  expect(runtime.tasks.get(task.taskId).finalOutput).toBeUndefined()
  expect(runtime.tasks.get(task.taskId).error).toContain('DataYes')
+})
+it.each(['source','simulated'])('captures validated workbench mode in private context: %s',async mode=>{
+ const request=mode==='simulated'?'创建公司新闻工作台，用模拟数据演示。':'创建公司真实新闻工作台。'
+ const f=await fixture(true,[human(request)])
+ await f.tool.execute({requestId:'mode-'+mode,title:'公司新闻',...(mode==='simulated'?{dataMode:mode,generationMode:'deferred',sharedContext:'虚构公司新闻演示。'}:{}),panels:[{title:'新闻',type:'timeline',size:'large',prompt:'整理公司新闻时间线。'}]},f.exec)
+ expect(f.runtime.startBatch.mock.calls[0][1].panels[0].workbenchRequest).toEqual({originalRequest:request,dataMode:mode})
 })

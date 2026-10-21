@@ -6,7 +6,7 @@ function sources(records=[]) {
 function safeUrl(value) {
  try{const url=new URL(value);if(url.protocol!=='https:'||url.hostname!=='data.eastmoney.com'||url.username||url.password)return null;url.hash='';return url.href}catch{return null}
 }
-function noticeDay(value) {
+export function noticeDay(value) {
  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/u.test(value)||value.startsWith('0000'))return null
  return Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value?value:null
 }
@@ -60,7 +60,7 @@ export function announcementItemRequired(data,item,records=[],options={}) {
  const url=safeUrl(item?.url)
  return ['news','reports'].includes(data?.type)&&Boolean(url&&/^\/notices\/detail\//u.test(new URL(url).pathname))
 }
-function explicitWindows(value) {
+export function explicitWindows(value) {
  if(typeof value!=='string')return []
  // Deliberately bounded grammar: no dates inferred from “recent”, month lengths,
  // retrieval timestamps, URL identifiers, or model-supplied asOf metadata.

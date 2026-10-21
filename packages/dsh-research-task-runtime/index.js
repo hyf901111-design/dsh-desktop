@@ -1,3 +1,4 @@
+import {articleTimelineRequired,restoreArticleTimelineScope} from './article-timeline-provenance.js'
 import {restoreWorkbenchHostContext} from './workbench-source-policy.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
@@ -1494,6 +1495,8 @@ export class ResearchTaskRuntime {
   async run(task) {
     let handle, readableFallback, statementIssue, statementRepairData
     const sourceRecords=[],sourceAttempts=[]
+    const feedOptions={panelRequest:workbenchPanelIntent(task.prompt),workbenchRequest:task.hostContext?.workbenchRequest}
+    let articleTimeline=workbenchPanelFormat(task.prompt)==='timeline'&&articleTimelineRequired({type:'timeline'},feedOptions),originalArticleTimeline
     const startingEvents = []
     try {
       const executionPrompt = (await buildResearchTaskExecutionPrompt(taskRequest(task), {
@@ -1599,15 +1602,23 @@ export class ResearchTaskRuntime {
         if(restoredQuotes)deliveredText=restoredQuotes
         const restoredType=/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(task.prompt??'')?restoreDeclaredArtifactType(deliveredText,plannedFormat):undefined
         if(restoredType)deliveredText=restoredType
+        let restoredArticleScope
+        const articleCandidate=extractArtifactObjects(deliveredText)
+        if(articleCandidate.length===1&&articleTimelineRequired(articleCandidate[0],feedOptions)){
+          articleTimeline=true
+          if(!originalArticleTimeline&&Array.isArray(articleCandidate[0].items)&&articleCandidate[0].items.length<=60)originalArticleTimeline=articleCandidate[0]
+          if(attempt===1)restoredArticleScope=restoreArticleTimelineScope(deliveredText,originalArticleTimeline,feedOptions,item=>!componentFeedEvidenceIssue(JSON.stringify({...originalArticleTimeline,items:[item]}),sourceRecords,feedOptions))
+          if(restoredArticleScope)deliveredText=restoredArticleScope
+        }
         // Capture the original table before any validator can spend the sole
         // repair attempt (including source/binding/operating failures).
         if(task.kind==='container'&&!statementRepairData){
           const requiredTables=extractArtifactObjects(deliveredText).map(data=>statementTableRequiredData(data,panelRequest,sourceRecords)).filter(Boolean)
           if(requiredTables.length)statementRepairData=requiredTables
         }
-        if (!feedAcquired && task.kind === 'container' && typeof acquireFeedEvidence === 'function' && componentFeedEvidenceIssue(deliveredText,sourceRecords,{panelRequest})) {
+        if (!feedAcquired && task.kind === 'container' && typeof acquireFeedEvidence === 'function' && componentFeedEvidenceIssue(deliveredText,sourceRecords,feedOptions)) {
           feedAcquired = true
-          const supplement = await acquireFeedEvidence(deliveredText,sourceRecords)
+          const supplement = await acquireFeedEvidence(deliveredText,sourceRecords,feedOptions)
           if (task.cancelRequested || terminalState(task.state)) return
           sourceRecords.push(...(supplement?.records ?? []))
           if (supplement?.evidence) recoveryEvidence = truncateUtf8([supplement.evidence,recoveryEvidence].filter(Boolean).join('\n\n'),MAX_CONTAINER_EVIDENCE_BYTES)
@@ -1615,9 +1626,9 @@ export class ResearchTaskRuntime {
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
         const restoredSnapshot=task.kind==='container'&&(restoreSnapshotMarketHistory(deliveredText,sourceRecords,historyOptions)||(!bindingRequested&&restoreSnapshotStatementGrowth(deliveredText,sourceRecords))||restoreSnapshotFeedHeadlines(deliveredText,sourceRecords))
         if(restoredSnapshot)deliveredText=recoveryText=restoredSnapshot
-        const retainedFeed=attempt===1&&task.kind==='container'&&workbenchPanelFormat(task.prompt)?retainVerifiedFeedItems(deliveredText,sourceRecords,{panelRequest}):undefined
+        const retainedFeed=attempt===1&&task.kind==='container'&&workbenchPanelFormat(task.prompt)?retainVerifiedFeedItems(deliveredText,sourceRecords,feedOptions):undefined
         if(retainedFeed)deliveredText=recoveryText=retainedFeed
-        if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
+        if (structured && !articleTimeline) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
           // A retrieval handoff is not a failed model artifact. Preserve its
           // evidence and enter the existing single synthesis attempt directly;
@@ -1626,7 +1637,7 @@ export class ResearchTaskRuntime {
           // A valid-looking static card can contain values copied from an API
           // example. Discovery-only evidence requires retrieval even when the
           // previous response was empty or a provider retry already ran.
-          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords,{panelRequest}))throw new ResearchTaskError('GENERATION_FAILED',componentFeedEvidenceIssue(deliveredText,sourceRecords,{panelRequest})??(sourceRecords.some(record=>record.snapshotRows?.length)?'已取得来源记录，但当前标题、日期或原文链接尚未与同一条来源记录对应。请使用已取得记录的原始标题、原始日期及真实链接，不重新枚举接口或猜测记录。':'当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。'))
+          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords,feedOptions))throw new ResearchTaskError('GENERATION_FAILED',componentFeedEvidenceIssue(deliveredText,sourceRecords,feedOptions)??(sourceRecords.some(record=>record.snapshotRows?.length)?'已取得来源记录，但当前标题、日期或原文链接尚未与同一条来源记录对应。请使用已取得记录的原始标题、原始日期及真实链接，不重新枚举接口或猜测记录。':'当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。'))
           let mapped
           const chartVariant=plannedFormat==='chart'?requestedChartVariant(workbenchPanelScope(task.prompt)?.contract??task.prompt):undefined
           try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,panelTitle,intervalMinutes:requestedComponentRefreshInterval(panelRequest),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(panelRequest)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(panelRequest)}) }
@@ -1665,7 +1676,7 @@ export class ResearchTaskRuntime {
               catch (error) { throw new ResearchTaskError('INVALID_OUTPUT', error.message) }
             }
           }
-          const feedIssue=!deferredPanel&&sourceRecords.length&&componentFeedEvidenceIssue(deliveredText,sourceRecords,{panelRequest})
+          const feedIssue=!deferredPanel&&(sourceRecords.length||articleTimeline)&&componentFeedEvidenceIssue(deliveredText,sourceRecords,feedOptions)
           if(feedIssue)throw new ResearchTaskError('GENERATION_FAILED',feedIssue)
           const sourceIssue=extractArtifactObjects(deliveredText).map(templateSourceDataIssue).find(Boolean)
           if(sourceIssue)throw new ResearchTaskError('GENERATION_FAILED',sourceIssue)
@@ -1692,7 +1703,7 @@ export class ResearchTaskRuntime {
                 '该组件指定通联 DataYes 来源，必须实际取得业务响应；需要刷新时提交可刷新映射，不能用其他网站的静态行情或接口目录代替。')
             }
           }
-          output = finalText(mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
+          output = finalText(mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', bindingRequested
@@ -2443,7 +2454,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         result: Promise.resolve(boundedResult).then(result => {
           const researchEvidence=collectedEvidence()
           const acquireFeedEvidence = kind==='container' && childTools.includes('web_fetch') && typeof ctx.web?.fetch === 'function' ? (text,records) => acquireFeedSourceEvidence({
-            text,records,observedUrls:[...feedSearchUrls],signal,onProgress,
+            text,records,observedUrls:[...feedSearchUrls],signal,onProgress,panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,
             readPage:async(url,readSignal)=>{
               const page=await withParentInitiator(parent,()=>ctx.web.fetch({url},readSignal))
               if(!Number.isInteger(page?.statusCode)||page.statusCode<200||page.statusCode>=300||!['html','text'].includes(page?.body?.kind)||typeof page.body.content!=='string')return
