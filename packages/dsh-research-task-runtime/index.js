@@ -43,7 +43,7 @@ import { applyBundledSkillPreferences, bundledSkillEnabled } from './bundled-ski
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
 import {createFrozenResearchFileLoader} from './context-runtime.js'
 import { registerWorkbench, captureSharedWorkbenchPlan } from './workbench.js'
-import { acceptArtifactOutput, artifactReadableFallback, extractArtifactObjects, workbenchMarketVariantIssue, workbenchMarketRecencyIssue } from './artifact-output.js'
+import { acceptArtifactOutput, artifactReadableFallback, extractArtifactObjects, restoreDeclaredArtifactType, workbenchMarketVariantIssue, workbenchMarketRecencyIssue } from './artifact-output.js'
 import { parseResearchContainerSpec } from './artifact-validator.js'
 import { INTERACTIVE_ARTIFACT_PROMPT } from './interactive-artifact.js'
 import { randomUUID } from 'node:crypto'
@@ -1537,6 +1537,8 @@ export class ResearchTaskRuntime {
         }
         if (typeof result?.researchEvidence === 'string' && result.researchEvidence.trim()) recoveryEvidence = truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES)
         let deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
+        const restoredType=/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(task.prompt??'')?restoreDeclaredArtifactType(deliveredText,plannedFormat):undefined
+        if(restoredType)deliveredText=restoredType
         if (!feedAcquired && task.kind === 'container' && typeof acquireFeedEvidence === 'function' && componentFeedEvidenceIssue(deliveredText,sourceRecords)) {
           feedAcquired = true
           const supplement = await acquireFeedEvidence(deliveredText,sourceRecords)
@@ -1617,7 +1619,7 @@ export class ResearchTaskRuntime {
                 '该组件指定通联 DataYes 来源，必须实际取得业务响应；需要刷新时提交可刷新映射，不能用其他网站的静态行情或接口目录代替。')
             }
           }
-          output = finalText(mapped || deferredPanel || restoredSnapshot ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
+          output = finalText(mapped || deferredPanel || restoredSnapshot || restoredType ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', bindingRequested

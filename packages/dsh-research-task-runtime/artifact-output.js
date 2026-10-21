@@ -33,6 +33,21 @@ export function extractArtifactObjects(text) {
  }
  return result;
 }
+// A planned panel already has a declared renderer. Recover only an omitted
+// discriminator on one complete, valid object; business values stay untouched.
+// Keep the data object so acquisition and per-record provenance still run.
+export function restoreDeclaredArtifactType(text,type) {
+ if(typeof type!=='string'||!/^[a-z][a-z-]{0,39}$/u.test(type))return;
+ const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null;
+ if(!data||data.version!==1||Object.hasOwn(data,'type'))return;
+ const typed={...data,type},encoded=JSON.stringify(typed);
+ let accepted;
+ try{accepted=acceptArtifactOutput(encoded)}catch{return}
+ if(!accepted)return;
+ const spec=JSON.parse(accepted),model=readTemplateModel(spec)?.data??spec;
+ if(model.type!==type&&!(type==='table'&&model.type==='market'&&model.variant==='table'))return;
+ return encoded;
+}
 export function acceptArtifactOutput(text) {
  const candidates=extractArtifactObjects(text);
  for(const original of candidates.reverse()) {
