@@ -489,6 +489,160 @@
           "研究看板继续后置。"
         ],
         "generatedAt": "2026-10-21T19:32:38.405877+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+        "verificationCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-layout.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-canvas-tools.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-generation-controls.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-runtime.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-challenge-intent.test.ts",
+              "test/notes-challenge-runtime.test.js",
+              "test/notes-challenge-controller-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/calendar-tool-client.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/calendar-tool-client.test.js",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/shared-calendar.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/shared-calendar.test.ts",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check 23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5",
+            "verifiedCommit": "e30de8a9dc950e124d2c32888aff94b65b47d4fe",
+            "completedAt": "2026-10-21T19:34:40.082Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-10-21T19:34:40.082Z"
       }
     },
     {
