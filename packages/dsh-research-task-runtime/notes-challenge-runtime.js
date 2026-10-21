@@ -178,7 +178,7 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort)
   }
 }
 
-async function run(ctx, input, signal) {
+async function run(ctx, input, signal, modelMilliseconds = 20000) {
   const { batches, total } = batchesFor(input), issueLimits = REVIEW_ISSUE_LIMITS, result = { version: 1, issues: [], coveredBlockIds: [], checks: [] }
   if (!batches.length) return { ...result, checks: [{ kind: 'review', status: 'skipped', detail: '本次没有待审查的正文变化。' }] }
   const response = await abortable(ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } }), signal)
@@ -191,7 +191,7 @@ async function run(ctx, input, signal) {
       reasoningEffort = ['minimal', 'low'].find(effort => info?.reasoning?.efforts?.some(level => level.id === effort))
     } catch { signal.throwIfAborted() }
   }
-  const modelBudget = deadline(signal, 20000), usage = { inputTokens: 0, outputTokens: 0 }
+  const modelBudget = deadline(signal, modelMilliseconds), usage = { inputTokens: 0, outputTokens: 0 }
   try {
     for (const targets of batches) {
       signal.throwIfAborted()
@@ -255,12 +255,17 @@ export async function generateNoteChallenge(ctx, value, requestedSignal) {
   if (!previous && active.size >= 4) throw Error('挑战后台任务已达到并发限制。')
   const controller = new AbortController(), signal = requestedSignal ? AbortSignal.any([controller.signal, requestedSignal]) : controller.signal
   const deep = input.action === 'review' && extractConsensusClaims(input.blocks).length > 0
-  const budget = deadline(signal, deep ? 45000 : 20000), state = { controller, done: null }
+  // Multiple paragraphs can produce a complete result beyond 20s even at low
+  // reasoning. Keep short actions at 20s, grow ordinary reviews by target count,
+  // and stay below the host's 65s request deadline. Consensus retains its budget.
+  const targets = input.action === 'review' ? batchesFor(input).batches.flat().length : 1
+  const milliseconds = deep ? 45000 : Math.min(60000, 20000 + Math.max(0, targets - 1) * 10000)
+  const budget = deadline(signal, milliseconds), state = { controller, done: null }
   // Reserve the replacement before yielding, so a third request can cancel a second waiting request.
   const done = Promise.resolve().then(async () => {
     if (previous) await abortable(previous.done.catch(() => {}), budget.signal)
     budget.signal.throwIfAborted()
-    return run(ctx, input, budget.signal)
+    return run(ctx, input, budget.signal, deep ? 20000 : milliseconds)
   })
   state.done = done; active.set(input.sessionId, state)
   try { const result = await done; budget.signal.throwIfAborted(); return result }
