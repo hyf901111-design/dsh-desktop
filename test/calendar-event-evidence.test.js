@@ -207,3 +207,64 @@ it('keeps a literal human-named missing company from the original calendar scope
  const data=corrected();data.note+='甲公司：定期报告、解禁、股东大会未取得。'
  expect(await issue(data,original,records,{requiredData:first})).toBeUndefined()
 })
+
+// Review round 1: synthetic variants of the existing narrow event/source contract.
+const conferenceContext={...context,workbenchRequest:{dataMode:'source',originalRequest:'查询未来行业会议日历，2026-10-21至2026-10-30。'}}
+const conferences=()=>({version:1,type:'calendar',title:'行业会议日历',items:[{title:'合成甲会议',date:'2026-10-24',category:'行业会议',summary:'来源明确的甲会议'},{title:'合成乙会议',date:'2026-10-28',category:'行业会议',summary:'来源明确的乙会议'}],note:'两场来源会议，原日期保留。'})
+const conferenceSources=()=>collect({records:[{tool:'ework__synthetic_events',args:{},response:{data:[{title:'合成甲会议',eventDate:'2026-10-24',category:'行业会议'},{title:'合成乙会议',eventDate:'2026-10-28',category:'行业会议'},{title:'无关公司合成会议',eventDate:'2026-10-29',category:'行业会议'}]}}]})
+const conferenceFirst=()=>({...conferences(),items:[...conferences().items,{title:'模型未核验线索',date:'待定',summary:'尚未取得原文'}]})
+function mixedUnlock(){
+ const data=corrected()
+ data.note=data.note.replace('中际旭创、新易盛、工业富联：解禁、股东大会记录本次未取得，不能据此证明未来没有事件。','中际旭创：已核验窗口内无解禁事件；中际旭创：股东大会记录本次未取得。新易盛、工业富联：解禁、股东大会记录本次未取得，不能据此证明未来没有事件。')
+ return data
+}
+const oneZero=()=>({...clone(records[0]),args:{http_method:'GET',nameEn:'getEquSharesFloat',url_params:{ticker:'300308',beginFloatDate:'20261021',endFloatDate:'20270630'}},response:{retCode:1,data:[]}})
+it('review1 Runtime rejects repair omitting a second proven in-scope conference without requiring unknown full titles from the human',async()=>{
+ const second={...conferences(),items:[conferences().items[0]]}
+ const f=await run([conferenceFirst(),second],{hostContext:conferenceContext,sources:conferenceSources()})
+ expect(f.result.state).toBe('failed');expect(f.result.finalOutput).toBeUndefined();expect(f.calls).toHaveLength(2)
+ expect(f.result.error).toContain('合成乙会议')
+})
+it('review1 Runtime rejects a wrong report year and period borrowing the same company preDate',async()=>{
+ const wrong=corrected();wrong.items[0].title='中际旭创（300308）2027年年报披露'
+ const f=await run([wrong]);expect(f.result.state).toBe('failed');expect(f.result.finalOutput).toBeUndefined();expect(f.calls).toHaveLength(2)
+ expect(f.result.error).toMatch(/报告期|期间/u)
+})
+it('review1 Runtime renders one-company proven zero unlock alongside other companies missing sources',async()=>{
+ const f=await run([observed.artifact,mixedUnlock()],{sources:[...records,oneZero()]})
+ expect(f.result.state).toBe('completed');expect(f.calls).toHaveLength(2)
+ const d=rendered(f.result.finalOutput)
+ expect(d.querySelector('#calendar-count').textContent).toBe('3 条来源日程')
+ expect([...d.querySelectorAll('#events .event > time')].map(n=>n.textContent)).toEqual(['2026-10-24','2026-10-30','2026-10-30'])
+ expect(d.querySelector('.calendar-footer').textContent).toContain(mixedUnlock().note)
+})
+it('review1 keeps both proven meetings in final HTML without promoting unrelated source rows or model leads',async()=>{
+ const f=await run([conferenceFirst(),conferences()],{hostContext:conferenceContext,sources:conferenceSources()})
+ expect(f.result.state).toBe('completed');expect(f.calls).toHaveLength(2)
+ const d=rendered(f.result.finalOutput)
+ expect(d.querySelector('#calendar-count').textContent).toBe('2 条来源日程')
+ expect([...d.querySelectorAll('#events .event > time')].map(n=>n.textContent)).toEqual(['2026-10-24','2026-10-28'])
+ expect(d.querySelector('.calendar-footer').textContent).toContain(conferences().note)
+ expect(d.body.textContent).not.toMatch(/无关公司|模型未核验线索/u)
+})
+it.each(['2027年三季报','2026年一季报','2026年半年报','2026年年报','2026 Q2 财报','2026年第二季度报告'])('review1 rejects explicit wrong report identity %s through Runtime',async period=>{
+ const data=corrected();data.items[0].title='中际旭创（300308）'+period+'披露'
+ const f=await run([data]);expect(f.result.state).toBe('failed');expect(f.calls).toHaveLength(2);expect(f.result.finalOutput).toBeUndefined()
+})
+it.each(['2026年三季报','2026 Q3 财报','2026年第三季度报告','定期报告'])('review1 retains correct or unspecified report identity %s without forcing a period',async period=>{
+ const data=corrected();data.items[0].title='中际旭创（300308）'+period+'披露'
+ const f=await run([data]);expect(f.result.state).toBe('completed');expect(f.calls).toHaveLength(1)
+ const d=rendered(f.result.finalOutput);expect(d.querySelector('#calendar-count').textContent).toBe('3 条来源日程');expect(d.querySelector('#events').textContent).toContain(period)
+})
+it.each(['所有公司均无解禁事件','三家公司均无解禁事件','已核验窗口内无解禁事件','新易盛：已核验窗口内无解禁事件'])('review1 still rejects an unproven collective or wrong-company absence claim %s',async claim=>{
+ const data=mixedUnlock();data.note+='；'+claim
+ const f=await run([observed.artifact,data],{sources:[...records,oneZero()]});expect(f.result.state).toBe('failed');expect(f.calls).toHaveLength(2)
+})
+it('review1 still cannot prove company zero unlock from failed or incomplete retrieval',async()=>{
+ const failed=oneZero();failed.response={retCode:-1,retMsg:'No Data Returned'}
+ const f=await run([observed.artifact,mixedUnlock()],{sources:[...records,failed]});expect(f.result.state).toBe('failed');expect(f.result.finalOutput).toBeUndefined()
+})
+it('review1 does not infer a report period from unrelated business-year and quarter prose',async()=>{
+ const data=corrected();data.items[0].title='中际旭创（300308）定期报告披露';data.items[0].summary+='；公司另有2027年业务目标，第一季度发展计划。'
+ const f=await run([data]);expect(f.result.state).toBe('completed');expect(f.calls).toHaveLength(1)
+})

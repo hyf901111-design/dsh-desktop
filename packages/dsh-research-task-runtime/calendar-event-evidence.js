@@ -33,8 +33,21 @@ function eventsFrom(records){
  const other=business(records).filter(r=>r.args?.nameEn!=='getEquReportPredisclo').flatMap(r=>rows(r)).filter(r=>r&&typeof r.title==='string'&&typeof r.eventDate==='string').map(row=>({kind:categories.find(([,re])=>re.test(row.title+' '+text(row.category)))?.[0],day:row.eventDate,title:row.title}))
  return [...disclosures,...other]
 }
+// endDate remains the report's identity, never its disclosure/event day.
+// Check only explicit year/quarter/half-year/annual wording; generic reports
+// carry no invented period and ordinary date strings are not report labels.
+function reportPeriodMatches(item,row){
+ const description=itemText(item),endDate=calendarDate(row.endDate)
+ const years=[...description.matchAll(/(?<!\d)(20\d{2})\s*(?:年\s*)?(?=Q[1-4]|第?[一二三四1234]季(?:度)?(?:报告|报|披露)|半年报|半年度报告|中报|年报|年度报告|财报|定期报告)/giu)].map(m=>m[1])
+ const periods=[...description.matchAll(/(?:Q([1-4])\s*(?:财报|财务报告|定期报告|业绩报告|披露|发布|公布)|第?([一二三四1234])季(?:度)?(?:报告|报|披露|发布|公布))/giu)].map(m=>Number(m[1]??({'一':1,'二':2,'三':3,'四':4}[m[2]]??m[2]))*3)
+ if(/半年报|半年度报告|中报/u.test(description))periods.push(6)
+ if(/(?<!半)年报|(?<!半)年度报告/u.test(description))periods.push(12)
+ const explicitDates=[...description.matchAll(/(?:报告期|endDate)\s*[:：=]?\s*(\d{4}-\d{2}-\d{2})/gu)].map(m=>m[1])
+ if(!years.length&&!periods.length&&!explicitDates.length)return true
+ return Boolean(endDate&&years.every(year=>year===endDate.slice(0,4))&&periods.every(month=>month===Number(endDate.slice(5,7)))&&explicitDates.every(date=>date===endDate))
+}
 function matchingEvent(item,event){
- if(event.row)return mentions([item?.title,item?.object].map(text).join(' '),event.entity)&&/披露|发布|公布/u.test(text(item?.title))&&/定期报告|季报|半年报|年报|财报/u.test(text(item?.title)+' '+text(item?.category))
+ if(event.row)return reportPeriodMatches(item,event.row)&&mentions([item?.title,item?.object].map(text).join(' '),event.entity)&&/披露|发布|公布/u.test(text(item?.title))&&/定期报告|季报|半年报|年报|财报/u.test(text(item?.title)+' '+text(item?.category))
  return normalize(item?.title)===normalize(event.title)
 }
 function scopeEntities(original,disclosures,previous){
@@ -88,14 +101,15 @@ export function calendarEventEvidenceIssue(spec,request={},records=[],{now=new D
   if(day&&!within(day,context)){add(`${label} ${day}：超出明确窗口或宿主本地今日 ${context.today}，仅能作为背景`);continue}
   if(new Set(matches.filter(event=>event.row).map(event=>event.row.ticker)).size>1){add(`${label}：事件对应多个公司身份，请逐公司保留来源事件`);continue}
   const match=matches.find(event=>event.day===item.date)
-  if(!match){add(`${label}：没有同条事件来源对应；披露仅使用 preDate${matches.some(e=>e.row)?'='+matches.filter(e=>e.row).map(e=>e.day).join('/') : ''}，endDate/updateDate1/latestPreDiscDate 不能替代事件日`);continue}
+  if(!match){add(`${label}：没有同条事件来源对应；披露仅使用 preDate${matches.some(e=>e.row)?'='+matches.filter(e=>e.row).map(e=>e.day).join('/') : ''}；声明的报告年度/季度必须对应同条报告期 endDate，endDate/updateDate1/latestPreDiscDate 不能替代事件日`);continue}
   if(proven.some(p=>p.item.date===item.date&&matchingEvent(p.item,match))){add(`${label}：同条来源事件重复，不能重复计数`);continue}
   proven.push({item,event:match})
  }
  // Preserve only actual source events in the human scope. An unrelated model
  // candidate or extra query never becomes a mandatory company or event.
  for(const event of events){
-  const requested=event.entity?mentions(context.original,event.entity):context.original.includes(event.title)
+  const selected=previous?.items?.some(item=>matchingEvent(item,event)&&item.date===event.day)
+  const requested=event.entity?mentions(context.original,event.entity):context.original.includes(event.title)||selected&&requiredCategories.includes(event.kind)
   if(requested&&within(calendarDate(event.day),context)&&!proven.some(p=>p.event===event||matchingEvent(p.item,event)&&p.item.date===event.day))add(`${event.entity?.label??event.title}：已取得${event.kind??'事件'} ${event.day}${event.row?' (preDate)':''}，修复不得省略已核验的窗口内事件`)
  }
  for(const entity of entities){
@@ -115,7 +129,12 @@ export function calendarEventEvidenceIssue(spec,request={},records=[],{now=new D
  if(disclosures.length&&unsupportedHistory(allText))add('getEquReportPredisclo 的 updateDate1/latestPreDiscDate 不是先前预披露日期或改期历史；无明确变更记录不能声称“曾预报/改期”')
  // A successful empty, fully covering business response is different from a
  // failed call or an omitted response. Never promote failed unlock calls to zero.
- if(clauses(metadata).some(noUnlock)&&!(entities.length&&entities.every(entity=>emptyUnlockCoverage(records,entity,context))))add('解禁记录未取得不等于窗口内无解禁；失败响应不能证明零事件')
+ for(const clause of clauses(metadata).filter(noUnlock)){
+  const named=entities.filter(entity=>mentions(clause,entity))
+  const collective=/(?:所有|全部|各|[一二三四五六七八九十\d]+家)公司/u.test(clause)
+  const scope=named.length&&!collective?named:entities
+  if(!scope.length||!scope.every(entity=>emptyUnlockCoverage(records,entity,context)))add('解禁记录未取得不等于窗口内无解禁；失败响应不能证明零事件：'+clause)
+ }
  if(previous?.type==='calendar'&&Array.isArray(previous.items))for(const row of disclosures){
   if(!mentions(context.original,entityFor(row)))continue
   if(previous.items.some(item=>mentions(itemText(item),entityFor(row))&&/报告期/u.test(itemText(item))&&item.date===row.endDate)&&!clauses(note).some(clause=>mentions(clause,entityFor(row))&&/报告期|endDate/u.test(clause)&&clause.includes(row.endDate)))add(`${row.secShortName}：已取得报告期 ${row.endDate} (endDate) 背景必须完整保留到 note，不计事件`)
