@@ -34,7 +34,7 @@ import {createNoteComponentDataActions} from './component-data-actions'
 import {InlineNoteFileBlock,noteFilePresentation} from './file-inline'
 import {useInlineComponentGeneration} from './use-inline-component-generation'
 import {useNoteChallenge,CHALLENGE_USER} from './challenge-controller'
-import {ChallengePicker,ChallengeComments,ManualNoteThreads} from './challenge-ui'
+import {ChallengeToolbar,ChallengeComments,ManualNoteThreads} from './challenge-ui'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -475,6 +475,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     const choices=fileIndex<0?[...defaults,...creation]:[...defaults.slice(0,fileIndex+1),...creation,...defaults.slice(fileIndex+1)]
     return filterSuggestionItems([...choices,library],query)
   }, [editor,props.bridge,props.sessionId,document.documentElement.dataset.odysseyLocale])
+  const [challengeMarginAvailable,setChallengeMarginAvailable]=useState(false)
   const challenge=useNoteChallenge({editor,doc,bridge:props.bridge,sessionId:props.sessionId,title,scroll,busy:writing,recovery:!!props.recovery,persist:changed})
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
   const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("正在生成内容…")}</span><button onClick={stop}>{t("停止")}</button></div> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
@@ -483,7 +484,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       </SuggestionPanel> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />
-    <ChallengePicker value={challenge.level} onChange={challenge.setLevel} disabled={!!props.recovery}/>
+    <ChallengeToolbar controller={challenge} sessionId={props.sessionId} dark={props.dark} marginAvailable={challengeMarginAvailable} disabled={!!props.recovery}/>
     <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant,.en-research')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document">
         {props.recovery ? <div className="en-recovery"><strong>{t("发现未保存的本地草稿")}</strong><span>{t("上次编辑内容已保留，可对比后恢复。")}</span><div><button onClick={() => setCompare(true)}>{t("对比草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? t("正在保存…") : t("恢复草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>{t("保留已保存版本")}</button></div></div> : null}
@@ -496,7 +497,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         </BlockNoteView>
       </div>
     </div>
-    <ChallengeComments controller={challenge} editor={editor} scroll={scroll}/>
+    <ChallengeComments controller={challenge} editor={editor} scroll={scroll} onMarginAvailableChange={setChallengeMarginAvailable}/>
     {assistantVisible ? createPortal(suggestion,assistantHost) : <div className="en-composer-area">{suggestion}</div>}</main>
     {compare && props.recovery ? <div className="en-dialog-backdrop" onClick={() => setCompare(false)}><section role="dialog" aria-modal="true" aria-label={t("本地草稿对比")} className="en-compare" onClick={e => e.stopPropagation()}><header><strong>{t("本地草稿对比")}</strong><button onClick={() => setCompare(false)}>{t("关闭")}</button></header><div><section><h3>{t("已保存版本")}</h3><pre>{plain(props.initial)}</pre></section><section><h3>{t("本地草稿")}</h3><pre>{plain(props.recovery)}</pre></section></div><footer><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? t("正在保存…") : t("恢复草稿")}</button><button onClick={() => setCompare(false)}>{t("稍后处理")}</button></footer></section></div> : null}
   </div></Context.Provider>
