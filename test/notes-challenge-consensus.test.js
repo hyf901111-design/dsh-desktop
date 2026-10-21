@@ -53,19 +53,21 @@ it('aligns by EST_DT and computes static units and strict default thresholds', a
   expect(compareConsensusClaim(claim, [{ ...row, EST_DT: '2026-11-01' }, { ...row, EST_DT: '2026-10-19' }]).evidence.data).toMatchObject({ estDt: '20261019', fallback: false })
 })
 
-it('downgrades thin samples, nulls, nonpositive bases, incompatible scope, and after-the-fact snapshots', async () => {
+it('downgrades thin samples and missing fields, keeps zero/negative median rules independent, and labels latest fallbacks', async () => {
   const { compareConsensusClaim } = await load()
   expect(compareConsensusClaim(claim, [{ ...row, NUM_EST_INST: 4 }]).rules).toEqual(['C1'])
   for (const count of [null, 0, -1]) expect(compareConsensusClaim(claim, [{ ...row, NUM_EST_INST: count }]).rules).toEqual([])
   expect(compareConsensusClaim(claim, [{ ...row, EPS_MEDIAN: 90 }])).toMatchObject({ status: 'unavailable', rules: [] })
-  for (const median of [null, '', 0, -10]) {
+  for (const median of [null, '']) {
     const result = compareConsensusClaim(claim, [{ ...row, EPS_MEDIAN: median, EPS_MIN: null, EPS_MAX: null }])
     expect(result.rules).toEqual([])
     expect(result.status).toBe('partial')
   }
+  expect(compareConsensusClaim(claim,[{...row,EPS_MEDIAN:0,EPS_MIN:null,EPS_MAX:null}]).rules).toEqual(['C3'])
+  expect(compareConsensusClaim(claim,[{...row,EPS_MEDIAN:-10,EPS_MIN:null,EPS_MAX:null}]).rules).toEqual(['C2','C3'])
   expect(compareConsensusClaim({ ...claim, basis: '营业总收入' }, [row])).toMatchObject({ status: 'skipped', rules: [] })
   const fallback = compareConsensusClaim(claim, [{ ...row, EST_DT: '20261021' }])
-  expect(fallback).toMatchObject({ status: 'partial', rules: [], evidence: { data: { fallback: true, estDt: '20261021' } } })
+  expect(fallback).toMatchObject({ status: 'partial', rules: ['C1','C3'], evidence: { data: { fallback: true, estDt: '20261021' } } })
   expect(fallback.detail).toContain('事后参考')
   expect(compareConsensusClaim(claim, [{ ...row, S_INFO_WINDCODE: '000001.SZ' }])).toMatchObject({ status: 'unavailable', rules: [] })
   expect(compareConsensusClaim(claim, [{ ...row, EST_DT: '20260230' }])).toMatchObject({ status: 'unavailable', rules: [] })
@@ -126,14 +128,30 @@ it('does not query unreviewed forecast targets when only a covered subset is req
   expect(f.calls[0].arguments.sql).not.toContain('20271231')
 })
 
-it('performs at most one latest fallback and never judges a historical report using that later snapshot', async () => {
+it('performs at most one latest fallback and clearly separates its comparison from a historical verdict', async () => {
   const { reviewNoteConsensus } = await load()
   const f = await sourceFixture({ data: body => body.arguments.sql.includes('EST_DT <=') ? [] : [{ ...row, EST_DT: '20261021' }] })
   const result = await reviewNoteConsensus(f.ctx, { sessionId: 'session', blocks: [{ id: 'a', type: 'paragraph', text: '600519.SH 报告基准日20261020。预计2026年EPS 76元。' }] }, new AbortController().signal)
   expect(f.calls).toHaveLength(2)
-  expect(result.issues).toEqual([])
+  expect(result.issues).toHaveLength(1)
+  expect(result.issues[0].evidence[0].data).toMatchObject({fallback:true,rules:['C1','C3']})
   expect(result.checks).toMatchObject([{ kind: 'consensus', status: 'partial' }])
   expect(result.checks[0].detail).toContain('事后参考')
+})
+it.each([2029,2027])('distinguishes an uncovered period from missing covered data for year %s',async year=>{
+  const {reviewNoteConsensus}=await load()
+  const f=await sourceFixture({data:body=>body.arguments.sql.includes('AS FIRST_PERIOD')?[{FIRST_PERIOD:'19991231',LAST_PERIOD:'20281231'}]:[]})
+  const result=await reviewNoteConsensus(f.ctx,{sessionId:'session',blocks:[{id:'f',type:'paragraph',text:`600519.SH 报告基准日20261020。预计${year}年EPS 76元。`}]},new AbortController().signal)
+  expect(result.issues).toEqual([]);expect(f.calls).toHaveLength(3)
+  expect(result.checks[0].detail).toContain(year===2029?'不在来源当前覆盖报告期':'位于当前覆盖范围内')
+})
+it('compares adjacent-year forecasts after both independently bounded date-aligned reads',async()=>{
+  const {reviewNoteConsensus}=await load()
+  const prior={...row,EST_REPORT_DT:'20251231',EPS_MEDIAN:72,EPS_MIN:60,EPS_MAX:80}
+  const f=await sourceFixture({data:body=>[body.arguments.sql.includes("EST_REPORT_DT = '20251231'")?prior:row]})
+  const result=await reviewNoteConsensus(f.ctx,{sessionId:'session',blocks:[{id:'meta',type:'paragraph',text:'600519.SH 报告基准日20261020。'},{id:'a',type:'paragraph',text:'预计2025年EPS 70元。'},{id:'b',type:'paragraph',text:'预计2026年EPS 76元。'}]},new AbortController().signal)
+  expect(f.calls).toHaveLength(2)
+  expect(result.issues.find(i=>i.blockId==='b').evidence[0].data.rules).toContain('C4')
 })
 
 it('does not promote truncated data or mismatched codes into verified consensus evidence', async () => {
