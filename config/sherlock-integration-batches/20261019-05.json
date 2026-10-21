@@ -9,62 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "优化组件阅读分区、宽内容布局与独特业务交互",
+        "featureName": "补齐共享宽布局保存并修复真实主题下的排程文本裁切",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "5bcb3757865d1d94dd945738cde41c1690b7efc3",
-        "tipCommit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
+        "baseCommit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
+        "tipCommit": "be97d9b3257e3b988ce3d8d8a0180f55699ef1b5",
         "commits": [
           {
-            "commit": "5c4fa764cdaf8c83228509551dd6144c46426a3c",
+            "commit": "e9301ef2f8854f04de3e6c6287e74cd0f5fc3a01",
             "parents": [
-              "5bcb3757865d1d94dd945738cde41c1690b7efc3"
+              "6deb233a1c2e78af142fa4832ec23bae6777ac89"
             ],
-            "subject": "优化生成组件阅读分区并支持宽内容布局与自定义交互"
+            "subject": "修复宽布局共享保存并统一自定义组件规划说明"
           },
           {
-            "commit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
+            "commit": "be97d9b3257e3b988ce3d8d8a0180f55699ef1b5",
             "parents": [
-              "5c4fa764cdaf8c83228509551dd6144c46426a3c"
+              "e9301ef2f8854f04de3e6c6287e74cd0f5fc3a01"
             ],
-            "subject": "同步组件生成规则新版的集成断言"
+            "subject": "修复宿主主题固定按钮高度裁切排程名称和负责人的问题"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/gantt-artifact.js"
+            "path": "packages/dsh-research-collaboration/document.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-reading-layout.js"
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
           },
           {
             "status": "M",
@@ -72,43 +44,15 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
+            "path": "src/main/research-board-integration.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "path": "test/research-board-document.test.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-workbench-growth.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/integration-bundled-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench-variety.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/stored-template-refinements.test.js"
+            "path": "test/research-board-generation.test.ts"
           },
           {
             "status": "M",
@@ -116,15 +60,7 @@
           },
           {
             "status": "M",
-            "path": "test/workbench-planning-phase.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/workbench-reading-layout-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-semantic-layout.test.js"
           }
         ],
         "checks": [
@@ -133,23 +69,19 @@
               "./node_modules/.bin/vitest",
               "run",
               "--maxWorkers=1",
-              "test/workbench-semantic-layout.test.js",
-              "test/research-grid-workbench.test.js",
+              "test/research-board-document.test.js",
+              "test/research-board-generation.test.ts",
               "test/workbench-deferred.test.js",
-              "test/workbench-planning-phase.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/workbench-execution-policy.test.js",
+              "test/workbench-semantic-layout.test.js",
               "test/workbench-reading-layout-browser.test.js",
-              "test/workflow-layout-browser.test.js",
-              "test/operations-template.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/workbench-layout-stability-browser.test.js"
+              "test/workbench-component-presentation.test.js",
+              "test/workbench-style.test.js",
+              "test/stored-template-refinements.test.js"
             ],
             "outcome": "passed",
-            "summary": "212项直接相关检查通过；/tmp/workbench-layout-final-with-skill-integration-20261021.log",
-            "verifiedCommit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
-            "completedAt": "2026-10-21T03:23:23.629751+00:00",
+            "summary": "89项直接相关检查通过；/tmp/workbench-layout-review-fixes-final-20261021.log",
+            "verifiedCommit": "be97d9b3257e3b988ce3d8d8a0180f55699ef1b5",
+            "completedAt": "2026-10-21T03:37:36.169117+00:00",
             "timeoutMs": 180000
           },
           {
@@ -159,117 +91,28 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/workbench-layout-typecheck-20261021.log",
-            "verifiedCommit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
-            "completedAt": "2026-10-21T03:23:23.629751+00:00",
+            "summary": "类型检查通过；/tmp/workbench-layout-review-fixes-typecheck-20261021.log",
+            "verifiedCommit": "be97d9b3257e3b988ce3d8d8a0180f55699ef1b5",
+            "completedAt": "2026-10-21T03:37:36.169117+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "已在真实Chromium验证400/656/900/1280像素新旧布局及筛选、勾选、点选详情。共享客户端尚未加载，集成后进行原生验证。"
+          "summary": "共享字段白名单和节点映射已用真实文档API和共享建卡函数验证；最终包原生验收待进行。"
         },
         "acceptanceCriteria": [
-          "标题独占合理宽度，筛选工具栏另行排列，清单与告警不出现窄列竖排。",
-          "排程作业标签完整换行，行高自然，点选详情独立，备注来源置后，宽框详情并排。",
-          "新计划的宽排程与宽业务内容跨整行，支持组件形成两列流；历史宽度提示不触发新规则，手动尺寸优先。",
-          "自定义模拟HTML可直接沿deferred生成，保留共同事实与原始需求；离线限制、来源、设计和共享状态门禁仍生效。",
-          "更新已保存的已知模板而不修改原始数据、控制路径或个人操作记录。"
+          "宽布局标记经freezeSnapshot/createDocument与编码解码保留，重排不会退回旧矩阵。",
+          "新建共享看板明确携带宽布局标记，不给普通节点插入undefined字段。",
+          "自定义HTML的type参数描述与deferred/sharedContext规则一致。",
+          "真实宿主主题预览的排程名称与负责人自然增高，四主题不受通用28px按钮高度裁切，点选详情仍可用。"
         ],
         "risks": [
-          "本次共享客户端尚未加载新代码，需原生验证。",
-          "新独特业务HTML的真实模型质量仍需实际生成验证，不能以单元检查代替交付。",
-          "历史research-workbench.test.js全文件存在与本改动无关的旧补丁锚点和契约断言失败；本次直接相关矩阵、网格、规划、内容布局、序列化与稳定性检查均通过。",
-          "只本地集成与测试，不发布、不推送、不晋升main。"
+          "只本地集成，不对外发布或晋升main。",
+          "最终本地包仍需真实界面验收。",
+          "research-html-theme旧测试存在4项既有阈值/层级断言失败，本轮不改无关路径；真实主题Gantt浏览器检查通过。"
         ],
-        "generatedAt": "2026-10-21T03:23:23.629751+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3de37b3c21b4df8709663f6bb935e1b2d1099e3e",
-        "verificationCommit": "3de37b3c21b4df8709663f6bb935e1b2d1099e3e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "3de37b3c21b4df8709663f6bb935e1b2d1099e3e",
-            "completedAt": "2026-10-21T03:24:35.658Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3de37b3c21b4df8709663f6bb935e1b2d1099e3e",
-            "completedAt": "2026-10-21T03:24:35.658Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "3de37b3c21b4df8709663f6bb935e1b2d1099e3e",
-            "completedAt": "2026-10-21T03:24:35.658Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "3de37b3c21b4df8709663f6bb935e1b2d1099e3e",
-            "completedAt": "2026-10-21T03:24:35.658Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3de37b3c21b4df8709663f6bb935e1b2d1099e3e",
-            "completedAt": "2026-10-21T03:24:35.658Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T03:24:35.658Z"
+        "generatedAt": "2026-10-21T03:37:36.169117+00:00"
       }
     },
     {
