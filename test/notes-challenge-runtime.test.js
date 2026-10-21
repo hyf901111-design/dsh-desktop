@@ -407,6 +407,41 @@ it('keeps format recovery and terminal rejection unchanged if its diagnostic sin
   expect(warn.mock.calls.filter(([text]) => String(text).includes('notes-challenge-format-rejected'))).toHaveLength(3)
 })
 
+it('preserves every valid target review in one call while discarding extra unknown groups', async () => {
+  const { generateNoteChallenge } = await load(), warn = vi.mocked(console.warn)
+  const valid = { quote:'收入增长10%', basis:'note', category:'question', message:'请确认统计期间。', evidence:[] }
+  const foreign = { ...valid, message:'PRIVATE-FOREIGN', quote:'收入减少10%' }
+  const f = fixture({ reviews:[{blockId:'a',issues:[valid,{...valid,quote:'PRIVATE-MISSING'},{...valid,category:'fact'}]},{blockId:'PRIVATE-EXTERNAL-1',issues:[foreign]},{blockId:'b',issues:[]},{blockId:'PRIVATE-EXTERNAL-2',issues:[foreign]}] })
+  const result = await generateNoteChallenge(f.ctx,{...input,changedIds:['a','b']})
+  expect(result.issues).toEqual([{blockId:'a',quote:valid.quote,category:valid.category,message:valid.message,evidence:[]}])
+  expect(result.coveredBlockIds).toEqual(['a','b']);expect(result.checks[0].status).toBe('completed')
+  expect(f.calls).toHaveLength(1);expect(f.events).toEqual([])
+  expect(warn).toHaveBeenCalledTimes(1)
+  const logged=warn.mock.calls[0][0]
+  expect(JSON.parse(logged)).toEqual({event:'notes-challenge-review-extra-groups',action:'review',attempt:1,targetCount:2,reviewCount:4,ignoredGroups:2,requestKey:expect.stringMatching(/^[a-f0-9]{12}$/u)})
+  for(const privateText of ['PRIVATE',input.requestId,input.sessionId,input.blocks[0].text])expect(logged).not.toContain(privateText)
+})
+
+it('does not treat discarded foreign candidates as filtered target candidates or let diagnostic failure reject valid targets', async () => {
+  const { generateNoteChallenge } = await load(), warn=vi.mocked(console.warn)
+  const f=fixture({reviews:[{blockId:'a',issues:[]},{blockId:'PRIVATE-EXTERNAL',issues:[{quote:'收入增长10%',category:'fact',basis:'general-knowledge',message:'PRIVATE-TEXT',evidence:[]}]}]})
+  const result=await generateNoteChallenge(f.ctx,input)
+  expect(result).toMatchObject({issues:[],coveredBlockIds:['a']});expect(f.calls).toHaveLength(1)
+  expect(warn).toHaveBeenCalledTimes(1);expect(JSON.parse(warn.mock.calls[0][0]).event).toBe('notes-challenge-review-extra-groups')
+  warn.mockImplementation(text=>{if(String(text).includes('notes-challenge-review-extra-groups'))throw Error('PRIVATE-LOGGER')})
+  const again=await generateNoteChallenge(f.ctx,{...input,requestId:'another'})
+  expect(again).toMatchObject({issues:[],coveredBlockIds:['a']});expect(f.calls).toHaveLength(2)
+})
+
+it('still rejects incomplete targets, duplicate IDs and malformed extra groups without silently projecting them', async () => {
+  const { generateNoteChallenge } = await load(), base=[{blockId:'a',issues:[]},{blockId:'b',issues:[]}],foreign={blockId:'PRIVATE-EXTERNAL',issues:[]}
+  for(const reviews of [[base[0],foreign],[...base,base[0]],[...base,foreign,foreign],[...base,{...foreign,'PRIVATE-KEY':'PRIVATE-TEXT'}],[...base,{...foreign,issues:{}}],[...base,{...foreign,blockId:{private:'PRIVATE'}}],[...base,{...foreign,blockId:''}],[...base,{...foreign,blockId:'bad\nID'}]]){
+    const f=fixture({reviews})
+    await expect(generateNoteChallenge(f.ctx,{...input,changedIds:['a','b']})).rejects.toThrow('格式不完整')
+    expect(f.calls).toHaveLength(2);expect(f.events).toEqual([])
+  }
+})
+
 it('regenerates a malformed review envelope once without reusing its contents or bypassing issue validation', async () => {
   const { generateNoteChallenge } = await load()
   const valid = { quote: '收入增长10%', basis: 'note', category: 'question', message: '请确认统计期间。', evidence: [] }
