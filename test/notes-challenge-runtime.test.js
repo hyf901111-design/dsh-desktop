@@ -226,6 +226,61 @@ it('does not retry a syntactically valid result that fails the reply schema', as
   expect(f.calls).toHaveLength(1)
 })
 
+it('regenerates a malformed review envelope once without reusing its contents or bypassing issue validation', async () => {
+  const { generateNoteChallenge } = await load()
+  const valid = { quote: '收入增长10%', basis: 'note', category: 'question', message: '请确认统计期间。', evidence: [] }
+  for (const malformed of [{ issues: [], message: 'PRIVATE BAD ENVELOPE' }, { reviews: [{ blockId: 'invented', issues: [] }] }, { reviews: [{ blockId: 'a', issues: {} }] }]) {
+    const f = textFixture([JSON.stringify(malformed), JSON.stringify({ reviews: [{ blockId: 'a', issues: [valid, { ...valid, quote: '不存在' }, { ...valid, category: 'fact', message: '模型捏造事实' }] }] })])
+    const result = await generateNoteChallenge(f.ctx, input)
+    expect(result.issues).toEqual([{ blockId: 'a', quote: valid.quote, category: valid.category, message: valid.message, evidence: [] }])
+    expect(result.coveredBlockIds).toEqual(['a'])
+    expect(result.usage).toEqual({ inputTokens: 60, outputTokens: 20 })
+    expect(f.calls).toHaveLength(2)
+    expect(f.calls[1]).toMatchObject({ provider: 'selected-provider', model: 'selected-model', maxTokens: 3000, reasoningEffort: 'low', messages: f.calls[0].messages })
+    expect(f.calls[1].system).not.toContain('PRIVATE BAD ENVELOPE')
+    expect(JSON.stringify(result)).not.toMatch(/PRIVATE|不存在|模型捏造事实/u)
+    expect(f.events).toEqual([])
+  }
+})
+
+it('shares one regeneration allowance between JSON syntax and review structure failures', async () => {
+  const { generateNoteChallenge } = await load()
+  for (const answers of [['{"reviews":', '{"issues":[]}'], ['{"issues":[]}', '{"reviews":'], ['{"reviews":[{"blockId":"a","issues":{}}]}', '{"issues":[]}']]) {
+    const f = textFixture(answers)
+    await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('格式')
+    expect(f.calls).toHaveLength(2)
+    expect(f.events).toEqual([])
+  }
+})
+
+it('does not regenerate valid empty, partial or all-filtered review results', async () => {
+  const { generateNoteChallenge } = await load()
+  for (const answer of [{ reviews: [] }, { reviews: [{ blockId: 'a', issues: [] }] }, { reviews: [{ blockId: 'a', issues: [{ quote: '收入增长10%', basis: 'general-knowledge', category: 'fact', message: '模型捏造事实', evidence: [] }] }] }]) {
+    const f = fixture(answer), result = await generateNoteChallenge(f.ctx, input)
+    expect(result.issues).toEqual([])
+    expect(result.coveredBlockIds).toEqual(answer.reviews.map(review => review.blockId))
+    expect(f.calls).toHaveLength(1)
+  }
+})
+
+it('keeps review structure regeneration inside the original model deadline', async () => {
+  vi.useFakeTimers()
+  const { generateNoteChallenge } = await load(), f = fixture()
+  let started
+  const ready = new Promise(resolve => { started = resolve })
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options); started()
+    if (f.calls.length === 1) {
+      await new Promise(resolve => setTimeout(resolve, 12000))
+      yield { type: 'text-delta', index: 0, text: '{"issues":[]}' }; yield { type: 'finish', reason: { kind: 'stop' } }
+    } else await new Promise(() => {})
+  }
+  const observed = generateNoteChallenge(f.ctx, input).then(() => null, error => error)
+  await ready; await vi.advanceTimersByTimeAsync(20001)
+  expect((await observed).message).toMatch(/超时|timeout/iu)
+  expect(f.calls).toHaveLength(2)
+})
+
 it('shares the original output size limit across a malformed response and its retry', async () => {
   const { generateNoteChallenge } = await load(), f = fixture()
   f.ctx.llm.stream = async function* (options) {
