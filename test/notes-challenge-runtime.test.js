@@ -68,6 +68,27 @@ it('returns optimize and reply suggestions only for a still-valid thread anchor 
   await expect(generateNoteChallenge(f.ctx, { ...input, action: 'optimize', thread: { ...thread, quote: '已删除的原文' } })).rejects.toThrow('原文')
 })
 
+it('continues a thread after an accepted 6000-character replacement becomes its exact quote', async () => {
+  const { generateNoteChallenge } = await load(), quote = '首' + '文'.repeat(5998) + '尾'
+  const answer = { reply: { text: '保留原立场，明确表述。', replacement: quote } }, f = fixture(answer)
+  const original = { blockId: 'a', quote: '收入增长10%', category: 'logic', message: '请明确统计期间。', messages: [{ role: 'user', text: '请优化' }] }
+  const optimized = await generateNoteChallenge(f.ctx, { ...input, action: 'optimize', thread: original })
+  expect(optimized.reply.replacement).toBe(quote)
+  const current = { ...input, blocks: [{ id: 'a', type: 'paragraph', text: '原文：' + optimized.reply.replacement + '。' }] }, thread = { ...original, quote, messages: [{ role: 'user', text: '请继续说明这段的前提。' }] }
+  answer.reply = { text: '这仍是基于原研究假设的表述。' }
+  expect((await generateNoteChallenge(f.ctx, { ...current, action: 'reply', thread })).reply).toEqual({ text: '这仍是基于原研究假设的表述。' })
+  answer.reply = { text: '只调整表达。', replacement: '在明确的前提下，收入预计增长10%。' }
+  expect((await generateNoteChallenge(f.ctx, { ...current, action: 'optimize', thread })).reply.replacement).toBe('在明确的前提下，收入预计增长10%。')
+  await expect(generateNoteChallenge(f.ctx, { ...current, action: 'reply', thread: { ...thread, quote: quote + '。' } })).rejects.toThrow('参数')
+  await expect(generateNoteChallenge(f.ctx, { ...current, action: 'reply', thread: { ...thread, messages: Array.from({ length: 3 }, () => ({ role: 'user', text: '问'.repeat(4000) })) } })).rejects.toThrow('参数')
+})
+
+it('keeps newly generated issue quotes limited to 2000 characters even when follow-up anchors allow 6000', async () => {
+  const { generateNoteChallenge } = await load(), quote = '首' + '文'.repeat(1999) + '尾'
+  const f = fixture({ issues: [{ blockId: 'a', quote, category: 'question', message: '请核对假设。', evidence: [] }] })
+  expect((await generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text: quote }] })).issues).toEqual([])
+})
+
 it('offers a replacement in replies only when the latest user explicitly asks to rewrite', async () => {
   const { generateNoteChallenge } = await load(), f = fixture({ reply: { text: '保持预测立场，改清楚假设。', replacement: '在该假设下，本期收入预计增长10%。' } })
   const thread = { blockId: 'a', quote: '收入增长10%', category: 'research', message: '解释假设差异。', messages: [{ role: 'user', text: '请把这段改写为条件预测' }] }

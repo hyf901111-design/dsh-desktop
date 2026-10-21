@@ -16,7 +16,7 @@ function validate(input) {
   if (input.changedIds !== undefined && (!Array.isArray(input.changedIds) || input.changedIds.length > 400 || input.changedIds.some(value => !ids.has(value)) || new Set(input.changedIds).size !== input.changedIds.length)) invalid()
   if (input.thread !== undefined) {
     const thread = input.thread
-    if (!fields(thread, ['blockId', 'quote', 'category', 'message', 'messages']) || !id(thread.blockId) || !string(thread.quote, 2000, true) || !categories.has(thread.category) || !string(thread.message, 2000, true) || !Array.isArray(thread.messages) || thread.messages.length > 20 || thread.messages.some(message => !fields(message, ['role', 'text']) || !['user', 'assistant'].includes(message.role) || !string(message.text, 4000, true)) || JSON.stringify(thread).length > 16000) invalid()
+    if (!fields(thread, ['blockId', 'quote', 'category', 'message', 'messages']) || !id(thread.blockId) || !string(thread.quote, 6000, true) || !categories.has(thread.category) || !string(thread.message, 2000, true) || !Array.isArray(thread.messages) || thread.messages.length > 20 || thread.messages.some(message => !fields(message, ['role', 'text']) || !['user', 'assistant'].includes(message.role) || !string(message.text, 4000, true)) || JSON.stringify(thread).length > 16000) invalid()
   }
   if (input.action !== 'review' && (!input.thread || !uniqueQuote(input.blocks.find(block => block.id === input.thread.blockId)?.text, input.thread.quote))) throw Error('挑战原文已变化或不唯一，请重新定位后重试。')
   return structuredClone(input)
