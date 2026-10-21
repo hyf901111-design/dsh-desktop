@@ -4,13 +4,30 @@ import {readFile,mkdir} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {planningResponseMetadata} from '../scripts/lib/research-planning-feedback.mjs'
 let browser,script
 const evidence='/tmp/workbench-feedback-actions-20261021'
 beforeAll(async()=>{
  const source=patchResearchCreationProgress(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  const start=source.search(/\/\* ework:workbench-feedback:v\d+ \*\//),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const chat=source.slice(source.indexOf('function ChatView('),source.indexOf('//#region lib/types/client/contract/slots.js',source.indexOf('function ChatView(')))
+ const flowStart=chat.search(/renderFlow\.(?:map|flatMap)\(\(entry\) => \{/),flowEnd=chat.indexOf('\n\t\t\t\t\t\t]',flowStart)
+ if(flowStart<0||flowEnd<0)throw Error('Actual ChatView render flow missing')
+ const flowRender=chat.slice(flowStart,flowEnd),execution=source.slice(end,source.indexOf('//#endregion',end)),receiptLookup=chat.match(/const workbenchReceiptAnchors=researchWorkbenchReceiptAnchors\([^;]+;/)?.[0],turnIdentity=source.match(/function conversationNodeTurn\(node\) \{[\s\S]*?\n\t\t\}/)?.[0]
+ if(!receiptLookup||!turnIdentity)throw Error('Actual ChatView receipt anchors or turn identity missing')
  const output=await build({stdin:{resolveDir:process.cwd(),contents:`import * as react from 'react';import * as react_jsx_runtime from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
 ${source.slice(start,end)}
+${planningResponseMetadata.toString()}
+${turnIdentity}
+const ChatView_module_css_default=new Proxy({},{get:(_target,key)=>String(key)}),executionDetailGroups=()=>[],executionProgressSurface=()=>({detailGroups:[],showProgress:false,updates:[]}),executionSummaryStatus=()=> '执行结果',formatRunDuration=()=>'',ToolImageOutputs=()=>null;
+const _deepseek_ai_dsh_client_ui_primitives={IconChevronRightOutline14:()=>null,IconThinkOutline14:()=>null};
+function ChatNodeSeat({nodeKey}){return react.createElement('div',{'data-message-id':nodeKey},nodeKey)}
+${execution}
+function ReceiptConversation({sessionId,flow,rows}){
+ const renderFlow=flow,nodeStore=new Map(rows.map(row=>[row.key,row])),order=rows.map(row=>row.key),timeline={turns:new Map()},runningTurn=null,runningTurnNumber=null,seatProps={},t=key=>key;
+ ${receiptLookup}
+ return react.createElement('section',{'data-conversation-session':sessionId},[${flowRender}]);
+}
 const plans=[{id:'plan',count:4}],target=window,root=createRoot(document.querySelector('main'));
 let nodes=[],dispose;
 window.retries=[];
@@ -20,6 +37,8 @@ window.complete=()=>{for(const node of nodes){node.generationStatus='completed';
 const restoredSnapshot={artifacts:[0,1,2,3].map(i=>({id:'saved-'+i,workbenchId:'plan',generationTaskId:'saved-task-'+i,generationStatus:i===3?'failed':'completed',...(i===3?{}:{containerSpec:{type:'html'}})}))};
 function RestoredNotesEntry(){react.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,'cold-notes',restoredSnapshot.artifacts)},[]);return react.createElement(ResearchWorkbenchProgress,{sessionId:'cold-notes',plans,footer:true})}
 window.restoreNotes=()=>{dispose?.();root.render(react.createElement(RestoredNotesEntry))};
+window.showConversation=({sessionId,flow,rows,artifacts,active=true})=>{dispose?.();nodes=artifacts;const publishCurrent=()=>publishResearchWorkbenchProgress(window,sessionId,nodes,active,active);publishCurrent();dispose=installResearchWorkbenchRetry({eventTarget:window,sessionId,getArtifacts:()=>nodes,canRetry:()=>active,retry:async node=>{window.retries.push(node.id);node.generationStatus='retrying';publishCurrent();await new Promise(r=>setTimeout(r,100));node.generationStatus='completed';node.containerSpec={type:'html'};publishCurrent()}});root.render(react.createElement(ReceiptConversation,{sessionId,flow,rows}))};
+window.publishSession=(sessionId,artifacts,active=true)=>publishResearchWorkbenchProgress(window,sessionId,artifacts,active,active);
 window.show(['completed','completed','running','failed']);`},bundle:true,platform:'browser',format:'iife',write:false})
  script=output.outputFiles[0].text
  const {chromium}=await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -56,6 +75,63 @@ it('renders mixed progress in narrow light/dark cards, retries only the failed n
   await page.getByRole('button',{name:'重试未完成的组件'}).waitFor()
   expect(await page.getByRole('button',{name:'重试未完成的组件'}).isDisabled()).toBe(true)
   expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
+
+const receipt=(key,planId,count=1)=>({key,kind:'tool-call',data:{root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:JSON.stringify({planId,status:'accepted',panelCount:count})}]}}})
+const turn=(number,planId,count=1)=>({rows:[{key:'user-'+number,kind:'user'},receipt('tool-'+number,planId,count),{key:'assistant-'+number,kind:'assistant-step'}].map(row=>({...row,location:{kind:'step',turn:{turn:number}}})),flow:[{kind:'node',key:'user-'+number},{kind:'execution',key:'execution:'+number,turn:number,nodeKeys:['tool-'+number],running:false},{kind:'node',key:'assistant-'+number}]})
+const artifact=(id,planId,status='running')=>({id,workbenchId:planId,generationTaskId:'task-'+id,generationStatus:status,...status==='completed'?{containerSpec:{type:'html'}}:{}})
+const positions=page=>page.evaluate(()=>Array.from(document.querySelector('[data-conversation-session]').children).map(el=>el.getAttribute('data-message-id')||el.getAttribute('data-chat-flow-key')||(el.hasAttribute('data-research-workbench-progress')?'progress':el.tagName)))
+
+it('keeps a cold restored 7/8 card beside its original execution when new user and assistant messages arrive',async()=>{
+ const page=await browser.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message))
+ try{
+  await page.setContent('<main></main>');await page.addScriptTag({content:script})
+  const original=turn(1,'original-plan',8),artifacts=Array.from({length:8},(_,i)=>artifact('original-'+i,'original-plan',i===7?'failed':'completed'))
+  await page.evaluate(value=>window.showConversation(value),{sessionId:'original',...original,artifacts,active:false})
+  await page.locator('[data-research-workbench-progress="partial"]').first().waitFor()
+  await page.evaluate(()=>window.originalProgress=document.querySelector('[data-research-workbench-progress]'))
+  await page.evaluate(value=>window.showConversation(value),{sessionId:'original',rows:[...original.rows,{key:'你好',kind:'user'}],flow:[...original.flow,{kind:'node',key:'你好'}],artifacts,active:false})
+  expect(await positions(page)).toEqual(['user-1','execution:1','assistant-1','progress','你好'])
+  const later={rows:[...original.rows,{key:'你好',kind:'user'},{key:'新assistant',kind:'assistant-step'}],flow:[...original.flow,{kind:'node',key:'你好'},{kind:'node',key:'新assistant'}]}
+  await page.evaluate(value=>window.showConversation(value),{sessionId:'original',...later,artifacts,active:false})
+  expect(await positions(page)).toEqual(['user-1','execution:1','assistant-1','progress','你好','新assistant'])
+  expect(await page.locator('[data-chat-flow-key="execution:1"] [data-research-workbench-progress]').count()).toBe(0)
+  expect(await page.locator('[data-research-workbench-progress]').count()).toBe(1)
+  expect(await page.evaluate(()=>window.originalProgress===document.querySelector('[data-research-workbench-progress]'))).toBe(true)
+  artifacts[7]=artifact('original-7','original-plan','retrying')
+  await page.evaluate(({artifacts})=>window.publishSession('original',artifacts),{artifacts})
+  await page.getByRole('img',{name:'正在生成组件'}).waitFor()
+  expect(await page.evaluate(()=>window.originalProgress===document.querySelector('[data-research-workbench-progress]'))).toBe(true)
+  expect(await positions(page)).toEqual(['user-1','execution:1','assistant-1','progress','你好','新assistant'])
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
+
+it('keeps separate plan retries on their original rounds and isolates restored session state',async()=>{
+ const page=await browser.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message))
+ try{
+  await page.setContent('<main></main>');await page.addScriptTag({content:script})
+  const first=turn(1,'plan-a'),second=turn(2,'plan-b'),rows=[...first.rows,...second.rows],flow=[...first.flow,...second.flow],artifacts=[artifact('one','plan-a','failed'),artifact('two','plan-b','running')]
+  await page.evaluate(value=>window.showConversation(value),{sessionId:'multi',rows,flow,artifacts})
+  await page.locator('[data-research-workbench-progress]').first().waitFor()
+  expect(await positions(page)).toEqual(['user-1','execution:1','assistant-1','progress','user-2','execution:2','assistant-2','progress'])
+  const cards=page.locator('[data-research-workbench-progress]');expect(await cards.count()).toBe(2)
+  await page.evaluate(()=>window.originalProgress=document.querySelector('[data-research-workbench-progress]'))
+  await cards.nth(0).getByRole('button',{name:'重试未完成的组件'}).click()
+  await page.waitForFunction(()=>window.retries.includes('one')&&document.querySelector('[data-research-workbench-progress]')?.getAttribute('data-research-workbench-progress')==='completed')
+  expect(await page.evaluate(()=>window.retries)).toEqual(['one'])
+  expect(await cards.nth(1).getAttribute('data-research-workbench-progress')).toBe('running')
+  expect(await page.evaluate(()=>window.originalProgress===document.querySelector('[data-research-workbench-progress]'))).toBe(true)
+  expect(await positions(page)).toEqual(['user-1','execution:1','assistant-1','progress','user-2','execution:2','assistant-2','progress'])
+  const restored=turn(3,'plan-a',2)
+  await page.evaluate(value=>window.showConversation(value),{sessionId:'other-session',...restored,artifacts:[artifact('other-one','plan-a','completed'),artifact('other-two','plan-a','failed')],active:false})
+  await page.locator('[data-conversation-session="other-session"] [data-research-workbench-progress="partial"]').waitFor()
+  expect(await positions(page)).toEqual(['user-3','execution:3','assistant-3','progress'])
+  expect(await cards.count()).toBe(1);expect(await cards.first().textContent()).toContain('1/2')
+  expect(await cards.first().getByRole('button',{name:'重试未完成的组件'}).isDisabled()).toBe(true)
+  await page.evaluate(({artifacts})=>window.publishSession('multi',artifacts),{artifacts})
+  expect(await cards.first().textContent()).toContain('1/2');expect(errors).toEqual([])
  }finally{await page.close()}
 },15000)
 

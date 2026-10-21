@@ -64,6 +64,34 @@ export function researchWorkbenchReceiptPlans(order,nodeStore,readMetadata) {
  return [...plans.values()]
 }
 
+// The first durable receipt proves which turn owns each plan. Native turn
+// metadata places its feedback after that turn's answer, never after new users.
+export function researchWorkbenchReceiptAnchors(flow,nodeStore,readMetadata,readTurn=()=>null) {
+ const anchors=new Map(),owners=new Map(),turnTails=new Map()
+ for(const entry of flow??[]){
+  const node=entry.kind==='node'?nodeStore?.get?.(entry.key):null
+  if(entry.kind!=='execution'&&!['assistant-step','turn-tail','turn-error','turn-max-tokens'].includes(node?.kind))continue
+  const turn=entry.kind==='execution'?entry.turn:readTurn(node)
+  if(typeof turn==='number'&&Number.isFinite(turn))turnTails.set(turn,entry.key)
+ }
+ for(const entry of flow??[]){
+  const keys=entry.kind==='execution'?entry.nodeKeys:entry.kind==='node'?[entry.key]:[]
+  for(const key of keys??[]){
+   const node=nodeStore?.get?.(key)
+   if(node?.kind!=='tool-call')continue
+   for(const plan of readMetadata([node]).plans??[]){
+    const owner=owners.get(plan.id)
+    if(owner){anchors.get(owner.key)[owner.index]=plan;continue}
+    const turn=entry.kind==='execution'&&typeof entry.turn==='number'?entry.turn:readTurn(node)
+    const anchor=turnTails.get(turn)??entry.key,plans=anchors.get(anchor)??[]
+    owners.set(plan.id,{key:anchor,index:plans.length})
+    plans.push(plan);anchors.set(anchor,plans)
+   }
+  }
+ }
+ return anchors
+}
+
 export async function requestResearchWorkbenchRetry(target,sessionId,plans,snapshot) {
  if(snapshot?.sessionId!==sessionId||snapshot.active===false||snapshot.retryAvailable===false)return false
  const planIds=[...new Set((plans??[]).map(p=>p.id).filter(id=>typeof id==='string'))]
@@ -139,11 +167,11 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
 }
 
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v4 */'
+ const marker='/* ework:workbench-feedback:v5 */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
- const helpers=marker+'\n'+[publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v[123] \*\//)
+ const helpers=marker+'\n'+[publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
+ const previous=source.search(/\/\* ework:workbench-feedback:v[1234] \*\//)
  if(previous>=0){
   const end=source.indexOf('const ExecutionStatusGroup =',previous)
   if(end<0)throw Error('Workbench feedback upgrade anchor missing')
@@ -153,10 +181,12 @@ export function patchResearchWorkbenchFeedback(source) {
  exact(anchor,helpers+anchor.replace('t, planningRequest','t, planningRequest, sessionId'))
  const meta='const planningMeta=planningRequest && entry.running ? planningResponseMetadata(activityNodes) : null;'
  exact(meta,meta+'\nconst workbenchMeta=planningResponseMetadata(activityNodes);')
- exact('planningMeta ? react_jsx_runtime.jsx(ResearchPlanningFeedback,',"workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,")
+ exact('planningMeta ? react_jsx_runtime.jsx(ResearchPlanningFeedback,',"planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,")
  const props='activityNodes,\n\t\t\t\t\t\t\t\t\tplanningRequest,'
  exact(props,'activityNodes, sessionId,\n\t\t\t\t\t\t\t\t\tplanningRequest,')
  }
+ // Upgrade older patches that also rendered the same status inside execution.
+ source=source.replace('workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, ','')
  if(!source.includes('/* ework:workbench-retry:v1 */')){
   const anchor='const startContainerGeneration = async (node, prompt) => {'
   const at=source.indexOf(anchor,source.indexOf('const retrySelectionGeneration = async (node) => {'))
@@ -167,16 +197,21 @@ export function patchResearchWorkbenchFeedback(source) {
  const start=source.indexOf('function ChatView('),end=source.indexOf('//#region lib/types/client/contract/slots.js',start)
  if(start<0||end<0)throw Error('Workbench feedback ChatView scope missing')
  let chat=source.slice(start,end)
- const nodes='const nodeStore = useSession((s) => s.chat.nodes);'
- if(chat.split(nodes).length!==2)throw Error('Workbench feedback ChatView nodes missing or ambiguous')
- if(!chat.includes('const workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);'))chat=chat.replace(nodes,nodes+'\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);')
- const tail=/(\}\))(\s*\]\s*\}\), \(0, react_jsx_runtime\.jsx\)\(OdysseyReadingStatus,)/g
- if(!chat.includes('ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}')){
-  if([...chat.matchAll(tail)].length!==1)throw Error('Workbench feedback ChatView footer missing or ambiguous')
-  chat=chat.replace(tail,'$1, workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null$2')
+ chat=chat.replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
+  .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
+ if(!chat.includes('/* ework:workbench-flow:v1 */')){
+  const seat='const seatProps = (0, react.useMemo)'
+  if(chat.split(seat).length!==2)throw Error('Workbench feedback ChatView seat missing or ambiguous')
+  chat=chat.replace(seat,'/* ework:workbench-flow:v1 */\nconst workbenchReceiptAnchors=researchWorkbenchReceiptAnchors(renderFlow,nodeStore,planningResponseMetadata,conversationNodeTurn);\n'+seat)
+  const flow='renderFlow.map((entry) => {'
+  if(chat.split(flow).length!==2)throw Error('Workbench feedback ChatView flow missing or ambiguous')
+  chat=chat.replace(flow,'renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{')
+  const tail=/(\}\))(\s*\]\s*\}\), \(0, react_jsx_runtime\.jsx\)\(OdysseyReadingStatus,)/g
+  if([...chat.matchAll(tail)].length!==1)throw Error('Workbench feedback ChatView flow ending missing or ambiguous')
+  chat=chat.replace(tail,'};const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+\":workbench:\"+entry.key)] : [renderedWorkbenchEntry];})$2')
  }
  source=source.slice(0,start)+chat+source.slice(end)
  const persisted='const researchWorkspaceSnapshot2 = (0, react.useSyncExternalStore)(researchWorkspace.subscribe, researchWorkspace.getSnapshot, researchWorkspace.getSnapshot);'
- exact(persisted,persisted+'\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);')
+ if(!source.includes('publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)'))exact(persisted,persisted+'\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);')
  return source
 }
