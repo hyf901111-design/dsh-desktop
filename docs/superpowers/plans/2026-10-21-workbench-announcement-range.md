@@ -172,3 +172,11 @@ Task6 → Task7 → Task8 → Task9，各自实现提交后独立复审；只读
 **Owner / scope：** 新鲜单implementer；先重现/诊断来源，再仅在单卡提示词或panel内置摘要中压缩重复表述，保留原完整需求、唯一技能注入、输出协议、适用schema/设计/来源/日期/刷新真实性约束。优先workbench-plan.js或component-skill.js/该profile摘要，不改Runtime事实门禁、来源权限、预算、模板容量或用户请求。不得提高5000门槛、截断需求、隐藏失败、删除必要设计/事实约束或改其他profile语义。
 
 **验证/交接：** 既有失败用例RED→GREEN，新增测试仅在需要证明保留语义时补充，不镜像实现；只运行bundled skill及直接受影响workbench prompt/contract检查、语法/diff，不全套/SDK/客户端/构建。区分冻结旧tip和当前源码的证据。自审/ownfiles中文提交，task-10-report.md；root独立任务scoped审阅通过后刷新同一未验收批次、执行清单检查和Task2原生六卡。单源码writer；不重复之前wholebranch最终review波次。
+
+### Task 11: 原生发现的工作台回执与真实SDK输出协议一致
+
+**触发：** 8087e979签名客户端中，原生同范围C请求真实SDK在第一次及后续create返回 `ToolOutputError INVALID_TOOL_OUTPUT`：`value.refreshStatus`/`value.refreshGuidance`不是additionalProperties:false的声明属性；副作用已创建规划，模型因此改payload/requestId重试，共4套24卡。原生停止父会话后，只通过现有 owned-task cancel API 停止此C测试剩余18项，全部内容/记录保留。此为实际SDK协议回归，不能用mock execute绿色或首卡速度记Task2成功。
+
+**范围：** workbench.js的registered tool.output.schema声明与已有refreshReceipt匹配（保留真实刷新语义）；新增/扩充一个实际SDK注册/调用/输出验证回归，优先使用已安装框架真实validator/工具执行路径及假外部依赖，不能只直接调用tool.execute或镜像schema断言。不改输出additionalProperties:false、不吞验证错误、不删refresh说明、不改requestId碰撞规则/来源/调度/修复预算/Notes。普通accepted、相同请求幂等、prepared及既有preparing返回合同保持。
+
+**验证/交接：** 原缺陷真实协议RED→GREEN；实际创建一次规划并使回执进入渲染/模型可读输出，重试相同完整请求不重复建卡；未知额外字段仍拒绝。只直接相关回执/SDK协议、原workbench合约检查与语法/diff，不全套、无在线SDK模型、客户端或功能分支构建。ownfiles中文提交，task-11-report.md，独立任务审阅；root刷新已合并批次时以798c5cbe为交接base，完成集成/构建/新原生同需求D，再做内容和布局验收。新观察任务，不重开已闭环分支最终审阅。
