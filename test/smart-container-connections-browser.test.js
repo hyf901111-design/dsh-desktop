@@ -30,14 +30,23 @@ it('keeps real canvas connection endpoints on visible circles across themes, scr
    const registry=new bundle.ResearchWorkspaceRegistry(localStorage),workspace=registry.for('port-browser'),quote=workspace.createFinancialWidget('quote'),draft=workspace.createContainerDraft()
    workspace.setArtifacts(workspace.getSnapshot().artifacts.map(n=>n.id===quote.id?{...n,containerSpec:{...n.containerSpec,symbols:[{market:'SH',code:'600519',name:'测试标的'}]}}:n))
    workspace.setCanvasSize({width:1000,height:760,availableWidth:1000});workspace.setWorkbenchWidth(1000)
-   workspace.applyWorkbenchCells([{id:quote.id,x:0,y:0,w:18,h:14},{id:draft.id,x:19,y:3,w:18,h:12}],true)
+   workspace.applyWorkbenchCells([{id:quote.id,x:0,y:0,w:18,h:14},{id:draft.id,x:19,y:2,w:18,h:12}],true)
    window.__workspace=workspace;window.__ids={quote:quote.id,draft:draft.id};window.__generated=[]
    createRoot(document.querySelector('#fixture')).render(React.createElement(bundle.ResearchCanvas,{sessionId:'port-browser',t:x=>x,researchWorkspaces:registry,selectionGeneration:{disabled:false,generate:async request=>{window.__generated.push(request);return {ok:true,taskId:'fixture'}}},actions:{setResearchRightTab(){}}}))
   })
   const ids=await page.evaluate(()=>window.__ids),root=page.locator('[data-research-canvas]'),card=page.locator('[data-research-node-id="'+ids.draft+'"]'),output=page.locator('[data-financial-port-node="'+ids.quote+'"][data-financial-port=output]'),input=card.locator('[data-financial-port=input]')
   await input.waitFor();await output.waitFor()
+  const footer=card.locator('[data-workbench-smart-footer]')
+  await expect.poll(()=>footer.count()).toBe(1)
+  expect(await footer.textContent()).toContain('待创建')
   const center=locator=>locator.evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})
   const assertCenters=async()=>{
+   expect(await footer.evaluate(el=>el.getBoundingClientRect().height)).toBe(24)
+   const footerGeometry=await page.evaluate(({quote,draft})=>{
+    const card=id=>document.querySelector('[data-research-node-id="'+id+'"]'),offset=(id,side)=>{const r=card(id).getBoundingClientRect(),p=card(id).querySelector('[data-financial-port="'+side+'"]>span').getBoundingClientRect();return r.bottom-p.top-p.height/2},target=card(draft),f=target.querySelector('[data-workbench-smart-footer]').getBoundingClientRect(),button=target.querySelector('[data-research-create-submit],[data-research-container-submit]').getBoundingClientRect()
+    return {offset:Math.abs(offset(quote,'output')-offset(draft,'input')),gap:f.top-button.bottom}
+   },ids)
+   expect(footerGeometry.offset).toBeLessThan(.5);expect(footerGeometry.gap).toBeGreaterThanOrEqual(0)
    for(const port of [input,output]){
     const delta=await port.evaluate(el=>{const a=el.getBoundingClientRect(),b=el.querySelector('span').getBoundingClientRect();return {x:Math.abs(a.left+a.width/2-b.left-b.width/2),y:Math.abs(a.top+a.height/2-b.top-b.height/2)}});expect(delta.x).toBeLessThan(.2);expect(delta.y).toBeLessThan(.2)
    }
@@ -53,6 +62,7 @@ it('keeps real canvas connection endpoints on visible circles across themes, scr
   const a=await center(output),b=await center(input);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});await page.mouse.up()
   await expect.poll(()=>card.locator('[data-workbench-selected-create-context]').count()).toBe(1)
   expect(await card.textContent()).toContain('希望基于这个组件生成什么？');expect(await card.locator('textarea').inputValue()).toBe(prompt)
+  expect(await footer.textContent()).toContain('已连接 1 个组件')
   await mkdir('/tmp/smart-container-ports-20261021',{recursive:true})
   for(const [mode,label] of [['light','浅色模式'],['dark','深色模式'],['enterprise','易方达模式'],['openterminal','彭博模式']]){
    await page.getByRole('radio',{name:label,exact:true}).click();await expect.poll(()=>root.getAttribute('data-workbench-style')).toBe(mode);await assertCenters()
@@ -61,6 +71,10 @@ it('keeps real canvas connection endpoints on visible circles across themes, scr
    await page.screenshot({path:'/tmp/smart-container-ports-20261021/'+mode+'.png'})
   }
   await root.evaluate(el=>{el.style.setProperty('width','900px','important')});await assertCenters()
+  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en')
+  await expect.poll(()=>footer.textContent()).toContain('Sources connected: 1')
+  expect(await footer.getAttribute('aria-label')).toBe('Smart container footer');expect(await card.locator('textarea').inputValue()).toBe(prompt)
+  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await expect.poll(()=>footer.textContent()).toContain('已连接 1 个组件')
   expect(errors).toEqual([]);await page.screenshot({path:'/tmp/smart-container-ports-20261021/connected.png'})
  }finally{await page.close()}
 },20000)
