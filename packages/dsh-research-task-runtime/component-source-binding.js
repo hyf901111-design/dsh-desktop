@@ -14,6 +14,7 @@ import {expandBusinessEvidence} from './component-source-projection.js'
 import {operatingSourceAttempt} from './statement-operating-coverage.js'
 import {newsSourceScopeIssue,generalNewsScope,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
 import {filterScopedNewsArtifact,NEWS_EMPTY_NOTE} from './news-topic-filter.js'
+import {newsQueryAttempt} from './news-query-coverage.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -44,7 +45,7 @@ export function componentSourceCollector(allowed,schemas=[]) {
       let response,snapshotRows,decodeFailed=false
       try { response=expandBusinessEvidence(decodeDataResponse(result)) }
       catch {decodeFailed=true;response=null}
-      const attempt=operatingSourceAttempt(call,result,response,purpose)
+      const attempt=operatingSourceAttempt(call,result,response,purpose)??newsQueryAttempt(call,result,response)
       if(attempt){attempts.push(attempt);if(attempts.length>64)attempts.shift()}
       if(result.isError||result.error||decodeFailed&&!purpose)return
       if(call.tool==='web_fetch') {

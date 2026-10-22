@@ -6,6 +6,7 @@ import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
 import {newsSourceScopeIssue,generalNewsScope} from './news-source-scope.js'
 import {filterScopedNewsArtifact} from './news-topic-filter.js'
+import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-query-coverage.js'
 import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
@@ -366,10 +367,17 @@ export class ComponentDataRefresh {
    if(data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)){
     const issue=templateDataIssue(data);if(issue)throw Error(issue+'；已保留上次内容')
    }
-   const output=acceptArtifactOutput(JSON.stringify(data));if(!output)throw Error('接口数据不符合模板，已保留上次内容')
+   let output=acceptArtifactOutput(JSON.stringify(data));if(!output)throw Error('接口数据不符合模板，已保留上次内容')
+   const newsPlan=plannedNewsQueries(b.newsScope)
+   if(newsPlan&&data.type==='news'){
+    const coverage=newsCoverageState(newsPlan,observed)
+    output=acceptArtifactOutput(appendNewsCoverage(output,coverage,{refresh:coverage.entries.some(entry=>entry.status==='not_attempted')?'partial':undefined}))
+    if(!output)throw Error('接口数据与覆盖说明超过展示容量，已保留上次内容')
+   }
    const spec=JSON.parse(output),accepted=readTemplateModel(spec)
    if(!accepted||accepted.templateId!==b.templateId||accepted.version!==b.templateVersion)throw Error('接口数据不符合当前模板，已保留上次内容')
-   const unchanged=hash(model.data)===hash(accepted.data)
+   const coverageFragment=value=>value?.html?.match(/<aside data-news-query-coverage[\s\S]*?<\/aside>/u)?.[0]
+   const unchanged=hash(model.data)===hash(accepted.data)&&(!newsPlan||coverageFragment(before.spec)===coverageFragment(spec))
    await this.commit(b,async()=>{
     signal.throwIfAborted();if(!current()||automatic&&!this.isVisible(b.sessionId))return
     const live=await this.options.inspect(b,signal)

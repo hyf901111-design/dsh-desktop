@@ -1,5 +1,16 @@
 import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
+ '查询覆盖：':'Search coverage: ',
+ '原表格（保留）':'Original table (retained)',
+ '当前为静态快照；逐查询自动更新尚未完整绑定。':'This is a static snapshot; automatic updates are not fully linked for every query.',
+ '周期更新以实际绑定状态为准；缺失查询尚未绑定。':'Scheduled updates depend on the actual binding status; missing queries are not linked.',
+ '本任务已取得记录':'Records retrieved during this task',
+ '来源返回空结果':'The source returned no results',
+ '来源暂不可用':'Source temporarily unavailable',
+ '尚未完成查询':'Search not completed',
+ '最近查询失败，保留已取得记录':'Latest search failed; previously retrieved records retained',
+ '最近查询空结果，保留已取得记录':'Latest search returned no results; previously retrieved records retained',
+ '仅覆盖已执行来源的查询窗口，不代表区间全部报道。':'Only the executed source search windows are covered; this is not a complete set of reports for the period.',
  ...NOTE_ENGLISH,
  "已更新当前看板样式":"Updated the current board style",
  "看板样式未保存，请检查本地存储后重试。":"Board style was not saved. Check local storage and try again.",

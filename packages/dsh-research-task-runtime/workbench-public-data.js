@@ -2,6 +2,7 @@ import { resolveBoundComponent } from './component-source-binding.js'
 import {financialWidgetDefaults,financialWidgetSpec} from './financial-widget-contract.js'
 import {generalNewsScope,NEWS_CAPACITY_MARKER,NEWS_DISPLAY_INSTRUCTION} from './news-source-scope.js'
 import {normalizeCryptoTickerResult} from './crypto-source-results.js'
+import {NEWS_QUERY_MARKER} from './news-query-coverage.js'
 
 // These recipes describe the bundled adapter's schema, never model-authored
 // paths, executable code, arbitrary URLs or connector credentials.
@@ -140,7 +141,8 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
     })
     if(new Set(queries.map(v=>JSON.stringify(v))).size!==queries.length)throw Error('免费源组件请求重复')
     const scope=JSON.stringify({queries,intervalMinutes:value.intervalMinutes??1,...(value.layoutProfile?{layoutProfile:value.layoutProfile}:{})})
-    return newsCapacityRequirement(value,`宿主来源能力校正：sina-news不支持主题关键词查询；已声明的定向新闻查询由一个独立news取数任务按对应来源能力执行。保留原面板全部主题与字段；以下筛选元信息仅供执行和验证，不写入note：${scope}。不得扩大为全市场新闻；仅使用原需求允许的来源中实际取得的相关报道、时间、摘要和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`)
+    const coverage=queries.map(row=>({...row,source:row.source==='sina-news'?'eastmoney-news':row.source}))
+    return newsCapacityRequirement(value,`宿主来源能力校正：sina-news不支持主题关键词查询；已声明的定向新闻查询由一个独立news取数任务按对应来源能力执行。保留原面板全部主题与字段；以下筛选元信息仅供执行和验证，不写入note：${scope}。不得扩大为全市场新闻；仅使用原需求允许的来源中实际取得的相关报道、时间、摘要和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}\n${NEWS_QUERY_MARKER}\n${JSON.stringify(coverage)}`)
   }
   if(value?.profile!=='news'||!Array.isArray(value.requests)||value.requests.length!==1)return null
   const request=value.requests[0]

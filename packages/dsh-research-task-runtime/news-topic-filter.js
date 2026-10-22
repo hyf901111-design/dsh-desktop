@@ -129,7 +129,12 @@ export function filterScopedNewsArtifact(data,records=[],requirement='',{general
  }
  if(data.type==='news'&&Array.isArray(data.items)){
   const sources=sourceRows(records)
-  const items=data.items.filter(item=>matches(textOf(item)+' '+textOf(sources.find(row=>safeUrl(item.url)&&safeUrl(row.url)===safeUrl(item.url)&&row.title===item.title)))),removed=data.items.length-items.length
+  const items=data.items.filter(item=>{
+   const observed=sources.filter(row=>safeUrl(item.url)&&safeUrl(row.url)===safeUrl(item.url)&&row.title===item.title)
+   // Once an article is observed, its source text decides relevance. Model
+   // summaries cannot add a requested company to an unrelated source article.
+   return observed.length?observed.some(row=>matches(textOf(row))):matches(textOf(item))
+  }),removed=data.items.length-items.length
   return {...data,items,note:items.length?note(data.note,removed)||undefined:NEWS_EMPTY_NOTE}
  }
  if(Array.isArray(data.rows)){
