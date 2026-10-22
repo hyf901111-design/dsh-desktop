@@ -50,7 +50,7 @@ export function workbenchSourcePolicy(originalRequest, panel, options={}) {
     // Keep fallback language attached to the preceding source requirement.
     const clauses = sentence.split(/[，,](?!\s*(?:不可用时|失败时|否则|或|允许.{0,8}替代))/u)
     for (const clause of clauses.flatMap(part => part.split('、'))) {
-      const forbiddenTencent=/(?:不要|禁止|不得|不用|不使用)(?:使用|用|调用|通过|接入)?\s*(?:腾讯(?:行情|报价)?|tencent(?:-quotes)?)(?:\s*(?:取数|来源|接口))?\s*$/iu.test(clause)
+      const forbiddenTencent=/(?:不要|禁止|不得|不用|不使用|不再使用|不再用)(?:再)?(?:使用|用|调用|通过|接入)?\s*(?:腾讯(?:行情|报价)?|tencent(?:-quotes)?)(?:\s*(?:取数|(?:作为)?(?:数据)?来源|接口))?\s*$/iu.test(clause)
       const unsupportedProvider = exclusivePublicSource.test(clause)||forbiddenTencent
       if (!unsupportedProvider && !plugin.test(clause) && !webOnly.test(clause)) continue
       if (!plugin.test(clause) && /(?:不要|禁止|不得|无需|不用|不使用).{0,6}网页/u.test(clause)) ambiguous()

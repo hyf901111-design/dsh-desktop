@@ -53,6 +53,11 @@ it('does not confuse a prohibition on copying Tencent quote dates with a prohibi
  expect(f.tasks[0].prompt).toContain('不得用腾讯行情日期填财务报告期');expect(f.query).not.toHaveBeenCalled()
 })
 
+it.each(['禁止使用腾讯行情作为来源。','不要再用腾讯行情取数。'])('keeps a later explicit human source prohibition rather than retaining the earlier Tencent recipe: %s',async prohibition=>{
+ const f=await fixture({human:captured.humanRequest+prohibition}),result=await f.invoke(structuredClone(captured.second))
+ expect(result).toMatchObject({isError:true});expect(f.tasks).toEqual([]);expect(await f.plans()).toEqual([]);expect(f.query).not.toHaveBeenCalled()
+})
+
 it.each(['zero','negative','numeric-text','date-cell','asOf-date','unknown-meta','observed-note','foreign-source','source-url'])('does not silently discard real observations, dates or unrecognized metadata: %s',async kind=>{
  const args=input(),a=args.panels[0].artifact
  a.rows=[Object.fromEntries(a.columns.map(c=>[c.key,null]))]
