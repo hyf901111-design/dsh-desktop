@@ -4,6 +4,7 @@ import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes
 import type {NoteContent} from '../../shared/workspace-notes'
 import {changeNoteAlignment,noteAlignmentBlocks} from './block-alignment'
 import {createNoteComponentDataActions} from './component-data-actions'
+import {updateNoteComponentLayout} from './component-size-state'
 import {noteCapabilityFingerprint,type NoteDataRefreshGuard} from './data-refresh-guard'
 export {noteCapabilityFingerprint} from './data-refresh-guard'
 export function noteResearchBlocks(blocks:any[]):any[]{return blocks.flatMap(block=>[...(block.type==='research'?[block]:[]),...noteResearchBlocks(block.children??[])])}
@@ -15,7 +16,7 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];componentWidth?(blockId:string):number;dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>(),activeData=new Set<string>()
  const advanceFingerprint=(next:string)=>{options.refreshGuard?.advanceOwn(generation,fingerprint,next);fingerprint=next}
@@ -60,16 +61,28 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
     return receipt(current()?'succeeded':'cancelled',current()?'':t('后续操作已取消。'))
    }catch(error){return receipt(current()?'failed':'cancelled',(error as Error).message)}
   }
-  const saveMutation=async(changedBlockIds:string[],kind:'alignment'|'content',data?:any)=>{
+  const saveMutation=async(changedBlockIds:string[],kind:'alignment'|'content'|'layout',data?:any)=>{
    advanceFingerprint(noteCapabilityFingerprint(options.snapshot()))
    let effect:CapabilityStyleEffect={state:'applied',changedBlockIds,kind}
    const publish=()=>options.reportEffect?.(input.requestId,effect).catch(()=>{})
-   const message=()=>t(kind==='alignment'?(effect.state==='saved'?'已保存 {count} 个块的对齐方式':'已应用但未确认保存 {count} 个块的对齐方式'):(effect.state==='saved'?'已保存 {count} 个组件的内容':'已应用但未确认保存 {count} 个组件的内容')).replace('{count}',String(changedBlockIds.length))
+   const message=()=>{const key=kind==='alignment'?(effect.state==='saved'?'已保存 {count} 个块的对齐方式':'已应用但未确认保存 {count} 个块的对齐方式'):kind==='layout'?(effect.state==='saved'?'已保存 {count} 个组件的布局。':'已应用但未确认保存 {count} 个组件的布局。'):(effect.state==='saved'?'已保存 {count} 个组件的内容':'已应用但未确认保存 {count} 个组件的内容');return (kind==='layout'?key:t(key)).replace('{count}',String(changedBlockIds.length))}
    const receipt=(status:string,detail='')=>({status,changedBlockIds,effect,...data?{data}:{},message:message()+detail})
    await publish()
    if(!current())return receipt('cancelled',t('后续操作已取消。'))
    try{await options.persist();effect={...effect,state:'saved'};await publish();if(current())await options.settle();return receipt(current()?'succeeded':'cancelled',current()?'':t('后续操作已取消。'))}
    catch(error){return receipt(current()?'failed':'cancelled',(error as Error).message)}
+  }
+  if(input.action==='notes.components.layout'){
+   const {scope,width,height,...extra}=input.args??{}
+   if(!['note','selected'].includes(scope)||Object.keys(extra).length)throw Error(t('组件布局参数无效。'))
+   const selected=options.selectedBlockIds()
+   if(scope==='selected'&&JSON.stringify(selected)!==JSON.stringify(input.context.selectedBlockIds))throw Error(t('选中组件已变化，请重新发送请求。'))
+   const all=noteResearchBlocks(options.editor.document),ids=(scope==='note'?all:all.filter(block=>selected.includes(block.id))).map(block=>block.id)
+   if(!ids.length||scope==='selected'&&ids.length!==selected.length)throw Error(t('当前未选中对应类型的段落或研究组件。'))
+   assertCurrent()
+   const changed=updateNoteComponentLayout(options.editor,ids,{width,height},{availableWidth:options.componentWidth})
+   const layouts=ids.map(blockId=>{const size=JSON.parse(options.editor.getBlock(blockId).props.payload).noteSize;return {blockId,width:typeof size?.width==='number'?size.width:'full',height:typeof size?.height==='number'?size.height:'auto'}})
+   return saveMutation(changed,'layout',{layouts})
   }
   if(input.action==='notes.blocks.align'){
    const {scope,target,alignment}=input.args
