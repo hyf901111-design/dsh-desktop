@@ -20,17 +20,41 @@ const labelledDate = /(?:报告基准日|报告发布日期|报告发布日|报�
 const dates = text => distinct([...text.matchAll(labelledDate)].map(match => reportDate(match[1])))
 const nonAnnual = /(?:上|下)半年|半年度|半年报|中报|季度|[一二三四1-4]季(?:度|报)?|单季|前[一二三四五六七八九十\d]+个月|\d{1,2}\s*月?\s*(?:[-—–~～]|至|到)\s*\d{1,2}\s*月|\b(?:first|second)\s+half|\bhalf[- ]?year|(?:^|[^A-Za-z])(?:Q[1-4]|H[12]|[1-4]Q|[12]H|[369]M)(?!\d)/iu
 const incompatibleBasis = /扣非|(?:剔除|扣除)非经常性损益|调整后|经调整|稀释|摊薄|\badjusted\b|\bnon[- ]?GAAP\b/iu
-const explicitForecastHint = text => /预计|预测|forecast|\b\d{2,4}E\b/iu.test(text)
+const explicitForecastHint = text => /预计|预测|\b(?:forecast|estimated?)\b|\b\d{2,4}E\b/iu.test(text)
 const forecastHint = text => explicitForecastHint(text)||/\bFY\s*20\d{2}/iu.test(text)
-const annualYears = text => distinct([...text.replace(labelledDate,'').matchAll(/(?:\bFY\s*)?(20\d{2})\s*(?:年(?:度|报)?|[eE]\b)|\bFY\s*(20\d{2})\b|\b(\d{2})E\b/giu)].map(match => Number(match[1] ?? match[2] ?? ('20' + match[3]))))
+const annualYears = text => distinct([...text.replace(labelledDate,'').matchAll(/(?:\bFY\s*)?(20\d{2})\s*(?:年(?:度|报)?|财年|[eE]\b)|\bFY\s*(20\d{2})\b|\b(\d{2})E\b/giu)].map(match => Number(match[1] ?? match[2] ?? ('20' + match[3]))))
 
 // Share the exact year scopes with the completion check. A second forecast
 // clause without its own metric must not inherit the first clause's receipt.
 export function consensusForecastScopes(sentence) {
-  const clauses=sentence.split(/，|(?<!\d),|,(?!\d)/u)
-  const separate=annualYears(sentence).length>1||clauses.filter(clause=>explicitForecastHint(clause)&&annualYears(clause).length).length>1
-  const fragments=separate?clauses.filter(fragment=>explicitForecastHint(fragment)&&!/实际|已实现|已披露|已公布|已发布|非预测|不是预测|\b(?:actual|realized|historical|reported|not\s+(?:a\s+)?forecast)\b/iu.test(fragment)):[sentence]
-  return fragments.map(text=>({text,years:annualYears(text)}))
+  const clauses=sentence.split(/，|(?<!\d),|,(?!\d)|(?=(?:但|不过|而)(?:我们)?(?:预计|预测))|\b(?:but|while)\s+(?=(?:forecast|estimate))/iu)
+  const actual=/实际|已实现|已披露|已公布|已发布|\b(?:actual|realized|historical|reported)\b/iu
+  const denied=/非预测|不是预测|\bnot\s+(?:a\s+)?forecast\b/iu
+  const scopes=[];let pending=''
+  const flush=()=>{if(pending)scopes.push({text:pending,years:annualYears(pending)});pending=''}
+  for(const raw of clauses){
+    const text=raw.replace(/^(?:但|不过|而)(?=我们|预计|预测)/u,'').trim()
+    const declared=actual.exec(text),hint=/预计|预测|\b(?:forecast|estimated?)\b/iu.exec(text)
+    // Reported orders/data can be evidence for a following explicit forecast;
+    // they do not declare that future EPS/profit itself has been realized.
+    const evidencePrefix=declared&&hint&&declared.index<hint.index&&!/(?:EPS|每股收益|净利润|收入)[^，,]*\d/iu.test(text.slice(0,hint.index))
+    if(declared&&!evidencePrefix||denied.test(text)){
+      // A trailing "not a forecast" qualifies the preceding figures, rather
+      // than giving that forecast a second completed receipt.
+      if(!annualYears(text).length&&(denied.test(text)||!/EPS|每股收益|净利润|主营(?:业务)?收入|营业(?:总)?收入/iu.test(text)))pending=''
+      else flush()
+      continue
+    }
+    if(annualYears(text).length){
+      if(pending&&!annualYears(pending).length&&explicitForecastHint(pending)){pending+='，'+text;continue}
+      flush()
+      // A separate historical/bare-year comparison cannot inherit the prior
+      // forecast verb. The first FY scope retains the supported shorthand.
+      if(explicitForecastHint(text)||!scopes.length&&forecastHint(text))pending=text
+    }else if(pending)pending+='，'+text
+    else if(forecastHint(text))pending=text
+  }
+  flush();return scopes
 }
 
 /** Conservative parsing: names, missing units, ambiguous years and multi-ticker inheritance do not become claims. */
@@ -42,19 +66,18 @@ export function extractConsensusClaims(blocks) {
     const baseDate = localDates.length === 1 ? localDates[0] : !localDates.length && globalDates.length === 1 ? globalDates[0] : null
     if (!code || !baseDate) continue
     for (const sentence of block.text.split(/[。；;\n]/u)) {
-      if (!forecastHint(sentence) || /已实现|实际实现|滚动|未来\s*12\s*个月|FTTM|TTM/iu.test(sentence)) continue
+      if (!forecastHint(sentence)) continue
       // The static table is annual and does not identify adjusted/diluted bases.
       // Do not strip an explicit incompatible period or basis from a metric.
-      if (nonAnnual.test(sentence) || incompatibleBasis.test(sentence)) continue
       // Several explicitly forecast clauses may describe adjacent years. Keep
       // each local year/metric together; a bare historical clause cannot borrow
       // the preceding forecast verb. Commas inside numeric values stay intact.
       for(const {text:fragment,years} of consensusForecastScopes(sentence)){
-      if(years.length!==1)continue
+      if(years.length!==1||nonAnnual.test(fragment)||incompatibleBasis.test(fragment)||/滚动|未来\s*12\s*个月|FTTM|TTM/iu.test(fragment))continue
       const metricPattern = /(EPS|每股收益|归母净利润|归属于母公司(?:股东)?的?净利润|主营业务收入|主营收入|营业总收入|营业收入)\s*(?:预测)?\s*(?:为|达|至|约为|约|预计|[:：=])?\s*([+-]?\d+(?:,\d{3})*(?:\.\d+)?)\s*(亿元|万元|千元|元(?:\/股)?)/giu
       let previousMetricEnd=0
       for (const match of fragment.matchAll(metricPattern)) {
-        const revision=fragment.slice(previousMetricEnd,match.index).match(/(?:较|相较)(?:上月|一个月前)\s*[，,]?\s*(?:我们|本报告)?\s*(上调|调高|上修|下调|调低|下修)\s*(?:对)?\s*(?:20\d{2}\s*年(?:度)?)?\s*$/u)
+        const revision=fragment.slice(previousMetricEnd,match.index).match(/(?:较|相较)(?:上月|一个月前)\s*[，,]?\s*(?:我们|本报告)?\s*(上调|调高|上修|下调|调低|下修)\s*(?:对)?\s*(?:20\d{2}\s*(?:年(?:度)?|财年))?\s*$/u)
         previousMetricEnd=match.index+match[0].length
         const label = match[1], metric = /EPS|每股收益/iu.test(label) ? 'EPS' : /净利润/u.test(label) ? 'NET_PROFIT' : 'MAIN_BUS_INC'
         const unit = match[3].replace('/股', ''), value = Number(match[2].replaceAll(',', ''))
