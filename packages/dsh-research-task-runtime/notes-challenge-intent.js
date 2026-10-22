@@ -4,19 +4,21 @@ function requestText(value) {
 }
 const quotes = /“[^”]*”|‘[^’]*’|「[^」]*」|『[^』]*』|"[^"]*"|'[^']*'/gu
 const quoteEnds = { '“': '”', '‘': '’', '「': '」', '『': '』', '"': '"', "'": "'" }
+const quoteClosers = new Set(Object.values(quoteEnds))
 function clauses(text) {
   const result = []
-  let end, start = 0
+  let end, start = 0, malformed = false
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
-    if (end) { if (char === end) end = undefined }
+    if (end) { if (char === end) end = undefined; else if (quoteEnds[char] || quoteClosers.has(char)) malformed = true }
     else if (quoteEnds[char]) end = quoteEnds[char]
+    else if (quoteClosers.has(char)) malformed = true
     else if (/[，,。；;\n]/u.test(char)) { result.push(text.slice(start, i).trim()); start = i + 1 }
   }
   result.push(text.slice(start).trim())
-  return result
+  return {parts:result,complete:!end&&!malformed}
 }
-const firstClause = text => clauses(text)[0]
+const firstClause = text => clauses(text).parts[0]
 // These complete clauses constrain output, not whether the human wants a rewrite.
 // Keep the vocabulary closed: stripping arbitrary negative phrases could turn
 // "先别替换" or a mixed clause into write permission. Quoted values stay literal.
@@ -29,7 +31,11 @@ const outputControl = new RegExp('^(?:请)?(?:不要|不用|无需|不必|不需
   '把' + reviewLabels + '(?:写进|写入|加入|添加到)' + noteBody + ')$', 'u')
 const communicationControl = /^(?:请)?(?:不要|不用|无需|不必|不需要)(?:再)?(?:问我|确认|征求意见|解释|说明)$/u
 function permissionText(value) {
-  return clauses(requestText(value)).filter(clause => {
+  const text = requestText(value), parsed = clauses(text)
+  // An incomplete/mixed literal cannot prove the boundary of an output-control
+  // clause. Retain the original negative wording instead of removing it.
+  if (!parsed.complete) return text
+  return parsed.parts.filter(clause => {
     const control = clause.replace(quotes, quoted => {
       const label = quoted.slice(1, -1)
       return reviewLabelOnly.test(label) ? label : quoted

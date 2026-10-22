@@ -30,7 +30,7 @@ for(const text of ['请直接修改原文，不要写审核、待核实或处理
  expect(challengeDirectReplacement(text,{quote:'成度'})).toBe(true)
  expect(challengeReplacementRequested(text,{quote:'成度'})).toBe(true)
 })
-for(const text of ['请直接修改原文，不要写审核但先别替换正文。','请直接修改原文，不要写审核，先别替换。','请直接修改原文，不要改动这段。','请直接修改原文，不要生成替换建议。','请直接修改原文，只讨论。','请直接修改原文，不要写“不要替换”。','请直接修改原文，不要在正文里加入“待核实”。不要替换，只解释。','请直接修改原文，不要写“待核实。'])it('does not turn a refusal, mixed clause or incomplete quoted control into edit permission: '+text,()=>{
+for(const text of ['请直接修改原文，不要写审核但先别替换正文。','请直接修改原文，不要写审核，先别替换。','请直接修改原文，不要改动这段。','请直接修改原文，不要生成替换建议。','请直接修改原文，只讨论。','请直接修改原文，不要写“不要替换”。','请直接修改原文，不要在正文里加入“待核实”。不要替换，只解释。','请直接修改原文，不要写“待核实。','请直接修改原文，不要写审核、待核实或处理状态，“','请直接修改原文，不要写审核，保持“原意’','请直接修改原文，不要写审核。保持”原意。'])it('does not turn a refusal, mixed clause or incomplete quoted control into edit permission: '+text,()=>{
  expect(challengeDirectReplacement(text,{quote:'成度'})).toBe(false)
  expect(challengeReplacementRequested(text,{quote:'成度'})).toBe(false)
 })

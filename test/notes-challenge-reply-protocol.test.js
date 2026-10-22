@@ -57,3 +57,10 @@ it('requests a scoped rewrite for the real calculation instruction while keeping
  expect(result.reply.replacement).toBe(body)
  expect(f.calls).toHaveLength(1)
 })
+
+it.each(['请直接修改原文，不要写审核、待核实或处理状态，“','请直接修改原文，不要写审核，保持“原意’','请直接修改原文，不要写审核，先别替换。'])('withholds a replacement for an incomplete or refused output-control request: %s',async text=>{
+ const f=fixture([valid]),result=await generateNoteChallenge(f.ctx,{...input,thread:{...input.thread,messages:[{role:'user',text}]}})
+ expect(JSON.parse(f.calls[0].messages[0].content[0].text).allowReplacement).toBe(false)
+ expect(result.reply).toEqual({text:'计算为75%。'})
+ expect(f.calls).toHaveLength(1)
+})
