@@ -44,3 +44,16 @@ it('keeps ordinary discussion separate from rewriting and still sanitizes verifi
  const dirty=fixture([JSON.stringify({reply:{text:'核对提醒仅留在评论。',replacement:'20人报名，15人到场，到场率75%（待核实）。'}})])
  expect((await generateNoteChallenge(dirty.ctx,input)).reply.replacement).toBe(replacement)
 })
+
+it('requests a scoped rewrite for the real calculation instruction while keeping review labels out of its body',async()=>{
+ const request='请将到场率纠正为75%，并将这处表述扩写成约120字的完整计算说明：写明分母是报名20人、分子是到场15人、15除以20再乘100%的步骤，并说明其余5人未到场。保留数字和原意，不添加新的调查结果。给出可以直接替换的正文，不要写审核、待核实或处理状态。'
+ const body='20人报名，15人到场，5人未到场。到场率以报名人数20人为分母、实际到场人数15人为分子，计算为15÷20×100%=75%。'
+ const f=fixture([JSON.stringify({reply:{text:'已按原数字更正计算，并保留其余内容。',replacement:body+'（待核实）'}})])
+ const result=await generateNoteChallenge(f.ctx,{...input,thread:{...input.thread,messages:[{role:'user',text:request}]}})
+ const payload=JSON.parse(f.calls[0].messages[0].content[0].text)
+ expect(payload.allowReplacement).toBe(true)
+ expect(payload.thread.replacementQuote).toBe('20人报名，15人到场，到场率90%。')
+ expect(payload.responseSchema.properties.reply.required).toEqual(['text','replacement'])
+ expect(result.reply.replacement).toBe(body)
+ expect(f.calls).toHaveLength(1)
+})

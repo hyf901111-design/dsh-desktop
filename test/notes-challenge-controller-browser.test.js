@@ -41,6 +41,40 @@ async function finish(page,value=answer,index=0){
 }
 async function start(page,kind='reply',text='请核实来源'){await page.evaluate(({kind,text})=>window.start(kind,text),{kind,text});await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)}
 
+it('applies an explicit anchored edit with a separate output-control clause and saves the unchanged surrounding text',async()=>{
+ const source='前句保持。20人报名，15人到场，到场率90%。后句保持。'
+ const replacement='20人报名，15人到场，到场率75%。'
+ const{context,page,errors,id}=await fixture(source,'到场率90%');try{
+  await start(page,'reply','请直接修改原文，不要写审核、待核实或处理状态。')
+  await finish(page,{...answer,reply:{text:'按15÷20更正为75%。',replacement}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const expected='前句保持。'+replacement+'后句保持。'
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(expected)
+  const saved=await page.evaluate(id=>({resolved:window.noteDoc.getMap('threads').get(id).get('resolved'),records:window.noteDoc.getMap('note-replacement-reviews').size,body:window.saved['note-a'].blocks.find(block=>block.id==='p').content.map(c=>c.text||'').join('')}),id)
+  expect(saved.resolved).toBe(true);expect(saved.records).toBe(1)
+  expect(saved.body).toBe(expected)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('keeps a calculation rewrite with output controls as a saved preview until the human clicks replace',async()=>{
+ const source='前句保持。20人报名，15人到场，到场率90%。后句保持。'
+ const replacement='20人报名，15人到场，5人未到场。到场率以报名人数20人为分母、实际到场人数15人为分子，计算为15÷20×100%=75%。'
+ const request='请将到场率纠正为75%，并将这处表述扩写成约120字的完整计算说明：写明分母是报名20人、分子是到场15人、15除以20再乘100%的步骤，并说明其余5人未到场。保留数字和原意，不添加新的调查结果。给出可以直接替换的正文，不要写审核、待核实或处理状态。'
+ const{context,page,errors,id}=await fixture(source,'到场率90%');try{
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,'reply',request)
+  await finish(page,{...answer,reply:{text:'计算说明已生成，确认后可替换。',replacement}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(source)
+  expect(await page.evaluate(()=>window.challenge.threads[0].comments.at(-1).metadata.challengeReplacement.status)).toBe('pending')
+  expect(await page.evaluate(()=>window.savedMessages())).toContain('计算说明已生成，确认后可替换。')
+  await page.getByRole('button',{name:'替换到原文',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('前句保持。'+replacement+'后句保持。')
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
 it('localizes only fixed challenge reply failures while preserving user and model messages',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en')

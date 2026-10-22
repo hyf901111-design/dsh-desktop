@@ -3,18 +3,41 @@ function requestText(value) {
   return value.trim().replace(/^(?:(?:不要|不用|无需|不需要)(?:再)?(?:问我|确认|征求意见|解释|说明)[，,。\s]*)+/u, '')
 }
 const quotes = /“[^”]*”|‘[^’]*’|「[^」]*」|『[^』]*』|"[^"]*"|'[^']*'/gu
-const normalizedIntent = value => requestText(value).replace(quotes, '内容')
 const quoteEnds = { '“': '”', '‘': '’', '「': '」', '『': '』', '"': '"', "'": "'" }
-function firstClause(text) {
-  let end
+function clauses(text) {
+  const result = []
+  let end, start = 0
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     if (end) { if (char === end) end = undefined }
     else if (quoteEnds[char]) end = quoteEnds[char]
-    else if (/[，,。；;\n]/u.test(char)) return text.slice(0, i).trim()
+    else if (/[，,。；;\n]/u.test(char)) { result.push(text.slice(start, i).trim()); start = i + 1 }
   }
-  return text.trim()
+  result.push(text.slice(start).trim())
+  return result
 }
+const firstClause = text => clauses(text)[0]
+// These complete clauses constrain output, not whether the human wants a rewrite.
+// Keep the vocabulary closed: stripping arbitrary negative phrases could turn
+// "先别替换" or a mixed clause into write permission. Quoted values stay literal.
+const reviewLabel = '(?:审核(?:状态|提示|标签)?|待核实|待核验|待验证|待校验|处理状态|校验状态)'
+const reviewLabelOnly = new RegExp('^' + reviewLabel + '$', 'u')
+const reviewLabels = reviewLabel + '(?:(?:、|或|和|及|与|以及)' + reviewLabel + ')*(?:等)?(?:的)?(?:提醒|标签|说明|文字|内容)?'
+const noteBody = '(?:正文|替换正文|替换后的正文|笔记正文)(?:里|中)?'
+const outputControl = new RegExp('^(?:请)?(?:不要|不用|无需|不必|不需要)(?:再)?(?:' +
+  '(?:在' + noteBody + ')?(?:写|写入|加入|添加|附加)(?:任何)?' + reviewLabels + '(?:到' + noteBody + ')?|' +
+  '把' + reviewLabels + '(?:写进|写入|加入|添加到)' + noteBody + ')$', 'u')
+const communicationControl = /^(?:请)?(?:不要|不用|无需|不必|不需要)(?:再)?(?:问我|确认|征求意见|解释|说明)$/u
+function permissionText(value) {
+  return clauses(requestText(value)).filter(clause => {
+    const control = clause.replace(quotes, quoted => {
+      const label = quoted.slice(1, -1)
+      return reviewLabelOnly.test(label) ? label : quoted
+    })
+    return !communicationControl.test(control) && !outputControl.test(control)
+  }).join('，')
+}
+const normalizedIntent = value => permissionText(value).replace(quotes, '内容')
 // Each literal keeps its closing delimiter. Mixed/unclosed delimiters and any
 // suffix after a quoted value cannot be swallowed into the assigned value.
 const literal = `(?:“[^“”‘’「」『』"'\\n]*”|‘[^“”‘’「」『』"'\\n]*’|「[^“”‘’「」『』"'\\n]*」|『[^“”‘’「」『』"'\\n]*』|"[^“”‘’「」『』"'\\n]*"|'[^“”‘’「」『』"'\\n]*')`
@@ -33,7 +56,7 @@ const replaceClause = new RegExp('^(?:替换(?:一下|上去|(?:到|进|回)?'+c
 const optimizeClause = new RegExp('^优化(?:一下)?(?:'+currentText+')?(?:一下|好)?(?:吧)?$','u')
 
 export function challengeDirectReplacement(value, context) {
-  const text = requestText(value)
+  const text = permissionText(value)
   if (negative.test(text.replace(quotes, '内容'))) return false
   const clause = firstClause(text)
   const lead = clause.match(prefix)?.[0] ?? ''
@@ -70,5 +93,5 @@ export function challengeDirectReplacement(value, context) {
 export function challengeReplacementRequested(value, context) {
   if (challengeDirectReplacement(value, context)) return true
   const text = normalizedIntent(value)
-  return !negative.test(text) && /^(?:(?:把|将).{1,60})?(?:修改|更改|改好|改写|重写|替换|改成|改为|优化)/u.test(text.replace(prefix, ''))
+  return !negative.test(text) && /^(?:(?:把|将).{1,60})?(?:修改|更改|改好|改写|重写|替换|改成|改为|优化|纠正|修正|扩写)/u.test(text.replace(prefix, ''))
 }
