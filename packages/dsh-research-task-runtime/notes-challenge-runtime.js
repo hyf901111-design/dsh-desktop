@@ -63,7 +63,8 @@ function unparsedForecastBlocks(input,covered,claims){
   // An explicitly forecast monetary amount for another year can omit the
   // repeated metric name. Keep it pending rather than guessing that metric or
   // borrowing a completed source read from the preceding year.
-  if(consensusForecastScopes(sentence).some(scope=>scope.years.length===1&&/[+-]?\d+(?:,\d{3})*(?:\.\d+)?\s*(?:亿元|万元|千元|元)/u.test(scope.text)&&!parsed.some(claim=>claim.year===scope.years[0]&&scope.text.includes(claim.quote))))return true
+  const abbreviatedAmount=/(?:\bFY\s*)?(?:20\d{2}\s*(?:年(?:度|报)?|E\b)?|\b\d{2}E\b)\s*(?:(?:预计|预测|forecast|estimated?)\s*)?(?:将(?:会)?\s*)?(?:为|达(?:到)?|至|约为|约|升至|降至|is|at|of|[:：=])?\s*[+-]?\d+(?:,\d{3})*(?:\.\d+)?\s*(?:亿元|万元|千元|元)/iu
+  if(consensusForecastScopes(sentence).some(scope=>scope.years.length===1&&abbreviatedAmount.test(scope.text)&&!parsed.some(claim=>claim.year===scope.years[0]&&scope.text.includes(claim.quote))))return true
   // Each numeric metric consumes only its exact claim; another forecast in the
   // same paragraph/sentence must not borrow that claim's completed status.
   let rest=sentence
