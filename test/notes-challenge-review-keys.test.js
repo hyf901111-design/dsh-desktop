@@ -26,7 +26,7 @@ function fixture(answer = p => keyed(p)) {
   }
   return { ctx, calls, payloads }
 }
-const reports = () => vi.mocked(console.warn).mock.calls.flatMap(([text]) => typeof text === 'string' && text.startsWith('{"event":"notes-challenge-') ? [JSON.parse(text)] : [])
+const reports = () => vi.mocked(console.warn).mock.calls.flatMap(([text]) => typeof text === 'string' && text.startsWith('{"event":"notes-challenge-') ? [JSON.parse(text)] : []).filter(report=>report.event!=='notes-challenge-phase-candidates')
 beforeEach(() => vi.spyOn(console, 'warn').mockImplementation(() => {}))
 afterEach(() => vi.restoreAllMocks())
 

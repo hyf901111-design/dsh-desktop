@@ -28,6 +28,24 @@ it('translates recognized note IPC errors while preserving unknown service and m
  expect(locale.noteUiError('智能组件','en')).toBe('智能组件')
 })
 
+it('localizes independent review phases without rewriting model explanations',()=>{
+ const notices=[
+  '主检查阶段未完成，已保留预算用于独立复查；未将未完成段落视为通过。',
+  '部分正文块检查未完成，已保留此前验证结果；未将失败块视为通过。',
+  '观点拓展阶段预算不足，未将抬杠维度视为完成。',
+  '观点拓展未完成或回执不完整；保留已验证问题，未将抬杠维度视为完成。',
+  '研究元数据与待检查段落超出本轮容量，相关段落已保留为待检查，尚未完成本等级检查。',
+  '观点拓展实际完成3/8个正文块；允许确无适用追问，不将纠错问句当作观点拓展。'
+ ]
+ for(const text of notices){
+  expect(locale.noteChallengeCheckText(text,'en')).not.toMatch(/[\u4e00-\u9fff]/u)
+  expect(locale.noteChallengeCheckText(text,'zh')).toBe(text)
+  const quoted='用户自己的解释：'+text
+  expect(locale.noteChallengeCheckText(quoted,'en')).toBe(quoted)
+ }
+ expect(locale.noteChallengeCheckText(notices.at(-1),'en')).toContain('3/8')
+})
+
 it('uses the current display locale without changing stored review text or user content',()=>{
  const saved={detail:'挑战模式已关闭。'},body='用户中文正文：智能组件和标题',before=JSON.stringify(saved)
  globalThis.document={documentElement:{dataset:{odysseyLocale:'en'}}}
