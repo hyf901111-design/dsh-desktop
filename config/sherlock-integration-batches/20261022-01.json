@@ -297,15 +297,22 @@
         "schemaVersion": 1,
         "featureName": "笔记数据同轮配置与刷新的可信版本衔接",
         "branch": "codex/feat/client-capabilities-followup-20261022",
-        "baseCommit": "6acf9115c3a46723146f439ed034404835a0c3af",
-        "tipCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
+        "baseCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
+        "tipCommit": "894e8ff06d312cc2168bab65d687cbdb4f792a9e",
         "commits": [
           {
-            "commit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
+            "commit": "dfbf9299f8006ef521cce8bb00f3fb622aea1599",
             "parents": [
-              "6acf9115c3a46723146f439ed034404835a0c3af"
+              "01666f059d5a7f1eb84d74ea2dde0d9744200726"
             ],
-            "subject": "支持会话批量调整笔记组件尺寸并复用手动拖柄规则"
+            "subject": "将通用客户端能力接入研究与对话工具循环"
+          },
+          {
+            "commit": "894e8ff06d312cc2168bab65d687cbdb4f792a9e",
+            "parents": [
+              "dfbf9299f8006ef521cce8bb00f3fb622aea1599"
+            ],
+            "subject": "允许当前可见的普通分支会话调用客户端能力"
           }
         ],
         "files": [
@@ -322,44 +329,88 @@
             "path": "packages/dsh-research-task-runtime/client-capabilities.js"
           },
           {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-capability-host.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-capability-host.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-tools.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/notes-locale.js"
           },
           {
             "status": "M",
-            "path": "src/main/notes/capability-bridge.ts"
+            "path": "scripts/lib/notes-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
             "path": "src/main/notes/service.ts"
           },
           {
+            "status": "A",
+            "path": "src/main/state/client-capability-service.ts"
+          },
+          {
             "status": "M",
-            "path": "src/preload/notes/client-capability-actions.ts"
+            "path": "src/main/state/research-context-bridge.ts"
           },
           {
             "status": "A",
-            "path": "src/preload/notes/component-size-state.ts"
+            "path": "src/preload/client-capabilities.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/notes/component-size.tsx"
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capabilities-bundle.test.js"
           },
           {
             "status": "M",
             "path": "test/client-capabilities.test.js"
           },
           {
-            "status": "M",
-            "path": "test/notes-client-capabilities-browser.test.js"
+            "status": "A",
+            "path": "test/client-capability-header.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/client-capability-host.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/client-capability-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/client-capability-transport.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/client-tools.test.js"
           },
           {
             "status": "M",
             "path": "test/notes-client-capability-service.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-component-layout.test.ts"
           }
         ],
         "checks": [
@@ -368,17 +419,21 @@
               "npx",
               "vitest",
               "run",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-layout.test.ts",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
+              "test/client-capability-host.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capability-header.test.ts",
+              "test/client-capability-transport.test.ts",
+              "test/client-tools.test.js",
               "test/client-capabilities.test.js",
-              "--maxWorkers=2"
+              "test/notes-client-capability-service.test.ts",
+              "test/client-capabilities-bundle.test.js",
+              "test/research-context-bridge.test.ts",
+              "test/notes-client-capabilities-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "5文件82项通过，包括实际NotesEditor两组件全篇/多选、隐藏组件父宽测量、full/auto清除轴、数值边界、GUI键盘拖柄同源、Yjs保存重挂、英中切换、旧选区/正文拒绝；共享helper/真实NotesStore/service/bridge取消、幂等和保存失败准确回执。",
-            "verifiedCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
-            "completedAt": "2026-10-22T19:20:26.749Z",
+            "summary": "精确最终tip上10直接文件109项通过：真实注册Harness工具→认证loopback→Main→CanvasActionBridge→既有canvas controller，inspect/apply/undo/CAS/重复回执；真实生产header hook/selectView/lease；窗口与导航；普通SDK fork自身绑定成功、父绑定/子代理/定时任务拒绝；取消/权限/窗口身份/目录重新捕获；保留NotesService与真实NotesEditor17项组合回归。",
+            "verifiedCommit": "894e8ff06d312cc2168bab65d687cbdb4f792a9e",
+            "completedAt": "2026-10-22T21:04:40.828717+00:00",
             "timeoutMs": 120000
           },
           {
@@ -388,9 +443,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript检查通过，新共享component-size-state及Notes handler实际导入，源码和新增测试参与编译。",
-            "verifiedCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
-            "completedAt": "2026-10-22T19:20:26.749Z",
+            "summary": "TypeScript检查通过，新增Main service/preload及runtime声明由实际生产导入路径参与编译。",
+            "verifiedCommit": "894e8ff06d312cc2168bab65d687cbdb4f792a9e",
+            "completedAt": "2026-10-22T21:04:40.828717+00:00",
             "timeoutMs": 120000
           },
           {
@@ -400,190 +455,33 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "diff检查通过，源码工作树干净。",
-            "verifiedCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
-            "completedAt": "2026-10-22T19:20:26.749Z",
+            "summary": "精确tip工作树clean；工作树及base01666..tip diff --check均通过。",
+            "verifiedCommit": "894e8ff06d312cc2168bab65d687cbdb4f792a9e",
+            "completedAt": "2026-10-22T21:04:40.828717+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "headless Chromium运行真实NotesEditor（模型/IPC外部边界为测试替身），17项浏览器组合全部通过，其中3项新增layout覆盖全篇与多选两组件、full/auto、可见及隐藏测量/数值clamp、手动Home/End、保存Yjs重挂、语言切换与旧选区/正文拒绝。未操作共享客户端GUI或构建；集成后原生验收由root执行。"
+          "summary": "隔离真实React生产header注入hook、preload与Main导航绑定通过；headless真实NotesEditor17项通过。真实Harness注册工具经本地HTTP到现有canvas controller组合读取/修改/撤销通过。未构建或操作共享客户端GUI、未发模型/行情请求；Electron原生验收仍由root在集成候选执行。"
         },
         "acceptanceCriteria": [
-          "新增notes.components.layout，只在Notes普通会话按scope note或当前捕获selected研究组件执行；至少指定width/full或height/auto，未知参数、非数值和非正数拒绝。",
-          "GUI拖柄与会话共享updateNoteComponentLayout/bounds/测量及undo事务；full/auto仅清除对应noteSize轴，数值四舍五入，实际可测宽度限制及高度180–2400保持；隐藏目标从可见祖先测量，无可测布局则保留请求宽度，渲染时按当前可用宽约束。",
-          "整篇递归和明确多选只改noteSize，正文富文本、containerSpec及其他payload字段、theme、对齐和其他block props保持；返回各目标实际保存尺寸。",
-          "沿用账号/session/document/generation/正文指纹和选区检查；旧lease、较新输入、取消后不继续旧操作；真实saved后确认成功，已应用但保存失败如实保留applied，停止后续依赖。",
-          "结构化effect kind layout贯通host桥、即时回执、历史和英中显示，保留已确认副作用与请求幂等；能力目录现11项。",
-          "本轮只补Notes研究组件尺寸，不将跨模式全局目录、批量data、view commands或附件尺寸未实现范围声称为已完成。"
+          "将同一typed registry/executor抽为createClientCapabilityHost，Notes保留原11能力与真实保存门禁；新增canvas apply/undo、zoom in/out、fullscreen set及当前会话mode set，目录17项，按实际mode/绑定/读写权限声明可用性。",
+          "Harness研究与普通对话原工具循环直接注册client_capabilities/client_action；模型仅requestId/capability/arguments，不含session、IPC、URL。执行器从真实当前session与未结束turn派生身份，Main重新核可信原生header的账号/窗口实例/session/mode/generation与90秒lease。",
+          "研究canvas inspect可取指定真实node详情，apply/undo共用现有CanvasActionBridge与canvas controller/CAS/取消/撤销，market/table/chart/kpi走现有artifact校验；真实pending不得冒充成功，回执保留同步待确认。",
+          "zoom/fullscreen复用现有真实菜单处理器与状态确认；mode set复用原生header同一selectView，仅作用当前session，以新header binding确认，之后重新捕获目录；视图失效取消旧在途操作，显式调用方取消不被迟到导航ACK洗成成功。",
+          "同轮幂等回执不因时间淘汰而重做副作用；目录根据画布可用性/权限变化刷新时保留已有回执。达到32操作/100轮次上限诚实拒绝新操作，不移除旧请求记录。",
+          "普通用户fork parentSession仅为SDK历史谱系，必须使用分支自身raw sessionId匹配当前可见Main绑定；origin subagent、非零/坏delegationDepth、已结束turn、宿主定时任务及借父会话绑定均拒绝。",
+          "更新中英回执与inventory，明确跨模式Notes文档adapter、其它菜单与批量data尚未覆盖，不以这17项声称所有客户端按钮已经完成。"
         ],
         "risks": [
-          "独立peer对exact01666f05只读复核GUI共享尺寸/整批preflight/范围与身份门禁/IPC effect取消保存/幂等/英中回执，无新增阻断；独立helper10项通过，8源码hash、日志及有限范围声明见05-independent-review.json/log。",
-          "新能力未在Electron原生客户端独立验收；此feature按约定不构建共享客户端、不GUI、不取数、不推送或发布。",
-          "宽度无法测量的未挂载组件暂存请求值，由现有渲染上下限在展示时约束；回执data反映实际保存值，不冒称隐藏组件已渲染到该宽度。",
-          "现有workbench-locale重复key会产生esbuild warning，非本轮新增且聚焦检查通过；未扩展修改该模块。"
+          "本轮尚未在Electron共享候选完成原生验收；feature严格未build/GUI/联网取数/推送/发布。root将执行研究或对话真实inspect→修改→撤销及当前会话mode切换。",
+          "ui.mode.set可激活同会话Notes并重新捕获目录，但Harness入口仍缺NotesEditor独立文档/选区/指纹/保存adapter，故不能直接串接notes.export或正文写入；现有Notes自身会话全部能力保持。后续需补adapter而非删除门禁。",
+          "幂等仅进程生命周期；每轮32操作、全服务100轮次满后需重启，不承诺跨进程副作用重放。",
+          "独立peer对dfbf主体4直接17项与普通fork后继3直接25项通过，无阻断，源码SHA与有限范围见independent-peer.json及independent-fork-peer-894e8ff0.json。",
+          "既有workbench-locale重复key产生esbuild warning，非本轮新增；本轮相关聚焦全部通过，未扩大修改该模块。"
         ],
-        "generatedAt": "2026-10-22T19:20:26.749Z"
-      },
-      "merged": {
-        "mergeCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-        "verificationCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "565129b5bab565716f95ed9123c383fe61b20b40",
-            "completedAt": "2026-10-22T19:28:47.181Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-22T19:28:47.181Z"
+        "generatedAt": "2026-10-22T21:04:40.828717+00:00"
       }
     },
     {
