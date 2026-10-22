@@ -407,7 +407,7 @@
         "featureName": "修复笔记评论点击定位与后台挑战保存并统一组件菜单材质",
         "branch": "codex/feat/notes-challenge-v16-20261021",
         "baseCommit": "e57eee4cfe0243ef9a6fddc4a658200acdbfe572",
-        "tipCommit": "dab06067d84bb3747c149d121c4934c5295eee30",
+        "tipCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
         "commits": [
           {
             "commit": "a8462f45b72085144fa6fe2f2d63871b8e7c1793",
@@ -429,6 +429,13 @@
               "0ee95f6a7424a85df060d40f51ee6dd08c3eaccc"
             ],
             "subject": "让笔记自动挑战跨会话与失焦完成并保存校验结果"
+          },
+          {
+            "commit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+            "parents": [
+              "dab06067d84bb3747c149d121c4934c5295eee30"
+            ],
+            "subject": "更新组件菜单检查以遵循统一中性磨砂样式"
           }
         ],
         "files": [
@@ -495,6 +502,10 @@
           {
             "status": "A",
             "path": "test/notes-challenge-review-state.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/openterminal-dark-controls.test.js"
           }
         ],
         "checks": [
@@ -512,8 +523,8 @@
             ],
             "outcome": "passed",
             "summary": "132项后台review、持久覆盖、controller及scheduler聚焦检查通过；/tmp/notes-challenge-background-green-20261022.log。",
-            "verifiedCommit": "dab06067d84bb3747c149d121c4934c5295eee30",
-            "completedAt": "2026-10-22T07:03:05.777Z",
+            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+            "completedAt": "2026-10-22T07:08:28.336Z",
             "timeoutMs": 180000
           },
           {
@@ -530,8 +541,8 @@
             ],
             "outcome": "passed",
             "summary": "58项评论定位、布局、日期、当前会话能力及文件显示交叉检查通过；/tmp/notes-popup-background-menu-cross-focused-final-20261022.log。旧布局断言等待真实180ms退出后再单次点击打开。",
-            "verifiedCommit": "dab06067d84bb3747c149d121c4934c5295eee30",
-            "completedAt": "2026-10-22T07:03:05.777Z",
+            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+            "completedAt": "2026-10-22T07:08:28.336Z",
             "timeoutMs": 180000
           },
           {
@@ -546,8 +557,8 @@
             ],
             "outcome": "passed",
             "summary": "59项菜单及研究组件样式检查通过；/tmp/research-menu-material-focused-20261022.log。实际patcher CSS的16组合中性材质与模糊像素矩阵见/tmp/research-menu-material-report-20261022.md。",
-            "verifiedCommit": "dab06067d84bb3747c149d121c4934c5295eee30",
-            "completedAt": "2026-10-22T07:03:05.777Z",
+            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+            "completedAt": "2026-10-22T07:08:28.336Z",
             "timeoutMs": 180000
           },
           {
@@ -558,8 +569,8 @@
             ],
             "outcome": "passed",
             "summary": "/tmp/notes-popup-background-menu-final-typecheck-20261022.log exit0。",
-            "verifiedCommit": "dab06067d84bb3747c149d121c4934c5295eee30",
-            "completedAt": "2026-10-22T07:03:05.777Z",
+            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+            "completedAt": "2026-10-22T07:08:28.336Z",
             "timeoutMs": 180000
           },
           {
@@ -567,13 +578,30 @@
               "git",
               "diff",
               "--check",
-              "e57eee4cfe0243ef9a6fddc4a658200acdbfe572..dab06067d84bb3747c149d121c4934c5295eee30"
+              "e57eee4cfe0243ef9a6fddc4a658200acdbfe572..efa50f9fd04b6154f04af8977e0b9a3a83d4b07b"
             ],
             "outcome": "passed",
             "summary": "本次严格后继完整diff检查通过。",
-            "verifiedCommit": "dab06067d84bb3747c149d121c4934c5295eee30",
-            "completedAt": "2026-10-22T07:03:05.777Z",
+            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+            "completedAt": "2026-10-22T07:08:28.336Z",
             "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/openterminal-dark-controls.test.js",
+              "test/menu-surface-theme.test.ts",
+              "test/menu-backdrop-pixels.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/workbench-style.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "同步旧菜单测试与最新中性磨砂合同；保留生成卡深色、外部浅色保护。63项通过，/tmp/research-menu-material-integration-check-20261022.log。",
+            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+            "completedAt": "2026-10-22T07:08:28.336Z",
+            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
@@ -592,7 +620,7 @@
           "保存失败保留原会话实例并在返回时重试，不能误称已保存。",
           "本次不扩大AI挑战语义召回或其他暂停范围。"
         ],
-        "generatedAt": "2026-10-22T07:03:05.777Z"
+        "generatedAt": "2026-10-22T07:08:28.336Z"
       }
     },
     {
