@@ -3,7 +3,7 @@ import {readTemplateModel} from './component-template-registry.js'
 import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} from './article-timeline-provenance.js'
 import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
-import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from './component-data-refresh.js'
+import { decodeDataResponse, evaluateMapping, materializeComponentProjection } from './component-data-refresh.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
 import {normalizeChartMetadata,CHART_VARIANTS} from './chart-template-contract.js'
@@ -477,8 +477,10 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
       return Object.entries(value).every(([k,v])=>k==='$default'?pureMissingSourceText(v):k.startsWith('$')&&k!=='$map'?true:sourceBacked(v,k==='$map'?key:k))
     }
     if(!sourceBacked(contract)||!paths)return null
-    const mapping=financialValueSelectors(singleSourceMapping(contract,responses),sources)
-    const data=materializeComponentMapping(mapping,responses,now,Object.values(sources))
+    let mapping=financialValueSelectors(singleSourceMapping(contract,responses),sources)
+    const projection=materializeComponentProjection(mapping,responses,now,Object.values(sources))
+    mapping=projection.mapping
+    const data=projection.data
     const normalized=normalizedHistoryMetadata(data,mapping,sources,now,options)
     const readable=componentReadableSnapshot(normalized,mapping,responses,Object.values(sources),now)
     const unavailable=Boolean(readable)&&readableSnapshotUnavailable(normalized)
@@ -636,13 +638,15 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     // Group labels/status never prove a company search; actual queries below do.
     displayContract={...base,items:groups.map(group=>group.items)};grouped=true
   }
-  const mapping=singleSourceMapping(displayContract,responses)
+  let mapping=singleSourceMapping(displayContract,responses)
   // Source identity comes from the exact observed call matched above, after
   // evaluating legal argument mappings such as source:{$default:'sina-news'}.
   // Keep original request expressions for refresh; never classify their shape.
   const scopeIssue=newsSourceScopeIssue(mapping,observed.map(({tool,args})=>({tool,args})),options.newsScope)
   if(scopeIssue)throw Object.assign(Error(scopeIssue),{code:'SOURCE_DATA_REQUIRED'})
-  const materialized=materializeComponentMapping(mapping,responses,now,observed)
+  const projection=materializeComponentProjection(mapping,responses,now,observed)
+  mapping=projection.mapping
+  const materialized=projection.data
   const data=filterScopedNewsArtifact(materialized,observed,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
   const readable=componentReadableSnapshot(data,mapping,responses,observed,now)
   const unavailable=Boolean(readable)&&readableSnapshotUnavailable(data)

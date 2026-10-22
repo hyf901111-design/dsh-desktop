@@ -21,6 +21,7 @@ import {renderDatasetViewArtifact} from './dataset-view-artifact.js';
 import { researchHtmlText } from './html-artifact.js';
 import { chinaMarketWindow } from './component-source-tools.js';
 import { financialWidgetDefaults } from './financial-widget-contract.js';
+import {normalizeKeyedTableProjection} from './table-projection.js';
 
 // Linear scan, string/escape aware: prose around a complete JSON object is harmless.
 // Never eval model output, concatenate fragments, or guess missing values.
@@ -122,6 +123,10 @@ function normalizeTemplateAliases(value) {
   const defaults=financialWidgetDefaults(value.widget);
   return defaults?{...defaults,...value}:value;
  }
+ const keyed=normalizeKeyedTableProjection(value).data;
+ // Static artifact rendering has always displayed keyed null cells as missing.
+ // Source materialization retains the real null for its original semantic gates.
+ if(keyed!==value)value={...keyed,rows:keyed.rows.map(row=>row.map(cell=>cell===null?'—':cell))};
  // Native tables cannot carry provenance. Route a fully valid sourced table
  // to the trusted interactive template instead of retrying or losing its notes.
  // A note-only snapshot must keep its actual dates/sources in the note/rows;
@@ -134,11 +139,7 @@ function normalizeTemplateAliases(value) {
  if(value?.type!=='market')return value;
  if(value.variant==='metrics'&&Array.isArray(value.items))return {...value,items:value.items.map(item=>
   item&&typeof item.change==='string'&&!item.detail?{...item,detail:item.change}:item)};
- if(!['table','fund-holdings'].includes(value.variant)||!Array.isArray(value.columns)||!value.columns.length||!Array.isArray(value.rows))return value;
- const keys=value.columns.map(c=>c?.key);
- if(keys.some(k=>typeof k!=='string'||!k||['__proto__','constructor','prototype'].includes(k))||new Set(keys).size!==keys.length||value.columns.some(c=>typeof c.label!=='string'||!c.label.trim()))return value;
- if(value.rows.some(row=>!row||Array.isArray(row)||typeof row!=='object'||Object.keys(row).length!==keys.length||keys.some(k=>!Object.hasOwn(row,k))))return value;
- return {...value,columns:value.columns.map(c=>c.label),rows:value.rows.map(row=>keys.map(k=>row[k]===null?'—':row[k]))};
+ return value;
 }
 
 export function workbenchMarketRecencyIssue(text, prompt, now = new Date()) {
