@@ -1,5 +1,9 @@
 export const NEWS_EMPTY_NOTE='本次未取得与用户主题相关的新闻；未用全市场或其他主题内容补齐。'
 const capacity='【新闻容量适配】',original='【原始工作台需求】'
+// Source requests are already bounded by the acquisition layer. Apply these
+// display budgets only after relevance/deduplication; leave room below the
+// host's 200 KB HTML limit for the controlled reading UI and coverage notice.
+const NEWS_HTML_ARTICLES=2000,NEWS_HTML_BODY_BYTES=180000
 const semiconductor=['半导体','semiconductor','semiconductors']
 const semiconductorTopics=[
  ['芯片','chip','chips','集成电路','integrated circuit','integrated circuits'],
@@ -45,14 +49,21 @@ const related=(value,terms)=>terms.some(term=>contains(value,term))
 const textOf=item=>[item?.title,item?.summary,item?.content,...(Array.isArray(item?.excerpts)?item.excerpts:[])].filter(v=>typeof v==='string').join(' ')
 const esc=value=>String(value??'').replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const safeUrl=value=>{try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:null}catch{return null}}
-const sourceRows=records=>records.filter(record=>record.purpose!=='discovery').flatMap(record=>Array.isArray(record.snapshotRows)?record.snapshotRows.map(row=>({...row,title:row.sourceTitle??row.title,url:row.urls?.find(safeUrl)})):Array.isArray(record.response?.records)?record.response.records:Array.isArray(record.response?.sources)?record.response.sources:[]).filter(row=>typeof row?.title==='string').slice(0,2000)
+const sourceRows=records=>records.filter(record=>record.purpose!=='discovery').flatMap(record=>Array.isArray(record.snapshotRows)?record.snapshotRows.map(row=>({...row,title:row.sourceTitle??row.title,url:row.urls?.find(safeUrl)})):Array.isArray(record.response?.records)?record.response.records:Array.isArray(record.response?.sources)?record.response.sources:[]).filter(row=>typeof row?.title==='string')
 const note=(prior,count)=>[prior, count?`宿主按用户原需求核对主题，已剔除 ${count} 条不相关记录。`:null].filter(Boolean).join('\n').slice(0,2000)
 const isScopedNews=(data,requirement)=>data?.type==='news'||String(requirement).includes(capacity)&&(['html','table'].includes(data?.type)||data?.type==='market'&&data.variant==='table')
 
 export function controlledNewsHtml(title,items,empty=NEWS_EMPTY_NOTE){
- const articles=items.map(item=>`<article><time>${esc(item.date??item.time??'来源未提供日期')}</time><h2>${safeUrl(item.url)?`<a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">${esc(item.title)}</a>`:esc(item.title)}</h2><p>${esc(item.summary??'来源未提供摘要')}</p>${item.publisher?`<small>${esc(item.publisher)}</small>`:''}</article>`).join('')
+ const shown=[];let bytes=0
+ for(const item of items){
+  const article=`<article><time>${esc(item.date??item.time??'来源未提供日期')}</time><h2>${safeUrl(item.url)?`<a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">${esc(item.title)}</a>`:esc(item.title)}</h2><p>${esc(item.summary??'来源未提供摘要')}</p>${item.publisher?`<small>${esc(item.publisher)}</small>`:''}</article>`,size=new TextEncoder().encode(article).length
+  if(shown.length<NEWS_HTML_ARTICLES&&bytes+size<=NEWS_HTML_BODY_BYTES){shown.push(article);bytes+=size}
+ }
+ const articles=shown.join(''),omitted=items.length-shown.length
+ const coverage=omitted?`<p class="note" role="status">已取得 ${items.length} 条相关记录，当前展示 ${shown.length} 条；另 ${omitted} 条超过组件展示容量，尚未展示。请缩小时间范围或拆分组件查看。</p>`:''
+ const emptyText=items.length?(shown.length?'当前筛选条件下没有匹配新闻。':'已取得相关新闻，但内容超出组件展示容量；请缩小范围或拆分组件。'):empty
  const script=`const rows=Array.from(document.querySelectorAll('article')),search=document.querySelector('input'),previous=document.getElementById('previous'),next=document.getElementById('next');const shared=window.sherlockShared.register({initialState:{query:'',page:0},reduce:(state,action)=>action.type==='search'?{query:String(action.query).slice(0,256),page:0}:action.type==='page'?{...state,page:Math.max(0,state.page+action.delta)}:state,render:(state,context)=>{const found=rows.filter(row=>row.textContent.toLocaleLowerCase().includes(state.query.toLocaleLowerCase())),page=Math.min(state.page,Math.max(0,Math.ceil(found.length/20)-1)),disabled=context.readOnly||!context.connected;search.value=state.query;search.disabled=disabled;rows.forEach(row=>row.hidden=true);found.forEach((row,i)=>row.hidden=Math.floor(i/20)!==page);previous.disabled=disabled||page===0;next.disabled=disabled||(page+1)*20>=found.length;document.getElementById('count').textContent=found.length+' / '+rows.length;document.getElementById('empty').hidden=found.length>0;}});search.oninput=()=>shared.dispatch({type:'search',query:search.value});previous.onclick=()=>shared.dispatch({type:'page',delta:-1});next.onclick=()=>shared.dispatch({type:'page',delta:1});`
- return {version:1,type:'html',title,html:`<style>body{margin:0;padding:10px;color:var(--sherlock-text);background:var(--sherlock-surface);font:13px/1.6 var(--sherlock-font-sans)}header{display:flex;gap:8px;align-items:center}input{flex:1;min-width:80px}input,button{font:inherit;color:inherit;background:var(--sherlock-surface-muted);border:1px solid var(--sherlock-border);border-radius:4px;padding:4px 8px}article{padding:10px 0;border-bottom:1px solid var(--sherlock-border)}article[hidden],[hidden]{display:none}h2{font-size:13px;margin:4px 0}p{margin:4px 0}a{color:var(--sherlock-link)}time,small,.note{font-size:11px;color:var(--sherlock-muted)}</style><header><input aria-label="搜索新闻" placeholder="搜索新闻"><button id="previous">上一页</button><button id="next">下一页</button><span id="count" role="status"></span></header><p class="note">按用户主题筛选的已取得来源快照；未绑定自动更新。</p><p id="empty" role="status">${esc(empty)}</p><main>${articles}</main><script>${script}</script>`}
+ return {version:1,type:'html',title,html:`<style>body{margin:0;padding:10px;color:var(--sherlock-text);background:var(--sherlock-surface);font:13px/1.6 var(--sherlock-font-sans)}header{display:flex;gap:8px;align-items:center}input{flex:1;min-width:80px}input,button{font:inherit;color:inherit;background:var(--sherlock-surface-muted);border:1px solid var(--sherlock-border);border-radius:4px;padding:4px 8px}article{padding:10px 0;border-bottom:1px solid var(--sherlock-border)}article[hidden],[hidden]{display:none}h2{font-size:13px;margin:4px 0}p{margin:4px 0}a{color:var(--sherlock-link)}time,small,.note{font-size:11px;color:var(--sherlock-muted)}</style><header><input aria-label="搜索新闻" placeholder="搜索新闻"><button id="previous">上一页</button><button id="next">下一页</button><span id="count" role="status"></span></header><p class="note">按用户主题筛选的已取得来源快照；未绑定自动更新。</p>${coverage}<p id="empty" role="status">${esc(emptyText)}</p><main>${articles}</main><script>${script}</script>`}
 }
 
 /** Filtering never treats a provider's search response as proof of relevance. */

@@ -128,3 +128,38 @@ it('turns a capacity HTML feed into controlled scoped articles without executing
   expect(result.finalOutput).toContain('搜索新闻')
  }finally{await runtime.dispose()}
 })
+
+it('keeps matching records from later sources in the real runtime instead of truncating unrelated records first',async()=>{
+ const prompt=scope+'\n【新闻容量适配】\n保留全部取得的相关新闻，优先使用 html 类型。'
+ const sources=Array.from({length:20},(_,i)=>observed(request('gdelt-news','银行 '+i),Array.from({length:100},()=>bank)))
+ sources.push(observed(request('gdelt-news','Bitcoin'),[btc]))
+ const adapter={start:vi.fn(async()=>({childSessionId:'later-source',result:Promise.resolve({stopReason:'completed',sourceRecords:sources,output:[{type:'text',text:JSON.stringify({version:1,type:'html',title:'加密新闻',html:'<p>模型页面省略末条</p>'})}]}),dispose:async()=>{}}))}
+ const runtime=new ResearchTaskRuntime({adapter,storage:{save:async()=>{}}})
+ try{
+  const receipt=await runtime.start({parentSessionId:'p',canvasNodeId:'later-source',kind:'container',prompt});await runtime.tasks.get(receipt.taskId).runPromise
+  const result=runtime.inspect({parentSessionId:'p',taskId:receipt.taskId});expect(result.state,result.error).toBe('completed')
+  expect(result.finalOutput).toContain(btc.title);expect(result.finalOutput).not.toContain(bank.title)
+  expect(result.finalOutput).not.toContain('本次未取得与用户主题相关的新闻')
+ }finally{await runtime.dispose()}
+})
+
+it('declares obtained but omitted matching records after the bounded HTML reading budget',()=>{
+ const rows=Array.from({length:2001},(_,i)=>({title:'BTC '+i,summary:'',date:''})),r=request(),records=Array.from({length:21},(_,i)=>observed(r,rows.slice(i*100,(i+1)*100)))
+ const data=filterScopedNewsArtifact({version:1,type:'html',title:'新闻',html:'<p>模型页面</p>'},records,scope+'\n【新闻容量适配】')
+ const window=new Window();window.document.body.innerHTML=data.html
+ try{
+  expect(window.document.querySelectorAll('article')).toHaveLength(2000)
+  expect(window.document.body.textContent).toContain('已取得 2001 条相关记录，当前展示 2000 条')
+  expect(window.document.body.textContent).toContain('另 1 条超过组件展示容量')
+  expect(Buffer.byteLength(data.html)).toBeLessThanOrEqual(200000)
+ }finally{window.happyDOM.abort()}
+})
+
+it('keeps a usable later article and reports a byte-budget gap without claiming no news was obtained',()=>{
+ const huge={...btc,summary:'已取得的来源长摘要。'.repeat(20000)},r=request()
+ const data=filterScopedNewsArtifact({version:1,type:'html',title:'新闻',html:'<p>模型页面</p>'},[observed(r,[huge,eth])],scope+'\n【新闻容量适配】')
+ expect(Buffer.byteLength(data.html)).toBeLessThanOrEqual(200000)
+ expect(data.html).toContain(eth.title)
+ expect(data.html).toContain('已取得 2 条相关记录，当前展示 1 条')
+ expect(data.html).not.toContain('本次未取得与用户主题相关的新闻')
+})
