@@ -502,7 +502,10 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
   const floor=metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0
   const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist|price-performance|valuation-multiples|price-target|company-profile|financial-statements|revenue-geography|revenue-business|dividends|stock-splits|insider-trading|institutional-ownership|stock-ownership|company-filings|historical-price|charting)"/.test(node.containerSpec?.html||'')
   const chrome=value?.chromeHeight??(snapshot?68:58)
-  return {width:preferred.width,height:Math.max(floor,value?.height?value.height+chrome:preferred.height)}
+  const height=Math.max(floor,value?.height?value.height+chrome:preferred.height)
+  // A long provenance note must not grow a quote card into several screens.
+  // The fixed viewport retains both independently scrollable content regions.
+  return {width:preferred.width,height:metrics?Math.min(840,height):height}
 }
 export function measureWorkbenchContents(root,nodes) {
   const measured=new Map(),cache=root?.__eworkContentMeasurements

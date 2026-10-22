@@ -145,7 +145,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;contentHeights.clear();contentOverrides.clear();forced=true;return true},
     contentHeight(id,value){
       const node=nodesById.get(id),kind=node?.containerSpec?.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1],trustedTemplate=/<body\b[^>]*data-sherlock-template="(?:calendar|kpi|timeline)"/.test(node?.containerSpec?.html||'')
-      if(node?.containerSpec?.type!=='html'||!trustedTemplate&&!['share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price','charting'].includes(kind)||value.html!==node.containerSpec.html||contentOverrides.has(id))return false
+      if(node?.containerSpec?.type!=='html'||!trustedTemplate&&!['metrics','share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price','charting'].includes(kind)||value.html!==node.containerSpec.html||contentOverrides.has(id))return false
       const old=contentHeights.get(id)
       if(old?.html===value.html&&old.width===value.width&&old.height===value.height)return false
       contentHeights.set(id,value);forced=true;return true

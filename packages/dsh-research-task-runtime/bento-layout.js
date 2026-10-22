@@ -52,7 +52,9 @@ export function researchMarketContentDimensions(variant, data = {}) {
     // every mode. Resizing keeps a fixed card; excess content scrolls internally.
     const columns = availableWidth <= 240 ? 1 : availableWidth <= 480 ? 2 : 3;
     const metricRows = Math.max(1, Math.ceil(rows / columns));
-    return {width:656,height:Math.min(456, 104 + metricRows * 112 + (metricRows - 1) * 6 + Math.min(4, footerLines) * 17)};
+    // Twelve quote fields need four readable rows, not the old two-row card.
+    // Bound very large sets while allowing their remaining rows to scroll.
+    return {width:656,height:Math.min(840, 104 + metricRows * 112 + (metricRows - 1) * 6 + Math.min(4, footerLines) * 17)};
   }
   if (variant === 'fund-kpi')
     return {width:656,height:48 + Math.max(1, Math.ceil((rows || 6) / 3)) * 82};

@@ -69,8 +69,8 @@ it('明确三排整理在窄视口及重开后不被阅读宽度下限改回两�
  state.set(g.arrange(snap.artifacts.map(n=>({...n,preferred:{height:260}})),state.get(),640,700,'standard'));snap=state.reconcile(snap)
  expect(snap.artifacts.every(n=>n.width>=280)).toBe(true)
 })
-it('快照随画布变窄保留完整内容占位，不改共享逻辑布局，手动缩高仍有效',()=>{
- const state=createWorkbenchGridState(null,'responsive-snapshots'),g=createResearchGrid(),html='<body data-sherlock-market="share-statistics"></body>'
+it.each(['share-statistics','metrics'])('快照 %s 随画布变窄保留完整内容占位，不改共享逻辑布局，手动缩高仍有效',kind=>{
+ const state=createWorkbenchGridState(null,'responsive-snapshots'),g=createResearchGrid(),html=`<body data-sherlock-market="${kind}"></body>`
  state.enable(1000)
  let snap=state.reconcile({files:[],artifacts:[{id:'a',kind:'generated-container',width:980,height:330,containerSpec:{type:'html',html}},{id:'b',kind:'pasted-text',width:480,height:200}],viewport:{y:0}})
  state.set([item('a',0,0,40,15),item('b',0,15,40,12)]);snap=state.reconcile(snap)
