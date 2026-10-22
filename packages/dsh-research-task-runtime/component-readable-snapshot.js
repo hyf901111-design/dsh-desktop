@@ -47,6 +47,10 @@ function sourcePayload(mapping,responses,now,scope=responses,cohort=[scope],mode
 
 function metadataSelector(value){
  if(!object(value))return undefined
+ if(Object.hasOwn(value,'$template')){
+  const names=Object.keys(value).filter(key=>key!=='$template')
+  return names.length===1?metadataSelector(value[names[0]]):undefined
+ }
  const clean=Object.fromEntries(Object.entries(value).filter(([key])=>!['$prefix','$suffix','$default'].includes(key)))
  if(Object.hasOwn(clean,'$map')){
   const child=metadataSelector(clean.$map)
@@ -162,16 +166,16 @@ export function componentReadableSnapshot(data,mapping,responses,records,now=new
  let asOf=data.asOf
  if(object(mapping.asOf)){
   asOf=null
-  const undecorated=value=>Array.isArray(value)?value.map(undecorated):object(value)?Object.fromEntries(Object.entries(value).filter(([key])=>!['$prefix','$suffix','$default'].includes(key)).map(([key,child])=>[key,undecorated(child)])):value
   try{
-   const selector=undecorated(mapping.asOf)
+   const selector=metadataSelector(mapping.asOf)
    if(sourcePayload(selector,responses,now)){
     const value=evaluateMapping(selector,responses,now)
     if(scalar(value))asOf=missing(value)?null:String(value)
    }
   }catch{}
  }
- const metadata=['subject','asOf','range','unit','subtitle','note'].filter(key=>key==='asOf'?Object.hasOwn(data,key):typeof data[key]==='string'&&data[key].trim()).map(key=>'<p data-readable-meta="'+key+'">'+text(key==='asOf'?asOf:data[key])+'</p>').join('')
+ const templated=value=>object(value)&&(Object.hasOwn(value,'$template')||Object.values(value).some(templated))||Array.isArray(value)&&value.some(templated)
+ const metadata=['subject','asOf','range','unit','subtitle','note'].filter(key=>key==='asOf'||!templated(mapping[key])).filter(key=>key==='asOf'?Object.hasOwn(data,key):typeof data[key]==='string'&&data[key].trim()).map(key=>'<p data-readable-meta="'+key+'">'+text(key==='asOf'?asOf:data[key])+'</p>').join('')
  const availability=readableSnapshotUnavailable(data)?'<p data-readable-availability role="status" data-workbench-status-text>来源未提供可用数值；已保留实际字段与来源。</p>':''
  const overview=readable.mode==='series'?(readableTrendFigure(data)??''):''
  const bodyMarker=data.type==='market'?' data-sherlock-market="'+esc(data.variant)+'"':''

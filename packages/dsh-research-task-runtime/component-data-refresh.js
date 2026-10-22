@@ -46,14 +46,30 @@ function scalarMapping(value,mapping){
  return value
 }
 /** Deliberately small JSON mapping language: no scripts, expressions or network. */
-export function evaluateMapping(mapping,responses,now=new Date(),row=responses,depth=0,budget={nodes:0}){
+export function evaluateMapping(mapping,responses,now=new Date(),row=responses,depth=0,budget={nodes:0},context=''){
  if(depth>24||++budget.nodes>30000)throw Error('字段映射超出限制')
- const next=(value,scope=row)=>evaluateMapping(value,responses,now,scope,depth+1,budget)
- if(Array.isArray(mapping)){if(mapping.length>2000)throw Error('数据记录过多');return mapping.map(v=>next(v))}
+ const next=(value,scope=row,childContext=context)=>evaluateMapping(value,responses,now,scope,depth+1,budget,childContext)
+ if(Array.isArray(mapping)){if(mapping.length>2000)throw Error('数据记录过多');return mapping.map(v=>next(v,row,context==='items'?'item':context))}
  if(!record(mapping))return mapping
  if(Object.keys(mapping).some(k=>forbidden.has(k)))throw Error('字段名称无效')
+ // Display templates only select observed scalar metadata; they are never a
+ // general mapping operator or a way to prove business values/units.
+ if(['display','optional-display','timestamp'].includes(context)&&Object.hasOwn(mapping,'$template')){
+  const format=mapping.$template,keys=Object.keys(mapping).filter(key=>key!=='$template')
+  const names=typeof format==='string'?[...format.matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/gu)].map(match=>match[1]):[]
+  const selector=(value,depth=0)=>depth<=12&&record(value)&&Object.keys(value).every(key=>['$from','$path','$each','$map','$filter','$sortBy','$order','$take','$single','$optional'].includes(key))&&(Object.hasOwn(value,'$map')?selector(value.$map,depth+1):typeof value.$path==='string')
+  if(context==='timestamp'&&keys.length!==1||typeof format!=='string'||!format.trim()||format.length>2000||!names.length||names.length>16||keys.length>8||/[{}]/u.test(format.replace(/\{[A-Za-z][A-Za-z0-9_]*\}/gu,''))||keys.some(key=>!/^[A-Za-z][A-Za-z0-9_]*$/u.test(key)||!names.includes(key)||!selector(mapping[key]))||names.some(name=>!Object.hasOwn(mapping,name)))throw Object.assign(Error('展示文本模板仅支持有限命名占位符及真实字段选择，不支持字面变量、默认值或嵌套模板'),{code:'UNSUPPORTED_DISPLAY_FORMAT'})
+  const values=Object.fromEntries(keys.map(key=>{
+   const value=next(mapping[key],row,'')
+   if(value!==null&&typeof value!=='string'&&!(typeof value==='number'&&Number.isFinite(value)))throw Object.assign(Error('展示文本模板变量必须是来源中的单个标量'),{code:'UNSUPPORTED_DISPLAY_FORMAT'})
+   return [key,value==null||value===''?'来源未提供':String(value)]
+  }))
+  // Template prose is not source evidence. Preserve only its actual selected
+  // scalars, so dates/providers cannot be forged in native cards or refresh.
+  return [...new Set(names)].map(name=>values[name]).join(' · ')
+ }
  const unknown=Object.keys(mapping).find(k=>k.startsWith('$')&&!mappingOperators.has(k))
- if(unknown)throw Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。')
+ if(unknown)throw Object.assign(Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。'),{code:'UNSUPPORTED_MAPPING_OPERATOR'})
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
  if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在')
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
@@ -85,7 +101,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   // conversions on the outer expression so units and precision apply once.
   const rowMapping=!Object.hasOwn(mapping,'$map')&&mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:mapping.$map
   if(mapping.$normalize!==undefined&&rowMapping===undefined)throw Error('归一化列表缺少数值选择：请提供 $map:{"$path":"真实数值字段"}，不能直接归一化整条记录')
-  let mapped=rows.map(item=>next(rowMapping,item))
+  let mapped=rows.map(item=>next(rowMapping,item,context==='items'?'item':context))
   if(mapping.$normalize!==undefined){
    if(mapping.$as==='number')mapped=mapped.map(value=>scalarMapping(value,{$as:'number'}))
    if(!mapped.length||mapped.some(value=>typeof value!=='number'||!Number.isFinite(value))||mapped[0]===0)throw Error('归一化需要完整有限数值列表及非零起点；缺失值不能填0')
@@ -99,7 +115,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  if(mapping.$filter!==undefined)throw Error('筛选必须指定列表 $each')
  if(Object.hasOwn(mapping,'$map')){
   if(!record(source)||mapping.$take!==undefined||mapping.$sortBy!==undefined||mapping.$order!==undefined||mapping.$single!==undefined&&mapping.$single!==true)throw Error('对象映射需要单个来源对象；列表请指定 $each')
-  return scalarMapping(next(mapping.$map,source),mapping)
+  return scalarMapping(next(mapping.$map,source,context==='items'?'item':context),mapping)
  }
  if(Object.hasOwn(mapping,'$path')){
   let value=path(source,mapping.$path)
@@ -117,12 +133,21 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   if(Object.keys(mapping).length!==1||typeof mapping.$default!=='string'||!mapping.$default.trim())throw Error('独立缺失说明只能使用非空文字；数值必须引用真实字段路径')
   return mapping.$default
  }
- return Object.fromEntries(Object.entries(mapping).map(([k,v])=>{if(k.startsWith('$'))throw Error('不支持的字段映射：'+k);return [k,next(v)]}))
+ return Object.fromEntries(Object.entries(mapping).flatMap(([k,v])=>{
+  if(k.startsWith('$'))throw Error('不支持的字段映射：'+k)
+  const childContext=context==='component'?(k==='asOf'?'timestamp':k==='note'?'optional-display':['subtitle','subject','range'].includes(k)?'display':k==='items'?'items':''):context==='item'?(['detail','source','url'].includes(k)?'optional-display':''):['display','optional-display','timestamp'].includes(context)?context:''
+  try{return [[k,next(v,row,childContext)]]}catch(error){
+   // Optional prose/link formatting cannot erase valid source values. Keep
+   // timestamps, scope fields, required paths and business payloads strict.
+   if(childContext==='optional-display'&&['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code))return []
+   throw error
+  }
+ }))
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentMapping(mapping,responses,now=new Date(),sourceRecords=[]){
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
- const data=normalizeChartMetadata(normalizeIndexedTableRows(evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now)))
+ const data=normalizeChartMetadata(normalizeIndexedTableRows(evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now,responses,0,{nodes:0},'component')))
  if(data.type==='chart'&&Array.isArray(data.labels)&&data.labels.every(label=>typeof label==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(label))&&Array.isArray(mapping.series)){
   for(const [i,series]of mapping.series.entries()){
    const values=series?.values
@@ -134,7 +159,7 @@ export function materializeComponentMapping(mapping,responses,now=new Date(),sou
  }
  if(candle){
   try{
-   const asOf=evaluateMapping(mapping.asOf,responses,now)
+   const asOf=evaluateMapping(mapping.asOf,responses,now,responses,0,{nodes:0},'timestamp')
    if(typeof asOf!=='string'||!asOf.trim())throw Error('K线数据日期必须是单个值')
    data.asOf=asOf
   }catch(error){
