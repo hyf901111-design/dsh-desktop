@@ -404,23 +404,37 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "接入托管infodb技能并完善笔记投资研究挑战方法",
+        "featureName": "区分笔记AI挑战四档能力、即时调档复查、编辑校对频率和运行流光，并移除重复回报计时",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "412554569983cf9e08c5d4a8a378ff7007733641",
-        "tipCommit": "b7ce3253ec11a3ad30066fcd0147e33ee2976cd1",
+        "baseCommit": "b7ce3253ec11a3ad30066fcd0147e33ee2976cd1",
+        "tipCommit": "56876338d0c29532d065c72f797c2affdb8bf682",
         "commits": [
           {
-            "commit": "b7ce3253ec11a3ad30066fcd0147e33ee2976cd1",
+            "commit": "d9c80f5fc0a05d12eac06627891a56e7d53e2abe",
             "parents": [
-              "412554569983cf9e08c5d4a8a378ff7007733641"
+              "b7ce3253ec11a3ad30066fcd0147e33ee2976cd1"
             ],
-            "subject": "过滤证券预测的记忆股本误报并复用有界技能发现"
+            "subject": "区分笔记挑战四档能力并加快编辑复查与流光反馈"
+          },
+          {
+            "commit": "8401e0017f1fd77363e8b164da220a60dfa4b9ef",
+            "parents": [
+              "d9c80f5fc0a05d12eac06627891a56e7d53e2abe"
+            ],
+            "subject": "修复挑战新编辑延迟和调档面板卸载后的暂停残留"
+          },
+          {
+            "commit": "56876338d0c29532d065c72f797c2affdb8bf682",
+            "parents": [
+              "8401e0017f1fd77363e8b164da220a60dfa4b9ef"
+            ],
+            "subject": "移除笔记指令回执中重复的阶段文字和计时"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-challenge-consensus.js"
+            "status": "A",
+            "path": "docs/verification/fixtures/2026-10-22-notes-challenge-tiered-article.md"
           },
           {
             "status": "M",
@@ -428,11 +442,59 @@
           },
           {
             "status": "M",
-            "path": "test/notes-challenge-infodb-skill.test.js"
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/challenge-controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/challenge-scheduler.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/challenge-ui.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/challenge.css"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/notes-challenge-v16/captured-ginkgo-typos.json"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-consistency.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-controller-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-recall.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-review-identity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-review-keys.test.js"
           },
           {
             "status": "M",
             "path": "test/notes-challenge-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-scheduler.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-send-preview.test.js"
           }
         ],
         "checks": [
@@ -441,21 +503,35 @@
               "npx",
               "vitest",
               "run",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-consensus.test.js",
+              "test/notes-challenge-scheduler.test.ts",
+              "test/notes-challenge-controller-browser.test.js",
+              "test/notes-challenge-editor-browser.test.js",
               "test/notes-challenge-runtime.test.js",
               "test/notes-challenge-recall.test.js",
+              "test/notes-challenge-consistency.test.js",
+              "test/notes-challenge-review-context.test.js",
               "test/notes-challenge-review-keys.test.js",
               "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/integration-skill-policy.test.js",
-              "test/research-context-runtime.test.js"
+              "test/notes-challenge-consensus-method.test.js",
+              "test/notes-challenge-infodb-skill.test.js"
             ],
             "outcome": "passed",
-            "summary": "274/274；包括真实捕获的记忆股本误报、正文算术及独立常识保留、慢发现与发现复用后撤权；/tmp/notes-infodb-final-controls-274-green-20261022.log",
-            "verifiedCommit": "b7ce3253ec11a3ad30066fcd0147e33ee2976cd1",
-            "completedAt": "2026-10-22T00:32:08.936280+00:00",
+            "summary": "319/319聚焦检查；/tmp/notes-tiers-current-focused-20261022.log",
+            "verifiedCommit": "56876338d0c29532d065c72f797c2affdb8bf682",
+            "completedAt": "2026-10-22T01:17:15.794Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-native-send-preview.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "30/30；/tmp/notes-feedback-dedup-green-20261022.log",
+            "verifiedCommit": "56876338d0c29532d065c72f797c2affdb8bf682",
+            "completedAt": "2026-10-22T01:17:15.794Z",
             "timeoutMs": 180000
           },
           {
@@ -465,9 +541,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "/tmp/notes-infodb-final-controls-typecheck-20261022.log",
-            "verifiedCommit": "b7ce3253ec11a3ad30066fcd0147e33ee2976cd1",
-            "completedAt": "2026-10-22T00:32:08.936280+00:00",
+            "summary": "/tmp/notes-tiers-review-fixes-typecheck-20261022.log",
+            "verifiedCommit": "56876338d0c29532d065c72f797c2affdb8bf682",
+            "completedAt": "2026-10-22T01:17:15.794Z",
             "timeoutMs": 180000
           },
           {
@@ -475,186 +551,31 @@
               "git",
               "diff",
               "--check",
-              "412554569983cf9e08c5d4a8a378ff7007733641..b7ce3253ec11a3ad30066fcd0147e33ee2976cd1"
+              "b7ce3253ec11a3ad30066fcd0147e33ee2976cd1..56876338d0c29532d065c72f797c2affdb8bf682"
             ],
             "outcome": "passed",
             "summary": "增量差异检查通过",
-            "verifiedCommit": "b7ce3253ec11a3ad30066fcd0147e33ee2976cd1",
-            "completedAt": "2026-10-22T00:32:08.936280+00:00",
+            "verifiedCommit": "56876338d0c29532d065c72f797c2affdb8bf682",
+            "completedAt": "2026-10-22T01:17:15.794Z",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "41255456真实UI已有infodb评论和依据，源头已接通。当前控制版修复实测阴性误报与一次技能发现超时，需新原生包最终验收。"
+          "summary": "真实挂载调档、停笔无标点复查、双主题流光、reduced motion已测试；新原生包及四档真实模型矩阵待验收。只读审查三项Important已修复并独立复核通过。"
         },
         "acceptanceCriteria": [
-          "使用当前会话已启用的托管infodb技能执行有界只读查询，停用或会话身份变化不接受数据，不泄露配置或任意执行模型SQL",
-          "明示阈值与统计周期，按报告日期/年度/单位对齐C1-C4、零标准差与负中值，回退醒目说明而非历史错误结论",
-          "真实客户端评论包含infodb证据和可解释方向，原正文、日期、历史讨论、两条未发送草稿保留"
+          "宽松仅拼写，标准事实逻辑表达，严格深入证据前提推理，抬杠增加观点质疑追问，逐级覆盖",
+          "调整关闭后立即复查最终档位；无句末标点停笔5秒内复查，IME与纯保存不触发",
+          "仅运行时有双剑与彩色外沿流光；只保留即时收到回执与原生进度计时",
+          "分层验收文章在新原生包中逐档实际检查；保护原文、讨论、草稿"
         ],
         "risks": [
-          "技能发现8秒、技能读取管线12秒、数据库进程4秒、整轮45秒；新原生包验收仍待完成",
-          "受控源码与审查通过不代替最终包和真实技能链路验收",
-          "默认20%/90天；12%或其他周期需报告明确指定，未自动猜行业",
-          "任意NLP句式和可选滚动估值未扩展，缺失/歧义不编造结果",
-          "原通用事实体裁边界仍需继续优化；新增会话操作/导出目标尚待后续开发"
+          "真实模型新档位递进效果尚待验收，不以渲染测试代替",
+          "新要求的替换后高亮、对照与取消替换尚在后续开发中，不包含在本交接",
+          "仅本地测试，不发布、不推送、不推进main"
         ],
-        "generatedAt": "2026-10-22T00:32:08.936280+00:00"
-      },
-      "merged": {
-        "mergeCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-        "verificationCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/calendar-tool-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/calendar-tool-client.test.js",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/shared-calendar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/shared-calendar.test.ts",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5",
-            "verifiedCommit": "45d8e09cbdaf0232d8270152620cec1e37ddaa5c",
-            "completedAt": "2026-10-22T00:38:01.905Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-22T00:38:01.905Z"
+        "generatedAt": "2026-10-22T01:17:15.794Z"
       }
     },
     {
