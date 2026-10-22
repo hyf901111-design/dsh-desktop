@@ -31,3 +31,9 @@ it('serializes the display formatters with only their declared locale helpers',(
  const output=execFileSync(process.execPath,['--input-type=module','-e',`import {NOTE_ENGLISH,noteUiText,noteUiError} from './packages/dsh-research-task-runtime/notes-locale.js';import{noteCapabilityReceiptMessage,capabilityReceiptText}from'./packages/dsh-research-task-runtime/client-capabilities.js';const render=new Function('const NOTE_ENGLISH='+JSON.stringify(NOTE_ENGLISH)+';'+noteUiText.toString()+';'+noteUiError.toString()+';'+noteCapabilityReceiptMessage.toString()+';'+capabilityReceiptText.toString()+';return capabilityReceiptText;')();process.stdout.write(render([{capability:'notes.export',status:'pending',message:'保存对话框已取消。'}],'en'))`],{encoding:'utf8'})
  expect(output).toBe('Export note: Waiting for user action. The save dialog was cancelled.')
 })
+
+it('translates alignment and content receipts while retaining their actual saved/cancelled phases',()=>{
+ const receipts=[{capability:'notes.blocks.align',status:'succeeded',effect:{kind:'alignment',state:'saved',changedBlockIds:['r']},message:'已保存 1 个块的对齐方式'},{capability:'notes.components.inspect',status:'succeeded'},{capability:'notes.components.apply',status:'cancelled',effect:{kind:'content',state:'applied',changedBlockIds:['r']},message:'已应用但未确认保存 1 个组件的内容；后续操作已取消。'}]
+ expect(capabilityReceiptText(receipts,'en')).toBe('Note alignment: Completed. Saved alignment for 1 blocks\nInspect selected component: Completed\nUpdate selected component: Cancelled. Applied content to 1 components; saving is not yet confirmed; subsequent operations were cancelled.')
+ expect(noteCapabilityReceiptMessage({message:'对齐目标已变化，请重新选择后重试。'},'en')).toBe('The alignment targets changed. Select them again and retry.')
+})

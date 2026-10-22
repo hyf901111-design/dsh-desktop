@@ -20,7 +20,7 @@ const bridge={request:async(method,input)=>{window.calls.push({method,input});
  if(method==='generate'){
   window.ordinaryInput=input;
   const invoke=(action,args)=>new Promise((resolve,reject)=>{const requestId='cap-'+(window.receipts.length+1);pending.set(requestId,{resolve,reject});document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{requestId,generationId:input.requestId,sessionId:input.sessionId,context:{...input.capabilityContext,owner:'alice',mode:'notes',editable:true},action,args}}))});
-  for(const [action,args] of [['notes.components.create',{prompt:'创建展示42的表格',requestContext:{images:input.images,context:input.context,title:input.title,markdown:input.markdown,selection:input.selection}}],['notes.components.style',{scope:'note',theme:'enterprise',titleBar:false}],['notes.export',{format:'pdf'}]]){const receipt=await invoke(action,args);window.receipts.push(receipt);if(receipt.status!=='succeeded')break}
+  const commands=window.capabilityCommands||[['notes.components.create',{prompt:'创建展示42的表格',requestContext:{images:input.images,context:input.context,title:input.title,markdown:input.markdown,selection:input.selection}}],['notes.components.style',{scope:'note',theme:'enterprise',titleBar:false}],['notes.export',{format:'pdf'}]];for(const [action,args] of commands){const receipt=await invoke(action,args);window.receipts.push(receipt);if(receipt.status!=='succeeded')break}
   return{kind:'conversation',markdown:'操作回执已确认'}
  }
  return{}},draft:async()=>{}};
@@ -87,3 +87,34 @@ it.each(['conflict','exception'])('retains only applied creation after a real ed
   expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+
+it('applies whole-note research alignment using the real editor and preserves text, widths and other block types',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>{
+   const payload=JSON.stringify({id:'one',title:'保留数据',noteSize:{width:330,height:210},containerSpec:{version:1,type:'table',title:'数据',columns:['值'],rows:[[42]]}})
+   window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'p',type:'paragraph',props:{textAlignment:'left'},content:[{type:'text',text:'保留富文本',styles:{bold:true}}]},{id:'r',type:'research',props:{payload,textAlignment:'left'}},{id:'r2',type:'research',props:{payload:payload.replace('"one"','"two"'),textAlignment:'left'}}]);window.beforeAlignment=JSON.stringify(window.noteEditor.document);
+   window.capabilityCommands=[['notes.blocks.align',{scope:'note',target:'researchComponents',alignment:'right'}]];document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'把这篇笔记里的所有研究组件右对齐，保持现有宽度。',images:[]}}))
+  })
+  await page.waitForFunction(()=>window.receipts.length===1)
+  const result=await page.evaluate(()=>({blocks:window.noteEditor.document,before:JSON.parse(window.beforeAlignment),saved:window.saved,receipt:window.receipts[0]}))
+  expect(result.receipt).toMatchObject({status:'succeeded',effect:{kind:'alignment',state:'saved'}});expect(result.blocks[0]).toEqual(result.before[0]);for(const id of ['r','r2']){const block=result.blocks.find(b=>b.id===id),before=result.before.find(b=>b.id===id);expect(block.props).toEqual({...before.props,textAlignment:'right'});expect(result.saved.blocks.find(b=>b.id===id).props).toEqual(block.props)}
+  const geometry=await page.locator('[data-id="r"] .en-research').evaluate(el=>({width:el.getBoundingClientRect().width,left:getComputedStyle(el).marginLeft,right:getComputedStyle(el).marginRight}))
+  expect(geometry.width).toBeCloseTo(330,0);expect(geometry.right).toBe('0px');expect(errors).toEqual([])
+ }finally{await context.close()}
+})
+
+it('captures referenced paragraph IDs for selected-text alignment without touching the next paragraph',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>{
+   window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'p',type:'paragraph',content:[{type:'text',text:'选择这一段',styles:{bold:true}}]},{id:'p2',type:'paragraph',content:'不要调整这段'}])
+   let from,to;window.noteEditor._tiptapEditor.state.doc.descendants((node,pos)=>{if(node.type.name==='blockContainer'&&node.attrs.id==='p'){from=pos+2;to=from+node.firstChild.content.size}})
+   window.noteEditor.focus();window.noteEditor._tiptapEditor.commands.setTextSelection({from,to})
+  })
+  await page.evaluate(()=>{window.capabilityCommands=[['notes.blocks.align',{scope:'selected',target:'paragraphs',alignment:'center'}]];document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'把选中的正文段落居中。',images:[]}}))})
+  await page.waitForFunction(()=>window.receipts.length===1)
+  const result=await page.evaluate(()=>({blocks:window.noteEditor.document,input:window.ordinaryInput,receipt:window.receipts[0]}))
+  expect(result.input.capabilityContext.selectedParagraphIds).toEqual(['p']);expect(result.input.capabilityContext.selectedBlockIds).toEqual([]);expect(result.receipt.status).toBe('succeeded');expect(result.blocks[0].props.textAlignment).toBe('center');expect(result.blocks[0].content[0]).toMatchObject({text:'选择这一段',styles:{bold:true}});expect(result.blocks[1].props.textAlignment).toBe('left');expect(errors).toEqual([])
+ }finally{await context.close()}
+})

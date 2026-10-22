@@ -7,6 +7,8 @@
 | `notes.components.create` | `prompt` | `useInlineComponentGeneration.startAndWait`；复用单卡生成、进度、数据绑定、停止与澄清。真实组件完成并保存后才返回成功，澄清返回 pending，失败/取消终止组合。 |
 | `notes.components.style` | `scope: note/selected`；`theme`、`titleBar` 至少一项 | `updateNoteComponentPresentation` 同时供选中组件控件和会话调用；仅更新 research 节点的 `notePresentation`。整篇范围递归覆盖全部研究组件，无需选择。等待 Notes 保存与渲染帧后回执。 |
 | `notes.export` | `format: pdf/docx/md`；可选 `path` | 同工具栏的 `exportNoteWithSnapshots` → `saveNoteExport`。截图包含当前组件主题/顶栏，真正写入后返回路径。省略路径使用原生保存框；路径必须与宿主从本次肯定目的地语句提取的完整绝对路径全等；前后缀、引用和否定不授权直写。无法唯一确定时使用原生保存框。 |
+| `notes.blocks.align` | `scope: note/selected`、`target: paragraphs/researchComponents`、`alignment: left/center/right` | 与段落菜单共享 `changeNoteAlignment`，只修改对应块的 `textAlignment`。组件容器与正文段落必须分别指定目标；保持正文、组件 payload、现有宽度。所选范围绑定稳定组件/段落 ID，变化后拒绝旧请求。 |
+| `notes.components.inspect` / `notes.components.apply` | inspect 空对象；apply `blockId/revision/containerSpec` | 仅当前明确选中的单个研究组件；复用 `createNoteComponentDataActions` 的 SHA-256 payload revision、结构校验和最终 CAS。apply 仅替换完整 containerSpec 并等待真实保存，保留其他节点属性/块/正文。先 inspect 再 apply，旧版本可重新读取后重试。 |
 | `canvas.inspect` | 空对象 | 复用 `CanvasActionBridge.inspect`；仅当前 session 存在有效绑定时提供，执行再检查可见 Notes 上下文与画布绑定。真实数据进入后续工具上下文。 |
 | `ui.zoom.reset` | 空对象 | 复用 `executeDesktopMenuCommand('zoom-reset')`；实际命令完成后回执。 |
 
@@ -24,8 +26,9 @@
 
 ## 尚未接入的家族与扩展点
 
-- Canvas 增删改、布局整理、绑定/刷新数据：在 registry 增加独立语义 schema 和既有 CanvasActionBridge 适配器；当前只有 inspect。
+- Notes 的通用目录仍只接入 Canvas inspect；研究会话已有独立 research_canvas_inspect/apply/undo 与数据工具，尚未统一成跨模式目录。研究 inspect 现在声明 presentation/presentationFields，apply 可单独提交 `{op:"presentation",fields:{workbenchStyle:"enterprise"}}`，复用手动 `setWorkbenchStyle`，按当前看板保存；该操作不能与内容/整理混批。需重新 inspect 获取新 revision 后才能继续整理，展示偏好不宣称支持内容事务撤销。
 - 客户端导航、设置、主题、窗口、更新及其他菜单：当前只有 zoom.reset；应映射现有 menu command handler，不开放任意命令执行。
+- 组件隐藏顶栏已有 `titleBar:false`；去除组件外框/边框没有注册，也没有新增外框持久化模型，不能把隐藏顶栏称为去除边框。
 - 文件查看器/附件节点外观：当前仅 research 节点。研究组件内置 HTML 如果自己不遵循主题令牌，外层不能保证改写其自定义固定颜色。
 - 插件/MCP、账户、云文档、日程、下载、发布和 OS 级操作：没有登记或授权；不宣称会话已支持。
 - 公开 API：本目录是内部 Notes host 适配层，尚未成为全产品跨入口的工具协议。新能力在注册表添加类型、schema、可用性和共享处理器即可；不应增加自然语言关键词分支。
@@ -33,3 +36,10 @@
 ## 证据分层
 
 聚焦测试覆盖 schema、host 回执、幂等、取消、账户/会话与正文变化、持久化、创建后导出、待澄清停止、普通文本预览。Playwright 使用真实 NotesEditor、脚本化外部模型与导出 stub，证明前端组合流程。服务测试实写 Markdown，PDF 聚焦测试使用模拟 Electron printer。真正 Electron PDF 内容、原生保存框及客户端重启恢复仍由集成后的原生验收完成，不能由这些测试替代。
+
+## 本轮直接验收范围
+
+- 在真实 NotesEditor 中，全笔记研究组件右对齐后，正文富文本、组件 payload 和宽度保留；保存内容与实际布局一致。
+- Notes host → renderer → selected component inspect/apply → NotesStore → 导出链覆盖真实处理器；仅模型输出与原生 PDF printer 仍沿测试替身。
+- 选区、正文、payload 或会话在异步 hash 中改变时拒绝旧写入，重新发送并 inspect 后可继续；没有选中、不同目标、非法结构均无副作用。
+- 研究会话工具 → HTTP → session bridge → 真实 workspace 的主题变更保持其他看板不变、保存失败不假报成功、旧 revision 可重新 inspect 重试；保留既有手动主题和全局试用行为。

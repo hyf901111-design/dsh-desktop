@@ -7,14 +7,14 @@ import {createNoteCapabilityActions} from '../src/preload/notes/client-capabilit
 import {exportNoteWithSnapshots} from '../src/preload/notes/component-snapshots'
 vi.mock('electron',()=>({BrowserWindow:class{},dialog:{showSaveDialog:async()=>({canceled:true})}}))
 const roots:string[]=[];afterEach(()=>{for(const r of roots.splice(0))rmSync(r,{recursive:true,force:true});vi.unstubAllGlobals()})
-function harness(options:{cancelAt?:'placeholder'|'applied'|'saved'|'settle';cancelExportReply?:boolean}={}){
+function harness(options:{cancelAt?:'placeholder'|'applied'|'saved'|'settle';cancelExportReply?:boolean;selected?:string[]}={}){
  const root=mkdtempSync(join(tmpdir(),'note-client-capabilities-'));roots.push(root)
  let owner='alice',visible=true,generation='job',handler:any,revision=0,calls=0
  const actions:any[]=[],history:any[]=[],requests:any[]=[],content:any={title:'实际笔记',yjs:'',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留正文',styles:{bold:true}}]},{id:'r',type:'research',props:{payload:JSON.stringify({id:'n',noteSize:{width:390},containerSpec:{version:1,type:'markdown',title:'数据',content:'实际组件'}})}}]}
- const editor={get document(){return content.blocks},getBlock(id:string){return content.blocks.find((b:any)=>b.id===id)},updateBlock(id:string,p:any){Object.assign(this.getBlock(id).props,p.props)},transact(f:()=>void){f()}}
+ const editor={isEditable:true,get document(){return content.blocks},getBlock(id:string){return content.blocks.find((b:any)=>b.id===id)},updateBlock(id:string,p:any){Object.assign(this.getBlock(id).props,p.props)},transact(f:()=>void){f()}}
  const window:any={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:2},send:(channel:string,value:any)=>{if(channel==='notes:capability-action'){actions.push(value);queueMicrotask(()=>{void renderer(value).then(async result=>{if(options.cancelExportReply&&value.action==='notes.export'&&result?.status==='succeeded')await call('stop',{requestId:generation});if(!value.cancel)return call('capability-reply',{requestId:value.requestId,result})}).catch(error=>call('capability-reply',{requestId:value.requestId,error:error.message}))})}}}}
  const event={sender:window.webContents,senderFrame:window.webContents.mainFrame},call=(method:string,input:any={})=>handler(event,method,{sessionId:'note',owner,...input})
- const bridge:any={request:call},renderer=createNoteCapabilityActions({editor,snapshot:()=>content,current:()=>visible,generationId:()=>generation,documentId:'doc',selectedBlockIds:()=>[],createComponent:async(_args,current,_requestId,report)=>{
+ const bridge:any={request:call},renderer=createNoteCapabilityActions({editor,snapshot:()=>content,current:()=>visible,generationId:()=>generation,documentId:'doc',selectedBlockIds:()=>options.selected??[],createComponent:async(_args,current,_requestId,report)=>{
   const node={id:'created',type:'research',props:{payload:JSON.stringify({id:'created-node',generationStatus:'draft'})}};content.blocks.push(node);await report({state:'placeholder',blockId:node.id})
   if(!current())return {status:'cancelled',blockId:node.id}
   node.props.payload=JSON.stringify({id:'created-node',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'真实结果',columns:['值'],rows:[[42]]}});await report({state:'applied',blockId:node.id})
@@ -22,7 +22,7 @@ function harness(options:{cancelAt?:'placeholder'|'applied'|'saved'|'settle';can
  },reportEffect:async(requestId,effect)=>{await call('capability-reply',{requestId,effect});if(options.cancelAt===effect.state)await call('stop',{requestId:generation})},persist:async()=>{const r=await call('save',{revision,content,clientId:'client'});if(r.status!=='saved')throw Error('冲突');revision=r.saved.revision},exportNote:(args,current)=>exportNoteWithSnapshots({snapshot:()=>content,bridge,sessionId:'note',...args,current}),settle:async()=>{if(options.cancelAt==='settle')await call('stop',{requestId:generation})}})
  const inspectCanvas=vi.fn(async()=>({revision:'r1',nodes:[{id:'canvas-one',title:'研究画布'}]})),resetZoom=vi.fn(async()=>{})
  const dispose=installNotesService({ipcMain:{handle:(_c:string,f:any)=>{handler=f},removeHandler:()=>{}},getWindow:()=>window,root,owner:()=>owner,runtimeUrl:()=> 'http://127.0.0.1:9999',canRead:()=>true,canWrite:()=>true,clipboard:()=>undefined,inspectCanvas,resetZoom})
- const generate=(prompt:string)=>call('generate',{requestId:generation,mode:'write',prompt,markdown:'原文',selection:'',title:'实际笔记',context:{scope:'note',components:[]},capabilityContext:{documentId:'doc',selectedBlockIds:[]}})
+ const generate=(prompt:string)=>call('generate',{requestId:generation,mode:'write',prompt,markdown:'原文',selection:'',title:'实际笔记',context:{scope:'note',components:[]},capabilityContext:{documentId:'doc',selectedBlockIds:options.selected??[]}})
  const wire=(next:(body:any)=>any)=>vi.stubGlobal('fetch',async(url:any,options:any)=>{const b=JSON.parse(options.body);if(String(url).endsWith('/session')){history.push(b);return new Response('{"ok":true}')};calls++;requests.push(b);return new Response(JSON.stringify({type:'result',result:next(b)})+'\n')})
  return{root,call,generate,wire,actions,history,requests,content,inspectCanvas,resetZoom,dispose,calls:()=>calls,hide:()=>{visible=false},account:()=>{owner='bob'},setGeneration:(id:string)=>{generation=id}}
 }
@@ -98,5 +98,19 @@ it.each(['placeholder','applied','saved'] as const)('retains actual creation pha
   expect(h.actions.filter(a=>a.action).map(a=>a.action)).toEqual(['notes.components.create'])
   expect(h.history.find(row=>row.action==='conversation-capabilities').receipts[0].effect).toEqual({state:cancelAt,blockId:'created'})
   if(cancelAt==='saved')expect(JSON.parse((await h.call('load')).saved.blocks.find((b:any)=>b.id==='created').props.payload)).toMatchObject({generationStatus:'completed',containerSpec:{rows:[[42]]}})
+ }finally{h.dispose()}
+})
+
+it('routes selected alignment, inspect and saved apply through the real host bridge before export',async()=>{
+ const h=harness({selected:['r']}),path=join(h.root,'updated.md'),before=structuredClone(h.content.blocks[0])
+ h.wire(body=>{
+  if(!body.clientReceipts.length)return{kind:'capabilities',calls:[{requestId:'align',capability:'notes.blocks.align',arguments:{scope:'selected',target:'researchComponents',alignment:'right'}},{requestId:'inspect',capability:'notes.components.inspect',arguments:{}}]}
+  if(body.clientReceipts.length===2){const data=body.clientReceipts[1].data;return{kind:'capabilities',calls:[{requestId:'apply',capability:'notes.components.apply',arguments:{blockId:data.blockId,revision:data.revision,containerSpec:{version:1,type:'markdown',title:'数据',content:'实际修改后的数据'}}},{requestId:'export',capability:'notes.export',arguments:{format:'md',path}}]}}
+  return{kind:'conversation',markdown:'模型不能假报成功'}
+ })
+ try{
+  const result=await h.generate('把所选组件右对齐，改正文为实际修改后的数据，然后导出到“'+path+'”')
+  expect(result.capabilityReceipts.map((row:any)=>row.status)).toEqual(['succeeded','succeeded','succeeded','succeeded'])
+  const stored=await h.call('load');expect(stored.saved.blocks[0]).toEqual(before);expect(stored.saved.blocks[1].props.textAlignment).toBe('right');expect(JSON.parse(stored.saved.blocks[1].props.payload)).toMatchObject({id:'n',noteSize:{width:390},containerSpec:{content:'实际修改后的数据'}});expect(readFileSync(path,'utf8')).toContain('实际修改后的数据');expect(result.markdown).not.toContain('模型不能假报成功')
  }finally{h.dispose()}
 })

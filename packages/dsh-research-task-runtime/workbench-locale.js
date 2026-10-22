@@ -1,6 +1,14 @@
 import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
  ...NOTE_ENGLISH,
+ "已更新当前看板样式":"Updated the current board style",
+ "看板样式未保存，请检查本地存储后重试。":"Board style was not saved. Check local storage and try again.",
+ "字段取值不在声明的选项中。":"The field value is not one of the declared options.",
+ "看板样式必须单独提交；请先完成样式修改，再重新查看后提交其他变更。":"Submit board style changes separately. Complete the style change, inspect again, then submit other changes.",
+ "看板样式字段无效。":"Invalid board style fields.",
+ "画板未声明此样式的编辑能力。":"The board has not declared this style editable.",
+ "看板样式未应用，请重新查看当前状态。":"Board style was not applied. Inspect the current state again.",
+
  '彭博模式':'Bloomberg mode',
  '智能容器底栏':'Smart container footer','待创建':'Awaiting creation','已连接 {count} 个组件':'Sources connected: {count}','基于 {count} 个组件':'Source components: {count}',
  '接收组件作为创建基准':'Use a component as the creation source','输出组件内容':'Output component content','拖到组件输出节点连接基准，拖到空白处断开':'Drag to an output to connect sources; drag to the canvas to disconnect','拖到智能容器左侧节点，基于此组件创建':'Drag to a smart container input to create from this component','断开创建基准连接':'Disconnect creation sources','创建基准':'Creation sources',

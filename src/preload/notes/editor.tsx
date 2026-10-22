@@ -27,6 +27,7 @@ import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-re
 import {useNoteDragAndDrop} from './drag-and-drop'
 import {useNoteReplyInsertion} from './reply-insertion'
 import {withNoteIndentSpecs,changeNoteIndent} from './paragraph-indent'
+import {changeNoteAlignment,selectedNoteParagraphIds} from './block-alignment'
 import {changeNoteList,type NoteListType} from './paragraph-style'
 import {useNoteReferenceContext,type NoteReferenceContext} from './reference-context'
 import {noteMessageReferences} from '../../../packages/dsh-research-task-runtime/notes-message-references.js'
@@ -173,7 +174,7 @@ function BlockMenu(props: any) {
   return <div className="en-side" ref={anchor}><button className="en-block-trigger" title={t("段落操作")} aria-label={t("段落操作")} aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => setOpen(!open)}><NoteMenuIcon kind="paragraph"/></button><SideMenu {...props}><DragHandleButton {...props} /></SideMenu>
     {open ? createPortal(<div ref={menu} className="en-block-menu" role="menu" style={{...position,visibility:position?'visible':'hidden'}}><div className="en-block-types">{[[t("正文"), 'paragraph', 0], ['H1', 'heading', 1], ['H2', 'heading', 2], ['H3', 'heading', 3], ['H4', 'heading', 4]].map(([label, type, level]) => <button role="menuitem" key={label} title={String(label)} aria-label={String(label)} onClick={() => change(String(type), level ? { level } : {})}>{type==='paragraph'?<NoteMenuIcon kind="paragraph"/>:label}</button>)}</div>
       <div className="en-block-formats">{([[t("无序列表"), 'bulletListItem'], [t("有序列表"), 'numberedListItem'], [t("待办列表"), 'checkListItem'], [t("代码块"), 'codeBlock'], [t("引用"), 'quote'], [t("分隔线"), 'divider']] as const).map(([label, type]) => <button role="menuitem" key={type} title={label} aria-label={label} onClick={() => change(type)}><NoteMenuIcon kind={type}/></button>)}</div>
-      <hr /><div className="en-block-types en-block-align">{[[t("左对齐"), 'left'], [t("居中"), 'center'], [t("右对齐"), 'right']].map(([label, textAlignment]) => <button key={label} onClick={() => change(block.type, { textAlignment })}><NoteMenuIcon kind={String(textAlignment)}/>{label}</button>)}</div>
+      <hr /><div className="en-block-types en-block-align">{[[t("左对齐"), 'left'], [t("居中"), 'center'], [t("右对齐"), 'right']].map(([label, textAlignment]) => <button key={label} onClick={() => {changeNoteAlignment(editor,[block.id],textAlignment as 'left'|'center'|'right');setOpen(false);editor.focus()}}><NoteMenuIcon kind={String(textAlignment)}/>{label}</button>)}</div>
       <button onClick={() => { changeNoteIndent(editor,block.id,1); setOpen(false) }}><NoteMenuIcon kind="indent"/>{t("增加缩进")}</button><button onClick={() => { changeNoteIndent(editor,block.id,-1); setOpen(false) }}><NoteMenuIcon kind="outdent"/>{t("减少缩进")}</button><hr />
       <button onClick={duplicate}><NoteMenuIcon kind="copy"/>{t("复制段落")}</button><button onClick={() => { editor.insertBlocks([{ type: 'paragraph' }], block, 'after'); setOpen(false) }}><NoteMenuIcon kind="add"/>{t("在下方添加")}</button><button className="en-danger" onClick={() => { editor.removeBlocks([block]); setOpen(false) }}><NoteMenuIcon kind="delete"/>{t("删除段落")}</button>
     </div>,document.body) : null}</div>
@@ -309,6 +310,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         const captured=references.capture()
         return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]
       },
+      selectedParagraphIds:()=>selectedNoteParagraphIds(editor,references.capture(false).range),
       createComponent:async(args,current,requestId,report)=>{
         if(!current())throw Error('笔记会话已变化。')
         const last=editor.document.at(-1)
@@ -430,7 +432,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       if(pending)activeGeneration.current={requestId,blockId:pending,expected:editor.getBlock(pending).props.payload}
       publishTask(requestId,'generating')
       capabilityFingerprint.current=noteCapabilityFingerprint(snapshot())
-      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
+      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt) return
       if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
       // Legacy component results still honor explicit creation after the generic
