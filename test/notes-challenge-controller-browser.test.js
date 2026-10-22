@@ -17,7 +17,7 @@ beforeAll(async()=>{
  window.savedMessages=()=>{const doc=new Y.Doc();Y.applyUpdate(doc,Uint8Array.from(atob(window.drafts['note-a'].yjs),c=>c.charCodeAt(0)));return[...doc.getMap('threads').values()].flatMap(thread=>thread.get('comments').toArray().map(comment=>noteText(comment.get('body'))))};
  window.start=(kind='reply',text='请核实来源')=>{window.challenge.runAction(window.challenge.threads[0],kind,text).then(()=>window.completed++)};
  window.seed=async(override={})=>{const issue={blockId:'p',quote:'成度',category:'typo',message:'请核对这段用字。',evidence:[],...override},store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));const thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue,sourceText:window.editor.getBlock(issue.blockId).content.map(c=>c.text||'').join('')},initialComment:{body:[{type:'paragraph',content:[{type:'text',text:issue.message,styles:{}}]}]}});const range=findChallengeQuote(window.editor,issue.blockId,issue.quote);window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return thread.id};
- `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-styles',setup(b){b.onResolve({filter:/\.css\?inline$/},async args=>{const found=await b.resolve(args.path.slice(0,-7),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-controller',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.challenge=challenge;window.noteDoc=doc; const slashMenu = useMemo'),loader:'tsx'}))}}]})
+ `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-styles',setup(b){b.onResolve({filter:/\.css\?inline$/},async args=>{const found=await b.resolve(args.path.slice(0,-7),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-controller',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.challenge=challenge;window.noteDoc=doc;window.setNoteWriting=setWriting; const slashMenu = useMemo'),loader:'tsx'}))}}]})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -35,6 +35,57 @@ async function fixture(content=original,quote='成度'){
 }
 async function finish(page,value=answer,index=0){await page.evaluate(({value,index})=>window.jobs[index].resolve(value),{value,index})}
 async function start(page,kind='reply',text='请核实来源'){await page.evaluate(({kind,text})=>window.start(kind,text),{kind,text});await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)}
+
+it('configure API reads Yjs immediately and queues a changed level until ordinary writing stops',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id)
+  await page.evaluate(()=>window.setNoteWriting(true));await page.getByText('正在生成内容…',{exact:true}).waitFor()
+  const immediate=await page.evaluate(()=>{window.configuringController=window.challenge;window.configuringController.configure({level:3,commentsExpanded:false});return{configuration:window.configuringController.getConfiguration(),level:window.noteDoc.getMap('note-challenge').get('level'),commentsExpanded:window.noteDoc.getMap('note-challenge').get('marginExpanded')}})
+  expect(immediate).toEqual({configuration:{level:3,commentsExpanded:false,phase:'paused'},level:3,commentsExpanded:false})
+  await page.clock.fastForward(10000);expect(await page.evaluate(()=>window.jobs.length)).toBe(0)
+  await page.evaluate(()=>window.setNoteWriting(false));await page.clock.fastForward(1)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input)).toMatchObject({action:'review',level:3,changedIds:['p']})
+  expect(await page.evaluate(()=>window.configuringController.getConfiguration())).toEqual({level:3,commentsExpanded:false,phase:'running'})
+  expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('configure API keeps the running review and existing selection when repeated settings do not change preferences',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(()=>window.challenge.configure({level:3,commentsExpanded:false}));await page.clock.fastForward(1)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  const before=await page.evaluate(id=>{window.challenge.select(id);window.repeatedController=window.challenge;return{configuration:window.challenge.getConfiguration()}},id)
+  const repeated=await page.evaluate(()=>{let updates=0;const observer=()=>updates++;window.noteDoc.on('update',observer);window.repeatedController.configure({level:3,commentsExpanded:false});window.noteDoc.off('update',observer);return{configuration:window.repeatedController.getConfiguration(),updates}})
+  expect(repeated).toEqual({configuration:{level:3,commentsExpanded:false,phase:'running'},updates:0})
+  expect(before.configuration.phase).toBe('running');expect(await page.evaluate(()=>window.challenge.selected)).toBe(id)
+  await page.evaluate(()=>window.challenge.configure({commentsExpanded:true}))
+  expect(await page.evaluate(()=>window.repeatedController.getConfiguration())).toEqual({level:3,commentsExpanded:true,phase:'running'})
+  expect(await page.evaluate(()=>window.calls.filter(call=>call.method==='challenge-stop'))).toEqual([])
+  expect(await page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:[],checks:[{kind:'review',status:'partial',detail:'本轮深入检查尚未完整结束。'}]})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.getConfiguration().phase)).toBe('idle')
+  expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('configure API preserves the rolling review budget across level changes and disabling then enabling',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id)
+  await page.evaluate(()=>window.challenge.configure({level:2}));await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[],usage:{inputTokens:20,outputTokens:4000}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.getConfiguration().phase)).toBe('idle')
+  for(const settings of [{level:3},{level:4,commentsExpanded:false},{level:0},{level:4,commentsExpanded:true}]){
+   const configuration=await page.evaluate(settings=>{window.challenge.configure(settings);return window.challenge.getConfiguration()},settings)
+   expect(configuration.phase).toBe(settings.level===0?'off':'limited')
+   await page.clock.fastForward(1);expect(await page.evaluate(()=>window.jobs.length)).toBe(1)
+  }
+  await page.clock.fastForward(600000);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  expect(await page.evaluate(()=>window.jobs[1].input.level)).toBe(4);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
 
 it('localizes only fixed challenge reply failures while preserving user and model messages',async()=>{
  const{context,page,errors}=await fixture();try{

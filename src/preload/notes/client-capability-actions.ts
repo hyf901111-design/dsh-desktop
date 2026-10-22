@@ -1,4 +1,5 @@
-import type {CapabilityStyleEffect,CapabilityCreateEffect} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import {noteCapabilityReceiptMessage} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import type {CapabilityStyleEffect,CapabilityCreateEffect,CapabilityChallengeConfiguration,CapabilityChallengeEffect,ClientCapabilityArguments} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {NoteContent} from '../../shared/workspace-notes'
 import {changeNoteAlignment,noteAlignmentBlocks} from './block-alignment'
@@ -13,7 +14,7 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>()
  return async(input:any)=>{
@@ -24,6 +25,27 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
   if(generation!==input.generationId){generation=input.generationId;fingerprint=options.initialFingerprint?.()||noteCapabilityFingerprint(options.snapshot())}
   if(noteCapabilityFingerprint(options.snapshot())!==fingerprint)throw Error(t('笔记内容已变化，请重新发送请求，较新修改已保留。'))
   if(input.action==='context')return {status:'succeeded'}
+  if(input.action==='notes.challenge.configure'){
+   const args=input.args,challenge=options.challenge?.()
+   if(!args||typeof args!=='object'||Array.isArray(args)||Object.keys(args).some(key=>!['level','commentsExpanded'].includes(key))||args.level!==undefined&&(!Number.isInteger(args.level)||args.level<0||args.level>4)||args.commentsExpanded!==undefined&&typeof args.commentsExpanded!=='boolean'||args.level===undefined&&args.commentsExpanded===undefined)throw Error(t('AI挑战设置参数无效。'))
+   if(!challenge)throw Error(t('当前笔记的AI挑战设置不可用。'))
+   assertCurrent();challenge.configure(args)
+   const configured=challenge.getConfiguration(),settings={level:configured.level,commentsExpanded:configured.commentsExpanded}
+   if(Object.entries(args).some(([key,value])=>configured[key as keyof CapabilityChallengeConfiguration]!==value))throw Error(t('AI挑战设置未应用，请重试。'))
+   let effect:CapabilityChallengeEffect={kind:'challenge',state:'applied',settings,phase:configured.phase}
+   const publish=()=>options.reportEffect?.(input.requestId,effect).catch(()=>{})
+   const receipt=(status:string,detail='')=>({status,effect,message:noteCapabilityReceiptMessage({status:'pending',effect,message:''})+detail})
+   await publish()
+   if(!current())return receipt('cancelled',t('后续操作已取消。'))
+   try{
+    await options.persist()
+    const actual=challenge.getConfiguration()
+    if(actual.level!==settings.level||actual.commentsExpanded!==settings.commentsExpanded)throw Error(t('AI挑战设置已变化，请重新发送请求。'))
+    effect={...effect,state:'saved',phase:actual.phase};await publish()
+    if(current())await options.settle()
+    return receipt(current()?'succeeded':'cancelled',current()?'':t('后续操作已取消。'))
+   }catch(error){return receipt(current()?'failed':'cancelled',(error as Error).message)}
+  }
   const saveMutation=async(changedBlockIds:string[],kind:'alignment'|'content',data?:any)=>{
    fingerprint=noteCapabilityFingerprint(options.snapshot())
    let effect:CapabilityStyleEffect={state:'applied',changedBlockIds,kind}

@@ -10,6 +10,7 @@ const definitions=[
  {id:'notes.blocks.align',description:'对齐当前笔记中的段落文字或研究组件容器。必须明确 target：paragraphs 仅正文段落，researchComponents 仅研究组件容器；两者不可混用。scope=note 操作该类全部块，scope=selected 仅当前已引用的该类块。left/center/right 与手动段落菜单共享处理器；保持正文、组件内容及现有宽度。',parameters:object({scope:{type:'string',enum:['note','selected']},target:{type:'string',enum:['paragraphs','researchComponents']},alignment:{type:'string',enum:['left','center','right']}},['scope','target','alignment']),handler:'alignBlocks',notes:true,write:true},
  {id:'notes.components.inspect',description:'读取当前明确选中的单个笔记研究组件、真实 payload revision 及可编辑内容。返回 blockId 和 containerSpec；不能读取未选中组件或正文。修改已有组件先读取此能力。',parameters:object({}),handler:'inspectNoteComponent',notes:true,selected:true},
  {id:'notes.components.apply',description:'将明确要求的修改直接应用并保存到当前选中的单个笔记研究组件。必须先 notes.components.inspect，沿用实际 blockId/revision，并提供完整 containerSpec；宿主校验结构与最新笔记版本，仅更新组件内容，保留正文、其他组件、尺寸及配色。解释/预览不调用；不得用此能力重新创建组件或修改未选中对象。',parameters:object({blockId:{type:'string',minLength:1,maxLength:256},revision:{type:'string',pattern:'^[a-f0-9]{64}$'},containerSpec:{type:'object',additionalProperties:true}},['blockId','revision','containerSpec']),handler:'applyNoteComponent',notes:true,write:true,selected:true,maxCallBytes:1500000},
+ {id:'notes.challenge.configure',description:'保存当前笔记的 AI 挑战等级和评论展开偏好。level：0关闭、1宽松、2标准、3严格、4抬杠；commentsExpanded=true展开、false收起评论。至少指定一项，不需要选中段落。沿用当前笔记真实调度器和既有用量预算，不改正文，不自动采纳建议。回执只确认设置的应用/保存及校验等待或运行状态，不代表已校验完成；会话处理、输入或笔记不可用时等待调度。没有评论或空间不足时仅保存展开偏好，不宣称评论已显示。',parameters:object({level:{type:'integer',minimum:0,maximum:4},commentsExpanded:{type:'boolean'}}),handler:'configureChallenge',notes:true,write:true},
  {id:'canvas.inspect',description:'通过现有画布桥查看当前会话已绑定研究画布及可用操作，不能查看其他会话。',parameters:object({}),handler:'inspectCanvas'},
  {id:'ui.zoom.reset',description:'恢复当前客户端窗口的默认缩放，与菜单恢复默认缩放共享处理器。',parameters:object({}),handler:'resetZoom'},
 ]
@@ -33,6 +34,7 @@ export function createClientCapabilityRegistry(handlers={}){
     if(call.arguments.scope==='selected'&&!context.selectedBlockIds?.length)throw Error('当前未选中组件，请明确使用整篇笔记范围或先选择组件。')
    }
    if(d.id==='notes.blocks.align'&&call.arguments.scope==='selected'&&!(call.arguments.target==='researchComponents'?context.selectedBlockIds:context.selectedParagraphIds)?.length)throw Error('当前未选中对应类型的段落或研究组件。')
+   if(d.id==='notes.challenge.configure'&&call.arguments.level===undefined&&call.arguments.commentsExpanded===undefined)throw Error('请指定AI挑战等级或评论展开偏好。')
    signal?.throwIfAborted()
    return handlers[d.handler](call.arguments,context,signal,call.requestId)
   }
@@ -64,6 +66,20 @@ export function createCapabilityExecutor(registry,current){
 /** Display only: unknown adapter/model details and paths remain literal. */
 export function noteCapabilityReceiptMessage(receipt,locale='zh'){
  const message=receipt.message
+ if(receipt.effect?.kind==='challenge'&&['applied','saved'].includes(receipt.effect.state)&&['off','idle','waiting','running','paused','limited','failed'].includes(receipt.effect.phase)&&Number.isInteger(receipt.effect.settings?.level)&&receipt.effect.settings.level>=0&&receipt.effect.settings.level<=4&&typeof receipt.effect.settings.commentsExpanded==='boolean'){
+  const effect=receipt.effect
+  const render=locale=>{
+   const t=value=>noteUiText(value,locale),settings=effect.settings
+   const phase=settings.level===0?'自动挑战已关闭。':effect.phase==='running'?'校验正在运行；本次回执仅确认设置。':effect.phase==='limited'?'校验等待用量恢复；本次回执仅确认设置。':effect.phase==='idle'?'当前没有运行中的校验；本次回执仅确认设置。':effect.phase==='failed'?'最近一次校验未完成；本次回执仅确认设置。':effect.phase==='waiting'||effect.phase==='paused'?'校验等待调度；本次回执仅确认设置。':'校验尚未启动；本次回执仅确认设置。'
+   return t(effect.state==='saved'?'AI挑战设置已保存。':'AI挑战设置已应用，尚未确认保存。')+t('等级：{level}；评论展开偏好：{comments}。').replace('{level}',t(['关闭','宽松','标准','严格','抬杠'][settings.level])).replace('{comments}',t(settings.commentsExpanded?'展开':'收起'))+t(phase)
+  }
+  const original=render('zh'),display=render(locale)
+  if(!message)return display
+  if(message.startsWith(original))return display+noteUiError(message.slice(original.length),locale)
+  const english=render('en')
+  if(message.startsWith(english))return display+message.slice(english.length)
+  return message
+ }
  if(locale!=='en'||typeof message!=='string')return message
  const fixedEffects=['已生成并保存组件','已生成组件，尚未确认保存','已插入组件占位块，尚未生成完成']
  if(fixedEffects.includes(message))return noteUiText(message,locale)
@@ -100,6 +116,6 @@ export function noteCapabilityReceiptMessage(receipt,locale='zh'){
  return message
 }
 export function capabilityReceiptText(receipts,locale='zh'){
- const names={'notes.components.create':'创建组件','notes.export':'导出笔记','notes.components.style':'组件样式','notes.blocks.align':'笔记对齐','notes.components.inspect':'查看所选组件','notes.components.apply':'修改所选组件','canvas.inspect':'查看画布','ui.zoom.reset':'恢复缩放'},labels={succeeded:'已完成',pending:'等待用户操作',cancelled:'已取消',failed:'失败',unavailable:'不可用'}
+ const names={'notes.components.create':'创建组件','notes.export':'导出笔记','notes.components.style':'组件样式','notes.blocks.align':'笔记对齐','notes.components.inspect':'查看所选组件','notes.components.apply':'修改所选组件','notes.challenge.configure':'AI挑战设置','canvas.inspect':'查看画布','ui.zoom.reset':'恢复缩放'},labels={succeeded:'已完成',pending:'等待用户操作',cancelled:'已取消',failed:'失败',unavailable:'不可用'}
  return receipts.map(r=>`${noteUiText(names[r.capability]||r.capability,locale)}${locale==='en'?': ':'：'}${noteUiText(labels[r.status]||'未完成',locale)}${r.path?' — '+r.path:''}${r.message?(locale==='en'?'. ':'。')+noteCapabilityReceiptMessage(r,locale):''}`).join('\n')
 }

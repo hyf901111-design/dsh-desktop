@@ -7,10 +7,11 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:repo,loader:'tsx',contents:`
 import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';
 import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
-window.calls=[];window.receipts=[];window.saved=null;window.effects=[];window.failCreate=false;window.stageEffects=[];window.saveAttempts=0;const pending=new Map();
+window.calls=[];window.receipts=[];window.reviewJobs=[];window.saved=null;window.effects=[];window.failCreate=false;window.stageEffects=[];window.saveAttempts=0;const pending=new Map();
 const bridge={request:async(method,input)=>{window.calls.push({method,input});
  if(method==='load')return {saved:{title:'组合验收',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留我的富文本正文',styles:{bold:true}}]}],yjs:'',revision:0,updatedAt:0}};
  if(method==='save'){if(window.saveFailure){window.saveAttempts++;const fail=()=>{if(window.saveFailure==='exception')throw Error('磁盘写入失败');return{status:'conflict'}};if(window.saveAttempts===1)return fail();return new Promise((resolve,reject)=>{window.completeSave=()=>{try{resolve(fail())}catch(error){reject(error)}}})}window.saved=input.content;return {status:'saved',saved:{...input.content,revision:input.revision+1}}}
+ if(method==='challenge')return new Promise(resolve=>window.reviewJobs.push({input,resolve}));
  if(method==='render')return{html:'<p>组件数据 42</p>',document:'<!doctype html><body><p>组件数据 42</p></body>'};
  if(method==='component-render')return{ok:true};
  if(method==='capability-reply'){if(input.effect){window.stageEffects.push(input.effect);return{ok:true}};const item=pending.get(input.requestId);if(item){pending.delete(input.requestId);input.error?item.reject(Error(input.error)):item.resolve(input.result)}return{ok:true}}
@@ -25,7 +26,7 @@ const bridge={request:async(method,input)=>{window.calls.push({method,input});
  }
  return{}},draft:async()=>{}};
 window.root=createRoot(document.querySelector('#notes'));window.root.render(<NotesApp sessionId='composed' bridge={bridge} dark={false} navigate={()=>{}}/>);
-`},bundle:true,platform:'browser',format:'iife',write:false,outfile:'fixture.js',conditions:['browser','import','style'],define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}},{name:'svg',setup(b){b.onResolve({filter:/\.svg\?inline$/},a=>({path:require('node:path').resolve(a.resolveDir,a.path.slice(0,-7)),namespace:'svg'}));b.onLoad({filter:/.*/,namespace:'svg'},async a=>({contents:'export default '+JSON.stringify('data:image/svg+xml;base64,'+Buffer.from(await readFile(a.path)).toString('base64')),loader:'js'}))}}]})
+`},bundle:true,platform:'browser',format:'iife',write:false,outfile:'fixture.js',conditions:['browser','import','style'],define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor;window.noteChallenge=challenge; const slashMenu = useMemo'),loader:'tsx'}))}},{name:'svg',setup(b){b.onResolve({filter:/\.svg\?inline$/},a=>({path:require('node:path').resolve(a.resolveDir,a.path.slice(0,-7)),namespace:'svg'}));b.onLoad({filter:/.*/,namespace:'svg'},async a=>({contents:'export default '+JSON.stringify('data:image/svg+xml;base64,'+Buffer.from(await readFile(a.path)).toString('base64')),loader:'js'}))}}]})
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text
  const pw=await import(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js');browser=await (pw.default||pw).chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },30000)
@@ -124,3 +125,19 @@ it('captures referenced paragraph IDs for selected-text alignment without touchi
   expect(result.input.capabilityContext.selectedParagraphIds).toEqual(['p']);expect(result.input.capabilityContext.selectedBlockIds).toEqual([]);expect(result.receipt.status).toBe('succeeded');expect(result.blocks[0].props.textAlignment).toBe('center');expect(result.blocks[0].content[0]).toMatchObject({text:'选择这一段',styles:{bold:true}});expect(result.blocks[1].props.textAlignment).toBe('left');expect(errors).toEqual([])
  }finally{await context.close()}
 })
+
+it('saves conversational challenge settings through the real editor and starts the resident review after the conversation',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>{window.noteEditor._tiptapEditor.commands.blur();window.beforeChallenge=JSON.stringify(window.noteEditor.document);window.capabilityCommands=[['notes.challenge.configure',{level:3,commentsExpanded:true}]];document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'把AI挑战切到严格，并展开评论',images:[]}}))})
+  await page.waitForFunction(()=>window.receipts.length===1)
+  const result=await page.evaluate(()=>({receipt:window.receipts[0],configuration:window.noteChallenge.getConfiguration(),saved:window.saved,blocks:JSON.stringify(window.noteEditor.document),before:window.beforeChallenge}))
+  expect(result.receipt).toMatchObject({status:'succeeded',effect:{kind:'challenge',state:'saved',settings:{level:3,commentsExpanded:true}}})
+  expect(result.receipt.message).toContain('设置已保存');expect(result.receipt.message).not.toContain('校验已完成');expect(result.configuration).toMatchObject({level:3,commentsExpanded:true})
+  expect(result.saved.yjs.length).toBeGreaterThan(0);expect(result.blocks).toBe(result.before)
+  await expect.poll(()=>page.evaluate(()=>window.reviewJobs.length)).toBe(1)
+  expect(await page.evaluate(()=>window.reviewJobs[0].input)).toMatchObject({action:'review',level:3})
+  await page.evaluate(()=>window.reviewJobs[0].resolve({version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[]}))
+  await expect.poll(()=>page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
