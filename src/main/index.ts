@@ -1400,7 +1400,7 @@ async function bootstrap(): Promise<void> {
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
     canRead:canReadNoteSession,canWrite:sessionId=>!researchBoardsService?.isSharedSession(sessionId),canvasAvailable:sessionId=>canvasActions.isAvailable(sessionId),inspectCanvas:(sessionId,signal)=>canvasActions.execute({sessionId,method:'inspect',args:{}},signal),resetZoom:()=>executeDesktopMenuCommand('zoom-reset'),nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,
-    componentData:{request:(sessionId,args)=>{if(!noteComponentDataService)throw Error('组件数据刷新服务暂不可用。');return noteComponentDataService.request(sessionId,args)},visible:(sessionId,active)=>noteComponentDataService?.engine.setVisible(sessionId,active),reply:value=>noteComponentActions.respond(value)},
+    componentData:{request:(sessionId,args,control)=>{if(!noteComponentDataService)throw Error('组件数据刷新服务暂不可用。');return noteComponentDataService.request(sessionId,args,control)},visible:(sessionId,active)=>noteComponentDataService?.engine.setVisible(sessionId,active),reply:value=>noteComponentActions.respond(value)},
     captureSources:(sessionId,sources)=>{if(!researchContextBridge)throw Error('笔记资料服务暂不可用。');return researchContextBridge.captureSources(sessionId,sources)},
     files:new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
   }))

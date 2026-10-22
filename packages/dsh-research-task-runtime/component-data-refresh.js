@@ -283,8 +283,10 @@ export class ComponentDataRefresh {
   this.active.get(binding.id)?.controller.abort()
   this.records=this.records.filter(b=>b.id!==binding.id);this.records.push(binding);await this.persist();return structuredClone(binding)
  }
- async configure(id,patch){
+ async configure(id,patch,control={}){
   const b=this.records.find(b=>b.id===id&&b.ownerAccountId===this.options.owner());if(!b)throw Error('组件数据绑定不存在')
+  const check=()=>{control.signal?.throwIfAborted();if(!this.records.includes(b)||b.ownerAccountId!==this.options.owner()||control.expectedRevision!==undefined&&b.revision!==control.expectedRevision)throw Error('组件数据绑定版本已变化，请重新读取。')}
+  check()
   if(!record(patch)||Object.keys(patch).some(k=>!['enabled','intervalMinutes','deleted','sourceId'].includes(k))||patch.intervalMinutes!==undefined&&!interval(patch.intervalMinutes)||patch.enabled!==undefined&&typeof patch.enabled!=='boolean'||patch.sourceId!==undefined&&!sourceId(patch.sourceId))throw Error('刷新设置无效')
   let selected,requests,sources
   if(patch.sourceId!==undefined){
@@ -294,17 +296,21 @@ export class ComponentDataRefresh {
    for(const r of selected.requests){requests.push(await this.options.validateRequest({key:r.key,toolId:r.toolId,args:r.args},b));if(this.options.owner()!==owner||!this.records.includes(b)||b.revision!==revision)throw Error('数据配置已变化，请重试')}
    const issue=refreshNewsScopeIssue(selected.mapping,requests,b.newsScope??b.mapping.title,new Date(this.now()));if(issue)throw Error(issue)
   }
-  this.active.get(id)?.controller.abort();this.active.delete(id)
+  check();this.active.get(id)?.controller.abort();this.active.delete(id)
   if(patch.deleted===true)this.records=this.records.filter(row=>row!==b)
   else{Object.assign(b,patch);if(selected){b.sources=sources.map(s=>s.id===selected.id?{...s,requests}:s);b.requests=requests;b.mapping=selected.mapping;b.error=undefined;b.failures=0}b.revision++;if(b.intervalMinutes===0)b.enabled=false;b.status=b.enabled?'idle':'paused';b.nextRun=b.enabled?this.now()+b.intervalMinutes*60000:null}
   await this.persist();return structuredClone(b)
  }
  async tick(){if(this.stopped)return;for(const [key,run]of this.active)if(run.automatic&&!this.isVisible(this.records.find(b=>b.id===key)?.sessionId))run.controller.abort();const due=this.records.filter(b=>b.ownerAccountId===this.options.owner()&&b.enabled&&this.isVisible(b.sessionId)&&b.nextRun<=this.now());await Promise.allSettled(due.slice(0,4).map(b=>this.refresh(b.id,true)))}
- refresh(id,automatic=false){
-  if(this.active.has(id))return this.active.get(id).promise
+ refresh(id,automatic=false,control){
   const b=this.records.find(b=>b.id===id&&b.ownerAccountId===this.options.owner());if(!b||this.stopped)return Promise.reject(Error('组件数据绑定不存在'))
+  try{control?.signal?.throwIfAborted();if(control?.expectedRevision!==undefined&&b.revision!==control.expectedRevision)throw Error('组件数据绑定版本已变化，请重新读取。')}catch(error){return Promise.reject(error)}
+  if(this.active.has(id))return control?Promise.resolve({...structuredClone(b),status:'refreshing'}):this.active.get(id).promise
   if(automatic&&!this.isVisible(b.sessionId))return Promise.resolve()
-  const controller=new AbortController();const promise=this.run(structuredClone(b),controller.signal,automatic).finally(()=>{if(this.active.get(id)?.promise===promise)this.active.delete(id)})
+  const controller=new AbortController(),abort=()=>controller.abort(control?.signal?.reason)
+  control?.signal?.addEventListener('abort',abort,{once:true})
+  const target={...structuredClone(b),...(control?.guardId?{guardId:control.guardId}:{})}
+  const promise=this.run(target,controller.signal,automatic).finally(()=>{control?.signal?.removeEventListener('abort',abort);if(this.active.get(id)?.promise===promise)this.active.delete(id)})
   this.active.set(id,{promise,controller,automatic});return promise
  }
  async request(b,request,signal){
@@ -338,7 +344,7 @@ export class ComponentDataRefresh {
   const current=()=>this.records.find(row=>row.id===b.id&&row.revision===b.revision&&row.ownerAccountId===this.options.owner())
   const startedAt=this.now();const state=current();state.status='refreshing';state.lastAttempt=startedAt;await this.persist()
   try{
-   const before=await this.options.inspect(b),model=readTemplateModel(before.spec)
+   const before=await this.options.inspect(b,signal),model=readTemplateModel(before.spec)
    signal.throwIfAborted()
    if(!before.writable||!model||model.templateId!==b.templateId||model.version!==b.templateVersion)throw Error('组件模板已变化，请重新绑定数据')
    const scopeIssue=refreshNewsScopeIssue(b.mapping,b.requests,b.newsScope??model.data.title,new Date(startedAt))
@@ -360,7 +366,7 @@ export class ComponentDataRefresh {
    const unchanged=hash(model.data)===hash(accepted.data)
    await this.commit(b,async()=>{
     signal.throwIfAborted();if(!current()||automatic&&!this.isVisible(b.sessionId))return
-    const live=await this.options.inspect(b)
+    const live=await this.options.inspect(b,signal)
     signal.throwIfAborted();if(!current()||automatic&&!this.isVisible(b.sessionId))return
     if(!live.writable||hash(live.spec)!==baseline)throw Error('组件内容已被修改，本次数据未覆盖你的更改')
     if(!unchanged)await this.options.apply(b,live.revision,spec,signal)

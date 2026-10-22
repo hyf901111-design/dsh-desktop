@@ -36,6 +36,7 @@ import {createNoteCapabilityActions,noteCapabilityFingerprint} from './client-ca
 import {useNotePresentation} from './component-presentation'
 import {NotePresentationControls} from './component-presentation-controls'
 import {createNoteComponentDataActions} from './component-data-actions'
+import {createNoteDataCapability} from './data-capability'
 import {InlineNoteFileBlock,noteFilePresentation} from './file-inline'
 import {useInlineComponentGeneration} from './use-inline-component-generation'
 import {useNoteChallenge,CHALLENGE_USER} from './challenge-controller'
@@ -224,6 +225,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>())
   const challengeController=useRef<ReturnType<typeof useNoteChallenge>>()
+  const noteDataCapability=useRef<ReturnType<typeof createNoteDataCapability>>()
   const importing=useRef(new Set<string>()),exportPending=useRef(false),[exporting,setExporting]=useState(false)
   const assistantHost=useMemo(()=>{const host=document.createElement('div');host.className='en-inline-assistant';host.contentEditable='false';return host},[])
   const paintSelection = (range: {from:number;to:number}) => {const version=++anchorVersion.current;setAssistantVisible(true);editor.getExtension(NoteAiSelection)?.highlight(range,assistantHost,()=>queueMicrotask(()=>{if(!disposed.current&&anchorVersion.current===version){setAssistantVisible(false);}}))}
@@ -293,7 +295,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   useEffect(()=>{
     let live=true
     const isVisible=()=>editorActive()&&document.visibilityState!=='hidden'
-    const handle=createNoteComponentDataActions({sessionId:props.sessionId,editor,current:()=>live&&!disposed.current&&!props.recovery&&isVisible(),update:updateSystemComponent})
+    const handle=createNoteComponentDataActions({sessionId:props.sessionId,editor,current:()=>live&&!disposed.current&&!props.recovery&&isVisible(),update:updateSystemComponent,authorize:value=>{if(value.guardId!==undefined&&!noteDataCapability.current)throw Error('组件数据操作已过期或不可用。');noteDataCapability.current?.authorize(value)},onApplied:(value,id)=>noteDataCapability.current?.onApplied(value,id)})
     const receive=(event:Event)=>{void handle((event as CustomEvent).detail).then(reply=>{if(live&&reply)return props.bridge.request('component-data-reply',reply)}).catch(()=>{})}
     const visible=()=>{if(live&&!props.recovery)void props.bridge.request('component-data-visible',{sessionId:props.sessionId,active:isVisible()}).catch(()=>{})}
     document.addEventListener('sherlock:notes-component-data-action',receive);document.addEventListener('visibilitychange',visible);document.addEventListener('sherlock:workspace-surface-change',visible);visible()
@@ -302,9 +304,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   },[editor,props.sessionId,props.recovery,props.bridge,props.active])
   useEffect(()=>{
     let live=true
+    const dataCapability=createNoteDataCapability({editor,selected:()=>{const captured=references.capture();return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]},request:(method,args)=>props.bridge.request(method,{sessionId:props.sessionId,...args}),persist:persistConfirmed,report:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect})})
+    noteDataCapability.current=dataCapability
     const handler=createNoteCapabilityActions({
       editor,snapshot,documentId:client.current,
-      challenge:()=>challengeController.current,
+      challenge:()=>challengeController.current,dataCapability,
       initialFingerprint:()=>capabilityFingerprint.current,
       generationId:()=>request.current,
       current:()=>live&&!disposed.current&&!props.recovery&&editor.isEditable&&editorActive(),
@@ -345,7 +349,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       }).catch(error=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId:input.requestId,error:error.message}).catch(()=>{}))
     }
     document.addEventListener('sherlock:notes-capability-action',receive)
-    return()=>{live=false;document.removeEventListener('sherlock:notes-capability-action',receive)}
+    return()=>{live=false;noteDataCapability.current=undefined;document.removeEventListener('sherlock:notes-capability-action',receive)}
   },[editor,props.sessionId,props.recovery,props.bridge])
   const locate = (id: string) => { const element = scroll.current?.querySelector<HTMLElement>('[data-id="' + CSS.escape(id) + '"]'); if (element) { element.scrollIntoView({ block: 'start', behavior: 'smooth' }); setActive(id) } }
   const track = () => { const top = scroll.current?.getBoundingClientRect().top ?? 0; let current = outline[0]?.id; for (const h of outline) { const el = scroll.current?.querySelector('[data-id="' + CSS.escape(h.id) + '"]'); if (el && el.getBoundingClientRect().top <= top + 140) current = h.id } setActive(current || '') }
