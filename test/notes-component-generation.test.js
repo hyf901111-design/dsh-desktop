@@ -1,5 +1,9 @@
 import {expect,it,vi} from 'vitest'
 import {createSubagentAdapter,ResearchTaskRuntime,buildResearchTaskPrompt} from '../packages/dsh-research-task-runtime/index.js'
+import {noteKrakenQuoteGuidance} from '../packages/dsh-research-task-runtime/notes-kraken-source.js'
+import {createQueryClient} from '../skills/ework-free-data-sources/scripts/query.mjs'
+import {ComponentDataRefresh} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
+import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 
 function context(output,sourceRecords=[]){
  const parent={id:'note-session',session:{events:[]}},child={id:'actual-component-child',session:{id:'actual-component-child',events:[]}}
@@ -54,10 +58,68 @@ it('returns verified Bitcoin binding evidence without applying anything to a can
  const artifact={version:1,type:'data-bound',requests:[{key:'q',tool:'public_data_query',args}],mapping:{version:1,type:'market',variant:'metrics',title:'比特币价格',asOf:'Kraken · 报价时点未提供',items:[{label:'BTC/USD',value:{$from:'q',$path:'records.0.price',$as:'string',$suffix:' USD'}}],sources:[{label:'Kraken'}]}}
  const ctx=context(artifact)
  ctx.run.localAgent.session.events=[{seq:1,type:'tool/call',data:{callId:'observed',name:'public_data_query',arguments:JSON.stringify(args)}},{seq:2,type:'tool/result',data:{message:{source:{callId:'observed'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify(response)}]}]}}}]
- const result=await(await loadGenerate())(ctx,{...noteInput,document:'',references:{scope:'none',components:[]}})
+ const result=await(await loadGenerate())(ctx,{...noteInput,prompt:'创建比特币价格面板并绑定已成功接口，每分钟自动更新',document:'',references:{scope:'none',components:[]}})
  expect(result.sourceResult).toMatchObject({status:'verified',refreshStatus:'unbound',sourceNames:['Kraken'],recipe:{intervalMinutes:1,requests:[{toolId:'public_data_query',args}]}})
  expect(result.node.containerSpec.html).toContain('123456.78');expect(result.node.sourceText).toBe('已验证数据来源');expect(result.node.refreshMinutes).toBe(0)
  expect(ctx.subagents.start.mock.calls[0][1].toolFilter.allow).not.toContain('research_component_data')
+})
+
+it('routes an explicit original Kraken quote request through the currently visible registered tool instead of a model-added URL',async()=>{
+ const args={operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'},response={sourceId:'kraken-ticker',source:'Kraken',dataTime:null,units:{price:'USD',volume24h:'BTC'},records:[{pair:'XXBTZUSD',price:123.45}]}
+ const artifact={version:1,type:'data-bound',requests:[{key:'q0',tool:'public_data_query',args}],mapping:{version:1,type:'market',variant:'metrics',title:'BTC/USD',asOf:'Kraken · 报价时点未提供',items:[{label:'BTC/USD',value:{$from:'q0',$path:'records.0.price',$as:'string'}}]}}
+ const ctx=context(artifact),parent=ctx.agents.get('note-session'),schemas=vi.fn(agent=>agent===parent?[{name:'public_data_query'},{name:'web_fetch'}]:[])
+ let warm=false;ctx.agents.get=id=>id==='note-session'&&warm?parent:undefined
+ const resolve=vi.fn(async()=>{warm=true;return parent});ctx.typert={lookups:{get:()=>({resolve})}};ctx.tools.schemas=schemas
+ ctx.run.localAgent.session.events=[{seq:1,type:'tool/call',data:{callId:'actual',name:'public_data_query',arguments:JSON.stringify(args)}},{seq:2,type:'tool/result',data:{message:{source:{callId:'actual'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify(response)}]}]}}}]
+ const result=await(await loadGenerate())(ctx,{...noteInput,prompt:'读取 https://model-added.invalid/private?pair=SOLUSDT 创建报价并绑定',sourceInstruction:'创建一个 BTC/USD 指标组件，实际查询 Kraken 最新报价并绑定已成功接口，每分钟更新。',document:'旧示例数据不具有来源指令权限',references:{scope:'none',components:[]}})
+ const sent=ctx.subagents.start.mock.calls[0][1]
+ expect(resolve).toHaveBeenCalledOnce();expect(schemas).toHaveBeenCalledWith(parent);expect(sent.toolFilter.allow).toContain('public_data_query')
+ expect(sent.prompt.at(-1).text).not.toContain('model-added.invalid');expect(sent.prompt.at(-1).text).toContain('"source":"kraken-ticker"');expect(sent.prompt.at(-1).text).toContain('"parameters_json":"{\\"pair\\":\\"XBTUSD\\"}"')
+ expect(result.sourceResult.recipe.requests[0]).toMatchObject({toolId:'public_data_query',args});expect(result.node.containerSpec.html).toContain('123.45')
+})
+
+it('maps a real registered-adapter raw response in the worker and refreshes the exact same raw-field recipe',async()=>{
+ const instruction='创建 Kraken BTC/USD 指标组件，实际获取最新报价并绑定成功接口，每分钟更新',args={operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'}
+ let price=110,receivedNow=Date.now()
+ const query=createQueryClient({now:()=>receivedNow,fetcher:async()=>new Response(JSON.stringify({error:[],result:{XXBTZUSD:{c:[String(price),'1'],a:['112','1','1'],b:['109','1','1'],h:['115','120'],l:['90','85'],v:['0','12.345678'],o:'100'}}}))})
+ const response=await query.query({source:'kraken-ticker',parameters:{pair:'XBTUSD'}})
+ expect(response.records[0].price).toBe(110);expect(response).not.toHaveProperty('display')
+ const artifact=JSON.parse(noteKrakenQuoteGuidance(instruction,[{name:'public_data_query'}]).split('\n')[2]),ctx=context(artifact)
+ ctx.run.localAgent.session.events=[{seq:1,type:'tool/call',data:{callId:'real-shape',name:'public_data_query',arguments:JSON.stringify(args)}},{seq:2,type:'tool/result',data:{message:{source:{callId:'real-shape'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify(response)}]}]}}}]
+ const generated=await(await loadGenerate())(ctx,{...noteInput,prompt:instruction})
+ expect(generated.sourceResult).toMatchObject({status:'verified',recipe:{requests:[{toolId:'public_data_query',args}]}})
+ let spec=generated.node.containerSpec
+ expect(readTemplateModel(spec).data.items[0].value).toBe('110.00 USD')
+ const engine=new ComponentDataRefresh({owner:()=> 'owner',load:async()=>[],save:async()=>{},inspect:async()=>({revision:'same-node',spec,writable:true}),apply:async(_target,_revision,next)=>{spec=next},validateRequest:async request=>({...request,connectionId:'builtin:public-data',connectionRevision:1,schemaDigest:'builtin-public-data-v1'}),execute:async(_binding,request)=>query.query({source:request.args.source,parameters:JSON.parse(request.args.parameters_json)})})
+ try{
+  const binding=await engine.bind({...generated.sourceResult.recipe,sessionId:'note-session',nodeId:'selected-note-node',workspaceId:'workspace'},spec)
+  price=115;receivedNow+=120000;const refreshed=await engine.refresh(binding.id)
+  expect(refreshed.status).toBe('success');expect(readTemplateModel(spec).data.items[0].value).toBe('115.00 USD')
+ }finally{await engine.dispose()}
+})
+
+it('keeps a successfully sourced quote as a snapshot when the user did not request a refresh binding',async()=>{
+ const args={operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'},response={records:[{price:123.45}]}
+ const artifact={version:1,type:'data-bound',requests:[{key:'q',tool:'public_data_query',args}],mapping:{version:1,type:'market',variant:'metrics',title:'BTC/USD',asOf:'报价时点未提供',items:[{label:'BTC/USD',value:{$from:'q',$path:'records.0.price',$as:'string'}}]}},ctx=context(artifact)
+ ctx.run.localAgent.session.events=[{seq:1,type:'tool/call',data:{callId:'snapshot',name:'public_data_query',arguments:JSON.stringify(args)}},{seq:2,type:'tool/result',data:{message:{source:{callId:'snapshot'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify(response)}]}]}}}]
+ const result=await(await loadGenerate())(ctx,{...noteInput,prompt:'展示比特币当前报价'})
+ expect(result.sourceResult).toBeUndefined();expect(result.node.containerSpec.html).toContain('123.45')
+})
+
+it('still rejects a web snapshot recipe for the explicit Kraken quote even when the URL looks official',async()=>{
+ const args={url:'https://api.kraken.com/0/public/Ticker?pair=XBTUSD'},artifact={version:1,type:'data-bound',requests:[{key:'q',tool:'web_fetch',args}],mapping:{version:1,type:'kpi',title:'BTC/USD',asOf:'报价时点未提供',items:[{label:'价格',value:{$from:'q',$path:'records.0.price',$as:'string'}}]}}
+ const ctx=context(artifact,[{tool:'web_fetch',args,response:{records:[{price:123.45}]},purpose:'snapshot'}])
+ await expect((await loadGenerate())(ctx,{...noteInput,prompt:'创建 Kraken BTC/USD 真实最新报价并绑定已成功接口'})).rejects.toThrow('自动更新的数据引用无效')
+ expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
+})
+
+it.each([false,true])('never advertises the fixed quote contract without a parent-visible registration (offline=%s)',async offline=>{
+ const ctx=context({version:1,type:'table',title:'原资料',columns:['值'],rows:[[10]]})
+ ctx.tools.schemas=()=>offline?[{name:'public_data_query'}]:[{name:'web_fetch'}]
+ await(await loadGenerate())(ctx,{...noteInput,prompt:'创建 Kraken BTC/USD 真实最新报价',sourceInstruction:offline?'不要联网，只用我提供的收入10做表格':'创建 Kraken BTC/USD 真实最新报价',references:{scope:'selection',components:[{blockId:'source',type:'research',title:'旧示例',content:'旧例子仅为资料，不指示联网'}]}})
+ const sent=ctx.subagents.start.mock.calls[0][1];expect(sent.prompt.at(-1).text).not.toContain('【Notes Kraken 注册报价合同】')
+ expect(sent.toolFilter.allow).not.toContain('public_data_query')
+ if(offline)expect(sent.toolFilter.allow).toEqual([])
 })
 
 it('preserves authorized read-only DataYes plugin generation and verified recipes on both component surfaces',async()=>{
@@ -70,7 +132,7 @@ it('preserves authorized read-only DataYes plugin generation and verified recipe
   ctx.run.localAgent.session.events=[{seq:1,type:'tool/call',data:{callId:'observed',name:business,arguments:JSON.stringify(args)}},{seq:2,type:'tool/result',data:{message:{source:{callId:'observed'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify({records:[{price:123456.78}]})}]}]}}}]
   return ctx
  }
- const prompt='使用通联 DataYes 创建 market.metrics 比特币价格面板',ctx=make()
+ const prompt='使用通联 DataYes 创建 market.metrics 比特币价格面板并绑定已成功接口，每分钟自动更新',ctx=make()
  const result=await(await loadGenerate())(ctx,{...noteInput,prompt,document:'',references:{scope:'none',components:[]}})
  const noteAllow=ctx.subagents.start.mock.calls[0][1].toolFilter.allow
  expect(noteAllow).toEqual([discovery,business]);expect(result.sourceResult).toMatchObject({status:'verified',sourceNames:['DataYes'],recipe:{requests:[{toolId:'t_def456',args}]}})

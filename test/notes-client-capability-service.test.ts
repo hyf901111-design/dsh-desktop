@@ -38,6 +38,16 @@ it('composes style, real local export, canvas inspect and shared UI command thro
   await expect(h.generate('不同指令')).rejects.toThrow('请求标识')
  }finally{h.dispose()}
 })
+
+it('captures the actual human instruction in component context rather than trusting a model-provided source URL',async()=>{
+ const h=harness(),instruction='创建 BTC/USD 指标组件，实际查询 Kraken 最新报价并绑定成功接口'
+ h.wire(body=>body.clientReceipts.length?{kind:'conversation',markdown:'完成'}:{kind:'capabilities',calls:[{requestId:'create',capability:'notes.components.create',arguments:{prompt:'读取 https://model-added.invalid/quote?pair=SOLUSDT 创建组件'}}]})
+ try{
+  const result=await h.generate(instruction),packet=h.actions.find(item=>item.action==='notes.components.create')
+  expect(result.capabilityReceipts[0].status).toBe('succeeded');expect(packet.args.requestContext.sourceInstruction).toBe(instruction)
+  expect(packet.args.prompt).toContain('model-added.invalid');expect(packet.args.requestContext.sourceInstruction).not.toContain('model-added.invalid')
+ }finally{h.dispose()}
+})
 it('reports actual saved actions before the final model response and leaves inspected component contents out of UI progress',async()=>{
  const h=harness({selected:['r']}),path=join(h.root,'progress.md')
  let finishModel!:(value:any)=>void,settled=false

@@ -67,3 +67,14 @@ it('reports generated and durably saved phases before cancellation during data b
  f.resolve('a',{...result(),sourceResult:{status:'verified',recipe:{requests:[]}}})
  expect(await pending).toMatchObject({status:'cancelled',blockId:'a'});expect(effects).toEqual(['applied','saved']);expect(f.save).toHaveBeenCalledOnce();expect(f.node('a').containerSpec).toBeDefined();expect(f.calls.some(call=>call.method==='component-data')).toBe(false)
 })
+
+it('retains the host human source instruction for a retry and replaces it when the user edits the component request',async()=>{
+ const f=fixture(),instruction='实际查询 Kraken BTC/USD 最新报价',prompt='Create a'
+ f.manager.start('a',prompt,{sourceInstruction:instruction})
+ expect(f.calls[0].input.sourceInstruction).toBe(instruction)
+ f.resolve('a',{kind:'conversation',markdown:'请稍后重试。'});await flush()
+ f.manager.start('a',prompt);expect(f.calls.filter(call=>call.method==='generate')[1].input.sourceInstruction).toBe(instruction)
+ const retry=f.calls.filter(call=>call.method==='generate').at(-1);f.pending.get(retry.input.requestId)!.resolve({kind:'conversation',markdown:'仍未取数。'});await flush()
+ const changed='不要联网，仅使用我给的数据10'
+ f.manager.start('a',changed);expect(f.calls.filter(call=>call.method==='generate')[2].input.sourceInstruction).toBe(changed)
+})

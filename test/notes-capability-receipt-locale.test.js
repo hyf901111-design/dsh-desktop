@@ -37,3 +37,10 @@ it('translates alignment and content receipts while retaining their actual saved
  expect(capabilityReceiptText(receipts,'en')).toBe('Note alignment: Completed. Saved alignment for 1 blocks\nInspect selected component: Completed\nUpdate selected component: Cancelled. Applied content to 1 components; saving is not yet confirmed; subsequent operations were cancelled.')
  expect(noteCapabilityReceiptMessage({message:'对齐目标已变化，请重新选择后重试。'},'en')).toBe('The alignment targets changed. Select them again and retry.')
 })
+
+it('describes an existing component refresh as in progress while other pending capabilities still await user action',()=>{
+ const data={capability:'notes.components.data',status:'pending',message:'组件已有刷新任务正在进行，本次未重复启动。'},create={capability:'notes.components.create',status:'pending'}
+ expect(capabilityReceiptText([data])).toBe('笔记组件数据：刷新进行中。组件已有刷新任务正在进行，本次未重复启动。')
+ expect(capabilityReceiptText(JSON.parse(JSON.stringify([data])),'en')).toBe('Note component data: Refresh in progress. The component is already refreshing; no duplicate refresh was started.')
+ expect(capabilityReceiptText([create],'en')).toBe('Create component: Waiting for user action')
+})
