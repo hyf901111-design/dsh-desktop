@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "关闭挑战等级框后同步启动校验并保留后台会话",
+        "featureName": "保护笔记写入保存窗口并在快速完成后恢复挑战队列",
         "branch": "codex/feat/notes-challenge-v16-20261021",
         "baseCommit": "827a1bc8a6f802869e91bd51050b96a5f59374ae",
-        "tipCommit": "9e5746f8efd5c1f0ab4f57a4b683d5411efb53da",
+        "tipCommit": "d58dfacaaf8d8988aa15134ca1cc6d7ed4d9e381",
         "commits": [
           {
             "commit": "9e5746f8efd5c1f0ab4f57a4b683d5411efb53da",
@@ -20,12 +20,34 @@
               "827a1bc8a6f802869e91bd51050b96a5f59374ae"
             ],
             "subject": "修复切换挑战等级后立即离开会话时未启动校验"
+          },
+          {
+            "commit": "3ef04d33aecdae40cdd2e64735af016cb5cf3f2f",
+            "parents": [
+              "9e5746f8efd5c1f0ab4f57a4b683d5411efb53da"
+            ],
+            "subject": "修复笔记会话写入期间挑战提前运行导致保存误报"
+          },
+          {
+            "commit": "d58dfacaaf8d8988aa15134ca1cc6d7ed4d9e381",
+            "parents": [
+              "3ef04d33aecdae40cdd2e64735af016cb5cf3f2f"
+            ],
+            "subject": "修复笔记请求快速结束后挑战队列未恢复"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "src/preload/notes/challenge-controller.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/notes/challenge-scheduler.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
           },
           {
             "status": "M",
@@ -48,9 +70,9 @@
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "exit 0; output/notes-post-135/immediate-9e5746f8efd5c1f0ab4f57a4b683d5411efb53da-0.log",
-            "verifiedCommit": "9e5746f8efd5c1f0ab4f57a4b683d5411efb53da",
-            "completedAt": "2026-10-22T15:04:49.168Z",
+            "summary": "exit 0; output/notes-post-135/writer-final-d58dfacaaf8d8988aa15134ca1cc6d7ed4d9e381-0.log",
+            "verifiedCommit": "d58dfacaaf8d8988aa15134ca1cc6d7ed4d9e381",
+            "completedAt": "2026-10-22T15:22:55.182Z",
             "timeoutMs": 180000
           },
           {
@@ -60,9 +82,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "exit 0; output/notes-post-135/immediate-9e5746f8efd5c1f0ab4f57a4b683d5411efb53da-1.log",
-            "verifiedCommit": "9e5746f8efd5c1f0ab4f57a4b683d5411efb53da",
-            "completedAt": "2026-10-22T15:04:56.280Z",
+            "summary": "exit 0; output/notes-post-135/writer-final-d58dfacaaf8d8988aa15134ca1cc6d7ed4d9e381-1.log",
+            "verifiedCommit": "d58dfacaaf8d8988aa15134ca1cc6d7ed4d9e381",
+            "completedAt": "2026-10-22T15:23:02.197Z",
             "timeoutMs": 180000
           },
           {
@@ -73,27 +95,28 @@
               "827a1bc8a6f802869e91bd51050b96a5f59374ae"
             ],
             "outcome": "passed",
-            "summary": "exit 0; output/notes-post-135/immediate-9e5746f8efd5c1f0ab4f57a4b683d5411efb53da-2.log",
-            "verifiedCommit": "9e5746f8efd5c1f0ab4f57a4b683d5411efb53da",
-            "completedAt": "2026-10-22T15:04:56.297Z",
+            "summary": "exit 0; unmerged predecessor requires original 827a1bc8 handoff boundary",
+            "verifiedCommit": "d58dfacaaf8d8988aa15134ca1cc6d7ed4d9e381",
+            "completedAt": "2026-10-22T15:24:09.847Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实生产mount/controller Chromium回归覆盖同一事件回合关闭选择器并切换会话，后台结果确认保存后再释放旧editor；aff771原生复现作为失败基线，修复后的原生复验待集成构建。"
+          "summary": "生产NotesApp/mount/controller真实Chromium：同turn立即切会话后台保存，以及pending writer/即时完成/即时失败/停止后挑战正确排队恢复；没有改正文。集成组合能力九项叠加验证通过，最终仍须真实集成门禁及原生复验。"
         },
         "acceptanceCriteria": [
-          "明确切换等级后选择器关闭时，在返回事件循环前占用本轮flight与驻留租约，立即切会话不会丢掉本轮执行。",
-          "普通自动节流保持原行为；active、busy、IME、批次和滚动预算门禁均在启动之前且execute再次复核。",
-          "后台仅完成已经启动的这一轮，不因失焦或离开会话重复启动；身份重置与显式停用仍取消。",
-          "不重写笔记正文、原讨论、历史或草稿；结果须确认保存后才释放旧editor。"
+          "在React提交writing state之前也从原request ref读取忙碌状态，不让明确挑战抢先修改保存快照。",
+          "级别偏好变更前同步最新正文、focus、恢复、IME与忙碌状态；不取消普通关框的同步claim。",
+          "会话设置保存后自动进行已排队挑战，不把设置保存说成校验完成。",
+          "维持9e同步claim、滚动预算、身份、正文保护和后台原轮完成语义。",
+          "完成、失败、停止后显式同步清空request后的调度状态，React合并true到false时也能运行已排队等级；普通busy/IME/额度门禁仍有效。"
         ],
         "risks": [
-          "只把明确expedited且已到期的任务同步claim；来源调用仍为异步，不绕过额度或读写身份。",
-          "新源码仍需集成后原生复验；当前运行aff771还含该启动竞态。"
+          "修复仍需最终集成包原生复验。",
+          "source接口未放宽，自动挑战不在写入过程中运行。"
         ],
-        "generatedAt": "2026-10-22T15:04:56.297Z"
+        "generatedAt": "2026-10-22T15:24:09.847Z"
       }
     },
     {
