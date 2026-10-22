@@ -223,6 +223,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>())
+  const challengeController=useRef<ReturnType<typeof useNoteChallenge>>()
   const importing=useRef(new Set<string>()),exportPending=useRef(false),[exporting,setExporting]=useState(false)
   const assistantHost=useMemo(()=>{const host=document.createElement('div');host.className='en-inline-assistant';host.contentEditable='false';return host},[])
   const paintSelection = (range: {from:number;to:number}) => {const version=++anchorVersion.current;setAssistantVisible(true);editor.getExtension(NoteAiSelection)?.highlight(range,assistantHost,()=>queueMicrotask(()=>{if(!disposed.current&&anchorVersion.current===version){setAssistantVisible(false);}}))}
@@ -303,6 +304,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     let live=true
     const handler=createNoteCapabilityActions({
       editor,snapshot,documentId:client.current,
+      challenge:()=>challengeController.current,
       initialFingerprint:()=>capabilityFingerprint.current,
       generationId:()=>request.current,
       current:()=>live&&!disposed.current&&!props.recovery&&editor.isEditable&&editorActive(),
@@ -509,7 +511,13 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const progress=(event:Event)=>{
       const value=(event as CustomEvent).detail
       if(value?.sessionId!==props.sessionId||value.requestId!==request.current)return
-      publishTask(value.requestId,'generating',{stage:value.stage,reasoning:value.reasoning,outputChars:value.outputChars,...value.seq===undefined?{}:{seq:value.seq,startedAt:value.startedAt}})
+      publishTask(value.requestId,'generating',{
+        ...value.stage===undefined?{}:{stage:value.stage},
+        ...value.reasoning===undefined?{}:{reasoning:value.reasoning},
+        ...value.outputChars===undefined?{}:{outputChars:value.outputChars},
+        ...value.capabilityProgress===undefined?{}:{capabilityProgress:value.capabilityProgress},
+        ...value.seq===undefined?{}:{seq:value.seq,startedAt:value.startedAt}
+      })
       const active=activeGeneration.current,task=value.componentTask
       if(!active||active.requestId!==value.requestId||!task||!currentGeneration(active))return
       const node=JSON.parse(active.expected),next={...node,generationTaskId:task.generationTaskId||node.generationTaskId,generationChildSessionId:task.childSessionId||node.generationChildSessionId,generationStartedAt:task.generationStartedAt||node.generationStartedAt,generationEvents:task.generationEvents||node.generationEvents,generationPartialText:task.generationPartialText??node.generationPartialText,generationStatus:'running'}
@@ -570,6 +578,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }, [editor,props.bridge,props.sessionId,document.documentElement.dataset.odysseyLocale])
   const [challengeMarginAvailable,setChallengeMarginAvailable]=useState(false)
   const challenge=useNoteChallenge({editor,doc,bridge:props.bridge,sessionId:props.sessionId,title,scroll,busy:writing,recovery:!!props.recovery,active:props.active,activityId:props.activityId,persist:changed,persistConfirmed})
+  challengeController.current=challenge
   const editedDate=editedAt?noteEditDate(editedAt,document.documentElement.dataset.odysseyLocale):undefined
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
   const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("正在生成内容…")}</span><button onClick={stop}>{t("停止")}</button></div> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}

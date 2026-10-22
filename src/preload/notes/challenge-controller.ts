@@ -88,7 +88,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   const current=blocks(),valid=visibleThreads()
   send('state',{sessionId,level:readLevel(),checks:state.current.checks,coverage:{checked:current.filter(b=>{const record=covered.current.get(b.id);return record?.complete===true&&record.text===b.text&&record.title===latest.current.title&&record.level===readLevel()}).length,total:current.length},issues:valid.map(thread=>({threadId:thread.id,...thread.metadata.issue}))})
  }
- const state=useRef({checks:[] as ChallengeCheck[]})
+ const state=useRef({checks:[] as ChallengeCheck[],phase:'off' as ChallengeScheduleState['phase']})
  const flushReview=()=>{
   // The lease starts before any asynchronous hash/save, and ends only after the
   // original note's current snapshot is confirmed saved. Errors keep it resident.
@@ -163,7 +163,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     for(const id of result.coveredBlockIds){const block=captured.blocks.find(b=>b.id===id);if(block)covered.current.set(id,{text:block.text,title:captured.title,level:captured.level,complete:complete.has(id),issueCount:result.issues.filter(issue=>issue.blockId===id).length})}
    }
    refresh()
-  },onState:value=>{if(!live.current)return;const wasRunning=activity.current.running;activity.current.running=value.phase==='running';if(activity.current.running)publishActivity();setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish();if(wasRunning!==activity.current.running){doc.getMap('note-challenge-results').set('usage',s.usageState());latest.current.persist();flushReview()}}})
+  },onState:value=>{if(!live.current)return;const wasRunning=activity.current.running;activity.current.running=value.phase==='running';if(activity.current.running)publishActivity();state.current.phase=value.phase;setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish();if(wasRunning!==activity.current.running){doc.getMap('note-challenge-results').set('usage',s.usageState());latest.current.persist();flushReview()}}})
   scheduler.current=s;sync();s.setLevel(readLevel())
   const restoredTitle=latest.current.title,restoredBlocks=blocks(),restoredLevel=readLevel(),restoredKey=fingerprint(restoredTitle,restoredBlocks)
   const savedReview=doc.getMap<any>('note-challenge-results').get('state')
@@ -222,6 +222,13 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const setPickerOpen=(open:boolean)=>{if(picker.current.open===open)return;if(open)picker.current={open,initialLevel:readLevel()};else picker.current.open=false;sync();if(!open&&readLevel()!==picker.current.initialLevel)scheduler.current?.recheck(true)}
  const levelChange=(value:ChallengeLevel)=>{if(!value)cancelAction();prefs.set('level',value)}
  const setMarginExpanded=(value:boolean)=>{setPopupAnchor(undefined);dismissed.current.clear();comments.selectThread(undefined,false);setSelected(undefined);prefs.set('marginExpanded',value);setRevision(v=>v+1)}
+ // Reuse the UI preference handlers and the resident scheduler. A capability
+ // changes settings, never creates a separate review or resets its budget.
+ const configure=(settings:{level?:ChallengeLevel;commentsExpanded?:boolean}):void=>{doc.transact(()=>{
+  if(settings.level!==undefined&&settings.level!==readLevel())levelChange(settings.level)
+  if(settings.commentsExpanded!==undefined&&settings.commentsExpanded!==readMarginExpanded())setMarginExpanded(settings.commentsExpanded)
+ })}
+ const getConfiguration=()=>({level:readLevel(),commentsExpanded:readMarginExpanded(),phase:state.current.phase})
  const close=(id:string)=>{setPopupAnchor(undefined);if(action.current?.kind!=='optimize')cancelAction(id);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
  const resolve=async(id:string)=>{setPopupAnchor(undefined);cancelAction(id);replacementReviews.resolveThread(id);comments.selectThread(undefined,false);setSelected(undefined);await comments.threadStore.resolveThread({threadId:id});sync();refresh()}
  const applyReplacement=async(threadId:string,commentId:string)=>{
@@ -306,5 +313,5 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   settle.current=Date.now()+10000;window.setTimeout(()=>{if(live.current)sync()},10010);sync();refresh()
  }})
  const paragraphFeedback=paragraphChallengeFeedback(covered.current,blocks(),options.title,level,threads.map(thread=>({id:thread.id,blockId:thread.metadata.issue.blockId})))
- return {paragraphFeedback,replacementReviews,level,marginExpanded,threads,selected,popupAnchor,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{setPopupAnchor(undefined);dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
+ return {paragraphFeedback,replacementReviews,level,marginExpanded,threads,selected,popupAnchor,busyId,actionKind,phase,running,revision,checks,configure,getConfiguration,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{setPopupAnchor(undefined);dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
 }

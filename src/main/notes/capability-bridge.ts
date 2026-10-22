@@ -1,14 +1,16 @@
 import {randomUUID} from 'node:crypto'
-import type {ClientCapabilityContext,CapabilityEffect,CapabilityStyleEffect,CapabilityExportEffect,CapabilityCreateEffect} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import {noteCapabilityReceiptMessage} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import type {ClientCapabilityContext,CapabilityEffect,CapabilityStyleEffect,CapabilityExportEffect,CapabilityCreateEffect,CapabilityChallengeEffect} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 type Pending={owner:string;sessionId:string;action:string;resolve(value:any):void;reject(error:Error):void;cleanup():void;signal:AbortSignal;current():boolean;cancelled?:boolean;effect?:CapabilityEffect}
-function effectValue(value:any,action:string):CapabilityStyleEffect|CapabilityCreateEffect|undefined{
+function effectValue(value:any,action:string):CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|undefined{
  if(action==='notes.components.create')return value&&['placeholder','applied','saved'].includes(value.state)&&typeof value.blockId==='string'&&value.blockId.length>0&&value.blockId.length<=256?{state:value.state,blockId:value.blockId}:undefined
+ if(action==='notes.challenge.configure')return value?.kind==='challenge'&&['applied','saved'].includes(value.state)&&Number.isInteger(value.settings?.level)&&value.settings.level>=0&&value.settings.level<=4&&typeof value.settings.commentsExpanded==='boolean'&&['off','idle','waiting','running','paused','limited','failed'].includes(value.phase)?{kind:'challenge',state:value.state,settings:{level:value.settings.level,commentsExpanded:value.settings.commentsExpanded},phase:value.phase}:undefined
  if(!['notes.components.style','notes.blocks.align','notes.components.apply'].includes(action))return
  if(!value||!['applied','saved'].includes(value.state)||!Array.isArray(value.changedBlockIds)||value.changedBlockIds.length>10000||value.changedBlockIds.some((id:any)=>typeof id!=='string'||id.length>256))return
  return {state:value.state,changedBlockIds:[...value.changedBlockIds],...(action==='notes.blocks.align'?{kind:'alignment' as const}:action==='notes.components.apply'?{kind:'content' as const}:{})}
 }
-const effectMessage=(effect:CapabilityEffect)=>'blockId' in effect?`${effect.state==='saved'?'已生成并保存组件':effect.state==='applied'?'已生成组件，尚未确认保存':'已插入组件占位块，尚未生成完成'}`:'path' in effect?effect.state==='saved'?`文件已保存：${effect.path}`:`文件写入已开始，保存结果尚未确认：${effect.path}`:`${effect.state==='saved'?'已保存':'已应用但未确认保存'} ${effect.changedBlockIds.length} ${effect.kind==='alignment'?'个块的对齐方式':effect.kind==='content'?'个组件的内容':'个组件的样式'}`
-const cancelledReceipt=(effect?:CapabilityEffect)=>({status:'cancelled',...effect?{effect,...'blockId' in effect?{blockId:effect.blockId}:'path' in effect?{path:effect.path}:{changedBlockIds:effect.changedBlockIds}}:{},message:effect?effectMessage(effect)+'；后续操作已取消。':'操作已取消，尚无已确认的应用结果；请检查原笔记当前状态。'})
+const effectMessage=(effect:CapabilityEffect)=>'settings' in effect?noteCapabilityReceiptMessage({status:'pending',effect,message:''})!:'blockId' in effect?`${effect.state==='saved'?'已生成并保存组件':effect.state==='applied'?'已生成组件，尚未确认保存':'已插入组件占位块，尚未生成完成'}`:'path' in effect?effect.state==='saved'?`文件已保存：${effect.path}`:`文件写入已开始，保存结果尚未确认：${effect.path}`:`${effect.state==='saved'?'已保存':'已应用但未确认保存'} ${effect.changedBlockIds.length} ${effect.kind==='alignment'?'个块的对齐方式':effect.kind==='content'?'个组件的内容':'个组件的样式'}`
+const cancelledReceipt=(effect?:CapabilityEffect)=>({status:'cancelled',...effect?{effect,...'blockId' in effect?{blockId:effect.blockId}:'path' in effect?{path:effect.path}:'changedBlockIds' in effect?{changedBlockIds:effect.changedBlockIds}:{}}:{},message:effect?effectMessage(effect)+'；后续操作已取消。':'操作已取消，尚无已确认的应用结果；请检查原笔记当前状态。'})
 /** Fixed renderer transport. Cancellation may stop future work, never erase a
  * recorded effect. A style acknowledgement after abort belongs only to the
  * original account/session/request and cannot authorize another operation.
@@ -16,7 +18,7 @@ const cancelledReceipt=(effect?:CapabilityEffect)=>({status:'cancelled',...effec
 export class NotesCapabilityBridge{
  private pending=new Map<string,Pending>()
  constructor(private send:(value:any)=>void){}
- request(action:'context'|'notes.export'|'notes.components.style'|'notes.components.create'|'notes.blocks.align'|'notes.components.inspect'|'notes.components.apply',args:any,context:ClientCapabilityContext,generationId:string,signal:AbortSignal,current:()=>boolean):Promise<any>{
+ request(action:'context'|'notes.export'|'notes.components.style'|'notes.components.create'|'notes.blocks.align'|'notes.components.inspect'|'notes.components.apply'|'notes.challenge.configure',args:any,context:ClientCapabilityContext,generationId:string,signal:AbortSignal,current:()=>boolean):Promise<any>{
   signal.throwIfAborted();if(!current())throw Error('笔记会话已变化。')
   const requestId=randomUUID()
   return new Promise((resolve,reject)=>{
@@ -24,7 +26,7 @@ export class NotesCapabilityBridge{
    const finishCancelled=()=>{const job=this.pending.get(requestId);if(!job)return;job.cleanup();this.pending.delete(requestId);resolve(cancelledReceipt(job.effect))}
    const end=(error:Error)=>{
     const job=this.pending.get(requestId);if(!job)return
-    if(['notes.components.style','notes.export','notes.components.create','notes.blocks.align','notes.components.apply'].includes(action)){
+    if(['notes.components.style','notes.export','notes.components.create','notes.blocks.align','notes.components.apply','notes.challenge.configure'].includes(action)){
      if(job.cancelled)return
      job.cancelled=true;clearTimeout(timer);notifyCancel()
      // Let an in-flight save report its actual outcome. A missing renderer is
@@ -47,6 +49,7 @@ export class NotesCapabilityBridge{
  private canAdvance(previous:CapabilityEffect|undefined,next:CapabilityEffect){
   if(!previous)return true
   if(previous.state==='saved'&&next.state!=='saved')return false
+  if('settings' in previous||'settings' in next)return 'settings' in previous&&'settings' in next&&previous.settings.level===next.settings.level&&previous.settings.commentsExpanded===next.settings.commentsExpanded
   if('blockId' in previous)return 'blockId' in next&&previous.blockId===next.blockId&&!(previous.state==='applied'&&next.state==='placeholder')
   return true
  }
