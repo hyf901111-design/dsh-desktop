@@ -331,6 +331,28 @@ export function prepareSimulatedArtifact(panel) {
     if (!acceptArtifactOutput(JSON.stringify(artifact))) throw Error(`面板「${panel.title}」的模拟数据格式无效。${simulatedArtifactProblem(artifact)}`);
     return artifact;
 }
+// Recover only an absent display recipe, before reading an optional layout
+// sketch. The declaration chooses a renderer, never a source permission. A
+// market panel without explicit table evidence remains ambiguous.
+const declaredKeyedColumns=prompt=>/\bkey\s*[/／]\s*label\b/iu.test(prompt)&&/(?:列声明|列结构|列定义|\bcolumns?\b)/iu.test(prompt);
+function sourceTableProfile(panel) {
+    const data=panel.publicData;
+    if(!data||typeof data!=='object'||Array.isArray(data)||Object.hasOwn(data,'profile')||
+        Object.hasOwn(panel,'profile')||Object.hasOwn(panel,'requests')||!['table','market'].includes(panel.type))return panel;
+    const variants=[...panel.prompt.matchAll(/\bmarket\.([a-z][a-z-]*)\b|(?:\bvariant|变体)\s*[:：=]\s*([a-z][a-z-]*)\b/giu)].map(match=>(match[1]??match[2]).toLowerCase());
+    if(variants.some(variant=>variant!=='table'))return panel;
+    const artifact=panel.artifact;
+    const tableArtifact=artifact?.type==='table'&&artifact.variant===undefined||artifact?.type==='market'&&artifact.variant==='table';
+    const keyedColumns=declaredKeyedColumns(panel.prompt);
+    if(panel.type!=='table'&&!tableArtifact&&!variants.length&&!keyedColumns)return panel;
+    const inferred=marketVariant(panel);
+    if(inferred&&inferred!=='table')return panel;
+    const candidate={...data,profile:'quotes-table'};
+    // The existing validator retains the complete original source/parameters,
+    // and rejects mixed providers, unknown keys, intervals and invalid symbols.
+    validatePublicDataPanel(candidate,'market',{strictParameters:true});
+    return {...panel,publicData:candidate};
+}
 // A source planner may include an empty presentation sketch. Carry only its
 // column declaration into the fetch task; never promote placeholders to data
 // or silently drop even one supplied observation. Both flat and data-wrapped
@@ -393,7 +415,11 @@ export function validateWorkbench(value) {
     const panels = resolveWorkbenchSamples(value.panels).map(p => {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
-        let explicitTableLayout=false;
+        if(!isSimulated)p=sourceTableProfile(p);
+        // A textual column declaration has the same layout obligation as a
+        // safe empty sketch. Do not let a fixed quote field allowlist drop an
+        // unfamiliar requested column: pass the full intent to the source task.
+        let explicitTableLayout=!isSimulated&&p.publicData?.profile==='quotes-table'&&declaredKeyedColumns(p.prompt);
         if(!isSimulated&&p.publicData!==undefined&&p.artifact!==undefined){
             const prompt=sourceTableLayoutPrompt(p);
             if(prompt!==null){
