@@ -529,6 +529,184 @@
         ],
         "recordedAt": "2026-10-22T11:58:08.234Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "新闻主题相关性、实体边界与缺链来源去重复核修复",
+        "branch": "codex/feat/component-data-sources-20261019",
+        "baseCommit": "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
+        "tipCommit": "3e7b7349cb69c1fd65b307ec31900cd316af0ebb",
+        "commits": [
+          {
+            "commit": "ed54b9f50f8916c58c2860f832c60f2a3de9c934",
+            "parents": [
+              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
+            ],
+            "subject": "修复：多币行情部分缺失时保留有效报价和完整刷新请求"
+          },
+          {
+            "commit": "4ee9511ab06da6092a9d36a19e28869ea0795db9",
+            "parents": [
+              "ed54b9f50f8916c58c2860f832c60f2a3de9c934"
+            ],
+            "subject": "修复：按用户原需求筛选新闻并保留多币部分行情刷新"
+          },
+          {
+            "commit": "ae594269956b0a835a1f036b66f3b1aab433a234",
+            "parents": [
+              "4ee9511ab06da6092a9d36a19e28869ea0795db9"
+            ],
+            "subject": "修复：选中内容总结与思维导图任务缺省提示时无法启动"
+          },
+          {
+            "commit": "501b30314d891c0beda9b0fd10bc0d236ee88802",
+            "parents": [
+              "ae594269956b0a835a1f036b66f3b1aab433a234"
+            ],
+            "subject": "修复：保留英文新闻实体并限制子行业主题扩展"
+          },
+          {
+            "commit": "56c42230cff841133cf902a7534cc24a5c268c58",
+            "parents": [
+              "501b30314d891c0beda9b0fd10bc0d236ee88802"
+            ],
+            "subject": "修复：新闻先筛主题再限制容量并明确展示缺口"
+          },
+          {
+            "commit": "0c34608f7d1cdb3770a246730a4f686dcfe9ab92",
+            "parents": [
+              "56c42230cff841133cf902a7534cc24a5c268c58"
+            ],
+            "subject": "修复：中英文行业泛词不再扩大新闻主题范围"
+          },
+          {
+            "commit": "3e7b7349cb69c1fd65b307ec31900cd316af0ebb",
+            "parents": [
+              "0c34608f7d1cdb3770a246730a4f686dcfe9ab92"
+            ],
+            "subject": "修复：保留新闻实体并收紧子行业筛选和缺链去重"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/crypto-source-results.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/news-source-scope.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/news-topic-filter.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
+          },
+          {
+            "status": "A",
+            "path": "test/crypto-partial-refresh.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/crypto-public-data.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/news-topic-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/public-data-capacity.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-selected-task-entry.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/news-topic-delivery.test.js",
+              "test/news-source-scope.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/workbench-public-data.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "5 个直接影响测试文件 232 项通过；真实绑定及 ResearchTaskRuntime 入口使用已执行来源记录验证，非真实联网数据。",
+            "verifiedCommit": "3e7b7349cb69c1fd65b307ec31900cd316af0ebb",
+            "completedAt": "2026-10-22T11:57:47Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "tsc --noEmit -p tsconfig.node.json 退出 0。",
+            "verifiedCommit": "3e7b7349cb69c1fd65b307ec31900cd316af0ebb",
+            "completedAt": "2026-10-22T11:57:47Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "HEAD^",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "当前修复提交差异检查退出 0。",
+            "verifiedCommit": "3e7b7349cb69c1fd65b307ec31900cd316af0ebb",
+            "completedAt": "2026-10-22T11:57:47Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "本次只修改新闻主题筛选与来源去重；真实绑定及任务入口合成记录已聚焦验证，未构建共享客户端或进行真实联网/客户端验收。"
+        },
+        "acceptanceCriteria": [
+          "News Corp、ONLY 及其他带泛词的完整英文实体按实体匹配，不因拆出 Corp、品牌、research 等泛词纳入无关新闻。",
+          "光刻机等明确子行业不会因背景父行业而扩展到手机芯片；独立并列要求父行业时仍保留父行业覆盖。",
+          "空、空白或非法链接的不同新闻分别保留，真正重复条目去重；容量说明准确区分已取得未展示与未取得。"
+        ],
+        "risks": [
+          "实体和主题识别为有边界的规则提取，未替代通用语义实体识别；没有增加任意网络源或模型调用。",
+          "本次未执行真实联网来源、模型、客户端 GUI 或共享构建验收。",
+          "未修改 notes、capabilities 或组件数据之外的产品模块；去组件外框仍属未覆盖的独立需求。"
+        ],
+        "generatedAt": "2026-10-22T11:57:47Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -624,6 +802,29 @@
         "--check"
       ],
       "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/news-topic-delivery.test.js",
+        "test/news-source-scope.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-refresh.test.js",
+        "test/workbench-public-data.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "HEAD^",
+        "--check"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
