@@ -19,7 +19,7 @@ const cancelledReceipt=(effect?:CapabilityEffect)=>({status:'cancelled',...effec
 export class NotesCapabilityBridge{
  private pending=new Map<string,Pending>()
  constructor(private send:(value:any)=>void){}
- request(action:'context'|'notes.export'|'notes.components.style'|'notes.components.layout'|'notes.components.create'|'notes.blocks.align'|'notes.components.inspect'|'notes.components.apply'|'notes.challenge.configure'|'notes.components.data',args:any,context:ClientCapabilityContext,generationId:string,signal:AbortSignal,current:()=>boolean):Promise<any>{
+ request(action:'context'|'context.acquire'|'notes.export'|'notes.components.style'|'notes.components.layout'|'notes.components.create'|'notes.blocks.align'|'notes.components.inspect'|'notes.components.apply'|'notes.challenge.configure'|'notes.components.data',args:any,context:ClientCapabilityContext,generationId:string,signal:AbortSignal,current:()=>boolean):Promise<any>{
   signal.throwIfAborted();if(!current())throw Error('笔记会话已变化。')
   const requestId=randomUUID()
   return new Promise((resolve,reject)=>{

@@ -1,4 +1,5 @@
 import {defineTool} from '@deepseek-ai/dsh-tools'
+import {canvasHumanRequest} from './canvas-task-routing.js'
 
 export const CLIENT_TOOL_NAMES=['client_capabilities','client_action']
 const MAX_CALL_BYTES=1500000
@@ -19,12 +20,21 @@ function executionIdentity(exec){
   const index=events.findLastIndex(event=>event?.type==='turn/start'),turnId=turnKey(events[index]?.data?.turn)
   if(index<0||turnId===undefined||events.slice(index+1).some(event=>event?.type==='turn/end'&&turnKey(event.data?.turn)===turnId))
     throw Error('客户端操作没有有效的执行轮次。')
-  return {sessionId:session.id,turnId}
+  const admitted=events.slice(index+1).findLast(event=>event?.type==='user/message'&&event.data?.source?.kind==='user')
+  const human=admitted?canvasHumanRequest({events:[admitted]}):undefined
+  const authoritySeq=admitted?(Number.isSafeInteger(admitted.seq)&&admitted.seq>=0?admitted.seq:events.indexOf(admitted)):undefined
+  const authorityId=admitted?(id(admitted.data?.id)?admitted.data.id:String(authoritySeq)):undefined
+  return {sessionId:session.id,turnId,...authorityId?{authorityId,authoritySeq,sourceInstruction:human?.text&&human.text.length<=8000?human.text:''}:{}}
 }
 
 function actionCall(args){
-  if(!object(args)||Object.keys(args).some(key=>!['requestId','capability','arguments'].includes(key))||!id(args.requestId)||!id(args.capability)||!object(args.arguments))
+  if(!object(args)||Object.keys(args).some(key=>!['requestId','capability','arguments'].includes(key))||!id(args.requestId)||!id(args.capability))
     throw Error('客户端操作参数无效。')
+  // Normalize absence once before transport and the host idempotency key.
+  // Explicit null/undefined or a non-object still fails. The selected fixed
+  // capability schema, not this convenience, decides whether {} is valid.
+  if(!Object.hasOwn(args,'arguments'))args={...args,arguments:{}}
+  if(!object(args.arguments))throw Error('客户端操作参数无效。')
   const pending=[{value:args,depth:0}],ancestors=new Set()
   let minimumBytes=0
   while(pending.length){
@@ -56,7 +66,7 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
     const parameters=method==='catalog'?{}:{
       requestId:{type:'string',required:true,description:'本次客户端操作的唯一标识；重试保持同一标识及相同参数。'},
       capability:{type:'string',required:true,description:'client_capabilities 返回的实际能力 ID。只调用 available=true 的能力。'},
-      arguments:{type:'object',required:true,additionalProperties:true,description:'严格按能力目录声明的参数填写；不能指定其他会话、文档或任意 IPC、URL。'}
+      arguments:{type:'object',additionalProperties:true,description:'严格按能力目录声明的参数填写；零参数能力可省略，等同于 {}，其他能力仍须提供其必填字段。不能指定其他会话、文档或任意 IPC、URL。'}
     }
     disposers.push(ctx.tools.register(defineTool({
       name:method==='catalog'?CLIENT_TOOL_NAMES[0]:CLIENT_TOOL_NAMES[1],
@@ -78,7 +88,9 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
         const controller=new AbortController(),abort=()=>controller.abort()
         controllers.add(controller)
         exec.signal?.addEventListener('abort',abort,{once:true})
-        const timer=setTimeout(abort,120000)
+        // The existing Notes create bridge owns a 250s generation budget plus
+        // a bounded final-effect acknowledgement. Other actions remain 120s.
+        const timer=setTimeout(abort,call?.capability==='notes.components.create'?260000:120000)
         try{
           const response=await request(`${endpoint.origin}/client-capabilities`,{
             method:'POST',redirect:'error',signal:controller.signal,

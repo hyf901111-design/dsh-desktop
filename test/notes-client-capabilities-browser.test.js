@@ -14,6 +14,7 @@ window.autoRefresh=async(nodeId)=>{
  await send('apply',{requestId:'automatic-apply-'+dataSequence,revision:before.revision,changes:[{op:'update',id:nodeId,fields:{containerSpec:spec}}]});
 };
 const bridge={request:async(method,input)=>{window.calls.push({method,input});
+ if(method==='capability-ready'){window.externalReady=input;return{ok:true}}
  if(method==='load')return {saved:window.restoreContent||{title:'组合验收',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留我的富文本正文',styles:{bold:true}}]}],yjs:'',revision:0,updatedAt:0}};
  if(method==='save'){if(window.holdNextSave){window.holdNextSave=false;await new Promise(resolve=>window.completePendingSave=resolve)}if(window.saveFailure){window.saveAttempts++;const fail=()=>{if(window.saveFailure==='exception')throw Error('磁盘写入失败');return{status:'conflict'}};if(window.saveAttempts===1)return fail();return new Promise((resolve,reject)=>{window.completeSave=()=>{try{resolve(fail())}catch(error){reject(error)}}})}window.saved=input.content;return {status:'saved',saved:{...input.content,revision:input.revision+1}}}
  if(method==='challenge')return new Promise(resolve=>window.reviewJobs.push({input,resolve}));
@@ -40,6 +41,9 @@ const bridge={request:async(method,input)=>{window.calls.push({method,input});
   return{kind:'conversation',markdown:'操作回执已确认'}
  }
  return{}},draft:async()=>{}};
+window.externalGeneration='harness:external-fixture';let externalSequence=0;
+window.externalInvoke=(action,args={})=>new Promise((resolve,reject)=>{const requestId='external-'+(++externalSequence),context=window.externalContext||{documentId:window.externalReady.documentId,owner:'alice',sessionId:'composed',mode:'notes',editable:true,selectedBlockIds:[],selectedParagraphIds:[]};pending.set(requestId,{resolve:result=>{if(action==='context.acquire')window.externalContext={...context,...result.context};resolve(result)},reject});document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{requestId,generationId:window.externalGeneration,sessionId:'composed',context,action,args}}))});
+window.acquireExternal=()=>window.externalInvoke('context.acquire');
 window.mountNotes=()=>{window.root=createRoot(document.querySelector('#notes'));window.root.render(<NotesApp sessionId='composed' bridge={bridge} dark={false} navigate={()=>{}}/>)};window.mountNotes();
 `},bundle:true,platform:'browser',format:'iife',write:false,outfile:'fixture.js',conditions:['browser','import','style'],define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor;window.noteChallenge=challenge; const slashMenu = useMemo'),loader:'tsx'}))}},{name:'svg',setup(b){b.onResolve({filter:/\.svg\?inline$/},a=>({path:require('node:path').resolve(a.resolveDir,a.path.slice(0,-7)),namespace:'svg'}));b.onLoad({filter:/.*/,namespace:'svg'},async a=>({contents:'export default '+JSON.stringify('data:image/svg+xml;base64,'+Buffer.from(await readFile(a.path)).toString('base64')),loader:'js'}))}}]})
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text
@@ -309,5 +313,77 @@ it('keeps a human edit protected after a later trusted update in the real editor
   expect(await page.evaluate(()=>window.receipts[0])).toMatchObject({status:'failed',message:'笔记内容已变化，请重新发送请求，较新修改已保留。'})
   expect(await page.evaluate(()=>window.calls.filter(call=>call.method==='component-data-capability').length)).toBe(0)
   expect(await page.evaluate(()=>window.noteEditor.getBlock('p').content[0].text)).toBe('新正文要保留');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+
+it('runs a captured external Harness lease through the real Editor create/style/layout/align/export without starting its composer planner',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>window.acquireExternal())
+  const creating=page.evaluate(()=>window.externalInvoke('notes.components.create',{prompt:'创建实际42表格',requestContext:{sourceInstruction:'明确用户创建要求',context:{scope:'note',components:[]},images:[]}}))
+  await page.waitForFunction(()=>typeof window.completeCard==='function');await page.evaluate(()=>window.completeCard());expect((await creating).effect.state).toBe('saved')
+  const result=await page.evaluate(async()=>{
+   const style=await window.externalInvoke('notes.components.style',{scope:'note',theme:'enterprise',titleBar:false,frame:false})
+   const layout=await window.externalInvoke('notes.components.layout',{scope:'note',width:'full',height:420})
+   const align=await window.externalInvoke('notes.blocks.align',{scope:'note',target:'paragraphs',alignment:'center'})
+   const exported=await window.externalInvoke('notes.export',{format:'md'})
+   return{receipts:[style,layout,align,exported],saved:window.saved,calls:window.calls,planner:window.ordinaryInput}
+  })
+  expect(result.receipts.every(r=>r.status==='succeeded')).toBe(true);expect(result.planner).toBeUndefined()
+  expect(result.calls.filter(c=>c.method==='generate').every(c=>c.input.entryPoint==='component')).toBe(true)
+  expect(result.saved.blocks[0].content[0]).toMatchObject({text:'保留我的富文本正文',styles:{bold:true}})
+  const node=JSON.parse(result.saved.blocks.find(b=>b.type==='research').props.payload);expect(node).toMatchObject({noteSize:{height:420},notePresentation:{theme:'enterprise',titleBar:false,frame:false},containerSpec:{rows:[[42]]}})
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('uses the external generation for the actual guarded data sink and keeps later ordinary mutations valid after its own refresh',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>{
+   const payload=JSON.stringify({id:'source-node',kind:'generated-container',noteDataBound:true,generationStatus:'completed',containerSpec:{version:1,type:'table',title:'Actual data',columns:['Value'],rows:[[42]]}})
+   window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'p',type:'paragraph',content:'正文保持'},{id:'source-block',type:'research',props:{payload}}]);window.noteEditor._tiptapEditor.commands.blur();document.dispatchEvent(new CustomEvent('sherlock:notes-reference-component',{detail:{sessionId:'composed',blockId:'source-block'}}))
+  })
+  const result=await page.evaluate(async()=>{
+   const captured=await window.acquireExternal(),inspect=await window.externalInvoke('notes.components.data',{action:'inspect'}),configure=await window.externalInvoke('notes.components.data',{action:'configure',revision:1,settings:{enabled:false,intervalMinutes:5}}),refresh=await window.externalInvoke('notes.components.data',{action:'refresh',revision:2}),style=await window.externalInvoke('notes.components.style',{scope:'selected',theme:'enterprise'})
+   return{captured,receipts:[inspect,configure,refresh,style],saved:window.saved}
+  })
+  expect(result.captured.context.selectedBlockIds).toEqual(['source-block']);expect(result.receipts.map(r=>r.status)).toEqual(['succeeded','succeeded','succeeded','succeeded'])
+  expect(JSON.parse(result.saved.blocks.find(b=>b.type==='research').props.payload)).toMatchObject({containerSpec:{rows:[[43]]},notePresentation:{theme:'enterprise'}});expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('rejects newer human edits and a concurrent local writer for external document leases',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>window.acquireExternal())
+  await page.evaluate(()=>window.noteEditor.updateBlock('p',{content:'较新正文'}))
+  await expect(page.evaluate(()=>window.externalInvoke('notes.blocks.align',{scope:'note',target:'paragraphs',alignment:'center'}))).rejects.toThrow('笔记内容已变化')
+  expect(await page.evaluate(()=>window.noteEditor.getBlock('p').content[0].text)).toBe('较新正文')
+  await page.evaluate(()=>{window.pauseBeforeCapabilities=true;document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'本地请求先占用',images:[]}}))})
+  await page.waitForFunction(()=>!!window.ordinaryInput)
+  await expect(page.evaluate(()=>window.acquireExternal())).rejects.toThrow('其它请求')
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+
+it('keeps a concurrent composer draft unaccepted and reports busy while an external save is pending',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await prepareLayout(page);await page.evaluate(()=>window.acquireExternal());await page.evaluate(()=>window.holdNextSave=true)
+  const operation=page.evaluate(()=>window.externalInvoke('notes.components.style',{scope:'note',theme:'enterprise'}))
+  await page.waitForFunction(()=>typeof window.completePendingSave==='function')
+  const state=await page.evaluate(()=>{
+   let accepted=0,latest;const accept=()=>accepted++,observe=e=>latest=e.detail
+   document.addEventListener('sherlock:notes-submit-accepted',accept);document.addEventListener('sherlock:notes-composer-state',observe)
+   document.dispatchEvent(new CustomEvent('sherlock:notes-composer-request-state',{detail:{sessionId:'composed'}}))
+   document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',submissionId:101,prompt:'用户尚未被接受的草稿',images:[]}}))
+   document.removeEventListener('sherlock:notes-submit-accepted',accept);document.removeEventListener('sherlock:notes-composer-state',observe)
+   return{accepted,state:latest,generated:window.calls.some(c=>c.method==='generate')}
+  })
+  expect(state).toMatchObject({accepted:0,generated:false,state:{running:true,ready:true}})
+  await page.evaluate(()=>window.completePendingSave());expect((await operation).effect.state).toBe('saved');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

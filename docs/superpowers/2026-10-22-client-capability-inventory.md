@@ -42,7 +42,7 @@
 - 研究组件顶栏、外框已有独立持久化开关 `titleBar:false`、`frame:false`；外框指组件宿主边界，不移除内部表格边线或任意 HTML 自定义边框。导出沿用保存后的实际外观，不提供仅导出时的临时去框。
 - 文件查看器/附件节点外观：当前仅 research 节点。研究组件内置 HTML 如果自己不遵循主题令牌，外层不能保证改写其自定义固定颜色。
 - 插件/MCP、账户、云文档、日程、下载、发布和 OS 级操作：没有登记或授权；不宣称会话已支持。
-- 跨模式 Notes 文档操作：ui.mode.set 已可激活当前会话 Notes 并重新捕获目录，但 Harness 入口尚未建立 NotesEditor 的独立文档/选区/语义指纹与保存 lease，因此不能紧接着直接导出或改写笔记。当前需在该 Notes 自身会话继续；后续接文档 adapter，不能删除 notes 门禁或借用其它打开文档。
+- 跨模式 Notes 文档操作现已接入：同一 Harness 轮次可 ui.mode.set → Notes → client_capabilities，从当前可见 NotesEditor 捕获实际文档/选区/指纹，再调用现有全部 Notes 家族。仍不提供任意 documentId/sessionId 参数、跨文档批量或后台文档写入；没有选中的内容/data操作仍 unavailable 或明确拒绝。当前 Harness 图片附件未转为 Notes inline generation 的图片字节，本轮创建复用真实文本与笔记引用；图片转接属于后续媒体适配，不宣称已支持。
 - 公开 API：这是内部可信宿主协议，没有公开任意传输调用。新能力在注册表添加类型、schema、可用性和共享处理器即可；不应增加自然语言关键词分支。
 
 ## 证据分层
@@ -66,3 +66,16 @@ Harness 原工具循环直接登记 `client_capabilities` / `client_action`，�
 Main 每轮保留最多 32 个操作回执、最多 100 个轮次；达到上限拒绝新操作，绝不因时间过期淘汰回执后重新执行同一副作用。模式变更后的新目录保留同轮既有回执，并依据实际画布绑定/权限重建可用性。跨进程重启不承诺重放。普通对话可执行窗口与当前会话导航；导航到研究且实际画布就绪后，可继续 inspect → apply → undo。研究详情可通过 `canvas.inspect({ids:[实际ID]})` 读取，不能指定另一个 session。
 
 直接验证包含真实注册工具 → 认证本地 HTTP → Main 服务 → CanvasActionBridge → 原 canvasActionController 的读取/改名/CAS/撤销与重复回执，原生 header 注入 hook → selectView → 新 Main context，取消/错误账号/外部窗口/失效 mode/无画布/只读共享权限，以及 Notes 既有保存和导出回执回归。测试不替代集成后的原生 GUI 验收。
+
+
+## 2026-10-23 跨模式 Notes 文档适配
+
+`ui.mode.set` 确认同一会话笔记视图后，首次新目录经固定 Main 文档 adapter 等待真实编辑器 ready，并通过同一个 `NotesCapabilityBridge` 的 `context.acquire` 取得当下 documentId、组件/段落选区及引用。Renderer 为 Harness turn 建立独立 lease，复用 `createNoteCapabilityActions` 的全部处理器，不伪造本地 composer request，不调用第二个模型规划器。原 Notes 会话也通过同一宿主 handler factory 执行创建、样式、尺寸、对齐、组件读写、挑战设置、数据与导出。
+
+本轮授权文字只来自 Harness 当前未结束轮次中最新已进入执行的 `source.kind=user` 真实人类消息；完整研究引用封装仅提取其后的人类正文，畸形封装不授权。真实 message id/seq 构成宿主 authority，同一 turn 新人类消息会立即撤销旧 lease，在 fresh catalog 后重捕最新文档与新授权；旧 completed receipt 只回放不重做。独立 authority token 在异步捕获前登记并在返回后复核，旧网络请求/捕获的迟到结果不能覆盖新请求。旧轮次、插件/引用内容和模型参数不授权导出目的地或新增来源。创建仍通过原单卡引擎，实际引用经原 `prepareNoteReferences` 限权；导出直写仍要求完整绝对目的地与真实人类语句匹配，否则打开保存框。零参数 `client_action` 可省略 arguments，统一成 `{}` 后才进入固定 schema 与幂等 fingerprint；显式 null/错误类型和非零参数的必填字段不放宽。
+
+同文档、同轮次重新读取目录不会重置已捕获正文或选区基线，防止把用户新修改洗成旧写许可。需要重新发送请求或经过明确视图导航的新 UI generation 才建立新的上下文。自己已确认的组件操作可推进该 lease；自动取数仅沿既有可信刷新 delta 推进数据能力专用基线，不能放宽普通写入。local writer、导出和手动单卡生成占用时拒绝外部冲突操作。
+
+外部写操作另持 capability residency，与 challenge residency 独立取 OR。切换会话/模式或取消会停止后续动作，已应用的保存仍可在原编辑器完成并向同 Bridge 报告 saved，确认后才释放驻留；不会把结果写入新会话。Notes 创建沿原250秒预算，工具运输260秒上限包含终态确认，其它通用动作仍120秒有界；返回 pending/failed/cancelled 不冒称完成。
+
+本轮直接证据包含注册工具→认证 HTTP→Main真实 Notes bridge→原 actions→NotesStore/Markdown写盘组合，及真实 NotesEditor无本地planner的创建→样式→尺寸→对齐→导出、单选数据inspect/configure/refresh→样式、正文/选区/账号/CAS/忙碌/取消拒绝、切换会话保存驻留与中英文。Electron原生多能力组合仍须集成候选验收，不能以这些隔离测试代替。

@@ -1,0 +1,6 @@
+{
+  "source": "Sanitized native 880420b4 turn 2 client_action schema rejection and subsequent self-recovery",
+  "firstCall": {"capability":"canvas.inspect","requestId":"fixture-inspect-missing-arguments"},
+  "recoveredCall": {"capability":"canvas.inspect","requestId":"fixture-inspect-with-empty-arguments","arguments":{}},
+  "observedError": "Error: invalid arguments: missing required property \"arguments\""
+}
