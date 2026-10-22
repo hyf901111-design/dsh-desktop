@@ -86,10 +86,11 @@ body [data-ework-notes-session]:has(.en-challenge-tools) [data-srb-utilities]{fl
 
 .en-challenge-paragraph-feedback{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:60}
 .en-challenge-paragraph-line{position:absolute;width:12px;pointer-events:auto;outline:none}
-.en-challenge-paragraph-line::before{content:"";position:absolute;left:4px;top:0;bottom:0;width:3px;border-radius:3px;background:#528cff;animation:en-challenge-paragraph-enter 220ms ease-out both}
-.en-challenge-paragraph-line[data-state=issues]::before{background:#eea438}
-.en-challenge-paragraph-line:focus-visible::before{outline:2px solid var(--en-ink);outline-offset:3px}
+.en-challenge-paragraph-stroke{position:absolute;left:4px;top:min(3px,25%);bottom:min(3px,25%);width:3px;border-radius:3px;background:#528cff;pointer-events:none}
+.en-challenge-paragraph-line[data-state=issues]>.en-challenge-paragraph-stroke{background:#eea438}
+.en-challenge-paragraph-line:focus-visible>.en-challenge-paragraph-stroke{outline:2px solid var(--en-ink);outline-offset:3px}
 .en-challenge-paragraph-line>[role=tooltip]{position:absolute;right:16px;top:0;width:max-content;max-width:min(280px,calc(100vw - 64px));padding:8px 10px;border:1px solid var(--en-challenge-border);border-radius:8px;background:var(--en-popup);color:var(--en-ink);box-shadow:var(--en-challenge-popup-shadow);font-size:12px;line-height:1.6;opacity:0;visibility:hidden;pointer-events:none;transition:opacity 120ms ease;white-space:normal}
-.en-challenge-paragraph-line:is(:hover,:focus-visible)>[role=tooltip]{opacity:1;visibility:visible}
-@keyframes en-challenge-paragraph-enter{from{opacity:0}to{opacity:1}}
-@media(prefers-reduced-motion:reduce){.en-challenge-paragraph-line::before{animation:none}.en-challenge-paragraph-line>[role=tooltip]{transition:none}}
+.en-challenge-paragraph-line:not([data-exiting]):is(:hover,:focus-visible)>[role=tooltip]{opacity:1;visibility:visible}
+@media(prefers-reduced-motion:reduce){.en-challenge-paragraph-line>[role=tooltip]{transition:none}}
+
+.en-challenge-paragraph-line[data-exiting]{pointer-events:none}
