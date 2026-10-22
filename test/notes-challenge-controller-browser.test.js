@@ -145,11 +145,16 @@ it('persists margin preference per note across resize, reload and switching with
 
 it('persists an optimization preview without editing and applies it only through the explicit replacement action',async()=>{
  const{context,page,errors,id}=await fixture();try{
-  await page.evaluate(id=>window.challenge.select(id),await page.evaluate(()=>window.challenge.threads[0].id));await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'这项结论的程度较高。'}})
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'这项结论的程度较高。'}})
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
   await expect.poll(()=>page.locator('.en-challenge-replacement-text').allTextContents()).toEqual(['这项结论的程度较高。'])
-  await expect.poll(()=>page.evaluate(()=>Object.keys(window.saved).length)).toBe(1);await page.evaluate(()=>window.remount());await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1);await page.evaluate(()=>window.challenge.select(window.challenge.threads[0].id));await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(1)
+  await expect.poll(()=>page.evaluate(()=>Object.keys(window.saved).length)).toBe(1)
+  await page.evaluate(()=>{window.previousChallenge=window.challenge;window.remount()})
+  // The old controller still exists until React mounts the restored editor.
+  // Wait for the new controller and the persisted thread, not the stale array.
+  await expect.poll(()=>page.evaluate(id=>window.challenge!==window.previousChallenge&&window.challenge.threads.some(thread=>thread.id===id),id)).toBe(true)
+  await page.evaluate(id=>window.challenge.select(id),id);await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(1)
   await page.locator('.en-challenge-card').screenshot({path:'/tmp/notes-challenge-v16-replacement-preview.png'});await page.locator('.en-challenge-replace').click()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
   expect(await page.locator('.en-challenge-replace').count()).toBe(0);expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
