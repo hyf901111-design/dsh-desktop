@@ -222,6 +222,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>())
+  const challengeScheduleSync=useRef<()=>void>()
   const importing=useRef(new Set<string>()),exportPending=useRef(false),[exporting,setExporting]=useState(false)
   const assistantHost=useMemo(()=>{const host=document.createElement('div');host.className='en-inline-assistant';host.contentEditable='false';return host},[])
   const paintSelection = (range: {from:number;to:number}) => {const version=++anchorVersion.current;setAssistantVisible(true);editor.getExtension(NoteAiSelection)?.highlight(range,assistantHost,()=>queueMicrotask(()=>{if(!disposed.current&&anchorVersion.current===version){setAssistantVisible(false);}}))}
@@ -485,9 +486,9 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         if (pending && currentGeneration()) editor.updateBlock(pending, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(pending).props.payload),generationStatus:'failed',generationError:message}) } })
         rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); setError(message)
       }
-    } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); publishComposer({running:false}); request.current = ''; generatingBlock.current = '';activeGeneration.current=undefined } }
+    } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); publishComposer({running:false}); request.current = ''; generatingBlock.current = '';activeGeneration.current=undefined;challengeScheduleSync.current?.() } }
   }
-  const stop = () => { epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。")) }
+  const stop = () => { epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。"));challengeScheduleSync.current?.() }
   const inlineComponents=useInlineComponentGeneration({sessionId:props.sessionId,bridge:props.bridge,editor,current:()=>!disposed.current&&!props.recovery&&editorActive(),persist:persistConfirmed,changed,update:updateSystemComponent})
   const apply = async (replace: boolean) => {
     if (!preview) return
@@ -568,6 +569,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }, [editor,props.bridge,props.sessionId,document.documentElement.dataset.odysseyLocale])
   const [challengeMarginAvailable,setChallengeMarginAvailable]=useState(false)
   const challenge=useNoteChallenge({editor,doc,bridge:props.bridge,sessionId:props.sessionId,title,scroll,busy:writing,isBusy:()=>!!request.current,recovery:!!props.recovery,active:props.active,activityId:props.activityId,persist:changed,persistConfirmed})
+  challengeScheduleSync.current=challenge.syncScheduling
   const editedDate=editedAt?noteEditDate(editedAt,document.documentElement.dataset.odysseyLocale):undefined
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
   const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("正在生成内容…")}</span><button onClick={stop}>{t("停止")}</button></div> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
