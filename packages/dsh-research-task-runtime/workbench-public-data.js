@@ -1,6 +1,6 @@
 import { resolveBoundComponent } from './component-source-binding.js'
 import {financialWidgetDefaults,financialWidgetSpec} from './financial-widget-contract.js'
-import {generalNewsScope,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
+import {generalNewsScope,NEWS_CAPACITY_MARKER,NEWS_DISPLAY_INSTRUCTION} from './news-source-scope.js'
 import {normalizeCryptoTickerResult} from './crypto-source-results.js'
 
 // These recipes describe the bundled adapter's schema, never model-authored
@@ -93,6 +93,7 @@ export function publicDataNewsTaskType(value,type){
   return count>100?'html':count>40?value.layoutProfile==='openterminal'?'market':'table':type
 }
 const newsCapacityRequirement=(value,requirement)=>{
+  requirement+='\n'+NEWS_DISPLAY_INSTRUCTION
   const type=publicDataNewsTaskType(value,'news')
   if(type==='news')return requirement
   const representation=type==='html'?`自包含HTML搜索、主题/日期分组与分页视图；全部真实记录保留在底层数据中，分页仅改变当前可见条目，不删除记录。${value.layoutProfile==='openterminal'?'OpenTerminal阅读布局在HTML继承宿主主题视觉；不要设置HTML不支持的artifact.layoutProfile。':''}原周期更新要求仍保留（intervalMinutes:${value.intervalMinutes??1}）；现有HTML不支持宿主data-bound自动渲染，当前为快照，尚未绑定原周期更新要求，必须明确说明，不能声称自动刷新已启用`:value.layoutProfile==='openterminal'?'market.table；variant: table；顶层保留layoutProfile:openterminal':'table的columns/rows'
@@ -117,7 +118,7 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
     })
     if(new Set(requests.map(r=>r.symbol)).size!==requests.length)throw Error('免费源组件请求重复')
     const scope=JSON.stringify({requests,intervalMinutes:value.intervalMinutes??1,...(value.layoutProfile?{layoutProfile:value.layoutProfile}:{})})
-    return newsCapacityRequirement(value,`宿主来源能力校正：内置sina-news不支持symbol证券筛选，本卡改由一个独立news取数任务；不要把这些筛选参数再次提交给sina-news。保留原面板全部主题、字段与证券筛选元信息：${scope}。不得扩大为全市场新闻；仅使用原需求允许且能按标的检索的来源中实际取得的相关报道、原始标题、时间和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`)
+    return newsCapacityRequirement(value,`宿主来源能力校正：内置sina-news不支持symbol证券筛选，本卡改由一个独立news取数任务；不要把这些筛选参数再次提交给sina-news。保留原面板全部主题与字段；以下证券筛选元信息仅供执行和验证，不写入note：${scope}。不得扩大为全市场新闻；仅使用原需求允许且能按标的检索的来源中实际取得的相关报道、原始标题、时间和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`)
   }
   // Observed planners group company keyword searches in one news panel. The
   // adapter cannot execute them; retain their validated scope for a worker.
@@ -139,7 +140,7 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
     })
     if(new Set(queries.map(v=>JSON.stringify(v))).size!==queries.length)throw Error('免费源组件请求重复')
     const scope=JSON.stringify({queries,intervalMinutes:value.intervalMinutes??1,...(value.layoutProfile?{layoutProfile:value.layoutProfile}:{})})
-    return newsCapacityRequirement(value,`宿主来源能力校正：sina-news不支持主题关键词查询；已声明的定向新闻查询由一个独立news取数任务按对应来源能力执行。保留原面板全部主题、字段与筛选元信息：${scope}。不得扩大为全市场新闻；仅使用原需求允许的来源中实际取得的相关报道、时间、摘要和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`)
+    return newsCapacityRequirement(value,`宿主来源能力校正：sina-news不支持主题关键词查询；已声明的定向新闻查询由一个独立news取数任务按对应来源能力执行。保留原面板全部主题与字段；以下筛选元信息仅供执行和验证，不写入note：${scope}。不得扩大为全市场新闻；仅使用原需求允许的来源中实际取得的相关报道、时间、摘要和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`)
   }
   if(value?.profile!=='news'||!Array.isArray(value.requests)||value.requests.length!==1)return null
   const request=value.requests[0]
@@ -157,7 +158,7 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
   const scope=JSON.stringify({source:request.source,...(hasSymbols?{symbols}:{}),limit:parameters.limit??20,intervalMinutes:supported.intervalMinutes,...(supported.layoutProfile?{layoutProfile:supported.layoutProfile}:{})})
   if(!hasSymbols&&!themed)return newsCapacityRequirement(value,`本卡明确要求全市场财经总流。由普通单卡任务复用已校验请求取得全部真实记录：${scope}。保留来源、日期、原文链接和实际返回数量。`)
   const layout=supported.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终news数据对象顶层必须保留已校验的 "layoutProfile":"openterminal"（即artifact.layoutProfile），沿用该内部布局。':''
-  return newsCapacityRequirement(value,`宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券或公司/行业主题筛选；本卡改由独立取数任务完成。保留原面板全部需求及筛选元信息：${scope}。${layout}${hasSymbols?'不得删除证券筛选后交付全市场新闻；':''}不得扩大为全市场新闻；只保留与原面板公司/行业主题及已声明证券匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`)
+  return newsCapacityRequirement(value,`宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券或公司/行业主题筛选；本卡改由独立取数任务完成。保留原面板全部需求；以下筛选元信息仅供执行和验证，不写入note：${scope}。${layout}${hasSymbols?'不得删除证券筛选后交付全市场新闻；':''}不得扩大为全市场新闻；只保留与原面板公司/行业主题及已声明证券匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`)
 }
 
 // A comparison chart may need several valid history requests, while the

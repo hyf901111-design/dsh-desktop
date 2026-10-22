@@ -9,6 +9,7 @@ import {prepareRequest,createQueryClient} from '../skills/ework-free-data-source
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
 import {Window} from 'happy-dom'
 import {runInNewContext} from 'node:vm'
+import {NEWS_DISPLAY_INSTRUCTION,newsScopeInstruction} from '../packages/dsh-research-task-runtime/news-source-scope.js'
 
 // Synthetic provider rows: these exercise routing and persistence, not live news.
 const newsPanel=(title,prompt)=>({title,prompt,type:'news',size:'large',publicData:{profile:'news',requests:[{source:'sina-news',parameters_json:'{"limit":12}'}],intervalMinutes:1}})
@@ -19,6 +20,27 @@ const record=(request,rows)=>({tool:request.tool,args:request.args,response:{sou
 const broadRows=general.items.map(item=>({...item,time:item.date}))
 
 describe('news research scope',()=>{
+ it.each([
+  [{limit:12}],
+  [{symbol:'sz300308',limit:12}],
+  [{symbols:['sz300308','sz300502'],limit:12}],
+  [{query:'比特币',limit:12}],
+  [{query:'比特币',limit:60},{query:'以太坊',limit:60}]
+ ])('keeps execution metadata in the task and explicitly reserves visible notes for true user-facing coverage (%j)',(...parameters)=>{
+  const rows=parameters.filter(value=>value&&typeof value==='object'&&!Array.isArray(value)),panel=newsPanel('加密资产专题','保留原始报道、来源和未取得的研究对象。')
+  panel.publicData.requests=rows.map(value=>({source:'sina-news',parameters_json:JSON.stringify(value)}));panel.publicData.intervalMinutes=0
+  const input={requestId:'display-boundary',title:'研究工作台',originalRequest:'只检索比特币和以太坊相关新闻，保留来源范围与缺失。',panels:[panel]},planned=validateWorkbench(input).panels[0]
+  const prompt=workbenchPanelPrompt(input,planned)
+  expect(planned.prompt).toContain(NEWS_DISPLAY_INSTRUCTION);expect(prompt).toContain(NEWS_DISPLAY_INSTRUCTION)
+  for(const value of rows)for(const entry of Object.values(value))for(const part of Array.isArray(entry)?entry:[entry])expect(planned.prompt).toContain(String(part))
+  expect(planned.prompt).toContain('"intervalMinutes":0');expect(prompt).toContain('仅供执行和验证');expect(prompt).toContain('不要复制到note')
+  expect(prompt).toContain('不得以截断或清空原有note掩盖真实缺口');expect(validateWorkbench({...input,panels:[planned]}).panels[0]).toEqual(planned)
+ })
+ it('gives ordinary scoped news the same presentation boundary without rewriting existing note data',()=>{
+  const instruction=newsScopeInstruction('只展示比特币相关新闻。')
+  expect(instruction).toContain(NEWS_DISPLAY_INSTRUCTION);expect(instruction).toContain('真实来源、实际报道日期与查询范围、未取得的对象及原因、当前刷新状态')
+  expect(instruction).toContain('检索仅覆盖首页');expect(instruction).toContain('不承诺完整区间或最新数据')
+ })
  it.each([
   ['加密市场最新资讯','最新加密货币相关财经资讯流（新浪财经新闻，limit:12），每分钟自动刷新'],
   ['航司动态','南方航空、中国国航与春秋航空最近事件'],
