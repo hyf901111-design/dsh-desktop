@@ -27,7 +27,9 @@ const annualYears = text => distinct([...text.replace(labelledDate,'').matchAll(
 // Share the exact year scopes with the completion check. A second forecast
 // clause without its own metric must not inherit the first clause's receipt.
 export function consensusForecastScopes(sentence) {
-  const fragments=annualYears(sentence).length>1?sentence.split(/，|(?<!\d),|,(?!\d)/u).filter(fragment=>explicitForecastHint(fragment)&&!/实际|已实现|已披露|已公布|已发布|非预测|不是预测|\b(?:actual|realized|historical|reported|not\s+(?:a\s+)?forecast)\b/iu.test(fragment)):[sentence]
+  const clauses=sentence.split(/，|(?<!\d),|,(?!\d)/u)
+  const separate=annualYears(sentence).length>1||clauses.filter(clause=>explicitForecastHint(clause)&&annualYears(clause).length).length>1
+  const fragments=separate?clauses.filter(fragment=>explicitForecastHint(fragment)&&!/实际|已实现|已披露|已公布|已发布|非预测|不是预测|\b(?:actual|realized|historical|reported|not\s+(?:a\s+)?forecast)\b/iu.test(fragment)):[sentence]
   return fragments.map(text=>({text,years:annualYears(text)}))
 }
 

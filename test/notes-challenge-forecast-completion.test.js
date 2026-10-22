@@ -42,6 +42,8 @@ it('compares explicitly forecast adjacent years in one sentence and completes on
 })
 
 it.each([
+ '预计2026年EPS76元，预计2027年目标价为1500元。',
+ '预计2026年EPS76元，预计2027年资本开支为90亿元。',
  '盈利预测：预计2026年EPS76元。',
  '盈利预测 / 估值测算：预计2026年EPS76元。',
  '预计2026年EPS76元；以上盈利假设仅用于估值测算。'
@@ -53,6 +55,7 @@ it.each([
 
 it.each([
  '预计2026年EPS76元，预计2027年为75元。',
+ '预计2026年EPS76元，预计2026年为75元。',
  '预计2026年归母净利润950亿元，预计2027年为900亿元。',
  'Forecast FY2026 EPS76元, forecast FY2027 at 75元。',
  '预计2026年EPS76元，归母净利润继续增加。',
