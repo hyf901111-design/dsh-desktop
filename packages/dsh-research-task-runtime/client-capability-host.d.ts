@@ -1,0 +1,3 @@
+import type {ClientCapabilityContext} from './client-capabilities.js'
+import {createClientCapabilityRegistry,createCapabilityExecutor} from './client-capabilities.js'
+export function createClientCapabilityHost(options:{current:()=>ClientCapabilityContext|undefined;handlers?:Parameters<typeof createClientCapabilityRegistry>[0];canvas?:(method:string,args:any,context:ClientCapabilityContext,signal?:AbortSignal)=>Promise<unknown>;window?:(action:string,args:any,context:ClientCapabilityContext,signal?:AbortSignal)=>Promise<unknown>;navigate?:(mode:string,context:ClientCapabilityContext,signal?:AbortSignal)=>Promise<unknown>}):{registry:ReturnType<typeof createClientCapabilityRegistry>;executor:ReturnType<typeof createCapabilityExecutor>}

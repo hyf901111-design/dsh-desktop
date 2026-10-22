@@ -33,7 +33,7 @@ it('composes style, real local export, canvas inspect and shared UI command thro
   const result=await h.generate('组件用易方达，隐藏顶栏，导出到“'+path+'”，查看当前画布并恢复默认缩放')
   expect(result.capabilityReceipts.map((r:any)=>r.status)).toEqual(['succeeded','succeeded','succeeded','succeeded']);expect(result.markdown).toContain(path);expect(result.markdown).not.toContain('fake completion');expect(readFileSync(path,'utf8')).toContain('保留正文')
   const stored=await h.call('load');expect(JSON.parse(stored.saved.blocks[1].props.payload)).toMatchObject({notePresentation:{theme:'enterprise',titleBar:false},noteSize:{width:390}})
-  expect(h.inspectCanvas).toHaveBeenCalledWith('note',expect.any(AbortSignal));expect(h.resetZoom).toHaveBeenCalledOnce();expect(h.history[0].receipts).toHaveLength(4)
+  expect(h.inspectCanvas).toHaveBeenCalledWith('note',expect.any(AbortSignal),{});expect(h.resetZoom).toHaveBeenCalledOnce();expect(h.history[0].receipts).toHaveLength(4)
   expect(await h.generate('组件用易方达，隐藏顶栏，导出到“'+path+'”，查看当前画布并恢复默认缩放')).toEqual(result);expect(h.calls()).toBe(2)
   await expect(h.generate('不同指令')).rejects.toThrow('请求标识')
  }finally{h.dispose()}

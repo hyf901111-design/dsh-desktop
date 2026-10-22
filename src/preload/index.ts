@@ -1,3 +1,4 @@
+import {createClientCapabilitiesBridge} from './client-capabilities'
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { mountNotes } from './notes/mount'
 import {createNoteHistoryLoader} from './notes/history-loader'
@@ -326,6 +327,7 @@ contextBridge.exposeInMainWorld(
     scheduledTasks: Object.freeze({list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list')}),
     componentData: Object.freeze({subscribe:(callback:(value:unknown)=>void)=>{const listener=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on('component-data:status',listener);return()=>ipcRenderer.removeListener('component-data:status',listener)},request:(sessionId:string,args:unknown)=>ipcRenderer.invoke('component-data:request',sessionId,args),setVisible:(sessionId:string,active:boolean)=>ipcRenderer.invoke('component-data:visibility',sessionId,active)}),
     researchCanvasActions: createCanvasActionsBridge(ipcRenderer),
+    clientCapabilities:createClientCapabilitiesBridge(ipcRenderer),
     financialWidget: Object.freeze({request:(args:unknown)=>ipcRenderer.invoke('research:financial-widget',args),openExternal:(url:string)=>ipcRenderer.invoke('research:financial-open-link',url)}),
     componentLibrary: Object.freeze({request:(args:unknown)=>ipcRenderer.invoke('research:component-library',args)}),
     calendarTool: Object.freeze({request:(args:unknown)=>ipcRenderer.invoke('research:calendar:request',args),subscribe:(callback:(value:unknown)=>void)=>{const listener=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on('research:calendar:event',listener);return()=>ipcRenderer.removeListener('research:calendar:event',listener)}}),

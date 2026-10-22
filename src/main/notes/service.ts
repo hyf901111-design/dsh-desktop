@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto'
-import {createClientCapabilityRegistry,createCapabilityExecutor} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import {createClientCapabilityHost} from '../../../packages/dsh-research-task-runtime/client-capability-host.js'
 import type {ClientCapabilityContext,CapabilityReceipt} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {runClientCapabilityLoop} from '../../../packages/dsh-research-task-runtime/client-capability-loop.js'
 import {NotesCapabilityBridge} from './capability-bridge'
@@ -27,7 +27,7 @@ import { pickNoteFiles } from './file-picker'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
-  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; canWrite?(sessionId:string):boolean; canvasAvailable?(sessionId:string):boolean; inspectCanvas?(sessionId:string,signal:AbortSignal):Promise<unknown>; resetZoom?():Promise<void>; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any,control?:{signal?:AbortSignal;guardId?:string}):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
+  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; canWrite?(sessionId:string):boolean; canvasAvailable?(sessionId:string):boolean; inspectCanvas?(sessionId:string,signal:AbortSignal,args?:{ids?:string[]}):Promise<unknown>; resetZoom?():Promise<void>;windowAction?(action:string,args:any):Promise<unknown>; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any,control?:{signal?:AbortSignal;guardId?:string}):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   const capabilityBridge=new NotesCapabilityBridge(value=>{const window=options.getWindow();if(!window||window.isDestroyed())throw Error('笔记窗口不可用。');(window.webContents as any).send('notes:capability-action',value)})
@@ -155,12 +155,12 @@ export function installNotesService(options: {
           const current=()=>!!generationWindow&&!generationWindow.isDestroyed()&&options.getWindow()===generationWindow&&options.owner()===owner&&options.canRead(session)&&active.get(input.requestId)===controller&&!signal.aborted
           const renderer=(action:'context'|'notes.export'|'notes.components.style'|'notes.components.layout'|'notes.components.create'|'notes.blocks.align'|'notes.components.inspect'|'notes.components.apply'|'notes.challenge.configure'|'notes.components.data',args:any)=>capabilityBridge.request(action,args,clientContext!,input.requestId,signal,current)
           const componentData=createNoteDataRevisionHandler(clientContext?.selectedBlockIds[0],args=>renderer('notes.components.data',args))
-          const registry=createClientCapabilityRegistry({
+          const host=createClientCapabilityHost({current:()=>current()?clientContext:undefined,...options.windowAction?{window:async(action,args)=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');return options.windowAction!(action,args)}}:{},handlers:{
             ...clientContext?{...options.componentData?{componentData}:{},configureChallenge:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.challenge.configure',args)},createComponent:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.create',{...args,requestContext:{images:input.images??[],context:input.context,title:input.title,markdown:input.markdown,selection:input.selection,sourceInstruction:input.prompt}})},exportNote:async(args:any)=>{const destinations=explicitNoteExportPaths(input.prompt);if(args.path&&destinations.length&&!destinations.includes(args.path))throw Error('导出位置与本次明确指定的位置不一致，请重新选择保存位置。');return renderer('notes.export',destinations.length?args:{...args,path:undefined})},alignBlocks:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.blocks.align',args)},inspectNoteComponent:async(args:any)=>renderer('notes.components.inspect',args),layoutComponents:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.layout',args)},applyNoteComponent:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.apply',args)},styleComponents:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.style',args)}}:{},
-            ...options.inspectCanvas&&(options.canvasAvailable?.(session)??true)?{inspectCanvas:async()=>{await renderer('context',{});const data=await options.inspectCanvas!(session,signal);return {status:'succeeded' as const,data}}}:{},
+            ...options.inspectCanvas&&(options.canvasAvailable?.(session)??true)?{inspectCanvas:async(args:any)=>{await renderer('context',{});const data=await options.inspectCanvas!(session,signal,args);return {status:'succeeded' as const,data}}}:{},
             ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
-          })
-          const executor=createCapabilityExecutor(registry,()=>current()?clientContext:undefined),receipts:CapabilityReceipt[]=[]
+          }})
+          const {registry,executor}=host,receipts:CapabilityReceipt[]=[]
           const result=await runClientCapabilityLoop({signal,execute:call=>executor.execute(call,clientContext!,signal),onReceipts:items=>{
             receipts.push(...items)
             // Only validated host receipts may become visible action progress.

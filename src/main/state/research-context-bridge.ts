@@ -17,6 +17,7 @@ type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes:
 type Options = {
   sessionCompleted?(value: { sessionId: string; seq: number; title: string; preview: string }): void
   canvasAction?(value: unknown,signal?:AbortSignal): Promise<unknown>
+  clientCapability?(value:unknown,signal?:AbortSignal):Promise<unknown>
   scheduledTask?(value: unknown): Promise<unknown>
   canReadSession?(sessionId: string): boolean
   isSharedSession?(sessionId:string):boolean
@@ -121,11 +122,11 @@ export class ResearchContextBridge {
         res.end(serialized)
       }
       if (!this.authorized(req)) return send(403, { error: '资料请求被拒绝。' })
-      if (!['/snapshot','/board-authority','/canvas-actions','/session-completed','/scheduled-tasks'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      if (!['/snapshot','/board-authority','/canvas-actions','/client-capabilities','/session-completed','/scheduled-tasks'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
       try {
         const chunks: Buffer[] = []
         let size = 0
-        const maxBody = req.url === "/canvas-actions" ? 1600000 : req.url === "/scheduled-tasks" ? 32768 : MAX_BODY_BYTES
+        const maxBody = ["/canvas-actions","/client-capabilities"].includes(req.url??'') ? 1600000 : req.url === "/scheduled-tasks" ? 32768 : MAX_BODY_BYTES
         if (Number(req.headers['content-length']) > maxBody) throw new Error()
         for await (const part of req) {
           const chunk = Buffer.from(part); size += chunk.length
@@ -146,12 +147,12 @@ export class ResearchContextBridge {
           this.options.sessionCompleted?.({ sessionId: raw.sessionId, seq: raw.seq, title: raw.title, preview: raw.preview ?? '' })
           return send(200, { ok: true })
         }
-        if(req.url==='/canvas-actions') {
+        if(req.url==='/canvas-actions'||req.url==='/client-capabilities') {
           const controller=new AbortController(),abort=()=>controller.abort()
           const close=()=>{if(!res.writableEnded)abort()}
           req.on('aborted',abort);res.on('close',close)
           if(req.aborted||res.destroyed)abort()
-          try { if(!this.options.canvasAction)throw Error('画布操作服务不可用。');return send(200,await this.options.canvasAction(raw,controller.signal)) }
+          try { const action=req.url==='/client-capabilities'?this.options.clientCapability:this.options.canvasAction;if(!action)throw Error('客户端操作服务不可用。');return send(200,await action(raw,controller.signal)) }
           catch(error){if(!res.destroyed)return send(400,{error:error instanceof Error?error.message:'画布操作失败。'})}
           finally{req.off('aborted',abort);res.off('close',close)}
           return

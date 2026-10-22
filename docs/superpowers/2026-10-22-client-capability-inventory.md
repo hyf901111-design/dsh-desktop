@@ -1,8 +1,8 @@
 # 客户端会话能力目录（2026-10-22）
 
-这是 Notes 普通会话入口已接入的能力清单。它不是全客户端功能清单，也不表示目录之外的功能已经可以由模型调用。
+这是 Notes 普通会话与 Harness 研究/普通对话入口共用的能力清单。它不是全客户端功能清单，也不表示目录之外的功能已经可以由模型调用。
 
-当前注册表共 11 项语义能力（inspect/apply 分别计数）。本轮新增组件布局，尚未将目录接入所有会话模式，也未新增批量数据操作或窗口视图命令。
+当前注册表共 17 项语义能力（inspect/apply 分别计数）。本轮将同一类型目录接入 Harness 现有工具循环，新增研究画布 apply/undo、窗口缩放/全屏、当前会话视图切换。可用性由真实界面与宿主权限动态决定，不表示全部客户端按钮已经覆盖。
 
 | 语义 ID | 参数 | 真实共享处理器与完成依据 |
 | --- | --- | --- |
@@ -15,7 +15,10 @@
 | `notes.challenge.configure` | 可选 `level: 0–4`、`commentsExpanded: boolean`，至少一项 | 复用真实挑战 controller 配置与 Yjs 保存，不改正文、不重置既有预算；回执区分设置已保存与校验等待/运行，不宣称已校验完成。 |
 | `notes.components.data` | `action: inspect/configure/refresh`；修改需真实 revision | 仅当前明确单选且已绑定的生成组件；复用 NoteComponentDataService、真实配方与 CAS。configure 仅启停/频率，refresh 读取真实 status，失败保留旧内容和上次成功。原生金融控件不支持；不开放来源切换、自由绑定或整篇批量。 |
 | `canvas.inspect` | 空对象 | 复用 `CanvasActionBridge.inspect`；仅当前 session 存在有效绑定时提供，执行再检查可见 Notes 上下文与画布绑定。真实数据进入后续工具上下文。 |
-| `ui.zoom.reset` | 空对象 | 复用 `executeDesktopMenuCommand('zoom-reset')`；实际命令完成后回执。 |
+| `canvas.apply` / `canvas.undo` | `revision/operations` 或 `revision/actionId` | 复用 CanvasActionBridge → 原 canvasActionController，既有整批校验、最后写入前 CAS、取消与撤销不变。原生 market/table/chart/kpi 数据通过既有 artifact 校验后交给真实处理器。applied/unchanged 为成功，pending 保留“同步待确认”，不宣称已同步。 |
+| `ui.zoom.in` / `ui.zoom.out` / `ui.zoom.reset` | 空对象 | 复用 `executeDesktopMenuCommand` 的三个真实菜单动作；回执返回实际 zoomLevel。Notes 入口也共用此窗口处理器。 |
+| `ui.fullscreen.set` | `enabled: boolean` | 复用菜单 toggle-fullscreen；仅当前状态不同时切换，并等待实际状态确认。相同设置不重复反向切换。 |
+| `ui.mode.set` | `mode: conversation/research/notes` | 可信当前会话原生 header 的同一个 `selectView` 处理器。仅当前 session，无模型 sessionId；以新 header binding 确认导航。完成后必须重新查询目录；board-only 等原生视图限制保留。 |
 
 主题枚举为 `light/dark/enterprise/openterminal/auto`，`enterprise` 即易方达。组件节点覆盖层复用 workbench palette 和已有 iframe 主题消息。选中组件的“组件外观”控件提供同一能力的手动入口，包含中英文顶栏和外框开关。
 
@@ -33,13 +36,14 @@
 
 ## 尚未接入的家族与扩展点
 
-- Notes 的通用目录仍只接入 Canvas inspect；研究会话已有独立 research_canvas_inspect/apply/undo 与数据工具，尚未统一成跨模式目录。研究 inspect 现在声明 presentation/presentationFields，apply 可单独提交 `{op:"presentation",fields:{workbenchStyle:"enterprise"}}`，复用手动 `setWorkbenchStyle`，按当前看板保存；该操作不能与内容/整理混批。需重新 inspect 获取新 revision 后才能继续整理，展示偏好不宣称支持内容事务撤销。
-- 客户端导航、设置、主题、窗口、更新及其他菜单：当前只有 zoom.reset；应映射现有 menu command handler，不开放任意命令执行。
+- 研究/对话已通过 client_capabilities/client_action 复用同一目录，canvas inspect/apply/undo 已统一；research_canvas_* 原入口仍保留并共享底层处理器。研究 inspect 现在声明 presentation/presentationFields，apply 可单独提交 `{op:"presentation",fields:{workbenchStyle:"enterprise"}}`，复用手动 `setWorkbenchStyle`，按当前看板保存；该操作不能与内容/整理混批。需重新 inspect 获取新 revision 后才能继续整理，展示偏好不宣称支持内容事务撤销。
+- 窗口缩放/全屏及当前会话三种视图切换已登记；设置、全局主题、更新与其他菜单尚未覆盖，不开放任意 menu command。
 - 组件尺寸布局已支持整篇及多选；组件内容修改和数据绑定操作仍限单选。批量数据操作需要宿主捕获目标清单与逐项 revision/CAS，不能靠模型枚举或移除 selected 门禁实现。
 - 研究组件顶栏、外框已有独立持久化开关 `titleBar:false`、`frame:false`；外框指组件宿主边界，不移除内部表格边线或任意 HTML 自定义边框。导出沿用保存后的实际外观，不提供仅导出时的临时去框。
 - 文件查看器/附件节点外观：当前仅 research 节点。研究组件内置 HTML 如果自己不遵循主题令牌，外层不能保证改写其自定义固定颜色。
 - 插件/MCP、账户、云文档、日程、下载、发布和 OS 级操作：没有登记或授权；不宣称会话已支持。
-- 公开 API：本目录是内部 Notes host 适配层，尚未成为全产品跨入口的工具协议。新能力在注册表添加类型、schema、可用性和共享处理器即可；不应增加自然语言关键词分支。
+- 跨模式 Notes 文档操作：ui.mode.set 已可激活当前会话 Notes 并重新捕获目录，但 Harness 入口尚未建立 NotesEditor 的独立文档/选区/语义指纹与保存 lease，因此不能紧接着直接导出或改写笔记。当前需在该 Notes 自身会话继续；后续接文档 adapter，不能删除 notes 门禁或借用其它打开文档。
+- 公开 API：这是内部可信宿主协议，没有公开任意传输调用。新能力在注册表添加类型、schema、可用性和共享处理器即可；不应增加自然语言关键词分支。
 
 ## 证据分层
 
@@ -51,3 +55,14 @@
 - Notes host → renderer → selected component inspect/apply → NotesStore → 导出链覆盖真实处理器；仅模型输出与原生 PDF printer 仍沿测试替身。
 - 选区、正文、payload 或会话在异步 hash 中改变时拒绝旧写入，重新发送并 inspect 后可继续；没有选中、不同目标、非法结构均无副作用。
 - 研究会话工具 → HTTP → session bridge → 真实 workspace 的主题变更保持其他看板不变、保存失败不假报成功、旧 revision 可重新 inspect 重试；保留既有手动主题和全局试用行为。
+
+
+## 2026-10-23 跨模式运输与验收
+
+Harness 原工具循环直接登记 `client_capabilities` / `client_action`，没有第二个模型规划器或关键词分流。前者无模型参数，后者只有能力 ID、arguments、requestId。真正 sessionId 和 live turnId 由执行器当前用户会话派生；普通用户分支的 `parentSession` 仅为历史谱系，仍须以分支自身 sessionId 匹配当前可见窗口，不能借父会话绑定。`origin:subagent` 或非零 delegationDepth、已结束轮次与宿主已登记的定时任务均不能借用当前窗口。
+
+固定 `/client-capabilities` 端点复用 ResearchContextBridge 的 127.0.0.1/token/无 Origin/限体积及断连取消。可信原生 header 每次视图或 session 变化发布 90 秒绑定（30 秒续约）；Main 再核账号、窗口实例、当前 session、模式、可读/可写权限。切换或关闭绑定会取消旧 generation 的在途画布请求，显式 caller cancellation 与已发出的导航请求分别报告；导航不会假称笔记导出或挑战已完成。
+
+Main 每轮保留最多 32 个操作回执、最多 100 个轮次；达到上限拒绝新操作，绝不因时间过期淘汰回执后重新执行同一副作用。模式变更后的新目录保留同轮既有回执，并依据实际画布绑定/权限重建可用性。跨进程重启不承诺重放。普通对话可执行窗口与当前会话导航；导航到研究且实际画布就绪后，可继续 inspect → apply → undo。研究详情可通过 `canvas.inspect({ids:[实际ID]})` 读取，不能指定另一个 session。
+
+直接验证包含真实注册工具 → 认证本地 HTTP → Main 服务 → CanvasActionBridge → 原 canvasActionController 的读取/改名/CAS/撤销与重复回执，原生 header 注入 hook → selectView → 新 Main context，取消/错误账号/外部窗口/失效 mode/无画布/只读共享权限，以及 Notes 既有保存和导出回执回归。测试不替代集成后的原生 GUI 验收。
