@@ -2,10 +2,10 @@ import {challengeReviewAnchors,type ChallengeBlock,type ChallengeCheck,type Chal
 
 export const CHALLENGE_LEVELS=[
  {name:'关闭',description:'专注写作，暂停自动挑战',pause:0,interval:0,deep:0},
- {name:'宽松',description:'只提醒明显问题，减少打扰',pause:15000,interval:60000,deep:600000},
- {name:'标准',description:'兼顾事实、逻辑与表达',pause:5000,interval:30000,deep:300000},
- {name:'严格',description:'深入检查证据、前提与推理',pause:3000,interval:20000,deep:180000},
- {name:'抬杠',description:'提出反驳与追问，检验观点',pause:3000,interval:15000,deep:120000}
+ {name:'宽松',description:'仅指出错别字及拼写错误',pause:5000,interval:10000,deep:600000},
+ {name:'标准',description:'指出事实、逻辑、表达方面问题',pause:2500,interval:6000,deep:300000},
+ {name:'严格',description:'深入检查证据、前提与推理',pause:2000,interval:4000,deep:180000},
+ {name:'抬杠',description:'热衷质疑与追问，协助完善内容',pause:1500,interval:3000,deep:120000}
 ] as const
 const inline=(value:any):string=>typeof value==='string'?value:Array.isArray(value)?value.map(inline).join(''):value&&typeof value==='object'?value.type==='hardBreak'?'\n':inline(value.text??value.content):''
 export function challengeDocumentBlocks(blocks:any[]):ChallengeBlock[]{
@@ -35,6 +35,7 @@ export class NoteChallengeScheduler{
  private initialized=false
  private hasEdited=false
  private firstAt?:number
+ private expedited=false
  private lastRun=-Infinity
  private lastDeep=-Infinity
  private flight?:{controller:AbortController;ids:string[]}
@@ -44,12 +45,12 @@ export class NoteChallengeScheduler{
  constructor(private options:{sessionId:string;run:(request:ChallengeRequest,signal:AbortSignal)=>Promise<ChallengeResult>;onResult:(result:ChallengeResult,captured:Captured)=>void|Promise<void>;onState?:(value:ChallengeScheduleState)=>void;now?:()=>number;getReviewAnchors?:()=>ChallengeReviewAnchor[]}){}
  private now(){return this.options.now?.()??Date.now()}
  private emit(phase:ChallengeScheduleState['phase']){this.options.onState?.({phase,pending:this.pending.size,checks:this.checks})}
- setLevel(level:ChallengeLevel){
+ setLevel(level:ChallengeLevel,immediate=false){
   if(!Number.isInteger(level)||level<0||level>4||this.disposed)return
   if(this.level===level)return
   const enabling=this.level===0
-  this.level=level;this.cancel();this.firstAt=undefined
-  if(level){for(const b of this.value.blocks)this.pending.add(b.id);if(enabling)this.firstAt=this.now()+2000}
+  this.level=level;this.cancel();this.firstAt=undefined;this.expedited=immediate
+  if(level){for(const b of this.value.blocks)this.pending.add(b.id);if(immediate)this.firstAt=this.now();else if(enabling)this.firstAt=this.now()+2000}
   else this.pending.clear()
   this.schedule()
  }
@@ -62,16 +63,16 @@ export class NoteChallengeScheduler{
    const titleChanged=previous.title!==value.title
    for(const block of value.blocks)if(titleChanged||before.get(block.id)!==JSON.stringify(block))this.pending.add(block.id)
    const ids=new Set(value.blocks.map(b=>b.id));for(const id of this.pending)if(!ids.has(id))this.pending.delete(id)
-   if(initial){if(this.level)this.firstAt=this.now()+2000}
-   else{this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined;this.failed.clear()}
+   if(initial){this.editedAt=this.now();if(this.level)this.firstAt=this.now()+2000}
+   else{this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined;this.expedited=false;this.failed.clear()}
   }
-  if(composingEnded){this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined}
+  if(composingEnded){this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined;this.expedited=false}
   if(!this.value.active||this.value.busy||this.value.composing)this.cancel()
   this.schedule()
  }
- recheck(){if(!this.level||this.disposed)return;this.failed.clear();for(const b of this.value.blocks)this.pending.add(b.id);this.firstAt=this.now();this.schedule()}
+ recheck(immediate=false){if(!this.level||this.disposed)return;this.expedited=immediate;this.failed.clear();for(const b of this.value.blocks)this.pending.add(b.id);this.firstAt=this.now();this.schedule()}
  private cancel(){clearTimeout(this.timer);this.timer=undefined;if(this.flight){for(const id of this.flight.ids)if(this.value.blocks.some(b=>b.id===id))this.pending.add(id);this.flight.controller.abort()}}
- private eligible(){return this.value.blocks.filter(b=>this.pending.has(b.id)&&!this.failed.has(b.id)&&(b.id!==this.value.editingBlockId||b.type==='heading'||/[。！？.!?；;：:]\s*$/u.test(b.text)))}
+ private eligible(){return this.value.blocks.filter(b=>this.pending.has(b.id)&&!this.failed.has(b.id))}
  private batch(){
   const chosen:ChallengeBlock[]=[],ids:string[]=[];let chars=0,oversized=false,deep=false
   for(const block of this.eligible()){
@@ -112,7 +113,10 @@ export class NoteChallengeScheduler{
   if(!batch.ids.length){this.emit('limited');return}
   const wait=this.budgetWait(batch.chars)
   if(wait!==undefined){this.emit('limited');this.timer=setTimeout(()=>this.schedule(),wait);return}
-  const config=CHALLENGE_LEVELS[this.level],due=Math.max(this.firstAt??this.editedAt+config.pause,this.hasEdited?this.editedAt+config.pause:-Infinity,this.lastRun+config.interval)
+  // Missing punctuation is not a permanent veto: a stable phrase can contain a
+  // complete misspelled word. Wait longer at the caret, while IME stays paused.
+  const current=this.value.blocks.find(b=>b.id===this.value.editingBlockId&&this.pending.has(b.id)),unfinished=current&&current.type!=='heading'&&!/[。！？.!?；;：:]\s*$/u.test(current.text)
+  const config=CHALLENGE_LEVELS[this.level],interval=this.hasEdited&&this.editedAt>=this.lastRun?config.pause:config.interval,due=this.expedited?this.now():Math.max(this.firstAt??this.editedAt+config.pause,this.hasEdited?this.editedAt+config.pause:-Infinity,unfinished?this.editedAt+Math.max(config.pause,5000):-Infinity,this.lastRun+interval)
   this.emit('waiting');this.timer=setTimeout(()=>{this.timer=undefined;void this.execute()},Math.max(0,due-this.now()))
  }
  private async execute(){
@@ -121,7 +125,7 @@ export class NoteChallengeScheduler{
   if(!ids.length||this.budgetWait(chars)!==undefined){this.schedule();return}
   for(const id of ids)this.pending.delete(id)
   const captured:Captured={key:key(this.value),title:this.value.title,blocks:this.value.blocks.map(b=>({...b}))},controller=new AbortController(),job={controller,ids}
-  this.flight=job;this.lastRun=this.now();if(deep)this.lastDeep=this.now();this.firstAt=undefined;const usage={at:this.now(),chars,input:0,output:0};this.usage.push(usage);this.emit('running')
+  this.flight=job;this.expedited=false;this.lastRun=this.now();if(deep)this.lastDeep=this.now();this.firstAt=undefined;const usage={at:this.now(),chars,input:0,output:0};this.usage.push(usage);this.emit('running')
   let onAbort:()=>void=()=>{}
   try{
    const aborted=new Promise<never>((_,reject)=>{onAbort=()=>reject(controller.signal.reason);controller.signal.addEventListener('abort',onAbort,{once:true})})

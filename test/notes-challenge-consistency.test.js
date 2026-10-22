@@ -5,7 +5,7 @@ beforeEach(() => vi.spyOn(console, 'warn').mockImplementation(() => {}))
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 const blocks = [{ id: 'a', type: 'paragraph', text: '太阳从东边升起。水在标准大气压下100℃沸腾、10℃结冰。' }]
-const input = { sessionId: 'qa', requestId: 'PRIVATE-REQUEST-ID', action: 'review', level: 1, title: '太阳从西边升起', blocks }
+const input = { sessionId: 'qa', requestId: 'PRIVATE-REQUEST-ID', action: 'review', level: 2, title: '太阳从西边升起', blocks }
 const bad = { quote: '太阳从东边升起', category: 'uncertain', basis: 'general-knowledge', message: '标题有误，正文首句表述本身正确，请核对标题。', evidence: [] }
 const real = { quote: '水在标准大气压下100℃沸腾、10℃结冰', category: 'uncertain', basis: 'general-knowledge', message: '该句大体相符，但结冰温度应为0℃而非10℃，是否需修正？', evidence: [] }
 const primary = { reviews: [{ blockId: 'a', issues: [bad, real] }] }

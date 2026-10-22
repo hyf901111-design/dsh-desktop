@@ -1,0 +1,27 @@
+{
+  "source": "Native accepted findings from b7ce3253, 2026-10-22; replay envelope reconstructed with explicit note basis (not raw provider output). QA snapshot only.",
+  "input": {
+    "sessionId": "session-e26f284a-d38f-465c-9fec-ce26507f8f48",
+    "requestId": "7208925a-0f4e-4366-83b6-8b7dcf28ac53",
+    "action": "review",
+    "title": "秋日里的银杏",
+    "level": 3,
+    "blocks": [
+      {
+        "id": "d7bb4927-5eca-47e1-bd6f-f5bd48a5a51d",
+        "type": "paragraph",
+        "text": "有一点需要说明：银杏原产于中国，后来才传播到欧洲等地，如今经过长久培育已广泛种植。银杏落叶时间很短，一般一场冷雨过后，短短两三天，满树黄叶就会落尽，想关上盛景要掐好时间。拾一片完整的银杏叶夹在书里，做成书签，留住秋天，是很多人年少时都做过的小事。"
+      },
+      {
+        "id": "a1dc16fd-e17e-4f16-92ce-3d1484835829",
+        "type": "paragraph",
+        "text": "没有什么可以主档，我探索自由的方向。"
+      }
+    ],
+    "changedIds": [
+      "d7bb4927-5eca-47e1-bd6f-f5bd48a5a51d",
+      "a1dc16fd-e17e-4f16-92ce-3d1484835829"
+    ]
+  },
+  "visibleText": "{\"reviews\": [{\"blockId\": \"d7bb4927-5eca-47e1-bd6f-f5bd48a5a51d\", \"issues\": [{\"quote\": \"想关上盛景要掐好时间\", \"category\": \"typo\", \"message\": \"“关上盛景”疑为“赶上盛景”之误，用字错误致语句不通\", \"evidence\": [{\"kind\": \"note\", \"label\": \"原文对照\", \"blockId\": \"d7bb4927-5eca-47e1-bd6f-f5bd48a5a51d\", \"quote\": \"银杏落叶时间很短，一般一场冷雨过后，短短两三天，满树黄叶就会落尽\"}], \"basis\": \"note\"}]}, {\"blockId\": \"a1dc16fd-e17e-4f16-92ce-3d1484835829\", \"issues\": [{\"quote\": \"没有什么可以主档，我探索自由的方向。\", \"category\": \"typo\", \"message\": \"“主档”疑为错字（如“阻挡”），且句子结构不完整，语义不明\", \"evidence\": [{\"kind\": \"note\", \"label\": \"原文对照\", \"blockId\": \"a1dc16fd-e17e-4f16-92ce-3d1484835829\", \"quote\": \"没有什么可以主档，我探索自由的方向。\"}], \"basis\": \"note\"}]}]}"
+}

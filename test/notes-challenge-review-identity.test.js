@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { generateNoteChallenge } from '../packages/dsh-research-task-runtime/notes-challenge-runtime.js'
 
 const input = {
-  sessionId: 'PRIVATE-SESSION', requestId: 'PRIVATE-REQUEST', action: 'review', level: 1, title: 'PRIVATE-TITLE',
+  sessionId: 'PRIVATE-SESSION', requestId: 'PRIVATE-REQUEST', action: 'review', level: 2, title: 'PRIVATE-TITLE',
   blocks: [
     { id: 'target-private-00000001', type: 'paragraph', text: 'PRIVATE-BODY-ONE。' },
     { id: 'target-private-00000002', type: 'paragraph', text: 'PRIVATE-BODY-TWO。' },
