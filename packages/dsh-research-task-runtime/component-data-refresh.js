@@ -9,6 +9,7 @@ import {newsSourceScopeIssue,generalNewsScope} from './news-source-scope.js'
 import {filterScopedNewsArtifact} from './news-topic-filter.js'
 import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-query-coverage.js'
 import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
+import {normalizeKeyedTableProjection} from './table-projection.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
 const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize'])
@@ -192,7 +193,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  }))
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
-export function materializeComponentMapping(mapping,responses,now=new Date(),sourceRecords=[]){
+export function materializeComponentProjection(mapping,responses,now=new Date(),sourceRecords=[]){
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
  const metadata=componentSourceMetadata(mapping,responses,sourceRecords)
  const qualityAlias=mapping?.type==='kpi'&&Object.hasOwn(mapping,'missing')
@@ -203,7 +204,9 @@ export function materializeComponentMapping(mapping,responses,now=new Date(),sou
  const asOf=mapping.asOf,body={...mapping}
  if(qualityAlias)delete body.missing
  if(Object.hasOwn(mapping,'asOf'))body.asOf=''
- let data=normalizeIndexedTableRows(evaluateMapping(body,responses,now,responses,0,{nodes:0},'component'))
+ const projection=normalizeKeyedTableProjection(evaluateMapping(body,responses,now,responses,0,{nodes:0},'component'),mapping)
+ mapping=projection.mapping
+ let data=normalizeIndexedTableRows(projection.data)
  if(!candle&&Object.hasOwn(mapping,'asOf')){
   try{data.asOf=evaluateMapping(asOf,responses,now,responses,0,{nodes:0},'timestamp')}
   catch(error){
@@ -273,7 +276,10 @@ export function materializeComponentMapping(mapping,responses,now=new Date(),sou
    return result
   })
  }
- return normalizeAnnouncementFeed(data,sourceRecords)
+ return {data:normalizeAnnouncementFeed(data,sourceRecords),mapping}
+}
+export function materializeComponentMapping(mapping,responses,now=new Date(),sourceRecords=[]){
+ return materializeComponentProjection(mapping,responses,now,sourceRecords).data
 }
 function rejectCredentials(value){
  if(!value||typeof value!=='object')return
