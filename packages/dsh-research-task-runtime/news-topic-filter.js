@@ -17,7 +17,34 @@ const aliases=[
  ['古籍','古籍保护','古籍修复','纸张脱酸','脱酸','馆藏保护'],['黄金','gold']
 ]
 const unique=values=>[...new Set(values)]
-const contains=(text,term)=>/[a-z]/iu.test(term)?new RegExp('(?:^|[^a-z0-9])'+term.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&')+'(?:$|[^a-z0-9])','iu').test(text):text.includes(term)
+const contains=(text,term)=>/[a-z]/iu.test(term)?new RegExp('(?:^|[^a-z0-9])'+term.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&').replace(/\s+/gu,'\\s+')+'(?:$|[^a-z0-9])','iu').test(text):text.includes(term)
+const englishNoise=/^(?:the|news|latest|recent|research|dashboard|monitor|show|display|source|articles?|reports?|updates?|and|with|for|only|all|please|in|within|of|on|from|about|at|to|industr(?:y|ies)|sectors?)$/iu
+function newsEntities(human){
+ const entities=[]
+ const keep=value=>{const name=value.trim().replace(/\s+/gu,' ');if(name.length>=2&&name.length<=64)entities.push(name);return ' '}
+ // Quoting is an explicit entity boundary, including names that are also
+ // ordinary instruction words. Never split a protected name into generic OR terms.
+ let text=human.replace(/[“"‘']([^”"’'\n]{2,64})[”"’']/gu,(match,value)=>/[a-z]/iu.test(value)?keep(value):match)
+ text=text.replace(/\b[A-Za-z][A-Za-z0-9&.'-]*(?:[ \t]+[A-Za-z][A-Za-z0-9&.'-]*)*\b/gu,(span,offset)=>span.split(/\s+(\b(?:and|or)\b)\s+/iu).map((part,index,parts)=>{
+  const words=part.split(/\s+/u)
+  while(words.length>1&&(/^(?:please|show|display|monitor|all)$/iu.test(words[0])||/^(?:only|research)$/iu.test(words[0])&&englishNoise.test(words[1])))words.shift()
+  while(words.length>1&&englishNoise.test(words.at(-1)))words.pop()
+  const topics=words.every(word=>englishNoise.test(word)||aliases.some(group=>group.some(term=>term.toLocaleLowerCase()===word.toLocaleLowerCase())))
+  const explicit=index===parts.length-1&&words.length===1&&/^\s*(?:品牌|公司|企业|集团)/u.test(text.slice(offset+span.length))
+  const named=explicit||!topics&&words.length>1&&(words.some(word=>/^[A-Z]/u.test(word)&&!englishNoise.test(word))||/^(?:corp(?:oration)?|inc|ltd|llc|plc|holdings|group|company)\.?$/iu.test(words.at(-1)))
+  return named?keep(words.join(' ')):part
+ }).join(' '))
+ return {text,entities:unique(entities)}
+}
+function independentParentScope(human,parent,children){
+ human=human.replace(/[“”"‘’']/gu,'')
+ const childTerms=children.flat(),has=(text,group)=>group.some(term=>contains(text,term))
+ // A parent mentioned only as context for a child does not authorize siblings.
+ if(human.split(/[。；;，,\n]/u).some(clause=>has(clause,parent)&&!has(clause,childTerms)&&/(?:新闻|资讯|报道|动态|\b(?:news|reports?|coverage|updates?)\b)/iu.test(clause)))return true
+ const pattern=group=>group.map(term=>term.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&')).join('|')
+ const qualifier='(?:\\s*(?:行业|产业|领域|新闻|industry|sector|news))*\\s*',join='(?:以及|和|与|及|、|&|\\band\\b|\\bincluding\\b|包括|涵盖)\\s*'
+ return new RegExp(`(?:${pattern(parent)})${qualifier}${join}(?:${pattern(childTerms)})|(?:${pattern(childTerms)})${qualifier}${join}(?:${pattern(parent)})`,'iu').test(human)
+}
 
 // Only the captured human request can override a legacy panel's scope. Query
 // terms, returned headlines and model-authored titles never supply authority.
@@ -28,22 +55,26 @@ export function newsHumanScope(requirement=''){
  return text.split(/\n【|\n仅生成本面板，/u)[0].replace(/(?:不要|不需要|不得|排除|不含|\bwithout\b|\bexclude\b)[^。；;，,\n]*/giu,'').trim()
 }
 export function newsTopicTerms(requirement){
- const human=newsHumanScope(requirement),known=aliases.filter(group=>group.some(term=>contains(human,term)))
+ const human=newsHumanScope(requirement),{text,entities}=newsEntities(human)
+ let known=aliases.filter(group=>group.some(term=>contains(text,term)||entities.some(name=>name.toLocaleLowerCase()===term.toLocaleLowerCase())))
  // Broader sector intent may admit its subtopics. A child topic never expands
  // to its parent or siblings merely because they share an industry.
+ const children=semiconductorTopics.filter(group=>known.includes(group))
+ if(known.includes(semiconductor)&&children.length&&!independentParentScope(human,semiconductor,children))known=known.filter(group=>group!==semiconductor)
  if(known.includes(semiconductor))known.push(...semiconductorTopics)
  // Named coins are narrower than the general crypto industry. A broad human
  // crypto request additionally admits actual sector/regulatory coverage.
- if(known.includes(aliases[2]))return unique(aliases.slice(0,3).flat())
- if(known.some(group=>group===aliases[0]||group===aliases[1]))return unique(known.flat())
- const cleaned=human.replace(/(?:工作台|本面板|新闻资讯|最新资讯|最新新闻|新闻列表|相关新闻|相关报道|新闻|资讯|报道|动态|监控|行情|研究|工作|展示|生成|创建|建立|搭建|检索|查询|读取|保留|标注|提供|获取|显示|只|仅|请|为|一个|关于|围绕|实时|最新|近期|最近|重要|原文|链接|摘要|标题|来源|日期|时间|记录|内容|数据|自动|刷新|更新|完整|全部|每分钟|最多|实际|相关|行业|产业)/gu,' ')
-  .replace(/\b(?:the|news|latest|recent|research|dashboard|monitor|show|display|source|articles?|reports?|updates?|and|with|for|only|industr(?:y|ies)|sectors?)\b/giu,' ')
+ if(known.includes(aliases[2]))return unique([...entities,...aliases.slice(0,3).flat()])
+ if(known.some(group=>group===aliases[0]||group===aliases[1]))return unique([...entities,...known.flat()])
+ const cleaned=text.replace(/(?:工作台|本面板|新闻资讯|最新资讯|最新新闻|新闻列表|相关新闻|相关报道|新闻|资讯|报道|动态|监控|行情|研究|工作|展示|生成|创建|建立|搭建|检索|查询|读取|保留|标注|提供|获取|显示|只|仅|请|为|一个|关于|围绕|实时|最新|近期|最近|重要|原文|链接|摘要|标题|来源|日期|时间|记录|内容|数据|自动|刷新|更新|完整|全部|每分钟|最多|实际|相关|行业|产业|领域|公司|企业|品牌)/gu,' ')
+  .replace(/\b[a-z]+\b/giu,word=>englishNoise.test(word)?' ':word)
  const pieces=cleaned.split(/[\s，,。；;：:/、()（）“”"\d]+|以及|或者|与|和|及/u).filter(Boolean)
  const terms=pieces.flatMap(piece=>{
   if(/^[\p{Script=Han}]{2,12}$/u.test(piece))return[piece]
   return [...new Intl.Segmenter('zh-CN',{granularity:'word'}).segment(piece)].filter(s=>s.isWordLike&&s.segment.length>=2).map(s=>s.segment)
  })
- return unique([...known.flat(),...terms]).filter(term=>term.length>=2&&term.length<=64).slice(0,48)
+ const inherited=children.length&&!known.includes(semiconductor)?new Set(semiconductor):new Set()
+ return unique([...entities,...known.flat(),...terms]).filter(term=>!inherited.has(term.toLocaleLowerCase())&&term.length>=2&&term.length<=64).slice(0,48)
 }
 const related=(value,terms)=>terms.some(term=>contains(value,term))
 const textOf=item=>[item?.title,item?.summary,item?.content,...(Array.isArray(item?.excerpts)?item.excerpts:[])].filter(v=>typeof v==='string').join(' ')
@@ -76,7 +107,7 @@ export function filterScopedNewsArtifact(data,records=[],requirement='',{general
   // Use all actual source rows: an incomplete model page cannot truncate a
   // second retrieved company or the final page. Model HTML supplies no data.
   const kept=sourceRows(records).filter(row=>related(textOf(row),terms)),seen=new Set()
-  return controlledNewsHtml(data.title,kept.filter(row=>{const key=row.url??row.title;if(seen.has(key))return false;seen.add(key);return true}))
+  return controlledNewsHtml(data.title,kept.filter(row=>{const address=safeUrl(row.url),key=JSON.stringify(address?[address,row.title]:[row.title,row.date??row.time??'',row.publisher??'',row.id??row.articleId??'']);if(seen.has(key))return false;seen.add(key);return true}))
  }
  if(data.type==='news'&&Array.isArray(data.items)){
   const sources=sourceRows(records)

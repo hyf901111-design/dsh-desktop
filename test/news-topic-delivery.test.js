@@ -43,10 +43,46 @@ it.each(['Ford','Theodore','Anderson','Showa'])('preserves the complete English 
  expect(result.data.items.map(item=>item.title)).toEqual([related.title])
 })
 
-it.each(['只展示光刻机行业相关新闻','只展示 光刻机 行业 新闻','Only show lithography industry news','Only show lithography sector news'])('keeps %s narrower than the semiconductor sector while accepting precise equipment terms',newsScope=>{
+it.each(['只展示 News Corp 相关新闻','Only show News Corp news','Only Show News Corp News','only show news corp news'])('preserves the full entity in %s without broadening to its corporate suffix',newsScope=>{
+ const r=request('gdelt-news','News Corp'),wanted=article('News Corp earnings rose','wanted'),unrelated=article('Intel Corp opens a new fab','unrelated'),word=article('Local news in a corporate office','word')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[unrelated,wanted,word])],new Date(),{newsScope})
+ expect(result.data.items.map(item=>item.title)).toEqual([wanted.title]);expect(newsTopicTerms(newsScope)).not.toContain('Corp')
+})
+
+it.each([['ONLY','“','”'],['Research In Motion','"','"'],['The Trade Desk','‘','’']])('retains the explicitly quoted name %s without keeping generic brand or suffix terms', (name,left,right)=>{
+ const r=request('gdelt-news',name),wanted=article(`${name} business update`,'wanted'),other=article('Other brands publish a research news report','other','其他品牌的业务动态')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[other,wanted])],new Date(),{newsScope:`只展示${left}${name}${right}品牌相关新闻`})
+ expect(result.data.items.map(item=>item.title)).toEqual([wanted.title]);expect(result.data.note).not.toContain('未取得')
+})
+
+it.each(['只展示 ONLY 品牌相关新闻','Only show ONLY品牌相关新闻','只展示Only公司相关新闻'])('preserves the explicitly named single-word entity in %s',newsScope=>{
+ const r=request('gdelt-news','ONLY'),wanted=article('ONLY opens a new store','wanted'),other=article('Other brands open stores','other','其他品牌的商业动态')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[other,wanted])],new Date(),{newsScope})
+ expect(result.data.items.map(item=>item.title)).toEqual([wanted.title])
+})
+
+it('keeps independently named entities and does not broaden a company name containing a sector alias',()=>{
+ const r=request('gdelt-news','Semiconductor Manufacturing International Corp'),company=article('Semiconductor Manufacturing International Corp expands operations','company'),sector=article('Smartphone chip demand improves','sector'),intel=article('Intel Corp expands operations','intel')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[sector,company,intel])],new Date(),{newsScope:'Only show Semiconductor Manufacturing International Corp and Intel Corp news'})
+ expect(result.data.items.map(item=>item.title)).toEqual([company.title,intel.title])
+})
+
+it('does not promote entity-list conjunctions into topic evidence before a brand classifier',()=>{
+ const r=request('gdelt-news','News Corp ONLY'),company=article('News Corp earnings update','company'),brand=article('ONLY opens a new store','brand'),other=article('Banks and lenders release new reports','other')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[other,company,brand])],new Date(),{newsScope:'只展示 News Corp and ONLY品牌相关新闻'})
+ expect(result.data.items.map(item=>item.title)).toEqual([company.title,brand.title])
+})
+
+it.each(['只展示光刻机行业相关新闻','只展示 光刻机 行业 新闻','Only show lithography industry news','Only show lithography sector news','只展示半导体领域的光刻机相关新闻','只展示半导体领域光刻机及EUV新闻','Only show lithography news in the semiconductor industry','Only Show Semiconductor Lithography News','Only show "lithography" news in the "semiconductor" industry'])('keeps %s narrower than the semiconductor sector while accepting precise equipment terms',newsScope=>{
  const r=request('gdelt-news','光刻机'),phone=article('手机芯片需求改善，半导体行业复苏','phone','Smartphone chip industry: sector demand update'),euv=article('极紫外曝光设备交付进展','euv','EUV曝光系统产能与交付情况'),duv=article('浸没式DUV曝光工艺进展','duv','深紫外光学系统制造进展')
  const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[phone,euv,duv])],new Date(),{newsScope})
  expect(result.data.items.map(item=>item.title)).toEqual([euv.title,duv.title])
+})
+
+it.each(['只展示半导体和光刻机相关新闻','只展示半导体新闻，重点关注光刻机','Show semiconductor and lithography news','Show "semiconductor" and "lithography" news'])('retains the parent sector when independently requested in %s',newsScope=>{
+ const r=request('gdelt-news','半导体'),chip=article('手机芯片订单变化','chip'),wafer=article('晶圆产线扩建进展','wafer'),euv=article('EUV设备交付进展','euv')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[bank,chip,wafer,euv])],new Date(),{newsScope})
+ expect(result.data.items.map(item=>item.title)).toEqual([chip.title,wafer.title,euv.title])
 })
 
 it('admits chip and wafer coverage when the human explicitly requests the broader semiconductor sector',()=>{
@@ -162,4 +198,22 @@ it('keeps a usable later article and reports a byte-budget gap without claiming 
  expect(data.html).toContain(eth.title)
  expect(data.html).toContain('已取得 2 条相关记录，当前展示 1 条')
  expect(data.html).not.toContain('本次未取得与用户主题相关的新闻')
+})
+
+it('retains distinct obtained reports without usable URLs in the real task and deduplicates only actual duplicates',async()=>{
+ const rows=[{...btc,url:''},{...eth,url:''},{...btc,url:''},{...article('Bitcoin third report','third'),url:'   '},{...article('Bitcoin fourth report','fourth'),url:'javascript:invalid'}],r=request()
+ const adapter={start:vi.fn(async()=>({childSessionId:'empty-urls',result:Promise.resolve({stopReason:'completed',sourceRecords:[observed(r,rows)],output:[{type:'text',text:JSON.stringify({version:1,type:'html',title:'加密新闻',html:'<p>模型页面</p>'})}]}),dispose:async()=>{}}))}
+ const runtime=new ResearchTaskRuntime({adapter,storage:{save:async()=>{}}})
+ try{
+  const receipt=await runtime.start({parentSessionId:'p',canvasNodeId:'empty-urls',kind:'container',prompt:scope+'\n【新闻容量适配】\n保留全部取得的相关新闻，使用html分页。'});await runtime.tasks.get(receipt.taskId).runPromise
+  const result=runtime.inspect({parentSessionId:'p',taskId:receipt.taskId});expect(result.state,result.error).toBe('completed')
+  const data=JSON.parse(result.finalOutput),window=new Window();window.document.body.innerHTML=data.html
+  try{expect(window.document.querySelectorAll('article')).toHaveLength(4);for(const row of rows)expect(window.document.body.textContent).toContain(row.title);expect(window.document.body.textContent).not.toContain('未取得');expect(window.document.querySelectorAll('article a')).toHaveLength(0)}finally{await window.happyDOM.abort()}
+ }finally{await runtime.dispose()}
+})
+
+it('counts missing-link records before the display budget and reports an obtained coverage gap accurately',()=>{
+ const rows=Array.from({length:2001},(_,i)=>({title:'BTC '+i,summary:'',date:'',url:''})),r=request(),records=Array.from({length:21},(_,i)=>observed(r,rows.slice(i*100,(i+1)*100)))
+ const data=filterScopedNewsArtifact({version:1,type:'html',title:'新闻',html:'<p>模型页面</p>'},records,scope+'\n【新闻容量适配】'),window=new Window();window.document.body.innerHTML=data.html
+ try{expect(window.document.querySelectorAll('article')).toHaveLength(2000);expect(window.document.body.textContent).toContain('已取得 2001 条相关记录，当前展示 2000 条');expect(window.document.body.textContent).toContain('另 1 条超过组件展示容量');expect(window.document.body.textContent).not.toContain('未取得');expect(acceptArtifactOutput(JSON.stringify(data))).toBeTypeOf('string')}finally{window.happyDOM.abort()}
 })
