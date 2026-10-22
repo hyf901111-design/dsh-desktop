@@ -27,6 +27,11 @@ it('transports Harness semantic actions through the authenticated Main endpoint 
   expect(await call('canvas.apply',{revision:read.data.revision,operations:[{op:'update',id:'n',fields:{title:'Updated'}}]})).toEqual(applied);expect(flushes).toBe(1)
   const undo=await call('canvas.undo',{revision:applied.data.revision,actionId:applied.data.actionId});expect(undo.status).toBe('succeeded');expect(state.artifacts[0].title).toBe('Original')
   expect((await call('ui.zoom.in',{})).data.zoomLevel).toBe(.5)
+  const omitted={requestId:'optional-empty-arguments',capability:'ui.zoom.in'}
+  expect(JSON.parse(await tools.get('client_action').execute(omitted,exec)).data.zoomLevel).toBe(1)
+  expect((await call('ui.zoom.in',{},omitted.requestId)).data.zoomLevel).toBe(1);expect(zoom).toBe(1)
+  const missingRequired=JSON.parse(await tools.get('client_action').execute({requestId:'missing-required-mode',capability:'ui.mode.set'},exec))
+  expect(missingRequired.status).toBe('failed');expect(zoom).toBe(1)
   const denied=await fetch(address.url+'/client-capabilities',{method:'POST',headers:{authorization:'Bearer '+address.token,origin:'https://attacker.invalid','content-type':'application/json'},body:JSON.stringify({sessionId:'s',turnId:'1',method:'catalog'})});expect(denied.status).toBe(403)
  }finally{dispose();service.dispose();bridge.dispose();await endpoint.stop()}
 })

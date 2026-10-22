@@ -23,8 +23,13 @@ function executionIdentity(exec){
 }
 
 function actionCall(args){
-  if(!object(args)||Object.keys(args).some(key=>!['requestId','capability','arguments'].includes(key))||!id(args.requestId)||!id(args.capability)||!object(args.arguments))
+  if(!object(args)||Object.keys(args).some(key=>!['requestId','capability','arguments'].includes(key))||!id(args.requestId)||!id(args.capability))
     throw Error('客户端操作参数无效。')
+  // Normalize absence once before transport and the host idempotency key.
+  // Explicit null/undefined or a non-object still fails. The selected fixed
+  // capability schema, not this convenience, decides whether {} is valid.
+  if(!Object.hasOwn(args,'arguments'))args={...args,arguments:{}}
+  if(!object(args.arguments))throw Error('客户端操作参数无效。')
   const pending=[{value:args,depth:0}],ancestors=new Set()
   let minimumBytes=0
   while(pending.length){
@@ -56,7 +61,7 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
     const parameters=method==='catalog'?{}:{
       requestId:{type:'string',required:true,description:'本次客户端操作的唯一标识；重试保持同一标识及相同参数。'},
       capability:{type:'string',required:true,description:'client_capabilities 返回的实际能力 ID。只调用 available=true 的能力。'},
-      arguments:{type:'object',required:true,additionalProperties:true,description:'严格按能力目录声明的参数填写；不能指定其他会话、文档或任意 IPC、URL。'}
+      arguments:{type:'object',additionalProperties:true,description:'严格按能力目录声明的参数填写；零参数能力可省略，等同于 {}，其他能力仍须提供其必填字段。不能指定其他会话、文档或任意 IPC、URL。'}
     }
     disposers.push(ctx.tools.register(defineTool({
       name:method==='catalog'?CLIENT_TOOL_NAMES[0]:CLIENT_TOOL_NAMES[1],

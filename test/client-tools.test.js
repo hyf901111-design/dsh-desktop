@@ -1,5 +1,6 @@
 import {it,expect,vi} from 'vitest'
 import {validateJsonSchemaValue} from '@deepseek-ai/dsh-tools'
+import {readFileSync} from 'node:fs'
 import {CLIENT_TOOL_NAMES,registerClientTools} from '../packages/dsh-research-task-runtime/client-tools.js'
 
 const env={SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1234',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'test-token'}
@@ -33,6 +34,17 @@ it('rejects model target overrides and unknown keys before contacting the host',
     for(const args of [{...call,sessionId:'other'},{...call,turnId:'other'},{...call,url:'https://example.com'},{...call,requestId:''},{...call,arguments:[]},null])
       await expect(f.tools.get('client_action').execute(args,execution())).rejects.toThrow()
     expect(f.calls).toHaveLength(0)
+  }finally{f.dispose()}
+})
+
+it('normalizes the actual native missing-arguments inspect envelope before transport, while refusing explicit invalid arguments',async()=>{
+  const actual=JSON.parse(readFileSync(new URL('./fixtures/client-action-missing-arguments.json',import.meta.url),'utf8')),f=fixture(),tool=f.tools.get('client_action')
+  try{
+    await tool.execute(actual.firstCall,execution())
+    expect(f.calls[0].body.call).toEqual({...actual.firstCall,arguments:{}})
+    for(const args of [null,[],false,'',0,undefined])
+      await expect(tool.execute({...actual.firstCall,arguments:args},execution())).rejects.toThrow()
+    expect(f.calls).toHaveLength(1)
   }finally{f.dispose()}
 })
 
