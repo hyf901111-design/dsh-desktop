@@ -20,14 +20,14 @@ export function createAssistantRevealLedger(){
 export function createAssistantTextPaint(root,record){
  if(!root||!record)return{update(){},dispose(){}}
  const doc=root.ownerDocument,view=doc.defaultView,media=view?.matchMedia?.('(prefers-reduced-motion: reduce)'),registry=view?.CSS?.highlights
- let frame=0,style,batches=[],names=[],disposed=false,selecting=false,quietUntil=0
+ let frame=0,style,batches=[],names=[],disposed=false,selecting=false,quietUntil=0,focused=doc.hasFocus?.()!==false
  const palettes=new Map()
  const prefix='ework-ai-reveal-'+Math.random().toString(36).slice(2)
  const clear=()=>{view?.cancelAnimationFrame(frame);frame=0;batches=[];for(const name of names)registry?.delete(name);delete root.dataset.aiRevealing}
- const visible=()=>doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
+ const visible=()=>focused&&doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
  const finish=()=>clear()
- const background=()=>{record.skipNext=true;finish()},preference=()=>{if(media?.matches)finish()},visibility=()=>{if(!visible())background()}
- media?.addEventListener?.('change',preference);doc.addEventListener('visibilitychange',visibility);view?.addEventListener('blur',background);doc.addEventListener('sherlock:workspace-surface-change',visibility)
+ const suspend=()=>{record.skipNext=true;finish()},background=()=>{focused=false;suspend()},foreground=()=>{focused=true},preference=()=>{if(media?.matches)finish()},visibility=()=>{if(doc.visibilityState==='hidden')background();else if(!visible())suspend()}
+ media?.addEventListener?.('change',preference);doc.addEventListener('visibilitychange',visibility);view?.addEventListener('blur',background);view?.addEventListener('focus',foreground);doc.addEventListener('sherlock:workspace-surface-change',visibility)
  const interact=event=>{if(event.type==='pointerdown')selecting=true;quietUntil=view.performance.now()+180;finish()},release=()=>{selecting=false}
  for(const type of ['pointerdown','keydown','copy','wheel'])root.addEventListener(type,interact,true)
  doc.addEventListener('pointerup',release,true);doc.addEventListener('pointercancel',release,true)
@@ -59,7 +59,7 @@ export function createAssistantTextPaint(root,record){
   // Bound work even when a provider sends very small fragments for a long time.
   if(batches.length>80)batches=batches.slice(-80)
   root.dataset.aiRevealing='';if(!frame)paint(clock)
- },dispose(){if(record.initialized&&record.text)record.skipNext=true;disposed=true;clear();style?.remove();media?.removeEventListener?.('change',preference);doc.removeEventListener('visibilitychange',visibility);view?.removeEventListener('blur',background);doc.removeEventListener('sherlock:workspace-surface-change',visibility);doc.removeEventListener('selectionchange',selection);doc.removeEventListener('pointerup',release,true);doc.removeEventListener('pointercancel',release,true);for(const type of ['pointerdown','keydown','copy','wheel'])root.removeEventListener(type,interact,true)}}
+ },dispose(){if(record.initialized&&record.text)record.skipNext=true;disposed=true;clear();style?.remove();media?.removeEventListener?.('change',preference);doc.removeEventListener('visibilitychange',visibility);view?.removeEventListener('blur',background);view?.removeEventListener('focus',foreground);doc.removeEventListener('sherlock:workspace-surface-change',visibility);doc.removeEventListener('selectionchange',selection);doc.removeEventListener('pointerup',release,true);doc.removeEventListener('pointercancel',release,true);for(const type of ['pointerdown','keydown','copy','wheel'])root.removeEventListener(type,interact,true)}}
 }
 export function useAssistantTextPaint(react,record,content){
  const root=react.useRef(null),paint=react.useRef()
@@ -69,11 +69,15 @@ export function useAssistantTextPaint(react,record,content){
 }
 
 export function patchAssistantReveal(source){
- const marker='/* ework:assistant-reveal:v1 */'
- if(source.includes(marker))return source
+ const marker='/* ework:assistant-reveal:v1 */',helpers=`${marker}\n${[createAssistantRevealLedger,createAssistantTextPaint,useAssistantTextPaint].map(fn=>fn.toString()).join('\n')}\nconst eworkAssistantRevealLedger=createAssistantRevealLedger();\n`
+ if(source.includes(marker)){
+  const start=source.indexOf(marker),end=source.indexOf('const AssistantMarkdown =',start)
+  if(source.split(marker).length!==2||end<0||!source.slice(start,end).endsWith('const eworkAssistantRevealLedger=createAssistantRevealLedger();\n'))throw Error('Assistant reveal helper boundary drifted')
+  return source.slice(0,start)+helpers+source.slice(end)
+ }
  const replace=(before,after)=>{if(source.split(before).length!==2)throw Error('Assistant reveal anchor drifted: '+before.slice(0,90));source=source.replace(before,after)}
  const anchor='const AssistantMarkdown = (0, react.memo)(function AssistantMarkdown({ blocks, streaming, interrupted, loadImage, mentions, openFile, t }) {'
- replace(anchor,`${marker}\n${[createAssistantRevealLedger,createAssistantTextPaint,useAssistantTextPaint].map(fn=>fn.toString()).join('\n')}\nconst eworkAssistantRevealLedger=createAssistantRevealLedger();\n`+anchor.replace('openFile, t','openFile, t, reveal')+'\nconst revealRef=useAssistantTextPaint(react,interrupted?undefined:reveal,blocks);')
+ replace(anchor,helpers+anchor.replace('openFile, t','openFile, t, reveal')+'\nconst revealRef=useAssistantTextPaint(react,interrupted?undefined:reveal,blocks);')
  replace('className: AssistantMarkdown_module_css_default.root,','ref:revealRef,\nclassName: AssistantMarkdown_module_css_default.root,')
  const viewStart=source.indexOf('function ChatView('),viewEnd=source.indexOf('//#endregion',viewStart),viewPart=source.slice(viewStart,viewEnd),open='const openState = useSession((s) => s.openState);';if(viewPart.split(open).length!==2)throw Error('Assistant reveal ChatView boundary drifted');source=source.slice(0,viewStart)+viewPart.replace(open,open+'\neworkAssistantRevealLedger.observe(useSession,openState,order,nodeStore);\nreact.useEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),[useSession]);')+source.slice(viewEnd)
  replace('const routedOwner = {\n\t\t\t\t...owner,','const routedOwner = {\n\t\t\t\teworkRevealOwner:useSession,\n\t\t\t\t...owner,')
