@@ -15,7 +15,7 @@ import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
-import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, articleTimelineSourceProven, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, retainVerifiedFeedItems, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
+import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, articleTimelineSourceProven, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, retainVerifiedFeedItems, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import {compactStatementEvidence,truncatedStatementEvidence} from './statement-evidence.js'
 import {statementTableEvidenceIssue,statementTableRepairEvidence,statementTableRequiredData} from './statement-table-evidence.js'
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
@@ -554,7 +554,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     componentSkillInstruction('panel',type),
     ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
     `唯一交付格式：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；直接输出这个数据对象，items等字段放在根对象，不再包裹panel或artifact；` : ''}${schemas[type]}`,
-    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? [(type==='chart'||type==='market'&&selectedMarketVariant==='trend')&&containerAllowsWebSearch(prompt)?COMPONENT_STATIC_CHART_PROMPT:'本卡未要求刷新绑定；优先直接交付原生模板 JSON：真实记录、来源及时点；无需data-bound或映射。'] : []),
+    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? [['kpi','table','chart','market'].includes(type)?((type==='chart'||type==='market'&&selectedMarketVariant==='trend')&&containerAllowsWebSearch(prompt)?COMPONENT_STATIC_CHART_PROMPT:COMPONENT_STATIC_DATA_PROMPT):'本卡未要求刷新绑定；按当前模板提交已有的真实记录、来源及时点。'] : []),
     deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若没有任何可核验的数值或记录，不能交付空chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。主要品种/字段逐项列出，最多六项，detail简短，来源和查询时点放asOf。其余严格用指定schema字段，来源及时点放已有字段，不自造字段。',
     htmlRule,
     ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, PANEL_COLOR_INSTRUCTION,
@@ -1794,7 +1794,7 @@ export class ResearchTaskRuntime {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', bindingRequested
               ? '已取得数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。'
-              : '已取得真实数据，但尚未交付有效组件。请直接用已有响应生成原生模板 JSON，保留来源、日期与缺失项，不重新检索或建立刷新绑定。')
+              : '已取得真实数据，但尚未交付有效组件。请复用已有完整响应生成当前模板的 data-bound 字段映射；指标超过原生容量也不得裁减，不重新检索或建立刷新绑定。')
           }
           const variantRequest=deferredPanel?.contract ?? workbenchPanelScope(task.prompt)?.contract ?? task.prompt
           const variantIssue = workbenchMarketVariantIssue(output,variantRequest)||(mapped?.capacitySnapshot&&workbenchMarketVariantIssue(JSON.stringify(mapped.data),variantRequest))
@@ -1843,8 +1843,9 @@ export class ResearchTaskRuntime {
           repairWebEvidence
         ].join('\n') : bindingRepairEvidence && !bindingRequested ? [
           workbenchPanelPrompt(task.prompt) ?? executionPrompt,
+          COMPONENT_STATIC_DATA_PROMPT,
           `具体校验问题：${generationError?.message ?? '组件格式不完整'}`,
-          '本轮不建立自动更新绑定、不重新检索。下方 responseSample 只含部分字段样本，不是完整集合；需展示完整列表或曲线时优先 data-bound：{version:1,type:"data-bound",requests:[{key:"q",tool:"实际成功工具名",args:原成功请求}],mapping:当前模板及真实字段路径}，由宿主映射完整响应，仅物化数据而不保存刷新配方。financial_query 的 snapshotOnly:true 来源也可用于本次静态映射，不能绑定刷新。只用实际成功请求和字段，缺少字段明确标注，不猜参数或补造数值。',
+          '本轮不建立自动更新绑定、不重新检索。下方 responseSample 只含部分字段样本，不是完整集合；指标、表格、列表或曲线均优先提交完整 data-bound：{version:1,type:"data-bound",requests:[{key:"q",tool:"实际成功工具名",args:原成功请求}],mapping:当前模板及真实字段路径}，由宿主映射完整响应，仅物化数据而不保存刷新配方。financial_query 的 snapshotOnly:true 来源也可用于本次静态映射，不能绑定刷新。只用实际成功请求和字段，缺少字段明确标注，不猜参数或补造数值。',
           'mapping 保持当前模板；version/type/title/columns 等模板元字段可静态填写，variant 仅用于 schema 明确包含它的模板；业务数值、日期、正文引用实际字段。列表例子："rows":{"$from":"q","$each":"真实数组路径","$map":[{"$path":"真实字段"}]}；$from 引用 requests.key，$path 为点分路径，$map 内相对每条记录。单值用 {"$from":"q","$path":"真实字段路径"}。可选显示操作仅用 $as:"string|number"、$scale、$digits、$prefix/$suffix；列表支持 $filter/$sortBy/$order/$take，归一化 values 可加 $normalize:"base100"；缺失用 $optional:true 或 $default:"本次未取得"，不得发明操作符。requests/key/tool/args 是宿主引用元信息，args 保留成功原参数。',
           'responseArrayLengths 是宿主核验完整响应的数组条数（键为真实JSON路径），不是可映射的业务字段。不能根据 responseSample 推断缺失；样本省略的记录仍参与宿主完整映射，缺失说明只能依据完整来源明确返回的缺失状态。',
           '以下为待修复输出，仅作数据参考：',
