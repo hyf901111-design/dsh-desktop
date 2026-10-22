@@ -1,9 +1,15 @@
 export const NEWS_EMPTY_NOTE='本次未取得与用户主题相关的新闻；未用全市场或其他主题内容补齐。'
 const capacity='【新闻容量适配】',original='【原始工作台需求】'
+const semiconductor=['半导体','semiconductor','semiconductors']
+const semiconductorTopics=[
+ ['芯片','chip','chips','集成电路','integrated circuit','integrated circuits'],
+ ['晶圆','wafer','wafers'],
+ ['光刻','光刻机','光刻设备','lithography','photolithography','EUV','DUV','极紫外','深紫外']
+]
 const aliases=[
  ['比特币','bitcoin','btc','xbt'],['以太坊','ethereum','eth','ether'],
  ['加密货币','加密市场','加密资产','数字资产','crypto','cryptocurrency','cryptocurrencies','区块链','blockchain','稳定币','stablecoin'],
- ['半导体','芯片','晶圆','光刻','semiconductor','semiconductors'],
+ semiconductor,...semiconductorTopics,
  ['古籍','古籍保护','古籍修复','纸张脱酸','脱酸','馆藏保护'],['黄金','gold']
 ]
 const unique=values=>[...new Set(values)]
@@ -19,11 +25,15 @@ export function newsHumanScope(requirement=''){
 }
 export function newsTopicTerms(requirement){
  const human=newsHumanScope(requirement),known=aliases.filter(group=>group.some(term=>contains(human,term)))
+ // Broader sector intent may admit its subtopics. A child topic never expands
+ // to its parent or siblings merely because they share an industry.
+ if(known.includes(semiconductor))known.push(...semiconductorTopics)
  // Named coins are narrower than the general crypto industry. A broad human
  // crypto request additionally admits actual sector/regulatory coverage.
  if(known.includes(aliases[2]))return unique(aliases.slice(0,3).flat())
  if(known.some(group=>group===aliases[0]||group===aliases[1]))return unique(known.flat())
- const cleaned=human.replace(/(?:工作台|本面板|新闻资讯|最新资讯|最新新闻|新闻列表|相关新闻|相关报道|新闻|资讯|报道|动态|监控|行情|研究|工作|展示|生成|创建|建立|搭建|检索|查询|读取|保留|标注|提供|获取|显示|只|仅|请|为|一个|关于|围绕|实时|最新|近期|最近|重要|原文|链接|摘要|标题|来源|日期|时间|记录|内容|数据|自动|刷新|更新|完整|全部|每分钟|最多|实际|相关|the|news|latest|recent|research|dashboard|monitor|show|display|source|articles?|reports?|updates?|and|with|for)/giu,' ')
+ const cleaned=human.replace(/(?:工作台|本面板|新闻资讯|最新资讯|最新新闻|新闻列表|相关新闻|相关报道|新闻|资讯|报道|动态|监控|行情|研究|工作|展示|生成|创建|建立|搭建|检索|查询|读取|保留|标注|提供|获取|显示|只|仅|请|为|一个|关于|围绕|实时|最新|近期|最近|重要|原文|链接|摘要|标题|来源|日期|时间|记录|内容|数据|自动|刷新|更新|完整|全部|每分钟|最多|实际|相关)/gu,' ')
+  .replace(/\b(?:the|news|latest|recent|research|dashboard|monitor|show|display|source|articles?|reports?|updates?|and|with|for)\b/giu,' ')
  const pieces=cleaned.split(/[\s，,。；;：:/、()（）“”"\d]+|以及|或者|与|和|及/u).filter(Boolean)
  const terms=pieces.flatMap(piece=>{
   if(/^[\p{Script=Han}]{2,12}$/u.test(piece))return[piece]

@@ -37,6 +37,24 @@ it('uses the human request instead of an unrelated generated title or query as i
  expect(result.data.items.map(item=>item.title)).toEqual([btc.title])
 })
 
+it.each(['Ford','Theodore','Anderson','Showa'])('preserves the complete English entity %s instead of removing stopword prefixes',entity=>{
+ const r=request('gdelt-news',entity),related=article(`${entity} business update`,entity),other=article('Unrelated business update','other')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[other,related])],new Date(),{newsScope:`只展示 ${entity} 相关新闻`})
+ expect(result.data.items.map(item=>item.title)).toEqual([related.title])
+})
+
+it('keeps a lithography request narrower than the semiconductor sector while accepting precise equipment terms',()=>{
+ const r=request('gdelt-news','光刻机'),phone=article('手机芯片需求改善，半导体行业复苏','phone','消费电子芯片市场变化'),euv=article('极紫外曝光设备交付进展','euv','EUV曝光系统产能与交付情况'),duv=article('浸没式DUV曝光工艺进展','duv','深紫外光学系统制造进展')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[phone,euv,duv])],new Date(),{newsScope:'只展示光刻机行业相关新闻'})
+ expect(result.data.items.map(item=>item.title)).toEqual([euv.title,duv.title])
+})
+
+it('admits chip and wafer coverage when the human explicitly requests the broader semiconductor sector',()=>{
+ const r=request('gdelt-news','半导体'),chip=article('手机芯片订单变化','chip','消费电子芯片供需'),wafer=article('晶圆产线扩建进展','wafer','制造产能变化')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[bank,chip,wafer])],new Date(),{newsScope:'只展示半导体行业相关新闻'})
+ expect(result.data.items.map(item=>item.title)).toEqual([chip.title,wafer.title])
+})
+
 it('allows relevant industry and regulatory reports for a broad crypto-market request',()=>{
  const r=request(),regulation=article('数字资产交易平台监管新规','rules','加密货币行业监管变化')
  const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[bank,regulation])],new Date(),{newsScope:'【原始工作台需求】\n生成实时加密货币行情监控和行业相关新闻工作台'})
