@@ -1,7 +1,7 @@
 import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
 import {calendarEventEvidenceIssue,calendarEventRepairEvidence} from './calendar-event-evidence.js'
 import {articleTimelineRequired,restoreArticleTimelineScope} from './article-timeline-provenance.js'
-import {restoreWorkbenchHostContext} from './workbench-source-policy.js'
+import {restoreWorkbenchHostContext,workbenchPublicSourceEvidenceIssue} from './workbench-source-policy.js'
 import {plannedNewsQueries,newsCoverageState,restoreNewsCoverage,completeNewsQueries,coverageNewsData,appendNewsCoverage,newsQueryArgs,coverageBindingCandidate,newsTableCoverageIssue} from './news-query-coverage.js'
 import {decodeDataResponse} from './component-data-refresh.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
@@ -912,6 +912,8 @@ function terminalState(state) {
 // source policy. This checks evidence, never grants access to a tool.
 function workbenchSourceEvidenceIssue(policy, records) {
   if (!policy) return undefined
+  const publicIssue=workbenchPublicSourceEvidenceIssue(policy,records)
+  if(publicIssue)return publicIssue
   const pluginRecords = records.filter(record => record.tool?.startsWith('ework__'))
   if (policy.pluginProhibited && pluginRecords.length) return '人类来源约束禁止使用插件；不能接纳插件业务数据。'
   if (policy.pluginRequired && !componentBindingEvidence(pluginRecords)) return '该组件指定通联 DataYes 来源，必须实际取得业务响应；不能用其他网站的静态记录或接口目录代替。'
@@ -2279,6 +2281,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         effectivePrompt+=`\n当前运行时日期：${today}（Asia/Shanghai）。近期、最新、今年等相对时间以此为锚，不能凭训练记忆选择过去年份或旧季度作为近期。用户明确指定的历史日期、区间或虚构场景仍按原需求；获取时间不等于来源数据日期，不把来源旧数据改写成今天。`
       }
       if (sourcePolicy) effectivePrompt += '\n宿主人类来源策略：'+(sourcePolicy.pluginRequired?'本卡必须使用指定插件。':sourcePolicy.pluginProhibited?'本卡禁止使用插件。':'本卡没有强制插件来源要求；可使用已授权且能证明本卡事实的真实来源。')+'规划面板中的取数路线仅是模型建议，不能覆盖本策略。保留原实体、字段、日期、单位与唯一交付格式。'
+      if(sourcePolicy?.publicSourceRequests)effectivePrompt+='\n本卡仅允许已校验的腾讯报价来源，复用以下完整原请求，不改标的、不查其他来源；字段未提供就如实保留缺失：'+JSON.stringify(sourcePolicy.publicSourceRequests)+'。catalog仅为目录，必须实际query取得响应；静态请求不建立自动刷新。'
       if (pluginRequired) effectivePrompt += '\n本面板已指定使用配置的插件：使用当前可见 ework__ 工具发现接口并取数，'+(bindingRequested?'交付可自动刷新映射。':'直接交付真实静态数据、来源和数据时点，不要求建立自动更新绑定。')+'通用 financial_query 不属于该插件绑定通道；不要把该工具的结果标为指定插件数据。插件不可用时如实保留错误和已有内容。'
       let hostEvidence = ''
       // Typed workbench panels already carry one exact host template schema.
@@ -2354,6 +2357,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         (!boundTemplate || name.startsWith('ework__') || ['public_data_query','financial_query','web_search','web_fetch'].includes(name)) &&
         (!pluginRequired || !['financial_query','public_data_query'].includes(name)) &&
         (!pluginProhibited || !name.startsWith('ework__')) &&
+        (!sourcePolicy?.publicSourceRequests || name==='public_data_query') &&
         (permitsTools || !networkTools.has(name) && !name.startsWith('ework__')) &&
         // Keep the generic financial adapter as a last-resort fallback when
         // the specialist's search, catalog, or business API is unavailable.
@@ -2366,6 +2370,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         ...(agentOptions ? { agentOptions } : {}),
         parent,
         signal,
+        sourcePolicy,
         // A typed panel rebuilds effectivePrompt from the public query. Keep
         // frozen note evidence separate so it survives that rewrite and never
         // becomes a host search query or a template-selection instruction.

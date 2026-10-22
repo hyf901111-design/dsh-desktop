@@ -1,0 +1,94 @@
+{
+  "provenance": "Sanitized actual owned d4bf874d native planner first and second public arguments; error results are original. No app paths, session IDs, headers, credentials or model settings.",
+  "humanRequest": "创建名为「行情列适配原生复验1023C」的研究工作台，只需一个行情表格。仅使用腾讯行情实际获取中际旭创300308、新易盛300502、工业富联601138的报价，完整保留三家公司。按以下8列顺序展示：证券代码、公司名称、最新价（元）、涨跌幅（%）、成交量（手）、成交额（元）、实际报价时点、最新财务报告期。表格使用明确的key/label列声明（code、name、price、change_pct、volume、amount、quote_time、reportDate），行按对应列键组织，并由真实响应的数据映射生成。来源没有的字段显示“来源未提供”，报告期没有就明确缺失，不能拿行情日期补成财务报告期，不使用模拟数据，不丢弃任何要求的列或公司。注明真实来源、原文链接和各自报价时间。按内容安排可阅读的宽高。本次为手动静态快照，不开启自动刷新。",
+  "first": {
+    "dataMode": "source",
+    "panels": [
+      {
+        "artifact": {
+          "template": "table",
+          "type": "table",
+          "version": 1,
+          "title": "A股行情报价快照（腾讯行情）",
+          "columns": [
+            {
+              "key": "code",
+              "label": "证券代码"
+            },
+            {
+              "key": "name",
+              "label": "公司名称"
+            },
+            {
+              "key": "price",
+              "label": "最新价（元）"
+            },
+            {
+              "key": "change_pct",
+              "label": "涨跌幅（%）"
+            },
+            {
+              "key": "volume",
+              "label": "成交量（手）"
+            },
+            {
+              "key": "amount",
+              "label": "成交额（元）"
+            },
+            {
+              "key": "quote_time",
+              "label": "实际报价时点"
+            },
+            {
+              "key": "reportDate",
+              "label": "最新财务报告期"
+            }
+          ],
+          "note": "真实来源：腾讯行情（tencent-quotes）。三家公司均须完整保留；reportDate 行情来源不提供，统一显示“来源未提供”，不得用行情日期补成财务报告期。报价时点以真实响应时间为准，不使用模拟值。",
+          "source": "腾讯行情 tencent-quotes，抓取于2026-10-23"
+        },
+        "prompt": "使用腾讯行情（tencent-quotes）真实获取三家公司报价：中际旭创（深市 sz300308）、新易盛（深市 sz300502）、工业富联（沪市 sh601138），交易所前缀必须确认后使用。生成一张行情表格，完整保留三家公司，行按证券代码组织。列为8列、按此顺序并以明确 key/label 声明：code=证券代码、name=公司名称、price=最新价（元）、change_pct=涨跌幅（%）、volume=成交量（手）、amount=成交额（元）、quote_time=实际报价时点、reportDate=最新财务报告期。所有数据由真实响应字段映射生成；来源没有的字段（如财务报告期）显示“来源未提供”，报告期缺失必须明确标注，不得用行情日期补成财务报告期。注明真实来源（腾讯行情）、原文链接和各自报价时间。不使用模拟数据，不丢弃任何要求的列或公司。本次为手动静态快照，不开启自动刷新（intervalMinutes=0）。",
+        "size": "large",
+        "type": "table",
+        "layout": "wide",
+        "title": "三家光模块/算力链公司行情快照（腾讯行情）",
+        "publicData": {
+          "profile": "quotes-table",
+          "requests": [
+            {
+              "source": "tencent-quotes",
+              "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}"
+            }
+          ],
+          "intervalMinutes": 0
+        }
+      }
+    ],
+    "title": "行情列适配原生复验1023C"
+  },
+  "firstError": "Error: 免费源直通面板不能混用模拟数据或静态artifact。",
+  "second": {
+    "dataMode": "source",
+    "panels": [
+      {
+        "layout": "wide",
+        "prompt": "使用腾讯行情（tencent-quotes）真实获取三家公司报价：中际旭创（深市 sz300308）、新易盛（深市 sz300502）、工业富联（沪市 sh601138），交易所前缀必须确认后使用。生成一张行情表格（table），完整保留三家公司，行按证券代码组织。列为8列、按此顺序并以明确 key/label 声明：code=证券代码、name=公司名称、price=最新价（元）、change_pct=涨跌幅（%）、volume=成交量（手）、amount=成交额（元）、quote_time=实际报价时点、reportDate=最新财务报告期。所有数据由真实响应字段映射生成，不使用模拟值；来源没有的字段（如最新财务报告期）显示“来源未提供”，报告期缺失必须明确标注，不得用行情日期补成财务报告期。表格中或标题注明真实来源（腾讯行情）、原文链接和各自报价时间。本次为手动静态快照，不开启自动刷新（intervalMinutes=0）。",
+        "publicData": {
+          "intervalMinutes": 0,
+          "profile": "quotes-table",
+          "requests": [
+            {
+              "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}",
+              "source": "tencent-quotes"
+            }
+          ]
+        },
+        "size": "large",
+        "title": "三家光模块/算力链公司行情快照（腾讯行情）",
+        "type": "table"
+      }
+    ],
+    "title": "行情列适配原生复验1023C"
+  },
+  "secondError": "Error: 当前工作台暂不支持准确执行此排他来源约束（腾讯、新浪或 public_data_query）；未启动面板任务，不能改用其他来源。"
+}

@@ -353,6 +353,16 @@ function sourceTableProfile(panel) {
     validatePublicDataPanel(candidate,'market',{strictParameters:true});
     return {...panel,publicData:candidate};
 }
+// The original planner recipe remains host-owned even when its fixed renderer
+// was replaced by a field-complete source task. Never recover it from prompt text.
+export function workbenchQuoteSourceRequests(panel) {
+    if(!panel||typeof panel!=='object')return;
+    const recovered=sourceTableProfile(panel);
+    const data=recovered.publicData??(recovered.profile==='quotes-table'?{profile:recovered.profile,requests:recovered.requests}:undefined);
+    if(data?.profile!=='quotes-table')return;
+    const validated=validatePublicDataPanel({...data,...recovered.intervalMinutes===undefined?{}:{intervalMinutes:recovered.intervalMinutes}},'market',{strictParameters:true});
+    return validated.requests.map(request=>({operation:'query',...request}));
+}
 // A source planner may include an empty presentation sketch. Carry only its
 // column declaration into the fetch task; never promote placeholders to data
 // or silently drop even one supplied observation. Both flat and data-wrapped
@@ -367,27 +377,36 @@ function sourceTableLayoutPrompt(panel) {
     // row/column count: larger real tables have the source snapshot route.
     if(Buffer.byteLength(JSON.stringify(artifact),'utf8')>64000)return null;
     const wrapped=Object.hasOwn(artifact,'data');
-    if(!only(artifact,wrapped?['version','type','variant','title','data']:['version','type','variant','title','columns','rows','asOf','source']))return null;
+    if(!only(artifact,wrapped?['version','type','variant','template','title','data']:['version','type','variant','template','title','columns','rows','asOf','source','note']))return null;
+    if(artifact.template!==undefined&&!['table','market.table'].includes(artifact.template))return null;
     const data=wrapped?artifact.data:artifact;
-    if(wrapped&&!only(data,['columns','rows','asOf','source']))return null;
+    if(wrapped&&!only(data,['columns','rows','asOf','source','note']))return null;
     if(artifact.title!==undefined&&!str(artifact.title,256))return null;
     if(data.asOf!==undefined&&(typeof data.asOf!=='string'||data.asOf.length>200||/\d/u.test(data.asOf)))return null;
-    if(data.source!==undefined&&(!only(data.source,['name','url'])||Object.values(data.source).some(value=>!str(value,2000)||!panel.prompt.includes(value))))return null;
-    if(!Array.isArray(data.columns)||data.columns.length<1||!Array.isArray(data.rows))return null;
+    if(data.note!==undefined&&(!str(data.note,2000)||/\d|已(?:取得|获取|采集|抓取|完成)|数据(?:截至|时点)/u.test(data.note)))return null;
+    if(data.source!==undefined){
+        if(typeof data.source==='string'){
+            // Preserve this planner annotation verbatim, but never treat an
+            // anticipated fetch date as an observed source/time assertion.
+            const label=data.source.replace(/[，,；;]?\s*抓取于\s*\d{4}-\d{2}-\d{2}\s*$/u,'').trim();
+            if(!str(data.source,2000)||!/^(?:腾讯(?:财经)?(?:公开)?(?:行情|报价)?|tencent-quotes)(?:\s+(?:腾讯(?:财经)?(?:公开)?(?:行情|报价)?|tencent-quotes))*$/iu.test(label))return null;
+        }else if(!only(data.source,['name','url'])||Object.values(data.source).some(value=>!str(value,2000)||!panel.prompt.includes(value)))return null;
+    }
+    if(!Array.isArray(data.columns)||data.columns.length<1||data.rows!==undefined&&!Array.isArray(data.rows))return null;
     const keyed=data.columns.every(column=>only(column,['key','label','unit'])&&str(column.key,128)&&!/[\u0000-\u001f]/u.test(column.key)&&!column.key.startsWith('$')&&!['__proto__','constructor','prototype'].includes(column.key)&&str(column.label,128)&&(column.unit===undefined||typeof column.unit==='string'&&column.unit.length<=40));
     if(!keyed&&!data.columns.every(column=>str(column,128)))return null;
     const keys=keyed?data.columns.map(column=>column.key):data.columns;
     if(new Set(keys).size!==keys.length)return null;
     const identity=/^(?:code|symbol|ticker|name|company|companyName|securityName|securityCode|证券代码|股票代码|证券名称|公司名称|名称|代码)$/iu;
-    for(const row of data.rows){
+    for(const row of data.rows??[]){
         if(keyed?(!object(row)||Object.keys(row).length!==keys.length||!keys.every(key=>Object.hasOwn(row,key))):(!Array.isArray(row)||row.length!==keys.length))return null;
         for(const [i,key]of keys.entries()){
             const value=keyed?row[key]:row[i];
-            if(value===null||value==='')continue;
+            if(value===null||value===''||typeof value==='string'&&/^(?:来源未提供|未提供|缺失|无数据|暂无数据|N\/A|—|Not provided|Unavailable)$/iu.test(value.trim()))continue;
             if(!identity.test(key)||!str(value,128)||!panel.prompt.includes(value))return null;
         }
     }
-    return panel.prompt+'\n展示结构（不含业务数据）：'+JSON.stringify({columns:data.columns,...(artifact.title?{title:artifact.title}:{}),...(data.asOf?{timeInstruction:data.asOf}:{})})+'。这是待取数的布局草稿；按原需求取得真实响应并映射全部字段，单位写入最终列名，不把空单元格当成查询结果。';
+    return panel.prompt+'\n展示结构（不含业务数据）：'+JSON.stringify({columns:data.columns,...(artifact.title?{title:artifact.title}:{}),...(data.asOf?{timeInstruction:data.asOf}:{}),...(data.note!==undefined||data.source!==undefined?{unverifiedPlanningAnnotations:{...data.note===undefined?{}:{note:data.note},...data.source===undefined?{}:{source:data.source}}}:{})})+'。这是待取数的布局草稿；附注是未经来源验证的规划文本，不是已取得的数据、抓取时间或来源凭证，不直接复制为最终来源说明。按原需求取得真实响应并映射全部字段，来源与日期只采用实际响应，单位写入最终列名，不把空单元格或缺失占位当成查询结果。';
 }
 export function validateWorkbench(value) {
     if (value?.generationMode === 'deferred' && value.preset !== undefined) throw Error('延后模拟生成不能混用固定预设。');
