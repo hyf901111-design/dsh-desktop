@@ -846,3 +846,45 @@ it('uses remaining bounded time for a useful depth response that takes more than
  vi.useFakeTimers();const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);await new Promise(resolve=>setTimeout(resolve,p.audit?18000:4000));yield{type:'text-delta',index:0,text:JSON.stringify({reviews:p.targets.map(t=>({reviewKey:t.reviewKey,issues:p.audit?[{quote:'只按收入评价活动',category:'question',basis:'note',message:'是否也应考虑参与者收获等价值？',evidence:[]}]:[]}))})};yield{type:'finish',reason:{kind:'stop'}}}
  const pending=generateNoteChallenge(f.ctx,{...input,level:4,blocks:[{id:'a',type:'paragraph',text:'计划只按收入评价活动。'}]});const checked=expect(pending).resolves.toMatchObject({issues:[expect.objectContaining({category:'question'})]});await vi.advanceTimersByTimeAsync(22001);await checked
 })
+
+it.each([[1,'minimal'],[2,'low'],[3,'medium'],[4,'medium']])('allocates supported reasoning effort for challenge level %i without using the parent maximum',async(level,effort)=>{
+ const{generateNoteChallenge}=await load(),f=fixture()
+ f.ctx.llm.resolveModelInfo=async()=>({reasoning:{efforts:[{id:'minimal'},{id:'low'},{id:'medium'},{id:'high'}]}})
+ await generateNoteChallenge(f.ctx,{...input,level})
+ expect(f.calls.length).toBeGreaterThan(0)
+ expect(f.calls.every(call=>call.reasoningEffort===effort)).toBe(true)
+})
+
+it('uses only a supported bounded effort when the ideal challenge effort is unavailable',async()=>{
+ const{generateNoteChallenge}=await load(),f=fixture()
+ f.ctx.llm.resolveModelInfo=async()=>({reasoning:{efforts:[{id:'minimal'},{id:'high'}]}})
+ await generateNoteChallenge(f.ctx,{...input,level:3})
+ expect(f.calls.every(call=>call.reasoningEffort==='minimal')).toBe(true)
+})
+
+it('attests full tier completion per block rather than presenting partial depth as passed',async()=>{
+ const{generateNoteChallenge}=await load(),standard=fixture()
+ const basic=await generateNoteChallenge(standard.ctx,input)
+ expect(basic.completeBlockIds).toEqual(['a'])
+ const incomplete=fixture();incomplete.ctx.llm.stream=async function*(options){incomplete.calls.push(options);const payload=JSON.parse(options.messages[0].content[0].text);if(payload.audit)throw Error('audit unavailable');yield{type:'text-delta',index:0,text:JSON.stringify({reviews:payload.targets.map(t=>({reviewKey:t.reviewKey,issues:[]}))})};yield{type:'finish',reason:{kind:'stop'}}}
+ const partial=await generateNoteChallenge(incomplete.ctx,{...input,level:4})
+ expect(partial.coveredBlockIds).toEqual(['a']);expect(partial.completeBlockIds).toEqual([])
+ const full=fixture(),complete=await generateNoteChallenge(full.ctx,{...input,level:4})
+ expect(complete.completeBlockIds).toEqual(['a'])
+})
+
+it('does not attest an unparseable forecast peer merely because another claim was extracted',async()=>{
+ const{generateNoteChallenge}=await load(),f=fixture(),blocks=[{id:'a',type:'paragraph',text:'600519.SH 报告基准日2026-10-22，预计2027年归母净利润100亿元。'},{id:'b',type:'paragraph',text:'预计2028年归母净利润继续增加。'}]
+ const result=await generateNoteChallenge(f.ctx,{...input,blocks,changedIds:['a','b']})
+ expect(result.coveredBlockIds).toEqual(['a','b']);expect(result.completeBlockIds).not.toContain('b');expect(result.checks.some(c=>c.kind==='consensus'&&c.status!=='completed')).toBe(true)
+})
+
+it.each([false,true])('keeps incomplete forecast intent unpassed even when another metric query succeeds (same block %s)',async sameBlock=>{
+ const{generateNoteChallenge}=await load(),f=fixture(),blocks=sameBlock?[{id:'a',type:'paragraph',text:'600519.SH 报告基准日2026-10-22，预计2027年EPS10元，归母净利润继续增加。'}]:[{id:'a',type:'paragraph',text:'600519.SH 报告基准日2026-10-22，预计2027年EPS10元。'},{id:'b',type:'paragraph',text:'预计2028年归母净利润继续增加。'}]
+ const agent={id:'session',session:{id:'session'}},parameters={type:'object',properties:{source:{type:'string'},schema:{type:'string'},sql:{type:'string',description:'SELECT SQL'}},required:['source','schema','sql']}
+ f.ctx.agents.get=()=>agent;f.ctx.tools={schemas:()=>[{name:'ework__infodb_read',description:'infodb read-only SQL SELECT'}],get:()=>({parameters,presentCall:()=>({kind:'read'})}),execute:async()=>({content:[{type:'text',text:JSON.stringify([{S_INFO_WINDCODE:'600519.SH',EST_REPORT_DT:'20271231',EST_DT:'20261020',CONSEN_DATA_CYCLE_TYP:'263002000',NUM_EST_INST:10,EPS_MEDIAN:10,EPS_AVG:10,EPS_MIN:9,EPS_MAX:11,EPS_DEV:1}])}]})}
+ const result=await generateNoteChallenge(f.ctx,{...input,blocks,changedIds:blocks.map(b=>b.id)})
+ expect(result.checks.some(c=>c.kind==='consensus'&&c.status==='completed')).toBe(true)
+ expect(result.completeBlockIds).not.toContain(sameBlock?'a':'b')
+ if(!sameBlock)expect(result.completeBlockIds).toContain('a')
+})

@@ -678,17 +678,17 @@ async function applyTrackedReplacement(page,replacement='这项结论的程度�
  await page.locator('.bn-editor [data-bn-thread-id]').first().click();await start(page,'optimize');await finish(page,{...answer,reply:{text:'修正错别字。',replacement}})
  await page.getByRole('button',{name:'替换到原文',exact:true}).click();await page.locator('.en-replacement-mark').waitFor();return replacement
 }
-it('highlights only changed text, opens an original/replacement comparison, and restores only its own scope',async()=>{
+it('highlights the complete marked replacement, opens an original/replacement comparison, and restores only its own scope',async()=>{
  const{context,page,errors,id}=await fixture();try{
   await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.getByRole('textbox',{name:'回复AI挑战'}).fill('保留未发送的原讨论草稿')
-  const replacement=await applyTrackedReplacement(page),mark=page.locator('.en-replacement-mark');expect(await mark.textContent()).toBe('程')
+  const replacement=await applyTrackedReplacement(page),mark=page.locator('.en-replacement-mark');expect(await mark.textContent()).toBe('程度')
   await mark.click();const popup=page.getByRole('dialog',{name:'替换对照'});await popup.waitFor();expect(await popup.locator('[data-replacement-before]').textContent()).toBe('成度');expect(await popup.locator('[data-replacement-after]').textContent()).toBe('程度')
   const bounds=await popup.boundingBox(),area=await page.locator('.en-main').boundingBox();expect(bounds.y).toBeGreaterThanOrEqual(area.y);expect(bounds.y+bounds.height).toBeLessThanOrEqual(area.y+area.height)
   await page.evaluate(()=>{const range=window.editor._tiptapEditor.state.doc;let from;range.descendants((node,pos)=>{if(node.type.name==='blockContainer'&&node.attrs.id==='p'){from=pos+2;return false}});const text=window.editor.getBlock('p').content.map(c=>c.text||'').join('');window.editor.transact(tr=>{tr.insertText('段后新增说明。',from+text.length);tr.insertText('新补充的前言。',from)})})
   await page.locator('.en-replacement-mark').click();await popup.getByRole('button',{name:'取消替换',exact:true}).click()
   await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('新补充的前言。'+original+'段后新增说明。')
   expect(await page.locator('.en-replacement-mark').count()).toBe(0);expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('metadata').draft,id)).toBe('保留未发送的原讨论草稿')
-  await page.locator('.bn-editor [data-bn-thread-id]').first().click();await expect.poll(()=>page.getByRole('button',{name:'已取消替换',exact:true}).count()).toBe(1);expect(errors).toEqual([])
+  await page.locator('.bn-editor [data-bn-thread-id]').first().click();await expect.poll(()=>page.getByRole('button',{name:'替换到原文',exact:true}).count()).toBe(1);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 it('retains replacement reviews across remount and resolves their highlight without changing the applied text',async()=>{
@@ -755,5 +755,56 @@ it('automatically resolves the replaced discussion, keeps its draft and shows on
   await popup.getByRole('button',{name:'取消替换',exact:true}).click()
   await expect.poll(()=>page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(false)
   expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('metadata').draft,id)).toBe('原讨论未发送的草稿');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('allows a cancelled suggestion to be applied again and highlights the whole marked replacement including shared edge characters',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await applyTrackedReplacement(page);expect(await page.locator('.en-replacement-mark').textContent()).toBe('程度')
+  await page.locator('.en-replacement-mark').click();await page.getByRole('button',{name:'取消替换',exact:true}).click()
+  await page.locator('.bn-editor [data-bn-thread-id]').first().click();const button=page.getByRole('button',{name:'替换到原文',exact:true});await button.waitFor();expect(await button.isEnabled()).toBe(true);await button.click()
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('这项结论的程度较高。')
+  expect(await page.locator('.en-replacement-mark').allTextContents()).toEqual(['程度']);expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('shows per-paragraph reviewed lines, exact unresolved counts and tier tooltips without marking unread paragraphs',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id)
+  await page.evaluate(()=>window.editor.replaceBlocks(window.editor.document,[{id:'p',type:'paragraph',content:'这是已经校对的正常段落。'},{id:'r',type:'paragraph',content:'请提胶并审和报告。'},{id:'q',type:'paragraph',content:'这是尚未阅读的段落。'}]))
+  await page.evaluate(()=>window.challenge.setLevel(4));await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
+  await finish(page,{version:1,issues:[{blockId:'r',quote:'提胶',category:'typo',message:'应为提交。',evidence:[]},{blockId:'r',quote:'审和',category:'typo',message:'应为审核。',evidence:[]}],coveredBlockIds:['p','r'],completeBlockIds:['p','r'],checks:[{kind:'review',status:'partial',detail:'已检查其中两个段落。'}]})
+  const passed=page.locator('.en-challenge-paragraph-line[data-block-id=p]'),issues=page.locator('.en-challenge-paragraph-line[data-block-id=r]')
+  await expect.poll(()=>page.locator('.en-challenge-paragraph-line').count()).toBe(2)
+  expect(await passed.getAttribute('data-state')).toBe('passed');expect(await passed.getAttribute('aria-label')).toContain('抬杠模式')
+  expect(await issues.getAttribute('data-state')).toBe('issues');expect(await issues.getAttribute('aria-label')).toContain('2 处未解决问题')
+  expect(await page.locator('.en-challenge-paragraph-line[data-block-id=q]').count()).toBe(0)
+  await issues.hover();await expect.poll(()=>issues.getByRole('tooltip').isVisible()).toBe(true)
+  const para=await page.locator('.bn-block-content[data-content-type=paragraph]').first().boundingBox(),line=await passed.boundingBox(),document=await page.locator('.en-document').boundingBox()
+  expect(Math.abs(line.y-para.y)).toBeLessThan(2);expect(line.x).toBeGreaterThan(document.x+document.width);expect(Math.abs(line.height-para.height)).toBeLessThan(2)
+  await page.evaluate(()=>{for(const thread of window.challenge.threads)void window.challenge.resolve(thread.id)})
+  await expect.poll(()=>issues.getAttribute('data-state')).toBe('passed');expect(await issues.getAttribute('aria-label')).toContain('已解决 2 处问题')
+  await page.evaluate(()=>window.editor.updateBlock('p',{content:'用户刚编辑过的新段落。'}));await expect.poll(()=>passed.count()).toBe(0)
+  await page.evaluate(()=>window.challenge.setLevel(1));await expect.poll(()=>page.locator('.en-challenge-paragraph-line').count()).toBe(0)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('does not display a passed line after a partial depth response, a failed request, or disabling challenge',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id);await page.evaluate(()=>window.challenge.setLevel(3));await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:[],checks:[{kind:'review',status:'partial',detail:'深入检查未完成。'}]});await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-recheck',{detail:{sessionId:'note-a'}})));await page.clock.fastForward(5000);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  await page.evaluate(()=>window.jobs[1].reject(Error('provider unavailable')));await page.clock.fastForward(1);expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
+  await page.evaluate(()=>window.challenge.setLevel(0));expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('keeps a clickable review anchor for a pure deletion and can restore the removed text',async()=>{
+ const{context,page,errors}=await fixture('请多提交报告。','多');try{
+  await applyTrackedReplacement(page,'请提交报告。');await page.locator('.en-replacement-mark').click()
+  const popup=page.getByRole('dialog',{name:'替换对照'});expect(await popup.locator('[data-replacement-before]').textContent()).toBe('多');expect(await popup.locator('[data-replacement-after]').textContent()).toBe('（已删除）')
+  await popup.getByRole('button',{name:'取消替换',exact:true}).click();expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('请多提交报告。');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

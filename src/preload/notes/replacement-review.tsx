@@ -9,27 +9,38 @@ import {findChallengeQuote} from './challenge-anchors'
 
 export type NoteReplacementReview={id:string;threadId:string;commentId?:string;blockId:string;anchorBefore:string;original:string;replacement:string;createdAt:number;resolved?:boolean;autoResolved?:boolean;position:{first:any;last:any};originalSlice:any}
 const valid=(v:any):v is NoteReplacementReview=>v&&typeof v.id==='string'&&v.id.length<=256&&typeof v.threadId==='string'&&v.threadId.length<=256&&typeof v.blockId==='string'&&v.blockId.length<=256&&typeof v.original==='string'&&v.original.trim()&&v.original.length<=6000&&typeof v.replacement==='string'&&v.replacement.trim()&&v.replacement.length<=6000&&typeof v.anchorBefore==='string'&&v.anchorBefore.length<=6000&&Number.isFinite(v.createdAt)&&v.position?.first&&v.position?.last&&v.originalSlice
+const splitsCodePoint=(s:string,n:number)=>n>0&&n<s.length&&/[\uD800-\uDBFF]/u.test(s[n-1]!)&&/[\uDC00-\uDFFF]/u.test(s[n]!)
 /** Bounds include whole code points; an insertion/deletion is a single local edit envelope. */
 export function replacementChange(original:string,replacement:string){
  let from=0,suffix=0
  while(from<original.length&&from<replacement.length&&original[from]===replacement[from])from++
- const splits=(s:string,n:number)=>n>0&&n<s.length&&/[\uD800-\uDBFF]/u.test(s[n-1]!)&&/[\uDC00-\uDFFF]/u.test(s[n]!)
- if(splits(original,from)||splits(replacement,from))from--
+ if(splitsCodePoint(original,from)||splitsCodePoint(replacement,from))from--
  while(suffix<original.length-from&&suffix<replacement.length-from&&original[original.length-1-suffix]===replacement[replacement.length-1-suffix])suffix++
- if(splits(original,original.length-suffix)||splits(replacement,replacement.length-suffix))suffix--
+ if(splitsCodePoint(original,original.length-suffix)||splitsCodePoint(replacement,replacement.length-suffix))suffix--
  const to=replacement.length-suffix
  // A deletion needs a visible adjacent anchor to open its comparison.
  return to>from?{from,to}:from<replacement.length?{from,to:from+(replacement.codePointAt(from)!>0xffff?2:1)}:{from:Math.max(0,from-(replacement.codePointAt(Math.max(0,from-2))!>0xffff?2:1)),to:from}
 }
 /** Compare only the marked fragment and any actual adjacent edit envelope. */
-export function replacementComparison(review:Pick<NoteReplacementReview,'original'|'replacement'|'anchorBefore'>){
+function replacementComparisonBounds(review:Pick<NoteReplacementReview,'original'|'replacement'|'anchorBefore'>){
  const {original,replacement,anchorBefore}=review,at=original.indexOf(anchorBefore)
- if(at<0||original.indexOf(anchorBefore,at+1)>=0)return{original,replacement}
+ if(at<0||original.indexOf(anchorBefore,at+1)>=0)return{from:0,oldTo:original.length,newTo:replacement.length}
  let prefix=0,suffix=0
  while(prefix<original.length&&prefix<replacement.length&&original[prefix]===replacement[prefix])prefix++
  while(suffix<original.length-prefix&&suffix<replacement.length-prefix&&original[original.length-1-suffix]===replacement[replacement.length-1-suffix])suffix++
- const from=Math.min(at,prefix),oldTo=Math.max(at+anchorBefore.length,original.length-suffix),newTo=oldTo+replacement.length-original.length
- return{original:original.slice(from,oldTo),replacement:replacement.slice(from,newTo)}
+ let from=Math.min(at,prefix),oldTo=Math.max(at+anchorBefore.length,original.length-suffix)
+ if(splitsCodePoint(original,from)||splitsCodePoint(replacement,from))from--
+ if(splitsCodePoint(original,oldTo)||splitsCodePoint(replacement,oldTo+replacement.length-original.length))oldTo++
+ const newTo=oldTo+replacement.length-original.length
+ return{from,oldTo,newTo}
+}
+
+export function replacementComparison(review:Pick<NoteReplacementReview,'original'|'replacement'|'anchorBefore'>){const bounds=replacementComparisonBounds(review);return{original:review.original.slice(bounds.from,bounds.oldTo),replacement:review.replacement.slice(bounds.from,bounds.newTo)}}
+
+function replacementHighlightBounds(review:Pick<NoteReplacementReview,'original'|'replacement'|'anchorBefore'>){
+ const bounds=replacementComparisonBounds(review)
+ // Deleting the whole marked fragment still needs a visible entry to undo it.
+ return bounds.newTo>bounds.from?{from:bounds.from,to:bounds.newTo}:replacementChange(review.original,review.replacement)
 }
 
 function relativeRange(editor:any,review:NoteReplacementReview){
@@ -49,8 +60,8 @@ function boundRange(editor:any,review:NoteReplacementReview){return editor.getEx
 export function replacementReviewRange(editor:any,review:NoteReplacementReview){
  const range=boundRange(editor,review)
  if(!range)return
- const change=replacementChange(review.original,review.replacement)
- return change.to>change.from?{from:range.from+change.from,to:range.from+change.to}:undefined
+ const bounds=replacementHighlightBounds(review)
+ return bounds.to>bounds.from?{from:range.from+bounds.from,to:range.from+bounds.to}:undefined
 }
 
 const highlightKey=new PluginKey('ework-note-replacement-review')
@@ -69,7 +80,7 @@ export const NoteReplacementHighlights=createExtension(({editor})=>{
  },prosemirrorPlugins:[new Plugin({key:highlightKey,state:{init:()=>null,apply(tr,value,_old,state){
   if(tr.docChanged)for(const review of reviews){const prior=positions.get(review.id);if(!prior)continue;const from=tr.mapping.mapResult(prior.from,1),to=tr.mapping.mapResult(prior.to,-1),range={from:from.pos,to:to.pos};positions.set(review.id,!from.deleted&&!to.deleted&&matches(state,range,review)?range:undefined)}
   return value
- }},props:{decorations(state){const decorations=[];for(const review of reviews){const range=positions.get(review.id),change=replacementChange(review.original,review.replacement);if(range&&matches(state,range,review)&&change.to>change.from)decorations.push(Decoration.inline(range.from+change.from,range.from+change.to,{class:'en-replacement-mark','data-en-replacement-id':review.id,role:'button',tabindex:'0','aria-label':'查看替换对照'}))}return DecorationSet.create(state.doc,decorations)}}})]}
+ }},props:{decorations(state){const decorations=[];for(const review of reviews){const range=positions.get(review.id),bounds=replacementHighlightBounds(review);if(range&&matches(state,range,review)&&bounds.to>bounds.from)decorations.push(Decoration.inline(range.from+bounds.from,range.from+bounds.to,{class:'en-replacement-mark','data-en-replacement-id':review.id,role:'button',tabindex:'0','aria-label':'查看替换对照'}))}return DecorationSet.create(state.doc,decorations)}}})]}
 })
 
 /** Decorations leave body formatting untouched; durable review records live beside comments. */
@@ -95,7 +106,7 @@ export function useNoteReplacementReviews(options:{editor:any;doc:Y.Doc;scroll:R
   const binding=ySyncPluginKey.getState(editor._tiptapEditor.state)?.binding;if(!binding)return
   const first=absolutePositionToRelativePosition(snapshot.range.from,binding.type,binding.mapping),last=absolutePositionToRelativePosition(snapshot.range.from+value.replacement.length-1,binding.type,binding.mapping)
   const review={...value,id:crypto.randomUUID(),createdAt:Date.now(),position:{first:Y.relativePositionToJSON(first),last:Y.relativePositionToJSON(last)},originalSlice:snapshot.originalSlice}
-  if(valid(review))records.set(review.id,review)
+  if(valid(review))doc.transact(()=>{for(const old of records.values())if(valid(old)&&old.threadId===review.threadId&&!old.resolved)records.set(old.id,{...old,resolved:true});records.set(review.id,review)})
  }
  const finish=async(revert:boolean)=>{
   const review=selected&&records.get(selected)
@@ -129,5 +140,5 @@ export function NoteReplacementPopover({controller,scroll}:{controller:ReturnTyp
  },[selected?.id,controller.revision])
  if(!selected)return null
  const comparison=replacementComparison(selected)
- return <section ref={root} className="en-replacement-popover" role="dialog" aria-label="替换对照" style={{...position,visibility:position?'visible':'hidden'}}><header><strong>替换对照</strong><button aria-label="关闭替换对照" onClick={controller.close}>×</button></header><div className="en-replacement-comparison"><section><h4>原文</h4><div data-replacement-before>{comparison.original}</div></section><section><h4>替换后</h4><div data-replacement-after>{comparison.replacement}</div></section></div>{controller.error||!controller.canRevert?<p role="status">{controller.error||'这段文字已再次编辑，无法直接取消替换。'}</p>:null}<footer><button disabled={controller.busy||!controller.canRevert} onClick={()=>void controller.revert()}>取消替换</button><button disabled={controller.busy} onClick={()=>void controller.resolve()}>已解决</button></footer></section>
+ return <section ref={root} className="en-replacement-popover" role="dialog" aria-label="替换对照" style={{...position,visibility:position?'visible':'hidden'}}><header><strong>替换对照</strong><button aria-label="关闭替换对照" onClick={controller.close}>×</button></header><div className="en-replacement-comparison"><section><h4>原文</h4><div data-replacement-before>{comparison.original}</div></section><section><h4>替换后</h4><div data-replacement-after>{comparison.replacement||'（已删除）'}</div></section></div>{controller.error||!controller.canRevert?<p role="status">{controller.error||'这段文字已再次编辑，无法直接取消替换。'}</p>:null}<footer><button disabled={controller.busy||!controller.canRevert} onClick={()=>void controller.revert()}>取消替换</button><button disabled={controller.busy} onClick={()=>void controller.resolve()}>已解决</button></footer></section>
 }

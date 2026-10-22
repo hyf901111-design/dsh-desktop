@@ -83,3 +83,12 @@ body [data-ework-notes-session]:has(.en-challenge-tools) [data-srb-utilities]{fl
 .en-root .en-replacement-popover header button{display:grid;place-items:center;box-sizing:border-box;width:24px;height:24px;min-width:24px;padding:0;border-radius:6px;background:transparent;color:var(--en-challenge-muted);font-size:18px;line-height:24px}
 .en-replacement-comparison{overflow:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;white-space:pre-wrap;overflow-wrap:anywhere}.en-replacement-comparison section+section{margin-top:14px}.en-replacement-comparison h4{font-size:11px;font-weight:400;line-height:18px;color:var(--en-challenge-muted);margin:0 0 4px}.en-replacement-comparison [data-replacement-after]{border-left:2px solid #6ba5d4;padding-left:8px}.en-replacement-popover>p{font-size:12px;color:var(--en-challenge-muted)}
 .en-replacement-popover footer{display:flex;flex:none;justify-content:flex-end;gap:8px;margin-top:12px}.en-root .en-replacement-popover footer button{min-width:0;height:28px;padding:4px 10px;border:0;border-radius:6px;background:var(--en-challenge-action);color:var(--en-challenge-action-ink);font-family:inherit;font-size:12px;font-weight:400;line-height:20px}.en-root .en-replacement-popover button:disabled{opacity:.5;cursor:default}
+
+.en-challenge-paragraph-feedback{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:60}
+.en-challenge-paragraph-line{position:absolute;width:12px;pointer-events:auto;outline:none}
+.en-challenge-paragraph-line::before{content:"";position:absolute;left:4px;top:0;bottom:0;width:3px;border-radius:3px;background:#528cff}
+.en-challenge-paragraph-line[data-state=issues]::before{background:#eea438}
+.en-challenge-paragraph-line:focus-visible::before{outline:2px solid var(--en-ink);outline-offset:3px}
+.en-challenge-paragraph-line>[role=tooltip]{position:absolute;right:16px;top:0;width:max-content;max-width:min(280px,calc(100vw - 64px));padding:8px 10px;border:1px solid var(--en-challenge-border);border-radius:8px;background:var(--en-popup);color:var(--en-ink);box-shadow:var(--en-challenge-popup-shadow);font-size:12px;line-height:1.6;opacity:0;visibility:hidden;pointer-events:none;transition:opacity 120ms ease;white-space:normal}
+.en-challenge-paragraph-line:is(:hover,:focus-visible)>[role=tooltip]{opacity:1;visibility:visible}
+@media(prefers-reduced-motion:reduce){.en-challenge-paragraph-line>[role=tooltip]{transition:none}}
