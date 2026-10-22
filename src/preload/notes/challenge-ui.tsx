@@ -148,7 +148,19 @@ export function ChallengeComments({controller,editor,scroll,onMarginAvailableCha
     if(!wide&&editingId&&editingId!==controller.selected)controller.select(editingId)
     let bottom=Number.NEGATIVE_INFINITY
     const columnLeft=wide?alignmentRight-area.left-320-16:0
-    const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected||t.id===editingId)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const start=editor._tiptapEditor.view.coordsAtPos(range.from),end=editor._tiptapEditor.view.coordsAtPos(range.to),rect={...start,bottom:end.bottom};return {thread:t,rect,position:range.from}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number};position:number}>
+    const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected||t.id===editingId)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{
+     const view=editor._tiptapEditor.view,start=view.coordsAtPos(range.from),end=view.coordsAtPos(range.to)
+     let rect={...start,bottom:end.bottom}
+     if(!wide){
+      // An inline highlight has one rect per wrapped line. Its overall bounds
+      // can end screens below the actual click, so never anchor a popup there.
+      const fragments=Array.from(scroller.querySelectorAll<HTMLElement>('[data-bn-thread-id="'+CSS.escape(t.id)+'"]:not([data-orphan="true"])')).flatMap(mark=>Array.from(mark.getClientRects())).filter(part=>part.width>0&&part.height>0)
+      const anchor=controller.popupAnchor,point=anchor?.threadId===t.id&&anchor.position>=range.from&&anchor.position<=range.to?view.coordsAtPos(anchor.position,anchor.position===range.to?-1:1):undefined
+      const middle=point?(point.top+point.bottom)/2:0,line=point?(fragments.find(part=>part.top<=middle&&part.bottom>=middle&&part.left<=point.left+1&&part.right>=point.left-1)??fragments.find(part=>part.top<=middle&&part.bottom>=middle)):fragments.find(part=>part.bottom>area.top&&part.top<area.bottom)
+      rect={...start,top:line?.top??point?.top??start.top,bottom:line?.bottom??point?.bottom??start.bottom,left:point?.left??line?.left??start.left}
+     }
+     return {thread:t,rect,position:range.from}
+    }catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number};position:number}>
     candidates.sort((a,b)=>a.position-b.position)
     const items=candidates.map(({thread,rect})=>{
      const height=cards.current.get(thread.id)?.getBoundingClientRect().height||260
@@ -180,7 +192,7 @@ export function ChallengeComments({controller,editor,scroll,onMarginAvailableCha
   const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'&&controller.selected)controller.close(controller.selected)}
   document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape)
   return()=>{cancelAnimationFrame(frame);if(resize.current===observer)resize.current=undefined;observer.disconnect();margin?.removeEventListener('scroll',measure);scroller.removeEventListener('scroll',documentScroll);window.removeEventListener('resize',measure);document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)}
- },[controller.revision,controller.selected,controller.level,controller.marginExpanded,layout.wide,onMarginAvailableChange])
+ },[controller.revision,controller.selected,controller.popupAnchor,controller.level,controller.marginExpanded,layout.wide,onMarginAvailableChange])
  const markStyles=controller.threads.map(thread=>'.en-root [data-bn-thread-id="'+CSS.escape(thread.id)+'"]:not([data-orphan="true"]){background:var('+(thread.id===controller.selected?'--en-challenge-mark-selected':'--en-challenge-mark')+');border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone}').join('')
  return <><ChallengeParagraphFeedback items={controller.paragraphFeedback} scroll={scroll} revision={controller.revision} level={controller.level} reducedMotion={reducedMotion}/><style>{markStyles}</style><div className="en-challenge-comments" ref={root} data-wide={presentation.wide||undefined} data-empty={!presentation.items.length||undefined} data-exiting={exiting||undefined} aria-hidden={exiting||undefined} style={{left:presentation.columnLeft}}>{presentation.items.map(item=>{const thread=controller.threads.find(t=>t.id===item.id);return thread?<ChallengeCard key={thread.id} thread={thread} controller={controller} popup={!presentation.wide} selected={presentation.multiple&&thread.id===controller.selected} style={item.style} cardRef={el=>{const prior=cards.current.get(thread.id);if(prior&&prior!==el)resize.current?.unobserve(prior);if(el){cards.current.set(thread.id,el);resize.current?.observe(el)}else cards.current.delete(thread.id)}}/>:null})}</div></>
 }

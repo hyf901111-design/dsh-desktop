@@ -324,6 +324,11 @@ it('keeps the swords static while waiting, animates a real review, and stops for
    await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(stop==='failure'?2:stop==='off'?3:4)
    await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('true')
    await page.evaluate(stop=>{if(stop==='failure')window.jobs.at(-1).reject(Error('fixture failure'));if(stop==='off')window.challenge.setLevel(0);if(stop==='hidden'){document.querySelector('.en-root').hidden=true;document.dispatchEvent(new Event('sherlock:workspace-surface-change'))}},stop)
+   if(stop==='hidden'){
+    expect(await page.evaluate(()=>window.challenge.phase)).toBe('running')
+    expect(await trigger.getAttribute('aria-busy')).toBe('true')
+    await finish(page,{...answer,coveredBlockIds:['p']},3)
+   }
    await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false')
    expect(await icon.getAttribute('src')).toBe(staticSrc)
    if(stop==='off')await page.evaluate(()=>window.challenge.setLevel(2))

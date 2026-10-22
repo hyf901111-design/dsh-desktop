@@ -2,6 +2,7 @@ import {afterEach,it,expect,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
 import {Window} from 'happy-dom'
+import postcss from 'postcss'
 import {canvasCss} from '../scripts/lib/figma-canvas-client.mjs'
 import {ComponentDataSettingsPanel,componentDataSettingsCss} from '../scripts/lib/component-data-settings-panel.mjs'
 import * as dataRefresh from '../scripts/lib/component-data-refresh.mjs'
@@ -25,19 +26,23 @@ it('未传触发器的生成组件设置仍从所属画布获取主题',()=>{
  expect(typeof dataRefresh.openComponentData).toBe('function');dataRefresh.openComponentData('session',{id:'card',title:'模拟数据'})
  expect(detail.theme).toBe('openterminal')
 })
-it('全局浅色下的工作台菜单和全部生成状态配套深色，原浅色模式不受影响',async()=>{
+it('彭博生成状态保持深色，菜单复用全局中性磨砂且不影响外部浅色页面',async()=>{
  const doc=setup(),sheet=readFileSync('scripts/lib/workbench-style.css','utf8')
  // Happy DOM does not implement cascade layers; exercise identical OT declarations without the wrapper.
  const ot=sheet.slice(sheet.indexOf('/* OpenTerminal is'),sheet.lastIndexOf('}')),style=doc.createElement('style')
  style.textContent=canvasCss+readFileSync('scripts/lib/research-grid-workbench.css','utf8')+sheet.slice(0,sheet.indexOf('@layer ework-workbench'))+ot;doc.head.append(style)
  doc.body.innerHTML='<main data-research-canvas data-ework-grid data-workbench-style="openterminal">'+['queued','running','retrying','failed','cancelled','interrupted'].map(s=>`<article data-research-node-id="${s}" data-research-artifact-card data-research-compact-chrome data-research-generation-state="${s}"><div class="odyssey-generation-surface"></div></article>`).join('')+'<article class="odyssey-creation-planning-card"><div class="odyssey-generation-surface"></div></article></main><div class="ew-grid-menu">菜单</div><div id="unrelated" style="background:#fff">外部页面</div>'
- const menu=doc.querySelector('.ew-grid-menu');expect(win.getComputedStyle(menu).backgroundColor).toBe('#1c1b20')
+ // Happy DOM drops background shorthands with nested var() fallbacks. Check parsed material
+ // ownership here; the Chromium menu matrix verifies actual colors and blur.
+ const rules=[];postcss.parse(style.textContent).walkRules(rule=>rules.push(rule))
+ const material=selector=>Object.fromEntries(rules.find(rule=>rule.selector===selector).nodes.filter(node=>node.type==='decl').map(({prop,value})=>[prop,value])),menuStyle=material('.ew-grid-menu'),darkMenuStyle=material('body[data-ds-dark-theme] .ew-grid-menu')
+ expect(menuStyle.background).toBe('var(--odyssey-menu,rgba(255,255,255,.78))')
+ expect(darkMenuStyle.background).toBe('var(--odyssey-menu,rgba(43,43,43,.68))')
+ expect(menuStyle['backdrop-filter']).toBe('var(--odyssey-menu-blur,blur(36px) saturate(1.2))')
+ expect(rules.filter(rule=>rule.selector.includes('openterminal')&&rule.selector.includes('.ew-grid-menu'))).toEqual([])
  for(const surface of doc.querySelectorAll('.odyssey-generation-surface'))expect(win.getComputedStyle(surface).getPropertyValue('--generation-bg')).toBe('#131315')
  for(const card of doc.querySelectorAll('[data-research-generation-state]'))expect(win.getComputedStyle(card).borderRadius).toBe('8px')
  expect(win.getComputedStyle(doc.querySelector('#unrelated')).backgroundColor).toBe('#fff')
- // A separate document avoids Happy DOM's ancestor :has() invalidation cache.
- // Real Chromium mode switching is verified in the UI fixture and client.
- const light=new Window(),lightStyle=light.document.createElement('style');lightStyle.textContent=style.textContent;light.document.head.append(lightStyle);light.document.body.innerHTML='<main data-research-canvas data-ework-grid data-workbench-style="light"></main><div class="ew-grid-menu">菜单</div>';expect(light.getComputedStyle(light.document.querySelector('.ew-grid-menu')).backgroundColor).toBe('#f8f8fa');await light.happyDOM.abort()
 })
 
 it('彭博模式位于深色和易方达之间，键盘顺序和英文名称一致',async()=>{

@@ -14,9 +14,21 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
   const editorHost = document.createElement('div'); editorHost.className = 'en-editor-host'
   surface.append(editorHost)
   let reactRoot: Root | undefined, sessionId = '', frame = 0, lastAnchor: Element | null = null
+  const entries=new Map<string,{instanceId:string;retaining:boolean}>();let resetting=false
   const nativeTab = (id: string) => document.querySelector<HTMLButtonElement>(`[data-srb-tabs] [data-conversation-view-id="${id}"]`)
   const navigate = (id: string) => { host.close('notes'); if (id === 'new') document.querySelector<HTMLButtonElement>('.hHd-Xa_newSession')?.click(); else nativeTab(id)?.click() }
-  const render = () => { if (!sessionId) return; reactRoot ??= createRoot(editorHost); reactRoot.render(<NotesApp key={sessionId} sessionId={sessionId} bridge={bridge} dark={surface.dataset.dark === 'true'} navigate={navigate} />) }
+  const render = () => {
+    if(!sessionId||resetting)return
+    if(!entries.has(sessionId))entries.set(sessionId,{instanceId:crypto.randomUUID(),retaining:false})
+    for(const [id,entry]of entries)if(id!==sessionId&&!entry.retaining)entries.delete(id)
+    reactRoot??=createRoot(editorHost)
+    reactRoot.render(<>{[...entries].map(([id,entry])=><div key={entry.instanceId} data-note-editor-session={id} data-note-editor-active={id===sessionId?'true':'false'} style={{height:'100%',minHeight:0,display:id===sessionId?'contents':'none'}} hidden={id!==sessionId} ref={node=>{if(node)(node as HTMLElement&{inert:boolean}).inert=id!==sessionId}}><NotesApp sessionId={id} active={id===sessionId} activityId={entry.instanceId} bridge={bridge} dark={surface.dataset.dark==='true'} navigate={navigate}/></div>)}</>)
+  }
+  const activity=(event:Event)=>{
+    const value=(event as CustomEvent).detail,entry=entries.get(value?.sessionId)
+    if(resetting||!entry||entry.instanceId!==value.instanceId||typeof value.retaining!=='boolean'||entry.retaining===value.retaining)return
+    entry.retaining=value.retaining;render()
+  }
   const open = (event?: Event) => {
     const id = document.querySelector<HTMLElement>('[data-ework-notes-session]')?.dataset.eworkNotesSession || ''
     if (!id || ((event as CustomEvent | undefined)?.detail?.sessionId && (event as CustomEvent).detail.sessionId !== id)) return
@@ -34,7 +46,7 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
   }
   const observer = new MutationObserver(() => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; sync() }) }); observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-ework-notes-session', 'data-odyssey-locale'] })
   const theme = new MutationObserver(render); theme.observe(surface, { attributes: true, attributeFilter: ['data-dark'] })
-  const identity = () => { reactRoot?.unmount(); reactRoot = undefined; sessionId = ''; host.close('notes'); document.dispatchEvent(new CustomEvent('sherlock:notes-reset')) }
-  document.addEventListener('sherlock:notes-open', open); document.addEventListener('sherlock:notes-close', close); document.addEventListener('click', onNativeTabClick, true); sync()
-  return { resetIdentity: identity, dispose: () => { identity(); observer.disconnect(); theme.disconnect(); cancelAnimationFrame(frame); style.remove(); surface.remove(); document.removeEventListener('sherlock:notes-open', open); document.removeEventListener('sherlock:notes-close', close); document.removeEventListener('click', onNativeTabClick, true) } }
+  const identity = () => { resetting=true;entries.clear();reactRoot?.unmount();reactRoot=undefined;sessionId='';host.close('notes');resetting=false;document.dispatchEvent(new CustomEvent('sherlock:notes-reset')) }
+  document.addEventListener('sherlock:notes-challenge-activity',activity);document.addEventListener('sherlock:notes-open', open); document.addEventListener('sherlock:notes-close', close); document.addEventListener('click', onNativeTabClick, true); sync()
+  return { resetIdentity: identity, dispose: () => { identity(); observer.disconnect(); theme.disconnect(); cancelAnimationFrame(frame); style.remove(); surface.remove(); document.removeEventListener('sherlock:notes-challenge-activity',activity);document.removeEventListener('sherlock:notes-open', open); document.removeEventListener('sherlock:notes-close', close); document.removeEventListener('click', onNativeTabClick, true) } }
 }

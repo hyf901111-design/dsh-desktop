@@ -86,8 +86,7 @@ body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] 
 
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] :is(.ew-youtube-preset,.ew-iframe-preset){--youtube-control:var(--grid-control)!important;--iframe-control:var(--grid-control)!important}
 
-/* OpenTerminal uses existing dark controls and progress cards even in a light app. */
-body:has([data-research-canvas][data-workbench-style=openterminal]) :is(.ew-grid-menu,.ew-grid-context-menu,.ew-grid-download-menu){background:#1c1b20!important;color:#e9e9ef!important;color-scheme:dark!important}
+/* OpenTerminal keeps board controls dark; portal menus use the shared app material. */
 body:has([data-research-canvas][data-workbench-style=openterminal]) [data-ework-toolbar][data-research-global-toolbar]{background:#242424!important;border-color:#404040!important}
 body:has([data-research-canvas][data-workbench-style=openterminal]) :is([data-ework-toolbar]>button,[data-ework-toolbar]>.rScV5Q_globalToolSlot>button,[data-ework-toolbar]>.ew-arrange-tool>button){color:#f1f1f3!important}
 body:has([data-research-canvas][data-workbench-style=openterminal]) :is([data-ework-toolbar]>button img,[data-ework-toolbar]>.rScV5Q_globalToolSlot>button img){filter:brightness(0) invert(1)!important}

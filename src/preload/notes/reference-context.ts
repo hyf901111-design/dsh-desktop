@@ -1,6 +1,7 @@
 import {useEffect,useRef} from 'react'
 import {NoteAiSelection} from './selection'
 import {noteRangeHasOnlyText} from './replace-selection'
+import {noteEditorVisible} from './editor-visibility'
 
 type Component = {blockId:string;title:string;type:string;content:string;file?:{nodeId:string;authorizationId:string}}
 type Range = {from:number;to:number;text:string;cursor:string}
@@ -31,10 +32,11 @@ export function useNoteReferenceContext(editor:any,sessionId:string,root:React.R
   }
   return {scope:current.range||current.ids.length?'selection':current.enabled?'note':'none',components:current.ids.length?all.filter(item=>current.ids.includes(item.blockId)):current.range||!current.enabled?[]:all,...current.range?{range:{...current.range}}:{}}
  }
- publishRef.current=()=>{const context=capture(false);document.dispatchEvent(new CustomEvent('sherlock:notes-reference-state',{detail:{sessionId,enabled:state.current.enabled,components:components(false).map(({content,...item})=>item),references:context.scope==='selection'?[...context.components.map(({content,...item})=>item),...context.range?[{blockId:'text-selection',type:'text',title:context.range.text}]:[]]:[]}}))}
+ publishRef.current=()=>{if(!noteEditorVisible(root.current))return;const context=capture(false);document.dispatchEvent(new CustomEvent('sherlock:notes-reference-state',{detail:{sessionId,enabled:state.current.enabled,components:components(false).map(({content,...item})=>item),references:context.scope==='selection'?[...context.components.map(({content,...item})=>item),...context.range?[{blockId:'text-selection',type:'text',title:context.range.text}]:[]]:[]}}))}
  useEffect(()=>{
   const clear=()=>{state.current.ids=[];state.current.range=undefined;editor.getExtension(NoteAiSelection)?.highlight()}
   const selection=()=>{
+   if(!noteEditorVisible(root.current))return
    const {doc,selection:range}=editor._tiptapEditor.state
    const selectedNode=range.node?.type.name==='blockContainer'?range.node.firstChild:range.node
    if(['research','attachment'].includes(selectedNode?.type.name)){
@@ -48,17 +50,18 @@ export function useNoteReferenceContext(editor:any,sessionId:string,root:React.R
    }else if(editor._tiptapEditor.isFocused){clear()}
    publishRef.current()
   }
-  const component=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId!==sessionId)return
+  const component=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!noteEditorVisible(root.current)||detail?.sessionId!==sessionId)return
    state.current.range=undefined;editor.getExtension(NoteAiSelection)?.highlight()
    state.current.ids=detail.append?[...new Set([...state.current.ids,detail.blockId])]:[detail.blockId];publishRef.current()
   }
-  const action=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId!==sessionId)return
+  const action=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!noteEditorVisible(root.current)||detail?.sessionId!==sessionId)return
    if(detail.action==='toggle')state.current.enabled=!state.current.enabled
    if(detail.action==='remove'){if(detail.blockId==='text-selection')clear();else state.current.ids=state.current.ids.filter(id=>id!==detail.blockId)}
    publishRef.current()
   }
   const requested=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===sessionId)publishRef.current()}
   const down=(event:PointerEvent)=>{
+   if(!noteEditorVisible(root.current))return
    const target=event.target as HTMLElement
    if(target.closest?.('[data-ework-notes-composer-host]')){if(state.current.range)editor.getExtension(NoteAiSelection)?.highlight(state.current.range);return}
    if(!root.current?.contains(target)||target.closest('.en-inline-assistant,.en-research,.bn-side-menu'))return

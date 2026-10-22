@@ -67,10 +67,11 @@ export class NoteChallengeScheduler{
    else{this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined;this.expedited=false;this.failed.clear()}
   }
   if(composingEnded){this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined;this.expedited=false}
-  if(!this.value.active||this.value.busy||this.value.composing)this.cancel()
+  if(this.value.busy||this.value.composing)this.cancel()
   this.schedule()
  }
  recheck(immediate=false){if(!this.level||this.disposed)return;this.expedited=immediate;this.failed.clear();for(const b of this.value.blocks)this.pending.add(b.id);this.firstAt=this.now();this.schedule()}
+ restoreCoverage(ids:string[],checks:ChallengeCheck[]){if(this.disposed)return;for(const id of ids)this.pending.delete(id);this.checks=checks;this.schedule()}
  private cancel(){clearTimeout(this.timer);this.timer=undefined;if(this.flight){for(const id of this.flight.ids)if(this.value.blocks.some(b=>b.id===id))this.pending.add(id);this.flight.controller.abort()}}
  private eligible(){return this.value.blocks.filter(b=>this.pending.has(b.id)&&!this.failed.has(b.id))}
  private batch(){
@@ -103,8 +104,8 @@ export class NoteChallengeScheduler{
   clearTimeout(this.timer);this.timer=undefined
   if(this.disposed)return
   if(!this.level){this.emit('off');return}
-  if(!this.value.active||this.value.busy||this.value.composing){this.emit('paused');return}
   if(this.flight){this.emit('running');return}
+  if(!this.value.active||this.value.busy||this.value.composing){this.emit('paused');return}
   if(!this.pending.size){this.emit('idle');return}
   if(!this.eligible().length){this.emit('waiting');return}
   const batch=this.batch()
