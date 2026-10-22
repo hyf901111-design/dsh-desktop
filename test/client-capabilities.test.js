@@ -3,14 +3,14 @@ const module = await import('../packages/dsh-research-task-runtime/client-capabi
 it('registers bounded semantic handlers with schemas instead of accepting arbitrary IPC',()=>{
  expect(module, 'typed capability registry has not been implemented').not.toBeNull()
  const registry=module.createClientCapabilityRegistry({exportNote:async()=>({status:'succeeded',path:'/tmp/report.pdf'}),styleComponents:async()=>({status:'succeeded'}),inspectCanvas:async()=>({status:'succeeded'}),resetZoom:async()=>({status:'succeeded'})})
- expect(registry.catalog(context).map(x=>x.id)).toEqual(['notes.components.create','notes.export','notes.components.style','canvas.inspect','ui.zoom.reset'])
+ expect(registry.catalog(context).map(x=>x.id)).toEqual(['notes.components.create','notes.export','notes.components.style','notes.blocks.align','notes.components.inspect','notes.components.apply','canvas.inspect','ui.zoom.reset'])
  expect(registry.catalog(context).every(x=>x.parameters.additionalProperties===false)).toBe(true)
 })
 const context={owner:'alice',sessionId:'note',documentId:'doc',mode:'notes',editable:true,selectedBlockIds:[],componentBlockIds:['one','two']}
 const run=async()=>{expect(module).not.toBeNull();return module}
 it('executes whole-note style and export in order, caches exact repeats and rejects changed identities or arguments',async()=>{
  const m=await run(),effects=[],registry=m.createClientCapabilityRegistry({styleComponents:async(args)=>{effects.push(args);return{status:'succeeded',changedBlockIds:['one','two']}},exportNote:async()=>{effects.push('pdf');return{status:'succeeded',path:'/tmp/report.pdf'}}}),controller=m.createCapabilityExecutor(registry,()=>context)
- const first={requestId:'a',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise',titleBar:false}}
+ const first={requestId:'a',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise',titleBar:false,frame:false}}
  const a=await controller.execute(first,context);expect(a.status).toBe('succeeded');expect(await controller.execute(first,context)).toEqual(a);expect(effects).toHaveLength(1)
  expect((await controller.execute({...first,arguments:{scope:'note',theme:'dark'}},context)).status).toBe('failed')
  expect((await controller.execute({requestId:'b',capability:'notes.export',arguments:{format:'pdf',path:'/tmp/report.pdf'}},context)).path).toBe('/tmp/report.pdf');expect(effects.at(-1)).toBe('pdf')
@@ -54,6 +54,7 @@ it.each([
  ['notes.export',{format:'pdf',path:'x'.repeat(4097)}],
  ['notes.export',{format:'PDF'}],
  ['notes.components.style',{scope:'note',titleBar:'false'}],
+ ['notes.components.style',{scope:'note',frame:'false'}],
  ['notes.components.style',{scope:'note',theme:'enterprise',ipc:'execute'}],
  ['notes.export',{}],
  ['notes.export',null],
@@ -67,7 +68,7 @@ it.each([
 it('accepts schema boundary lengths without coercing or mutating validated arguments',async()=>{
  const effects=[],handler=async input=>{effects.push(input);return{status:'succeeded'}}
  const registry=module.createClientCapabilityRegistry({createComponent:handler,exportNote:handler,styleComponents:handler})
- for(const [capability,args] of [['notes.components.create',{prompt:'字'.repeat(8000)}],['notes.export',{format:'pdf',path:'x'.repeat(4096)}],['notes.components.style',{scope:'note',titleBar:false}]]){
+ for(const [capability,args] of [['notes.components.create',{prompt:'字'.repeat(8000)}],['notes.export',{format:'pdf',path:'x'.repeat(4096)}],['notes.components.style',{scope:'note',titleBar:false}],['notes.components.style',{scope:'note',frame:false}]]){
   const before=JSON.stringify(args)
   expect(await registry.execute({capability,arguments:args},context)).toEqual({status:'succeeded'})
   expect(effects.at(-1)).toBe(args);expect(JSON.stringify(args)).toBe(before)

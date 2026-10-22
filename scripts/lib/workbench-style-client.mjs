@@ -7,20 +7,30 @@ export function workbenchStyleTrialState(storage) {
 export function createWorkbenchStyleState(storage,sessionId) {
  const key='ework.research.presentation.v1:'+sessionId,trialKey='ework.research.openterminal-trial.v1'
  const shared=workbenchStyleTrialState(storage)
- let mode=null
- try{const saved=JSON.parse(storage?.getItem(key)||'null');if(saved?.version===1&&['light','dark','enterprise','openterminal'].includes(saved.mode))mode=saved.mode}catch{}
+ let mode=null,boardOnly=false
+ try{const saved=JSON.parse(storage?.getItem(key)||'null');if(saved?.version===1&&['light','dark','enterprise','openterminal'].includes(saved.mode)){mode=saved.mode;boardOnly=saved.scope==='board'}}catch{}
  const trial=()=>{if(shared.override!==null)return shared.override;try{return storage?.getItem(trialKey)==='enabled'}catch{return false}}
  const notify=()=>{if(typeof window!=='undefined')window.dispatchEvent(new window.Event('ework-workbench-trial-change'))}
- return {get:()=>trial()?'openterminal':mode,set(value){
+ return {get:()=>boardOnly?mode:trial()?'openterminal':mode,set(value,options={}){
   if(!['light','dark','enterprise','openterminal'].includes(value))return false
+  // Conversation actions are bound to one board. Keep the existing global
+  // trial picker while allowing a durable board preference through this same setter.
+  if(options.scope==='board'){
+   if(boardOnly&&value===mode)return false
+   try{if(!storage?.setItem||storage.setItem(key,JSON.stringify({version:1,mode:value,scope:'board'}))===false)throw Error('storage unavailable')}
+   catch{throw Error('看板样式未保存，请检查本地存储后重试。')}
+   mode=value;boardOnly=true;notify();return true
+  }
+  const scoped=boardOnly
   if(value==='openterminal'){
-   if(trial())return false
+   if(scoped){boardOnly=false;try{storage?.setItem(key,JSON.stringify({version:1,mode}))}catch{}}
+   if(trial()){if(scoped)notify();return scoped}
    shared.override=true;try{storage?.setItem(trialKey,'enabled')}catch{}
    notify();return true
   }
-  const activeTrial=trial();if(!activeTrial&&value===mode)return false
+  const activeTrial=trial();if(!activeTrial&&value===mode&&!scoped)return false
   if(activeTrial){shared.override=false;try{storage?.setItem(trialKey,'disabled')}catch{}}
-  mode=value;try{storage?.setItem(key,JSON.stringify({version:1,mode}))}catch{}
+  mode=value;boardOnly=false;try{storage?.setItem(key,JSON.stringify({version:1,mode}))}catch{}
   notify();return true
  }}
 }

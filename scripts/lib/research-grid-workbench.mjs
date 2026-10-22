@@ -62,6 +62,14 @@ export function patchResearchGridWorkbench(source){
   change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':'', 'data-research-generation-stage': presentation.stage,")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
   change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);')
+  change('const canvasActions = canvasWorkspaceActions({\n        snapshot:()=>snapshot,',`const canvasActions = canvasWorkspaceActions({
+        snapshot:()=>snapshot,
+        presentation:()=>({workbenchStyle:workbenchStyleState.get()||readResearchComponentTheme()}),
+        describePresentation:()=>({workbenchStyle:{type:'string',enum:['light','dark','enterprise','openterminal'],description:'仅当前看板的展示主题；enterprise 为易方达，openterminal 为彭博。'}}),
+        canChangePresentation:()=>true,
+        applyPresentation:fields=>setWorkbenchStyle(fields.workbenchStyle,{scope:'board'}),`)
+  change('let actionReceipt = null; const actionListeners = new Set();',`const setWorkbenchStyle=(mode,options)=>{if(workbenchStyleState.set(mode,options)){update({},false);return true}return false};
+      let actionReceipt = null; const actionListeners = new Set();`)
   change('frame?.contentWindow?.postMessage({ type: \"sherlock-theme\", colorScheme: readResearchComponentTheme(frame.ownerDocument) }, \"*\");','sendWorkbenchFramePresentation(frame);')
   // Explicitly drawn frames retain their size across generation and hydration.
   // This is distinct from automatic voice/selection cards' readable task size.
@@ -80,7 +88,7 @@ export function patchResearchGridWorkbench(source){
     getWorkbenchTableColumns:(id,index,labels)=>workbenchTableColumns.get(id,index,labels),
     setWorkbenchTableColumns:(id,index,labels,state)=>workbenchTableColumns.set(id,index,labels,state),
     getWorkbenchStyle:()=>workbenchStyleState.get(),
-    setWorkbenchStyle(mode){if(workbenchStyleState.set(mode)){update({},false);return true}return false},
+    setWorkbenchStyle,
     getWorkbenchCells:()=>workbenchGrid.get(),
     getWorkbenchVisibleCells:()=>workbenchGrid.visible(),
     setWorkbenchContentHeight(id,value){if(workbenchGrid.contentHeight(id,value)){update({},false);return true}return false},
