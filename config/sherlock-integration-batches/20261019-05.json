@@ -404,23 +404,95 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复段落校对提示偏移并增加状态线渐入",
+        "featureName": "优化段落线错落动效与评论关闭居中并修复研究组件及专题资讯",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "9032871dbccc4e24ce732e5081bebe37f74947f0",
-        "tipCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
+        "baseCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
+        "tipCommit": "e57eee4cfe0243ef9a6fddc4a658200acdbfe572",
         "commits": [
           {
-            "commit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
+            "commit": "e4361b8f46cdcc6409024489faf026dbbf9bdaf6",
             "parents": [
-              "9032871dbccc4e24ce732e5081bebe37f74947f0"
+              "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2"
             ],
-            "subject": "修复段落校对提示定位并为状态线增加渐入动效"
+            "subject": "增大段落线间隙并加入分段错落淡入淡出"
+          },
+          {
+            "commit": "470491098cc9f53324da675c18d8e52a29cf83ed",
+            "parents": [
+              "e4361b8f46cdcc6409024489faf026dbbf9bdaf6"
+            ],
+            "subject": "修复：规范加密行情组件参数并补充真实日内涨跌幅"
+          },
+          {
+            "commit": "5d5bcbadd4ba956b1a03cfb66fbf879fb17a4c51",
+            "parents": [
+              "470491098cc9f53324da675c18d8e52a29cf83ed"
+            ],
+            "subject": "保持段落线状态更新时的焦点并避免重复入场"
+          },
+          {
+            "commit": "ff52d0f3b6c6ce3ea8b277ecfdebb10ce968e355",
+            "parents": [
+              "5d5bcbadd4ba956b1a03cfb66fbf879fb17a4c51"
+            ],
+            "subject": "修正笔记挑战评论关闭图标的视觉中心"
+          },
+          {
+            "commit": "e57eee4cfe0243ef9a6fddc4a658200acdbfe572",
+            "parents": [
+              "ff52d0f3b6c6ce3ea8b277ecfdebb10ce968e355"
+            ],
+            "subject": "修复研究资讯主题检索与刷新范围并按内容自适应展示"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/floating-surfaces.ts"
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/news-source-scope.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/references/generation.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/references/source-guide.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/references/sources.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/scripts/query.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/assets/challenge-close.svg"
           },
           {
             "status": "M",
@@ -428,14 +500,67 @@
           },
           {
             "status": "M",
+            "path": "src/preload/notes/challenge-ui.tsx"
+          },
+          {
+            "status": "M",
             "path": "src/preload/notes/challenge.css"
           },
           {
             "status": "M",
+            "path": "src/shared/component-data.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/crypto-public-data.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/free-data-sources.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/news-source-scope.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/notes-challenge-controller-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/public-data-capacity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-public-data.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/crypto-public-data.test.js",
+              "test/public-data-capacity.test.js",
+              "test/news-source-scope.test.js",
+              "test/workbench-public-data.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-task-runtime.test.js",
+              "test/free-data-sources.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "研究直接相关8个文件；/tmp/notes-motion-research-final-focused-20261022.log。",
+            "verifiedCommit": "e57eee4cfe0243ef9a6fddc4a658200acdbfe572",
+            "completedAt": "2026-10-22T06:20:57.860Z",
+            "timeoutMs": 180000
+          },
           {
             "argv": [
               "npx",
@@ -444,13 +569,13 @@
               "test/notes-challenge-controller-browser.test.js",
               "test/floating-surfaces.test.ts",
               "-t",
-              "paragraph|fits near|promotes the context"
+              "paragraph|fades newly|interrupted line|fits near|promotes the context"
             ],
             "outcome": "passed",
-            "summary": "受影响7/7；真实全局浮层RED复现x=0，GREEN贴近标记；opacity起中终点与reduced-motion通过；/tmp/notes-paragraph-tooltip-fade-green-20261022.log",
-            "verifiedCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
-            "completedAt": "2026-10-22T05:27:10.662612+00:00",
-            "timeoutMs": 120000
+            "summary": "段落动效与tooltip直接相关10项；/tmp/notes-motion-final-focused-20261022.log。关闭SVG实际Chromium像素质心和浅深色按钮几何报告/tmp/notes-challenge-close-center-report-20261022.md。",
+            "verifiedCommit": "e57eee4cfe0243ef9a6fddc4a658200acdbfe572",
+            "completedAt": "2026-10-22T06:20:57.860Z",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -459,9 +584,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "/tmp/notes-paragraph-tooltip-fade-typecheck-20261022.log exit0",
-            "verifiedCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
-            "completedAt": "2026-10-22T05:27:10.662612+00:00",
+            "summary": "/tmp/notes-motion-research-final-typecheck-20261022.log exit0。",
+            "verifiedCommit": "e57eee4cfe0243ef9a6fddc4a658200acdbfe572",
+            "completedAt": "2026-10-22T06:20:57.860Z",
             "timeoutMs": 180000
           },
           {
@@ -469,183 +594,31 @@
               "git",
               "diff",
               "--check",
-              "9032871dbccc4e24ce732e5081bebe37f74947f0..6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2"
+              "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2..e57eee4cfe0243ef9a6fddc4a658200acdbfe572"
             ],
             "outcome": "passed",
-            "summary": "完整后继差异检查通过",
-            "verifiedCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
-            "completedAt": "2026-10-22T05:27:10.662612+00:00",
+            "summary": "完整严格后继差异检查通过。",
+            "verifiedCommit": "e57eee4cfe0243ef9a6fddc4a658200acdbfe572",
+            "completedAt": "2026-10-22T06:20:57.860Z",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "903集成客户端已真实可启动并显示蓝橙段落线；本次修复原生hover偏移和动效，须重新集成后检查实际气泡坐标。不得把isolated浏览器验证当native通过。"
+          "summary": "真实旧客户端确认价格failed与资讯总流跑题；源码修复后必须在新签名包原位重试和核对相关新闻。尚未声称native通过。"
         },
         "acceptanceCriteria": [
-          "段落提示与对应线相邻，不被全局浮层强制移到左上角",
-          "线自然渐入且文本布局不移动，reduced motion尊重用户设置",
-          "保留未读/过期不显示、等级/真实未解决计数、长段落滚动定位"
+          "段落线上下间隙增加，入/退场按可见文档顺序交错重叠，切换等级及减少动态效果正确。",
+          "评论关闭SVG真实图形与按钮背景居中，点击关闭行为保留。",
+          "旧ticker配方安全规范化；3–8对行情改用完整表格，合法大量资讯按内容容量改展示合同，保留数据来源与时点。",
+          "专题资讯定向查询、保留父主题与来源约束及刷新，不能用无主题财经总流改标题替代；旧卡可原位重新生成。"
         ],
         "risks": [
-          "纯UI修复，不改模型语义；903真实荷花召回仍漏单花期/秋季并无额外内容追问，需持续优化",
-          "只本地集成/测试，不发布推送或推进main"
+          "只本地测试，不发布/推送/晋升main。",
+          "实际来源仍可能暂时不可用；保留真实缺失和错误，不能保证任何外部源恒定成功。",
+          "本范围不修改AI挑战语义召回；广泛目标继续暂停等待用户测试。"
         ],
-        "generatedAt": "2026-10-22T05:27:10.662612+00:00"
-      },
-      "merged": {
-        "mergeCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-        "verificationCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/calendar-tool-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/calendar-tool-client.test.js",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/shared-calendar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/shared-calendar.test.ts",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5",
-            "verifiedCommit": "088a773fbdf221378416765647c798bd33cf6c38",
-            "completedAt": "2026-10-22T05:30:53.839Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-22T05:30:53.839Z"
+        "generatedAt": "2026-10-22T06:20:57.860Z"
       }
     },
     {
