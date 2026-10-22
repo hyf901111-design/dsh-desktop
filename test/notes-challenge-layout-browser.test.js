@@ -129,10 +129,14 @@ it('places persistent note tools before export and preserves tabs while a long h
   await page.evaluate(()=>window.seed());await openSelected(page)
   const tools=page.locator('[data-en-challenge-tools="layout-note"]');await expect.poll(()=>tools.locator('.en-challenge-trigger').count()).toBe(1)
   expect(await page.locator('[data-srb-utilities]').evaluate(el=>[...el.querySelectorAll('button')].map(button=>button.textContent))).toEqual(['收起评论','AI挑战关闭','导出'])
-  const box=await page.locator('.en-challenge-trigger').boundingBox(),exportBox=await page.locator('.en-header-export').boundingBox();expect(box.width).toBe(128);expect(box.height).toBe(30);expect(exportBox.x-box.x-box.width).toBe(12)
-  await page.setViewportSize({width:850,height:900});await expect.poll(()=>page.getByRole('button',{name:'收起评论',exact:true}).count()).toBe(0)
+  const box=await page.locator('.en-challenge-trigger').boundingBox(),exportBox=await page.locator('.en-header-export').boundingBox();expect(box.width).toBe(128);expect(box.height).toBe(30);expect(exportBox.x-box.x-box.width).toBe(12);expect((await page.locator('.en-challenge-margin-toggle').boundingBox()).width).toBe(96)
+  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');await page.getByRole('button',{name:'Challenge mode: Off'}).click();await page.getByRole('slider',{name:'Challenge intensity'}).press('End');await expect.poll(()=>page.evaluate(()=>window.challenge.level)).toBe(4)
+  const englishTools=()=>page.locator('[data-srb-utilities]').evaluate(el=>{const trigger=el.querySelector('.en-challenge-trigger'),r=trigger.getBoundingClientRect(),tabs=document.querySelector('[data-srb-tabs]').getBoundingClientRect(),tools=el.querySelector('.en-challenge-tools').getBoundingClientRect(),exportButton=el.querySelector('.en-header-export').getBoundingClientRect();return{width:r.width,contentsFit:[...trigger.querySelectorAll('span,img')].every(child=>{const c=child.getBoundingClientRect();return c.left>=r.left-1&&c.right<=r.right+1}),noOverlap:tabs.right<=tools.left+1&&r.right+11<=exportButton.left}})
+  await expect.poll(englishTools).toMatchObject({contentsFit:true,noOverlap:true});expect((await englishTools()).width).toBeGreaterThan(128)
+  await page.setViewportSize({width:850,height:900});await expect.poll(()=>page.locator('.en-challenge-margin-toggle').count()).toBe(0)
   expect(await page.locator('[data-srb-tabs]').evaluate(el=>[...el.children].every(tab=>{const r=tab.getBoundingClientRect();return r.width>0&&r.left>=0&&r.right<=innerWidth}))).toBe(true)
   expect(await page.locator('.wSkVaW_crumb').evaluate(el=>el.scrollWidth>el.clientWidth)).toBe(true)
+  await expect.poll(englishTools).toMatchObject({contentsFit:true,noOverlap:true})
  }finally{await context.close()}
 },15000)
 

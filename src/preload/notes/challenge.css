@@ -7,11 +7,13 @@
 .en-challenge-tools :is(.en-challenge-trigger,.en-challenge-margin-toggle){display:flex;align-items:center;justify-content:center;flex:none;height:30px;border:0;font:inherit;line-height:20px;cursor:pointer;white-space:nowrap}
 .en-challenge-tools .en-challenge-trigger{gap:4px;width:128px;padding:0 8px;border-radius:16px;background:var(--en-challenge-trigger-bg);color:inherit}
 .en-challenge-tools .en-challenge-margin-toggle{gap:6px;width:96px;padding:0 8px;border-radius:6px;background:transparent;color:var(--en-challenge-muted)}
+html[data-odyssey-locale=en] .en-challenge-tools .en-challenge-trigger{width:auto;min-width:128px}
+html[data-odyssey-locale=en] .en-challenge-tools .en-challenge-margin-toggle{width:auto;min-width:96px}
 .en-challenge-tools .en-challenge-margin-toggle:hover{background:var(--en-challenge-action)}
 .en-challenge-tools button:focus-visible{outline:2px solid #477ef3;outline-offset:2px}
 .en-challenge-tools button:disabled{opacity:.5;cursor:default}
 .en-challenge-trigger img{display:block;width:16px;height:16px;flex:none}.en-challenge-trigger .en-challenge-chevron{width:10px;height:10px}.en-challenge-grade{color:var(--en-challenge-muted)}.en-challenge-margin-toggle img{width:14px;height:14px;flex:none}
-.en-challenge-popover{position:fixed;z-index:110;color:var(--en-challenge-ink);font:400 13px/20px "Noto Sans SC",system-ui,sans-serif;-webkit-app-region:no-drag;box-sizing:border-box;width:280px;height:112px;padding:9px 13px 11px;border:1px solid var(--en-challenge-border);border-radius:20px;background:var(--en-challenge-bg);box-shadow:0 4px 6px rgb(0 0 0 / .08)}
+.en-challenge-popover{position:fixed;z-index:110;color:var(--en-challenge-ink);font:400 13px/20px "Noto Sans SC",system-ui,sans-serif;-webkit-app-region:no-drag;box-sizing:border-box;width:280px;min-height:112px;padding:9px 13px 11px;border:1px solid var(--en-challenge-border);border-radius:20px;background:var(--en-challenge-bg);box-shadow:0 4px 6px rgb(0 0 0 / .08)}
 .en-challenge-popover *{box-sizing:border-box}
 .en-challenge-level-name{text-align:center;font-size:18px;line-height:28px;font-weight:500;color:#477ef3}.en-challenge-description{text-align:center;font-size:12px;line-height:18px;color:var(--en-challenge-muted);margin-top:9px}
 .en-challenge-slider{position:relative;width:252px;height:26px;margin-top:9px;touch-action:none;cursor:pointer;border-radius:14px;outline-offset:3px}

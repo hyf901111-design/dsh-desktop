@@ -1,3 +1,4 @@
+import type {CapabilityReceipt} from '../../packages/dsh-research-task-runtime/client-capabilities.js'
 export type NoteContent = { title: string; blocks: any[]; yjs: string }
 export type SavedNote = NoteContent & { revision: number; updatedAt: number }
 export type DraftNote = NoteContent & { baseRevision: number; updatedAt: number; clientId: string }
@@ -19,8 +20,9 @@ export function noteOutline(blocks: any[]): Array<{ id: string; level: number; t
 export function canApplySuggestion(captured: { documentId: string; fingerprint: string }, current: { documentId: string; fingerprint: string }): boolean {
   return captured.documentId === current.documentId && captured.fingerprint === current.fingerprint
 }
-export type NoteDocumentResult = ({ kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & {capabilitySummary?:string}
-export type NoteAiResult = NoteDocumentResult | { kind: 'conversation'; markdown: string }
+type NoteCapabilityResult = {capabilitySummary?:string;capabilityReceipts?:CapabilityReceipt[]}
+export type NoteDocumentResult = ({ kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & NoteCapabilityResult
+export type NoteAiResult = NoteDocumentResult | ({ kind: 'conversation'; markdown: string } & NoteCapabilityResult)
 
 /** Only an affirmative creation clause reserves a component in the document. */
 export function noteComponentRequest(prompt:string):boolean {

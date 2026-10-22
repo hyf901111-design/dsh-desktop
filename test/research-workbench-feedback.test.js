@@ -137,8 +137,23 @@ it('keeps native pending and admitted steering from moving earlier plans to same
 })
 
 it('installs a live status for settled creation turns while preserving the existing planning-only feedback',()=>{
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const installed=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ // The shared resident bundle may be from a newer integration branch. This
+ // branch tests its supported v6 -> v7 upgrade, keeping the resident shell and
+ // replacing only the in-memory feedback helper block with a v6 installation.
+ // The locale hook is the sole helper change between these two versions.
+ const definitions=readFileSync('scripts/lib/research-workbench-feedback.mjs','utf8')
+ const helperEnd=definitions.indexOf('\nexport function patchResearchWorkbenchFeedback(')
+ const v6Helpers=definitions.slice(0,helperEnd).replace(/^export /gm,'').replace(/^ const \[,renderLocale\]=react\.useState\(0\)\n react\.useEffect\([^\n]+\n/m,'')
+ expect(helperEnd).toBeGreaterThan(0);expect(v6Helpers).not.toContain('renderLocale')
+ const helperStart=installed.search(/\/\* ework:workbench-feedback:v\d+ \*\//),shellStart=installed.indexOf('const ExecutionStatusGroup =',helperStart)
+ expect(helperStart).toBeGreaterThan(0);expect(shellStart).toBeGreaterThan(helperStart)
+ const original=installed.slice(0,helperStart)+'/* ework:workbench-feedback:v6 */\n'+v6Helpers+'\n'+installed.slice(shellStart)
+ expect(original.slice(0,helperStart)).toBe(installed.slice(0,helperStart))
+ expect(original.slice(original.indexOf('const ExecutionStatusGroup =',helperStart))).toBe(installed.slice(shellStart))
  const source=patchResearchCreationProgress(original)
+ expect(source).toContain('const [,renderLocale]=react.useState(0)')
+ expect(source.split('/* ework:workbench-feedback:v7 */')).toHaveLength(2)
  expect(source).toContain('data-research-workbench-progress')
  expect(source).toContain('const workbenchMeta=planningResponseMetadata(activityNodes)')
  expect(source).not.toContain('sessionId, plans:workbenchMeta.plans')
@@ -149,7 +164,7 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(source).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber')
  expect(patchResearchWorkbenchFeedback(source)).toBe(source)
  expect(patchResearchCreationProgress(source)).toBe(source)
- const start=source.indexOf('/* ework:workbench-feedback:v6 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const start=source.indexOf('/* ework:workbench-feedback:v7 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
  const element=(type,props)=>({type,props})
  let snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
  const Component=runInNewContext(source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[snapshot,()=>{}],useEffect:()=>{}},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
@@ -166,20 +181,22 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('上次状态')
  snapshot={...snapshot,active:true,nodes:[{id:'other',planId:'other-plan',status:'completed'}]}
  expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
- const legacy=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v1 */')
+ const legacy=source.replace('/* ework:workbench-feedback:v7 */','/* ework:workbench-feedback:v1 */')
   .replace('\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);','')
   .replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
   .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
  expect(patchResearchWorkbenchFeedback(legacy)).toBe(source)
  // Simulate the installed v4 wiring, including its global footer and duplicate
  // execution status, so an existing client patch upgrades to the same output.
- const v4=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v4 */')
+ const v4=source.replace('/* ework:workbench-feedback:v7 */','/* ework:workbench-feedback:v4 */')
   .replace('/* ework:workbench-flow:v1 */\nconst workbenchReceiptAnchors=researchWorkbenchReceiptAnchors(renderFlow,nodeStore,planningResponseMetadata,conversationNodeTurn);\n','')
   .replace('const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);')
   .replace('renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{','renderFlow.map((entry) => {')
   .replace('};const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];})','}), workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null')
   .replace('planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,','workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,')
  expect(patchResearchWorkbenchFeedback(v4)).toBe(source)
- const v5=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v5 */')
+ const v5=source.replace('/* ework:workbench-feedback:v7 */','/* ework:workbench-feedback:v5 */')
  expect(patchResearchWorkbenchFeedback(v5)).toBe(source)
+ const v6=source.replace('/* ework:workbench-feedback:v7 */','/* ework:workbench-feedback:v6 */')
+ expect(patchResearchWorkbenchFeedback(v6)).toBe(source)
 })

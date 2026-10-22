@@ -1,4 +1,5 @@
 import Ajv from 'ajv'
+import {noteUiText,noteUiError} from './notes-locale.js'
 const object=(properties,required=[])=>({type:'object',properties,required,additionalProperties:false})
 const identity=c=>JSON.stringify([c?.owner,c?.sessionId,c?.documentId,c?.mode])
 const statuses=new Set(['succeeded','pending','cancelled','failed','unavailable'])
@@ -56,7 +57,45 @@ export function createCapabilityExecutor(registry,current){
   receipts.set(call.requestId,{fingerprint,promise});return promise
  }}
 }
-export function capabilityReceiptText(receipts){
+/** Display only: unknown adapter/model details and paths remain literal. */
+export function noteCapabilityReceiptMessage(receipt,locale='zh'){
+ const message=receipt.message
+ if(locale!=='en'||typeof message!=='string')return message
+ const fixedEffects=['已生成并保存组件','已生成组件，尚未确认保存','已插入组件占位块，尚未生成完成']
+ if(fixedEffects.includes(message))return noteUiText(message,locale)
+ const fixed=noteUiError(message,locale);if(fixed!==message)return fixed
+ const translate=part=>{
+  if(fixedEffects.includes(part))return noteUiText(part,locale)
+  const fixed=noteUiError(part,locale);if(fixed!==part)return fixed
+  const count=/^(已保存|已应用但未确认保存) (\d{1,5}) 个组件的样式(。?)$/u.exec(part)
+  if(count)return noteUiText(count[1]+' {count} 个组件的样式'+count[3],locale).replace('{count}',()=>count[2])
+  return part
+ }
+ const effect=receipt.effect
+ let original,display
+ if(effect&&'path'in effect&&typeof effect.path==='string'){
+  const key=effect.state==='saved'?'文件已保存：{path}':'文件写入已开始，保存结果尚未确认：{path}'
+  original=key.replace('{path}',()=>effect.path);display=noteUiText(key,locale).replace('{path}',()=>effect.path)
+ }else if(effect&&'changedBlockIds'in effect&&Array.isArray(effect.changedBlockIds)){
+  const key=effect.state==='saved'?'已保存 {count} 个组件的样式':'已应用但未确认保存 {count} 个组件的样式'
+  original=key.replace('{count}',()=>String(effect.changedBlockIds.length));display=noteUiText(key,locale).replace('{count}',()=>String(effect.changedBlockIds.length))
+ }else if(effect&&'blockId'in effect){
+  original=effect.state==='saved'?'已生成并保存组件':effect.state==='applied'?'已生成组件，尚未确认保存':'已插入组件占位块，尚未生成完成';display=noteUiText(original,locale)
+ }
+ if(original&&message.startsWith(original)){
+  const rest=message.slice(original.length)
+  if(!rest)return display
+  if(rest==='；后续操作已取消。')return display+noteUiText(rest,locale)
+  if(rest.startsWith('。'))return display+'. '+noteUiError(rest.slice(1),locale)
+ }
+ const cancelled='；后续操作已取消。'
+ if(message.endsWith(cancelled)){const base=message.slice(0,-cancelled.length),next=translate(base);if(next!==base)return next+noteUiText(cancelled,locale)}
+ const translated=translate(message);if(translated!==message)return translated
+ // A path supplied by the export receipt can contain punctuation or template syntax.
+ if(typeof receipt.path==='string')for(const key of ['文件已保存：{path}','文件写入已开始，保存结果尚未确认：{path}'])if(message===key.replace('{path}',()=>receipt.path))return noteUiText(key,locale).replace('{path}',()=>receipt.path)
+ return message
+}
+export function capabilityReceiptText(receipts,locale='zh'){
  const names={'notes.components.create':'创建组件','notes.export':'导出笔记','notes.components.style':'组件样式','canvas.inspect':'查看画布','ui.zoom.reset':'恢复缩放'},labels={succeeded:'已完成',pending:'等待用户操作',cancelled:'已取消',failed:'失败',unavailable:'不可用'}
- return receipts.map(r=>`${names[r.capability]||r.capability}：${labels[r.status]||'未完成'}${r.path?' — '+r.path:''}${r.message?'。'+r.message:''}`).join('\n')
+ return receipts.map(r=>`${noteUiText(names[r.capability]||r.capability,locale)}${locale==='en'?': ':'：'}${noteUiText(labels[r.status]||'未完成',locale)}${r.path?' — '+r.path:''}${r.message?(locale==='en'?'. ':'。')+noteCapabilityReceiptMessage(r,locale):''}`).join('\n')
 }

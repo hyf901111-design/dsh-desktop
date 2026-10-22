@@ -1,4 +1,5 @@
 import {useLayoutEffect,useRef,useState,type RefObject} from 'react'
+import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {ChallengeBlock,ChallengeLevel} from '../../shared/notes-challenge'
 import {CHALLENGE_LEVELS} from './challenge-scheduler'
 
@@ -10,10 +11,10 @@ export function paragraphChallengeFeedback(records:Map<string,ParagraphReview>,b
  return blocks.flatMap<ParagraphFeedback>(block=>{
   const record=records.get(block.id)
   if(!record||record.level!==level||record.title!==title||record.text!==block.text)return[]
-  const count=new Set(issues.filter(issue=>issue.blockId===block.id).map(issue=>issue.id)).size,name=CHALLENGE_LEVELS[record.level].name
-  if(count)return[{blockId:block.id,state:'issues' as const,count,label:`段落经${name}模式 AI 挑战校对，当前有 ${count} 处未解决问题`}]
+  const count=new Set(issues.filter(issue=>issue.blockId===block.id).map(issue=>issue.id)).size,name=t(CHALLENGE_LEVELS[record.level].name)
+  if(count)return[{blockId:block.id,state:'issues' as const,count,label:t('段落经{level}模式 AI 挑战校对，当前有 {count} 处未解决问题').replace('{level}',name).replace('{count}',String(count))}]
   if(!record.complete)return[]
-  return[{blockId:block.id,state:'passed' as const,count:0,label:record.issueCount?`段落经${name}模式 AI 挑战校对，已解决 ${record.issueCount} 处问题`:`段落已通过${name}模式的 AI 挑战，本轮未发现问题`}]
+  return[{blockId:block.id,state:'passed' as const,count:0,label:record.issueCount?t('段落经{level}模式 AI 挑战校对，已解决 {count} 处问题').replace('{level}',name).replace('{count}',String(record.issueCount)):t('段落已通过{level}模式的 AI 挑战，本轮未发现问题').replace('{level}',name)}]
  })
 }
 

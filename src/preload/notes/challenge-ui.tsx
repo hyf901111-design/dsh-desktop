@@ -1,4 +1,5 @@
 import {createPortal} from 'react-dom'
+import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React,{useEffect,useLayoutEffect,useRef,useState} from 'react'
 import {FloatingThreadController,Thread,useBlockNoteEditor,useExtensionState} from '@blocknote/react'
 import {CommentsExtension} from '@blocknote/core/comments'
@@ -20,6 +21,7 @@ import thumbIcon from './assets/challenge-thumb.svg?inline'
 import closeIcon from './assets/challenge-close.svg?inline'
 type Controller=ReturnType<typeof useNoteChallenge>
 const names:Record<string,string>={typo:'错别字',grammar:'表达建议',contradiction:'前后矛盾',logic:'逻辑挑战',fact:'事实核验',research:'研究挑战',question:'反驳与追问',uncertain:'待核验'}
+const levelName=(level:ChallengeLevel)=>t(level===0&&document.documentElement.dataset.odysseyLocale==='en'?'挑战模式关闭':CHALLENGE_LEVELS[level].name)
 
 export function ChallengePicker({value,onChange,disabled=false,dark=false,running=false,onOpenChange}:{value:ChallengeLevel;running?:boolean;onOpenChange?(open:boolean):void;onChange(value:ChallengeLevel):void;disabled?:boolean;dark?:boolean}){
  // SVG-as-image media queries do not reliably inherit the host motion preference.
@@ -37,8 +39,8 @@ export function ChallengePicker({value,onChange,disabled=false,dark=false,runnin
   const trigger=root.current?.querySelector('button');if(!trigger)return
   const header=trigger.closest<HTMLElement>('[data-ework-notes-session]'),sessionId=header?.dataset.eworkNotesSession,surface=(sessionId?document.querySelector('[data-note-source-session="'+CSS.escape(sessionId)+'"]'):root.current)?.closest<HTMLElement>('.en-root')
   const visible=()=>trigger.isConnected&&trigger.getClientRects().length>0&&getComputedStyle(trigger).visibility!=='hidden'&&!trigger.closest('[hidden],[aria-hidden="true"],[inert]')&&surface?.dataset.settingsOpen!=='true'&&(!surface||!surface.hidden&&getComputedStyle(surface).display!=='none'&&getComputedStyle(surface).visibility!=='hidden')&&!document.querySelector('.VOzbGW_overlay:not([hidden])')&&(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')
-  const measure=()=>{if(!visible()){drag.current=false;setPressed(false);changeOpen(false);return false}const r=trigger.getBoundingClientRect(),next={left:Math.max(8,Math.min(r.right-280,window.innerWidth-288)),top:Math.max(8,Math.min(r.bottom+6,window.innerHeight-120))};setPosition(old=>old.left===next.left&&old.top===next.top?old:next);return true}
-  const resize=new ResizeObserver(measure);resize.observe(trigger);if(header)resize.observe(header)
+  const measure=()=>{if(!visible()){drag.current=false;setPressed(false);changeOpen(false);return false}const r=trigger.getBoundingClientRect(),height=popover.current?.getBoundingClientRect().height||112,next={left:Math.max(8,Math.min(r.right-280,window.innerWidth-288)),top:Math.max(8,Math.min(r.bottom+6,window.innerHeight-height-8))};setPosition(old=>old.left===next.left&&old.top===next.top?old:next);return true}
+  const resize=new ResizeObserver(measure);resize.observe(trigger);if(header)resize.observe(header);if(popover.current)resize.observe(popover.current)
   // Observe only the resident surface and trigger ancestors; native settings
   // portals are direct body children. No observer follows editor mutations.
   const visibility=new MutationObserver(measure),attributes={attributes:true,attributeFilter:['class','style','hidden','aria-hidden','inert','data-settings-open','data-workspace-surface']}
@@ -57,9 +59,9 @@ export function ChallengePicker({value,onChange,disabled=false,dark=false,runnin
  },[open])
  const pointer=(clientX:number)=>{const r=track.current!.getBoundingClientRect(),next=Math.max(0,Math.min(4,Math.round(((clientX-r.left)/r.width*252-12)/57))) as ChallengeLevel;choice.current=next;setPreview(next)}
  return <div className="en-challenge-picker" ref={root}>
-  <button className="en-challenge-trigger" disabled={disabled} aria-busy={running} aria-description={running?'AI挑战正在执行':undefined} aria-label={'挑战模式，当前'+CHALLENGE_LEVELS[value].name} aria-expanded={open} onClick={()=>changeOpen(!open)}><img src={running&&!reducedMotion?busySwordsIcon:swordsIcon} alt=""/><span>AI挑战</span><span className="en-challenge-grade">{CHALLENGE_LEVELS[value].name}</span><img className="en-challenge-chevron" src={chevronIcon} alt=""/></button>
-  {open?createPortal(<section className="en-challenge-popover" ref={popover} data-dark={dark} style={position} aria-label="挑战强度"><div className="en-challenge-level-name">{CHALLENGE_LEVELS[preview].name}</div><div className="en-challenge-description">{CHALLENGE_LEVELS[preview].description}</div>
-   <div className="en-challenge-slider" ref={track} role="slider" tabIndex={0} aria-label="挑战强度" aria-valuemin={0} aria-valuemax={4} aria-valuenow={preview} aria-valuetext={CHALLENGE_LEVELS[preview].name} data-pressed={pressed||undefined}
+  <button className="en-challenge-trigger" disabled={disabled} aria-busy={running} aria-description={running?t('AI挑战正在执行'):undefined} aria-label={t('挑战模式，当前{level}').replace('{level}',levelName(value))} aria-expanded={open} onClick={()=>changeOpen(!open)}><img src={running&&!reducedMotion?busySwordsIcon:swordsIcon} alt=""/><span>{t('AI挑战')}</span><span className="en-challenge-grade">{levelName(value)}</span><img className="en-challenge-chevron" src={chevronIcon} alt=""/></button>
+  {open?createPortal(<section className="en-challenge-popover" ref={popover} data-dark={dark} style={position} aria-label={t('挑战强度')}><div className="en-challenge-level-name">{levelName(preview)}</div><div className="en-challenge-description">{t(CHALLENGE_LEVELS[preview].description)}</div>
+   <div className="en-challenge-slider" ref={track} role="slider" tabIndex={0} aria-label={t('挑战强度')} aria-valuemin={0} aria-valuemax={4} aria-valuenow={preview} aria-valuetext={levelName(preview)} data-pressed={pressed||undefined}
     onPointerDown={e=>{e.preventDefault();drag.current=true;setPressed(true);e.currentTarget.focus();e.currentTarget.setPointerCapture(e.pointerId);pointer(e.clientX)}} onPointerMove={e=>{if(drag.current)pointer(e.clientX)}} onPointerUp={e=>{if(!drag.current)return;pointer(e.clientX);drag.current=false;setPressed(false);onChange(choice.current);e.currentTarget.releasePointerCapture(e.pointerId)}} onPointerCancel={()=>{drag.current=false;setPressed(false);setPreview(value)}}
     onKeyDown={e=>{let next=value;if(['ArrowRight','ArrowUp'].includes(e.key))next=Math.min(4,value+1) as ChallengeLevel;else if(['ArrowLeft','ArrowDown'].includes(e.key))next=Math.max(0,value-1) as ChallengeLevel;else if(e.key==='Home')next=0;else if(e.key==='End')next=4;else return;e.preventDefault();onChange(next);setPreview(next)}}>
     <div className="en-challenge-track"><div style={{width:12+57*preview}}/></div>{CHALLENGE_LEVELS.map((v,i)=><img key={v.name} src={i<=preview?stopActiveIcon:stopIcon} alt="" className="en-challenge-stop" style={{left:12+57*i}}/>)}<img className="en-challenge-thumb" src={thumbIcon} alt="" style={{left:12+57*preview-16}}/>
@@ -76,7 +78,7 @@ export function ChallengeToolbar({controller,sessionId,dark,marginAvailable,disa
   find();const observer=new MutationObserver(find);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-en-challenge-tools']});return()=>observer.disconnect()
  },[sessionId])
  const tools=<div className="en-challenge-tools" data-dark={dark} data-header={!!host}>
-  {marginAvailable?<button className="en-challenge-margin-toggle" type="button" aria-expanded={controller.marginExpanded} onClick={()=>controller.setMarginExpanded(!controller.marginExpanded)}><img src={controller.marginExpanded?collapseIcon:expandIcon} alt=""/>{controller.marginExpanded?'收起评论':'展开评论'}</button>:null}
+  {marginAvailable?<button className="en-challenge-margin-toggle" type="button" aria-expanded={controller.marginExpanded} onClick={()=>controller.setMarginExpanded(!controller.marginExpanded)}><img src={controller.marginExpanded?collapseIcon:expandIcon} alt=""/>{t(controller.marginExpanded?'收起评论':'展开评论')}</button>:null}
   <ChallengePicker onOpenChange={controller.setPickerOpen} running={controller.running} value={controller.level} onChange={controller.setLevel} disabled={disabled} dark={dark}/>
  </div>
  return host?createPortal(tools,host):tools
@@ -96,20 +98,20 @@ function ChallengeCard({thread,controller,style,cardRef,selected,popup}:{thread:
   priorMessages.current={pending:replyPending,count:thread.comments.length}
  },[replyPending,thread.comments.length])
  const send=()=>{if(text.trim()&&!busy)void controller.runAction(thread,'reply',text)}
- return <article className="en-challenge-card" ref={cardRef} style={style} data-thread-id={thread.id} data-popup={popup||undefined} data-selected={selected||undefined} aria-label="AI挑战评论" onPointerDown={e=>{e.stopPropagation();if(controller.selected!==thread.id)controller.select(thread.id)}}>
-   {popup?<button className="en-challenge-close" aria-label="收起挑战评论" onClick={()=>controller.close(thread.id)}><img src={closeIcon} alt=""/></button>:null}
+ return <article className="en-challenge-card" ref={cardRef} style={style} data-thread-id={thread.id} data-popup={popup||undefined} data-selected={selected||undefined} aria-label={t('AI挑战评论')} onPointerDown={e=>{e.stopPropagation();if(controller.selected!==thread.id)controller.select(thread.id)}}>
+   {popup?<button className="en-challenge-close" aria-label={t('收起挑战评论')} onClick={()=>controller.close(thread.id)}><img src={closeIcon} alt=""/></button>:null}
   <div className="en-challenge-messages" ref={messages} onScroll={e=>{const el=e.currentTarget;followEnd.current=el.scrollHeight-el.clientHeight-el.scrollTop<=24}}>
    <div className="en-challenge-quote">{thread.metadata.issue.quote}</div>
    {thread.comments.filter(c=>!c.deletedAt).map((comment,index)=><div className="en-challenge-message" key={comment.id}>
-    <div className="en-challenge-author">{comment.userId===CHALLENGE_USER?<><img src={reviewIcon} alt=""/><strong>AI挑战者</strong></>:<strong>我</strong>}<time>{new Date(comment.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</time></div>
-    {index===0?<div className="en-challenge-category">{names[thread.metadata.issue.category]||'挑战'}</div>:null}<div className="en-challenge-text">{noteText(comment.body)}</div>
-    {comment.metadata?.challengeReplacement&&comment.metadata.challengeReplacement.replacement!==comment.metadata.challengeReplacement.quote?<div className="en-challenge-suggestion"><div className="en-challenge-replacement-text">{comment.metadata.challengeReplacement.replacement}</div><button className="en-challenge-replace" disabled={!!controller.busyId||!['pending','reverted'].includes(comment.metadata.challengeReplacement.status)} onClick={()=>void controller.applyReplacement(thread.id,comment.id)}>{comment.metadata.challengeReplacement.status==='applied'?'已替换到原文':comment.metadata.challengeReplacement.status==='stale'?'原文已变化':'替换到原文'}</button></div>:null}
-    {index===0?<div className="en-challenge-actions"><button className="en-challenge-optimize" aria-label="AI优化" aria-busy={busy&&controller.actionKind==='optimize'} disabled={!!controller.busyId} onClick={()=>void controller.runAction(thread,'optimize')}>{busy&&controller.actionKind==='optimize'?<span className="en-challenge-optimize-spinner" role="progressbar" aria-label="正在优化"/>:null}AI优化</button>{thread.metadata.issue.evidence.length?<button onClick={()=>controller.openEvidence(thread)}>查看依据</button>:null}<span/><button onClick={()=>void controller.resolve(thread.id)}>已解决</button></div>:null}
+    <div className="en-challenge-author">{comment.userId===CHALLENGE_USER?<><img src={reviewIcon} alt=""/><strong>{t('AI挑战者')}</strong></>:<strong>{t('我')}</strong>}<time>{new Date(comment.createdAt).toLocaleTimeString(document.documentElement.dataset.odysseyLocale==='en'?'en':'zh-CN',{hour:'2-digit',minute:'2-digit'})}</time></div>
+    {index===0?<div className="en-challenge-category">{t(names[thread.metadata.issue.category]||'挑战')}</div>:null}<div className="en-challenge-text">{noteText(comment.body)}</div>
+    {comment.metadata?.challengeReplacement&&comment.metadata.challengeReplacement.replacement!==comment.metadata.challengeReplacement.quote?<div className="en-challenge-suggestion"><div className="en-challenge-replacement-text">{comment.metadata.challengeReplacement.replacement}</div><button className="en-challenge-replace" disabled={!!controller.busyId||!['pending','reverted'].includes(comment.metadata.challengeReplacement.status)} onClick={()=>void controller.applyReplacement(thread.id,comment.id)}>{t(comment.metadata.challengeReplacement.status==='applied'?'已替换到原文':comment.metadata.challengeReplacement.status==='stale'?'原文已变化':'替换到原文')}</button></div>:null}
+    {index===0?<div className="en-challenge-actions"><button className="en-challenge-optimize" aria-label={t('AI优化')} aria-busy={busy&&controller.actionKind==='optimize'} disabled={!!controller.busyId} onClick={()=>void controller.runAction(thread,'optimize')}>{busy&&controller.actionKind==='optimize'?<span className="en-challenge-optimize-spinner" role="progressbar" aria-label={t('正在优化')}/>:null}{t('AI优化')}</button>{thread.metadata.issue.evidence.length?<button onClick={()=>controller.openEvidence(thread)}>{t('查看依据')}</button>:null}<span/><button onClick={()=>void controller.resolve(thread.id)}>{t('已解决')}</button></div>:null}
    </div>)}
-   {replyPending?<div className="en-challenge-thinking" role="status" aria-live="polite"><span aria-hidden="true"/>思考回复中…</div>:null}
+   {replyPending?<div className="en-challenge-thinking" role="status" aria-live="polite"><span aria-hidden="true"/>{t('思考回复中…')}</div>:null}
   </div>
 
-  <div className="en-challenge-reply"><textarea ref={input} value={text} rows={1} maxLength={4000} aria-label="回复AI挑战" placeholder="回复 AI，继续处理这段文字…" onChange={e=>{setText(e.target.value);controller.setDraft(thread.id,e.target.value)}} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&e.nativeEvent.keyCode!==229){e.preventDefault();send()}}}/><button disabled={!text.trim()||!!controller.busyId} aria-label="发送挑战回复" onClick={send}>发送</button></div>
+  <div className="en-challenge-reply"><textarea ref={input} value={text} rows={1} maxLength={4000} aria-label={t('回复AI挑战')} placeholder={t('回复 AI，继续处理这段文字…')} onChange={e=>{setText(e.target.value);controller.setDraft(thread.id,e.target.value)}} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&e.nativeEvent.keyCode!==229){e.preventDefault();send()}}}/><button disabled={!text.trim()||!!controller.busyId} aria-label={t('发送挑战回复')} onClick={send}>{t('发送')}</button></div>
  </article>
 }
 
