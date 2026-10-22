@@ -3,6 +3,7 @@ import { realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, sep } from 'node:path'
 import { homedir } from 'node:os'
 import { consensusSql } from './notes-challenge-consensus-query.js'
+import { deadline } from './notes-challenge-bounds.js'
 
 // Runs the user's enabled connection module with a fixed read-only transaction.
 // All module/driver stdout is suppressed, and no exception text leaves the child.
@@ -89,7 +90,8 @@ export async function managedInfodbSource(ctx,agent,signal) {
       querySignal?.throwIfAborted()
       if(!live(ctx,agent))throw Error('infodb读取会话已变化。')
       let result
-      try {result=await readProcess(executable,path,sql,querySignal)}catch(error){if(error.code==='ENOENT'&&!configured)continue;throw error}
+      const readBudget=deadline(querySignal,4000)
+      try {result=await readProcess(executable,path,sql,readBudget.signal)}catch(error){if(error.code==='ENOENT'&&!configured)continue;throw error}finally{readBudget.dispose()}
       if(result.error==='missing-driver'&&!configured)continue
       if(result.error){
         const error=Error('infodb技能未取得有效数据。')
