@@ -34,7 +34,8 @@ it('renders three successful 20-record mappings without publicData as a source-v
   expect(document.querySelectorAll('article')).toHaveLength(60)
   expect([...document.querySelectorAll('article a')].map(a=>a.href).sort()).toEqual(records.flatMap(record=>record.response.records.map(row=>row.url)).sort())
   expect(document.body.textContent).toContain(records[2].response.records[19].summary)
-  expect(document.body.textContent).toContain(draft.mapping.note)
+  expect(document.body.textContent).not.toContain(draft.mapping.note)
+  expect(document.querySelector('[data-news-original-note]')).toBeNull()
   for(const value of ['未取得来源支持的模型结论','通联DataYes','通联 DataYes','伪媒体'])expect(document.body.textContent).not.toContain(value)
   expect(document.body.textContent).toContain('当前为静态快照');expect(document.body.textContent).toContain('来源查询：'+names[2]);expect(document.querySelector('#next')).not.toBeNull()
  })
@@ -140,7 +141,8 @@ it.each([[20,'groups'],[5,'sections']])('adapts source-bound company groups of %
  await dom(task.finalOutput,document=>{
   expect(document.querySelectorAll('article')).toHaveLength(count*3)
   for(const name of names)expect(document.body.textContent).toContain('来源查询：'+name)
-  expect(document.body.textContent).not.toContain('伪造状态');expect(document.body.textContent).toContain(draft.mapping.note)
+  expect(document.body.textContent).not.toContain('伪造状态');expect(document.body.textContent).not.toContain(draft.mapping.note)
+  expect(document.querySelector('[data-news-original-note]')).toBeNull()
   let state,render
   const bridge={register:config=>{state=config.initialState;render=()=>config.render(state,{connected:true,readOnly:false});render();return {dispatch:action=>{state=config.reduce(state,action);render()}}}}
   runInNewContext(document.querySelector('script').textContent,{document,window:{sherlockShared:bridge}})
@@ -168,7 +170,7 @@ it('retains actual source-query characters while safely serializing the filter s
   const visible=[...document.querySelectorAll('article')].filter(row=>!row.hidden);expect(visible).toHaveLength(1);expect(visible[0].dataset.newsQuery).toBe(query)
  })
 })
-it('translates fixed source-query and coverage labels without changing source names, actual excerpts or user notes',async()=>{
+it('translates fixed source-query and coverage labels without changing source names or actual excerpts, and omits model notes',async()=>{
  const {records,draft}=fixture(),result=resolveBoundComponent(JSON.stringify(draft),records,now,options),window=new Window()
  try{
   window.document.body.innerHTML=JSON.parse(result.output).html
@@ -177,7 +179,21 @@ it('translates fixed source-query and coverage labels without changing source na
   listeners.get('DOMContentLoaded')();listeners.get('message')({source:context.parent,data:{type:'sherlock-workbench-locale',locale:'en'}});await Promise.resolve()
   expect(window.document.querySelector('[data-news-source-query]').textContent).toBe('Source search: '+names[0])
   expect(window.document.querySelector('[data-news-query-coverage]').textContent).toContain('Source records: 20')
-  expect(window.document.body.textContent).toContain(records[0].response.records[0].summary);expect(window.document.body.textContent).toContain(draft.mapping.note)
+  expect(window.document.body.textContent).toContain(records[0].response.records[0].summary);expect(window.document.body.textContent).not.toContain(draft.mapping.note)
   listeners.get('message')({source:context.parent,data:{type:'sherlock-workbench-locale',locale:'zh'}});await Promise.resolve();expect(window.document.querySelector('[data-news-source-query]').textContent).toBe('来源查询：'+names[0])
  }finally{await window.happyDOM.abort()}
+})
+
+it('uses host-observed coverage instead of model execution notes when rebuilding a controlled news snapshot',async()=>{
+ const {records,draft}=fixture()
+ draft.mapping.note='保留来源首页全部返回记录（含部分行情类条目），请按category分组；接口原参数'+JSON.stringify(draft.requests)
+ const result=resolveBoundComponent(JSON.stringify(draft),records,now,options)
+ await dom(result.output,document=>{
+  expect(document.querySelectorAll('article')).toHaveLength(60)
+  expect(document.querySelector('[data-news-original-note]')).toBeNull()
+  expect(document.body.textContent).not.toContain('请按category分组')
+  expect(document.body.textContent).not.toContain('接口原参数')
+  expect(document.body.textContent).toContain('来源返回：20')
+  expect(document.body.textContent).toContain('未列出的研究对象尚未证明已完成查询。')
+ })
 })

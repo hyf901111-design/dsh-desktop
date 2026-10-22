@@ -1,4 +1,4 @@
-import {evaluateMapping} from './component-data-refresh.js'
+import {evaluateMapping,materializeComponentMapping} from './component-data-refresh.js'
 import {templateDataIssue} from './template-data-contract.js'
 import {readableTrendFigure} from './component-readable-chart.js'
 
@@ -7,6 +7,7 @@ const missing=value=>value===null||value===undefined||value===''
 export const pureMissingSourceText=value=>typeof value==='string'&&/^(?:(?:—|--|N\/A|Not provided|Unavailable)|(?:来源未提供|本次未取得|未提供|未取得|缺失|暂无)(?:数据|数值|字段)?)[。.]?$/iu.test(value.trim())
 const pureMissing=pureMissingSourceText
 const missingDisplay=value=>missing(value)||pureMissing(value)
+const itemMetadata=new Set(['detail','source','url'])
 const scalar=value=>missing(value)||typeof value==='string'||typeof value==='number'&&Number.isFinite(value)&&Math.abs(value)<=1e15
 const esc=value=>String(value).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 
@@ -39,9 +40,29 @@ function sourcePayload(mapping,responses,now,scope=responses,cohort=[scope],mode
    return mapping.$optional===true&&cohort.some(row=>{try{evaluateMapping(selector,responses,now,row);return true}catch{return false}})
   }
  }
- if(mode==='item')return Object.hasOwn(mapping,'value')&&sourcePayload(mapping.value,responses,now,scope,cohort)&&Object.entries(mapping).every(([key,value])=>['label','value'].includes(key)||key==='unit'&&typeof value==='string'||key==='missing'&&pureMissing(value)||sourcePayload(value,responses,now,scope,cohort))
+ if(mode==='item')return Object.hasOwn(mapping,'value')&&sourcePayload(mapping.value,responses,now,scope,cohort)&&Object.entries(mapping).every(([key,value])=>['label','value'].includes(key)||itemMetadata.has(key)||key==='unit'&&typeof value==='string'||key==='missing'&&pureMissing(value)||sourcePayload(value,responses,now,scope,cohort))
  if(mode==='seriesItem')return Object.hasOwn(mapping,'values')&&sourcePayload(mapping.values,responses,now,scope,cohort)
  return false
+}
+
+function metadataSelector(value){
+ if(!object(value))return undefined
+ const clean=Object.fromEntries(Object.entries(value).filter(([key])=>!['$prefix','$suffix','$default'].includes(key)))
+ if(Object.hasOwn(clean,'$map')){
+  const child=metadataSelector(clean.$map)
+  return child?{...clean,$map:child}:undefined
+ }
+ return Object.hasOwn(clean,'$path')?{...clean,$optional:true}:undefined
+}
+function metricDisplayMapping(value){
+ if(Array.isArray(value))return value.map(metricDisplayMapping)
+ if(!object(value))return value
+ if(Object.hasOwn(value,'value'))return Object.fromEntries(Object.entries(value).flatMap(([key,child])=>{
+  if(!itemMetadata.has(key))return [[key,child]]
+  const selector=metadataSelector(child)
+  return selector?[[key,selector]]:[]
+ }))
+ return Object.hasOwn(value,'$map')?{...value,$map:metricDisplayMapping(value.$map)}:value
 }
 
 function readableData(data){
@@ -106,12 +127,23 @@ export function readableSnapshotRuntime(){
 }
 
 export function componentReadableSnapshot(data,mapping,responses,records,now=new Date()){
- const readable=readableData(data)
+ let readable=readableData(data)
  if(!readable||!records.length||records.some(record=>record.purpose==='discovery'))return null
  try{
   if(!sourcePayload(mapping[readable.mode],responses,now,responses,[responses],readable.mode))return null
   if(readable.mode==='series'&&!sourcePayload(mapping.labels,responses,now))return null
  }catch{return null}
+ if(readable.mode==='items'){
+  // Detail/source/link are display metadata, never proof of a business value.
+  // Keep the original semantic data for guards; render only metadata selected
+  // from the same real row scope, not literal claims or formatter decorations.
+  try{
+   const display=materializeComponentMapping({...mapping,items:metricDisplayMapping(mapping.items)},responses,now,records)
+   display.items=display.items.map(item=>Object.fromEntries(Object.entries(item).filter(([key,value])=>!itemMetadata.has(key)||!missing(value))))
+   readable=readableData(display)
+   if(!readable)return null
+  }catch{return null}
+ }
  const text=value=>missingDisplay(value)?'<span data-workbench-status-text>来源未提供</span>':esc(value)
  const headers=readable.columns.map((value,index)=>'<th scope="col">'+(readable.fixedColumns?.[index]?'<span data-workbench-status-text>'+esc(value)+'</span>':esc(value))+'</th>').join(''),rows=readable.rows.map(row=>'<tr>'+row.map(value=>'<td>'+text(value)+'</td>').join('')+'</tr>').join('')
  const sources=[...new Map(records.map(record=>{
