@@ -87,7 +87,7 @@ export const NoteReplacementHighlights=createExtension(({editor})=>{
 /** Decorations leave body formatting untouched; durable review records live beside comments. */
 export function useNoteReplacementReviews(options:{editor:any;doc:Y.Doc;scroll:RefObject<HTMLDivElement>;canEdit():boolean;persist():void;onRestore(review:NoteReplacementReview):Promise<void>|void;onResolve(threadId:string):Promise<void>|void}){
  const {editor,doc}=options,latest=useRef(options);latest.current=options
- const records=doc.getMap<NoteReplacementReview>('note-replacement-reviews'),[revision,setRevision]=useState(0),[selected,setSelected]=useState<string>(),[busy,setBusy]=useState(false),[error,setError]=useState(''),working=useRef(false)
+ const records=doc.getMap<NoteReplacementReview>('note-replacement-reviews'),[revision,setRevision]=useState(0),[selected,setSelected]=useState<string>(),[popupAnchor,setPopupAnchor]=useState<{id:string;position:any}>(),[busy,setBusy]=useState(false),[error,setError]=useState(''),working=useRef(false)
  const entries=()=>[...records.values()].filter(valid).filter(v=>!v.resolved).sort((a,b)=>b.createdAt-a.createdAt).slice(0,128)
  useEffect(()=>{
   let live=true,queued=false
@@ -97,7 +97,13 @@ export function useNoteReplacementReviews(options:{editor:any;doc:Y.Doc;scroll:R
   refresh()
   const off=editor.onChange(refresh);records.observe(refresh)
   const root=latest.current.scroll.current
-  const open=(e:Event)=>{const el=(e.target as HTMLElement).closest<HTMLElement>('[data-en-replacement-id]');if(!el||!root?.contains(el))return;if(e instanceof KeyboardEvent&&!['Enter',' '].includes(e.key))return;const id=el.dataset.enReplacementId,review=id&&records.get(id);if(!valid(review)||review.resolved)return;e.preventDefault();e.stopImmediatePropagation();setError('');setSelected(id)}
+  const open=(e:Event)=>{const el=(e.target as HTMLElement).closest<HTMLElement>('[data-en-replacement-id]');if(!el||!root?.contains(el))return;if(e instanceof KeyboardEvent&&!['Enter',' '].includes(e.key))return;const id=el.dataset.enReplacementId,review=id&&records.get(id);if(!valid(review)||review.resolved)return;e.preventDefault();e.stopImmediatePropagation();setError('')
+   let anchor:{id:string;position:any}|undefined
+   if(e instanceof MouseEvent&&e.detail>0){
+    const state=editor._tiptapEditor.state,binding=ySyncPluginKey.getState(state)?.binding,range=replacementReviewRange(editor,review),point=editor._tiptapEditor.view.posAtCoords({left:e.clientX,top:e.clientY})
+    if(binding&&range&&point&&point.pos>=range.from&&point.pos<=range.to)anchor={id:review.id,position:Y.relativePositionToJSON(absolutePositionToRelativePosition(point.pos,binding.type,binding.mapping))}
+   }
+   setPopupAnchor(anchor);setSelected(id)}
   root?.addEventListener('click',open,true);root?.addEventListener('keydown',open,true)
   return()=>{live=false;off();records.unobserve(refresh);root?.removeEventListener('click',open,true);root?.removeEventListener('keydown',open,true)}
  },[editor,doc])
@@ -128,7 +134,18 @@ export function useNoteReplacementReviews(options:{editor:any;doc:Y.Doc;scroll:R
   }finally{working.current=false;setBusy(false)}
  }
  const item=selected&&records.get(selected)
- return{resolveThread:(id:string)=>{doc.transact(()=>{for(const review of records.values())if(valid(review)&&review.threadId===id&&!review.resolved)records.set(review.id,{...review,resolved:true})})},revision,selected:valid(item)&&!item.resolved?item:undefined,busy,error,capture,add,close:()=>setSelected(undefined),revert:()=>finish(true),resolve:()=>finish(false),canRevert:valid(item)&&!!boundRange(editor,item)}
+ const popupAnchorRect=()=>{
+  const review=selected&&records.get(selected)
+  if(!valid(review)||popupAnchor?.id!==review.id)return
+  try{
+   const state=editor._tiptapEditor.state,binding=ySyncPluginKey.getState(state)?.binding,range=replacementReviewRange(editor,review)
+   if(!binding||!range)return
+   const position=relativePositionToAbsolutePosition(binding.type.doc,binding.type,Y.createRelativePositionFromJSON(popupAnchor.position),binding.mapping)
+   if(position===null||position<range.from||position>range.to)return
+   return editor._tiptapEditor.view.coordsAtPos(position,position===range.to?-1:1)
+  }catch{return}
+ }
+ return{popupAnchor,popupAnchorRect,resolveThread:(id:string)=>{doc.transact(()=>{for(const review of records.values())if(valid(review)&&review.threadId===id&&!review.resolved)records.set(review.id,{...review,resolved:true})})},revision,selected:valid(item)&&!item.resolved?item:undefined,busy,error,capture,add,close:()=>setSelected(undefined),revert:()=>finish(true),resolve:()=>finish(false),canRevert:valid(item)&&!!boundRange(editor,item)}
 }
 
 export function NoteReplacementPopover({controller,scroll}:{controller:ReturnType<typeof useNoteReplacementReviews>;scroll:RefObject<HTMLDivElement>}){
@@ -136,12 +153,16 @@ export function NoteReplacementPopover({controller,scroll}:{controller:ReturnTyp
  useLayoutEffect(()=>{
   if(!selected){setPosition(undefined);return}
   let frame=0
-  const measure=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const area=scroll.current?.closest('.en-main')?.getBoundingClientRect(),mark=scroll.current?.querySelector<HTMLElement>('[data-en-replacement-id="'+CSS.escape(selected.id)+'"]')?.getBoundingClientRect(),card=root.current;if(!area||!card)return;const width=Math.min(360,area.width-32);if(!mark){setPosition(old=>old??{left:Math.max(16,area.width-width-16),top:16,maxHeight:Math.max(120,area.height-32)});return}const height=Math.min(card.scrollHeight,area.height-32),left=Math.max(16,Math.min(mark.left-area.left,area.width-width-16)),below=mark.bottom-area.top+8,top=below+height<=area.height-16?below:Math.max(16,mark.top-area.top-height-8);setPosition({left,top,maxHeight:Math.max(120,area.height-32)})})}
+  const measure=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const area=scroll.current?.closest('.en-main')?.getBoundingClientRect(),card=root.current;if(!area||!card)return
+   const fragments=Array.from(scroll.current?.querySelectorAll<HTMLElement>('[data-en-replacement-id="'+CSS.escape(selected.id)+'"]')??[]).flatMap(mark=>Array.from(mark.getClientRects())).filter(rect=>rect.width>0&&rect.height>0),point=controller.popupAnchorRect(),middle=point?(point.top+point.bottom)/2:0
+   const line=point?(fragments.find(rect=>rect.top<=middle&&rect.bottom>=middle&&rect.left<=point.left+1&&rect.right>=point.left-1)??fragments.find(rect=>rect.top<=middle&&rect.bottom>=middle)):fragments.find(rect=>rect.bottom>area.top&&rect.top<area.bottom)
+   const mark=line?{left:point?.left??line.left,top:line.top,bottom:line.bottom}:point
+   const width=Math.min(360,area.width-32);if(!mark){setPosition(old=>old??{left:Math.max(16,area.width-width-16),top:16,maxHeight:Math.max(120,area.height-32)});return}const height=Math.min(card.scrollHeight,area.height-32),left=Math.max(16,Math.min(mark.left-area.left,area.width-width-16)),below=mark.bottom-area.top+8,top=below+height<=area.height-16?below:Math.max(16,mark.top-area.top-height-8);setPosition({left,top,maxHeight:Math.max(120,area.height-32)})})}
   measure();const observer=new ResizeObserver(measure);if(root.current)observer.observe(root.current);if(scroll.current)observer.observe(scroll.current);scroll.current?.addEventListener('scroll',measure);window.addEventListener('resize',measure)
   const dismiss=(e:Event)=>{if(e instanceof KeyboardEvent){if(e.key!=='Escape')return;e.preventDefault()}else if(root.current?.contains(e.target as Node)||(e.target as HTMLElement).closest('[data-en-replacement-id]'))return;controller.close()}
   document.addEventListener('pointerdown',dismiss,true);document.addEventListener('keydown',dismiss,true)
   return()=>{cancelAnimationFrame(frame);observer.disconnect();scroll.current?.removeEventListener('scroll',measure);window.removeEventListener('resize',measure);document.removeEventListener('pointerdown',dismiss,true);document.removeEventListener('keydown',dismiss,true)}
- },[selected?.id,controller.revision])
+ },[selected?.id,controller.revision,controller.popupAnchor])
  if(!selected)return null
  const comparison=replacementComparison(selected)
  return <section ref={root} className="en-replacement-popover" role="dialog" aria-label={t('替换对照')} style={{...position,visibility:position?'visible':'hidden'}}><header><strong>{t('替换对照')}</strong><button aria-label={t('关闭替换对照')} onClick={controller.close}>×</button></header><div className="en-replacement-comparison"><section><h4>{t('原文')}</h4><div data-replacement-before>{comparison.original}</div></section><section><h4>{t('替换后')}</h4><div data-replacement-after>{comparison.replacement||t('（已删除）')}</div></section></div>{controller.error||!controller.canRevert?<p role="status">{t(controller.error||'这段文字已再次编辑，无法直接取消替换。')}</p>:null}<footer><button disabled={controller.busy||!controller.canRevert} onClick={()=>void controller.revert()}>{t('取消替换')}</button><button disabled={controller.busy} onClick={()=>void controller.resolve()}>{t('已解决')}</button></footer></section>
