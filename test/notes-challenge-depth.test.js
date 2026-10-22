@@ -184,3 +184,84 @@ it('aborts an uncooperative securities model lookup at sixty seconds without sta
  expect(result.at-startedAt).toBe(60000)
  expect(f.calls).toEqual([])
 })
+
+it('keeps a new viewpoint alongside an existing question on the same quote',async()=>{
+ const original={...question,message:'活动收入按什么口径计算？'}
+ const f=provider(payload=>payload.dimension==='viewpoint'?viewpoint(payload,[question]):basic(payload,payload.audit?[]:[original]))
+ const result=await generateNoteChallenge(f.ctx,request)
+ expect(result.issues).toHaveLength(2)
+ expect(result.issues.map(issue=>issue.message)).toEqual([original.message,question.message])
+ expect(result.completeBlockIds).toEqual(['a'])
+})
+
+it('preserves two distinct viewpoint questions on one quote for the native thread to append',async()=>{
+ const additional={...question,questionType:'scope',message:'如果活动以公益学习为目标，应该采用哪些评价指标？'}
+ const f=provider(payload=>payload.dimension==='viewpoint'?viewpoint(payload,[question,additional]):basic(payload))
+ const result=await generateNoteChallenge(f.ctx,request)
+ expect(result.issues).toHaveLength(2)
+ expect(result.issues.map(issue=>issue.message)).toEqual([question.message,additional.message])
+ expect(result.completeBlockIds).toEqual(['a'])
+})
+
+it('keeps a repeated identical question singular while attesting its actual viewpoint delivery',async()=>{
+ const f=provider(payload=>payload.dimension==='viewpoint'?viewpoint(payload,[question]):basic(payload,payload.audit?[]:[question]))
+ const result=await generateNoteChallenge(f.ctx,request)
+ expect(result.issues).toHaveLength(1)
+ expect(result.issues[0].message).toBe(question.message)
+ expect(result.completeBlockIds).toEqual(['a'])
+})
+
+it('keeps individually bounded long questions separate instead of truncating a combined message',async()=>{
+ const original={...question,message:'计算口径'.repeat(75)},longer={...question,message:'参与者可及性'.repeat(60)}
+ const f=provider(payload=>payload.dimension==='viewpoint'?viewpoint(payload,[longer]):basic(payload,payload.audit?[]:[original]))
+ const result=await generateNoteChallenge(f.ctx,request)
+ expect(result.issues).toHaveLength(2)
+ expect(result.issues.map(issue=>issue.message)).toEqual([original.message,longer.message])
+ expect(result.completeBlockIds).toEqual(['a'])
+})
+
+it('does not attest a new viewpoint that cannot fit the per-paragraph issue limit',async()=>{
+ const existing=Array.from({length:6},(_,index)=>({...question,message:'已有独立问题'+index+'？'}))
+ const f=provider(payload=>payload.dimension==='viewpoint'?viewpoint(payload,[question]):basic(payload,payload.audit?[]:existing))
+ const result=await generateNoteChallenge(f.ctx,request)
+ expect(result.issues).toHaveLength(6)
+ expect(result.issues.map(issue=>issue.message)).toEqual(existing.map(issue=>issue.message))
+ expect(result.completeBlockIds).toEqual([])
+ expect(result.checks).toContainEqual(expect.objectContaining({status:'partial',detail:expect.stringContaining('观点拓展')}))
+})
+
+it('retains the first valid batch and continues bounded audits after two malformed later responses',async()=>{
+ const f=provider(payload=>{
+  if(!payload.audit&&payload.targets[0].id==='b12')return{reviews:{}}
+  return payload.dimension==='viewpoint'?viewpoint(payload):basic(payload,payload.audit?[]:[typo])
+ })
+ const blocks=Array.from({length:24},(_,index)=>block('b'+index,request.blocks[0].text))
+ const result=await generateNoteChallenge(f.ctx,{...request,blocks,changedIds:blocks.map(item=>item.id)})
+ expect(result.issues).toHaveLength(12)
+ expect(result.coveredBlockIds).toEqual(blocks.map(item=>item.id))
+ expect(result.completeBlockIds).toEqual(blocks.slice(0,12).map(item=>item.id))
+ expect(f.calls.map(call=>call.payload.dimension??'primary')).toEqual(['primary','primary','primary','omissions','omissions','viewpoint','viewpoint'])
+ expect(result.checks).toContainEqual(expect.objectContaining({status:'partial',detail:expect.stringContaining('此前验证结果')}))
+})
+
+it('still reports malformed first-batch failure when no prior review was validated',async()=>{
+ const f=provider(()=>({reviews:{}}))
+ await expect(generateNoteChallenge(f.ctx,request)).rejects.toThrow('格式不完整')
+ expect(f.calls).toHaveLength(2)
+ expect(f.calls.every(call=>!call.payload.audit)).toBe(true)
+})
+
+it('does not convert cancellation of a later batch into a partial successful review',async()=>{
+ const controller=new AbortController()
+ let started
+ const ready=new Promise(resolve=>{started=resolve})
+ const f=provider(async payload=>{
+  if(!payload.audit&&payload.targets[0].id==='b12'){started();await new Promise(()=>{})}
+  return basic(payload,[typo])
+ })
+ const blocks=Array.from({length:24},(_,index)=>block('b'+index,request.blocks[0].text))
+ const observed=generateNoteChallenge(f.ctx,{...request,blocks,changedIds:blocks.map(item=>item.id)},controller.signal).then(result=>({result}),error=>({error}))
+ await ready;controller.abort(Error('explicit-qa-cancellation'))
+ expect((await observed).error.message).toBe('explicit-qa-cancellation')
+ expect(f.calls).toHaveLength(2)
+})

@@ -8,7 +8,7 @@ function fixture(text){
   schemas:()=>[{name:'ework__qa_infodb_read',description:'infodb read-only SQL SELECT'}],get:()=>({parameters,presentCall:()=>({kind:'read'})}),
   execute:async call=>{calls.push(call);return{content:[{type:'text',text:JSON.stringify([row])}]}}
  },llm:{stream:async function*(options){const payload=JSON.parse(options.messages[0].content[0].text);yield{type:'text-delta',index:0,text:JSON.stringify({reviews:payload.targets.map(target=>({reviewKey:target.reviewKey,issues:[]}))})};yield{type:'finish',reason:{kind:'stop'}}}}}
- const blocks=[{id:'meta',type:'paragraph',text:'贵州茅台600519.SH。报告基准日：2026年10月20日。一致预期偏离阈值：12%。一致预期统计周期：90天。'},{id:'forecast',type:'paragraph',text}]
+ const blocks=[{id:'meta',type:'paragraph',text:'研究标的：贵州茅台600519.SH。报告基准日：2026年10月20日。一致预期偏离阈值：12%。一致预期统计周期：90天。'},{id:'forecast',type:'paragraph',text}]
  return{ctx,calls,input:{sessionId:agent.id,requestId:'forecast-completion-review',action:'review',level:2,title:'研究笔记',blocks,changedIds:blocks.map(block=>block.id)}}
 }
 beforeEach(()=>vi.spyOn(console,'warn').mockImplementation(()=>{}))

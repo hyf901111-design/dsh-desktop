@@ -9,6 +9,7 @@ import { CONSISTENCY_SYSTEM, buildConsistencyInput, applyConsistencyDecisions } 
 
 const jobs = new WeakMap()
 const categories = new Set(['typo', 'grammar', 'contradiction', 'logic', 'fact', 'research', 'question', 'uncertain'])
+const questionMessageKey = message => message.trim().replace(/\s+/gu,' ')
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value)
 const string = (value, max, nonempty = false) => typeof value === 'string' && value.length <= max && (!nonempty || !!value.trim())
 const id = value => string(value, 256, true) && !/[\u0000-\u001f]/u.test(value)
@@ -216,7 +217,9 @@ function issuesFrom(value, targets, available, limits, forecastClaims=[],level=4
       }
       if (!valid) { reject('evidence'); continue }
       const category = generalKnowledge ? 'uncertain' : item.category
-      const key = item.quote + '\0' + category
+      // The same original sentence can support independent questions. Let the
+      // native thread append each distinct message rather than swallowing it.
+      const key = item.quote + '\0' + category + (category==='question'?'\0'+questionMessageKey(item.message):'')
       if (seen.has(key)) { reject('duplicate'); continue }
       seen.add(key)
       if (accepted.length === limits.perBlock) { reject('limit'); continue }
@@ -438,7 +441,7 @@ async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt 
     const delivered=[],stats={retained:0,merged:0,limited:0}
     for(const id of reviewed.coveredBlockIds)if(!result.coveredBlockIds.includes(id))result.coveredBlockIds.push(id)
     for(const issue of reviewed.issues){
-      const prior=result.issues.find(old=>old.blockId===issue.blockId&&old.quote===issue.quote&&old.category===issue.category)
+      const prior=result.issues.find(old=>old.blockId===issue.blockId&&old.quote===issue.quote&&old.category===issue.category&&(issue.category!=='question'||questionMessageKey(old.message)===questionMessageKey(issue.message)))
       if(prior){delivered.push(prior);stats.merged++;continue}
       if(result.issues.filter(old=>old.blockId===issue.blockId).length>=issueLimits.perBlock){stats.limited++;continue}
       result.issues.push(issue);delivered.push(issue);stats.retained++
@@ -470,10 +473,13 @@ async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt 
         generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits, ...existingAnchors.length ? { existingAnchors } : {} } : {}, ...thread ? { thread, allowReplacement } : {} }, primary?.signal??modelBudget.signal, reasoningEffort, input.action === 'review' ? targets : undefined, input.requestId, usage)
       }catch(error){
         modelBudget.signal.throwIfAborted()
-        if(!staged||milliseconds>=1000&&!primary.signal.aborted)throw error
-        diagnostic(input.requestId,{event:'notes-challenge-phase',phase:'primary',status:'partial',reason:'budget',targetCount:targets.length})
-        result.checks.push({kind:'review',status:'partial',detail:'主检查阶段未完成，已保留预算用于独立复查；未将未完成段落视为通过。'})
-        audits.push({targets,context,available,existingAnchors,reviewed:{issues:[],coveredBlockIds:[]}})
+        const reservedBudget=staged&&(milliseconds<1000||primary.signal.aborted),priorProgress=input.action==='review'&&result.coveredBlockIds.length>0
+        // A bad first response must still fail explicitly. Later non-cancelled
+        // failures cannot erase already validated paragraphs or their findings.
+        if(!reservedBudget&&!priorProgress)throw error
+        diagnostic(input.requestId,{event:'notes-challenge-phase',phase:'primary',status:'partial',reason:reservedBudget?'budget':'provider-or-format',targetCount:targets.length})
+        result.checks.push({kind:'review',status:'partial',detail:reservedBudget?'主检查阶段未完成，已保留预算用于独立复查；未将未完成段落视为通过。':'部分正文块检查未完成，已保留此前验证结果；未将失败块视为通过。'})
+        if(staged)audits.push({targets,context,available,existingAnchors,reviewed:{issues:[],coveredBlockIds:[]}})
         continue
       }finally{primary?.dispose()}
       if (input.action === 'review') {
