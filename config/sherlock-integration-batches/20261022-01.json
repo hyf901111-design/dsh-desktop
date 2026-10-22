@@ -170,6 +170,237 @@
         ],
         "recordedAt": "2026-10-22T11:54:56.002Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记会话能力与组件外框导出",
+        "branch": "codex/feat/client-capabilities-followup-20261022",
+        "baseCommit": "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
+        "tipCommit": "da7e25066c63d851a743923b40ceb40732cd58fe",
+        "commits": [
+          {
+            "commit": "07d486f22fac399584ddc02376ef3bc86555ff76",
+            "parents": [
+              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
+            ],
+            "subject": "功能：补齐会话对齐、所选组件修改与看板主题能力"
+          },
+          {
+            "commit": "da7e25066c63d851a743923b40ceb40732cd58fe",
+            "parents": [
+              "07d486f22fac399584ddc02376ef3bc86555ff76"
+            ],
+            "subject": "功能：支持会话与手动设置笔记组件外框并沿用到导出"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/2026-10-22-client-capability-inventory.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-actions.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-actions-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/capability-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/block-alignment.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/client-capability-actions.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/component-presentation-controls.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/component-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capabilities.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-capability-receipt-locale.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capabilities-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capability-actions.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-client-capability-editing.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capability-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-component-presentation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-theme-export-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-presentation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-structured-apply.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-openterminal.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/client-capabilities.test.js",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-component-presentation.test.ts",
+              "test/notes-theme-export-browser.test.js",
+              "test/notes-client-capabilities-browser.test.js",
+              "test/notes-component-snapshots.test.ts",
+              "test/notes-export-snapshots.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "7个直接文件70/70；真实NotesEditor中英文外框开关及保存，Chromium真实DOM快照默认/true保留1px外框，false去除外层线，内部表格线与正文保留。",
+            "verifiedCommit": "da7e25066c63d851a743923b40ceb40732cd58fe",
+            "completedAt": "2026-10-22T11:56:54.670395+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-client-capability-service.test.ts",
+              "test/notes-client-capability-bridge.test.ts",
+              "test/notes-client-capability-runtime.test.js",
+              "test/notes-client-capability-editing.test.ts",
+              "test/research-canvas-presentation.test.js",
+              "test/research-canvas-structured-apply.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/client-capabilities-bundle.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "9个直接文件78/78；会话服务、桥接、能力回执、对齐与单组件修改、看板主题及bundle覆盖。",
+            "verifiedCommit": "da7e25066c63d851a743923b40ceb40732cd58fe",
+            "completedAt": "2026-10-22T11:56:54.670395+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "tsc --noEmit -p tsconfig.node.json 通过。",
+            "verifiedCommit": "da7e25066c63d851a743923b40ceb40732cd58fe",
+            "completedAt": "2026-10-22T11:56:54.670395+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异空白检查通过。",
+            "verifiedCommit": "da7e25066c63d851a743923b40ceb40732cd58fe",
+            "completedAt": "2026-10-22T11:56:54.670395+00:00",
+            "timeoutMs": 30000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "确切feature tip上真实NotesEditor Chromium合成外部模型/导出替身流程通过；实际共享冻结函数读取真实组件CSS，验证外框开关默认行为和表格内部边线。未构建共享客户端，原生保存框与Electron PDF仍待集成后验收。"
+        },
+        "acceptanceCriteria": [
+          "会话和手动组件样式共享持久化处理器，支持易方达主题、顶栏与独立外框开关及中英文。",
+          "frame:false仅去除研究组件外框，保留内部表格边线、正文、尺寸；缺省与true保持原行为；导出沿用实际保存外观。",
+          "正文与组件对齐、所选单组件inspect/apply及当前看板主题复用既有固定处理器，并保持会话、选择和revision边界。",
+          "无仅本次导出的临时样式覆盖；保存、取消及导出结果依照真实回执，不能假称完成。"
+        ],
+        "risks": [
+          "本worktree不构建共享客户端；原生保存框、真实Electron PDF和客户端重启后的端到端验收仍待集成。",
+          "外框/顶栏/配色仅针对research节点，不扩展附件外观或移除内部HTML自定义边框。",
+          "外观设置保存到原笔记；仅导出时临时去框不在能力范围。"
+        ],
+        "generatedAt": "2026-10-22T11:56:54.670395+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -213,6 +444,56 @@
         "diff",
         "--check",
         "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/client-capabilities.test.js",
+        "test/notes-client-capability-actions.test.ts",
+        "test/notes-component-presentation.test.ts",
+        "test/notes-theme-export-browser.test.js",
+        "test/notes-client-capabilities-browser.test.js",
+        "test/notes-component-snapshots.test.ts",
+        "test/notes-export-snapshots.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/notes-client-capability-service.test.ts",
+        "test/notes-client-capability-bridge.test.ts",
+        "test/notes-client-capability-runtime.test.js",
+        "test/notes-client-capability-editing.test.ts",
+        "test/research-canvas-presentation.test.js",
+        "test/research-canvas-structured-apply.test.js",
+        "test/workbench-openterminal.test.js",
+        "test/notes-capability-receipt-locale.test.js",
+        "test/client-capabilities-bundle.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
       ],
       "timeoutMs": 30000
     }
