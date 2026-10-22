@@ -1,5 +1,6 @@
 import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
+ '来源查询':'Source search','全部查询':'All searches',
  '查询覆盖：':'Search coverage: ',
  '来源查询：':'Source search: ',
  '来源返回：':'Source records: ',

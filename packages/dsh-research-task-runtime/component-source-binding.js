@@ -607,7 +607,19 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     observed.push(source)
     requests.push({key:request.key,toolId:request.tool==='public_data_query'?request.tool:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(requestArgs,now):requestArgs})
   }
-  const mapping=singleSourceMapping(contract,responses)
+  const groupKeys=contract?.type==='news'?['groups','sections'].filter(key=>Object.hasOwn(contract,key)):[]
+  let grouped=false,displayContract=contract
+  if(groupKeys.length){
+    if(groupKeys.length!==1||Object.hasOwn(contract,'items'))throw Error('分组资讯必须提供一份明确的条目集合，不能同时提交冲突的 items、groups 或 sections。')
+    const groups=contract[groupKeys[0]]
+    if(!Array.isArray(groups)||!groups.length||groups.some(group=>!group||typeof group!=='object'||Array.isArray(group)||!Object.hasOwn(group,'items')||!group.items||typeof group.items!=='object'))throw Error('每个资讯分组必须保留完整 items 条目集合，不能猜测或丢弃条目。')
+    const {groups:unusedGroups,sections:unusedSections,variant:unusedVariant,...base}=contract
+    // Groups are presentation, not a different data contract. Materialize all
+    // source-backed collections together, then use the same per-item gates.
+    // Group labels/status never prove a company search; actual queries below do.
+    displayContract={...base,items:groups.map(group=>group.items)};grouped=true
+  }
+  const mapping=singleSourceMapping(displayContract,responses)
   // Source identity comes from the exact observed call matched above, after
   // evaluating legal argument mappings such as source:{$default:'sina-news'}.
   // Keep original request expressions for refresh; never classify their shape.
@@ -623,7 +635,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   // Once their complete news mapping exceeds the native 40-item template,
   // validate every item before choosing the existing controlled reading UI.
   // HTML is a disclosed snapshot, never a native automatic-refresh recipe.
-  if(data.type==='news'&&Array.isArray(data.items)&&materialized.items.length>40){
+  if(data.type==='news'&&Array.isArray(data.items)&&(grouped||materialized.items.length>40)){
     const captured=options.feedOptions??{},human=String(captured.workbenchRequest?.originalRequest??'').replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|「[^」]*」|"[^"\n]*"/gu,'')
     const days=[...human.matchAll(/(?:近|最近|过去)\s*(\d+)\s*(?:天|日)(?!历)/gu)].map(match=>Number(match[1]))
     if(days.some(value=>value<1||value>366)||new Set(days).size>1)throw Object.assign(Error('新闻的相对天数范围无效或存在歧义，不能扩大或猜测查询窗口。'),{code:'SOURCE_DATA_REQUIRED'})
