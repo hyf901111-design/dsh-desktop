@@ -25,11 +25,11 @@ it('composes style, real local export, canvas inspect and shared UI command thro
  const h=harness(),path=join(h.root,'receipt.md'),calls=[{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise',titleBar:false}},{requestId:'export',capability:'notes.export',arguments:{format:'md',path}},{requestId:'canvas',capability:'canvas.inspect',arguments:{}},{requestId:'zoom',capability:'ui.zoom.reset',arguments:{}}]
  h.wire(b=>b.clientReceipts.length?{kind:'conversation',markdown:'fake completion'}:{kind:'capabilities',calls})
  try{
-  const result=await h.generate('组件用易方达，隐藏顶栏，导出到 '+path+'，查看当前画布并恢复默认缩放')
+  const result=await h.generate('组件用易方达，隐藏顶栏，导出到“'+path+'”，查看当前画布并恢复默认缩放')
   expect(result.capabilityReceipts.map((r:any)=>r.status)).toEqual(['succeeded','succeeded','succeeded','succeeded']);expect(result.markdown).toContain(path);expect(result.markdown).not.toContain('fake completion');expect(readFileSync(path,'utf8')).toContain('保留正文')
   const stored=await h.call('load');expect(JSON.parse(stored.saved.blocks[1].props.payload)).toMatchObject({notePresentation:{theme:'enterprise',titleBar:false},noteSize:{width:390}})
   expect(h.inspectCanvas).toHaveBeenCalledWith('note',expect.any(AbortSignal));expect(h.resetZoom).toHaveBeenCalledOnce();expect(h.history[0].receipts).toHaveLength(4)
-  expect(await h.generate('组件用易方达，隐藏顶栏，导出到 '+path+'，查看当前画布并恢复默认缩放')).toEqual(result);expect(h.calls()).toBe(2)
+  expect(await h.generate('组件用易方达，隐藏顶栏，导出到“'+path+'”，查看当前画布并恢复默认缩放')).toEqual(result);expect(h.calls()).toBe(2)
   await expect(h.generate('不同指令')).rejects.toThrow('请求标识')
  }finally{h.dispose()}
 })
@@ -72,7 +72,15 @@ it.each(['不要导出到 /tmp/report.pdf','示例里提到 /tmp/report.pdf'])('
  const h=harness();h.wire(()=>({kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path:'/tmp/report.pdf'}}]}))
  try{const r=await h.generate(prompt);expect(h.actions[0].args.path).toBeUndefined();expect(r.capabilityReceipts[0].status).toBe('cancelled')}finally{h.dispose()}
 })
-it.each(['report final.md','report,final.md','report.md.bak'])('writes only the complete explicitly named destination %s',async(name)=>{
+it.each(['report final.md','report,final.md','report.md.bak','报告，最终版.pdf','报告。终稿.pdf','报告.pdf，最终版.pdf'])('writes only the complete explicitly named destination %s',async(name)=>{
  const h=harness(),path=join(h.root,name);h.wire(b=>b.clientReceipts.length?{kind:'conversation',markdown:'完成'}:{kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path}}]})
  try{const r=await h.generate('不要显示顶栏，然后导出到“'+path+'”');expect(r.capabilityReceipts[0]).toMatchObject({status:'succeeded',path});expect(readFileSync(path,'utf8')).toContain('保留正文')}finally{h.dispose()}
+})
+it.each([
+ ['/tmp/报告，最终版.pdf','/tmp/报告'],
+ ['/tmp/报告。终稿.pdf','/tmp/报告'],
+ ['/tmp/报告.pdf，最终版.pdf','/tmp/报告.pdf']
+])('opens a save dialog rather than directly writing the punctuation prefix of %s',async(source,path)=>{
+ const h=harness();h.wire(()=>({kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path}}]}))
+ try{const r=await h.generate('导出到 '+source);expect(h.actions[0].args.path).toBeUndefined();expect(r.capabilityReceipts[0].status).toBe('cancelled')}finally{h.dispose()}
 })

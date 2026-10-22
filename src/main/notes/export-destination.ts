@@ -18,8 +18,18 @@ export function explicitNoteExportPaths(prompt:string):string[]{
   add(path,groups[5] as number)
   return ' '.repeat(match.length)
  })
- // Keep spaces and ASCII punctuation within the entire remaining path literal;
- // never authorize a prefix because whitespace or punctuation followed it.
- for(const match of unquoted.matchAll(/\/[^，。；！？\r\n"'`“”「」]+/g))add(match[0].trimEnd(),match.index!)
+ // Consume the whole unquoted line before considering punctuation. An internal
+ // Chinese mark could belong to a filename, even after a valid extension; it
+ // must never authorize its prefix. Only a lone final sentence mark may end a
+ // bare destination. Quoted filenames preserve every punctuation character.
+ for(const match of unquoted.matchAll(/\/[^\r\n"'`“”「」]+/g)){
+  let path=match[0].trimEnd()
+  // Masked quoted material after a bare path is still trailing source text,
+  // not a natural line ending that can authorize the preceding prefix.
+  if(prompt.slice(match.index!,match.index!+match[0].length).trimEnd()!==path)continue
+  const mark=path.search(/[，。；！？、]/)
+  if(mark>=0){if(mark!==path.length-1)continue;path=path.slice(0,-1).trimEnd()}
+  add(path,match.index!)
+ }
  return paths.length===1?paths:[]
 }
