@@ -47,7 +47,7 @@ export function createAssistantTextPaint(root,record){
   for(let bucket=0;bucket<levels;bucket++){const first=Math.max(done,upper(now-(bucket+1)*fade/levels)),end=Math.min(pending,upper(now-bucket*fade/levels));if(first<end)add(units[first].from,units[end-1].to,bucket)}
   for(const[name,ranges]of groups)registry.set(name,new view.Highlight(...ranges))
   const frontier=units[Math.max(0,pending-1)];if(frontier){const part=parts.find(p=>p.end>=frontier.to);if(part){const range=doc.createRange();range.setStart(part.node,Math.max(0,Math.min(part.node.length,frontier.to-part.start-1)));range.setEnd(part.node,Math.max(0,Math.min(part.node.length,frontier.to-part.start)));root.__eworkAssistantRevealEnd=range}}
-  if(done)units=units.slice(done)
+  if(done===units.length)units=[]
   root.dispatchEvent(new view.CustomEvent('sherlock:assistant-reveal-frame',{bubbles:true}))
   if(units.length)frame=view.requestAnimationFrame(paint);else{delete root.dataset.aiRevealing;delete root.__eworkAssistantRevealEnd;root.dispatchEvent(new view.CustomEvent('sherlock:assistant-reveal-frame',{bubbles:true}))}
  }
@@ -57,6 +57,8 @@ export function createAssistantTextPaint(root,record){
   // React may replace every Markdown node while preserving its logical text.
   // Refresh these ranges even when the provider has not appended another character.
   parts=nodes
+  // Reclaim completed graphemes on actual renderer updates, never per frame.
+  if(units.length)units=units.slice(upper(clock-fade))
   if(disposed||skip||media?.matches||!visible()||!(record.fresh||record.live)||initial&&!record.fresh){finish();lastStart=undefined;return}
   if(selecting||hasSelection()||clock<quietUntil||!registry||!view.Highlight){finish();return}
   if(!style){style=doc.createElement('style');style.dataset.assistantReveal='';doc.head.append(style)}
