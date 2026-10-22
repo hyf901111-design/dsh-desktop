@@ -1,3 +1,4 @@
+import type {ChallengeIssue} from '../../shared/notes-challenge'
 /** Find a single exact occurrence in one original block, across text styles.
  * Never attach a stale/ambiguous quote to another paragraph or table cell. */
 export function findChallengeQuote(editor:any,blockId:string,quote:string):{from:number;to:number}|undefined{
@@ -68,4 +69,15 @@ export function replaceChallengeQuote(editor:any,blockId:string,quote:string,rep
   if(threadId&&!challengeThreadQuote({_tiptapEditor:{state:{doc:tr.doc}}},blockId,threadId))tr.addMark(range.from,range.from+replacement.length,tr.doc.type.schema.marks.comment.create({threadId,orphan:false}))
  })
  undo?.stopCapturing();return true
+}
+
+/** Preserve an existing spelling discussion when a later tier splits its same span. */
+export function reuseSpellingAnchors(issues:ChallengeIssue[],anchors:Array<{blockId:string;quote:string;category:string}>):ChallengeIssue[]{
+ const result:ChallengeIssue[]=[]
+ for(const issue of issues){
+  const anchor=issue.category==='typo'?anchors.filter(a=>a.category==='typo'&&a.blockId===issue.blockId&&a.quote.includes(issue.quote)).sort((a,b)=>a.quote.length-b.quote.length)[0]:undefined
+  const next=anchor?{...issue,quote:anchor.quote}:issue,prior=result.find(i=>i.blockId===next.blockId&&i.quote===next.quote&&i.category===next.category)
+  if(prior){if(prior.message!==next.message&&!prior.message.includes(next.message))prior.message=(prior.message+'；'+next.message).slice(0,600)}else result.push({...next})
+ }
+ return result
 }

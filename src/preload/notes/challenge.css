@@ -66,10 +66,20 @@ body [data-ework-notes-session]:has(.en-challenge-tools) [data-srb-utilities]{fl
 
 /* A masked one-pixel perimeter stays outside the label and never intercepts input. */
 @property --en-challenge-orbit-angle{syntax:"<angle>";inherits:false;initial-value:0deg}
-.en-challenge-tools .en-challenge-trigger{position:relative;isolation:isolate}
+.en-challenge-tools .en-challenge-trigger{position:relative;isolation:isolate;--en-challenge-beam:84 103 130}
+.en-challenge-tools[data-dark=true] .en-challenge-trigger{--en-challenge-beam:255 255 255}
 .en-challenge-tools .en-challenge-trigger:hover:not(:disabled){background:var(--en-challenge-trigger-bg)}
-.en-challenge-trigger::before{content:"";position:absolute;inset:-1px;box-sizing:border-box;border-radius:inherit;padding:1.5px;pointer-events:none;opacity:0;background:conic-gradient(from var(--en-challenge-orbit-angle),#58d9f8,#9391ff 22%,#ed8bd8 46%,#ffd28e 66%,#78e4cb 84%,#58d9f8);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;transition:opacity 180ms ease}
+.en-challenge-trigger::before{content:"";position:absolute;inset:-1px;box-sizing:border-box;border-radius:inherit;padding:1.5px;pointer-events:none;opacity:0;background:conic-gradient(from var(--en-challenge-orbit-angle),transparent 0deg 275deg,rgb(var(--en-challenge-beam) / .08) 290deg,rgb(var(--en-challenge-beam) / .95) 315deg,rgb(var(--en-challenge-beam) / .08) 340deg,transparent 355deg 360deg);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;transition:opacity 180ms ease}
 .en-challenge-trigger[aria-busy=true]::before{opacity:1;animation:en-challenge-orbit 2.4s linear infinite}
-.en-challenge-trigger[aria-busy=true]{box-shadow:0 0 7px rgb(130 144 255 / .16)}
+
 @keyframes en-challenge-orbit{to{--en-challenge-orbit-angle:360deg}}
 @media(prefers-reduced-motion:reduce){.en-challenge-trigger::before{transition:none}.en-challenge-trigger[aria-busy=true]::before{animation:none}}
+
+.en-root .en-replacement-mark{background:#d8edff!important;color:inherit;box-shadow:inset 0 -1px #6ba5d4;cursor:pointer;border-radius:2px}
+.en-root[data-dark=true] .en-replacement-mark{background:#25465e!important;box-shadow:inset 0 -1px #6cb0d9}
+.en-replacement-mark:focus-visible{outline:2px solid #6ba5d4;outline-offset:2px}
+.en-replacement-popover{position:absolute;z-index:69;box-sizing:border-box;display:flex;flex-direction:column;width:min(360px,calc(100% - 32px));min-height:0;border:1px solid var(--en-challenge-border);border-radius:12px;padding:12px 16px;background:var(--en-challenge-bg);color:var(--en-challenge-ink);box-shadow:var(--en-challenge-popup-shadow);font-size:13px;line-height:21px}
+.en-replacement-popover header{display:flex;align-items:center;justify-content:space-between;flex:none;margin-bottom:8px}.en-replacement-popover header strong{font-size:13px;font-weight:500}
+.en-root .en-replacement-popover header button{display:grid;place-items:center;box-sizing:border-box;width:24px;height:24px;min-width:24px;padding:0;border-radius:6px;background:transparent;color:var(--en-challenge-muted);font-size:18px;line-height:24px}
+.en-replacement-comparison{overflow:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;white-space:pre-wrap;overflow-wrap:anywhere}.en-replacement-comparison section+section{margin-top:14px}.en-replacement-comparison h4{font-size:11px;font-weight:400;line-height:18px;color:var(--en-challenge-muted);margin:0 0 4px}.en-replacement-comparison [data-replacement-after]{border-left:2px solid #6ba5d4;padding-left:8px}.en-replacement-popover>p{font-size:12px;color:var(--en-challenge-muted)}
+.en-replacement-popover footer{display:flex;flex:none;justify-content:flex-end;gap:8px;margin-top:12px}.en-root .en-replacement-popover footer button{min-width:0;height:28px;padding:4px 10px;border:0;border-radius:6px;background:var(--en-challenge-action);color:var(--en-challenge-action-ink);font-family:inherit;font-size:12px;font-weight:400;line-height:20px}.en-root .en-replacement-popover button:disabled{opacity:.5;cursor:default}
