@@ -404,68 +404,87 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复笔记评论点击定位与后台挑战保存并统一组件菜单材质",
+        "featureName": "补齐新增笔记挑战与研究组件英文界面",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "e57eee4cfe0243ef9a6fddc4a658200acdbfe572",
-        "tipCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+        "baseCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
+        "tipCommit": "472152a69af14ce2b62887d98d02f8b5b0fa10f9",
         "commits": [
           {
-            "commit": "a8462f45b72085144fa6fe2f2d63871b8e7c1793",
+            "commit": "472152a69af14ce2b62887d98d02f8b5b0fa10f9",
             "parents": [
-              "e57eee4cfe0243ef9a6fddc4a658200acdbfe572"
+              "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b"
             ],
-            "subject": "让笔记挑战评论气泡靠近实际点击文字"
-          },
-          {
-            "commit": "0ee95f6a7424a85df060d40f51ee6dd08c3eaccc",
-            "parents": [
-              "a8462f45b72085144fa6fe2f2d63871b8e7c1793"
-            ],
-            "subject": "统一组件菜单的中性半透明背景与模糊材质"
-          },
-          {
-            "commit": "dab06067d84bb3747c149d121c4934c5295eee30",
-            "parents": [
-              "0ee95f6a7424a85df060d40f51ee6dd08c3eaccc"
-            ],
-            "subject": "让笔记自动挑战跨会话与失焦完成并保存校验结果"
-          },
-          {
-            "commit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
-            "parents": [
-              "dab06067d84bb3747c149d121c4934c5295eee30"
-            ],
-            "subject": "更新组件菜单检查以遵循统一中性磨砂样式"
+            "subject": "补齐笔记挑战与研究组件新增功能的英文界面和回执"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/workbench-style.css"
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-challenge-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-workbench-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-localization.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
             "path": "src/preload/notes/challenge-controller.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/notes/challenge-review-state.ts"
-          },
-          {
             "status": "M",
-            "path": "src/preload/notes/challenge-scheduler.ts"
+            "path": "src/preload/notes/challenge-coverage.tsx"
           },
           {
             "status": "M",
             "path": "src/preload/notes/challenge-ui.tsx"
           },
           {
-            "status": "A",
-            "path": "src/preload/notes/editor-visibility.ts"
+            "status": "M",
+            "path": "src/preload/notes/challenge.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/client-capability-actions.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/component-presentation-controls.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/component-snapshots.ts"
           },
           {
             "status": "M",
@@ -473,19 +492,23 @@
           },
           {
             "status": "M",
-            "path": "src/preload/notes/mount.tsx"
+            "path": "src/preload/notes/native-component-block.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/notes/reference-context.ts"
+            "path": "src/preload/notes/replacement-review.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/workspace-notes.ts"
           },
           {
             "status": "A",
-            "path": "test/notes-challenge-background-browser.test.js"
+            "path": "test/notes-capability-receipt-locale.test.js"
           },
           {
-            "status": "A",
-            "path": "test/notes-challenge-background.test.ts"
+            "status": "M",
+            "path": "test/notes-challenge-client-browser.test.js"
           },
           {
             "status": "M",
@@ -496,16 +519,28 @@
             "path": "test/notes-challenge-layout-browser.test.js"
           },
           {
-            "status": "A",
-            "path": "test/notes-challenge-popup-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-challenge-review-state.test.ts"
+            "status": "M",
+            "path": "test/notes-client-capabilities-browser.test.js"
           },
           {
             "status": "M",
-            "path": "test/openterminal-dark-controls.test.js"
+            "path": "test/notes-english-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-header-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-recent-locale.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-new-ui-localization.test.js"
           }
         ],
         "checks": [
@@ -514,35 +549,19 @@
               "npx",
               "vitest",
               "run",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background-browser.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "132项后台review、持久覆盖、controller及scheduler聚焦检查通过；/tmp/notes-challenge-background-green-20261022.log。",
-            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
-            "completedAt": "2026-10-22T07:08:28.336Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-popup-browser.test.js",
-              "test/notes-challenge-layout-browser.test.js",
-              "test/notes-edit-date-browser.test.js",
+              "test/notes-english-browser.test.js",
+              "test/notes-header-runtime.test.js",
               "test/notes-client-capabilities-browser.test.js",
-              "test/notes-inline-files.test.tsx",
+              "test/notes-recent-locale.test.js",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/workbench-new-ui-localization.test.js",
+              "test/research-workbench-feedback.test.js",
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "58项评论定位、布局、日期、当前会话能力及文件显示交叉检查通过；/tmp/notes-popup-background-menu-cross-focused-final-20261022.log。旧布局断言等待真实180ms退出后再单次点击打开。",
-            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
-            "completedAt": "2026-10-22T07:08:28.336Z",
+            "summary": "43项最终英文显示、状态保留、结构回执及研究locale检查通过；/tmp/notes-new-features-english-final-focused-20261022.log。",
+            "verifiedCommit": "472152a69af14ce2b62887d98d02f8b5b0fa10f9",
+            "completedAt": "2026-10-22T07:58:38.653Z",
             "timeoutMs": 180000
           },
           {
@@ -550,15 +569,48 @@
               "npx",
               "vitest",
               "run",
-              "test/menu-surface-theme.test.ts",
-              "test/menu-backdrop-pixels.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/workbench-style.test.js"
+              "test/notes-header-runtime.test.js",
+              "test/notes-activity.test.js",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-client-capabilities-browser.test.js",
+              "test/notes-component-snapshots.test.ts",
+              "test/notes-component-presentation.test.ts",
+              "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "59项菜单及研究组件样式检查通过；/tmp/research-menu-material-focused-20261022.log。实际patcher CSS的16组合中性材质与模糊像素矩阵见/tmp/research-menu-material-report-20261022.md。",
-            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
-            "completedAt": "2026-10-22T07:08:28.336Z",
+            "summary": "45项activity/真实能力链/组件样式/导出snapshots通过；/tmp/notes-recent-english-root-final-focused-20261022.log。",
+            "verifiedCommit": "472152a69af14ce2b62887d98d02f8b5b0fa10f9",
+            "completedAt": "2026-10-22T07:58:38.653Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_SIDEBAR_SOURCE=/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js",
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-challenge-client-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "5项真实sidebar含英文切换通过；/tmp/notes-challenge-evidence-english-browser-20261022.log。只读既有fixture，没有feature构建。",
+            "verifiedCommit": "472152a69af14ce2b62887d98d02f8b5b0fa10f9",
+            "completedAt": "2026-10-22T07:58:38.653Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-challenge-layout-browser.test.js",
+              "-t",
+              "places persistent note tools before export"
+            ],
+            "outcome": "passed",
+            "summary": "英文宽度、窄头部可达及中文128px保留通过；/tmp/notes-challenge-english-width-green-20261022.log。",
+            "verifiedCommit": "472152a69af14ce2b62887d98d02f8b5b0fa10f9",
+            "completedAt": "2026-10-22T07:58:38.653Z",
             "timeoutMs": 180000
           },
           {
@@ -568,9 +620,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "/tmp/notes-popup-background-menu-final-typecheck-20261022.log exit0。",
-            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
-            "completedAt": "2026-10-22T07:08:28.336Z",
+            "summary": "/tmp/notes-new-features-english-final-typecheck-20261022.log exit0。",
+            "verifiedCommit": "472152a69af14ce2b62887d98d02f8b5b0fa10f9",
+            "completedAt": "2026-10-22T07:58:38.653Z",
             "timeoutMs": 180000
           },
           {
@@ -578,203 +630,31 @@
               "git",
               "diff",
               "--check",
-              "e57eee4cfe0243ef9a6fddc4a658200acdbfe572..efa50f9fd04b6154f04af8977e0b9a3a83d4b07b"
+              "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b..472152a69af14ce2b62887d98d02f8b5b0fa10f9"
             ],
             "outcome": "passed",
-            "summary": "本次严格后继完整diff检查通过。",
-            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
-            "completedAt": "2026-10-22T07:08:28.336Z",
+            "summary": "完整本轮差异检查通过。",
+            "verifiedCommit": "472152a69af14ce2b62887d98d02f8b5b0fa10f9",
+            "completedAt": "2026-10-22T07:58:38.653Z",
             "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/openterminal-dark-controls.test.js",
-              "test/menu-surface-theme.test.ts",
-              "test/menu-backdrop-pixels.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/workbench-style.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "同步旧菜单测试与最新中性磨砂合同；保留生成卡深色、外部浅色保护。63项通过，/tmp/research-menu-material-integration-check-20261022.log。",
-            "verifiedCommit": "efa50f9fd04b6154f04af8977e0b9a3a83d4b07b",
-            "completedAt": "2026-10-22T07:08:28.336Z",
-            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "隔离真实editor Chromium点击行定位及后台session/失焦路径已验证；尚未声称签名新客户端通过。必须从此handoff的集成提交构建并原生核验。"
+          "summary": "旧原生英文界面确实显示中文AI挑战与程序回执。真实Chromium中英切换已验证保留正文、草稿和review记录；新签名客户端仍需原生核验，尚未宣称完成。"
         },
         "acceptanceCriteria": [
-          "窄屏评论按用户实际点击字符所在行就近弹出并限制在笔记视口；宽屏评论仍与导出按钮右对齐，滚动和草稿保留。",
-          "已开始的自动review在失焦、切mode或session后完成并确认保存至原笔记；不启动隐藏的新轮，返回恢复相应段落线与问题。",
-          "显式关闭、换级、身份清理和过期正文保护不变；隐藏editor不处理当前会话的reference、发送或组件操作。",
-          "组件更多菜单及子菜单使用现有全局中性半透明材质和背景模糊，兼容浅深应用主题及不同看板主题。"
+          "挑战档位/描述、评论按钮/等待/aria、段落tooltip、替换对照及固定证据检查显示随语言切换。",
+          "组件样式、菜单、刷新/RSS/设置状态和程序化结构回执显示英文；用户正文、源数据/新闻、模型原始内容及未知错误不被批量改写。",
+          "英文说明弹层和header工具按实际文字尺寸显示，中文尺寸保留；切语言不卸载整篇笔记、不丢替换标记或草稿、不触发校验/生成。",
+          "从集成来源构建本地测试客户端，保持打开；广泛目标继续暂停。"
         ],
         "risks": [
-          "仅本地测试，不发布、推送或晋升main；广泛目标继续暂停等待用户测试。",
-          "后台继续范围为客户端仍运行时已启动的自动review，不保证退出进程后的请求继续。",
-          "保存失败保留原会话实例并在返回时重试，不能误称已保存。",
-          "本次不扩大AI挑战语义召回或其他暂停范围。"
+          "研究回执功能分支v7与已集成v8存在既有差异：合并须保留v8的subscribeSession/refreshSnapshot/refreshHistory等业务，仅加入locale hook，marker升v9支持既有v8重装；保留集成业务测试并验证locale/feedback后才能构建。",
+          "本轮不翻译用户或模型的自由正文；两句旧host提示已与模型reply.text混合且缺provenance，未用尾部猜测替换。",
+          "仅本地，不版本号变更、发布、公证、上传、推送或main晋升。"
         ],
-        "generatedAt": "2026-10-22T07:08:28.336Z"
-      },
-      "merged": {
-        "mergeCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-        "verificationCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/calendar-tool-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/calendar-tool-client.test.js",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/shared-calendar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/shared-calendar.test.ts",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5",
-            "verifiedCommit": "1294b407536075ecfc3dd52d5ad1d9a71b33ad4f",
-            "completedAt": "2026-10-22T07:09:41.701Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-22T07:09:41.701Z"
+        "generatedAt": "2026-10-22T07:58:38.653Z"
       }
     },
     {
