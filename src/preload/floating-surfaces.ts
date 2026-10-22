@@ -52,7 +52,8 @@ ${customTriggers.split(',').map(s => s + '[data-odyssey-floating-anchor]::after'
   function reconcile() {
     if (active && (!active.isConnected || active.getAttribute('aria-expanded') === 'true')) hide()
     doc.querySelectorAll<HTMLElement>(customTriggers).forEach(el => { if (!el.hasAttribute('data-odyssey-floating-anchor')) el.dataset.odysseyFloatingAnchor = '' })
-    doc.querySelectorAll<HTMLElement>('.JObwrW_panel,[role=tooltip]').forEach(el => {
+    // Locally anchored tooltips already own their coordinates and clipping policy.
+    doc.querySelectorAll<HTMLElement>('.JObwrW_panel,[role=tooltip]:not([data-odyssey-local-tooltip])').forEach(el => {
       if (el === bubble || tracked.has(el)) return
       const anchor = el.matches('.JObwrW_panel') ? el.closest('.JObwrW_root')?.querySelector<HTMLElement>('.JObwrW_trigger') ?? null : null
       if (el.matches('.JObwrW_panel') && !anchor) return

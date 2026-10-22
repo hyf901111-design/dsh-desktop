@@ -36,5 +36,5 @@ export function ChallengeParagraphFeedback({items,scroll,revision}:{items:Paragr
   scroller.addEventListener('scroll',measure,{passive:true});window.addEventListener('resize',measure);measure()
   return()=>{cancelAnimationFrame(frame);observer.disconnect();scroller.removeEventListener('scroll',measure);window.removeEventListener('resize',measure)}
  },[items,scroll,revision])
- return <div className="en-challenge-paragraph-feedback" ref={root}>{positions.map(item=><div key={item.blockId} className="en-challenge-paragraph-line" data-block-id={item.blockId} data-state={item.state} tabIndex={0} role="img" aria-label={item.label} style={{top:item.top,left:item.left,height:item.height}}><span role="tooltip" style={{top:Math.max(0,8-item.top),maxWidth:Math.max(64,Math.min(280,item.left-24))}}>{item.label}</span></div>)}</div>
+ return <div className="en-challenge-paragraph-feedback" ref={root}>{positions.map(item=><div key={item.blockId} className="en-challenge-paragraph-line" data-block-id={item.blockId} data-state={item.state} tabIndex={0} role="img" aria-label={item.label} style={{top:item.top,left:item.left,height:item.height}}><span role="tooltip" data-odyssey-local-tooltip="" style={{top:Math.max(0,8-item.top),maxWidth:Math.max(64,Math.min(280,item.left-24))}}>{item.label}</span></div>)}</div>
 }

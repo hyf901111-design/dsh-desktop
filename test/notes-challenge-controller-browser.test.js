@@ -8,7 +8,7 @@ const original='这项结论的成度较高。'
 const answer={version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'目前没有实际来源，无法核实这项判断。'}}
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import{mountNotes}from'./src/preload/notes/mount';import{YjsThreadStore}from'@blocknote/core/yjs';import{DefaultThreadStoreAuth}from'@blocknote/core/comments';import{findChallengeQuote}from'./src/preload/notes/challenge-anchors';import{CHALLENGE_KIND,CHALLENGE_USER}from'./src/preload/notes/challenge-controller';import{noteText}from'./src/shared/workspace-notes';import*as Y from'yjs';
+ import{mountNotes}from'./src/preload/notes/mount';import{mountFloatingSurfaces}from'./src/preload/floating-surfaces';window.enableFloatingSurfaces=()=>mountFloatingSurfaces(document);import{YjsThreadStore}from'@blocknote/core/yjs';import{DefaultThreadStoreAuth}from'@blocknote/core/comments';import{findChallengeQuote}from'./src/preload/notes/challenge-anchors';import{CHALLENGE_KIND,CHALLENGE_USER}from'./src/preload/notes/challenge-controller';import{noteText}from'./src/shared/workspace-notes';import*as Y from'yjs';
  window.calls=[];window.jobs=[];window.saved={};window.drafts={};window.completed=0;
  const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{saved:window.saved[input.sessionId]?{...window.saved[input.sessionId],revision:0}:{title:input.sessionId,blocks:[{id:'p',type:'paragraph',content:${JSON.stringify(original)}}],yjs:'',revision:0}};if(method==='challenge')return new Promise((resolve,reject)=>window.jobs.push({input,resolve,reject}));if(method==='save'){window.saved[input.sessionId]=input.content;return{status:'saved',saved:{...input.content,revision:input.revision+1}}}return{}},draft:async input=>{window.drafts[input.sessionId]=input.content}};
  const host={register:(_mode,surface)=>{surface.style.left='0';document.body.append(surface)},open:()=>{},close:()=>{},current:()=>'notes'};let mounted=mountNotes(document,bridge,host);window.remount=()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)};
@@ -820,5 +820,31 @@ it('keeps a reviewed paragraph tooltip visible while the top of a long paragraph
   await expect.poll(async()=>Math.round((await line.boundingBox()).y)).toBeLessThan(Math.round(area.y))
   const rect=await line.boundingBox();await line.hover({position:{x:6,y:area.y-rect.y+24}})
   const tooltip=line.getByRole('tooltip');await expect.poll(()=>tooltip.isVisible()).toBe(true);expect((await tooltip.boundingBox()).y).toBeGreaterThanOrEqual(area.y);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('anchors paragraph feedback beside its own line with the real global floating surfaces mounted',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(()=>window.enableFloatingSurfaces());await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id)
+  await page.evaluate(()=>{window.editor.replaceBlocks(window.editor.document,[{id:'p',type:'paragraph',content:'这是已经校对的正常段落。'},{id:'r',type:'paragraph',content:'请提胶并审和报告。'}]);window.challenge.setLevel(2)})
+  await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[{blockId:'r',quote:'提胶',category:'typo',message:'应为提交。',evidence:[]}],coveredBlockIds:['p','r'],completeBlockIds:['p','r'],checks:[]})
+  for(const block of ['p','r']){
+   const line=page.locator('.en-challenge-paragraph-line[data-block-id='+block+']');await line.hover();const tooltip=line.getByRole('tooltip');await expect.poll(()=>tooltip.isVisible()).toBe(true)
+   const a=await line.boundingBox(),b=await tooltip.boundingBox();expect(b.x).toBeGreaterThan(24);expect(b.x+b.width).toBeLessThan(a.x);expect(a.x-b.x-b.width).toBeLessThan(32);expect(Math.abs(a.y-b.y)).toBeLessThan(20)
+   expect(await tooltip.getAttribute('data-odyssey-floating-surface')).toBeNull()
+  }
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('fades newly reviewed paragraph lines in without moving the text and respects reduced motion',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id);await page.evaluate(()=>window.challenge.setLevel(2));await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[]})
+  const line=page.locator('.en-challenge-paragraph-line');await line.waitFor();const before=await page.locator('.bn-block-content').first().boundingBox()
+  const opacity=await line.evaluate(el=>{const animation=el.getAnimations({subtree:true}).find(a=>a.effect?.pseudoElement==='::before'||a.animationName);if(!animation)return null;animation.pause();const duration=Number(animation.effect.getTiming().duration);return [0,duration/2,duration].map(time=>{animation.currentTime=time;return Number(getComputedStyle(el,'::before').opacity)})})
+  expect(opacity).not.toBeNull();expect(opacity[0]).toBeLessThan(.05);expect(opacity[1]).toBeGreaterThan(opacity[0]);expect(opacity[1]).toBeLessThan(1);expect(opacity[2]).toBeCloseTo(1)
+  expect(await page.locator('.bn-block-content').first().boundingBox()).toEqual(before)
+  await page.emulateMedia({reducedMotion:'reduce'});expect(await line.evaluate(el=>getComputedStyle(el,'::before').animationName)).toBe('none');expect(await line.evaluate(el=>Number(getComputedStyle(el,'::before').opacity))).toBe(1);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
