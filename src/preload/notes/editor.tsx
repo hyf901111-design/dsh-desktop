@@ -37,6 +37,7 @@ import {useNotePresentation} from './component-presentation'
 import {NotePresentationControls} from './component-presentation-controls'
 import {createNoteComponentDataActions} from './component-data-actions'
 import {createNoteDataCapability} from './data-capability'
+import {createNoteDataRefreshGuard} from './data-refresh-guard'
 import {InlineNoteFileBlock,noteFilePresentation} from './file-inline'
 import {useInlineComponentGeneration} from './use-inline-component-generation'
 import {useNoteChallenge,CHALLENGE_USER} from './challenge-controller'
@@ -224,6 +225,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>())
+  const dataRefreshGuard=useRef(createNoteDataRefreshGuard())
   const challengeController=useRef<ReturnType<typeof useNoteChallenge>>()
   const noteDataCapability=useRef<ReturnType<typeof createNoteDataCapability>>()
   const importing=useRef(new Set<string>()),exportPending=useRef(false),[exporting,setExporting]=useState(false)
@@ -267,9 +269,13 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     if(lastWritten.current!==JSON.stringify(snapshot()))throw Error('笔记尚未保存，较新内容已保留为草稿。')
   }
   const systemMutation=useRef(false)
-  const updateSystemComponent=(blockId:string,node:Record<string,any>)=>{
+  const updateSystemComponent=(blockId:string,node:Record<string,any>,value?:any)=>{
+    const ticket=value?.method==='apply'?dataRefreshGuard.current.before(snapshot(),blockId,node.id):undefined
     systemMutation.current=true
-    try{editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);editor.updateBlock(blockId,{props:{payload:JSON.stringify(node)}})})}
+    try{
+      editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);editor.updateBlock(blockId,{props:{payload:JSON.stringify(node)}})})
+      if(ticket)dataRefreshGuard.current.applied(request.current,ticket,snapshot(),value.guardId)
+    }
     finally{queueMicrotask(()=>{systemMutation.current=false})}
   }
   const changed = () => {
@@ -304,12 +310,13 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   },[editor,props.sessionId,props.recovery,props.bridge,props.active])
   useEffect(()=>{
     let live=true
-    const dataCapability=createNoteDataCapability({editor,selected:()=>{const captured=references.capture();return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]},request:(method,args)=>props.bridge.request(method,{sessionId:props.sessionId,...args}),persist:persistConfirmed,report:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect})})
+    const dataCapability=createNoteDataCapability({editor,refreshGuard:dataRefreshGuard.current,selected:()=>{const captured=references.capture();return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]},request:(method,args)=>props.bridge.request(method,{sessionId:props.sessionId,...args}),persist:persistConfirmed,report:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect})})
     noteDataCapability.current=dataCapability
     const handler=createNoteCapabilityActions({
       editor,snapshot,documentId:client.current,
       challenge:()=>challengeController.current,dataCapability,
       initialFingerprint:()=>capabilityFingerprint.current,
+      refreshGuard:dataRefreshGuard.current,
       generationId:()=>request.current,
       current:()=>live&&!disposed.current&&!props.recovery&&editor.isEditable&&editorActive(),
       selectedBlockIds:()=>{
@@ -349,7 +356,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       }).catch(error=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId:input.requestId,error:error.message}).catch(()=>{}))
     }
     document.addEventListener('sherlock:notes-capability-action',receive)
-    return()=>{live=false;noteDataCapability.current=undefined;document.removeEventListener('sherlock:notes-capability-action',receive)}
+    return()=>{live=false;handler.dispose();noteDataCapability.current=undefined;document.removeEventListener('sherlock:notes-capability-action',receive)}
   },[editor,props.sessionId,props.recovery,props.bridge])
   const locate = (id: string) => { const element = scroll.current?.querySelector<HTMLElement>('[data-id="' + CSS.escape(id) + '"]'); if (element) { element.scrollIntoView({ block: 'start', behavior: 'smooth' }); setActive(id) } }
   const track = () => { const top = scroll.current?.getBoundingClientRect().top ?? 0; let current = outline[0]?.id; for (const h of outline) { const el = scroll.current?.querySelector('[data-id="' + CSS.escape(h.id) + '"]'); if (el && el.getBoundingClientRect().top <= top + 140) current = h.id } setActive(current || '') }
@@ -438,6 +445,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       if(pending)activeGeneration.current={requestId,blockId:pending,expected:editor.getBlock(pending).props.payload}
       publishTask(requestId,'generating')
       capabilityFingerprint.current=noteCapabilityFingerprint(snapshot())
+      dataRefreshGuard.current.begin(requestId,snapshot())
       const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt) return
       if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
