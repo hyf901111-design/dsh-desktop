@@ -7,11 +7,19 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:repo,loader:'tsx',contents:`
 import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';
 import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';import {createNotesActivityStore} from './scripts/lib/notes-activity.mjs';window.noteActivity=createNotesActivityStore(document);
-window.calls=[];window.receipts=[];window.reviewJobs=[];window.saved=null;window.effects=[];window.failCreate=false;window.stageEffects=[];window.saveAttempts=0;const pending=new Map();
+window.calls=[];window.receipts=[];window.reviewJobs=[];window.saved=null;window.effects=[];window.failCreate=false;window.stageEffects=[];window.saveAttempts=0;const pending=new Map(),dataPending=new Map();let dataSequence=0,dataRevision=1,dataEnabled=true,dataInterval=1;
 const bridge={request:async(method,input)=>{window.calls.push({method,input});
  if(method==='load')return {saved:{title:'组合验收',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留我的富文本正文',styles:{bold:true}}]}],yjs:'',revision:0,updatedAt:0}};
  if(method==='save'){if(window.saveFailure){window.saveAttempts++;const fail=()=>{if(window.saveFailure==='exception')throw Error('磁盘写入失败');return{status:'conflict'}};if(window.saveAttempts===1)return fail();return new Promise((resolve,reject)=>{window.completeSave=()=>{try{resolve(fail())}catch(error){reject(error)}}})}window.saved=input.content;return {status:'saved',saved:{...input.content,revision:input.revision+1}}}
  if(method==='challenge')return new Promise(resolve=>window.reviewJobs.push({input,resolve}));
+ if(method==='component-data-reply'){const job=dataPending.get(input.requestId);if(job){dataPending.delete(input.requestId);input.error?job.reject(Error(input.error)):job.resolve(input.result)}return{ok:true}}
+ if(method==='component-data-capability'){
+  const send=(method,args)=>new Promise((resolve,reject)=>{const requestId='data-'+(++dataSequence);dataPending.set(requestId,{resolve,reject});document.dispatchEvent(new CustomEvent('sherlock:notes-component-data-action',{detail:{requestId,sessionId:input.sessionId,method,args,selectedIds:[input.nodeId],guardId:input.executionId,expiresAt:Date.now()+35000}}))});
+  const before=await send('inspect',{ids:[input.nodeId]});
+  if(input.action==='configure'){dataEnabled=input.settings.enabled;dataInterval=input.settings.intervalMinutes;dataRevision++}
+  if(input.action==='refresh'){const spec={...before.nodes[0].content.containerSpec,rows:[[43]]};await send('apply',{requestId:'actual-refresh',revision:before.revision,changes:[{op:'update',id:input.nodeId,fields:{containerSpec:spec}}]})}
+  return{bound:true,nodeId:input.nodeId,revision:dataRevision,enabled:dataEnabled,intervalMinutes:dataInterval,status:input.action==='refresh'?'success':dataEnabled?'idle':'paused',sourceNames:['合成测试来源'],...(input.action==='refresh'?{lastSuccess:123}:{} )}
+ }
  if(method==='render')return{html:'<p>组件数据 42</p>',document:'<!doctype html><body><p>组件数据 42</p></body>'};
  if(method==='component-render')return{ok:true};
  if(method==='capability-reply'){if(input.effect){window.stageEffects.push(input.effect);return{ok:true}};const item=pending.get(input.requestId);if(item){pending.delete(input.requestId);input.error?item.reject(Error(input.error)):item.resolve(input.result)}return{ok:true}}
@@ -168,5 +176,26 @@ it('saves conversational challenge settings through the real editor and starts t
   expect(await page.evaluate(()=>window.reviewJobs[0].input)).toMatchObject({action:'review',level:3})
   await page.evaluate(()=>window.reviewJobs[0].resolve({version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[]}))
   await expect.poll(()=>page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('uses the real editor reference and guarded data sink for one selected component without touching other note content',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>{
+   const payload=JSON.stringify({id:'source-node',kind:'generated-container',title:'已绑定数据',generationStatus:'completed',noteDataBound:true,noteSize:{width:330,height:210},containerSpec:{version:1,type:'table',title:'保留表格',columns:['值'],rows:[[42]]}})
+   window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'p',type:'paragraph',content:'保留笔记正文'},{id:'source-block',type:'research',props:{payload}},{id:'other-block',type:'research',props:{payload:payload.replace('source-node','other-node')}}])
+   window.noteEditor._tiptapEditor.commands.blur();window.otherPayload=window.noteEditor.getBlock('other-block').props.payload
+   document.dispatchEvent(new CustomEvent('sherlock:notes-reference-component',{detail:{sessionId:'composed',blockId:'source-block'}}))
+   window.capabilityCommands=[['notes.components.data',{action:'inspect'}],['notes.components.data',{action:'configure',revision:1,settings:{enabled:false,intervalMinutes:5}}],['notes.components.data',{action:'refresh',revision:2}]]
+   document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'关闭这个组件的自动刷新并改成每五分钟，然后手动刷新一次',images:[]}}))
+  })
+  await page.waitForFunction(()=>window.receipts.length===3)
+  const result=await page.evaluate(()=>({receipts:window.receipts,input:window.ordinaryInput,blocks:window.noteEditor.document,saved:window.saved,otherPayload:window.otherPayload,calls:window.calls}))
+  expect(result.input.capabilityContext.selectedBlockIds).toEqual(['source-block']);expect(result.receipts.map(row=>row.status)).toEqual(['succeeded','succeeded','succeeded'])
+  expect(result.receipts[1]).toMatchObject({effect:{kind:'data',operation:'configure',state:'saved',enabled:false,intervalMinutes:5}});expect(result.receipts[2]).toMatchObject({effect:{kind:'data',operation:'refresh',state:'saved',lastSuccess:123}})
+  expect(result.blocks[0].content[0].text).toBe('保留笔记正文');expect(result.blocks.find(b=>b.id==='other-block').props.payload).toBe(result.otherPayload)
+  const changed=JSON.parse(result.saved.blocks.find(b=>b.id==='source-block').props.payload);expect(changed).toMatchObject({noteSize:{width:330,height:210},containerSpec:{rows:[[43]]}})
+  expect(result.calls.filter(call=>call.method==='component-data-capability').every(call=>call.input.nodeId==='source-node')).toBe(true);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

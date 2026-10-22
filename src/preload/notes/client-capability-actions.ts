@@ -1,5 +1,5 @@
 import {noteCapabilityReceiptMessage} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
-import type {CapabilityStyleEffect,CapabilityCreateEffect,CapabilityChallengeConfiguration,CapabilityChallengeEffect,ClientCapabilityArguments} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import type {CapabilityStyleEffect,CapabilityCreateEffect,CapabilityDataEffect,CapabilityChallengeConfiguration,CapabilityChallengeEffect,ClientCapabilityArguments} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {NoteContent} from '../../shared/workspace-notes'
 import {changeNoteAlignment,noteAlignmentBlocks} from './block-alignment'
@@ -14,17 +14,18 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>()
  return async(input:any)=>{
-  if(input?.cancel){cancelled.add(input.requestId);options.cancelComponent?.(input.requestId);return}
+  if(input?.cancel){cancelled.add(input.requestId);options.cancelComponent?.(input.requestId);options.dataCapability?.cancel(input.requestId);return}
   const current=()=>options.current()&&options.generationId()===input.generationId&&options.documentId===input.context?.documentId&&!cancelled.has(input.requestId)
   const assertCurrent=()=>{if(!current())throw Error(t('笔记会话已变化或操作已取消。'))}
   assertCurrent()
   if(generation!==input.generationId){generation=input.generationId;fingerprint=options.initialFingerprint?.()||noteCapabilityFingerprint(options.snapshot())}
   if(noteCapabilityFingerprint(options.snapshot())!==fingerprint)throw Error(t('笔记内容已变化，请重新发送请求，较新修改已保留。'))
   if(input.action==='context')return {status:'succeeded'}
+  if(input.action==='notes.components.data'){if(!options.dataCapability)throw Error('组件数据刷新服务暂不可用。');return options.dataCapability.execute(input,()=>current()&&noteCapabilityFingerprint(options.snapshot())===fingerprint,()=>{fingerprint=noteCapabilityFingerprint(options.snapshot())})}
   if(input.action==='notes.challenge.configure'){
    const args=input.args,challenge=options.challenge?.()
    if(!args||typeof args!=='object'||Array.isArray(args)||Object.keys(args).some(key=>!['level','commentsExpanded'].includes(key))||args.level!==undefined&&(!Number.isInteger(args.level)||args.level<0||args.level>4)||args.commentsExpanded!==undefined&&typeof args.commentsExpanded!=='boolean'||args.level===undefined&&args.commentsExpanded===undefined)throw Error(t('AI挑战设置参数无效。'))
