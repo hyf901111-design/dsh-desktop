@@ -1,0 +1,101 @@
+{
+  "dataMode": "source",
+  "panels": [
+    {
+      "artifact": {
+        "data": {
+          "asOf": "由真实腾讯行情响应中的实际报价时点填写，不手抄历史数据",
+          "columns": [
+            {
+              "key": "code",
+              "label": "证券代码",
+              "unit": ""
+            },
+            {
+              "key": "name",
+              "label": "公司名称",
+              "unit": ""
+            },
+            {
+              "key": "price",
+              "label": "最新价",
+              "unit": "元"
+            },
+            {
+              "key": "change_pct",
+              "label": "涨跌幅",
+              "unit": "%"
+            },
+            {
+              "key": "volume",
+              "label": "成交量",
+              "unit": "手"
+            },
+            {
+              "key": "amount",
+              "label": "成交额",
+              "unit": "万元"
+            },
+            {
+              "key": "quote_time",
+              "label": "实际报价时点",
+              "unit": ""
+            }
+          ],
+          "rows": [
+            {
+              "amount": null,
+              "change_pct": null,
+              "code": "300308",
+              "name": "中际旭创",
+              "price": null,
+              "quote_time": null,
+              "volume": null
+            },
+            {
+              "amount": null,
+              "change_pct": null,
+              "code": "300502",
+              "name": "新易盛",
+              "price": null,
+              "quote_time": null,
+              "volume": null
+            },
+            {
+              "amount": null,
+              "change_pct": null,
+              "code": "601138",
+              "name": "工业富联",
+              "price": null,
+              "quote_time": null,
+              "volume": null
+            }
+          ],
+          "source": {
+            "name": "腾讯行情查询（tencent-quotes）",
+            "url": "https://qt.gtimg.cn/q=sz300308,sz300502,sh601138"
+          }
+        },
+        "title": "三家公司行情表（中际旭创 / 新易盛 / 工业富联）",
+        "type": "table",
+        "version": 1
+      },
+      "prompt": "调用腾讯行情查询（tencent-quotes）一次性获取三只股票的真实快照：中际旭创（深市 sz300308）、新易盛（深市 sz300502）、工业富联（沪市 sh601138），三家公司必须全部保留。展示列用明确的 key/label 声明：code=证券代码、name=公司名称、price=最新价（元）、change_pct=涨跌幅（%）、volume=成交量（手）、amount=成交额（万元）、quote_time=实际报价时点（数据日期时间，Asia/Shanghai）；行用与列键对应的对象，从真实响应的数据映射生成，禁止手抄、编造或沿用示例值。腾讯行情缺少的字段在该单元格明确标注「缺失」，不用模拟值。在表格下方注明每个数值的单位、来源（腾讯行情查询）及原始链接 https://qt.gtimg.cn/q=sz300308,sz300502,sh601138 。本面板为手动静态快照，不开启自动刷新。",
+      "publicData": {
+        "intervalMinutes": 0,
+        "profile": "quotes-table",
+        "requests": [
+          {
+            "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}",
+            "source": "tencent-quotes"
+          }
+        ]
+      },
+      "size": "large",
+      "title": "三家公司行情表格（功能验收）",
+      "type": "table"
+    }
+  ],
+  "requestId": "source-table-layout-draft",
+  "title": "三家公司行情表格复验1023"
+}

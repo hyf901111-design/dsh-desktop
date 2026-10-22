@@ -78,12 +78,12 @@ function requiredQuoteFields(requirement,profile){
   return requirement.replace(new RegExp(`${exclusion}\\s*${field}(?:\\s*${separator}\\s*${field})*`,'giu'),(match,offset)=>
     /^\s*(?:[，,。.;；!！?？：:\n]|$)/u.test(requirement.slice(offset+match.length))?'':match)
 }
-export function publicDataQuoteTaskRequirement(value,type,requirement=''){
+export function publicDataQuoteTaskRequirement(value,type,requirement='',{explicitTableLayout=false}={}){
   if(!['quotes-table','quotes-metrics'].includes(value?.profile))return null
   const supported=validatePublicDataPanel(value,type,{strictParameters:true})
   const required=requiredQuoteFields(requirement,value.profile)
   const missing=new RegExp(quoteExtraField,'iu').test(required)||value.profile==='quotes-metrics'&&new RegExp(metricsExtraField,'iu').test(required)
-  if(!missing)return null
+  if(!missing&&!explicitTableLayout)return null
   const layout=supported.layoutProfile?'最终使用market的variant: table，顶层保留已校验的 "layoutProfile":"openterminal"（artifact.layoutProfile）。':'最终使用table的columns/rows，原规划的market/metrics仅是路由提示，不能替代本卡字段。'
   return {type:supported.layoutProfile?'market':'table',promptPrefix:supported.layoutProfile?'market.table；variant: table；\n':'',requirement:`宿主来源能力校正：${value.profile}直通仅展示固定报价字段，不能完整表达本卡要求；改由独立表格取数任务完成。${layout}保留原面板全部标的、字段、单位、时间及交互要求，复用已校验来源参数：${JSON.stringify(supported)}。继续遵从显式来源限制，不猜接口或改请求参数；来源未提供的字段逐项标注「来源未提供」，不能删列或用股价/涨跌幅替代估值、成交量等指标，不补模拟值或声称已开启刷新。`}
 }

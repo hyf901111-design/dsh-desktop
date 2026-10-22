@@ -6,13 +6,15 @@ import {FINANCIAL_PROFILE_VARIANTS,financialProfileDataIssue} from './financial-
 // Shared by prompt construction, renderers and mapping validation. Keep data
 // limits here so a compact prompt cannot promise a shape the renderer rejects.
 export const TEMPLATE_LIMITS=Object.freeze({tableColumns:32,tableRows:100,trendSeries:12,trendPoints:366,scatterItems:20,allocationItems:12,fundMetrics:12,fundIndustries:40,holdingsColumns:8,holdingsRows:30})
+export const TABLE_INPUT_GUIDANCE='表格支持两种等价输入：columns:[列名] 配等宽 rows:[[单元格]]；或 columns:[{key,label}] 配 rows:[{列键:单元格}] 对象行。后一种按声明的 key 顺序无损转成宿主数组，key 必须唯一，每行恰好包含全部列键，不含额外键或嵌套单元格；列声明只含 key/label，单位写入 label。data-bound 的 mapping 使用相同列声明与逐列路径，宿主同时规范化映射和结果，不手抄源数据。真实映射结果超过交互模板容量时保留完整数据与映射，由宿主改用可读快照，不裁剪行列。'
+export const TABLE_INPUT_SCHEMA='{"version":1,"type":"table","title":"标题","columns":[{"key":"code","label":"证券代码"},{"key":"price","label":"最新价（元）"}],"rows":[{"code":"原证券代码","price":"原数值"}]}'
 export const TEMPLATE_RULES=Object.freeze({
- table:`1–${TEMPLATE_LIMITS.tableColumns}列、1–${TEMPLATE_LIMITS.tableRows}行；rows 每一行是与 columns 等长的完整单元格数组；保留所有字段和原始精度，不删列或截断；最终交付仍须满足 HTML 字节容量限制`,
+ table:`1–${TEMPLATE_LIMITS.tableColumns}列、1–${TEMPLATE_LIMITS.tableRows}行；${TABLE_INPUT_GUIDANCE}保留所有字段和原始精度，不删列或截断；最终交付仍须满足 HTML 字节容量限制`,
  metrics:'1–12 项，每项必须同时有 label 和 value，均为非空文字；数值与单位放 value，detail 为可选非空文字。证券名称可作为 value 或写入标题，不能只提交 label；缺失指标写“—”并解释，不编造数值',
  trend:`1–${TEMPLATE_LIMITS.trendSeries} 条同单位同纵轴序列，2–${TEMPLATE_LIMITS.trendPoints} 个时点；每条 values 必须与 labels 等长且全为有限数值，允许负数`,
  scatter:`1–${TEMPLATE_LIMITS.scatterItems} 个样本；x/y 为有限数值，允许负数；可选 size 必须大于0`,
  'fund-kpi':`1–${TEMPLATE_LIMITS.fundMetrics} 项，value 使用数值与单位字符串；缺失值用“—”并解释，不编造数值`,
- 'fund-holdings':`1–${TEMPLATE_LIMITS.holdingsColumns} 列、1–${TEMPLATE_LIMITS.holdingsRows} 行；rows 每一行是与 columns 等长的数组，不是对象`,
+ 'fund-holdings':`1–${TEMPLATE_LIMITS.holdingsColumns} 列、1–${TEMPLATE_LIMITS.holdingsRows} 行；${TABLE_INPUT_GUIDANCE}`,
  'fund-industry':`1–${TEMPLATE_LIMITS.fundIndustries} 项；weight 是0–100百分数；benchmark 可省略或null，缺失时只展示实际权重，不编造基准和偏离`
 })
 export const TABLE_GUIDANCE=`table 仅支持 version/type/title/columns/rows/asOf/note；不使用 variant 或 notes，完整说明合并为 note 单个非空字符串，asOf/note 可省略，提供时为1–2000字。带 asOf 或 note 的可信交互表格支持${TEMPLATE_RULES.table}；无来源原生表格仍限1–12列、1–100行。title 为1–256字，列名为1–128字，单元格为1–512字非空文字或绝对值不超过1e15的有限数值。证券代码、名称、单位和报价时间必须引用各行真实字段，不把一个证券代码或交易所固定拼到所有行；缺失字段明确说明。`
