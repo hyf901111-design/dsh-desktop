@@ -57,6 +57,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const readLevel=():ChallengeLevel=>{const value=prefs.get('level');return Number.isInteger(value)&&Number(value)>=0&&Number(value)<=4?value as ChallengeLevel:0}
  const readMarginExpanded=()=>prefs.get('marginExpanded')!==false
  const [level,setLevelState]=useState<ChallengeLevel>(readLevel),[marginExpanded,setMarginExpandedState]=useState(readMarginExpanded),[threads,setThreads]=useState<ChallengeThread[]>([]),[selected,setSelected]=useState<string>(),[pending,setPending]=useState<Pick<ChallengeAction,'threadId'|'kind'>>(),[revision,setRevision]=useState(0)
+ const [popupAnchor,setPopupAnchor]=useState<{threadId:string;position:number}>()
  const busyId=pending?.threadId,actionKind=pending?.kind
  const [phase,setPhase]=useState<ChallengeScheduleState['phase']>('off')
  const running=phase==='running'||!!pending
@@ -163,9 +164,11 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   const composition=()=>queueMicrotask(sync)
   let settleTimer:ReturnType<typeof setTimeout>|undefined
   const pasted=()=>{settle.current=Date.now()+10000;sync();clearTimeout(settleTimer);settleTimer=setTimeout(sync,10010)}
-  const locate=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.sessionId!==sessionId||typeof value.blockId!=='string')return;const el=latest.current.scroll.current?.querySelector<HTMLElement>('[data-id="'+CSS.escape(value.blockId)+'"]');el?.scrollIntoView({block:'center',behavior:'smooth'});const thread=visibleThreads().find(t=>t.metadata.issue.blockId===value.blockId&&(!value.quote||t.metadata.issue.quote===value.quote));if(thread)comments.selectThread(thread.id,false)}
+  const locate=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.sessionId!==sessionId||typeof value.blockId!=='string')return;setPopupAnchor(undefined);const el=latest.current.scroll.current?.querySelector<HTMLElement>('[data-id="'+CSS.escape(value.blockId)+'"]');el?.scrollIntoView({block:'center',behavior:'smooth'});const thread=visibleThreads().find(t=>t.metadata.issue.blockId===value.blockId&&(!value.quote||t.metadata.issue.quote===value.quote));if(thread)comments.selectThread(thread.id,false)}
   const recheck=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===sessionId)s.recheck()}
-  const markClick=(event:Event)=>{if((event.target as HTMLElement).closest('[data-en-replacement-id]'))return;const target=(event.target as HTMLElement).closest<HTMLElement>('[data-bn-thread-id]:not([data-orphan="true"])'),id=target?.dataset.bnThreadId,thread=id&&ai.getThreads().get(id);if(!id||!thread||thread.metadata?.kind!==CHALLENGE_KIND||thread.resolved||thread.deletedAt)return;event.preventDefault();event.stopPropagation();dismissed.current.delete(id);comments.selectThread(id,false);setSelected(id);setRevision(v=>v+1)}
+  const markClick=(event:Event)=>{if((event.target as HTMLElement).closest('[data-en-replacement-id]'))return;const target=(event.target as HTMLElement).closest<HTMLElement>('[data-bn-thread-id]:not([data-orphan="true"])'),id=target?.dataset.bnThreadId,thread=id&&ai.getThreads().get(id);if(!id||!thread||thread.metadata?.kind!==CHALLENGE_KIND||thread.resolved||thread.deletedAt)return;event.preventDefault();event.stopPropagation();let position:number|undefined
+   if(event instanceof MouseEvent&&event.detail>0){const point=editor._tiptapEditor.view.posAtCoords({left:event.clientX,top:event.clientY}),range=findChallengeQuote(editor,thread.metadata.issue.blockId,thread.metadata.issue.quote);if(point&&range&&point.pos>=range.from&&point.pos<=range.to)position=point.pos}
+   setPopupAnchor(position===undefined?undefined:{threadId:id,position});dismissed.current.delete(id);comments.selectThread(id,false);setSelected(id);setRevision(v=>v+1)}
   document.addEventListener('visibilitychange',visibility);document.addEventListener('sherlock:workspace-surface-change',visibility);window.addEventListener('focus',visibility);window.addEventListener('blur',visibility)
   document.addEventListener('compositionstart',composition,true);document.addEventListener('compositionend',composition,true);latest.current.scroll.current?.addEventListener('paste',pasted,true)
   document.addEventListener('sherlock:notes-challenge-locate',locate);document.addEventListener('sherlock:notes-challenge-recheck',recheck)
@@ -176,9 +179,9 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  useEffect(()=>{if(options.busy||options.recovery)cancelAction();sync()},[options.title,options.busy,options.recovery])
  const setPickerOpen=(open:boolean)=>{if(picker.current.open===open)return;if(open)picker.current={open,initialLevel:readLevel()};else picker.current.open=false;sync();if(!open&&readLevel()!==picker.current.initialLevel)scheduler.current?.recheck(true)}
  const levelChange=(value:ChallengeLevel)=>{if(!value)cancelAction();prefs.set('level',value)}
- const setMarginExpanded=(value:boolean)=>{dismissed.current.clear();comments.selectThread(undefined,false);setSelected(undefined);prefs.set('marginExpanded',value);setRevision(v=>v+1)}
- const close=(id:string)=>{if(action.current?.kind!=='optimize')cancelAction(id);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
- const resolve=async(id:string)=>{cancelAction(id);replacementReviews.resolveThread(id);comments.selectThread(undefined,false);setSelected(undefined);await comments.threadStore.resolveThread({threadId:id});sync();refresh()}
+ const setMarginExpanded=(value:boolean)=>{setPopupAnchor(undefined);dismissed.current.clear();comments.selectThread(undefined,false);setSelected(undefined);prefs.set('marginExpanded',value);setRevision(v=>v+1)}
+ const close=(id:string)=>{setPopupAnchor(undefined);if(action.current?.kind!=='optimize')cancelAction(id);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
+ const resolve=async(id:string)=>{setPopupAnchor(undefined);cancelAction(id);replacementReviews.resolveThread(id);comments.selectThread(undefined,false);setSelected(undefined);await comments.threadStore.resolveThread({threadId:id});sync();refresh()}
  const applyReplacement=async(threadId:string,commentId:string)=>{
   if(action.current||latest.current.busy||!active()||dismissed.current.has(threadId))return
   const thread=ai.getThreads().get(threadId),comment=thread?.comments.find(c=>c.id===commentId&&!c.deletedAt);let suggestion=comment?.metadata?.challengeReplacement as ChallengeReplacement|undefined
@@ -261,5 +264,5 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   settle.current=Date.now()+10000;window.setTimeout(()=>{if(live.current)sync()},10010);sync();refresh()
  }})
  const paragraphFeedback=paragraphChallengeFeedback(covered.current,blocks(),options.title,level,threads.map(thread=>({id:thread.id,blockId:thread.metadata.issue.blockId})))
- return {paragraphFeedback,replacementReviews,level,marginExpanded,threads,selected,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
+ return {paragraphFeedback,replacementReviews,level,marginExpanded,threads,selected,popupAnchor,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{setPopupAnchor(undefined);dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
 }
