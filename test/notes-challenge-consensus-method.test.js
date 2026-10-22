@@ -7,9 +7,13 @@ it.each(['2026年10月20日','2026年1月2日','2026-1-2','2026/1/2','20261020']
   const {extractConsensusClaims}=await load(),expected=value.includes('10')?'20261020':'20260102'
   expect(extractConsensusClaims([{id:'header',text:`贵州茅台600519.SH。报告基准日：${value}。`},{id:'forecast',text:'预计2026年EPS76元。'}])).toEqual([{...claim,baseDate:expected}])
 })
-it.each(['2026年2月30日','2026-10-201','202610201','2026年13月1日'])('does not replace an invalid local cutoff %s with another paragraph date',async value=>{
+it.each(['2026年2月30日','2026-10-201','202610201','2026年13月1日','2026-1-020','2026--10--20','202610-20','2026-10/20'])('does not replace an invalid local cutoff %s with another paragraph date',async value=>{
   const {extractConsensusClaims}=await load()
   expect(extractConsensusClaims([{id:'header',text:'600519.SH 报告基准日20261020。'},{id:'forecast',text:`报告基准日：${value}。预计2026年EPS76元。`}])).toEqual([])
+})
+it.each(['2026-10-20','2026年10月20日'])('keeps a parenthesized cutoff %s separate from a different forecast year',async value=>{
+  const {extractConsensusClaims}=await load()
+  expect(extractConsensusClaims([{id:'forecast',text:`600519.SH（报告基准日：${value}），预计2027年EPS76元。`}])).toEqual([{...claim,year:2027}])
 })
 it('applies the MD threshold and cycle when both headers use natural sentence punctuation',async()=>{
   const {extractConsensusClaims,consensusPolicyFromBlocks,compareConsensusClaim}=await load()
@@ -19,6 +23,20 @@ it('applies the MD threshold and cycle when both headers use natural sentence pu
   for(const item of claims)expect(compareConsensusClaim(item,[row],policy).rules).toEqual(['C1','C2','C3'])
   expect(()=>consensusPolicyFromBlocks([{text:'一致预期偏离阈值：12%；一致预期偏离阈值：20%。'}])).toThrow(/冲突/)
   expect(()=>consensusPolicyFromBlocks([{text:'一致预期统计周期：90天。一致预期统计周期：180天。'}])).toThrow(/冲突/)
+})
+it('does not turn an obsolete example or quoted/code paragraph into the report comparison policy',async()=>{
+  const {consensusPolicyFromBlocks,compareConsensusClaim}=await load()
+  for(const block of [{text:'旧版错误示范。一致预期偏离阈值：100%。这个设置已经弃用。'},{type:'quote',text:'一致预期偏离阈值：100%'},{type:'codeBlock',text:'一致预期偏离阈值：100%'}]){
+    const policy=consensusPolicyFromBlocks([block])
+    expect(policy.threshold).toBe(.2)
+    expect(compareConsensusClaim({...claim,value:25},[{...row,EPS_MEDIAN:20,EPS_MIN:15,EPS_MAX:30,EPS_DEV:10}],policy).rules).toEqual(['C2'])
+  }
+})
+it('keeps explicit comparison settings in a paragraph with the other report metadata',async()=>{
+  const {consensusPolicyFromBlocks}=await load()
+  const text='研究标的：600519.SH\n报告基准日：2026年10月20日\n一致预期偏离阈值：12%\n一致预期统计周期：180天'
+  expect(consensusPolicyFromBlocks([{type:'paragraph',text}])).toEqual({threshold:.12,cycle:'263003000'})
+  expect(()=>consensusPolicyFromBlocks([{text:text+'\n一致预期统计周期：90天'}])).toThrow(/冲突/)
 })
 
 it('applies a configured mature-industry threshold and retains explicit capital-basis evidence',async()=>{

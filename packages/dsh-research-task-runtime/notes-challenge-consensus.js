@@ -11,12 +11,13 @@ const number = value => (typeof value === 'number' || typeof value === 'string' 
 const distinct = values => [...new Set(values)]
 const codes = text => distinct([...text.matchAll(/\b\d{6}\.(?:SH|SZ|BJ)\b/giu)].map(match => match[0].toUpperCase()))
 const reportDate = value => {
-  const parts = value.match(/^(20\d{2})年(\d{1,2})月(\d{1,2})日$/u) ?? value.match(/^(20\d{2})[-/](\d{1,2})[-/](\d{1,2})$/u)
-  return date(parts ? parts[1]+parts[2].padStart(2,'0')+parts[3].padStart(2,'0') : value)
+  const parts = value.match(/^(20\d{2})年(\d{1,2})月(\d{1,2})日$/u) ?? value.match(/^(20\d{2})-(\d{1,2})-(\d{1,2})$/u) ?? value.match(/^(20\d{2})\/(\d{1,2})\/(\d{1,2})$/u)
+  return parts ? date(parts[1]+parts[2].padStart(2,'0')+parts[3].padStart(2,'0')) : /^20\d{6}$/u.test(value) ? date(value) : null
 }
 // Keep an invalid explicitly labelled date as an ambiguity marker. It must not
 // borrow a different paragraph's valid cutoff or accept a valid numeric prefix.
-const dates = text => distinct([...text.matchAll(/(?:报告基准日|报告发布日期|报告发布日|报告日期|基准日|模型日|预测截止日)\s*[:：]?\s*(20[^\s。；;，,]*)/gu)].map(match => reportDate(match[1])))
+const labelledDate = /(?:报告基准日|报告发布日期|报告发布日|报告日期|基准日|模型日|预测截止日)\s*[:：]?\s*(20[^\s。；;，,、.:：）)\]】」』”"]*)/gu
+const dates = text => distinct([...text.matchAll(labelledDate)].map(match => reportDate(match[1])))
 const nonAnnual = /(?:上|下)半年|半年度|半年报|中报|季度|[一二三四1-4]季(?:度|报)?|单季|前[一二三四五六七八九十\d]+个月|\d{1,2}\s*月?\s*(?:[-—–~～]|至|到)\s*\d{1,2}\s*月|\b(?:first|second)\s+half|\bhalf[- ]?year|(?:^|[^A-Za-z])(?:Q[1-4]|H[12]|[1-4]Q|[12]H|[369]M)(?!\d)/iu
 const incompatibleBasis = /扣非|(?:剔除|扣除)非经常性损益|调整后|经调整|稀释|摊薄|\badjusted\b|\bnon[- ]?GAAP\b/iu
 
@@ -33,7 +34,8 @@ export function extractConsensusClaims(blocks) {
       // The static table is annual and does not identify adjusted/diluted bases.
       // Do not strip an explicit incompatible period or basis from a metric.
       if (nonAnnual.test(sentence) || incompatibleBasis.test(sentence)) continue
-      const years = distinct([...sentence.matchAll(/(?:\bFY\s*)?(20\d{2})\s*(?:年(?:度|报)?|[eE]\b)|\bFY\s*(20\d{2})\b|\b(\d{2})E\b/giu)].map(match => Number(match[1] ?? match[2] ?? ('20' + match[3]))))
+      const forecastText=sentence.replace(labelledDate,'')
+      const years = distinct([...forecastText.matchAll(/(?:\bFY\s*)?(20\d{2})\s*(?:年(?:度|报)?|[eE]\b)|\bFY\s*(20\d{2})\b|\b(\d{2})E\b/giu)].map(match => Number(match[1] ?? match[2] ?? ('20' + match[3]))))
       if (years.length !== 1) continue
       const metricPattern = /(EPS|每股收益|归母净利润|归属于母公司(?:股东)?的?净利润|主营业务收入|主营收入|营业总收入|营业收入)\s*(?:预测)?\s*(?:为|达|至|约为|约|预计|[:：=])?\s*([+-]?\d+(?:,\d{3})*(?:\.\d+)?)\s*(亿元|万元|千元|元(?:\/股)?)/giu
       let previousMetricEnd=0
@@ -61,7 +63,14 @@ function revisionCounts(row,metric,count) {
 
 /** Explicit report metadata selects a threshold; company names never infer an industry. */
 export function consensusPolicyFromBlocks(blocks) {
-  const all=blocks.flatMap(b=>b.text.split(/[\n。；;]/u)).map(s=>s.trim().replace(/[.!?！？]$/u,'').trim()),lines=all.filter(s=>/^一致预期偏离阈值\s*[:：]/u.test(s))
+  // Configuration belongs to dedicated metadata paragraphs, not quoted examples
+  // or a labelled fragment embedded in ordinary prose about an obsolete policy.
+  const all=blocks.flatMap(block=>{
+    if(block.type&&!['paragraph','heading'].includes(block.type))return[]
+    const clauses=block.text.split(/[\n。；;]/u).map(s=>s.trim().replace(/[.!?！？]$/u,'').trim()).filter(Boolean)
+    const metadata=s=>/^一致预期(?:偏离阈值|统计周期)\s*[:：]/u.test(s)||/^(?:研究标的|股票代码|证券代码)\s*[:：]/u.test(s)&&codes(s).length===1||/^(?:报告基准日|报告发布日期|报告发布日|报告日期|基准日|模型日|预测截止日)\s*[:：]/u.test(s)&&dates(s).length===1&&dates(s)[0]!==null
+    return clauses.length&&clauses.every(metadata)?clauses:[]
+  }),lines=all.filter(s=>/^一致预期偏离阈值\s*[:：]/u.test(s))
   const values=lines.map(line=>{const match=line.match(/^一致预期偏离阈值\s*[:：]\s*(\d+(?:\.\d+)?)\s*[%％]$/u);const value=match?Number(match[1])/100:NaN;if(!Number.isFinite(value)||value<=0||value>1)throw Error('一致预期偏离阈值无效，请明确指定0%到100%之间的正数。');return value})
   if(distinct(values).length>1)throw Error('一致预期偏离阈值有冲突，未作偏离判断。')
   const cycles=all.filter(s=>/^一致预期统计周期\s*[:：]/u.test(s)).map(line=>{const match=line.match(/^一致预期统计周期\s*[:：]\s*(30|90|180)\s*天$/u);if(!match)throw Error('一致预期统计周期须为30天、90天或180天。');return {'30':'263001000','90':'263002000','180':'263003000'}[match[1]]})
