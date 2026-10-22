@@ -1,9 +1,17 @@
+import {capabilityReceiptText} from './client-capabilities.js'
 export const NOTE_SESSION_EVENT = 'workspace-note/edited'
 export const NOTE_CONVERSATION_EVENT = 'workspace-note/conversation'
-const activeNoteRequests=new WeakMap()
+const activeNoteRequests=new WeakMap(),capabilityLeases=new WeakMap()
 export function setNoteConversationRunning(session,requestId,running){
  const active=activeNoteRequests.get(session)||new Set()
  if(running){active.add(requestId);activeNoteRequests.set(session,active)}else active.delete(requestId)
+}
+/** Host operations may outlive one model HTTP round; cap their running lease. */
+export function setNoteCapabilityRunning(session,requestId,running){
+ const leases=capabilityLeases.get(session)||new Map();capabilityLeases.set(session,leases)
+ clearTimeout(leases.get(requestId));leases.delete(requestId)
+ setNoteConversationRunning(session,requestId,running)
+ if(running){const timer=setTimeout(()=>{leases.delete(requestId);setNoteConversationRunning(session,requestId,false)},610000);timer.unref?.();leases.set(requestId,timer)}
 }
 export function noteConversationRows(session){
  const rows=new Map()
@@ -71,6 +79,18 @@ export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
     if (req.method !== 'POST' || !isTrustedRequest(req, true)) return send(403, { error: 'Request rejected' })
     try {
       const input=await readJsonBody(req)
+      if(input.action==='conversation-capabilities-end'){
+        const session=ctx.sessions.get(input.sessionId);if(session)setNoteCapabilityRunning(session,input.requestId,false)
+        return send(200,{ok:true})
+      }
+      if(input.action==='conversation-capabilities'){
+        const session=ctx.sessions.get(input.sessionId),receipts=input.receipts
+        if(!session||!noteConversationRows(session).some(row=>row.requestId===input.requestId)||!Array.isArray(receipts)||!receipts.length||receipts.length>16||JSON.stringify(receipts).length>300000||receipts.some(r=>!['succeeded','failed','cancelled','pending','unavailable'].includes(r?.status)||typeof r.capability!=='string'))throw Error('客户端操作回执无效。')
+        const previous=noteConversationRows(session).find(row=>row.requestId===input.requestId)
+        const result=previous?.result?.kind==='text'?{...previous.result,capabilityReceipts:receipts}:{kind:'conversation',markdown:capabilityReceiptText(receipts),capabilityReceipts:receipts}
+        recordNoteConversation(session,{requestId:input.requestId,phase:result.kind==='text'?'ready':'replied',result,finishedAt:Date.now()});setNoteCapabilityRunning(session,input.requestId,false)
+        return send(200,{ok:true})
+      }
       if(input.action==='conversation-load'||input.action==='conversation-state'){
         const session=ctx.sessions.get(input.sessionId);if(!session)throw Error('笔记会话不可用。')
         if(input.action==='conversation-state'){

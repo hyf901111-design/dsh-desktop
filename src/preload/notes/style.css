@@ -215,3 +215,16 @@ body .bn-mantine .mantine-Menu-label,body .bn-mantine .mantine-Menu-item:not(:ho
    submenu instead of making its DOM ancestor a backdrop-filter root. */
 body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu{background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu::before{content:"";position:absolute;inset:-1px;z-index:-1;pointer-events:none;box-sizing:border-box;border:1px solid var(--odyssey-menu-border);border-radius:inherit;background:var(--odyssey-menu);box-shadow:var(--odyssey-menu-shadow);backdrop-filter:var(--odyssey-menu-blur);-webkit-backdrop-filter:var(--odyssey-menu-blur)}
+
+/* Node-local presentation uses the same palette as Research and survives export. */
+.en-research[data-note-titlebar=hidden]>.en-research-header{display:none!important}
+.en-research[data-note-presentation]{background:var(--sherlock-surface);color:var(--sherlock-text);border-color:var(--sherlock-border)}
+.en-research[data-note-presentation] :is(.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_previewBody){background:var(--sherlock-surface)!important;color:var(--sherlock-text)!important}
+.en-research[data-workbench-style=enterprise] th{background:var(--sherlock-table-heading)!important;color:var(--sherlock-table-heading-text)!important}
+.en-component-presentation-controls{position:absolute;right:8px;bottom:8px;z-index:8;font-size:12px;color:var(--sherlock-text);background:var(--sherlock-surface);border:1px solid var(--sherlock-border);border-radius:6px;padding:4px 8px}
+.en-component-presentation-controls summary{cursor:pointer;list-style:none}
+.en-component-presentation-controls>div{display:flex;flex-direction:column;gap:8px;padding:8px 0}
+.en-component-presentation-controls label{display:flex;align-items:center;gap:8px}
+.en-component-presentation-controls select{background:var(--sherlock-control-bg);color:var(--sherlock-control-text);border:1px solid var(--sherlock-control-border);border-radius:4px}
+
+.en-capability-receipts{white-space:pre-wrap;font-size:12px;line-height:1.6;padding:8px 12px;border-bottom:1px solid var(--en-border);color:var(--en-muted)}

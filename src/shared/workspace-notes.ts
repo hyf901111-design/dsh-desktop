@@ -19,7 +19,7 @@ export function noteOutline(blocks: any[]): Array<{ id: string; level: number; t
 export function canApplySuggestion(captured: { documentId: string; fingerprint: string }, current: { documentId: string; fingerprint: string }): boolean {
   return captured.documentId === current.documentId && captured.fingerprint === current.fingerprint
 }
-export type NoteDocumentResult = { kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }
+export type NoteDocumentResult = ({ kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & {capabilitySummary?:string}
 export type NoteAiResult = NoteDocumentResult | { kind: 'conversation'; markdown: string }
 
 /** Only an affirmative creation clause reserves a component in the document. */

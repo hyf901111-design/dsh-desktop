@@ -1,4 +1,8 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
+import {createClientCapabilityRegistry,createCapabilityExecutor} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import type {ClientCapabilityContext,CapabilityReceipt} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import {runClientCapabilityLoop} from '../../../packages/dsh-research-task-runtime/client-capability-loop.js'
+import {NotesCapabilityBridge} from './capability-bridge'
 import { NotesStore } from './store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import type { TrustedWindow } from '../ipc-trust'
@@ -21,9 +25,11 @@ import { pickNoteFiles } from './file-picker'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
-  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
+  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; canWrite?(sessionId:string):boolean; canvasAvailable?(sessionId:string):boolean; inspectCanvas?(sessionId:string,signal:AbortSignal):Promise<unknown>; resetZoom?():Promise<void>; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
+  const capabilityBridge=new NotesCapabilityBridge(value=>{const window=options.getWindow();if(!window||window.isDestroyed())throw Error('笔记窗口不可用。');(window.webContents as any).send('notes:capability-action',value)})
+  const capabilityResults=new Map<string,{fingerprint:string;result:any}>()
   const generations=new Map<string,{owner:string;sessionId:string;cardLocal:boolean}>()
   const challenges=new Map<string,{owner:string;sessionId:string;controller:AbortController}>()
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
@@ -31,6 +37,7 @@ export function installNotesService(options: {
     const owner = options.owner(), session = input.sessionId
     if (method !== 'load' && method !== 'conversation-load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
     switch (method) {
+      case 'capability-reply': return capabilityBridge.respond(input,owner)
       case 'library-list': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryItems(options.library()!)
       case 'library-read': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryNode(options.library()!,input.id,owner)
       case 'component-ready': return {ready:findNoteComponent(store.load(owner,session).saved.blocks,input.nodeId)?.containerSpec?.type==='calendar-tool'}
@@ -61,7 +68,7 @@ export function installNotesService(options: {
         const window=options.getWindow(),key='note-snapshot:'+randomUUID(),controller=new AbortController();active.set(key,controller)
         try{return await captureNoteComponentSnapshots(window,input,()=>options.owner()===owner&&options.canRead(session)&&options.getWindow()===window,controller.signal)}finally{active.delete(key)}
       }
-      case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session))
+      case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session)&&(!input.executionId||capabilityBridge.allowed(input.executionId,owner,session)))
       case 'conversation-load':
       case 'conversation-state': {
         const base=options.runtimeUrl();if(!base)return {rows:[],owner}
@@ -112,26 +119,56 @@ export function installNotesService(options: {
       case 'generate': {
         for(const job of challenges.values())if(job.owner===owner&&job.sessionId===session)job.controller.abort()
         const cardLocal=input.mode==='component'&&input.entryPoint==='component'
+        const cacheKey=JSON.stringify([owner,session,input.requestId]),fingerprint=createHash('sha256').update(JSON.stringify(input)).digest('hex'),cached=capabilityResults.get(cacheKey)
+        if(cached){if(cached.fingerprint!==fingerprint)throw Error('请求标识已用于不同生成请求。');return cached.result}
+        if(capabilityResults.size>=512)throw Error('本次客户端会话的操作回执已满，请重新启动客户端。')
         if (typeof input.requestId !== 'string' || !input.requestId || input.requestId.length > 128 || active.has(input.requestId) || [...generations.values()].filter(job=>job.cardLocal===cardLocal).length >= (cardLocal?3:1)) throw Error('请等待当前笔记生成完成。')
         const base = options.runtimeUrl(); if (!base) throw Error('模型服务尚未就绪，请稍后重试。')
         const url = new URL('/sherlock/notes/generate', base), controller = new AbortController()
         active.set(input.requestId, controller)
         generations.set(input.requestId,{owner,sessionId:session,cardLocal})
         try {
-          const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(input.mode==='component'?245000:125000)])
+          const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(input.capabilityContext?600000:input.mode==='component'?245000:125000)])
           const context=await prepareNoteReferences(input.context,{sessionId:session,owner,files:options.files,captureSources:options.captureSources,signal,current:()=>options.owner()===owner&&options.canRead(session)})
-          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},stream:true }) })
-          if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
-          const result = await readNoteGenerationStream(response,progress=>{
-            if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}
-            ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,...progress})
+          const binding=input.capabilityContext
+          const clientContext:ClientCapabilityContext|undefined=!cardLocal&&input.mode!=='component'&&binding&&typeof binding.documentId==='string'&&binding.documentId.length<=128&&Array.isArray(binding.selectedBlockIds)&&binding.selectedBlockIds.length<=1000&&binding.selectedBlockIds.every((id:any)=>typeof id==='string'&&id.length<=256)?{owner,sessionId:session,documentId:binding.documentId,mode:'notes',editable:options.canWrite?.(session)??true,selectedBlockIds:binding.selectedBlockIds}:undefined
+          const generationWindow=options.getWindow()
+          const current=()=>!!generationWindow&&!generationWindow.isDestroyed()&&options.getWindow()===generationWindow&&options.owner()===owner&&options.canRead(session)&&active.get(input.requestId)===controller&&!signal.aborted
+          const renderer=(action:'context'|'notes.export'|'notes.components.style'|'notes.components.create',args:any)=>capabilityBridge.request(action,args,clientContext!,input.requestId,signal,current)
+          const registry=createClientCapabilityRegistry({
+            ...clientContext?{createComponent:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.create',{...args,requestContext:{images:input.images??[],context:input.context,title:input.title,markdown:input.markdown,selection:input.selection}})},exportNote:async(args:any)=>{if(args.path&&!input.prompt.includes(args.path))throw Error('导出路径须由本次用户指令明确指定；请省略路径使用保存对话框。');return renderer('notes.export',args)},styleComponents:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.style',args)}}:{},
+            ...options.inspectCanvas&&(options.canvasAvailable?.(session)??true)?{inspectCanvas:async()=>{await renderer('context',{});const data=await options.inspectCanvas!(session,signal);return {status:'succeeded' as const,data}}}:{},
+            ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
           })
+          const executor=createCapabilityExecutor(registry,()=>current()?clientContext:undefined),receipts:CapabilityReceipt[]=[]
+          const result=await runClientCapabilityLoop({signal,execute:call=>executor.execute(call,clientContext!,signal),onReceipts:items=>receipts.push(...items),generate:async clientReceipts=>{
+            const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},...clientContext?{clientCapabilities:registry.catalog(clientContext),clientContext,clientReceipts}:{},stream:true }) })
+            if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
+            return readNoteGenerationStream(response,progress=>{
+              if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}
+              ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,...progress})
+            })
+          }})
+          if(receipts.length){
+            capabilityResults.set(cacheKey,{fingerprint,result})
+            if(options.owner()===owner&&options.canRead(session)){
+              const receiptUrl=new URL('/sherlock/notes/session',base)
+              const recorded=await fetch(receiptUrl,{method:'POST',headers:{'content-type':'application/json',origin:receiptUrl.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities',requestId:input.requestId,receipts})}).catch(()=>undefined)
+              if(!recorded?.ok)result.markdown=result.kind==='conversation'?result.markdown+'\n操作回执暂未写入会话历史。':result.markdown
+            }
+          }
           if (options.owner() !== owner) throw Error('账号已变化，请重新生成。')
           return result
-        } finally { active.delete(input.requestId);generations.delete(input.requestId) }
+        } finally {
+          if(input.capabilityContext&&options.owner()===owner){
+            const endUrl=new URL('/sherlock/notes/session',base)
+            await fetch(endUrl,{method:'POST',headers:{'content-type':'application/json',origin:endUrl.origin},signal:AbortSignal.timeout(3000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities-end',requestId:input.requestId})}).catch(()=>{})
+          }
+          active.delete(input.requestId);generations.delete(input.requestId)
+        }
       }
       default: throw Error('不支持的笔记操作。')
     }
   })
-  return () => { options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear();generations.clear();for(const job of challenges.values())job.controller.abort();challenges.clear(); options.ipcMain.removeHandler('notes:request') }
+  return () => { capabilityBridge.dispose();options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear();generations.clear();for(const job of challenges.values())job.controller.abort();challenges.clear(); options.ipcMain.removeHandler('notes:request') }
 }

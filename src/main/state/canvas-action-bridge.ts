@@ -15,6 +15,7 @@ export class CanvasActionBridge {
     this.bindings.set(value.sessionId,{selectedIds:[...value.selectedIds],expires:Date.now()+30*60*1000})
     return {ok:true}
   }
+  isAvailable(sessionId:string):boolean {const binding=this.bindings.get(sessionId);return !this.stopped&&!!binding&&binding.expires>=Date.now()&&this.options.canRead(sessionId)}
   async execute(value:any,signal?:AbortSignal):Promise<unknown> {
     const binding=this.bindings.get(value?.sessionId)
     if(this.stopped||!binding||binding.expires<Date.now()||!this.options.canRead(value.sessionId)||!['inspect','apply','undo','use'].includes(value.method)||this.pending.size>=20)throw Error('当前执行未绑定可访问的画板，请从画板右侧重新发送指令。')

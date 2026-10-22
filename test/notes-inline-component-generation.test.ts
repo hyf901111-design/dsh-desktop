@@ -50,3 +50,13 @@ it('times out each job independently and stops all transports on disposal withou
  expect(f.node('a')).toMatchObject({generationStatus:'failed'});expect(f.manager.isGenerating('a')).toBe(false);expect(f.manager.isGenerating('b')).toBe(true)
  const before=f.updates.length;f.manager.dispose();f.resolve('a',result('a'));f.resolve('b',result('b'));await flush();expect(f.updates).toHaveLength(before);expect(f.calls.filter(call=>call.method==='stop')).toHaveLength(2)
 })
+it('exposes an awaitable receipt only after the real generated component is available',async()=>{
+ const module=await import('../src/preload/notes/use-inline-component-generation')
+ let complete:any;const blocks:any[]=[{id:'card',props:{payload:JSON.stringify({id:'node',noteDraft:'smart'})}}]
+ const editor:any={isEditable:true,getBlock:(id:string)=>blocks.find(b=>b.id===id),updateBlock:(id:string,p:any)=>Object.assign(blocks.find(b=>b.id===id).props,p.props)}
+ const controller=module.createInlineComponentGeneration({sessionId:'s',editor,current:()=>true,persist:async()=>{},bridge:{request:async(method:string)=>method==='generate'?new Promise(resolve=>{complete=resolve}):{ok:true}}})
+ expect(controller.startAndWait,'awaitable component receipt is missing').toBeTypeOf('function')
+ const pending=controller.startAndWait('card','创建表格');let settled=false;void pending.then(()=>{settled=true});await Promise.resolve();expect(settled).toBe(false)
+ complete({kind:'component',node:{id:'generated',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'完成',columns:['值'],rows:[[1]]}}})
+ expect(await pending).toMatchObject({status:'succeeded',blockId:'card'});expect(JSON.parse(blocks[0].props.payload).containerSpec.rows).toEqual([[1]]);controller.dispose()
+})

@@ -26,7 +26,7 @@ export function createWorkbenchStyleState(storage,sessionId) {
 }
 
 export function workbenchFramePresentation(frame) {
- const root=frame?.closest('[data-ework-grid]'),globalTheme=frame?.ownerDocument?.body?.hasAttribute('data-ds-dark-theme')?'dark':'light'
+ const root=frame?.closest('[data-note-presentation],[data-ework-grid]'),globalTheme=frame?.ownerDocument?.body?.hasAttribute('data-ds-dark-theme')?'dark':'light'
  const mode=root?.dataset.workbenchStyle||globalTheme,controlTheme=mode==='openterminal'?'dark':globalTheme
  return {type:'sherlock-workbench-style',mode,controlTheme}
 }
