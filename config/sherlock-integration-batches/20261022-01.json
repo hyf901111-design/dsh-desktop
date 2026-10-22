@@ -11,40 +11,37 @@
         "schemaVersion": 1,
         "featureName": "保护笔记写入保存窗口并在快速完成后恢复挑战队列",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "803b068f3de694cd938da36ae6394e73aa9c50e0",
-        "tipCommit": "e34707acd5019ebcc565276a95befd7b36e9eee1",
+        "baseCommit": "e34707acd5019ebcc565276a95befd7b36e9eee1",
+        "tipCommit": "8f35cd64a0c5222bd6c799116e656140a8cdc628",
         "commits": [
           {
-            "commit": "b46f92f047ae299496fd83ce20dea5a4c57bb485",
+            "commit": "8f35cd64a0c5222bd6c799116e656140a8cdc628",
             "parents": [
-              "803b068f3de694cd938da36ae6394e73aa9c50e0"
+              "e34707acd5019ebcc565276a95befd7b36e9eee1"
             ],
-            "subject": "区分笔记改写指令与正文审查标签限制"
-          },
-          {
-            "commit": "e34707acd5019ebcc565276a95befd7b36e9eee1",
-            "parents": [
-              "b46f92f047ae299496fd83ce20dea5a4c57bb485"
-            ],
-            "subject": "保留输出约束引号边界避免误授直接替换权限"
+            "subject": "为新增AI回复加入自然渐显并保留阅读交互"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-challenge-intent.js"
+            "status": "A",
+            "path": "scripts/lib/assistant-reveal.mjs"
           },
           {
             "status": "M",
-            "path": "test/notes-challenge-controller-browser.test.js"
+            "path": "scripts/lib/notes-activity.mjs"
           },
           {
             "status": "M",
-            "path": "test/notes-challenge-intent.test.ts"
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
-            "status": "M",
-            "path": "test/notes-challenge-reply-protocol.test.js"
+            "status": "A",
+            "path": "test/assistant-reveal-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/assistant-reveal.test.js"
           }
         ],
         "checks": [
@@ -53,31 +50,16 @@
               "npx",
               "vitest",
               "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-reply-protocol.test.js",
-              "test/notes-challenge-runtime.test.js",
-              "--maxWorkers=2"
+              "test/assistant-reveal.test.js",
+              "test/assistant-reveal-browser.test.js",
+              "test/notes-activity.test.js",
+              "test/notes-history-ready.test.js",
+              "test/markdown-file-links.test.js"
             ],
             "outcome": "passed",
-            "summary": "188 passed /3 directly affected files; output/notes-intent-controls-runtime.log",
-            "verifiedCommit": "e34707acd5019ebcc565276a95befd7b36e9eee1",
-            "completedAt": "2026-10-22T21:42:39.067144+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-controller-browser.test.js",
-              "-t",
-              "output.control|output controls|uses human intent|stale targeted|in.flight direct",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "33 production Editor cases passed /71 unrelated skipped; output/notes-intent-controls-editor.log",
-            "verifiedCommit": "e34707acd5019ebcc565276a95befd7b36e9eee1",
-            "completedAt": "2026-10-22T21:42:39.067144+00:00",
+            "summary": "26 passed /5 directly affected files, including actual AssistantMarkdown/MarkdownText and actual Notes preparing row lifecycle. output/assistant-reveal-1023/focused-final.json; exact source hashes independently reverified after commit.",
+            "verifiedCommit": "8f35cd64a0c5222bd6c799116e656140a8cdc628",
+            "completedAt": "2026-10-22T22:44:11.929Z",
             "timeoutMs": 180000
           },
           {
@@ -87,9 +69,20 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "passed; output/notes-intent-controls-typecheck.log",
-            "verifiedCommit": "e34707acd5019ebcc565276a95befd7b36e9eee1",
-            "completedAt": "2026-10-22T21:42:39.067144+00:00",
+            "summary": "Passed; output/assistant-reveal-1023/typecheck.log",
+            "verifiedCommit": "8f35cd64a0c5222bd6c799116e656140a8cdc628",
+            "completedAt": "2026-10-22T22:44:11.929Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "output/assistant-reveal-1023/verify-in-memory-frontend.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Entire real runtime conversation module patched in memory, parsed by esbuild and idempotence verified; no dependency mutation or shared build. output/assistant-reveal-1023/frontend-asset-manifest.json",
+            "verifiedCommit": "8f35cd64a0c5222bd6c799116e656140a8cdc628",
+            "completedAt": "2026-10-22T22:44:11.929Z",
             "timeoutMs": 180000
           },
           {
@@ -97,190 +90,32 @@
               "git",
               "diff",
               "--check",
-              "803b068f3de694cd938da36ae6394e73aa9c50e0..e34707acd5019ebcc565276a95befd7b36e9eee1"
+              "e34707acd5019ebcc565276a95befd7b36e9eee1..8f35cd64a0c5222bd6c799116e656140a8cdc628"
             ],
             "outcome": "passed",
-            "summary": "passed; clean committed four-file scope",
-            "verifiedCommit": "e34707acd5019ebcc565276a95befd7b36e9eee1",
-            "completedAt": "2026-10-22T21:42:39.067144+00:00",
+            "summary": "Passed; clean committed five-file scope",
+            "verifiedCommit": "8f35cd64a0c5222bd6c799116e656140a8cdc628",
+            "completedAt": "2026-10-22T22:44:11.929Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Isolated actual production Editor proves closed direct edit plus complete output-control clause applies/saves only the full anchored sentence and resolves its original thread; the exact long calculation request remains a persisted preview until explicit Replace. No shared-client GUI, new model or network call claimed."
+          "summary": "Isolated headless actual production AssistantMarkdown + MarkdownText and source NotesActivityStore/NoteConversationRow exercise fast settled content, sustained real appends, Markdown tables/code/math/web and file links, selection/copy/scroll, reduced motion, interruptions and background/remount catch-up. Independent reviewer repeated all 26 with identical source hashes. Native Electron shell motion acceptance remains integrated-root verification; no GUI/build/model request was run in this feature worktree."
         },
         "acceptanceCriteria": [
-          "A complete independent Chinese output-control clause excluding review labels from note body does not negate an otherwise authorized correction request. Quote-aware clause parsing preserves assigned literals and only removes a closed vocabulary of complete output controls.",
-          "A mixed refusal, actual do-not-edit clause, incomplete/mixed quote, or unrecognized negative instruction retains existing conservative permissions. The peer counterexample with a trailing unclosed quote is denied in both pure intent and real runtime payload/output.",
-          "Broader correction/expansion requests can produce a replacement preview; the existing closed direct-write grammar, anchored complete-sentence scope, fingerprint conflict check, body sanitizer and confirmed persistence are preserved.",
-          "The exact previously failed long calculation instruction now yields allowReplacement=true and full scoped JSON contract, without automatic document edits. Standalone review labels in a returned replacement are still sanitized into the comment."
+          "Only actually arrived new AI reply content receives a bounded paint-only reveal; original full Markdown, copy/save text, completion state and tool outcomes remain immediate and unchanged. Native current running updates keep original streaming grammar, and Notes terminal replies retain streaming=false.",
+          "History/older pages/session return and completed-remount content do not replay; genuine subsequent appended text may fade. Notes pending rows leaving before a first result are also covered.",
+          "Per-TextNode computed foreground palettes retain actual text/link/code colors. Persistent selection or pointer drag, copy/key/wheel interaction, blur/hidden, interruption and reduced motion immediately expose full text; no added scroll writes or DOM text wrappers.",
+          "Complete fast large result fades within 660ms; at most 80 active range fragments and 32 color palettes prevent a sustained-fragment display backlog. Unsupported CSS Highlight environments show full content immediately.",
+          "Actual patch entry is scripts/patch-web-frontend-loading.mjs after Notes/session patches. Root must inspect built Contents/Resources/app/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js with provided read-only packaged verifier; static web index shell is not the helper-bearing artifact."
         ],
         "risks": [
-          "This is a narrow Chinese output-control and correction-verb repair, not general natural-language permission inference; unfamiliar constraints can still remain conservative previews or discussion.",
-          "Native a0 malformed reply remains a historical failed attempt; these isolated tests do not rewrite that evidence. The current running 880420b4 client predates this successor and needs integrated package acceptance.",
-          "No version change, notarization, upload, push, main promotion or actual user-data mutation occurred in this feature worktree."
+          "CSS Highlight paint is presentation-only; final native Electron theme/scroll motion acceptance remains root integration work.",
+          "Whole-runtime expected hash in frontend manifest comes from feature dependency plus in-memory feature patch and may differ after other accepted patches merge; helper-specific hashes and marker/entry checks are supplied for actual package parity.",
+          "No version change, shared build, application launch, notarization, upload, push, model/source query, or user-note data mutation occurred."
         ],
-        "generatedAt": "2026-10-22T21:42:39.067144+00:00"
-      },
-      "merged": {
-        "mergeCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-        "verificationCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "96d399235579d4310f25650e839a265ca0d498bf",
-            "completedAt": "2026-10-22T21:48:25.172Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-22T21:48:25.172Z"
+        "generatedAt": "2026-10-22T22:44:11.929Z"
       }
     },
     {
