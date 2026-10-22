@@ -123,3 +123,22 @@ it('reports only bounded source failure stages and driver codes for native diagn
     expect(JSON.stringify(result)).not.toContain('ORA-12514')
   }finally{warn.mockRestore()}
 })
+
+it('keeps authorized reads usable when fresh pre and post skill checks require separate bridge round trips',async()=>{
+  const f=await fixture(),get=f.ctx.skills.get
+  f.ctx.skills.get=async(...args)=>{if(f.state.gets>=1)await new Promise(resolve=>setTimeout(resolve,2200));return get(...args)}
+  const result=await (await load()).reviewNoteConsensus(f.ctx,input,AbortSignal.timeout(12000))
+  expect(result.issues).toHaveLength(1)
+  expect(result.issues[0].evidence[0].data).toMatchObject({source:'infodb',skillName:'ework-skill-infodb'})
+},15000)
+
+it('still kills a stalled database process within four seconds despite the authorization pipeline allowance',async()=>{
+  const f=await fixture()
+  await writeFile(join(f.root,'scripts/connection.py'),`import os,time\nfrom pathlib import Path\ndef get_connection():\n Path(${JSON.stringify(f.marker)}).write_text(str(os.getpid()))\n time.sleep(20)\n`)
+  const at=Date.now(),result=await (await load()).reviewNoteConsensus(f.ctx,input,AbortSignal.timeout(12000))
+  expect(result.issues).toEqual([])
+  expect(result.checks[0].status).toBe('unavailable')
+  expect(Date.now()-at).toBeLessThan(7000)
+  const pid=Number(await readFile(f.marker,'utf8'))
+  await vi.waitFor(()=>expect(()=>process.kill(pid,0)).toThrow())
+},10000)

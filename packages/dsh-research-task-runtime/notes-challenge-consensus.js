@@ -200,7 +200,10 @@ export async function reviewNoteConsensus(ctx, input, signal) {
         if (!source) return { issues, checks: [...checks, { kind: 'consensus', status: 'unavailable', detail: '当前会话没有可用的已授权infodb只读SQL工具或已启用的infodb读取技能；未查询、未使用其他来源替代。' }] }
         const query = async mode => {
           phase='read'
-          const budget = deadline(signal, 4000)
+          // Managed skill reads include two fresh authorization round trips.
+          // Their Python/DB process retains its own 4s bound; the full review
+          // deadline still bounds discovery, authorization and all query groups.
+          const budget = deadline(signal, source.kind==='skill'?12000:4000)
           try {
             const response = await abortable(source.query(queryClaim,mode,budget.signal), budget.signal)
             phase='response'
