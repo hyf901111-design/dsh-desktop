@@ -16,6 +16,10 @@ function service(base?:string,extra:any={}) {
   const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame }
   return { call: (method: string, input: any = {}) => handler(event, method, { sessionId: 'session', owner, ...input }), handler: () => handler, event, progress,changeOwner: () => { owner = 'bob' }, deny: () => { allowed = false }, dispose }
 }
+it('reports a starting runtime as pending rather than an authoritative empty note history',async()=>{
+ const s=service()
+ try{expect(await s.call('conversation-load')).toEqual({rows:[],owner:'alice',pending:true})}finally{s.dispose()}
+})
 it('relays progress to the trusted request and separates it from the final document result',async()=>{
  const s=service('http://127.0.0.1:9999'),wire=[{type:'progress',stage:'thinking',reasoning:'先整理段落。',outputChars:0},{type:'result',result:{kind:'text',markdown:'结果正文'}}].map(v=>JSON.stringify(v)+'\n').join('')
  vi.stubGlobal('fetch',async()=>new Response(wire))

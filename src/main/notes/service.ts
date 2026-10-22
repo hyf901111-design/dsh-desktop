@@ -72,7 +72,7 @@ export function installNotesService(options: {
       case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session)&&(!input.executionId||capabilityBridge.allowed(input.executionId,owner,session)),(path,state)=>{if(input.executionId)capabilityBridge.exportEffect(input.executionId,owner,session,{state,path})})
       case 'conversation-load':
       case 'conversation-state': {
-        const base=options.runtimeUrl();if(!base)return {rows:[],owner}
+        const base=options.runtimeUrl();if(!base)return {rows:[],owner,pending:true}
         const url=new URL('/sherlock/notes/session',base),response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:method,requestId:input.requestId,phase:input.phase})})
         const result=await response.json();if(!response.ok)throw Error(result.error||'会话记录暂不可用。');if(options.owner()!==owner)throw Error('账号已变化');return {...result,owner}
       }
