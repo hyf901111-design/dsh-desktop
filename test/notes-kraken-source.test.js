@@ -3,6 +3,7 @@ import {noteKrakenQuotePlan,noteKrakenQuoteGuidance} from '../packages/dsh-resea
 const instruction='创建 BTC/USD 与 ETH/USD 指标组件，实际读取 Kraken 最新报价并绑定成功接口'
 it('supplies fixed registered requests and the existing crypto mapping without inventing business values',()=>{
  const plan=noteKrakenQuotePlan(instruction),text=noteKrakenQuoteGuidance(instruction,[{name:'public_data_query'}])
+ expect(text).toContain('实际周期以宿主当前刷新设置为准');expect(text).toContain('配置保存时间不代表报价时点')
  expect(plan.publicData.requests).toEqual([{source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'},{source:'kraken-ticker',parameters_json:'{"pair":"ETHUSD"}'}])
  const candidate=JSON.parse(text.split('\n')[2])
  expect(candidate.requests.map(x=>x.tool)).toEqual(['public_data_query','public_data_query']);expect(candidate.mapping).toMatchObject({type:'market',variant:'metrics',asOf:'Kraken · 报价时点未提供'})

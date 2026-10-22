@@ -28,5 +28,5 @@ export function noteKrakenQuoteGuidance(instruction,schemas){
   const asset=JSON.parse(plan.publicData.requests[i].parameters_json).pair==='ETHUSD'?'ETH':'BTC'
   return fields.map(([field,label])=>({label:asset+' '+label,value:{$from:request.key,$path:'records.0.'+field,$as:'string',$digits:field==='volume24h'?4:2,$suffix:' '+(field==='volume24h'?asset:'USD'),$default:'来源未提供'}}))
  })}}
- return '\n【Notes Kraken 注册报价合同】本轮原始用户需求明确指定 Kraken 及美元交易对，当前父会话可见 public_data_query。必须实际调用以下已注册内置接口取得本轮真实响应；不需要插件凭证，不调用模型自行补写的 URL，不用 web_fetch/financial_query 伪造可刷新来源。保留原始需求的刷新频率；以下仅为无数值的请求及映射合同，尚未取数、尚未保存绑定。只有真实成功调用且参数完全一致才能交付该 data-bound；接口失败或工具撤销时诚实说明，绝不填写报价或凭空声称已取得。报价时点未提供就写未提供，receivedAt只代表获取时间。\n'+JSON.stringify(candidate)+'\n【Notes Kraken 注册报价合同结束】'
+ return '\n【Notes Kraken 注册报价合同】本轮原始用户需求明确指定 Kraken 及美元交易对，当前父会话可见 public_data_query。必须实际调用以下已注册内置接口取得本轮真实响应；不需要插件凭证，不调用模型自行补写的 URL，不用 web_fetch/financial_query 伪造可刷新来源。保留原始需求的刷新频率；组件正文和来源页脚不写死每分钟等刷新周期，实际周期以宿主当前刷新设置为准，后续用户可修改。以下仅为无数值的请求及映射合同，尚未取数、尚未保存绑定。只有真实成功调用且参数完全一致才能交付该 data-bound；接口失败或工具撤销时诚实说明，绝不填写报价或凭空声称已取得。报价时点未提供就写未提供，receivedAt只代表获取时间，配置保存时间不代表报价时点。\n'+JSON.stringify(candidate)+'\n【Notes Kraken 注册报价合同结束】'
 }
