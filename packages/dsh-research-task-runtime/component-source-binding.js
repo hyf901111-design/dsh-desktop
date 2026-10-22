@@ -12,7 +12,8 @@ import {observedMarketHistory} from './observed-market-history.js'
 import {observedStatementGrowth} from './observed-statement-growth.js'
 import {expandBusinessEvidence} from './component-source-projection.js'
 import {operatingSourceAttempt} from './statement-operating-coverage.js'
-import {newsSourceScopeIssue,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
+import {newsSourceScopeIssue,generalNewsScope,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
+import {filterScopedNewsArtifact,NEWS_EMPTY_NOTE} from './news-topic-filter.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -262,6 +263,7 @@ export function componentFeedEvidenceIssue(text,records,options={}) {
   if(announcementIssue)return announcementIssue
   const articleTimeline=articleTimelineRequired(data,options)
   if(!['news','reports'].includes(data?.type)&&!articleTimeline)return null
+  if(data?.type==='news'&&data.version===1&&Array.isArray(data.items)&&!data.items.length&&data.note===NEWS_EMPTY_NOTE)return null
   if(data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>(articleTimeline?60:40))return articleTimeline?'文章时间线必须包含1–60条已取得的实际记录。':'资讯列表必须包含1–40条已取得的实际记录。'
   const sources=feedSnapshotSources(records)
   if(articleTimeline){
@@ -610,7 +612,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   // Keep original request expressions for refresh; never classify their shape.
   const scopeIssue=newsSourceScopeIssue(mapping,observed.map(({tool,args})=>({tool,args})),options.newsScope)
   if(scopeIssue)throw Object.assign(Error(scopeIssue),{code:'SOURCE_DATA_REQUIRED'})
-  const data=materializeComponentMapping(mapping,responses,now,observed)
+  const data=filterScopedNewsArtifact(materializeComponentMapping(mapping,responses,now,observed),observed,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
   const sourceIssue=templateSourceDataIssue(data)
   if(sourceIssue)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
   const issue=templateDataIssue(data)

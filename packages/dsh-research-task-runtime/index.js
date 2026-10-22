@@ -42,6 +42,7 @@ import { registerPublicDataTool } from './public-data-tool.js'
 import { createPublicDataClient } from './public-data-client.js'
 import { preparePublicDataPanel, validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataNewsTaskType } from './workbench-public-data.js'
 import {newsSourceScopeIssue,newsScopeInstruction,generalNewsScope} from './news-source-scope.js'
+import {filterScopedNewsArtifact} from './news-topic-filter.js'
 import { loadBundledComponentSkill } from './component-skill.js'
 import { deferredWorkbenchPanel, prepareSimulatedArtifact, workbenchPanelScope, workbenchPanelIntent } from './workbench-plan.js'
 import {parseDatasetViewArtifact} from './dataset-view-contract.js'
@@ -1649,6 +1650,11 @@ export class ResearchTaskRuntime {
         if(restoredSnapshot)deliveredText=recoveryText=restoredSnapshot
         const retainedFeed=attempt===1&&task.kind==='container'&&workbenchPanelFormat(task.prompt)?retainVerifiedFeedItems(deliveredText,sourceRecords,{...feedOptions,articleScopeGaps:restoredArticleScope?.gaps}):undefined
         if(retainedFeed)deliveredText=recoveryText=retainedFeed
+        let scopedNews=false
+        if(structured&&!deferredPanel){
+          const candidates=extractArtifactObjects(deliveredText)
+          if(candidates.length===1){const filtered=filterScopedNewsArtifact(candidates[0],sourceRecords,task.prompt,{general:generalNewsScope(task.prompt)});if(filtered!==candidates[0]){scopedNews=true;deliveredText=recoveryText=JSON.stringify(filtered)}}
+        }
         if (structured && !articleTimeline) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
           if(restoredArticleScope?.gaps.length&&!retainedFeed)throw new ResearchTaskError('GENERATION_FAILED','修复省略的研究范围缺口无法完整保留，不能以部分记录和旧覆盖声明伪装成功。')
@@ -1730,7 +1736,7 @@ export class ResearchTaskRuntime {
                 '该组件指定通联 DataYes 来源，必须实际取得业务响应；需要刷新时提交可刷新映射，不能用其他网站的静态行情或接口目录代替。')
             }
           }
-          output = finalText(mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
+          output = finalText(mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', bindingRequested

@@ -4,7 +4,9 @@ import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 import {randomUUID,createHash} from 'node:crypto'
 import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
-import {newsSourceScopeIssue} from './news-source-scope.js'
+import {newsSourceScopeIssue,generalNewsScope} from './news-source-scope.js'
+import {filterScopedNewsArtifact} from './news-topic-filter.js'
+import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
 const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize'])
@@ -344,9 +346,13 @@ export class ComponentDataRefresh {
    const scopeIssue=refreshNewsScopeIssue(b.mapping,b.requests,b.newsScope??model.data.title,new Date(startedAt))
    if(scopeIssue)throw Error(scopeIssue)
    const baseline=hash(before.spec)
-   const results=await Promise.all(b.requests.map(async r=>[r.key,await this.request(b,r,signal)]));signal.throwIfAborted()
+   const crypto=b.mapping?.type==='market'&&['metrics','table'].includes(b.mapping.variant)&&b.requests.every(isCryptoTickerRequest)
+   const outcomes=await Promise.allSettled(b.requests.map(r=>this.request(b,r,signal)));signal.throwIfAborted()
+   const results=outcomes.map((outcome,i)=>[b.requests[i].key,crypto?normalizeCryptoTickerResult(b.requests[i],outcome):outcome.status==='fulfilled'?outcome.value:(()=>{throw outcome.reason})()])
    const responses=Object.fromEntries(results)
-   const data=materializeComponentMapping(b.mapping,responses,new Date(startedAt),b.requests.map(request=>({tool:request.toolId,args:request.args,response:responses[request.key]})))
+   if(crypto&&!results.some(([,response])=>response.records?.length))throw Error('所有交易对本次均未取得行情；已保留上次内容')
+   const observed=b.requests.map(request=>({tool:request.toolId,args:request.args,response:responses[request.key]}))
+   const data=filterScopedNewsArtifact(materializeComponentMapping(b.mapping,responses,new Date(startedAt),observed),observed,b.newsScope??'',{general:generalNewsScope(b.newsScope??model.data.title)})
    data.title=model.data.title
    // A source recipe updates data; it cannot silently discard the chosen layout.
    if(model.data.layoutProfile!==undefined)data.layoutProfile=model.data.layoutProfile

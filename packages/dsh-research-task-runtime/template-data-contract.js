@@ -23,7 +23,8 @@ export function tableShapeIssue(data,{generic=false,maxColumns=TEMPLATE_LIMITS.t
  if(!Array.isArray(data.columns)||data.columns.length<1||data.columns.length>maxColumns)return `columns 必须包含 1–${maxColumns} 列`
  const column=data.columns.findIndex(value=>!text(value,generic?128:2000))
  if(column>=0)return `columns[${column}] 必须为1–${generic?128:2000}字的非空文字`
- if(!Array.isArray(data.rows)||data.rows.length<1||data.rows.length>TEMPLATE_LIMITS.tableRows)return `rows 必须包含 1–${TEMPLATE_LIMITS.tableRows} 行`
+ const emptyNews=data.note==='本次未取得与用户主题相关的新闻；未用全市场或其他主题内容补齐。'
+ if(!Array.isArray(data.rows)||data.rows.length<1&&!emptyNews||data.rows.length>TEMPLATE_LIMITS.tableRows)return `rows 必须包含 1–${TEMPLATE_LIMITS.tableRows} 行`
  for(const [i,row]of data.rows.entries()){
   if(!Array.isArray(row)||row.length!==data.columns.length)return `rows[${i}] 必须是 ${data.columns.length} 个单元格的数组`
   const cell=row.findIndex(value=>generic
