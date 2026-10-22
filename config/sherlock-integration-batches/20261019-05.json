@@ -404,125 +404,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记段落校对反馈与通用客户端会话能力组合执行",
+        "featureName": "修复段落校对提示偏移并增加状态线渐入",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "dec0f5d6753fdaf25e84799432a634e55687cc3d",
-        "tipCommit": "9032871dbccc4e24ce732e5081bebe37f74947f0",
+        "baseCommit": "9032871dbccc4e24ce732e5081bebe37f74947f0",
+        "tipCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
         "commits": [
           {
-            "commit": "5178a15229bd1f0d77eb0ac4594ac204f659d467",
+            "commit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
             "parents": [
-              "dec0f5d6753fdaf25e84799432a634e55687cc3d"
+              "9032871dbccc4e24ce732e5081bebe37f74947f0"
             ],
-            "subject": "保留组件创建效果与混合预览并等待主题终态快照"
-          },
-          {
-            "commit": "ac0d69041389314c85a19d7d6a1aa3104026f007",
-            "parents": [
-              "5178a15229bd1f0d77eb0ac4594ac204f659d467"
-            ],
-            "subject": "移除客户端能力校验的启动副作用并验证打包导入"
-          },
-          {
-            "commit": "9032871dbccc4e24ce732e5081bebe37f74947f0",
-            "parents": [
-              "ac0d69041389314c85a19d7d6a1aa3104026f007"
-            ],
-            "subject": "统一组件持久化确认避免保存冲突后虚报成功"
+            "subject": "修复段落校对提示定位并为状态线增加渐入动效"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/superpowers/2026-10-22-client-capability-inventory.md"
+            "path": "src/preload/floating-surfaces.ts"
           },
           {
             "status": "M",
-            "path": "package-lock.json"
+            "path": "src/preload/notes/challenge-coverage.tsx"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+            "path": "src/preload/notes/challenge.css"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-session.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/package.json"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/capability-bridge.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/component-snapshot.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/client-capability-actions.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/component-snapshots.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/use-inline-component-generation.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/note-component-snapshot.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/client-capabilities-bundle.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/client-capabilities.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-client-capabilities-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-client-capability-actions.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-client-capability-bridge.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-client-capability-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-client-capability-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-inline-component-generation.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-theme-export-browser.test.js"
+            "path": "test/notes-challenge-controller-browser.test.js"
           }
         ],
         "checks": [
@@ -531,15 +441,16 @@
               "npx",
               "vitest",
               "run",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-inline-component-generation.test.ts",
-              "test/notes-client-capability-actions.test.ts"
+              "test/notes-challenge-controller-browser.test.js",
+              "test/floating-surfaces.test.ts",
+              "-t",
+              "paragraph|fits near|promotes the context"
             ],
             "outcome": "passed",
-            "summary": "最终有限保存确认修复3文件20/20；/tmp/task1-save-confirmation-green.log exit0。其直接前驱ac0d全受影响36文件551/551通过，未将前驱结果冒充本提交重跑。",
-            "verifiedCommit": "9032871dbccc4e24ce732e5081bebe37f74947f0",
-            "completedAt": "2026-10-22T05:04:58.639988+00:00",
-            "timeoutMs": 240000
+            "summary": "受影响7/7；真实全局浮层RED复现x=0，GREEN贴近标记；opacity起中终点与reduced-motion通过；/tmp/notes-paragraph-tooltip-fade-green-20261022.log",
+            "verifiedCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
+            "completedAt": "2026-10-22T05:27:10.662612+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
@@ -548,9 +459,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "/tmp/task1-save-confirmation-typecheck.log exit0；exact source9032871",
-            "verifiedCommit": "9032871dbccc4e24ce732e5081bebe37f74947f0",
-            "completedAt": "2026-10-22T05:04:58.639988+00:00",
+            "summary": "/tmp/notes-paragraph-tooltip-fade-typecheck-20261022.log exit0",
+            "verifiedCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
+            "completedAt": "2026-10-22T05:27:10.662612+00:00",
             "timeoutMs": 180000
           },
           {
@@ -558,187 +469,29 @@
               "git",
               "diff",
               "--check",
-              "dec0f5d6753fdaf25e84799432a634e55687cc3d..9032871dbccc4e24ce732e5081bebe37f74947f0"
+              "9032871dbccc4e24ce732e5081bebe37f74947f0..6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2"
             ],
             "outcome": "passed",
-            "summary": "完整后继差异检查退出0。",
-            "verifiedCommit": "9032871dbccc4e24ce732e5081bebe37f74947f0",
-            "completedAt": "2026-10-22T05:04:58.639988+00:00",
+            "summary": "完整后继差异检查通过",
+            "verifiedCommit": "6b58eff4c2776c3d70c4f8a0696f8779eb4c65c2",
+            "completedAt": "2026-10-22T05:27:10.662612+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "真实窗口/PDF/语义召回仍待本次重建。最终scoped复核关闭preview/theme/startup3项；残余saved确认缺口9032871已最小共享条件修复，控制器核对准确diff及真实editor冲突/异常RED/GREEN。旧c6e无法启动；新main临时Electron导入通过不能替代native。"
+          "summary": "903集成客户端已真实可启动并显示蓝橙段落线；本次修复原生hover偏移和动效，须重新集成后检查实际气泡坐标。不得把isolated浏览器验证当native通过。"
         },
         "acceptanceCriteria": [
-          "仅实际完成当前档位审查的原段落显示状态线；未读/过期/深入检查失败不显示已通过，未解决评论按实际定位计数",
-          "完整高亮对应替换片段，纯删除保留取消入口，取消后可再次替换，保留正文格式、评论草稿与撤销重做",
-          "通用类型化目录支持创建组件→样式→导出、全笔记易方达主题与隐藏顶栏，并以真实回执反馈",
-          "只向用户明确指定的完整文件路径直接导出，歧义走保存框；取消后保留实际已应用/已保存效果和路径",
-          "原生专用验收笔记检查实际PDF、组件呈现、状态线与正确/错误文章召回，不覆盖用户原笔记"
+          "段落提示与对应线相邻，不被全局浮层强制移到左上角",
+          "线自然渐入且文本布局不移动，reduced motion尊重用户设置",
+          "保留未读/过期不显示、等级/真实未解决计数、长段落滚动定位"
         ],
         "risks": [
-          "源5821真实荷花文章召回仍漏叶片/花期/秋季并无额外追问；本次分档推理改动必须重新验证真实模型，不把coverage元数据当语义正确证明",
-          "首批目录5项能力；Canvas仅inspect、UI仅zoom.reset，未宣称所有客户端功能均已接入",
-          "真实PDF、保存框、固定颜色自定义HTML的主题呈现仍待验收；仅本地测试不发布、不推送、不推进main",
-          "旧c6e候选未验收且不能启动，修复后须真实主窗口及active runtime哈希核验；不得把包完整性或import smoke当产品可用证据"
+          "纯UI修复，不改模型语义；903真实荷花召回仍漏单花期/秋季并无额外内容追问，需持续优化",
+          "只本地集成/测试，不发布推送或推进main"
         ],
-        "generatedAt": "2026-10-22T05:04:58.639988+00:00"
-      },
-      "merged": {
-        "mergeCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-        "verificationCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/calendar-tool-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/calendar-tool-client.test.js",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/shared-calendar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/shared-calendar.test.ts",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5",
-            "verifiedCommit": "333e3d3b6f7b13abf90e3bd1e65f15b4e9038e46",
-            "completedAt": "2026-10-22T05:07:41.802Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-22T05:07:41.802Z"
+        "generatedAt": "2026-10-22T05:27:10.662612+00:00"
       }
     },
     {
