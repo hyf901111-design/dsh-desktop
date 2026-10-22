@@ -73,5 +73,14 @@ it('shows completed host actions while the model is still thinking, keeps their 
   expect(final).not.toContain('data-note-client-progress');expect(final.split('Component style: Completed')).toHaveLength(2)
   expect(final).not.toContain('untrusted model completion')
   doc.dispatchEvent(new Event('sherlock:notes-reset'));expect(store.snapshot('a')).toEqual([])
+  for(const result of [{kind:'text',markdown:'新文章预览'},{kind:'component',node:{title:'预览组件'}}]){
+   // Durable replay contains no transient capabilityProgress field.
+   doc.dispatchEvent(new Event('sherlock:notes-reset'))
+   doc.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId:'a',rows:[{requestId:'r',phase:'ready',startedAt:1,finishedAt:2,result:{...result,capabilityReceipts:[receipt]}}]}}))
+   const restored=render()
+   expect(restored).toContain('data-note-client-receipts');expect(restored).not.toContain('data-note-client-progress')
+   expect(restored.split('Component style: Completed')).toHaveLength(2)
+   expect(restored).toContain(result.kind==='text'?'新文章预览':'预览组件')
+  }
  }finally{store.dispose();vi.unstubAllGlobals()}
 })

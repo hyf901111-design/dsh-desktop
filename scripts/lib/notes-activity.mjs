@@ -53,6 +53,7 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     const feedback={ready:noteUiText("已生成以下内容，可在文档预览中采纳。"),accepted:noteUiText("已将以下内容写入笔记。"),discarded:noteUiText("以下建议未被采纳。")}[row.phase]
     const conversation=row.result?.kind==='conversation'&&row.result.capabilityReceipts?.length?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):row.result?.markdown
     const liveReceipts=Array.isArray(row.capabilityProgress)&&!row.result?.capabilityReceipts?.length?row.capabilityProgress:[]
+    const finalReceipts=row.result?.kind!=='conversation'&&Array.isArray(row.result?.capabilityReceipts)?row.result.capabilityReceipts:[]
     const text=['text','conversation'].includes(row.result?.kind)?String(conversation||''):row.result?.kind==='component'?noteUiText("已生成组件：")+(row.result.node?.title||noteUiText("研究组件"))+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()
     // Read the durable final-event position after generation; the preparing seq is only for row ordering.
     react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])
@@ -62,6 +63,7 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
       liveReceipts.length?h('div',{className:'en-task-feedback','data-note-client-progress':'',role:'status','aria-live':'polite'},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(liveReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:eworkNoteUiError(row.error)}],streaming:false,t}) : null,
+      finalReceipts.length?h('div',{'data-note-client-receipts':''},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(finalReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
       row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:conversation}],streaming:false,t}) : null,
       row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:[feedback,row.result.markdown].filter(Boolean).join('\n\n')}],streaming:false,t})) : null,
       row.result?.kind==='component' ? h(Markdown,{blocks:[{kind:'text',text:(row.phase==='accepted'?noteUiText("已创建并写入笔记组件："):noteUiText("已生成组件："))+(row.result.node.title||noteUiText("研究组件"))+'。'}],streaming:false,t}) : null,
