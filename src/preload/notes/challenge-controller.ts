@@ -103,7 +103,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
      const retry=scheduler.current?.retryState()
      // Keep the private retry allowance on the same exact document as coverage,
      // without duplicating its body text in the persisted scheduling metadata.
-     const retrySchedule=retry?.key===key&&retry.level===level?{version:1,documentHash:saved.documentHash,level,entries:retry.entries,usage:retry.usage}:undefined
+     const retrySchedule=retry?.key===key&&retry.level===level?{version:1,documentHash:saved.documentHash,level,entries:retry.entries}:undefined
      doc.getMap('note-challenge-results').set('state',{...saved,...retrySchedule?{retrySchedule}:{}});latest.current.persist()
     }
     await latest.current.persistConfirmed()
@@ -163,10 +163,14 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     for(const id of result.coveredBlockIds){const block=captured.blocks.find(b=>b.id===id);if(block)covered.current.set(id,{text:block.text,title:captured.title,level:captured.level,complete:complete.has(id),issueCount:result.issues.filter(issue=>issue.blockId===id).length})}
    }
    refresh()
-  },onState:value=>{if(!live.current)return;const wasRunning=activity.current.running;activity.current.running=value.phase==='running';if(activity.current.running)publishActivity();setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish();if(wasRunning!==activity.current.running)flushReview()}})
+  },onState:value=>{if(!live.current)return;const wasRunning=activity.current.running;activity.current.running=value.phase==='running';if(activity.current.running)publishActivity();setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish();if(wasRunning!==activity.current.running){doc.getMap('note-challenge-results').set('usage',s.usageState());latest.current.persist();flushReview()}}})
   scheduler.current=s;sync();s.setLevel(readLevel())
   const restoredTitle=latest.current.title,restoredBlocks=blocks(),restoredLevel=readLevel(),restoredKey=fingerprint(restoredTitle,restoredBlocks)
   const savedReview=doc.getMap<any>('note-challenge-results').get('state')
+  // Session cost outlives document/tier changes and is restored while automatic
+  // review is still paused. Older private snapshots migrate without granting a
+  // fresh budget merely because their coverage hash no longer matches.
+  s.restoreUsage(doc.getMap('note-challenge-results').get('usage')??{version:1,sessionId,usage:savedReview?.retrySchedule?.usage})
   void restoreChallengeReviewState(savedReview,restoredTitle,restoredBlocks,restoredLevel).then(async restored=>{
    const retry=savedReview?.retrySchedule
    const retryState=retry?.version===1&&savedReview.title===restoredTitle&&savedReview.level===restoredLevel&&retry.level===restoredLevel&&retry.documentHash===await reviewKeyHash(restoredKey)?{...retry,key:restoredKey}:undefined

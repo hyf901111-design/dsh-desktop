@@ -25,6 +25,7 @@ type Usage={at:number;chars:number;input:number;output:number}
 type Supplement={attempts:number;notBefore:number}
 /** Private scheduling state; the controller persists the document key as a hash. */
 export type ChallengeRetryState={version:1;key:string;level:ChallengeLevel;entries:Array<Supplement&{id:string;blocked:boolean}>;usage:Usage[]}
+export type ChallengeUsageState={version:1;sessionId:string;usage:Usage[]}
 const key=(value:{title:string;blocks:ChallengeBlock[]})=>JSON.stringify([value.title,value.blocks])
 const MAX_CHARS=16000,MAX_BLOCK_CHARS=12000,MAX_BLOCKS=24,WINDOW=600000,MAX_SUPPLEMENTS=2
 const researchMetadata=(block:ChallengeBlock)=>['paragraph','heading'].includes(block.type)&&(/\b\d{6}\.(?:SH|SZ|BJ)\b/iu.test(block.text)||/(?:^|[\n。；;])\s*(?:研究标的|股票代码|证券代码|报告基准日|报告发布日期|报告发布日|报告日期|基准日|模型日|预测截止日|一致预期偏离阈值|一致预期统计周期)\s*[:：]?/u.test(block.text))
@@ -83,17 +84,28 @@ export class NoteChallengeScheduler{
  retryState():ChallengeRetryState{
   return{version:1,key:key(this.value),level:this.level,entries:this.value.blocks.flatMap(block=>{const retry=this.supplements.get(block.id);return retry||this.failed.has(block.id)?[{id:block.id,attempts:retry?.attempts??0,notBefore:retry?.notBefore??this.now(),blocked:this.failed.has(block.id)}]:[]}),usage:this.usage.filter(v=>v.at>this.now()-WINDOW).map(v=>({...v}))}
  }
+ usageState():ChallengeUsageState{return{version:1,sessionId:this.options.sessionId,usage:this.usage.filter(v=>v.at>this.now()-WINDOW).map(v=>({...v}))}}
+ restoreUsage(saved:unknown){
+  const ledger=saved as ChallengeUsageState|undefined
+  // Hydrate before editor activation; an old snapshot must never replace usage
+  // already reserved by a resident scheduler. This ledger belongs to the session,
+  // independently of edits, the title and the selected challenge tier.
+  if(this.disposed||this.usage.length||ledger?.version!==1||ledger.sessionId!==this.options.sessionId||!Array.isArray(ledger.usage)||ledger.usage.length>40000)return
+  this.usage=ledger.usage.filter(v=>v&&Number.isFinite(v.at)&&v.at<=this.now()&&v.at>this.now()-WINDOW&&Number.isFinite(v.chars)&&v.chars>0&&v.chars<=40000&&Number.isFinite(v.input)&&v.input>=0&&Number.isFinite(v.output)&&v.output>=0).map(v=>({...v})).sort((a,b)=>a.at-b.at)
+  this.schedule()
+ }
  restoreCoverage(ids:string[],checks:ChallengeCheck[],completeIds:string[]=[],saved?:unknown){
   if(this.disposed)return
   const current=new Set(this.value.blocks.map(b=>b.id)),complete=new Set(completeIds.filter(id=>ids.includes(id))),retry=saved as ChallengeRetryState|undefined
+  // Compatibility with the earlier private snapshot: its cost remains real even
+  // when its exact-body retry allowance no longer applies.
+  if(retry?.version===1)this.restoreUsage({version:1,sessionId:this.options.sessionId,usage:retry.usage})
   if(retry?.version===1&&retry.key===key(this.value)&&retry.level===this.level&&Array.isArray(retry.entries)&&retry.entries.length<=10000){
    for(const entry of retry.entries){
     if(!entry||!current.has(entry.id)||complete.has(entry.id)||!Number.isInteger(entry.attempts)||entry.attempts<0||entry.attempts>MAX_SUPPLEMENTS||!Number.isFinite(entry.notBefore)||typeof entry.blocked!=='boolean')continue
     this.supplements.set(entry.id,{attempts:entry.attempts,notBefore:Math.max(this.now(),Math.min(entry.notBefore,this.now()+this.retryDelay(1)))})
     if(entry.blocked)this.failed.add(entry.id)
    }
-   // Reopening a resident note must not grant a fresh rolling input/output budget.
-   if(!this.usage.length&&Array.isArray(retry.usage)&&retry.usage.length<=40000)this.usage=retry.usage.filter(v=>v&&Number.isFinite(v.at)&&v.at<=this.now()&&v.at>this.now()-WINDOW&&Number.isFinite(v.chars)&&v.chars>0&&v.chars<=40000&&Number.isFinite(v.input)&&v.input>=0&&Number.isFinite(v.output)&&v.output>=0).map(v=>({...v}))
   }
   for(const id of ids){
    if(!current.has(id))continue

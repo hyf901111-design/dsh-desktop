@@ -326,3 +326,14 @@ it('reserves whole metadata before filling ordinary batches without duplicating 
  for(const [request] of run.mock.calls){expect(request.blocks).toEqual(expect.arrayContaining(metadata));expect(request.blocks.length).toBeLessThanOrEqual(24);expect(new Set(request.blocks.map(b=>b.id)).size).toBe(request.blocks.length)}
  expect(s.retryState().usage.map(v=>v.chars)).toEqual(run.mock.calls.map(([request])=>request.blocks.reduce((sum,block)=>sum+block.text.length,0)));s.dispose()
 })
+it('does not restore another session rolling ledger into this note',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>result),s=new NoteChallengeScheduler({sessionId:'other',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:false});s.setLevel(4);s.restoreUsage({version:1,sessionId:'original',usage:[{at:Date.now(),chars:100,input:40000,output:1}]});s.update({title:'',blocks:blocks(),active:true})
+ await vi.advanceTimersByTimeAsync(2000);expect(run).toHaveBeenCalledOnce();s.dispose()
+})
+it('does not replace resident reserved usage with an empty restored ledger after editing',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>({...result,usage:{inputTokens:40000,outputTokens:1}})),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),onState:value=>states.push(value)})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(2000)
+ s.update({title:'',blocks:blocks('新正文不应获得额外额度。'),active:true});s.restoreUsage({version:1,sessionId:'s',usage:[]})
+ await vi.advanceTimersByTimeAsync(120000);expect(run).toHaveBeenCalledOnce();expect(states.at(-1).phase).toBe('limited');expect(s.usageState().usage[0]?.input).toBe(40000);s.dispose()
+})
