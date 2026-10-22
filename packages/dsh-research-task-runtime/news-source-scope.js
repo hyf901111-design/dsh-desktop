@@ -3,6 +3,7 @@
 import {filterScopedNewsArtifact} from './news-topic-filter.js'
 export const NEWS_SCOPE_MARKER='【新闻主题约束】'
 export const NEWS_CAPACITY_MARKER='【新闻容量适配】'
+export const NEWS_DISPLAY_INSTRUCTION='【新闻展示边界】\n原始需求JSON、来源配方与接口参数仅供执行和验证，保留在任务及绑定元信息中；不要复制到note、asOf、摘要、标题或其他可见内容。展示说明只用简短自然语言保留真实来源、实际报道日期与查询范围、未取得的对象及原因、当前刷新状态。检索仅覆盖首页或来源暂不可用时如实披露，不把获取时间当报道时间，不承诺完整区间或最新数据。不要展示source、parameters_json、requests、mapping、intervalMinutes等字段名及内部实现解释；不得以截断或清空原有note掩盖真实缺口，也不删除新闻条目来缩短说明。'
 const broadTitle=/^(?:全市场(?:财经)?(?:新闻|资讯)(?:总流)?|综合财经(?:新闻|资讯)|财经(?:新闻|资讯)?总流|(?:general|market-wide|all-market) (?:financial |finance )?news)$/iu
 const broadRequest=/全市场(?:财经)?(?:新闻|资讯)|综合财经(?:新闻|资讯)|财经(?:新闻|资讯)?总流|\b(?:general|market-wide|all-market) (?:financial |finance )?news\b/iu
 const genericTitle=/^(?:新闻(?:列表)?|资讯(?:列表)?|news)$/iu
@@ -20,7 +21,7 @@ export function generalNewsScope(requirement=''){
 }
 
 export function newsScopeInstruction(scope){
- return `${NEWS_SCOPE_MARKER}\n本卡的主题、实体、时间范围和来源限制以以下宿主原始需求为准：${scope}。本轮originalRequest与本面板规划优先于会话名、笔记标题和旧聊天主题；旧publicData配方的选源不代表用户指定来源，来源限制以originalRequest明确要求为准。先从本卡及父需求提取研究主题、实体全称、别名和英文缩写，再用能携带这些条件的实际来源定向检索；财经、公司与产业主题可用已授权public_data_query的eastmoney-news(query,limit)，跨领域新闻可用gdelt-news(query,limit)，或原需求允许的已授权MCP/网页检索。不要把整句排版要求当检索词。交付前逐条核对标题及实际摘要/正文与这些主题或实体的实质关系，剔除只因“市场、科技、公司、研究”等泛词相同而混入的记录；实体别名或行业实质相关报道可保留，不能只按是否包含卡片标题机械过滤。在已有note中简要说明实际查询条件、匹配依据及缺失；无可核验相关新闻时明确“本次未取得与本卡主题相关的新闻”，保留空列表或缺失状态，不用热门/全市场新闻填充，不扩写未读原文。需要刷新时只绑定本轮成功且保持同一主题/实体条件的请求与映射，不能回退到无条件总流；gdelt的firstSeenAt仅是索引发现时间，不能写成原文发布时间。`
+ return `${NEWS_SCOPE_MARKER}\n本卡的主题、实体、时间范围和来源限制以以下宿主原始需求为准：${scope}。本轮originalRequest与本面板规划优先于会话名、笔记标题和旧聊天主题；旧publicData配方的选源不代表用户指定来源，来源限制以originalRequest明确要求为准。先从本卡及父需求提取研究主题、实体全称、别名和英文缩写，再用能携带这些条件的实际来源定向检索；财经、公司与产业主题可用已授权public_data_query的eastmoney-news(query,limit)，跨领域新闻可用gdelt-news(query,limit)，或原需求允许的已授权MCP/网页检索。不要把整句排版要求当检索词。交付前逐条核对标题及实际摘要/正文与这些主题或实体的实质关系，剔除只因“市场、科技、公司、研究”等泛词相同而混入的记录；实体别名或行业实质相关报道可保留，不能只按是否包含卡片标题机械过滤。在已有note中简要说明实际查询范围及缺失；无可核验相关新闻时明确“本次未取得与本卡主题相关的新闻”，保留空列表或缺失状态，不用热门/全市场新闻填充，不扩写未读原文。需要刷新时只绑定本轮成功且保持同一主题/实体条件的请求与映射，不能回退到无条件总流；gdelt的firstSeenAt仅是索引发现时间，不能写成原文发布时间。\n${NEWS_DISPLAY_INSTRUCTION}`
 }
 
 export function newsSourceScopeIssue(data,records=[],requirement){

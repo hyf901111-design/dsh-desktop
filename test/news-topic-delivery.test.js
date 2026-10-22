@@ -24,6 +24,91 @@ it.each(['eastmoney-news','gdelt-news'])('filters actual %s rows by the human sc
  expect(result.recipe.requests[0].args).toEqual(r.args)
 })
 
+const homonyms=[
+ ['BTC胆道癌药物获得资格（合成样例）','该药用于胆道系统恶性肿瘤，BTC为胆道癌缩写。'],
+ ['FDA designates a biliary tract cancer (BTC) therapy (synthetic)','The report concerns biliary tract carcinoma.'],
+ ['BTC胆管癌研究进展（合成样例）','BTC在此指胆管癌，与加密资产无关。'],
+ ['BTC treatment study (synthetic)','Bile duct cancer (BTC), not about Bitcoin.'],
+ ['苏黎世联邦理工学院（ETH）发布校园计划（合成样例）','ETH学院新增课程，与比特币、以太坊无关。'],
+ ['ETH Zurich opens a laboratory (synthetic)','The university is expanding its research facilities.'],
+ ['ETH Zürich campus news (synthetic)','Swiss Federal Institute of Technology; unrelated to cryptocurrency.'],
+ ['ETH publishes admissions results (synthetic)','Eidgenössische Technische Hochschule announces student admissions.']
+]
+it.each(homonyms)('excludes an explicitly conflicting crypto acronym without substantive crypto evidence: %s', (title,summary)=>{
+ const r=request('gdelt-news','Bitcoin Ethereum'),wrong={...article(title,'homonym',summary),publisher:'Bitcoin Media'}
+ const model=draft(r);model.mapping.note='本次仅取得部分来源；其余研究对象尚缺独立报道，当前为手动快照。'
+ const result=resolveBoundComponent(JSON.stringify(model),[observed(r,[wrong,btc,eth])],new Date(),{newsScope:scope})
+ expect(result.data.items.map(item=>item.title)).toEqual([btc.title,eth.title])
+ expect(result.data.note).toContain(model.mapping.note)
+ expect(result.recipe.requests[0].args).toEqual(r.args)
+})
+it.each([
+ ['ETH Zurich research update (synthetic)','The team studies Ethereum staking and blockchain transaction fees.'],
+ ['苏黎世联邦理工学院（ETH）公布研究结果（合成样例）','研究涉及区块链和链上代币交易机制。'],
+ ['BTC胆道癌慈善项目进展（合成样例）','项目公开了收到的Bitcoin捐款及BTC/USD兑换明细。'],
+ ['BTC clinical study and market report (synthetic)','Biliary tract cancer research appears alongside BTC ETF flow data.'],
+ ['BTC胆道癌慈善活动（合成样例）','基金购入0.4 BTC后转入活动公开的钱包地址。'],
+ ['ETH Zurich donations report (synthetic)','The foundation donated 0.25 ETH for the university project.'],
+ ['ETH Zurich finance study (synthetic)','The analysis includes ETH/USDT futures transactions.'],
+ ['美股收盘：AI与芯片股回暖（合成样例）','公司披露本周购入267枚比特币（BTC）。'],
+ ['高校发布数字经济研究（合成样例）','ETH院校研究中包含以太坊网络升级后的质押活动。'],
+ ['BTC项目报告（合成歧义未决样例）','该片段没有明确给出另一种词义。']
+])('keeps genuine crypto and mixed-domain evidence even without a coin in the headline: %s',(title,summary)=>{
+ const r=request(),row=article(title,'crypto-context',summary)
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[row])],new Date(),{newsScope:scope})
+ expect(result.data.items.map(item=>item.title)).toEqual([title])
+})
+it('does not apply the crypto-only homonym exclusion to an explicitly requested medical or university topic',()=>{
+ for(const [newsScope,row]of [['胆道癌BTC药物相关新闻',article(homonyms[0][0],'medical-scope',homonyms[0][1])],['ETH Zurich院校相关新闻',article(homonyms[5][0],'university-scope',homonyms[5][1])]]){
+  expect(filterScopedNewsArtifact({version:1,type:'news',title:'专题',items:[{...row,date:row.time}]},[],newsScope).items).toHaveLength(1)
+ }
+})
+it.each([
+ '比特币/BTC 与以太坊新闻，排除胆道癌(BTC)和ETH苏黎世联邦理工院校新闻。',
+ '比特币/BTC 与以太坊新闻；排除胆道癌(BTC)，不要ETH Zurich院校新闻。',
+ 'Bitcoin and Ethereum news; exclude biliary tract cancer (BTC), ETH Zurich campus news.',
+ '比特币/BTC 与以太坊新闻；也提及胆道癌(BTC)和ETH Zurich研究，只有涉及加密资产的报道才保留。',
+ '稳定币新闻；同时关注ETH Zurich的相关研究。'
+])('keeps explicit crypto disambiguation active in exclusion and mixed requests: %s',newsScope=>{
+ const r=request('gdelt-news','Bitcoin Ethereum'),wrong=article(homonyms[0][0],'excluded-medical',homonyms[0][1]),university=article(homonyms[5][0],'excluded-university',homonyms[5][1]),mixed=article('ETH Zurich research (synthetic)','mixed-scope','The university studies Ethereum staking and stablecoin transactions.')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[wrong,university,btc,eth,mixed])],new Date(),{newsScope})
+ expect(result.data.items.map(item=>item.title)).toEqual([btc.title,eth.title,mixed.title])
+})
+it('uses an exact observed source excerpt as crypto context and ignores another article identity',()=>{
+ const row=article('ETH Zurich research update (synthetic)','identity','ETH Zurich公布研究进展。'),r=request()
+ const data={version:1,type:'news',title:'加密资产研究',items:[{...row,date:row.time}]}
+ expect(filterScopedNewsArtifact(data,[observed(r,[{...row,summary:'Ethereum staking研究。'}])],scope).items).toHaveLength(1)
+ expect(filterScopedNewsArtifact(data,[observed(r,[{...row,url:'https://example.org/another',summary:'Ethereum staking研究。'}])],scope).items).toHaveLength(0)
+})
+it('applies explicit acronym disambiguation to controlled HTML and aligned large-news table rows',()=>{
+ const wrong=article(homonyms[0][0],'medical',homonyms[0][1]),mixed=article('ETH Zurich blockchain study (synthetic)','mixed','ETH Zurich研究Ethereum网络。'),r=request()
+ const requirement=scope+'\n【新闻容量适配】',html=filterScopedNewsArtifact({version:1,type:'html',title:'专题',html:'<p>模型内容</p>'},[observed(r,[wrong,btc,mixed])],requirement)
+ expect(html.html).not.toContain(wrong.title);expect(html.html).toContain(btc.title);expect(html.html).toContain(mixed.title)
+ const table=filterScopedNewsArtifact({version:1,type:'table',title:'专题',columns:['标题','摘要'],rows:[[wrong.title,wrong.summary],[btc.title,btc.summary],[mixed.title,mixed.summary]],rowLinks:[wrong.url,btc.url,mixed.url]},[],requirement)
+ expect(table.rows).toEqual([[btc.title,btc.summary],[mixed.title,mixed.summary]]);expect(table.rowLinks).toEqual([btc.url,mixed.url])
+})
+it('rechecks acronym meaning on refresh without changing the recipe or discarding the saved gap disclosure',async()=>{
+ const r=request(),model=draft(r);model.mapping.note='另一指定来源仍未取得；当前仅展示本次可核验记录。'
+ const initial=resolveBoundComponent(JSON.stringify(model),[observed(r,[btc])],new Date(),{newsScope:scope})
+ const wrong=article(homonyms[0][0],'refresh-medical',homonyms[0][1]);let spec=JSON.parse(initial.output),saved=[]
+ const service=new ComponentDataRefresh({owner:()=> 'o',load:async()=>saved,save:async value=>{saved=structuredClone(value)},validateRequest:async value=>value,execute:async()=>({sourceId:r.args.source,records:[wrong,eth]}),inspect:async()=>({spec,writable:true,revision:'r'}),apply:async(_b,_rev,value)=>{spec=value}})
+ try{await service.load();const binding=await service.bind({sessionId:'s',nodeId:'n',workspaceId:'w',...initial.recipe});await service.refresh(binding.id)
+  const updated=readTemplateModel(spec).data;expect(updated.items.map(item=>item.title)).toEqual([eth.title]);expect(updated.note).toContain(model.mapping.note);expect(saved[0].newsScope).toBe(scope)
+ }finally{await service.dispose()}
+})
+it('removes explicit acronym conflicts from a completed static news task while retaining mixed research evidence',async()=>{
+ const r=request(),wrong=article(homonyms[0][0],'runtime-medical',homonyms[0][1]),university=article(homonyms[5][0],'runtime-university',homonyms[5][1]),mixed=article('ETH Zurich research (synthetic)','runtime-mixed','ETH Zurich研究Ethereum质押机制。')
+ const rows=[wrong,university,btc,mixed],data={version:1,type:'news',title:'加密资产专题',note:'仅覆盖合成来源记录，另一指定来源缺失；当前为手动快照。',items:rows.map(row=>({...row,date:row.time}))}
+ const adapter={start:vi.fn(async()=>({childSessionId:'crypto-acronym-fixture',result:Promise.resolve({stopReason:'completed',sourceRecords:[observed(r,rows)],output:[{type:'text',text:JSON.stringify(data)}]}),dispose:async()=>{}}))}
+ const runtime=new ResearchTaskRuntime({adapter,storage:{save:async()=>{}}})
+ try{
+  const receipt=await runtime.start({parentSessionId:'p',canvasNodeId:'n',kind:'container',prompt:scope+'\n仅生成本面板，优先使用 news 类型。'});await runtime.tasks.get(receipt.taskId).runPromise
+  const result=runtime.inspect({parentSessionId:'p',taskId:receipt.taskId});expect(result.state,result.error).toBe('completed')
+  const saved=readTemplateModel(JSON.parse(result.finalOutput)).data
+  expect(saved.items.map(item=>item.title)).toEqual([btc.title,mixed.title]);expect(saved.note).toContain(data.note)
+ }finally{await runtime.dispose()}
+})
+
 it('delivers a real empty news state when the source has no matching articles',()=>{
  const r=request('eastmoney-news','银行'),result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[bank])],new Date(),{newsScope:scope})
  expect(result.data.items).toEqual([])

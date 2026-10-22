@@ -77,6 +77,24 @@ export function newsTopicTerms(requirement){
  return unique([...entities,...known.flat(),...terms]).filter(term=>!inherited.has(term.toLocaleLowerCase())&&term.length>=2&&term.length<=64).slice(0,48)
 }
 const related=(value,terms)=>terms.some(term=>contains(value,term))
+// A ticker alone is ambiguous. Exclude only explicitly identified alternate
+// meanings, never a research institution's genuine crypto research or a mixed
+// medical/crypto article. The source title and readable evidence decide this;
+// provider names, URLs and the model's selected search query do not.
+const cryptoNames='(?:比特币|以太坊|以太币|加密(?:货币|资产|市场|行业)|数字资产|稳定币|区块链|\\b(?:bitcoin|ethereum|cryptocurrenc(?:y|ies)|crypto|blockchain|stablecoins?)\\b)'
+const cryptoEvidence=new RegExp(cryptoNames+'|链上|币价|代币|挖矿|质押|\\b(?:BTC|XBT|ETH)\\s*[/:-]?\\s*(?:USDT|USDC|USD|EUR)\\b|\\b(?:BTC|XBT|ETH)\\s+(?:ETF|staking|futures)\\b|(?:捐赠|捐款|支付|转账|买入|购入|卖出|持仓|持有|\\b(?:donat\\w*|purchas\\w*|bought|sold|paid|holdings?)\\b)[^。；;\\n]{0,24}\\d+(?:[.,]\\d+)*\\s*枚?\\s*(?:BTC|XBT|ETH)\\b','iu')
+const negatedCryptoEvidence=new RegExp('(?:与|跟|和)?'+cryptoNames+'(?:[、/或和与\\s]+'+cryptoNames+')*\\s*(?:无关|不相关|没有关系)|(?:不是|并非|不指|不代表|不涉及|非)\\s*'+cryptoNames+'|\\b(?:unrelated\\s+to|not\\s+(?:(?:about|related\\s+to|a|an)\\s+)?|no\\s+relation\\s+to|nothing\\s+to\\s+do\\s+with)\\s*'+cryptoNames,'giu')
+const substantiveCrypto=value=>cryptoEvidence.test(value.replace(negatedCryptoEvidence,' '))
+function explicitCryptoHomonym(value){
+ return contains(value,'btc')&&/(?:胆道癌|胆管癌|胆道(?:系统)?(?:恶性)?肿瘤|\bbiliary[\s-]+tract[\s-]+(?:cancers?|carcinomas?)\b|\bbile[\s-]+duct[\s-]+cancers?\b)/iu.test(value)
+  ||contains(value,'eth')&&/(?:苏黎世联邦理工(?:学院|大学)?|\bETH[\s-]+(?:Z[üu]rich|Zuerich)\b|\bSwiss Federal Institute of Technology\b|\bEidgenössische Technische Hochschule\b)/iu.test(value)
+}
+function newsMatcher(terms,requirement){
+ // Alternate meanings in exclusions or a mixed request must not disable an
+ // explicit crypto scope. Only an alternate-meaning-only request opts out.
+ const human=newsHumanScope(requirement),cryptoScope=terms.some(term=>aliases.slice(0,3).some(group=>group.includes(term.toLocaleLowerCase())))&&(!explicitCryptoHomonym(human)||substantiveCrypto(human))
+ return value=>related(value,terms)&&(!cryptoScope||!explicitCryptoHomonym(value)||substantiveCrypto(value))
+}
 const textOf=item=>[item?.title,item?.summary,item?.content,...(Array.isArray(item?.excerpts)?item.excerpts:[])].filter(v=>typeof v==='string').join(' ')
 const esc=value=>String(value??'').replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const safeUrl=value=>{try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:null}catch{return null}}
@@ -100,22 +118,22 @@ export function controlledNewsHtml(title,items,empty=NEWS_EMPTY_NOTE){
 /** Filtering never treats a provider's search response as proof of relevance. */
 export function filterScopedNewsArtifact(data,records=[],requirement='',{general=false}={}){
  if(!isScopedNews(data,requirement)||general)return data
- const terms=newsTopicTerms(requirement)
+ const terms=newsTopicTerms(requirement),matches=newsMatcher(terms,requirement)
  if(data.type==='html'){
   // Never execute or surgically patch model scripts. Rebuild this news-only
   // capacity route from actual source rows into a small host-owned reading UI.
   // Use all actual source rows: an incomplete model page cannot truncate a
   // second retrieved company or the final page. Model HTML supplies no data.
-  const kept=sourceRows(records).filter(row=>related(textOf(row),terms)),seen=new Set()
+  const kept=sourceRows(records).filter(row=>matches(textOf(row))),seen=new Set()
   return controlledNewsHtml(data.title,kept.filter(row=>{const address=safeUrl(row.url),key=JSON.stringify(address?[address,row.title]:[row.title,row.date??row.time??'',row.publisher??'',row.id??row.articleId??'']);if(seen.has(key))return false;seen.add(key);return true}))
  }
  if(data.type==='news'&&Array.isArray(data.items)){
   const sources=sourceRows(records)
-  const items=data.items.filter(item=>related(textOf(item)+' '+textOf(sources.find(row=>safeUrl(item.url)&&safeUrl(row.url)===safeUrl(item.url)&&row.title===item.title)),terms)),removed=data.items.length-items.length
+  const items=data.items.filter(item=>matches(textOf(item)+' '+textOf(sources.find(row=>safeUrl(item.url)&&safeUrl(row.url)===safeUrl(item.url)&&row.title===item.title)))),removed=data.items.length-items.length
   return {...data,items,note:items.length?note(data.note,removed)||undefined:NEWS_EMPTY_NOTE}
  }
  if(Array.isArray(data.rows)){
-  const selected=data.rows.flatMap((row,i)=>related(row.map(cell=>String(cell??'')).join(' '),terms)?[i]:[]),rows=selected.map(i=>data.rows[i])
+  const selected=data.rows.flatMap((row,i)=>matches(row.map(cell=>String(cell??'')).join(' '))?[i]:[]),rows=selected.map(i=>data.rows[i])
   const aligned=Object.fromEntries(['rowLinks','tones'].filter(key=>Array.isArray(data[key])&&data[key].length===data.rows.length).map(key=>[key,selected.map(i=>data[key][i])]))
   return {...data,...aligned,rows,note:rows.length?note(data.note,data.rows.length-rows.length)||undefined:NEWS_EMPTY_NOTE}
  }
