@@ -621,7 +621,7 @@ it('shows a flowing perimeter only during work, keeps picker geometry and clicks
   for(const dark of [false,true]){
    await page.locator('.en-root').evaluate((el,dark)=>el.dataset.dark=String(dark),dark)
    await expect.poll(()=>trigger.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(dark?'rgb(44, 44, 44)':'rgb(233, 233, 233)')
-   const first=await perimeter();expect(first.animation).toBe('en-challenge-orbit');expect(first.pointerEvents).toBe('none');expect(first.mask).toContain('exclude');expect(first.background).toContain('conic-gradient')
+   const first=await perimeter();expect(first.animation).toBe('en-challenge-orbit');expect(first.pointerEvents).toBe('none');expect(first.mask).toContain('exclude');expect(first.background).toContain('conic-gradient');expect(first.background).toContain('rgba(0, 0, 0, 0)');expect(first.background).toContain(dark?'255, 255, 255':'84, 103, 130')
    await expect.poll(async()=>(await perimeter()).angle).not.toBe(first.angle)
    expect(await trigger.boundingBox()).toEqual(before)
    await trigger.click();await page.getByRole('slider',{name:'挑战强度'}).waitFor();await page.keyboard.press('Escape')
@@ -671,5 +671,48 @@ it('releases a visible picker pause when the native header retargets its portal'
   await page.evaluate(()=>{document.querySelector('#slot-a').dataset.enChallengeTools='other';document.querySelector('#slot-b').dataset.enChallengeTools='note-a'})
   await page.locator('#slot-b .en-challenge-trigger').waitFor();await page.clock.fastForward(1)
   await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1);expect(await page.locator('.en-challenge-popover').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+async function applyTrackedReplacement(page,replacement='这项结论的程度较高。'){
+ await page.locator('.bn-editor [data-bn-thread-id]').first().click();await start(page,'optimize');await finish(page,{...answer,reply:{text:'修正错别字。',replacement}})
+ await page.getByRole('button',{name:'替换到原文',exact:true}).click();await page.locator('.en-replacement-mark').waitFor();return replacement
+}
+it('highlights only changed text, opens an original/replacement comparison, and restores only its own scope',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.getByRole('textbox',{name:'回复AI挑战'}).fill('保留未发送的原讨论草稿')
+  const replacement=await applyTrackedReplacement(page),mark=page.locator('.en-replacement-mark');expect(await mark.textContent()).toBe('程')
+  await mark.click();const popup=page.getByRole('dialog',{name:'替换对照'});await popup.waitFor();expect(await popup.locator('[data-replacement-before]').textContent()).toBe(original);expect(await popup.locator('[data-replacement-after]').textContent()).toBe(replacement)
+  const bounds=await popup.boundingBox(),area=await page.locator('.en-main').boundingBox();expect(bounds.y).toBeGreaterThanOrEqual(area.y);expect(bounds.y+bounds.height).toBeLessThanOrEqual(area.y+area.height)
+  await page.evaluate(()=>window.editor.updateBlock('p',{content:'新补充的前言。'+window.editor.getBlock('p').content.map(c=>c.text||'').join('')+'段后新增说明。'}))
+  await page.locator('.en-replacement-mark').click();await popup.getByRole('button',{name:'取消替换',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('新补充的前言。'+original+'段后新增说明。')
+  expect(await page.locator('.en-replacement-mark').count()).toBe(0);expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('metadata').draft,id)).toBe('保留未发送的原讨论草稿')
+  await page.locator('.bn-editor [data-bn-thread-id]').first().click();await expect.poll(()=>page.getByRole('button',{name:'已取消替换',exact:true}).count()).toBe(1);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('retains replacement reviews across remount and resolves their highlight without changing the applied text',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  const replacement=await applyTrackedReplacement(page);await expect.poll(()=>page.evaluate(()=>!!window.saved['note-a']?.yjs)).toBe(true)
+  await page.waitForTimeout(850);await page.evaluate(()=>window.remount());await page.locator('.en-replacement-mark').waitFor();await page.locator('.en-replacement-mark').click()
+  const popup=page.getByRole('dialog',{name:'替换对照'});await popup.getByRole('button',{name:'已解决',exact:true}).click()
+  await expect.poll(()=>page.locator('.en-replacement-mark').count()).toBe(0);expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(replacement)
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('tracks direct requested replacements and hides/reappears with native undo and redo',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await start(page,'reply','直接替换到原文');const replacement='这项结论的程度较高。';await finish(page,{...answer,reply:{text:'已按要求修正。',replacement}})
+  await expect.poll(()=>page.evaluate(()=>({body:window.editor.getBlock('p').content.map(c=>c.text||'').join(''),records:window.noteDoc.getMap('note-replacement-reviews').size,messages:window.messages()}))).toMatchObject({body:replacement,records:1});await page.locator('.en-replacement-mark').waitFor();await page.locator('.bn-editor').focus();await page.keyboard.press('Meta+z');await expect.poll(()=>page.locator('.en-replacement-mark').count()).toBe(0)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
+  await page.keyboard.press('Meta+Shift+z');await page.locator('.en-replacement-mark').waitFor();await page.locator('.en-replacement-mark').click()
+  expect(await page.locator('[data-replacement-after]').textContent()).toBe(replacement);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('refuses a stale targeted restore after the user edits the applied sentence and still allows resolving its review',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await applyTrackedReplacement(page);await page.locator('.en-replacement-mark').click();const popup=page.getByRole('dialog',{name:'替换对照'})
+  await page.evaluate(()=>window.editor.updateBlock('p',{content:'这项结论的评估程度有所提升。'}));await expect.poll(()=>popup.getByRole('button',{name:'取消替换',exact:true}).isDisabled()).toBe(true)
+  expect(await popup.textContent()).toContain('已再次编辑');await popup.getByRole('button',{name:'已解决',exact:true}).click();expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('这项结论的评估程度有所提升。');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
