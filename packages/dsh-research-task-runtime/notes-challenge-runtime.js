@@ -61,6 +61,7 @@ payload.title仅提供主题、实体与文体背景，不是本轮待检查正�
 每个targets正文块都要单独检查。reviews使用对应target.reviewKey作为返回身份，逐字复制，不使用target.id或context.id代替，不改写或推导键。target.id和context.id仍是原文依据evidence.blockId使用的真实段落ID，reviewKey不能作为依据ID。以普通陈述为准，结合上下文识别明显的笔误、内部矛盾、逻辑错误和通用常识冲突；未完句、明确的比喻、童话、反事实假设、引用作为反驳的错误，以及已经改正的内容不要凑问题。正确句子不能因为可能使人误会而标错。必须完整阅读否定、时间先后及条件限定，不能遗漏否定词或将已有澄清误当成矛盾。输出前排除自我否定的候选：如果你的说明承认原文正确、与通用说法相符，只想补步骤、细化范围或防止可能误解，就不要输出这条常识冲突；没有实际冲突时该块issues为空。
 所有开启档位共享同一事实检查底线：逐句检查全部明确的事实、数字计算、内部矛盾和常识冲突，包括各段后半段；宽松不是少找明显错误，不能因为一段已经找到一两处就停止。level1宽松只减少轻微表达建议和推测性追问，仍须列出全部独立的明显错误；level2增加明确的表达与逻辑问题；level3深入检查证据、前提与推理缺口；level4在上述基础上增加有价值的反例或追问，反例须标成疑问。等级不改变明显错误的检查范围和保留名额。转述但未被反驳、并作为事实继续推论的陈述仍需检查，不能因为局部拟人或童话意象把整篇普通陈述豁免。先遍历全部段落并识别实际问题，正确或没有具体问题的段落issues保持为空；只在存在实际问题的段落之间，先各取最重要的一项，再逐轮补充第二、第三项等，不能要求每段都有问题。数量遵守payload.issueLimits的perBlock与total上限，不为填满上限凑问题。明显事实冲突、内部矛盾与健康安全问题优先于可选的表达建议和反例。紧邻且同一机制的关联问题可合为一条，不同机制分别引用最短且唯一的对应原文；每条说明尽量不超过60字，不重复、不整段包围。
 没有实际来源的常识冲突只是模型筛查，不能断言已核实：basis用general-knowledge，category用uncertain，message用一句短的核对问题表达，明确指出原文与哪项通用知识冲突，不编造evidence。仅仅没有联网核验、缺少来源，或把原文改写成“是否如此、建议核对”的疑问，均不构成常识冲突；无法指出具体冲突时不要输出该条。原文可直接证明的内部矛盾或推理错误用basis为note，evidence引用真实原文。只能引用提供的targets/context，quote应是所在块唯一出现的精确短句。
+证券年度盈利预测与一致预期的数值比对由宿主infodb专项完成，不使用记忆中的公司股本、行情或历史业绩推断预测有误，也不把预测分歧当事实错误。若正文明确给出股本等计算依据，仍可检查内部算术，但须引用该正文依据；其他独立的事实与逻辑问题照常检查。
 原文依据evidence必须是数组，最多4项。每项严格使用{"kind":"note","label":"原文对照","blockId":"依据所在targets或context块的id","quote":"该块中精确且唯一出现的原文"}；四个字段均须提供，不使用text、source等别名，不用字符串代替对象。正文中可定位的事实陈述、前提、条件限定与结论均可作为依据；原文之间存在可具体说明的矛盾或推理缺口时，可以引用这些真实原句提问，不依赖外部检索。不能为了填依据而捏造原文或引用无法定位的改写。general-knowledge的evidence仍须为空。
 结构：{"reviews":[{"reviewKey":"每个target的reviewKey","issues":[{"quote":"精确原文","category":"typo|grammar|contradiction|logic|question|uncertain","basis":"note|general-knowledge","message":"短问题或说明","evidence":[]}]}]}。每个target恰好一项reviews，无问题时issues为空。每项reviews只含reviewKey与issues，不能再放blockId。JSON字段键必须逐字使用上述英文键名，不翻译键名；正文说明可以使用中文。`
 
@@ -111,7 +112,19 @@ function reviewEntries(value, targets) {
   return reviewed
 }
 
-function issuesFrom(value, targets, available, limits) {
+function unverifiedForecastQuote(quote,target,claims) {
+  const start=target.text.indexOf(quote),end=start+quote.length
+  for(const sentence of target.text.matchAll(/[^。；;\n]+[。；;\n]?/gu)) {
+    if(start<sentence.index||end>sentence.index+sentence[0].length)continue
+    for(const claim of claims)if(claim.blockId===target.id){
+      const at=target.text.indexOf(claim.quote)
+      if(at>=sentence.index&&at+claim.quote.length<=sentence.index+sentence[0].length&&start<at+claim.quote.length&&end>at)return true
+    }
+  }
+  return false
+}
+
+function issuesFrom(value, targets, available, limits, forecastClaims=[]) {
   const result = [], reviewed = reviewEntries(value, targets), byId = new Map(available.map(block => [block.id, block]))
   for (const target of targets) {
     const seen = new Set(), accepted = []
@@ -127,6 +140,10 @@ function issuesFrom(value, targets, available, limits) {
       const generalKnowledge = item.basis === 'general-knowledge' || unsupportedReasoning
       if (!generalKnowledge && item.basis !== 'note') continue
       if (generalKnowledge && sources.length) continue
+      // Securities forecasts require acquired data; model memory must not
+      // manufacture a competing capital basis or earnings snapshot. Keep
+      // actual note evidence and independent issues outside the forecast span.
+      if (generalKnowledge && unverifiedForecastQuote(item.quote,target,forecastClaims)) continue
       if (generalKnowledge && acknowledgesNoConflict(item.message)) continue
       if (item.category === 'grammar') {
         const completeEnd = [...target.text.matchAll(/[。！？.!?；;]/gu)].at(-1)?.index ?? -1
@@ -325,6 +342,7 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
 
 async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt = Infinity) {
   const { batches, total } = batchesFor(input), issueLimits = REVIEW_ISSUE_LIMITS, result = { version: 1, issues: [], coveredBlockIds: [], checks: [] }
+  const forecastClaims=input.action==='review'?extractConsensusClaims(input.blocks):[]
   if (!batches.length) return { ...result, checks: [{ kind: 'review', status: 'skipped', detail: '本次没有待审查的正文变化。' }] }
   const response = await abortable(ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } }), signal)
   const route = response?.result?.value?.current
@@ -357,7 +375,7 @@ async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt 
       const existingAnchors = input.action === 'review' ? challengeReviewAnchors(input.existingAnchors ?? [], targets) : []
       const generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits, ...existingAnchors.length ? { existingAnchors } : {} } : {}, ...thread ? { thread, allowReplacement } : {} }, modelBudget.signal, reasoningEffort, input.action === 'review' ? targets : undefined, input.requestId, usage)
       if (input.action === 'review') {
-        const reviewed = issuesFrom(generated.value, targets, available, issueLimits)
+        const reviewed = issuesFrom(generated.value, targets, available, issueLimits,forecastClaims)
         if (!reviewed.issues.length) {
           const stats = filteredReviewStats(generated.value, targets)
           if (stats.candidates) diagnostic(input.requestId, { event: 'notes-challenge-review-filtered', ...stats, accepted: 0 })
@@ -404,7 +422,7 @@ async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt 
   if (input.action === 'review') {
     const covered = new Set(result.coveredBlockIds)
     // The bounded context can supply explicit code/date headers, but never adds uncovered forecast targets.
-    const claims = extractConsensusClaims(input.blocks).filter(claim => covered.has(claim.blockId))
+    const claims = forecastClaims.filter(claim => covered.has(claim.blockId))
     if (claims.length) {
       const consensus = await reviewNoteConsensus(ctx, { sessionId: input.sessionId, blocks: input.blocks, targetBlockIds: result.coveredBlockIds }, signal)
       result.issues.push(...consensus.issues.filter(issue => covered.has(issue.blockId)))
