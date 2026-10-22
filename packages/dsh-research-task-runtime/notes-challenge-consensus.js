@@ -24,6 +24,13 @@ const explicitForecastHint = text => /预计|预测|forecast|\b\d{2,4}E\b/iu.tes
 const forecastHint = text => explicitForecastHint(text)||/\bFY\s*20\d{2}/iu.test(text)
 const annualYears = text => distinct([...text.replace(labelledDate,'').matchAll(/(?:\bFY\s*)?(20\d{2})\s*(?:年(?:度|报)?|[eE]\b)|\bFY\s*(20\d{2})\b|\b(\d{2})E\b/giu)].map(match => Number(match[1] ?? match[2] ?? ('20' + match[3]))))
 
+// Share the exact year scopes with the completion check. A second forecast
+// clause without its own metric must not inherit the first clause's receipt.
+export function consensusForecastScopes(sentence) {
+  const fragments=annualYears(sentence).length>1?sentence.split(/，|(?<!\d),|,(?!\d)/u).filter(fragment=>explicitForecastHint(fragment)&&!/实际|已实现|已披露|已公布|已发布|非预测|不是预测|\b(?:actual|realized|historical|reported|not\s+(?:a\s+)?forecast)\b/iu.test(fragment)):[sentence]
+  return fragments.map(text=>({text,years:annualYears(text)}))
+}
+
 /** Conservative parsing: names, missing units, ambiguous years and multi-ticker inheritance do not become claims. */
 export function extractConsensusClaims(blocks) {
   const allText = blocks.map(block => block.text).join('\n'), globalCodes = codes(allText), globalDates = dates(allText), claims = []
@@ -40,9 +47,7 @@ export function extractConsensusClaims(blocks) {
       // Several explicitly forecast clauses may describe adjacent years. Keep
       // each local year/metric together; a bare historical clause cannot borrow
       // the preceding forecast verb. Commas inside numeric values stay intact.
-      const fragments=annualYears(sentence).length>1?sentence.split(/，|(?<!\d),|,(?!\d)/u).filter(fragment=>explicitForecastHint(fragment)&&!/实际|已实现|已披露|已公布|已发布|非预测|不是预测|\b(?:actual|realized|historical|reported|not\s+(?:a\s+)?forecast)\b/iu.test(fragment)):[sentence]
-      for(const fragment of fragments){
-      const years=annualYears(fragment)
+      for(const {text:fragment,years} of consensusForecastScopes(sentence)){
       if(years.length!==1)continue
       const metricPattern = /(EPS|每股收益|归母净利润|归属于母公司(?:股东)?的?净利润|主营业务收入|主营收入|营业总收入|营业收入)\s*(?:预测)?\s*(?:为|达|至|约为|约|预计|[:：=])?\s*([+-]?\d+(?:,\d{3})*(?:\.\d+)?)\s*(亿元|万元|千元|元(?:\/股)?)/giu
       let previousMetricEnd=0
