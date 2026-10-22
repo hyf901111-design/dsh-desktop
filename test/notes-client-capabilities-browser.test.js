@@ -6,7 +6,7 @@ let browser,script,css
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:repo,loader:'tsx',contents:`
 import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';
-import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
+import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';import {createNotesActivityStore} from './scripts/lib/notes-activity.mjs';window.noteActivity=createNotesActivityStore(document);
 window.calls=[];window.receipts=[];window.reviewJobs=[];window.saved=null;window.effects=[];window.failCreate=false;window.stageEffects=[];window.saveAttempts=0;const pending=new Map();
 const bridge={request:async(method,input)=>{window.calls.push({method,input});
  if(method==='load')return {saved:{title:'组合验收',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留我的富文本正文',styles:{bold:true}}]}],yjs:'',revision:0,updatedAt:0}};
@@ -22,6 +22,7 @@ const bridge={request:async(method,input)=>{window.calls.push({method,input});
   window.ordinaryInput=input;
   const invoke=(action,args)=>new Promise((resolve,reject)=>{const requestId='cap-'+(window.receipts.length+1);pending.set(requestId,{resolve,reject});document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{requestId,generationId:input.requestId,sessionId:input.sessionId,context:{...input.capabilityContext,owner:'alice',mode:'notes',editable:true},action,args}}))});
   const commands=window.capabilityCommands||[['notes.components.create',{prompt:'创建展示42的表格',requestContext:{images:input.images,context:input.context,title:input.title,markdown:input.markdown,selection:input.selection}}],['notes.components.style',{scope:'note',theme:'enterprise',titleBar:false,frame:false}],['notes.export',{format:'pdf'}]];for(const [action,args] of commands){const receipt=await invoke(action,args);window.receipts.push(receipt);if(receipt.status!=='succeeded')break}
+  if(window.holdOrdinaryFinal)await new Promise(resolve=>{window.finishOrdinaryFinal=resolve});
   return{kind:'conversation',markdown:'操作回执已确认'}
  }
  return{}},draft:async()=>{}};
@@ -69,6 +70,34 @@ it('routes creation through the generic composer and waits before persistent the
 it('keeps a requested clarification in the component and does not export it as a completed result',async()=>{
  const {context,page,errors}=await fixture()
  try{await page.evaluate(()=>{window.failCreate=true;document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'创建表格并导出PDF',images:[]}}))});await page.waitForFunction(()=>typeof window.completeCard==='function');await page.evaluate(()=>window.completeCard());await page.waitForFunction(()=>window.receipts.length===1);expect(await page.evaluate(()=>window.receipts[0].status)).toBe('pending');expect(await page.evaluate(()=>window.effects)).toEqual([]);expect(await page.locator('.en-document').innerText()).toContain('保留我的富文本正文');expect(errors).toEqual([])}finally{await context.close()}
+},15000)
+
+it('keeps actual receipt progress bound to the active request without clearing live model reasoning',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>{
+   window.holdOrdinaryFinal=true;window.capabilityCommands=[['notes.blocks.align',{scope:'note',target:'paragraphs',alignment:'center'}]]
+   document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'将笔记正文居中',images:[]}}))
+  })
+  await page.waitForFunction(()=>typeof window.finishOrdinaryFinal==='function')
+  const row=await page.evaluate(()=>{
+   const requestId=window.ordinaryInput.requestId
+   const send=detail=>document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail}))
+   send({sessionId:'composed',requestId,stage:'thinking',reasoning:'实际说明仍在生成',outputChars:0})
+   send({sessionId:'composed',requestId,capabilityProgress:window.receipts.map(receipt=>({...receipt,capability:'notes.blocks.align'}))})
+   send({sessionId:'another-note',requestId,capabilityProgress:[{status:'failed',message:'不属于当前笔记'}]})
+   send({sessionId:'composed',requestId:'stale-request',reasoning:'不属于当前请求',capabilityProgress:[]})
+   return window.noteActivity.snapshot('composed').find(row=>row.requestId===requestId)
+  })
+  expect(row).toMatchObject({phase:'generating',stage:'thinking',reasoning:'实际说明仍在生成',capabilityProgress:[{capability:'notes.blocks.align',status:'succeeded',effect:{state:'saved',kind:'alignment'}}]})
+  expect(await page.evaluate(()=>window.noteActivity.snapshot('another-note'))).toEqual([])
+  await page.evaluate(()=>window.finishOrdinaryFinal())
+  await expect.poll(()=>page.evaluate(()=>window.noteActivity.snapshot('composed')[0]?.phase)).toBe('replied')
+  const before=await page.evaluate(()=>JSON.stringify(window.noteActivity.snapshot('composed')))
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:{sessionId:'composed',requestId:window.ordinaryInput.requestId,capabilityProgress:[{status:'failed',message:'过期结果'}]}})))
+  expect(await page.evaluate(()=>JSON.stringify(window.noteActivity.snapshot('composed')))).toBe(before)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
 },15000)
 
 it.each(['conflict','exception'])('retains only applied creation after a real editor %s save failure and cancellation',async(saveFailure)=>{

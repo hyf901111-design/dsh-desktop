@@ -1,10 +1,11 @@
-import {expect,it} from 'vitest'
+import {expect,it,vi} from 'vitest'
 import {createNotesActivityStore} from '../scripts/lib/notes-activity.mjs'
 import React from 'react'
 import {renderToStaticMarkup} from 'react-dom/server'
 import {readFile} from 'node:fs/promises'
 import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 import {patchFigmaFinalConversation} from '../scripts/lib/patch-figma-final-shell.mjs'
+import {capabilityReceiptText} from '../packages/dsh-research-task-runtime/client-capabilities.js'
 
 it('retains note reference chips when the production shell patch runs again during a rebuild',async()=>{
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
@@ -47,4 +48,30 @@ it('merges replayed durable notes with current task state and native message ord
  const flow=mergeNoteConversationFlow([{kind:'node',key:'user'},{kind:'execution',nodeKeys:['assistant'],key:'answer'}],new Map([['user',{anchorSeq:1}],['assistant',{anchorSeq:6}]]),store.snapshot('s'))
  expect(flow.map(e=>e.key)).toEqual(['user','note:first','answer','note:new'])
  expect(flow.find(e=>e.key==='note:first').row.result.markdown).toBe('已采纳正文');store.dispose()
+})
+
+it('shows completed host actions while the model is still thinking, keeps their effects on stop, and avoids a second final receipt',async()=>{
+ const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs')
+ vi.stubGlobal('react',React);vi.stubGlobal('eworkNoteCapabilityReceiptText',capabilityReceiptText)
+ vi.stubGlobal('document',{documentElement:{dataset:{odysseyLocale:'en'}}})
+ const doc=new EventTarget(),store=createNotesActivityStore(doc)
+ const send=(phase,extra={})=>doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'a',requestId:'r',phase,...extra}}))
+ const props={t:key=>key,UserBubble:()=>null,Progress:({entry})=>React.createElement('div',{'data-running':entry.running},entry.noteTask.status),Markdown:({blocks})=>React.createElement('div',null,blocks.map(b=>b.text).join('\n'))}
+ const render=()=>renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:store.snapshot('a')[0]}))
+ const receipt={requestId:'style',capability:'notes.components.style',status:'succeeded',message:'已保存 1 个组件的样式。',effect:{state:'saved',changedBlockIds:['r']},data:{internal:'not-for-display'}}
+ try{
+  send('preparing',{prompt:'保存样式后导出'})
+  send('generating',{capabilityProgress:[receipt]})
+  send('generating',{stage:'thinking',reasoning:'actual model reasoning'})
+  const running=render()
+  expect(running).toContain('data-note-client-progress');expect(running).toContain('Component style: Completed')
+  expect(running).toContain('Saved styles for 1 components.');expect(running).not.toContain('data-note-feedback=')
+  expect(running).not.toMatch(/not-for-display|正在分析内容与修改要求|已用时/)
+  send('stopped');expect(render()).toContain('Saved styles for 1 components.')
+  send('replied',{result:{kind:'conversation',markdown:'untrusted model completion',capabilityReceipts:[receipt]}})
+  const final=render()
+  expect(final).not.toContain('data-note-client-progress');expect(final.split('Component style: Completed')).toHaveLength(2)
+  expect(final).not.toContain('untrusted model completion')
+  doc.dispatchEvent(new Event('sherlock:notes-reset'));expect(store.snapshot('a')).toEqual([])
+ }finally{store.dispose();vi.unstubAllGlobals()}
 })

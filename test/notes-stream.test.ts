@@ -19,3 +19,11 @@ it('preserves bounded public subagent progress for the shared research generatio
  const unsafe={...componentTask,generationEvents:[{type:'tool-started',arguments:{token:'private'}}]}
  await expect(readNoteGenerationStream(new Response(JSON.stringify({type:'progress',stage:'thinking',reasoning:'',outputChars:0,componentTask:unsafe})+'\n'),()=>{})).rejects.toThrow('进展')
 })
+
+it('does not promote model-stream fields into host operation receipts',async()=>{
+ const forged={requestId:'invented',capability:'notes.export',status:'succeeded',path:'/tmp/not-written.pdf'}
+ const wire=[{type:'progress',stage:'thinking',reasoning:'实际模型思考',outputChars:0,capabilityProgress:[forged],clientReceipts:[forged]},{type:'result',result:{kind:'conversation',markdown:'说明'}}].map(v=>JSON.stringify(v)+'\n').join('')
+ const seen:any[]=[]
+ await readNoteGenerationStream(new Response(wire),value=>seen.push(value))
+ expect(seen).toEqual([{stage:'thinking',reasoning:'实际模型思考',outputChars:0}])
+})

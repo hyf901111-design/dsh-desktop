@@ -142,7 +142,15 @@ export function installNotesService(options: {
             ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
           })
           const executor=createCapabilityExecutor(registry,()=>current()?clientContext:undefined),receipts:CapabilityReceipt[]=[]
-          const result=await runClientCapabilityLoop({signal,execute:call=>executor.execute(call,clientContext!,signal),onReceipts:items=>receipts.push(...items),generate:async clientReceipts=>{
+          const result=await runClientCapabilityLoop({signal,execute:call=>executor.execute(call,clientContext!,signal),onReceipts:items=>{
+            receipts.push(...items)
+            // Only validated host receipts may become visible action progress.
+            // Read results stay in the model context, outside the conversation UI.
+            if(options.owner()===owner&&options.canRead(session)&&generationWindow&&!generationWindow.isDestroyed()){
+              const capabilityProgress=receipts.map(({requestId,capability,status,message,path,effect})=>({requestId,capability,status,...message===undefined?{}:{message},...path===undefined?{}:{path},...effect===undefined?{}:{effect}}))
+              ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,capabilityProgress})
+            }
+          },generate:async clientReceipts=>{
             const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},...clientContext?{clientCapabilities:registry.catalog(clientContext),clientContext,clientReceipts}:{},stream:true }) })
             if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
             return readNoteGenerationStream(response,progress=>{

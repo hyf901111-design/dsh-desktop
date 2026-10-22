@@ -511,7 +511,13 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const progress=(event:Event)=>{
       const value=(event as CustomEvent).detail
       if(value?.sessionId!==props.sessionId||value.requestId!==request.current)return
-      publishTask(value.requestId,'generating',{stage:value.stage,reasoning:value.reasoning,outputChars:value.outputChars,...value.seq===undefined?{}:{seq:value.seq,startedAt:value.startedAt}})
+      publishTask(value.requestId,'generating',{
+        ...value.stage===undefined?{}:{stage:value.stage},
+        ...value.reasoning===undefined?{}:{reasoning:value.reasoning},
+        ...value.outputChars===undefined?{}:{outputChars:value.outputChars},
+        ...value.capabilityProgress===undefined?{}:{capabilityProgress:value.capabilityProgress},
+        ...value.seq===undefined?{}:{seq:value.seq,startedAt:value.startedAt}
+      })
       const active=activeGeneration.current,task=value.componentTask
       if(!active||active.requestId!==value.requestId||!task||!currentGeneration(active))return
       const node=JSON.parse(active.expected),next={...node,generationTaskId:task.generationTaskId||node.generationTaskId,generationChildSessionId:task.childSessionId||node.generationChildSessionId,generationStartedAt:task.generationStartedAt||node.generationStartedAt,generationEvents:task.generationEvents||node.generationEvents,generationPartialText:task.generationPartialText??node.generationPartialText,generationStatus:'running'}
