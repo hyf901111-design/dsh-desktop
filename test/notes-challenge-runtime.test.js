@@ -360,11 +360,11 @@ it('does not retry output-size, tool-call or non-stop completion failures', asyn
   }
 })
 
-it('does not retry a syntactically valid result that fails the reply schema', async () => {
+it('uses the one shared regeneration allowance for a syntactically valid invalid reply schema', async () => {
   const { generateNoteChallenge } = await load(), f = textFixture('{"reply":{}}')
   const thread = { blockId: 'a', quote: '收入增长10%', category: 'question', message: '请核对来源。', messages: [{ role: 'user', text: '依据是什么？' }] }
   await expect(generateNoteChallenge(f.ctx, { ...input, action: 'reply', thread })).rejects.toThrow('格式不完整')
-  expect(f.calls).toHaveLength(1)
+  expect(f.calls).toHaveLength(2)
 })
 
 for (const [value, expected] of [

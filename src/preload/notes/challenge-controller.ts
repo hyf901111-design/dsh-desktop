@@ -67,8 +67,10 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const running=phase==='running'||!!pending
  const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,ParagraphReview>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0),picker=useRef({open:false,initialLevel:readLevel()})
  const activityId=useRef(options.activityId??crypto.randomUUID()),activity=useRef({running:false,pending:0,failed:false}),restoring=useRef(true),flushQueue=useRef(Promise.resolve())
- const publishActivity=()=>send('activity',{sessionId,instanceId:activityId.current,running:activity.current.running,retaining:activity.current.running||activity.current.pending>0||activity.current.failed})
- const cancelAction=(id?:string)=>{const current=action.current;if(!current||id&&current.threadId!==id)return;action.current=undefined;current.controller.abort();if(live.current)setPending(undefined)}
+ // Keep the originating editor resident through an action and its confirmed save,
+ // even when the user closes its bubble, switches sessions or leaves the app.
+ const publishActivity=()=>send('activity',{sessionId,instanceId:activityId.current,running:activity.current.running||!!action.current,retaining:activity.current.running||!!action.current||activity.current.pending>0||activity.current.failed})
+ const cancelAction=(id?:string)=>{const current=action.current;if(!current||id&&current.threadId!==id)return;action.current=undefined;current.controller.abort();if(live.current){setPending(undefined);flushReview()}}
  const setAutomaticResolution=(threadId:string,resolved:boolean)=>{let promise:Promise<void>|undefined;editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);promise=ai[resolved?'resolveThread':'unresolveThread']({threadId})});return promise!}
  const blocks=()=>challengeDocumentBlocks(editor.document)
  const active=()=>latest.current.active!==false&&!latest.current.recovery&&noteEditorVisible(latest.current.scroll.current)&&document.visibilityState!=='hidden'&&document.hasFocus()
@@ -202,7 +204,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   }),offSelection=editor.onSelectionChange(sync)
   const offThreads=ai.subscribe(refresh),offComments=comments.store.subscribe(()=>{const id=comments.store.state.selectedThreadId;if(id)dismissed.current.delete(id);setSelected(id)})
   prefs.observe(pref)
-  const visibility=()=>{if(!active())cancelAction();sync();if(active()&&activity.current.failed&&!activity.current.pending)flushReview()}
+  const visibility=()=>{sync();if(active()&&activity.current.failed&&!activity.current.pending)flushReview()}
   const composition=()=>queueMicrotask(sync)
   let settleTimer:ReturnType<typeof setTimeout>|undefined
   const pasted=()=>{settle.current=Date.now()+10000;sync();clearTimeout(settleTimer);settleTimer=setTimeout(sync,10010)}
@@ -218,7 +220,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   refresh()
   return()=>{live.current=false;s.dispose();cancelAction();send('activity',{sessionId,instanceId:activityId.current,running:false,retaining:false});off();offSelection();offThreads();offComments();prefs.unobserve(pref);clearTimeout(settleTimer);document.removeEventListener('visibilitychange',visibility);document.removeEventListener('sherlock:workspace-surface-change',visibility);window.removeEventListener('focus',visibility);window.removeEventListener('blur',visibility);document.removeEventListener('compositionstart',composition,true);document.removeEventListener('compositionend',composition,true);latest.current.scroll.current?.removeEventListener('paste',pasted,true);latest.current.scroll.current?.removeEventListener('click',markClick,true);document.removeEventListener('sherlock:notes-challenge-locate',locate);document.removeEventListener('sherlock:notes-challenge-recheck',recheck)}
  },[editor,doc,bridge,sessionId])
- useEffect(()=>{if(options.busy||options.recovery||!active())cancelAction();sync();if(active()&&activity.current.failed&&!activity.current.pending)flushReview()},[options.title,options.busy,options.recovery,options.active])
+ useEffect(()=>{if(options.busy||options.recovery)cancelAction();sync();if(active()&&activity.current.failed&&!activity.current.pending)flushReview()},[options.title,options.busy,options.recovery,options.active])
  const setPickerOpen=(open:boolean)=>{if(picker.current.open===open)return;if(open)picker.current={open,initialLevel:readLevel()};else picker.current.open=false;sync();if(!open&&readLevel()!==picker.current.initialLevel)scheduler.current?.recheck(true)}
  const levelChange=(value:ChallengeLevel)=>{if(!value)cancelAction();prefs.set('level',value)}
  const setMarginExpanded=(value:boolean)=>{setPopupAnchor(undefined);dismissed.current.clear();comments.selectThread(undefined,false);setSelected(undefined);prefs.set('marginExpanded',value);setRevision(v=>v+1)}
@@ -229,7 +231,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   if(settings.commentsExpanded!==undefined&&settings.commentsExpanded!==readMarginExpanded())setMarginExpanded(settings.commentsExpanded)
  })}
  const getConfiguration=()=>({level:readLevel(),commentsExpanded:readMarginExpanded(),phase:state.current.phase})
- const close=(id:string)=>{setPopupAnchor(undefined);if(action.current?.kind!=='optimize')cancelAction(id);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
+ const close=(id:string)=>{setPopupAnchor(undefined);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
  const resolve=async(id:string)=>{setPopupAnchor(undefined);cancelAction(id);replacementReviews.resolveThread(id);comments.selectThread(undefined,false);setSelected(undefined);await comments.threadStore.resolveThread({threadId:id});sync();refresh()}
  const applyReplacement=async(threadId:string,commentId:string)=>{
   if(action.current||latest.current.busy||!active()||dismissed.current.has(threadId))return
@@ -260,8 +262,8 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   if(!currentThread||currentThread.resolved||currentThread.deletedAt||currentThread.metadata?.kind!==CHALLENGE_KIND||kind==='reply'&&(!text.trim()||text.trim().length>4000))return
   const issue=currentThread.metadata.issue,range=findChallengeQuote(editor,issue.blockId,issue.quote)
   if(!range)return
-  const controller=new AbortController(),job:ChallengeAction={controller,threadId:thread.id,kind};action.current=job;setPending({threadId:thread.id,kind});sync()
-  const current=()=>{const saved=ai.getThreads().get(thread.id);return live.current&&action.current===job&&!controller.signal.aborted&&active()&&(kind==='optimize'||!dismissed.current.has(thread.id))&&!!saved&&!saved.resolved&&!saved.deletedAt&&saved.metadata?.kind===CHALLENGE_KIND&&JSON.stringify(saved.metadata.issue)===JSON.stringify(issue)&&saved.metadata.sourceText===currentThread.metadata.sourceText}
+  const controller=new AbortController(),job:ChallengeAction={controller,threadId:thread.id,kind};action.current=job;setPending({threadId:thread.id,kind});publishActivity();sync()
+  const current=()=>{const saved=ai.getThreads().get(thread.id);return live.current&&action.current===job&&!controller.signal.aborted&&!latest.current.recovery&&!latest.current.busy&&!!saved&&!saved.resolved&&!saved.deletedAt&&saved.metadata?.kind===CHALLENGE_KIND&&JSON.stringify(saved.metadata.issue)===JSON.stringify(issue)&&saved.metadata.sourceText===currentThread.metadata.sourceText}
   const append=async(text:string,suggestion?:ChallengeReplacement)=>{if(current()){await ai.addComment({threadId:thread.id,comment:{body:body(text),...(suggestion?{metadata:{challengeReplacement:suggestion}}:{})}});latest.current.persist()}}
   try{
    if(kind==='reply'){
@@ -301,8 +303,11 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
      await ai.addComment({threadId:thread.id,comment:{body:body(result.reply.text||t('已优化这段表达，并保留原有研究立场。'))}});metadata(thread.id,{replacementResolutionHistory:replacementResolutionHistory((savedThread.metadata as any).replacementResolutionHistory,{sourceText:currentBlock.text,resolved:false},{sourceText,resolved:true})});await setAutomaticResolution(thread.id,true);comments.selectThread(undefined,false);setSelected(undefined);latest.current.persist()
     }else await append(t('正文已变化，这次建议未替换原文。请基于当前文字继续讨论。'))
    }else await append(result.reply?.text||t('本轮未形成可核验的修改建议，原文保持不变。'))
-  }catch{await append(t('没能完成，请重试'))}
-  finally{if(action.current===job){action.current=undefined;if(live.current){setPending(undefined);sync();refresh()}}}
+  }catch(error){
+   const message=error instanceof Error?error.message:String(error),format=/挑战(?:回复|检查)(?:结果)?格式(?:无效|不完整)/u.test(message)
+   await append(t(format?'AI回复格式不符合要求，原文未修改。请重新发送，或点击“AI优化”重试。':'没能完成，请重试'))
+  }
+  finally{if(action.current===job){action.current=undefined;if(live.current){flushReview();setPending(undefined);sync();refresh()}}}
  }
  const replacementReviews=useNoteReplacementReviews({editor,doc,scroll:options.scroll,canEdit:()=>active()&&!latest.current.busy&&!action.current,persist:()=>latest.current.persist(),onResolve:resolve,onRestore:async review=>{
   const thread=ai.getThreads().get(review.threadId),source=blocks().find(b=>b.id===review.blockId)
