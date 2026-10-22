@@ -162,6 +162,8 @@ export function installResearchWorkbenchRetry({eventTarget,sessionId,getArtifact
 
 function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  const [snapshot,setSnapshot]=react.useState(()=>window.__sherlockWorkbenchGenerationV1?.get?.(sessionId)??null)
+ const [,renderLocale]=react.useState(0)
+ react.useEffect(()=>{const observer=new MutationObserver(()=>renderLocale(n=>n+1));observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']});return()=>observer.disconnect()},[])
  const [retrying,setRetrying]=react.useState(false),[retryError,setRetryError]=react.useState(false)
  react.useEffect(()=>observeResearchWorkbenchProgress(window,sessionId,setSnapshot),[sessionId])
  const subscribeRefresh=react.useCallback(listener=>componentDataStatusStore.subscribeSession(sessionId,listener),[sessionId])
@@ -197,11 +199,11 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
 }
 
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v8 */'
+ const marker='/* ework:workbench-feedback:v9 */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+[publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v[1234567] \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v[12345678] \*\//)
  if(previous>=0){
   const end=source.indexOf('const ExecutionStatusGroup =',previous)
   if(end<0)throw Error('Workbench feedback upgrade anchor missing')

@@ -1,4 +1,5 @@
 import {useEffect,useLayoutEffect,useRef,useState,type RefObject} from 'react'
+import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import * as Y from 'yjs'
 import {absolutePositionToRelativePosition,relativePositionToAbsolutePosition,ySyncPluginKey} from 'y-prosemirror'
 import {Slice} from '@tiptap/pm/model'
@@ -80,7 +81,7 @@ export const NoteReplacementHighlights=createExtension(({editor})=>{
  },prosemirrorPlugins:[new Plugin({key:highlightKey,state:{init:()=>null,apply(tr,value,_old,state){
   if(tr.docChanged)for(const review of reviews){const prior=positions.get(review.id);if(!prior)continue;const from=tr.mapping.mapResult(prior.from,1),to=tr.mapping.mapResult(prior.to,-1),range={from:from.pos,to:to.pos};positions.set(review.id,!from.deleted&&!to.deleted&&matches(state,range,review)?range:undefined)}
   return value
- }},props:{decorations(state){const decorations=[];for(const review of reviews){const range=positions.get(review.id),bounds=replacementHighlightBounds(review);if(range&&matches(state,range,review)&&bounds.to>bounds.from)decorations.push(Decoration.inline(range.from+bounds.from,range.from+bounds.to,{class:'en-replacement-mark','data-en-replacement-id':review.id,role:'button',tabindex:'0','aria-label':'查看替换对照'}))}return DecorationSet.create(state.doc,decorations)}}})]}
+ }},props:{decorations(state){const decorations=[];for(const review of reviews){const range=positions.get(review.id),bounds=replacementHighlightBounds(review);if(range&&matches(state,range,review)&&bounds.to>bounds.from)decorations.push(Decoration.inline(range.from+bounds.from,range.from+bounds.to,{class:'en-replacement-mark','data-en-replacement-id':review.id,role:'button',tabindex:'0','aria-label':t('查看替换对照')}))}return DecorationSet.create(state.doc,decorations)}}})]}
 })
 
 /** Decorations leave body formatting untouched; durable review records live beside comments. */
@@ -100,6 +101,9 @@ export function useNoteReplacementReviews(options:{editor:any;doc:Y.Doc;scroll:R
   root?.addEventListener('click',open,true);root?.addEventListener('keydown',open,true)
   return()=>{live=false;off();records.unobserve(refresh);root?.removeEventListener('click',open,true);root?.removeEventListener('keydown',open,true)}
  },[editor,doc])
+ const locale=document.documentElement.dataset.odysseyLocale
+ // Refresh after React commits the language change, keeping Yjs records intact.
+ useEffect(()=>{editor.getExtension(NoteReplacementHighlights)?.setReviews(entries())},[editor,doc,locale])
  const capture=(blockId:string,quote:string)=>{const range=findChallengeQuote(editor,blockId,quote);return range?{range,originalSlice:editor._tiptapEditor.state.doc.slice(range.from,range.to).toJSON()}:undefined}
  const add=(value:Omit<NoteReplacementReview,'id'|'createdAt'|'position'|'originalSlice'>,snapshot:ReturnType<typeof capture>)=>{
   if(value.original===value.replacement||!snapshot)return
@@ -140,5 +144,5 @@ export function NoteReplacementPopover({controller,scroll}:{controller:ReturnTyp
  },[selected?.id,controller.revision])
  if(!selected)return null
  const comparison=replacementComparison(selected)
- return <section ref={root} className="en-replacement-popover" role="dialog" aria-label="替换对照" style={{...position,visibility:position?'visible':'hidden'}}><header><strong>替换对照</strong><button aria-label="关闭替换对照" onClick={controller.close}>×</button></header><div className="en-replacement-comparison"><section><h4>原文</h4><div data-replacement-before>{comparison.original}</div></section><section><h4>替换后</h4><div data-replacement-after>{comparison.replacement||'（已删除）'}</div></section></div>{controller.error||!controller.canRevert?<p role="status">{controller.error||'这段文字已再次编辑，无法直接取消替换。'}</p>:null}<footer><button disabled={controller.busy||!controller.canRevert} onClick={()=>void controller.revert()}>取消替换</button><button disabled={controller.busy} onClick={()=>void controller.resolve()}>已解决</button></footer></section>
+ return <section ref={root} className="en-replacement-popover" role="dialog" aria-label={t('替换对照')} style={{...position,visibility:position?'visible':'hidden'}}><header><strong>{t('替换对照')}</strong><button aria-label={t('关闭替换对照')} onClick={controller.close}>×</button></header><div className="en-replacement-comparison"><section><h4>{t('原文')}</h4><div data-replacement-before>{comparison.original}</div></section><section><h4>{t('替换后')}</h4><div data-replacement-after>{comparison.replacement||t('（已删除）')}</div></section></div>{controller.error||!controller.canRevert?<p role="status">{t(controller.error||'这段文字已再次编辑，无法直接取消替换。')}</p>:null}<footer><button disabled={controller.busy||!controller.canRevert} onClick={()=>void controller.revert()}>{t('取消替换')}</button><button disabled={controller.busy} onClick={()=>void controller.resolve()}>{t('已解决')}</button></footer></section>
 }

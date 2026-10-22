@@ -39,7 +39,24 @@ it('routes creation through the generic composer and waits before persistent the
   await page.evaluate(()=>window.completeCard());await page.waitForFunction(()=>window.receipts.length===3)
   const result=await page.evaluate(()=>({receipts:window.receipts,saved:window.saved,effects:window.effects}));expect(result.receipts.map(r=>r.status)).toEqual(['succeeded','succeeded','succeeded']);expect(result.effects).toHaveLength(1);expect(result.saved.blocks[0].content[0]).toMatchObject({text:'保留我的富文本正文',styles:{bold:true}})
   const research=result.saved.blocks.find(b=>b.type==='research');expect(JSON.parse(research.props.payload)).toMatchObject({notePresentation:{theme:'enterprise',titleBar:false},containerSpec:{rows:[[42]]}})
-  await expect.poll(()=>page.locator('[data-note-titlebar=hidden]>.en-research-header').isHidden()).toBe(true);expect(await page.locator('[data-note-presentation]').getAttribute('data-workbench-style')).toBe('enterprise');expect(errors).toEqual([])
+  await expect.poll(()=>page.locator('[data-note-titlebar=hidden]>.en-research-header').isHidden()).toBe(true);expect(await page.locator('[data-note-presentation]').getAttribute('data-workbench-style')).toBe('enterprise')
+  const original=await page.evaluate(()=>{window.originalEditor=window.noteEditor;return JSON.stringify(window.noteEditor.document)})
+  for(const locale of ['en','zh','en']){
+   await page.evaluate(locale=>document.documentElement.dataset.odysseyLocale=locale,locale)
+   await page.getByRole('textbox',{name:locale==='en'?'Note title':'笔记标题',exact:true}).waitFor()
+   const card=page.locator('[data-id="'+research.id+'"]'),guard=card.locator('.en-component-scroll-guard')
+   await expect.poll(()=>card.locator('.en-component-scroll-guard,.en-component-presentation-controls').count()).toBeGreaterThan(0)
+   if(await guard.count())await guard.click()
+   const controls=card.locator('.en-component-presentation-controls')
+   await expect.poll(()=>controls.locator('summary').getAttribute('aria-label')).toBe(locale==='en'?'Component style':'组件样式')
+   if(await controls.getAttribute('open')===null)await controls.locator('summary').click()
+   expect(await controls.getByRole('combobox',{name:locale==='en'?'Component color theme':'组件配色'}).inputValue()).toBe('enterprise')
+   expect(await controls.getByRole('checkbox',{name:locale==='en'?'Show component title bar':'显示组件顶栏'}).isChecked()).toBe(false)
+   expect(await controls.locator('option[value=enterprise]').textContent()).toBe(locale==='en'?'EFund':'易方达')
+   expect(await page.evaluate(()=>window.originalEditor===window.noteEditor)).toBe(true)
+   expect(await page.evaluate(()=>JSON.stringify(window.noteEditor.document))).toBe(original)
+  }
+  expect(errors).toEqual([])
  }catch(error){console.log('CAPABILITY DEBUG',await page.evaluate(()=>({calls:window.calls,receipts:window.receipts,body:document.body.innerText})),errors);throw error}finally{await context.close()}
 },15000)
 it('keeps a requested clarification in the component and does not export it as a completed result',async()=>{

@@ -36,6 +36,18 @@ async function fixture(content=original,quote='成度'){
 async function finish(page,value=answer,index=0){await page.evaluate(({value,index})=>window.jobs[index].resolve(value),{value,index})}
 async function start(page,kind='reply',text='请核实来源'){await page.evaluate(({kind,text})=>window.start(kind,text),{kind,text});await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)}
 
+it('localizes only fixed challenge reply failures while preserving user and model messages',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en')
+  await start(page,'reply','用户中文问题不能翻译');await finish(page,{...answer,reply:{text:'模型原生中文回复应当保留。'}})
+  await expect.poll(()=>page.evaluate(()=>window.messages().at(-1))).toBe('模型原生中文回复应当保留。')
+  await page.evaluate(()=>window.start('reply','这次模拟来源失败'));await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  await page.evaluate(()=>window.jobs[1].reject(Error('fixture transport failure')))
+  await expect.poll(()=>page.evaluate(()=>window.messages().at(-1))).toBe('Could not finish. Try again.')
+  expect(await page.evaluate(()=>window.messages())).toContain('用户中文问题不能翻译');expect(await page.evaluate(()=>window.messages())).toContain('模型原生中文回复应当保留。');expect(errors).toEqual([])
+ }finally{await context.close()}
+})
+
 it('publishes and saves a sent message before the deferred reply, blocks duplicate actions, and keeps a new draft',async()=>{
  const{context,page,errors,id}=await fixture();try{
   await page.evaluate(id=>window.challenge.setDraft(id,'请核实来源'),id)

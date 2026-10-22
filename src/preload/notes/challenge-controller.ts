@@ -11,6 +11,7 @@ import {findChallengeQuote,replaceChallengeQuote,challengeThreadQuote,reuseSpell
 import {useNoteReplacementReviews} from './replacement-review'
 import {paragraphChallengeFeedback,type ParagraphReview} from './challenge-coverage'
 import {noteEditorVisible} from './editor-visibility'
+import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import {restoreChallengeReviewState,saveChallengeReviewState} from './challenge-review-state'
 
 export const CHALLENGE_KIND='ework-challenge-v1',CHALLENGE_USER='ework-ai-challenge'
@@ -214,9 +215,9 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   const thread=ai.getThreads().get(threadId),comment=thread?.comments.find(c=>c.id===commentId&&!c.deletedAt);let suggestion=comment?.metadata?.challengeReplacement as ChallengeReplacement|undefined
   if(!thread||thread.resolved||thread.deletedAt||thread.metadata?.kind!==CHALLENGE_KIND||!comment||!suggestion||!['pending','reverted'].includes(suggestion.status))return
   const cleanBody=challengeReplacementBody(suggestion.quote,suggestion.replacement)
-  if(cleanBody.error){await ai.addComment({threadId,comment:{body:body('这条建议将审查提醒写入了正文，请重新优化；提醒仅应保留在评论中。')}});latest.current.persist();refresh();return}
+  if(cleanBody.error){await ai.addComment({threadId,comment:{body:body(t('这条建议将审查提醒写入了正文，请重新优化；提醒仅应保留在评论中。'))}});latest.current.persist();refresh();return}
   suggestion={...suggestion,replacement:cleanBody.replacement}
-  if(suggestion.scopeVersion!==2){await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'stale'}}}});await ai.addComment({threadId,comment:{body:body('这条历史建议没有完整句编辑范围，请重新优化后再替换。')}});latest.current.persist();refresh();return}
+  if(suggestion.scopeVersion!==2){await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'stale'}}}});await ai.addComment({threadId,comment:{body:body(t('这条历史建议没有完整句编辑范围，请重新优化后再替换。'))}});latest.current.persist();refresh();return}
   const issue=thread.metadata.issue,currentBlock=blocks().find(b=>b.id===issue.blockId)
   const scope=currentBlock&&challengeReplacementScope(currentBlock.text,issue.quote)
   const valid=suggestion.scopeVersion===2&&suggestion.anchorQuote===issue.quote&&suggestion.blockId===issue.blockId&&thread.metadata.sourceText===suggestion.sourceText&&scope&&!('error' in scope)&&scope.quote===suggestion.quote&&typeof suggestion.replacement==='string'&&!!suggestion.replacement.trim()&&suggestion.replacement.length<=6000&&currentBlock?.text===suggestion.sourceText&&fingerprint(latest.current.title,blocks())===suggestion.documentKey&&currentBlock.text.length-suggestion.quote.length+suggestion.replacement.length<=12000&&findChallengeQuote(editor,issue.blockId,suggestion.quote)
@@ -249,26 +250,26 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    }
    if(!current())return
    const all=blocks(),captured=fingerprint(latest.current.title,all),savedThread=ai.getThreads().get(thread.id)!
-   const target=all.find(b=>b.id===issue.blockId),others=all.filter(b=>b.id!==issue.blockId);if(!target||target.text.length>12000){await append('当前段落过长或已不存在，请分段并重新定位后继续。');return}let size=target.text.length
+   const target=all.find(b=>b.id===issue.blockId),others=all.filter(b=>b.id!==issue.blockId);if(!target||target.text.length>12000){await append(t('当前段落过长或已不存在，请分段并重新定位后继续。'));return}let size=target.text.length
    const chosen=[target];for(const b of others){if(chosen.length>=24||size+b.text.length>24000)continue;chosen.push(b);size+=b.text.length}
    const scope=challengeReplacementScope(target.text,issue.quote)
-   if(savedThread.metadata.sourceText!==target.text&&(kind==='optimize'||challengeDirectReplacement(text,{quote:issue.quote}))){await append('正文已变化，请重新定位后继续。');return}
-   if('error' in scope&&(kind==='optimize'||challengeDirectReplacement(text,{quote:issue.quote}))){await append(scope.error==='too-long'?'完整句优化范围超过6000字，请缩小或分段后重新优化。':'正文已变化或范围不唯一，请重新定位后继续。');return}
+   if(savedThread.metadata.sourceText!==target.text&&(kind==='optimize'||challengeDirectReplacement(text,{quote:issue.quote}))){await append(t('正文已变化，请重新定位后继续。'));return}
+   if('error' in scope&&(kind==='optimize'||challengeDirectReplacement(text,{quote:issue.quote}))){await append(t(scope.error==='too-long'?'完整句优化范围超过6000字，请缩小或分段后重新优化。':'正文已变化或范围不唯一，请重新定位后继续。'));return}
    const threadInput={blockId:issue.blockId,quote:issue.quote,category:issue.category,message:issue.message,messages:[] as Array<{role:'assistant'|'user';text:string}>}
    threadInput.messages=challengeThreadMessages(savedThread.comments,Math.min(10000,15000-JSON.stringify(threadInput).length))
    const result=await request({sessionId,requestId:crypto.randomUUID(),action:kind,level:readLevel()||2,title:latest.current.title,blocks:chosen,thread:threadInput},controller.signal)
    if(!current())return
-   if(fingerprint(latest.current.title,blocks())!==captured){await append('正文已变化，这次回复未应用到当前原文。请基于当前文字继续讨论。');return}
+   if(fingerprint(latest.current.title,blocks())!==captured){await append(t('正文已变化，这次回复未应用到当前原文。请基于当前文字继续讨论。'));return}
    state.current.checks=result.checks;setChecks(result.checks)
    if(result.reply?.replacement){
     const currentBlock=blocks().find(b=>b.id===issue.blockId),currentScope=currentBlock&&challengeReplacementScope(currentBlock.text,issue.quote),rawReplacement=result.reply.replacement
     const cleanBody=challengeReplacementBody('error' in scope?'':scope.quote,rawReplacement)
-    if(cleanBody.error){await append('这条建议将审查提醒写入了正文，请重新优化；提醒仅应保留在评论中。');return}
+    if(cleanBody.error){await append(t('这条建议将审查提醒写入了正文，请重新优化；提醒仅应保留在评论中。'));return}
     const replacement=cleanBody.replacement
-    if(!current()||!currentBlock||savedThread.metadata.sourceText!==currentBlock.text||'error' in scope||!currentScope||'error' in currentScope||currentScope.quote!==scope.quote||!findChallengeQuote(editor,issue.blockId,issue.quote)||!findChallengeQuote(editor,issue.blockId,scope.quote)){await append('正文已变化或范围不唯一，这次建议未替换原文。请重新优化。');return}
-    if(!replacement.trim()||replacement.length>6000||currentBlock.text.length-scope.quote.length+replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
-    if(replacement===scope.quote){await append(result.reply.text||'原文与建议一致，无需替换。');return}
-    if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||'建议如下，可确认后替换到原文。',{scopeVersion:2,anchorQuote:issue.quote,blockId:issue.blockId,quote:scope.quote,sourceText:currentBlock.text,documentKey:captured,replacement,status:'pending'});return}
+    if(!current()||!currentBlock||savedThread.metadata.sourceText!==currentBlock.text||'error' in scope||!currentScope||'error' in currentScope||currentScope.quote!==scope.quote||!findChallengeQuote(editor,issue.blockId,issue.quote)||!findChallengeQuote(editor,issue.blockId,scope.quote)){await append(t('正文已变化或范围不唯一，这次建议未替换原文。请重新优化。'));return}
+    if(!replacement.trim()||replacement.length>6000||currentBlock.text.length-scope.quote.length+replacement.length>12000){await append(t('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。'));return}
+    if(replacement===scope.quote){await append(result.reply.text||t('原文与建议一致，无需替换。'));return}
+    if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||t('建议如下，可确认后替换到原文。'),{scopeVersion:2,anchorQuote:issue.quote,blockId:issue.blockId,quote:scope.quote,sourceText:currentBlock.text,documentKey:captured,replacement,status:'pending'});return}
     const replacementSnapshot=replacementReviews.capture(issue.blockId,scope.quote)
     if(current()&&fingerprint(latest.current.title,blocks())===captured&&replaceChallengeQuote(editor,issue.blockId,scope.quote,replacement,thread.id)){
      replacementReviews.add({threadId:thread.id,blockId:issue.blockId,anchorBefore:issue.quote,original:scope.quote,replacement,autoResolved:true},replacementSnapshot)
@@ -276,10 +277,10 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
      if(sourceText!==currentBlock.text)metadata(thread.id,{issue:{...issue,quote},sourceText,anchorHistory:anchorHistory(savedThread.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote,sourceText})})
      settle.current=Date.now()+10000
      window.setTimeout(()=>{if(live.current)sync()},10010)
-     await ai.addComment({threadId:thread.id,comment:{body:body(result.reply.text||'已优化这段表达，并保留原有研究立场。')}});metadata(thread.id,{replacementResolutionHistory:replacementResolutionHistory((savedThread.metadata as any).replacementResolutionHistory,{sourceText:currentBlock.text,resolved:false},{sourceText,resolved:true})});await setAutomaticResolution(thread.id,true);comments.selectThread(undefined,false);setSelected(undefined);latest.current.persist()
-    }else await append('正文已变化，这次建议未替换原文。请基于当前文字继续讨论。')
-   }else await append(result.reply?.text||'本轮未形成可核验的修改建议，原文保持不变。')
-  }catch{await append('没能完成，请重试')}
+     await ai.addComment({threadId:thread.id,comment:{body:body(result.reply.text||t('已优化这段表达，并保留原有研究立场。'))}});metadata(thread.id,{replacementResolutionHistory:replacementResolutionHistory((savedThread.metadata as any).replacementResolutionHistory,{sourceText:currentBlock.text,resolved:false},{sourceText,resolved:true})});await setAutomaticResolution(thread.id,true);comments.selectThread(undefined,false);setSelected(undefined);latest.current.persist()
+    }else await append(t('正文已变化，这次建议未替换原文。请基于当前文字继续讨论。'))
+   }else await append(result.reply?.text||t('本轮未形成可核验的修改建议，原文保持不变。'))
+  }catch{await append(t('没能完成，请重试'))}
   finally{if(action.current===job){action.current=undefined;if(live.current){setPending(undefined);sync();refresh()}}}
  }
  const replacementReviews=useNoteReplacementReviews({editor,doc,scroll:options.scroll,canEdit:()=>active()&&!latest.current.busy&&!action.current,persist:()=>latest.current.persist(),onResolve:resolve,onRestore:async review=>{

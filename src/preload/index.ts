@@ -1,5 +1,6 @@
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { mountNotes } from './notes/mount'
+import {noteUiError} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 import { IntegrationView } from './integrations/view'
 import { mountMemoryUi } from './memory/view'
 import { createSkillUseBridge } from './integrations/skill-use'
@@ -225,11 +226,16 @@ function initializeUi(): void {
   const notes = mountNotes(document, {
     filePath:file=>safePathForFile(file,webUtils.getPathForFile),
     request: async (method, input) => {
-      const result = await ipcRenderer.invoke('notes:request', method, { ...input, ...(method !== 'load' ? { owner: noteOwners.get(input.sessionId) } : {}) })
-      if (method === 'load') noteOwners.set(input.sessionId, result.owner)
-      return result
+      try {
+        const result = await ipcRenderer.invoke('notes:request', method, { ...input, ...(method !== 'load' ? { owner: noteOwners.get(input.sessionId) } : {}) })
+        if (method === 'load') noteOwners.set(input.sessionId, result.owner)
+        return result
+      } catch(error) {
+        if(error instanceof Error){const message=noteUiError(error.message);if(message!==error.message)error.message=message}
+        throw error
+      }
     },
-    draft: async input => { await ipcRenderer.invoke('notes:request', 'draft', { ...input, owner: noteOwners.get(input.sessionId) }) }
+    draft: async input => {try{await ipcRenderer.invoke('notes:request', 'draft', { ...input, owner: noteOwners.get(input.sessionId) })}catch(error){if(error instanceof Error){const message=noteUiError(error.message);if(message!==error.message)error.message=message}throw error}}
   }, workspaceSurfaceHost)
   const integrationBridge = { request: (command: import('../shared/integration-ui').IntegrationCommand) => ipcRenderer.invoke('integrations:request', command) }
   const skillUse = createSkillUseBridge(document, integrationBridge, () => { integrationView.close(); workspaceSurfaceHost.revealConversation() })

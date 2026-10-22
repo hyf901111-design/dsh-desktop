@@ -87,13 +87,13 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
  if(generation)return <section className="en-research en-native-component en-note-generation" ref={root} style={{...size.style,height:size.height}} contentEditable={false} data-note-research-block={block.id} data-research-node-id={node.id} data-research-compact-chrome="" data-research-artifact-card={node.id} data-research-generation-state={node.generationStatus} data-research-generation-empty="" data-selected={selected||undefined} data-resizing={size.resizing||undefined}>
   <div id={instance.current+'-title'} hidden/>
   <div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>
-  {!ready&&error?<div className="en-component-error" role="alert">{error}</div>:null}
+  {!ready&&error?<div className="en-component-error" role="alert">{t(error)}</div>:null}
   {selected&&context.editor?.isEditable?<><NotePresentationControls editor={context.editor} block={block} node={node}/><NoteComponentResizeHandles size={size}/></>:null}
  </section>
  return <section className="en-research en-native-component" ref={root} style={size.style} contentEditable={false} data-note-research-block={block.id} data-research-node-id={node.id} data-selected={selected||undefined} data-resizing={size.resizing||undefined} data-financial-theme={context.dark?'dark':'light'}>
   <header className="en-research-header" draggable={!!context.editor?.isEditable}><div className="en-native-component-title" id={instance.current+'-title'}><strong>{node.title}</strong></div><button className="en-component-close" aria-label={t("移除笔记中的组件")} disabled={!context.editor?.isEditable} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button></header>
   <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>{!ready?<div className="en-component-empty" role="status">{t(error)||t("正在读取组件…")}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label={t("选中组件并操作内容")} onClick={interaction.select}/>:null}</div>
-  {error&&ready?<div className="en-component-error" role="alert">{error}</div>:null}
+  {error&&ready?<div className="en-component-error" role="alert">{t(error)}</div>:null}
   {selected&&context.editor?.isEditable?<><NotePresentationControls editor={context.editor} block={block} node={node}/><NoteComponentResizeHandles size={size}/></>:null}
  </section>
 }
