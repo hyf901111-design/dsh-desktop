@@ -29,7 +29,7 @@ export function createNoteCapabilityHandlers(options:Options):Handlers{
   exportNote:async(args)=>{
    const destinations=explicitNoteExportPaths(options.sourceInstruction)
    if(args.path&&destinations.length&&!destinations.includes(args.path))throw Error('导出位置与本次明确指定的位置不一致，请重新选择保存位置。')
-   return options.renderer('notes.export',destinations.length?args:{...args,path:undefined})
+   return options.renderer('notes.export',{...args,path:destinations[0]})
   },
   alignBlocks:mutate('notes.blocks.align'),
   inspectNoteComponent:async(args)=>options.renderer('notes.components.inspect',args),

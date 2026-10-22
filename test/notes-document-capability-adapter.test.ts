@@ -11,6 +11,7 @@ import {createNoteCapabilityActions} from '../src/preload/notes/client-capabilit
 import {createExternalNoteCapabilityLease} from '../src/preload/notes/external-capability-lease'
 import {createNoteDataCapability} from '../src/preload/notes/data-capability'
 import {exportNoteWithSnapshots} from '../src/preload/notes/component-snapshots'
+import nativeExport from './fixtures/client-notes-export-sentence.json'
 vi.mock('electron',()=>({BrowserWindow:class{},dialog:{showSaveDialog:async()=>({canceled:true})}}))
 const cleanups:Array<()=>Promise<any>|void>=[];afterEach(async()=>{for(const close of cleanups.splice(0).reverse())await close()})
 async function fixture(withData=false){
@@ -51,6 +52,22 @@ it('uses the real registered tool/transport/Main Notes bridge/store across same-
  const exported=await h.action('notes.export',{format:'md',path:h.output});expect(exported.status).toBe('succeeded');expect(readFileSync(h.output,'utf8')).toContain('Keep original text')
  expect(JSON.stringify(h.content.blocks[0])).toBe(before);expect(h.challenge).toMatchObject({level:3,commentsExpanded:true});expect(h.packets.every(p=>p.generationId?.startsWith('harness:')||p.cancel||p.release)).toBe(true)
  const stored=(await h.call('load')).saved;expect(stored.blocks).toEqual(h.content.blocks);expect(stored.revision).toBeGreaterThan(1)
+})
+it.each(['present','omitted'])('exports the actual native sentence-boundary instruction after saved cross-mode actions with model path %s',async pathMode=>{
+ const h=await fixture(),before=JSON.stringify(h.content.blocks[0])
+ h.withdraw(nativeExport.instruction.replace(nativeExport.path,h.output))
+ await h.open()
+ for(const [capability,args] of [
+  ['notes.components.style',{scope:'note',theme:'enterprise',titleBar:false,frame:false}],
+  ['notes.components.layout',{scope:'note',width:'full',height:420}],
+  ['notes.blocks.align',{scope:'note',target:'researchComponents',alignment:'center'}],
+ ] as const)expect((await h.action(capability,args)).effect.state).toBe('saved')
+ const {path:_nativePath,...withoutPath}=nativeExport.call.arguments
+ const exported=await h.action('notes.export',pathMode==='present'?{...withoutPath,path:h.output}:withoutPath)
+ expect(exported.status).toBe('succeeded');expect(readFileSync(h.output,'utf8')).toContain('Keep original text')
+ expect(JSON.stringify(h.content.blocks[0])).toBe(before)
+ expect((await h.call('load')).saved.blocks).toEqual(h.content.blocks)
+ expect(h.packets.filter(p=>p.action==='notes.export').at(-1).args.path).toBe(h.output)
 })
 it.each(['human','selection','busy','owner','mode','revision'])('rejects stale %s context without replacing newer data',async kind=>{
  const h=await fixture();await h.open()

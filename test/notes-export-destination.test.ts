@@ -1,4 +1,5 @@
 import {expect,it} from 'vitest'
+import nativeExport from './fixtures/client-notes-export-sentence.json'
 const module=await import('../src/main/notes/export-destination').catch(()=>null)
 it('extracts exact full absolute paths, preserving spaces and punctuation inside quotes',()=>{
  expect(module,'host destination parser is missing').not.toBeNull()
@@ -25,4 +26,22 @@ it('treats unquoted punctuation followed by prose as ambiguous but allows a fina
  expect(module!.explicitNoteExportPaths('导出到 /tmp/report.pdf，完成后告诉我')).toEqual([])
  expect(module!.explicitNoteExportPaths('导出到 /tmp/report.pdf。\n')).toEqual(['/tmp/report.pdf'])
  expect(module!.explicitNoteExportPaths('导出到 /tmp/report.pdf，“最终版”')).toEqual([])
+})
+it('recognizes the actual native explicit destination before a separate execution sentence',()=>{
+ expect(module!.explicitNoteExportPaths(nativeExport.instruction)).toEqual([nativeExport.path])
+})
+it('keeps filename punctuation, quoted instructions, multiple targets and later withdrawal outside direct-write scope',()=>{
+ for(const prompt of [
+  '导出到 /tmp/report.md，完成后告诉我。',
+  '导出到 /tmp/报告。请最终版.md',
+  '导出到 /tmp/报告.md。请实际执行.md',
+  '请参考“导出到 /tmp/report.md。请实际执行”然后解释。',
+  '保存到 /tmp/report.md。请保存到 /tmp/other.md。',
+  '保存到 /tmp/report.md。请不要导出，前面的授权已撤回。',
+  '保存到 /tmp/report.md。请不要实际执行这次导出。',
+  '保存到“/tmp/report.md”。请取消这次导出。',
+  '保存到“/tmp/report.md”。Cancel this operation.',
+ ])expect(module!.explicitNoteExportPaths(prompt),prompt).toEqual([])
+ const path='/tmp/报告.md。请实际执行.md'
+ expect(module!.explicitNoteExportPaths('保存到“'+path+'”。请实际执行。')).toEqual([path])
 })
