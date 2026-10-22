@@ -1,4 +1,4 @@
-import {evidenceWindows,usesHumanSourceScope} from './workbench-explicit-scope.js'
+import {evidenceWindows,usesHumanSourceScope,applicableExplicitScope} from './workbench-explicit-scope.js'
 import {readTemplateModel} from './component-template-registry.js'
 import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} from './article-timeline-provenance.js'
 import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
@@ -13,8 +13,8 @@ import {observedStatementGrowth} from './observed-statement-growth.js'
 import {expandBusinessEvidence} from './component-source-projection.js'
 import {operatingSourceAttempt} from './statement-operating-coverage.js'
 import {newsSourceScopeIssue,generalNewsScope,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
-import {filterScopedNewsArtifact,NEWS_EMPTY_NOTE} from './news-topic-filter.js'
-import {newsQueryAttempt} from './news-query-coverage.js'
+import {filterScopedNewsArtifact,controlledNewsHtml,NEWS_EMPTY_NOTE} from './news-topic-filter.js'
+import {newsQueryAttempt,mergeObservedNewsItems} from './news-query-coverage.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -613,11 +613,74 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   // Keep original request expressions for refresh; never classify their shape.
   const scopeIssue=newsSourceScopeIssue(mapping,observed.map(({tool,args})=>({tool,args})),options.newsScope)
   if(scopeIssue)throw Object.assign(Error(scopeIssue),{code:'SOURCE_DATA_REQUIRED'})
-  const data=filterScopedNewsArtifact(materializeComponentMapping(mapping,responses,now,observed),observed,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
+  const materialized=materializeComponentMapping(mapping,responses,now,observed)
+  const data=filterScopedNewsArtifact(materialized,observed,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
   const sourceIssue=templateSourceDataIssue(data)
   if(sourceIssue)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
   const issue=templateDataIssue(data)
   if(issue)throw Error(issue)
+  // Successful queries need not declare publicData in the workbench plan.
+  // Once their complete news mapping exceeds the native 40-item template,
+  // validate every item before choosing the existing controlled reading UI.
+  // HTML is a disclosed snapshot, never a native automatic-refresh recipe.
+  if(data.type==='news'&&Array.isArray(data.items)&&materialized.items.length>40){
+    const captured=options.feedOptions??{},human=String(captured.workbenchRequest?.originalRequest??'').replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|「[^」]*」|"[^"\n]*"/gu,'')
+    const days=[...human.matchAll(/(?:近|最近|过去)\s*(\d+)\s*(?:天|日)(?!历)/gu)].map(match=>Number(match[1]))
+    if(days.some(value=>value<1||value>366)||new Set(days).size>1)throw Object.assign(Error('新闻的相对天数范围无效或存在歧义，不能扩大或猜测查询窗口。'),{code:'SOURCE_DATA_REQUIRED'})
+    let feedOptions=captured
+    if(days.length){
+      const end=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now),start=new Date(Date.parse(end)-days[0]*86400000).toISOString().slice(0,10),scope=applicableExplicitScope(captured)
+      feedOptions={...captured,explicitScope:{...scope,windows:[...scope.windows,{start,end}]}}
+    }
+    const retainAll=human.split(/[，,。；;\n]/u).some(clause=>!/(?:不要|不用|无需|不必|禁止|不得|不需要|不要求|不允许)/u.test(clause)&&/(?:保留|展示|显示)(?:全部|所有)[^。；;\n]{0,20}(?:实际取得|已取得)[^。；;\n]{0,20}(?:记录|新闻|资讯|报道)/u.test(clause))
+    // Retain-all does not grant a new provider. Reuse other successful query
+    // rows only within the tool/provider identity already proved by this
+    // mapping; other connector calls remain exact observed requests.
+    const sourceRecords=retainAll?records.filter(record=>observed.some(source=>source.tool===record.tool&&(source.tool==='public_data_query'&&['eastmoney-news','gdelt-news'].includes(source.args?.source)&&source.args.source===record.args?.source||isDeepStrictEqual(source.args,record.args)))):observed
+    const identityOptions={...feedOptions,workbenchRequest:undefined}
+    for(const item of data.items){
+      const single={...data,items:[item]}
+      if(!acceptArtifactOutput(JSON.stringify(single)))throw Error('新闻条目的字段不符合资讯模板，请保留真实标题、日期、摘要与原文链接。')
+      const evidence=componentFeedEvidenceIssue(JSON.stringify(single),sourceRecords,identityOptions)
+      if(evidence)throw Object.assign(Error(evidence),{code:'SOURCE_DATA_REQUIRED'})
+    }
+    const escape=value=>String(value).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+    const verified=value=>Boolean(acceptArtifactOutput(JSON.stringify(value)))&&!componentFeedEvidenceIssue(JSON.stringify(value),sourceRecords,feedOptions)
+    const within=data.items.filter(item=>verified({...data,items:[item]}))
+    const merged=retainAll?mergeObservedNewsItems(within,sourceRecords,verified):mergeObservedNewsItems(within,[],verified)
+    const scoped=filterScopedNewsArtifact({...data,items:merged},sourceRecords,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
+    const sources=feedSnapshotSources(sourceRecords),present=value=>typeof value==='string'&&value.trim()?value:undefined
+    const items=scoped.items.map(item=>{
+      const source=sources.find(record=>snapshotRecordMatches(item,record))
+      const rows=Array.isArray(source?.response?.records)?source.response.records:Array.isArray(source?.response?.sources)?source.response.sources:[]
+      const row=rows.find(row=>row&&snapshotTitle(row.title)===snapshotTitle(item.title)&&snapshotUrl(row.url)===snapshotUrl(item.url)&&(!item.date||snapshotDate(row.time??row.date)===snapshotDate(item.date)))
+      let hostname
+      try{hostname=new URL(item.url).hostname}catch{}
+      const publisher=present(row?.publisher)??present(row?.source)??present(source?.response?.source)??hostname??'来源名称未提供'
+      let query
+      try{if(['eastmoney-news','gdelt-news'].includes(source?.args?.source))query=present(JSON.parse(source.args.parameters_json).query)}catch{}
+      // A literal model summary/category is not source evidence. Reuse only
+      // the matched row's actual excerpt and publisher; web fingerprints have
+      // no excerpt, so their missing summary stays explicit.
+      return {title:row?.title??item.title,...(item.date?{date:item.date}:{}),url:row?.url??item.url,summary:present(row?.summary)??'来源未提供摘要',publisher,...(query?{query}:{})}
+    })
+    const snapshot=controlledNewsHtml(data.title,items)
+    const providers=[...new Set(sourceRecords.map(record=>present(record.response?.source)??present(record.response?.sourceId)).filter(Boolean))]
+    const fixed=value=>`<span data-workbench-status-text>${escape(value)}</span>`
+    const queryRows=sourceRecords.flatMap(record=>{
+      try{const query=JSON.parse(record.args?.parameters_json).query;return ['eastmoney-news','gdelt-news'].includes(record.args?.source)&&typeof query==='string'&&Array.isArray(record.response?.records)?[{query,rows:record.response.records}]:[]}catch{return[]}
+    })
+    const windows=evidenceWindows(feedOptions)
+    const coverage=queryRows.map(({query,rows})=>`${fixed('来源查询：')}${escape(query)} · ${fixed('来源返回：')}${rows.length} · ${fixed('已保留：')}${rows.filter(row=>items.some(item=>snapshotUrl(item.url)===snapshotUrl(row?.url)&&snapshotTitle(item.title)===snapshotTitle(row?.title))).length} · ${fixed('窗口外：')}${rows.filter(row=>{const day=snapshotDate(row?.time??row?.date);return day&&windows.some(window=>day<window.start||day>window.end)}).length}`).join('<br>')
+    const unproven=[...human.matchAll(/[（(]\s*(\d{6})(?:\.(?:SH|SZ|BJ))?\s*[)）]/giu)].filter(match=>!queryRows.some(({query})=>query===match[1]||human.slice(0,match.index).trimEnd().endsWith(query))).map(match=>match[1])
+    // Source names come from the observed responses. In particular, a model
+    // cannot turn Eastmoney into DataYes by copying a mapping-example suffix.
+    const context=`<aside data-news-query-coverage role="status">${providers.map(escape).join(' · ')}<br>${coverage}${unproven.length?`<br>${fixed('尚未证明独立查询：')}${unproven.map(escape).join('、')}`:''}<br>${fixed('当前为静态快照；逐查询自动更新尚未完整绑定。')}${fixed('仅覆盖已执行来源的查询窗口，不代表区间全部报道。')}${fixed('未列出的研究对象尚未证明已完成查询。')}${fixed('未保留条目包括不相关、窗口外、未核验或重复记录。')}</aside>`+(data.note?`<aside data-news-original-note style="white-space:pre-wrap">${escape(data.note)}</aside>`:'')
+    snapshot.html=snapshot.html.replace('<main>',context+'<main>')
+    const output=acceptArtifactOutput(JSON.stringify(snapshot))
+    if(!output)throw Error('已核验新闻超过当前页面容量，来源记录已保留，请拆分展示。')
+    return {data:snapshot,output}
+  }
   const output=acceptArtifactOutput(JSON.stringify(data))
   if(!output)throw Error('数据映射结果不符合当前组件模板，请根据真实响应修正路径、类型或单位。')
   return {data,output,recipe:{requests,mapping,intervalMinutes:options.intervalMinutes===0?0:1,...(options.newsScope&&(data.type==='news'||options.newsScope.includes(NEWS_CAPACITY_MARKER))?{newsScope:options.newsScope}:{})}}

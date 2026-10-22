@@ -1,6 +1,13 @@
 import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
  '查询覆盖：':'Search coverage: ',
+ '来源查询：':'Source search: ',
+ '来源返回：':'Source records: ',
+ '已保留：':'Retained: ',
+ '窗口外：':'Outside the date window: ',
+ '尚未证明独立查询：':'Independent search not verified: ',
+ '未列出的研究对象尚未证明已完成查询。':'Searches for research subjects not listed here have not been verified.',
+ '未保留条目包括不相关、窗口外、未核验或重复记录。':'Excluded entries include unrelated, out-of-window, unverified or duplicate records.',
  '原表格（保留）':'Original table (retained)',
  '当前为静态快照；逐查询自动更新尚未完整绑定。':'This is a static snapshot; automatic updates are not fully linked for every query.',
  '周期更新以实际绑定状态为准；缺失查询尚未绑定。':'Scheduled updates depend on the actual binding status; missing queries are not linked.',

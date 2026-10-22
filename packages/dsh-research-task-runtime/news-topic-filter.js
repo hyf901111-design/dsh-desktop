@@ -105,7 +105,7 @@ const isScopedNews=(data,requirement)=>data?.type==='news'||String(requirement).
 export function controlledNewsHtml(title,items,empty=NEWS_EMPTY_NOTE){
  const shown=[];let bytes=0
  for(const item of items){
-  const article=`<article><time>${esc(item.date??item.time??'来源未提供日期')}</time><h2>${safeUrl(item.url)?`<a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">${esc(item.title)}</a>`:esc(item.title)}</h2><p>${esc(item.summary??'来源未提供摘要')}</p>${item.publisher?`<small>${esc(item.publisher)}</small>`:''}</article>`,size=new TextEncoder().encode(article).length
+  const article=`<article><time>${esc(item.date??item.time??'来源未提供日期')}</time><h2>${safeUrl(item.url)?`<a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">${esc(item.title)}</a>`:esc(item.title)}</h2><p>${esc(item.summary??'来源未提供摘要')}</p>${item.publisher?`<small>${esc(item.publisher)}</small>`:''}${item.query?`<small data-news-source-query style="display:block"><span data-workbench-status-text>来源查询：</span>${esc(item.query)}</small>`:''}</article>`,size=new TextEncoder().encode(article).length
   if(shown.length<NEWS_HTML_ARTICLES&&bytes+size<=NEWS_HTML_BODY_BYTES){shown.push(article);bytes+=size}
  }
  const articles=shown.join(''),omitted=items.length-shown.length
