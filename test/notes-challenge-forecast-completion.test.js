@@ -25,6 +25,22 @@ it('does not count a generic forecast heading and valuation explanation as a thi
  expect(result.completeBlockIds).toContain('forecast')
 })
 
+it('compares explicitly forecast adjacent years in one sentence and completes only after both source queries',async()=>{
+ const f=fixture('我们预计2026年归母净利润为950亿元，预计2027年归母净利润为900亿元。我们认为下一年度盈利会下降，但尚未提供收入、成本和利润率假设。')
+ f.ctx.tools.execute=async call=>{
+  f.calls.push(call)
+  const next=call.arguments.sql.includes("EST_REPORT_DT = '20271231'")
+  return{content:[{type:'text',text:JSON.stringify([next?{...row,EST_REPORT_DT:'20271231',NET_PROFIT_MEDIAN:9000000,NET_PROFIT_MIN:8500000,NET_PROFIT_MAX:9700000,NET_PROFIT_DEV:100000}:row])}]}
+ }
+ const result=await generateNoteChallenge(f.ctx,f.input)
+ expect(f.calls).toHaveLength(2)
+ expect(f.calls.every(call=>call.arguments.sql.includes("EST_DT <= '20261020'"))).toBe(true)
+ const next=result.issues.find(issue=>issue.evidence[0]?.data.forecastYear===2027)
+ expect(next.evidence[0].data).toMatchObject({rules:['C4'],direction:{kind:'adjacent-year',previousYear:2026,reportedChange:-500000,consensusChange:613100}})
+ expect(result.checks.filter(check=>check.kind==='consensus').every(check=>check.status==='completed')).toBe(true)
+ expect(result.completeBlockIds).toContain('forecast')
+})
+
 it.each([
  '盈利预测：预计2026年EPS76元。',
  '盈利预测 / 估值测算：预计2026年EPS76元。',
@@ -36,6 +52,9 @@ it.each([
 })
 
 it.each([
+ '预计2026年EPS76元，预计2027年为75元。',
+ '预计2026年归母净利润950亿元，预计2027年为900亿元。',
+ 'Forecast FY2026 EPS76元, forecast FY2027 at 75元。',
  '预计2026年EPS76元，归母净利润继续增加。',
  '预计2026年EPS76元，归母净利润950（尚未给单位）。',
  '预计2026年EPS76元。预计2026年盈利100亿元。',

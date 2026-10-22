@@ -3,7 +3,7 @@ import { challengeReplacementBody,challengeReplacementScope } from './notes-chal
 import { challengeReplacementRequested } from './notes-challenge-intent.js'
 import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { abortable, deadline, uniqueQuote } from './notes-challenge-bounds.js'
-import { extractConsensusClaims, reviewNoteConsensus } from './notes-challenge-consensus.js'
+import { consensusForecastScopes, extractConsensusClaims, reviewNoteConsensus } from './notes-challenge-consensus.js'
 import { challengeReviewAnchors, REVIEW_ANCHOR_LIMITS } from './notes-challenge-review-context.js'
 import { CONSISTENCY_SYSTEM, buildConsistencyInput, applyConsistencyDecisions } from './notes-challenge-consistency.js'
 
@@ -59,10 +59,15 @@ function hasConsensusIntent(input, covered) {
 function unparsedForecastBlocks(input,covered,claims){
  return input.blocks.filter(block=>covered.has(block.id)&&hasConsensusIntent(input,new Set([block.id]))&&block.text.split(/[。；;\n]/u).some(sentence=>{
   if(!consensusSentence(sentence))return false
+  const parsed=claims.filter(claim=>claim.blockId===block.id)
+  // An explicitly forecast monetary amount for another year can omit the
+  // repeated metric name. Keep it pending rather than guessing that metric or
+  // borrowing a completed source read from the preceding year.
+  if(consensusForecastScopes(sentence).some(scope=>scope.years.length===1&&/[+-]?\d+(?:,\d{3})*(?:\.\d+)?\s*(?:亿元|万元|千元|元)/u.test(scope.text)&&!parsed.some(claim=>claim.year===scope.years[0]&&scope.text.includes(claim.quote))))return true
   // Each numeric metric consumes only its exact claim; another forecast in the
   // same paragraph/sentence must not borrow that claim's completed status.
   let rest=sentence
-  for(const claim of claims.filter(claim=>claim.blockId===block.id))rest=rest.replace(claim.quote,'')
+  for(const claim of parsed)rest=rest.replace(claim.quote,'')
   if(comparableForecastMetric.test(rest))return true
   // “盈利预测 / 表3-1” and explanatory “盈利假设” are headings/context,
   // not a third metric after the actual EPS/profit quotes were consumed.

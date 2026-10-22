@@ -24,6 +24,27 @@ it('applies the MD threshold and cycle when both headers use natural sentence pu
   expect(()=>consensusPolicyFromBlocks([{text:'一致预期偏离阈值：12%；一致预期偏离阈值：20%。'}])).toThrow(/冲突/)
   expect(()=>consensusPolicyFromBlocks([{text:'一致预期统计周期：90天。一致预期统计周期：180天。'}])).toThrow(/冲突/)
 })
+it.each(['，',', '])('keeps explicitly forecast adjacent years separate across %s clauses',async separator=>{
+  const {extractConsensusClaims}=await load()
+  const blocks=[{id:'header',text:'研究标的：600519.SH。报告基准日：2026年10月20日。'},{id:'forecast',text:`我们预计2026年归母净利润为950亿元${separator}预计2027年归母净利润为900亿元。`}]
+  expect(extractConsensusClaims(blocks).map(({year,value,quote})=>({year,value,quote}))).toEqual([
+    {year:2026,value:950,quote:'归母净利润为950亿元'},
+    {year:2027,value:900,quote:'归母净利润为900亿元'}
+  ])
+})
+it('does not assign an ambiguous year or inherit a forecast label onto historical comparisons',async()=>{
+  const {extractConsensusClaims}=await load(),header={id:'header',text:'600519.SH 报告基准日20261020。'}
+  expect(extractConsensusClaims([header,{id:'forecast',text:'预计2026年、2027年归母净利润为950亿元。'}])).toEqual([])
+  for(const tail of ['2025年归母净利润为800亿元','2025年实际归母净利润为800亿元','已披露2025年归母净利润为800亿元']){
+    const claims=extractConsensusClaims([header,{id:'forecast',text:'预计2026年归母净利润为9,500亿元，'+tail+'。'}])
+    expect(claims.map(({year,value})=>({year,value}))).toEqual([{year:2026,value:9500}])
+  }
+  for(const label of ['actual','historical','realized','reported','已公布','已发布']){
+    expect(extractConsensusClaims([header,{id:'forecast',text:`Forecast FY2026 EPS76元, ${label} FY2025 EPS75元。`}]).map(({year,value})=>({year,value}))).toEqual([{year:2026,value:76}])
+  }
+  expect(extractConsensusClaims([header,{id:'forecast',text:'Forecast FY2026 EPS76元, FY2025 EPS75元。'}]).map(({year,value})=>({year,value}))).toEqual([{year:2026,value:76}])
+  expect(extractConsensusClaims([header,{id:'forecast',text:'Forecast FY2026 EPS76元, forecast FY2027 EPS80元。'}]).map(({year,value})=>({year,value}))).toEqual([{year:2026,value:76},{year:2027,value:80}])
+})
 it('does not turn an obsolete example or quoted/code paragraph into the report comparison policy',async()=>{
   const {consensusPolicyFromBlocks,compareConsensusClaim}=await load()
   for(const block of [{text:'旧版错误示范。一致预期偏离阈值：100%。这个设置已经弃用。'},{type:'quote',text:'一致预期偏离阈值：100%'},{type:'codeBlock',text:'一致预期偏离阈值：100%'}]){
