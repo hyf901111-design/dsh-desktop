@@ -313,6 +313,7 @@ export const NOTE_ENGLISH = {
   "易方达": "EFund",
   "彭博": "Bloomberg",
   "显示组件顶栏": "Show component title bar",
+  "显示组件外框": "Show component frame",
   "笔记任务过程": "Note activity",
   "探索更远，洞见更深": "Explore further, see deeper",
   "尚无可查看的挑战依据。": "No challenge evidence to view yet.",

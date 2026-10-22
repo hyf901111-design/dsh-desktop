@@ -5,14 +5,16 @@
 | 语义 ID | 参数 | 真实共享处理器与完成依据 |
 | --- | --- | --- |
 | `notes.components.create` | `prompt` | `useInlineComponentGeneration.startAndWait`；复用单卡生成、进度、数据绑定、停止与澄清。真实组件完成并保存后才返回成功，澄清返回 pending，失败/取消终止组合。 |
-| `notes.components.style` | `scope: note/selected`；`theme`、`titleBar` 至少一项 | `updateNoteComponentPresentation` 同时供选中组件控件和会话调用；仅更新 research 节点的 `notePresentation`。整篇范围递归覆盖全部研究组件，无需选择。等待 Notes 保存与渲染帧后回执。 |
+| `notes.components.style` | `scope: note/selected`；`theme`、`titleBar`、`frame` 至少一项 | `updateNoteComponentPresentation` 同时供选中组件控件和会话调用；仅更新 research 节点的 `notePresentation`。`frame:false` 仅去除组件外层边框，保留表格和内容内部边线；缺省或 true 保留外框。整篇范围递归覆盖全部研究组件，无需选择。等待 Notes 保存与渲染帧后回执。 |
 | `notes.export` | `format: pdf/docx/md`；可选 `path` | 同工具栏的 `exportNoteWithSnapshots` → `saveNoteExport`。截图包含当前组件主题/顶栏，真正写入后返回路径。省略路径使用原生保存框；路径必须与宿主从本次肯定目的地语句提取的完整绝对路径全等；前后缀、引用和否定不授权直写。无法唯一确定时使用原生保存框。 |
 | `notes.blocks.align` | `scope: note/selected`、`target: paragraphs/researchComponents`、`alignment: left/center/right` | 与段落菜单共享 `changeNoteAlignment`，只修改对应块的 `textAlignment`。组件容器与正文段落必须分别指定目标；保持正文、组件 payload、现有宽度。所选范围绑定稳定组件/段落 ID，变化后拒绝旧请求。 |
 | `notes.components.inspect` / `notes.components.apply` | inspect 空对象；apply `blockId/revision/containerSpec` | 仅当前明确选中的单个研究组件；复用 `createNoteComponentDataActions` 的 SHA-256 payload revision、结构校验和最终 CAS。apply 仅替换完整 containerSpec 并等待真实保存，保留其他节点属性/块/正文。先 inspect 再 apply，旧版本可重新读取后重试。 |
 | `canvas.inspect` | 空对象 | 复用 `CanvasActionBridge.inspect`；仅当前 session 存在有效绑定时提供，执行再检查可见 Notes 上下文与画布绑定。真实数据进入后续工具上下文。 |
 | `ui.zoom.reset` | 空对象 | 复用 `executeDesktopMenuCommand('zoom-reset')`；实际命令完成后回执。 |
 
-主题枚举为 `light/dark/enterprise/openterminal/auto`，`enterprise` 即易方达。组件节点覆盖层复用 workbench palette 和已有 iframe 主题消息。选中组件的“组件外观”控件提供同一能力的手动入口。
+主题枚举为 `light/dark/enterprise/openterminal/auto`，`enterprise` 即易方达。组件节点覆盖层复用 workbench palette 和已有 iframe 主题消息。选中组件的“组件外观”控件提供同一能力的手动入口，包含中英文顶栏和外框开关。
+
+外观修改会保存到原笔记，不是仅导出时临时覆盖。明确要求修改组件外观并导出时，可先执行 `notes.components.style({scope:'note',theme:'enterprise',titleBar:false,frame:false})`，等待保存成功后再 `notes.export({format:'pdf'})`。当前没有不改变原笔记的导出独立外观参数，不能声称支持这种临时覆盖。
 
 ## 会话及权限边界
 
@@ -28,7 +30,7 @@
 
 - Notes 的通用目录仍只接入 Canvas inspect；研究会话已有独立 research_canvas_inspect/apply/undo 与数据工具，尚未统一成跨模式目录。研究 inspect 现在声明 presentation/presentationFields，apply 可单独提交 `{op:"presentation",fields:{workbenchStyle:"enterprise"}}`，复用手动 `setWorkbenchStyle`，按当前看板保存；该操作不能与内容/整理混批。需重新 inspect 获取新 revision 后才能继续整理，展示偏好不宣称支持内容事务撤销。
 - 客户端导航、设置、主题、窗口、更新及其他菜单：当前只有 zoom.reset；应映射现有 menu command handler，不开放任意命令执行。
-- 组件隐藏顶栏已有 `titleBar:false`；去除组件外框/边框没有注册，也没有新增外框持久化模型，不能把隐藏顶栏称为去除边框。
+- 研究组件顶栏、外框已有独立持久化开关 `titleBar:false`、`frame:false`；外框指组件宿主边界，不移除内部表格边线或任意 HTML 自定义边框。导出沿用保存后的实际外观，不提供仅导出时的临时去框。
 - 文件查看器/附件节点外观：当前仅 research 节点。研究组件内置 HTML 如果自己不遵循主题令牌，外层不能保证改写其自定义固定颜色。
 - 插件/MCP、账户、云文档、日程、下载、发布和 OS 级操作：没有登记或授权；不宣称会话已支持。
 - 公开 API：本目录是内部 Notes host 适配层，尚未成为全产品跨入口的工具协议。新能力在注册表添加类型、schema、可用性和共享处理器即可；不应增加自然语言关键词分支。

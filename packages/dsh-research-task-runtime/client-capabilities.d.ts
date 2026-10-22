@@ -2,7 +2,7 @@ export type ClientCapabilityContext={owner:string;sessionId:string;documentId:st
 export type ClientCapabilityArguments={
  'notes.components.create':{prompt:string}
  'notes.export':{format:'pdf'|'docx'|'md';path?:string}
- 'notes.components.style':{scope:'note'|'selected';theme?:'light'|'dark'|'enterprise'|'openterminal'|'auto';titleBar?:boolean}
+ 'notes.components.style':{scope:'note'|'selected';theme?:'light'|'dark'|'enterprise'|'openterminal'|'auto';titleBar?:boolean;frame?:boolean}
  'notes.blocks.align':{scope:'note'|'selected';target:'paragraphs'|'researchComponents';alignment:'left'|'center'|'right'}
  'notes.components.inspect':Record<string,never>
  'notes.components.apply':{blockId:string;revision:string;containerSpec:Record<string,any>}

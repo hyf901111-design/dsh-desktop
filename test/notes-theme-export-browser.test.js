@@ -1,8 +1,9 @@
 import {beforeAll,afterAll,expect,it} from 'vitest'
 import {createRequire} from 'node:module'
+import {readFileSync} from 'node:fs'
 const require=createRequire(import.meta.url),{build}=require('esbuild');let browser,script
 beforeAll(async()=>{
- const output=await build({stdin:{resolveDir:process.cwd(),loader:'ts',contents:`import {freezeNoteSnapshotElement} from './src/shared/note-component-snapshot';import {installWorkbenchStyleMessages,WORKBENCH_MODE_CSS} from './packages/dsh-research-task-runtime/workbench-style.js';Object.assign(window,{freezeNoteSnapshotElement,installWorkbenchStyleMessages,WORKBENCH_MODE_CSS});`},bundle:true,format:'iife',platform:'browser',write:false})
+ const output=await build({stdin:{resolveDir:process.cwd(),loader:'ts',contents:`import {freezeNoteSnapshotElement} from './src/shared/note-component-snapshot';import {installNotePresentation} from './src/preload/notes/component-presentation';import {installWorkbenchStyleMessages,WORKBENCH_MODE_CSS} from './packages/dsh-research-task-runtime/workbench-style.js';Object.assign(window,{freezeNoteSnapshotElement,installNotePresentation,installWorkbenchStyleMessages,WORKBENCH_MODE_CSS});`},bundle:true,format:'iife',platform:'browser',write:false})
  script=output.outputFiles[0].text
  const pw=await import(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js')
  browser=await(pw.default||pw).chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -45,4 +46,21 @@ it('bounds a stalled shared transition marker instead of waiting for unlimited a
 it('can freeze final theme colors for an off-screen mounted iframe',async()=>{
  const {context,frame}=await fixture('no-preference',true)
  try{const frozen=await frame.evaluate(()=>window.freezeNoteSnapshotElement(document.body,'offscreen-theme',{width:500,height:220}));expect(frozen.html).toContain('rgb(30, 185, 225)')}finally{await context.close()}
+})
+
+it.each([undefined,true,false])('freezes frame=%s from the real component CSS without removing table rules',async frame=>{
+ const context=await browser.newContext(),page=await context.newPage()
+ try{
+  await page.setContent('<section class="en-research" style="width:400px;height:200px"><header class="en-research-header">顶栏</header><div class="en-research-view"><table><tr><td style="border:1px solid #222">保留表格内容</td></tr></table></div></section>')
+  await page.addStyleTag({content:readFileSync('src/preload/notes/style.css','utf8')});await page.addScriptTag({content:script})
+  const result=await page.evaluate(async frame=>{
+   const root=document.querySelector('.en-research'),before=root.innerHTML,dispose=window.installNotePresentation(root,{theme:'enterprise',titleBar:false,...frame===undefined?{}:{frame}},false)
+   try{
+    const frozen=await window.freezeNoteSnapshotElement(root,'content-frame'),copy=new DOMParser().parseFromString(frozen.html,'text/html')
+    return{outer:copy.querySelector('.en-research').style.borderTopWidth,inner:copy.querySelector('td').style.borderTopWidth,text:copy.body.textContent,liveKept:root.innerHTML===before}
+   }finally{dispose()}
+  },frame)
+  expect(result.outer).toBe(frame===false?'0px':'1px');expect(result.inner).toBe('1px')
+  expect(result.text).toContain('保留表格内容');expect(result.text).not.toContain('顶栏');expect(result.liveKept).toBe(true)
+ }finally{await context.close()}
 })

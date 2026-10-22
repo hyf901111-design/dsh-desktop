@@ -5,7 +5,7 @@ import {changeNoteAlignment,noteAlignmentBlocks} from './block-alignment'
 import {createNoteComponentDataActions} from './component-data-actions'
 export const noteCapabilityFingerprint=(content:NoteContent)=>JSON.stringify([content.title,content.blocks])
 export function noteResearchBlocks(blocks:any[]):any[]{return blocks.flatMap(block=>[...(block.type==='research'?[block]:[]),...noteResearchBlocks(block.children??[])])}
-export type NotePresentation={theme?:'light'|'dark'|'enterprise'|'openterminal'|'auto';titleBar?:boolean}
+export type NotePresentation={theme?:'light'|'dark'|'enterprise'|'openterminal'|'auto';titleBar?:boolean;frame?:boolean}
 /** Both component controls and conversational operations update the same node property. */
 export function updateNoteComponentPresentation(editor:any,ids:string[],style:NotePresentation){
  const updates=ids.map(id=>{const block=editor.getBlock(id);if(!block||block.type!=='research')throw Error(t('组件已移除，请重新发送请求。'));const node=JSON.parse(block.props.payload);return {id,node:{...node,notePresentation:{...node.notePresentation,...style}}}})
@@ -87,14 +87,14 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
    }catch(error){return receipt({status:'failed',message:(error as Error).message})}
   }
   if(input.action==='notes.components.style'){
-   const {scope,theme,titleBar}=input.args
-   if(!['note','selected'].includes(scope)||theme!==undefined&&!['light','dark','enterprise','openterminal','auto'].includes(theme)||titleBar!==undefined&&typeof titleBar!=='boolean'||theme===undefined&&titleBar===undefined)throw Error(t('组件样式参数无效。'))
+   const {scope,theme,titleBar,frame}=input.args
+   if(!['note','selected'].includes(scope)||theme!==undefined&&!['light','dark','enterprise','openterminal','auto'].includes(theme)||titleBar!==undefined&&typeof titleBar!=='boolean'||frame!==undefined&&typeof frame!=='boolean'||theme===undefined&&titleBar===undefined&&frame===undefined)throw Error(t('组件样式参数无效。'))
    const selected=options.selectedBlockIds()
    if(scope==='selected'&&JSON.stringify(selected)!==JSON.stringify(input.context.selectedBlockIds))throw Error(t('选中组件已变化，请重新发送请求。'))
    const ids=scope==='note'?noteResearchBlocks(options.editor.document).map(b=>b.id):selected
    if(!ids.length)throw Error(t(scope==='note'?'当前笔记没有可设置样式的研究组件。':'当前未选中研究组件。'))
    assertCurrent()
-   const changedBlockIds=updateNoteComponentPresentation(options.editor,ids,{...theme!==undefined?{theme}:{},...titleBar!==undefined?{titleBar}:{}})
+   const changedBlockIds=updateNoteComponentPresentation(options.editor,ids,{...theme!==undefined?{theme}:{},...titleBar!==undefined?{titleBar}:{},...frame!==undefined?{frame}:{}})
    fingerprint=noteCapabilityFingerprint(options.snapshot())
    let effect:CapabilityStyleEffect={state:'applied',changedBlockIds}
    const publish=()=>options.reportEffect?.(input.requestId,effect).catch(()=>{})
