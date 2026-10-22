@@ -61,7 +61,7 @@ export function installWorkbenchLocaleMessages(english) {
  function translated(value){return locale==='en'?(Object.hasOwn(english,value)?english[value]:value.replace(/^(\d+ \/ \d+) 条$/,(match,count)=>count+' items')):value}
  function update(){
   queued=false
-  for(const control of document.querySelectorAll('button,summary,input,select,textarea,[role=button],body[data-research-kind] #count[role=status],body[data-research-kind] #empty,[data-news-query-coverage] [data-workbench-status-text]')){
+  for(const control of document.querySelectorAll('button,summary,input,select,textarea,[role=button],body[data-research-kind] #count[role=status],body[data-research-kind] #empty,[data-news-query-coverage] [data-workbench-status-text],[data-news-source-query] [data-workbench-status-text]')){
    let saved=originals.get(control)
    if(!saved){saved={attrs:{},texts:new Map()};originals.set(control,saved)}
    for(const name of ['placeholder','title','aria-label']){

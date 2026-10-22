@@ -113,6 +113,18 @@ export async function completeNewsQueries(state,{query,signal,onChange,budgetMs=
 }
 const identity=item=>JSON.stringify([item.url??'',item.title])
 const escape=value=>String(value).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+export function mergeObservedNewsItems(existing,records,verified){
+ const items=[],seen=new Set()
+ for(const item of existing){const key=identity(item);if(!seen.has(key)){seen.add(key);items.push(item)}}
+ for(const record of records)for(const row of Array.isArray(record.response?.records)?record.response.records:[]){
+  const date=row?.time??row?.date
+  if(!row?.url||seen.has(identity(row)))continue
+  const item={title:row.title,...(date?{date}:{}),url:row.url,...(row.summary?{summary:row.summary}:{}),...(row.publisher?{category:row.publisher}:{})}
+  if(!verified({version:1,type:'news',title:'已取得新闻',items:[item]}))continue
+  seen.add(identity(row));items.push(item)
+ }
+ return items
+}
 export function newsTableCoverageIssue(data,scope,{verified=()=>false}={}){
  if(!String(scope).includes('【新闻容量适配】')||!(data?.type==='table'||data?.type==='market'&&data.variant==='table'))return
  const columns=Array.isArray(data.columns)?data.columns.map(value=>String(value).trim()):[]
@@ -128,15 +140,8 @@ export function coverageNewsData(text,state,scope,{verified=()=>false}={}){
  if(!news&&!table)return text
  if(news&&data.items.length&&!verified(data)||table&&!acceptArtifactOutput(JSON.stringify(data)))return text
  if(table&&newsTableCoverageIssue(data,scope,{verified}))return text
- const seen=new Set((news?data.items:[]).map(identity)),items=news?[...data.items]:[]
- for(const record of state.records)for(const row of record.response.records){
-  // Publication dates must actually exist. An index firstSeenAt is not one.
-  const date=row.time??row.date
-  if(!row.url||seen.has(identity(row)))continue
-  const item={title:row.title,...(date?{date}:{}),url:row.url,...(row.summary?{summary:row.summary}:{}),...(row.publisher?{category:row.publisher}:{})}
-  if(!verified({version:1,type:'news',title:data.title,items:[item]}))continue
-  seen.add(identity(row));items.push(item)
- }
+ // Publication dates must actually exist. An index firstSeenAt is not one.
+ const items=mergeObservedNewsItems(news?data.items:[],state.records,verified)
  // Never truncate a source collection to fit this template. Large-news plans
  // already use the existing controlled table/HTML routes.
  if(table&&!items.some(item=>!JSON.stringify(data.rows).includes(item.title)))return text
