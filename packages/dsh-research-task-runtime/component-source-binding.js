@@ -15,6 +15,7 @@ import {operatingSourceAttempt} from './statement-operating-coverage.js'
 import {newsSourceScopeIssue,generalNewsScope,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
 import {filterScopedNewsArtifact,controlledNewsHtml,NEWS_EMPTY_NOTE} from './news-topic-filter.js'
 import {newsQueryAttempt,mergeObservedNewsItems} from './news-query-coverage.js'
+import {componentReadableSnapshot,readableSnapshotUnavailable,pureMissingSourceText} from './component-readable-snapshot.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -470,12 +471,17 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
       if((Object.hasOwn(value,'$path')||Object.hasOwn(value,'$each'))&&!['asOf','title','sources'].includes(key))paths++
       // Only the source selector can produce values; literals inside $map are
       // checked as usual, while formatting and missing-value text are metadata.
-      return Object.entries(value).every(([k,v])=>k==='$default'?typeof v==='string'&&/未取得|未提供|缺失|暂无/u.test(v):k.startsWith('$')&&k!=='$map'?true:sourceBacked(v,k==='$map'?key:k))
+      return Object.entries(value).every(([k,v])=>k==='$default'?pureMissingSourceText(v):k.startsWith('$')&&k!=='$map'?true:sourceBacked(v,k==='$map'?key:k))
     }
     if(!sourceBacked(contract)||!paths)return null
     const mapping=financialValueSelectors(singleSourceMapping(contract,responses),sources)
     const data=materializeComponentMapping(mapping,responses,now,Object.values(sources))
-    if(templateSourceDataIssue(data)||templateDataIssue(data))return null
+    const normalized=normalizedHistoryMetadata(data,mapping,sources,now,options)
+    const readable=componentReadableSnapshot(normalized,mapping,responses,Object.values(sources),now)
+    const unavailable=Boolean(readable)&&readableSnapshotUnavailable(normalized)
+    if(templateSourceDataIssue(data)&&!unavailable)return null
+    if(readable){const output=acceptArtifactOutput(JSON.stringify(readable));return output?{data:normalized,output,capacitySnapshot:true,dataUnavailable:unavailable}:null}
+    if(templateDataIssue(data))return null
     const snapshot=normalizeChartMetadata(componentSnapshotData(normalizedHistoryMetadata(data,mapping,sources,now,options))),output=acceptArtifactOutput(JSON.stringify(snapshot))
     return output?{data:snapshot,output}:null
   }catch{return null}
@@ -483,6 +489,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
 
 export const COMPONENT_STATIC_CHART_PROMPT = `
 本卡仅生成本次静态图表，不保存自动刷新设置。取得可映射的结构化列表时，优先交付一个 data-bound JSON，由宿主直接读取完整响应和计算曲线，不逐点抄写或手算数组：{"version":1,"type":"data-bound","requests":[{"key":"q0","tool":"实际成功调用的 public_data_query、financial_query 或 ework__ 工具名","args":原成功请求参数}],"mapping":上文当前模板及字段映射}。requests 必须与本卡实际成功调用完全一致；financial_query 仅支持本次静态映射，不能登记自动刷新。网页纯文本不能伪造为这些接口。
+实际成功的结构化响应若字段或条数超过原生布局容量，仍提交完整 source-backed mapping；不要为适配容量删除标的、指标、行列或序列，也不要截断长单元格。宿主会在来源与结构校验后按支持的类型采用完整可读静态展示；自动更新以实际绑定回执为准，不把容量展示快照称为已绑定。
 mapping 必须保留上文指定的 type 与 variant：原生图表为 type:chart 及其变体，金融趋势为 type:market、variant:trend；不得换模板或省略变体。每条 values 都要选择数值字段，例如 financial-1 收盘价的完整表达式：{"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"value"},"$normalize":"base100","$digits":2}。不要漏掉 $map；其他来源使用其实际数值字段。
 $from 引 requests.key，$each 指真实列表路径，$map 指每行字段，$filter:{"实际字段":"实际值"} 为标量等值筛选（多个条件同时满足）；$sortBy:"真实日期字段"/$order:"asc" 排序，$take:-20 取末20条，$as:"number" 转数值，$digits:2 控制显示精度。例如 financial_query 的响应明确含 records/metric/as_of/value 时，labels 使用 {"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"as_of"}}；series.values 使用同一筛选排序，$map 改为 {"$path":"value"}。路径与筛选值以本轮真实响应为准，其他来源不套用这些字段。
 需求要求共同基期100比较时，在每条 values 的 $each 同层加 "$normalize":"base100" 和 "$digits":2，由宿主按筛选排序后的首值执行 值/首值×100；不手算数组，不写死 $scale=100/起点。归一化只用于所需的比较；原始价格需求保留原单位。每条序列都必须使用同一组实际日期，不能将不同日期按条数硬对齐；缺失值不填0。各标的、来源、复权口径、日期和计算说明保留在 note，asOf 仅放简短来源与时点（最多256字）。样本只说明字段路径，不代表完整数据条数；原响应中存在的标的不得因上下文样本省略而标为未取得。
@@ -492,6 +499,7 @@ note 保留真实来源、日期、原单位和复权口径；不要凭样本、
 export const COMPONENT_BOUND_DATA_PROMPT = `
 自动绑定数据交付协议：通过已配置插件或 public_data_query 取得可映射的结构化数据后，最终必须交付一个 data-bound 对象。此协议替代上文直接提交静态模板 JSON 的输出要求；mapping 仍使用上文模板 schema。由宿主映射真实响应、渲染当前固定模板并保存刷新设置；未指定时默认一分钟，用户或宿主明确要求仅手动时 intervalMinutes=0。无需抄写数百行数值，也不调用额外工具设置刷新。行情、K线、表格、资讯、研报均适用。保留可复用的原始字段和摘要，不为改写摘要退回静态输出。格式：
 {"version":1,"type":"data-bound","requests":[{"key":"q","tool":"实际成功调用的 ework__ 工具名或 public_data_query","args":{"原参数":"原值"}}],"mapping":{"version":1,"type":"market","variant":"本面板模板","title":"标题","asOf":{"$from":"q","$path":"真实日期路径","$suffix":" · 通联 DataYes"},"items":{"$from":"q","$each":"真实数组路径","$map":{"label":{"$path":"名称字段"},"value":{"$path":"数值字段","$as":"string"}}}}}
+实际成功的结构化响应若字段或条数超过原生布局容量，仍提交完整 source-backed mapping；不要为适配容量删除标的、指标、行列或序列，也不要截断长单元格。宿主会在来源与结构校验后按支持的类型采用完整可读静态展示；自动更新以实际绑定回执为准，不把容量展示快照称为已绑定。
 public_data_query 请求必须保留 operation:"query"、source 和 parameters_json 原字符串；catalog 只是目录不能绑定。内置返回 records 为数组、source 为来源、dataTime 为数据时点（可为 null）、receivedAt 仅为获取时间；未知报价时点写“报价时点未提供”，不可用获取时间冒充交易时间。
 data-bound 的验证依据是当前面板任务实际成功调用的工具响应，父任务附在 prompt 的记录只供参考，不能替代该凭证。当前已获联网授权且工具可见时，即使父任务写“已有记录、不要重复取数”，也须用相同的真实参数调用一次来源工具来建立绑定凭证（免费工具可命中共享缓存，不重新搜索接口）。用户或宿主禁止联网、工具不可见时只交付快照并明确未绑定，不伪造调用。
 mapping 内的整体结构必须符合上文当前模板 schema；例子里的 items 仅演示指标映射，K线须用 candles，表格须用 columns/rows。$from 指 requests.key，$path 是点分路径或数组下标，$each/$map 映射原始数组，数组可加 $sortBy:"实际日期字段"、$order:"asc|desc" 排序，$take:5 取前5条、$take:-20 取最后20条；$single:true 要求恰好一条并返回单值，用于最新行情或数据日期，避免写死随分页变化的数组下标。$as 为 string/number；放在 $each 同层时逐项转换标量列表，放在 $map 字段内时转换该字段；$single:true 后转换单值。表格的 $map 必须是单元格数组，例如 [{"$path":"name"},{"$path":"weight","$as":"number"}]。$scale 换算单位，$digits:2 在换算后控制小数位（0–8）；百分比与亿元通常保留2位，价格按精度保留2–3位，避免显示浮点长尾。$prefix/$suffix 加文字，$optional:true 将来源缺失值保留为 null；文本字段可用 $default:"来源未提供摘要" 为缺失、null 或空字符串提供明确的缺失说明，不能用假数值填补。列表中存在 url 时将其映射到条目 url，保留来源链接。无脚本。请求 args 必须原样复制本轮成功业务调用，包括日期值和所有参数类型；无需创建日期表达式。宿主会为最新数据自动推导滚动窗口，固定历史需求保持原日期。不要把日期写成表达式字符串。通联 ai_search 的 SOURCES/EVIDENCE 文本由宿主按实际来源规范化为 {sources:[{id,category,source,date,title,url,summary,excerpts}]}；summary 是第一条证据原句，excerpts 为全部原句，可直接绑定 news.items。除此之外只引用实际 JSON 结构，不猜字段。
@@ -627,8 +635,17 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   if(scopeIssue)throw Object.assign(Error(scopeIssue),{code:'SOURCE_DATA_REQUIRED'})
   const materialized=materializeComponentMapping(mapping,responses,now,observed)
   const data=filterScopedNewsArtifact(materialized,observed,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
+  const readable=componentReadableSnapshot(data,mapping,responses,observed,now)
+  const unavailable=Boolean(readable)&&readableSnapshotUnavailable(data)
   const sourceIssue=templateSourceDataIssue(data)
-  if(sourceIssue)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
+  if(sourceIssue&&!unavailable)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
+  if(readable){
+    const output=acceptArtifactOutput(JSON.stringify(readable))
+    if(!output)throw Error('完整来源数据超过当前快照传输容量，不能截断记录或伪装完成。')
+    // Keep semantic data for every existing source/date/unit/statement gate.
+    // Only the host presentation differs, and it never gets a refresh recipe.
+    return {data,output,capacitySnapshot:true,dataUnavailable:unavailable}
+  }
   const issue=templateDataIssue(data)
   if(issue)throw Error(issue)
   // Successful queries need not declare publicData in the workbench plan.

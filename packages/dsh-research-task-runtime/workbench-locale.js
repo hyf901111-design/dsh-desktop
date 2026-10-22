@@ -1,6 +1,10 @@
 import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
  '来源查询':'Source search','全部查询':'All searches',
+ '搜索完整数据':'Search all data','浏览全部':'Browse all','完整来源数据':'Complete source data','日期 / 期间':'Date / period',
+ '指标':'Metric','原值':'Original value','指标说明':'Metric detail','缺失说明':'Missing data explanation',
+ '来源未提供可用数值；已保留实际字段与来源。':'No usable values were provided; actual fields and sources are retained.',
+ '静态快照，自动更新未绑定':'Static snapshot; automatic updates are not linked','来源未提供':'Not provided by the source','来源名称未提供':'Source name not provided','单位':'Unit','来源':'Source','原文链接':'Original link',
  '查询覆盖：':'Search coverage: ',
  '来源查询：':'Source search: ',
  '来源返回：':'Source records: ',

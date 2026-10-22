@@ -1515,7 +1515,7 @@ export class ResearchTaskRuntime {
   }
 
   async run(task) {
-    let handle, readableFallback, statementIssue, statementRepairData, calendarIssue, calendarRepairData,coveredHtml,newsTableError
+    let handle, readableFallback, statementIssue, statementRepairData, calendarIssue, calendarRepairData,coveredHtml,newsTableError,readableSnapshot,readableRepairRequired=false
     const sourceRecords=[...(task.newsCoverage?.records??[])],sourceAttempts=[]
     const newsPlan=task.kind==='container'&&plannedNewsQueries(task.prompt)
     const newsCollector=newsPlan?componentSourceCollector(['public_data_query','ework__public_data_query']):undefined
@@ -1712,12 +1712,18 @@ export class ResearchTaskRuntime {
           try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,panelTitle,newsScope:task.prompt,feedOptions,intervalMinutes:requestedComponentRefreshInterval(panelRequest),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(panelRequest)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(panelRequest)}) }
           catch(error){
             const snapshot=resolveComponentSnapshot(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,panelTitle,...historyOptions})
-            if(snapshot)verifiedSnapshot=snapshot
+            if(snapshot&&!snapshot.capacitySnapshot)verifiedSnapshot=snapshot
             if(!snapshot||bindingRequested)throw new ResearchTaskError(error.code==='SOURCE_DATA_REQUIRED'?'GENERATION_FAILED':'INVALID_OUTPUT',error.message)
             mapped=snapshot
           }
           binding=bindingRequested?mapped?.recipe:undefined
+          if(readableRepairRequired&&!mapped)throw new ResearchTaskError('GENERATION_FAILED','容量组件修复必须保留可核验的数据映射，不能用 HTML 或文字取消原有来源、日期和数据约束。')
+          if(mapped?.capacitySnapshot)readableRepairRequired=true
           if(mapped)deliveredText=restoreSnapshotMarketHistory(JSON.stringify(mapped.data),sourceRecords,historyOptions)??JSON.stringify(mapped.data)
+          if(task.kind==='container'&&mapped&&!statementRepairData){
+            const requiredTables=extractArtifactObjects(deliveredText).map(data=>statementTableRequiredData(data,panelRequest,sourceRecords)).filter(Boolean)
+            if(requiredTables.length)statementRepairData=requiredTables
+          }
           if(!calendarRepairData&&mapped?.data?.type==='calendar')calendarRepairData=mapped.data
           if (deferredPanel) {
             const candidates = extractArtifactObjects(deliveredText)
@@ -1758,13 +1764,13 @@ export class ResearchTaskRuntime {
           }
           const newsScopeIssue=!deferredPanel&&extractArtifactObjects(deliveredText).map(data=>newsSourceScopeIssue(data,sourceRecords,task.prompt)).find(Boolean)
           if(newsScopeIssue)throw new ResearchTaskError('GENERATION_FAILED',newsScopeIssue)
-          const sourceIssue=extractArtifactObjects(deliveredText).map(templateSourceDataIssue).find(Boolean)
+          const sourceIssue=!(mapped?.capacitySnapshot&&mapped.dataUnavailable)&&extractArtifactObjects(deliveredText).map(templateSourceDataIssue).find(Boolean)
           if(sourceIssue)throw new ResearchTaskError('GENERATION_FAILED',sourceIssue)
           operatingIssue=!deferredPanel&&task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>statementOperatingCoverageIssue(data,panelRequest,sourceRecords,sourceAttempts)).find(Boolean)
           if(operatingIssue)throw new ResearchTaskError('GENERATION_FAILED',operatingIssue)
           statementIssue=task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>statementTableEvidenceIssue(data,panelRequest,sourceRecords,{requiredData:statementRepairData})).find(Boolean)
           if(statementIssue)throw new ResearchTaskError('GENERATION_FAILED',statementIssue)
-          const templateIssue=extractArtifactObjects(deliveredText).filter(data=>data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)).map(templateDataIssue).find(Boolean)
+          const templateIssue=!mapped?.capacitySnapshot&&extractArtifactObjects(deliveredText).filter(data=>data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)).map(templateDataIssue).find(Boolean)
           if(templateIssue)throw new ResearchTaskError('INVALID_OUTPUT',templateIssue)
           // A named connected source is part of the requested result. Static
           // quotes from a different website cannot satisfy it, even if the
@@ -1783,14 +1789,15 @@ export class ResearchTaskRuntime {
                 '该组件指定通联 DataYes 来源，必须实际取得业务响应；需要刷新时提交可刷新映射，不能用其他网站的静态行情或接口目录代替。')
             }
           }
-          output = finalText(mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
+          output = finalText(mapped?.capacitySnapshot?[{type:'text',text:mapped.output}]:mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', bindingRequested
               ? '已取得数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。'
               : '已取得真实数据，但尚未交付有效组件。请直接用已有响应生成原生模板 JSON，保留来源、日期与缺失项，不重新检索或建立刷新绑定。')
           }
-          const variantIssue = workbenchMarketVariantIssue(output, deferredPanel?.contract ?? workbenchPanelScope(task.prompt)?.contract ?? task.prompt)
+          const variantRequest=deferredPanel?.contract ?? workbenchPanelScope(task.prompt)?.contract ?? task.prompt
+          const variantIssue = workbenchMarketVariantIssue(output,variantRequest)||(mapped?.capacitySnapshot&&workbenchMarketVariantIssue(JSON.stringify(mapped.data),variantRequest))
           if (variantIssue) throw new ResearchTaskError('INVALID_OUTPUT', variantIssue)
           const recencyIssue = workbenchMarketRecencyIssue(deliveredText, deferredPanel?.contract ?? workbenchPanelScope(task.prompt)?.contract ?? task.prompt, new Date(this.now()))
           if (recencyIssue) throw new ResearchTaskError('GENERATION_FAILED', recencyIssue)
@@ -1798,10 +1805,13 @@ export class ResearchTaskRuntime {
             const model=output&&readTemplateModel(JSON.parse(output))
             if(model)output=acceptArtifactOutput(JSON.stringify(componentSnapshotData(model.data)))??output
           }
+          // A model marker is never authority. This exact output/data pair is
+          // created only after this attempt passed the original semantic gates.
+          readableSnapshot=mapped?.capacitySnapshot?{output,data:mapped.data}:undefined
         }
         catch (error) {
           if (!structured || !['INVALID_OUTPUT', 'OUTPUT_TOO_LARGE', 'GENERATION_FAILED', 'SHARED_STATE_REQUIRED', DESIGN_POLICY_ERROR].includes(error.code)) throw error
-          output = undefined; generationError = error
+          output = undefined; generationError = error;readableSnapshot=undefined
           // Progress prose and malformed JSON can fail before the missing-binding
           // check above. Keep verified responses in that same bounded repair.
           if (error.code === 'INVALID_OUTPUT' && plannedFormat !== 'html' && sourceRecords.length && (
@@ -1894,7 +1904,8 @@ export class ResearchTaskRuntime {
         if(eventIssue){calendarIssue=eventIssue;output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',eventIssue)}
         const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
         if (policyIssue) {output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',policyIssue)}
-        const issue=output && extractArtifactObjects(output).map(data=>statementTableEvidenceIssue(data,panelRequest,sourceRecords,{requiredData:statementRepairData})).find(Boolean)
+        const semantic=readableSnapshot&&readableSnapshot.output===output?JSON.stringify(readableSnapshot.data):output
+        const issue=output && extractArtifactObjects(semantic).map(data=>statementTableEvidenceIssue(data,panelRequest,sourceRecords,{requiredData:statementRepairData})).find(Boolean)
         if(issue){statementIssue=issue;output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',issue)}
       }
       if(output!==undefined&&task.newsCoverage){
@@ -1969,7 +1980,7 @@ export class ResearchTaskRuntime {
     } catch (error) {
       console.warn('[research-task] execution failed', task.taskId, error instanceof Error ? error.message : String(error))
       const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
-      if (!policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
+      if (!readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
         await this.finish(task, 'completed', { finalOutput: readableFallback })
       } else if (!terminalState(task.state)) {
         await this.finish(
