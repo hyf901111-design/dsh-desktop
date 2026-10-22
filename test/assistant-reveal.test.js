@@ -24,7 +24,7 @@ it('grants Notes presentation only from a real new preparing chain, never from h
 it('patches the real keyed assistant renderer and Notes terminal props idempotently without changing streaming grammar or tool results',()=>{
  const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),notes=patchNotesActivity(source),next=patchAssistantReveal(notes)
  expect(patchAssistantReveal(next)).toBe(next);expect(patchNotesActivity(next)).toBe(next)
- expect(next).toContain('eworkAssistantRevealLedger.record(eworkRevealOwner,node)');expect(next).toContain('text: block.text,');expect(next).toContain('streaming: data.status === "running"')
+ expect(next).toContain('eworkAssistantRevealLedger.record(eworkRevealOwner,node)');expect(next).toContain('/* ework:assistant-reveal-follow:v1 */');expect(next.match(/el.scrollTop = assistantRevealScrollTop\(el\) \?\? el.scrollHeight;/g)).toHaveLength(2);expect(next).toContain('if(movedByReader)finishAssistantReveals(local);');expect(next).toContain('text: block.text,');expect(next).toContain('streaming: data.status === "running"')
  expect(next).not.toContain('return messageId === void 0 ? content :');expect(next).toContain('streaming:false,reveal,t');expect(next).toContain('eworkAssistantRevealLedger.observe(useSession,openState,order,nodeStore)')
 })
 it('refreshes an already patched runtime helper without duplicating its native wiring',()=>{
