@@ -1,5 +1,6 @@
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { mountNotes } from './notes/mount'
+import {createNoteHistoryLoader} from './notes/history-loader'
 import {noteUiError} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 import { IntegrationView } from './integrations/view'
 import { mountMemoryUi } from './memory/view'
@@ -217,7 +218,8 @@ function initializeUi(): void {
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
   const noteOwners = new Map<string, string>()
   let noteIdentityEpoch=0
-  document.addEventListener('sherlock:notes-history-request',event=>{const sessionId=(event as CustomEvent).detail?.sessionId,epoch=noteIdentityEpoch;if(typeof sessionId!=='string')return;void ipcRenderer.invoke('notes:request','conversation-load',{sessionId}).then(value=>{if(epoch!==noteIdentityEpoch)return;noteOwners.set(sessionId,value.owner);document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId,rows:value.rows}}))}).catch(()=>{})})
+  const noteHistory=createNoteHistoryLoader({currentEpoch:()=>noteIdentityEpoch,load:sessionId=>ipcRenderer.invoke('notes:request','conversation-load',{sessionId}),accept:(sessionId,value)=>{noteOwners.set(sessionId,value.owner);document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId,rows:value.rows}}))},onError:error=>console.warn('[notes-history]',noteUiError(error instanceof Error?error.message:String(error)))})
+  document.addEventListener('sherlock:notes-history-request',event=>{const sessionId=(event as CustomEvent).detail?.sessionId;if(typeof sessionId==='string'&&sessionId.length>0&&sessionId.length<=256)void noteHistory.request(sessionId)})
 
   ipcRenderer.on('notes:capability-action',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:value}))})
   ipcRenderer.on('notes:progress',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:value}))})
@@ -249,10 +251,10 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) })
   scheduledView.mount()
-  const resetIntegrationIdentity = () => { noteIdentityEpoch++; notes.resetIdentity(); noteOwners.clear(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { noteIdentityEpoch++; noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
-  window.addEventListener('unload', () => { memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
+  window.addEventListener('unload', () => { noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,
