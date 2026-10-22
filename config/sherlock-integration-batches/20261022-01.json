@@ -11,15 +11,29 @@
         "schemaVersion": 1,
         "featureName": "保护笔记写入保存窗口并在快速完成后恢复挑战队列",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "8f35cd64a0c5222bd6c799116e656140a8cdc628",
-        "tipCommit": "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5",
+        "baseCommit": "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5",
+        "tipCommit": "5882387ed0cbcb4bd6b00df20af3c9081f7e01d3",
         "commits": [
           {
-            "commit": "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5",
+            "commit": "daf11ba5d9fe8aeab9fb69253f13cb1ab31659a0",
             "parents": [
-              "8f35cd64a0c5222bd6c799116e656140a8cdc628"
+              "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5"
             ],
-            "subject": "修复失焦期间连续回复重新渐显并更新已补丁前端"
+            "subject": "将助手回复改为连续逐字淡入并跟随可见前缘"
+          },
+          {
+            "commit": "7a1aa8df522c2805d1451f42f08b732be5420872",
+            "parents": [
+              "daf11ba5d9fe8aeab9fb69253f13cb1ab31659a0"
+            ],
+            "subject": "避免长回复逐帧复制待显文字队列"
+          },
+          {
+            "commit": "5882387ed0cbcb4bd6b00df20af3c9081f7e01d3",
+            "parents": [
+              "7a1aa8df522c2805d1451f42f08b732be5420872"
+            ],
+            "subject": "统一消息提交后的默认思考提示并保留实际执行状态"
           }
         ],
         "files": [
@@ -28,12 +42,28 @@
             "path": "scripts/lib/assistant-reveal.mjs"
           },
           {
+            "status": "A",
+            "path": "scripts/lib/conversation-thinking-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
             "status": "M",
             "path": "test/assistant-reveal-browser.test.js"
           },
           {
             "status": "M",
             "path": "test/assistant-reveal.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-thinking-status.test.js"
           }
         ],
         "checks": [
@@ -42,6 +72,7 @@
               "npx",
               "vitest",
               "run",
+              "test/conversation-thinking-status.test.js",
               "test/assistant-reveal.test.js",
               "test/assistant-reveal-browser.test.js",
               "test/notes-activity.test.js",
@@ -49,9 +80,9 @@
               "test/markdown-file-links.test.js"
             ],
             "outcome": "passed",
-            "summary": "29 passed /5 directly affected files; exact working source committed unchanged. output/assistant-reveal-focus-1023/focused-final.json. Mounted/first-mount blur repeated-arrival reproductions first failed twice against base8f then passed after the focused state fix.",
-            "verifiedCommit": "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5",
-            "completedAt": "2026-10-22T22:52:24.783Z",
+            "summary": "41 focused tests across six affected files; continuous neighbor alpha, monotonic fragments, stable-block settled DOM replacement, native follow handlers, background/history safety, large-reply allocations and default bilingual thinking state. output/assistant-character-reveal-1023/exact-final.json",
+            "verifiedCommit": "5882387ed0cbcb4bd6b00df20af3c9081f7e01d3",
+            "completedAt": "2026-10-22T23:41:28.116Z",
             "timeoutMs": 180000
           },
           {
@@ -61,20 +92,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "Passed; output/assistant-reveal-focus-1023/typecheck.log",
-            "verifiedCommit": "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5",
-            "completedAt": "2026-10-22T22:52:24.783Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "output/assistant-reveal-focus-1023/verify-old-asset-upgrade.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "Exact committed base8f helper generates an old runtime asset, then new patch upgrades it exactly to a fresh patch and remains idempotent. Entire actual runtime module parsed by esbuild; no dependency/app mutation. output/assistant-reveal-focus-1023/old-asset-upgrade.json",
-            "verifiedCommit": "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5",
-            "completedAt": "2026-10-22T22:52:24.783Z",
+            "summary": "Typecheck passed; output/assistant-character-reveal-1023/typecheck-with-thinking.log",
+            "verifiedCommit": "5882387ed0cbcb4bd6b00df20af3c9081f7e01d3",
+            "completedAt": "2026-10-22T23:41:28.116Z",
             "timeoutMs": 180000
           },
           {
@@ -82,191 +102,31 @@
               "git",
               "diff",
               "--check",
-              "8f35cd64a0c5222bd6c799116e656140a8cdc628..c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5"
+              "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5..5882387ed0cbcb4bd6b00df20af3c9081f7e01d3"
             ],
             "outcome": "passed",
-            "summary": "Passed; clean committed three-file scope",
-            "verifiedCommit": "c59ca9b7c56a0eab8fb8b115c146a2734b1cc4e5",
-            "completedAt": "2026-10-22T22:52:24.783Z",
+            "summary": "Clean committed source scope; no unrelated feature changes.",
+            "verifiedCommit": "5882387ed0cbcb4bd6b00df20af3c9081f7e01d3",
+            "completedAt": "2026-10-22T23:41:28.116Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Actual production AssistantMarkdown+MarkdownText isolated headless tests prove document-visible blur followed by arrival A/B has zero highlights for both mounted and newly mounted replies, and a real focus event enables only the subsequently appended suffix. Existing Markdown/selection/history/Notes cases remain green. Root independently reviewed the three-file delta and ran twenty direct reveal cases without blockers; native integrated application verification remains root-owned."
+          "summary": "Real production Markdown headless frame sequence at 0/60/120/240/600/1200/2400ms visually reviewed. Native scroll callbacks extracted into the fixture follow the visible frontier, preserve manual offset, then reach actual bottom. Independent read-only peer found no blockers; native packaged-client verification remains root-owned."
         },
         "acceptanceCriteria": [
-          "An existing reply remains fully painted for every update during a continuous blurred state, even when document.visibilityState remains visible; window focus releases this state.",
-          "First mounting a reply while document.hasFocus() is false also disables paint until focus. Returning to focus does not replay earlier background text, while a genuinely new suffix can reveal.",
-          "Surface geometry hiding still suspends existing paint and skips catch-up without incorrectly setting a permanent window-blurred state. Focus listeners are removed on disposal.",
-          "A previously v1-patched runtime asset refreshes only its uniquely delimited helper region; existing native/Notes wiring and ledger declaration are retained without duplication, unexpected helper boundaries fail closed, and repeat patching is idempotent.",
-          "No Markdown contents, request/task states, note persistence, tool receipts, scroll offsets or model generation behavior change."
+          "Received foreground reply text fades in in grapheme order with one continuous timeline across fragments, without grouped twelve-character flashes.",
+          "Stable-block streaming completion and Markdown reparsing remap the visible frontier without exposing the hidden tail; history, blur, copy and selection retain immediate complete text.",
+          "Following conversations track the visible frontier while manual readers keep their position; long-reply per-frame work does not copy all pending graphemes.",
+          "Initial conversation and note status is Thinking in English and 正在思考 in Chinese; actual commands, search, writing and validation keep specific status labels."
         ],
         "risks": [
-          "Headless lifecycle/paint checks establish the regression boundary; final native Electron motion acceptance is performed by root after integration.",
-          "The packaged frontend verifier reads actual runtime helper definitions; when copied into integration its relative imports must resolve the integrated source, including already merged unrelated Notes row changes.",
-          "No shared build, GUI, model request, source query, version change, publish or remote push was performed by this feature."
+          "Visual reveal only paints already received Markdown; this does not change model token delivery or persistence semantics.",
+          "Final native build, package parity and user testing are performed by root after integration.",
+          "No public release, version bump, notarization, remote push or main promotion is included."
         ],
-        "generatedAt": "2026-10-22T22:52:24.783Z"
-      },
-      "merged": {
-        "mergeCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-        "verificationCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "ad123741b90f0f947c78c67014e4a26f9009406b",
-            "completedAt": "2026-10-22T22:53:35.853Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-22T22:53:35.853Z"
+        "generatedAt": "2026-10-22T23:41:28.116Z"
       }
     },
     {
