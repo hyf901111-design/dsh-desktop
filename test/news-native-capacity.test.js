@@ -7,6 +7,7 @@ import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.j
 import {validateWorkbench,workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import {installWorkbenchLocaleMessages,validWorkbenchLocaleMessage} from '../packages/dsh-research-task-runtime/workbench-style.js'
 import {WORKBENCH_ENGLISH} from '../packages/dsh-research-task-runtime/workbench-locale.js'
+import {controlledNewsHtml} from '../packages/dsh-research-task-runtime/news-topic-filter.js'
 
 const now=new Date('2026-10-22T14:45:00Z'),names=['中际旭创','新易盛','工业富联'],codes=['300308','300502','601138']
 const originalRequest='分别检索中际旭创（300308）、新易盛（300502）、工业富联（601138）近30天相关新闻，每家公司独立查询。保留所有实际取得且相关的记录；无结果、失败或未完成均明确披露，不使用模拟数据。'
@@ -124,6 +125,48 @@ it('completes the actual workbench runtime entry in one model response without p
  await runtime.tasks.get(receipt.taskId).runPromise;const task=runtime.inspect({parentSessionId:'native-capacity-parent',taskId:receipt.taskId})
  expect(task.state,task.error).toBe('completed');expect(start).toHaveBeenCalledOnce();expect(bindData).not.toHaveBeenCalled()
  await dom(task.finalOutput,document=>expect(document.querySelectorAll('article')).toHaveLength(60))
+})
+it.each([[20,'groups'],[5,'sections']])('adapts source-bound company groups of %s rows using %s without asking the model to rewrite a valid collection',async(count,key)=>{
+ const {records,draft}=fixture(count)
+ const items=draft.mapping.items;delete draft.mapping.items
+ draft.mapping.variant='company-news-groups'
+ draft.mapping[key]=items.map((items,i)=>({company:names[i],status:'伪造状态：全部来源覆盖完整',items}))
+ draft.mapping[key][0].company={name:names[0],code:codes[0]};draft.mapping[key][0].metadata={sourceNotes:['不可作为真实来源凭据的展示说明']}
+ const start=vi.fn(async()=>({childSessionId:'grouped-native-child',result:Promise.resolve({stopReason:'completed',sourceRecords:records,output:[{type:'text',text:JSON.stringify(draft)}]}),dispose:async()=>{}})),bindData=vi.fn()
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{save:async()=>{}},now:()=>now.valueOf(),retryDelayMs:0});cleanup.push(()=>runtime.dispose())
+ const receipt=await runtime.start({parentSessionId:'grouped-native-parent',canvasNodeId:'grouped-native-node',kind:'container',prompt},hostContext)
+ await runtime.tasks.get(receipt.taskId).runPromise;const task=runtime.inspect({parentSessionId:'grouped-native-parent',taskId:receipt.taskId})
+ expect(task.state,task.error).toBe('completed');expect(start).toHaveBeenCalledOnce();expect(bindData).not.toHaveBeenCalled()
+ await dom(task.finalOutput,document=>{
+  expect(document.querySelectorAll('article')).toHaveLength(count*3)
+  for(const name of names)expect(document.body.textContent).toContain('来源查询：'+name)
+  expect(document.body.textContent).not.toContain('伪造状态');expect(document.body.textContent).toContain(draft.mapping.note)
+  let state,render
+  const bridge={register:config=>{state=config.initialState;render=()=>config.render(state,{connected:true,readOnly:false});render();return {dispatch:action=>{state=config.reduce(state,action);render()}}}}
+  runInNewContext(document.querySelector('script').textContent,{document,window:{sherlockShared:bridge}})
+  const filter=document.querySelector('#source-query');filter.value=names[2];filter.dispatchEvent(new document.defaultView.Event('change'))
+  expect([...document.querySelectorAll('article')].filter(article=>!article.hidden)).toHaveLength(count)
+  expect([...document.querySelectorAll('article')].filter(article=>!article.hidden).every(article=>article.dataset.newsQuery===names[2])).toBe(true)
+  filter.value='';filter.dispatchEvent(new document.defaultView.Event('change'));expect([...document.querySelectorAll('article')].filter(article=>!article.hidden)).toHaveLength(Math.min(20,count*3))
+ })
+})
+it.each(['title','date','url','shape','competing-items'])('keeps grouped-news %s errors inside the existing verification and repair gate',mode=>{
+ const {records,draft}=fixture(20),items=draft.mapping.items
+ delete draft.mapping.items;draft.mapping.groups=items.map(items=>({company:'不能作为来源证据的分组标签',items}))
+ if(mode==='shape')draft.mapping.groups[0].items=null
+ else if(mode==='competing-items')draft.mapping.items=items
+ else draft.mapping.groups[0].items.$map[mode]=mode==='title'?'源中不存在的标题':mode==='date'?'2099-01-01':'https://unobserved.example.com/fake'
+ expect(()=>resolveBoundComponent(JSON.stringify(draft),records,now,options)).toThrow()
+})
+it('retains actual source-query characters while safely serializing the filter script',async()=>{
+ const query='实际查询</script><来源>',spec=controlledNewsHtml('安全查询分组',[{title:'实际条目',summary:'实际摘要',url:'https://news.example.com/a',query},{title:'其他实际条目',summary:'其他摘要',url:'https://news.example.com/b',query:'其他查询'}])
+ await dom(JSON.stringify(spec),document=>{
+  expect(document.querySelectorAll('script')).toHaveLength(1)
+  const bridge={register:config=>{let state=config.initialState;const render=()=>config.render(state,{connected:true,readOnly:false});render();return {dispatch:action=>{state=config.reduce(state,action);render()}}}}
+  runInNewContext(document.querySelector('script').textContent,{document,window:{sherlockShared:bridge}})
+  const filter=document.querySelector('#source-query');filter.value=query;filter.dispatchEvent(new document.defaultView.Event('change'))
+  const visible=[...document.querySelectorAll('article')].filter(row=>!row.hidden);expect(visible).toHaveLength(1);expect(visible[0].dataset.newsQuery).toBe(query)
+ })
 })
 it('translates fixed source-query and coverage labels without changing source names, actual excerpts or user notes',async()=>{
  const {records,draft}=fixture(),result=resolveBoundComponent(JSON.stringify(draft),records,now,options),window=new Window()
