@@ -222,6 +222,17 @@ body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu::before{content:
 .en-research[data-note-frame=hidden]{border:0!important;box-shadow:none!important}
 .en-research[data-note-presentation] :is(.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_previewBody){background:var(--sherlock-surface)!important;color:var(--sherlock-text)!important}
 .en-research[data-workbench-style=enterprise] th{background:var(--sherlock-table-heading)!important;color:var(--sherlock-table-heading-text)!important}
+/* Projected tables live in the host DOM. Their node palette must beat the
+   canvas's global dark rules without repainting business tones or other nodes. */
+.en-research[data-note-presentation] .rScV5Q_containerBody,.en-research[data-note-presentation] [data-sherlock-market-native]{background:var(--sherlock-surface)!important;color:var(--sherlock-text)!important}
+.en-research[data-note-presentation] [data-sherlock-market-native] :is(thead,th){background:var(--sherlock-table-heading,var(--sherlock-surface-muted))!important}
+.en-research[data-note-presentation] [data-sherlock-market-native] th{color:var(--sherlock-table-heading-text,var(--sherlock-muted))!important;border-bottom-color:var(--sherlock-border)!important}
+.en-research[data-note-presentation] [data-sherlock-market-native] tbody tr{background:var(--sherlock-surface)!important}
+.en-research[data-note-presentation] [data-sherlock-market-native] tbody tr:nth-child(even){background:var(--sherlock-row-alternate)!important}
+.en-research[data-note-presentation] [data-sherlock-market-native=table] tbody tr:first-child,.en-research[data-note-presentation] [data-sherlock-market-native] tbody tr[aria-selected=true]{background:var(--sherlock-row-selected)!important}
+.en-research[data-note-presentation] [data-sherlock-market-native] .terminal-native-filters input{background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border-color:var(--sherlock-control-border)!important}
+.en-research[data-note-presentation] [data-sherlock-market-native] .terminal-native-filters input::placeholder{color:var(--sherlock-control-muted)!important}
+.en-research[data-note-presentation] [data-sherlock-market-native] :is(.terminal-native-context,.terminal-native-readout){color:var(--sherlock-muted);border-color:var(--sherlock-border)}
 .en-component-presentation-controls{position:absolute;right:8px;bottom:8px;z-index:8;font-size:12px;color:var(--sherlock-text);background:var(--sherlock-surface);border:1px solid var(--sherlock-border);border-radius:6px;padding:4px 8px}
 .en-component-presentation-controls summary{cursor:pointer;list-style:none}
 .en-component-presentation-controls>div{display:flex;flex-direction:column;gap:8px;padding:8px 0}
