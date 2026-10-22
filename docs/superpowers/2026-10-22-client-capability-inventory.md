@@ -2,13 +2,18 @@
 
 这是 Notes 普通会话入口已接入的能力清单。它不是全客户端功能清单，也不表示目录之外的功能已经可以由模型调用。
 
+当前注册表共 11 项语义能力（inspect/apply 分别计数）。本轮新增组件布局，尚未将目录接入所有会话模式，也未新增批量数据操作或窗口视图命令。
+
 | 语义 ID | 参数 | 真实共享处理器与完成依据 |
 | --- | --- | --- |
 | `notes.components.create` | `prompt` | `useInlineComponentGeneration.startAndWait`；复用单卡生成、进度、数据绑定、停止与澄清。真实组件完成并保存后才返回成功，澄清返回 pending，失败/取消终止组合。 |
 | `notes.components.style` | `scope: note/selected`；`theme`、`titleBar`、`frame` 至少一项 | `updateNoteComponentPresentation` 同时供选中组件控件和会话调用；仅更新 research 节点的 `notePresentation`。`frame:false` 仅去除组件外层边框，保留表格和内容内部边线；缺省或 true 保留外框。整篇范围递归覆盖全部研究组件，无需选择。等待 Notes 保存与渲染帧后回执。 |
+| `notes.components.layout` | `scope: note/selected`；`width: full/number`、`height: auto/number` 至少一项 | 与手动宽高拖柄共用 `updateNoteComponentLayout`、边界计算和撤销事务，只更新 `noteSize`。full/auto 清除对应手动轴；数值像素四舍五入，宽度以组件实际可用宽限制，高度 180–2400。折叠组件从可见祖先测量，无可测布局时保留请求宽度并由渲染层限制。支持整篇、单选和多选研究组件，递归查找；不修改正文、containerSpec、主题或对齐。真实保存后回报 saved，并返回各目标实际保存的 width/height。 |
 | `notes.export` | `format: pdf/docx/md`；可选 `path` | 同工具栏的 `exportNoteWithSnapshots` → `saveNoteExport`。截图包含当前组件主题/顶栏，真正写入后返回路径。省略路径使用原生保存框；路径必须与宿主从本次肯定目的地语句提取的完整绝对路径全等；前后缀、引用和否定不授权直写。无法唯一确定时使用原生保存框。 |
 | `notes.blocks.align` | `scope: note/selected`、`target: paragraphs/researchComponents`、`alignment: left/center/right` | 与段落菜单共享 `changeNoteAlignment`，只修改对应块的 `textAlignment`。组件容器与正文段落必须分别指定目标；保持正文、组件 payload、现有宽度。所选范围绑定稳定组件/段落 ID，变化后拒绝旧请求。 |
 | `notes.components.inspect` / `notes.components.apply` | inspect 空对象；apply `blockId/revision/containerSpec` | 仅当前明确选中的单个研究组件；复用 `createNoteComponentDataActions` 的 SHA-256 payload revision、结构校验和最终 CAS。apply 仅替换完整 containerSpec 并等待真实保存，保留其他节点属性/块/正文。先 inspect 再 apply，旧版本可重新读取后重试。 |
+| `notes.challenge.configure` | 可选 `level: 0–4`、`commentsExpanded: boolean`，至少一项 | 复用真实挑战 controller 配置与 Yjs 保存，不改正文、不重置既有预算；回执区分设置已保存与校验等待/运行，不宣称已校验完成。 |
+| `notes.components.data` | `action: inspect/configure/refresh`；修改需真实 revision | 仅当前明确单选且已绑定的生成组件；复用 NoteComponentDataService、真实配方与 CAS。configure 仅启停/频率，refresh 读取真实 status，失败保留旧内容和上次成功。原生金融控件不支持；不开放来源切换、自由绑定或整篇批量。 |
 | `canvas.inspect` | 空对象 | 复用 `CanvasActionBridge.inspect`；仅当前 session 存在有效绑定时提供，执行再检查可见 Notes 上下文与画布绑定。真实数据进入后续工具上下文。 |
 | `ui.zoom.reset` | 空对象 | 复用 `executeDesktopMenuCommand('zoom-reset')`；实际命令完成后回执。 |
 
@@ -30,6 +35,7 @@
 
 - Notes 的通用目录仍只接入 Canvas inspect；研究会话已有独立 research_canvas_inspect/apply/undo 与数据工具，尚未统一成跨模式目录。研究 inspect 现在声明 presentation/presentationFields，apply 可单独提交 `{op:"presentation",fields:{workbenchStyle:"enterprise"}}`，复用手动 `setWorkbenchStyle`，按当前看板保存；该操作不能与内容/整理混批。需重新 inspect 获取新 revision 后才能继续整理，展示偏好不宣称支持内容事务撤销。
 - 客户端导航、设置、主题、窗口、更新及其他菜单：当前只有 zoom.reset；应映射现有 menu command handler，不开放任意命令执行。
+- 组件尺寸布局已支持整篇及多选；组件内容修改和数据绑定操作仍限单选。批量数据操作需要宿主捕获目标清单与逐项 revision/CAS，不能靠模型枚举或移除 selected 门禁实现。
 - 研究组件顶栏、外框已有独立持久化开关 `titleBar:false`、`frame:false`；外框指组件宿主边界，不移除内部表格边线或任意 HTML 自定义边框。导出沿用保存后的实际外观，不提供仅导出时的临时去框。
 - 文件查看器/附件节点外观：当前仅 research 节点。研究组件内置 HTML 如果自己不遵循主题令牌，外层不能保证改写其自定义固定颜色。
 - 插件/MCP、账户、云文档、日程、下载、发布和 OS 级操作：没有登记或授权；不宣称会话已支持。

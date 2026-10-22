@@ -39,6 +39,22 @@ it('composes style, real local export, canvas inspect and shared UI command thro
  }finally{h.dispose()}
 })
 
+it('executes layout through the real service and renderer bridge, saves it once, and publishes accurate effects',async()=>{
+ const h=harness()
+ const call={requestId:'layout',capability:'notes.components.layout',arguments:{scope:'note',width:'full',height:99999}}
+ h.wire(body=>body.clientReceipts.length?{kind:'conversation',markdown:'完成'}:{kind:'capabilities',calls:[call,call]})
+ try{
+  const result=await h.generate('把整篇笔记研究组件设为满宽，高度增加到允许的最大值。')
+  expect(result.capabilityReceipts).toHaveLength(2);expect(result.capabilityReceipts[0]).toMatchObject({status:'succeeded',effect:{kind:'layout',state:'saved',changedBlockIds:['r']}})
+  expect(h.actions.filter(a=>a.action==='notes.components.layout')).toHaveLength(1)
+  const saved=(await h.call('load')).saved,original=JSON.parse(h.content.blocks[1].props.payload)
+  expect(JSON.parse(saved.blocks[1].props.payload)).toEqual(original);expect(original.noteSize).toEqual({height:2400});expect(original.containerSpec).toEqual({version:1,type:'markdown',title:'数据',content:'实际组件'})
+  expect(saved.blocks[0].content[0]).toMatchObject({text:'保留正文',styles:{bold:true}})
+  expect(h.progress.find(row=>row.capabilityProgress)?.capabilityProgress[0]).toMatchObject({capability:'notes.components.layout',status:'succeeded',effect:{kind:'layout',state:'saved'}})
+  expect(result.markdown).toContain('组件布局');expect(result.markdown).not.toContain('fake completion')
+ }finally{h.dispose()}
+})
+
 it('captures the actual human instruction in component context rather than trusting a model-provided source URL',async()=>{
  const h=harness(),instruction='创建 BTC/USD 指标组件，实际查询 Kraken 最新报价并绑定成功接口'
  h.wire(body=>body.clientReceipts.length?{kind:'conversation',markdown:'完成'}:{kind:'capabilities',calls:[{requestId:'create',capability:'notes.components.create',arguments:{prompt:'读取 https://model-added.invalid/quote?pair=SOLUSDT 创建组件'}}]})
