@@ -149,3 +149,36 @@ it('discloses inconsistent revision counts instead of presenting them as trustwo
   expect(r.evidence.data).toMatchObject({upgrade:null,downgrade:null,maintain:null})
   expect(r.detail).toContain('修订家数')
 })
+
+it.each(['2026年度','2026财年','FY2026','26E'])('treats an explicit annual forecast %s as the same EPS/profit basis',async year=>{
+ const{extractConsensusClaims}=await load(),blocks=[{id:'meta',text:'研究标的贵州茅台600519.SH。报告基准日2026年10月20日。'},{id:'forecast',text:`预计${year} EPS76元，归母净利润950亿元。`}]
+ expect(extractConsensusClaims(blocks).map(({year,metric,value})=>({year,metric,value}))).toEqual([{year:2026,metric:'EPS',value:76},{year:2026,metric:'NET_PROFIT',value:950}])
+})
+it.each([
+ 'FY2026已披露归母净利润950亿元。',
+ '2026年度已披露归母净利润950亿元，不是预测。',
+ 'FY2026 reported EPS76元。',
+ 'FY2026归母净利润950亿元，不是预测。',
+ '预计2026财年归母净利润950亿元，非预测数据。',
+ 'FY2026 EPS76元, not a forecast.',
+ 'FY2026 EPS76元，已披露。',
+ '预计2026财年EPS76元，以上是实际数据，不是预测。'
+])('does not compare clearly reported or explicitly non-forecast figures: %s',async text=>{
+ const{extractConsensusClaims}=await load();expect(extractConsensusClaims([{id:'meta',text:'600519.SH 报告基准日20261020。'},{id:'forecast',text}])).toEqual([])
+})
+it.each([
+ '2025年实际实现归母净利润800亿元，预计2026财年EPS76元，归母净利润950亿元。',
+ '预计2026财年EPS76元，归母净利润950亿元，2025年已披露归母净利润800亿元。',
+ 'FY2025 reported EPS60元, forecast FY2026 EPS76元，归母净利润950亿元。',
+ '2025年已披露归母净利润800亿元，但预计2026财年EPS76元，归母净利润950亿元。'
+])('preserves explicit forecasts when adjacent clauses describe actual results: %s',async text=>{
+ const{extractConsensusClaims}=await load();expect(extractConsensusClaims([{id:'meta',text:'600519.SH 报告基准日20261020。'},{id:'forecast',text}]).map(({year,metric,value})=>({year,metric,value}))).toEqual([{year:2026,metric:'EPS',value:76},{year:2026,metric:'NET_PROFIT',value:950}])
+})
+
+it.each([
+ ['FY2026 EPS为76元，归母净利润为950亿元。',2],
+ ['我们预计，2026年EPS为76元。',1],
+ ['基于已披露订单预计2026年归母净利润为950亿元。',1]
+])('keeps previously supported forecast language separate from evidence qualifiers: %s',async(text,count)=>{
+ const{extractConsensusClaims}=await load();expect(extractConsensusClaims([{id:'meta',text:'研究标的600519.SH。报告基准日20261020。'},{id:'forecast',text}])).toHaveLength(count)
+})

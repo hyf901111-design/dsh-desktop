@@ -1023,3 +1023,28 @@ it('keeps interrupted line fades continuous and does not let an old tier timer r
   await page.clock.fastForward(700);await expect.poll(()=>leaving.count()).toBe(0);expect(await current.count()).toBe(1);expect(await current.getAttribute('aria-label')).toContain('标准模式');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+
+it('anchors a wrapped replacement comparison to the clicked character instead of the full highlight bounds',async()=>{
+ const prefix='用于定位的背景说明文字'.repeat(4),quote='这段原始论述需要逐一核对各项假设，再根据实际资料调整结论，并保留准确的内容和范围。'.repeat(2),replacement=quote.replaceAll('原始论述','修订论述'),source=prefix+quote
+ const{context,page,errors,id}=await fixture(source,quote);try{
+  await page.evaluate(()=>{window.challenge.setMarginExpanded(false);window.editor.insertBlocks([{id:'filler',type:'paragraph',content:'其他正文内容。'.repeat(180)}],'p','after')});await start(page,'optimize');await finish(page,{...answer,reply:{text:'仅修订标记文字。',replacement:prefix+replacement}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await page.evaluate(id=>{const t=window.challenge.threads.find(t=>t.id===id),comment=t.comments.find(c=>c.metadata?.challengeReplacement);return window.challenge.applyReplacement(id,comment.id)},id)
+  const mark=page.locator('.en-replacement-mark');await mark.waitFor();const fragments=await mark.evaluateAll(elements=>elements.flatMap(el=>[...el.getClientRects()]).filter(r=>r.width>0&&r.height>0).map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom})))
+  expect(fragments.length).toBeGreaterThan(1);const first=fragments[0],point={x:first.left+Math.min(24,(first.right-first.left)/2),y:(first.top+first.bottom)/2}
+  const caret=await page.evaluate(point=>{const view=window.editor._tiptapEditor.view,p=view.posAtCoords({left:Math.floor(point.x),top:Math.floor(point.y)});return view.coordsAtPos(p.pos)},point)
+  await page.mouse.click(point.x,point.y);const popup=page.getByRole('dialog',{name:'替换对照'});await popup.waitFor()
+  const expected=await page.locator('.en-main').evaluate((el,x)=>{const a=el.getBoundingClientRect();return Math.max(a.left+16,Math.min(x,a.right-Math.min(360,a.width-32)-16))},caret.left)
+  await expect.poll(async()=>Math.abs((await popup.boundingBox()).x-expected)).toBeLessThanOrEqual(2)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(prefix+replacement)
+  const prior=await popup.boundingBox();await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop+=20);await expect.poll(async()=>Math.abs((await popup.boundingBox()).y-prior.y+20)).toBeLessThanOrEqual(2)
+  const currentFragments=await mark.evaluateAll(elements=>elements.flatMap(el=>[...el.getClientRects()]).filter(r=>r.width>0&&r.height>0).map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom}))),last=currentFragments.at(-1),next={x:last.left+Math.min(24,(last.right-last.left)/2),y:(last.top+last.bottom)/2}
+  const nextCaret=await page.evaluate(point=>{const view=window.editor._tiptapEditor.view,p=view.posAtCoords({left:Math.floor(point.x),top:Math.floor(point.y)});return view.coordsAtPos(p.pos)},next)
+  await page.mouse.click(next.x,next.y);await popup.waitFor();const nextExpected=await page.locator('.en-main').evaluate((el,x)=>{const a=el.getBoundingClientRect();return Math.max(a.left+16,Math.min(x,a.right-Math.min(360,a.width-32)-16))},nextCaret.left)
+  await expect.poll(async()=>Math.abs((await popup.boundingBox()).x-nextExpected)).toBeLessThanOrEqual(2)
+  await popup.getByRole('button',{name:'关闭替换对照'}).click();await mark.evaluate(el=>el.focus({preventScroll:true}));await page.keyboard.press('Enter');await popup.waitFor()
+  expect(await page.evaluate(()=>window.challenge.replacementReviews.popupAnchor??null)).toBeNull()
+  const fallback=await page.locator('.en-main').evaluate((el,left)=>{const a=el.getBoundingClientRect();return Math.max(a.left+16,Math.min(left,a.right-Math.min(360,a.width-32)-16))},currentFragments[0].left)
+  await expect.poll(async()=>Math.abs((await popup.boundingBox()).x-fallback)).toBeLessThanOrEqual(2)
+  expect(await popup.evaluate(el=>{const b=el.getBoundingClientRect(),a=document.querySelector('.en-main').getBoundingClientRect();return b.left>=a.left+16&&b.right<=a.right-16&&b.top>=a.top+16&&b.bottom<=a.bottom-16})).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)

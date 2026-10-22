@@ -71,3 +71,35 @@ it.each([
  expect(result.completeBlockIds).not.toContain('forecast')
  expect(result.issues.filter(issue=>issue.category==='research')).toHaveLength(1)
 })
+
+it.each(['2026年度','2026财年','FY2026','26E'])('completes %s EPS and profit only after the actual same-year consensus read',async year=>{
+ const f=fixture(`预计${year} EPS76元，归母净利润950亿元。`),result=await generateNoteChallenge(f.ctx,f.input)
+ expect(f.calls).toHaveLength(1);expect(result.issues.filter(issue=>issue.category==='research')).toHaveLength(2)
+ expect(result.checks.filter(check=>check.kind==='consensus')).toHaveLength(2);expect(result.completeBlockIds).toContain('forecast')
+})
+it.each(['FY2026已披露归母净利润950亿元。','2026年度已披露归母净利润950亿元，不是预测。','FY2026 EPS76元, not a forecast.','FY2026 EPS76元，已披露。','预计2026财年EPS76元，以上是实际数据，不是预测。'])('does not query or leave a false incomplete forecast for reported text: %s',async text=>{
+ const f=fixture(text),result=await generateNoteChallenge(f.ctx,f.input)
+ expect(f.calls).toHaveLength(0);expect(result.issues.filter(issue=>issue.category==='research')).toHaveLength(0)
+ expect(result.checks.filter(check=>check.kind==='consensus')).toHaveLength(0);expect(result.completeBlockIds).toContain('forecast')
+})
+it('completes the explicit fiscal forecast beside actual figures without querying the historical metric',async()=>{
+ const f=fixture('2025年实际实现归母净利润800亿元，预计2026财年EPS76元，归母净利润950亿元。'),result=await generateNoteChallenge(f.ctx,f.input)
+ expect(f.calls).toHaveLength(1);expect(f.calls[0].arguments.sql).toContain("EST_REPORT_DT = '20261231'")
+ expect(result.issues.filter(issue=>issue.category==='research')).toHaveLength(2);expect(result.completeBlockIds).toContain('forecast')
+ expect(result.checks.filter(check=>check.kind==='consensus').every(check=>check.status==='completed')).toBe(true)
+})
+it('does not borrow a parsed fiscal EPS receipt for a later forecast lacking its own profit unit',async()=>{
+ const f=fixture('预计2026财年EPS76元，归母净利润950（尚未给单位）。'),result=await generateNoteChallenge(f.ctx,f.input)
+ expect(f.calls).toHaveLength(1);expect(result.issues.filter(issue=>issue.category==='research')).toHaveLength(1)
+ expect(result.checks).toContainEqual(expect.objectContaining({kind:'consensus',status:'partial'}));expect(result.completeBlockIds).not.toContain('forecast')
+})
+
+it.each([
+ ['FY2026 EPS为76元，归母净利润为950亿元。',2],
+ ['我们预计，2026年EPS为76元。',1],
+ ['基于已披露订单预计2026年归母净利润为950亿元。',1]
+])('completes a supported forecast without confusing preceding evidence with reported metrics: %s',async(text,count)=>{
+ const f=fixture(text),result=await generateNoteChallenge(f.ctx,f.input)
+ expect(f.calls).toHaveLength(1);expect(result.issues.filter(issue=>issue.category==='research')).toHaveLength(count)
+ expect(result.completeBlockIds).toContain('forecast');expect(result.checks.filter(check=>check.kind==='consensus').every(check=>check.status==='completed')).toBe(true)
+})

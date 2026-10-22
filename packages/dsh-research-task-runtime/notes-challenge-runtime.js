@@ -47,7 +47,7 @@ function batchesFor(input) {
 
 const consensusMetric=/EPS|每股收益|净利润|盈利|主营(?:业务)?收入|营业(?:总)?收入/iu
 const comparableForecastMetric=/EPS|每股收益|净利润|主营(?:业务)?收入|营业(?:总)?收入/iu
-const consensusSentence=sentence=>consensusMetric.test(sentence)&&/预计|预测|forecast|estimate|\b\d{2,4}E\b/iu.test(sentence)&&/20\d{2}\s*(?:年|E\b)|\bFY\s*20\d{2}\b|\b\d{2}E\b/iu.test(sentence)
+const consensusSentence=sentence=>consensusForecastScopes(sentence).some(scope=>scope.years.length&&consensusMetric.test(scope.text))
 function hasConsensusIntent(input, covered) {
   // A year, an income figure or arithmetic alone is not a securities forecast.
   // This only controls an honest skipped check; it never supplies missing claim fields.
@@ -57,14 +57,15 @@ function hasConsensusIntent(input, covered) {
 }
 
 function unparsedForecastBlocks(input,covered,claims){
- return input.blocks.filter(block=>covered.has(block.id)&&hasConsensusIntent(input,new Set([block.id]))&&block.text.split(/[。；;\n]/u).some(sentence=>{
-  if(!consensusSentence(sentence))return false
+ return input.blocks.filter(block=>covered.has(block.id)&&hasConsensusIntent(input,new Set([block.id]))&&block.text.split(/[。；;\n]/u).flatMap(consensusForecastScopes).some(scope=>{
+  if(!scope.years.length)return false
+  const sentence=scope.text
   const parsed=claims.filter(claim=>claim.blockId===block.id)
   // An explicitly forecast monetary amount for another year can omit the
   // repeated metric name. Keep it pending rather than guessing that metric or
   // borrowing a completed source read from the preceding year.
-  const abbreviatedAmount=/(?:\bFY\s*)?(?:20\d{2}\s*(?:年(?:度|报)?|E\b)?|\b\d{2}E\b)\s*(?:(?:预计|预测|forecast|estimated?)\s*)?(?:将(?:会)?\s*)?(?:为|达(?:到)?|至|约为|约|升至|降至|is|at|of|[:：=])?\s*[+-]?\d+(?:,\d{3})*(?:\.\d+)?\s*(?:亿元|万元|千元|元)/iu
-  if(consensusForecastScopes(sentence).some(scope=>scope.years.length===1&&abbreviatedAmount.test(scope.text)&&!parsed.some(claim=>claim.year===scope.years[0]&&scope.text.includes(claim.quote))))return true
+  const abbreviatedAmount=/(?:\bFY\s*)?(?:20\d{2}\s*(?:年(?:度|报)?|财年|E\b)?|\b\d{2}E\b)\s*(?:(?:预计|预测|forecast|estimated?)\s*)?(?:将(?:会)?\s*)?(?:为|达(?:到)?|至|约为|约|升至|降至|is|at|of|[:：=])?\s*[+-]?\d+(?:,\d{3})*(?:\.\d+)?\s*(?:亿元|万元|千元|元)/iu
+  if(scope.years.length===1&&abbreviatedAmount.test(sentence)&&!parsed.some(claim=>claim.year===scope.years[0]&&sentence.includes(claim.quote)))return true
   // Each numeric metric consumes only its exact claim; another forecast in the
   // same paragraph/sentence must not borrow that claim's completed status.
   let rest=sentence
@@ -78,7 +79,7 @@ function unparsedForecastBlocks(input,covered,claims){
    const after=rest.slice(match.index+match[0].length)
    if(!/^\s*(?:预测|假设)/u.test(after))return true
    if(/^\s*(?:预测|假设)\s*(?:为|达|至|约为|约|[:：=])?\s*[+-]?\d/u.test(after))return true
-   return /(?:预计|预测|forecast|estimate)\s*(?:20\d{2}\s*年(?:度)?\s*)?$/iu.test(rest.slice(0,match.index))
+   return /(?:预计|预测|forecast|estimate)\s*(?:20\d{2}\s*(?:年(?:度)?|财年)\s*)?$/iu.test(rest.slice(0,match.index))
   })
  })).map(block=>block.id)
 }
