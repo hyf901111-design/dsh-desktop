@@ -1,4 +1,4 @@
-import {evaluateMapping,materializeComponentMapping} from './component-data-refresh.js'
+import {evaluateMapping,materializeComponentMapping,sourceDisplaySelector,componentSourceMetadata} from './component-data-refresh.js'
 import {templateDataIssue} from './template-data-contract.js'
 import {readableTrendFigure} from './component-readable-chart.js'
 
@@ -63,7 +63,7 @@ function metricDisplayMapping(value){
  if(!object(value))return value
  if(Object.hasOwn(value,'value'))return Object.fromEntries(Object.entries(value).flatMap(([key,child])=>{
   if(!itemMetadata.has(key))return [[key,child]]
-  const selector=metadataSelector(child)
+  const selector=key==='detail'?sourceDisplaySelector(child):metadataSelector(child)
   return selector?[[key,selector]]:[]
  }))
  return Object.hasOwn(value,'$map')?{...value,$map:metricDisplayMapping(value.$map)}:value
@@ -174,10 +174,18 @@ export function componentReadableSnapshot(data,mapping,responses,records,now=new
    }
   }catch{}
  }
+ const hostMetadata=componentSourceMetadata(mapping,responses,records)
+ if(object(mapping.asOf)&&hostMetadata&&hostMetadata.time!==undefined){
+  // The shared materializer already chose this observed time when the header
+  // formatter could not execute. Do not turn it back into a missing date.
+  try{evaluateMapping(mapping.asOf,responses,now,responses,0,{nodes:0},'timestamp')}
+  catch(error){if(['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code))asOf=hostMetadata.time}
+ }
+ const sourceGaps=hostMetadata?.gaps.length?'<p data-readable-source-gaps role="status"><span data-workbench-status-text>来源缺失项：</span>'+hostMetadata.gaps.map(esc).join('、')+'</p>':''
  const templated=value=>object(value)&&(Object.hasOwn(value,'$template')||Object.values(value).some(templated))||Array.isArray(value)&&value.some(templated)
  const metadata=['subject','asOf','range','unit','subtitle','note'].filter(key=>key==='asOf'||!templated(mapping[key])).filter(key=>key==='asOf'?Object.hasOwn(data,key):typeof data[key]==='string'&&data[key].trim()).map(key=>'<p data-readable-meta="'+key+'">'+text(key==='asOf'?asOf:data[key])+'</p>').join('')
  const availability=readableSnapshotUnavailable(data)?'<p data-readable-availability role="status" data-workbench-status-text>来源未提供可用数值；已保留实际字段与来源。</p>':''
  const overview=readable.mode==='series'?(readableTrendFigure(data)??''):''
  const bodyMarker=data.type==='market'?' data-sherlock-market="'+esc(data.variant)+'"':''
- return {version:1,type:'html',title:data.title,html:`<html><body${bodyMarker} data-readable-snapshot><style>body{margin:0;padding:12px;box-sizing:border-box;background:var(--sherlock-surface);color:var(--sherlock-text);font:13px/1.6 var(--sherlock-font-sans)}header{display:flex;flex-wrap:wrap;gap:8px;align-items:center}input,button{font:inherit;color:inherit;background:var(--sherlock-surface-muted);border:1px solid var(--sherlock-border);border-radius:4px;padding:4px 8px}input{flex:1;min-width:100px}a{color:var(--sherlock-link)}.readable-scroll{overflow:auto;max-height:70vh;margin-top:10px}table{border-collapse:collapse;min-width:100%;width:max-content}th,td{padding:8px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--sherlock-border);white-space:pre-wrap;max-width:560px;overflow-wrap:anywhere}th{position:sticky;top:0;background:var(--sherlock-surface-muted)}p{white-space:pre-wrap;margin:6px 0}aside{color:var(--sherlock-muted)}[hidden]{display:none!important}</style><header><input data-readable-search aria-label="搜索完整数据" placeholder="搜索完整数据"><button data-readable-previous>上一页</button><button data-readable-next>下一页</button><button data-readable-all aria-pressed="false">浏览全部</button><span data-readable-count role="status">${readable.rows.length} / ${readable.rows.length}</span></header><aside><p data-workbench-status-text>静态快照，自动更新未绑定</p>${availability}<p>${provider}</p>${metadata}</aside>${overview}<main class="readable-scroll" tabindex="0"><table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></main><script>(${readableSnapshotRuntime.toString()})()</script></body></html>`}
+ return {version:1,type:'html',title:data.title,html:`<html><body${bodyMarker} data-readable-snapshot><style>body{margin:0;padding:12px;box-sizing:border-box;background:var(--sherlock-surface);color:var(--sherlock-text);font:13px/1.6 var(--sherlock-font-sans)}header{display:flex;flex-wrap:wrap;gap:8px;align-items:center}input,button{font:inherit;color:inherit;background:var(--sherlock-surface-muted);border:1px solid var(--sherlock-border);border-radius:4px;padding:4px 8px}input{flex:1;min-width:100px}a{color:var(--sherlock-link)}.readable-scroll{overflow:auto;max-height:70vh;margin-top:10px}table{border-collapse:collapse;min-width:100%;width:max-content}th,td{padding:8px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--sherlock-border);white-space:pre-wrap;max-width:560px;overflow-wrap:anywhere}th{position:sticky;top:0;background:var(--sherlock-surface-muted)}p{white-space:pre-wrap;margin:6px 0}aside{color:var(--sherlock-muted)}[hidden]{display:none!important}</style><header><input data-readable-search aria-label="搜索完整数据" placeholder="搜索完整数据"><button data-readable-previous>上一页</button><button data-readable-next>下一页</button><button data-readable-all aria-pressed="false">浏览全部</button><span data-readable-count role="status">${readable.rows.length} / ${readable.rows.length}</span></header><aside><p data-workbench-status-text>静态快照，自动更新未绑定</p>${availability}<p>${provider}</p>${metadata}${sourceGaps}</aside>${overview}<main class="readable-scroll" tabindex="0"><table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></main><script>(${readableSnapshotRuntime.toString()})()</script></body></html>`}
 }

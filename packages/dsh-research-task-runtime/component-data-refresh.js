@@ -2,6 +2,7 @@ import { normalizeIndexedTableRows, templateDataIssue } from './template-data-co
 import {normalizeChartMetadata} from './chart-template-contract.js'
 import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 import {randomUUID,createHash} from 'node:crypto'
+import {isDeepStrictEqual} from 'node:util'
 import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
 import {newsSourceScopeIssue,generalNewsScope} from './news-source-scope.js'
@@ -44,6 +45,48 @@ function scalarMapping(value,mapping){
   if(mapping.$prefix!==undefined||mapping.$suffix!==undefined)value=(mapping.$prefix??'')+String(value??'—')+(mapping.$suffix??'')
  }
  return value
+}
+// Strip display-only wrappers without interpreting their names or prose. Only
+// one real selector may survive; row selection remains in its original scope.
+export function sourceDisplaySelector(value,depth=0,budget={nodes:0}){
+ if(depth>12||++budget.nodes>256||!value||typeof value!=='object')return undefined
+ if(!Array.isArray(value)&&Object.keys(value).some(key=>forbidden.has(key)))return undefined
+ if(record(value)&&Object.hasOwn(value,'$map')){
+  const allowed=['$from','$path','$each','$map','$filter','$sortBy','$order','$take','$single','$optional']
+  if(Object.keys(value).some(key=>!allowed.includes(key)))return undefined
+  const child=sourceDisplaySelector(value.$map,depth+1,budget)
+  return child?{...value,$map:child}:undefined
+ }
+ if(record(value)&&Object.hasOwn(value,'$path')){
+  const allowed=['$from','$path','$each','$filter','$sortBy','$order','$take','$single','$optional']
+  const clean=Object.fromEntries(Object.entries(value).filter(([key])=>!['$prefix','$suffix','$default'].includes(key)))
+  return Object.keys(clean).every(key=>allowed.includes(key))?{...clean,$optional:true}:undefined
+ }
+ const children=Object.values(value).filter(child=>child&&typeof child==='object').map(child=>sourceDisplaySelector(child,depth+1,budget)).filter(Boolean)
+ return children.length===1?children[0]:undefined
+}
+// Only observed records already matched to the mapping's actual business
+// responses can establish canonical quote time or source-reported gaps.
+export function componentSourceMetadata(mapping,responses,records=[]){
+ const keys=new Set();let nodes=0,overflow=false
+ const visit=(value,depth=0)=>{
+  if(overflow)return
+  if(depth>24||++nodes>30000){overflow=true;return}
+  if(Array.isArray(value))value.forEach(child=>visit(child,depth+1))
+  else if(record(value)){if(typeof value.$from==='string')keys.add(value.$from);Object.values(value).forEach(child=>visit(child,depth+1))}
+ }
+ for(const key of ['items','rows','labels','series','candles'])visit(mapping?.[key])
+ if(overflow||!keys.size)return null
+ const matched=[]
+ for(const key of keys){
+  if(!Object.hasOwn(responses,key))return null
+  const observed=records.find(record=>record.purpose!=='discovery'&&isDeepStrictEqual(record.response,responses[key]))
+  if(!observed)return null
+  matched.push({key,response:observed.response})
+ }
+ const times=matched.map(({response})=>response.dataTime==null||response.dataTime===''?null:response.dataTime)
+ const valid=value=>value===null||typeof value==='string'&&/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?)?$/u.test(value)&&Number.isFinite(Date.parse(value))
+ return {matched,time:times.every(valid)&&new Set(times).size===1?times[0]:undefined,gaps:[...new Set(matched.flatMap(({response})=>Array.isArray(response.missingSymbols)?response.missingSymbols.filter(value=>typeof value==='string'&&value.trim()):[]))]}
 }
 /** Deliberately small JSON mapping language: no scripts, expressions or network. */
 export function evaluateMapping(mapping,responses,now=new Date(),row=responses,depth=0,budget={nodes:0},context=''){
@@ -139,7 +182,11 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   try{return [[k,next(v,row,childContext)]]}catch(error){
    // Optional prose/link formatting cannot erase valid source values. Keep
    // timestamps, scope fields, required paths and business payloads strict.
-   if(childContext==='optional-display'&&['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code))return []
+   if(childContext==='optional-display'&&['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)){
+    const selector=k==='detail'?sourceDisplaySelector(v):undefined
+    if(selector)return [[k,next(selector,row,'')]]
+    return []
+   }
    throw error
   }
  }))
@@ -147,7 +194,29 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentMapping(mapping,responses,now=new Date(),sourceRecords=[]){
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
- const data=normalizeChartMetadata(normalizeIndexedTableRows(evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now,responses,0,{nodes:0},'component')))
+ const metadata=componentSourceMetadata(mapping,responses,sourceRecords)
+ const qualityAlias=mapping?.type==='kpi'&&Object.hasOwn(mapping,'missing')
+ if(qualityAlias){
+  const selector=mapping.missing
+  if(!record(selector)||Object.keys(selector).some(key=>!['$from','$path'].includes(key))||selector.$path!=='missingSymbols'||!metadata?.matched.some(source=>source.key===selector.$from&&Array.isArray(source.response.missingSymbols)&&source.response.missingSymbols.every(value=>typeof value==='string')))throw Error('来源缺失项必须引用已观察响应的 missingSymbols')
+ }
+ const asOf=mapping.asOf,body={...mapping}
+ if(qualityAlias)delete body.missing
+ if(Object.hasOwn(mapping,'asOf'))body.asOf=''
+ let data=normalizeIndexedTableRows(evaluateMapping(body,responses,now,responses,0,{nodes:0},'component'))
+ if(!candle&&Object.hasOwn(mapping,'asOf')){
+  try{data.asOf=evaluateMapping(asOf,responses,now,responses,0,{nodes:0},'timestamp')}
+  catch(error){
+   if(!['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)||!metadata||metadata.time===undefined)throw error
+   // A broken presentation formatter cannot replace actual quote time with a
+   // fetched/current date. Disagreeing source times remain an error.
+   data.asOf=metadata.time??'来源未提供'
+  }
+ }
+ if(metadata?.gaps.length){
+  const gap='来源缺失项：'+metadata.gaps.join('、')
+  data.note=typeof data.note==='string'&&data.note.trim()?data.note+'\n'+gap:gap
+ }
  if(data.type==='chart'&&Array.isArray(data.labels)&&data.labels.every(label=>typeof label==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(label))&&Array.isArray(mapping.series)){
   for(const [i,series]of mapping.series.entries()){
    const values=series?.values
@@ -172,13 +241,24 @@ export function materializeComponentMapping(mapping,responses,now=new Date(),sou
    data.asOf=dates.reduce((a,b)=>a>b?a:b)+' · 数据截至最后交易日'
   }
  }
+ data=normalizeChartMetadata(data)
  // Multiple source selections naturally produce groups of item records. The
  // template owns a flat item list; preserve every record and its source order.
  // Never flatten table rows or arrays of scalar field values.
  if(Array.isArray(data?.items))data.items=data.items.flatMap(item=>Array.isArray(item)&&item.every(record)?item:[item])
  const display=value=>typeof value==='number'&&Number.isFinite(value)?String(value):value
  if(['kpi','dashboard'].includes(data?.type)||data?.type==='market'&&['metrics','fund-kpi','key-metrics'].includes(data.variant)){
-  if(Array.isArray(data.items))data.items=data.items.map(item=>({...item,value:display(item.value)}))
+  if(Array.isArray(data.items))data.items=data.items.map((item,index)=>{
+   const result={...item,value:display(item.value)},value=Array.isArray(mapping.items)?mapping.items[index]?.value:undefined
+   // A quote's sibling time belongs to the exact same selected source row.
+   // Retain it for every metric, including when prose supplied it only once
+   // per security. No current/global timestamp is substituted for row time.
+   if(result.detail==null&&record(value)&&typeof value.$each==='string'&&value.$single===true&&metadata?.matched.some(source=>source.key===value.$from)){
+    const select=Object.fromEntries(Object.entries(value).filter(([key])=>['$from','$each','$filter','$sortBy','$order','$take','$single'].includes(key)))
+    try{const time=evaluateMapping({...select,$map:{$path:'time',$optional:true}},responses,now);if(typeof time==='string'&&/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/u.test(time)&&Number.isFinite(Date.parse(time)))result.detail=time}catch{}
+   }
+   return result
+  })
  }
  if(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant)){
   if(Array.isArray(data.rows))data.rows=data.rows.map(row=>Array.isArray(row)?row.map(display):row)
