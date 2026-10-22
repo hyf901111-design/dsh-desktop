@@ -48,12 +48,32 @@ function independentParentScope(human,parent,children){
 
 // Only the captured human request can override a legacy panel's scope. Query
 // terms, returned headlines and model-authored titles never supply authority.
-export function newsHumanScope(requirement=''){
+function capturedNewsScope(requirement=''){
  let text=String(requirement)
  if(text.includes(original))text=text.split(original).at(-1).replace(/^\s*以下原始用户需求[^\n]*\n/u,'')
  else if(/^工作台：/u.test(text))text=text.split('\n仅生成本面板，')[0].split('\n【新闻主题约束】')[0]
- return text.split(/\n【|\n仅生成本面板，/u)[0].replace(/(?:不要|不需要|不得|排除|不含|\bwithout\b|\bexclude\b)[^。；;，,\n]*/giu,'').trim()
+ return text.split(/\n【|\n仅生成本面板，/u)[0]
 }
+export function newsHumanScope(requirement=''){
+ return capturedNewsScope(requirement).replace(/(?:不要|不需要)\s*(?=只|仅)/gu,'').replace(/(?:不要|不需要|不得|排除|不含|\bwithout\b|\bexclude\b)[^。；;，,\n]*/giu,'').trim()
+}
+
+// A company name alone permits its ordinary news. Only an explicit human
+// business-only instruction excludes market tape; model notes, query labels
+// and quoted or negated instructions never narrow that permission.
+function businessOnlyNews(requirement){
+ const human=capturedNewsScope(requirement).replace(/^\s*>.*$/gmu,' ').replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|‘[^’]*’|「[^」]*」|『[^』]*』|《[^》]*》|"[^"\n]*"|(?<![\p{L}\p{N}])'[^'\n]*'(?![\p{L}\p{N}])/gu,' ')
+ return human.split(/[。；;，,\n]/u).some(clause=>{
+  const match=clause.match(/(?:只|仅)(?:收录|展示|显示|保留|关注|需要|看|要)?[^。；;，,\n]{0,48}(?:业务|经营|主营|基本面)[^。；;，,\n]{0,20}(?:新闻|资讯|报道|动态|内容|有关|相关)|\bonly\b[^.;,\n]{0,70}\b(?:business(?:[- ]related)?|operat(?:ions?|ing)|fundamentals?)\b|\b(?:business(?:[- ]related)?|operat(?:ions?|ing)|fundamentals?)\b[^.;,\n]{0,45}\bonly\b/iu)
+  if(!match||/(?:业务|经营|主营|基本面).{0,8}(?:无关|不相关|之外|以外)|非(?:公司|企业)?(?:业务|经营)/u.test(match[0]))return false
+  if(/(?:业务|经营|主营|基本面|\bbusiness\b|\boperations?\b).{0,24}(?:以及|和|与|及|、|包括|涵盖|\band\b|\bincluding\b).{0,16}(?:行情|股价|成交|两融|\bmarket\b|\bstock\b|\bshare\b)|(?:行情|股价|成交|两融|\bmarket\b|\bstock\b|\bshare\b).{0,16}(?:以及|和|与|及|、|包括|涵盖|\band\b).{0,24}(?:业务|经营|主营|基本面|\bbusiness\b|\boperations?\b)/iu.test(clause))return false
+  const before=clause.slice(0,match.index)
+  return !/(?:不要|不用|无需|不必|不得|禁止|不应|不需要|不要求|并非|不是|不)[^。；;，,\n]{0,18}$|\b(?:not|never|without|don't|do not|no need)[^.;,\n]{0,20}$/iu.test(before)
+ })
+}
+const marketTape=/盘口异动|(?:盘中|开盘|股价|港股|A股).{0,20}(?:涨|跌|反弹)|大涨|大跌|涨幅|跌幅|涨超|跌超|涨停|跌停|快速反弹|成交额|成交量|换手率|大宗交易|两融|融资(?:余额|买入|净买入|偿还|净偿还)|融券(?:余额|卖出|偿还)|资金(?:净流入|流入|流出)|加仓|减仓|破发|飘红|杠杆盘|抄底|\b(?:trading|stock|share)\s+(?:price|volume|turnover)\b|\b(?:shares?|stock)\b.{0,30}\b(?:rise|fall|gain|drop|rally|surge)\w*\b|\bmargin(?:[- ]financing)?\s+balance\b|\bblock trades?\b/iu
+const businessEvidence=/主营|生产|经营|订单|交付|产能|产量|产线|投产|量产|供应链|供应商|营收|净利润|业绩|财报|季报|年报|毛利率|现金流|销量|出货|研发|产品进展|产品验证|产品发布|签约|中标|专利|侵权|诉讼|337调查|反垄断调查|反倾销调查|回购|注销|增持计划|增持提议|增持公告|股权激励|员工持股|重组|并购|收购|分红|\b(?:orders?|deliver(?:y|ies)|supply chain|capacity|production|revenues?|earnings|profits?|financial results|annual report|patents?|litigation|investigation|buybacks?|repurchases?|contracts?)\b/iu
+const businessRelevant=value=>!marketTape.test(value)||businessEvidence.test(value)
 export function newsTopicTerms(requirement){
  const human=newsHumanScope(requirement),{text,entities}=newsEntities(human)
  let known=aliases.filter(group=>group.some(term=>contains(text,term)||entities.some(name=>name.toLocaleLowerCase()===term.toLocaleLowerCase())))
@@ -66,9 +86,9 @@ export function newsTopicTerms(requirement){
  // crypto request additionally admits actual sector/regulatory coverage.
  if(known.includes(aliases[2]))return unique([...entities,...aliases.slice(0,3).flat()])
  if(known.some(group=>group===aliases[0]||group===aliases[1]))return unique([...entities,...known.flat()])
- const cleaned=text.replace(/(?:工作台|本面板|新闻资讯|最新资讯|最新新闻|新闻列表|相关新闻|相关报道|新闻|资讯|报道|动态|监控|行情|研究|工作|展示|生成|创建|建立|搭建|检索|查询|读取|保留|标注|提供|获取|显示|只|仅|请|为|一个|关于|围绕|实时|最新|近期|最近|重要|原文|链接|摘要|标题|来源|日期|时间|记录|内容|数据|自动|刷新|更新|完整|全部|每分钟|最多|实际|相关|行业|产业|领域|公司|企业|品牌)/gu,' ')
+ const cleaned=text.replace(/(?:工作台|本面板|新闻资讯|最新资讯|最新新闻|新闻列表|相关新闻|相关报道|新闻|资讯|报道|动态|监控|行情|研究|工作|展示|生成|创建|建立|搭建|检索|查询|读取|保留|收录|业务|经营|标注|提供|获取|显示|只要|只|仅|请|为|一个|关于|围绕|实时|最新|近期|最近|重要|原文|链接|摘要|标题|来源|日期|时间|记录|内容|数据|自动|刷新|更新|完整|全部|每分钟|最多|实际|相关|行业|产业|领域|公司|企业|品牌)/gu,' ')
   .replace(/\b[a-z]+\b/giu,word=>englishNoise.test(word)?' ':word)
- const pieces=cleaned.split(/[\s，,。；;：:/、()（）“”"\d]+|以及|或者|与|和|及/u).filter(Boolean)
+ const pieces=cleaned.split(/[\s，,.。；;：:/、()（）“”"\d]+|以及|或者|与|和|及/u).filter(Boolean)
  const terms=pieces.flatMap(piece=>{
   if(/^[\p{Script=Han}]{2,12}$/u.test(piece))return[piece]
   return [...new Intl.Segmenter('zh-CN',{granularity:'word'}).segment(piece)].filter(s=>s.isWordLike&&s.segment.length>=2).map(s=>s.segment)
@@ -117,14 +137,16 @@ export function controlledNewsHtml(title,items,empty=NEWS_EMPTY_NOTE){
 
 /** Filtering never treats a provider's search response as proof of relevance. */
 export function filterScopedNewsArtifact(data,records=[],requirement='',{general=false}={}){
- if(!isScopedNews(data,requirement)||general)return data
- const terms=newsTopicTerms(requirement),matches=newsMatcher(terms,requirement)
+ const businessOnly=businessOnlyNews(requirement)
+ if(!isScopedNews(data,requirement)||general&&!businessOnly)return data
+ const terms=newsTopicTerms(requirement),matches=general?()=>true:newsMatcher(terms,requirement)
+ const sourceMatches=row=>matches(textOf(row))&&(!businessOnly||businessRelevant(textOf(row)))
  if(data.type==='html'){
   // Never execute or surgically patch model scripts. Rebuild this news-only
   // capacity route from actual source rows into a small host-owned reading UI.
   // Use all actual source rows: an incomplete model page cannot truncate a
   // second retrieved company or the final page. Model HTML supplies no data.
-  const kept=sourceRows(records).filter(row=>matches(textOf(row))),seen=new Set()
+  const kept=sourceRows(records).filter(sourceMatches),seen=new Set()
   return controlledNewsHtml(data.title,kept.filter(row=>{const address=safeUrl(row.url),key=JSON.stringify(address?[address,row.title]:[row.title,row.date??row.time??'',row.publisher??'',row.id??row.articleId??'']);if(seen.has(key))return false;seen.add(key);return true}))
  }
  if(data.type==='news'&&Array.isArray(data.items)){
@@ -133,7 +155,7 @@ export function filterScopedNewsArtifact(data,records=[],requirement='',{general
    const observed=sources.filter(row=>safeUrl(item.url)&&safeUrl(row.url)===safeUrl(item.url)&&row.title===item.title)
    // Once an article is observed, its source text decides relevance. Model
    // summaries cannot add a requested company to an unrelated source article.
-   return observed.length?observed.some(row=>matches(textOf(row))):matches(textOf(item))
+   return observed.length?observed.some(sourceMatches):matches(textOf(item))
   }),removed=data.items.length-items.length
   return {...data,items,note:items.length?note(data.note,removed)||undefined:NEWS_EMPTY_NOTE}
  }
