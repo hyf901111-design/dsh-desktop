@@ -29,7 +29,7 @@ const bridge={request:async(method,input)=>{window.noteRequests.push({method,inp
 window.notesRoot=createRoot(document.querySelector('#notes'));window.notesRoot.render(<NotesApp sessionId='send-preview' bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);
 function NativeComposer(){const props={sessionId:'send-preview',eworkNotes:true,keyboard:ordinary,inputActions:ordinary.actions,useInput:select=>select(React.useSyncExternalStore(ordinary.state.subscribe,ordinary.state.getSnapshot)),useNotices:select=>select(React.useSyncExternalStore(ordinary.notices.subscribe,ordinary.notices.getSnapshot)),useSession:select=>select({running:false,promptError:null,subagent:null,removed:false}),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(undefined),useProjection:()=>undefined,draftImages:ids=>conversationController.draftImages(ids),resolveSubmitMode:()=> 'queue',t:key=>key,renderSlot:()=>null,stop:()=>{},command:()=>{}};return <EWorkSharedInputBar {...props}/>};
 createRoot(document.querySelector('#composer')).render(<NativeComposer/>);
-createRoot(document.querySelector('#history')).render(<nativeExports.__NoteHistory sessionId='send-preview' t={key=>key} UserBubble={undefined} Progress={()=>null} Markdown={()=>null} Actions={null}/>);
+createRoot(document.querySelector('#history')).render(<nativeExports.__NoteHistory sessionId='send-preview' t={key=>key} UserBubble={undefined} Progress={({entry})=><div data-native-note-progress>{entry.noteTask.status}</div>} Markdown={()=>null} Actions={null}/>);
 `},bundle:true,platform:'browser',format:'iife',write:false,outfile:'fixture.js',conditions:['browser','import','style'],define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}},{name:'svg',setup(b){b.onResolve({filter:/\.svg\?inline$/},a=>({path:require('node:path').resolve(a.resolveDir,a.path.slice(0,-7)),namespace:'svg'}));b.onLoad({filter:/.*/,namespace:'svg'},async a=>({contents:'export default '+JSON.stringify('data:image/svg+xml;base64,'+Buffer.from(await readFile(a.path)).toString('base64')),loader:'js'}))}}]});
 
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text
@@ -146,16 +146,16 @@ for(const dark of [false,true])it(`keeps the preview handle inside an offset cli
  }finally{await context.close()}
 },15000)
 
-it('acknowledges a native note instruction immediately and reports real stages outside collapsed details',async()=>{
+it('acknowledges immediately while real stages use the existing native progress region without a duplicate timer',async()=>{
  const {context,page,errors}=await fixture();try{
   await page.clock.install();await send(page,'优化本篇笔记')
   const feedback=page.locator('#history [data-note-feedback]');await feedback.waitFor();expect(await feedback.textContent()).toContain('已收到，正在处理这条笔记指令。')
   const id=await page.evaluate(()=>window.noteTasks.find(row=>row.phase==='preparing').requestId)
-  for(const [stage,label]of [['model','正在连接当前模型'],['thinking','正在分析内容与修改要求'],['writing','正在撰写建议内容'],['validating','正在检查生成内容']]){
+  for(const [stage,label]of [['model','正在连接当前模型'],['thinking','正在思考'],['writing','正在撰写内容'],['validating','正在检查生成内容']]){
    await page.evaluate(({id,stage})=>document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:{sessionId:'send-preview',requestId:id,stage,reasoning:'PRIVATE-REASONING',outputChars:0}})),{id,stage})
-   await expect.poll(()=>feedback.textContent()).toContain(label);expect(await feedback.textContent()).not.toContain('PRIVATE-REASONING');expect(await feedback.count()).toBe(1)
+   await expect.poll(()=>page.locator('[data-native-note-progress]').textContent()).toContain(label);expect(await feedback.textContent()).toBe('已收到，正在处理这条笔记指令。');expect(await feedback.count()).toBe(1);expect(await feedback.locator('.en-task-feedback-progress').count()).toBe(0)
   }
-  await page.clock.runFor(2100);await expect.poll(()=>feedback.textContent()).toContain('已用时 2 秒')
+  await page.clock.runFor(2100);expect(await feedback.textContent()).toBe('已收到，正在处理这条笔记指令。')
   await ready(page,'建议正文');await expect.poll(()=>feedback.count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

@@ -38,10 +38,6 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
   const h = react.createElement
   const labels = {preparing:noteUiText("正在读取笔记内容"),generating:noteUiText("正在生成内容"),ready:noteUiText("内容已生成，请在笔记中预览"),replied:noteUiText("已回复"),accepted:noteUiText("已写入笔记"),discarded:noteUiText("已放弃建议"),failed:noteUiText("生成失败"),stopped:noteUiText("已停止")}
     const pending = ['preparing','generating'].includes(row.phase)
-    const [now,setNow]=react.useState(Date.now)
-    react.useEffect(()=>{if(!pending)return;setNow(Date.now());const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[pending,row.startedAt])
-    const elapsed=Number.isFinite(row.startedAt)?Math.max(0,Math.floor((now-row.startedAt)/1000)):0
-    const visibleStage={model:noteUiText("正在连接当前模型"),thinking:noteUiText("正在分析内容与修改要求"),writing:noteUiText("正在撰写建议内容"),validating:noteUiText("正在检查生成内容")}[row.stage]||noteUiText("正在准备请求")
     const stage = {model:noteUiText("正在连接当前模型"),thinking:noteUiText("正在思考"),writing:noteUiText("正在撰写内容"),validating:noteUiText("正在检查生成内容")}[row.stage]
     const status=(row.phase==='generating'?stage:null)||labels[row.phase]
     const feedback={ready:noteUiText("已生成以下内容，可在文档预览中采纳。"),accepted:noteUiText("已将以下内容写入笔记。"),discarded:noteUiText("以下建议未被采纳。")}[row.phase]
@@ -50,7 +46,7 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
       h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || noteUiText("根据附件撰写内容")}],noteReferences:row.references,imageLoader:loadImage,openFile,t}),
-      pending?h('div',{className:'en-task-feedback','data-note-feedback':''},h('p',null,noteUiText("已收到，正在处理这条笔记指令。")),h('div',{className:'en-task-feedback-progress'},h('span',{role:'status','aria-live':'polite'},visibleStage),h('span',{'aria-hidden':true},noteUiText("已用时 {seconds} 秒").replace('{seconds}',String(elapsed))))):null,
+      pending?h('div',{className:'en-task-feedback','data-note-feedback':'',role:'status','aria-live':'polite'},h('p',null,noteUiText("已收到，正在处理这条笔记指令。"))):null,
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:row.error}],streaming:false,t}) : null,
       row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t}) : null,
