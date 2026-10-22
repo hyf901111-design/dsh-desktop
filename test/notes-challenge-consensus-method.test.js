@@ -3,6 +3,24 @@ const load=()=>import('../packages/dsh-research-task-runtime/notes-challenge-con
 const row={CONSEN_DATA_CYCLE_TYP:'263002000',S_INFO_WINDCODE:'600519.SH',EST_REPORT_DT:'20261231',EST_DT:'20261019',NUM_EST_INST:45,EPS_AVG:67.3481,EPS_MEDIAN:67.0908,EPS_MIN:64.7795,EPS_MAX:71.1026,EPS_DEV:1.6094,S_EST_BASESHARE:125008.1601,NET_PROFIT_MEDIAN:8386900,NET_PROFIT_MIN:8097961,NET_PROFIT_MAX:8888400,NET_PROFIT_DEV:201182.2346,NET_PROFIT_UPGRADE:0,NET_PROFIT_DOWNGRADE:35,NET_PROFIT_MAINTAIN:8}
 const claim={blockId:'forecast',quote:'EPS76元',windCode:'600519.SH',baseDate:'20261020',year:2026,metric:'EPS',value:76,unit:'元'}
 
+it.each(['2026年10月20日','2026年1月2日','2026-1-2','2026/1/2','20261020'])('reads the explicitly labelled report date %s in normal note text',async value=>{
+  const {extractConsensusClaims}=await load(),expected=value.includes('10')?'20261020':'20260102'
+  expect(extractConsensusClaims([{id:'header',text:`贵州茅台600519.SH。报告基准日：${value}。`},{id:'forecast',text:'预计2026年EPS76元。'}])).toEqual([{...claim,baseDate:expected}])
+})
+it.each(['2026年2月30日','2026-10-201','202610201','2026年13月1日'])('does not replace an invalid local cutoff %s with another paragraph date',async value=>{
+  const {extractConsensusClaims}=await load()
+  expect(extractConsensusClaims([{id:'header',text:'600519.SH 报告基准日20261020。'},{id:'forecast',text:`报告基准日：${value}。预计2026年EPS76元。`}])).toEqual([])
+})
+it('applies the MD threshold and cycle when both headers use natural sentence punctuation',async()=>{
+  const {extractConsensusClaims,consensusPolicyFromBlocks,compareConsensusClaim}=await load()
+  const blocks=[{id:'header',text:'研究标的：贵州茅台（600519.SH）。报告基准日：2026年10月20日。'},{id:'policy',text:'一致预期偏离阈值：12%。一致预期统计周期：90天。'},{id:'forecast',text:'预计2026年归母净利润950亿元，EPS为76.00元。'}]
+  const policy=consensusPolicyFromBlocks(blocks),claims=extractConsensusClaims(blocks)
+  expect(policy).toEqual({threshold:.12,cycle:'263002000'});expect(claims).toHaveLength(2)
+  for(const item of claims)expect(compareConsensusClaim(item,[row],policy).rules).toEqual(['C1','C2','C3'])
+  expect(()=>consensusPolicyFromBlocks([{text:'一致预期偏离阈值：12%；一致预期偏离阈值：20%。'}])).toThrow(/冲突/)
+  expect(()=>consensusPolicyFromBlocks([{text:'一致预期统计周期：90天。一致预期统计周期：180天。'}])).toThrow(/冲突/)
+})
+
 it('applies a configured mature-industry threshold and retains explicit capital-basis evidence',async()=>{
   const {compareConsensusClaim}=await load(),r=compareConsensusClaim(claim,[row],{threshold:.12})
   expect(r.rules).toEqual(['C1','C2','C3'])

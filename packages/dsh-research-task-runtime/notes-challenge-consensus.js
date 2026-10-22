@@ -10,7 +10,13 @@ const record = value => value !== null && typeof value === 'object' && !Array.is
 const number = value => (typeof value === 'number' || typeof value === 'string' && value.trim()) && Number.isFinite(Number(value)) ? Number(value) : null
 const distinct = values => [...new Set(values)]
 const codes = text => distinct([...text.matchAll(/\b\d{6}\.(?:SH|SZ|BJ)\b/giu)].map(match => match[0].toUpperCase()))
-const dates = text => distinct([...text.matchAll(/(?:报告基准日|报告发布日期|报告发布日|报告日期|基准日|模型日|预测截止日)\s*[:：]?\s*(20\d{2}(?:[-/]\d{2}[-/]\d{2}|\d{4}))/gu)].map(match => date(match[1])).filter(Boolean))
+const reportDate = value => {
+  const parts = value.match(/^(20\d{2})年(\d{1,2})月(\d{1,2})日$/u) ?? value.match(/^(20\d{2})[-/](\d{1,2})[-/](\d{1,2})$/u)
+  return date(parts ? parts[1]+parts[2].padStart(2,'0')+parts[3].padStart(2,'0') : value)
+}
+// Keep an invalid explicitly labelled date as an ambiguity marker. It must not
+// borrow a different paragraph's valid cutoff or accept a valid numeric prefix.
+const dates = text => distinct([...text.matchAll(/(?:报告基准日|报告发布日期|报告发布日|报告日期|基准日|模型日|预测截止日)\s*[:：]?\s*(20[^\s。；;，,]*)/gu)].map(match => reportDate(match[1])))
 const nonAnnual = /(?:上|下)半年|半年度|半年报|中报|季度|[一二三四1-4]季(?:度|报)?|单季|前[一二三四五六七八九十\d]+个月|\d{1,2}\s*月?\s*(?:[-—–~～]|至|到)\s*\d{1,2}\s*月|\b(?:first|second)\s+half|\bhalf[- ]?year|(?:^|[^A-Za-z])(?:Q[1-4]|H[12]|[1-4]Q|[12]H|[369]M)(?!\d)/iu
 const incompatibleBasis = /扣非|(?:剔除|扣除)非经常性损益|调整后|经调整|稀释|摊薄|\badjusted\b|\bnon[- ]?GAAP\b/iu
 
@@ -55,7 +61,7 @@ function revisionCounts(row,metric,count) {
 
 /** Explicit report metadata selects a threshold; company names never infer an industry. */
 export function consensusPolicyFromBlocks(blocks) {
-  const all=blocks.flatMap(b=>b.text.split('\n')).map(s=>s.trim()),lines=all.filter(s=>/^一致预期偏离阈值\s*[:：]/u.test(s))
+  const all=blocks.flatMap(b=>b.text.split(/[\n。；;]/u)).map(s=>s.trim().replace(/[.!?！？]$/u,'').trim()),lines=all.filter(s=>/^一致预期偏离阈值\s*[:：]/u.test(s))
   const values=lines.map(line=>{const match=line.match(/^一致预期偏离阈值\s*[:：]\s*(\d+(?:\.\d+)?)\s*[%％]$/u);const value=match?Number(match[1])/100:NaN;if(!Number.isFinite(value)||value<=0||value>1)throw Error('一致预期偏离阈值无效，请明确指定0%到100%之间的正数。');return value})
   if(distinct(values).length>1)throw Error('一致预期偏离阈值有冲突，未作偏离判断。')
   const cycles=all.filter(s=>/^一致预期统计周期\s*[:：]/u.test(s)).map(line=>{const match=line.match(/^一致预期统计周期\s*[:：]\s*(30|90|180)\s*天$/u);if(!match)throw Error('一致预期统计周期须为30天、90天或180天。');return {'30':'263001000','90':'263002000','180':'263003000'}[match[1]]})
