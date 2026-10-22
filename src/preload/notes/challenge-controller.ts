@@ -172,8 +172,9 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   const valid=suggestion.scopeVersion===2&&suggestion.anchorQuote===issue.quote&&suggestion.blockId===issue.blockId&&thread.metadata.sourceText===suggestion.sourceText&&scope&&!('error' in scope)&&scope.quote===suggestion.quote&&typeof suggestion.replacement==='string'&&!!suggestion.replacement.trim()&&suggestion.replacement.length<=6000&&currentBlock?.text===suggestion.sourceText&&fingerprint(latest.current.title,blocks())===suggestion.documentKey&&currentBlock.text.length-suggestion.quote.length+suggestion.replacement.length<=12000&&findChallengeQuote(editor,issue.blockId,suggestion.quote)
   if(!valid){await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'stale'}}}});latest.current.persist();refresh();return}
   if(suggestion.replacement===scope.quote)return
+  const replacementSnapshot=replacementReviews.capture(issue.blockId,suggestion.quote)
   if(!replaceChallengeQuote(editor,issue.blockId,suggestion.quote,suggestion.replacement,threadId))return
-  replacementReviews.add({threadId,commentId,blockId:issue.blockId,anchorBefore:issue.quote,original:suggestion.quote,replacement:suggestion.replacement})
+  replacementReviews.add({threadId,commentId,blockId:issue.blockId,anchorBefore:issue.quote,original:suggestion.quote,replacement:suggestion.replacement},replacementSnapshot)
   const sourceText=blocks().find(b=>b.id===issue.blockId)!.text,quote=challengeThreadQuote(editor,issue.blockId,threadId)??suggestion.replacement
   if(sourceText!==suggestion.sourceText)metadata(threadId,{issue:{...issue,quote},sourceText,anchorHistory:anchorHistory(thread.metadata.anchorHistory,{quote:issue.quote,sourceText:suggestion.sourceText},{quote,sourceText})})
   await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'applied'}}}})
@@ -213,8 +214,9 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     if(!replacement.trim()||replacement.length>6000||currentBlock.text.length-scope.quote.length+replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
     if(replacement===scope.quote){await append(result.reply.text||'原文与建议一致，无需替换。');return}
     if(kind==='optimize'||!challengeDirectReplacement(text,{quote:issue.quote})){await append(result.reply.text||'建议如下，可确认后替换到原文。',{scopeVersion:2,anchorQuote:issue.quote,blockId:issue.blockId,quote:scope.quote,sourceText:currentBlock.text,documentKey:captured,replacement,status:'pending'});return}
+    const replacementSnapshot=replacementReviews.capture(issue.blockId,scope.quote)
     if(current()&&fingerprint(latest.current.title,blocks())===captured&&replaceChallengeQuote(editor,issue.blockId,scope.quote,replacement,thread.id)){
-     replacementReviews.add({threadId:thread.id,blockId:issue.blockId,anchorBefore:issue.quote,original:scope.quote,replacement})
+     replacementReviews.add({threadId:thread.id,blockId:issue.blockId,anchorBefore:issue.quote,original:scope.quote,replacement},replacementSnapshot)
      const sourceText=blocks().find(b=>b.id===issue.blockId)!.text,quote=challengeThreadQuote(editor,issue.blockId,thread.id)??replacement
      if(sourceText!==currentBlock.text)metadata(thread.id,{issue:{...issue,quote},sourceText,anchorHistory:anchorHistory(savedThread.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote,sourceText})})
      settle.current=Date.now()+10000
@@ -227,7 +229,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  }
  const replacementReviews=useNoteReplacementReviews({editor,doc,scroll:options.scroll,canEdit:()=>active()&&!latest.current.busy&&!action.current,persist:()=>latest.current.persist(),onResolve:resolve,onRestore:async review=>{
   const thread=ai.getThreads().get(review.threadId),source=blocks().find(b=>b.id===review.blockId)
-  if(thread?.metadata?.kind===CHALLENGE_KIND&&source&&findChallengeQuote(editor,review.blockId,review.anchorBefore))metadata(review.threadId,{issue:{...thread.metadata.issue,quote:review.anchorBefore},sourceText:source.text})
+  if(thread?.metadata?.kind===CHALLENGE_KIND&&source&&findChallengeQuote(editor,review.blockId,review.anchorBefore))metadata(review.threadId,{issue:{...thread.metadata.issue,quote:review.anchorBefore},sourceText:source.text,anchorHistory:anchorHistory(thread.metadata.anchorHistory,{quote:thread.metadata.issue.quote,sourceText:source.text.replace(review.original,review.replacement)},{quote:review.anchorBefore,sourceText:source.text})})
   const comment=review.commentId?thread?.comments.find(c=>c.id===review.commentId&&!c.deletedAt):undefined
   if(comment?.metadata?.challengeReplacement)await ai.updateComment({threadId:review.threadId,commentId:comment.id,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...comment.metadata.challengeReplacement,status:'reverted'}}}})
   settle.current=Date.now()+10000;window.setTimeout(()=>{if(live.current)sync()},10010);sync();refresh()

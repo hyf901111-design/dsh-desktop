@@ -684,7 +684,7 @@ it('highlights only changed text, opens an original/replacement comparison, and 
   const replacement=await applyTrackedReplacement(page),mark=page.locator('.en-replacement-mark');expect(await mark.textContent()).toBe('程')
   await mark.click();const popup=page.getByRole('dialog',{name:'替换对照'});await popup.waitFor();expect(await popup.locator('[data-replacement-before]').textContent()).toBe(original);expect(await popup.locator('[data-replacement-after]').textContent()).toBe(replacement)
   const bounds=await popup.boundingBox(),area=await page.locator('.en-main').boundingBox();expect(bounds.y).toBeGreaterThanOrEqual(area.y);expect(bounds.y+bounds.height).toBeLessThanOrEqual(area.y+area.height)
-  await page.evaluate(()=>window.editor.updateBlock('p',{content:'新补充的前言。'+window.editor.getBlock('p').content.map(c=>c.text||'').join('')+'段后新增说明。'}))
+  await page.evaluate(()=>{const range=window.editor._tiptapEditor.state.doc;let from;range.descendants((node,pos)=>{if(node.type.name==='blockContainer'&&node.attrs.id==='p'){from=pos+2;return false}});const text=window.editor.getBlock('p').content.map(c=>c.text||'').join('');window.editor.transact(tr=>{tr.insertText('段后新增说明。',from+text.length);tr.insertText('新补充的前言。',from)})})
   await page.locator('.en-replacement-mark').click();await popup.getByRole('button',{name:'取消替换',exact:true}).click()
   await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('新补充的前言。'+original+'段后新增说明。')
   expect(await page.locator('.en-replacement-mark').count()).toBe(0);expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('metadata').draft,id)).toBe('保留未发送的原讨论草稿')
@@ -714,5 +714,33 @@ it('refuses a stale targeted restore after the user edits the applied sentence a
   await applyTrackedReplacement(page);await page.locator('.en-replacement-mark').click();const popup=page.getByRole('dialog',{name:'替换对照'})
   await page.evaluate(()=>window.editor.updateBlock('p',{content:'这项结论的评估程度有所提升。'}));await expect.poll(()=>popup.getByRole('button',{name:'取消替换',exact:true}).isDisabled()).toBe(true)
   expect(await popup.textContent()).toContain('已再次编辑');await popup.getByRole('button',{name:'已解决',exact:true}).click();expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('这项结论的评估程度有所提升。');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('never moves a replacement review onto a newly added identical quote after the original range changes',async()=>{
+ const{context,page,errors}=await fixture();try{
+  const replacement=await applyTrackedReplacement(page);await page.locator('.en-replacement-mark').click()
+  await page.evaluate(replacement=>window.editor.updateBlock('p',{content:'这项结论的评估有所提升。另一个引用：'+replacement}),replacement)
+  await expect.poll(()=>page.locator('.en-replacement-mark').count()).toBe(0)
+  expect(await page.getByRole('button',{name:'取消替换',exact:true}).isDisabled()).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('restores original inline styles when cancelling an optimized replacement',async()=>{
+ const{context,page,errors}=await fixture([{type:'text',text:'这项结论的',styles:{}},{type:'text',text:'成',styles:{bold:true}},{type:'text',text:'度',styles:{italic:true}},{type:'text',text:'较高。',styles:{}}]);try{
+  await applyTrackedReplacement(page,'这项判断已经明确。');await page.locator('.en-replacement-mark').click();await page.getByRole('button',{name:'取消替换',exact:true}).click()
+  const content=await page.evaluate(()=>window.editor.getBlock('p').content)
+  expect(content.find(c=>c.text==='成')?.styles.bold).toBe(true);expect(content.find(c=>c.text==='度')?.styles.italic).toBe(true);expect(content.map(c=>c.text||'').join('')).toBe(original);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('keeps outside edits, original discussion and replacement review through cancelling and native undo/redo',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  const replacement=await applyTrackedReplacement(page)
+  await page.evaluate(()=>{const state=window.editor._tiptapEditor.state;let from;state.doc.descendants((n,pos)=>{if(n.type.name==='blockContainer'&&n.attrs.id==='p'){from=pos+2;return false}});window.editor.transact(tr=>{tr.insertText('补充说明。',from+window.editor.getBlock('p').content.map(c=>c.text||'').join('').length);tr.insertText('前言。',from)})})
+  await page.locator('.en-replacement-mark').click();await page.getByRole('button',{name:'取消替换',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('前言。'+original+'补充说明。')
+  await page.locator('.bn-editor').focus();await page.keyboard.press('Meta+z');await page.locator('.en-replacement-mark').waitFor()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('前言。'+replacement+'补充说明。')
+  expect(await page.evaluate(id=>window.challenge.threads.some(t=>t.id===id),id)).toBe(true)
+  await page.keyboard.press('Meta+Shift+z');await expect.poll(()=>page.locator('.en-replacement-mark').count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

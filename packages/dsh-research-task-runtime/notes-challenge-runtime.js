@@ -347,7 +347,7 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
 }
 
 async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt = Infinity) {
-  const { batches, total } = batchesFor(input), issueLimits = REVIEW_ISSUE_LIMITS, result = { version: 1, issues: [], coveredBlockIds: [], checks: [] }
+  const { batches, total } = batchesFor(input), issueLimits = REVIEW_ISSUE_LIMITS, result = { version: 1, issues: [], coveredBlockIds: [], checks: [] }, audits=[]
   const forecastClaims=input.action==='review'?extractConsensusClaims(input.blocks):[]
   if (!batches.length) return { ...result, checks: [{ kind: 'review', status: 'skipped', detail: '本次没有待审查的正文变化。' }] }
   const response = await abortable(ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } }), signal)
@@ -388,7 +388,16 @@ async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt 
         }
         result.issues.push(...reviewed.issues)
         result.coveredBlockIds.push(...reviewed.coveredBlockIds)
-        if(input.level>=3){
+        if(input.level>=3)audits.push({targets,context,available,existingAnchors,reviewed})
+      }
+      else {
+        const reply = generated.value?.reply
+        if (!record(reply) || !string(reply.text, 1600, true) || input.action === 'optimize' && !string(reply.replacement, 6000, true) || allowReplacement && reply.replacement !== undefined && !string(reply.replacement, 6000, true)) throw Error('挑战回复格式不完整。')
+        result.reply = { text: reply.text, ...allowReplacement && reply.replacement !== undefined ? { replacement: reply.replacement } : {} }
+      }
+      if (input.action !== 'review') result.coveredBlockIds.push(...targets.map(block => block.id))
+    }
+    for(const {targets,context,available,existingAnchors,reviewed} of audits){
           const remaining=modelExpiresAt-Date.now()
           if(remaining<4000)result.checks.push({kind:'review',status:'partial',detail:'基础检查已返回，剩余预算不足，深度复查未完成。'})
           else{
@@ -407,14 +416,6 @@ async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt 
             }finally{audit.dispose()}
           }
         }
-      }
-      else {
-        const reply = generated.value?.reply
-        if (!record(reply) || !string(reply.text, 1600, true) || input.action === 'optimize' && !string(reply.replacement, 6000, true) || allowReplacement && reply.replacement !== undefined && !string(reply.replacement, 6000, true)) throw Error('挑战回复格式不完整。')
-        result.reply = { text: reply.text, ...allowReplacement && reply.replacement !== undefined ? { replacement: reply.replacement } : {} }
-      }
-      if (input.action !== 'review') result.coveredBlockIds.push(...targets.map(block => block.id))
-    }
     if (input.action === 'review') {
       const shown = boundedIssues(result.issues, input.blocks, issueLimits.total), payload = buildConsistencyInput(shown, input.blocks, input.title)
       if (payload) {

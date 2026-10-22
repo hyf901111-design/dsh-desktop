@@ -831,3 +831,10 @@ it('credits an omitted primary block only after a valid independent audit actual
  const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);yield{type:'text-delta',index:0,text:JSON.stringify({reviews:p.audit?p.targets.map(t=>({reviewKey:t.reviewKey,issues:[]})):[]})};yield{type:'finish',reason:{kind:'stop'}}}
  const result=await generateNoteChallenge(f.ctx,{...input,level:3,blocks:[{id:'a',type:'paragraph',text:'这是一段没有具体错误的正常内容。'}]});expect(result.coveredBlockIds).toEqual(['a']);expect(result.issues).toEqual([])
 })
+it('finishes all primary batches before spending remaining time on optional depth audits',async()=>{
+ vi.useFakeTimers();const{generateNoteChallenge}=await load(),f=fixture(),blocks=Array.from({length:24},(_,i)=>({id:'p'+i,type:'paragraph',text:'第'+i+'段请提胶。'}))
+ f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);if(p.audit)await new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(options.signal.reason),{once:true}));else{await new Promise(resolve=>setTimeout(resolve,24000));yield{type:'text-delta',index:0,text:JSON.stringify({reviews:p.targets.map(t=>({reviewKey:t.reviewKey,issues:[{quote:'提胶',category:'typo',basis:'note',message:'应为提交。',evidence:[]}]}))})};yield{type:'finish',reason:{kind:'stop'}}}}
+ const pending=generateNoteChallenge(f.ctx,{...input,level:4,blocks,changedIds:blocks.map(b=>b.id)});const checked=expect(pending).resolves.toMatchObject({coveredBlockIds:blocks.map(b=>b.id),issues:expect.arrayContaining([expect.objectContaining({blockId:'p0'}),expect.objectContaining({blockId:'p23'})])})
+ await vi.advanceTimersByTimeAsync(59001);await checked
+ expect(f.calls.slice(0,2).map(c=>JSON.parse(c.messages[0].content[0].text).audit||false)).toEqual([false,false])
+})
