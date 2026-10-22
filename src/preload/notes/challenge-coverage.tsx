@@ -21,7 +21,7 @@ type PlacedFeedback=ParagraphFeedback&{key:string;level:ChallengeLevel;top:numbe
 const ENTER_MS=240,EXIT_MS=180
 
 function ParagraphLine({item,exiting,reducedMotion}:{item:PlacedFeedback;exiting:boolean;reducedMotion:boolean}){
- const root=useRef<HTMLDivElement>(null),stroke=useRef<HTMLSpanElement>(null),animation=useRef<Animation>(),delay=exiting?item.exitDelay:item.enterDelay
+ const root=useRef<HTMLDivElement>(null),stroke=useRef<HTMLSpanElement>(null),animation=useRef<Animation>(),entered=useRef(false),delay=exiting?item.exitDelay:item.enterDelay
  useLayoutEffect(()=>{
   const line=root.current,paint=stroke.current;if(!line||!paint)return
   // Sample before cancelling: a tier switch can interrupt an entrance delay/fade.
@@ -30,7 +30,8 @@ function ParagraphLine({item,exiting,reducedMotion}:{item:PlacedFeedback;exiting
   line.inert=exiting
   if(exiting&&line.contains(document.activeElement))(document.activeElement as HTMLElement)?.blur()
   paint.style.opacity=exiting?'0':'1'
-  if(!reducedMotion&&(exiting||item.animate))animation.current=paint.animate([{opacity:exiting?opacity:'0'},{opacity:exiting?'0':'1'}],{duration:exiting?EXIT_MS:ENTER_MS,delay,easing:'ease-out',fill:'both'})
+  const enter=item.animate&&!entered.current;entered.current=true
+  if(!reducedMotion&&(exiting||enter))animation.current=paint.animate([{opacity:exiting?opacity:'0'},{opacity:exiting?'0':'1'}],{duration:exiting?EXIT_MS:ENTER_MS,delay,easing:'ease-out',fill:'both'})
  },[exiting,reducedMotion,item.animate,delay])
  useLayoutEffect(()=>()=>animation.current?.cancel(),[])
  return <div ref={root} className="en-challenge-paragraph-line" data-block-id={item.blockId} data-state={item.state} data-exiting={exiting||undefined} tabIndex={exiting?-1:0} role={exiting?undefined:'img'} aria-hidden={exiting||undefined} aria-label={exiting?undefined:item.label} style={{top:item.top,left:item.left,height:item.height}}><span ref={stroke} className="en-challenge-paragraph-stroke" aria-hidden="true"/>{!exiting&&<span role="tooltip" data-odyssey-local-tooltip="" style={{top:Math.max(0,8-item.top),maxWidth:Math.max(64,Math.min(280,item.left-24))}}>{item.label}</span>}</div>
@@ -77,6 +78,7 @@ export function ChallengeParagraphFeedback({items,scroll,revision,level,reducedM
   scroller.addEventListener('scroll',measure,{passive:true});window.addEventListener('resize',measure);measure()
   return()=>{cancelAnimationFrame(frame);observer.disconnect();scroller.removeEventListener('scroll',measure);window.removeEventListener('resize',measure)}
  },[items,scroll,revision,level])
- const current=new Map(items.map(item=>[item.blockId,item.label]))
- return <div className="en-challenge-paragraph-feedback" ref={root} data-motion={reducedMotion?'reduced':'full'}>{[...departing,...positions.filter(item=>item.level!==level||current.get(item.blockId)===item.label)].map(item=><ParagraphLine key={item.key} item={item} exiting={item.level!==level||departing.some(old=>old.key===item.key)} reducedMotion={reducedMotion}/>)}</div>
+ const current=new Map(items.map(item=>[item.blockId,item]))
+ const present=positions.flatMap(item=>{if(item.level!==level)return[item];const latest=current.get(item.blockId);return latest?[{...item,...latest}]:[]})
+ return <div className="en-challenge-paragraph-feedback" ref={root} data-motion={reducedMotion?'reduced':'full'}>{[...departing,...present].map(item=><ParagraphLine key={item.key} item={item} exiting={item.level!==level||departing.some(old=>old.key===item.key)} reducedMotion={reducedMotion}/>)}</div>
 }

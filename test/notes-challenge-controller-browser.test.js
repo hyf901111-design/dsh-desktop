@@ -782,8 +782,9 @@ it('shows per-paragraph reviewed lines, exact unresolved counts and tier tooltip
   await issues.hover();await expect.poll(()=>issues.getByRole('tooltip').isVisible()).toBe(true)
   const para=await page.locator('.bn-block-content[data-content-type=paragraph]').first().boundingBox(),line=await passed.boundingBox(),document=await page.locator('.en-document').boundingBox()
   expect(Math.abs(line.y-para.y)).toBeLessThan(2);expect(line.x).toBeGreaterThan(document.x+document.width);expect(Math.abs(line.height-para.height)).toBeLessThan(2)
+  await issues.evaluate(el=>{window.originalStatusLine=el});await issues.focus()
   await page.evaluate(()=>{for(const thread of window.challenge.threads)void window.challenge.resolve(thread.id)})
-  await expect.poll(()=>issues.getAttribute('data-state')).toBe('passed');expect(await issues.getAttribute('aria-label')).toContain('已解决 2 处问题')
+  await expect.poll(()=>issues.getAttribute('data-state')).toBe('passed');expect(await issues.evaluate(el=>el===window.originalStatusLine)).toBe(true);expect(await issues.evaluate(el=>el===el.ownerDocument.activeElement)).toBe(true);expect(await issues.getAttribute('aria-label')).toContain('已解决 2 处问题')
   await page.evaluate(()=>window.editor.updateBlock('p',{content:'用户刚编辑过的新段落。'}));await expect.poll(()=>passed.count()).toBe(0)
   await page.evaluate(()=>window.challenge.setLevel(1));await page.clock.fastForward(600);await expect.poll(()=>page.locator('.en-challenge-paragraph-line').count()).toBe(0)
   expect(errors).toEqual([])
@@ -876,7 +877,7 @@ it('does not replay paragraph entrance on scroll and clears tier exits under red
   await page.evaluate(()=>window.challenge.setLevel(3));await expect.poll(()=>page.locator('[data-exiting].en-challenge-paragraph-line').count()).toBe(1)
   await page.emulateMedia({reducedMotion:'reduce'});await expect.poll(()=>page.locator('[data-exiting].en-challenge-paragraph-line').count()).toBe(0)
   await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2);await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[]},1);await line.waitFor();expect(await line.locator('.en-challenge-paragraph-stroke').evaluate(el=>el.getAnimations().length)).toBe(0)
-  await page.emulateMedia({reducedMotion:'no-preference'});await expect.poll(()=>page.locator('.en-challenge-paragraph-feedback').getAttribute('data-motion')).toBe('full');await page.evaluate(()=>window.challenge.setLevel(4));await expect.poll(()=>page.locator('[data-exiting].en-challenge-paragraph-line').count()).toBe(1);await page.evaluate(()=>window.switchNote('note-b'));await expect.poll(()=>page.locator('.en-challenge-paragraph-line').count()).toBe(0);await page.clock.fastForward(700);expect(errors).toEqual([])
+  await page.emulateMedia({reducedMotion:'no-preference'});await expect.poll(()=>page.locator('.en-challenge-paragraph-feedback').getAttribute('data-motion')).toBe('full');expect(await line.locator('.en-challenge-paragraph-stroke').evaluate(el=>el.getAnimations().length)).toBe(0);await page.evaluate(()=>window.challenge.setLevel(4));await expect.poll(()=>page.locator('[data-exiting].en-challenge-paragraph-line').count()).toBe(1);await page.evaluate(()=>window.switchNote('note-b'));await expect.poll(()=>page.locator('.en-challenge-paragraph-line').count()).toBe(0);await page.clock.fastForward(700);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 
