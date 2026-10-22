@@ -10,7 +10,7 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountNotes}from'./src/preload/notes/mount';import{mountFloatingSurfaces}from'./src/preload/floating-surfaces';window.enableFloatingSurfaces=()=>mountFloatingSurfaces(document);import{YjsThreadStore}from'@blocknote/core/yjs';import{DefaultThreadStoreAuth}from'@blocknote/core/comments';import{findChallengeQuote}from'./src/preload/notes/challenge-anchors';import{CHALLENGE_KIND,CHALLENGE_USER}from'./src/preload/notes/challenge-controller';import{noteText}from'./src/shared/workspace-notes';import*as Y from'yjs';
  window.calls=[];window.jobs=[];window.saved={};window.drafts={};window.completed=0;
- const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{saved:window.saved[input.sessionId]?{...window.saved[input.sessionId],revision:0}:{title:input.sessionId,blocks:[{id:'p',type:'paragraph',content:${JSON.stringify(original)}}],yjs:'',revision:0}};if(method==='challenge')return new Promise((resolve,reject)=>window.jobs.push({input,resolve,reject}));if(method==='save'){window.saved[input.sessionId]=input.content;return{status:'saved',saved:{...input.content,revision:input.revision+1}}}return{}},draft:async input=>{window.drafts[input.sessionId]=input.content}};
+ const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{saved:window.saved[input.sessionId]?{...window.saved[input.sessionId],revision:0}:{title:input.sessionId,blocks:[{id:'p',type:'paragraph',content:${JSON.stringify(original)}}],yjs:'',revision:0}};if(method==='generate'){if(window.generationMode==='instant')return{kind:'conversation',markdown:'即时处理完成。'};if(window.generationMode==='failure')throw Error('fixture generation failure');return new Promise(resolve=>{window.finishGeneration=resolve})}if(method==='challenge')return new Promise((resolve,reject)=>window.jobs.push({input,resolve,reject}));if(method==='save'){window.saved[input.sessionId]=input.content;return{status:'saved',saved:{...input.content,revision:input.revision+1}}}return{}},draft:async input=>{window.drafts[input.sessionId]=input.content}};
  const host={register:(_mode,surface)=>{surface.style.left='0';document.body.append(surface)},open:()=>{},close:()=>{},current:()=>'notes'};let mounted=mountNotes(document,bridge,host);window.remount=()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)};
  window.switchNote=id=>{document.querySelector('[data-ework-notes-session]').dataset.eworkNotesSession=id;document.querySelector('[data-ework-note-view]').dataset.eworkNoteView=id;document.dispatchEvent(new CustomEvent('sherlock:notes-open',{detail:{sessionId:id}}))};
  window.messages=()=>window.challenge.threads[0]?.comments.filter(c=>!c.deletedAt).map(c=>noteText(c.body))||[];
@@ -742,6 +742,56 @@ it('coalesces slider changes and starts the selected tier immediately after clos
   expect(await page.evaluate(()=>window.jobs[1].input.level)).toBe(4);expect(await trigger.getAttribute('aria-busy')).toBe('true');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+it('defers an immediate tier change during a writer request even before React commits its busy state',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install()
+  await page.evaluate(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'note-a',prompt:'请说明这篇笔记的处理范围',images:[]}}));window.challenge.setLevel(4)})
+  await expect.poll(()=>page.evaluate(()=>typeof window.finishGeneration)).toBe('function')
+  await page.clock.fastForward(10000);expect(await page.evaluate(()=>window.jobs.length)).toBe(0)
+  await page.evaluate(()=>window.finishGeneration({kind:'conversation',markdown:'本次仅解释处理范围。'}))
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input.level)).toBe(4)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],checks:[]})
+  await expect.poll(()=>page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it.each(['instant','failure','stop'])('starts the queued tier after a writer %s without relying on an intermediate React busy render',async mode=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install()
+  await page.evaluate(mode=>{window.generationMode=mode;document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'note-a',prompt:'请说明这篇笔记的处理范围',images:[]}}));window.challenge.setLevel(4)},mode)
+  if(mode==='stop')await page.getByRole('button',{name:'停止',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input.level)).toBe(4)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],checks:[]})
+  await expect.poll(()=>page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('retains and saves an explicit tier review when its close handler is followed by a session switch in the same turn',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install()
+  const started=await page.evaluate(()=>{window.challenge.setPickerOpen(true);window.challenge.setLevel(4);window.challenge.setPickerOpen(false);const count=window.jobs.length;window.switchNote('note-b');return count})
+  expect(started).toBe(1)
+  await expect.poll(()=>page.locator('[data-note-editor-session="note-b"] .en-title').inputValue()).toBe('note-b')
+  expect(await page.locator('[data-note-editor-session="note-a"]').count()).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input.level)).toBe(4)
+  await finish(page,{version:1,issues:[{blockId:'p',quote:'较高',category:'question',message:'采用什么标准判断程度较高？',evidence:[]}],coveredBlockIds:['p'],checks:[]})
+  await expect.poll(()=>page.evaluate(()=>window.savedMessages().includes('采用什么标准判断程度较高？'))).toBe(true)
+  await expect.poll(()=>page.locator('[data-note-editor-session="note-a"]').count()).toBe(0)
+  expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(0)
+  await page.evaluate(()=>window.switchNote('note-a'))
+  await expect.poll(()=>page.locator('.en-title').inputValue()).toBe('note-a')
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads.some(t=>t.metadata.issue.message==='采用什么标准判断程度较高？'))).toBe(true)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
 it('releases a visible picker pause when the native header retargets its portal',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.clock.install();await page.evaluate(()=>{document.body.insertAdjacentHTML('beforeend','<div id="slot-a" data-en-challenge-tools="note-a"></div><div id="slot-b" data-en-challenge-tools="other"></div>')})
