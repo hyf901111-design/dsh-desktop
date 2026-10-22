@@ -553,24 +553,20 @@
         "schemaVersion": 1,
         "featureName": "按真实资料适配完整组件快照并按人类业务范围过滤新闻",
         "branch": "codex/feat/component-data-sources-20261019",
-        "baseCommit": "debd4f38895d6c5ee9488c487e59bdcea2de58f9",
-        "tipCommit": "134cc5e064074359384adb7a2d92820277af4666",
+        "baseCommit": "134cc5e064074359384adb7a2d92820277af4666",
+        "tipCommit": "e4f35979a1c437bc8938f0357bdf37836d353282",
         "commits": [
           {
-            "commit": "134cc5e064074359384adb7a2d92820277af4666",
+            "commit": "e4f35979a1c437bc8938f0357bdf37836d353282",
             "parents": [
-              "debd4f38895d6c5ee9488c487e59bdcea2de58f9"
+              "134cc5e064074359384adb7a2d92820277af4666"
             ],
-            "subject": "适配真实组件完整数据展示并过滤公司纯行情资讯"
+            "subject": "修复真实十八项指标容量出口与业务新闻来源展示"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-readable-chart.js"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/component-readable-snapshot.js"
           },
           {
@@ -579,30 +575,18 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/news-topic-filter.js"
           },
           {
+            "status": "A",
+            "path": "test/component-native-kpi-capacity.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/component-native-kpi18.json"
+          },
+          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-style.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-readable-chart.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-readable-snapshot.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/news-business-scope.test.js"
           }
         ],
@@ -612,6 +596,7 @@
               "npx",
               "vitest",
               "run",
+              "test/component-native-kpi-capacity.test.js",
               "test/component-readable-snapshot.test.js",
               "test/component-readable-chart.test.js",
               "test/component-source-binding.test.js",
@@ -626,9 +611,9 @@
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "438 passed in 11 directly affected files; output/component-readable-snapshot-1023/final-focused-tests.log",
-            "verifiedCommit": "134cc5e064074359384adb7a2d92820277af4666",
-            "completedAt": "2026-10-22T16:32:04.848219+00:00",
+            "summary": "456 tests passed in 12 directly affected files; output/native-component-followup-1023/final-focused-tests.log",
+            "verifiedCommit": "e4f35979a1c437bc8938f0357bdf37836d353282",
+            "completedAt": "2026-10-22T17:06:46.325Z",
             "timeoutMs": 180000
           },
           {
@@ -638,9 +623,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "Typecheck passed; output/component-readable-snapshot-1023/typecheck.log",
-            "verifiedCommit": "134cc5e064074359384adb7a2d92820277af4666",
-            "completedAt": "2026-10-22T16:32:04.848219+00:00",
+            "summary": "Typecheck passed; output/native-component-followup-1023/typecheck.log",
+            "verifiedCommit": "e4f35979a1c437bc8938f0357bdf37836d353282",
+            "completedAt": "2026-10-22T17:06:46.325Z",
             "timeoutMs": 180000
           },
           {
@@ -650,192 +635,29 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "Whitespace check passed; precise committed source clean",
-            "verifiedCommit": "134cc5e064074359384adb7a2d92820277af4666",
-            "completedAt": "2026-10-22T16:32:04.848219+00:00",
+            "summary": "Staged/committed range whitespace checks passed; tracked tree clean.",
+            "verifiedCommit": "e4f35979a1c437bc8938f0357bdf37836d353282",
+            "completedAt": "2026-10-22T17:06:46.325Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Actual runtime + Happy-dom verifies all 18 metrics, zero/negative/null, all-null unavailable state, 101 rows, 13/33 columns, long cells, 800 chart points, 367-period trends, search/page/all browsing, units and English fixed UI. Four exact synthetic runtime cases fail at baseline debd and complete in one captured response at this commit, with no binding. The specific root-owned native business task65ba is separately replayed using its exact original output/60 real source records: 29 retained (8/11/10), known pure quote-only records excluded, all three mixed-business positives retained, all three actual source queries proven, zero new model/network calls. No new native-client/GUI/build performed here."
+          "summary": "Exact root-owned native public responses replayed offline through actual runtime and DOM at this clean commit: task a03aa90a first/repair each complete once, all 18 source selector values/labels match, true Tencent time 2026-10-22 16:14:45 retained, false DataYes absent, no refresh binding. Exact task d0bef337 first/repair sequence + 120 real source rows completes to dynamic 47 relevant unique articles; known pure tape removed, actual repurchase excerpt chosen for shared identity, all displayed fields match one observed identity, query groups/coverage 9/21/17 agree and every page remains reachable. No fresh model/network/GUI/native-build performed here. Two independent peer reviews passed."
         },
         "acceptanceCriteria": [
-          "Only exact observed, successfully materialized source mappings with valid supported data structure receive deterministic capacity/missing-state adaptation. Model literal cells, invalid paths, numeric defaults/prefixes/suffixes and malformed rows/series are not upgraded to source evidence.",
-          "Complete supported KPI/metrics, tables and chart data remain in a controlled searchable/paged/all-readable HTML snapshot without a refresh recipe. Native components that already fit their own contract retain their existing renderer and recipe; market.trend does not inherit chart.line's 600-point limit.",
-          "Line and market.trend capacity snapshots preserve every valid plotted point and series, original labels/units and a full data table; null breaks lines, isolated zero remains visible, all-null data has an explicit unavailable UI and no invented plot/zero.",
-          "Original source-policy, record/date/variant/financial semantics execute on source data before host HTML. Capacity repairs must keep verifiable mappings; copied HTML cannot erase source-date/financial obligations. Attempt-local exact output/data identity is required for final financial checking, and cleared-output paths do not dereference a missing receipt.",
-          "Footer provenance uses observed provider names/URLs rather than model-declared sources. Fixed controls, generated headers and strict missing states translate to English while original business text, notes, series labels and units remain intact.",
-          "Only explicit positive human business-only intent filters high-confidence pure quote/trading/margin-balance reports, using matched actual source text. Substantive business/operations/legal/company action content mixed with price news remains; normal broad news and negative/quoted intent keep prior semantics.",
-          "Source mapping prompts tell the model to keep complete data beyond native layout capacity, not trim securities/metrics/rows/columns/series or long cells, and only claim refresh when actually bound."
+          "Only the redundant mapping type=kpi/variant=kpi pair is normalized. Incompatible variants, unknown keys, literal values and unobserved requests remain invalid; every business value still requires observed source proof.",
+          "Capacity snapshot asOf presentation uses the unadorned proven source selector; unprovable/null/missing dates display a translatable missing state rather than model defaults or provider suffixes. Provider names and URLs derive from actual observed records, while original semantic data remains unchanged for existing source/date/unit/financial checks.",
+          "Both mapping prompts require variant only for templates that use one and no longer teach a hard-coded DataYes time suffix.",
+          "Explicit human business-only news scopes additionally remove high-confidence post-market trading amount, intervening-date fund flow, target-price and stock technical signals. Ordinary broad/negative/quoted scope and substantive business mixed with market data retain prior behavior; operating platform transaction amounts and product technical indicators are not market tape by themselves.",
+          "The same source relevance predicate selects the final same-identity article excerpt, publisher and source-query label. A pure trading excerpt cannot overwrite another actual query excerpt supporting company action. Query retained counts use actual displayed single-query assignments with matching source title/URL/date."
         ],
         "risks": [
-          "Capacity adaptation is limited to KPI/market.metrics/fund-kpi, scalar tables and supported labels/series charts. It retains the existing bounded evaluator, source permissions and physical HTML output limit; it is not a universal arbitrary-object renderer.",
-          "Non-line Cartesian capacity data keeps complete numeric details; the additional trend visualization is specifically line/market.trend. All-null completion is a generated UI state, not evidence that numerical data was acquired or complete.",
-          "Mapping-selected scope remains authoritative; this change does not infer omitted entities, request new sources or promise complete/latest upstream data. The existing query/parser/source limits still apply.",
-          "Business-only classification is a finite high-confidence lexical rule over real article text and explicit human intent, not universal semantic news understanding. The replayed 29 records are not proof of all reports in the 30-day period.",
-          "The 4-case red/green run uses synthetic observations; task65ba uses previously captured real observations. Neither is a fresh model/upstream/native-client validation. Root will build and test the exact integration separately."
+          "Business-only filtering remains a finite lexical rule over observed article text, not universal semantic classification. The replayed relevant subset does not prove all upstream reports or complete 30-day coverage.",
+          "Actual retrieved source windows, source permissions, bounded mapping validation, existing financial/date/unit gates and physical HTML limits remain unchanged. This follow-up adds no new source or pagination acquisition.",
+          "The 18 KPI and 120 news validation reuses exact previously captured public native observations; current UI/native acceptance belongs to the root integration build. Source metadata correction applies to mapped timestamp presentation, not arbitrary model prose."
         ],
-        "generatedAt": "2026-10-22T16:32:04.848219+00:00"
-      },
-      "merged": {
-        "mergeCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-        "verificationCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "431ce4a888e9352abc2c715bd6dd2f28622b60dd",
-            "completedAt": "2026-10-22T16:32:51.743Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-22T16:32:51.743Z"
+        "generatedAt": "2026-10-22T17:06:46.325Z"
       }
     }
   ],
