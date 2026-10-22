@@ -4,7 +4,8 @@ import type {ClientCapabilityContext,CapabilityReceipt} from '../../../packages/
 import {runClientCapabilityLoop} from '../../../packages/dsh-research-task-runtime/client-capability-loop.js'
 import {NotesCapabilityBridge} from './capability-bridge'
 import {createNoteDataRevisionHandler} from './data-revisions'
-import {explicitNoteExportPaths} from './export-destination'
+import {createNoteCapabilityHandlers} from './capability-handlers'
+import {NotesDocumentCapabilityAdapter,type NoteDocumentAdapter} from './document-capability-adapter'
 import { NotesStore } from './store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import type { TrustedWindow } from '../ipc-trust'
@@ -26,11 +27,13 @@ import type {ResearchContextSource} from '../state/research-context-bridge'
 import { pickNoteFiles } from './file-picker'
 
 export function installNotesService(options: {
-  ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
+  ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string; onDocumentAdapter?(adapter:NoteDocumentAdapter):void;
   runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; canWrite?(sessionId:string):boolean; canvasAvailable?(sessionId:string):boolean; inspectCanvas?(sessionId:string,signal:AbortSignal,args?:{ids?:string[]}):Promise<unknown>; resetZoom?():Promise<void>;windowAction?(action:string,args:any):Promise<unknown>; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any,control?:{signal?:AbortSignal;guardId?:string}):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   const capabilityBridge=new NotesCapabilityBridge(value=>{const window=options.getWindow();if(!window||window.isDestroyed())throw Error('笔记窗口不可用。');(window.webContents as any).send('notes:capability-action',value)})
+  const documentAdapter=new NotesDocumentCapabilityAdapter({owner:options.owner,window:options.getWindow,canRead:options.canRead,canWrite:sessionId=>options.canWrite?.(sessionId)??true,bridge:capabilityBridge,componentData:!!options.componentData,notify:value=>{const window=options.getWindow();if(window&&!window.isDestroyed())(window.webContents as any).send('notes:capability-action',value)},prepare:(context,sessionId,signal,current)=>prepareNoteReferences(context,{sessionId,owner:options.owner(),files:options.files,captureSources:options.captureSources,signal,current})})
+  options.onDocumentAdapter?.(documentAdapter)
   const dataJobs=new Map<string,{owner:string;sessionId:string;controller:AbortController}>()
   const capabilityResults=new Map<string,{fingerprint:string;result:any}>()
   const generations=new Map<string,{owner:string;sessionId:string;cardLocal:boolean}>()
@@ -41,6 +44,7 @@ export function installNotesService(options: {
     if (method !== 'load' && method !== 'conversation-load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
     switch (method) {
       case 'capability-reply': return capabilityBridge.respond(input,owner)
+      case 'capability-ready': return documentAdapter.ready(input,owner)
       case 'library-list': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryItems(options.library()!)
       case 'library-read': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryNode(options.library()!,input.id,owner)
       case 'component-ready': return {ready:findNoteComponent(store.load(owner,session).saved.blocks,input.nodeId)?.containerSpec?.type==='calendar-tool'}
@@ -156,7 +160,7 @@ export function installNotesService(options: {
           const renderer=(action:'context'|'notes.export'|'notes.components.style'|'notes.components.layout'|'notes.components.create'|'notes.blocks.align'|'notes.components.inspect'|'notes.components.apply'|'notes.challenge.configure'|'notes.components.data',args:any)=>capabilityBridge.request(action,args,clientContext!,input.requestId,signal,current)
           const componentData=createNoteDataRevisionHandler(clientContext?.selectedBlockIds[0],args=>renderer('notes.components.data',args))
           const host=createClientCapabilityHost({current:()=>current()?clientContext:undefined,...options.windowAction?{window:async(action,args)=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');return options.windowAction!(action,args)}}:{},handlers:{
-            ...clientContext?{...options.componentData?{componentData}:{},configureChallenge:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.challenge.configure',args)},createComponent:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.create',{...args,requestContext:{images:input.images??[],context:input.context,title:input.title,markdown:input.markdown,selection:input.selection,sourceInstruction:input.prompt}})},exportNote:async(args:any)=>{const destinations=explicitNoteExportPaths(input.prompt);if(args.path&&destinations.length&&!destinations.includes(args.path))throw Error('导出位置与本次明确指定的位置不一致，请重新选择保存位置。');return renderer('notes.export',destinations.length?args:{...args,path:undefined})},alignBlocks:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.blocks.align',args)},inspectNoteComponent:async(args:any)=>renderer('notes.components.inspect',args),layoutComponents:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.layout',args)},applyNoteComponent:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.apply',args)},styleComponents:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.style',args)}}:{},
+            ...createNoteCapabilityHandlers({context:clientContext,renderer,canWrite:()=>options.canWrite?.(session)!==false,componentData:options.componentData?componentData:undefined,requestContext:{images:input.images??[],context:input.context,title:input.title,markdown:input.markdown,selection:input.selection},sourceInstruction:input.prompt}),
             ...options.inspectCanvas&&(options.canvasAvailable?.(session)??true)?{inspectCanvas:async(args:any)=>{await renderer('context',{});const data=await options.inspectCanvas!(session,signal,args);return {status:'succeeded' as const,data}}}:{},
             ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
           }})
@@ -198,5 +202,5 @@ export function installNotesService(options: {
       default: throw Error('不支持的笔记操作。')
     }
   })
-  return () => { capabilityBridge.dispose();for(const job of dataJobs.values())job.controller.abort();dataJobs.clear();options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear();generations.clear();for(const job of challenges.values())job.controller.abort();challenges.clear(); options.ipcMain.removeHandler('notes:request') }
+  return () => { documentAdapter.dispose();capabilityBridge.dispose();for(const job of dataJobs.values())job.controller.abort();dataJobs.clear();options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear();generations.clear();for(const job of challenges.values())job.controller.abort();challenges.clear(); options.ipcMain.removeHandler('notes:request') }
 }

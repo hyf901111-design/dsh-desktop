@@ -1,5 +1,17 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+"客户端请求已被较新用户输入替代，请重新读取能力目录。":"A newer user request superseded this action. Read the capability catalog again.",
+"笔记文档上下文无效。":"Invalid note document context.",
+"当前笔记编辑器尚未就绪，请稍后重新读取能力目录。":"The current note editor is not ready. Read the capability catalog again shortly.",
+"笔记文档上下文未确认，请重新读取能力目录。":"The note document context was not confirmed. Read the capability catalog again.",
+"当前笔记正在处理其它请求或已切换，请稍后重试。":"The note is handling another request or its view changed. Try again shortly.",
+"当前笔记操作尚未保存，请等待完成。":"Wait for the current note operation to finish saving.",
+"请使用当前笔记能力上下文，不能重置本轮校验。":"Use the captured note context. This turn’s checks cannot be reset.",
+"笔记内容已变化或操作已取消，请重新读取能力目录。":"The note changed or the operation was cancelled. Read the capability catalog again.",
+"笔记能力上下文已失效，请重新发送请求。":"The note capability context expired. Send the request again.",
+"当前笔记操作尚未完成，请等待回执。":"Wait for the current note operation’s receipt.",
+"客户端请求来源无效。":"Invalid client request authority.",
+
 "客户端操作历史已达上限，请重启客户端后继续。":"Client action history reached its limit. Restart the client to continue.",
 "同步待确认":"Synchronization unconfirmed",
 "修改画布":"Modify canvas","撤销画布操作":"Undo canvas action","放大窗口":"Zoom in","缩小窗口":"Zoom out","窗口全屏":"Window fullscreen","切换会话视图":"Switch session view","当前会话未绑定可见客户端，请回到该会话后重试。":"This session is not bound to the visible client. Return to it and retry.","请先重新读取当前客户端能力目录。":"Read the current client capability catalog again.","客户端操作请求无效。":"Invalid client action request.","客户端上下文无效。":"Invalid client context.","当前会话不可用。":"This session is unavailable.","视图切换请求已发出；后续操作已取消，请查看当前视图。":"The view switch was requested; further actions were cancelled. Check the current view.","会话视图切换未确认，请查看当前界面。":"The view switch was not confirmed. Check the current interface.","全屏状态尚未确认。":"Fullscreen state has not been confirmed.",

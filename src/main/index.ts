@@ -1277,7 +1277,8 @@ async function bootstrap(): Promise<void> {
     else throw Error('不支持的窗口操作。')
     return{zoomLevel:mainWindow.webContents.getZoomLevel(),fullscreen:mainWindow.isFullScreen()}
   }
-  const clientCapabilities=new ClientCapabilityService({owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:sessionId=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}},canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
+  let notesDocumentAdapter:import('./notes/document-capability-adapter').NoteDocumentAdapter|undefined
+  const clientCapabilities=new ClientCapabilityService({notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:sessionId=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}},canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
   researchContextBridge = new ResearchContextBridge({
@@ -1408,7 +1409,7 @@ async function bootstrap(): Promise<void> {
   const calendarNotes = new NotesStore(join(app.getPath('userData'),'workspace-notes'))
   const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
   const noteNativeMenu = new NoteNativeMenu({getWindow:()=>mainWindow,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession})
-  app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow,
+  app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow, onDocumentAdapter:adapter=>{notesDocumentAdapter=adapter},
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
     canRead:canReadNoteSession,canWrite:sessionId=>!researchBoardsService?.isSharedSession(sessionId),canvasAvailable:sessionId=>canvasActions.isAvailable(sessionId),inspectCanvas:(sessionId,signal,args)=>canvasActions.execute({sessionId,method:'inspect',args:args??{}},signal),resetZoom:()=>executeDesktopMenuCommand('zoom-reset'),windowAction:clientWindowAction,nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,

@@ -1,4 +1,5 @@
 import {defineTool} from '@deepseek-ai/dsh-tools'
+import {canvasHumanRequest} from './canvas-task-routing.js'
 
 export const CLIENT_TOOL_NAMES=['client_capabilities','client_action']
 const MAX_CALL_BYTES=1500000
@@ -19,7 +20,11 @@ function executionIdentity(exec){
   const index=events.findLastIndex(event=>event?.type==='turn/start'),turnId=turnKey(events[index]?.data?.turn)
   if(index<0||turnId===undefined||events.slice(index+1).some(event=>event?.type==='turn/end'&&turnKey(event.data?.turn)===turnId))
     throw Error('客户端操作没有有效的执行轮次。')
-  return {sessionId:session.id,turnId}
+  const admitted=events.slice(index+1).findLast(event=>event?.type==='user/message'&&event.data?.source?.kind==='user')
+  const human=admitted?canvasHumanRequest({events:[admitted]}):undefined
+  const authoritySeq=admitted?(Number.isSafeInteger(admitted.seq)&&admitted.seq>=0?admitted.seq:events.indexOf(admitted)):undefined
+  const authorityId=admitted?(id(admitted.data?.id)?admitted.data.id:String(authoritySeq)):undefined
+  return {sessionId:session.id,turnId,...authorityId?{authorityId,authoritySeq,sourceInstruction:human?.text&&human.text.length<=8000?human.text:''}:{}}
 }
 
 function actionCall(args){
@@ -83,7 +88,9 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
         const controller=new AbortController(),abort=()=>controller.abort()
         controllers.add(controller)
         exec.signal?.addEventListener('abort',abort,{once:true})
-        const timer=setTimeout(abort,120000)
+        // The existing Notes create bridge owns a 250s generation budget plus
+        // a bounded final-effect acknowledgement. Other actions remain 120s.
+        const timer=setTimeout(abort,call?.capability==='notes.components.create'?260000:120000)
         try{
           const response=await request(`${endpoint.origin}/client-capabilities`,{
             method:'POST',redirect:'error',signal:controller.signal,
