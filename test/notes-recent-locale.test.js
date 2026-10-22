@@ -31,8 +31,10 @@ it('translates recognized note IPC errors while preserving unknown service and m
 it('localizes independent review phases without rewriting model explanations',()=>{
  const notices=[
   '主检查阶段未完成，已保留预算用于独立复查；未将未完成段落视为通过。',
+  '部分正文块检查未完成，已保留此前验证结果；未将失败块视为通过。',
   '观点拓展阶段预算不足，未将抬杠维度视为完成。',
   '观点拓展未完成或回执不完整；保留已验证问题，未将抬杠维度视为完成。',
+  '研究元数据与待检查段落超出本轮容量，相关段落已保留为待检查，尚未完成本等级检查。',
   '观点拓展实际完成3/8个正文块；允许确无适用追问，不将纠错问句当作观点拓展。'
  ]
  for(const text of notices){

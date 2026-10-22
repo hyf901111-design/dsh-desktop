@@ -33,7 +33,12 @@ async function fixture(content=original,quote='成度'){
  const id=await page.evaluate(quote=>window.seed({quote}),quote);await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1)
  return{context,page,errors,id}
 }
-async function finish(page,value=answer,index=0){await page.evaluate(({value,index})=>window.jobs[index].resolve(value),{value,index})}
+// Successful mock reviews finish their returned coverage. Partial-review cases
+// explicitly supply an empty/subset completeBlockIds, as the runtime now does.
+async function finish(page,value=answer,index=0){
+ const response=value.completeBlockIds===undefined?{...value,completeBlockIds:value.coveredBlockIds??[]}:value
+ await page.evaluate(({value,index})=>window.jobs[index].resolve(value),{value:response,index})
+}
 async function start(page,kind='reply',text='请核实来源'){await page.evaluate(({kind,text})=>window.start(kind,text),{kind,text});await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)}
 
 it('localizes only fixed challenge reply failures while preserving user and model messages',async()=>{
@@ -811,7 +816,7 @@ it('shows per-paragraph reviewed lines, exact unresolved counts and tier tooltip
 it('does not display a passed line after a partial depth response, a failed request, or disabling challenge',async()=>{
  const{context,page,errors,id}=await fixture();try{
   await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id);await page.evaluate(()=>window.challenge.setLevel(3));await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
-  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:[],checks:[{kind:'review',status:'partial',detail:'深入检查未完成。'}]});await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:[],checks:[{kind:'review',status:'partial',detail:'深入检查未完成。'}]});await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('waiting')
   expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
   await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-recheck',{detail:{sessionId:'note-a'}})));await page.clock.fastForward(5000);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
   await page.evaluate(()=>window.jobs[1].reject(Error('provider unavailable')));await page.clock.fastForward(1);expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
