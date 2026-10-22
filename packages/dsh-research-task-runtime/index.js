@@ -8,7 +8,7 @@ import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
 import {operationsTemplateSchema,requestedOperationsType} from './operations-template-contract.js'
 import { KPI_GUIDANCE } from './kpi-template-contract.js'
-import { templateDataIssue, templateSourceDataIssue, TABLE_GUIDANCE } from './template-data-contract.js'
+import { templateDataIssue, templateSourceDataIssue, TABLE_GUIDANCE, TABLE_INPUT_SCHEMA } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
@@ -526,7 +526,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     timeline: TIMELINE_DATA_GUIDANCE,
     gantt: GANTT_GUIDANCE,
     kpi: '{"version":1,"type":"kpi","title":"标题","asOf":"原数据来源及时点","items":[{"label":"指标","value":"原数值及单位"}]}\n' + KPI_GUIDANCE,
-    table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}\n' + TABLE_GUIDANCE,
+    table: TABLE_INPUT_SCHEMA + '\n' + TABLE_GUIDANCE,
     chart: chartTemplateSchema(requestedChartVariant(templatePrompt)),
     dashboard: '{"version":1,"type":"dashboard","title":"标题","asOf":"时点/示例口径","items":[{"label":"指标","value":"数值及单位","detail":"口径说明"}]}',
     news: '{"version":1,"type":"news","title":"标题","items":[{"title":"条目","summary":"摘要","date":"发布日期","category":"分类"}]}',
@@ -596,7 +596,7 @@ export function buildResearchTaskPrompt(request) {
       chartTemplateSchema(),
       INTERACTIVE_ARTIFACT_PROMPT,
       MARKET_ARTIFACT_PROMPT,
-      '{"version": 1, "type": "table", "title": "标题", "columns": ["列名"], "rows": [["单元格"]]}',
+      TABLE_INPUT_SCHEMA + '\n' + TABLE_GUIDANCE,
       '{"version": 1, "type": "kpi", "title": "标题", "items": [{"label": "指标", "value": "数值", "change": "可选变化"}]}',
       '{"version": 1, "type": "markdown", "title": "标题", "content": "Markdown 内容"}',
       '{"version": 1, "type": "mind-map", "title": "标题", "content": "# 中心主题\\n- 分支\\n  - 要点"}',
@@ -633,7 +633,7 @@ export function buildResearchTaskPrompt(request) {
       chartTemplateSchema(),
       INTERACTIVE_ARTIFACT_PROMPT,
       MARKET_ARTIFACT_PROMPT,
-      '{"version": 1, "type": "table", "title": "标题", "columns": ["列名"], "rows": [["单元格"]]}',
+      TABLE_INPUT_SCHEMA + '\n' + TABLE_GUIDANCE,
       '{"version": 1, "type": "kpi", "title": "标题", "items": [{"label": "指标", "value": "数值", "change": "可选变化"}]}',
       '{"version": 1, "type": "markdown", "title": "标题", "content": "Markdown 内容"}',
       '{"version": 1, "type": "mind-map", "title": "标题", "content": "# 中心主题\\n- 分支\\n  - 要点"}',

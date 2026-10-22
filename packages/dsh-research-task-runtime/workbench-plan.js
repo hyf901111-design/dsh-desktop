@@ -24,6 +24,7 @@ import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataNewsT
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 import {validateWorkbenchDatasets,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue,DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
 import {generalNewsScope,newsScopeInstruction,NEWS_CAPACITY_MARKER} from './news-source-scope.js';
+import {TABLE_INPUT_GUIDANCE} from './template-data-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
 export const WORKBENCH_PANEL_TYPES = Object.freeze(['view','financial-widget','files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
@@ -73,7 +74,7 @@ const schemaHints = {
     timeline: TIMELINE_GUIDANCE,
     dashboard: 'dashboard 应包含 asOf 和 items:[{label,value:"带单位的字符串",detail?}]（也接受 metrics 中的数值和 unit）。',
     chart: chartTemplateSchema(),
-    table: 'table 应包含 columns:[列名] 和 rows:[[单元格]]，每行列数一致。',
+    table: TABLE_INPUT_GUIDANCE,
     kpi: KPI_GUIDANCE,
     market: 'market 应包含 variant、asOf 和对应数据；metrics 用 items:[{label,value}]，trend 用等长 labels/series.values，量价联动用 price-volume 的等长 labels/prices/volumes 与 priceUnit/volumeUnit，盘口用 order-book 的 bids/asks 与 priceUnit/sizeUnit，资金流向用 fund-flow 的 records:[{period,industry,inflow,outflow}] 与 unit，估值分位带用 valuation-band 的等长 labels/values 与 bands:{p10,p25,p50,p75,p90}，净值回撤用 equity-drawdown 的等长 labels/equity/benchmark 与 unit，配置占比用 allocation-donut 的 items:[{label,value}] 与 unit，瀑布图用 waterfall 的 start/changes:[{label,value}]/unit，漏斗用 funnel 的 stages:[{label,count}]，风险矩阵用 risk-matrix 的 items:[{label,probability,impact,detail?}]，table 用等宽 columns/rows；医药侧图、管线、事件依次用 scatter 的 xLabel/yLabel/items、pipeline 的 stages/items、events 的 items；基金三件套分别用 fund-kpi items、fund-holdings columns/rows、fund-industry items:[{label,weight,benchmark}]。',
     news: 'news 应包含 items:[{title,summary,date?,category?}]。',
@@ -330,6 +331,42 @@ export function prepareSimulatedArtifact(panel) {
     if (!acceptArtifactOutput(JSON.stringify(artifact))) throw Error(`面板「${panel.title}」的模拟数据格式无效。${simulatedArtifactProblem(artifact)}`);
     return artifact;
 }
+// A source planner may include an empty presentation sketch. Carry only its
+// column declaration into the fetch task; never promote placeholders to data
+// or silently drop even one supplied observation. Both flat and data-wrapped
+// sketches occur in actual planner calls.
+function sourceTableLayoutPrompt(panel) {
+    const artifact=panel.artifact;
+    const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+    const only=(value,keys)=>object(value)&&Object.keys(value).every(key=>keys.includes(key));
+    if(panel.publicData?.profile!=='quotes-table'||!['table','market'].includes(panel.type)||!object(artifact)||artifact.version!==1||
+        !(artifact.type==='table'&&artifact.variant===undefined||artifact.type==='market'&&artifact.variant==='table'))return null;
+    // A declaration is not yet renderer data. Bound its complexity, not its
+    // row/column count: larger real tables have the source snapshot route.
+    if(Buffer.byteLength(JSON.stringify(artifact),'utf8')>64000)return null;
+    const wrapped=Object.hasOwn(artifact,'data');
+    if(!only(artifact,wrapped?['version','type','variant','title','data']:['version','type','variant','title','columns','rows','asOf','source']))return null;
+    const data=wrapped?artifact.data:artifact;
+    if(wrapped&&!only(data,['columns','rows','asOf','source']))return null;
+    if(artifact.title!==undefined&&!str(artifact.title,256))return null;
+    if(data.asOf!==undefined&&(typeof data.asOf!=='string'||data.asOf.length>200||/\d/u.test(data.asOf)))return null;
+    if(data.source!==undefined&&(!only(data.source,['name','url'])||Object.values(data.source).some(value=>!str(value,2000)||!panel.prompt.includes(value))))return null;
+    if(!Array.isArray(data.columns)||data.columns.length<1||!Array.isArray(data.rows))return null;
+    const keyed=data.columns.every(column=>only(column,['key','label','unit'])&&str(column.key,128)&&!/[\u0000-\u001f]/u.test(column.key)&&!column.key.startsWith('$')&&!['__proto__','constructor','prototype'].includes(column.key)&&str(column.label,128)&&(column.unit===undefined||typeof column.unit==='string'&&column.unit.length<=40));
+    if(!keyed&&!data.columns.every(column=>str(column,128)))return null;
+    const keys=keyed?data.columns.map(column=>column.key):data.columns;
+    if(new Set(keys).size!==keys.length)return null;
+    const identity=/^(?:code|symbol|ticker|name|company|companyName|securityName|securityCode|证券代码|股票代码|证券名称|公司名称|名称|代码)$/iu;
+    for(const row of data.rows){
+        if(keyed?(!object(row)||Object.keys(row).length!==keys.length||!keys.every(key=>Object.hasOwn(row,key))):(!Array.isArray(row)||row.length!==keys.length))return null;
+        for(const [i,key]of keys.entries()){
+            const value=keyed?row[key]:row[i];
+            if(value===null||value==='')continue;
+            if(!identity.test(key)||!str(value,128)||!panel.prompt.includes(value))return null;
+        }
+    }
+    return panel.prompt+'\n展示结构（不含业务数据）：'+JSON.stringify({columns:data.columns,...(artifact.title?{title:artifact.title}:{}),...(data.asOf?{timeInstruction:data.asOf}:{})})+'。这是待取数的布局草稿；按原需求取得真实响应并映射全部字段，单位写入最终列名，不把空单元格当成查询结果。';
+}
 export function validateWorkbench(value) {
     if (value?.generationMode === 'deferred' && value.preset !== undefined) throw Error('延后模拟生成不能混用固定预设。');
     value = expandSimulatedWorkbenchPreset(expandLiveWorkbenchPreset(value));
@@ -356,6 +393,16 @@ export function validateWorkbench(value) {
     const panels = resolveWorkbenchSamples(value.panels).map(p => {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
+        let explicitTableLayout=false;
+        if(!isSimulated&&p.publicData!==undefined&&p.artifact!==undefined){
+            const prompt=sourceTableLayoutPrompt(p);
+            if(prompt!==null){
+                if(prompt.length>5000)throw Error('面板需求与展示结构超过内容上限，请精简需求文字。');
+                const {artifact,...planned}=p;
+                p={...planned,prompt};
+                explicitTableLayout=true;
+            }
+        }
         if(p.layout !== undefined && !['standard','wide'].includes(p.layout))throw Error('面板阅读布局无效。');
         seen.add(p.title.trim());
         if (p.view !== undefined && p.type !== 'view') throw Error('只有view组件可引用共同数据视图。');
@@ -415,7 +462,7 @@ export function validateWorkbench(value) {
                 throw Error('面板与免费源刷新频率冲突，请只填写一个一致的值。');
             const candidate=p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes };
             const sourceType=p.type==='table'&&candidate?.profile==='quotes-table'?'market':p.type;
-            const quoteTask=publicDataQuoteTaskRequirement(candidate,sourceType,p.title+'\n'+p.prompt);
+            const quoteTask=publicDataQuoteTaskRequirement(candidate,sourceType,p.title+'\n'+p.prompt,{explicitTableLayout});
             const historyTask=publicDataHistoryTaskRequirement(candidate,p.type);
             const newsScope=p.title+'\n'+p.prompt+(value.originalRequest?'\n【原始工作台需求】\n'+value.originalRequest:'\n工作台研究范围：'+value.title);
             const newsTask=publicDataNewsTaskRequirement(candidate,p.type,newsScope);
