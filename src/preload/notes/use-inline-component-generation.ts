@@ -3,7 +3,8 @@ import type {NoteAiResult,NotesBridge} from '../../shared/workspace-notes'
 
 type Options={sessionId:string;bridge:Pick<NotesBridge,'request'>;editor:any;current():boolean;persist():Promise<unknown>;changed?():void;update?(blockId:string,node:Record<string,any>):void;notify?():void}
 type GenerationContext={images?:any[];context?:any;title?:string;markdown?:string;selection?:string}
-type Job={blockId:string;requestId:string;expected:string;controller:AbortController;timer:ReturnType<typeof setTimeout>;phase:'generating'|'binding'}
+type GenerationEffect=(state:'applied'|'saved')=>Promise<void>
+type Job={onEffect?:GenerationEffect;blockId:string;requestId:string;expected:string;controller:AbortController;timer:ReturnType<typeof setTimeout>;phase:'generating'|'binding'}
 const withoutSize=(node:any)=>JSON.stringify({...node,noteSize:undefined})
 const stopped='生成已停止，可调整需求后重试。'
 
@@ -47,10 +48,10 @@ export function createInlineComponentGeneration(options:Options){
    if(result.kind!=='component'||!result.node?.containerSpec)throw Error('组件生成未返回有效内容，请重试。')
    const node={...result.node,id:latest.node.id,noteLibrary:true,noteSize:latest.node.noteSize}
    if(!write(job,node))return
-   job.phase='binding';options.changed?.()
+   job.phase='binding';options.changed?.();await job.onEffect?.('applied');if(!active(job))return
    if(result.sourceResult?.status==='verified'){
     try{
-     await options.persist();const saved=current(job);if(!saved)return
+     await options.persist();await job.onEffect?.('saved');const saved=current(job);if(!saved)return
      const binding=await options.bridge.request('component-data',{sessionId:options.sessionId,action:'bind-generated',nodeId:saved.node.id,recipe:result.sourceResult.recipe,initialSpec:saved.node.containerSpec})
      const bound=current(job);if(bound)write(job,{...bound.node,noteDataBound:true,sourceText:binding.enabled===false?'已绑定数据源 · 手动刷新':'已绑定数据源 · 可见时自动刷新'},true)
     }catch(error){const saved=current(job);if(saved)write(job,{...saved.node,noteDataBound:false,sourceText:'已验证数据来源 · 当前为快照，自动刷新未启用',generationError:(error as Error).message},true)}
@@ -61,13 +62,13 @@ export function createInlineComponentGeneration(options:Options){
   }finally{finish(job)}
  }
  const api={
-  startAndWait:async(blockId:string,prompt:string,source?:GenerationContext):Promise<any>=>{
+  startAndWait:async(blockId:string,prompt:string,source?:GenerationContext,onEffect?:GenerationEffect):Promise<any>=>{
    if(jobs.has(blockId)||waiters.has(blockId))return {status:'failed',message:'此组件正在生成。'}
    let done!:(value:any)=>void;const completion=new Promise(resolve=>{done=resolve});waiters.set(blockId,done)
-   const started=api.start(blockId,prompt,source);if(!started.ok){waiters.delete(blockId);return {status:'failed',message:started.error}}return completion
+   const started=api.start(blockId,prompt,source,onEffect);if(!started.ok){waiters.delete(blockId);return {status:'failed',message:started.error}}return completion
   },
   activate:()=>{disposed=false},
-  start:(blockId:string,prompt:string,source?:GenerationContext):{ok:boolean;error?:string}=>{
+  start:(blockId:string,prompt:string,source?:GenerationContext,onEffect?:GenerationEffect):{ok:boolean;error?:string}=>{
    if(disposed||!options.current()||!options.editor.isEditable)return {ok:false,error:'笔记当前不可编辑。'}
    // Deleted or independently replaced cards must not occupy a concurrency slot.
    for(const job of [...jobs.values()])if(!current(job))cancel(job)
@@ -76,7 +77,7 @@ export function createInlineComponentGeneration(options:Options){
    const block=options.editor.getBlock(blockId);let node:any
    try{node=JSON.parse(block.props.payload)}catch{return {ok:false,error:'组件已移除或记录已变化。'}}
    if(node.noteDraft!=='smart'||!prompt.trim())return {ok:false,error:'请先描述要创建的组件。'}
-   const requestId=crypto.randomUUID(),job:Job={blockId,requestId,expected:block.props.payload,controller:new AbortController(),phase:'generating',timer:setTimeout(()=>cancel(job,'failed','组件创建超时，可调整需求后重试。'),240000)}
+   const requestId=crypto.randomUUID(),job:Job={blockId,requestId,onEffect,expected:block.props.payload,controller:new AbortController(),phase:'generating',timer:setTimeout(()=>cancel(job,'failed','组件创建超时，可调整需求后重试。'),240000)}
    jobs.set(blockId,job)
    if(!write(job,{...node,containerPrompt:prompt.trim(),generationStatus:'running',generationError:undefined,generationDetail:undefined,generationTaskId:requestId,generationChildSessionId:undefined,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:''})){finish(job);return {ok:false,error:'组件已变化，较新内容已保留。'}}
    options.notify?.();void run(job,prompt.trim(),source);return {ok:true}

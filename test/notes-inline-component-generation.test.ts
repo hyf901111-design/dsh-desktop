@@ -60,3 +60,10 @@ it('exposes an awaitable receipt only after the real generated component is avai
  complete({kind:'component',node:{id:'generated',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'完成',columns:['值'],rows:[[1]]}}})
  expect(await pending).toMatchObject({status:'succeeded',blockId:'card'});expect(JSON.parse(blocks[0].props.payload).containerSpec.rows).toEqual([[1]]);controller.dispose()
 })
+
+it('reports generated and durably saved phases before cancellation during data binding',async()=>{
+ const f=fixture(),effects:string[]=[]
+ const pending=f.manager.startAndWait('a','Create a',undefined,async state=>{effects.push(state);if(state==='saved')f.manager.stop('a')})
+ f.resolve('a',{...result(),sourceResult:{status:'verified',recipe:{requests:[]}}})
+ expect(await pending).toMatchObject({status:'cancelled',blockId:'a'});expect(effects).toEqual(['applied','saved']);expect(f.save).toHaveBeenCalledOnce();expect(f.node('a').containerSpec).toBeDefined();expect(f.calls.some(call=>call.method==='component-data')).toBe(false)
+})

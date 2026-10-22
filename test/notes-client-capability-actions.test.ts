@@ -42,3 +42,13 @@ it('does not apply a style when cancellation was acknowledged before mutation',a
  await expect(handler({requestId:'style',generationId:'generation',context:{documentId:'doc'},action:'notes.components.style',args:{scope:'note',theme:'enterprise'}})).rejects.toThrow('已取消')
  expect(JSON.parse(content.blocks[0].props.payload)).not.toHaveProperty('notePresentation')
 })
+it('journals placeholder, generated and saved creation effects when cancelled after persistence',async()=>{
+ const content:any={title:'原文',yjs:'',blocks:[]},effects:any[]=[],saved:any[]=[];let handler:any
+ const call={requestId:'create',generationId:'generation',context:{documentId:'doc'},action:'notes.components.create',args:{prompt:'表格'}}
+ handler=module!.createNoteCapabilityActions({editor:{document:content.blocks},snapshot:()=>content,current:()=>true,generationId:()=> 'generation',documentId:'doc',selectedBlockIds:()=>[],
+  createComponent:async(_args:any,_current:any,_id:any,report:any)=>{content.blocks.push({id:'created',type:'research',props:{payload:'{}'}});await report?.({state:'placeholder',blockId:'created'});content.blocks[0].props.payload=JSON.stringify({containerSpec:{type:'table',columns:['值'],rows:[[1]]}});return{status:'succeeded',blockId:'created'}},
+  reportEffect:async(_id:string,effect:any)=>{effects.push(effect)},persist:async()=>{saved.push(structuredClone(content));await handler({requestId:'create',cancel:true})},settle:async()=>{},exportNote:async()=>({})} as any)
+ const result=await handler(call)
+ expect(result).toMatchObject({status:'cancelled',blockId:'created',effect:{state:'saved',blockId:'created'}})
+ expect(saved[0].blocks[0].id).toBe('created');expect(effects.map(e=>e.state)).toEqual(['placeholder','applied','saved'])
+})

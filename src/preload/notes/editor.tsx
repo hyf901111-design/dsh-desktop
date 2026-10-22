@@ -301,7 +301,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         const captured=references.capture()
         return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]
       },
-      createComponent:async(args,current,requestId)=>{
+      createComponent:async(args,current,requestId,report)=>{
         if(!current())throw Error('笔记会话已变化。')
         const last=editor.document.at(-1)
         const created=editor.insertBlocks([{type:'research',props:{payload:JSON.stringify({
@@ -309,7 +309,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           noteDraft:'smart',containerPrompt:args.prompt,generationStatus:'draft'
         })}}],last,'after')[0]
         capabilityCards.current.set(requestId,created.id)
-        try{return await inlineComponents.startAndWait(created.id,args.prompt,args.requestContext)}
+        try{
+          await report({state:'placeholder',blockId:created.id})
+          if(!current())return {status:'cancelled',blockId:created.id}
+          return await inlineComponents.startAndWait(created.id,args.prompt,args.requestContext,state=>report({state,blockId:created.id}))
+        }
         finally{capabilityCards.current.delete(requestId)}
       },
       cancelComponent:requestId=>{

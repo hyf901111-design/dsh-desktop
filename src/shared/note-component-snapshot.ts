@@ -7,6 +7,23 @@ export async function freezeNoteSnapshotElement(element:Element,prefix:string,vi
  check()
  for(const host of [element,...element.querySelectorAll('*')]){const prepare=(host as any).__sherlockPrepareNoteSnapshot;if(typeof prepare==='function'){leases.push(await prepare());check()}}
  const doc=element.ownerDocument,win=doc.defaultView!
+ // The shared workbench protocol owns this marker until its finite palette
+ // transitions finish. Freeze source computed styles only after that barrier,
+ // never wait for arbitrary chart/decoration animations or guess CSS duration.
+ const themeRoot=doc.documentElement
+ if(themeRoot.hasAttribute('data-workbench-style')||themeRoot.hasAttribute('data-workbench-transition')){
+  const deadline=Date.now()+1200,stable=()=>{check();if(Date.now()>deadline)throw Error('组件主题尚未稳定，请稍后重新导出。')}
+  const paint=()=>new Promise<void>((resolve,reject)=>{
+   let frame=0
+   const finish=(error?:unknown)=>{win.clearInterval(timer);win.cancelAnimationFrame(frame);error?reject(error):resolve()}
+   const timer=win.setInterval(()=>{try{stable()}catch(error){finish(error)}},16)
+   frame=win.requestAnimationFrame(()=>{try{stable();finish()}catch(error){finish(error)}})
+  })
+  do{
+   while(themeRoot.hasAttribute('data-workbench-transition')){stable();await new Promise(resolve=>win.setTimeout(resolve,16))}
+   await paint();await paint();stable()
+  }while(themeRoot.hasAttribute('data-workbench-transition'))
+ }
  const box=element.getBoundingClientRect(),width=Math.ceil(viewport?.width||box.width),height=Math.ceil(viewport?.height||box.height)
  if(!width||!height||width>2200||height>3000)throw Error('组件尺寸暂不适合导出，请调整组件大小后重试。')
  for(const host of element.querySelectorAll('.en-native-component-host,.en-file-host')){

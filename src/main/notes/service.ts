@@ -67,7 +67,7 @@ export function installNotesService(options: {
       }
       case 'component-snapshots': {
         const window=options.getWindow(),key='note-snapshot:'+randomUUID(),controller=new AbortController();active.set(key,controller)
-        try{return await captureNoteComponentSnapshots(window,input,()=>options.owner()===owner&&options.canRead(session)&&options.getWindow()===window,controller.signal)}finally{active.delete(key)}
+        try{return await captureNoteComponentSnapshots(window,input,()=>options.owner()===owner&&options.canRead(session)&&options.getWindow()===window&&(!input.executionId||capabilityBridge.allowed(input.executionId,owner,session)),controller.signal)}finally{active.delete(key)}
       }
       case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session)&&(!input.executionId||capabilityBridge.allowed(input.executionId,owner,session)),(path,state)=>{if(input.executionId)capabilityBridge.exportEffect(input.executionId,owner,session,{state,path})})
       case 'conversation-load':

@@ -23,3 +23,18 @@ it('keeps ordinary writing as an unapplied preview with the original request his
  const h=harness();h.set({kind:'text',markdown:'## 建议正文\n保留写作预览。'})
  expect(await generateNoteSuggestion(h.ctx,{...h.input,prompt:'写一段文字'})).toEqual({kind:'text',markdown:'## 建议正文\n保留写作预览。'});expect(noteConversationRows(h.session)[0]).toMatchObject({phase:'ready',prompt:'写一段文字'})
 })
+it.each(['accepted','discarded'])('preserves a component preview and mixed receipts through the real session route before %s',async phase=>{
+ const {registerNoteSessions,recordNoteConversation}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('mixed-preview');let route
+ registerNoteSessions({sessions:{get:()=>session},webServer:{register:config=>{route=config.handler;return()=>{}}}},{isTrustedRequest:()=>true,readJsonBody:async req=>req.body})
+ const requestId='preview',node={id:'preview-node',containerSpec:{version:1,type:'table',title:'表格',columns:['值'],rows:[[1]]}}
+ recordNoteConversation(session,{requestId,phase:'ready',result:{kind:'component',node}})
+ const call=async body=>{let status,result;await route({method:'POST',body:{sessionId:session.id,requestId,...body}},{writeHead:code=>{status=code},end:text=>{result=JSON.parse(text)}});return{status,result}}
+ const receipts=[{capability:'ui.zoom.reset',status:'succeeded'}]
+ expect((await call({action:'conversation-capabilities',receipts})).status).toBe(200)
+ expect(noteConversationRows(session)[0]).toMatchObject({phase:'ready',result:{kind:'component',node,capabilityReceipts:receipts,capabilitySummary:expect.stringContaining('恢复缩放')}})
+ expect((await call({action:'conversation-state',phase})).status).toBe(200)
+ expect(noteConversationRows(session)[0]).toMatchObject({phase,result:{kind:'component',node}})
+ await call({action:'conversation-capabilities',receipts})
+ expect(noteConversationRows(session)[0].phase).toBe(phase)
+})
