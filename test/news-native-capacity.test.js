@@ -56,6 +56,11 @@ it('honors explicit retain-all human intent by merging every proven relevant in-
  const ordinary={...options,feedOptions:{...options.feedOptions,workbenchRequest:{dataMode:'source',originalRequest:originalRequest.split('保留所有')[0]}}}
  const restricted=resolveBoundComponent(JSON.stringify(draft),records,now,ordinary)
  await dom(restricted.output,document=>expect(document.querySelectorAll('article')).toHaveLength(45))
+ for(const negation of ['不要','不用','无需','不必','禁止','不得','不需要']){
+  const human=originalRequest.split('保留所有')[0]+negation+'保留全部实际取得记录，只展示每家公司15条。'
+  const negative=resolveBoundComponent(JSON.stringify(draft),records,now,{...options,feedOptions:{...options.feedOptions,workbenchRequest:{dataMode:'source',originalRequest:human}}})
+  await dom(negative.output,document=>expect(document.querySelectorAll('article')).toHaveLength(45))
+ }
 })
 it('uses captured human relative days and frozen Shanghai now; a model note cannot widen the window',async()=>{
  const {records,draft}=fixture(41)

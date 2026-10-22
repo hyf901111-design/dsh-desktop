@@ -632,7 +632,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
       const end=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now),start=new Date(Date.parse(end)-days[0]*86400000).toISOString().slice(0,10),scope=applicableExplicitScope(captured)
       feedOptions={...captured,explicitScope:{...scope,windows:[...scope.windows,{start,end}]}}
     }
-    const retainAll=/(?:保留|展示|显示)(?:全部|所有)[^。；;\n]{0,20}(?:实际取得|已取得)[^。；;\n]{0,20}(?:记录|新闻|资讯|报道)/u.test(human)
+    const retainAll=human.split(/[，,。；;\n]/u).some(clause=>!/(?:不要|不用|无需|不必|禁止|不得|不需要|不要求|不允许)/u.test(clause)&&/(?:保留|展示|显示)(?:全部|所有)[^。；;\n]{0,20}(?:实际取得|已取得)[^。；;\n]{0,20}(?:记录|新闻|资讯|报道)/u.test(clause))
     // Retain-all does not grant a new provider. Reuse other successful query
     // rows only within the tool/provider identity already proved by this
     // mapping; other connector calls remain exact observed requests.
