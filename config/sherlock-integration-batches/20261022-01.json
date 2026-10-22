@@ -555,21 +555,44 @@
         "schemaVersion": 1,
         "featureName": "按真实资料适配完整组件快照并按人类业务范围过滤新闻",
         "branch": "codex/feat/component-data-sources-20261019",
-        "baseCommit": "26dcfe66ac15370267a528e149df85958eed38e3",
-        "tipCommit": "3e5b1a77954264b8867567143be35dadc71caa63",
+        "baseCommit": "3e5b1a77954264b8867567143be35dadc71caa63",
+        "tipCommit": "bae8dbd366e2d825319db3f9e3d131d8b0db238d",
         "commits": [
           {
-            "commit": "3e5b1a77954264b8867567143be35dadc71caa63",
+            "commit": "1454ba70eb310130e703368b2d1dc86cf047ceb0",
             "parents": [
-              "26dcfe66ac15370267a528e149df85958eed38e3"
+              "3e5b1a77954264b8867567143be35dadc71caa63"
             ],
-            "subject": "修复表格取数首轮缺省配方并保留全部声明列"
+            "subject": "修复空行情布局首轮受理并准确执行腾讯排他来源"
+          },
+          {
+            "commit": "bae8dbd366e2d825319db3f9e3d131d8b0db238d",
+            "parents": [
+              "1454ba70eb310130e703368b2d1dc86cf047ceb0"
+            ],
+            "subject": "补齐腾讯来源禁止与撤回表述的严格识别"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-agent-scope.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-source-policy.js"
           },
           {
             "status": "M",
@@ -577,11 +600,15 @@
           },
           {
             "status": "A",
-            "path": "test/fixtures/workbench-source-profile-missing.json"
+            "path": "test/fixtures/workbench-source-layout-exclusive-tencent.json"
           },
           {
             "status": "A",
-            "path": "test/workbench-public-data-profile.test.js"
+            "path": "test/workbench-source-exclusive-execution.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-source-exclusive-layout.test.js"
           }
         ],
         "checks": [
@@ -589,20 +616,20 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/workbench-source-exclusive-layout.test.js",
+              "test/workbench-source-exclusive-execution.test.js",
               "test/workbench-public-data-profile.test.js",
               "test/workbench-table-input-contract.test.js",
-              "test/component-keyed-table-projection.test.js",
-              "test/workbench-sourced-wide-table.test.js",
+              "test/workbench-source-policy.test.js",
+              "test/component-agent-scope.test.js",
               "test/workbench-public-data.test.js",
-              "test/component-readable-snapshot.test.js",
-              "test/workbench-sdk-receipt.test.js",
               "--maxWorkers=2",
               "--testTimeout=180000"
             ],
             "outcome": "passed",
-            "summary": "220 passed in seven directly affected files; output/source-profile-recovery-1023/focused.log",
-            "verifiedCommit": "3e5b1a77954264b8867567143be35dadc71caa63",
-            "completedAt": "2026-10-22T21:41:15.124070+00:00",
+            "summary": "180 passed in 7 directly affected files; output/source-exclusive-layout-followup-1023/final-focused.log. Independent root ran 37 new SDK/runtime/guard cases at exact clean tip; root-peer-final-37.log and audit.json bind all six production and two test SHA256.",
+            "verifiedCommit": "bae8dbd366e2d825319db3f9e3d131d8b0db238d",
+            "completedAt": "2026-10-22T22:42:18.718592+00:00",
             "timeoutMs": 180000
           },
           {
@@ -612,9 +639,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "passed; output/source-profile-recovery-1023/typecheck.log",
-            "verifiedCommit": "3e5b1a77954264b8867567143be35dadc71caa63",
-            "completedAt": "2026-10-22T21:41:15.124070+00:00",
+            "summary": "passed; output/source-exclusive-layout-followup-1023/typecheck.log",
+            "verifiedCommit": "bae8dbd366e2d825319db3f9e3d131d8b0db238d",
+            "completedAt": "2026-10-22T22:42:18.718592+00:00",
             "timeoutMs": 180000
           },
           {
@@ -624,189 +651,30 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "passed; exact four-file committed scope, tracked worktree clean",
-            "verifiedCommit": "3e5b1a77954264b8867567143be35dadc71caa63",
-            "completedAt": "2026-10-22T21:41:15.124070+00:00",
+            "summary": "passed; 9-file Chinese commit, tracked clean; output/source-exclusive-layout-followup-1023/audit.json binds all file SHA256",
+            "verifiedCommit": "bae8dbd366e2d825319db3f9e3d131d8b0db238d",
+            "completedAt": "2026-10-22T22:42:18.718592+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Planner SDK/host contract only. The sanitized actual 880420b4 first public arguments run through the installed ToolRuntime and registered workbench schema: first accepted, duplicate call one plan/task, no source query. No fresh native/model/GUI execution; packaged native acceptance remains with root. Independent peer reviewed inference/source authority and closed its arbitrary-column loss counterexample."
+          "summary": "SDK/source-host contract fix only. Real d4bf874d native failed before a task existed (9 rejected create calls, 2 local catalogs, 0 source queries, stopped via root UI); this remains failed evidence. Captured first/second public arguments now pass the installed SDK on the first call and repeat idempotently. Runtime/guard/restore checks are offline; root must revalidate the integrated client."
         },
         "acceptanceCriteria": [
-          "Only a genuinely absent own publicData.profile key may infer quotes-table from an unambiguous table declaration and one strictly validated Tencent quotes recipe. A generic market request has no table default.",
-          "Explicit null, empty, own undefined or conflicting profile/renderer declarations are not silently replaced. Unsupported providers, mixed sources, unknown parameters and invalid symbols remain rejected.",
-          "Every explicit key/label column declaration, including unfamiliar reportDate/customValue fields, uses the existing ordinary source table task with its complete original request and validated recipe. No fixed quote-field allowlist may drop a declared column; missing fields remain instructions to disclose missing source values, never fabricated observations.",
-          "The actual three-stock seven-column first call is accepted through real SDK validation without an extra planner call; a repeated identical call returns the same receipt and does not duplicate its plan/task. Inputs, source parameter bytes, entities, units and manual interval are preserved.",
-          "No-column-declaration explicit market.table remains on the existing direct recipe path. Existing empty-layout, 33-column and real source readable-snapshot regressions continue to pass.",
-          "Network/tool permissions and the human source policy remain independent of display inference. No-tool/no-network requests and ambiguous human source constraints still reject; an explicit DataYes requirement is preserved in the generated task context."
+          "Accept the actual safe table sketch with missing rows, redundant table template, full key/label columns and only null or strict missing placeholders. Preserve original source/note annotations as unverified planning text; do not treat them as observed data or silently discard real values/dates/unknown metadata.",
+          "Retain all three entities, every requested column including reportDate, column order/units and intervalMinutes:0 in the ordinary source table task. Missing source fields must remain visibly missing; quotation time must not be invented as a financial reporting period.",
+          "A human exclusive Tencent requirement is executable only with the host-validated original quotes-table recipe. Freeze its complete query arguments in private context, enforce them through the real SDK child-scoped monotonic guard and source tool filter, and require an actual matching Tencent query response on all completion/repair/readable-fallback paths.",
+          "No-tool/no-network, mandatory DataYes/web, contradictory source bans, ambiguous card scope, unknown providers/parameters and absent recipes retain independent rejection. Display declarations and model prompt markers cannot grant authority or replace the human source requirement. Explicit later 禁止使用腾讯行情作为来源 / 不要再用腾讯行情取数 reject; 不得用腾讯行情日期填财务报告期 remains a preserved date obligation rather than a false provider ban.",
+          "Persist the exact bounded recipe through JSON restore and unchanged retries; existing output repair keeps the same policy. Repeated accepted creation remains one plan/task, and static execution creates no automatic refresh binding.",
+          "New actionable source statuses have English translations. New 37 SDK/runtime/guard cases and 7-file 180-test direct group pass; source-bound file hashes and independent root review are retained in durable ignored evidence."
         ],
         "risks": [
-          "Inference is intentionally limited to Tencent quotes-table. Ambiguous/mixed renderers and other absent profiles still report real errors; this is not a generic profile guessing layer.",
-          "Validation uses captured native public arguments and synthetic no-query ToolRuntime tasks. It does not claim a new native success or that the previous literal keyed-table child exercised data-bound mapping. Root must verify the integrated client.",
-          "No new source/model calls, GUI, shared build, version change, push, publish, or broader source-policy parser change occurred."
+          "Nearby pre-existing source-context (7) and source-capability (1) news expectations still fail unchanged. Isolated exact 3e5 baseline and current source reproduce the same eight failure names (83 adjacent passes); evidence in baseline-focused.log/focused.log. These red files are not declared passed checks.",
+          "The source recovery is intentionally bounded to one validated Tencent quotes-table request. It is not generic provider inference or a wider network grant.",
+          "No new model/source calls, GUI, shared build, integration, version change, push or publication occurred. Original native failure is preserved; new native success is pending root acceptance."
         ],
-        "generatedAt": "2026-10-22T21:41:15.124070+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-        "verificationCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "4b3e87cc70324c7edd6c86f7284541a8d6be2341",
-            "completedAt": "2026-10-22T21:43:18.928Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-22T21:43:18.928Z"
+        "generatedAt": "2026-10-22T22:42:18.718592+00:00"
       }
     }
   ],
