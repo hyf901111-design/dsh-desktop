@@ -816,3 +816,18 @@ it('limits relaxed automatic review to spelling even if the provider returns fac
  const result=await generateNoteChallenge(f.ctx,{...input,level:1,blocks:[{id:'a',type:'paragraph',text:'提胶并提交报告。水在100摄氏度结冰，所以一定成功。600519.SH 报告基准日20261020。预计2026年EPS76元。'}]})
  expect(result.issues.map(i=>i.category)).toEqual(['typo']);expect(result.checks.some(c=>c.kind==='consensus')).toBe(false);expect(skills.list).not.toHaveBeenCalled()
 })
+
+it('adds independently validated omissions and a concrete viewpoint question in the bounded adversarial audit',async()=>{
+ const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text),issues=p.audit?[{quote:'水会在100℃结冰',category:'uncertain',basis:'general-knowledge',message:'常压下冰点应为0℃，是否需要修正？',evidence:[]},{quote:'收入是活动唯一价值',category:'question',basis:'note',message:'是否还应考虑教育和社区参与价值？',evidence:[]}]:[{quote:'提胶',category:'typo',basis:'note',message:'应为提交。',evidence:[]}];yield{type:'text-delta',index:0,text:JSON.stringify({reviews:[{reviewKey:p.targets[0].reviewKey,issues}]})};yield{type:'finish',reason:{kind:'stop'}}}
+ const result=await generateNoteChallenge(f.ctx,{...input,level:4,blocks:[{id:'a',type:'paragraph',text:'请提胶报告。水会在100℃结冰。收入是活动唯一价值。'}]})
+ expect(f.calls).toHaveLength(2);expect(result.issues.map(i=>i.category)).toEqual(['typo','uncertain','question']);expect(JSON.parse(f.calls[1].messages[0].content[0].text).alreadyFound).toHaveLength(1);expect(result.checks).toContainEqual(expect.objectContaining({kind:'review',status:'completed',detail:expect.stringContaining('深度复查')}))
+})
+it('returns validated primary findings with honest partial depth if the optional audit fails once',async()=>{
+ const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);if(p.audit)throw Error('provider unavailable');yield{type:'text-delta',index:0,text:JSON.stringify({reviews:[{reviewKey:p.targets[0].reviewKey,issues:[{quote:'提胶',category:'typo',basis:'note',message:'应为提交。',evidence:[]}]}]})};yield{type:'finish',reason:{kind:'stop'}}}
+ const result=await generateNoteChallenge(f.ctx,{...input,level:3,blocks:[{id:'a',type:'paragraph',text:'请提胶报告。'}]})
+ expect(result.issues.map(i=>i.quote)).toEqual(['提胶']);expect(f.calls).toHaveLength(2);expect(result.checks).toContainEqual(expect.objectContaining({kind:'review',status:'partial',detail:expect.stringContaining('深度复查未完成')}))
+})
+it('credits an omitted primary block only after a valid independent audit actually checks it',async()=>{
+ const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);yield{type:'text-delta',index:0,text:JSON.stringify({reviews:p.audit?p.targets.map(t=>({reviewKey:t.reviewKey,issues:[]})):[]})};yield{type:'finish',reason:{kind:'stop'}}}
+ const result=await generateNoteChallenge(f.ctx,{...input,level:3,blocks:[{id:'a',type:'paragraph',text:'这是一段没有具体错误的正常内容。'}]});expect(result.coveredBlockIds).toEqual(['a']);expect(result.issues).toEqual([])
+})
