@@ -439,7 +439,7 @@ function requestedSinglePanelType(prompt) {
   return type === 'kpi' && /计算口径|指标口径|定义/u.test(instruction) ? 'dashboard' : type
 }
 
-function workbenchPanelFormat(prompt) {
+function workbenchPanelFormat(prompt = '') {
   prompt = workbenchPanelScope(prompt)?.contract ?? prompt
   const deferred = deferredWorkbenchPanel(prompt)
   if (deferred) return deferred.type
