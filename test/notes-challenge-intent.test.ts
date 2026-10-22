@@ -20,3 +20,20 @@ it('keeps complex unquoted values as previews but accepts their explicit literal
  expect(challengeDirectReplacement('请把原文改为“本期收入增加百分之十”',{quote:'成度'})).toBe(true)
 })
 it('does not let a similar source sentence prove an unquoted subordinate request',()=>expect(challengeDirectReplacement('请把原文改为程度的理由说明一下',{quote:'成度的理由说明一下'})).toBe(false))
+
+const calculationRequest='请将到场率纠正为75%，并将这处表述扩写成约120字的完整计算说明：写明分母是报名20人、分子是到场15人、15除以20再乘100%的步骤，并说明其余5人未到场。保留数字和原意，不添加新的调查结果。给出可以直接替换的正文，不要写审核、待核实或处理状态。'
+it('keeps a complete calculation rewrite preview available when the human excludes review labels from the body',()=>{
+ expect(challengeReplacementRequested(calculationRequest,{quote:'到场率为90%'})).toBe(true)
+ expect(challengeDirectReplacement(calculationRequest,{quote:'到场率为90%'})).toBe(false)
+})
+for(const text of ['请直接修改原文，不要写审核、待核实或处理状态。','请把“成度”替换为“程度”，不要在正文里加入“待核实”。','不要把「待核实」等提醒写进正文；请直接修改原文。','请直接修改原文，不用解释。'])it('separates a complete output-control clause from the edit permission: '+text,()=>{
+ expect(challengeDirectReplacement(text,{quote:'成度'})).toBe(true)
+ expect(challengeReplacementRequested(text,{quote:'成度'})).toBe(true)
+})
+for(const text of ['请直接修改原文，不要写审核但先别替换正文。','请直接修改原文，不要写审核，先别替换。','请直接修改原文，不要改动这段。','请直接修改原文，不要生成替换建议。','请直接修改原文，只讨论。','请直接修改原文，不要写“不要替换”。','请直接修改原文，不要在正文里加入“待核实”。不要替换，只解释。','请直接修改原文，不要写“待核实。','请直接修改原文，不要写审核、待核实或处理状态，“','请直接修改原文，不要写审核，保持“原意’','请直接修改原文，不要写审核。保持”原意。'])it('does not turn a refusal, mixed clause or incomplete quoted control into edit permission: '+text,()=>{
+ expect(challengeDirectReplacement(text,{quote:'成度'})).toBe(false)
+ expect(challengeReplacementRequested(text,{quote:'成度'})).toBe(false)
+})
+it('preserves a negative command inside the explicitly assigned literal body',()=>{
+ expect(challengeDirectReplacement('请把原文改为“不要写审核、待核实或处理状态。”',{quote:'成度'})).toBe(true)
+})
