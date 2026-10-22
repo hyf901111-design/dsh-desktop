@@ -59,7 +59,7 @@
 
 ## 2026-10-23 跨模式运输与验收
 
-Harness 原工具循环直接登记 `client_capabilities` / `client_action`，没有第二个模型规划器或关键词分流。前者无模型参数，后者只有能力 ID、arguments、requestId。真正 sessionId 和 live turnId 由执行器的主会话派生；child/parentSession/delegation、已结束轮次与宿主已登记的定时任务均不能借用当前窗口。
+Harness 原工具循环直接登记 `client_capabilities` / `client_action`，没有第二个模型规划器或关键词分流。前者无模型参数，后者只有能力 ID、arguments、requestId。真正 sessionId 和 live turnId 由执行器当前用户会话派生；普通用户分支的 `parentSession` 仅为历史谱系，仍须以分支自身 sessionId 匹配当前可见窗口，不能借父会话绑定。`origin:subagent` 或非零 delegationDepth、已结束轮次与宿主已登记的定时任务均不能借用当前窗口。
 
 固定 `/client-capabilities` 端点复用 ResearchContextBridge 的 127.0.0.1/token/无 Origin/限体积及断连取消。可信原生 header 每次视图或 session 变化发布 90 秒绑定（30 秒续约）；Main 再核账号、窗口实例、当前 session、模式、可读/可写权限。切换或关闭绑定会取消旧 generation 的在途画布请求，显式 caller cancellation 与已发出的导航请求分别报告；导航不会假称笔记导出或挑战已完成。
 

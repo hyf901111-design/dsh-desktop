@@ -36,10 +36,14 @@ it('rejects model target overrides and unknown keys before contacting the host',
   }finally{f.dispose()}
 })
 
-it('rejects children even when their session has a live turn and a parent canvas could be bound',async()=>{
+it('allows ordinary fork lineage while rejecting real delegated children with the same parent',async()=>{
   const f=fixture()
   try{
-    for(const header of [{parentSession:'parent'},{origin:'subagent'},{delegationDepth:1},{delegationDepth:'1'}])
+    for(const header of [{parentSession:'parent'},{parentSession:'parent',delegationDepth:0}])
+      await f.tools.get('client_capabilities').execute({},execution(undefined,header))
+    expect(f.calls.map(call=>call.body.sessionId)).toEqual(['chat-session','chat-session'])
+    f.calls.length=0
+    for(const header of [{parentSession:'parent',origin:'subagent'},{parentSession:'parent',delegationDepth:1},{origin:'subagent'},{delegationDepth:1},{delegationDepth:'1'}])
       await expect(f.tools.get('client_capabilities').execute({},execution(undefined,header))).rejects.toThrow(/主会话/)
     expect(f.calls).toHaveLength(0)
   }finally{f.dispose()}

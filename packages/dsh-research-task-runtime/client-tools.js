@@ -10,7 +10,9 @@ const turnKey=value=>typeof value==='string'&&id(value)?value:typeof value==='nu
 // canvas binding can authorize an operation on the visible desktop session.
 function executionIdentity(exec){
   const session=exec.agent?.session,header=session?.header
-  if(!id(session?.id)||header?.parentSession!==undefined||header?.origin==='subagent'||header?.delegationDepth!==undefined&&header.delegationDepth!==0)
+  // parentSession records ordinary user-fork lineage too. Delegate markers
+  // distinguish subagents; Main still requires this exact visible session ID.
+  if(!id(session?.id)||header?.origin==='subagent'||header?.delegationDepth!==undefined&&header.delegationDepth!==0)
     throw Error('客户端操作只能由当前用户主会话执行。')
   const events=session.events
   if(!Array.isArray(events))throw Error('客户端操作没有有效的执行轮次。')
