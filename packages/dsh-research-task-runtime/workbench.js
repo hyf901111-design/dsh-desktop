@@ -25,7 +25,7 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 export const WORKBENCH_PATH = '/sherlock/research-workbenches/list';
-import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt, WORKBENCH_PANEL_TYPES as types} from './workbench-plan.js';
+import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt, workbenchQuoteSourceRequests, WORKBENCH_PANEL_TYPES as types} from './workbench-plan.js';
 import {NOTE_WORKBENCH_GUIDANCE} from './note-template-contract.js';
 import {RSS_WORKBENCH_GUIDANCE} from './rss-template-contract.js';
 import {SIMULATED_WORKBENCH_PRESETS} from './simulated-workbench-presets.js';
@@ -118,7 +118,11 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         const run = async () => {
             const input = validateWorkbench(args);
             // Resolve before queuing so ambiguous human restrictions remain explicit.
-            const contexts = new Map(originalRequest ? input.panels.filter(p => !p.artifact && !p.publicData).map(panel => [JSON.stringify([panel.title,panel.type,panel.prompt]), {sourcePolicy:input.dataMode !== 'simulated' ? workbenchSourcePolicy(originalRequest, panel) : {pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt},sourceRequirement:panel.prompt,...(usesHumanSourceScope({originalRequest,dataMode:input.dataMode}) ? {explicitScope:workbenchExplicitScope(originalRequest,panel)} : {}),workbenchRequest:{originalRequest:input.originalRequest,dataMode:input.dataMode ?? 'source'}}]) : []);
+            const contexts = new Map(originalRequest ? input.panels.filter(p => !p.artifact && !p.publicData).map(panel => {
+                const authored=args.panels?.find(value=>value?.title?.trim()===panel.title);
+                const publicSourceRequests=authored?workbenchQuoteSourceRequests(authored):undefined;
+                return [JSON.stringify([panel.title,panel.type,panel.prompt]), {sourcePolicy:input.dataMode !== 'simulated' ? workbenchSourcePolicy(originalRequest, panel, {publicSourceRequests}) : {pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt},sourceRequirement:panel.prompt,...(usesHumanSourceScope({originalRequest,dataMode:input.dataMode}) ? {explicitScope:workbenchExplicitScope(originalRequest,panel)} : {}),workbenchRequest:{originalRequest:input.originalRequest,dataMode:input.dataMode ?? 'source'}}];
+            }) : []);
             const panelContext = panel => contexts.get(JSON.stringify([panel.title,panel.type,panel.prompt]));
             const parentSessionId = exec.agent?.session?.id;
             if (!str(parentSessionId, 256) || !ctx.agents.get(parentSessionId))

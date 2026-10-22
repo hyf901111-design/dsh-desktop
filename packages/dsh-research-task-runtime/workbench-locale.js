@@ -1,5 +1,8 @@
 import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
+ '本组件仅允许已校验的腾讯报价请求；其他来源或参数不能替代。':'This component only allows the validated Tencent quote request; other sources or parameters cannot replace it.',
+ '本组件必须实际取得已校验的腾讯报价响应；接口目录或其他来源不能作为取数结果。':'This component requires an actual response to the validated Tencent quote request; a catalog or another source does not count as retrieved data.',
+ '当前来源执行边界不可用，尚未发起取数。':'The source execution boundary is unavailable; no data request has started.',
  '来源缺失项：':'Missing from the source: ',
  '来源查询':'Source search','全部查询':'All searches',
  '搜索完整数据':'Search all data','浏览全部':'Browse all','完整来源数据':'Complete source data','日期 / 期间':'Date / period',
