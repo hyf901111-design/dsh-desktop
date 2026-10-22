@@ -406,15 +406,15 @@
         "schemaVersion": 1,
         "featureName": "接入托管infodb技能并完善笔记投资研究挑战方法",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "0411832906151184f65bac2c0e4eb85b12c9660d",
-        "tipCommit": "053348288d89f44abcc62401788800473852d639",
+        "baseCommit": "053348288d89f44abcc62401788800473852d639",
+        "tipCommit": "412554569983cf9e08c5d4a8a378ff7007733641",
         "commits": [
           {
-            "commit": "053348288d89f44abcc62401788800473852d639",
+            "commit": "412554569983cf9e08c5d4a8a378ff7007733641",
             "parents": [
-              "0411832906151184f65bac2c0e4eb85b12c9660d"
+              "053348288d89f44abcc62401788800473852d639"
             ],
-            "subject": "增加infodb原生读取失败的脱敏阶段诊断"
+            "subject": "分离技能授权往返与数据库读取预算防止有效数据被超时丢弃"
           }
         ],
         "files": [
@@ -449,9 +449,9 @@
               "test/research-context-runtime.test.js"
             ],
             "outcome": "passed",
-            "summary": "267/267；/tmp/notes-infodb-native-diagnostic-focused-20261022.log",
-            "verifiedCommit": "053348288d89f44abcc62401788800473852d639",
-            "completedAt": "2026-10-21T23:52:03.368401+00:00",
+            "summary": "269/269，包含真实读取前后授权延迟与数据库进程独立4秒上限；/tmp/notes-infodb-native-auth-budget-final-green-20261022.log",
+            "verifiedCommit": "412554569983cf9e08c5d4a8a378ff7007733641",
+            "completedAt": "2026-10-22T00:13:07.310613+00:00",
             "timeoutMs": 180000
           },
           {
@@ -461,9 +461,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "/tmp/notes-infodb-native-diagnostic-typecheck-20261022.log",
-            "verifiedCommit": "053348288d89f44abcc62401788800473852d639",
-            "completedAt": "2026-10-21T23:52:03.368401+00:00",
+            "summary": "/tmp/notes-infodb-native-auth-budget-typecheck-20261022.log",
+            "verifiedCommit": "412554569983cf9e08c5d4a8a378ff7007733641",
+            "completedAt": "2026-10-22T00:13:07.310613+00:00",
             "timeoutMs": 180000
           },
           {
@@ -471,18 +471,18 @@
               "git",
               "diff",
               "--check",
-              "0411832906151184f65bac2c0e4eb85b12c9660d..053348288d89f44abcc62401788800473852d639"
+              "053348288d89f44abcc62401788800473852d639..412554569983cf9e08c5d4a8a378ff7007733641"
             ],
             "outcome": "passed",
             "summary": "增量差异检查通过",
-            "verifiedCommit": "053348288d89f44abcc62401788800473852d639",
-            "completedAt": "2026-10-21T23:52:03.368401+00:00",
+            "verifiedCommit": "412554569983cf9e08c5d4a8a378ff7007733641",
+            "completedAt": "2026-10-22T00:13:07.310613+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "原生包041183实际专项读取失败；增加不含凭据的阶段诊断，当前未宣称原生链路通过。独立同源码真实读取成功。"
+          "summary": "原生读取约1秒退出，含前后授权的4秒总预算超时。复现与预算分离聚焦测试通过，最终原生确认仍待执行。"
         },
         "acceptanceCriteria": [
           "使用当前会话已启用的托管infodb技能执行有界只读查询，停用或会话身份变化不接受数据，不泄露配置或任意执行模型SQL",
@@ -490,167 +490,13 @@
           "真实客户端评论包含infodb证据和可解释方向，原正文、日期、历史讨论、两条未发送草稿保留"
         ],
         "risks": [
-          "当前原生读取返回unavailable，必须定位并修复后才可验收",
+          "保留单进程4秒和整轮45秒上限；技能读调用另含授权往返，最终原生验收未宣称通过",
           "受控源码与审查通过不代替最终包和真实技能链路验收",
           "默认20%/90天；12%或其他周期需报告明确指定，未自动猜行业",
           "任意NLP句式和可选滚动估值未扩展，缺失/歧义不编造结果",
           "原通用事实体裁边界仍需继续优化；新增会话操作/导出目标尚待后续开发"
         ],
-        "generatedAt": "2026-10-21T23:52:03.368401+00:00"
-      },
-      "merged": {
-        "mergeCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-        "verificationCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/calendar-tool-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/calendar-tool-client.test.js",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/shared-calendar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/shared-calendar.test.ts",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5",
-            "verifiedCommit": "95ca6987d74b24a5ded2a7251b751280de29af27",
-            "completedAt": "2026-10-21T23:55:49.024Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-21T23:55:49.024Z"
+        "generatedAt": "2026-10-22T00:13:07.310613+00:00"
       }
     },
     {
