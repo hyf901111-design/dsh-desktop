@@ -553,41 +553,34 @@
         "schemaVersion": 1,
         "featureName": "按真实资料适配完整组件快照并按人类业务范围过滤新闻",
         "branch": "codex/feat/component-data-sources-20261019",
-        "baseCommit": "e4f35979a1c437bc8938f0357bdf37836d353282",
-        "tipCommit": "33ad29fc6fbd7b627e7f949d3e74ff9f53061311",
+        "baseCommit": "33ad29fc6fbd7b627e7f949d3e74ff9f53061311",
+        "tipCommit": "808d0d9f235107c6b6c359a008e693a73fbd0d7c",
         "commits": [
           {
-            "commit": "33ad29fc6fbd7b627e7f949d3e74ff9f53061311",
+            "commit": "808d0d9f235107c6b6c359a008e693a73fbd0d7c",
             "parents": [
-              "e4f35979a1c437bc8938f0357bdf37836d353282"
+              "33ad29fc6fbd7b627e7f949d3e74ff9f53061311"
             ],
-            "subject": "修复静态指标映射指导并隔离未核验展示备注"
+            "subject": "容错来源展示元信息格式并保持业务映射严格校验"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/component-readable-snapshot.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
             "status": "A",
-            "path": "test/component-native-static-kpi-capacity.test.js"
+            "path": "test/component-display-templates.test.js"
           },
           {
-            "status": "A",
-            "path": "test/fixtures/component-native-static-kpi18.json"
-          },
-          {
-            "status": "M",
-            "path": "test/news-native-capacity.test.js"
+            "status": "C068",
+            "path": "test/fixtures/component-native-display-templates.json",
+            "previousPath": "test/fixtures/component-native-static-kpi18.json"
           }
         ],
         "checks": [
@@ -596,6 +589,8 @@
               "npx",
               "vitest",
               "run",
+              "test/component-display-templates.test.js",
+              "test/component-data-refresh.test.js",
               "test/component-native-static-kpi-capacity.test.js",
               "test/component-native-kpi-capacity.test.js",
               "test/component-readable-snapshot.test.js",
@@ -612,9 +607,9 @@
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "468 passed in 13 directly affected files; output/static-kpi-native-followup-1023/final-focused-tests.log",
-            "verifiedCommit": "33ad29fc6fbd7b627e7f949d3e74ff9f53061311",
-            "completedAt": "2026-10-22T17:36:54.820Z",
+            "summary": "535 passed in 15 directly affected files; output/display-template-native-followup-1023/final-focused-tests.log",
+            "verifiedCommit": "808d0d9f235107c6b6c359a008e693a73fbd0d7c",
+            "completedAt": "2026-10-22T18:10:49.581Z",
             "timeoutMs": 180000
           },
           {
@@ -624,9 +619,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "Typecheck passed; output/static-kpi-native-followup-1023/typecheck.log",
-            "verifiedCommit": "33ad29fc6fbd7b627e7f949d3e74ff9f53061311",
-            "completedAt": "2026-10-22T17:36:54.820Z",
+            "summary": "Typecheck passed; output/display-template-native-followup-1023/typecheck.log",
+            "verifiedCommit": "808d0d9f235107c6b6c359a008e693a73fbd0d7c",
+            "completedAt": "2026-10-22T18:10:49.581Z",
             "timeoutMs": 180000
           },
           {
@@ -637,188 +632,29 @@
             ],
             "outcome": "passed",
             "summary": "Staged and committed-range whitespace checks passed; tracked tree clean",
-            "verifiedCommit": "33ad29fc6fbd7b627e7f949d3e74ff9f53061311",
-            "completedAt": "2026-10-22T17:36:54.820Z",
+            "verifiedCommit": "808d0d9f235107c6b6c359a008e693a73fbd0d7c",
+            "completedAt": "2026-10-22T18:10:49.581Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Exact root-owned task4fa literal first output + source-mapped repair + same successful Tencent response replay offline through production runtime: completed in existing two attempts, 18 labels/values/units exact, real source and 16:14:45 quote time retained, no unverified item metadata, no binding, no prompt conflict and complete static mapping guidance in both prompts. Independent metadata scope matrix covers per-row/whole-source selections, optional missing fields and literal999 rejection. Exact news90 native task9d0e remains39=9/17/13 and prior news120 taskd0be remains47=9/21/17, with full identity/excerpt/query/pagination parity while contradictory model note is absent and host coverage/window/gap/static limitations remain. No fresh model/network/native-client/GUI/build performed here; two independent peer reviews passed."
+          "summary": "Exact owned native task20141 public output with all20 display templates and the actual Tencent query response replays through production runtime as one completed response,18 values/units/detail quote times exact, actual16:14:45/provider retained, no binding/new network/model calls. Baseline33ad materializer rejects the same input at $template; this clean tip passes.21 new focused cases cover metadata source scopes, native small-card output, live bind/refresh execution, optional unknown-format omission, business/unit/raw evaluator rejection, malformed variables, false prose, old quote with invented newer template date and multi-variable timestamp rejection. Independent peer additionally serialized raw-template recipe, loaded a fresh engine and refreshed successfully; no GUI/native build performed here."
         },
         "acceptanceCriteria": [
-          "Static KPI/table/market panels can reuse exact already-authorized successful structured responses through complete data-bound mappings without saving a refresh recipe. Prompts no longer override this with direct-template-only instructions; the existing single synthesis repair explicitly covers metrics as well as lists/charts.",
-          "Explicit Chinese prohibitions 不开启/不启用/不启动 automatic updates are recognized as static intent. This does not grant network/source access, change retry limits or force mapping for unstructured supplied text.",
-          "Value/unit and other business fields retain existing source-selector proof. Only detail/source/url display metadata is separated from business proof: literal or unproven display claims are not rendered; source-selected metadata is materialized in its original per-row scope without model prefix/suffix/default decorations. Original semantic data still reaches existing source/date/unit/financial gates.",
-          "Unknown business fields, literal numerical values, numeric missing defaults and unobserved requests do not receive a source-backed capacity snapshot. Existing source, financial, date and repair-copy gates remain active.",
-          "Host-rebuilt controlled news snapshots no longer append model execution/controls notes; actual source article records, exact observed provider/query/window/count/coverage gaps and static-refresh limitation remain. Ordinary non-controlled content paths are unchanged."
+          "First materialization supplies explicit component metadata contexts. Default evaluateMapping and business value/unit/rows/series/unknown business fields do not gain new template operators. No eval, scripts, external fetch, new source permission or extra retry is added.",
+          "Finite named-placeholder metadata accepts only actual selector variables, with bounded length, occurrence count, variable count and selector depth. Literals/default/date expressions, nested templates, unsupported formatter variables and prototype/script placeholders are not accepted as source values.",
+          "Template prose is not evidence: materialization keeps only actual selected scalar metadata. AsOf templates require exactly one real variable, preserving the quote-date gate instead of appending an invented current date or combining an old quote with newer fetched time. Template source/date assertions cannot appear in native cards or refresh.",
+          "Only root note and item detail/source/url may omit an unsupported optional formatting expression before it can discard otherwise valid business data. This narrow error-code omission does not catch asOf, range/subject/subtitle, required source-path failures or business payload errors.",
+          "Capacity snapshots retain each actual source-selected detail in the correct row scope. Multi-variable model note prose is not adopted; host observed source/time and static status remain. Original business/date/unit/financial gates run on materialized source data.",
+          "Generation and native source-recipe refresh share the same constrained materializeComponentMapping entry, including recipes saved/reloaded with display templates. News source filtering and news UI were not modified."
         ],
         "risks": [
-          "The captured literal first response still requires the existing one synthesis repair; this change corrects prompt guidance but does not claim fresh-model success or introduce a literal-value bypass.",
-          "Metadata omission applies only to controlled capacity display. Non-optional nonexistent source paths can still fail during original materialization; the change does not claim universal malformed-field recovery.",
-          "Existing capacity/type/source/evaluator limits and upstream coverage remain unchanged. No source authority, additional fetch, pagination acquisition or refresh recipe was added.",
-          "The validations reuse exact previously captured public observations. Root must perform final native acceptance from its clean integration build."
+          "Unknown or malformed asOf formats that cannot establish a single actual source timestamp still fail rather than use wall-clock time. Scope fields and non-optional missing paths remain strict; this is not a blanket catch for all mapping errors.",
+          "Template decorations and literal assertions are deliberately not preserved as source facts. Actual selected scalar metadata is retained; native metadata wording may therefore be simpler than model-authored prose.",
+          "Existing bounded mapping, type/source/financial limits and upstream availability remain unchanged. The exact public observations are captured evidence, not fresh upstream/model/native-client acceptance; root will test the clean integration build."
         ],
-        "generatedAt": "2026-10-22T17:36:54.820Z"
-      },
-      "merged": {
-        "mergeCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-        "verificationCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "800c4b0781afe379ee5a0d0e65d4ac0239b5fd75",
-            "completedAt": "2026-10-22T17:38:14.293Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-22T17:38:14.293Z"
+        "generatedAt": "2026-10-22T18:10:49.581Z"
       }
     }
   ],
