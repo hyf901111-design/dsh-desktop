@@ -1,0 +1,456 @@
+{
+  "nativeTaskId": "a03aa90a-cb35-4168-ada3-b4afc1e81db5",
+  "createdAt": 1792687594578,
+  "records": [
+    {
+      "tool": "public_data_query",
+      "args": {
+        "operation": "query",
+        "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}",
+        "source": "tencent-quotes"
+      },
+      "response": {
+        "version": 1,
+        "source": "腾讯财经公开报价",
+        "sourceId": "tencent-quotes",
+        "sourceUrl": "https://qt.gtimg.cn/?q=sz300308%2Csz300502%2Csh601138",
+        "documentation": "https://gu.qq.com/",
+        "records": [
+          {
+            "symbol": "sz300308",
+            "name": "中际旭创",
+            "code": "300308",
+            "price": 590.11,
+            "previousClose": 646.77,
+            "open": 647.01,
+            "change": -56.66,
+            "changePercent": -8.76,
+            "high": 649.48,
+            "low": 590.11,
+            "time": "2026-10-22 16:14:45",
+            "timezone": "Asia/Shanghai",
+            "priceUnit": "CNY",
+            "currency": "CNY"
+          },
+          {
+            "symbol": "sz300502",
+            "name": "新易盛",
+            "code": "300502",
+            "price": 258.01,
+            "previousClose": 294.12,
+            "open": 293.89,
+            "change": -36.11,
+            "changePercent": -12.28,
+            "high": 295,
+            "low": 258,
+            "time": "2026-10-22 16:14:15",
+            "timezone": "Asia/Shanghai",
+            "priceUnit": "CNY",
+            "currency": "CNY"
+          },
+          {
+            "symbol": "sh601138",
+            "name": "工业富联",
+            "code": "601138",
+            "price": 47.91,
+            "previousClose": 49.7,
+            "open": 49.62,
+            "change": -1.79,
+            "changePercent": -3.6,
+            "high": 49.69,
+            "low": 47.41,
+            "time": "2026-10-22 16:14:41",
+            "timezone": "Asia/Shanghai",
+            "priceUnit": "CNY",
+            "currency": "CNY"
+          }
+        ],
+        "units": {
+          "price": "各记录priceUnit；指数为points，证券为报价币种",
+          "changePercent": "%"
+        },
+        "dataTime": "2026-10-22 16:14:45",
+        "missingSymbols": [],
+        "timeMeaning": "各证券最后报价时间；不把获取时间当交易时间，不同市场不能共用时区",
+        "receivedAt": "2026-10-22T16:46:40.034Z",
+        "cacheHit": false,
+        "nextRefreshSeconds": 60,
+        "limitations": "无稳定官方API文档；尽力而为，可能延迟/停用/地区受限，不能承诺交易级实时",
+        "rights": "公开网页可访问不等于商业再分发授权；按腾讯及交易所条款核实",
+        "quality": "source-response",
+        "delivery": "snapshot; no automatic component refresh binding"
+      }
+    }
+  ],
+  "draft": {
+    "version": 1,
+    "type": "data-bound",
+    "requests": [
+      {
+        "key": "q",
+        "tool": "public_data_query",
+        "args": {
+          "operation": "query",
+          "source": "tencent-quotes",
+          "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}"
+        }
+      }
+    ],
+    "mapping": {
+      "version": 1,
+      "type": "kpi",
+      "variant": "kpi",
+      "title": "三家公司18项真实行情指标",
+      "asOf": {
+        "$from": "q",
+        "$path": "dataTime",
+        "$suffix": " · 腾讯财经公开报价 · 通联 DataYes"
+      },
+      "items": [
+        {
+          "label": "中际旭创 最新价",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300308"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "price"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "中际旭创 昨收",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300308"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "previousClose"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "中际旭创 开盘",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300308"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "open"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "中际旭创 最高",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300308"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "high"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "中际旭创 最低",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300308"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "low"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "中际旭创 涨跌幅",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300308"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "changePercent"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": "%"
+          }
+        },
+        {
+          "label": "新易盛 最新价",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300502"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "price"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "新易盛 昨收",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300502"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "previousClose"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "新易盛 开盘",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300502"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "open"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "新易盛 最高",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300502"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "high"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "新易盛 最低",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300502"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "low"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "新易盛 涨跌幅",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sz300502"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "changePercent"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": "%"
+          }
+        },
+        {
+          "label": "工业富联 最新价",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sh601138"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "price"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "工业富联 昨收",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sh601138"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "previousClose"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "工业富联 开盘",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sh601138"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "open"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "工业富联 最高",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sh601138"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "high"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "工业富联 最低",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sh601138"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "low"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": " CNY"
+          }
+        },
+        {
+          "label": "工业富联 涨跌幅",
+          "value": {
+            "$from": "q",
+            "$each": "records",
+            "$filter": {
+              "symbol": "sh601138"
+            },
+            "$take": 1,
+            "$single": true,
+            "$map": {
+              "$path": "changePercent"
+            },
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": "%"
+          }
+        }
+      ],
+      "note": "静态快照，手动刷新（intervalMinutes=0）。涨跌幅单位来源 units.changePercent=%；价格单位来源各记录 priceUnit=CNY。各证券时间为最后报价时间（2026-10-22 16:14:45 / 16:14:15 / 16:14:41，Asia/Shanghai），获取时间非交易时间。"
+    },
+    "intervalMinutes": 0
+  },
+  "prompt": "工作台：三家公司18指标容量复验1023\n本面板：三家公司18项真实行情指标\n容量验收：使用 kpi 组件（type=kpi），完整展示18个items，不拆卡，不改成 table、market.metrics 或原生行情控件。通过当前已登记的 public_data_query 取数，source=tencent-quotes，parameters_json={\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}，一次获取中际旭创、新易盛、工业富联的真实行情。每家公司分别展示：最新价 price、昨收 previousClose、开盘 open、最高 high、最低 low、涨跌幅 changePercent，共6×3=18项。价格单位复制每条记录的 priceUnit，涨跌幅单位复制来源的 units.changePercent。所有数值必须来自本次实际响应，保留原始精度、来源与真实报价时间；缺项明确显示缺失，不补值、不删除指标，不添加其他指标。静态快照，不开启自动更新。若18项超过紧凑模板容量，由宿主组织成可搜索浏览的快照。artifact 按 kpi 数据契约填写 version:1、type、title 及包含全部18项的 items。\n仅生成本面板，优先使用 kpi 类型。",
+  "hostContext": {
+    "explicitScope": {
+      "windows": [],
+      "future": false
+    },
+    "workbenchRequest": {
+      "originalRequest": "创建「三家公司18指标容量复验1023」研究工作台，只创建一个「三家公司18项真实行情指标」组件。此为容量验收：组件输入类型使用 kpi，完整保留18个items，不拆卡，不改成table、market.metrics或原生行情控件。使用当前已登记的public_data_query，source为tencent-quotes，parameters_json为{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}，一次获取中际旭创、新易盛、工业富联的真实行情。每家公司分别展示最新价price、昨收previousClose、开盘open、最高high、最低low、涨跌幅changePercent，共18项；价格单位复制每条记录的priceUnit，涨跌幅单位复制来源的units.changePercent。所有数值必须来自本次实际响应，保留原始精度、来源和真实报价时间；缺项明确显示缺失，不补值、不删除指标。不添加其他指标。此次仅静态快照，不开启自动更新；允许宿主将超过紧凑模板容量的完整18项组织成可搜索浏览的快照。",
+      "dataMode": "source"
+    },
+    "sourcePolicy": {
+      "pluginRequired": false,
+      "pluginProhibited": false,
+      "preferenceRequest": "三家公司18项真实行情指标\n容量验收：使用 kpi 组件（type=kpi），完整展示18个items，不拆卡，不改成 table、market.metrics 或原生行情控件。通过当前已登记的 public_data_query 取数，source=tencent-quotes，parameters_json={\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}，一次获取中际旭创、新易盛、工业富联的真实行情。每家公司分别展示：最新价 price、昨收 previousClose、开盘 open、最高 high、最低 low、涨跌幅 changePercent，共6×3=18项。价格单位复制每条记录的 priceUnit，涨跌幅单位复制来源的 units.changePercent。所有数值必须来自本次实际响应，保留原始精度、来源与真实报价时间；缺项明确显示缺失，不补值、不删除指标，不添加其他指标。静态快照，不开启自动更新。若18项超过紧凑模板容量，由宿主组织成可搜索浏览的快照。artifact 按 kpi 数据契约填写 version:1、type、title 及包含全部18项的 items。"
+    },
+    "sourceRequirement": "容量验收：使用 kpi 组件（type=kpi），完整展示18个items，不拆卡，不改成 table、market.metrics 或原生行情控件。通过当前已登记的 public_data_query 取数，source=tencent-quotes，parameters_json={\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}，一次获取中际旭创、新易盛、工业富联的真实行情。每家公司分别展示：最新价 price、昨收 previousClose、开盘 open、最高 high、最低 low、涨跌幅 changePercent，共6×3=18项。价格单位复制每条记录的 priceUnit，涨跌幅单位复制来源的 units.changePercent。所有数值必须来自本次实际响应，保留原始精度、来源与真实报价时间；缺项明确显示缺失，不补值、不删除指标，不添加其他指标。静态快照，不开启自动更新。若18项超过紧凑模板容量，由宿主组织成可搜索浏览的快照。artifact 按 kpi 数据契约填写 version:1、type、title 及包含全部18项的 items。"
+  }
+}

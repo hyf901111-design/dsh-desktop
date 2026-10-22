@@ -124,7 +124,22 @@ export function componentReadableSnapshot(data,mapping,responses,records,now=new
   const label=source.label?esc(source.label):'<span data-workbench-status-text>来源名称未提供</span>'
   return source.url?`<a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${label}</a>`:label
  }).join(' · ')
- const metadata=['subject','asOf','range','unit','subtitle','note'].filter(key=>typeof data[key]==='string'&&data[key].trim()).map(key=>'<p data-readable-meta="'+key+'">'+esc(data[key])+'</p>').join('')
+ // Timestamp selectors prove the date, not a model-written provider suffix.
+ // Display their unadorned observed value; keep the original semantic data for
+ // all date/source/unit gates and derive provider labels only from records.
+ let asOf=data.asOf
+ if(object(mapping.asOf)){
+  asOf=null
+  const undecorated=value=>Array.isArray(value)?value.map(undecorated):object(value)?Object.fromEntries(Object.entries(value).filter(([key])=>!['$prefix','$suffix','$default'].includes(key)).map(([key,child])=>[key,undecorated(child)])):value
+  try{
+   const selector=undecorated(mapping.asOf)
+   if(sourcePayload(selector,responses,now)){
+    const value=evaluateMapping(selector,responses,now)
+    if(scalar(value))asOf=missing(value)?null:String(value)
+   }
+  }catch{}
+ }
+ const metadata=['subject','asOf','range','unit','subtitle','note'].filter(key=>key==='asOf'?Object.hasOwn(data,key):typeof data[key]==='string'&&data[key].trim()).map(key=>'<p data-readable-meta="'+key+'">'+text(key==='asOf'?asOf:data[key])+'</p>').join('')
  const availability=readableSnapshotUnavailable(data)?'<p data-readable-availability role="status" data-workbench-status-text>来源未提供可用数值；已保留实际字段与来源。</p>':''
  const overview=readable.mode==='series'?(readableTrendFigure(data)??''):''
  const bodyMarker=data.type==='market'?' data-sherlock-market="'+esc(data.variant)+'"':''

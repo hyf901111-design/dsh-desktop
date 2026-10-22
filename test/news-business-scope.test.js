@@ -119,3 +119,57 @@ it('keeps the existing supplied-text path when no actual source record matches',
  const data=news([captured[0]])
  expect(filterScopedNewsArtifact(data,[],scope).items).toEqual(data.items)
 })
+
+it.each([
+ ['工业富联盘后固定价格交易额8.30亿元','工业富联盘后固定价格交易额8.30亿元。'],
+ ['13只股盘后交易额超500万元','工业富联等13只股盘后交易额超500万元。'],
+ ['6.71亿元资金今日流入电子股','工业富联等电子股今日资金流入6.71亿元。'],
+ ['中际旭创获上调目标价','中际旭创目标价上调，估值目标和股价技术信号看涨。'],
+ ['新易盛技术指标突破','新易盛出现技术指标金叉，股价支撑位上移。']
+])('excludes explicit business-only market tape: %s',(title,summary)=>{
+ const rows=[{title,summary,time:'2026-10-22',url:'https://example.org/actual-quote'}]
+ expect(filterScopedNewsArtifact(news(rows),[record(rows)],scope).items).toEqual([])
+ expect(filterScopedNewsArtifact(news(rows),[record(rows)],'中际旭创、新易盛、工业富联全部新闻，包括行情。').items).toHaveLength(1)
+})
+it('keeps real operating facts in the same source excerpt as trading amounts or target prices',()=>{
+ const rows=[{title:'工业富联盘后交易额8.30亿元，公司披露订单交付进度',summary:'工业富联产能利用率和营收提高。',time:'2026-10-22',url:'https://example.org/operating'},
+ {title:'新易盛目标价上调',summary:'新易盛披露新产线投产与产能计划。',time:'2026-10-22',url:'https://example.org/production'}]
+ expect(filterScopedNewsArtifact(news(rows),[record(rows)],scope).items).toHaveLength(2)
+})
+it('renders the observed excerpt supporting business relevance when another query has only market tape for the same article identity',()=>{
+ const identity={title:'中际旭创、新易盛，开盘上涨',time:'2026-10-16',url:'https://finance.eastmoney.com/a/202610163897964110.html'}
+ const pure={...identity,summary:'今天A股早盘，中际旭创、新易盛龙头股开盘上涨。',publisher:'行情摘要'},business={...identity,summary:'10月15日晚，新易盛公司控股股东及董事长提议回购公司股份。',publisher:'公司行动摘要'}
+ const records=[record([pure],'中际旭创'),record([business],'新易盛')]
+ const draft={version:1,type:'data-bound',requests:records.map((r,i)=>({key:'q'+i,tool:r.tool,args:r.args})),mapping:{version:1,type:'news',title:'业务新闻',groups:records.map((_,i)=>({items:{$from:'q'+i,$each:'records',$map:{title:{$path:'title'},summary:{$path:'summary'},date:{$path:'time'},url:{$path:'url'}}}}))}}
+ const result=resolveBoundComponent(JSON.stringify(draft),records,new Date('2026-10-22T08:00:00Z'),{newsScope:scope}),window=new Window()
+ try{
+  window.document.body.innerHTML=JSON.parse(result.output).html
+  const articles=window.document.querySelectorAll('article');expect(articles).toHaveLength(1)
+  expect(articles[0].querySelector('p').textContent).toBe(business.summary)
+  expect(articles[0].textContent).toContain(business.publisher)
+  expect(articles[0].dataset.newsQuery).toBe('新易盛')
+  const coverage=window.document.querySelector('[data-news-query-coverage]').textContent
+  expect(coverage).toContain('来源查询：中际旭创 · 来源返回：1 · 已保留：0')
+  expect(coverage).toContain('来源查询：新易盛 · 来源返回：1 · 已保留：1')
+ }finally{window.happyDOM.abort()}
+})
+
+it('does not confuse ordinary product technical indicators or operating-platform transaction amounts with stock market tape',()=>{
+ const rows=[{title:'新易盛设备技术指标达标',summary:'新易盛设备通过测试认证。',time:'2026-10-22',url:'https://example.org/technical-spec'},
+ {title:'工业富联电商平台交易额增长',summary:'工业富联电商平台完成年度交易额目标。',time:'2026-10-22',url:'https://example.org/platform-amount'}]
+ expect(filterScopedNewsArtifact(news(rows),[record(rows)],scope).items).toHaveLength(2)
+})
+
+it('counts a shared business article once under its actual displayed source query rather than each matching query',()=>{
+ const row={title:'中际旭创、新易盛披露订单',summary:'中际旭创与新易盛订单交付有序。',time:'2026-10-22',url:'https://example.org/shared-orders'},records=[record([row],'中际旭创'),record([row],'新易盛')]
+ const draft={version:1,type:'data-bound',requests:records.map((r,i)=>({key:'q'+i,tool:r.tool,args:r.args})),mapping:{version:1,type:'news',title:'业务新闻',groups:records.map((_,i)=>({items:{$from:'q'+i,$each:'records',$map:{title:{$path:'title'},summary:{$path:'summary'},date:{$path:'time'},url:{$path:'url'}}}}))}}
+ const result=resolveBoundComponent(JSON.stringify(draft),records,new Date('2026-10-22T08:00:00Z'),{newsScope:scope}),window=new Window()
+ try{
+  window.document.body.innerHTML=JSON.parse(result.output).html
+  expect(window.document.querySelectorAll('article')).toHaveLength(1)
+  expect(window.document.querySelector('article').dataset.newsQuery).toBe('中际旭创')
+  const coverage=window.document.querySelector('[data-news-query-coverage]').textContent
+  expect(coverage).toContain('来源查询：中际旭创 · 来源返回：1 · 已保留：1')
+  expect(coverage).toContain('来源查询：新易盛 · 来源返回：1 · 已保留：0')
+ }finally{window.happyDOM.abort()}
+})

@@ -13,7 +13,7 @@ import {observedStatementGrowth} from './observed-statement-growth.js'
 import {expandBusinessEvidence} from './component-source-projection.js'
 import {operatingSourceAttempt} from './statement-operating-coverage.js'
 import {newsSourceScopeIssue,generalNewsScope,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
-import {filterScopedNewsArtifact,controlledNewsHtml,NEWS_EMPTY_NOTE} from './news-topic-filter.js'
+import {filterScopedNewsArtifact,newsSourceMatcher,controlledNewsHtml,NEWS_EMPTY_NOTE} from './news-topic-filter.js'
 import {newsQueryAttempt,mergeObservedNewsItems} from './news-query-coverage.js'
 import {componentReadableSnapshot,readableSnapshotUnavailable,pureMissingSourceText} from './component-readable-snapshot.js'
 
@@ -367,6 +367,9 @@ export function componentMappableSource(record) {
 // Missing referenced requests/fields still fail; no guessed arguments or literals
 // are substituted for the source data.
 function mappingContract(mapping,options,envelopeVersion) {
+ // Some models repeat the KPI type as a variant. This identical label carries
+ // no distinct template meaning; incompatible variants and other keys stay invalid.
+ if(mapping?.type==='kpi'&&mapping.variant==='kpi'){const {variant,...rest}=mapping;mapping=rest}
  // Only the caller's trusted panel contract can supply display metadata.
  // Explicit invalid values still reach the existing template validation.
  if(mapping&&typeof mapping==='object'&&!Array.isArray(mapping)&&mapping.title===undefined&&typeof options.panelTitle==='string'&&options.panelTitle.trim()&&options.panelTitle.length<=256)mapping={...mapping,title:options.panelTitle}
@@ -490,7 +493,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
 export const COMPONENT_STATIC_CHART_PROMPT = `
 本卡仅生成本次静态图表，不保存自动刷新设置。取得可映射的结构化列表时，优先交付一个 data-bound JSON，由宿主直接读取完整响应和计算曲线，不逐点抄写或手算数组：{"version":1,"type":"data-bound","requests":[{"key":"q0","tool":"实际成功调用的 public_data_query、financial_query 或 ework__ 工具名","args":原成功请求参数}],"mapping":上文当前模板及字段映射}。requests 必须与本卡实际成功调用完全一致；financial_query 仅支持本次静态映射，不能登记自动刷新。网页纯文本不能伪造为这些接口。
 实际成功的结构化响应若字段或条数超过原生布局容量，仍提交完整 source-backed mapping；不要为适配容量删除标的、指标、行列或序列，也不要截断长单元格。宿主会在来源与结构校验后按支持的类型采用完整可读静态展示；自动更新以实际绑定回执为准，不把容量展示快照称为已绑定。
-mapping 必须保留上文指定的 type 与 variant：原生图表为 type:chart 及其变体，金融趋势为 type:market、variant:trend；不得换模板或省略变体。每条 values 都要选择数值字段，例如 financial-1 收盘价的完整表达式：{"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"value"},"$normalize":"base100","$digits":2}。不要漏掉 $map；其他来源使用其实际数值字段。
+mapping 必须保留上文指定的 type，仅需要变体的模板保留 variant；kpi 不使用 variant：原生图表为 type:chart 及其变体，金融趋势为 type:market、variant:trend；不得换模板或省略变体。每条 values 都要选择数值字段，例如 financial-1 收盘价的完整表达式：{"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"value"},"$normalize":"base100","$digits":2}。不要漏掉 $map；其他来源使用其实际数值字段。
 $from 引 requests.key，$each 指真实列表路径，$map 指每行字段，$filter:{"实际字段":"实际值"} 为标量等值筛选（多个条件同时满足）；$sortBy:"真实日期字段"/$order:"asc" 排序，$take:-20 取末20条，$as:"number" 转数值，$digits:2 控制显示精度。例如 financial_query 的响应明确含 records/metric/as_of/value 时，labels 使用 {"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"as_of"}}；series.values 使用同一筛选排序，$map 改为 {"$path":"value"}。路径与筛选值以本轮真实响应为准，其他来源不套用这些字段。
 需求要求共同基期100比较时，在每条 values 的 $each 同层加 "$normalize":"base100" 和 "$digits":2，由宿主按筛选排序后的首值执行 值/首值×100；不手算数组，不写死 $scale=100/起点。归一化只用于所需的比较；原始价格需求保留原单位。每条序列都必须使用同一组实际日期，不能将不同日期按条数硬对齐；缺失值不填0。各标的、来源、复权口径、日期和计算说明保留在 note，asOf 仅放简短来源与时点（最多256字）。样本只说明字段路径，不代表完整数据条数；原响应中存在的标的不得因上下文样本省略而标为未取得。
 note 保留真实来源、日期、原单位和复权口径；不要凭样本、记忆或心算添加交易日数、区间涨跌幅、首尾值及强弱排名等额外数值断言。映射后的完整曲线由宿主计算，不能用未经计算核对的文字结论与曲线互相矛盾。已识别的日线基期100映射由宿主从实际选中记录生成副标题、时点和来源说明，不采用手写计数、排名或控件操作说明；当前图表只支持图例显隐、数据点查看和完整数据展开，不承诺原始价格切换。
@@ -498,11 +501,11 @@ note 保留真实来源、日期、原单位和复权口径；不要凭样本、
 
 export const COMPONENT_BOUND_DATA_PROMPT = `
 自动绑定数据交付协议：通过已配置插件或 public_data_query 取得可映射的结构化数据后，最终必须交付一个 data-bound 对象。此协议替代上文直接提交静态模板 JSON 的输出要求；mapping 仍使用上文模板 schema。由宿主映射真实响应、渲染当前固定模板并保存刷新设置；未指定时默认一分钟，用户或宿主明确要求仅手动时 intervalMinutes=0。无需抄写数百行数值，也不调用额外工具设置刷新。行情、K线、表格、资讯、研报均适用。保留可复用的原始字段和摘要，不为改写摘要退回静态输出。格式：
-{"version":1,"type":"data-bound","requests":[{"key":"q","tool":"实际成功调用的 ework__ 工具名或 public_data_query","args":{"原参数":"原值"}}],"mapping":{"version":1,"type":"market","variant":"本面板模板","title":"标题","asOf":{"$from":"q","$path":"真实日期路径","$suffix":" · 通联 DataYes"},"items":{"$from":"q","$each":"真实数组路径","$map":{"label":{"$path":"名称字段"},"value":{"$path":"数值字段","$as":"string"}}}}}
+{"version":1,"type":"data-bound","requests":[{"key":"q","tool":"实际成功调用的 ework__ 工具名或 public_data_query","args":{"原参数":"原值"}}],"mapping":{"version":1,"type":"market","variant":"本面板模板","title":"标题","asOf":{"$from":"q","$path":"真实日期路径"},"items":{"$from":"q","$each":"真实数组路径","$map":{"label":{"$path":"名称字段"},"value":{"$path":"数值字段","$as":"string"}}}}}
 实际成功的结构化响应若字段或条数超过原生布局容量，仍提交完整 source-backed mapping；不要为适配容量删除标的、指标、行列或序列，也不要截断长单元格。宿主会在来源与结构校验后按支持的类型采用完整可读静态展示；自动更新以实际绑定回执为准，不把容量展示快照称为已绑定。
 public_data_query 请求必须保留 operation:"query"、source 和 parameters_json 原字符串；catalog 只是目录不能绑定。内置返回 records 为数组、source 为来源、dataTime 为数据时点（可为 null）、receivedAt 仅为获取时间；未知报价时点写“报价时点未提供”，不可用获取时间冒充交易时间。
 data-bound 的验证依据是当前面板任务实际成功调用的工具响应，父任务附在 prompt 的记录只供参考，不能替代该凭证。当前已获联网授权且工具可见时，即使父任务写“已有记录、不要重复取数”，也须用相同的真实参数调用一次来源工具来建立绑定凭证（免费工具可命中共享缓存，不重新搜索接口）。用户或宿主禁止联网、工具不可见时只交付快照并明确未绑定，不伪造调用。
-mapping 内的整体结构必须符合上文当前模板 schema；例子里的 items 仅演示指标映射，K线须用 candles，表格须用 columns/rows。$from 指 requests.key，$path 是点分路径或数组下标，$each/$map 映射原始数组，数组可加 $sortBy:"实际日期字段"、$order:"asc|desc" 排序，$take:5 取前5条、$take:-20 取最后20条；$single:true 要求恰好一条并返回单值，用于最新行情或数据日期，避免写死随分页变化的数组下标。$as 为 string/number；放在 $each 同层时逐项转换标量列表，放在 $map 字段内时转换该字段；$single:true 后转换单值。表格的 $map 必须是单元格数组，例如 [{"$path":"name"},{"$path":"weight","$as":"number"}]。$scale 换算单位，$digits:2 在换算后控制小数位（0–8）；百分比与亿元通常保留2位，价格按精度保留2–3位，避免显示浮点长尾。$prefix/$suffix 加文字，$optional:true 将来源缺失值保留为 null；文本字段可用 $default:"来源未提供摘要" 为缺失、null 或空字符串提供明确的缺失说明，不能用假数值填补。列表中存在 url 时将其映射到条目 url，保留来源链接。无脚本。请求 args 必须原样复制本轮成功业务调用，包括日期值和所有参数类型；无需创建日期表达式。宿主会为最新数据自动推导滚动窗口，固定历史需求保持原日期。不要把日期写成表达式字符串。通联 ai_search 的 SOURCES/EVIDENCE 文本由宿主按实际来源规范化为 {sources:[{id,category,source,date,title,url,summary,excerpts}]}；summary 是第一条证据原句，excerpts 为全部原句，可直接绑定 news.items。除此之外只引用实际 JSON 结构，不猜字段。
+mapping 内的整体结构必须符合上文当前模板 schema；仅需要变体的模板填写 variant，kpi 不使用 variant；来源名称只引用本轮真实响应，不从范例复制供应商名。例子里的 items 仅演示指标映射，K线须用 candles，表格须用 columns/rows。$from 指 requests.key，$path 是点分路径或数组下标，$each/$map 映射原始数组，数组可加 $sortBy:"实际日期字段"、$order:"asc|desc" 排序，$take:5 取前5条、$take:-20 取最后20条；$single:true 要求恰好一条并返回单值，用于最新行情或数据日期，避免写死随分页变化的数组下标。$as 为 string/number；放在 $each 同层时逐项转换标量列表，放在 $map 字段内时转换该字段；$single:true 后转换单值。表格的 $map 必须是单元格数组，例如 [{"$path":"name"},{"$path":"weight","$as":"number"}]。$scale 换算单位，$digits:2 在换算后控制小数位（0–8）；百分比与亿元通常保留2位，价格按精度保留2–3位，避免显示浮点长尾。$prefix/$suffix 加文字，$optional:true 将来源缺失值保留为 null；文本字段可用 $default:"来源未提供摘要" 为缺失、null 或空字符串提供明确的缺失说明，不能用假数值填补。列表中存在 url 时将其映射到条目 url，保留来源链接。无脚本。请求 args 必须原样复制本轮成功业务调用，包括日期值和所有参数类型；无需创建日期表达式。宿主会为最新数据自动推导滚动窗口，固定历史需求保持原日期。不要把日期写成表达式字符串。通联 ai_search 的 SOURCES/EVIDENCE 文本由宿主按实际来源规范化为 {sources:[{id,category,source,date,title,url,summary,excerpts}]}；summary 是第一条证据原句，excerpts 为全部原句，可直接绑定 news.items。除此之外只引用实际 JSON 结构，不猜字段。
 批量多证券列表先使用 $filter:{"ticker":"实际证券代码"} 按行字段等值筛选，再排序和截取；$filter 只支持 1–16 个标量条件，多个条件同时成立，不支持表达式。近20日曲线的 labels 和每条 series.values 必须使用相同的日期排序及 $take:-20，保证日期和值对齐。共同基期100比较可在 values 的 $each 同层添加 $normalize:"base100"，宿主在筛选、排序、截取后执行 值/首值×100，再按 $digits 控制精度；起点不能为0、不能填补缺失值，原始值需求不归一化。单对象接口响应使用 {"$from":"q","$map":{"label":{"$path":"data.data.name"},"weight":{"$path":"data.data.marketValue","$scale":1e-8}}}，路径相对该请求响应根对象，无需 $each；$single:true 可省略。
 最新单值的完整例子：{"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number","$scale":100,"$digits":2,"$suffix":"%"}。数据日期使用同一结构，$map 改为 {"$path":"真实日期字段"}，删除 $as:number、$scale、$digits。$path 读取字段，$each 选择列表，$map 在行内读取；只能用上述运算符，禁止发明 $path2、$field 或把整条记录格式化成文字。
 来源完全未提供的字段直接写文字“本次未取得”，或使用 {"$default":"本次未取得"}；独立 $default 仅接受非空文字，不与数值换算混用。不要为缺失字段猜造路径。表格逐行保留真实日期与数值；扩展查询窗口的记录必须明确说明在原需求区间之外。
@@ -678,11 +681,15 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     const within=data.items.filter(item=>verified({...data,items:[item]}))
     const merged=retainAll?mergeObservedNewsItems(within,sourceRecords,verified):mergeObservedNewsItems(within,[],verified)
     const scoped=filterScopedNewsArtifact({...data,items:merged},sourceRecords,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
-    const sources=feedSnapshotSources(sourceRecords),present=value=>typeof value==='string'&&value.trim()?value:undefined
+    const sources=feedSnapshotSources(sourceRecords),present=value=>typeof value==='string'&&value.trim()?value:undefined,sourceMatches=newsSourceMatcher(options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
     const items=scoped.items.map(item=>{
-      const source=sources.find(record=>snapshotRecordMatches(item,record))
-      const rows=Array.isArray(source?.response?.records)?source.response.records:Array.isArray(source?.response?.sources)?source.response.sources:[]
-      const row=rows.find(row=>row&&snapshotTitle(row.title)===snapshotTitle(item.title)&&snapshotUrl(row.url)===snapshotUrl(item.url)&&(!item.date||snapshotDate(row.time??row.date)===snapshotDate(item.date)))
+      const matches=sources.filter(record=>snapshotRecordMatches(item,record)).flatMap(source=>{
+        const rows=Array.isArray(source.response?.records)?source.response.records:Array.isArray(source.response?.sources)?source.response.sources:[]
+        return rows.filter(row=>row&&snapshotTitle(row.title)===snapshotTitle(item.title)&&snapshotUrl(row.url)===snapshotUrl(item.url)&&(!item.date||snapshotDate(row.time??row.date)===snapshotDate(item.date))).map(row=>({source,row}))
+      })
+      // Keep the same observed excerpt that justifies topic/business relevance.
+      // A different query's market-only excerpt must not replace that evidence.
+      const {source,row}=matches.find(({row})=>sourceMatches(row))??{source:sources.find(record=>snapshotRecordMatches(item,record))}
       let hostname
       try{hostname=new URL(item.url).hostname}catch{}
       const publisher=present(row?.publisher)??present(row?.source)??present(source?.response?.source)??hostname??'来源名称未提供'
@@ -700,7 +707,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
       try{const query=JSON.parse(record.args?.parameters_json).query;return ['eastmoney-news','gdelt-news'].includes(record.args?.source)&&typeof query==='string'&&Array.isArray(record.response?.records)?[{query,rows:record.response.records}]:[]}catch{return[]}
     })
     const windows=evidenceWindows(feedOptions)
-    const coverage=queryRows.map(({query,rows})=>`${fixed('来源查询：')}${escape(query)} · ${fixed('来源返回：')}${rows.length} · ${fixed('已保留：')}${rows.filter(row=>items.some(item=>snapshotUrl(item.url)===snapshotUrl(row?.url)&&snapshotTitle(item.title)===snapshotTitle(row?.title))).length} · ${fixed('窗口外：')}${rows.filter(row=>{const day=snapshotDate(row?.time??row?.date);return day&&windows.some(window=>day<window.start||day>window.end)}).length}`).join('<br>')
+    const coverage=queryRows.map(({query,rows})=>`${fixed('来源查询：')}${escape(query)} · ${fixed('来源返回：')}${rows.length} · ${fixed('已保留：')}${items.filter(item=>item.query===query&&rows.some(row=>sourceMatches(row)&&snapshotUrl(item.url)===snapshotUrl(row?.url)&&snapshotTitle(item.title)===snapshotTitle(row?.title)&&(!item.date||snapshotDate(item.date)===snapshotDate(row?.time??row?.date)))).length} · ${fixed('窗口外：')}${rows.filter(row=>{const day=snapshotDate(row?.time??row?.date);return day&&windows.some(window=>day<window.start||day>window.end)}).length}`).join('<br>')
     const unproven=[...human.matchAll(/[（(]\s*(\d{6})(?:\.(?:SH|SZ|BJ))?\s*[)）]/giu)].filter(match=>!queryRows.some(({query})=>query===match[1]||human.slice(0,match.index).trimEnd().endsWith(query))).map(match=>match[1])
     // Source names come from the observed responses. In particular, a model
     // cannot turn Eastmoney into DataYes by copying a mapping-example suffix.

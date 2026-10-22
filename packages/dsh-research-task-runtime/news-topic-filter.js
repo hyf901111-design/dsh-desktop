@@ -71,7 +71,7 @@ function businessOnlyNews(requirement){
   return !/(?:不要|不用|无需|不必|不得|禁止|不应|不需要|不要求|并非|不是|不)[^。；;，,\n]{0,18}$|\b(?:not|never|without|don't|do not|no need)[^.;,\n]{0,20}$/iu.test(before)
  })
 }
-const marketTape=/盘口异动|(?:盘中|开盘|股价|港股|A股).{0,20}(?:涨|跌|反弹)|大涨|大跌|涨幅|跌幅|涨超|跌超|涨停|跌停|快速反弹|成交额|成交量|换手率|大宗交易|两融|融资(?:余额|买入|净买入|偿还|净偿还)|融券(?:余额|卖出|偿还)|资金(?:净流入|流入|流出)|加仓|减仓|破发|飘红|杠杆盘|抄底|\b(?:trading|stock|share)\s+(?:price|volume|turnover)\b|\b(?:shares?|stock)\b.{0,30}\b(?:rise|fall|gain|drop|rally|surge)\w*\b|\bmargin(?:[- ]financing)?\s+balance\b|\bblock trades?\b/iu
+const marketTape=/盘口异动|(?:盘中|开盘|股价|港股|A股).{0,20}(?:涨|跌|反弹)|大涨|大跌|涨幅|跌幅|涨超|跌超|涨停|跌停|快速反弹|成交额|(?:盘后|固定价格|只股|股票|证券)[^。；;\n]{0,20}交易额|成交量|换手率|大宗交易|两融|融资(?:余额|买入|净买入|偿还|净偿还)|融券(?:余额|卖出|偿还)|资金(?:(?:今日|当日|当周|本周|本月|昨日|当月|净)\s*){0,2}(?:流入|流出)|加仓|减仓|破发|飘红|杠杆盘|抄底|目标价|支撑位|阻力位|金叉|死叉|均线|\b(?:trading|stock|share)\s+(?:price|volume|turnover)\b|\b(?:shares?|stock)\b.{0,30}\b(?:rise|fall|gain|drop|rally|surge)\w*\b|\bmargin(?:[- ]financing)?\s+balance\b|\bblock trades?\b/iu
 const businessEvidence=/主营|生产|经营|订单|交付|产能|产量|产线|投产|量产|供应链|供应商|营收|净利润|业绩|财报|季报|年报|毛利率|现金流|销量|出货|研发|产品进展|产品验证|产品发布|签约|中标|专利|侵权|诉讼|337调查|反垄断调查|反倾销调查|回购|注销|增持计划|增持提议|增持公告|股权激励|员工持股|重组|并购|收购|分红|\b(?:orders?|deliver(?:y|ies)|supply chain|capacity|production|revenues?|earnings|profits?|financial results|annual report|patents?|litigation|investigation|buybacks?|repurchases?|contracts?)\b/iu
 const businessRelevant=value=>!marketTape.test(value)||businessEvidence.test(value)
 export function newsTopicTerms(requirement){
@@ -136,11 +136,14 @@ export function controlledNewsHtml(title,items,empty=NEWS_EMPTY_NOTE){
 }
 
 /** Filtering never treats a provider's search response as proof of relevance. */
+export function newsSourceMatcher(requirement='',{general=false}={}){
+ const businessOnly=businessOnlyNews(requirement),terms=newsTopicTerms(requirement),matches=general?()=>true:newsMatcher(terms,requirement)
+ return row=>matches(textOf(row))&&(!businessOnly||businessRelevant(textOf(row)))
+}
 export function filterScopedNewsArtifact(data,records=[],requirement='',{general=false}={}){
  const businessOnly=businessOnlyNews(requirement)
  if(!isScopedNews(data,requirement)||general&&!businessOnly)return data
- const terms=newsTopicTerms(requirement),matches=general?()=>true:newsMatcher(terms,requirement)
- const sourceMatches=row=>matches(textOf(row))&&(!businessOnly||businessRelevant(textOf(row)))
+ const matches=general?()=>true:newsMatcher(newsTopicTerms(requirement),requirement),sourceMatches=newsSourceMatcher(requirement,{general})
  if(data.type==='html'){
   // Never execute or surgically patch model scripts. Rebuild this news-only
   // capacity route from actual source rows into a small host-owned reading UI.
