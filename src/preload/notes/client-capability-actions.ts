@@ -1,3 +1,4 @@
+import type {CapabilityStyleEffect} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import type {NoteContent} from '../../shared/workspace-notes'
 export const noteCapabilityFingerprint=(content:NoteContent)=>JSON.stringify([content.title,content.blocks])
 export function noteResearchBlocks(blocks:any[]):any[]{return blocks.flatMap(block=>[...(block.type==='research'?[block]:[]),...noteResearchBlocks(block.children??[])])}
@@ -9,7 +10,7 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];createComponent?(args:any,current:()=>boolean,requestId:string):Promise<any>;cancelComponent?(requestId:string):void;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];createComponent?(args:any,current:()=>boolean,requestId:string):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>()
  return async(input:any)=>{
@@ -41,10 +42,17 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
    assertCurrent()
    const changedBlockIds=updateNoteComponentPresentation(options.editor,ids,{...theme!==undefined?{theme}:{},...titleBar!==undefined?{titleBar}:{}})
    fingerprint=noteCapabilityFingerprint(options.snapshot())
-   await options.persist()
-   // A committed mutation stays successful if cancellation arrives afterwards.
-   await options.settle()
-   return {status:'succeeded',changedBlockIds,message:`已保存 ${ids.length} 个组件的样式。`}
+   let effect:CapabilityStyleEffect={state:'applied',changedBlockIds}
+   const publish=()=>options.reportEffect?.(input.requestId,effect).catch(()=>{})
+   const receipt=(status:string,detail='')=>({status,changedBlockIds,effect,message:`${effect.state==='saved'?'已保存':'已应用但未确认保存'} ${ids.length} 个组件的样式。${detail}`})
+   await publish()
+   if(!current())return receipt('cancelled','后续操作已取消。')
+   try{
+    await options.persist()
+    effect={state:'saved',changedBlockIds};await publish()
+    if(current())await options.settle()
+    return receipt(current()?'succeeded':'cancelled',current()?'':'后续操作已取消。')
+   }catch(error){return receipt(current()?'failed':'cancelled',(error as Error).message)}
   }
   if(input.action==='notes.export'){
    await options.persist();assertCurrent()

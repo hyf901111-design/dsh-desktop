@@ -19,3 +19,26 @@ it('styles every embedded research block without selection and persists rich tex
   current=false;await expect(handler({...call,requestId:'d'})).rejects.toThrow('会话已变化')
  }finally{rmSync(root,{recursive:true,force:true})}
 })
+it.each(['before-save','during-save','after-save'])('keeps accurate style effects when cancelled %s without undoing the edit',async(when)=>{
+ const content:any={title:'原文',yjs:'',blocks:[{id:'r',type:'research',props:{payload:JSON.stringify({id:'n'})}}]},effects:any[]=[],saved:any[]=[]
+ const editor={document:content.blocks,getBlock:()=>content.blocks[0],updateBlock:(_id:string,value:any)=>Object.assign(content.blocks[0].props,value.props)}
+ const call={requestId:'style',generationId:'generation',context:{documentId:'doc'},action:'notes.components.style',args:{scope:'note',theme:'enterprise'}}
+ let handler:any
+ const cancel=()=>handler({requestId:'style',cancel:true})
+ handler=module!.createNoteCapabilityActions({editor,snapshot:()=>content,current:()=>true,generationId:()=> 'generation',documentId:'doc',selectedBlockIds:()=>[],
+  reportEffect:async(_id:string,effect:any)=>{effects.push(effect);if(when==='before-save'&&effect.state==='applied')await cancel()},
+  persist:async()=>{if(when==='during-save')await cancel();saved.push(JSON.parse(JSON.stringify(content)))},
+  settle:async()=>{if(when==='after-save')await cancel()},exportNote:async()=>({})} as any)
+ const result=await handler(call)
+ expect(result).toMatchObject({status:'cancelled',effect:{state:when==='before-save'?'applied':'saved',changedBlockIds:['r']}})
+ expect(saved).toHaveLength(when==='before-save'?0:1);expect(JSON.parse(content.blocks[0].props.payload).notePresentation.theme).toBe('enterprise')
+ expect(effects.map(e=>e.state)).toEqual(when==='before-save'?['applied']:['applied','saved'])
+})
+
+it('does not apply a style when cancellation was acknowledged before mutation',async()=>{
+ const content:any={title:'原文',yjs:'',blocks:[{id:'r',type:'research',props:{payload:JSON.stringify({id:'n'})}}]}
+ const handler=module!.createNoteCapabilityActions({editor:{document:content.blocks},snapshot:()=>content,current:()=>true,generationId:()=> 'generation',documentId:'doc',selectedBlockIds:()=>[],persist:async()=>{throw Error('must not save')},exportNote:async()=>({}),settle:async()=>{}})
+ await handler({requestId:'style',cancel:true})
+ await expect(handler({requestId:'style',generationId:'generation',context:{documentId:'doc'},action:'notes.components.style',args:{scope:'note',theme:'enterprise'}})).rejects.toThrow('已取消')
+ expect(JSON.parse(content.blocks[0].props.payload)).not.toHaveProperty('notePresentation')
+})

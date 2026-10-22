@@ -182,7 +182,7 @@ export async function noteWordBuffer(content:NoteContent,snapshots?:NoteComponen
  }
  return Packer.toBuffer(new Document({styles:{default:{document:{run:{font:'Arial',size:22},paragraph:{spacing:{line:340}}}}},numbering:{config:[{reference:'notes-numbered',levels:Array.from({length:9},(_,level)=>({level,format:LevelFormat.DECIMAL,text:'%'+(level+1)+'.',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720*(level+1),hanging:360}}}}))}]},sections:[{properties:{page:{margin:{top:1134,bottom:1134,left:1134,right:1134}}},children}]}))
 }
-export async function saveNoteExport(input:any,allowed:()=>boolean){
+export async function saveNoteExport(input:any,allowed:()=>boolean,onCommit?:(path:string,state:'writing'|'saved')=>void){
  if(!['docx','pdf','md'].includes(input.format))throw Error('不支持的笔记导出格式。')
  const content=validateNoteContent(input.content),name=(content.title||noteUiText('无标题文档',input.locale)).replace(/[\u0000-\u001f\\/:*?"<>|]/g,'_').slice(0,140)
  if(input.path!==undefined&&(typeof input.path!=='string'||!isAbsolute(input.path)||input.path.length>4096||input.path.includes('\0')))throw Error('导出位置必须是有效的绝对路径。')
@@ -207,5 +207,6 @@ export async function saveNoteExport(input:any,allowed:()=>boolean){
    finally{if(window&&!window.isDestroyed())window.destroy();await rm(directory,{recursive:true,force:true})}
  }
  if(!allowed())throw Error('账号已变化，请重新导出。')
- await writeFile(result.filePath,bytes,{mode:0o600});return {status:'saved',path:result.filePath}
+ onCommit?.(result.filePath,'writing')
+ await writeFile(result.filePath,bytes,{mode:0o600});onCommit?.(result.filePath,'saved');return {status:'saved',path:result.filePath}
 }

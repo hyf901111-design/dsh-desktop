@@ -316,6 +316,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         const blockId=capabilityCards.current.get(requestId)
         if(blockId)inlineComponents.stop(blockId)
       },
+      reportEffect:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect}),
       persist:async()=>{
         save();await saveQueue.current
         if(lastWritten.current!==JSON.stringify(snapshot()))throw Error('笔记尚未保存，较新内容已保留为草稿。')

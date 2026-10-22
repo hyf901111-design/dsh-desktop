@@ -13,7 +13,7 @@ const bridge={request:async(method,input)=>{window.calls.push({method,input});
  if(method==='save'){window.saved=input.content;return {status:'saved',saved:{...input.content,revision:input.revision+1}}}
  if(method==='render')return{html:'<p>组件数据 42</p>',document:'<!doctype html><body><p>组件数据 42</p></body>'};
  if(method==='component-render')return{ok:true};
- if(method==='capability-reply'){const item=pending.get(input.requestId);if(item){pending.delete(input.requestId);input.error?item.reject(Error(input.error)):item.resolve(input.result)}return{ok:true}}
+ if(method==='capability-reply'){if(input.effect)return{ok:true};const item=pending.get(input.requestId);if(item){pending.delete(input.requestId);input.error?item.reject(Error(input.error)):item.resolve(input.result)}return{ok:true}}
  if(method==='component-snapshots')return[];
  if(method==='export'){window.effects.push({kind:'export',content:input.content});return {status:'saved',path:'/tmp/native-composition.pdf'}}
  if(method==='generate'&&input.entryPoint==='component')return new Promise(resolve=>{window.completeCard=()=>resolve(window.failCreate?{kind:'conversation',markdown:'请提供数据。'}:{kind:'component',node:{id:'generated',title:'新组件',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'新组件',columns:['值'],rows:[[42]]}}})});

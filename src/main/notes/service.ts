@@ -3,6 +3,7 @@ import {createClientCapabilityRegistry,createCapabilityExecutor} from '../../../
 import type {ClientCapabilityContext,CapabilityReceipt} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {runClientCapabilityLoop} from '../../../packages/dsh-research-task-runtime/client-capability-loop.js'
 import {NotesCapabilityBridge} from './capability-bridge'
+import {explicitNoteExportPaths} from './export-destination'
 import { NotesStore } from './store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import type { TrustedWindow } from '../ipc-trust'
@@ -68,7 +69,7 @@ export function installNotesService(options: {
         const window=options.getWindow(),key='note-snapshot:'+randomUUID(),controller=new AbortController();active.set(key,controller)
         try{return await captureNoteComponentSnapshots(window,input,()=>options.owner()===owner&&options.canRead(session)&&options.getWindow()===window,controller.signal)}finally{active.delete(key)}
       }
-      case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session)&&(!input.executionId||capabilityBridge.allowed(input.executionId,owner,session)))
+      case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session)&&(!input.executionId||capabilityBridge.allowed(input.executionId,owner,session)),(path,state)=>{if(input.executionId)capabilityBridge.exportEffect(input.executionId,owner,session,{state,path})})
       case 'conversation-load':
       case 'conversation-state': {
         const base=options.runtimeUrl();if(!base)return {rows:[],owner}
@@ -136,7 +137,7 @@ export function installNotesService(options: {
           const current=()=>!!generationWindow&&!generationWindow.isDestroyed()&&options.getWindow()===generationWindow&&options.owner()===owner&&options.canRead(session)&&active.get(input.requestId)===controller&&!signal.aborted
           const renderer=(action:'context'|'notes.export'|'notes.components.style'|'notes.components.create',args:any)=>capabilityBridge.request(action,args,clientContext!,input.requestId,signal,current)
           const registry=createClientCapabilityRegistry({
-            ...clientContext?{createComponent:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.create',{...args,requestContext:{images:input.images??[],context:input.context,title:input.title,markdown:input.markdown,selection:input.selection}})},exportNote:async(args:any)=>{if(args.path&&!input.prompt.includes(args.path))throw Error('导出路径须由本次用户指令明确指定；请省略路径使用保存对话框。');return renderer('notes.export',args)},styleComponents:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.style',args)}}:{},
+            ...clientContext?{createComponent:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.create',{...args,requestContext:{images:input.images??[],context:input.context,title:input.title,markdown:input.markdown,selection:input.selection}})},exportNote:async(args:any)=>{const destinations=explicitNoteExportPaths(input.prompt);if(args.path&&destinations.length&&!destinations.includes(args.path))throw Error('导出位置与本次明确指定的位置不一致，请重新选择保存位置。');return renderer('notes.export',destinations.length?args:{...args,path:undefined})},styleComponents:async(args:any)=>{if(options.canWrite?.(session)===false)throw Error('当前笔记不可编辑。');return renderer('notes.components.style',args)}}:{},
             ...options.inspectCanvas&&(options.canvasAvailable?.(session)??true)?{inspectCanvas:async()=>{await renderer('context',{});const data=await options.inspectCanvas!(session,signal);return {status:'succeeded' as const,data}}}:{},
             ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
           })
