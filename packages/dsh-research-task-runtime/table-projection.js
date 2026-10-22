@@ -49,6 +49,9 @@ export function normalizeKeyedTableProjection(data,mapping){
  if(mapping!==undefined&&!selected(mapping.rows))return unchanged
  if(!(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant))||!Array.isArray(data.columns)||!data.columns.length||!Array.isArray(data.rows))return unchanged
  if(data.columns.some(column=>!object(column)||Object.keys(column).some(key=>!['key','label'].includes(key))||typeof column.key!=='string'||!column.key.trim()||column.key.length>512||/[\u0000-\u001f]/u.test(column.key)||column.key.startsWith('$')||forbidden.has(column.key)||typeof column.label!=='string'||!column.label.trim()))return unchanged
+ // Only explicit declarations can become a persisted canonical projection.
+ // Materializing a dynamic column key/label once would freeze its future scope.
+ if(mapping!==undefined&&(!Array.isArray(mapping.columns)||mapping.columns.length!==data.columns.length||mapping.columns.some((column,i)=>!object(column)||column.key!==data.columns[i].key||column.label!==data.columns[i].label)))return unchanged
  const keys=data.columns.map(column=>column.key)
  if(new Set(keys).size!==keys.length||data.rows.some(row=>!sameKeys(row,keys)||keys.some(key=>!scalar(row[key]))))return unchanged
  const rows=mapping===undefined?undefined:rowsProjection(mapping.rows,keys)

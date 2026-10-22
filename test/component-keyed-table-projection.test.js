@@ -67,7 +67,7 @@ it.each(['collection-path-map','nested-object-map','single-row-selectors'])('pre
  expect(resolved.data.rows).toEqual(f.response.records.map(row=>allKeys.map(key=>String(row[key]))))
 })
 
-it.each(['missing-key','extra-key','duplicate-column','dangerous-key','column-extra-field','nested-cell','extra-root'])('rejects %s rather than dropping fields into an HTML snapshot',async kind=>{
+it.each(['missing-key','extra-key','duplicate-column','dangerous-key','column-extra-field','computed-key','computed-label','nested-cell','extra-root'])('rejects %s rather than dropping fields into an HTML snapshot',async kind=>{
  const f=fixture(true)
  if(kind==='missing-key')delete f.mapping.rows.$map[f.fields[0]]
  if(kind==='extra-key')f.mapping.rows.$map.unmapped=path('price')
@@ -77,6 +77,8 @@ it.each(['missing-key','extra-key','duplicate-column','dangerous-key','column-ex
   f.mapping.rows.$map=JSON.parse(JSON.stringify(f.mapping.rows.$map).replace('"symbol":','"__proto__":'))
  }
  if(kind==='column-extra-field')f.mapping.columns[0].hidden=true
+ if(kind==='computed-key')f.mapping.columns[0].key={$default:f.mapping.columns[0].key}
+ if(kind==='computed-label')f.mapping.columns[0].label={$default:f.mapping.columns[0].label}
  if(kind==='nested-cell')f.mapping.rows.$map[f.fields[0]]={nested:path('price')}
  if(kind==='extra-root')f.mapping.unrecognized='不能被宿主忽略'
  const {task}=await run(f);expect(task.state).toBe('failed');expect(task.finalOutput).toBeUndefined()
