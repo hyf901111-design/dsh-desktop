@@ -1,0 +1,86 @@
+import {afterEach,expect,it,vi} from 'vitest'
+import {mkdtempSync,rmSync,readFileSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {installNotesService} from '../src/main/notes/service'
+import {createNoteCapabilityActions} from '../src/preload/notes/client-capability-actions'
+import {exportNoteWithSnapshots} from '../src/preload/notes/component-snapshots'
+vi.mock('electron',()=>({BrowserWindow:class{},dialog:{showSaveDialog:async()=>({canceled:true})}}))
+const roots:string[]=[];afterEach(()=>{for(const r of roots.splice(0))rmSync(r,{recursive:true,force:true});vi.unstubAllGlobals()})
+function harness(options:{cancelAt?:'applied'|'saved'|'settle';cancelExportReply?:boolean}={}){
+ const root=mkdtempSync(join(tmpdir(),'note-client-capabilities-'));roots.push(root)
+ let owner='alice',visible=true,generation='job',handler:any,revision=0,calls=0
+ const actions:any[]=[],history:any[]=[],requests:any[]=[],content:any={title:'实际笔记',yjs:'',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留正文',styles:{bold:true}}]},{id:'r',type:'research',props:{payload:JSON.stringify({id:'n',noteSize:{width:390},containerSpec:{version:1,type:'markdown',title:'数据',content:'实际组件'}})}}]}
+ const editor={get document(){return content.blocks},getBlock(id:string){return content.blocks.find((b:any)=>b.id===id)},updateBlock(id:string,p:any){Object.assign(this.getBlock(id).props,p.props)},transact(f:()=>void){f()}}
+ const window:any={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:2},send:(channel:string,value:any)=>{if(channel==='notes:capability-action'){actions.push(value);queueMicrotask(()=>{void renderer(value).then(async result=>{if(options.cancelExportReply&&value.action==='notes.export'&&result?.status==='succeeded')await call('stop',{requestId:generation});if(!value.cancel)return call('capability-reply',{requestId:value.requestId,result})}).catch(error=>call('capability-reply',{requestId:value.requestId,error:error.message}))})}}}}
+ const event={sender:window.webContents,senderFrame:window.webContents.mainFrame},call=(method:string,input:any={})=>handler(event,method,{sessionId:'note',owner,...input})
+ const bridge:any={request:call},renderer=createNoteCapabilityActions({editor,snapshot:()=>content,current:()=>visible,generationId:()=>generation,documentId:'doc',selectedBlockIds:()=>[],reportEffect:async(requestId,effect)=>{await call('capability-reply',{requestId,effect});if(options.cancelAt===effect.state)await call('stop',{requestId:generation})},persist:async()=>{const r=await call('save',{revision,content,clientId:'client'});if(r.status!=='saved')throw Error('冲突');revision=r.saved.revision},exportNote:(args,current)=>exportNoteWithSnapshots({snapshot:()=>content,bridge,sessionId:'note',...args,current}),settle:async()=>{if(options.cancelAt==='settle')await call('stop',{requestId:generation})}})
+ const inspectCanvas=vi.fn(async()=>({revision:'r1',nodes:[{id:'canvas-one',title:'研究画布'}]})),resetZoom=vi.fn(async()=>{})
+ const dispose=installNotesService({ipcMain:{handle:(_c:string,f:any)=>{handler=f},removeHandler:()=>{}},getWindow:()=>window,root,owner:()=>owner,runtimeUrl:()=> 'http://127.0.0.1:9999',canRead:()=>true,canWrite:()=>true,clipboard:()=>undefined,inspectCanvas,resetZoom})
+ const generate=(prompt:string)=>call('generate',{requestId:generation,mode:'write',prompt,markdown:'原文',selection:'',title:'实际笔记',context:{scope:'note',components:[]},capabilityContext:{documentId:'doc',selectedBlockIds:[]}})
+ const wire=(next:(body:any)=>any)=>vi.stubGlobal('fetch',async(url:any,options:any)=>{const b=JSON.parse(options.body);if(String(url).endsWith('/session')){history.push(b);return new Response('{"ok":true}')};calls++;requests.push(b);return new Response(JSON.stringify({type:'result',result:next(b)})+'\n')})
+ return{root,call,generate,wire,actions,history,requests,content,inspectCanvas,resetZoom,dispose,calls:()=>calls,hide:()=>{visible=false},account:()=>{owner='bob'},setGeneration:(id:string)=>{generation=id}}
+}
+it('composes style, real local export, canvas inspect and shared UI command through host-validated calls',async()=>{
+ const h=harness(),path=join(h.root,'receipt.md'),calls=[{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise',titleBar:false}},{requestId:'export',capability:'notes.export',arguments:{format:'md',path}},{requestId:'canvas',capability:'canvas.inspect',arguments:{}},{requestId:'zoom',capability:'ui.zoom.reset',arguments:{}}]
+ h.wire(b=>b.clientReceipts.length?{kind:'conversation',markdown:'fake completion'}:{kind:'capabilities',calls})
+ try{
+  const result=await h.generate('组件用易方达，隐藏顶栏，导出到“'+path+'”，查看当前画布并恢复默认缩放')
+  expect(result.capabilityReceipts.map((r:any)=>r.status)).toEqual(['succeeded','succeeded','succeeded','succeeded']);expect(result.markdown).toContain(path);expect(result.markdown).not.toContain('fake completion');expect(readFileSync(path,'utf8')).toContain('保留正文')
+  const stored=await h.call('load');expect(JSON.parse(stored.saved.blocks[1].props.payload)).toMatchObject({notePresentation:{theme:'enterprise',titleBar:false},noteSize:{width:390}})
+  expect(h.inspectCanvas).toHaveBeenCalledWith('note',expect.any(AbortSignal));expect(h.resetZoom).toHaveBeenCalledOnce();expect(h.history[0].receipts).toHaveLength(4)
+  expect(await h.generate('组件用易方达，隐藏顶栏，导出到“'+path+'”，查看当前画布并恢复默认缩放')).toEqual(result);expect(h.calls()).toBe(2)
+  await expect(h.generate('不同指令')).rejects.toThrow('请求标识')
+ }finally{h.dispose()}
+})
+it('refuses stale renderer visibility and never runs a later export after failed style',async()=>{
+ const h=harness();h.hide();h.wire(()=>({kind:'capabilities',calls:[{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise'}},{requestId:'export',capability:'notes.export',arguments:{format:'pdf'}}]}))
+ try{const r=await h.generate('整篇组件易方达再导出PDF');expect(r.capabilityReceipts).toHaveLength(1);expect(r.capabilityReceipts[0].status).toBe('failed');expect(h.actions.map(a=>a.action)).toEqual(['notes.components.style']);expect(JSON.parse(h.content.blocks[1].props.payload)).not.toHaveProperty('notePresentation')}finally{h.dispose()}
+})
+it('will not use a path invented by the model and preserves normal writing without executing any capability',async()=>{
+ const h=harness();h.wire(()=>({kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path:'/tmp/model-invented.pdf'}}]}))
+ try{const r=await h.generate('导出PDF');expect(r.capabilityReceipts[0]).toMatchObject({status:'cancelled'});expect(h.actions[0].args.path).toBeUndefined();h.setGeneration('writing');h.wire(()=>({kind:'text',markdown:'新文章预览'}));expect(await h.generate('写文章')).toEqual({kind:'text',markdown:'新文章预览'});expect(h.content.blocks[0].content[0].text).toBe('保留正文')}finally{h.dispose()}
+})
+it.each([
+ ['prefix','/tmp/report.pdf.bak','/tmp/report.pdf'],
+ ['suffix','/tmp/sub/report.pdf','/report.pdf'],
+ ['space','"/tmp/report final.pdf"','/tmp/report'],
+ ['punctuation','“/tmp/report,final.pdf”','/tmp/report'],
+ ['similar','/tmp/report-v2.pdf','/tmp/report-v1.pdf']
+])('rejects a model path that is only a %s of the explicit destination',async(_label,source,path)=>{
+ const h=harness();h.wire(()=>({kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'pdf',path}}]}))
+ try{const r=await h.generate('导出到 '+source);expect(r.capabilityReceipts[0].status).toBe('failed');expect(h.actions).toHaveLength(0)}finally{h.dispose()}
+})
+
+it.each(['applied','saved','settle'] as const)('records real style effects when stopped at %s and never starts the following export',async(cancelAt)=>{
+ const h=harness({cancelAt});h.wire(()=>({kind:'capabilities',calls:[{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise'}},{requestId:'export',capability:'notes.export',arguments:{format:'pdf'}}]}))
+ try{
+  const result=await h.generate('全部组件易方达并导出PDF'),state=cancelAt==='applied'?'applied':'saved'
+  expect(result.capabilityReceipts).toHaveLength(1);expect(result.capabilityReceipts[0]).toMatchObject({status:'cancelled',effect:{state,changedBlockIds:['r']}})
+  expect(result.markdown).toContain(state==='saved'?'已保存':'已应用但未确认保存');expect(h.actions.some(a=>a.action==='notes.export')).toBe(false)
+  if(state==='saved')expect(JSON.parse((await h.call('load')).saved.blocks[1].props.payload).notePresentation.theme).toBe('enterprise')
+  expect(h.history.find(row=>row.action==='conversation-capabilities').receipts[0].effect.state).toBe(state)
+ }finally{h.dispose()}
+})
+
+it('preserves an actual saved export path when stopped before its renderer reply',async()=>{
+ const h=harness({cancelExportReply:true}),path=join(h.root,'completed.md')
+ h.wire(()=>({kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path}},{requestId:'zoom',capability:'ui.zoom.reset',arguments:{}}]}))
+ try{const r=await h.generate('保存到 '+path);expect(readFileSync(path,'utf8')).toContain('保留正文');expect(r.capabilityReceipts).toHaveLength(1);expect(r.capabilityReceipts[0]).toMatchObject({status:'cancelled',path,effect:{state:'saved',path}});expect(r.markdown).toContain('文件已保存');expect(h.resetZoom).not.toHaveBeenCalled()}finally{h.dispose()}
+})
+it.each(['不要导出到 /tmp/report.pdf','示例里提到 /tmp/report.pdf'])('uses the save dialog instead of writing a path without destination authorization: %s',async(prompt)=>{
+ const h=harness();h.wire(()=>({kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path:'/tmp/report.pdf'}}]}))
+ try{const r=await h.generate(prompt);expect(h.actions[0].args.path).toBeUndefined();expect(r.capabilityReceipts[0].status).toBe('cancelled')}finally{h.dispose()}
+})
+it.each(['report final.md','report,final.md','report.md.bak','报告，最终版.pdf','报告。终稿.pdf','报告.pdf，最终版.pdf'])('writes only the complete explicitly named destination %s',async(name)=>{
+ const h=harness(),path=join(h.root,name);h.wire(b=>b.clientReceipts.length?{kind:'conversation',markdown:'完成'}:{kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path}}]})
+ try{const r=await h.generate('不要显示顶栏，然后导出到“'+path+'”');expect(r.capabilityReceipts[0]).toMatchObject({status:'succeeded',path});expect(readFileSync(path,'utf8')).toContain('保留正文')}finally{h.dispose()}
+})
+it.each([
+ ['/tmp/报告，最终版.pdf','/tmp/报告'],
+ ['/tmp/报告。终稿.pdf','/tmp/报告'],
+ ['/tmp/报告.pdf，最终版.pdf','/tmp/报告.pdf']
+])('opens a save dialog rather than directly writing the punctuation prefix of %s',async(source,path)=>{
+ const h=harness();h.wire(()=>({kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path}}]}))
+ try{const r=await h.generate('导出到 '+source);expect(h.actions[0].args.path).toBeUndefined();expect(r.capabilityReceipts[0].status).toBe('cancelled')}finally{h.dispose()}
+})

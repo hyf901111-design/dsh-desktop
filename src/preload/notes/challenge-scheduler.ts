@@ -20,7 +20,7 @@ export function challengeDocumentBlocks(blocks:any[]):ChallengeBlock[]{
 }
 export type ChallengeScheduleState={phase:'off'|'idle'|'waiting'|'running'|'paused'|'limited'|'failed';pending:number;checks:ChallengeCheck[]}
 type DocumentInput={title:string;blocks:ChallengeBlock[];editingBlockId?:string;composing?:boolean;active?:boolean;busy?:boolean}
-type Captured={key:string;blocks:ChallengeBlock[];title:string}
+type Captured={key:string;blocks:ChallengeBlock[];title:string;level:ChallengeLevel}
 const key=(value:{title:string;blocks:ChallengeBlock[]})=>JSON.stringify([value.title,value.blocks])
 const MAX_CHARS=16000,MAX_BLOCK_CHARS=12000,MAX_BLOCKS=24,WINDOW=600000
 
@@ -124,7 +124,7 @@ export class NoteChallengeScheduler{
   const {chosen,ids,chars,deep,existingAnchors}=this.batch()
   if(!ids.length||this.budgetWait(chars)!==undefined){this.schedule();return}
   for(const id of ids)this.pending.delete(id)
-  const captured:Captured={key:key(this.value),title:this.value.title,blocks:this.value.blocks.map(b=>({...b}))},controller=new AbortController(),job={controller,ids}
+  const captured:Captured={key:key(this.value),title:this.value.title,level:this.level,blocks:this.value.blocks.map(b=>({...b}))},controller=new AbortController(),job={controller,ids}
   this.flight=job;this.expedited=false;this.lastRun=this.now();if(deep)this.lastDeep=this.now();this.firstAt=undefined;const usage={at:this.now(),chars,input:0,output:0};this.usage.push(usage);this.emit('running')
   let onAbort:()=>void=()=>{}
   try{

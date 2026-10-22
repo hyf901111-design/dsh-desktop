@@ -1,7 +1,7 @@
 import {noteUiText} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import {mkdtemp,rm,writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
-import {join} from 'node:path'
+import {join,isAbsolute} from 'node:path'
 import {inflateSync} from 'node:zlib'
 import {BrowserWindow,dialog} from 'electron'
 import {Document,Packer,Paragraph,TextRun,ImageRun,ExternalHyperlink,Table,TableRow,TableCell,HeadingLevel,WidthType,LevelFormat,AlignmentType} from 'docx'
@@ -102,12 +102,12 @@ export function noteExportBlocks(content:NoteContent,snapshots?:Map<string,Valid
      let node:any;try{node=JSON.parse(block.props?.payload||'{}')}catch{node={}}
      const title=String(block.type==='research'?(node.title||'研究组件'):('附件：'+(node.displayName||node.name||'文件')))
      const indent=noteIndentLevel(block.props?.noteIndent),displayWidth=typeof node.noteSize?.width==='number'&&Number.isFinite(node.noteSize.width)&&node.noteSize.width>0?node.noteSize.width:undefined,alignment=['center','right'].includes(block.props?.textAlignment)?block.props.textAlignment:'left'
-     output.push({type:block.type==='research'?'heading':'paragraph',level:block.type==='research'?2:Math.min(depth,8),content:[{type:'text',text:title}],keepNext:true,...indent?{indent}:{}})
+     if(node.notePresentation?.titleBar!==false)output.push({type:block.type==='research'?'heading':'paragraph',level:block.type==='research'?2:Math.min(depth,8),content:[{type:'text',text:title}],keepNext:true,...indent?{indent}:{}})
      output.push({type:'snapshot',level:Math.min(depth,8),content:[{type:'text',text:title}],snapshot,displayWidth,alignment,...indent?{indent}:{}})
    }else if(block.type==='research'){
      let node:any;try{node=JSON.parse(block.props?.payload||'{}')}catch{node={}}
      const spec=node.containerSpec
-     output.push({type:'heading',level:2,content:[{type:'text',text:node.title||'研究组件'}]})
+     if(node.notePresentation?.titleBar!==false)output.push({type:'heading',level:2,content:[{type:'text',text:node.title||'研究组件'}]})
      if(spec?.type==='table')output.push({type:'table',level:depth,content:[],rows:[spec.columns,...spec.rows].map((row:any[])=>row.map(value=>[{type:'text',text:String(value??'')}]))})
      else if(spec?.type==='chart')output.push({type:'table',level:depth,content:[],rows:[['日期',...spec.series.map((series:any)=>series.name)],...spec.labels.map((label:string,i:number)=>[label,...spec.series.map((series:any)=>series.values[i])])].map((row:any[])=>row.map(value=>[{type:'text',text:String(value??'')}]))})
      else if(spec?.type==='html'){
@@ -182,10 +182,12 @@ export async function noteWordBuffer(content:NoteContent,snapshots?:NoteComponen
  }
  return Packer.toBuffer(new Document({styles:{default:{document:{run:{font:'Arial',size:22},paragraph:{spacing:{line:340}}}}},numbering:{config:[{reference:'notes-numbered',levels:Array.from({length:9},(_,level)=>({level,format:LevelFormat.DECIMAL,text:'%'+(level+1)+'.',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720*(level+1),hanging:360}}}}))}]},sections:[{properties:{page:{margin:{top:1134,bottom:1134,left:1134,right:1134}}},children}]}))
 }
-export async function saveNoteExport(input:any,allowed:()=>boolean){
+export async function saveNoteExport(input:any,allowed:()=>boolean,onCommit?:(path:string,state:'writing'|'saved')=>void){
  if(!['docx','pdf','md'].includes(input.format))throw Error('不支持的笔记导出格式。')
  const content=validateNoteContent(input.content),name=(content.title||noteUiText('无标题文档',input.locale)).replace(/[\u0000-\u001f\\/:*?"<>|]/g,'_').slice(0,140)
- const result=await dialog.showSaveDialog({title:noteUiText('导出笔记',input.locale),defaultPath:name+'.'+input.format,filters:[{name:noteUiText(({docx:'Word 文档',pdf:'PDF 文档',md:'Markdown 文档'} as Record<string,string>)[input.format]!,input.locale),extensions:[input.format]}]})
+ if(input.path!==undefined&&(typeof input.path!=='string'||!isAbsolute(input.path)||input.path.length>4096||input.path.includes('\0')))throw Error('导出位置必须是有效的绝对路径。')
+ if(!allowed())throw Error('账号已变化，请重新导出。')
+ const result=input.path?{canceled:false,filePath:input.path}:await dialog.showSaveDialog({title:noteUiText('导出笔记',input.locale),defaultPath:name+'.'+input.format,filters:[{name:noteUiText(({docx:'Word 文档',pdf:'PDF 文档',md:'Markdown 文档'} as Record<string,string>)[input.format]!,input.locale),extensions:[input.format]}]})
  if(result.canceled||!result.filePath)return {status:'cancelled'}
  if(!allowed())throw Error('账号已变化，请重新导出。')
  const snapshots=input.format==='md'?undefined:input.snapshots??[]
@@ -205,5 +207,6 @@ export async function saveNoteExport(input:any,allowed:()=>boolean){
    finally{if(window&&!window.isDestroyed())window.destroy();await rm(directory,{recursive:true,force:true})}
  }
  if(!allowed())throw Error('账号已变化，请重新导出。')
- await writeFile(result.filePath,bytes,{mode:0o600});return {status:'saved'}
+ onCommit?.(result.filePath,'writing')
+ await writeFile(result.filePath,bytes,{mode:0o600});onCommit?.(result.filePath,'saved');return {status:'saved',path:result.filePath}
 }

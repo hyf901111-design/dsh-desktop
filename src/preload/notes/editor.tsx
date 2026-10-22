@@ -30,6 +30,9 @@ import {changeNoteList,type NoteListType} from './paragraph-style'
 import {useNoteReferenceContext,type NoteReferenceContext} from './reference-context'
 import {noteMessageReferences} from '../../../packages/dsh-research-task-runtime/notes-message-references.js'
 import {exportNoteWithSnapshots} from './component-snapshots'
+import {createNoteCapabilityActions,noteCapabilityFingerprint} from './client-capability-actions'
+import {useNotePresentation} from './component-presentation'
+import {NotePresentationControls} from './component-presentation-controls'
 import {createNoteComponentDataActions} from './component-data-actions'
 import {InlineNoteFileBlock,noteFilePresentation} from './file-inline'
 import {useInlineComponentGeneration} from './use-inline-component-generation'
@@ -86,6 +89,7 @@ function ResearchSnapshotBlock({ block }: any) {
   const interaction=useNoteComponentInteraction()
   const context = useContext(Context)!, [html, setHtml] = useState(''), [error, setError] = useState('')
   const node = useMemo(() => { try { return JSON.parse(block.props.payload) } catch { return {} } }, [block.props.payload])
+  useNotePresentation(interaction.root,node,context.dark)
   const [height, setHeight] = useState(Number.isFinite(node.height)?Math.max(120,node.height-80):320), frame = useRef<HTMLIFrameElement>(null), intrinsic=useRef(false)
   const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height}),renderKey=JSON.stringify(node.containerSpec)
   useEffect(() => {
@@ -105,7 +109,7 @@ function ResearchSnapshotBlock({ block }: any) {
     <header className="en-research-header" draggable={!!context.editor?.isEditable}><strong>{node.title||t("研究组件")}</strong>{context.editor?.getBlock(block.id)?<button className="en-component-close" aria-label={t("移除笔记中的组件")} title={t("移除组件")} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button>:null}</header>
     {html?<div className="en-research-view"><iframe ref={frame} title={node.title||t("研究组件")} sandbox="allow-scripts" srcDoc={doc} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')} style={{height:size.height}}/>{!interaction.selected?<button className="en-component-scroll-guard" aria-label={t("选中组件并操作内容")} onClick={interaction.select}/>:null}</div>:<div className="en-component-empty"><strong>{node.title||t("研究组件")}</strong><p>{error||t("正在读取组件…")}</p></div>}
     {error&&html?<div className="en-component-error" role="alert">{error}</div>:null}
-    {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
+    {interaction.selected&&context.editor?.isEditable?<><NotePresentationControls editor={context.editor} block={block} node={node}/><NoteComponentResizeHandles size={size}/></>:null}
   </section>
 }
 const componentAlignment={default:'left',values:['left','center','right'] as const}
@@ -213,6 +217,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
+  const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>())
   const importing=useRef(new Set<string>()),exportPending=useRef(false),[exporting,setExporting]=useState(false)
   const assistantHost=useMemo(()=>{const host=document.createElement('div');host.className='en-inline-assistant';host.contentEditable='false';return host},[])
   const paintSelection = (range: {from:number;to:number}) => {const version=++anchorVersion.current;setAssistantVisible(true);editor.getExtension(NoteAiSelection)?.highlight(range,assistantHost,()=>queueMicrotask(()=>{if(!disposed.current&&anchorVersion.current===version){setAssistantVisible(false);}}))}
@@ -284,6 +289,51 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const timer=setInterval(visible,10000)
     return()=>{live=false;clearInterval(timer);document.removeEventListener('sherlock:notes-component-data-action',receive);document.removeEventListener('visibilitychange',visible);document.removeEventListener('sherlock:workspace-surface-change',visible);void props.bridge.request('component-data-visible',{sessionId:props.sessionId,active:false}).catch(()=>{})}
   },[editor,props.sessionId,props.recovery,props.bridge])
+  useEffect(()=>{
+    let live=true
+    const visible=()=>{const surface=scroll.current?.closest<HTMLElement>('.en-root');return !!surface&&!surface.hidden&&surface.style.display!=='none'}
+    const handler=createNoteCapabilityActions({
+      editor,snapshot,documentId:client.current,
+      initialFingerprint:()=>capabilityFingerprint.current,
+      generationId:()=>request.current,
+      current:()=>live&&!disposed.current&&!props.recovery&&editor.isEditable&&visible(),
+      selectedBlockIds:()=>{
+        const captured=references.capture()
+        return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]
+      },
+      createComponent:async(args,current,requestId)=>{
+        if(!current())throw Error('笔记会话已变化。')
+        const last=editor.document.at(-1)
+        const created=editor.insertBlocks([{type:'research',props:{payload:JSON.stringify({
+          id:'note-component-'+crypto.randomUUID(),kind:'generated-container',title:t('智能组件'),
+          noteDraft:'smart',containerPrompt:args.prompt,generationStatus:'draft'
+        })}}],last,'after')[0]
+        capabilityCards.current.set(requestId,created.id)
+        try{return await inlineComponents.startAndWait(created.id,args.prompt,args.requestContext)}
+        finally{capabilityCards.current.delete(requestId)}
+      },
+      cancelComponent:requestId=>{
+        const blockId=capabilityCards.current.get(requestId)
+        if(blockId)inlineComponents.stop(blockId)
+      },
+      reportEffect:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect}),
+      persist:async()=>{
+        save();await saveQueue.current
+        if(lastWritten.current!==JSON.stringify(snapshot()))throw Error('笔记尚未保存，较新内容已保留为草稿。')
+      },
+      exportNote:(args,current)=>exportNoteWithSnapshots({snapshot,bridge:props.bridge,sessionId:props.sessionId,...args,locale:document.documentElement.dataset.odysseyLocale,current}),
+      settle:()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())))
+    })
+    const receive=(event:Event)=>{
+      const input=(event as CustomEvent).detail
+      if(input?.sessionId!==props.sessionId)return
+      void handler(input).then(result=>{
+        if(!input.cancel)return props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId:input.requestId,result})
+      }).catch(error=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId:input.requestId,error:error.message}).catch(()=>{}))
+    }
+    document.addEventListener('sherlock:notes-capability-action',receive)
+    return()=>{live=false;document.removeEventListener('sherlock:notes-capability-action',receive)}
+  },[editor,props.sessionId,props.recovery,props.bridge])
   const locate = (id: string) => { const element = scroll.current?.querySelector<HTMLElement>('[data-id="' + CSS.escape(id) + '"]'); if (element) { element.scrollIntoView({ block: 'start', behavior: 'smooth' }); setActive(id) } }
   const track = () => { const top = scroll.current?.getBoundingClientRect().top ?? 0; let current = outline[0]?.id; for (const h of outline) { const el = scroll.current?.querySelector('[data-id="' + CSS.escape(h.id) + '"]'); if (el && el.getBoundingClientRect().top <= top + 140) current = h.id } setActive(current || '') }
   const paste = async (event?: React.ClipboardEvent) => {
@@ -348,7 +398,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const attempt = ++epoch.current, captured = { ...(retry?.captured || context.range || {...selection.current,text:'',from:0,to:0}) }, fingerprint = retry?.fingerprint || (context.range?pinnedSelection.current?.fingerprint:undefined) || JSON.stringify(editor.document), requestId = crypto.randomUUID()
     if(!retry&&context.range&&pinnedSelection.current){const range=editor.getExtension(NoteAiSelection)?.currentRange();Object.assign(captured,range?{...range,text:editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n')}:{from:0,to:0,text:''})}
     const targetPayloads=new Map(context.components.map(item=>[item.blockId,editor.getBlock(item.blockId)?.props.payload]))
-    const component = !!draftBlockId || noteComponentRequest(prompt)
+    const component = !!draftBlockId
     const selectedResearch=context.scope==='selection'?context.components.filter(item=>item.type==='research'):[]
     const targetBlockId=component&&selectedResearch.length===1&&/(修改|改为|改成|调整|更新|替换|重做|重绘|重新生成|重新制作)/u.test(prompt)?selectedResearch[0]?.blockId:undefined
     engage()
@@ -370,9 +420,16 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       }
       if(pending)activeGeneration.current={requestId,blockId:pending,expected:editor.getBlock(pending).props.payload}
       publishTask(requestId,'generating')
-      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
+      capabilityFingerprint.current=noteCapabilityFingerprint(snapshot())
+      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt) return
       if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
+      // Legacy component results still honor explicit creation after the generic
+      // conversation loop has completed; they never bypass capability planning.
+      if(!pending&&result.kind==='component'&&!result.targetBlockId&&noteComponentRequest(prompt)){
+        const reference=captured.cursor?editor.getBlock(captured.cursor):editor.getTextCursorPosition().block
+        pending=editor.insertBlocks([{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}],reference||editor.getTextCursorPosition().block,'after')[0].id
+      }
       let completedBlock=''
       if(draftBlockId&&result.kind==='conversation'){
         const previous=JSON.parse(editor.getBlock(pending).props.payload);editor.updateBlock(pending,{props:{payload:JSON.stringify({...previous,generationStatus:'draft',generationDetail:result.markdown})}});publishTask(requestId,'replied',{result})
@@ -385,7 +442,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         const updated={...original,...result.node,id:original.id.startsWith('note-component-')?original.id:'note-component-'+crypto.randomUUID(),noteSize:original.noteSize};delete updated.noteReply;delete updated.excerpt
         editor.updateBlock(current.id,{props:{payload:JSON.stringify(updated)}})
         completedBlock=current.id;publishTask(requestId,'accepted',{result});changed();requestAnimationFrame(()=>locate(current.id))
-      }else if (component && result.kind === 'component' && editor.getBlock(pending)) {
+      }else if (pending && result.kind === 'component' && editor.getBlock(pending)) {
         publishTask(requestId,'accepted',{result}); const previous=JSON.parse(editor.getBlock(pending).props.payload); editor.updateBlock(pending, { props: { payload: JSON.stringify({...result.node,id:previous.id,noteLibrary:true,noteSize:previous.noteSize}) } }); completedBlock=pending;changed(); requestAnimationFrame(() => locate(pending))
       } else {
         if(draftBlockId)throw Error(t("组件生成未返回有效内容，请重试。"))
@@ -506,6 +563,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
   const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("正在生成内容…")}</span><button onClick={stop}>{t("停止")}</button></div> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
       {preview ? <SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? t("创建的研究组件") : t("内容预览")}</strong><button aria-label={t("放弃建议")} onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>{t("替换所选")}</button> : null}<button onClick={() => apply(false)}>{t("添加至正文")}</button><button onClick={regenerate}>{t("重新撰写")}</button><button onClick={discardPreview}>{t("放弃")}</button></>}>
+        {preview.result.capabilitySummary?<div className="en-capability-receipts" role="status">{preview.result.capabilitySummary}</div>:null}
         {preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
       </SuggestionPanel> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>

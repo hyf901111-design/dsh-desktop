@@ -10,11 +10,11 @@ export async function gatherNoteComponentSnapshots(content:NoteContent,bridge:No
  return blockIds.length?bridge.request('component-snapshots',{sessionId,blockIds}):[]
 }
 
-export async function exportNoteWithSnapshots(options:{snapshot():NoteContent;bridge:NotesBridge;sessionId:string;format:string;locale?:string;current():boolean}):Promise<unknown>{
+export async function exportNoteWithSnapshots(options:{snapshot():NoteContent;bridge:NotesBridge;sessionId:string;format:string;locale?:string;path?:string;executionId?:string;current():boolean}):Promise<unknown>{
  if(!options.current())throw Error('笔记会话已变化，请重新打开笔记后导出。')
  const fingerprint=JSON.stringify(options.snapshot()),content=JSON.parse(fingerprint) as NoteContent
  const snapshots=options.format==='md'?undefined:await gatherNoteComponentSnapshots(content,options.bridge,options.sessionId)
  if(!options.current())throw Error('笔记会话已变化，请重新打开笔记后导出。')
  if(JSON.stringify(options.snapshot())!==fingerprint)throw Error('笔记内容已变化，请重新导出以保持正文与组件一致。')
- return options.bridge.request('export',{sessionId:options.sessionId,format:options.format,locale:options.locale,content,...snapshots?{snapshots}:{}})
+ return options.bridge.request('export',{sessionId:options.sessionId,format:options.format,locale:options.locale,content,...options.path?{path:options.path}:{},...options.executionId?{executionId:options.executionId}:{},...snapshots?{snapshots}:{}})
 }

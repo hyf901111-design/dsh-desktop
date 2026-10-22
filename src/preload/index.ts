@@ -218,6 +218,7 @@ function initializeUi(): void {
   let noteIdentityEpoch=0
   document.addEventListener('sherlock:notes-history-request',event=>{const sessionId=(event as CustomEvent).detail?.sessionId,epoch=noteIdentityEpoch;if(typeof sessionId!=='string')return;void ipcRenderer.invoke('notes:request','conversation-load',{sessionId}).then(value=>{if(epoch!==noteIdentityEpoch)return;noteOwners.set(sessionId,value.owner);document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId,rows:value.rows}}))}).catch(()=>{})})
 
+  ipcRenderer.on('notes:capability-action',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:value}))})
   ipcRenderer.on('notes:progress',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:value}))})
   ipcRenderer.on('notes:menu-event',(_event,value)=>{if(value?.owner&&value.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:value}))})
   ipcRenderer.on('notes:component-data-action',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId)||value?.cancel)document.dispatchEvent(new CustomEvent('sherlock:notes-component-data-action',{detail:value}))})

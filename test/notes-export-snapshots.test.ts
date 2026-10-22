@@ -27,7 +27,7 @@ const componentNote:NoteContent={title:'带组件笔记',yjs:'',blocks:[
 ]} as any
 const snapshots=[snapshot('attachment',600,300),snapshot('chart')]
 let directory:string
-beforeEach(async()=>{vi.clearAllMocks();directory=await mkdtemp(join(tmpdir(),'note-export-snapshots-'))})
+beforeEach(async()=>{vi.resetAllMocks();directory=await mkdtemp(join(tmpdir(),'note-export-snapshots-'))})
 afterEach(async()=>{await rm(directory,{recursive:true,force:true})})
 
 it('embeds component PNGs in passive PDF HTML at their persisted nested positions',()=>{
@@ -107,12 +107,13 @@ it('requires snapshots for saved PDF and Word exports, and preserves cancel and 
  vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({canceled:true,filePath:''})
  expect(await saveNoteExport({format:'docx',content:componentNote,snapshots},()=>true)).toEqual({status:'cancelled'})
  const destination=join(directory,'guarded.docx')
- vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({canceled:false,filePath:destination})
+ const dialogsBeforeDenied=vi.mocked(dialog.showSaveDialog).mock.calls.length
  await expect(saveNoteExport({format:'docx',content:componentNote,snapshots},()=>false)).rejects.toThrow('账号已变化')
+ expect(vi.mocked(dialog.showSaveDialog).mock.calls.length).toBe(dialogsBeforeDenied)
  await expect(stat(destination)).rejects.toMatchObject({code:'ENOENT'})
  const wordPath=join(directory,'real.docx')
  vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({canceled:false,filePath:wordPath})
- expect(await saveNoteExport({format:'docx',content:componentNote,snapshots},()=>true)).toEqual({status:'saved'})
+ expect(await saveNoteExport({format:'docx',content:componentNote,snapshots},()=>true)).toEqual({status:'saved',path:wordPath})
  const saved=await JSZip.loadAsync(await readFile(wordPath));expect(Object.keys(saved.files).some(name=>name.startsWith('word/media/'))).toBe(true)
 })
 
@@ -134,9 +135,14 @@ it('prints large HTML from a private temporary file and removes it after success
  let fail=false
  vi.mocked(BrowserWindow).mockImplementation(function(){return {loadFile:async(path:string)=>{temporaryPaths.push(path);const file=await stat(path);expect(file.mode&0o777).toBe(0o600);expect(file.size).toBeGreaterThan(10*1024*1024);expect(await readFile(path,'utf8')).toContain('data:image/png;base64,')},webContents:{setWindowOpenHandler:()=>{},printToPDF:async()=>{if(fail)throw Error('ERR_INVALID_URL (-300): data:text/html;private-data');return pdf}},destroy:()=>{},isDestroyed:()=>false} as any})
  vi.mocked(dialog.showSaveDialog).mockResolvedValue({canceled:false,filePath:destination})
- expect(await saveNoteExport({format:'pdf',content:componentNote,snapshots:largeSnapshots},()=>true)).toEqual({status:'saved'})
+ expect(await saveNoteExport({format:'pdf',content:componentNote,snapshots:largeSnapshots},()=>true)).toEqual({status:'saved',path:destination})
  expect(await readFile(destination)).toEqual(pdf)
  fail=true
  await expect(saveNoteExport({format:'pdf',content:componentNote,snapshots:largeSnapshots},()=>true)).rejects.toThrow(/^PDF 生成失败/)
  for(const path of temporaryPaths)await expect(stat(path)).rejects.toMatchObject({code:'ENOENT'})
+})
+it('omits a hidden component title from the printed document while retaining its actual snapshot and text',()=>{
+ const hidden=JSON.parse(JSON.stringify(componentNote));hidden.blocks[1].props.payload=JSON.stringify({...JSON.parse(hidden.blocks[1].props.payload),notePresentation:{theme:'enterprise',titleBar:false}})
+ const html=notePrintHtml(hidden,snapshots)
+ expect(html).not.toContain('<h2>季度趋势');expect(html).toContain('data:image/png;base64,');expect(html).toContain('组件之前');expect(html).toContain('嵌套正文')
 })

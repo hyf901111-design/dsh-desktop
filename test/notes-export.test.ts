@@ -52,3 +52,8 @@ it('keeps imported attachment names in every export without leaking preview capa
  const c={title:'附件',yjs:'',blocks:[{id:'f',type:'attachment',props:{payload:JSON.stringify({name:'数据.xlsx',path:'/private/data.xlsx',authorizationId:'secret-grant'})}}]}
  for(const result of [noteMarkdown(c),notePrintHtml(c),await(await JSZip.loadAsync(await noteWordBuffer(c))).file('word/document.xml')!.async('string')]){expect(result).toContain('数据.xlsx');expect(result).not.toContain('/private');expect(result).not.toContain('secret-grant')}
 })
+it('writes an explicitly requested absolute path and returns the actual artifact path',async()=>{
+ vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({canceled:true,filePath:''} as any)
+ const {mkdtemp,readFile,rm}=await import('node:fs/promises'),{tmpdir}=await import('node:os'),{join}=await import('node:path'),root=await mkdtemp(join(tmpdir(),'notes-explicit-')),path=join(root,'export.md')
+ try{expect(await saveNoteExport({format:'md',content,path},()=>true)).toEqual({status:'saved',path});expect(await readFile(path,'utf8')).toContain(content.title);await expect(saveNoteExport({format:'md',content,path:'relative.md'},()=>true)).rejects.toThrow('绝对路径')}finally{await rm(root,{recursive:true,force:true})}
+})

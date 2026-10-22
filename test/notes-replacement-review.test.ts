@@ -18,3 +18,7 @@ it('shows the marked fragment and its actual updated counterpart without surroun
  const{replacementComparison}=await import('../src/preload/notes/replacement-review')
  expect(replacementComparison({original:'前面的内容保持不变；莲芯性偏温热，适合上火的人泡水。',replacement:'前面的内容保持不变；莲芯性偏寒凉，适合心火旺的人泡水。',anchorBefore:'莲芯性偏温热，适合上火的人泡水'})).toEqual({original:'莲芯性偏温热，适合上火的人泡水',replacement:'莲芯性偏寒凉，适合心火旺的人泡水'})
 })
+it('does not split a surrogate pair when a marked comparison also includes another adjacent edit',async()=>{
+ const{replacementComparison}=await import('../src/preload/notes/replacement-review')
+ expect(replacementComparison({original:'🐱今天晴天。待校对成度。',replacement:'🐶今天晴天。待校对程度。',anchorBefore:'成度'})).toEqual({original:'🐱今天晴天。待校对成度',replacement:'🐶今天晴天。待校对程度'})
+})

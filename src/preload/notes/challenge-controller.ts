@@ -9,6 +9,7 @@ import {challengeDirectReplacement,challengeReplacementBody,challengeReplacement
 import {challengeDocumentBlocks,NoteChallengeScheduler,type ChallengeScheduleState} from './challenge-scheduler'
 import {findChallengeQuote,replaceChallengeQuote,challengeThreadQuote,reuseSpellingAnchors} from './challenge-anchors'
 import {useNoteReplacementReviews} from './replacement-review'
+import {paragraphChallengeFeedback,type ParagraphReview} from './challenge-coverage'
 
 export const CHALLENGE_KIND='ework-challenge-v1',CHALLENGE_USER='ework-ai-challenge'
 type ChallengeAnchor={quote:string;sourceText:string}
@@ -59,7 +60,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const busyId=pending?.threadId,actionKind=pending?.kind
  const [phase,setPhase]=useState<ChallengeScheduleState['phase']>('off')
  const running=phase==='running'||!!pending
- const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,string>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0),picker=useRef({open:false,initialLevel:readLevel()})
+ const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,ParagraphReview>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0),picker=useRef({open:false,initialLevel:readLevel()})
  const cancelAction=(id?:string)=>{const current=action.current;if(!current||id&&current.threadId!==id)return;action.current=undefined;current.controller.abort();if(live.current)setPending(undefined)}
  const setAutomaticResolution=(threadId:string,resolved:boolean)=>{let promise:Promise<void>|undefined;editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);promise=ai[resolved?'resolveThread':'unresolveThread']({threadId})});return promise!}
  const blocks=()=>challengeDocumentBlocks(editor.document)
@@ -78,7 +79,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  }).sort((a,b)=>a.position-b.position).map(item=>item.thread)
  const publish=()=>{
   const current=blocks(),valid=visibleThreads()
-  send('state',{sessionId,level:readLevel(),checks:state.current.checks,coverage:{checked:current.filter(b=>covered.current.get(b.id)===b.text).length,total:current.length},issues:valid.map(thread=>({threadId:thread.id,...thread.metadata.issue}))})
+  send('state',{sessionId,level:readLevel(),checks:state.current.checks,coverage:{checked:current.filter(b=>{const record=covered.current.get(b.id);return record?.text===b.text&&record.title===latest.current.title&&record.level===readLevel()}).length,total:current.length},issues:valid.map(thread=>({threadId:thread.id,...thread.metadata.issue}))})
  }
  const state=useRef({checks:[] as ChallengeCheck[]})
  const refresh=()=>{if(!live.current)return;setThreads(visibleThreads());setRevision(v=>v+1);publish()}
@@ -94,7 +95,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    const issue=thread.metadata?.issue
    return thread.metadata?.kind===CHALLENGE_KIND&&!thread.resolved&&!thread.deletedAt&&issue?[{blockId:issue.blockId,quote:issue.quote}]:[]
   }),onResult:async(result,captured)=>{
-   for(const id of result.coveredBlockIds){const b=captured.blocks.find(v=>v.id===id);if(b)covered.current.set(id,b.text)}
+   if(!live.current||!active()||readLevel()!==captured.level||fingerprint(latest.current.title,blocks())!==captured.key)return
    const anchors=[...ai.getThreads().values()].flatMap(thread=>thread.metadata?.kind===CHALLENGE_KIND&&!thread.resolved&&!thread.deletedAt&&findChallengeQuote(editor,thread.metadata.issue.blockId,thread.metadata.issue.quote)?[thread.metadata.issue]:[])
    for(const issue of reuseSpellingAnchors(result.issues,anchors)){
     if(!live.current||!active()||readLevel()===0||fingerprint(latest.current.title,blocks())!==captured.key)break
@@ -124,6 +125,12 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     const current=findChallengeQuote(editor,issue.blockId,issue.quote)
     if(!current||!live.current||!active()||readLevel()===0||fingerprint(latest.current.title,blocks())!==captured.key){await ai.resolveThread({threadId:thread.id});continue}
     editor.transact((tr:any)=>tr.setMeta('addToHistory',false).addMark(current.from,current.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})))
+   }
+   if(live.current&&active()&&readLevel()===captured.level&&fingerprint(latest.current.title,blocks())===captured.key){
+    // Fail closed for an older host which cannot attest full tier completion.
+    const complete=new Set(result.completeBlockIds??[]),ids=new Set(captured.blocks.map(b=>b.id))
+    for(const id of covered.current.keys())if(!ids.has(id))covered.current.delete(id)
+    for(const id of result.coveredBlockIds){const block=captured.blocks.find(b=>b.id===id);if(block)covered.current.set(id,{text:block.text,title:captured.title,level:captured.level,complete:complete.has(id),issueCount:result.issues.filter(issue=>issue.blockId===id).length})}
    }
    refresh()
   },onState:value=>{if(!live.current)return;setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish()}})
@@ -175,7 +182,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const applyReplacement=async(threadId:string,commentId:string)=>{
   if(action.current||latest.current.busy||!active()||dismissed.current.has(threadId))return
   const thread=ai.getThreads().get(threadId),comment=thread?.comments.find(c=>c.id===commentId&&!c.deletedAt);let suggestion=comment?.metadata?.challengeReplacement as ChallengeReplacement|undefined
-  if(!thread||thread.resolved||thread.deletedAt||thread.metadata?.kind!==CHALLENGE_KIND||!comment||!suggestion||suggestion.status!=='pending')return
+  if(!thread||thread.resolved||thread.deletedAt||thread.metadata?.kind!==CHALLENGE_KIND||!comment||!suggestion||!['pending','reverted'].includes(suggestion.status))return
   const cleanBody=challengeReplacementBody(suggestion.quote,suggestion.replacement)
   if(cleanBody.error){await ai.addComment({threadId,comment:{body:body('这条建议将审查提醒写入了正文，请重新优化；提醒仅应保留在评论中。')}});latest.current.persist();refresh();return}
   suggestion={...suggestion,replacement:cleanBody.replacement}
@@ -250,8 +257,9 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   if(review.autoResolved&&thread?.resolved)await setAutomaticResolution(review.threadId,false)
   if(thread?.metadata?.kind===CHALLENGE_KIND&&source&&findChallengeQuote(editor,review.blockId,review.anchorBefore))metadata(review.threadId,{issue:{...thread.metadata.issue,quote:review.anchorBefore},sourceText:source.text,replacementResolutionHistory:replacementResolutionHistory((thread.metadata as any).replacementResolutionHistory,{sourceText:source.text.replace(review.original,review.replacement),resolved:true},{sourceText:source.text,resolved:false}),anchorHistory:anchorHistory(thread.metadata.anchorHistory,{quote:thread.metadata.issue.quote,sourceText:source.text.replace(review.original,review.replacement)},{quote:review.anchorBefore,sourceText:source.text})})
   const comment=review.commentId?thread?.comments.find(c=>c.id===review.commentId&&!c.deletedAt):undefined
-  if(comment?.metadata?.challengeReplacement)await ai.updateComment({threadId:review.threadId,commentId:comment.id,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...comment.metadata.challengeReplacement,status:'reverted'}}}})
+  if(comment?.metadata?.challengeReplacement)await ai.updateComment({threadId:review.threadId,commentId:comment.id,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...comment.metadata.challengeReplacement,anchorQuote:review.anchorBefore,quote:review.original,sourceText:source?.text??comment.metadata.challengeReplacement.sourceText,documentKey:fingerprint(latest.current.title,blocks()),status:'reverted'}}}})
   settle.current=Date.now()+10000;window.setTimeout(()=>{if(live.current)sync()},10010);sync();refresh()
  }})
- return {replacementReviews,level,marginExpanded,threads,selected,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
+ const paragraphFeedback=paragraphChallengeFeedback(covered.current,blocks(),options.title,level,threads.map(thread=>({id:thread.id,blockId:thread.metadata.issue.blockId})))
+ return {paragraphFeedback,replacementReviews,level,marginExpanded,threads,selected,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
 }

@@ -2,13 +2,14 @@ import {useEffect,useMemo,useRef,useState} from 'react'
 import type {NoteAiResult,NotesBridge} from '../../shared/workspace-notes'
 
 type Options={sessionId:string;bridge:Pick<NotesBridge,'request'>;editor:any;current():boolean;persist():Promise<unknown>;changed?():void;update?(blockId:string,node:Record<string,any>):void;notify?():void}
+type GenerationContext={images?:any[];context?:any;title?:string;markdown?:string;selection?:string}
 type Job={blockId:string;requestId:string;expected:string;controller:AbortController;timer:ReturnType<typeof setTimeout>;phase:'generating'|'binding'}
 const withoutSize=(node:any)=>JSON.stringify({...node,noteSize:undefined})
 const stopped='生成已停止，可调整需求后重试。'
 
 /** Card jobs own only their block; conversation and composer state stay outside this controller. */
 export function createInlineComponentGeneration(options:Options){
- const jobs=new Map<string,Job>();let disposed=false
+ const jobs=new Map<string,Job>(),waiters=new Map<string,(receipt:any)=>void>();let disposed=false
  const active=(job:Job)=>!disposed&&!job.controller.signal.aborted&&jobs.get(job.blockId)===job&&options.current()
  const current=(job:Job)=>{
   if(!active(job))return
@@ -26,7 +27,10 @@ export function createInlineComponentGeneration(options:Options){
  }
  const finish=(job:Job,notify=true)=>{
   clearTimeout(job.timer)
-  if(jobs.get(job.blockId)===job){jobs.delete(job.blockId);if(notify)options.notify?.()}
+  if(jobs.get(job.blockId)===job){jobs.delete(job.blockId);if(notify)options.notify?.()
+   const done=waiters.get(job.blockId);if(done){waiters.delete(job.blockId);let node:any;try{node=JSON.parse(options.editor.getBlock(job.blockId)?.props.payload)}catch{}
+    done({status:job.controller.signal.aborted?'cancelled':node?.containerSpec&&!['failed','interrupted'].includes(node.generationStatus)?'succeeded':node?.generationStatus==='draft'?'pending':'failed',blockId:job.blockId,message:node?.generationError||node?.generationDetail})}
+  }
  }
  const cancel=(job:Job,status?:'interrupted'|'failed',message=stopped,notify=true)=>{
   if(jobs.get(job.blockId)!==job)return
@@ -34,9 +38,9 @@ export function createInlineComponentGeneration(options:Options){
   job.controller.abort();finish(job,notify)
   void options.bridge.request('stop',{sessionId:options.sessionId,requestId:job.requestId}).catch(()=>{})
  }
- const run=async(job:Job,prompt:string)=>{
+ const run=async(job:Job,prompt:string,source:GenerationContext={})=>{
   try{
-   const result:NoteAiResult=await options.bridge.request('generate',{sessionId:options.sessionId,requestId:job.requestId,prompt,images:[],title:'',markdown:'',selection:'',context:{scope:'none',components:[]},mode:'component',entryPoint:'component'})
+   const result:NoteAiResult=await options.bridge.request('generate',{sessionId:options.sessionId,requestId:job.requestId,prompt,images:[],title:'',markdown:'',selection:'',context:{scope:'none',components:[]},...source,mode:'component',entryPoint:'component'})
    if(!active(job))return
    const latest=current(job);if(!latest){cancel(job);return}
    if(result.kind==='conversation'){write(job,{...latest.node,generationStatus:'draft',generationDetail:result.markdown,generationError:undefined});return}
@@ -56,9 +60,14 @@ export function createInlineComponentGeneration(options:Options){
    if(latest)write(job,{...latest.node,generationStatus:'failed',generationError:(error as Error).name==='AbortError'?stopped:(error as Error).message})
   }finally{finish(job)}
  }
- return {
+ const api={
+  startAndWait:async(blockId:string,prompt:string,source?:GenerationContext):Promise<any>=>{
+   if(jobs.has(blockId)||waiters.has(blockId))return {status:'failed',message:'此组件正在生成。'}
+   let done!:(value:any)=>void;const completion=new Promise(resolve=>{done=resolve});waiters.set(blockId,done)
+   const started=api.start(blockId,prompt,source);if(!started.ok){waiters.delete(blockId);return {status:'failed',message:started.error}}return completion
+  },
   activate:()=>{disposed=false},
-  start:(blockId:string,prompt:string):{ok:boolean;error?:string}=>{
+  start:(blockId:string,prompt:string,source?:GenerationContext):{ok:boolean;error?:string}=>{
    if(disposed||!options.current()||!options.editor.isEditable)return {ok:false,error:'笔记当前不可编辑。'}
    // Deleted or independently replaced cards must not occupy a concurrency slot.
    for(const job of [...jobs.values()])if(!current(job))cancel(job)
@@ -70,7 +79,7 @@ export function createInlineComponentGeneration(options:Options){
    const requestId=crypto.randomUUID(),job:Job={blockId,requestId,expected:block.props.payload,controller:new AbortController(),phase:'generating',timer:setTimeout(()=>cancel(job,'failed','组件创建超时，可调整需求后重试。'),240000)}
    jobs.set(blockId,job)
    if(!write(job,{...node,containerPrompt:prompt.trim(),generationStatus:'running',generationError:undefined,generationDetail:undefined,generationTaskId:requestId,generationChildSessionId:undefined,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:''})){finish(job);return {ok:false,error:'组件已变化，较新内容已保留。'}}
-   options.notify?.();void run(job,prompt.trim());return {ok:true}
+   options.notify?.();void run(job,prompt.trim(),source);return {ok:true}
   },
   stop:(blockId:string)=>{const job=jobs.get(blockId);if(!job)return {ok:false};cancel(job,'interrupted');return {ok:true}},
   isGenerating:(blockId:string)=>{const job=jobs.get(blockId);return !!job&&!!current(job)},
@@ -84,6 +93,7 @@ export function createInlineComponentGeneration(options:Options){
   },
   dispose:()=>{for(const job of [...jobs.values()])cancel(job,undefined,stopped,false);disposed=true}
  }
+ return api
 }
 
 export function useInlineComponentGeneration(options:Options){
@@ -95,5 +105,5 @@ export function useInlineComponentGeneration(options:Options){
   document.addEventListener('sherlock:notes-generation-progress',progress);document.addEventListener('sherlock:notes-reset',reset)
   return()=>{document.removeEventListener('sherlock:notes-generation-progress',progress);document.removeEventListener('sherlock:notes-reset',reset);controller.dispose()}
  },[controller])
- return {start:controller.start,stop:controller.stop,isGenerating:controller.isGenerating,version}
+ return {start:controller.start,startAndWait:controller.startAndWait,stop:controller.stop,isGenerating:controller.isGenerating,version}
 }
