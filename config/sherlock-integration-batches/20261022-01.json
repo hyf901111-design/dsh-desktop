@@ -328,29 +328,37 @@
         "schemaVersion": 1,
         "featureName": "笔记数据同轮配置与刷新的可信版本衔接",
         "branch": "codex/feat/client-capabilities-followup-20261022",
-        "baseCommit": "3dec09d8d1bd2999d9c6ba0040b0669a5e10aea9",
-        "tipCommit": "6acf9115c3a46723146f439ed034404835a0c3af",
+        "baseCommit": "6acf9115c3a46723146f439ed034404835a0c3af",
+        "tipCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
         "commits": [
           {
-            "commit": "6acf9115c3a46723146f439ed034404835a0c3af",
+            "commit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
             "parents": [
-              "3dec09d8d1bd2999d9c6ba0040b0669a5e10aea9"
+              "6acf9115c3a46723146f439ed034404835a0c3af"
             ],
-            "subject": "修复笔记数据配置后同轮刷新的版本衔接"
+            "subject": "支持会话批量调整笔记组件尺寸并复用手动拖柄规则"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/2026-10-22-client-capability-inventory.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/client-capabilities.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-kraken-source.js"
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
           },
           {
-            "status": "A",
-            "path": "src/main/notes/data-revisions.ts"
+            "status": "M",
+            "path": "src/main/notes/capability-bridge.ts"
           },
           {
             "status": "M",
@@ -358,15 +366,31 @@
           },
           {
             "status": "M",
-            "path": "test/notes-data-capability.test.ts"
+            "path": "src/preload/notes/client-capability-actions.ts"
           },
           {
             "status": "A",
-            "path": "test/notes-data-revisions.test.ts"
+            "path": "src/preload/notes/component-size-state.ts"
           },
           {
             "status": "M",
-            "path": "test/notes-kraken-source.test.js"
+            "path": "src/preload/notes/component-size.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capabilities.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capabilities-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capability-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-component-layout.test.ts"
           }
         ],
         "checks": [
@@ -375,17 +399,17 @@
               "npx",
               "vitest",
               "run",
-              "test/notes-data-revisions.test.ts",
-              "test/notes-data-capability.test.ts",
+              "test/notes-client-capabilities-browser.test.js",
+              "test/notes-component-layout.test.ts",
               "test/notes-client-capability-service.test.ts",
-              "test/notes-kraken-source.test.js",
-              "test/notes-client-capability-runtime.test.js",
+              "test/notes-client-capability-bridge.test.ts",
+              "test/client-capabilities.test.js",
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "5文件115项通过：生产loop同批configure→旧revision refresh红转绿、真实host/engine外部rev3仍CAS拒绝、新generation隔离、连续本轮版本边、失败/foreign block/node/无inspect/非+1回执不建边、原source指导与服务能力保持。",
-            "verifiedCommit": "6acf9115c3a46723146f439ed034404835a0c3af",
-            "completedAt": "2026-10-22T15:53:27.160411Z",
+            "summary": "5文件82项通过，包括实际NotesEditor两组件全篇/多选、隐藏组件父宽测量、full/auto清除轴、数值边界、GUI键盘拖柄同源、Yjs保存重挂、英中切换、旧选区/正文拒绝；共享helper/真实NotesStore/service/bridge取消、幂等和保存失败准确回执。",
+            "verifiedCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
+            "completedAt": "2026-10-22T19:20:26.749Z",
             "timeoutMs": 120000
           },
           {
@@ -395,9 +419,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript检查通过，src/main/notes/service.ts实际导入新data-revisions.ts，新增helper与测试均参与编译。",
-            "verifiedCommit": "6acf9115c3a46723146f439ed034404835a0c3af",
-            "completedAt": "2026-10-22T15:53:27.334489Z",
+            "summary": "TypeScript检查通过，新共享component-size-state及Notes handler实际导入，源码和新增测试参与编译。",
+            "verifiedCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
+            "completedAt": "2026-10-22T19:20:26.749Z",
             "timeoutMs": 120000
           },
           {
@@ -408,189 +432,30 @@
             ],
             "outcome": "passed",
             "summary": "diff检查通过，源码工作树干净。",
-            "verifiedCommit": "6acf9115c3a46723146f439ed034404835a0c3af",
-            "completedAt": "2026-10-22T15:53:34.095346Z",
+            "verifiedCommit": "01666f059d5a7f1eb84d74ea2dde0d9744200726",
+            "completedAt": "2026-10-22T19:20:26.749Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "本次只改host请求链和模型能力/生成指导，无renderer视觉变更。生产NotesService→真实renderer lease/sink→独立Note数据engine的loop回归通过；未操作GUI或构建共享客户端，原生复验由集成主会话执行。"
+          "outcome": "passed",
+          "summary": "headless Chromium运行真实NotesEditor（模型/IPC外部边界为测试替身），17项浏览器组合全部通过，其中3项新增layout覆盖全篇与多选两组件、full/auto、可见及隐藏测量/数值clamp、手动Home/End、保存Yjs重挂、语言切换与旧选区/正文拒绝。未操作共享客户端GUI或构建；集成后原生验收由root执行。"
         },
         "acceptanceCriteria": [
-          "每个generate请求独立维护可信版本边，只在本次成功inspect后的同node、同捕获block、真实saved configure回执、exact revision+1且effect与summary一致时建立。",
-          "同轮refresh沿自己已确认的configure边衔接旧revision，仍把新版本提交原service/engine CAS；用户/其他操作再递增到3时拒绝且不取数、不覆盖原组件。",
-          "无当前inspect、失败/取消/未保存/foreign block或node/跳跃版本/新请求历史回执均不能授权版本推进；重新inspect清旧边，configure本身不做旧版本重写。",
-          "普通组件apply不经过此handler；不重新取绑定、不猜当前revision、不修改engine版本门禁、来源权限或参数。",
-          "能力目录明确configure递增版本，后续应使用成功configure回执data.revision，依赖读取结果时拆为下一批。",
-          "Kraken新生成指导不在正文或来源页脚写死刷新频率，明确实际周期以宿主设置为准且保存时间不是报价时点。"
+          "新增notes.components.layout，只在Notes普通会话按scope note或当前捕获selected研究组件执行；至少指定width/full或height/auto，未知参数、非数值和非正数拒绝。",
+          "GUI拖柄与会话共享updateNoteComponentLayout/bounds/测量及undo事务；full/auto仅清除对应noteSize轴，数值四舍五入，实际可测宽度限制及高度180–2400保持；隐藏目标从可见祖先测量，无可测布局则保留请求宽度，渲染时按当前可用宽约束。",
+          "整篇递归和明确多选只改noteSize，正文富文本、containerSpec及其他payload字段、theme、对齐和其他block props保持；返回各目标实际保存尺寸。",
+          "沿用账号/session/document/generation/正文指纹和选区检查；旧lease、较新输入、取消后不继续旧操作；真实saved后确认成功，已应用但保存失败如实保留applied，停止后续依赖。",
+          "结构化effect kind layout贯通host桥、即时回执、历史和英中显示，保留已确认副作用与请求幂等；能力目录现11项。",
+          "本轮只补Notes研究组件尺寸，不将跨模式全局目录、批量data、view commands或附件尺寸未实现范围声称为已完成。"
         ],
         "risks": [
-          "root已独立审阅最终产品源码，并独立运行data-revisions/data-capability两文件48项通过，原日志复制为04-independent-root.log；这是提交前相同源码的独立复核，不冒充新增exact-tip UI验收。",
-          "原生日志仅在父会话b727...授权的23:40–23:44窗口只读提取：inspect revision1、configure revision2、refresh失败；历史不保存calls参数，未从requestId推断实传值。生产loop另以旧inspect revision1的同批调用红测复现。",
-          "既有已保存卡片内静态每分钟页脚未被改写；本轮只防止未来生成写死周期，不宣称已补齐Notes host状态页脚。",
-          "没有GUI、外部取数、共享构建、集成、发布或推送；交接后保持精确tip及源码干净等待集成。"
+          "独立peer对exact01666f05只读复核GUI共享尺寸/整批preflight/范围与身份门禁/IPC effect取消保存/幂等/英中回执，无新增阻断；独立helper10项通过，8源码hash、日志及有限范围声明见05-independent-review.json/log。",
+          "新能力未在Electron原生客户端独立验收；此feature按约定不构建共享客户端、不GUI、不取数、不推送或发布。",
+          "宽度无法测量的未挂载组件暂存请求值，由现有渲染上下限在展示时约束；回执data反映实际保存值，不冒称隐藏组件已渲染到该宽度。",
+          "现有workbench-locale重复key会产生esbuild warning，非本轮新增且聚焦检查通过；未扩展修改该模块。"
         ],
-        "generatedAt": "2026-10-22T15:54:25.558291Z"
-      },
-      "merged": {
-        "mergeCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-        "verificationCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "71398dd95c7e561c0c8ad82bd4318a31316c05a6",
-            "completedAt": "2026-10-22T15:55:30.533Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-22T15:55:30.533Z"
+        "generatedAt": "2026-10-22T19:20:26.749Z"
       }
     },
     {
