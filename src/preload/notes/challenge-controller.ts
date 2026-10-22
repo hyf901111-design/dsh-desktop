@@ -52,7 +52,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const busyId=pending?.threadId,actionKind=pending?.kind
  const [phase,setPhase]=useState<ChallengeScheduleState['phase']>('off')
  const running=phase==='running'||!!pending
- const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,string>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0)
+ const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,string>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0),picker=useRef({open:false,initialLevel:readLevel()})
  const cancelAction=(id?:string)=>{const current=action.current;if(!current||id&&current.threadId!==id)return;action.current=undefined;current.controller.abort();if(live.current)setPending(undefined)}
  const blocks=()=>challengeDocumentBlocks(editor.document)
  const active=()=>{const root=latest.current.scroll.current?.closest<HTMLElement>('.en-root');return !latest.current.recovery&&(!root||!root.hidden&&root.style.display!=='none')&&document.visibilityState!=='hidden'&&document.hasFocus()}
@@ -78,7 +78,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   const current=latest.current
   let editingBlockId:string|undefined
   try{if(editor._tiptapEditor.view.hasFocus())editingBlockId=editor.getTextCursorPosition().block.id}catch{}
-  scheduler.current?.update({title:current.title,blocks:blocks(),active:active(),editingBlockId,composing:editor._tiptapEditor.view.composing,busy:current.busy||!!action.current||Date.now()<settle.current})
+  scheduler.current?.update({title:current.title,blocks:blocks(),active:active(),editingBlockId,composing:editor._tiptapEditor.view.composing,busy:current.busy||!!action.current||picker.current.open||Date.now()<settle.current})
  }
  useEffect(()=>{
   live.current=true
@@ -119,7 +119,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    refresh()
   },onState:value=>{if(!live.current)return;setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish()}})
   scheduler.current=s;sync();s.setLevel(readLevel())
-  const pref=(event:Y.YMapEvent<unknown>)=>{setLevelState(readLevel());setMarginExpandedState(readMarginExpanded());if(event.keysChanged.has('level')){if(!readLevel())cancelAction();s.setLevel(readLevel())}latest.current.persist();publish()}
+  const pref=(event:Y.YMapEvent<unknown>)=>{setLevelState(readLevel());setMarginExpandedState(readMarginExpanded());if(event.keysChanged.has('level')){if(!readLevel())cancelAction();s.setLevel(readLevel(),!picker.current.open)}latest.current.persist();publish()}
   const off=editor.onChange((_editor:any,{getChanges}:any)=>{
    // BlockNote attributes native Yjs history changes to "undo-redo". Only
    // remap blocks whose text this history action actually restored; ordinary
@@ -155,6 +155,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   return()=>{live.current=false;s.dispose();cancelAction();off();offSelection();offThreads();offComments();prefs.unobserve(pref);clearTimeout(settleTimer);document.removeEventListener('visibilitychange',visibility);document.removeEventListener('sherlock:workspace-surface-change',visibility);window.removeEventListener('focus',visibility);window.removeEventListener('blur',visibility);document.removeEventListener('compositionstart',composition,true);document.removeEventListener('compositionend',composition,true);latest.current.scroll.current?.removeEventListener('paste',pasted,true);latest.current.scroll.current?.removeEventListener('click',markClick,true);document.removeEventListener('sherlock:notes-challenge-locate',locate);document.removeEventListener('sherlock:notes-challenge-recheck',recheck)}
  },[editor,doc,bridge,sessionId])
  useEffect(()=>{if(options.busy||options.recovery)cancelAction();sync()},[options.title,options.busy,options.recovery])
+ const setPickerOpen=(open:boolean)=>{if(picker.current.open===open)return;if(open)picker.current={open,initialLevel:readLevel()};else picker.current.open=false;sync();if(!open&&readLevel()!==picker.current.initialLevel)scheduler.current?.recheck(true)}
  const levelChange=(value:ChallengeLevel)=>{if(!value)cancelAction();prefs.set('level',value)}
  const setMarginExpanded=(value:boolean)=>{dismissed.current.clear();comments.selectThread(undefined,false);setSelected(undefined);prefs.set('marginExpanded',value);setRevision(v=>v+1)}
  const close=(id:string)=>{if(action.current?.kind!=='optimize')cancelAction(id);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
@@ -220,5 +221,5 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   }catch{await append('没能完成，请重试')}
   finally{if(action.current===job){action.current=undefined;if(live.current){setPending(undefined);sync();refresh()}}}
  }
- return {level,marginExpanded,threads,selected,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
+ return {level,marginExpanded,threads,selected,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
 }

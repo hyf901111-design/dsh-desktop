@@ -761,7 +761,7 @@ it('lets a multi-paragraph review finish beyond the short single-block deadline 
     yield { type: 'text-delta', index: 0, text: JSON.stringify({ reviews: input.blocks.map(b => ({ blockId: b.id, issues: [] })) }) }
     yield { type: 'finish', reason: { kind: 'stop' } }
   }
-  const observed = generateNoteChallenge(f.ctx, { ...input, changedIds: ['a', 'b'], level: 1 }).then(result => ({result}), error => ({error}))
+  const observed = generateNoteChallenge(f.ctx, { ...input, changedIds: ['a', 'b'], level: 2 }).then(result => ({result}), error => ({error}))
   await ready; await vi.advanceTimersByTimeAsync(25001)
   const value = await observed
   expect(value.error).toBeUndefined()
@@ -777,7 +777,7 @@ it('caps the whole dense review at sixty seconds even when its provider ignores 
   const ready = new Promise(resolve => { started = resolve })
   f.ctx.llm.stream = async function* () { started(); await new Promise(() => {}); yield { type: 'text-delta', text: '{}' } }
   const blocks = Array.from({length:6}, (_,i) => ({id:'dense-'+i,type:'paragraph',text:'独立正文段落。'}))
-  const observed = generateNoteChallenge(f.ctx, {...input, blocks, changedIds:blocks.map(b=>b.id),level:1}).then(result=>({result}),error=>({error}))
+  const observed = generateNoteChallenge(f.ctx, {...input, blocks, changedIds:blocks.map(b=>b.id),level:2}).then(result=>({result}),error=>({error}))
   await ready; await vi.advanceTimersByTimeAsync(20001)
   let settled = false; observed.then(()=>{settled=true}); await Promise.resolve()
   expect(settled).toBe(false)
@@ -803,4 +803,15 @@ it('keeps explicit note-backed forecast arithmetic and unrelated obvious knowled
   ]}]})
   const result=await generateNoteChallenge(f.ctx,{...input,blocks:[{id:'a',type:'paragraph',text}]})
   expect(result.issues.map(i=>i.quote)).toEqual(['EPS20元','水在100摄氏度一定会结冰'])
+})
+
+it('limits relaxed automatic review to spelling even if the provider returns facts, logic and research advice',async()=>{
+ const {generateNoteChallenge}=await load(),f=fixture({reviews:[{blockId:'a',issues:[
+ {quote:'提胶',category:'typo',basis:'note',message:'应为“提交”。',evidence:[]},
+ {quote:'100摄氏度结冰',category:'uncertain',basis:'general-knowledge',message:'冰点是否有误？',evidence:[]},
+ {quote:'一定成功',category:'logic',basis:'note',message:'依据不足。',evidence:[]},
+ {quote:'提交报告',category:'grammar',basis:'note',message:'建议润色表达。',evidence:[]}
+ ]}]}),skills={list:vi.fn(async()=>[])};f.ctx.skills=skills
+ const result=await generateNoteChallenge(f.ctx,{...input,level:1,blocks:[{id:'a',type:'paragraph',text:'提胶并提交报告。水在100摄氏度结冰，所以一定成功。600519.SH 报告基准日20261020。预计2026年EPS76元。'}]})
+ expect(result.issues.map(i=>i.category)).toEqual(['typo']);expect(result.checks.some(c=>c.kind==='consensus')).toBe(false);expect(skills.list).not.toHaveBeenCalled()
 })

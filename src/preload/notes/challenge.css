@@ -63,3 +63,13 @@ body [data-ework-notes-session]:has(.en-challenge-tools) [data-srb-utilities]{fl
 @media(prefers-reduced-motion:reduce){.en-challenge-optimize-spinner{animation:none}}
 
 .en-root .en-challenge-card .en-challenge-reply>button:not(:disabled){background:var(--en-challenge-send-bg);color:var(--en-challenge-send-ink)}
+
+/* A masked one-pixel perimeter stays outside the label and never intercepts input. */
+@property --en-challenge-orbit-angle{syntax:"<angle>";inherits:false;initial-value:0deg}
+.en-challenge-tools .en-challenge-trigger{position:relative;isolation:isolate}
+.en-challenge-tools .en-challenge-trigger:hover:not(:disabled){background:var(--en-challenge-trigger-bg)}
+.en-challenge-trigger::before{content:"";position:absolute;inset:-1px;box-sizing:border-box;border-radius:inherit;padding:1.5px;pointer-events:none;opacity:0;background:conic-gradient(from var(--en-challenge-orbit-angle),#58d9f8,#9391ff 22%,#ed8bd8 46%,#ffd28e 66%,#78e4cb 84%,#58d9f8);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;transition:opacity 180ms ease}
+.en-challenge-trigger[aria-busy=true]::before{opacity:1;animation:en-challenge-orbit 2.4s linear infinite}
+.en-challenge-trigger[aria-busy=true]{box-shadow:0 0 7px rgb(130 144 255 / .16)}
+@keyframes en-challenge-orbit{to{--en-challenge-orbit-angle:360deg}}
+@media(prefers-reduced-motion:reduce){.en-challenge-trigger::before{transition:none}.en-challenge-trigger[aria-busy=true]::before{animation:none}}

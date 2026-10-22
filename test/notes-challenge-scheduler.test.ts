@@ -1,5 +1,5 @@
 import {afterEach,expect,it,vi} from 'vitest'
-import {NoteChallengeScheduler,challengeDocumentBlocks} from '../src/preload/notes/challenge-scheduler'
+import {NoteChallengeScheduler,challengeDocumentBlocks,CHALLENGE_LEVELS} from '../src/preload/notes/challenge-scheduler'
 import type {ChallengeRequest} from '../src/shared/notes-challenge'
 const blocks=(text='这是一段已经完成的研究判断。')=>[{id:'p',type:'paragraph',text}]
 const result={version:1 as const,issues:[],coveredBlockIds:['p'],checks:[]}
@@ -39,12 +39,12 @@ it('defaults off, waits for a stable pause and does not review formatting, comme
  s.setLevel(2);await vi.advanceTimersByTimeAsync(1999);expect(run).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledOnce()
  s.update({title:'文稿',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(60000);expect(run).toHaveBeenCalledOnce();expect(onResult).toHaveBeenCalledOnce();s.dispose()
 })
-it('waits for IME composition and the completed sentence, then enforces the level minimum interval',async()=>{
+it('waits for IME composition and a stable pause, then enforces the level minimum interval',async()=>{
  vi.useFakeTimers();const run=vi.fn(async()=>result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
  s.update({title:'',blocks:blocks('还没有写完'),editingBlockId:'p',composing:true,active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(10000);expect(run).not.toHaveBeenCalled()
- s.update({title:'',blocks:blocks('还没有写完'),editingBlockId:'p',composing:false,active:true});await vi.advanceTimersByTimeAsync(10000);expect(run).not.toHaveBeenCalled()
- s.update({title:'',blocks:blocks('现在已经写完。'),editingBlockId:'p',active:true});await vi.advanceTimersByTimeAsync(5000);expect(run).toHaveBeenCalledOnce()
- s.update({title:'',blocks:blocks('现在修改了数字25%。'),active:true});await vi.advanceTimersByTimeAsync(29999);expect(run).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+ s.update({title:'',blocks:blocks('还没有写完'),editingBlockId:'p',composing:false,active:true});await vi.advanceTimersByTimeAsync(4999);expect(run).not.toHaveBeenCalled()
+ s.update({title:'',blocks:blocks('现在已经写完。'),editingBlockId:'p',active:true});await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[2].pause);expect(run).toHaveBeenCalledOnce()
+ s.update({title:'',blocks:blocks('现在修改了数字25%。'),active:true});await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[2].interval-1);expect(run).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2);s.dispose()
 })
 it('cancels for hidden notes and manual writing and discards a late response, then coalesces the latest changes',async()=>{
  vi.useFakeTimers();let finish:(v:any)=>void=()=>{};const signals:AbortSignal[]=[],onResult=vi.fn(),run=vi.fn((_r:any,signal:AbortSignal)=>{signals.push(signal);return new Promise<any>(resolve=>{finish=resolve})}),s=new NoteChallengeScheduler({sessionId:'s',run,onResult})
@@ -67,12 +67,12 @@ it('waits the full pause after a completed IME sentence is committed without a f
  s.update({title:'',blocks:blocks('组词中的完整句子。'),editingBlockId:'p',active:true,composing:true});s.setLevel(2)
  await vi.advanceTimersByTimeAsync(10000);expect(run).not.toHaveBeenCalled()
  s.update({title:'',blocks:blocks('组词中的完整句子。'),editingBlockId:'p',active:true,composing:false})
- await vi.advanceTimersByTimeAsync(4999);expect(run).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledOnce();s.dispose()
+ await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[2].pause-1);expect(run).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledOnce();s.dispose()
 })
 it('does not reset the last-run interval when switching levels after an initial review',async()=>{
  vi.useFakeTimers();const run=vi.fn(async()=>result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
  s.update({title:'',blocks:blocks(),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(2000);expect(run).toHaveBeenCalledOnce()
- s.setLevel(1);await vi.advanceTimersByTimeAsync(59999);expect(run).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+ s.setLevel(1);await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[1].interval-1);expect(run).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2);s.dispose()
 })
 it('reserves a whole batch before the 40k rolling character limit instead of submitting 48k',async()=>{
  vi.useFakeTimers();const run=vi.fn(async(_request:ChallengeRequest,_signal:AbortSignal)=>result),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),onState:value=>states.push(value)})
@@ -110,11 +110,40 @@ for(const outcome of ['rejected','unavailable'] as const)it(`keeps ${outcome} re
  s.update({title:'',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(120000);expect(run).toHaveBeenCalledOnce()
  s.recheck();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2)
  await vi.advanceTimersByTimeAsync(120000);expect(run).toHaveBeenCalledTimes(2)
- s.update({title:'',blocks:blocks('真正变化后的正文。'),active:true});await vi.advanceTimersByTimeAsync(4999);expect(run).toHaveBeenCalledTimes(2);await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(3);s.dispose()
+ s.update({title:'',blocks:blocks('真正变化后的正文。'),active:true});await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[2].pause-1);expect(run).toHaveBeenCalledTimes(2);await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(3);s.dispose()
 })
 it('does not let a late failure from an old version block a newer pending edit',async()=>{
  vi.useFakeTimers();let reject:(error:Error)=>void=()=>{};const run=vi.fn(()=>new Promise<any>((_resolve,fail)=>{reject=fail})),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
  s.update({title:'',blocks:blocks(),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(2000)
  s.update({title:'',blocks:blocks('请求中继续修改了正文。'),active:true});reject(Error('old version failed'));await vi.advanceTimersByTimeAsync(30000)
  expect(run).toHaveBeenCalledTimes(2);s.dispose()
+})
+
+it('reviews a stable paragraph without final punctuation while the caret stays inside it',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async(_r:ChallengeRequest)=>result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks('这份报告已经提胶'),editingBlockId:'p',active:true});s.setLevel(3)
+ await vi.advanceTimersByTimeAsync(4999);expect(run).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledOnce()
+ expect(run.mock.calls[0]![0].blocks[0]!.text).toBe('这份报告已经提胶');await vi.advanceTimersByTimeAsync(60000);expect(run).toHaveBeenCalledOnce();s.dispose()
+})
+for(const level of [1,2,3,4] as const)it(`rechecks a fresh semantic edit promptly at enabled level ${level}`,async()=>{
+ vi.useFakeTimers();const run=vi.fn(async(_r:ChallengeRequest)=>result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks('这份报告已经提交。'),active:true});s.setLevel(level);await vi.advanceTimersByTimeAsync(2000);expect(run).toHaveBeenCalledOnce()
+ s.update({title:'',blocks:blocks('这份报告已经提胶。'),editingBlockId:'p',active:true})
+ await vi.advanceTimersByTimeAsync(10000);expect(run).toHaveBeenCalledTimes(2)
+ await vi.advanceTimersByTimeAsync(60000);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+})
+it('coalesces continued typing and IME edits before checking an unpunctuated phrase',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async(_r:ChallengeRequest)=>result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks('错别'),editingBlockId:'p',composing:true,active:true});s.setLevel(3)
+ await vi.advanceTimersByTimeAsync(12000);expect(run).not.toHaveBeenCalled()
+ s.update({title:'',blocks:blocks('错别字已经提胶'),editingBlockId:'p',composing:false,active:true});await vi.advanceTimersByTimeAsync(4000);expect(run).not.toHaveBeenCalled()
+ s.update({title:'',blocks:blocks('错别字已经提胶给编辑'),editingBlockId:'p',active:true});await vi.advanceTimersByTimeAsync(4999);expect(run).not.toHaveBeenCalled()
+ await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledOnce();expect(run.mock.calls[0]![0].blocks[0]!.text).toBe('错别字已经提胶给编辑');s.dispose()
+})
+it('immediately rechecks a changed level after adjustment closes without the old interval delaying it',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async(_r:ChallengeRequest)=>result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(2000);expect(run).toHaveBeenCalledOnce()
+ s.update({title:'',blocks:blocks(),active:true,busy:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledOnce()
+ s.update({title:'',blocks:blocks(),active:true,busy:false});s.recheck(true);await vi.advanceTimersByTimeAsync(1)
+ expect(run).toHaveBeenCalledTimes(2);expect(run.mock.calls[1]![0].level).toBe(4);s.dispose()
 })

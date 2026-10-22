@@ -5,9 +5,10 @@ import { NoteChallengeScheduler } from '../src/preload/notes/challenge-scheduler
 
 afterEach(() => vi.useRealTimers())
 
-const captured = name => JSON.parse(readFileSync(new URL(`./fixtures/notes-challenge-v16/${name}.json`, import.meta.url), 'utf8'))
+// Historical fact-review fixtures now exercise Standard; relaxed is spelling-only.
+const captured = name => {const value=JSON.parse(readFileSync(new URL(`./fixtures/notes-challenge-v16/${name}.json`, import.meta.url), 'utf8'));if(value.input)value.input.level=2;return value}
 const block = (id, text) => ({ id, type: 'paragraph', text })
-const note = blocks => ({ sessionId: 'fixture', requestId: 'review', action: 'review', level: 1, title: '', blocks, changedIds: blocks.map(b => b.id) })
+const note = blocks => ({ sessionId: 'fixture', requestId: 'review', action: 'review', level: 2, title: '', blocks, changedIds: blocks.map(b => b.id) })
 const issue = (quote, extra = {}) => ({ quote, category: 'uncertain', basis: 'general-knowledge', message: '是否需要核对这个判断？', evidence: [], ...extra })
 function provider(visibleText) {
   let calls = 0
@@ -250,7 +251,7 @@ it('retains only unacknowledged paragraphs for the next scheduled runtime pass a
   } finally { scheduler.dispose() }
 })
 
-for(const [level,expected] of [[1,6],[2,6],[3,6],[4,6]])it(`retains up to ${expected} distinct issues in a dense paragraph at challenge level ${level}`,async()=>{
+for(const [level,expected] of [[1,0],[2,6],[3,6],[4,6]])it(`retains up to ${expected} distinct issues in a dense paragraph at challenge level ${level}`,async()=>{
  const quotes=['一周有十天','六月有四十天','正方形只有三条边','三角形有五个角','一米等于十厘米','一小时等于六分钟','三加四等于九','十减二等于一']
  const input={...note([block('dense',quotes.join('。')+'。')]),level}
  const result=await run(input,{reviews:[{blockId:'dense',issues:quotes.map(quote=>issue(quote))}]})
@@ -258,10 +259,29 @@ for(const [level,expected] of [[1,6],[2,6],[3,6],[4,6]])it(`retains up to ${expe
  expect(result.issues.every(item=>item.category==='uncertain'&&item.evidence.length===0&&item.message.includes('未联网核验'))).toBe(true)
 })
 
-for(const level of [1,2,3,4])it(`keeps later independent claims across every paragraph at level ${level} instead of truncating all paragraphs to two issues`,async()=>{
+for(const level of [2,3,4])it(`keeps later independent claims across every paragraph at level ${level} instead of truncating all paragraphs to two issues`,async()=>{
  const blocks=Array.from({length:6},(_,n)=>block('dense-'+n,'判断甲。判断乙。判断丙。判断丁。判断戊。'))
  const result=await run({...note(blocks),level},{reviews:blocks.map(b=>({blockId:b.id,issues:['判断甲','判断乙','判断丙','判断丁','判断戊'].map(quote=>issue(quote))}))})
  expect(result.issues).toHaveLength(24)
  expect(blocks.map(b=>result.issues.filter(issue=>issue.blockId===b.id).map(issue=>issue.quote))).toEqual(blocks.map(()=>['判断甲','判断乙','判断丙','判断丁']))
  expect(result.coveredBlockIds).toEqual(blocks.map(b=>b.id))
+})
+
+it('retains both independently captured contextual misspellings rather than treating them as optional polish',async()=>{
+ const fixture=captured('captured-ginkgo-typos')
+ for(const level of [1,3]){
+  const result=await generateNoteChallenge(provider(fixture.visibleText),{...fixture.input,level})
+  expect(result.coveredBlockIds).toEqual(fixture.input.changedIds)
+  expect(result.issues).toHaveLength(2);expect(result.issues.every(i=>i.category==='typo')).toBe(true)
+  expect(result.issues.some(i=>i.quote.includes('关上'))).toBe(true);expect(result.issues.some(i=>i.quote.includes('主档'))).toBe(true)
+ }
+})
+it('keeps concrete spelling findings in a stable unpunctuated phrase while dropping unfinished-syntax advice',async()=>{
+ const input=note([block('a','材料以经提胶，请完成审和')])
+ const result=await run(input,{reviews:[{blockId:'a',issues:[
+  {quote:'以经提胶',category:'typo',basis:'note',message:'应为“已经提交”。',evidence:[]},
+  {quote:'审和',category:'typo',basis:'note',message:'应为“审核”。',evidence:[]},
+  {quote:'请完成审和',category:'grammar',basis:'note',message:'句末缺少标点。',evidence:[]}
+ ]}]})
+ expect(result.issues.map(i=>i.quote)).toEqual(['以经提胶','审和']);expect(result.coveredBlockIds).toEqual(['a'])
 })

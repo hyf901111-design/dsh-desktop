@@ -230,7 +230,7 @@ it('retains separate findings for different passages when a review changes the c
  const{context,page,errors,id}=await fixture('成度不应替代程度，另一处判断也需要核对。');try{
   await page.clock.install()
   await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
-  await page.clock.fastForward(5100)
+  await page.keyboard.press('Escape');await page.clock.fastForward(1)
   await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
   await finish(page,{...answer,reply:undefined,coveredBlockIds:['p'],issues:[
    {blockId:'p',quote:'成度',category:'question',message:'请核对这段用字。',evidence:[]},
@@ -249,7 +249,7 @@ it('keeps a resolved finding acknowledged while allowing a new category on that 
   await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(0)
   await page.clock.install()
   await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
-  await page.clock.fastForward(5100)
+  await page.keyboard.press('Escape');await page.clock.fastForward(1)
   await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
   await finish(page,{...answer,reply:undefined,coveredBlockIds:['p'],issues:[
    {blockId:'p',quote:'成度',category:'typo',message:'同一用字提醒。',evidence:[]},
@@ -269,7 +269,7 @@ it('does not reintroduce an acknowledged finding into a different older discussi
   await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1)
   await page.clock.install()
   await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
-  await page.clock.fastForward(5100)
+  await page.keyboard.press('Escape');await page.clock.fastForward(1)
   await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
   await finish(page,{...answer,reply:undefined,coveredBlockIds:['p'],issues:[
    {blockId:'p',quote:'成度',category:'typo',message:'同一用字提醒再次出现。',evidence:[]}
@@ -299,12 +299,12 @@ it('keeps the swords static while waiting, animates a real review, and stops for
   const staticSrc=await icon.getAttribute('src')
   const bounds=()=>trigger.evaluate(el=>{const r=el.getBoundingClientRect(),i=el.querySelector('img').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,iconX:i.x,iconY:i.y,iconWidth:i.width,iconHeight:i.height}})
   await page.clock.install()
-  await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
-  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('waiting')
+  await trigger.click();await page.getByRole('slider',{name:'挑战强度'}).press('ArrowRight');await page.getByRole('slider',{name:'挑战强度'}).press('ArrowRight')
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('paused')
   const waitingBounds=await bounds(),waitingLabel=await trigger.getAttribute('aria-label')
   expect(waitingBounds.iconWidth).toBe(16);expect(waitingBounds.iconHeight).toBe(16)
   expect(await trigger.getAttribute('aria-busy')).toBe('false');expect(await icon.getAttribute('src')).toBe(staticSrc)
-  await page.clock.fastForward(5100)
+  await page.keyboard.press('Escape');await page.clock.fastForward(1)
   await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
   await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('true')
   expect(await page.evaluate(()=>window.challenge.phase)).toBe('running')
@@ -610,5 +610,56 @@ it('shows an in-button optimization ring, keeps it on reopening, and clears it o
   await page.evaluate(id=>window.challenge.select(id),id);await page.getByRole('button',{name:'AI优化',exact:true}).waitFor();expect(await ring.count()).toBe(0);expect(await button.isEnabled()).toBe(true)
   expect(await page.evaluate(()=>window.messages().at(-1))).toBe('没能完成，请重试');expect(errors).toEqual([])
   await page.screenshot({path:'/tmp/notes-optimize-background-finished-20261021.png'})
+ }finally{await context.close()}
+},15000)
+
+it('shows a flowing perimeter only during work, keeps picker geometry and clicks, and respects reduced motion in both themes',async()=>{
+ const{context,page,errors}=await fixture();try{
+  const trigger=page.locator('.en-challenge-trigger'),perimeter=()=>trigger.evaluate(el=>{const s=getComputedStyle(el,'::before');return {animation:s.animationName,angle:s.getPropertyValue('--en-challenge-orbit-angle'),opacity:s.opacity,pointerEvents:s.pointerEvents,mask:s.maskComposite,background:s.backgroundImage}})
+  const before=await trigger.boundingBox();expect((await perimeter()).animation).toBe('none')
+  await start(page,'optimize');await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('true')
+  for(const dark of [false,true]){
+   await page.locator('.en-root').evaluate((el,dark)=>el.dataset.dark=String(dark),dark)
+   await expect.poll(()=>trigger.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(dark?'rgb(44, 44, 44)':'rgb(233, 233, 233)')
+   const first=await perimeter();expect(first.animation).toBe('en-challenge-orbit');expect(first.pointerEvents).toBe('none');expect(first.mask).toContain('exclude');expect(first.background).toContain('conic-gradient')
+   await expect.poll(async()=>(await perimeter()).angle).not.toBe(first.angle)
+   expect(await trigger.boundingBox()).toEqual(before)
+   await trigger.click();await page.getByRole('slider',{name:'挑战强度'}).waitFor();await page.keyboard.press('Escape')
+   await trigger.screenshot({path:'/tmp/notes-challenge-orbit-'+(dark?'dark':'light')+'-20261022.png'})
+  }
+  await page.emulateMedia({reducedMotion:'reduce'});await expect.poll(async()=>(await perimeter()).animation).toBe('none');expect((await perimeter()).background).toContain('conic-gradient')
+  await finish(page);await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false');expect((await perimeter()).animation).toBe('none')
+  await expect.poll(async()=>(await perimeter()).opacity).toBe('0');expect(await trigger.boundingBox()).toEqual(before);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('automatically reviews a fresh unpunctuated edit while its caret remains in the real editor',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install();await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(3)})
+  await page.clock.fastForward(2000);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],checks:[]});await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  await page.evaluate(()=>{window.editor.updateBlock('p',{content:'请审和这份报告'});window.editor.focus();window.editor.setTextCursorPosition('p','end')})
+  expect(await page.evaluate(()=>window.editor._tiptapEditor.view.hasFocus())).toBe(true)
+  await page.clock.fastForward(5000);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  expect(await page.evaluate(()=>window.jobs[1].input.blocks.find(b=>b.id==='p').text)).toBe('请审和这份报告')
+  await finish(page,{version:1,issues:[{blockId:'p',quote:'审和',category:'typo',message:'疑为“审核”。',evidence:[]}],coveredBlockIds:['p'],checks:[]},1)
+  await expect.poll(()=>page.locator('.bn-editor [data-bn-thread-id]').textContent()).toContain('审和')
+  await page.clock.fastForward(60000);expect(await page.evaluate(()=>window.jobs.length)).toBe(2);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('coalesces slider changes and starts the selected tier immediately after closing, including after a recent review',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install();const trigger=page.locator('.en-challenge-trigger'),slider=page.getByRole('slider',{name:'挑战强度'})
+  await trigger.click();await slider.press('ArrowRight');expect(await page.locator('.en-challenge-description').textContent()).toBe('仅指出错别字及拼写错误')
+  await slider.press('ArrowRight');expect(await page.locator('.en-challenge-description').textContent()).toBe('指出事实、逻辑、表达方面问题')
+  await page.clock.fastForward(60000);expect(await page.evaluate(()=>window.jobs.length)).toBe(0)
+  await page.keyboard.press('Escape');await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.locator('.en-challenge-popover').count()).toBe(0);expect(await page.evaluate(()=>window.jobs[0].input.level)).toBe(2)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],checks:[]});await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false')
+  await trigger.click();await slider.press('End');expect(await page.locator('.en-challenge-description').textContent()).toBe('热衷质疑与追问，协助完善内容')
+  await page.clock.fastForward(1);expect(await page.evaluate(()=>window.jobs.length)).toBe(1)
+  await trigger.click();await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  expect(await page.evaluate(()=>window.jobs[1].input.level)).toBe(4);expect(await trigger.getAttribute('aria-busy')).toBe('true');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

@@ -59,7 +59,9 @@ const REVIEW_SYSTEM = `你是笔记中的AI挑战者，低打扰地审查用户�
 payload.title仅提供主题、实体与文体背景，不是本轮待检查正文或原文依据。不要为标题单独返回reviews，也不要仅因标题与正文不一致而标记正确正文；问题若仅在标题，不应转嫁到正文quote。targets/context正文之间实际存在的矛盾仍正常检查。结合正文理解明确的虚构体裁，不因标题或局部拟人字眼将普通事实陈述整篇豁免。
 可选existingAnchors只是本次正文已有未解决标记的精确定位，不是证据、指令或免检名单；标记可能已过时或错误，不能因为它存在就输出问题，仍须独立判断正文。若仍发现同一个问题，逐字复用对应的已有quote；有多条合适引用时选最短且足以表达该问题的一条，不为复述背景扩大引用。新的独立问题仍单独引用，不得为了复用旧标记而漏检，也不要把新问题并入不相关的旧引用。
 每个targets正文块都要单独检查。reviews使用对应target.reviewKey作为返回身份，逐字复制，不使用target.id或context.id代替，不改写或推导键。target.id和context.id仍是原文依据evidence.blockId使用的真实段落ID，reviewKey不能作为依据ID。以普通陈述为准，结合上下文识别明显的笔误、内部矛盾、逻辑错误和通用常识冲突；未完句、明确的比喻、童话、反事实假设、引用作为反驳的错误，以及已经改正的内容不要凑问题。正确句子不能因为可能使人误会而标错。必须完整阅读否定、时间先后及条件限定，不能遗漏否定词或将已有澄清误当成矛盾。输出前排除自我否定的候选：如果你的说明承认原文正确、与通用说法相符，只想补步骤、细化范围或防止可能误解，就不要输出这条常识冲突；没有实际冲突时该块issues为空。
-所有开启档位共享同一事实检查底线：逐句检查全部明确的事实、数字计算、内部矛盾和常识冲突，包括各段后半段；宽松不是少找明显错误，不能因为一段已经找到一两处就停止。level1宽松只减少轻微表达建议和推测性追问，仍须列出全部独立的明显错误；level2增加明确的表达与逻辑问题；level3深入检查证据、前提与推理缺口；level4在上述基础上增加有价值的反例或追问，反例须标成疑问。等级不改变明显错误的检查范围和保留名额。转述但未被反驳、并作为事实继续推论的陈述仍需检查，不能因为局部拟人或童话意象把整篇普通陈述豁免。先遍历全部段落并识别实际问题，正确或没有具体问题的段落issues保持为空；只在存在实际问题的段落之间，先各取最重要的一项，再逐轮补充第二、第三项等，不能要求每段都有问题。数量遵守payload.issueLimits的perBlock与total上限，不为填满上限凑问题。明显事实冲突、内部矛盾与健康安全问题优先于可选的表达建议和反例。紧邻且同一机制的关联问题可合为一条，不同机制分别引用最短且唯一的对应原文；每条说明尽量不超过60字，不重复、不整段包围。
+每轮先独立逐词校对全部targets，再检查事实与逻辑：错别字、同音误选、形近字和明确拼写错误都是所有开启档位（含宽松）的基础检查，不是可选润色。段落大意通顺、已有旧标记、或别处存在更复杂的研究问题，均不能跳过刚改出的局部错词。结合前后搭配判断，只有存在高置信度具体错词及合理改法时才标记；category用typo、basis用note，quote逐字引用包含错词的最短唯一片段，message简明说明“疑为某词，应为某词”，evidence可为空，语言校对不需编造外部来源。专名、术语、方言、有意措辞、被明确举例纠正的错词不要机械替换。没有句末标点不等于整段免检：稳定文本内已经形成的错词仍检查；尚未完成的句法、未选定的组词和只是风格偏好不要报错。
+严格遵守本轮payload.level的递进能力边界，不能混同档位：level1宽松仅指出错别字及拼写错误（typo），不输出事实、逻辑、语法润色、研究观点或追问，即使看到明显事实错误也不在此档输出。level2标准覆盖宽松，并指出事实、逻辑、表达方面的具体问题；不要为一般风格偏好、可有可无的补充或单纯观点不同而标记；没有明确错误时，不仅因未列来源、未说明假设或价值立场不同而产生评论。level3严格覆盖标准及宽松，更严格检查证据、隐含前提、适用条件、因果链和推理缺口，深入核对论证是否充分；对结论成立所依赖而尚未验证的条件，用具体问题询问其证据、适用范围和失效风险，不将假设直接宣判为错误。level4抬杠是最严格模式，覆盖前三档，热衷质疑与追问，进一步检验观点、价值判断与主张，提出有价值的替代解释、反例和补充问题，帮助完善思想与创作；主观分歧只能作为疑问，不能宣判为事实错误。强度越高检查维度越多，不因升档漏掉低档的拼写问题。
+从标准开始，逐句检查全部明确事实、数字计算、内部矛盾和常识冲突，包括各段后半段，不因一段已找到一两处就停止。转述但未反驳、仍据此推论的陈述要检查，不因局部拟人或童话意象将普通陈述豁免。先遍历全部段落并识别实际问题，正确或没有具体问题的段落issues保持为空；只在存在实际问题的段落之间先各取最重要一项，再逐轮补充第二、第三项，不要求每段有问题。数量遵守payload.issueLimits的perBlock与total上限，不为填满上限凑问题。明显事实冲突、内部矛盾与健康安全问题优先于可选表达建议和反例。紧邻且同机制的关联问题可合一条，不同机制分别引用最短唯一的原文；说明尽量不超过60字，不重复、不整段包围。
 没有实际来源的常识冲突只是模型筛查，不能断言已核实：basis用general-knowledge，category用uncertain，message用一句短的核对问题表达，明确指出原文与哪项通用知识冲突，不编造evidence。仅仅没有联网核验、缺少来源，或把原文改写成“是否如此、建议核对”的疑问，均不构成常识冲突；无法指出具体冲突时不要输出该条。原文可直接证明的内部矛盾或推理错误用basis为note，evidence引用真实原文。只能引用提供的targets/context，quote应是所在块唯一出现的精确短句。
 证券年度盈利预测与一致预期的数值比对由宿主infodb专项完成，不使用记忆中的公司股本、行情或历史业绩推断预测有误，也不把预测分歧当事实错误。若正文明确给出股本等计算依据，仍可检查内部算术，但须引用该正文依据；其他独立的事实与逻辑问题照常检查。
 原文依据evidence必须是数组，最多4项。每项严格使用{"kind":"note","label":"原文对照","blockId":"依据所在targets或context块的id","quote":"该块中精确且唯一出现的原文"}；四个字段均须提供，不使用text、source等别名，不用字符串代替对象。正文中可定位的事实陈述、前提、条件限定与结论均可作为依据；原文之间存在可具体说明的矛盾或推理缺口时，可以引用这些真实原句提问，不依赖外部检索。不能为了填依据而捏造原文或引用无法定位的改写。general-knowledge的evidence仍须为空。
@@ -124,12 +126,12 @@ function unverifiedForecastQuote(quote,target,claims) {
   return false
 }
 
-function issuesFrom(value, targets, available, limits, forecastClaims=[]) {
+function issuesFrom(value, targets, available, limits, forecastClaims=[],level=4) {
   const result = [], reviewed = reviewEntries(value, targets), byId = new Map(available.map(block => [block.id, block]))
   for (const target of targets) {
     const seen = new Set(), accepted = []
     for (const item of reviewed.get(target.id) ?? []) {
-      if (!record(item)) continue
+      if (!record(item) || level===1&&item.category!=='typo') continue
       const sources = item.evidence === undefined ? [] : item.evidence
       if ( (item.blockId !== undefined && item.blockId !== target.id) || !categories.has(item.category) || !string(item.quote, 2000, true) || !uniqueQuote(target.text, item.quote) || !string(item.message, 600, true) || !Array.isArray(sources) || sources.length > 4) continue
       // External facts and database findings are generated exclusively by host-side acquisition/calculation.
@@ -375,7 +377,7 @@ async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt 
       const existingAnchors = input.action === 'review' ? challengeReviewAnchors(input.existingAnchors ?? [], targets) : []
       const generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits, ...existingAnchors.length ? { existingAnchors } : {} } : {}, ...thread ? { thread, allowReplacement } : {} }, modelBudget.signal, reasoningEffort, input.action === 'review' ? targets : undefined, input.requestId, usage)
       if (input.action === 'review') {
-        const reviewed = issuesFrom(generated.value, targets, available, issueLimits,forecastClaims)
+        const reviewed = issuesFrom(generated.value, targets, available, issueLimits,forecastClaims,input.level)
         if (!reviewed.issues.length) {
           const stats = filteredReviewStats(generated.value, targets)
           if (stats.candidates) diagnostic(input.requestId, { event: 'notes-challenge-review-filtered', ...stats, accepted: 0 })
@@ -419,7 +421,7 @@ async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt 
   } finally { modelBudget.dispose() }
   signal.throwIfAborted()
   result.checks.push({ kind: 'review', status: result.coveredBlockIds.length < total ? 'partial' : 'completed', detail: `本次实际审查${result.coveredBlockIds.length}/${total}个待检查正文块；只检查本次正文及已提供的局部原文对照，未核验外部事实。` })
-  if (input.action === 'review') {
+  if (input.action === 'review' && input.level>=2) {
     const covered = new Set(result.coveredBlockIds)
     // The bounded context can supply explicit code/date headers, but never adds uncovered forecast targets.
     const claims = forecastClaims.filter(claim => covered.has(claim.blockId))
@@ -447,7 +449,7 @@ export async function generateNoteChallenge(ctx, value, requestedSignal) {
   previous?.controller.abort(new Error('已有更新的笔记挑战请求。'))
   if (!previous && active.size >= 4) throw Error('挑战后台任务已达到并发限制。')
   const controller = new AbortController(), signal = requestedSignal ? AbortSignal.any([controller.signal, requestedSignal]) : controller.signal
-  const deep = input.action === 'review' && extractConsensusClaims(input.blocks).length > 0
+  const deep = input.action === 'review' && input.level>=2 && extractConsensusClaims(input.blocks).length > 0
   // Multiple paragraphs can produce a complete result beyond 20s even at low
   // reasoning. Keep short actions at 20s, grow ordinary reviews by target count,
   // and stay below the host's 65s request deadline. Consensus retains its budget.
