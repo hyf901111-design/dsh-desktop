@@ -5,6 +5,28 @@ const blocks=(text='这是一段稳定正文。')=>[{id:'p',type:'paragraph',tex
 const answer={version:1 as const,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[]}
 afterEach(()=>vi.useRealTimers())
 
+it('claims an explicit tier recheck before an immediate session switch can pause it',async()=>{
+ vi.useFakeTimers();let finish!:(value:any)=>void,signal!:AbortSignal
+ const run=vi.fn((_request,current)=>{signal=current;return new Promise<typeof answer>(resolve=>{finish=resolve})}),onResult=vi.fn(),scheduler=new NoteChallengeScheduler({sessionId:'a',run,onResult})
+ scheduler.update({title:'文稿',blocks:blocks(),active:true,busy:true});scheduler.setLevel(4)
+ scheduler.update({title:'文稿',blocks:blocks(),active:true,busy:false});scheduler.recheck(true)
+ expect(run).toHaveBeenCalledOnce()
+ scheduler.update({title:'文稿',blocks:blocks(),active:false})
+ expect(signal.aborted).toBe(false)
+ finish(answer);await vi.advanceTimersByTimeAsync(1);expect(onResult).toHaveBeenCalledOnce()
+ scheduler.recheck(true);await vi.advanceTimersByTimeAsync(60000);expect(run).toHaveBeenCalledOnce()
+ scheduler.dispose()
+})
+
+it.each(['inactive','busy','composing','budget'])('keeps an immediate recheck gated by %s',async gate=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>answer),scheduler=new NoteChallengeScheduler({sessionId:'a',run,onResult:vi.fn()})
+ scheduler.update({title:'文稿',blocks:blocks(),active:gate!=='inactive',busy:gate==='busy',composing:gate==='composing'})
+ if(gate==='budget')scheduler.restoreUsage({version:1,sessionId:'a',usage:[{at:Date.now(),chars:1,input:1,output:4000}]})
+ scheduler.setLevel(4,true);scheduler.recheck(true)
+ expect(run).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(1);expect(run).not.toHaveBeenCalled()
+ scheduler.dispose()
+})
+
 it('finishes an already-started review while inactive without launching another hidden batch',async()=>{
  vi.useFakeTimers();let finish!:(value:any)=>void;let signal!:AbortSignal
  const run=vi.fn((_request:any,current:AbortSignal)=>{signal=current;return new Promise<any>(resolve=>{finish=resolve})}),onResult=vi.fn(),states:any[]=[]

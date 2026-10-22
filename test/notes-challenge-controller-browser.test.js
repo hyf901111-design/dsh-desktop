@@ -690,6 +690,26 @@ it('coalesces slider changes and starts the selected tier immediately after clos
   expect(await page.evaluate(()=>window.jobs[1].input.level)).toBe(4);expect(await trigger.getAttribute('aria-busy')).toBe('true');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+it('retains and saves an explicit tier review when its close handler is followed by a session switch in the same turn',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install()
+  const started=await page.evaluate(()=>{window.challenge.setPickerOpen(true);window.challenge.setLevel(4);window.challenge.setPickerOpen(false);const count=window.jobs.length;window.switchNote('note-b');return count})
+  expect(started).toBe(1)
+  await expect.poll(()=>page.locator('[data-note-editor-session="note-b"] .en-title').inputValue()).toBe('note-b')
+  expect(await page.locator('[data-note-editor-session="note-a"]').count()).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input.level)).toBe(4)
+  await finish(page,{version:1,issues:[{blockId:'p',quote:'较高',category:'question',message:'采用什么标准判断程度较高？',evidence:[]}],coveredBlockIds:['p'],checks:[]})
+  await expect.poll(()=>page.evaluate(()=>window.savedMessages().includes('采用什么标准判断程度较高？'))).toBe(true)
+  await expect.poll(()=>page.locator('[data-note-editor-session="note-a"]').count()).toBe(0)
+  expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(0)
+  await page.evaluate(()=>window.switchNote('note-a'))
+  await expect.poll(()=>page.locator('.en-title').inputValue()).toBe('note-a')
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads.some(t=>t.metadata.issue.message==='采用什么标准判断程度较高？'))).toBe(true)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
 it('releases a visible picker pause when the native header retargets its portal',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.clock.install();await page.evaluate(()=>{document.body.insertAdjacentHTML('beforeend','<div id="slot-a" data-en-challenge-tools="note-a"></div><div id="slot-b" data-en-challenge-tools="other"></div>')})

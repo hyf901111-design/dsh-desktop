@@ -174,6 +174,10 @@ export class NoteChallengeScheduler{
   // complete misspelled word. Wait longer at the caret, while IME stays paused.
   const current=this.value.blocks.find(b=>b.id===this.value.editingBlockId&&this.pending.has(b.id)),unfinished=current&&current.type!=='heading'&&!/[。！？.!?；;：:]\s*$/u.test(current.text)
   const config=CHALLENGE_LEVELS[this.level],interval=this.hasEdited&&this.editedAt>=this.lastRun?config.pause:config.interval,due=this.expedited?this.now():Math.max(this.firstAt??this.editedAt+config.pause,this.hasEdited?this.editedAt+config.pause:-Infinity,unfinished?this.editedAt+Math.max(config.pause,5000):-Infinity,this.lastRun+interval)
+  // Claim an explicit tier recheck before its close handler returns. A zero-delay
+  // timer can otherwise lose the resident editor lease to an immediate session
+  // switch, even though the user already requested this exact review.
+  if(this.expedited&&due<=this.now()){void this.execute();return}
   this.emit('waiting');this.timer=setTimeout(()=>{this.timer=undefined;void this.execute()},Math.max(0,due-this.now()))
  }
  private async execute(){
