@@ -12,7 +12,7 @@
         "featureName": "完善笔记挑战分阶段审查、一致预期追问与有界补查",
         "branch": "codex/feat/notes-challenge-v16-20261021",
         "baseCommit": "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-        "tipCommit": "aec135290b8fc3270ded5042b79c01e616cc431b",
+        "tipCommit": "db64bd46e2613e8a44a611b8417b22da81969ed3",
         "commits": [
           {
             "commit": "2aee70c7f0a381e46bc31580f76d6425eb19e948",
@@ -90,6 +90,13 @@
               "9fc4c53c67c23ad33808c5229bb01f4d53f33dfc"
             ],
             "subject": "修复：独立恢复会话挑战额度防止编辑或切档绕过限流"
+          },
+          {
+            "commit": "db64bd46e2613e8a44a611b8417b22da81969ed3",
+            "parents": [
+              "aec135290b8fc3270ded5042b79c01e616cc431b"
+            ],
+            "subject": "测试：等待重挂后的新评论控制器再验证替换预览"
           }
         ],
         "files": [
@@ -189,8 +196,8 @@
             ],
             "outcome": "passed",
             "summary": "focused: exit 0",
-            "verifiedCommit": "aec135290b8fc3270ded5042b79c01e616cc431b",
-            "completedAt": "2026-10-22T11:13:04.053Z",
+            "verifiedCommit": "db64bd46e2613e8a44a611b8417b22da81969ed3",
+            "completedAt": "2026-10-22T11:17:45.263Z",
             "timeoutMs": 180000
           },
           {
@@ -201,8 +208,8 @@
             ],
             "outcome": "passed",
             "summary": "types: exit 0",
-            "verifiedCommit": "aec135290b8fc3270ded5042b79c01e616cc431b",
-            "completedAt": "2026-10-22T11:12:14.572Z",
+            "verifiedCommit": "db64bd46e2613e8a44a611b8417b22da81969ed3",
+            "completedAt": "2026-10-22T11:16:56.520Z",
             "timeoutMs": 180000
           },
           {
@@ -214,8 +221,8 @@
             ],
             "outcome": "passed",
             "summary": "whitespace: exit 0",
-            "verifiedCommit": "aec135290b8fc3270ded5042b79c01e616cc431b",
-            "completedAt": "2026-10-22T11:12:07.559Z",
+            "verifiedCommit": "db64bd46e2613e8a44a611b8417b22da81969ed3",
+            "completedAt": "2026-10-22T11:16:48.984Z",
             "timeoutMs": 30000
           }
         ],
@@ -232,7 +239,7 @@
         "risks": [
           "模型协议回放不代表真实语义检出率；新候选仍需原生模型和infodb复验，尚未经用户接受。"
         ],
-        "generatedAt": "2026-10-22T11:13:04.086Z"
+        "generatedAt": "2026-10-22T11:17:45.297Z"
       }
     }
   ],
