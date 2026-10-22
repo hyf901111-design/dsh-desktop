@@ -135,7 +135,7 @@ it('persists an optimization preview without editing and applies it only through
   await expect.poll(()=>page.evaluate(()=>Object.keys(window.saved).length)).toBe(1);await page.evaluate(()=>window.remount());await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1);await page.evaluate(()=>window.challenge.select(window.challenge.threads[0].id));await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(1)
   await page.locator('.en-challenge-card').screenshot({path:'/tmp/notes-challenge-v16-replacement-preview.png'});await page.locator('.en-challenge-replace').click()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
-  expect(await page.locator('.en-challenge-replace').isDisabled()).toBe(true)
+  expect(await page.locator('.en-challenge-replace').count()).toBe(0);expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
   expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
@@ -409,12 +409,12 @@ it('previews the captured half-quote/full-sentence model result and applies exac
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedReplacement+'后句保留。')
   expect(await page.evaluate(quote=>window.editor.getBlock('p').content.find(c=>c.text===quote)?.styles.bold,capturedQuote)).toBe(true)
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.filter(c=>c.styles.italic).map(c=>c.text).join(''))).toBe('，因此完成率为75%。后句保留。')
-  expect(await page.evaluate(()=>window.challenge.threads[0].metadata.draft)).toBe('保留这份未发送草稿')
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('metadata').draft,id)).toBe('保留这份未发送草稿')
   await page.locator('.bn-editor').focus();await page.keyboard.press('Meta+z')
   await expect.poll(()=>page.locator('.en-challenge-quote').textContent()).toBe(capturedQuote)
   expect(await page.evaluate(()=>window.editor.getBlock('p').content)).toEqual(before.content)
   await page.keyboard.press('Meta+Shift+z')
-  await expect.poll(()=>page.locator('.en-challenge-quote').textContent()).toBe(capturedQuote)
+  await expect.poll(()=>page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
   expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
@@ -682,7 +682,7 @@ it('highlights only changed text, opens an original/replacement comparison, and 
  const{context,page,errors,id}=await fixture();try{
   await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.getByRole('textbox',{name:'回复AI挑战'}).fill('保留未发送的原讨论草稿')
   const replacement=await applyTrackedReplacement(page),mark=page.locator('.en-replacement-mark');expect(await mark.textContent()).toBe('程')
-  await mark.click();const popup=page.getByRole('dialog',{name:'替换对照'});await popup.waitFor();expect(await popup.locator('[data-replacement-before]').textContent()).toBe(original);expect(await popup.locator('[data-replacement-after]').textContent()).toBe(replacement)
+  await mark.click();const popup=page.getByRole('dialog',{name:'替换对照'});await popup.waitFor();expect(await popup.locator('[data-replacement-before]').textContent()).toBe('成度');expect(await popup.locator('[data-replacement-after]').textContent()).toBe('程度')
   const bounds=await popup.boundingBox(),area=await page.locator('.en-main').boundingBox();expect(bounds.y).toBeGreaterThanOrEqual(area.y);expect(bounds.y+bounds.height).toBeLessThanOrEqual(area.y+area.height)
   await page.evaluate(()=>{const range=window.editor._tiptapEditor.state.doc;let from;range.descendants((node,pos)=>{if(node.type.name==='blockContainer'&&node.attrs.id==='p'){from=pos+2;return false}});const text=window.editor.getBlock('p').content.map(c=>c.text||'').join('');window.editor.transact(tr=>{tr.insertText('段后新增说明。',from+text.length);tr.insertText('新补充的前言。',from)})})
   await page.locator('.en-replacement-mark').click();await popup.getByRole('button',{name:'取消替换',exact:true}).click()
@@ -706,7 +706,7 @@ it('tracks direct requested replacements and hides/reappears with native undo an
   await expect.poll(()=>page.evaluate(()=>({body:window.editor.getBlock('p').content.map(c=>c.text||'').join(''),records:window.noteDoc.getMap('note-replacement-reviews').size,messages:window.messages()}))).toMatchObject({body:replacement,records:1});await page.locator('.en-replacement-mark').waitFor();await page.locator('.bn-editor').focus();await page.keyboard.press('Meta+z');await expect.poll(()=>page.locator('.en-replacement-mark').count()).toBe(0)
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
   await page.keyboard.press('Meta+Shift+z');await page.locator('.en-replacement-mark').waitFor();await page.locator('.en-replacement-mark').click()
-  expect(await page.locator('[data-replacement-after]').textContent()).toBe(replacement);expect(errors).toEqual([])
+  expect(await page.locator('[data-replacement-after]').textContent()).toBe('程度');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 it('refuses a stale targeted restore after the user edits the applied sentence and still allows resolving its review',async()=>{
@@ -740,7 +740,20 @@ it('keeps outside edits, original discussion and replacement review through canc
   await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('前言。'+original+'补充说明。')
   await page.locator('.bn-editor').focus();await page.keyboard.press('Meta+z');await page.locator('.en-replacement-mark').waitFor()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('前言。'+replacement+'补充说明。')
-  expect(await page.evaluate(id=>window.challenge.threads.some(t=>t.id===id),id)).toBe(true)
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
   await page.keyboard.press('Meta+Shift+z');await expect.poll(()=>page.locator('.en-replacement-mark').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('automatically resolves the replaced discussion, keeps its draft and shows only fragment comparison with reviewer labels outside prose',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(id=>window.challenge.setDraft(id,'原讨论未发送的草稿'),id)
+  await applyTrackedReplacement(page,'这项结论的程度较高（待核实）。')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('这项结论的程度较高。')
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
+  expect(await page.locator('.en-challenge-card').count()).toBe(0)
+  await page.locator('.en-replacement-mark').click();const popup=page.getByRole('dialog',{name:'替换对照'});expect(await popup.locator('[data-replacement-before]').textContent()).toBe('成度');expect(await popup.locator('[data-replacement-after]').textContent()).toBe('程度')
+  await popup.getByRole('button',{name:'取消替换',exact:true}).click()
+  await expect.poll(()=>page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(false)
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('metadata').draft,id)).toBe('原讨论未发送的草稿');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

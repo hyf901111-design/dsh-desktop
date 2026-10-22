@@ -13,5 +13,5 @@ export type ChallengeRequest = { sessionId: string; requestId: string; action: '
 export type ChallengeReplacement = { scopeVersion?: 2; anchorQuote?: string; blockId?: string; quote: string; sourceText: string; documentKey: string; replacement: string; status: 'pending' | 'applied' | 'stale' | 'reverted' }
 export {challengeDirectReplacement} from '../../packages/dsh-research-task-runtime/notes-challenge-intent.js'
 
-export {challengeReplacementScope} from '../../packages/dsh-research-task-runtime/notes-challenge-scope.js'
+export {challengeReplacementBody,challengeReplacementScope} from '../../packages/dsh-research-task-runtime/notes-challenge-scope.js'
 export {challengeReviewAnchors} from '../../packages/dsh-research-task-runtime/notes-challenge-review-context.js'

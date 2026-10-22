@@ -838,3 +838,11 @@ it('finishes all primary batches before spending remaining time on optional dept
  await vi.advanceTimersByTimeAsync(59001);await checked
  expect(f.calls.slice(0,2).map(c=>JSON.parse(c.messages[0].content[0].text).audit||false)).toEqual([false,false])
 })
+it('keeps reviewer-only parenthetical reminders in the comment instead of new replacement prose',async()=>{
+ const{generateNoteChallenge}=await load(),f=fixture({reply:{text:'这一说法仍需核对。',replacement:'收入增长12%（待核实）。'}}),current={...input,action:'optimize',blocks:[{id:'a',type:'paragraph',text:'收入增长10%。'}],thread:{blockId:'a',quote:'收入增长10%',category:'fact',message:'请核对',messages:[]}}
+ const result=await generateNoteChallenge(f.ctx,current);expect(result.reply.replacement).toBe('收入增长12%。');expect(result.reply.text).toContain('评论')
+})
+it('uses remaining bounded time for a useful depth response that takes more than twelve seconds',async()=>{
+ vi.useFakeTimers();const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);await new Promise(resolve=>setTimeout(resolve,p.audit?18000:4000));yield{type:'text-delta',index:0,text:JSON.stringify({reviews:p.targets.map(t=>({reviewKey:t.reviewKey,issues:p.audit?[{quote:'只按收入评价活动',category:'question',basis:'note',message:'是否也应考虑参与者收获等价值？',evidence:[]}]:[]}))})};yield{type:'finish',reason:{kind:'stop'}}}
+ const pending=generateNoteChallenge(f.ctx,{...input,level:4,blocks:[{id:'a',type:'paragraph',text:'计划只按收入评价活动。'}]});const checked=expect(pending).resolves.toMatchObject({issues:[expect.objectContaining({category:'question'})]});await vi.advanceTimersByTimeAsync(22001);await checked
+})

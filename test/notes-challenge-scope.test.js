@@ -20,3 +20,12 @@ it('never falls back to a short quote when its whole sentence is over the replac
 it('rejects missing and repeated anchors',()=>{
  for(const [source,quote] of [['这里。','已删除'],['重复，重复。','重复'],['这里。','']])expect(challengeReplacementScope(source,quote)).toEqual({error:'anchor'})
 })
+it('keeps new reviewer reminders outside replacement prose while preserving text already authored in the note',async()=>{
+ const{challengeReplacementBody}=await import('../packages/dsh-research-task-runtime/notes-challenge-scope.js')
+ expect(challengeReplacementBody('正文。','修正正文（待核实）。')).toEqual({replacement:'修正正文。',removed:true})
+ expect(challengeReplacementBody('原计划待核实。','原计划待核实，已补充说明。')).toEqual({replacement:'原计划待核实，已补充说明。',removed:false})
+ expect(challengeReplacementBody('正文。','数据仍待核实，正文。')).toEqual({error:'review-reminder'})
+ expect(challengeReplacementBody('原计划待核实。','原计划（待核实）。')).toEqual({replacement:'原计划（待核实）。',removed:false})
+ expect(challengeReplacementBody('原计划(待核实)。','原计划[待核实]。')).toEqual({replacement:'原计划[待核实]。',removed:false})
+ expect(challengeReplacementBody('原计划（待核实），报告已提胶。','原计划（待核实），报告已提交（待核实）。')).toEqual({error:'review-reminder'})
+})
