@@ -39,9 +39,11 @@ it('does not assign an ambiguous year or inherit a forecast label onto historica
     const claims=extractConsensusClaims([header,{id:'forecast',text:'预计2026年归母净利润为9,500亿元，'+tail+'。'}])
     expect(claims.map(({year,value})=>({year,value}))).toEqual([{year:2026,value:9500}])
   }
-  for(const label of ['actual','historical','realized']){
+  for(const label of ['actual','historical','realized','reported','已公布','已发布']){
     expect(extractConsensusClaims([header,{id:'forecast',text:`Forecast FY2026 EPS76元, ${label} FY2025 EPS75元。`}]).map(({year,value})=>({year,value}))).toEqual([{year:2026,value:76}])
   }
+  expect(extractConsensusClaims([header,{id:'forecast',text:'Forecast FY2026 EPS76元, FY2025 EPS75元。'}]).map(({year,value})=>({year,value}))).toEqual([{year:2026,value:76}])
+  expect(extractConsensusClaims([header,{id:'forecast',text:'Forecast FY2026 EPS76元, forecast FY2027 EPS80元。'}]).map(({year,value})=>({year,value}))).toEqual([{year:2026,value:76},{year:2027,value:80}])
 })
 it('does not turn an obsolete example or quoted/code paragraph into the report comparison policy',async()=>{
   const {consensusPolicyFromBlocks,compareConsensusClaim}=await load()

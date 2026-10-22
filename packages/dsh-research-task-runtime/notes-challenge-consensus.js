@@ -20,7 +20,8 @@ const labelledDate = /(?:报告基准日|报告发布日期|报告发布日|报�
 const dates = text => distinct([...text.matchAll(labelledDate)].map(match => reportDate(match[1])))
 const nonAnnual = /(?:上|下)半年|半年度|半年报|中报|季度|[一二三四1-4]季(?:度|报)?|单季|前[一二三四五六七八九十\d]+个月|\d{1,2}\s*月?\s*(?:[-—–~～]|至|到)\s*\d{1,2}\s*月|\b(?:first|second)\s+half|\bhalf[- ]?year|(?:^|[^A-Za-z])(?:Q[1-4]|H[12]|[1-4]Q|[12]H|[369]M)(?!\d)/iu
 const incompatibleBasis = /扣非|(?:剔除|扣除)非经常性损益|调整后|经调整|稀释|摊薄|\badjusted\b|\bnon[- ]?GAAP\b/iu
-const forecastHint = text => /预计|预测|forecast|\bFY\s*20\d{2}|\b\d{2,4}E\b/iu.test(text)
+const explicitForecastHint = text => /预计|预测|forecast|\b\d{2,4}E\b/iu.test(text)
+const forecastHint = text => explicitForecastHint(text)||/\bFY\s*20\d{2}/iu.test(text)
 const annualYears = text => distinct([...text.replace(labelledDate,'').matchAll(/(?:\bFY\s*)?(20\d{2})\s*(?:年(?:度|报)?|[eE]\b)|\bFY\s*(20\d{2})\b|\b(\d{2})E\b/giu)].map(match => Number(match[1] ?? match[2] ?? ('20' + match[3]))))
 
 /** Conservative parsing: names, missing units, ambiguous years and multi-ticker inheritance do not become claims. */
@@ -39,7 +40,7 @@ export function extractConsensusClaims(blocks) {
       // Several explicitly forecast clauses may describe adjacent years. Keep
       // each local year/metric together; a bare historical clause cannot borrow
       // the preceding forecast verb. Commas inside numeric values stay intact.
-      const fragments=annualYears(sentence).length>1?sentence.split(/，|(?<!\d),|,(?!\d)/u).filter(fragment=>forecastHint(fragment)&&!/实际|已实现|已披露|\b(?:actual|realized|historical)\b/iu.test(fragment)):[sentence]
+      const fragments=annualYears(sentence).length>1?sentence.split(/，|(?<!\d),|,(?!\d)/u).filter(fragment=>explicitForecastHint(fragment)&&!/实际|已实现|已披露|已公布|已发布|非预测|不是预测|\b(?:actual|realized|historical|reported|not\s+(?:a\s+)?forecast)\b/iu.test(fragment)):[sentence]
       for(const fragment of fragments){
       const years=annualYears(fragment)
       if(years.length!==1)continue
