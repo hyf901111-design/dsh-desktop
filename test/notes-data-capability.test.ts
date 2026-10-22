@@ -33,14 +33,14 @@ async function fixture(options:{bound?:boolean;native?:boolean}={}){
  const directory=await mkdtemp(join(tmpdir(),'notes-data-capability-'))
  const model={version:1,type:'market',variant:'metrics',title:'真实指标',asOf:'合成测试来源',items:[{label:'价格',value:'100'}]},spec=JSON.parse(acceptArtifactOutput(JSON.stringify(model))!)
  const node={id:'node',kind:'generated-container',generationStatus:'completed',noteDataBound:true,containerSpec:options.native?{type:'financial-widget',kind:'news'}:spec},content:any={title:'保留笔记',yjs:'',blocks:[{id:'text',type:'paragraph',content:'保留正文'},{id:'block',type:'research',props:{payload:JSON.stringify(node)}},{id:'other',type:'research',props:{payload:JSON.stringify({...node,id:'other-node'})}}]}
- let selected=['block'],visible=true,generation='generation',initialFingerprint='',revision=0,ipc:any,planned:any,beforePersist:(()=>Promise<void>)|undefined,afterQuery:(()=>void|Promise<void>)|undefined,afterEffect:((effect:any)=>void)|undefined
+ let selected=['block'],visible=true,generation='generation',initialFingerprint='',revision=0,ipc:any,planned:any,beforePersist:(()=>Promise<void>)|undefined,afterQuery:(()=>void|Promise<void>)|undefined,afterEffect:((effect:any)=>void|Promise<void>)|undefined
  const effects:any[]=[],progress:any[]=[],history:any[]=[],selectionListeners=new Set<()=>void>()
  const editor:any={isEditable:true,get document(){return content.blocks},getBlock:(id:string)=>content.blocks.find((b:any)=>b.id===id),updateBlock:(id:string,value:any)=>Object.assign(editor.getBlock(id).props,value.props),onSelectionChange:(fn:()=>void)=>{selectionListeners.add(fn);return()=>selectionListeners.delete(fn)}}
  const window:any={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:2},send:(channel:string,value:any)=>{if(channel==='notes:progress')progress.push(value);if(channel==='notes:capability-action')queueMicrotask(()=>{void renderer(value).then(result=>!value.cancel&&request('capability-reply',{requestId:value.requestId,result})).catch(error=>request('capability-reply',{requestId:value.requestId,error:error.message}))})}}}
  const event={sender:window.webContents,senderFrame:window.webContents.mainFrame},request=(method:string,args:any={})=>ipc(event,method,{owner:'alice',sessionId:'note',...args})
  const persist=async()=>{const hook=beforePersist;beforePersist=undefined;await hook?.();const result=await request('save',{revision,clientId:'client',content});if(result.status!=='saved')throw Error('保存冲突');revision=result.saved.revision}
  const refreshGuard=createNoteDataRefreshGuard()
- const data=createNoteDataCapability({editor,refreshGuard,selected:()=>selected,request,persist,report:async(requestId,effect)=>{effects.push(effect);afterEffect?.(effect);await request('capability-reply',{requestId,effect})}})
+ const data=createNoteDataCapability({editor,refreshGuard,selected:()=>selected,request,persist,report:async(requestId,effect)=>{effects.push(effect);await afterEffect?.(effect);await request('capability-reply',{requestId,effect})}})
  const sink=createNoteComponentDataActions({sessionId:'note',editor,current:()=>visible,authorize:data.authorize,onApplied:data.onApplied,update:(id,next,value)=>{const ticket=refreshGuard.before(content,id,next.id);editor.updateBlock(id,{props:{payload:JSON.stringify(next)}});refreshGuard.applied(generation,ticket,content,value.guardId)}})
  const bridge=new CanvasActionBridge({canRead:()=>true,send:value=>queueMicrotask(()=>{void sink(value).then(reply=>{if(reply)bridge.respond(reply)})})})
  const query=vi.fn(async(args:any)=>{if(args.parameters_json==='{}')await afterQuery?.();return{items:[{label:'价格',value:101}]}})
@@ -52,8 +52,8 @@ async function fixture(options:{bound?:boolean;native?:boolean}={}){
  if(options.bound!==false&&!options.native)await bind('node')
  const automatic=async(nodeId='node')=>{if(!service.engine.list('note').some(row=>row.nodeId===nodeId))await bind(nodeId);service.engine.setVisible('note',true);await service.engine.refresh(service.engine.list('note').find(row=>row.nodeId===nodeId)!.id,true)}
  vi.stubGlobal('fetch',async(url:any,options:any)=>{const body=JSON.parse(options.body);if(String(url).endsWith('/session')){history.push(body);return new Response('{"ok":true}')};return new Response(JSON.stringify({type:'result',result:await planned(body)})+'\n')})
- const generate=(next:any)=>{initialFingerprint=noteCapabilityFingerprint(content);refreshGuard.begin(generation,content);planned=next;return request('generate',{requestId:generation,mode:'write',prompt:'按当前所选组件的数据绑定操作',capabilityContext:{documentId:'doc',selectedBlockIds:['block']},context:{scope:'selection',components:[]}})}
- return {content,effects,query,progress,service,request,generate,history,persist,automatic,beforePersist:(fn:()=>Promise<void>)=>{beforePersist=fn},setAfterEffect:(fn:(effect:any)=>void)=>{afterEffect=fn},setAfterQuery:(fn:()=>void|Promise<void>)=>{afterQuery=fn},switchSelection:()=>{selected=['other'];for(const fn of selectionListeners)fn()},close:async()=>{renderer.dispose();dispose();bridge.dispose();await service.dispose();vi.unstubAllGlobals();await rm(directory,{recursive:true,force:true})}}
+ const generate=(next:any,id=generation)=>{generation=id;initialFingerprint=noteCapabilityFingerprint(content);refreshGuard.begin(generation,content);planned=next;return request('generate',{requestId:generation,mode:'write',prompt:'按当前所选组件的数据绑定操作',capabilityContext:{documentId:'doc',selectedBlockIds:['block']},context:{scope:'selection',components:[]}})}
+ return {content,effects,query,progress,service,request,generate,history,persist,automatic,beforePersist:(fn:()=>Promise<void>)=>{beforePersist=fn},setAfterEffect:(fn:(effect:any)=>void|Promise<void>)=>{afterEffect=fn},setAfterQuery:(fn:()=>void|Promise<void>)=>{afterQuery=fn},switchSelection:()=>{selected=['other'];for(const fn of selectionListeners)fn()},close:async()=>{renderer.dispose();dispose();bridge.dispose();await service.dispose();vi.unstubAllGlobals();await rm(directory,{recursive:true,force:true})}}
 }
 it.each(['before-first','between-rounds','during-save'])('continues data configuration after a real automatic refresh %s without a human edit',async timing=>{
  const f=await fixture()
@@ -165,6 +165,35 @@ it('uses the real host, independent note engine and renderer lease for inspect, 
   expect((await f.request('load')).saved.blocks[1].props.payload).toBe(f.content.blocks[1].props.payload)
   expect(f.progress.filter(v=>v.capabilityProgress).map(v=>v.capabilityProgress.length)).toEqual([1,2,3])
   expect(noteCapabilityReceiptMessage(result.capabilityReceipts[1],'en')).toBe('Refresh settings saved; data has not been fetched.')
+ }finally{await f.close()}
+})
+it('uses the trusted configure receipt revision for a dependent refresh batched with the old inspect revision',async()=>{
+ const f=await fixture()
+ try{
+  const result=await f.generate((body:any)=>!body.clientReceipts.length?{kind:'capabilities',calls:[{requestId:'inspect',capability:action,arguments:{action:'inspect'}}]}:body.clientReceipts.length===1?{kind:'capabilities',calls:[{requestId:'configure',capability:action,arguments:{action:'configure',revision:body.clientReceipts[0].data.revision,settings:{enabled:true,intervalMinutes:2}}},{requestId:'refresh',capability:action,arguments:{action:'refresh',revision:body.clientReceipts[0].data.revision}}]}:{kind:'conversation',markdown:'结束'})
+  expect(result.capabilityReceipts.map((r:any)=>r.status)).toEqual(['succeeded','succeeded','succeeded'])
+  expect(result.capabilityReceipts[1]).toMatchObject({data:{revision:2,intervalMinutes:2},effect:{operation:'configure',state:'saved'}})
+  expect(result.capabilityReceipts[2]).toMatchObject({data:{revision:2,status:'success'},effect:{operation:'refresh',state:'saved'}})
+  expect(f.query).toHaveBeenCalledOnce();expect(f.service.engine.list('note')[0]).toMatchObject({revision:2,enabled:true,intervalMinutes:2})
+ }finally{await f.close()}
+})
+it('keeps the actual host CAS when another operation changes the binding after this request saves its settings',async()=>{
+ const f=await fixture(),before=f.content.blocks[1].props.payload
+ try{
+  f.setAfterEffect(async effect=>{if(effect.operation==='configure'&&effect.state==='saved')await f.service.engine.configure(f.service.engine.list('note')[0]!.id,{intervalMinutes:7})})
+  const result=await f.generate((body:any)=>!body.clientReceipts.length?{kind:'capabilities',calls:[{requestId:'inspect',capability:action,arguments:{action:'inspect'}}]}:body.clientReceipts.length===1?{kind:'capabilities',calls:[{requestId:'configure',capability:action,arguments:{action:'configure',revision:1,settings:{enabled:true,intervalMinutes:2}}},{requestId:'refresh',capability:action,arguments:{action:'refresh',revision:1}}]}:{kind:'conversation',markdown:'结束'})
+  expect(result.capabilityReceipts.map((r:any)=>r.status)).toEqual(['succeeded','succeeded','failed'])
+  expect(result.capabilityReceipts[1].data.revision).toBe(2);expect(result.capabilityReceipts[2].message).toContain('绑定版本已变化')
+  expect(f.query).not.toHaveBeenCalled();expect(f.content.blocks[1].props.payload).toBe(before);expect(f.service.engine.list('note')[0]).toMatchObject({revision:3,intervalMinutes:7})
+ }finally{await f.close()}
+})
+it('never reuses a prior generation configure receipt to repair a new request stale revision',async()=>{
+ const f=await fixture()
+ try{
+  const first=await f.generate((body:any)=>!body.clientReceipts.length?{kind:'capabilities',calls:[{requestId:'inspect-first',capability:action,arguments:{action:'inspect'}}]}:body.clientReceipts.length===1?{kind:'capabilities',calls:[{requestId:'configure-first',capability:action,arguments:{action:'configure',revision:1,settings:{enabled:true,intervalMinutes:2}}}]}:{kind:'conversation',markdown:'结束'})
+  expect(first.capabilityReceipts.map((r:any)=>r.status)).toEqual(['succeeded','succeeded'])
+  const second=await f.generate((body:any)=>!body.clientReceipts.length?{kind:'capabilities',calls:[{requestId:'stale-next-generation',capability:action,arguments:{action:'refresh',revision:1}}]}:{kind:'conversation',markdown:'结束'},'next-generation')
+  expect(second.capabilityReceipts[0].status).toBe('failed');expect(second.capabilityReceipts[0].message).toContain('绑定版本已变化');expect(f.query).not.toHaveBeenCalled()
  }finally{await f.close()}
 })
 it.each(['failure','selection','edit','cancel'])('keeps prior content and last success when refresh encounters %s',async mode=>{
