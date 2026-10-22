@@ -53,7 +53,7 @@ function replacementResolutionHistory(prior:any,...values:Array<{sourceText:stri
  while(result.length>8||result.reduce((n,v)=>n+v.sourceText.length,0)>64000)result.shift()
  return result
 }
-export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridge;sessionId:string;title:string;scroll:RefObject<HTMLDivElement>;busy:boolean;recovery:boolean;active?:boolean;activityId?:string;persist():void;persistConfirmed():Promise<void>}){
+export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridge;sessionId:string;title:string;scroll:RefObject<HTMLDivElement>;busy:boolean;isBusy?():boolean;recovery:boolean;active?:boolean;activityId?:string;persist():void;persistConfirmed():Promise<void>}){
  const {editor,doc,bridge,sessionId}=options
  const latest=useRef(options);latest.current=options
  const ai=useMemo(()=>new YjsThreadStore(CHALLENGE_USER,doc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor')),[doc])
@@ -117,7 +117,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   const current=latest.current
   let editingBlockId:string|undefined
   try{if(editor._tiptapEditor.view.hasFocus())editingBlockId=editor.getTextCursorPosition().block.id}catch{}
-  scheduler.current?.update({title:current.title,blocks:blocks(),active:!restoring.current&&active(),editingBlockId,composing:editor._tiptapEditor.view.composing,busy:current.busy||!!action.current||picker.current.open||Date.now()<settle.current})
+  scheduler.current?.update({title:current.title,blocks:blocks(),active:!restoring.current&&active(),editingBlockId,composing:editor._tiptapEditor.view.composing,busy:current.busy||current.isBusy?.()||!!action.current||picker.current.open||Date.now()<settle.current})
  }
  useEffect(()=>{
   live.current=true
@@ -177,7 +177,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    if(!live.current)return
    if(readLevel()===restoredLevel&&fingerprint(latest.current.title,blocks())===restoredKey){covered.current=restored.covered;state.current.checks=restored.checks;setChecks(restored.checks);s.restoreCoverage([...restored.covered.keys()],restored.checks,[...restored.covered].flatMap(([id,value])=>value.complete?[id]:[]),retryState)}
   }).catch(()=>{}).finally(()=>{if(live.current){restoring.current=false;sync();refresh()}})
-  const pref=(event:Y.YMapEvent<unknown>)=>{setLevelState(readLevel());setMarginExpandedState(readMarginExpanded());if(event.keysChanged.has('level')){if(!readLevel())cancelAction();s.setLevel(readLevel(),!picker.current.open)}latest.current.persist();publish()}
+  const pref=(event:Y.YMapEvent<unknown>)=>{setLevelState(readLevel());setMarginExpandedState(readMarginExpanded());if(event.keysChanged.has('level')){if(!readLevel())cancelAction();sync();s.setLevel(readLevel(),!picker.current.open)}latest.current.persist();publish()}
   const off=editor.onChange((_editor:any,{getChanges}:any)=>{
    // BlockNote attributes native Yjs history changes to "undo-redo". Only
    // remap blocks whose text this history action actually restored; ordinary
