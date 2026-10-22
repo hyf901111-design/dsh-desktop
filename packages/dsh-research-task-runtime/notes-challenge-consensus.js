@@ -184,6 +184,7 @@ export async function reviewNoteConsensus(ctx, input, signal) {
   let policy
   try { policy=consensusPolicyFromBlocks(input.blocks) }catch(error){return {issues,checks:[{kind:'consensus',status:'unavailable',detail:error.message}]}}
   const agent = ctx.agents?.get(input.sessionId), cache = new Map(), selected=claims.slice(0,12)
+  let skillSource
   const keyFor=claim=>`${claim.windCode}/${claim.year}/${claim.baseDate}`
   let groups = 0
   for (const claim of selected) {
@@ -193,10 +194,16 @@ export async function reviewNoteConsensus(ctx, input, signal) {
       if (groups++ >= 3) { checks.push({ kind: 'consensus', status: 'partial', detail: '本批已达到3组证券/年度/基准日查询预算，剩余预测未查。' }); break }
       let phase='discovery'
       try {
-        const discovery=deadline(signal,4000)
+        const discovery=deadline(signal,8000)
         let source
         const queryClaim={...claim,cycle:policy.cycle}
-        try {source=sourceFor(ctx,agent,queryClaim)??await abortable(managedInfodbSource(ctx,agent,discovery.signal),discovery.signal)}finally{discovery.dispose()}
+        try {
+          source=sourceFor(ctx,agent,queryClaim)
+          if(!source){
+            skillSource??=await abortable(managedInfodbSource(ctx,agent,discovery.signal),discovery.signal)
+            source=skillSource
+          }
+        }finally{discovery.dispose()}
         if (!source) return { issues, checks: [...checks, { kind: 'consensus', status: 'unavailable', detail: '当前会话没有可用的已授权infodb只读SQL工具或已启用的infodb读取技能；未查询、未使用其他来源替代。' }] }
         const query = async mode => {
           phase='read'

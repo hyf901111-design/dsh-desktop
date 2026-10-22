@@ -142,3 +142,34 @@ it('still kills a stalled database process within four seconds despite the autho
   const pid=Number(await readFile(f.marker,'utf8'))
   await vi.waitFor(()=>expect(()=>process.kill(pid,0)).toThrow())
 },10000)
+
+it('allows bounded managed catalog discovery separately from the database execution limit',async()=>{
+  const f=await fixture(),get=f.ctx.skills.get
+  f.ctx.skills.get=async(...args)=>{if(!f.state.gets)await new Promise(resolve=>setTimeout(resolve,4250));return get(...args)}
+  const result=await (await load()).reviewNoteConsensus(f.ctx,input,AbortSignal.timeout(12000))
+  expect(result.issues).toHaveLength(1)
+},15000)
+
+it('discovers a managed source once per review while reauthorizing every separate snapshot read',async()=>{
+  const f=await fixture(),list=vi.spyOn(f.ctx.skills,'list')
+  const result=await (await load()).reviewNoteConsensus(f.ctx,{sessionId:'skill-session',blocks:[
+    {id:'a',text:'600519.SH 报告基准日20261020。预计2026年EPS76元。'},
+    {id:'b',text:'600519.SH 报告基准日20261021。预计2026年EPS77元。'}
+  ]},AbortSignal.timeout(12000))
+  expect(result.issues).toHaveLength(2)
+  expect(list).toHaveBeenCalledTimes(1)
+  expect(f.state.gets).toBe(5)
+  expect((await readFile(f.marker,'utf8')).trim().split('\n')).toHaveLength(2)
+})
+
+it('does not reuse discovery to bypass a skill revocation between two snapshot groups',async()=>{
+  const f=await fixture(),get=f.ctx.skills.get
+  f.ctx.skills.get=async(...args)=>{if(f.state.gets===3)f.state.enabled=false;return get(...args)}
+  const result=await (await load()).reviewNoteConsensus(f.ctx,{sessionId:'skill-session',blocks:[
+    {id:'a',text:'600519.SH 报告基准日20261020。预计2026年EPS76元。'},
+    {id:'b',text:'600519.SH 报告基准日20261021。预计2026年EPS77元。'}
+  ]},AbortSignal.timeout(12000))
+  expect(result.issues.map(i=>i.blockId)).toEqual(['a'])
+  expect(result.checks).toContainEqual(expect.objectContaining({status:'unavailable'}))
+  expect((await readFile(f.marker,'utf8')).trim().split('\n')).toHaveLength(1)
+})

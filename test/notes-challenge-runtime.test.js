@@ -784,3 +784,23 @@ it('caps the whole dense review at sixty seconds even when its provider ignores 
   await vi.advanceTimersByTimeAsync(40000)
   expect((await observed).error.message).toMatch(/超时|timeout/i)
 })
+
+it('does not let model memory invent a capital basis conflict for a qualified securities forecast',async()=>{
+  const {generateNoteChallenge}=await load()
+  const text='600519.SH 报告基准日20261020。预计2026年归母净利润838.69亿元，EPS67.0908元。'
+  const f=fixture({reviews:[{blockId:'a',issues:[{quote:'预计2026年归母净利润838.69亿元，EPS67.0908元。',basis:'general-knowledge',category:'uncertain',message:'按贵州茅台总股本约12.56亿股，838.69亿元对应EPS约66.77元，与67.0908元不符，请核对计算口径',evidence:[]}]}]})
+  const result=await generateNoteChallenge(f.ctx,{...input,blocks:[{id:'a',type:'paragraph',text}]})
+  expect(result.issues).toEqual([])
+  expect(result.checks).toContainEqual(expect.objectContaining({kind:'consensus',status:'unavailable'}))
+})
+
+it('keeps explicit note-backed forecast arithmetic and unrelated obvious knowledge conflicts',async()=>{
+  const {generateNoteChallenge}=await load()
+  const text='600519.SH 报告基准日20261020。预计2026年归母净利润100亿元，EPS20元，假设股本10亿股。水在100摄氏度一定会结冰。'
+  const f=fixture({reviews:[{blockId:'a',issues:[
+    {quote:'EPS20元',basis:'note',category:'logic',message:'100亿元除以10亿股应为10元，请核对EPS。',evidence:[{kind:'note',label:'正文股本假设',blockId:'a',quote:'假设股本10亿股'}]},
+    {quote:'水在100摄氏度一定会结冰',basis:'general-knowledge',category:'uncertain',message:'常温常压下100摄氏度的水通常沸腾而非结冰，请核对。',evidence:[]}
+  ]}]})
+  const result=await generateNoteChallenge(f.ctx,{...input,blocks:[{id:'a',type:'paragraph',text}]})
+  expect(result.issues.map(i=>i.quote)).toEqual(['EPS20元','水在100摄氏度一定会结冰'])
+})
