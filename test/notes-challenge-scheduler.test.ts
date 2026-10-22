@@ -282,3 +282,47 @@ it('uses only the bounded legacy allowance for malformed private retry metadata'
  s.restoreCoverage(['p'],partial.checks,[],bad);s.update({title:'',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(1200000)
  expect(run).toHaveBeenCalledTimes(2);expect(s.retryState().entries[0]?.attempts).toBe(2);s.dispose()
 })
+
+const researchDocument=(text='预计2026年EPS为76元，12%阈值用于本报告。')=>[
+ {id:'header',type:'paragraph',text:'研究标的：贵州茅台（600519.SH）。报告基准日：2026年10月20日。'},
+ {id:'policy',type:'paragraph',text:'一致预期偏离阈值：12%。一致预期统计周期：180天。'},
+ {id:'business',type:'paragraph',text:'公司主营高端消费产品。'},
+ {id:'channel',type:'paragraph',text:'渠道价格需要跟踪验证。'},
+ {id:'forecast',type:'paragraph',text},
+ {id:'risk',type:'paragraph',text:'消费需求仍有不确定性。'}
+]
+it.each(['预计2026年EPS为76元，12%阈值用于本报告。','预计2027年EPS为76元。'])('retains exact distant research metadata on both supplements for %s',async text=>{
+ vi.useFakeTimers();const {extractConsensusClaims,consensusPolicyFromBlocks}=await import(new URL('../packages/dsh-research-task-runtime/notes-challenge-consensus.js',import.meta.url).href)
+ const document=researchDocument(text),run=vi.fn(async(_request:ChallengeRequest)=>({...partial,coveredBlockIds:['forecast']})),onResult=vi.fn(),s=new NoteChallengeScheduler({sessionId:'s',run,onResult})
+ s.update({title:'研究记录',blocks:document,active:false});s.setLevel(4);s.restoreCoverage(document.map(b=>b.id),[],document.filter(b=>b.id!=='forecast').map(b=>b.id));s.update({title:'研究记录',blocks:document,active:true})
+ await vi.advanceTimersByTimeAsync(18002);expect(run).toHaveBeenCalledTimes(2)
+ for(const [request] of run.mock.calls){
+  expect(request.changedIds).toEqual(['forecast']);expect(request.blocks.filter(b=>['header','policy'].includes(b.id))).toEqual(document.slice(0,2))
+  expect(extractConsensusClaims(request.blocks)).toEqual([expect.objectContaining({blockId:'forecast',windCode:'600519.SH',baseDate:'20261020',year:text.includes('2027')?2027:2026,value:76})])
+  expect(consensusPolicyFromBlocks(request.blocks)).toEqual({threshold:.12,cycle:'263003000'})
+ }
+ expect(onResult.mock.calls.every(([response])=>response.coveredBlockIds.join(',')==='forecast')).toBe(true)
+ expect(s.retryState().usage.map(v=>v.chars)).toEqual(run.mock.calls.map(([request])=>request.blocks.reduce((sum,block)=>sum+block.text.length,0)))
+ await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+})
+it('preserves every conflicting explicit metadata paragraph instead of choosing a default policy',async()=>{
+ vi.useFakeTimers();const {consensusPolicyFromBlocks}=await import(new URL('../packages/dsh-research-task-runtime/notes-challenge-consensus.js',import.meta.url).href)
+ const document=[...researchDocument(),{id:'other-policy',type:'paragraph',text:'一致预期偏离阈值：20%。一致预期统计周期：90天。'}],run=vi.fn(async(_request:ChallengeRequest)=>({...partial,coveredBlockIds:['forecast']})),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'研究记录',blocks:document,active:false});s.setLevel(4);s.restoreCoverage(document.map(b=>b.id),[],document.filter(b=>b.id!=='forecast').map(b=>b.id));s.update({title:'研究记录',blocks:document,active:true});await vi.advanceTimersByTimeAsync(18002)
+ expect(run).toHaveBeenCalledTimes(2);for(const [request] of run.mock.calls){expect(request.blocks).toContainEqual(document.at(-1));expect(()=>consensusPolicyFromBlocks(request.blocks)).toThrow(/冲突/)}s.dispose()
+})
+it.each(['characters','blocks','oversized'] as const)('fails closed when exact research metadata cannot fit the %s capacity',async limit=>{
+ vi.useFakeTimers();let document=researchDocument()
+ if(limit==='characters'){document[0]!.text+='甲'.repeat(10000);document[1]!.text+='乙'.repeat(3000);document[4]!.text+='丙'.repeat(4000)}
+ if(limit==='blocks')document=[...document,...Array.from({length:24},(_,n)=>({id:'metadata-'+n,type:'paragraph',text:'报告基准日：2026年10月20日。'}))]
+ if(limit==='oversized')document[0]!.text+='甲'.repeat(12000)
+ const source=JSON.stringify(document),run=vi.fn(async()=>({...result,coveredBlockIds:['forecast'],completeBlockIds:['forecast']})),onResult=vi.fn(),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult,onState:value=>states.push(value)})
+ s.update({title:'研究记录',blocks:document,active:false});s.setLevel(4);s.restoreCoverage(document.map(b=>b.id),[],document.filter(b=>b.id!=='forecast').map(b=>b.id));s.update({title:'研究记录',blocks:document,active:true});await vi.advanceTimersByTimeAsync(1200000)
+ expect(run).not.toHaveBeenCalled();expect(onResult).not.toHaveBeenCalled();expect(states.at(-1)).toMatchObject({phase:'limited',pending:1});expect(states.at(-1).checks).toContainEqual(expect.objectContaining({kind:'coverage',status:'partial',detail:expect.stringContaining('研究元数据')}));expect(JSON.stringify(document)).toBe(source);s.dispose()
+})
+it('reserves whole metadata before filling ordinary batches without duplicating blocks or charging free context',async()=>{
+ vi.useFakeTimers();const metadata=researchDocument().slice(0,2),document=[...Array.from({length:30},(_,n)=>({id:'body-'+n,type:'paragraph',text:'待校验正文第'+n+'段。'})),...metadata],run=vi.fn(async(request:ChallengeRequest)=>({...result,coveredBlockIds:request.changedIds!,completeBlockIds:request.changedIds!})),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'研究记录',blocks:document,active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(10000);expect(run).toHaveBeenCalledTimes(2)
+ for(const [request] of run.mock.calls){expect(request.blocks).toEqual(expect.arrayContaining(metadata));expect(request.blocks.length).toBeLessThanOrEqual(24);expect(new Set(request.blocks.map(b=>b.id)).size).toBe(request.blocks.length)}
+ expect(s.retryState().usage.map(v=>v.chars)).toEqual(run.mock.calls.map(([request])=>request.blocks.reduce((sum,block)=>sum+block.text.length,0)));s.dispose()
+})

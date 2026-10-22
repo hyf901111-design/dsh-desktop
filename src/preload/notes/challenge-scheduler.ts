@@ -27,6 +27,7 @@ type Supplement={attempts:number;notBefore:number}
 export type ChallengeRetryState={version:1;key:string;level:ChallengeLevel;entries:Array<Supplement&{id:string;blocked:boolean}>;usage:Usage[]}
 const key=(value:{title:string;blocks:ChallengeBlock[]})=>JSON.stringify([value.title,value.blocks])
 const MAX_CHARS=16000,MAX_BLOCK_CHARS=12000,MAX_BLOCKS=24,WINDOW=600000,MAX_SUPPLEMENTS=2
+const researchMetadata=(block:ChallengeBlock)=>['paragraph','heading'].includes(block.type)&&(/\b\d{6}\.(?:SH|SZ|BJ)\b/iu.test(block.text)||/(?:^|[\n。；;])\s*(?:研究标的|股票代码|证券代码|报告基准日|报告发布日期|报告发布日|报告日期|基准日|模型日|预测截止日|一致预期偏离阈值|一致预期统计周期)\s*[:：]?/u.test(block.text))
 
 /** Local semantic changes drive one cancellable review, never autosave events. */
 export class NoteChallengeScheduler{
@@ -104,26 +105,37 @@ export class NoteChallengeScheduler{
  private cancel(){clearTimeout(this.timer);this.timer=undefined;if(this.flight){for(const id of this.flight.ids)if(this.value.blocks.some(b=>b.id===id))this.pending.add(id);this.flight.controller.abort()}}
  private eligible(){return this.value.blocks.filter(b=>this.pending.has(b.id)&&!this.failed.has(b.id)&&(this.supplements.get(b.id)?.attempts??0)<MAX_SUPPLEMENTS)}
  private batch(){
-  const chosen:ChallengeBlock[]=[],ids:string[]=[];let chars=0,oversized=false,deep=false
+  const chosen:ChallengeBlock[]=[],ids:string[]=[];let chars=0,oversized=false,deep=false,metadataLimited=false,nextAt=Infinity
+  // Identifiers, cutoffs and explicitly configured comparison settings are part
+  // of every factual pass, not optional low-frequency cross-paragraph evidence.
+  // Preserve whole source paragraphs, including conflicts or invalid values.
+  const metadata=this.level>=2?this.value.blocks.filter(researchMetadata):[],metadataIds=new Set(metadata.map(block=>block.id)),metadataChars=metadata.reduce((sum,block)=>sum+block.text.length,0)
+  if(metadata.length>MAX_BLOCKS||metadataChars>MAX_CHARS||metadata.some(block=>block.text.length>MAX_BLOCK_CHARS))return{chosen,ids,chars,existingAnchors:[],oversized,deep,metadataLimited:true,nextAt}
+  let extraChars=0,extraBlocks=0
   for(const block of this.eligible()){
-   if((this.supplements.get(block.id)?.notBefore??-Infinity)>this.now())continue
    if(block.text.length>MAX_BLOCK_CHARS){oversized=true;continue}
-   if(chosen.length>=MAX_BLOCKS||chars+block.text.length>MAX_CHARS)break
-   chosen.push(block);ids.push(block.id);chars+=block.text.length
+   const extra=!metadataIds.has(block.id),size=extra?block.text.length:0,count=extra?1:0
+   if(metadataChars+size>MAX_CHARS||metadata.length+count>MAX_BLOCKS){metadataLimited=true;continue}
+   const readyAt=this.supplements.get(block.id)?.notBefore??-Infinity
+   if(readyAt>this.now()){nextAt=Math.min(nextAt,readyAt);continue}
+   if(metadata.length+extraBlocks+count>MAX_BLOCKS||metadataChars+extraChars+size>MAX_CHARS)break
+   chosen.push(block);ids.push(block.id);chars+=block.text.length;extraChars+=size;extraBlocks+=count
   }
+  const included=new Set(ids)
+  for(const block of metadata)if(!included.has(block.id)){chosen.push(block);included.add(block.id);chars+=block.text.length}
   // Adjacent paragraphs remain available on every pass; distant related
   // paragraphs are the extra cross-paragraph pass governed by `deep`.
   const adjacent=new Set<string>(),context=new Set<string>()
   for(const id of ids){const at=this.value.blocks.findIndex(b=>b.id===id);for(const index of [at-1,at+1]){const b=this.value.blocks[index];if(b){adjacent.add(b.id);context.add(b.id)}}}
   if(ids.length&&this.now()>=this.lastDeep+CHALLENGE_LEVELS[this.level].deep){
-   const terms=new Set(chosen.flatMap(b=>b.text.match(/[A-Za-z]{2,}|\d{2,}|[\u4e00-\u9fff]{2,6}/gu)??[]))
+   const terms=new Set(chosen.filter(b=>ids.includes(b.id)).flatMap(b=>b.text.match(/[A-Za-z]{2,}|\d{2,}|[\u4e00-\u9fff]{2,6}/gu)??[]))
    const related=this.value.blocks.filter(b=>!ids.includes(b.id)).map(b=>({b,score:[...terms].filter(t=>b.text.includes(t)).length})).sort((a,b)=>b.score-a.score)
    for(const {b,score} of related)if(score>0)context.add(b.id)
   }
-  for(const id of context){const b=this.value.blocks.find(b=>b.id===id)!;if(ids.includes(id)||b.text.length>MAX_BLOCK_CHARS||chosen.length>=MAX_BLOCKS||chars+b.text.length>MAX_CHARS)continue;chosen.push(b);chars+=b.text.length;if(!adjacent.has(id))deep=true}
+  for(const id of context){const b=this.value.blocks.find(b=>b.id===id)!;if(included.has(id)||b.text.length>MAX_BLOCK_CHARS||chosen.length>=MAX_BLOCKS||chars+b.text.length>MAX_CHARS)continue;chosen.push(b);included.add(id);chars+=b.text.length;if(!adjacent.has(id))deep=true}
   const existingAnchors=challengeReviewAnchors(this.options.getReviewAnchors?.()??[],chosen.filter(block=>ids.includes(block.id)))
   // Repeated location hints consume the same rolling input budget as body text.
-  return{chosen,ids,chars:chars+(existingAnchors.length?JSON.stringify(existingAnchors).length:0),existingAnchors,oversized,deep}
+  return{chosen,ids,chars:chars+(existingAnchors.length?JSON.stringify(existingAnchors).length:0),existingAnchors,oversized,deep,metadataLimited,nextAt}
  }
  private budgetWait(chars:number){
   this.usage=this.usage.filter(v=>v.at>this.now()-WINDOW)
@@ -139,12 +151,11 @@ export class NoteChallengeScheduler{
   if(!this.pending.size){this.emit('idle');return}
   const eligible=this.eligible()
   if(!eligible.length){this.emit('waiting');return}
-  const next=eligible.filter(block=>block.text.length<=MAX_BLOCK_CHARS).reduce((due,block)=>Math.min(due,this.supplements.get(block.id)?.notBefore??-Infinity),Infinity)
-  if(Number.isFinite(next)&&next>this.now()){this.emit('waiting');this.timer=setTimeout(()=>this.schedule(),next-this.now());return}
   const batch=this.batch()
   this.checks=this.checks.filter(v=>v.kind!=='coverage')
   if(batch.oversized)this.checks.push({kind:'coverage',status:'partial',detail:'部分长段落超出单段处理上限，已保留为待检查，尚未完成检查。'})
-  if(!batch.ids.length){this.emit('limited');return}
+  if(batch.metadataLimited)this.checks.push({kind:'coverage',status:'partial',detail:'研究元数据与待检查段落超出本轮容量，相关段落已保留为待检查，尚未完成本等级检查。'})
+  if(!batch.ids.length){if(Number.isFinite(batch.nextAt)&&batch.nextAt>this.now()){this.emit('waiting');this.timer=setTimeout(()=>this.schedule(),batch.nextAt-this.now())}else this.emit('limited');return}
   const wait=this.budgetWait(batch.chars)
   if(wait!==undefined){this.emit('limited');this.timer=setTimeout(()=>this.schedule(),wait);return}
   // Missing punctuation is not a permanent veto: a stable phrase can contain a
