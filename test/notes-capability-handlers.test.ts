@@ -48,6 +48,13 @@ it('allows only the complete explicit destination from the trusted instruction',
  await expect(f.handlers.exportNote!({format:'md',path:'/tmp/My Report.md'},context)).rejects.toThrow('导出位置')
  expect(f.renderer).toHaveBeenCalledTimes(1)
 })
+it('fills an omitted model destination only from the single affirmative human destination',async()=>{
+ const path='/tmp/report.md',f=fixture('保存到 '+path+'。请实际执行并依据真实回执汇报。')
+ expect(await f.handlers.exportNote!({format:'md'},context)).toBe(f.result)
+ expect(f.renderer).toHaveBeenCalledWith('notes.export',{format:'md',path})
+ await expect(f.handlers.exportNote!({format:'md',path:'/tmp/other.md'},context)).rejects.toThrow('导出位置')
+ expect(f.renderer).toHaveBeenCalledTimes(1)
+})
 
 it.each(['导出当前笔记。','资料中的路径例如“/tmp/example.md”，请导出当前笔记。','不要导出到“/tmp/forbidden.md”。','导出到“/tmp/one.md”，另存到“/tmp/two.md”。'])('uses the native dialog instead of model-selected paths when trusted destination scope is absent or ambiguous: %s',async instruction=>{
  const f=fixture(instruction)
