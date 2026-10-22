@@ -90,7 +90,7 @@ it('replaces a transport failure with a short retry message while retaining the 
  }finally{await context.close()}
 },15000)
 
-for(const route of ['close','resolve','switch','off','hidden'])it('ends a pending reply on '+route+' and ignores a late replacement',async()=>{
+for(const route of ['resolve','off'])it('ends a pending reply on '+route+' and ignores a late replacement',async()=>{
  const{context,page,errors,id}=await fixture();try{
   await start(page)
   await page.evaluate(({route,id})=>{window.challenge.setDraft(id,'保留新草稿');if(route==='close')window.challenge.close(id);if(route==='resolve')void window.challenge.resolve(id);if(route==='switch')window.switchNote('note-b');if(route==='off')window.challenge.setLevel(0);if(route==='hidden'){document.querySelector('.en-root').hidden=true;document.dispatchEvent(new Event('sherlock:workspace-surface-change'))}},{route,id})
@@ -110,7 +110,7 @@ for(const route of ['close','resolve','switch','off','hidden'])it('ends a pendin
 
 it('keeps a new action busy when an older cancelled request settles later and guards changed text',async()=>{
  const{context,page,errors,id}=await fixture();try{
-  await start(page);await page.evaluate(id=>{window.challenge.close(id);window.challenge.select(id);window.start('optimize')},id)
+  await start(page);await page.evaluate(id=>{window.challenge.setLevel(0);window.challenge.select(id);window.start('optimize')},id)
   await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
   await finish(page,{...answer,reply:{text:'旧建议',replacement:'旧替换'}})
   expect(await page.evaluate(()=>({id:window.challenge.busyId,kind:window.challenge.actionKind}))).toEqual({id,kind:'optimize'})
@@ -994,5 +994,38 @@ it('anchors a wrapped replacement comparison to the clicked character instead of
   const fallback=await page.locator('.en-main').evaluate((el,left)=>{const a=el.getBoundingClientRect();return Math.max(a.left+16,Math.min(left,a.right-Math.min(360,a.width-32)-16))},currentFragments[0].left)
   await expect.poll(async()=>Math.abs((await popup.boundingBox()).x-fallback)).toBeLessThanOrEqual(2)
   expect(await popup.evaluate(el=>{const b=el.getBoundingClientRect(),a=document.querySelector('.en-main').getBoundingClientRect();return b.left>=a.left+16&&b.right<=a.right-16&&b.top>=a.top+16&&b.bottom<=a.bottom-16})).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+for(const kind of ['reply','optimize'])for(const route of ['close','blur','switch'])it('retains a started '+kind+' after '+route+' and saves only its originating note',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,kind,'请解释这处用字，不直接改写')
+  await page.evaluate(({route,id})=>{if(route==='close')window.challenge.close(id);if(route==='blur'){Object.defineProperty(document,'hasFocus',{configurable:true,value:()=>false});window.dispatchEvent(new Event('blur'))}if(route==='switch')window.switchNote('note-b')},{route,id})
+  if(route==='switch')await page.locator('[data-note-source-session="note-b"] .bn-editor').waitFor()
+  expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(0)
+  await finish(page,{...answer,reply:{text:'原会话后台结果。',...(kind==='optimize'?{replacement:'这项结论的程度较高。'}:{})}})
+  await expect.poll(()=>page.evaluate(()=>window.completed)).toBe(1)
+  await expect.poll(()=>page.evaluate(()=>JSON.stringify(window.saved['note-a']||{}).includes('yjs'))).toBe(true)
+  if(route==='switch'){await expect.poll(()=>page.locator('[data-note-source-session="note-a"]').count()).toBe(0);await page.evaluate(()=>window.switchNote('note-a'));await page.locator('[data-note-source-session="note-a"] .bn-editor').waitFor()}
+  if(route==='blur')await page.evaluate(()=>{Object.defineProperty(document,'hasFocus',{configurable:true,value:()=>true});window.dispatchEvent(new Event('focus'))})
+  await expect.poll(()=>page.evaluate(()=>window.messages().includes('原会话后台结果。'))).toBe(true)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
+  expect(await page.evaluate(()=>window.challenge.busyId||null)).toBeNull();expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it.each(['zh','en'])('explains a reply format failure in %s and reuses AI optimize without applying twice',async locale=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(({locale,id})=>{document.documentElement.dataset.odysseyLocale=locale;window.challenge.select(id)}, {locale,id});await start(page)
+  await page.evaluate(()=>window.jobs[0].reject(Error("Error invoking remote method 'notes:request': Error: 挑战检查结果格式无效。")))
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const message=await page.evaluate(()=>window.messages().at(-1));expect(message).toContain(locale==='en'?'format':'格式');expect(message).toContain(locale==='en'?'AI optimize':'AI优化')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
+  await page.getByRole('button',{name:locale==='en'?'AI optimize':'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  await page.evaluate(()=>window.start('optimize'));expect(await page.evaluate(()=>window.jobs.length)).toBe(2)
+  await finish(page,{...answer,reply:{text:'可重试的建议。',replacement:'这项结论的程度较高。'}},1)
+  const apply=page.getByRole('button',{name:locale==='en'?'Apply to note':'替换到原文',exact:true});await apply.waitFor();await apply.click()
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
+  expect(await page.evaluate(()=>window.noteDoc.getMap('note-replacement-reviews').size)).toBe(1);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

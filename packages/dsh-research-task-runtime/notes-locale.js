@@ -390,6 +390,7 @@ export const NOTE_ENGLISH = {
   "已优化这段表达，并保留原有研究立场。": "The wording was improved while preserving your research position.",
   "本轮未形成可核验的修改建议，原文保持不变。": "This review produced no verifiable revision. The original text was preserved.",
   "正文已变化，这次建议未替换原文。请基于当前文字继续讨论。": "The text changed, so this suggestion was not applied. Continue the discussion using the current text.",
+  "AI回复格式不符合要求，原文未修改。请重新发送，或点击“AI优化”重试。": "The AI reply format was invalid. Your note was not changed. Send again or use AI optimize to retry.",
   "没能完成，请重试": "Could not finish. Try again.",
   "审查提醒应保留在评论中，这次建议未替换正文，请重新优化。": "Review notices belong in comments. This suggestion was not applied to the note; request another optimization.",
   "尚需确认的提醒仅保留在这条评论中。": "Notices that still require confirmation remain in this comment.",
