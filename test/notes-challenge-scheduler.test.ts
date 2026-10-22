@@ -2,7 +2,7 @@ import {afterEach,expect,it,vi} from 'vitest'
 import {NoteChallengeScheduler,challengeDocumentBlocks,CHALLENGE_LEVELS} from '../src/preload/notes/challenge-scheduler'
 import type {ChallengeRequest} from '../src/shared/notes-challenge'
 const blocks=(text='这是一段已经完成的研究判断。')=>[{id:'p',type:'paragraph',text}]
-const result={version:1 as const,issues:[],coveredBlockIds:['p'],checks:[]}
+const result={version:1 as const,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[]}
 afterEach(()=>vi.useRealTimers())
 it('includes current review anchor context and charges its rolling character cost',async()=>{
  vi.useFakeTimers();const text='甲'.repeat(1899)+'乙'+'丙'.repeat(1899)+'丁'+'戊'.repeat(99)+'。',anchors=[{blockId:'p',quote:text.slice(0,1900)},{blockId:'p',quote:text.slice(1900,3800)}]
@@ -16,7 +16,7 @@ it('includes current review anchor context and charges its rolling character cos
 })
 it('limits review anchor hints to reviewed targets even when adjacent context has its own marks',async()=>{
  vi.useFakeTimers();const anchors=[{blockId:'p',quote:'已有问题'},{blockId:'q',quote:'邻段'}]
- const run=vi.fn(async(r:ChallengeRequest)=>({...result,coveredBlockIds:r.changedIds!})),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),getReviewAnchors:()=>anchors})
+ const run=vi.fn(async(r:ChallengeRequest)=>({...result,coveredBlockIds:r.changedIds!,completeBlockIds:r.changedIds!})),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),getReviewAnchors:()=>anchors})
  const document=(n:number)=>[{id:'p',type:'paragraph',text:'已有问题。'+n},{id:'q',type:'paragraph',text:'邻段注释。'}]
  s.update({title:'',blocks:document(0),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(2000)
  s.update({title:'',blocks:document(1),active:true});await vi.advanceTimersByTimeAsync(30000)
@@ -90,7 +90,7 @@ it('retains a paragraph above the per-block runtime limit as pending with honest
  expect(run).not.toHaveBeenCalled();expect(states.at(-1).pending).toBe(1);expect(states.at(-1).checks).toContainEqual(expect.objectContaining({kind:'coverage',status:'partial'}));s.dispose()
 })
 it('always includes adjacent context but throttles extra related paragraphs using the deep interval',async()=>{
- vi.useFakeTimers();const calls:any[]=[],run=vi.fn(async(request:any)=>{calls.push(request);return{...result,coveredBlockIds:request.changedIds}}),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ vi.useFakeTimers();const calls:any[]=[],run=vi.fn(async(request:any)=>{calls.push(request);return{...result,coveredBlockIds:request.changedIds,completeBlockIds:request.changedIds}}),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
  const document=(n:number)=>[{id:'p',type:'paragraph',text:`EPS 预测${n}。`},{id:'near',type:'paragraph',text:'相邻段落。'},{id:'unrelated',type:'paragraph',text:'另一主题。'},{id:'related',type:'paragraph',text:'EPS 计算的股本假设。'}]
  s.update({title:'',blocks:document(0),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(2000)
  s.update({title:'',blocks:document(1),active:true});await vi.advanceTimersByTimeAsync(30000)
@@ -146,4 +146,139 @@ it('immediately rechecks a changed level after adjustment closes without the old
  s.update({title:'',blocks:blocks(),active:true,busy:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledOnce()
  s.update({title:'',blocks:blocks(),active:true,busy:false});s.recheck(true);await vi.advanceTimersByTimeAsync(1)
  expect(run).toHaveBeenCalledTimes(2);expect(run.mock.calls[1]![0].level).toBe(4);s.dispose()
+})
+
+const partial={...result,completeBlockIds:[],checks:[{kind:'review',status:'partial' as const,detail:'基础检查已完成，当前等级的深入检查尚未完成。'}]}
+it('backs off and makes at most two supplemental passes for covered but incomplete paragraphs',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>partial),onResult=vi.fn(),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult,onState:value=>states.push(value)})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(2000);expect(run).toHaveBeenCalledOnce()
+ await vi.advanceTimersByTimeAsync(5999);expect(run).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(2);expect(run).toHaveBeenCalledTimes(2)
+ await vi.advanceTimersByTimeAsync(11999);expect(run).toHaveBeenCalledTimes(2);await vi.advanceTimersByTimeAsync(2);expect(run).toHaveBeenCalledTimes(3)
+ await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(3);expect(onResult).toHaveBeenCalledTimes(3)
+ expect(states.at(-1)).toMatchObject({phase:'waiting',pending:1});expect(s.retryState().entries).toMatchObject([{id:'p',attempts:2,blocked:false}]);s.dispose()
+})
+it('stops supplemental checks as soon as this tier is complete',async()=>{
+ vi.useFakeTimers();const run=vi.fn().mockResolvedValueOnce(partial).mockResolvedValue(result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(8001);expect(run).toHaveBeenCalledTimes(2)
+ expect(s.retryState().entries).toEqual([]);await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+})
+it('only targets incomplete paragraphs on the supplemental pass while retaining adjacent context',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async(request:ChallengeRequest)=>({...result,coveredBlockIds:request.changedIds!,completeBlockIds:['p']})),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:[...blocks(),{id:'q',type:'paragraph',text:'需要额外追问的结论。'}],active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(8001)
+ expect(run.mock.calls[0]![0].changedIds).toEqual(['p','q']);expect(run.mock.calls[1]![0].changedIds).toEqual(['q']);expect(run.mock.calls[1]![0].blocks.map(b=>b.id)).toEqual(['q','p'])
+ await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(3);s.dispose()
+})
+it('treats an old host without completion attestations as partial, with a bounded compatibility retry',async()=>{
+ vi.useFakeTimers();const {completeBlockIds:_,...oldResult}=result,run=vi.fn(async()=>oldResult),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(1200000)
+ expect(run).toHaveBeenCalledTimes(3);expect(s.retryState().entries[0]?.attempts).toBe(2);s.dispose()
+})
+it('does not treat an unreviewed block as complete just because it is in completeBlockIds',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>({...result,coveredBlockIds:[]})),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),onState:value=>states.push(value)})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(1200000)
+ expect(run).toHaveBeenCalledOnce();expect(states.at(-1)).toMatchObject({pending:1});s.dispose()
+})
+it('restores old partial coverage as two delayed supplements instead of silently dropping it',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>partial),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:false});s.setLevel(4);s.restoreCoverage(['p'],partial.checks,[]);s.update({title:'',blocks:blocks(),active:true})
+ await vi.advanceTimersByTimeAsync(5999);expect(run).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(2);expect(run).toHaveBeenCalledOnce()
+ await vi.advanceTimersByTimeAsync(12001);expect(run).toHaveBeenCalledTimes(2);await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+})
+it('preserves the consumed allowance across repeated scheduler reopenings',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>partial),create=()=>{const s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()});s.update({title:'文稿',blocks:blocks(),active:false});s.setLevel(4);return s}
+ const first=create();first.update({title:'文稿',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(8001)
+ expect(run).toHaveBeenCalledTimes(2);const oneUsed=first.retryState();expect(oneUsed.entries[0]?.attempts).toBe(1);first.dispose()
+ const second=create();second.restoreCoverage(['p'],partial.checks,[],oneUsed);second.update({title:'文稿',blocks:blocks(),active:true})
+ await vi.advanceTimersByTimeAsync(11999);expect(run).toHaveBeenCalledTimes(2);await vi.advanceTimersByTimeAsync(2);expect(run).toHaveBeenCalledTimes(3)
+ const exhausted=second.retryState();expect(exhausted.entries[0]?.attempts).toBe(2);second.dispose()
+ for(let n=0;n<3;n++){const reopened=create();reopened.restoreCoverage(['p'],partial.checks,[],exhausted);reopened.update({title:'文稿',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(3);reopened.dispose()}
+})
+it('does not supplement restored fully completed coverage',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>result),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),onState:value=>states.push(value)})
+ s.update({title:'',blocks:blocks(),active:false});s.setLevel(4);s.restoreCoverage(['p'],[],['p']);s.update({title:'',blocks:blocks(),active:true})
+ await vi.advanceTimersByTimeAsync(1200000);expect(run).not.toHaveBeenCalled();expect(states.at(-1)).toMatchObject({phase:'idle',pending:0});s.dispose()
+})
+it.each(['title','text','type','level'] as const)('does not attach persisted retry exhaustion to a different %s',async change=>{
+ vi.useFakeTimers();const before=new NoteChallengeScheduler({sessionId:'s',run:async()=>partial,onResult:vi.fn()})
+ before.update({title:'文稿',blocks:blocks(),active:true});before.setLevel(4);await vi.advanceTimersByTimeAsync(20002);const exhausted=before.retryState();before.dispose()
+ const title=change==='title'?'新的文稿':'文稿',current=blocks(change==='text'?'已经重新编辑的内容。':undefined);if(change==='type')current[0]!.type='heading'
+ const run=vi.fn(async()=>partial),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()});s.update({title,blocks:current,active:false});s.setLevel(change==='level'?3:4);s.restoreCoverage(['p'],[],[],exhausted);s.update({title,blocks:current,active:true})
+ await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+})
+it.each(['edit','title','level','recheck'] as const)('renews exhausted supplements on an explicit %s while preserving the rolling budget',async change=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>partial),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'文稿',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(20002);expect(run).toHaveBeenCalledTimes(3)
+ if(change==='edit')s.update({title:'文稿',blocks:blocks('修订后的正文。'),active:true})
+ if(change==='title')s.update({title:'修订后的标题',blocks:blocks(),active:true})
+ if(change==='level')s.setLevel(3,true)
+ if(change==='recheck')s.recheck(true)
+ await vi.advanceTimersByTimeAsync(60000);expect(run).toHaveBeenCalledTimes(6);expect(s.retryState().usage).toHaveLength(6);s.dispose()
+})
+it('does not renew exhausted supplements on focus, formatting or same-level updates',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>partial),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(20002)
+ for(let n=0;n<3;n++){s.update({title:'',blocks:blocks(),active:false});s.setLevel(4);s.update({title:'',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(60000)}
+ expect(run).toHaveBeenCalledTimes(3);s.dispose()
+})
+it.each(['rejected','unavailable'] as const)('stops a failed supplemental %s pass and preserves that stop on reopening',async outcome=>{
+ vi.useFakeTimers();const run=vi.fn().mockResolvedValueOnce(partial)
+ if(outcome==='rejected')run.mockRejectedValue(Error('provider unavailable'))
+ else run.mockResolvedValue({...partial,coveredBlockIds:[],checks:[{kind:'review',status:'unavailable',detail:'本轮未执行。'}]})
+ const s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()});s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(1200000)
+ expect(run).toHaveBeenCalledTimes(2);const stopped=s.retryState();expect(stopped.entries[0]).toMatchObject({attempts:1,blocked:true});s.dispose()
+ const reopened=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()});reopened.update({title:'',blocks:blocks(),active:false});reopened.setLevel(4);reopened.restoreCoverage(['p'],partial.checks,[],stopped);reopened.update({title:'',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(1200000)
+ expect(run).toHaveBeenCalledTimes(2);reopened.dispose()
+})
+it('charges interrupted supplemental attempts without repeatedly restarting them',async()=>{
+ vi.useFakeTimers();const signals:AbortSignal[]=[],run=vi.fn((_request:ChallengeRequest,signal:AbortSignal)=>{signals.push(signal);return signals.length===1?Promise.resolve(partial):new Promise<any>(()=>{})}),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(8001);expect(run).toHaveBeenCalledTimes(2)
+ s.update({title:'',blocks:blocks(),active:true,busy:true});await vi.advanceTimersByTimeAsync(1);expect(signals[1]!.aborted).toBe(true)
+ s.update({title:'',blocks:blocks(),active:true,busy:false});await vi.advanceTimersByTimeAsync(12000);expect(run).toHaveBeenCalledTimes(3)
+ s.update({title:'',blocks:blocks(),active:true,busy:true});await vi.advanceTimersByTimeAsync(1);expect(signals[2]!.aborted).toBe(true)
+ s.update({title:'',blocks:blocks(),active:true,busy:false});await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(3);s.dispose()
+})
+it('finishes a partial pass after losing focus but waits for the note to become active before supplementing',async()=>{
+ vi.useFakeTimers();let finish!:(value:any)=>void;let signal!:AbortSignal
+ const run=vi.fn((_request:ChallengeRequest,current:AbortSignal)=>{signal=current;return new Promise<any>(resolve=>{finish=resolve})}),onResult=vi.fn(),s=new NoteChallengeScheduler({sessionId:'s',run,onResult})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(2000);s.update({title:'',blocks:blocks(),active:false});expect(signal.aborted).toBe(false)
+ finish(partial);await vi.advanceTimersByTimeAsync(60000);expect(onResult).toHaveBeenCalledOnce();expect(run).toHaveBeenCalledOnce()
+ s.update({title:'',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+})
+it('keeps the rolling token budget after restoring partial coverage instead of using retries to bypass it',async()=>{
+ vi.useFakeTimers();const run=vi.fn().mockResolvedValueOnce({...partial,usage:{inputTokens:40000,outputTokens:1}}).mockResolvedValue(result),first=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ first.update({title:'',blocks:blocks(),active:true});first.setLevel(4);await vi.advanceTimersByTimeAsync(2000);const saved=first.retryState();first.dispose()
+ const states:any[]=[],reopened=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),onState:value=>states.push(value)});reopened.update({title:'',blocks:blocks(),active:false});reopened.setLevel(4);reopened.restoreCoverage(['p'],partial.checks,[],saved);reopened.update({title:'',blocks:blocks(),active:true})
+ await vi.advanceTimersByTimeAsync(599999);expect(run).toHaveBeenCalledOnce();expect(states.at(-1).phase).toBe('limited')
+ await vi.advanceTimersByTimeAsync(2);expect(run).toHaveBeenCalledTimes(2);expect(reopened.retryState().entries).toEqual([]);reopened.dispose()
+})
+it('does not send a third large partial batch before the rolling character reservation permits it',async()=>{
+ vi.useFakeTimers();const document=[{id:'p',type:'paragraph',text:'甲'.repeat(7999)+'。'},{id:'q',type:'paragraph',text:'乙'.repeat(7999)+'。'}],run=vi.fn(async()=>({...partial,coveredBlockIds:['p','q']})),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),onState:value=>states.push(value)})
+ s.update({title:'',blocks:document,active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(20002);expect(run).toHaveBeenCalledTimes(2);expect(states.at(-1)).toMatchObject({phase:'limited',pending:2})
+ await vi.advanceTimersByTimeAsync(581997);expect(run).toHaveBeenCalledTimes(2);await vi.advanceTimersByTimeAsync(2);expect(run).toHaveBeenCalledTimes(3)
+ await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(3);s.dispose()
+})
+it('still supplements a partial paragraph when its oversized neighbor remains pending',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>({...partial,coveredBlockIds:['q']})),states:any[]=[],s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn(),onState:value=>states.push(value)})
+ s.update({title:'',blocks:[{id:'p',type:'paragraph',text:'长'.repeat(17000)},{id:'q',type:'paragraph',text:'可以完成深入检查的短段落。'}],active:true});s.setLevel(4)
+ await vi.advanceTimersByTimeAsync(1200000);expect(run).toHaveBeenCalledTimes(3);expect(states.at(-1)).toMatchObject({pending:2,phase:'limited'});s.dispose()
+})
+it('does not let an old in-flight supplement consume or complete the edited text allowance',async()=>{
+ vi.useFakeTimers();let finish!:(value:any)=>void,calls=0
+ const run=vi.fn((_request:ChallengeRequest)=>++calls===2?new Promise<any>(resolve=>{finish=resolve}):Promise.resolve(partial)),onResult=vi.fn(),s=new NoteChallengeScheduler({sessionId:'s',run,onResult})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(8001);expect(run).toHaveBeenCalledTimes(2)
+ s.update({title:'',blocks:blocks('补查期间编辑的新正文。'),active:true});finish(result);await vi.advanceTimersByTimeAsync(60000)
+ expect(run).toHaveBeenCalledTimes(5);expect(onResult).toHaveBeenCalledTimes(4);expect(run.mock.calls.slice(2).every(([request])=>request.blocks[0]!.text==='补查期间编辑的新正文。')).toBe(true)
+ expect(s.retryState().entries[0]?.attempts).toBe(2);s.dispose()
+})
+it.each(['rejected','unavailable'] as const)('does not repeatedly reopen an unchanged initial %s failure',async outcome=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>{if(outcome==='rejected')throw Error('provider unavailable');return{...partial,coveredBlockIds:[]}}),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:true});s.setLevel(4);await vi.advanceTimersByTimeAsync(2000);const saved=s.retryState();expect(saved.entries[0]).toMatchObject({id:'p',attempts:0,blocked:true});s.dispose()
+ const reopened=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()});reopened.update({title:'',blocks:blocks(),active:false});reopened.setLevel(4);reopened.restoreCoverage([],[],[],saved);reopened.update({title:'',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(1200000)
+ expect(run).toHaveBeenCalledOnce();reopened.dispose()
+})
+it('uses only the bounded legacy allowance for malformed private retry metadata',async()=>{
+ vi.useFakeTimers();const run=vi.fn(async()=>partial),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
+ s.update({title:'',blocks:blocks(),active:false});s.setLevel(4);const bad={...s.retryState(),entries:[{id:'p',attempts:-1,notBefore:NaN,blocked:false}],usage:'untrusted'}
+ s.restoreCoverage(['p'],partial.checks,[],bad);s.update({title:'',blocks:blocks(),active:true});await vi.advanceTimersByTimeAsync(1200000)
+ expect(run).toHaveBeenCalledTimes(2);expect(s.retryState().entries[0]?.attempts).toBe(2);s.dispose()
 })

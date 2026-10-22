@@ -20,6 +20,7 @@ type ChallengeAction={controller:AbortController;threadId:string;kind:'reply'|'o
 export type ChallengeThread={id:string;metadata:{kind:string;issue:ChallengeIssue;sourceText:string;draft?:string;anchorHistory?:ChallengeAnchor[]};comments:any[];createdAt:Date;resolved:boolean}
 const body=(text:string)=>[{type:'paragraph',content:[{type:'text',text,styles:{}}]}]
 const fingerprint=(title:string,blocks:any[])=>JSON.stringify([title,blocks])
+const reviewKeyHash=async(value:string)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),byte=>byte.toString(16).padStart(2,'0')).join('')
 const send=(name:string,detail:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-'+name,{detail}))
 // Retain only explicit replacement snapshots, bounded even for long paragraphs.
 const anchorHistory=(prior:unknown,...added:ChallengeAnchor[]):ChallengeAnchor[]=>{
@@ -85,7 +86,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  }).sort((a,b)=>a.position-b.position).map(item=>item.thread)
  const publish=()=>{
   const current=blocks(),valid=visibleThreads()
-  send('state',{sessionId,level:readLevel(),checks:state.current.checks,coverage:{checked:current.filter(b=>{const record=covered.current.get(b.id);return record?.text===b.text&&record.title===latest.current.title&&record.level===readLevel()}).length,total:current.length},issues:valid.map(thread=>({threadId:thread.id,...thread.metadata.issue}))})
+  send('state',{sessionId,level:readLevel(),checks:state.current.checks,coverage:{checked:current.filter(b=>{const record=covered.current.get(b.id);return record?.complete===true&&record.text===b.text&&record.title===latest.current.title&&record.level===readLevel()}).length,total:current.length},issues:valid.map(thread=>({threadId:thread.id,...thread.metadata.issue}))})
  }
  const state=useRef({checks:[] as ChallengeCheck[]})
  const flushReview=()=>{
@@ -98,7 +99,13 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     const title=latest.current.title,current=blocks(),level=readLevel(),key=fingerprint(title,current)
     const saved=await saveChallengeReviewState(title,current,level,covered.current,state.current.checks)
     if(!live.current)return
-    if(readLevel()===level&&fingerprint(latest.current.title,blocks())===key){doc.getMap('note-challenge-results').set('state',saved);latest.current.persist()}
+    if(readLevel()===level&&fingerprint(latest.current.title,blocks())===key){
+     const retry=scheduler.current?.retryState()
+     // Keep the private retry allowance on the same exact document as coverage,
+     // without duplicating its body text in the persisted scheduling metadata.
+     const retrySchedule=retry?.key===key&&retry.level===level?{version:1,documentHash:saved.documentHash,level,entries:retry.entries,usage:retry.usage}:undefined
+     doc.getMap('note-challenge-results').set('state',{...saved,...retrySchedule?{retrySchedule}:{}});latest.current.persist()
+    }
     await latest.current.persistConfirmed()
     if(live.current)activity.current.failed=false
    }catch{if(live.current)activity.current.failed=true}
@@ -156,12 +163,15 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     for(const id of result.coveredBlockIds){const block=captured.blocks.find(b=>b.id===id);if(block)covered.current.set(id,{text:block.text,title:captured.title,level:captured.level,complete:complete.has(id),issueCount:result.issues.filter(issue=>issue.blockId===id).length})}
    }
    refresh()
-  },onState:value=>{if(!live.current)return;const wasRunning=activity.current.running;activity.current.running=value.phase==='running';if(activity.current.running)publishActivity();setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish();if(wasRunning&&!activity.current.running)flushReview()}})
+  },onState:value=>{if(!live.current)return;const wasRunning=activity.current.running;activity.current.running=value.phase==='running';if(activity.current.running)publishActivity();setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish();if(wasRunning!==activity.current.running)flushReview()}})
   scheduler.current=s;sync();s.setLevel(readLevel())
   const restoredTitle=latest.current.title,restoredBlocks=blocks(),restoredLevel=readLevel(),restoredKey=fingerprint(restoredTitle,restoredBlocks)
-  void restoreChallengeReviewState(doc.getMap('note-challenge-results').get('state'),restoredTitle,restoredBlocks,restoredLevel).then(restored=>{
+  const savedReview=doc.getMap<any>('note-challenge-results').get('state')
+  void restoreChallengeReviewState(savedReview,restoredTitle,restoredBlocks,restoredLevel).then(async restored=>{
+   const retry=savedReview?.retrySchedule
+   const retryState=retry?.version===1&&savedReview.title===restoredTitle&&savedReview.level===restoredLevel&&retry.level===restoredLevel&&retry.documentHash===await reviewKeyHash(restoredKey)?{...retry,key:restoredKey}:undefined
    if(!live.current)return
-   if(readLevel()===restoredLevel&&fingerprint(latest.current.title,blocks())===restoredKey){covered.current=restored.covered;state.current.checks=restored.checks;setChecks(restored.checks);s.restoreCoverage([...restored.covered.keys()],restored.checks)}
+   if(readLevel()===restoredLevel&&fingerprint(latest.current.title,blocks())===restoredKey){covered.current=restored.covered;state.current.checks=restored.checks;setChecks(restored.checks);s.restoreCoverage([...restored.covered.keys()],restored.checks,[...restored.covered].flatMap(([id,value])=>value.complete?[id]:[]),retryState)}
   }).catch(()=>{}).finally(()=>{if(live.current){restoring.current=false;sync();refresh()}})
   const pref=(event:Y.YMapEvent<unknown>)=>{setLevelState(readLevel());setMarginExpandedState(readMarginExpanded());if(event.keysChanged.has('level')){if(!readLevel())cancelAction();s.setLevel(readLevel(),!picker.current.open)}latest.current.persist();publish()}
   const off=editor.onChange((_editor:any,{getChanges}:any)=>{
