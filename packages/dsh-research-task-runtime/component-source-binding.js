@@ -9,6 +9,7 @@ import {observedMarketHistory} from './observed-market-history.js'
 import {observedStatementGrowth} from './observed-statement-growth.js'
 import {expandBusinessEvidence} from './component-source-projection.js'
 import {operatingSourceAttempt} from './statement-operating-coverage.js'
+import {newsSourceScopeIssue,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -522,6 +523,11 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     requests.push({key:request.key,toolId:request.tool==='public_data_query'?request.tool:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(requestArgs,now):requestArgs})
   }
   const mapping=singleSourceMapping(contract,responses)
+  // Source identity comes from the exact observed call matched above, after
+  // evaluating legal argument mappings such as source:{$default:'sina-news'}.
+  // Keep original request expressions for refresh; never classify their shape.
+  const scopeIssue=newsSourceScopeIssue(mapping,observed.map(({tool,args})=>({tool,args})),options.newsScope)
+  if(scopeIssue)throw Object.assign(Error(scopeIssue),{code:'SOURCE_DATA_REQUIRED'})
   const data=materializeComponentMapping(mapping,responses,now,observed)
   const sourceIssue=templateSourceDataIssue(data)
   if(sourceIssue)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
@@ -529,5 +535,5 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   if(issue)throw Error(issue)
   const output=acceptArtifactOutput(JSON.stringify(data))
   if(!output)throw Error('数据映射结果不符合当前组件模板，请根据真实响应修正路径、类型或单位。')
-  return {data,output,recipe:{requests,mapping,intervalMinutes:options.intervalMinutes===0?0:1}}
+  return {data,output,recipe:{requests,mapping,intervalMinutes:options.intervalMinutes===0?0:1,...(options.newsScope&&(data.type==='news'||options.newsScope.includes(NEWS_CAPACITY_MARKER))?{newsScope:options.newsScope}:{})}}
 }

@@ -1290,7 +1290,7 @@ describe('Research task Subagent adapter', () => {
       await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:first.taskId}).state).toBe('failed'))
       const retry=await runtime.start({...containerRequest('news-node'),prompt})
       await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:retry.taskId}).state).toBe('completed'))
-      expect(query).toHaveBeenCalledTimes(1)
+      expect(query).not.toHaveBeenCalled()
       expect(start).toHaveBeenCalledTimes(1)
       expect(start.mock.calls[0][0].query).toContain(prompt)
       expect(start.mock.calls[0][0].query).toContain('"symbols":["sz300308","sz300502","sh601138"]')

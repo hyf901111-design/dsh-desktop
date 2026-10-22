@@ -120,6 +120,21 @@ export function prepareRequest(sourceId, p = {}) {
   } else if (sourceId === 'sina-news') {
     endpoint = url('https://feed.mix.sina.com.cn/api/roll/get', { pageid: 384, lid: 2519, num: Math.min(limit, 50), page: 1 }); headers.referer = 'https://finance.sina.com.cn/';
     normalize = d => ({ records: d.result.data.slice(0, limit).map(r => ({ title: clean(r.title), url: r.url, publisher: clean(r.media_name), time: /^\d{10}$/.test(String(r.ctime)) ? new Date(Number(r.ctime) * 1000).toISOString() : null })), units: {}, dataTime: latest(d.result.data.map(r => ({ time: /^\d{10}$/.test(String(r.ctime)) ? new Date(Number(r.ctime) * 1000).toISOString() : null }))) });
+  } else if (sourceId === 'eastmoney-news') {
+    const query = text(p, 'query');
+    headers.accept = '*/*'; // The fixed public endpoint returns JSONP, not JSON.
+    endpoint = url('https://search-api-web.eastmoney.com/search/jsonp', { cb: 'ework', param: JSON.stringify({ uid: '', keyword: query, type: ['cmsArticle'], client: 'web', clientType: 'web', clientVersion: 'curr', param: { cmsArticle: { searchScope: 'default', sort: 'latest', pageIndex: 1, pageSize: limit, preTag: '', postTag: '' } } }) });
+    normalize = body => {
+      const match = typeof body === 'string' && body.trim().match(/^ework\(([\s\S]*)\);?$/), data = JSON.parse(match?.[1] ?? '');
+      if (data.code !== 0 || !Array.isArray(data.result?.cmsArticle)) throw Error('invalid news search');
+      const records = data.result.cmsArticle.flatMap(row => {
+        const title = clean(row.title), stamp = typeof row.date === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(row.date) ? row.date.replace(' ', 'T') + '+08:00' : null;
+        let link; try { const address = new URL(row.url); if (address.protocol === 'https:' && !address.username && !address.password) link = address.href; } catch {}
+        link ??= /^\d{14,24}$/.test(String(row.code)) ? 'https://finance.eastmoney.com/a/' + row.code + '.html' : undefined;
+        return title && stamp && Number.isFinite(Date.parse(stamp)) && link ? [{ title, url: link, publisher: clean(row.mediaName), time: stamp, summary: clean(row.content) }] : [];
+      }).sort((a, b) => b.time.localeCompare(a.time)).slice(0, limit);
+      return { records, units: {}, dataTime: latest(records), coverage: { query, scope: 'keyword-search-first-page', returned: records.length }, timeMeaning: 'time为搜索结果提供的报道时间；summary是匹配片段，未读原文不能扩写全文事实。搜索匹配仍须按本卡主题逐条核对；仅首页，不代表区间全部报道。' };
+    };
   } else if (sourceId === 'eastmoney-announcements') {
     // A separate, bounded query per issuer avoids a combined first page being
     // dominated by one company and silently omitting the other requested ones.
@@ -190,7 +205,7 @@ export function createQueryClient({ fetcher = globalThis.fetch, now = Date.now, 
         for await (const chunk of response.body) { bytes += chunk.length; if (bytes > MAX_BYTES) { controller.abort(); throw new PublicDataError('RESPONSE_TOO_LARGE', '来源响应过大，请缩小查询范围'); } chunks.push(chunk); }
         const body = Buffer.concat(chunks), content = source.id === 'tencent-quotes' ? new TextDecoder('gb18030').decode(body) : body.toString('utf8');
         let normalized;
-        try { normalized = normalize(source.id === 'ecb-fx' || source.id === 'tencent-quotes' ? content : JSON.parse(content), now()); }
+        try { normalized = normalize(['ecb-fx','tencent-quotes','eastmoney-news'].includes(source.id) ? content : JSON.parse(content), now()); }
         catch { throw new PublicDataError('INVALID_RESPONSE', '来源返回了无法核验的数据，请换用适用来源或稍后重试'); }
         if (!Array.isArray(normalized.records) || normalized.records.length > 100) throw new PublicDataError('INVALID_RESPONSE', '来源记录不符合数量约束');
         const expires = Date.parse(response.headers.get('expires') ?? ''), age = Number(response.headers.get('cache-control')?.match(/max-age=(\d+)/)?.[1] ?? 0);

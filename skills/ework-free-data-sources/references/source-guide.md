@@ -10,7 +10,7 @@
 |地理灾害|usgs-earthquakes|事件发生时间、震级、深度km；不是地震预测|
 |论文|crossref|仅元数据，不等于全文许可|
 |软件生态|github-repo、npm-downloads|stars/downloads不是独立用户数|
-|新闻|gdelt-news、sina-news|标题与链接，首次发现时间不等于发布时间|
+|新闻|eastmoney-news、gdelt-news、sina-news|标题与链接，首次发现时间不等于发布时间|
 
 ## 世界银行 Indicators（world-bank）
 [官方来源/文档](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation)；全球国家宏观年度指标。访问类型：official-open，认证：none。年度数据可能缺失或修订；不是实时指标。世界银行数据通常CC BY 4.0，按具体数据集例外核实：https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets。
@@ -36,6 +36,8 @@
 [官方来源/文档](https://gu.qq.com/)；A股/港股/部分美股及指数。访问类型：public-web-best-effort，认证：none。无稳定官方API文档；尽力而为，可能延迟/停用/地区受限，不能承诺交易级实时。公开网页可访问不等于商业再分发授权；按腾讯及交易所条款核实。
 ## 腾讯财经公开日K（tencent-history）
 [官方来源/文档](https://gu.qq.com/)；A股及港股未复权日OHLC。访问类型：public-web-best-effort，认证：none。无稳定官方API文档；未复权，不提供分钟线，成交量原始单位未核实时不得写万手。公开网页可访问不等于商业再分发授权。
+## 东方财富关键词新闻搜索（eastmoney-news）
+[来源搜索](https://so.eastmoney.com/news/)；query、limit限定搜索首页。按本轮需求的主题、实体与别名定向检索，逐条核对标题及匹配片段的实质相关性；摘要是搜索片段，未读取原文不扩写。无结果保持空，不回退全市场热门资讯。报道时间、原文链接与实际query一同保留，刷新沿用相同query。公开网页接口尽力而为，无稳定API文档；标题、片段与正文权利按原媒体及东方财富条款。
 ## 新浪财经滚动资讯（sina-news）
 [官方来源/文档](https://finance.sina.com.cn/roll/)；财经新闻标题、来源与链接。访问类型：public-web-best-effort，认证：none。无稳定官方API文档，尽力而为；保留原文链接，不复制全文。标题与正文权利按原媒体及新浪条款。
 ## Eurostat（eurostat）

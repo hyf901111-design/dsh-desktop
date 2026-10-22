@@ -12,7 +12,7 @@ import { runInNewContext } from 'node:vm'
 import { componentPromptSource } from '../scripts/lib/figma-generation-client.mjs'
 
 const spec = (profile, source, parameters = {}, type = 'market') => ({
-  title: profile, type, size: 'large', prompt: '真实免费来源，每分钟自动刷新',
+  title: profile==='news'?'全市场财经资讯':profile, type, size: 'large', prompt: '真实免费来源，每分钟自动刷新',
   publicData: { profile, requests: [{ source, parameters_json: JSON.stringify(parameters) }], intervalMinutes: 1 }
 })
 const filteredNews = () => ({...spec('news','sina-news',{symbols:['sz300308','sz300502','sh601138'],limit:12},'news'),title:'算力公司新闻',prompt:'只检索中际旭创、 新易盛与工业富联最近一周的重要新闻，保留日期、摘要与原文链接；不得混入其他公司的新闻。',publicData:{profile:'news',requests:[{source:'sina-news',parameters_json:'{"symbols":["sz300308","sz300502","sh601138"],"limit":12}'}],intervalMinutes:5}})
