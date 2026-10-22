@@ -64,10 +64,17 @@ export function prepareRequest(sourceId, p = {}) {
     normalize = d => {
       if (d.error?.length || !d.result) throw Error('kraken failed');
       const key = Object.keys(d.result).find(k => k !== 'last'), values = d.result[key]; if (!values) throw Error('no pair');
-      const records = candle ? values.slice(-limit).map(r => ({ time: new Date(r[0] * 1000).toISOString(), open: num(r[1]), high: num(r[2]), low: num(r[3]), close: num(r[4]), volume: num(r[6]), trades: num(r[7]), pair: key })) : [{ pair: key, price: num(values.c?.[0]), bid: num(values.b?.[0]), ask: num(values.a?.[0]), volume24h: num(values.v?.[1]), high24h: num(values.h?.[1]), low24h: num(values.l?.[1]), time: null }];
+      const price = num(values.c?.[0]), openToday = num(values.o);
+      // Kraken's opening price is midnight UTC, not a rolling 24-hour price.
+      // Keep the raw calculation and an explicit display fallback together so
+      // a missing opening price never turns into a fabricated zero change.
+      const changePercentToday = price !== null && openToday !== null && openToday > 0 ? (price - openToday) / openToday * 100 : null;
+      const changeTodayDetail = changePercentToday !== null && Number.isFinite(changePercentToday)
+        ? `日内涨跌幅 ${changePercentToday.toFixed(2)}%（UTC 00:00 起）` : '日内涨跌幅：来源未提供有效UTC开盘价';
+      const records = candle ? values.slice(-limit).map(r => ({ time: new Date(r[0] * 1000).toISOString(), open: num(r[1]), high: num(r[2]), low: num(r[3]), close: num(r[4]), volume: num(r[6]), trades: num(r[7]), pair: key })) : [{ pair: key, price, bid: num(values.b?.[0]), ask: num(values.a?.[0]), volume24h: num(values.v?.[1]), high24h: num(values.h?.[1]), low24h: num(values.l?.[1]), openToday, changePercentToday: Number.isFinite(changePercentToday) ? changePercentToday : null, changeTodayDetail, time: null }];
       if (!records.length || (candle ? records.some(r => r.close === null) : records[0].price === null)) throw Error('no valid price');
       const quoteUnit = { XBTUSD: 'USD', ETHUSD: 'USD', XBTEUR: 'EUR', ETHEUR: 'EUR', XBTUSDT: 'USDT', ETHUSDT: 'USDT' }[pair] ?? 'pair报价货币（来源未提供独立币种）', baseUnit = pair.startsWith('XBT') ? 'BTC' : pair.startsWith('ETH') ? 'ETH' : 'pair基础资产（来源未提供独立币种）';
-      return { records, units: { price: quoteUnit, open: quoteUnit, high: quoteUnit, low: quoteUnit, close: quoteUnit, volume: baseUnit, volume24h: baseUnit }, dataTime: candle ? latest(records) : null, ...(candle ? { granularitySeconds: interval * 60, note: '最后一根可能尚未收盘' } : { timeMeaning: '报价时点未提供；receivedAt仅为获取时间' }) };
+      return { records, units: { price: quoteUnit, open: quoteUnit, high: quoteUnit, low: quoteUnit, close: quoteUnit, volume: baseUnit, volume24h: baseUnit, ...(!candle ? { openToday: quoteUnit, changePercentToday: '%' } : {}) }, dataTime: candle ? latest(records) : null, ...(candle ? { granularitySeconds: interval * 60, note: '最后一根可能尚未收盘' } : { timeMeaning: '报价时点未提供；receivedAt仅为获取时间；openToday为UTC 00:00开盘价，changePercentToday=(price-openToday)/openToday×100，不是滚动24h涨跌幅' }) };
     };
   } else if (sourceId.startsWith('coinbase-')) {
     const product = token(p, 'product', /^[A-Z0-9]{2,12}-[A-Z0-9]{2,12}$/), [base, quote] = product.split('-');

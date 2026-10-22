@@ -26,6 +26,17 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
     if (!object(parameters)) throw Error('parameters_json必须为JSON对象字符串')
     // New plans check adapter capabilities before acceptance. Persisted tasks
     // retain their shape contract so old failed recipes remain recoverable.
+    if(request.source==='kraken-ticker'||request.source==='kraken-candles'){
+      const supported=Object.keys(parameters).every(key=>['pair','interval','limit'].includes(key))&&
+        typeof parameters.pair==='string'&&/^[A-Z0-9]{5,14}$/u.test(parameters.pair)&&
+        (!Object.hasOwn(parameters,'interval')||[1,5,15,30,60,240,1440,10080,21600].includes(parameters.interval))&&
+        (!Object.hasOwn(parameters,'limit')||Number.isInteger(parameters.limit)&&parameters.limit>=1&&parameters.limit<=100)
+      if(strictParameters&&!supported)throw Error('Kraken面板仅接受合规pair及K线粒度interval、记录数limit，不接受任意URL、密钥或请求头')
+      // Planners may copy a history recipe into a ticker panel. These bounded
+      // candle hints have no meaning for a quote snapshot; refresh is governed
+      // exclusively by intervalMinutes. Never strip unknown or invalid keys.
+      if(supported&&request.source==='kraken-ticker')return {source:request.source,parameters_json:JSON.stringify({pair:parameters.pair})}
+    }
     if(strictParameters&&request.source==='tencent-quotes'){
       if(Object.keys(parameters).some(key=>key!=='symbols'))throw Error('腾讯报价只支持symbols，不接受任意URL、密钥或请求头')
       if(!Array.isArray(parameters.symbols)||!parameters.symbols.length||parameters.symbols.length>12||parameters.symbols.some(symbol=>typeof symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5}|us[A-Z][A-Z0-9.]{0,9})$/u.test(symbol)))throw Error('腾讯报价symbols必须为1–12个合规交易代码')
@@ -179,10 +190,11 @@ function mappingFor(panel, responses) {
   }
   if (panel.publicData.profile === 'crypto-metrics') {
     const fields = [['price', '最近成交'], ['bid', '买一'], ['ask', '卖一'], ['high24h', '24h最高'], ['low24h', '24h最低'], ['volume24h', '24h成交量']]
-    return { ...base, asOf: 'Kraken · 报价时点未提供', note: '行情仅代表Kraken交易所；24h成交量为基础资产数量。',
+    return { ...base, asOf: 'Kraken · 报价时点未提供', note: '行情仅代表Kraken交易所；24h成交量为基础资产数量。日内涨跌幅由最近成交价相对UTC 00:00开盘价计算，不等于滚动24h涨跌幅。',
       items: responses.flatMap((response, i) => fields.map(([field, label]) => ({
         label: `${response.units.volume24h ?? response.records[0].pair} ${label}`,
-        value: path(`q${i}`, `records.0.${field}`, { $as: 'string', $digits: field === 'volume24h' ? 4 : 2, $suffix: ` ${response.units[field === 'volume24h' ? 'volume24h' : 'price']}`, $optional: true })
+        value: path(`q${i}`, `records.0.${field}`, { $as: 'string', $digits: field === 'volume24h' ? 4 : 2, $suffix: ` ${response.units[field === 'volume24h' ? 'volume24h' : 'price']}`, $optional: true }),
+        ...(field==='price'?{detail:path(`q${i}`,'records.0.changeTodayDetail',{$default:'日内涨跌幅：来源未提供有效UTC开盘价'})}:{})
       })))
     }
   }
