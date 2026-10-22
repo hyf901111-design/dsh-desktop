@@ -140,6 +140,7 @@ function issuesFrom(value, targets, available, limits, forecastClaims=[],level=4
       // an unverified question, never a factual verdict or a fabricated note citation.
       const unsupportedReasoning = !sources.length && ['contradiction', 'logic', 'uncertain'].includes(item.category)
       const generalKnowledge = item.basis === 'general-knowledge' || unsupportedReasoning
+      if(level===1&&generalKnowledge)continue
       if (!generalKnowledge && item.basis !== 'note') continue
       if (generalKnowledge && sources.length) continue
       // Securities forecasts require acquired data; model memory must not

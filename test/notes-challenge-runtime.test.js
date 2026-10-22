@@ -808,6 +808,7 @@ it('keeps explicit note-backed forecast arithmetic and unrelated obvious knowled
 it('limits relaxed automatic review to spelling even if the provider returns facts, logic and research advice',async()=>{
  const {generateNoteChallenge}=await load(),f=fixture({reviews:[{blockId:'a',issues:[
  {quote:'提胶',category:'typo',basis:'note',message:'应为“提交”。',evidence:[]},
+ {quote:'100摄氏度结冰',category:'typo',basis:'general-knowledge',message:'冰点是否有误？',evidence:[]},
  {quote:'100摄氏度结冰',category:'uncertain',basis:'general-knowledge',message:'冰点是否有误？',evidence:[]},
  {quote:'一定成功',category:'logic',basis:'note',message:'依据不足。',evidence:[]},
  {quote:'提交报告',category:'grammar',basis:'note',message:'建议润色表达。',evidence:[]}

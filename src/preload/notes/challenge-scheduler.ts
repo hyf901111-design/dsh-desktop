@@ -116,7 +116,7 @@ export class NoteChallengeScheduler{
   // Missing punctuation is not a permanent veto: a stable phrase can contain a
   // complete misspelled word. Wait longer at the caret, while IME stays paused.
   const current=this.value.blocks.find(b=>b.id===this.value.editingBlockId&&this.pending.has(b.id)),unfinished=current&&current.type!=='heading'&&!/[。！？.!?；;：:]\s*$/u.test(current.text)
-  const config=CHALLENGE_LEVELS[this.level],due=this.expedited?this.now():Math.max(this.firstAt??this.editedAt+config.pause,this.hasEdited?this.editedAt+config.pause:-Infinity,unfinished?this.editedAt+Math.max(config.pause,5000):-Infinity,this.lastRun+config.interval)
+  const config=CHALLENGE_LEVELS[this.level],interval=this.hasEdited&&this.editedAt>=this.lastRun?config.pause:config.interval,due=this.expedited?this.now():Math.max(this.firstAt??this.editedAt+config.pause,this.hasEdited?this.editedAt+config.pause:-Infinity,unfinished?this.editedAt+Math.max(config.pause,5000):-Infinity,this.lastRun+interval)
   this.emit('waiting');this.timer=setTimeout(()=>{this.timer=undefined;void this.execute()},Math.max(0,due-this.now()))
  }
  private async execute(){

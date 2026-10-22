@@ -44,7 +44,7 @@ it('waits for IME composition and a stable pause, then enforces the level minimu
  s.update({title:'',blocks:blocks('还没有写完'),editingBlockId:'p',composing:true,active:true});s.setLevel(2);await vi.advanceTimersByTimeAsync(10000);expect(run).not.toHaveBeenCalled()
  s.update({title:'',blocks:blocks('还没有写完'),editingBlockId:'p',composing:false,active:true});await vi.advanceTimersByTimeAsync(4999);expect(run).not.toHaveBeenCalled()
  s.update({title:'',blocks:blocks('现在已经写完。'),editingBlockId:'p',active:true});await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[2].pause);expect(run).toHaveBeenCalledOnce()
- s.update({title:'',blocks:blocks('现在修改了数字25%。'),active:true});await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[2].interval-1);expect(run).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2);s.dispose()
+ s.update({title:'',blocks:blocks('现在修改了数字25%。'),active:true});await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[2].pause-1);expect(run).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2);s.dispose()
 })
 it('cancels for hidden notes and manual writing and discards a late response, then coalesces the latest changes',async()=>{
  vi.useFakeTimers();let finish:(v:any)=>void=()=>{};const signals:AbortSignal[]=[],onResult=vi.fn(),run=vi.fn((_r:any,signal:AbortSignal)=>{signals.push(signal);return new Promise<any>(resolve=>{finish=resolve})}),s=new NoteChallengeScheduler({sessionId:'s',run,onResult})
@@ -129,7 +129,7 @@ for(const level of [1,2,3,4] as const)it(`rechecks a fresh semantic edit promptl
  vi.useFakeTimers();const run=vi.fn(async(_r:ChallengeRequest)=>result),s=new NoteChallengeScheduler({sessionId:'s',run,onResult:vi.fn()})
  s.update({title:'',blocks:blocks('这份报告已经提交。'),active:true});s.setLevel(level);await vi.advanceTimersByTimeAsync(2000);expect(run).toHaveBeenCalledOnce()
  s.update({title:'',blocks:blocks('这份报告已经提胶。'),editingBlockId:'p',active:true})
- await vi.advanceTimersByTimeAsync(10000);expect(run).toHaveBeenCalledTimes(2)
+ await vi.advanceTimersByTimeAsync(CHALLENGE_LEVELS[level].pause-1);expect(run).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(2)
  await vi.advanceTimersByTimeAsync(60000);expect(run).toHaveBeenCalledTimes(2);s.dispose()
 })
 it('coalesces continued typing and IME edits before checking an unpunctuated phrase',async()=>{

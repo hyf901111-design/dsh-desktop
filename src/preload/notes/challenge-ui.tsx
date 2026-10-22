@@ -25,7 +25,10 @@ export function ChallengePicker({value,onChange,disabled=false,dark=false,runnin
  const [reducedMotion,setReducedMotion]=useState(()=>typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)
  useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)'),update=()=>setReducedMotion(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update)},[])
  const [open,setOpen]=useState(false),[preview,setPreview]=useState(value),[pressed,setPressed]=useState(false),root=useRef<HTMLDivElement>(null),popover=useRef<HTMLElement>(null),[position,setPosition]=useState({left:8,top:8}),track=useRef<HTMLDivElement>(null),drag=useRef(false),choice=useRef(value)
- const changeOpen=(next:boolean)=>{setOpen(next);onOpenChange?.(next)}
+ // Header discovery can move this picker into a portal without unmounting the note.
+ const openListener=useRef(onOpenChange);openListener.current=onOpenChange
+ useEffect(()=>()=>openListener.current?.(false),[])
+ const changeOpen=(next:boolean)=>{setOpen(next);openListener.current?.(next)}
  useEffect(()=>{if(!drag.current){setPreview(value);choice.current=value}},[value])
  useEffect(()=>{if(disabled&&open)changeOpen(false)},[disabled])
  useLayoutEffect(()=>{

@@ -663,3 +663,13 @@ it('coalesces slider changes and starts the selected tier immediately after clos
   expect(await page.evaluate(()=>window.jobs[1].input.level)).toBe(4);expect(await trigger.getAttribute('aria-busy')).toBe('true');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+it('releases a visible picker pause when the native header retargets its portal',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install();await page.evaluate(()=>{document.body.insertAdjacentHTML('beforeend','<div id="slot-a" data-en-challenge-tools="note-a"></div><div id="slot-b" data-en-challenge-tools="other"></div>')})
+  await page.locator('#slot-a .en-challenge-trigger').waitFor();await page.locator('#slot-a .en-challenge-trigger').click();await page.getByRole('slider',{name:'挑战强度'}).press('ArrowRight')
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('paused')
+  await page.evaluate(()=>{document.querySelector('#slot-a').dataset.enChallengeTools='other';document.querySelector('#slot-b').dataset.enChallengeTools='note-a'})
+  await page.locator('#slot-b .en-challenge-trigger').waitFor();await page.clock.fastForward(1)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1);expect(await page.locator('.en-challenge-popover').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
