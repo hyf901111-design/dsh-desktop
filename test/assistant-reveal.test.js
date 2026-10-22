@@ -27,3 +27,7 @@ it('patches the real keyed assistant renderer and Notes terminal props idempoten
  expect(next).toContain('eworkAssistantRevealLedger.record(eworkRevealOwner,node)');expect(next).toContain('text: block.text,');expect(next).toContain('streaming: data.status === "running"')
  expect(next).not.toContain('return messageId === void 0 ? content :');expect(next).toContain('streaming:false,reveal,t');expect(next).toContain('eworkAssistantRevealLedger.observe(useSession,openState,order,nodeStore)')
 })
+it('refreshes an already patched runtime helper without duplicating its native wiring',()=>{
+ const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchAssistantReveal(source),stale=next.replace('focused=doc.hasFocus?.()!==false','focused=false/* previous packaged helper */')
+ expect(stale).not.toBe(next);expect(patchAssistantReveal(stale)).toBe(next);expect(patchAssistantReveal(next)).toBe(next)
+})
