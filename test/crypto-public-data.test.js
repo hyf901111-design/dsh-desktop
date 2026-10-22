@@ -6,6 +6,7 @@ import { preparePublicDataPanel, validatePublicDataPanel } from '../packages/dsh
 import { ResearchTaskRuntime } from '../packages/dsh-research-task-runtime/index.js'
 import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import { materializeComponentMapping } from '../packages/dsh-research-task-runtime/component-data-refresh.js'
+import { isCryptoTickerRequest, normalizeCryptoTickerResult } from '../packages/dsh-research-task-runtime/crypto-source-results.js'
 
 const panel = (parameters = { pair: 'XBTUSD', interval: 1, limit: 60 }) => ({
   title: '数字资产观察', type: 'market', size: 'large', prompt: '展示最新成交价及涨跌幅，保留真实口径',
@@ -88,12 +89,56 @@ describe('Kraken component recipes', () => {
     expect(data.items.find(item => item.label === 'ETH 最近成交')).toMatchObject({ value: '95.00 USD', detail: '日内涨跌幅 -5.00%（UTC 00:00 起）' })
     expect(data.asOf).toContain('报价时点未提供')
     expect(data.note).toContain('不等于滚动24h涨跌幅')
-    const refresh = materializeComponentMapping(result.recipe.mapping, {
+    const raw = {
       q0: { sourceId: 'kraken-ticker', ...prepareRequest('kraken-ticker', { pair: 'XBTUSD' }).normalize(tickerBody('XXBTZUSD', 100)) },
       q1: { sourceId: 'kraken-ticker', ...prepareRequest('kraken-ticker', { pair: 'ETHUSD' }).normalize(tickerBody('XETHZUSD', 105)) }
-    })
+    }
+    const refresh = materializeComponentMapping(result.recipe.mapping, Object.fromEntries(result.recipe.requests.map(request => [request.key, normalizeCryptoTickerResult(request, { status: 'fulfilled', value: raw[request.key] })])))
     expect(refresh.items.find(item => item.label === 'BTC 最近成交').detail).toBe('日内涨跌幅 0.00%（UTC 00:00 起）')
     expect(refresh.items.find(item => item.label === 'ETH 最近成交').detail).toBe('日内涨跌幅 5.00%（UTC 00:00 起）')
+  })
+
+  it.each(['empty', 'error'])('retains compact metrics and a recoverable request for a missing pair: %s', async kind => {
+    const original = panel({ pair: 'XBTUSD' })
+    original.publicData.requests.push({ source: 'kraken-ticker', parameters_json: '{"pair":"ETHUSD"}' })
+    const observed = { sourceId: 'kraken-ticker', source: 'Kraken', ...prepareRequest('kraken-ticker', { pair: 'XBTUSD' }).normalize(tickerBody('XXBTZUSD', 110)) }
+    const missing = { sourceId: 'kraken-ticker', source: 'Kraken', records: [] }
+    const query = vi.fn(async args => {
+      if (JSON.parse(args.parameters_json).pair === 'XBTUSD') return observed
+      if (kind === 'error') throw Object.assign(Error('provider failed'), { code: 'NETWORK_ERROR' })
+      return missing
+    })
+    const result = await preparePublicDataPanel(original, { query })
+    const data = readTemplateModel(JSON.parse(result.output)).data
+    expect(data.variant).toBe('metrics')
+    expect(data.items).toHaveLength(12)
+    expect(data.items[0].value).toBe('110.00 USD')
+    expect(data.items[6].value).toBe('本次未取得')
+    expect(data.items[6].detail).toContain(kind === 'empty' ? '未返回' : '无法连接')
+    expect(data.items.slice(7).every(item => item.value === '来源未提供')).toBe(true)
+    expect(result.recipe.requests.map(request => JSON.parse(request.args.parameters_json).pair)).toEqual(['XBTUSD', 'ETHUSD'])
+    const recovered = { sourceId: 'kraken-ticker', ...prepareRequest('kraken-ticker', { pair: 'ETHUSD' }).normalize(tickerBody('XETHZUSD', 105)) }
+    const responses = Object.fromEntries(result.recipe.requests.map((request, i) => [request.key, normalizeCryptoTickerResult(request, { status: 'fulfilled', value: i ? recovered : observed })]))
+    expect(responses.q1.records).toEqual(recovered.records)
+    const refreshed = materializeComponentMapping(result.recipe.mapping, responses)
+    expect(refreshed.items[6]).toMatchObject({ label: 'ETH 最近成交', value: '105.00 USD', detail: '日内涨跌幅 5.00%（UTC 00:00 起）' })
+    expect(observed).not.toHaveProperty('display')
+    expect(missing.records).toEqual([])
+  })
+
+  it('limits partial-source formatting to exact built-in pair requests and never creates quote records', () => {
+    const request = { key: 'q', toolId: 'public_data_query', args: { operation: 'query', source: 'kraken-ticker', parameters_json: '{"pair":"XBTUSD"}' } }
+    expect(isCryptoTickerRequest(request)).toBe(true)
+    for (const changed of [{ ...request, toolId: 'untrusted' }, { ...request, args: { ...request.args, source: 'kraken-candles' } }, { ...request, args: { ...request.args, parameters_json: '{"pair":"XBTUSD","headers":{}}' } }]) {
+      expect(isCryptoTickerRequest(changed)).toBe(false)
+      expect(() => normalizeCryptoTickerResult(changed, { status: 'fulfilled', value: {} })).toThrow()
+    }
+    const missing = normalizeCryptoTickerResult(request, { status: 'rejected', reason: Object.assign(Error('private provider detail'), { code: 'NETWORK_ERROR' }) })
+    expect(missing.records).toEqual([])
+    expect(missing).not.toHaveProperty('receivedAt')
+    expect(missing.display).toMatchObject({ pair: 'XBTUSD', price: '本次未取得', bid: '来源未提供' })
+    expect(JSON.stringify(missing)).not.toContain('private provider detail')
+    expect(() => normalizeCryptoTickerResult(request, { status: 'rejected', reason: Error('programming error') })).toThrow('programming error')
   })
 
   it.each([undefined, '0', '-1', 'invalid'])('keeps unavailable opening prices explicit without fabricating a percentage: %s', open => {

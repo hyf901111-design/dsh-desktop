@@ -1,6 +1,7 @@
 import { resolveBoundComponent } from './component-source-binding.js'
 import {financialWidgetDefaults,financialWidgetSpec} from './financial-widget-contract.js'
 import {generalNewsScope,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
+import {normalizeCryptoTickerResult} from './crypto-source-results.js'
 
 // These recipes describe the bundled adapter's schema, never model-authored
 // paths, executable code, arbitrary URLs or connector credentials.
@@ -38,7 +39,7 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
         typeof parameters.pair==='string'&&/^[A-Z0-9]{5,14}$/u.test(parameters.pair)&&
         (!Object.hasOwn(parameters,'interval')||[1,5,15,30,60,240,1440,10080,21600].includes(parameters.interval))&&
         (!Object.hasOwn(parameters,'limit')||Number.isInteger(parameters.limit)&&parameters.limit>=1&&parameters.limit<=100)
-      if(strictParameters&&!supported)throw Error('Kraken面板仅接受合规pair及K线粒度interval、记录数limit，不接受任意URL、密钥或请求头')
+      if(strictParameters&&!supported)throw Error('Kraken面板存在不支持的参数；仅接受合规pair及K线粒度interval、记录数limit，不接受任意URL、密钥或请求头')
       // Planners may copy a history recipe into a ticker panel. These bounded
       // candle hints have no meaning for a quote snapshot; refresh is governed
       // exclusively by intervalMinutes. Never strip unknown or invalid keys.
@@ -225,16 +226,16 @@ function mappingFor(panel, responses) {
       return {...base,...metadata,variant:'table',
         columns:['交易对','最近成交','日内涨跌幅（UTC 00:00 起）','买一','卖一','24h最高','24h最低','24h成交量','价格单位','量单位','报价时点','获取时点'],
         rows:responses.map((_response,i)=>[
-          cell(i,'records.0.pair'),cell(i,'records.0.price'),cell(i,'records.0.changeTodayDetail'),
+          JSON.parse(panel.publicData.requests[i].parameters_json).pair,path(`q${i}`,'records.0.price',{$as:'string',$default:'本次未取得'}),path(`q${i}`,'display.changeTodayDetail',{$default:'来源未提供'}),
           ...['bid','ask','high24h','low24h','volume24h'].map(field=>cell(i,`records.0.${field}`)),
           cell(i,'units.price'),cell(i,'units.volume24h'),cell(i,'dataTime'),cell(i,'receivedAt')
         ])}
     }
     return { ...base, ...metadata,
-      items: responses.flatMap((response, i) => fields.map(([field, label]) => ({
-        label: `${response.units.volume24h ?? response.records[0].pair} ${label}`,
-        value: path(`q${i}`, `records.0.${field}`, { $as: 'string', $digits: field === 'volume24h' ? 4 : 2, $suffix: ` ${response.units[field === 'volume24h' ? 'volume24h' : 'price']}`, $optional: true }),
-        ...(field==='price'?{detail:path(`q${i}`,'records.0.changeTodayDetail',{$default:'日内涨跌幅：来源未提供有效UTC开盘价'})}:{})
+      items: responses.flatMap((_response, i) => fields.map(([field, label]) => ({
+        label: path(`q${i}`,'display.assetLabel',{$suffix:` ${label}`}),
+        value: path(`q${i}`, `display.${field}`, { $default: '来源未提供' }),
+        ...(field==='price'?{detail:path(`q${i}`,'display.changeTodayDetail',{$default:'日内涨跌幅：来源未提供有效UTC开盘价'})}:{})
       })))
     }
   }
@@ -251,12 +252,18 @@ function mappingFor(panel, responses) {
 }
 
 export async function preparePublicDataPanel(panel, client, signal, now = new Date()) {
-  const publicData = validatePublicDataPanel(panel.publicData, panel.type)
+  const crypto = panel.publicData?.profile === 'crypto-metrics'
+  const publicData = validatePublicDataPanel(panel.publicData, panel.type, { strictParameters: crypto })
   if(publicDataNewsTaskRequirement(publicData,panel.type,[panel.title,panel.prompt,panel.publicDataPrompt].filter(Boolean).join('\n')))throw Error('该新闻组件需要按原主题定向检索，不能直接读取无主题的财经总流；请重试以恢复相关取数。')
   const requests = publicData.requests.map((request, i) => ({ key: `q${i}`, tool: 'public_data_query', args: { operation: 'query', source: request.source, parameters_json: request.parameters_json } }))
-  const responses = await Promise.all(requests.map(request => client.query(request.args, signal)))
+  const outcomes = await Promise.allSettled(requests.map(request => client.query(request.args, signal)))
   signal?.throwIfAborted()
-  if (responses.some((response, i) => response?.sourceId !== requests[i].args.source || !Array.isArray(response.records) || !response.records.length)) throw Error('免费来源没有返回该组件所需的真实记录')
+  const responses = outcomes.map((outcome,i) => {
+    if(crypto)return normalizeCryptoTickerResult(requests[i],outcome)
+    if(outcome.status==='rejected')throw outcome.reason
+    return outcome.value
+  })
+  if (responses.some((response, i) => response?.sourceId !== requests[i].args.source || !Array.isArray(response.records) || !crypto&&!response.records.length) || !responses.some(response=>response.records.length)) throw Error('免费来源没有返回该组件所需的真实记录')
   const mapping = mappingFor({ ...panel, publicData }, responses)
   const result = resolveBoundComponent(JSON.stringify({ version: 1, type: 'data-bound', requests, mapping }), requests.map((r, i) => ({ tool: r.tool, args: r.args, response: responses[i] })), now)
   if (!result) throw Error('免费来源映射未通过模板校验')

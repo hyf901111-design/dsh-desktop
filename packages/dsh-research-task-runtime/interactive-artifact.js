@@ -19,7 +19,8 @@ export function renderInteractiveArtifact(spec) {
  const ot=spec.layoutProfile==='openterminal';
  if(spec?.type==='calendar')return renderCalendarArtifact(spec);
  if (!['news','reports','calendar','dashboard'].includes(spec?.type)) return null;
- if (spec.version !== 1 || !text(spec.title,256) || !Array.isArray(spec.items) || !spec.items.length || spec.items.length > 40) return null;
+ const emptyNews=spec?.type==='news'&&Array.isArray(spec.items)&&!spec.items.length&&spec.note==='本次未取得与用户主题相关的新闻；未用全市场或其他主题内容补齐。';
+ if (spec.version !== 1 || !text(spec.title,256) || !Array.isArray(spec.items) || !spec.items.length&&!emptyNews || spec.items.length > 40) return null;
  const dashboard = spec.type === 'dashboard';
  if (dashboard && !text(spec.asOf,256)) return null;
  for(const key of ['asOf','note'])if(spec[key]!==undefined&&!text(spec[key]))return null;

@@ -1,5 +1,6 @@
 // The host keeps the user's research scope separate from a provider's feed
 // label. A working financial total feed is not a scoped news capability.
+import {filterScopedNewsArtifact} from './news-topic-filter.js'
 export const NEWS_SCOPE_MARKER='【新闻主题约束】'
 export const NEWS_CAPACITY_MARKER='【新闻容量适配】'
 const broadTitle=/^(?:全市场(?:财经)?(?:新闻|资讯)(?:总流)?|综合财经(?:新闻|资讯)|财经(?:新闻|资讯)?总流|(?:general|market-wide|all-market) (?:financial |finance )?news)$/iu
@@ -27,6 +28,10 @@ export function newsSourceScopeIssue(data,records=[],requirement){
  // evaluator before this identity check. Stored expressions are not identities.
  const news=data?.type==='news'||typeof requirement==='string'&&requirement.includes(NEWS_CAPACITY_MARKER)&&(data?.type==='table'||data?.type==='market'&&data.variant==='table')
  if(!news||generalNewsScope(requirement??data.title??''))return null
+ // A static feed may contain a genuinely relevant article. Judge the actual
+ // delivered rows rather than rejecting their provider name alone. Mapping
+ // expressions still cannot authorize an unfiltered general-feed binding.
+ if(data?.type==='news'&&Array.isArray(data.items)&&filterScopedNewsArtifact(data,records,requirement??data.title).items.length===data.items.length)return null
  const sources=records.filter(record=>['public_data_query','ework__public_data_query'].includes(record.tool??record.toolId)&&record.args?.source==='sina-news')
  // A worker may inspect a general feed before finding a relevant source. Only
  // the records actually delivered from that feed invalidate a static result.

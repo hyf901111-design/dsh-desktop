@@ -3,6 +3,7 @@ import { validateWorkbench } from '../packages/dsh-research-task-runtime/workben
 import { preparePublicDataPanel, publicDataPanelVariant, validatePublicDataPanel } from '../packages/dsh-research-task-runtime/workbench-public-data.js'
 import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import { materializeComponentMapping } from '../packages/dsh-research-task-runtime/component-data-refresh.js'
+import { normalizeCryptoTickerResult } from '../packages/dsh-research-task-runtime/crypto-source-results.js'
 
 const pairs = ['XBTUSD', 'ETHUSD', 'SOLUSD', 'DOGEUSD', 'LTCUSD', 'ADAUSD', 'DOTUSD', 'XRPUSD']
 const cryptoPanel = count => ({ title: '自选资产快照', prompt: '保留全部观察对象、报价及盘口、日内变动和24h区间/成交量', type: 'market', size: 'large',
@@ -11,6 +12,7 @@ const response = (pair, i) => ({ sourceId: 'kraken-ticker', source: 'Kraken 公�
   units: { price: 'USD', volume24h: pair.slice(0, -3) }, dataTime: null, receivedAt: `2026-10-22T07:00:0${i}Z`,
   records: [{ pair, price: 100 + i, bid: i === 2 ? null : 99 + i, ask: 101 + i, high24h: 120 + i, low24h: 80 + i,
     volume24h: i, changeTodayDetail: `日内涨跌幅 ${i === 0 ? '-1.00' : '0.00'}%（UTC 00:00 起）` }] })
+const refreshResponsesFor = (result, responses) => Object.fromEntries(result.recipe.requests.map(request => [request.key, normalizeCryptoTickerResult(request, { status: 'fulfilled', value: responses[request.key] })]))
 
 describe('public-data presentation capacity', () => {
   it.each([3, 8])('organizes %i valid crypto pairs as a complete bound table instead of overflowing 12 metrics', async count => {
@@ -41,7 +43,7 @@ describe('public-data presentation capacity', () => {
     const refreshResponses = Object.fromEntries(pairs.slice(0, count).map((pair, i) => [`q${i}`, response(pair, i)]))
     refreshResponses.q2.records[0].bid = 102
     refreshResponses.q0.records[0].volume24h = 10
-    const refreshed = materializeComponentMapping(result.recipe.mapping, refreshResponses)
+    const refreshed = materializeComponentMapping(result.recipe.mapping, refreshResponsesFor(result, refreshResponses))
     expect(refreshed.rows[2][3]).toBe('102')
     expect(refreshed.rows[0][7]).toBe('10')
     expect(refreshed.rows.map(row => row[0])).toEqual(pairs.slice(0, count))
@@ -54,6 +56,54 @@ describe('public-data presentation capacity', () => {
       expect(planned.publicData.requests).toHaveLength(count)
       expect(planned.publicData.intervalMinutes).toBe(1)
     }
+  })
+
+  it.each([[3, 0], [3, 2], [8, 0], [8, 7]])('keeps all %i requested pair identities when quote response %i has no records', async (count, missing) => {
+    const panel = cryptoPanel(count)
+    const result = await preparePublicDataPanel(panel, { query: async args => {
+      const pair = JSON.parse(args.parameters_json).pair, i = pairs.indexOf(pair)
+      return { ...response(pair, i), ...(i === missing ? { records: [] } : {}) }
+    } })
+    const data = readTemplateModel(JSON.parse(result.output)).data
+    expect(data.variant).toBe('table')
+    expect(data.rows.map(row => row[0])).toEqual(pairs.slice(0, count))
+    expect(data.rows[missing][1]).toContain('未取得')
+    expect(data.rows[missing][2]).toContain('来源未返回')
+    expect(data.rows[(missing + 1) % count][1]).toBe(String(100 + (missing + 1) % count))
+    expect(result.recipe.requests.map(request => JSON.parse(request.args.parameters_json).pair)).toEqual(pairs.slice(0, count))
+    const refreshed = materializeComponentMapping(result.recipe.mapping, refreshResponsesFor(result, Object.fromEntries(pairs.slice(0, count).map((pair, i) => [`q${i}`, response(pair, i)]))))
+    expect(refreshed.rows.map(row => row[0])).toEqual(pairs.slice(0, count))
+    expect(refreshed.rows[missing][1]).toBe(String(100 + missing))
+    expect(refreshed.rows[missing][2]).not.toContain('未取得')
+  })
+
+  it.each(['NETWORK_ERROR', 'SOURCE_UNAVAILABLE', 'RATE_LIMITED', 'TIMEOUT', 'INVALID_RESPONSE'])('isolates a %s request failure without dropping observed prices or retryable requests', async code => {
+    const panel = cryptoPanel(3)
+    const query = vi.fn(async args => {
+      const pair = JSON.parse(args.parameters_json).pair
+      if (pair === 'ETHUSD') throw Object.assign(Error('provider failed'), { code })
+      return response(pair, pairs.indexOf(pair))
+    })
+    const result = await preparePublicDataPanel(panel, { query })
+    const data = readTemplateModel(JSON.parse(result.output)).data
+    expect(data.rows.map(row => row[0])).toEqual(pairs.slice(0, 3))
+    expect(data.rows.map(row => row[1])).toEqual(['100', expect.stringContaining('未取得'), '102'])
+    expect(result.recipe.requests).toHaveLength(3)
+    expect(query).toHaveBeenCalledTimes(3)
+    const recovered = materializeComponentMapping(result.recipe.mapping, refreshResponsesFor(result, Object.fromEntries(pairs.slice(0, 3).map((pair, i) => [`q${i}`, response(pair, i)]))))
+    expect(recovered.rows[1][1]).toBe('101')
+  })
+
+  it('does not treat an entirely missing watchlist, unrelated source response, unsafe arguments or cancellation as partial success', async () => {
+    await expect(preparePublicDataPanel(cryptoPanel(3), { query: async () => ({ sourceId: 'kraken-ticker', records: [] }) })).rejects.toThrow('真实记录')
+    await expect(preparePublicDataPanel(cryptoPanel(3), { query: async () => ({ ...response('XBTUSD', 0), sourceId: 'unrelated' }) })).rejects.toThrow('真实记录')
+    const unsafe = cryptoPanel(3), query = vi.fn(async () => response('XBTUSD', 0))
+    unsafe.publicData.requests[1].parameters_json = '{"pair":"ETHUSD","url":"https://private.invalid"}'
+    await expect(preparePublicDataPanel(unsafe, { query })).rejects.toThrow()
+    expect(query).not.toHaveBeenCalled()
+    const controller = new AbortController()
+    const aborted = Object.assign(Error('aborted'), { name: 'AbortError' })
+    await expect(preparePublicDataPanel(cryptoPanel(3), { query: async () => { controller.abort(aborted); throw aborted } }, controller.signal)).rejects.toThrow('aborted')
   })
 
   it('keeps compact 1–2 pair metrics and preserves manual refresh when a larger table is needed', async () => {
