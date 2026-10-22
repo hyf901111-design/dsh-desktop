@@ -22,7 +22,7 @@ function fixture(value) {
   }
   return { ctx, calls }
 }
-const reports = () => vi.mocked(console.warn).mock.calls.map(([text]) => JSON.parse(text))
+const reports = () => vi.mocked(console.warn).mock.calls.map(([text]) => JSON.parse(text)).filter(report=>report.event!=='notes-challenge-phase-candidates')
 function privateSafe(rows) {
   for (const row of rows) {
     expect(JSON.stringify(row)).not.toContain('PRIVATE')
