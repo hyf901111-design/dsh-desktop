@@ -12,7 +12,7 @@ beforeAll(async()=>{
  mountNotes(document,bridge,{register:(_mode,surface)=>{surface.style.left='0';document.body.append(surface)},open:()=>{},close:()=>{},current:()=>'notes'});
  window.historyState=()=>{const state=window.editor._tiptapEditor.state,manager=yUndoPluginKey.getState(state).undoManager;return{undo:manager.undoStack.length,redo:manager.redoStack.length,keys:state.plugins.map(p=>p.key).filter(key=>/y.*undo/i.test(key))}};
  window.stopCapturing=()=>yUndoPluginKey.getState(window.editor._tiptapEditor.state).undoManager.stopCapturing();
- window.seedChallenge=async(quote=${JSON.stringify(original)})=>{const block=window.editor.document.find(b=>b.content?.some(c=>c.text?.includes('成度'))),issue={blockId:block.id,quote,category:'typo',message:'请核对这段用字。',evidence:[]},store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));const thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue,sourceText:block.content.map(c=>c.text||'').join('')},initialComment:{body:[{type:'paragraph',content:[{type:'text',text:issue.message,styles:{}}]}]}});const range=findChallengeQuote(window.editor,block.id,issue.quote);window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return{blockId:block.id,threadId:thread.id}};
+ window.seedChallenge=async(quote=${JSON.stringify(original)})=>{const block=window.editor.document.find(b=>b.content?.some(c=>c.text?.includes('成度'))),issue={blockId:block.id,quote,category:'typo',message:'请核对这段用字。',evidence:[]},store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));const thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue,sourceText:block.content.map(c=>c.text||'').join('')},initialComment:{body:[{type:'paragraph',content:[{type:'text',text:issue.message,styles:{}}]}]}});window.nativeThreadStore=store;window.nativeThreadId=thread.id;const range=findChallengeQuote(window.editor,block.id,issue.quote);window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return{blockId:block.id,threadId:thread.id}};
  `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-styles',setup(b){b.onResolve({filter:/\.css\?inline$/},async args=>{const found=await b.resolve(args.path.slice(0,-7),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.challenge=challenge;window.noteDoc=doc; const slashMenu = useMemo'),loader:'tsx'}))}}]})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -33,12 +33,15 @@ async function fixture(quote=original){
  return{context,page,errors,pasted,beforeComment,...identity}
 }
 async function optimize(page,value=replacement){
+ // Reopen explicitly when exercising consecutive historical optimizations;
+ // successful replacements now automatically resolve the original discussion.
+ if(!await page.getByRole('button',{name:'AI优化',exact:true}).count())await page.evaluate(()=>window.editor.transact(tr=>{tr.setMeta('addToHistory',false);void window.nativeThreadStore.unresolveThread({threadId:window.nativeThreadId})}))
  const count=await page.evaluate(()=>Object.keys(window.jobs).length)
  await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(count+1)
  await page.evaluate(replacement=>Object.values(window.jobs).at(-1).resolve({version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'只优化这段用字。',replacement}}),value)
  await page.getByRole('button',{name:'替换到原文',exact:true}).click()
- await expect.poll(()=>page.locator('.en-challenge-quote').textContent()).toBe(value)
- await expect.poll(()=>page.getByRole('button',{name:'AI优化',exact:true}).isEnabled()).toBe(true)
+ await expect.poll(()=>page.evaluate(()=>window.editor.getBlock(window.noteDoc.getMap('threads').get(window.nativeThreadId).get('metadata').issue.blockId).content.map(c=>c.text||'').join(''))).toBe(value)
+ await expect.poll(()=>page.evaluate(()=>window.noteDoc.getMap('threads').get(window.nativeThreadId).get('resolved'))).toBe(true)
 }
 // Keep the native editor focused without clicking an empty document after undo;
 // that click can insert a fresh paragraph and legitimately clear the redo stack.
@@ -69,11 +72,12 @@ it('keeps the same discussion and unsent draft readable at the restored quote af
   await f.page.getByRole('textbox',{name:'回复AI挑战'}).fill('这份未发送讨论草稿不能丢。')
   await optimize(f.page);await nativeHistory(f.page)
   await expect.poll(()=>f.page.evaluate(id=>window.editor.getBlock(id).content.map(part=>part.text).join(''),f.blockId)).toBe(original)
+  await expect.poll(()=>f.page.locator('.en-challenge-quote').textContent()).toBe(original)
   const undone=await f.page.evaluate(id=>({quote:document.querySelector('.en-challenge-quote')?.textContent??null,draft:window.noteDoc.getMap('threads').get(id).get('metadata').draft,ids:[...window.noteDoc.getMap('threads').keys()],mark:[...document.querySelectorAll('.bn-editor [data-bn-thread-id]')].filter(el=>el.dataset.bnThreadId===id).map(el=>el.textContent).join('')}),f.threadId)
   await nativeHistory(f.page,true)
-  await expect.poll(()=>f.page.locator('.en-challenge-quote').textContent()).toBe(replacement)
-  expect(await f.page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('这份未发送讨论草稿不能丢。')
-  expect(await f.page.locator('.en-challenge-text').allTextContents()).toEqual(['请核对这段用字。','只优化这段用字。'])
+  await expect.poll(()=>f.page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),f.threadId)).toBe(true)
+  expect(await f.page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('metadata').draft,f.threadId)).toBe('这份未发送讨论草稿不能丢。')
+  expect(await f.page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('comments').length,f.threadId)).toBe(2)
   expect(undone).toEqual({quote:original,draft:'这份未发送讨论草稿不能丢。',ids:[f.threadId],mark:original})
   expect(f.errors).toEqual([])
  }finally{await f.context.close()}

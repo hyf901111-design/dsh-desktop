@@ -7,7 +7,7 @@ import {Plugin,PluginKey} from '@tiptap/pm/state'
 import {Decoration,DecorationSet} from '@tiptap/pm/view'
 import {findChallengeQuote} from './challenge-anchors'
 
-export type NoteReplacementReview={id:string;threadId:string;commentId?:string;blockId:string;anchorBefore:string;original:string;replacement:string;createdAt:number;resolved?:boolean;position:{first:any;last:any};originalSlice:any}
+export type NoteReplacementReview={id:string;threadId:string;commentId?:string;blockId:string;anchorBefore:string;original:string;replacement:string;createdAt:number;resolved?:boolean;autoResolved?:boolean;position:{first:any;last:any};originalSlice:any}
 const valid=(v:any):v is NoteReplacementReview=>v&&typeof v.id==='string'&&v.id.length<=256&&typeof v.threadId==='string'&&v.threadId.length<=256&&typeof v.blockId==='string'&&v.blockId.length<=256&&typeof v.original==='string'&&v.original.trim()&&v.original.length<=6000&&typeof v.replacement==='string'&&v.replacement.trim()&&v.replacement.length<=6000&&typeof v.anchorBefore==='string'&&v.anchorBefore.length<=6000&&Number.isFinite(v.createdAt)&&v.position?.first&&v.position?.last&&v.originalSlice
 /** Bounds include whole code points; an insertion/deletion is a single local edit envelope. */
 export function replacementChange(original:string,replacement:string){
@@ -21,6 +21,17 @@ export function replacementChange(original:string,replacement:string){
  // A deletion needs a visible adjacent anchor to open its comparison.
  return to>from?{from,to}:from<replacement.length?{from,to:from+(replacement.codePointAt(from)!>0xffff?2:1)}:{from:Math.max(0,from-(replacement.codePointAt(Math.max(0,from-2))!>0xffff?2:1)),to:from}
 }
+/** Compare only the marked fragment and any actual adjacent edit envelope. */
+export function replacementComparison(review:Pick<NoteReplacementReview,'original'|'replacement'|'anchorBefore'>){
+ const {original,replacement,anchorBefore}=review,at=original.indexOf(anchorBefore)
+ if(at<0||original.indexOf(anchorBefore,at+1)>=0)return{original,replacement}
+ let prefix=0,suffix=0
+ while(prefix<original.length&&prefix<replacement.length&&original[prefix]===replacement[prefix])prefix++
+ while(suffix<original.length-prefix&&suffix<replacement.length-prefix&&original[original.length-1-suffix]===replacement[replacement.length-1-suffix])suffix++
+ const from=Math.min(at,prefix),oldTo=Math.max(at+anchorBefore.length,original.length-suffix),newTo=oldTo+replacement.length-original.length
+ return{original:original.slice(from,oldTo),replacement:replacement.slice(from,newTo)}
+}
+
 function relativeRange(editor:any,review:NoteReplacementReview){
  try{
   const state=editor._tiptapEditor.state,binding=ySyncPluginKey.getState(state)?.binding
@@ -110,12 +121,13 @@ export function NoteReplacementPopover({controller,scroll}:{controller:ReturnTyp
  useLayoutEffect(()=>{
   if(!selected){setPosition(undefined);return}
   let frame=0
-  const measure=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const area=scroll.current?.closest('.en-main')?.getBoundingClientRect(),mark=scroll.current?.querySelector<HTMLElement>('[data-en-replacement-id="'+CSS.escape(selected.id)+'"]')?.getBoundingClientRect(),card=root.current;if(!area||!mark||!card)return;const width=Math.min(360,area.width-32),height=Math.min(card.scrollHeight,area.height-32),left=Math.max(16,Math.min(mark.left-area.left,area.width-width-16)),below=mark.bottom-area.top+8,top=below+height<=area.height-16?below:Math.max(16,mark.top-area.top-height-8);setPosition({left,top,maxHeight:Math.max(120,area.height-32)})})}
+  const measure=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const area=scroll.current?.closest('.en-main')?.getBoundingClientRect(),mark=scroll.current?.querySelector<HTMLElement>('[data-en-replacement-id="'+CSS.escape(selected.id)+'"]')?.getBoundingClientRect(),card=root.current;if(!area||!card)return;const width=Math.min(360,area.width-32);if(!mark){setPosition(old=>old??{left:Math.max(16,area.width-width-16),top:16,maxHeight:Math.max(120,area.height-32)});return}const height=Math.min(card.scrollHeight,area.height-32),left=Math.max(16,Math.min(mark.left-area.left,area.width-width-16)),below=mark.bottom-area.top+8,top=below+height<=area.height-16?below:Math.max(16,mark.top-area.top-height-8);setPosition({left,top,maxHeight:Math.max(120,area.height-32)})})}
   measure();const observer=new ResizeObserver(measure);if(root.current)observer.observe(root.current);if(scroll.current)observer.observe(scroll.current);scroll.current?.addEventListener('scroll',measure);window.addEventListener('resize',measure)
   const dismiss=(e:Event)=>{if(e instanceof KeyboardEvent){if(e.key!=='Escape')return;e.preventDefault()}else if(root.current?.contains(e.target as Node)||(e.target as HTMLElement).closest('[data-en-replacement-id]'))return;controller.close()}
   document.addEventListener('pointerdown',dismiss,true);document.addEventListener('keydown',dismiss,true)
   return()=>{cancelAnimationFrame(frame);observer.disconnect();scroll.current?.removeEventListener('scroll',measure);window.removeEventListener('resize',measure);document.removeEventListener('pointerdown',dismiss,true);document.removeEventListener('keydown',dismiss,true)}
  },[selected?.id,controller.revision])
  if(!selected)return null
- return <section ref={root} className="en-replacement-popover" role="dialog" aria-label="替换对照" style={{...position,visibility:position?'visible':'hidden'}}><header><strong>替换对照</strong><button aria-label="关闭替换对照" onClick={controller.close}>×</button></header><div className="en-replacement-comparison"><section><h4>原文</h4><div data-replacement-before>{selected.original}</div></section><section><h4>替换后</h4><div data-replacement-after>{selected.replacement}</div></section></div>{controller.error||!controller.canRevert?<p role="status">{controller.error||'这段文字已再次编辑，无法直接取消替换。'}</p>:null}<footer><button disabled={controller.busy||!controller.canRevert} onClick={()=>void controller.revert()}>取消替换</button><button disabled={controller.busy} onClick={()=>void controller.resolve()}>已解决</button></footer></section>
+ const comparison=replacementComparison(selected)
+ return <section ref={root} className="en-replacement-popover" role="dialog" aria-label="替换对照" style={{...position,visibility:position?'visible':'hidden'}}><header><strong>替换对照</strong><button aria-label="关闭替换对照" onClick={controller.close}>×</button></header><div className="en-replacement-comparison"><section><h4>原文</h4><div data-replacement-before>{comparison.original}</div></section><section><h4>替换后</h4><div data-replacement-after>{comparison.replacement}</div></section></div>{controller.error||!controller.canRevert?<p role="status">{controller.error||'这段文字已再次编辑，无法直接取消替换。'}</p>:null}<footer><button disabled={controller.busy||!controller.canRevert} onClick={()=>void controller.revert()}>取消替换</button><button disabled={controller.busy} onClick={()=>void controller.resolve()}>已解决</button></footer></section>
 }

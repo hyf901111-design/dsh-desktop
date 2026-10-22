@@ -14,3 +14,7 @@ it('reuses a prior spelling span when an upgraded review splits its same typos, 
  const result=reuseSpellingAnchors(input,[{blockId:'p',quote:'材料以经提胶',category:'typo'}])
  expect(result.map(i=>i.quote)).toEqual(['材料以经提胶','另一个错词','以经','以经']);expect(result[0]!.message).toContain('以经');expect(result[0]!.message).toContain('提胶');expect(input[0]!.quote).toBe('以经')
 })
+it('shows the marked fragment and its actual updated counterpart without surrounding unchanged sentence clauses',async()=>{
+ const{replacementComparison}=await import('../src/preload/notes/replacement-review')
+ expect(replacementComparison({original:'前面的内容保持不变；莲芯性偏温热，适合上火的人泡水。',replacement:'前面的内容保持不变；莲芯性偏寒凉，适合心火旺的人泡水。',anchorBefore:'莲芯性偏温热，适合上火的人泡水'})).toEqual({original:'莲芯性偏温热，适合上火的人泡水',replacement:'莲芯性偏寒凉，适合心火旺的人泡水'})
+})
