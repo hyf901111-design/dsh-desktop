@@ -1,3 +1,4 @@
+import {registerClientTools} from './client-tools.js'
 import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
 import {calendarEventEvidenceIssue,calendarEventRepairEvidence} from './calendar-event-evidence.js'
 import {articleTimelineRequired,restoreArticleTimelineScope} from './article-timeline-provenance.js'
@@ -2875,6 +2876,7 @@ export async function apply(ctx) {
     const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
+    const disposeClientTools = registerClientTools(ctx)
     let context
     try {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
@@ -2883,7 +2885,7 @@ export async function apply(ctx) {
       disposeWorkbenchPolicy()
       disposeModelQueue()
       disposeCompletionNotifications()
-      disposeCanvasTools()
+      disposeCanvasTools();disposeClientTools()
       disposeRoutes()
       disposeScheduledTitle()
       disposeScheduledTaskTool()
@@ -2903,7 +2905,7 @@ export async function apply(ctx) {
       await disposeCanvasUseTasks()
       await sharedExecutor.dispose()
       await disposeWorkbench()
-      disposeCanvasTools()
+      disposeCanvasTools();disposeClientTools()
       await context.dispose()
       disposeRoutes()
       disposeScheduledTitle()

@@ -42,6 +42,19 @@ children: [active?.id === 'notes' && (0, react_jsx_runtime.jsxs)('button', {
   children:[(0,react_jsx_runtime.jsx)('svg',{width:14,height:14,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.25,strokeLinecap:'round',strokeLinejoin:'round', 'aria-hidden':true,children:(0,react_jsx_runtime.jsx)('path',{d:'M8 10V2m-3 3 3-3 3 3M3 9v4a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9'})}), '导出']
 }), renderSlot("conversation.session.header.utilities", {})]`)
   }
+  if(!source.includes('ework:client-capability-context:v1')){
+    const anchor='const homeHeader = active?.id === "notes" ? notesHeaderPresentation.current.home : nativeHomeHeader;'
+    if(source.split(anchor).length!==2)throw Error('客户端能力无法定位当前会话视图。')
+    source=source.replace(anchor,anchor+`
+/* ework:client-capability-context:v1 */
+(0,react.useLayoutEffect)(()=>{
+ const bridge=window.dshDesktop?.clientCapabilities;if(!bridge||!active)return;
+ const mode=active.id==='notes'?'notes':active.id==='research'?'research':'conversation';
+ let live=true;const bind=async()=>{try{if(mode==='research'&&typeof researchWorkspaces!=='undefined'){const workspace=researchWorkspaces.sessions.get(sessionId);if(workspace)await window.dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:workspace.getSnapshot().selection.selectedNodeIds})}if(live)await bridge.bind({sessionId,mode,active:true})}catch{}};void bind();const timer=setInterval(bind,30000);
+ const off=bridge.subscribe(value=>{if(value.sessionId===sessionId)selectView(value.mode==='conversation'?'chat':value.mode)});
+ return()=>{live=false;clearInterval(timer);off();void bridge.bind({sessionId,mode,active:false}).catch(()=>{})};
+},[sessionId,active?.id,selectView]);`)
+  }
   source=source.replace("label:()=> '笔记'", "label:()=> document.documentElement.dataset.odysseyLocale==='en'?'Notes':'笔记'")
   source=patchNotesChallengeClient(patchNotesExportMenu(source))
   return source.includes('function createResearchWorkspaceSession(') ? patchCanvasSessionActivity(source) : source

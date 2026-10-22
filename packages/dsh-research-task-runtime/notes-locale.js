@@ -1,5 +1,8 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+"客户端操作历史已达上限，请重启客户端后继续。":"Client action history reached its limit. Restart the client to continue.",
+"同步待确认":"Synchronization unconfirmed",
+"修改画布":"Modify canvas","撤销画布操作":"Undo canvas action","放大窗口":"Zoom in","缩小窗口":"Zoom out","窗口全屏":"Window fullscreen","切换会话视图":"Switch session view","当前会话未绑定可见客户端，请回到该会话后重试。":"This session is not bound to the visible client. Return to it and retry.","请先重新读取当前客户端能力目录。":"Read the current client capability catalog again.","客户端操作请求无效。":"Invalid client action request.","客户端上下文无效。":"Invalid client context.","当前会话不可用。":"This session is unavailable.","视图切换请求已发出；后续操作已取消，请查看当前视图。":"The view switch was requested; further actions were cancelled. Check the current view.","会话视图切换未确认，请查看当前界面。":"The view switch was not confirmed. Check the current interface.","全屏状态尚未确认。":"Fullscreen state has not been confirmed.",
   "我":"Me",
   "笔记": "Notes",
   "新笔记": "New Note",
