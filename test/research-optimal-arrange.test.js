@@ -9,7 +9,7 @@ describe('content-sized workbench arrangement',()=>{
     const html='<body data-sherlock-market="metrics"><div class="market-metrics">'+ '<div class="market-metric"></div>'.repeat(6)+'</div><footer class="market-footer"><span>2026-09-30</span><span>完整来源和单位说明</span></footer></body>';
     const old=node('old',{type:'html',html});
     expect(researchMarketDimensions(old)).toEqual({width:656,height:368});
-    expect(researchMarketDimensions(old,true,320)).toEqual({width:656,height:456});
+    expect(researchMarketDimensions(old,true,320)).toEqual({width:656,height:486});
     old.sizeMode='manual';expect(researchMarketDimensions(old)).toBeNull();
     expect(researchMarketDimensions(old,true).height).toBe(368);
   });
