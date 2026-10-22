@@ -262,7 +262,13 @@ export async function reviewNoteConsensus(ctx, input, signal) {
     const revision=data.downgrade!==null||data.upgrade!==null?`近一月调高${data.upgrade??'未知'}家、调低${data.downgrade??'未知'}家。`:''
     const directions=(data.direction.comparisons??[]).filter(c=>c.conflict).map(c=>c.kind==='adjacent-year'?`报告较${c.previousYear}年${c.reportedChange>0?'增加':'减少'}${display(Math.abs(c.reportedChange))}，一致预期中值同期${c.consensusChange>0?'增加':'减少'}${display(Math.abs(c.consensusChange))}。`:`报告较上月${c.reportedDirection>0?'上调':'下调'}该预测，市场近一月以${c.consensusDirection>0?'上调':'下调'}为主。`).join('')
     const deviation=data.deviationPct===null?'':`相对中值偏离${Number(data.deviationPct.toFixed(2))}%（阈值${Number((data.threshold*100).toFixed(2))}%）。`
-    issues.push({ blockId: claim.blockId, quote: claim.quote, category: 'research', message: `${claim.windCode} ${claim.year}年度${METRICS[claim.metric]}预测${claim.value}${claim.unit}；${data.estDt}一致预期中值${display(data.median)}，范围[${display(data.min)}, ${display(data.max)}]，${data.institutionCount??'未知'}家机构，触发${comparison.rules.join('/')}。${deviation}${directions}${revision}请说明收入、利润率等核心假设差异${claim.metric === 'EPS' ? '及EPS股本基准是否一致' : ''}；不会将预测强制改为市场中值。${comparison.status === 'partial' ? comparison.detail : ''}`.slice(0, 600), evidence: [comparison.evidence] })
+    const questions=[
+      `收入、成本或利润率等核心假设与市场有何差异${claim.metric==='EPS'?'，EPS股本基准是否一致':''}？`,
+      `与机构一致预期的分歧来自信息差还是假设差异${data.downgrade>data.upgrade&&data.upgrade!==null?'，是否已纳入近一月下修反映的因素':''}？`,
+      '若维持这一预测，请说明该情景对应的估值影响。'
+    ]
+    data.questionsToResearcher=questions
+    issues.push({ blockId: claim.blockId, quote: claim.quote, category: 'research', message: `${claim.windCode} ${claim.year}年度${METRICS[claim.metric]}预测${claim.value}${claim.unit}；${data.estDt}一致预期中值${display(data.median)}，范围[${display(data.min)}, ${display(data.max)}]，${data.institutionCount??'未知'}家机构，触发${comparison.rules.join('/')}。${deviation}${directions}${revision}预测分歧不等于事实错误，不会将预测强制改为市场中值。请研究员说明：${questions.map((question,index)=>`${index+1}. ${question}`).join(' ')}${comparison.status === 'partial' ? comparison.detail : ''}`.slice(0, 600), evidence: [comparison.evidence] })
   }
   if (claims.length > 12) checks.push({ kind: 'consensus', status: 'partial', detail: `本批识别${claims.length}项预测，仅前12项进入专项预算。` })
   return { issues, checks }

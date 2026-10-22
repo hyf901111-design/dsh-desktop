@@ -111,6 +111,21 @@ it('never substitutes another tool or trusts a model-supplied dataset when a sou
   expect(result.checks).toMatchObject([{ kind: 'consensus', status: 'unavailable' }])
 })
 
+it('delivers the MD researcher questions with verified profit and EPS comparisons without calling forecasts factual errors',async()=>{
+  const {reviewNoteConsensus}=await load(),f=await sourceFixture({data:[{...row,NET_PROFIT_MEDIAN:8386900,NET_PROFIT_MIN:8097961,NET_PROFIT_MAX:8888400,NET_PROFIT_DEV:201182.2346,NET_PROFIT_UPGRADE:0,NET_PROFIT_DOWNGRADE:35,NET_PROFIT_MAINTAIN:8}]})
+  const blocks=[{id:'header',text:'贵州茅台600519.SH，报告基准日：2026年10月20日。'},{id:'policy',text:'一致预期偏离阈值：12%。一致预期统计周期：90天。'},{id:'forecast',text:'预计2026年归母净利润950亿元，EPS为76元。'}]
+  const result=await reviewNoteConsensus(f.ctx,{sessionId:'session',blocks},new AbortController().signal)
+  expect(result.issues).toHaveLength(2);expect(f.calls).toHaveLength(1)
+  for(const issue of result.issues){
+    expect(issue.evidence[0].data.rules).toEqual(['C1','C2','C3'])
+    const questions=issue.evidence[0].data.questionsToResearcher
+    expect(questions).toHaveLength(3);expect(questions[0]).toContain('核心假设');expect(questions[1]).toContain('信息差还是假设差异');expect(questions[2]).toContain('估值影响')
+    expect(issue.message).toContain('预测分歧不等于事实错误');expect(issue.message).toContain('不会将预测强制改为市场中值');expect(issue.message).toContain('估值影响')
+  }
+  expect(result.issues.find(issue=>issue.evidence[0].data.metric==='NET_PROFIT').evidence[0].data.questionsToResearcher[1]).toContain('近一月下修')
+  expect(result.issues.find(issue=>issue.evidence[0].data.metric==='EPS').evidence[0].data.questionsToResearcher[0]).toContain('股本基准')
+})
+
 it('rejects a source response that is truncated, misdated or contradictory instead of fabricating evidence', async () => {
   const { reviewNoteConsensus } = await load()
   const f = await sourceFixture({ data: [{ ...row, EPS_MEDIAN: 70 }, { ...row, EPS_MEDIAN: 90 }] })
