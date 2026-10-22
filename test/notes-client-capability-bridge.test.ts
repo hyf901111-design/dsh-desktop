@@ -49,3 +49,15 @@ it('accepts a same-request saved checkpoint arriving during cancellation and rej
  bridge.respond({requestId:id,sessionId:'note',result:{status:'succeeded',path:'/tmp/actual.md'}},'alice')
  expect(await pending).toMatchObject({status:'cancelled',path:'/tmp/actual.md',effect:{state:'saved',path:'/tmp/actual.md'}});bridge.dispose()
 })
+it('preserves a created block saved before cancellation and rejects a different block in a later phase',async()=>{
+ const sent:any[]=[],bridge=new NotesCapabilityBridge(value=>sent.push(value)),controller=new AbortController()
+ const pending=bridge.request('notes.components.create',{prompt:'表格'},context,'generation',controller.signal,()=>!controller.signal.aborted),id=sent[0].requestId
+ expect(bridge.respond({requestId:id,sessionId:'note',effect:{state:'placeholder',blockId:'created'}},'alice')).toEqual({ok:true})
+ expect(bridge.respond({requestId:id,sessionId:'note',effect:{state:'applied',blockId:'created'}},'alice')).toEqual({ok:true})
+ expect(bridge.respond({requestId:id,sessionId:'note',effect:{state:'saved',blockId:'created'}},'alice')).toEqual({ok:true})
+ controller.abort()
+ expect(bridge.respond({requestId:id,sessionId:'note',effect:{state:'saved',blockId:'different'}},'alice')).toEqual({ok:false})
+ expect(bridge.respond({requestId:id,sessionId:'note',result:{status:'succeeded',effect:{state:'saved',blockId:'different'}}},'alice')).toEqual({ok:false})
+ bridge.respond({requestId:id,sessionId:'note',result:{status:'succeeded',blockId:'created'}},'alice')
+ expect(await pending).toMatchObject({status:'cancelled',blockId:'created',effect:{state:'saved',blockId:'created'},message:expect.stringContaining('已生成并保存')});bridge.dispose()
+})

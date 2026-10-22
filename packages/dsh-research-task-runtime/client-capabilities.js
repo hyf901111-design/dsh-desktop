@@ -1,4 +1,4 @@
-import {validateJsonSchemaValue} from '@deepseek-ai/dsh-tools'
+import Ajv from 'ajv'
 const object=(properties,required=[])=>({type:'object',properties,required,additionalProperties:false})
 const identity=c=>JSON.stringify([c?.owner,c?.sessionId,c?.documentId,c?.mode])
 const statuses=new Set(['succeeded','pending','cancelled','failed','unavailable'])
@@ -9,6 +9,10 @@ const definitions=[
  {id:'canvas.inspect',description:'通过现有画布桥查看当前会话已绑定研究画布及可用操作，不能查看其他会话。',parameters:object({}),handler:'inspectCanvas'},
  {id:'ui.zoom.reset',description:'恢复当前客户端窗口的默认缩放，与菜单恢复默认缩放共享处理器。',parameters:object({}),handler:'resetZoom'},
 ]
+// Keep host validation independent of Harness plugin imports and their startup side effects.
+// Validate without coercion, defaults or property removal: model arguments are never rewritten.
+const validator=new Ajv({strict:true,coerceTypes:false,useDefaults:false,removeAdditional:false})
+const validators=new Map(definitions.map(d=>[d.id,validator.compile(d.parameters)]))
 /** Registry owns semantic schemas; transports never become model-callable names. */
 export function createClientCapabilityRegistry(handlers={}){
  const entries=new Map(definitions.map(d=>[d.id,d]))
@@ -19,7 +23,7 @@ export function createClientCapabilityRegistry(handlers={}){
   async execute(call,context,signal){
    const d=entries.get(call.capability)
    if(!d||!available(d,context))return {status:'unavailable',message:'当前上下文中该客户端能力不可用。'}
-   if(validateJsonSchemaValue(d.parameters,call.arguments).length)throw Error('客户端能力参数无效。')
+   if(!validators.get(d.id)(call.arguments))throw Error('客户端能力参数无效。')
    if(d.id==='notes.components.style'){
     if(call.arguments.theme===undefined&&call.arguments.titleBar===undefined)throw Error('请指定需要修改的组件样式。')
     if(call.arguments.scope==='selected'&&!context.selectedBlockIds?.length)throw Error('当前未选中组件，请明确使用整篇笔记范围或先选择组件。')

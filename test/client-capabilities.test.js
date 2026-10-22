@@ -47,3 +47,29 @@ it('keeps new prose unapplied while exposing completed operation receipts beside
  const result=await runClientCapabilityLoop({generate:async()=>round++?{kind:'text',markdown:'尚未采纳的新正文'}:{kind:'capabilities',calls:[{requestId:'zoom',capability:'ui.zoom.reset',arguments:{}}]},execute:async()=>({status:'succeeded',capability:'ui.zoom.reset'})})
  expect(result.kind).toBe('text');expect(result.markdown).toBe('尚未采纳的新正文');expect(result.capabilitySummary).toContain('恢复缩放：已完成')
 })
+it.each([
+ ['notes.components.create',{prompt:''}],
+ ['notes.components.create',{prompt:'x'.repeat(8001)}],
+ ['notes.export',{format:'pdf',path:''}],
+ ['notes.export',{format:'pdf',path:'x'.repeat(4097)}],
+ ['notes.export',{format:'PDF'}],
+ ['notes.components.style',{scope:'note',titleBar:'false'}],
+ ['notes.components.style',{scope:'note',theme:'enterprise',ipc:'execute'}],
+ ['notes.export',{}],
+ ['notes.export',null],
+])('rejects invalid %s arguments before invoking any effect (case %#)',async(capability,args)=>{
+ const effects=[],handler=async input=>{effects.push(input);return{status:'succeeded'}}
+ const registry=module.createClientCapabilityRegistry({createComponent:handler,exportNote:handler,styleComponents:handler})
+ const before=JSON.stringify(args)
+ await expect(registry.execute({capability,arguments:args},context)).rejects.toThrow('客户端能力参数无效')
+ expect(effects).toEqual([]);expect(JSON.stringify(args)).toBe(before)
+})
+it('accepts schema boundary lengths without coercing or mutating validated arguments',async()=>{
+ const effects=[],handler=async input=>{effects.push(input);return{status:'succeeded'}}
+ const registry=module.createClientCapabilityRegistry({createComponent:handler,exportNote:handler,styleComponents:handler})
+ for(const [capability,args] of [['notes.components.create',{prompt:'字'.repeat(8000)}],['notes.export',{format:'pdf',path:'x'.repeat(4096)}],['notes.components.style',{scope:'note',titleBar:false}]]){
+  const before=JSON.stringify(args)
+  expect(await registry.execute({capability,arguments:args},context)).toEqual({status:'succeeded'})
+  expect(effects.at(-1)).toBe(args);expect(JSON.stringify(args)).toBe(before)
+ }
+})

@@ -253,6 +253,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       } catch (e) { if (!disposed.current) { setStatus('保存失败 · 本地草稿'); setError((e as Error).message) } }
     })
   }
+  // Queue settlement alone is not persistence: save() keeps conflict/error UI local.
+  const persistConfirmed = async () => {
+    save();await saveQueue.current
+    if(lastWritten.current!==JSON.stringify(snapshot()))throw Error('笔记尚未保存，较新内容已保留为草稿。')
+  }
   const systemMutation=useRef(false)
   const updateSystemComponent=(blockId:string,node:Record<string,any>)=>{
     systemMutation.current=true
@@ -301,7 +306,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         const captured=references.capture()
         return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]
       },
-      createComponent:async(args,current,requestId)=>{
+      createComponent:async(args,current,requestId,report)=>{
         if(!current())throw Error('笔记会话已变化。')
         const last=editor.document.at(-1)
         const created=editor.insertBlocks([{type:'research',props:{payload:JSON.stringify({
@@ -309,7 +314,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           noteDraft:'smart',containerPrompt:args.prompt,generationStatus:'draft'
         })}}],last,'after')[0]
         capabilityCards.current.set(requestId,created.id)
-        try{return await inlineComponents.startAndWait(created.id,args.prompt,args.requestContext)}
+        try{
+          await report({state:'placeholder',blockId:created.id})
+          if(!current())return {status:'cancelled',blockId:created.id}
+          return await inlineComponents.startAndWait(created.id,args.prompt,args.requestContext,state=>report({state,blockId:created.id}))
+        }
         finally{capabilityCards.current.delete(requestId)}
       },
       cancelComponent:requestId=>{
@@ -317,10 +326,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         if(blockId)inlineComponents.stop(blockId)
       },
       reportEffect:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect}),
-      persist:async()=>{
-        save();await saveQueue.current
-        if(lastWritten.current!==JSON.stringify(snapshot()))throw Error('笔记尚未保存，较新内容已保留为草稿。')
-      },
+      persist:persistConfirmed,
       exportNote:(args,current)=>exportNoteWithSnapshots({snapshot,bridge:props.bridge,sessionId:props.sessionId,...args,locale:document.documentElement.dataset.odysseyLocale,current}),
       settle:()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())))
     })
@@ -479,7 +485,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); publishComposer({running:false}); request.current = ''; generatingBlock.current = '';activeGeneration.current=undefined } }
   }
   const stop = () => { epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。")) }
-  const inlineComponents=useInlineComponentGeneration({sessionId:props.sessionId,bridge:props.bridge,editor,current:()=>!disposed.current&&!props.recovery,persist:async()=>{save();await saveQueue.current},changed,update:updateSystemComponent})
+  const inlineComponents=useInlineComponentGeneration({sessionId:props.sessionId,bridge:props.bridge,editor,current:()=>!disposed.current&&!props.recovery,persist:persistConfirmed,changed,update:updateSystemComponent})
   const apply = async (replace: boolean) => {
     if (!preview) return
     editor.focus()

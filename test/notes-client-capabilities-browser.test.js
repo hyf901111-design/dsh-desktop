@@ -7,16 +7,16 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:repo,loader:'tsx',contents:`
 import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';
 import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
-window.calls=[];window.receipts=[];window.saved=null;window.effects=[];window.failCreate=false;const pending=new Map();
+window.calls=[];window.receipts=[];window.saved=null;window.effects=[];window.failCreate=false;window.stageEffects=[];window.saveAttempts=0;const pending=new Map();
 const bridge={request:async(method,input)=>{window.calls.push({method,input});
  if(method==='load')return {saved:{title:'组合验收',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留我的富文本正文',styles:{bold:true}}]}],yjs:'',revision:0,updatedAt:0}};
- if(method==='save'){window.saved=input.content;return {status:'saved',saved:{...input.content,revision:input.revision+1}}}
+ if(method==='save'){if(window.saveFailure){window.saveAttempts++;const fail=()=>{if(window.saveFailure==='exception')throw Error('磁盘写入失败');return{status:'conflict'}};if(window.saveAttempts===1)return fail();return new Promise((resolve,reject)=>{window.completeSave=()=>{try{resolve(fail())}catch(error){reject(error)}}})}window.saved=input.content;return {status:'saved',saved:{...input.content,revision:input.revision+1}}}
  if(method==='render')return{html:'<p>组件数据 42</p>',document:'<!doctype html><body><p>组件数据 42</p></body>'};
  if(method==='component-render')return{ok:true};
- if(method==='capability-reply'){if(input.effect)return{ok:true};const item=pending.get(input.requestId);if(item){pending.delete(input.requestId);input.error?item.reject(Error(input.error)):item.resolve(input.result)}return{ok:true}}
+ if(method==='capability-reply'){if(input.effect){window.stageEffects.push(input.effect);return{ok:true}};const item=pending.get(input.requestId);if(item){pending.delete(input.requestId);input.error?item.reject(Error(input.error)):item.resolve(input.result)}return{ok:true}}
  if(method==='component-snapshots')return[];
  if(method==='export'){window.effects.push({kind:'export',content:input.content});return {status:'saved',path:'/tmp/native-composition.pdf'}}
- if(method==='generate'&&input.entryPoint==='component')return new Promise(resolve=>{window.completeCard=()=>resolve(window.failCreate?{kind:'conversation',markdown:'请提供数据。'}:{kind:'component',node:{id:'generated',title:'新组件',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'新组件',columns:['值'],rows:[[42]]}}})});
+ if(method==='generate'&&input.entryPoint==='component')return new Promise(resolve=>{window.completeCard=()=>resolve(window.failCreate?{kind:'conversation',markdown:'请提供数据。'}:{kind:'component',...(window.verified?{sourceResult:{status:'verified',recipe:{}}}:{}),node:{id:'generated',title:'新组件',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'新组件',columns:['值'],rows:[[42]]}}})});
  if(method==='generate'){
   window.ordinaryInput=input;
   const invoke=(action,args)=>new Promise((resolve,reject)=>{const requestId='cap-'+(window.receipts.length+1);pending.set(requestId,{resolve,reject});document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{requestId,generationId:input.requestId,sessionId:input.sessionId,context:{...input.capabilityContext,owner:'alice',mode:'notes',editable:true},action,args}}))});
@@ -34,7 +34,7 @@ async function fixture(){const context=await browser.newContext({viewport:{width
 it('routes creation through the generic composer and waits before persistent theme and export',async()=>{
  const {context,page,errors}=await fixture()
  try{
-  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'创建一个表格组件，然后设置易方达主题，隐藏顶栏并导出 PDF。',images:[]}})))
+  await page.evaluate(()=>{window.verified=true;document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'创建一个表格组件，然后设置易方达主题，隐藏顶栏并导出 PDF。',images:[]}}))})
   await page.waitForFunction(()=>typeof window.completeCard==='function');expect(await page.evaluate(()=>window.ordinaryInput.mode)).toBe('write');expect(await page.evaluate(()=>window.effects)).toEqual([])
   await page.evaluate(()=>window.completeCard());await page.waitForFunction(()=>window.receipts.length===3)
   const result=await page.evaluate(()=>({receipts:window.receipts,saved:window.saved,effects:window.effects}));expect(result.receipts.map(r=>r.status)).toEqual(['succeeded','succeeded','succeeded']);expect(result.effects).toHaveLength(1);expect(result.saved.blocks[0].content[0]).toMatchObject({text:'保留我的富文本正文',styles:{bold:true}})
@@ -45,4 +45,28 @@ it('routes creation through the generic composer and waits before persistent the
 it('keeps a requested clarification in the component and does not export it as a completed result',async()=>{
  const {context,page,errors}=await fixture()
  try{await page.evaluate(()=>{window.failCreate=true;document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'创建表格并导出PDF',images:[]}}))});await page.waitForFunction(()=>typeof window.completeCard==='function');await page.evaluate(()=>window.completeCard());await page.waitForFunction(()=>window.receipts.length===1);expect(await page.evaluate(()=>window.receipts[0].status)).toBe('pending');expect(await page.evaluate(()=>window.effects)).toEqual([]);expect(await page.locator('.en-document').innerText()).toContain('保留我的富文本正文');expect(errors).toEqual([])}finally{await context.close()}
+},15000)
+
+it.each(['conflict','exception'])('retains only applied creation after a real editor %s save failure and cancellation',async(saveFailure)=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(saveFailure=>{window.saveFailure=saveFailure;window.verified=true;document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'创建表格并导出PDF',images:[]}}))},saveFailure)
+  await page.waitForFunction(()=>typeof window.completeCard==='function');await page.evaluate(()=>window.completeCard())
+  // The first, inner save has failed. Hold the outer save until cancellation,
+  // exercising the real editor queue and both callers of its persistence API.
+  await page.waitForFunction(()=>typeof window.completeSave==='function')
+  await page.evaluate(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{sessionId:'composed',requestId:'cap-1',cancel:true}}));window.completeSave()})
+  await page.waitForFunction(()=>window.receipts.length===1)
+  const result=await page.evaluate(()=>({receipt:window.receipts[0],stages:window.stageEffects,saved:window.saved,blocks:window.noteEditor.document,exports:window.effects,calls:window.calls}))
+  expect(result.saved).toBeNull();expect(result.exports).toEqual([])
+  expect(result.receipt).toMatchObject({status:'cancelled',effect:{state:'applied'}})
+  expect(result.stages.every(effect=>effect.state!=='saved')).toBe(true)
+  expect(result.receipt.message).toContain('尚未确认保存');expect(result.receipt.message).not.toContain('已生成并保存')
+  const created=result.blocks.find(block=>block.id===result.receipt.blockId)
+  expect(JSON.parse(created.props.payload).containerSpec.rows).toEqual([[42]])
+  expect(result.blocks[0].content[0]).toMatchObject({text:'保留我的富文本正文',styles:{bold:true}})
+  expect(result.calls.some(call=>call.method==='component-data'&&call.input.action==='bind-generated')).toBe(false)
+  expect(await page.locator('.en-error').innerText()).toContain(saveFailure==='conflict'?'已有较新保存版本':'磁盘写入失败')
+  expect(errors).toEqual([])
+ }finally{await context.close()}
 },15000)

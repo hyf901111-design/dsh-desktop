@@ -7,14 +7,19 @@ import {createNoteCapabilityActions} from '../src/preload/notes/client-capabilit
 import {exportNoteWithSnapshots} from '../src/preload/notes/component-snapshots'
 vi.mock('electron',()=>({BrowserWindow:class{},dialog:{showSaveDialog:async()=>({canceled:true})}}))
 const roots:string[]=[];afterEach(()=>{for(const r of roots.splice(0))rmSync(r,{recursive:true,force:true});vi.unstubAllGlobals()})
-function harness(options:{cancelAt?:'applied'|'saved'|'settle';cancelExportReply?:boolean}={}){
+function harness(options:{cancelAt?:'placeholder'|'applied'|'saved'|'settle';cancelExportReply?:boolean}={}){
  const root=mkdtempSync(join(tmpdir(),'note-client-capabilities-'));roots.push(root)
  let owner='alice',visible=true,generation='job',handler:any,revision=0,calls=0
  const actions:any[]=[],history:any[]=[],requests:any[]=[],content:any={title:'实际笔记',yjs:'',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留正文',styles:{bold:true}}]},{id:'r',type:'research',props:{payload:JSON.stringify({id:'n',noteSize:{width:390},containerSpec:{version:1,type:'markdown',title:'数据',content:'实际组件'}})}}]}
  const editor={get document(){return content.blocks},getBlock(id:string){return content.blocks.find((b:any)=>b.id===id)},updateBlock(id:string,p:any){Object.assign(this.getBlock(id).props,p.props)},transact(f:()=>void){f()}}
  const window:any={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:2},send:(channel:string,value:any)=>{if(channel==='notes:capability-action'){actions.push(value);queueMicrotask(()=>{void renderer(value).then(async result=>{if(options.cancelExportReply&&value.action==='notes.export'&&result?.status==='succeeded')await call('stop',{requestId:generation});if(!value.cancel)return call('capability-reply',{requestId:value.requestId,result})}).catch(error=>call('capability-reply',{requestId:value.requestId,error:error.message}))})}}}}
  const event={sender:window.webContents,senderFrame:window.webContents.mainFrame},call=(method:string,input:any={})=>handler(event,method,{sessionId:'note',owner,...input})
- const bridge:any={request:call},renderer=createNoteCapabilityActions({editor,snapshot:()=>content,current:()=>visible,generationId:()=>generation,documentId:'doc',selectedBlockIds:()=>[],reportEffect:async(requestId,effect)=>{await call('capability-reply',{requestId,effect});if(options.cancelAt===effect.state)await call('stop',{requestId:generation})},persist:async()=>{const r=await call('save',{revision,content,clientId:'client'});if(r.status!=='saved')throw Error('冲突');revision=r.saved.revision},exportNote:(args,current)=>exportNoteWithSnapshots({snapshot:()=>content,bridge,sessionId:'note',...args,current}),settle:async()=>{if(options.cancelAt==='settle')await call('stop',{requestId:generation})}})
+ const bridge:any={request:call},renderer=createNoteCapabilityActions({editor,snapshot:()=>content,current:()=>visible,generationId:()=>generation,documentId:'doc',selectedBlockIds:()=>[],createComponent:async(_args,current,_requestId,report)=>{
+  const node={id:'created',type:'research',props:{payload:JSON.stringify({id:'created-node',generationStatus:'draft'})}};content.blocks.push(node);await report({state:'placeholder',blockId:node.id})
+  if(!current())return {status:'cancelled',blockId:node.id}
+  node.props.payload=JSON.stringify({id:'created-node',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'真实结果',columns:['值'],rows:[[42]]}});await report({state:'applied',blockId:node.id})
+  return {status:'succeeded',blockId:node.id}
+ },reportEffect:async(requestId,effect)=>{await call('capability-reply',{requestId,effect});if(options.cancelAt===effect.state)await call('stop',{requestId:generation})},persist:async()=>{const r=await call('save',{revision,content,clientId:'client'});if(r.status!=='saved')throw Error('冲突');revision=r.saved.revision},exportNote:(args,current)=>exportNoteWithSnapshots({snapshot:()=>content,bridge,sessionId:'note',...args,current}),settle:async()=>{if(options.cancelAt==='settle')await call('stop',{requestId:generation})}})
  const inspectCanvas=vi.fn(async()=>({revision:'r1',nodes:[{id:'canvas-one',title:'研究画布'}]})),resetZoom=vi.fn(async()=>{})
  const dispose=installNotesService({ipcMain:{handle:(_c:string,f:any)=>{handler=f},removeHandler:()=>{}},getWindow:()=>window,root,owner:()=>owner,runtimeUrl:()=> 'http://127.0.0.1:9999',canRead:()=>true,canWrite:()=>true,clipboard:()=>undefined,inspectCanvas,resetZoom})
  const generate=(prompt:string)=>call('generate',{requestId:generation,mode:'write',prompt,markdown:'原文',selection:'',title:'实际笔记',context:{scope:'note',components:[]},capabilityContext:{documentId:'doc',selectedBlockIds:[]}})
@@ -83,4 +88,15 @@ it.each([
 ])('opens a save dialog rather than directly writing the punctuation prefix of %s',async(source,path)=>{
  const h=harness();h.wire(()=>({kind:'capabilities',calls:[{requestId:'export',capability:'notes.export',arguments:{format:'md',path}}]}))
  try{const r=await h.generate('导出到 '+source);expect(h.actions[0].args.path).toBeUndefined();expect(r.capabilityReceipts[0].status).toBe('cancelled')}finally{h.dispose()}
+})
+
+it.each(['placeholder','applied','saved'] as const)('retains actual creation phase %s in host history and stops dependent operations',async(cancelAt)=>{
+ const h=harness({cancelAt});h.wire(()=>({kind:'capabilities',calls:[{requestId:'create',capability:'notes.components.create',arguments:{prompt:'创建表格'}},{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise'}},{requestId:'export',capability:'notes.export',arguments:{format:'pdf'}}]}))
+ try{
+  const result=await h.generate('创建表格，切换易方达并导出PDF')
+  expect(result.capabilityReceipts).toHaveLength(1);expect(result.capabilityReceipts[0]).toMatchObject({status:'cancelled',blockId:'created',effect:{state:cancelAt,blockId:'created'}})
+  expect(h.actions.filter(a=>a.action).map(a=>a.action)).toEqual(['notes.components.create'])
+  expect(h.history.find(row=>row.action==='conversation-capabilities').receipts[0].effect).toEqual({state:cancelAt,blockId:'created'})
+  if(cancelAt==='saved')expect(JSON.parse((await h.call('load')).saved.blocks.find((b:any)=>b.id==='created').props.payload)).toMatchObject({generationStatus:'completed',containerSpec:{rows:[[42]]}})
+ }finally{h.dispose()}
 })

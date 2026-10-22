@@ -68,11 +68,13 @@ export async function captureNoteComponentSnapshots(window:TrustedWindow|undefin
  const root=window!.webContents.mainFrame as WebFrameMain,prefix='note-export-'+randomUUID(),touched=new Map<WebFrameMain,Set<string>>(),states=new Map<WebFrameMain,Set<string>>(),pendingFreezes=new Set<Promise<unknown>>()
  let hidden:BrowserWindow|undefined,temporary:string|undefined,totalBytes=0,totalPngBytes=0
  const execute=async<T>(frame:WebFrameMain,code:string,timeout=10000,mutates=false):Promise<T>=>{
-  check();let timer:ReturnType<typeof setTimeout>|undefined
-  const aborted=new Promise<never>((_resolve,reject)=>{timer=setTimeout(()=>reject(Error('组件快照准备超时，请重新载入预览后重试。')),timeout)})
-  const pending=frame.executeJavaScript(code)
-  if(mutates){pendingFreezes.add(pending);void pending.then(()=>pendingFreezes.delete(pending),()=>pendingFreezes.delete(pending))}
-  try{const result=await Promise.race([pending,aborted]);check();return result as T}finally{clearTimeout(timer)}
+  check();let timer:ReturnType<typeof setTimeout>|undefined,guard:ReturnType<typeof setInterval>|undefined
+  const aborted=new Promise<never>((_resolve,reject)=>{timer=setTimeout(()=>reject(Error('组件快照准备超时，请重新载入预览后重试。')),timeout);guard=setInterval(()=>{try{check()}catch(error){reject(error)}},25)})
+  try{
+   const pending=frame.executeJavaScript(code)
+   if(mutates){pendingFreezes.add(pending);void pending.then(()=>pendingFreezes.delete(pending),()=>pendingFreezes.delete(pending))}
+   const result=await Promise.race([pending,aborted]);check();return result as T
+  }finally{clearTimeout(timer);clearInterval(guard)}
  }
  const mark=(frame:WebFrameMain,key:string)=>{if(!touched.has(frame))touched.set(frame,new Set());touched.get(frame)!.add(key)}
  const frameMaps=new Map<WebFrameMain,Map<string,WebFrameMain>>()

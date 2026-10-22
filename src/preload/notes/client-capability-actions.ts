@@ -1,4 +1,4 @@
-import type {CapabilityStyleEffect} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import type {CapabilityStyleEffect,CapabilityCreateEffect} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import type {NoteContent} from '../../shared/workspace-notes'
 export const noteCapabilityFingerprint=(content:NoteContent)=>JSON.stringify([content.title,content.blocks])
 export function noteResearchBlocks(blocks:any[]):any[]{return blocks.flatMap(block=>[...(block.type==='research'?[block]:[]),...noteResearchBlocks(block.children??[])])}
@@ -10,7 +10,7 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];createComponent?(args:any,current:()=>boolean,requestId:string):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>()
  return async(input:any)=>{
@@ -23,14 +23,26 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
   if(input.action==='context')return {status:'succeeded'}
   if(input.action==='notes.components.create'){
    if(!options.createComponent||typeof input.args?.prompt!=='string'||!input.args.prompt.trim()||input.args.prompt.length>8000)throw Error('组件创建参数无效。')
-   const before=noteCapabilityFingerprint(options.snapshot()),result=await options.createComponent(input.args,current,input.requestId)
-   if(result.status==='succeeded'){
-    const after=options.snapshot(),withoutCreated={...after,blocks:after.blocks.filter(block=>block.id!==result.blockId)}
-    // Keep a stale guard if the human edited anything outside the new card.
-    fingerprint=noteCapabilityFingerprint(withoutCreated)===before?noteCapabilityFingerprint(after):'document-changed-during-generation'
-    await options.persist();await options.settle()
+   let effect:CapabilityCreateEffect|undefined
+   const publish=async(next:CapabilityCreateEffect)=>{
+    if(effect?.state==='saved'&&next.state!=='saved')return
+    effect=next;await options.reportEffect?.(input.requestId,effect).catch(()=>{})
    }
-   return result
+   const receipt=(result:any)=>({...result,...effect?{effect,blockId:effect.blockId}:{},...!current()?{status:'cancelled'}:{},message:[result.message,effect?`${effect.state==='saved'?'已生成并保存组件':effect.state==='applied'?'已生成组件，尚未确认保存':'已插入组件占位块，尚未生成完成'}`:'',!current()?'后续操作已取消。':''].filter(Boolean).join('。')})
+   const before=noteCapabilityFingerprint(options.snapshot())
+   try{
+    const result=await options.createComponent(input.args,current,input.requestId,publish)
+    if(result.status==='succeeded'){
+     await publish({state:'applied',blockId:result.blockId})
+     const after=options.snapshot(),withoutCreated={...after,blocks:after.blocks.filter(block=>block.id!==result.blockId)}
+     // Keep a stale guard if the human edited anything outside the new card.
+     fingerprint=noteCapabilityFingerprint(withoutCreated)===before?noteCapabilityFingerprint(after):'document-changed-during-generation'
+     if(!current())return receipt(result)
+     await options.persist();await publish({state:'saved',blockId:result.blockId})
+     if(current())await options.settle()
+    }
+    return receipt(result)
+   }catch(error){return receipt({status:'failed',message:(error as Error).message})}
   }
   if(input.action==='notes.components.style'){
    const {scope,theme,titleBar}=input.args

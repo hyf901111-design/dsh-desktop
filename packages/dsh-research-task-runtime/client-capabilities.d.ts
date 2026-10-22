@@ -10,7 +10,8 @@ export type ClientCapabilityId=keyof ClientCapabilityArguments
 export type CapabilityCall={[K in ClientCapabilityId]:{requestId:string;capability:K;arguments:ClientCapabilityArguments[K]}}[ClientCapabilityId]
 export type CapabilityStyleEffect={state:'applied'|'saved';changedBlockIds:string[]}
 export type CapabilityExportEffect={state:'writing'|'saved';path:string}
-export type CapabilityEffect=CapabilityStyleEffect|CapabilityExportEffect
+export type CapabilityCreateEffect={state:'placeholder'|'applied'|'saved';blockId:string}
+export type CapabilityEffect=CapabilityStyleEffect|CapabilityExportEffect|CapabilityCreateEffect
 export type CapabilityReceipt={requestId?:string;capability?:string;status:'succeeded'|'pending'|'cancelled'|'failed'|'unavailable';message?:string;effect?:CapabilityEffect;path?:string;changedBlockIds?:string[];blockId?:string;data?:unknown}
 export type CapabilityHandler<K extends ClientCapabilityId=ClientCapabilityId>=(args:ClientCapabilityArguments[K],context:ClientCapabilityContext,signal?:AbortSignal,requestId?:string)=>Promise<CapabilityReceipt>
 export function createClientCapabilityRegistry(handlers:{createComponent?:CapabilityHandler<'notes.components.create'>;exportNote?:CapabilityHandler<'notes.export'>;styleComponents?:CapabilityHandler<'notes.components.style'>;inspectCanvas?:CapabilityHandler<'canvas.inspect'>;resetZoom?:CapabilityHandler<'ui.zoom.reset'>}):{catalog(context:ClientCapabilityContext):Array<{id:string;description:string;parameters:any;available:boolean}>;get(id:string):any;execute(call:CapabilityCall,context:ClientCapabilityContext,signal?:AbortSignal):Promise<CapabilityReceipt>}
