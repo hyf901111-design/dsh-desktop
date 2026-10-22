@@ -33,7 +33,7 @@ describe('builtin free data sources', () => {
     const entries = await loadBundledSkills(root); const item = entries.find(e => e.skill.id === BUNDLED_FREE_DATA_SKILL_ID); expect(item.skill).toMatchObject({ enabled: true, provider: 'bundled', source: 'EWork 内置 · v1.0.8' }); expect(isBundledSkillId(item.skill.id)).toBe(true);
   });
   it('only exposes adapters for eligible sources and never uses restricted/keyed providers', () => {
-    expect(catalog().sources).toHaveLength(28); expect(catalog().sources.filter(s => s.queryable)).toHaveLength(16);
+    expect(catalog().sources).toHaveLength(29); expect(catalog().sources.filter(s => s.queryable)).toHaveLength(17);
     for (const s of catalog().sources) { expect(s.documentation).toMatch(/^https:\/\//); if (s.defaultEligible) expect(() => prepareRequest(s.id, s.example)).not.toThrow(); }
     for (const id of ['fred','eia','open-meteo','nominatim-public','sec-edgar']) expect(() => prepareRequest(id)).toThrow(/条件/);
     expect(catalog('fx').sources.map(s => s.id)).toEqual(['ecb-fx']);

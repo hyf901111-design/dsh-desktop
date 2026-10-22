@@ -352,6 +352,23 @@
       "reviewedOn": "2026-10-10"
     },
     {
+      "id": "eastmoney-news",
+      "name": "东方财富关键词新闻搜索",
+      "category": "news",
+      "documentation": "https://so.eastmoney.com/news/",
+      "coverage": "按公司、行业或主题关键词检索新闻标题、媒体、报道时间、匹配片段与原文链接",
+      "parameters": { "query": "1–200字符关键词；实体别名可分次检索，不能传整句排版要求", "limit": "1–100条，默认20" },
+      "example": { "query": "半导体", "limit": 12 },
+      "cacheSeconds": 60,
+      "access": "public-web-best-effort",
+      "authentication": "none",
+      "limitations": "无稳定官方API文档，尽力而为；仅搜索首页，匹配片段不是全文；须逐条核对与主题的实质相关性，空结果不回退热门新闻",
+      "rights": "标题、匹配片段与正文权利按原媒体及东方财富条款；不复制全文",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-22"
+    },
+    {
       "id": "eastmoney-announcements",
       "name": "东方财富证券公告列表",
       "category": "news",

@@ -4,6 +4,7 @@ import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 import {randomUUID,createHash} from 'node:crypto'
 import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
+import {newsSourceScopeIssue} from './news-source-scope.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
 const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize'])
@@ -12,6 +13,7 @@ const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
 const sourceId=v=>typeof v==='string'&&/^[a-zA-Z0-9][\w.-]{0,63}$/.test(v)
 const sourceRecipe=(s,templateId)=>record(s)&&sourceId(s.id)&&typeof s.name==='string'&&s.name.trim().length>0&&s.name.length<=128&&!/[\u0000-\u001f]/.test(s.name)&&Array.isArray(s.requests)&&s.requests.length>0&&s.requests.length<=8&&record(s.mapping)&&templateFor(s.mapping)?.id===templateId
+const refreshNewsScopeIssue=(mapping,requests,scope,now)=>newsSourceScopeIssue(mapping,requests.map(request=>({...request,args:evaluateMapping(request.args,{},now)})),scope)
 function bounded(value,limit=256000){const text=JSON.stringify(value);if(!text||Buffer.byteLength(text)>limit)throw Error('数据超过组件容量');return JSON.parse(text)}
 function path(root,path){
  if(typeof path!=='string'||path.length>512)throw Error('字段路径无效')
@@ -242,6 +244,7 @@ export class ComponentDataRefresh {
   input=bounded(input);rejectCredentials(input)
   input.intervalMinutes??=1
   if(![input.sessionId,input.nodeId,input.workspaceId].every(id)||!interval(input.intervalMinutes)||!Array.isArray(input.requests)||input.requests.length<1||input.requests.length>8||!record(input.mapping))throw Error('数据绑定参数无效')
+  if(input.newsScope!==undefined&&(typeof input.newsScope!=='string'||!input.newsScope.trim()||input.newsScope.length>18000))throw Error('新闻主题约束无效')
   const owner=this.options.owner();if(!owner)throw Error('当前账户不可用')
   const checkOwner=()=>{if(this.options.owner()!==owner)throw Error('账号已变化，请重新打开后重试。')}
   // Generation registers its verified recipe before the renderer mounts the
@@ -257,6 +260,8 @@ export class ComponentDataRefresh {
    return requests
   }
   let requests=await verify(input.requests),mapping=input.mapping,sources,selectedSource
+  const checkNewsScope=(mapping,requests)=>{const issue=refreshNewsScopeIssue(mapping,requests,input.newsScope??model.data.title,new Date(this.now()));if(issue)throw Error(issue)}
+  checkNewsScope(mapping,requests)
   if(input.sources!==undefined){
    if(!Array.isArray(input.sources)||!input.sources.length||input.sources.length>5||new Set(input.sources.map(s=>s?.id)).size!==input.sources.length)throw Error('数据源方案无效或重复')
    sources=input.sources.some(s=>s.id==='default')?[]:[{id:'default',name:[...new Set(requests.map(r=>r.sourceName||r.toolId))].join(' + ').slice(0,128),requests,mapping}]
@@ -264,6 +269,7 @@ export class ComponentDataRefresh {
     if(!record(s)||!record(s.mapping)||templateFor(s.mapping)?.id!==model.templateId)throw Error('数据源字段映射必须保留当前模板类型')
     if(!sourceRecipe(s,model.templateId))throw Error('数据源方案无效')
     sources.push({id:s.id,name:s.name.trim(),requests:await verify(s.requests),mapping:s.mapping})
+    checkNewsScope(s.mapping,sources.at(-1).requests)
    }
    if(sources.length>5)throw Error('数据源方案最多五个')
    selectedSource=input.sourceId??'default'
@@ -273,7 +279,7 @@ export class ComponentDataRefresh {
   const previous=this.records.find(b=>b.ownerAccountId===owner&&b.sessionId===input.sessionId&&b.nodeId===input.nodeId)
   const intervalMinutes=preserveSettings&&previous?previous.intervalMinutes:input.intervalMinutes
   const enabled=intervalMinutes>0&&(preserveSettings&&previous?previous.enabled:true)
-  const binding={id:previous?.id??randomUUID(),revision:(previous?.revision??0)+1,ownerAccountId:owner,sessionId:input.sessionId,nodeId:input.nodeId,workspaceId:input.workspaceId,templateId:model.templateId,templateVersion:model.version,requests,mapping,...(sources?{sources,sourceId:selectedSource}:{}),intervalMinutes,enabled,status:enabled?'idle':'paused',failures:0,nextRun:enabled?this.now()+intervalMinutes*60000:null}
+  const binding={id:previous?.id??randomUUID(),revision:(previous?.revision??0)+1,ownerAccountId:owner,sessionId:input.sessionId,nodeId:input.nodeId,workspaceId:input.workspaceId,templateId:model.templateId,templateVersion:model.version,requests,mapping,...(input.newsScope?{newsScope:input.newsScope}:{}),...(sources?{sources,sourceId:selectedSource}:{}),intervalMinutes,enabled,status:enabled?'idle':'paused',failures:0,nextRun:enabled?this.now()+intervalMinutes*60000:null}
   this.active.get(binding.id)?.controller.abort()
   this.records=this.records.filter(b=>b.id!==binding.id);this.records.push(binding);await this.persist();return structuredClone(binding)
  }
@@ -286,6 +292,7 @@ export class ComponentDataRefresh {
    selected=sources.find(s=>s.id===patch.sourceId);if(!selected)throw Error('所选数据源不存在')
    const revision=b.revision,owner=this.options.owner();requests=[]
    for(const r of selected.requests){requests.push(await this.options.validateRequest({key:r.key,toolId:r.toolId,args:r.args},b));if(this.options.owner()!==owner||!this.records.includes(b)||b.revision!==revision)throw Error('数据配置已变化，请重试')}
+   const issue=refreshNewsScopeIssue(selected.mapping,requests,b.newsScope??b.mapping.title,new Date(this.now()));if(issue)throw Error(issue)
   }
   this.active.get(id)?.controller.abort();this.active.delete(id)
   if(patch.deleted===true)this.records=this.records.filter(row=>row!==b)
@@ -334,6 +341,8 @@ export class ComponentDataRefresh {
    const before=await this.options.inspect(b),model=readTemplateModel(before.spec)
    signal.throwIfAborted()
    if(!before.writable||!model||model.templateId!==b.templateId||model.version!==b.templateVersion)throw Error('组件模板已变化，请重新绑定数据')
+   const scopeIssue=refreshNewsScopeIssue(b.mapping,b.requests,b.newsScope??model.data.title,new Date(startedAt))
+   if(scopeIssue)throw Error(scopeIssue)
    const baseline=hash(before.spec)
    const results=await Promise.all(b.requests.map(async r=>[r.key,await this.request(b,r,signal)]));signal.throwIfAborted()
    const responses=Object.fromEntries(results)
