@@ -76,6 +76,15 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
     const serialized = acceptArtifactOutput(JSON.stringify(result.artifact))
     if (serialized) return ready({ kind: 'component', ...result.targetBlockId?{targetBlockId:result.targetBlockId}:{},node: { id: randomUUID(), kind: 'generated-container', title: result.artifact.title || '研究组件', containerSpec: JSON.parse(serialized), generationStatus: 'completed', sourceText: '基于当前笔记与提供资料生成', createdAt: Date.now() } })
   }
+  // A normally stopped final explanation cannot invalidate confirmed host
+  // effects. Report only those receipts, without inferring that the entire
+  // instruction is done. New operation requests and invalid document previews
+  // still fail normally; never retry a write to repair explanatory prose.
+  const explanationOnly=!result||Object.entries(result).every(([key,value])=>key==='kind'
+    ?['conversation','final','reply','message'].includes(value)
+    :['markdown','message','reply','text','summary','content'].includes(key)&&typeof value==='string')
+  if(capabilityReceipts.length&&capabilityReceipts.every(receipt=>receipt?.status==='succeeded')&&explanationOnly)
+    return ready({kind:'conversation',markdown:capabilityReceiptText(capabilityReceipts)})
   throw Error('生成结果格式不完整，请调整需求后重试。')
  }catch(error){if(started)recordNoteConversation(session,{requestId:input.requestId,phase:requestedSignal?.aborted?'stopped':'failed',reasoning:latest.reasoning,error:error.message||'生成失败',finishedAt:Date.now()});throw error}
  finally{if(started)setNoteCapabilityRunning(session,input.requestId,awaitingCapabilities)}
