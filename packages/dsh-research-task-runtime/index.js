@@ -1982,7 +1982,7 @@ function artifactStreamStarted(text) {
   return /(?:^|\n)\s*(?:```(?:json)?\s*)?\{\s*(?:"|$)/iu.test(text.slice(0,512))
 }
 
-export function createSubagentAdapter(ctx, { surface } = {}) {
+export function createSubagentAdapter(ctx, { surface, noteSourceGuidance } = {}) {
   let disposed = false
   const sourceProjectionStops=new Set()
 
@@ -2168,6 +2168,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       // Compact the initial typed task, but retain a recovery's concrete error,
       // prior response and evidence instead of restarting the original request.
       let effectivePrompt = applyBundledSkillPreferences(boundTemplate && !preservePrompt ? workbenchPanelPrompt(query, bindingRequested) : prompt, bundledSkills)
+      const noteGuidance=surface==='note'&&permitsTools&&typeof noteSourceGuidance==='function'?noteSourceGuidance(scopedSchemas)||'':''
       if(kind==='container'&&permitsTools){
         const {end}=chinaMarketWindow(new Date()),today=`${end.slice(0,4)}-${end.slice(4,6)}-${end.slice(6,8)}`
         effectivePrompt+=`\n当前运行时日期：${today}（Asia/Shanghai）。近期、最新、今年等相对时间以此为锚，不能凭训练记忆选择过去年份或旧季度作为近期。用户明确指定的历史日期、区间或虚构场景仍按原需求；获取时间不等于来源数据日期，不把来源旧数据改写成今天。`
@@ -2263,7 +2264,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         // A typed panel rebuilds effectivePrompt from the public query. Keep
         // frozen note evidence separate so it survives that rewrite and never
         // becomes a host search query or a template-selection instruction.
-        prompt: [...(surface === 'note' ? imageContent : []), { type: 'text', text: effectivePrompt + (surface === 'note' ? executionContext : '') }],
+        prompt: [...(surface === 'note' ? imageContent : []), { type: 'text', text: effectivePrompt + (surface === 'note' ? executionContext+noteGuidance : '') }],
         maxDepth: 1,
         toolFilter: {
           // Tool availability must not depend on a freshness keyword match.

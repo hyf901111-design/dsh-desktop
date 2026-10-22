@@ -441,6 +441,7 @@ export const NOTE_ENGLISH = {
   "后续操作已取消。": "Subsequent operations were cancelled.",
   "笔记对齐": "Note alignment",
   "笔记组件数据": "Note component data",
+  "刷新进行中": "Refresh in progress",
   "组件数据能力参数无效。": "The component data arguments are invalid.",
   "组件数据操作已过期或不可用。": "The component data operation expired or is unavailable.",
   "组件数据操作正在执行，请等待回执。": "The component data operation is running. Wait for its receipt.",

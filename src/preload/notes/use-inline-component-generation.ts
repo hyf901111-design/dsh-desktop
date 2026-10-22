@@ -2,7 +2,7 @@ import {useEffect,useMemo,useRef,useState} from 'react'
 import type {NoteAiResult,NotesBridge} from '../../shared/workspace-notes'
 
 type Options={sessionId:string;bridge:Pick<NotesBridge,'request'>;editor:any;current():boolean;persist():Promise<unknown>;changed?():void;update?(blockId:string,node:Record<string,any>):void;notify?():void}
-type GenerationContext={images?:any[];context?:any;title?:string;markdown?:string;selection?:string}
+type GenerationContext={images?:any[];context?:any;title?:string;markdown?:string;selection?:string;sourceInstruction?:string}
 type GenerationEffect=(state:'applied'|'saved')=>Promise<void>
 type Job={onEffect?:GenerationEffect;blockId:string;requestId:string;expected:string;controller:AbortController;timer:ReturnType<typeof setTimeout>;phase:'generating'|'binding'}
 const withoutSize=(node:any)=>JSON.stringify({...node,noteSize:undefined})
@@ -77,10 +77,11 @@ export function createInlineComponentGeneration(options:Options){
    const block=options.editor.getBlock(blockId);let node:any
    try{node=JSON.parse(block.props.payload)}catch{return {ok:false,error:'组件已移除或记录已变化。'}}
    if(node.noteDraft!=='smart'||!prompt.trim())return {ok:false,error:'请先描述要创建的组件。'}
+   const sourceInstruction=source?.sourceInstruction??(node.containerSourcePrompt===prompt.trim()&&typeof node.containerSourceInstruction==='string'?node.containerSourceInstruction:prompt.trim())
    const requestId=crypto.randomUUID(),job:Job={blockId,requestId,onEffect,expected:block.props.payload,controller:new AbortController(),phase:'generating',timer:setTimeout(()=>cancel(job,'failed','组件创建超时，可调整需求后重试。'),240000)}
    jobs.set(blockId,job)
-   if(!write(job,{...node,containerPrompt:prompt.trim(),generationStatus:'running',generationError:undefined,generationDetail:undefined,generationTaskId:requestId,generationChildSessionId:undefined,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:''})){finish(job);return {ok:false,error:'组件已变化，较新内容已保留。'}}
-   options.notify?.();void run(job,prompt.trim(),source);return {ok:true}
+   if(!write(job,{...node,containerPrompt:prompt.trim(),containerSourcePrompt:prompt.trim(),containerSourceInstruction:sourceInstruction,generationStatus:'running',generationError:undefined,generationDetail:undefined,generationTaskId:requestId,generationChildSessionId:undefined,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:''})){finish(job);return {ok:false,error:'组件已变化，较新内容已保留。'}}
+   options.notify?.();void run(job,prompt.trim(),{...source,sourceInstruction});return {ok:true}
   },
   stop:(blockId:string)=>{const job=jobs.get(blockId);if(!job)return {ok:false};cancel(job,'interrupted');return {ok:true}},
   isGenerating:(blockId:string)=>{const job=jobs.get(blockId);return !!job&&!!current(job)},
