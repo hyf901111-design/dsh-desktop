@@ -4,7 +4,8 @@ import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes
 import type {NoteContent} from '../../shared/workspace-notes'
 import {changeNoteAlignment,noteAlignmentBlocks} from './block-alignment'
 import {createNoteComponentDataActions} from './component-data-actions'
-export const noteCapabilityFingerprint=(content:NoteContent)=>JSON.stringify([content.title,content.blocks])
+import {noteCapabilityFingerprint,type NoteDataRefreshGuard} from './data-refresh-guard'
+export {noteCapabilityFingerprint} from './data-refresh-guard'
 export function noteResearchBlocks(blocks:any[]):any[]{return blocks.flatMap(block=>[...(block.type==='research'?[block]:[]),...noteResearchBlocks(block.children??[])])}
 export type NotePresentation={theme?:'light'|'dark'|'enterprise'|'openterminal'|'auto';titleBar?:boolean;frame?:boolean}
 /** Both component controls and conversational operations update the same node property. */
@@ -14,18 +15,30 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
- const cancelled=new Set<string>()
- return async(input:any)=>{
+ const cancelled=new Set<string>(),activeData=new Set<string>()
+ const advanceFingerprint=(next:string)=>{options.refreshGuard?.advanceOwn(generation,fingerprint,next);fingerprint=next}
+ const offRefresh=options.refreshGuard?.subscribe(delta=>{
+  // Own guarded refreshes retain their prior ordinary-action behavior. Automatic
+  // updates never advance the strict editing baseline, even after a data call.
+  if(delta.generationId===generation&&delta.guardId&&activeData.has(delta.guardId)&&fingerprint===delta.beforeFingerprint)fingerprint=delta.afterFingerprint
+ })
+ const execute=async(input:any)=>{
   if(input?.cancel){cancelled.add(input.requestId);options.cancelComponent?.(input.requestId);options.dataCapability?.cancel(input.requestId);return}
   const current=()=>options.current()&&options.generationId()===input.generationId&&options.documentId===input.context?.documentId&&!cancelled.has(input.requestId)
   const assertCurrent=()=>{if(!current())throw Error(t('笔记会话已变化或操作已取消。'))}
   assertCurrent()
   if(generation!==input.generationId){generation=input.generationId;fingerprint=options.initialFingerprint?.()||noteCapabilityFingerprint(options.snapshot())}
-  if(noteCapabilityFingerprint(options.snapshot())!==fingerprint)throw Error(t('笔记内容已变化，请重新发送请求，较新修改已保留。'))
+  const dataCurrent=()=>noteCapabilityFingerprint(options.snapshot())===(options.refreshGuard?options.refreshGuard.expected(input.generationId):fingerprint)
+  if(input.action==='notes.components.data'?!dataCurrent():noteCapabilityFingerprint(options.snapshot())!==fingerprint)throw Error(t('笔记内容已变化，请重新发送请求，较新修改已保留。'))
   if(input.action==='context')return {status:'succeeded'}
-  if(input.action==='notes.components.data'){if(!options.dataCapability)throw Error('组件数据刷新服务暂不可用。');return options.dataCapability.execute(input,()=>current()&&noteCapabilityFingerprint(options.snapshot())===fingerprint,()=>{fingerprint=noteCapabilityFingerprint(options.snapshot())})}
+  if(input.action==='notes.components.data'){
+   if(!options.dataCapability)throw Error('组件数据刷新服务暂不可用。')
+   activeData.add(input.requestId)
+   try{return await options.dataCapability.execute(input,()=>current()&&dataCurrent(),()=>{if(!options.refreshGuard)advanceFingerprint(noteCapabilityFingerprint(options.snapshot()))})}
+   finally{activeData.delete(input.requestId)}
+  }
   if(input.action==='notes.challenge.configure'){
    const args=input.args,challenge=options.challenge?.()
    if(!args||typeof args!=='object'||Array.isArray(args)||Object.keys(args).some(key=>!['level','commentsExpanded'].includes(key))||args.level!==undefined&&(!Number.isInteger(args.level)||args.level<0||args.level>4)||args.commentsExpanded!==undefined&&typeof args.commentsExpanded!=='boolean'||args.level===undefined&&args.commentsExpanded===undefined)throw Error(t('AI挑战设置参数无效。'))
@@ -48,7 +61,7 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
    }catch(error){return receipt(current()?'failed':'cancelled',(error as Error).message)}
   }
   const saveMutation=async(changedBlockIds:string[],kind:'alignment'|'content',data?:any)=>{
-   fingerprint=noteCapabilityFingerprint(options.snapshot())
+   advanceFingerprint(noteCapabilityFingerprint(options.snapshot()))
    let effect:CapabilityStyleEffect={state:'applied',changedBlockIds,kind}
    const publish=()=>options.reportEffect?.(input.requestId,effect).catch(()=>{})
    const message=()=>t(kind==='alignment'?(effect.state==='saved'?'已保存 {count} 个块的对齐方式':'已应用但未确认保存 {count} 个块的对齐方式'):(effect.state==='saved'?'已保存 {count} 个组件的内容':'已应用但未确认保存 {count} 个组件的内容')).replace('{count}',String(changedBlockIds.length))
@@ -76,7 +89,7 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
    const node=JSON.parse(block.props.payload),applying=input.action==='notes.components.apply'
    if(applying&&input.args.blockId!==block.id)throw Error(t('组件不在当前引用范围内，请重新选择。'))
    let applied=false
-   const handle=createNoteComponentDataActions({sessionId:input.context.sessionId,editor:options.editor,current:()=>current()&&selectionCurrent()&&noteCapabilityFingerprint(options.snapshot())===fingerprint,update:(id,next)=>{options.editor.updateBlock(id,{props:{payload:JSON.stringify(next)}});applied=true;fingerprint=noteCapabilityFingerprint(options.snapshot())}})
+   const handle=createNoteComponentDataActions({sessionId:input.context.sessionId,editor:options.editor,current:()=>current()&&selectionCurrent()&&noteCapabilityFingerprint(options.snapshot())===fingerprint,update:(id,next)=>{options.editor.updateBlock(id,{props:{payload:JSON.stringify(next)}});applied=true;advanceFingerprint(noteCapabilityFingerprint(options.snapshot()))}})
    const reply=await handle({sessionId:input.context.sessionId,requestId:input.requestId,expiresAt:Date.now()+100000,selectedIds:[node.id],method:applying?'apply':'inspect',args:applying?{requestId:input.requestId,revision:input.args.revision,changes:[{op:'update',id:node.id,fields:{containerSpec:input.args.containerSpec}}]}:{ids:[node.id]}})
    // The existing sink rechecks visibility after its mutation. Keep an honest
    // applied effect if cancellation arrived at that boundary; never claim no edit.
@@ -101,7 +114,7 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
      await publish({state:'applied',blockId:result.blockId})
      const after=options.snapshot(),withoutCreated={...after,blocks:after.blocks.filter(block=>block.id!==result.blockId)}
      // Keep a stale guard if the human edited anything outside the new card.
-     fingerprint=noteCapabilityFingerprint(withoutCreated)===before?noteCapabilityFingerprint(after):'document-changed-during-generation'
+     advanceFingerprint(noteCapabilityFingerprint(withoutCreated)===before?noteCapabilityFingerprint(after):'document-changed-during-generation')
      if(!current())return receipt(result)
      await options.persist();await publish({state:'saved',blockId:result.blockId})
      if(current())await options.settle()
@@ -118,7 +131,7 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
    if(!ids.length)throw Error(t(scope==='note'?'当前笔记没有可设置样式的研究组件。':'当前未选中研究组件。'))
    assertCurrent()
    const changedBlockIds=updateNoteComponentPresentation(options.editor,ids,{...theme!==undefined?{theme}:{},...titleBar!==undefined?{titleBar}:{},...frame!==undefined?{frame}:{}})
-   fingerprint=noteCapabilityFingerprint(options.snapshot())
+   advanceFingerprint(noteCapabilityFingerprint(options.snapshot()))
    let effect:CapabilityStyleEffect={state:'applied',changedBlockIds}
    const publish=()=>options.reportEffect?.(input.requestId,effect).catch(()=>{})
    const receipt=(status:string,detail='')=>({status,changedBlockIds,effect,message:t(effect.state==='saved'?'已保存 {count} 个组件的样式。':'已应用但未确认保存 {count} 个组件的样式。').replace('{count}',String(ids.length))+detail})
@@ -138,4 +151,5 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
   }
   throw Error(t('不支持的笔记客户端能力。'))
  }
+ return Object.assign(execute,{dispose:()=>offRefresh?.()})
 }

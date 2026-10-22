@@ -8,9 +8,14 @@ beforeAll(async()=>{
 import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';
 import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';import {createNotesActivityStore} from './scripts/lib/notes-activity.mjs';window.noteActivity=createNotesActivityStore(document);
 window.calls=[];window.receipts=[];window.reviewJobs=[];window.saved=null;window.effects=[];window.failCreate=false;window.stageEffects=[];window.saveAttempts=0;const pending=new Map(),dataPending=new Map();let dataSequence=0,dataRevision=1,dataEnabled=true,dataInterval=1;
+window.autoRefresh=async(nodeId)=>{
+ const send=(method,args)=>new Promise((resolve,reject)=>{const requestId='automatic-'+(++dataSequence);dataPending.set(requestId,{resolve,reject});document.dispatchEvent(new CustomEvent('sherlock:notes-component-data-action',{detail:{requestId,sessionId:'composed',method,args,selectedIds:[nodeId],expiresAt:Date.now()+35000}}))});
+ const before=await send('inspect',{ids:[nodeId]}),spec={...before.nodes[0].content.containerSpec,rows:[[99]]};
+ await send('apply',{requestId:'automatic-apply-'+dataSequence,revision:before.revision,changes:[{op:'update',id:nodeId,fields:{containerSpec:spec}}]});
+};
 const bridge={request:async(method,input)=>{window.calls.push({method,input});
  if(method==='load')return {saved:{title:'组合验收',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留我的富文本正文',styles:{bold:true}}]}],yjs:'',revision:0,updatedAt:0}};
- if(method==='save'){if(window.saveFailure){window.saveAttempts++;const fail=()=>{if(window.saveFailure==='exception')throw Error('磁盘写入失败');return{status:'conflict'}};if(window.saveAttempts===1)return fail();return new Promise((resolve,reject)=>{window.completeSave=()=>{try{resolve(fail())}catch(error){reject(error)}}})}window.saved=input.content;return {status:'saved',saved:{...input.content,revision:input.revision+1}}}
+ if(method==='save'){if(window.holdNextSave){window.holdNextSave=false;await new Promise(resolve=>window.completePendingSave=resolve)}if(window.saveFailure){window.saveAttempts++;const fail=()=>{if(window.saveFailure==='exception')throw Error('磁盘写入失败');return{status:'conflict'}};if(window.saveAttempts===1)return fail();return new Promise((resolve,reject)=>{window.completeSave=()=>{try{resolve(fail())}catch(error){reject(error)}}})}window.saved=input.content;return {status:'saved',saved:{...input.content,revision:input.revision+1}}}
  if(method==='challenge')return new Promise(resolve=>window.reviewJobs.push({input,resolve}));
  if(method==='component-data-reply'){const job=dataPending.get(input.requestId);if(job){dataPending.delete(input.requestId);input.error?job.reject(Error(input.error)):job.resolve(input.result)}return{ok:true}}
  if(method==='component-data-capability'){
@@ -28,8 +33,9 @@ const bridge={request:async(method,input)=>{window.calls.push({method,input});
  if(method==='generate'&&input.entryPoint==='component')return new Promise(resolve=>{window.completeCard=()=>resolve(window.failCreate?{kind:'conversation',markdown:'请提供数据。'}:{kind:'component',...(window.verified?{sourceResult:{status:'verified',recipe:{}}}:{}),node:{id:'generated',title:'新组件',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'新组件',columns:['值'],rows:[[42]]}}})});
  if(method==='generate'){
   window.ordinaryInput=input;
+  if(window.pauseBeforeCapabilities)await new Promise(resolve=>window.resumeCapabilities=resolve);
   const invoke=(action,args)=>new Promise((resolve,reject)=>{const requestId='cap-'+(window.receipts.length+1);pending.set(requestId,{resolve,reject});document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{requestId,generationId:input.requestId,sessionId:input.sessionId,context:{...input.capabilityContext,owner:'alice',mode:'notes',editable:true},action,args}}))});
-  const commands=window.capabilityCommands||[['notes.components.create',{prompt:'创建展示42的表格',requestContext:{images:input.images,context:input.context,title:input.title,markdown:input.markdown,selection:input.selection}}],['notes.components.style',{scope:'note',theme:'enterprise',titleBar:false,frame:false}],['notes.export',{format:'pdf'}]];for(const [action,args] of commands){const receipt=await invoke(action,args);window.receipts.push(receipt);if(receipt.status!=='succeeded')break}
+  const commands=window.capabilityCommands||[['notes.components.create',{prompt:'创建展示42的表格',requestContext:{images:input.images,context:input.context,title:input.title,markdown:input.markdown,selection:input.selection}}],['notes.components.style',{scope:'note',theme:'enterprise',titleBar:false,frame:false}],['notes.export',{format:'pdf'}]];for(const [action,args] of commands){let receipt;try{receipt=await invoke(action,typeof args==='function'?args(window.receipts):args)}catch(error){receipt={status:'failed',message:error.message}}window.receipts.push(receipt);if(receipt.status!=='succeeded')break;if(window.pauseAfterCommand===window.receipts.length)await new Promise(resolve=>window.resumeCapabilities=resolve)}
   if(window.holdOrdinaryFinal)await new Promise(resolve=>{window.finishOrdinaryFinal=resolve});
   return{kind:'conversation',markdown:'操作回执已确认'}
  }
@@ -197,5 +203,53 @@ it('uses the real editor reference and guarded data sink for one selected compon
   expect(result.blocks[0].content[0].text).toBe('保留笔记正文');expect(result.blocks.find(b=>b.id==='other-block').props.payload).toBe(result.otherPayload)
   const changed=JSON.parse(result.saved.blocks.find(b=>b.id==='source-block').props.payload);expect(changed).toMatchObject({noteSize:{width:330,height:210},containerSpec:{rows:[[43]]}})
   expect(result.calls.filter(call=>call.method==='component-data-capability').every(call=>call.input.nodeId==='source-node')).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+async function prepareLiveData(page,commands,options={}){
+ await page.evaluate(({commands,options})=>{
+  const payload=JSON.stringify({id:'source-node',kind:'generated-container',title:'已绑定数据',generationStatus:'completed',noteDataBound:true,noteSize:{width:330,height:210},containerSpec:{version:1,type:'table',title:'保留表格',columns:['值'],rows:[[42]]}})
+  window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'p',type:'paragraph',content:'保留笔记正文'},{id:'source-block',type:'research',props:{payload}},{id:'other-block',type:'research',props:{payload:payload.replace('source-node','other-node')}}])
+  window.noteEditor._tiptapEditor.commands.blur();document.dispatchEvent(new CustomEvent('sherlock:notes-reference-component',{detail:{sessionId:'composed',blockId:'source-block'}}))
+  window.capabilityCommands=commands;Object.assign(window,options)
+  document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'composed',prompt:'读取所选数据绑定并调整刷新',images:[]}}))
+ },{commands,options})
+}
+const dataCommands=[['notes.components.data',{action:'inspect'}],['notes.components.data',{action:'configure',revision:1,settings:{enabled:false,intervalMinutes:2}}]]
+it.each(['source-node','other-node'])('keeps real data commands valid after %s auto refresh before their first callback',async nodeId=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await prepareLiveData(page,dataCommands,{pauseBeforeCapabilities:true})
+  await page.waitForFunction(()=>typeof window.resumeCapabilities==='function');await page.evaluate(nodeId=>window.autoRefresh(nodeId),nodeId);await page.evaluate(()=>window.resumeCapabilities())
+  await page.waitForFunction(()=>window.receipts.length===2)
+  const result=await page.evaluate(()=>({receipts:window.receipts,saved:window.saved,blocks:window.noteEditor.document}))
+  expect(result.receipts.map(row=>row.status)).toEqual(['succeeded','succeeded'])
+  expect(result.receipts[1]).toMatchObject({effect:{state:'saved',operation:'configure',intervalMinutes:2}})
+  const block=result.blocks.find(block=>JSON.parse(block.props?.payload||'{}').id===nodeId);expect(JSON.parse(block.props.payload).containerSpec.rows).toEqual([[99]])
+  expect(result.saved.blocks).toEqual(result.blocks);expect(result.blocks[0].content[0].text).toBe('保留笔记正文');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it.each([false,true])('rebases a pending real save only while there is no human edit (human edit=%s)',async humanEdit=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await prepareLiveData(page,dataCommands,{holdNextSave:true})
+  await page.waitForFunction(()=>typeof window.completePendingSave==='function');await page.evaluate(()=>window.autoRefresh('source-node'))
+  await page.evaluate(humanEdit=>{if(humanEdit)window.noteEditor.updateBlock('p',{content:'并发正文要保留'});window.completePendingSave()},humanEdit)
+  await page.waitForFunction(()=>window.receipts.length===2||window.receipts.some(row=>row.status!=='succeeded'))
+  expect(await page.evaluate(()=>window.receipts.map(row=>row.status))).toEqual(humanEdit?['cancelled']:['succeeded','succeeded'])
+  if(humanEdit){expect(await page.evaluate(()=>window.noteEditor.getBlock('p').content[0].text)).toBe('并发正文要保留');expect(await page.evaluate(()=>window.calls.filter(call=>call.method==='component-data-capability').length)).toBe(0)}
+  else expect(await page.evaluate(()=>JSON.parse(window.saved.blocks.find(b=>b.id==='source-block').props.payload).containerSpec.rows)).toEqual([[99]])
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('keeps a human edit protected after a later trusted update in the real editor',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await prepareLiveData(page,dataCommands,{pauseBeforeCapabilities:true});await page.waitForFunction(()=>typeof window.resumeCapabilities==='function')
+  await page.evaluate(async()=>{window.noteEditor.updateBlock('p',{content:'新正文要保留'});await window.autoRefresh('other-node');window.resumeCapabilities()})
+  await page.waitForFunction(()=>window.receipts.length===1)
+  expect(await page.evaluate(()=>window.receipts[0])).toMatchObject({status:'failed',message:'笔记内容已变化，请重新发送请求，较新修改已保留。'})
+  expect(await page.evaluate(()=>window.calls.filter(call=>call.method==='component-data-capability').length)).toBe(0)
+  expect(await page.evaluate(()=>window.noteEditor.getBlock('p').content[0].text)).toBe('新正文要保留');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
