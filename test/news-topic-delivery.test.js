@@ -43,9 +43,9 @@ it.each(['Ford','Theodore','Anderson','Showa'])('preserves the complete English 
  expect(result.data.items.map(item=>item.title)).toEqual([related.title])
 })
 
-it('keeps a lithography request narrower than the semiconductor sector while accepting precise equipment terms',()=>{
- const r=request('gdelt-news','光刻机'),phone=article('手机芯片需求改善，半导体行业复苏','phone','消费电子芯片市场变化'),euv=article('极紫外曝光设备交付进展','euv','EUV曝光系统产能与交付情况'),duv=article('浸没式DUV曝光工艺进展','duv','深紫外光学系统制造进展')
- const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[phone,euv,duv])],new Date(),{newsScope:'只展示光刻机行业相关新闻'})
+it.each(['只展示光刻机行业相关新闻','只展示 光刻机 行业 新闻','Only show lithography industry news','Only show lithography sector news'])('keeps %s narrower than the semiconductor sector while accepting precise equipment terms',newsScope=>{
+ const r=request('gdelt-news','光刻机'),phone=article('手机芯片需求改善，半导体行业复苏','phone','Smartphone chip industry: sector demand update'),euv=article('极紫外曝光设备交付进展','euv','EUV曝光系统产能与交付情况'),duv=article('浸没式DUV曝光工艺进展','duv','深紫外光学系统制造进展')
+ const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[phone,euv,duv])],new Date(),{newsScope})
  expect(result.data.items.map(item=>item.title)).toEqual([euv.title,duv.title])
 })
 

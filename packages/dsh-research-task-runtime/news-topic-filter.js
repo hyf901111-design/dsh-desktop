@@ -36,8 +36,8 @@ export function newsTopicTerms(requirement){
  // crypto request additionally admits actual sector/regulatory coverage.
  if(known.includes(aliases[2]))return unique(aliases.slice(0,3).flat())
  if(known.some(group=>group===aliases[0]||group===aliases[1]))return unique(known.flat())
- const cleaned=human.replace(/(?:工作台|本面板|新闻资讯|最新资讯|最新新闻|新闻列表|相关新闻|相关报道|新闻|资讯|报道|动态|监控|行情|研究|工作|展示|生成|创建|建立|搭建|检索|查询|读取|保留|标注|提供|获取|显示|只|仅|请|为|一个|关于|围绕|实时|最新|近期|最近|重要|原文|链接|摘要|标题|来源|日期|时间|记录|内容|数据|自动|刷新|更新|完整|全部|每分钟|最多|实际|相关)/gu,' ')
-  .replace(/\b(?:the|news|latest|recent|research|dashboard|monitor|show|display|source|articles?|reports?|updates?|and|with|for)\b/giu,' ')
+ const cleaned=human.replace(/(?:工作台|本面板|新闻资讯|最新资讯|最新新闻|新闻列表|相关新闻|相关报道|新闻|资讯|报道|动态|监控|行情|研究|工作|展示|生成|创建|建立|搭建|检索|查询|读取|保留|标注|提供|获取|显示|只|仅|请|为|一个|关于|围绕|实时|最新|近期|最近|重要|原文|链接|摘要|标题|来源|日期|时间|记录|内容|数据|自动|刷新|更新|完整|全部|每分钟|最多|实际|相关|行业|产业)/gu,' ')
+  .replace(/\b(?:the|news|latest|recent|research|dashboard|monitor|show|display|source|articles?|reports?|updates?|and|with|for|only|industr(?:y|ies)|sectors?)\b/giu,' ')
  const pieces=cleaned.split(/[\s，,。；;：:/、()（）“”"\d]+|以及|或者|与|和|及/u).filter(Boolean)
  const terms=pieces.flatMap(piece=>{
   if(/^[\p{Script=Han}]{2,12}$/u.test(piece))return[piece]
