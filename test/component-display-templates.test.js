@@ -54,7 +54,9 @@ it.each(['literal','default','date','nested','unknown-name','prototype','script-
  if(kind==='formatter')value.t={$from:'q',$path:'dataTime',$prefix:'2099 DataYes '}
  if(kind==='too-many'){value.$template=Array(17).fill('{t}').join(' ')}
  if(kind==='too-long')value.$template='x'.repeat(2001)+'{t}'
- expect(()=>resolveBoundComponent(JSON.stringify(f.draft),f.records,new Date(f.createdAt))).toThrow()
+ const result=resolveBoundComponent(JSON.stringify(f.draft),f.records,new Date(f.createdAt))
+ expect(result.data.asOf).toBe(f.records[0].response.dataTime)
+ expect(()=>evaluateMapping(value,{q:f.records[0].response})).toThrow(/不支持/)
 })
 it('keeps the recent-market date gate tied to the observed old timestamp instead of an invented template suffix',async()=>{
  const f=structuredClone(captured);f.draft.mapping.type='market';f.draft.mapping.variant='metrics';f.records[0].response.dataTime='2025-01-01';f.draft.mapping.asOf.$template='{t} · 2026-10-22 最新行情';f.prompt='工作台：最新股票行情\n本面板：当前行情\n优先使用 market 类型；variant: metrics。';f.hostContext=undefined
@@ -97,5 +99,5 @@ it('does not hide a scope-format error or join a quote time with a newer fetched
   expect(()=>resolveBoundComponent(JSON.stringify(draft),f.records,new Date(f.createdAt))).toThrow(/不支持/)
  }
  const draft=structuredClone(f.draft);draft.mapping.asOf={$template:'{quote} {fetched}',quote:{$from:'q',$path:'dataTime'},fetched:{$from:'q',$path:'receivedAt'}}
- expect(()=>resolveBoundComponent(JSON.stringify(draft),f.records,new Date(f.createdAt))).toThrow(/展示文本模板/)
+ expect(resolveBoundComponent(JSON.stringify(draft),f.records,new Date(f.createdAt)).data.asOf).toBe(f.records[0].response.dataTime)
 })
