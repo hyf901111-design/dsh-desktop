@@ -808,3 +808,17 @@ it('keeps a clickable review anchor for a pure deletion and can restore the remo
   await popup.getByRole('button',{name:'取消替换',exact:true}).click();expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe('请多提交报告。');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+
+it('keeps a reviewed paragraph tooltip visible while the top of a long paragraph is scrolled away',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id)
+  await page.evaluate(()=>{window.editor.updateBlock('p',{content:'这段正常文字用于检查长段落滚动时反馈的位置。'.repeat(90)});window.challenge.setLevel(2)})
+  await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[{kind:'review',status:'completed',detail:'已完成。'}]})
+  const line=page.locator('.en-challenge-paragraph-line'),area=await page.locator('.en-main').boundingBox();await line.waitFor()
+  await page.locator('.en-document-scroll').evaluate(el=>{el.scrollTop=300;el.dispatchEvent(new Event('scroll'))})
+  await expect.poll(async()=>Math.round((await line.boundingBox()).y)).toBeLessThan(Math.round(area.y))
+  const rect=await line.boundingBox();await line.hover({position:{x:6,y:area.y-rect.y+24}})
+  const tooltip=line.getByRole('tooltip');await expect.poll(()=>tooltip.isVisible()).toBe(true);expect((await tooltip.boundingBox()).y).toBeGreaterThanOrEqual(area.y);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)

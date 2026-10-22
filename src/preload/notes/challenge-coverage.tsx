@@ -11,7 +11,7 @@ export function paragraphChallengeFeedback(records:Map<string,ParagraphReview>,b
   const record=records.get(block.id)
   if(!record||record.level!==level||record.title!==title||record.text!==block.text)return[]
   const count=new Set(issues.filter(issue=>issue.blockId===block.id).map(issue=>issue.id)).size,name=CHALLENGE_LEVELS[record.level].name
-  if(count)return[{blockId:block.id,state:'issues' as const,count,label:`段落经${name}模式 AI 挑战后，发现 ${count} 处未解决问题`}]
+  if(count)return[{blockId:block.id,state:'issues' as const,count,label:`段落经${name}模式 AI 挑战校对，当前有 ${count} 处未解决问题`}]
   if(!record.complete)return[]
   return[{blockId:block.id,state:'passed' as const,count:0,label:record.issueCount?`段落经${name}模式 AI 挑战校对，已解决 ${record.issueCount} 处问题`:`段落已通过${name}模式的 AI 挑战，本轮未发现问题`}]
  })
@@ -36,5 +36,5 @@ export function ChallengeParagraphFeedback({items,scroll,revision}:{items:Paragr
   scroller.addEventListener('scroll',measure,{passive:true});window.addEventListener('resize',measure);measure()
   return()=>{cancelAnimationFrame(frame);observer.disconnect();scroller.removeEventListener('scroll',measure);window.removeEventListener('resize',measure)}
  },[items,scroll,revision])
- return <div className="en-challenge-paragraph-feedback" ref={root}>{positions.map(item=><div key={item.blockId} className="en-challenge-paragraph-line" data-block-id={item.blockId} data-state={item.state} tabIndex={0} role="img" aria-label={item.label} style={{top:item.top,left:item.left,height:item.height}}><span role="tooltip">{item.label}</span></div>)}</div>
+ return <div className="en-challenge-paragraph-feedback" ref={root}>{positions.map(item=><div key={item.blockId} className="en-challenge-paragraph-line" data-block-id={item.blockId} data-state={item.state} tabIndex={0} role="img" aria-label={item.label} style={{top:item.top,left:item.left,height:item.height}}><span role="tooltip" style={{top:Math.max(0,8-item.top),maxWidth:Math.max(64,Math.min(280,item.left-24))}}>{item.label}</span></div>)}</div>
 }

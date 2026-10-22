@@ -13,7 +13,7 @@ it('shows only current exact text actually reviewed at the active tier',()=>{
 it('counts current unresolved marked discussions once and does not confuse replacements with problems',()=>{
  const records=new Map([['a',{...record,level:1 as const,issueCount:2}]])
  const issues=[{id:'x',blockId:'a'},{id:'y',blockId:'a'},{id:'x',blockId:'a'}]
- expect(paragraphChallengeFeedback(records,blocks,'标题',1,issues)).toEqual([{blockId:'a',state:'issues',count:2,label:'段落经宽松模式 AI 挑战后，发现 2 处未解决问题'}])
+ expect(paragraphChallengeFeedback(records,blocks,'标题',1,issues)).toEqual([{blockId:'a',state:'issues',count:2,label:'段落经宽松模式 AI 挑战校对，当前有 2 处未解决问题'}])
  expect(paragraphChallengeFeedback(records,blocks,'标题',1,[])[0]?.label).toBe('段落经宽松模式 AI 挑战校对，已解决 2 处问题')
 })
 it('never gives a passed line for partial review, but may show proven unresolved issues',()=>{
