@@ -60,7 +60,21 @@ export function researchMarketContentDimensions(variant, data = {}) {
     return {width:656,height:48 + Math.max(1, Math.ceil((rows || 6) / 3)) * 82};
   // Short datasets collapse; large datasets get a readable viewport with scrolling.
   // Never make a 100-row feed turn into a multi-screen canvas column.
-  if (variant === 'table' || variant === 'fund-holdings')
+  if (variant === 'table') {
+    const width = data.availableWidth > 0 ? data.availableWidth : 656;
+    const capacity = Math.max(24, Math.floor((width - 20) / 6));
+    const units = text => [...String(text ?? '')].reduce((n,c) => n + (/[^\x00-\xff]/u.test(c) ? 2 : 1), 0);
+    const footerLines = Number.isInteger(data.footerLines) ? data.footerLines
+      : (data.asOf ? Math.ceil(units(data.asOf) / capacity) : 0)
+        + (data.note ? Math.ceil(units(data.note) / capacity) : 0)
+        + (Array.isArray(data.sources) && data.sources.length ? Math.max(1, Math.ceil(units(data.sources.map(s=>s.label).join(' · ')) / capacity)) : 0);
+    const readoutLines = Number.isInteger(data.readoutLines) ? data.readoutLines
+      : Math.max(1,...(Array.isArray(data.rows)?data.rows:[]).filter(Array.isArray).map(row=>Math.ceil(units(row.map((cell,i)=>(data.columns?.[i]??'')+' '+cell).join(' · '))/capacity)));
+    // Include canvas title/stamp, search, header, row readout, body insets and
+    // wrapped source text. The table and unusually long notes scroll separately.
+    return {width:656,height:Math.min(840,144 + (Math.min(12,rows) + 1) * 26 + Math.min(12,footerLines) * 17 + Math.min(8,Math.max(0,readoutLines-1))*17)};
+  }
+  if (variant === 'fund-holdings')
     return {width:656,height:80 + Math.min(12, Math.max(3, rows || 10)) * 25};
   if (variant === 'fund-industry') return {width:656,height:144 + Math.min(8, Math.max(3, rows || 6)) * 28};
   if (variant === 'pipeline') return {width:656,height:72 + Math.min(8, Math.max(3, rows || 5)) * 36};
@@ -96,6 +110,24 @@ export function researchMarketDimensions(node, includeManual = false, availableW
     return {width:656,height:Math.max(220,80+Math.min(6,rows)*46)};
   }
   const kind=html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1];
+  if (kind === 'table' && html.includes('data-sherlock-design="21m-20260923-v1"')) {
+    const footer=html.match(/<footer\b[^>]*class="market-footer"[^>]*>([\s\S]*?)<\/footer>/)?.[1] ?? '';
+    const capacity=Math.max(24,Math.floor((availableWidth-20)/6));
+    const asOf=html.match(/<meta name="sherlock-header-note" content="([^"]*)"/)?.[1]??'';
+    const footerLines=[asOf,...[...footer.matchAll(/<span\b[^>]*>([\s\S]*?)<\/span>/g)].map(match=>match[1])].reduce((n,value)=>{
+      const text=value.replace(/<[^>]*>/g,'').replace(/&[^;]+;/g,' ').trim();
+      const units=[...text].reduce((sum,c)=>sum+(/[^\x00-\xff]/u.test(c)?2:1),0);
+      return n+(units?Math.ceil(units/capacity):0);
+    },0);
+    const body=html.match(/<tbody>[\s\S]*?<\/tbody>/)?.[0] ?? '';
+    const text=value=>value.replace(/<[^>]*>/g,'').replace(/&[^;]+;/g,' ').trim();
+    const headers=[...(html.match(/<thead>[\s\S]*?<\/thead>/)?.[0]??'').matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/g)].map(match=>text(match[1]));
+    const readoutLines=Math.max(1,...[...body.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].map(row=>{
+      const value=[...row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map((cell,i)=>(headers[i]??'')+' '+text(cell[1])).join(' · ');
+      return Math.ceil([...value].reduce((sum,c)=>sum+(/[^\x00-\xff]/u.test(c)?2:1),0)/capacity);
+    }));
+    return researchMarketContentDimensions(kind,{rowCount:(body.match(/<tr\b/g)||[]).length,availableWidth,footerLines,readoutLines});
+  }
   // Old saved metrics use the same current presentation. Their original
   // 896x144 strip cannot hold wrapped values or enterprise tile insets.
   if (kind === 'metrics') {

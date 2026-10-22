@@ -572,6 +572,31 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
           intrinsicMetrics = true;
         }
       }
+      // Ordinary source tables also need an intrinsic reading height. Using
+      // their current clipped scroll box makes every Arrange shrink them again.
+      if (workbench && document.body.dataset.sherlockMarket === 'table') {
+        const wrap=document.body.querySelector('.market-table-wrap'),table=wrap?.querySelector('table');
+        if (table) {
+          const pixels=value=>Math.max(0,parseFloat(value)||0);
+          const insets=element=>{const s=getComputedStyle(element);return pixels(s.paddingTop)+pixels(s.paddingBottom)+pixels(s.borderTopWidth)+pixels(s.borderBottomWidth)};
+          const margins=element=>{const s=getComputedStyle(element);return pixels(s.marginTop)+pixels(s.marginBottom)};
+          const rows=Array.from(table.querySelectorAll('tbody tr')).filter(visible).slice(0,12);
+          let height=insets(document.body)+(table.querySelector('thead')?.getBoundingClientRect().height||0)
+            +rows.reduce((sum,row)=>sum+row.getBoundingClientRect().height,0)+insets(wrap)+margins(wrap)
+            // Reserve a real horizontal scrollbar even on overlay-scrollbar Macs.
+            +(table.scrollWidth>wrap.clientWidth+1?16:0);
+          for(const element of Array.from(document.body.children).filter(visible)) {
+            if(element===wrap)continue;
+            if(element.matches('script,style'))continue;
+            if(element.classList.contains('market-footer')) {
+              const boxes=Array.from(element.children).filter(visible).map(el=>el.getBoundingClientRect());
+              const natural=(boxes.length?Math.max(...boxes.map(b=>b.bottom))-Math.min(...boxes.map(b=>b.top)):0)+insets(element);
+              height+=Math.min(240,natural)+margins(element);
+            } else height+=element.getBoundingClientRect().height+margins(element);
+          }
+          bottom=height;
+        }
+      }
       // Quote tables and overview strips have bounded scroll viewports. Their
       // clipped boxes must not feed a progressively smaller height to Arrange.
       // Measure the intrinsic controls, a bounded set of rows, and provenance
