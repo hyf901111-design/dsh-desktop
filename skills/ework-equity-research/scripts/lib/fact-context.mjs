@@ -21,6 +21,14 @@ function reportTitle(packet,mapping,lines,locator,valueLine){
  if(!allowedIssuers.includes(issuer))fail('PERIOD_MAPPING','报告标题只能是报告期标题本身或已声明公司的完整报告标题，正文中的引用不构成报告标题。')
  return period
 }
+function recognizedReportTitlePeriod(packet,line){
+ const title=line.replace(/\s/g,'')
+ for(const issuer of ['',packet.company.name,...(packet.entityScopes??[])]){
+  const name=issuer.replace(/\s/g,'')
+  if(title.startsWith(name)){const period=reportPeriod(title.slice(name.length));if(period)return period}
+ }
+ return null
+}
 
 export function resolveFactPeriodMapping(packet,fact,lines){
  const evidence=fact.evidence,m=evidence?.periodMapping,loc=evidence?.locator
@@ -31,8 +39,11 @@ export function resolveFactPeriodMapping(packet,fact,lines){
  const period=reportTitle(packet,m,lines,loc,valueLine)
  if(m.kind==='report-current-prior'){
   if(!exactKeys(m,['kind','reportTitleLine','reportPeriodText','headerLine','role'])||!roles[m.role]||!roles[m.role].has(evidence.periodText)||!Number.isInteger(m.headerLine)||m.headerLine<=m.reportTitleLine||m.headerLine>=valueLine||originalLine(lines,m.headerLine)?.split('\t')[loc.column-1]?.trim()!==evidence.periodText)fail('PERIOD_MAPPING','本期/上期角色必须匹配真实报告标题之后、目标值之前同列的原字面表头。')
-  for(let n=m.headerLine+1;n<valueLine;n++){
+  for(let n=m.reportTitleLine+1;n<valueLine;n++){
    const cells=lines[n-1].split('\t'),token=cells[loc.column-1]?.trim()
+   const nearerReportPeriod=recognizedReportTitlePeriod(packet,cells[0])
+   if(nearerReportPeriod&&nearerReportPeriod!==period)fail('PERIOD_MAPPING','锚定标题至目标值之间出现不同期间的较新报告标题，不能沿用旧报告本期/上期映射。')
+   if(n<=m.headerLine)continue
    if(roles.current.has(token)||roles.prior.has(token)||/^(?:FY20\d{2}|20\d{2}(?:[HQ]|年|-))/.test(token??'')&&periodKey(token))fail('PERIOD_MAPPING','目标值前出现较新的期间表头，不能跨用旧本期/上期映射。')
   }
   const mapped=m.role==='current'?period:period.replace(/20\d{2}/,year=>String(Number(year)-1))
