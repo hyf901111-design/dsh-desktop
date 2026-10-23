@@ -156,7 +156,7 @@ export function installSkillComposer(deps: Dependencies): () => void {
                         const s=segment.span
                         if(!s || !Number.isSafeInteger(s.start) || !Number.isSafeInteger(s.end) || s.start<0 || s.end<s.start || s.end>snapshot.draft.length || s.draftRev!==snapshot.draftRev) throw Error('草稿已变化，请重新打开技能菜单。')
                         const token=snapshot.draft.slice(s.start,s.end)
-                        if(token && (!token.startsWith('/') || !'skills'.startsWith(token.slice(1)))) throw Error('技能命令已变化，原输入已保留。')
+                        if(token.trim() && (!token.startsWith('/') || !'skills'.startsWith(token.slice(1)))) throw Error('技能命令已变化，原输入已保留。')
                         span={start:s.start,end:s.end}
                     } else if(segment?.via==='enter' && segment.token==='/skills' && snapshot.draft.trim()==='/skills') {
                         span={start:0,end:snapshot.draft.length}
