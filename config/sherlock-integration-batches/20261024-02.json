@@ -100,6 +100,54 @@
           "本变更修复编辑器依赖导入fatal，不承诺隔离环境中的可选emoji picker能力，也不视为系统鼠标冻结根因修复。"
         ],
         "generatedAt": "2026-10-23T16:50:44.658607+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b3846cb0a0ccc7003708a9e2b719d1b2ca790d95",
+        "verificationCommit": "b3846cb0a0ccc7003708a9e2b719d1b2ca790d95",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/preload-custom-elements.test.ts",
+              "test/preload-editor-singleton.test.ts",
+              "test/sandbox-preload.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/preload-custom-elements.test.ts test/preload-editor-singleton.test.ts test/sandbox-preload.test.js --maxWorkers=2",
+            "verifiedCommit": "b3846cb0a0ccc7003708a9e2b719d1b2ca790d95",
+            "completedAt": "2026-10-23T16:53:25.805Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b3846cb0a0ccc7003708a9e2b719d1b2ca790d95",
+            "completedAt": "2026-10-23T16:53:25.805Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "b3846cb0a0ccc7003708a9e2b719d1b2ca790d95",
+            "completedAt": "2026-10-23T16:53:25.805Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-23T16:53:25.805Z"
       }
     }
   ],
