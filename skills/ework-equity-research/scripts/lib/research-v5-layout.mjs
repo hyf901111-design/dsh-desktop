@@ -12,6 +12,12 @@ const table=(title,headers,rows,refs=[],meta='')=>({type:'table',title,headers,r
 const chart=(title,kind,series,labels,refs=[],meta='')=>({type:'chart',title,kind,series,labels,refs,meta})
 const section=(anchor,title,nodes)=>({anchor,title,nodes:nodes.filter(Boolean)})
 const chunks=(rows,size)=>Array.from({length:Math.ceil(rows.length/size)},(_,i)=>rows.slice(i*size,(i+1)*size))
+const forecastGroups=rows=>{
+ if(!rows.length)return []
+ const count=Math.ceil(rows.length/3),size=Math.floor(rows.length/count),extra=rows.length%count;let offset=0
+ return Array.from({length:count},(_,i)=>{const length=size+(i<extra?1:0),group=rows.slice(offset,offset+length);offset+=length;return group})
+}
+const bridgeKey=i=>'B'+String(i+1).padStart(2,'0')
 const available=value=>typeof value==='string'
 const modelOK=model=>model?.status==='calculated'
 const amount=value=>cell(value,'CNY')
@@ -46,18 +52,20 @@ function dcfPlan(dcf){
  if(dcf.currentPrice)summary.push(note(`经核验价格：${displayValue(perShare(dcf.currentPrice.value))}，时点 ${dcf.currentPrice.asOf}。价格差异为模型情景算术结果，不是目标回报承诺；不自动生成评级。`,dcf.currentPrice.sourceRefs))
  if(dcf.shares)summary.push(note(`估值采用股本：${displayValue(cell(dcf.shares.value,'shares'))}；生效核对时点 ${dcf.shares.asOf}。股本时点与财务披露基期分别核对。`,dcf.shares.sourceRefs))
  summary.push(...(dcf.limitations??[]).map(text=>note(text,allRefs)))
- const wacc=dcf.wacc??{},assumptions=[note('经营驱动、折现参数及价值调整按证据属性区分。代理推导与研究假设不冒充公司披露。',allRefs),table('经营与估值研究假设',['参数','数值','属性','研究依据 / 时点'],(dcf.assumptions??[]).map(a=>[a.label??a.id,cell(a.value,a.unit),KINDS[a.kind]??a.kind,`${a.reason??''}${a.asOf?' · '+a.asOf:''}`]),refsOf((dcf.assumptions??[]).flatMap(a=>a.refs))),table('WACC参数与折现口径',['参数','数值'],[['无风险利率',ratio(wacc.riskFree)],['Beta',cell(wacc.beta,'multiple')],['权益风险溢价',ratio(wacc.erp)],['债务权重',ratio(wacc.debtWeight)],['税前债务成本',ratio(wacc.debtCost)],['税率',ratio(wacc.tax)],['WACC',ratio(wacc.value)]],wacc.sourceRefs??[]),note(wacc.formula??'WACC公式以计算结果为准。',wacc.sourceRefs??[])]
+ const reasons=[...new Set((dcf.assumptions??[]).map(a=>a.reason??''))],reasonKey=reason=>'R'+String(reasons.indexOf(reason)+1).padStart(2,'0')
+ const assumptionRefs=refsOf((dcf.assumptions??[]).flatMap(a=>a.refs))
+ const wacc=dcf.wacc??{},assumptions=[note('经营驱动、折现参数及价值调整按证据属性区分。代理推导与研究假设不冒充公司披露。相同理由以索引引用，下表保留全部研究依据原文。',allRefs),table('经营与估值研究假设',['参数','数值','属性','依据索引 / 时点'],(dcf.assumptions??[]).map(a=>[a.label??a.id,cell(a.value,a.unit),KINDS[a.kind]??a.kind,`${reasonKey(a.reason??'')}${a.asOf?' · '+a.asOf:''}`]),assumptionRefs),...(reasons.length?[table('研究依据全文索引',['索引','完整研究依据'],reasons.map(reason=>[reasonKey(reason),reason]),assumptionRefs,'同一理由仅完整列示一次，逐参数索引与时点见上表；不截断原文。')]:[]),table('WACC参数与折现口径',['参数','数值'],[['无风险利率',ratio(wacc.riskFree)],['Beta',cell(wacc.beta,'multiple')],['权益风险溢价',ratio(wacc.erp)],['债务权重',ratio(wacc.debtWeight)],['税前债务成本',ratio(wacc.debtCost)],['税率',ratio(wacc.tax)],['WACC',ratio(wacc.value)]],wacc.sourceRefs??[]),note(wacc.formula??'WACC公式以计算结果为准。',wacc.sourceRefs??[])]
  const forecasts=[],discounts=[],bridges=[]
  for(const s of scenarios){
   const name=scenarioName(s),rows=s.forecastRows??[],refs=refsOf(s.sourceRefs,rows.flatMap(r=>r.sourceRefs))
   forecasts.push(note(`${name}情景：${s.reason??''}`,refs))
   if(s.h2){const h=s.h2;forecasts.push(table(`${name}情景剩余披露区间与估值日拆分`,['项目','模型结果'],[['期间 / 期末',`${h.period??'财务期至年末未披露区间'} / ${h.end??'见模型年末'}`],['已披露累计FCFF',amount(h.h1FCFF)],['剩余披露区间FCFF',amount(h.fcff)],['剩余区间归属FCFF',amount(h.fcffOwners)],['已过区间天数',cell(String(h.elapsedDays),'days')],['未来余期天数',cell(String(h.remainingDays),'days')],['完整区间天数',cell(String(h.totalDays),'days')],['已过区间现金积累',amount(h.elapsedCashAccumulation)],['未来余期现金流',amount(h.remainingStubCashFlow)],['剩余区间收入',amount(h.revenue)],['剩余区间NOPAT',amount(h.nopat)],['剩余区间折旧摊销',amount(h.da)],['剩余区间资本开支',amount(h.capex)],['剩余区间营运资本增量',amount(h.deltaNWC)]],h.sourceRefs??refs,'已过区间进入现金桥，未来余期才折现；全年预测不与余期混为同频实绩。'))}
   if(rows.length)forecasts.push(chart(`${name}情景FCFF驱动结果`,'line',[{name:'企业FCFF',unit:'CNY',values:rows.map(r=>r.fcff)},{name:'归属FCFF',unit:'CNY',values:rows.map(r=>r.fcffOwners)}],rows.map(r=>r.period),refs,'单位：亿元 · 情景预测，非公司盈利指引'))
-  for(const group of chunks(rows,5))forecasts.push(table(`${name}情景经营与FCFF预测 · ${group[0].period}—${group.at(-1).period}`,['指标 / 单位',...group.map(r=>r.period)],FORECAST_FIELDS.map(([label,key,unit])=>[`${label}（${units[unit]??unit}）`,...group.map(r=>cell(r[key],unit))]),refs,'预测值为模型计算结果；规模、利润率、税率、再投资与归属口径逐项保留。'))
+  for(const group of forecastGroups(rows))forecasts.push(table(`${name}情景经营与FCFF预测 · ${group.length===1?group[0].period:group[0].period+'—'+group.at(-1).period}`,['指标 / 单位',...group.map(r=>r.period)],FORECAST_FIELDS.map(([label,key,unit])=>[`${label}（${units[unit]??unit}）`,...group.map(r=>cell(r[key],unit))]),refs,'预测值为模型计算结果；规模、利润率、税率、再投资与归属口径逐项保留。'))
   const discount=s.discountRows??[]
   if(discount.length){discounts.push(chart(`${name}情景现金流与折现现值`,'bar',[{name:'未折现现金流',unit:'CNY',values:discount.map(r=>r.cashFlow)},{name:'现金流现值',unit:'CNY',values:discount.map(r=>r.presentValue)}],discount.map(r=>r.period),refsOf(s.sourceRefs,discount.flatMap(r=>r.sourceRefs)),'单位：亿元 · 估值日与现金流期末之间的实际折现时长'),table(`${name}情景折现明细`,['期间 / 期末','天数','折现年限','折现系数','现金流','现值'],discount.map(r=>[`${r.period} / ${r.end}`,cell(String(r.days),'days'),cell(r.timeYears,'years'),cell(r.discountFactor),amount(r.cashFlow),amount(r.presentValue)]),refsOf(s.sourceRefs,discount.flatMap(r=>r.sourceRefs)),'天数、年限、系数及现值直接取自同次计算；未按完整整数年重算。'))}
   const bridge=s.bridgeRows??[]
-  if(bridge.length)bridges.push({...chart(`${name}情景归属权益价值桥`,'value-bridge',[],[],refsOf(s.sourceRefs,bridge.flatMap(r=>r.sourceRefs)),'金额桥从零原点开始；小额调整以标签及明细保留，柱高不夸大。'),bridge,equityValue:s.equityValue},table(`${name}情景归属权益桥明细`,['价值项目','有符号金额','属性'],[...bridge.map(r=>[r.label,amount(r.value),KINDS[r.kind]??r.kind]),['权益价值合计',amount(s.equityValue),'程序计算']],refsOf(s.sourceRefs,bridge.flatMap(r=>r.sourceRefs)),'各行按模型给定符号列示；最终端点直接取模型权益价值，不在展示层重新求值。'))
+  if(bridge.length)bridges.push({...chart(`${name}情景归属权益价值桥`,'value-bridge',[],[],refsOf(s.sourceRefs,bridge.flatMap(r=>r.sourceRefs)),'金额桥从零原点开始；B序号对应下方完整明细，小额调整保留真实标记与金额。'),bridge,equityValue:s.equityValue},table(`${name}情景归属权益桥明细`,['序号 / 价值项目','有符号金额','属性'],[...bridge.map((r,i)=>[bridgeKey(i)+' · '+r.label,amount(r.value),KINDS[r.kind]??r.kind]),['合计 · 权益价值',amount(s.equityValue),'程序计算']],refsOf(s.sourceRefs,bridge.flatMap(r=>r.sourceRefs)),'各行按模型给定符号列示；最终端点直接取模型权益价值，不在展示层重新求值。'))
  }
  const terminals=[chart('显性期与终值现值构成','bar',[{name:'显性期FCFF现值',unit:'CNY',values:scenarios.map(s=>s.presentFCFF)},{name:'终值现值',unit:'CNY',values:scenarios.map(s=>s.terminal?.presentValue)}],scenarios.map(scenarioName),allRefs,'单位：亿元 · 两项均来自模型现值结果'),table('终值与企业价值构成',['项目',...scenarios.map(scenarioName)],[['WACC',...scenarios.map(s=>ratio(s.wacc))],['永续增长率',...scenarios.map(s=>ratio(s.terminalGrowth))],['终值ROIC',...scenarios.map(s=>ratio(s.terminalROIC))],['终值下期NOPAT',...scenarios.map(s=>amount(s.terminal?.nextNOPAT))],['终值再投资率',...scenarios.map(s=>ratio(s.terminal?.reinvestmentRate))],['终值再投资额',...scenarios.map(s=>amount(s.terminal?.reinvestment))],['终值自由现金流',...scenarios.map(s=>amount(s.terminal?.fcff))],['未折现终值',...scenarios.map(s=>amount(s.terminal?.undiscounted))],['显性期FCFF现值',...scenarios.map(s=>amount(s.presentFCFF))],['终值现值',...scenarios.map(s=>amount(s.terminal?.presentValue))],['企业价值',...scenarios.map(s=>amount(s.enterpriseValue))],['终值占企业价值',...scenarios.map(s=>ratio(s.terminal?.valueShare))]],refsOf(allRefs,scenarios.flatMap(s=>s.terminal?.sourceRefs??[])),'终值贡献较高意味着模型更依赖长期增长与资本回报假设，不能仅凭精细预测表降低不确定性。')]
  const sensitivities=[],sensitivity=dcf.sensitivities??{},wg=sensitivity.waccGrowth
@@ -67,9 +75,9 @@ function dcfPlan(dcf){
   for(const indices of chunks(wg.growthRates.map((_,i)=>i),5))sensitivities.push(table('WACC与永续增长敏感性明细',['WACC / 永续增长',...indices.map(i=>displayValue(ratio(wg.growthRates[i])))],wg.rows.map(r=>[ratio(r.wacc),...indices.map(i=>perShare(r.perShareValues[i]))]),refs,'每格为模型独立计算结果；WACC须高于永续增长率。'))
  }
  for(const[key,title,xField,xUnit]of[['beta','Beta敏感性','beta','multiple'],['cash','现金调整敏感性','cashShift','CNY'],['financialPB','金融资产PB敏感性','multiple','multiple']]){
-  const rows=sensitivity[key]??[];if(!rows.length)continue
+  const rows=[...(sensitivity[key]??[])].sort((a,b)=>decimal(a[xField]).cmp(b[xField]));if(!rows.length)continue
   const refs=refsOf(rows.flatMap(r=>r.sourceRefs))
-  sensitivities.push(chart(title,'line',[{name:'每股模型值',unit:'CNY_per_share',values:rows.map(r=>r.perShareValue)}],rows.map(r=>displayValue(cell(r[xField],xUnit))),refs,'纵轴：元/股 · 固定其余模型条件'),table(title+'明细',[title.replace('敏感性',''),...(key==='beta'?['对应WACC']:[]),'每股模型值'],rows.map(r=>[cell(r[xField],xUnit),...(key==='beta'?[ratio(r.wacc)]:[]),perShare(r.perShareValue)]),refs))
+  sensitivities.push({...chart(title,'line',[{name:'每股模型值',unit:'CNY_per_share',values:rows.map(r=>r.perShareValue)}],rows.map(r=>displayValue(cell(r[xField],xUnit))),refs,'纵轴：元/股 · 横轴按真实参数间距 · 固定其余模型条件'),xValues:rows.map(r=>r[xField])},table(title+'明细',[title.replace('敏感性',''),...(key==='beta'?['对应WACC']:[]),'每股模型值'],rows.map(r=>[cell(r[xField],xUnit),...(key==='beta'?[ratio(r.wacc)]:[]),perShare(r.perShareValue)]),refs))
  }
  const reverse=sensitivity.reverseGrowth,reverseNodes=[]
  if(reverse?.status==='calculated'&&available(reverse.constantRevenueGrowth??reverse.value)){
@@ -117,8 +125,21 @@ function axes(d,{e,x0,x1,top,bottom,unit,right=false}){
  if(d.min.cmp('0')<=0&&d.max.cmp('0')>=0)html+=`<line class="zero-line" x1="${x0}" x2="${x1}" y1="${at('0',d,top,bottom)}" y2="${at('0',d,top,bottom)}" stroke="#839DAE"/>`
  return html
 }
+export function coverMarketAvailable(packet,calculation){
+ const market=calculation?.market
+ return packet.schemaVersion===2&&packet.report?.profile==='full'&&modelOK(market)&&market.coverage?.fullYear===true&&market.rows?.length>=2
+}
+export function renderMarketCoverThumbnail(market,helpers,index){
+ const e=helpers.escape,rows=market.rows,entry=index.chart('一年股价与基准表现（封面）'),colors=['#005096','#1EB9E1']
+ const series=[{name:'公司股价',values:rows.map(r=>r.stockNormalized100)},{name:market.benchmark?.name??'市场基准',values:rows.map(r=>r.benchmarkNormalized100)}]
+ const d=domain(series.flatMap(s=>s.values),{focus:true}),x0=52,x1=269,top=18,bottom=119,x=i=>x0+i*(x1-x0)/(rows.length-1)
+ let svg=axes(d,{e,x0,x1,top,bottom,unit:'index'})
+ svg+=series.map((s,j)=>`<polyline points="${s.values.map((value,i)=>x(i)+','+at(value,d,top,bottom)).join(' ')}" fill="none" stroke="${colors[j]}" stroke-width="2"/>`).join('')
+ svg+=[...new Set([0,Math.floor((rows.length-1)/2),rows.length-1])].map(i=>`<text x="${x(i)}" y="145" text-anchor="${i===0?'start':i===rows.length-1?'end':'middle'}">${e(rows[i].date.slice(2,7))}</text>`).join('')
+ return `<figure class="cover-market-chart" id="${entry.id}" data-publication-kind="figure" data-chart-kind="market-thumbnail"><figcaption>${e(entry.title)}<small>起点 = 100 · 未复权价格</small></figcaption><div class="legend">${series.map((s,i)=>`<span style="border-left:7px solid ${colors[i]}">${e(s.name)}</span>`).join('')}</div><svg viewBox="0 0 280 170" role="img" aria-label="一年股价与基准归一化走势">${svg}</svg>${helpers.sourceNote(market.sourceRefs??[],true)}</figure>`
+}
 function seriesSvg(node,e){
- const width=760,x0=78,x1=node.kind==='combo'?678:730,top=36,bottom=220,labels=node.labels,left=node.series.filter(s=>!s.right),right=node.series.find(s=>s.right),d=domain(left.flatMap(s=>s.values),{focus:left[0]?.unit==='index'}),rd=right?domain(right.values):null,group=(x1-x0)/Math.max(1,labels.length),x=i=>x0+(i+.5)*group,colors=['#005096','#1EB9E1','#0078B4','#FFC819']
+ const width=760,x0=78,x1=node.kind==='combo'?678:730,top=36,bottom=220,labels=node.labels,left=node.series.filter(s=>!s.right),right=node.series.find(s=>s.right),d=domain(left.flatMap(s=>s.values),{focus:left[0]?.unit==='index'}),rd=right?domain(right.values):null,group=(x1-x0)/Math.max(1,labels.length),xd=node.xValues?domain(node.xValues,{focus:true}):null,x=i=>xd?at(node.xValues[i],xd,x1,x0):x0+(i+.5)*group,colors=['#005096','#1EB9E1','#0078B4','#FFC819']
  let svg=axes(d,{e,x0,x1,top,bottom,unit:left[0]?.unit??'number'});if(rd)svg+=axes(rd,{e,x0,x1,top,bottom,unit:right.unit,right:true})
  for(const[j,s]of node.series.entries()){
   const sd=s.right?rd:d,color=colors[j%colors.length],isLine=node.kind==='line'||s.right,points=s.values.map((v,i)=>available(v)?{v,x:x(i),y:at(v,sd,top,bottom)}:null)
@@ -126,7 +147,7 @@ function seriesSvg(node,e){
    // Missing observations split paths instead of silently joining a data gap.
    let current=[];const paths=[];for(const point of points){if(point)current.push(point);else if(current.length){paths.push(current);current=[]}}if(current.length)paths.push(current)
    svg+=paths.map(path=>`<polyline points="${path.map(p=>p.x+','+p.y).join(' ')}" stroke="${color}" stroke-width="2.5" fill="none"/>`).join('')
-   if(labels.length<=14)svg+=points.filter(Boolean).map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3.6" fill="${color}" stroke="white"/><text x="${p.x}" y="${p.y-9}" text-anchor="middle">${e(axisText(p.v,s.unit))}</text>`).join('')
+   if(labels.length<=14)svg+=points.filter(Boolean).map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3.6" fill="${color}" stroke="white"/><text class="point-value" data-series="${j}" x="${p.x}" y="${node.kind==='line'&&j%2?p.y+18:p.y-9}" text-anchor="middle">${e(axisText(p.v,s.unit))}</text>`).join('')
   }else{
    const bars=node.kind==='combo'?1:left.length,barWidth=Math.min(36,group*.75/bars),offset=node.kind==='combo'?0:(j-(bars-1)/2)*barWidth,zero=at('0',sd,top,bottom)
    svg+=points.filter(Boolean).map(p=>`<rect x="${p.x+offset-barWidth/2}" y="${Math.min(zero,p.y)}" width="${barWidth-2}" height="${Math.abs(zero-p.y)}" fill="${color}"/>${labels.length<=8?`<text x="${p.x+offset}" y="${p.y<=zero?p.y-8:p.y+16}" text-anchor="middle">${e(axisText(p.v,s.unit))}</text>`:''}`).join('')
@@ -138,12 +159,12 @@ function seriesSvg(node,e){
 }
 function bridgeSvg(node,e){
  const rows=node.bridge??[],columns=[];let current=decimal('0')
- for(const row of rows){const before=current;current=current.add(row.value);columns.push({...row,from:before.toString(),to:current.toString(),total:row.role==='operating-value'})}
- columns.push({label:'权益价值',value:node.equityValue,from:'0',to:node.equityValue,total:true})
+ for(const [i,row]of rows.entries()){const before=current;current=current.add(row.value);columns.push({...row,key:bridgeKey(i),from:before.toString(),to:current.toString(),total:row.role==='operating-value'})}
+ columns.push({key:'合计',label:'权益价值',value:node.equityValue,from:'0',to:node.equityValue,total:true})
  const d=domain(columns.flatMap(c=>[c.from,c.to])),x0=78,x1=732,top=52,bottom=236,group=(x1-x0)/columns.length,width=Math.min(42,group*.65)
  let svg=axes(d,{e,x0,x1,top,bottom,unit:'CNY'})
- svg+=columns.map((c,i)=>{const x=x0+(i+.5)*group,y1=at(c.total?'0':c.from,d,top,bottom),y2=at(c.to,d,top,bottom),labelY=Math.max(16,Math.min(y1,y2)-9-(i%2)*17),fill=c.total?'#005096':decimal(c.value).cmp('0')>=0?'#1EB9E1':'#FFC819',lines=Array.from(c.label).reduce((a,l,i)=>{if(i%7===0)a.push('');a[a.length-1]+=l;return a},[])
-  return `${i>0&&!c.total?`<line x1="${x-group+width/2}" x2="${x-width/2}" y1="${y1}" y2="${y1}" stroke="#96AAB6" stroke-dasharray="3 2"/>`:''}<rect x="${x-width/2}" y="${Math.min(y1,y2)}" width="${width}" height="${Math.abs(y2-y1)}" fill="${fill}"/>${Math.abs(y2-y1)<1?`<path class="small-value-marker" d="M${x-4},${y2} l4,-4 l4,4 l-4,4 z" fill="${fill}"/>`:''}<text x="${x}" y="${labelY}" text-anchor="middle">${e(displayValue(amount(c.value)))}</text><text x="${x}" y="${bottom+24}" text-anchor="middle">${lines.map((line,j)=>`<tspan x="${x}" dy="${j?15:0}">${e(line)}</tspan>`).join('')}</text>`
+ svg+=columns.map((c,i)=>{const x=x0+(i+.5)*group,y1=at(c.total?'0':c.from,d,top,bottom),y2=at(c.to,d,top,bottom),labelY=Math.max(16,Math.min(y1,y2)-9-(i%2)*17),fill=c.total?'#005096':decimal(c.value).cmp('0')>=0?'#1EB9E1':'#FFC819'
+  return `<g><title>${e(c.key+' · '+c.label)}</title>${i>0&&!c.total?`<line x1="${x-group+width/2}" x2="${x-width/2}" y1="${y1}" y2="${y1}" stroke="#96AAB6" stroke-dasharray="3 2"/>`:''}<rect x="${x-width/2}" y="${Math.min(y1,y2)}" width="${width}" height="${Math.abs(y2-y1)}" fill="${fill}"/>${Math.abs(y2-y1)<1?`<path class="small-value-marker" d="M${x-4},${y2} l4,-4 l4,4 l-4,4 z" fill="${fill}"/>`:''}<text data-value-key="${e(c.key)}" x="${x}" y="${labelY}" text-anchor="${i===0?'start':'middle'}">${e(displayValue(amount(c.value)))}</text><text data-bridge-key="${e(c.key)}" x="${x}" y="${bottom+24}" text-anchor="middle">${e(c.key)}</text></g>`
  }).join('')
  return `<svg viewBox="0 0 760 315" role="img" aria-label="${e(node.title)}" data-zero-origin="true">${svg}</svg>`
 }
@@ -154,7 +175,7 @@ function heatmapSvg(node,e){
  return `<svg viewBox="0 0 760 ${y0+rows.length*height+20}" role="img" aria-label="${e(node.title)}">${svg}</svg>`
 }
 export function renderResearchV5(calculation,helpers,index,{startNumber=0}={}){
- const plan=researchV5Plan(calculation),e=helpers.escape,sourceNote=helpers.sourceNote
+ const plan=researchV5Plan(calculation),e=helpers.escape,sourceNote=refs=>helpers.sourceNote(refs,true)
  const renderNode=node=>{
   if(node.type==='note')return `<p class="small model-note">${e(node.text)}</p>${sourceNote(node.refs??[])}`
   if(node.type==='table'){

@@ -15,6 +15,13 @@ function fixture(){
  const packet={company:{name:'示例股份有限公司',ticker:'600000.SH'},asOf:'2026-10-23',financialAsOf:'2026-06-30',sources,report:{profile:'brief',title:'经营质量与情景价值',publication:{companyShortName:'示例公司',reportType:'公司深度研究与DCF情景估值报告'},summary:[{text:'经营质量仍需验证。',refs}],sections:[{kind:'performance',title:'经营观察',paragraphs:[{text:'以正式披露为准。',refs}]}]}}
  return {packet,validation:{ok:true,facts,observations:[],diagnostics:[]},calculation:{ok:true,calculations:[],dcf,market,quarterly,diagnostics:[]}}
 }
+function fullFixture(){
+ const f=fixture();f.packet.schemaVersion=2;f.packet.report.profile='full'
+ f.packet.report.sections=['business','industry','performance','profitability','balance','cashflow','forecast','valuation','risks','monitoring'].map(kind=>({kind,status:'supported',title:'研究专题',paragraphs:[{text:'依据已经核验的正式披露。',refs:['financial']}]}))
+ f.packet.report.theses=[{statement:'经营质量需要验证。',inference:'披露不等同价值。',assumption:'研究假设仍需跟踪。',falsifier:'经营方向改变。',monitoring:'持续核对正式披露。',evidenceRefs:['financial']}]
+ f.calculation.dcf.sensitivities.reverseGrowth={status:'unavailable',code:'NO_BRACKET',reason:'显式区间内无可行根。',sourceRefs:['financial']}
+ return f
+}
 
 describe('V5 deep research publication',()=>{
  it('retains the disclosed financial basis in the formal deep-report filename',()=>{
@@ -78,5 +85,56 @@ describe('V5 deep research publication',()=>{
   const html=renderReport(f.packet,f.validation,f.calculation)
   expect(html).toContain('现价隐含常量收入增长');expect(html).toContain('-3.50%');expect(html).toContain('0.000000000001 元/股');expect(html).toContain('固定其他经营率、折现和价值桥假设。');expect(html).toContain('非一致预期')
   expect(html).toContain('已过区间现金积累');expect(html).toContain('未来余期现金流');expect(html).toContain('2026H2')
+ })
+ it('uses the calculated one-year market miniature on a full V2 cover and counts its real navigation target',()=>{
+  const f=fullFixture(),html=renderReport(f.packet,f.validation,f.calculation),cover=html.split('<header class="publication-cover">')[1].split('</header>')[0]
+  expect(cover).toContain('class="cover-market-chart"');expect(cover).toContain('data-chart-kind="market-thumbnail"')
+  expect(cover).toContain('一年股价与基准表现');expect(cover).toContain('viewBox="0 0 280 170"');expect(cover.match(/<polyline /g)).toHaveLength(2)
+  expect(cover).not.toContain('历史年度收入与归母净利润')
+  expect(html).toContain('id="section-market-year"')
+  expect(publicationTargetCount(f.packet,f.validation.facts,new Map(),f.calculation,0)).toBe([...html.matchAll(/data-publication-target=/g)].length)
+ })
+ it('limits cover financial citations to displayed basic facts and uses one formal subtitle',()=>{
+  const f=fullFixture();f.packet.sources.push({id:'financial-detail',title:'未在封面展示的报表分项',kind:'text-snapshot'})
+  f.validation.facts.push({id:'unused-financial-ref',metric:'tradePayables',period:'2026H1',scope:'合并',status:'verified',sourceId:'financial-detail',normalizedUnit:'CNY',normalizedValue:'123000000'})
+  const html=renderReport(f.packet,f.validation,f.calculation),cover=html.split('<header class="publication-cover">')[1].split('</header>')[0],basis=cover.split('<div class="cover-basis">')[1].split('估值基准日')[0],subtitle=cover.split('<div class="cover-subtitle">')[1].split('</div>')[0]
+  expect(basis).not.toContain('source-financial-detail');expect(html).toContain('id="source-financial-detail"')
+  expect(subtitle.match(/公司深度研究与DCF情景估值报告/g)).toHaveLength(1)
+ })
+ it('balances six forecast years across readable tables without a singleton trailing year',()=>{
+  const f=fixture(),html=renderReport(f.packet,f.validation,f.calculation),forecast=html.split('id="section-dcf-forecast"')[1].split('id="section-dcf-discount"')[0]
+  expect(forecast).toContain('FY2027—FY2029');expect(forecast).toContain('FY2030—FY2032')
+  expect(forecast).not.toContain('FY2032—FY2032');expect(forecast).not.toContain('FY2027—FY2031')
+  expect(publicationTargetCount(f.packet,f.validation.facts,new Map(),f.calculation,0)).toBe([...html.matchAll(/data-publication-target=/g)].length)
+ })
+ it('uses compact model source numbers and preserves complete unique assumption reasons once',()=>{
+  const f=fixture(),reason='重复研究依据必须完整保留，不能截断、不能冒充公司数值指引。'
+  f.calculation.dcf.assumptions.push(...['one','two'].map(id=>({id,label:id,value:'0.1',unit:'ratio',kind:'assumption',reason,refs:['financial']})))
+  const html=renderReport(f.packet,f.validation,f.calculation),model=html.split('id="section-dcf-summary"')[1].split('id="financial-statements"')[0],visible=model.replace(/<[^>]*>/g,'')
+  expect(visible).not.toContain('正式财务披露');expect(model).toContain('title="正式财务披露"');expect(model).toContain('href="#source-disclosure"')
+  expect(model.match(new RegExp(reason,'g'))).toHaveLength(1);expect(model).toContain('研究依据全文索引');expect(model).toContain('R02')
+ })
+ it('maps concise bridge-axis keys to full adjustment names in the exact detail table',()=>{
+  const f=fixture(),html=renderReport(f.packet,f.validation,f.calculation),bridge=html.split('id="section-dcf-owner-bridge"')[1].split('id="section-dcf-sensitivity"')[0]
+  expect(bridge).toContain('B01 · 归属经营价值');expect(bridge).toContain('B03 · 小额权益调整');expect(bridge).toContain('data-bridge-key="B01"')
+  expect(bridge).toContain('data-zero-origin="true"');expect(bridge).toContain('small-value-marker');expect(bridge).toContain('2.50 万元')
+ })
+ it('places the opening bridge amount to the right of its column instead of over the value axis',()=>{
+  const f=fixture(),html=renderReport(f.packet,f.validation,f.calculation),bridge=html.split('id="section-dcf-owner-bridge"')[1].split('id="section-dcf-sensitivity"')[0]
+  const firstAmount=bridge.match(/<text[^>]+data-value-key="B01"[^>]*>/)?.[0]
+  expect(firstAmount).toContain('text-anchor="start"')
+ })
+ it('sorts sensitivity parameters numerically for both detail and line geometry without changing model rows',()=>{
+  const f=fixture(),s=f.calculation.dcf.sensitivities
+  s.beta=[{beta:'2',wacc:'0.12',perShareValue:'18',sourceRefs:['financial']},{beta:'0.7',wacc:'0.07',perShareValue:'33',sourceRefs:['financial']},{beta:'0.8',wacc:'0.075',perShareValue:'31',sourceRefs:['financial']}]
+  s.cash.reverse();s.financialPB.reverse();const before=JSON.stringify(s)
+  const html=renderReport(f.packet,f.validation,f.calculation),model=html.split('id="section-dcf-sensitivity"')[1].split('id="section-dcf-reverse"')[0]
+  for(const[title,ordered]of[['Beta',['0.70 倍','0.80 倍','2.00 倍']],['现金调整',['-0.10 亿元','0.10 亿元']],['金融资产PB',['0.80 倍','1.20 倍']]]){
+   const body=model.split(title+'敏感性明细</h3>')[1].split('</tbody>')[0].replace(/<[^>]*>/g,'')
+   expect(ordered.map(value=>body.indexOf(value))).toEqual([...ordered.map(value=>body.indexOf(value))].sort((a,b)=>a-b));expect(ordered.every(value=>body.includes(value))).toBe(true)
+  }
+  const betaFigure=[...model.matchAll(/<figure\b[\s\S]*?<\/figure>/g)].find(m=>m[0].includes('aria-label="Beta敏感性"'))[0],xs=[...betaFigure.matchAll(/<circle cx="([^"]+)"/g)].map(m=>Number(m[1]))
+  expect(xs).toHaveLength(3);expect(xs[2]-xs[1]).toBeGreaterThan((xs[1]-xs[0])*10)
+  expect(JSON.stringify(s)).toBe(before)
  })
 })
