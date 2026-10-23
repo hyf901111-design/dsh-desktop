@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261023-04",
+  "branch": "codex/integration/20261023-04",
+  "baseMainCommit": "eb74150bfa3ac922f82e29c81c41f4996affeef1",
+  "expectedMainCommit": "eb74150bfa3ac922f82e29c81c41f4996affeef1",
+  "createdAt": "2026-10-23T14:33:06.485Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首页较矮窄栏完整卡片与文案间距修复",
+        "branch": "codex/feat/home-operations-compact-height-20261023",
+        "baseCommit": "eb74150bfa3ac922f82e29c81c41f4996affeef1",
+        "tipCommit": "db05f5e3d970fbe3ada9f21de687bc17265f387d",
+        "commits": [
+          {
+            "commit": "db05f5e3d970fbe3ada9f21de687bc17265f387d",
+            "parents": [
+              "eb74150bfa3ac922f82e29c81c41f4996affeef1"
+            ],
+            "subject": "修复：首页较矮窄栏卡片裁切与文案重叠"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "600px Retina center pane|reduced-height center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "12项直接相关浏览器检查通过；600×760 viewport456/content456，480×704原生滚动且无裁字，三案例间距及宽态回归通过。/tmp/home-operations-compact-height-final-20261023.log；差异检查通过。",
+            "verifiedCommit": "db05f5e3d970fbe3ada9f21de687bc17265f387d",
+            "completedAt": "2026-10-23T14:33:05.813526+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "12项直接相关浏览器检查通过；600×760 viewport456/content456，480×704原生滚动且无裁字，三案例间距及宽态回归通过。/tmp/home-operations-compact-height-final-20261023.log；差异检查通过。",
+            "verifiedCommit": "db05f5e3d970fbe3ada9f21de687bc17265f387d",
+            "completedAt": "2026-10-23T14:33:05.813526+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Playwright实际深浅渲染已核：600×760五卡同屏；480×704可原生滚动到所有卡且不遮按钮。此前正式app实际窗口揭示最小高度过大，故本次修复；正式包重新构建后再目视确认。不将此浏览器检查视作用户最终验收。"
+        },
+        "acceptanceCriteria": [
+          "较矮窄栏按测得可视高度允许大卡180px、小卡100px最低尺寸，完整展示600×760中栏五卡。",
+          "短容器收紧字号与行高，三张轮播文案、标题、副标题、分页不重叠，不裁文字。",
+          "480×704更短栏仍原生滚动，四小卡可达，宽屏保持原布局。",
+          "用户已明确要求使用正式客户端本地构建，按main集成后重建，不改版本或公开发布。"
+        ],
+        "risks": [
+          "只改窄栏CSS与对应布局测试；最终真实窗口将用正式身份本地应用核验。"
+        ],
+        "generatedAt": "2026-10-23T14:33:05.813526+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "-t",
+        "600px Retina center pane|reduced-height center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
