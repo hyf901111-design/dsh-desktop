@@ -23,7 +23,7 @@ beforeAll(async () => {
       import {mountDesktopShellStyles} from './src/preload/shell-style';
       import {mountHomeOperations} from './src/preload/home-operations';
       import {mountHomeThemes} from './src/preload/home-themes';
-      window.homeOperations={mount(themes=false){mountDesktopShellStyles(document);if(themes)this.disposeThemes=mountHomeThemes(document);this.original=document.querySelector('textarea');const before=[...document.querySelectorAll('style')];this.dispose=mountHomeOperations(document);this.ownStyles=[...document.querySelectorAll('style')].filter(style=>!before.includes(style))}};
+      window.homeOperations={mount(themes=false){mountDesktopShellStyles(document);if(themes)this.disposeThemes=mountHomeThemes(document);this.original=document.querySelector('textarea');const before=[...document.querySelectorAll('style')];this.dispose=mountHomeOperations(document,this.onAction?{onAction:this.onAction}:undefined);this.ownStyles=[...document.querySelectorAll('style')].filter(style=>!before.includes(style))}};
     ` }, bundle: true, format: 'iife', platform: 'browser', write: false,
     plugins: [{ name: 'home-operations-assets', setup(builder) {
       builder.onResolve({ filter: /\.(?:svg|png|jpe?g|webp)\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'home-inline' }))
@@ -51,18 +51,18 @@ function hero() {
   </div>`
 }
 
-async function fixture({ dark = false, reduced = true, width = 1380, height = 900, route = 'home', surface = '', child = false, themes = false, clock = false } = {}) {
-  const page = await browser.newPage({ viewport: { width, height }, reducedMotion: reduced ? 'reduce' : 'no-preference' })
+async function fixture({ dark = false, reduced = true, width = 1380, height = 900, route = 'home', surface = '', child = false, themes = false, clock = false, panelWidth = 0, deviceScaleFactor = 1 } = {}) {
+  const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor, reducedMotion: reduced ? 'reduce' : 'no-preference' })
   if (clock) await page.clock.install({ time: new Date('2026-10-23T00:00:00Z') })
   await page.route('**/*', request => request.abort())
-  await page.setContent(`<!doctype html><meta charset="utf-8"><style>${frontend}\n${native}\n${portalCss}</style><body ${dark ? 'data-ds-dark-theme' : ''} ${surface ? `data-workspace-surface="${surface}"` : ''}>
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>${frontend}\n${native}\n${portalCss}</style><body ${dark ? 'data-ds-dark-theme' : ''} ${surface ? `data-workspace-surface="${surface}"` : ''} ${panelWidth ? `style="--dsh-sidebar-width:${panelWidth}px"` : ''}>
     <div id="root"><div data-slot="root" style="display:contents"><div class="pI_x6G_frame" data-dsh-frame="true" style="grid-template-columns:280px minmax(0,1fr) 0px">
       <aside></aside><main class="pI_x6G_centerCol" data-pane="conversation"><div data-slot="conversation" style="display:contents"><div class="wSkVaW_root" data-phase="${route === 'home' ? 'hero' : 'active'}" data-odyssey-page="${route}">
         <div data-slot="conversation.session.header" style="display:contents"><header class="wSkVaW_header" data-srb-session-header data-odyssey-home-header="true"><button aria-label="对话">对话</button></header></div>
         <div class="wSkVaW_scrollBody" data-conversation-scroll></div><div data-center-composer-host><div data-composer-portal-host><div class="wSkVaW_composerSeat" data-composer-seat><div data-slot="conversation.composer" style="display:contents"><div data-chain-overlay-fallback="conversation.composer" style="display:contents">${hero()}</div></div></div></div></div>
         ${child ? `<section data-odyssey-subagent-panel><div class="wSkVaW_root" data-phase="hero" data-odyssey-page="home">${hero()}</div></section>` : ''}
       </div></div></main>
-    </div></div></div><aside data-dsh-panel-host data-odyssey-panel-right="closed"></aside>
+    </div></div></div><aside data-dsh-panel-host data-odyssey-panel-right="${panelWidth ? 'open' : 'closed'}"></aside>
   </body>`)
   await page.locator('textarea').first().fill('保留原生输入草稿\n第二行 🔎')
   await page.addScriptTag({ content: runtime })
@@ -1329,6 +1329,89 @@ it('keeps the toggle at one low fixed position throughout state changes and hove
   } finally { await page.close() }
 }, 15000)
 
+it.each([{ dark: false }, { dark: true }])('fits the complete heading and case above scrollable quick starts in a 600px Retina center pane %j', async options => {
+  const page = await fixture({ ...options, width: 1380, height: 900, panelWidth: 480, deviceScaleFactor: 2, themes: true })
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  try {
+    await toggle(page).click()
+    await waitState(page, 'operations')
+    await nextPaint(page)
+    const initial = await page.evaluate(() => {
+      const host = document.querySelector('.pI_x6G_centerCol'), section = host.querySelector('[data-odyssey-home-operations]')
+      const rect = element => { const bounds = element.getBoundingClientRect(); return { x: bounds.x, y: bounds.y, right: bounds.right, bottom: bounds.bottom, width: bounds.width, height: bounds.height } }
+      return { pane: rect(host), section: rect(section), heading: rect(section.querySelector('h2')), usecase: rect(section.querySelector('.odyssey-operations-usecase')), title: rect(section.querySelector('.odyssey-operations-title')), cards: [...section.querySelectorAll('.odyssey-operations-quick-card')].map(rect), scrollTop: section.scrollTop, scrollHeight: section.scrollHeight, clientHeight: section.clientHeight, overflow: section.scrollWidth > section.clientWidth }
+    })
+    await writeFile(`${evidence}/responsive-600-${options.dark ? 'dark' : 'light'}-initial.json`, JSON.stringify(initial, null, 2))
+    await page.screenshot({ path: `${evidence}/responsive-600-${options.dark ? 'dark' : 'light'}-initial.png` })
+    expect(initial.pane.width).toBe(600)
+    expect(initial.pane.height).toBe(880)
+    expect(initial.scrollTop).toBe(0)
+    expect(initial.heading.y).toBeGreaterThanOrEqual(initial.section.y)
+    expect(initial.heading.bottom).toBeLessThanOrEqual(initial.usecase.y)
+    expect(initial.title.y).toBeGreaterThanOrEqual(initial.usecase.y)
+    expect(initial.usecase.bottom).toBeLessThanOrEqual(initial.section.bottom)
+    expect(initial.section.y).toBeGreaterThanOrEqual(initial.pane.y + 64)
+    expect(initial.overflow).toBe(false)
+    expect(initial.scrollHeight, 'a 600×880 center pane should fit the compact collection at entry').toBeLessThanOrEqual(initial.clientHeight + 1)
+    for (const card of initial.cards) expect(card.bottom, 'the lower quick-start row is complete before scrolling').toBeLessThanOrEqual(initial.section.bottom + 1)
+    for (const card of await page.locator('.odyssey-operations-quick-card').all()) {
+      await card.scrollIntoViewIfNeeded()
+      const reached = await card.evaluate(card => {
+        const bounds = card.getBoundingClientRect(), clip = card.closest('[data-odyssey-home-operations]').getBoundingClientRect(), hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+        return { inside: bounds.top >= clip.top && bounds.bottom <= clip.bottom + 1, hit: card === hit || card.contains(hit), bottom: bounds.bottom, toggleTop: document.querySelector('[data-odyssey-home-operations-toggle]').getBoundingClientRect().top }
+      })
+      expect(reached.inside).toBe(true)
+      expect(reached.hit).toBe(true)
+      expect(reached.bottom).toBeLessThanOrEqual(reached.toggleTop - 16)
+      await card.click()
+    }
+    await page.screenshot({ path: `${evidence}/responsive-600-${options.dark ? 'dark' : 'light'}-lower.png` })
+    await toggle(page).click()
+    await waitState(page, 'input')
+    expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
+    expect(errors).toEqual([])
+  } finally { await page.close() }
+}, 15000)
+
+it('adapts the operation collection to panel and short-pane resizing without carrying clipped content back into the full layout', async () => {
+  const page = await fixture({ themes: true, deviceScaleFactor: 2 })
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  try {
+    await toggle(page).click()
+    await waitState(page, 'operations')
+    const original = await page.locator('.odyssey-operations-grid').boundingBox()
+    await page.evaluate(() => { document.body.style.setProperty('--dsh-sidebar-width', '480px'); document.querySelector('[data-dsh-panel-host]').dataset.odysseyPanelRight = 'open' })
+    await expect.poll(() => region(page).evaluate(section => section.scrollHeight - section.clientHeight)).toBeLessThanOrEqual(1)
+    await page.setViewportSize({ width: 1180, height: 720 })
+    await expect.poll(() => region(page).evaluate(section => section.scrollHeight - section.clientHeight)).toBeGreaterThan(20)
+    const report = page.locator('.odyssey-operations-quick-card[data-card="report"]')
+    await report.scrollIntoViewIfNeeded()
+    expect(await dispatchWheel(page, '.odyssey-operations-quick-card[data-card="report"]', 120)).toBe(false)
+    const bottom = await report.evaluate(card => {
+      const rect = card.getBoundingClientRect(), clip = card.closest('[data-odyssey-home-operations]').getBoundingClientRect(), hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
+      return { inside: rect.top >= clip.top && rect.bottom <= clip.bottom + 1, hit: hit === card || card.contains(hit), toggleGap: document.querySelector('[data-odyssey-home-operations-toggle]').getBoundingClientRect().top - rect.bottom }
+    })
+    expect(bottom.inside).toBe(true); expect(bottom.hit).toBe(true); expect(bottom.toggleGap).toBeGreaterThanOrEqual(16)
+    await page.screenshot({ path: `${evidence}/responsive-400-short-scrolled.png` })
+    await page.setViewportSize({ width: 1380, height: 900 })
+    await expect.poll(() => region(page).evaluate(section => ({ top: section.scrollTop, overflow: section.scrollHeight - section.clientHeight }))).toEqual({ top: 0, overflow: 0 })
+    const heading = await page.locator('.odyssey-operations-heading').boundingBox(), bounds = await region(page).boundingBox()
+    expect(heading.y).toBeGreaterThanOrEqual(bounds.y)
+    await page.screenshot({ path: `${evidence}/responsive-600-after-resize.png` })
+    await page.locator('[data-dsh-panel-host]').evaluate(element => element.dataset.odysseyPanelRight = 'closed')
+    await expect.poll(() => page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-layout')).toBe('wide')
+    const restored = await page.locator('.odyssey-operations-grid').boundingBox()
+    expect(restored.width).toBeCloseTo(original.width, 1); expect(restored.height).toBeCloseTo(original.height, 1)
+    await page.screenshot({ path: `${evidence}/responsive-wide-restored.png` })
+    expect(await state(page)).toBe('operations')
+    expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
+    expect(errors).toEqual([])
+  } finally { await page.close() }
+}, 15000)
+
 it('keeps small-pane content natively scrollable while only the bottom button returns to input', async () => {
   const page = await fixture({ width: 1040, height: 640, reduced: true })
   try {
@@ -1553,3 +1636,91 @@ it('keeps the tilted glass surface free of a second fixed rectangular shadow pla
   await writeFile(`${evidence}/tilt-plane-diagnostics.json`, JSON.stringify(observations, null, 2))
   for (const observation of observations) expect(observation.departureFromFollowingSurface, `${observation.dark ? 'dark' : 'light'} angle ${observation.angle} has no separate flat shadow plane`).toBeLessThan(.8)
 }, 20000)
+
+
+it('connects every quick-start card to its action once while a previous click is still pending', async () => {
+  const page = await fixture({ themes: true })
+  try {
+    await page.evaluate(() => {
+      window.homeOperations.dispose()
+      window.homeOperations.actionCalls = []
+      window.homeOperations.onAction = (card, context) => new Promise(resolve => {
+        window.homeOperations.actionCalls.push({ card, signal: context.signal, revealComposer: context.revealComposer })
+        window.homeOperations.finishAction = resolve
+      })
+      window.homeOperations.mount()
+    })
+    await toggle(page).click(); await waitState(page, 'operations')
+    const selectedTheme = await page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]').getAttribute('data-home-theme-id')
+    for (const [index, key] of ['board', 'note', 'ppt', 'report'].entries()) {
+      const card = page.locator(`.odyssey-operations-quick-card[data-card="${key}"]`)
+      await card.click()
+      await expect.poll(() => page.evaluate(() => window.homeOperations.actionCalls.length), { timeout: 1500 }).toBe(index + 1)
+      await card.dispatchEvent('click')
+      expect(await page.evaluate(() => window.homeOperations.actionCalls.length)).toBe(index + 1)
+      expect(await page.evaluate(() => { const action = window.homeOperations.actionCalls.at(-1); return action.signal instanceof AbortSignal && !action.signal.aborted && typeof action.revealComposer === 'function' })).toBe(true)
+      await page.evaluate(() => window.homeOperations.finishAction())
+      await nextPaint(page)
+    }
+    expect(await page.evaluate(() => window.homeOperations.actionCalls.map(action => action.card))).toEqual(['board', 'note', 'ppt', 'report'])
+    expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+    expect(await page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]').getAttribute('data-home-theme-id')).toBe(selectedTheme)
+  } finally { await page.close() }
+}, 15000)
+
+it.each(['ppt', 'report'])('waits for the native composer to settle before %s preparation and keeps a failed action visible', async card => {
+  const page = await fixture({ themes: true, reduced: false })
+  try {
+    await page.evaluate(() => {
+      window.homeOperations.dispose()
+      window.homeOperations.actionOrder = []
+      window.homeOperations.onAction = async (card, context) => {
+        window.homeOperations.actionOrder.push({ step: 'clicked', state: document.querySelector('[data-odyssey-home-operations-state]').dataset.odysseyHomeOperationsState })
+        await context.revealComposer()
+        const hero = document.querySelector('.wSkVaW_composerHero')
+        window.homeOperations.actionOrder.push({ step: 'ready', state: document.querySelector('[data-odyssey-home-operations-state]').dataset.odysseyHomeOperationsState, opacity: getComputedStyle(hero).opacity, inert: hero.inert })
+        throw Error('测试动作暂不可用，原有草稿已保留')
+      }
+      window.homeOperations.mount()
+    })
+    await toggle(page).click(); await waitState(page, 'operations')
+    await page.locator(`.odyssey-operations-quick-card[data-card="${card}"]`).click()
+    await waitState(page, 'input')
+    await expect.poll(() => page.evaluate(() => window.homeOperations.actionOrder.length)).toBe(2)
+    expect(await page.evaluate(() => window.homeOperations.actionOrder)).toEqual([{ step: 'clicked', state: 'operations' }, { step: 'ready', state: 'input', opacity: '1', inert: false }])
+    const alert = page.getByRole('alert')
+    await alert.waitFor({ state: 'visible' })
+    expect(await alert.textContent()).toContain('原有草稿已保留')
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+    expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
+    expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(1)
+  } finally { await page.close() }
+}, 15000)
+
+it('aborts a pending quick-start action when the homepage is left or disposed', async () => {
+  const page = await fixture()
+  try {
+    await page.evaluate(() => {
+      window.homeOperations.dispose()
+      window.homeOperations.onAction = (_card, context) => new Promise(resolve => { window.homeOperations.actionContext = context; window.homeOperations.finishAction = resolve })
+      window.homeOperations.mount()
+    })
+    await toggle(page).click(); await waitState(page, 'operations')
+    await page.locator('.odyssey-operations-quick-card[data-card="ppt"]').click()
+    await expect.poll(() => page.evaluate(() => !!window.homeOperations.actionContext)).toBe(true)
+    await page.evaluate(() => document.body.dataset.workspaceSurface = 'settings')
+    await expect.poll(() => page.evaluate(() => window.homeOperations.actionContext.signal.aborted)).toBe(true)
+    await page.evaluate(() => { window.homeOperations.finishAction(); window.homeOperations.previousActionContext = window.homeOperations.actionContext; delete document.body.dataset.workspaceSurface })
+    await expect.poll(() => region(page).count()).toBe(1)
+    await toggle(page).click(); await waitState(page, 'operations')
+    await page.locator('.odyssey-operations-quick-card[data-card="ppt"]').click()
+    await expect.poll(() => page.evaluate(() => window.homeOperations.actionContext !== window.homeOperations.previousActionContext)).toBe(true)
+    await page.evaluate(() => window.homeOperations.dispose())
+    expect(await page.evaluate(() => window.homeOperations.actionContext.signal.aborted)).toBe(true)
+    await page.evaluate(() => window.homeOperations.finishAction())
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+    expect(await region(page).count()).toBe(0)
+    expect(await page.getByRole('alert').count()).toBe(0)
+  } finally { await page.close() }
+})

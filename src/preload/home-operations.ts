@@ -5,7 +5,10 @@ import { createHomeOperationsCaseTransition, type HomeOperationsCaseTransition }
 
 type Section = 'input' | 'operations'
 type Motion = 'idle' | 'settling'
-type Card = 'board' | 'note' | 'ppt' | 'report'
+export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
+export type HomeOperationActionContext = { signal: AbortSignal; revealComposer(): Promise<void> }
+type Card = HomeOperationCard
+type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void> }
 const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
 const DESIGN_WIDTH = 780
@@ -37,8 +40,8 @@ const COPY = {
   }
 } as const
 
-/** Home decoration owns no session state and never replaces the native composer. */
-export function mountHomeOperations(doc: Document = document): () => void {
+/** Owns homepage presentation; native action adapters retain session and draft state. */
+export function mountHomeOperations(doc: Document = document, options: Options = {}): () => void {
   const existing = mounted.get(doc)
   if (existing) return existing
   const win = doc.defaultView
@@ -62,6 +65,8 @@ export function mountHomeOperations(doc: Document = document): () => void {
   let wheelTime = 0, wheelDirection = 0, wheelDistance = 0, wheelConsumed = false, wheelNavigated = false
   let geometry = { inputTop: 0, targetTop: 0, shift: 1, scale: 1, viewportHeight: 0 }
   let renderedLocale = '', renderedTheme = ''
+  let actionController: AbortController | null = null
+  let feedback: HTMLElement | null = null, feedbackTimer = 0
   const quickCards: HTMLButtonElement[] = [], pages: HTMLButtonElement[] = []
   const pointerFrames = new Map<HTMLElement, number>()
   const illustrationTimers = new Map<HTMLElement, number>()
@@ -282,6 +287,47 @@ export function mountHomeOperations(doc: Document = document): () => void {
     return true
   }
   const toggleSection = () => setSection((motion === 'idle' ? state : intent) === 'input' ? 'operations' : 'input')
+  const clearFeedback = () => {
+    if (feedbackTimer) win.clearTimeout(feedbackTimer)
+    feedbackTimer = 0; feedback?.remove(); feedback = null
+  }
+  const setActionBusy = (busy: boolean) => {
+    section?.setAttribute('aria-busy', String(busy))
+    for (const card of quickCards) card.disabled = busy
+  }
+  const revealComposer = (signal: AbortSignal) => new Promise<void>((resolve, reject) => {
+    if (signal.aborted || !setSection('input')) { reject(Error('首页已变化，请重新点击卡片。')); return }
+    let pendingFrame = 0
+    const started = win.performance.now()
+    const cleanup = () => { if (pendingFrame) win.cancelAnimationFrame(pendingFrame); signal.removeEventListener('abort', abort) }
+    const abort = () => { cleanup(); reject(Error('本次卡片操作已取消。')) }
+    const check = () => {
+      pendingFrame = 0
+      if (signal.aborted || disposed || !visible || !hero) { abort(); return }
+      if (motion === 'idle' && state === 'input' && !hero.inert && shown(hero)) { cleanup(); resolve(); return }
+      if (win.performance.now() - started > 4000) { cleanup(); reject(Error('输入框暂未就绪，请重试。')); return }
+      pendingFrame = win.requestAnimationFrame(check)
+    }
+    signal.addEventListener('abort', abort, { once: true })
+    check()
+  })
+  const runAction = async (card: Card) => {
+    if (!options.onAction || actionController || !visible || motion !== 'idle' || state !== 'operations') return
+    clearFeedback()
+    const controller = new win.AbortController()
+    actionController = controller; setActionBusy(true)
+    try { await options.onAction(card, { signal: controller.signal, revealComposer: () => revealComposer(controller.signal) }) }
+    catch (error) {
+      if (controller.signal.aborted || disposed) return
+      feedback = doc.createElement('div'); feedback.dataset.odysseyOperationsFeedback = ''; feedback.setAttribute('role', 'alert')
+      feedback.textContent = error instanceof Error ? error.message : '操作暂时无法完成，请稍后重试。'
+      feedback.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147483647;max-width:min(440px,calc(100vw - 40px));padding:10px 16px;border-radius:10px;background:#262729;color:#fff;box-shadow:0 8px 28px #0003;font:14px/22px system-ui;pointer-events:none'
+      doc.body.append(feedback)
+      feedbackTimer = win.setTimeout(clearFeedback, 8000)
+    } finally {
+      if (actionController === controller) { actionController = null; setActionBusy(false) }
+    }
+  }
   const preserveNativeWheel = (target: EventTarget | null) => {
     if (!(target instanceof win.Element) || !host?.contains(target)) return true
     if (target.closest('textarea,input,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"],[role="listbox"],[role="dialog"],[data-odyssey-theme-dock]')) return true
@@ -448,6 +494,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
     const quickGrid = doc.createElement('div'); quickGrid.className = 'odyssey-operations-quick-grid'
     for (const key of CARDS) {
       const card = doc.createElement('button'); card.type = 'button'; card.className = `odyssey-operations-quick-card ${key}`; card.dataset.card = key; card.tabIndex = -1
+      card.addEventListener('click', () => { void runAction(key) })
       const label = doc.createElement('span'); label.className = 'odyssey-operations-quick-label'
       const illustration = doc.createElement('div'); illustration.className = 'odyssey-operations-illustration'; illustration.setAttribute('aria-hidden', 'true')
       imagePair(illustration)
@@ -465,7 +512,8 @@ export function mountHomeOperations(doc: Document = document): () => void {
     carousel = createHomeOperationsCarousel({ win, card: usecase, initialIndex: caseIndex, onChange: index => caseTransition?.select(index) })
   }
   const resize = new win.ResizeObserver(measure)
-  const detach = () => {
+  const detach = (preserveAction = false) => {
+    if (!preserveAction) { actionController?.abort(); clearFeedback() }
     cancelSettlement()
     carousel?.dispose(); carousel = null
     caseTransition?.dispose(); caseTransition = null
@@ -482,14 +530,14 @@ export function mountHomeOperations(doc: Document = document): () => void {
     geometry = { inputTop: 0, targetTop: 0, shift: 1, scale: 1, viewportHeight: 0 }
   }
   const attach = (nextHost: HTMLElement, nextRoot: HTMLElement, nextHero: HTMLElement) => {
-    detach(); host = nextHost; root = nextRoot; hero = nextHero; heroWasInert = hero.inert
+    detach(true); host = nextHost; root = nextRoot; hero = nextHero; heroWasInert = hero.inert
     hero.dataset.odysseyOperationsComposer = ''
     createSection(); host.append(section!, toggle!)
     host.addEventListener('wheel', onWheel, { passive: false })
     resize.observe(host); resize.observe(hero)
     const header = root.querySelector('.wSkVaW_header,[data-srb-session-header]')
     if (header) resize.observe(header)
-    updateLabels(); updateImages()
+    updateLabels(); updateImages(); setActionBusy(!!actionController)
   }
   const sync = () => {
     if (disposed) return
@@ -522,6 +570,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
   localeChanges.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
   const onVisibility = () => {
     if (!doc.hidden) { sync(); return }
+    actionController?.abort()
     cancelSettlement()
     resetWheel()
     clearPointers(); clearIllustrationBlends(); intent = state; motion = 'idle'; velocity = 0

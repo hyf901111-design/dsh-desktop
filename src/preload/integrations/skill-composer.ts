@@ -1,4 +1,5 @@
 import {SKILL_REFERENCE_SOURCE,encodeSkillReference,decodeSkillReference} from '../../shared/skill-reference'
+import type { SkillComposerPrefill } from '../../shared/integration-ui'
 type InputSnapshot = { draft: string; draftRev: number; phase: string; researchContextPreparing?: boolean; occurrences?:Array<{source:string;ref:string;offset:number}> }
 type InputShell = {
     disposed?: boolean
@@ -24,9 +25,19 @@ type Dependencies = {
         } | null
     }
 }
-type Ticket = { sessionId: string; shell: InputShell; revision: number; expires: number; inserted: boolean; caret: number; span: {start:number;end:number} }
+type Ticket = { sessionId: string; shell: InputShell; revision: number; expires: number; inserted: boolean; caret: number; selectionEnd: number; span: {start:number;end:number} }
 const REQUEST = 'sherlock:skill-compose-request'
 const REPLY = 'sherlock:skill-compose-reply'
+
+function decodePrefill(value: unknown): SkillComposerPrefill | undefined {
+    if (value === undefined) return undefined
+    const prefill = value as SkillComposerPrefill | null
+    if (!prefill || typeof prefill !== 'object' || Array.isArray(prefill) || typeof prefill.text !== 'string' || prefill.text.length > 16_000 ||
+        !Number.isSafeInteger(prefill.selectionStart) || !Number.isSafeInteger(prefill.selectionEnd) ||
+        prefill.selectionStart < 0 || prefill.selectionEnd < prefill.selectionStart || prefill.selectionEnd > prefill.text.length)
+        throw Error('预填内容或选择范围无效，原草稿已保留。')
+    return { text: prefill.text, selectionStart: prefill.selectionStart, selectionEnd: prefill.selectionEnd }
+}
 
 /** Expand method references while leaving shared file/artifact picks for the board adapter. */
 export async function serializeSharedSkillDraft<T extends {draft:string;occurrences:readonly {source:string;ref:string;offset:number}[]}>(snapshot:T,serialize:(source:string,ref:string)=>Promise<string>):Promise<T> {
@@ -102,7 +113,7 @@ export function installSkillComposer(deps: Dependencies): () => void {
                 if (document.activeElement !== origin && document.activeElement !== document.body && document.activeElement !== input)
                     throw Error('技能已加入草稿，焦点已移至其他位置。')
                 input.focus({ preventScroll: true })
-                input.setSelectionRange(ticket.caret, ticket.caret)
+                input.setSelectionRange(ticket.caret, ticket.selectionEnd)
                 reply(requestId, true)
             } catch (error) { reply(requestId, false, { message: error instanceof Error ? error.message : '无法定位对话输入框。' }) }
         }
@@ -123,6 +134,8 @@ export function installSkillComposer(deps: Dependencies): () => void {
             if (request.phase === 'prepare') {
                 const { id, shell, snapshot } = current()
                 if (request.sessionId !== undefined && request.sessionId !== id) throw Error('当前对话已切换，请重新选择技能。')
+                if (request.expectedDraftRev !== undefined && (!Number.isSafeInteger(request.expectedDraftRev) || request.expectedDraftRev !== snapshot.draftRev))
+                    throw Error('对话草稿已变更，原输入已保留，请重新点击快捷卡片。')
                 let span = {start:0,end:0}
                 if (request.commandSegment !== undefined) {
                     const segment = request.commandSegment as {via?:string;span?:{start:number;end:number;draftRev:number};token?:string}
@@ -138,7 +151,7 @@ export function installSkillComposer(deps: Dependencies): () => void {
                 }
                 if (tickets.size >= 32) tickets.delete(tickets.keys().next().value!)
                 const token = window.crypto.randomUUID()
-                tickets.set(token, { sessionId: id, shell, revision: snapshot.draftRev, expires: Date.now() + 60_000, inserted: false, caret: 0, span })
+                tickets.set(token, { sessionId: id, shell, revision: snapshot.draftRev, expires: Date.now() + 60_000, inserted: false, caret: 0, selectionEnd: 0, span })
                 reply(requestId, true, { token })
                 return
             }
@@ -170,11 +183,32 @@ export function installSkillComposer(deps: Dependencies): () => void {
             if (research && !deps.researchSidebar.service) throw Error('对话面板尚未就绪，请稍后重试。')
             const reference=request.reference===undefined?undefined:decodeSkillReference(JSON.stringify(request.reference))
             if(reference&&reference.invocationName!==request.invocationName)throw Error('技能引用无效，请重新选择技能。')
+            // Validate every prefill field before either native insertion can change the draft.
+            const prefill = decodePrefill(request.prefill)
+            if (prefill && !reference) throw Error('预填内容需要有效的技能引用，原草稿已保留。')
             const prefix = `/${request.invocationName}`
+            let selection: { start: number; end: number } | undefined
             if(reference){
                 const ref=encodeSkillReference(reference),label=`/${reference.label}`
                 const present=snapshot.occurrences?.some(o=>o.offset===ticket.span.start&&o.source===SKILL_REFERENCE_SOURCE&&o.ref===ref)
                 if(!present&&!shell.insertReference({source:SKILL_REFERENCE_SOURCE,ref,label,clipboardText:label},{...ticket.span,draftRev:ticket.revision}))throw Error('草稿发生变化，原输入已保留，请重试。')
+                if (prefill) {
+                    const oldTail = snapshot.draft.slice(present ? ticket.span.start + 1 : ticket.span.end)
+                    const hasBody = present && oldTail.replace(/\uFFFC/g, '').trim().length > 0
+                    if (!hasBody) {
+                        // The native chip adds a space unless the original tail already
+                        // begins with one. Preserve that original tail verbatim.
+                        const nativeGap = !present && oldTail[0] !== ' '
+                        const existingGap = present && oldTail[0] === ' '
+                        const start = ticket.span.start + 1 + (nativeGap || existingGap ? 1 : 0)
+                        const gap = nativeGap || existingGap ? '' : ' '
+                        const tail = existingGap ? oldTail.slice(1) : oldTail
+                        const text = `${gap}${prefill.text}${tail ? '\n\n' : ''}`
+                        const revision = shell.snapshot.draftRev
+                        if (!shell.insertText(text, { start, end: start, draftRev: revision })) throw Error('草稿发生变化，原输入已保留，请重试。')
+                        selection = { start: start + gap.length + prefill.selectionStart, end: start + gap.length + prefill.selectionEnd }
+                    }
+                }
             }else{
             const present = snapshot.draft.startsWith(prefix) && (snapshot.draft.length === prefix.length || /\s/.test(snapshot.draft[prefix.length]!))
             const separator = /\s/.test(snapshot.draft[ticket.span.end] ?? '') ? '' : ' '
@@ -183,7 +217,8 @@ export function installSkillComposer(deps: Dependencies): () => void {
             }
             ticket.revision = shell.snapshot.draftRev
             ticket.inserted = true
-            ticket.caret = Math.min(ticket.span.start + (reference?2:prefix.length+1), shell.snapshot.draft.length)
+            ticket.caret = selection?.start ?? Math.min(ticket.span.start + (reference?2:prefix.length+1), shell.snapshot.draft.length)
+            ticket.selectionEnd = selection?.end ?? ticket.caret
             if (research) {
                 const scope = { sessionId: ticket.sessionId }
                 deps.researchSidebar.service!.activateTab('sherlock-research-conversation', scope)

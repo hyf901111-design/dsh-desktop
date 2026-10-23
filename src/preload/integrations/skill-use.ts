@@ -1,8 +1,8 @@
-import type { IntegrationBridge, SkillCommandSegment } from '../../shared/integration-ui';
+import type { IntegrationBridge, SkillCommandSegment, SkillComposerPrefill } from '../../shared/integration-ui';
 import type {SkillReference} from '../../shared/skill-reference';
 
 type ComposerReply = { requestId: string; ok: boolean; token?: string; message?: string };
-type ComposerRequest = { phase: 'prepare' | 'insert' | 'cancel' | 'focus'; token?: string; invocationName?: string; reference?:SkillReference; sessionId?:string; commandSegment?:SkillCommandSegment };
+type ComposerRequest = { phase: 'prepare' | 'insert' | 'cancel' | 'focus'; token?: string; invocationName?: string; reference?:SkillReference; sessionId?:string; expectedDraftRev?:number; commandSegment?:SkillCommandSegment; prefill?:SkillComposerPrefill };
 const requestEvent = 'sherlock:skill-compose-request';
 const replyEvent = 'sherlock:skill-compose-reply';
 
@@ -41,7 +41,7 @@ export function createSkillUseBridge(document: Document, bridge: Pick<Integratio
     const useSkill: NonNullable<IntegrationBridge['useSkill']> = async input => {
         if (disposed) throw new Error('页面已关闭，请重新打开技能。');
         const attempt = generation;
-        const prepared = await exchange({ phase: 'prepare', ...(input.sessionId?{sessionId:input.sessionId}:{}), ...(input.commandSegment?{commandSegment:input.commandSegment}:{}) }, input.signal);
+        const prepared = await exchange({ phase: 'prepare', ...(input.sessionId?{sessionId:input.sessionId}:{}), ...(input.expectedDraftRev !== undefined?{expectedDraftRev:input.expectedDraftRev}:{}), ...(input.commandSegment?{commandSegment:input.commandSegment}:{}) }, input.signal);
         const token = prepared.token;
         if (!token) throw new Error('无法定位当前对话，请重新选择会话。');
         tokens.add(token);
@@ -50,11 +50,12 @@ export function createSkillUseBridge(document: Document, bridge: Pick<Integratio
             if (attempt !== generation || disposed || input.signal?.aborted) throw new Error('页面或账号已变化，请重新选择技能。');
             if (detail.type !== 'skill-detail' || detail.id !== input.id || detail.revision !== input.revision) throw new Error('技能已变化，请刷新详情后重试。');
             if (!detail.enabled || detail.usable === false) throw new Error(detail.unavailableReason || '请先启用技能。');
+            if (input.prefill !== undefined && !detail.invocationLabel) throw new Error('技能引用尚未就绪，请刷新后重试。');
             // Use the freshly verified runtime name, never a display name or stale UI alias.
-            await exchange({ phase: 'insert', token, invocationName: detail.invocationName, ...(detail.invocationLabel?{reference:{id:detail.id,revision:detail.revision,invocationName:detail.invocationName,label:detail.invocationLabel}}:{}) }, input.signal);
+            await exchange({ phase: 'insert', token, invocationName: detail.invocationName, ...(detail.invocationLabel?{reference:{id:detail.id,revision:detail.revision,invocationName:detail.invocationName,label:detail.invocationLabel}}:{}), ...(input.prefill !== undefined?{prefill:input.prefill}:{}) }, input.signal);
             if (attempt !== generation || disposed || input.signal?.aborted) return;
             revealConversation();
-            await exchange({ phase: 'focus', token });
+            await exchange({ phase: 'focus', token }, input.signal);
         } finally {
             tokens.delete(token);
             dispatch({ phase: 'cancel', token }, win.crypto.randomUUID());

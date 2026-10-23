@@ -30,6 +30,30 @@ it('rereads current authority and inserts only the verified invocation name befo
     expect(f.reveal).toHaveBeenCalledTimes(1);
     f.adapter.dispose();
 });
+it.each([0, 7])('forwards the navigation-time expectedDraftRev to native prepare (%s)', async expectedDraftRev => {
+    const f = fixture(), operation = { ...input, expectedDraftRev };
+    await f.adapter.useSkill(operation);
+    expect(f.phases[0]).toMatchObject({ phase: 'prepare', expectedDraftRev });
+    f.adapter.dispose();
+});
+it('forwards prefill together with a freshly verified readable native skill reference', async () => {
+    const fresh = { ...detail, invocationLabel: 'efund-ppt-maker' };
+    const f = fixture(async () => fresh);
+    const text = '请按公司风格制作PPT。\n主题：';
+    const prefill = { text, selectionStart: text.length, selectionEnd: text.length };
+    await f.adapter.useSkill({ ...input, prefill });
+    expect(f.phases[1]).toMatchObject({ phase: 'insert', prefill, reference: { id: fresh.id, revision: fresh.revision, invocationName: fresh.invocationName, label: fresh.invocationLabel } });
+    expect(f.reveal).toHaveBeenCalledOnce();
+    f.adapter.dispose();
+});
+it.each([undefined, ''])('rejects prefill without a fresh native reference label (%j) before insertion', async invocationLabel => {
+    const f = fixture(async () => ({ ...detail, invocationLabel }));
+    const operation = { ...input, prefill: { text: '主题：', selectionStart: 3, selectionEnd: 3 } };
+    await expect(f.adapter.useSkill(operation)).rejects.toThrow();
+    expect(f.phases.map(p => p.phase)).toEqual(['prepare', 'cancel']);
+    expect(f.reveal).not.toHaveBeenCalled();
+    f.adapter.dispose();
+});
 it('does not close a newly opened page if navigation happens just after insertion acknowledgement', async () => {
     const signal = new AbortController();
     const f = fixture(async () => detail, phase => { if (phase === 'insert') signal.abort(); });

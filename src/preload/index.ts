@@ -34,6 +34,7 @@ import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
 import { mountHomeThemes } from './home-themes'
 import { mountHomeOperations } from './home-operations'
+import { createHomeOperationsActions } from './home-operations-actions'
 import { mountFigmaResizeFeedback } from './figma-resize-feedback'
 import { mountFigmaScrollbars } from './figma-scrollbars'
 import { mountFigmaTaskScrollbar } from './figma-task-scrollbar'
@@ -205,7 +206,6 @@ function initializeUi(): void {
       get: () => ipcRenderer.sendSync('desktop-home-theme:get'),
       set: theme => ipcRenderer.sendSync('desktop-home-theme:set', theme) === true
     }), { once: true })
-    window.addEventListener('unload', mountHomeOperations(document), { once: true })
     window.addEventListener('unload', mountFigmaResizeFeedback(document), { once: true })
     if (process.platform === 'darwin') window.addEventListener('unload', mountWindowResize(document, edge => ipcRenderer.send('desktop-window:resize', edge)), { once: true })
     window.addEventListener('unload', mountFigmaResponsiveHeader(document), { once: true })
@@ -246,6 +246,8 @@ function initializeUi(): void {
   const skillUse = createSkillUseBridge(document, integrationBridge, () => { integrationView.close(); workspaceSurfaceHost.revealConversation() })
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
+  const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
+  const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { onAction: homeActions.run }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
@@ -254,10 +256,10 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) })
   scheduledView.mount()
-  const resetIntegrationIdentity = () => { noteIdentityEpoch++; noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { noteIdentityEpoch++; noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
-  window.addEventListener('unload', () => { noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
+  window.addEventListener('unload', () => { disposeHomeOperations(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,
