@@ -10,16 +10,25 @@ const entry = '\0preload-editor-registry-probe'
 // Keep the real public entrypoints used by the notes editor: import-only source
 // tests cannot catch two physical dependency roots bundled into one preload.
 const source = `
-import { BlockNoteSchema } from '@blocknote/core';
+import { BlockNoteEditor, BlockNoteSchema } from '@blocknote/core';
 import { SideMenuExtension } from '@blocknote/core/extensions';
 import { CommentsExtension } from '@blocknote/core/comments';
 import { withCollaboration } from '@blocknote/core/yjs';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
-globalThis.editorProbe = { BlockNoteSchema, SideMenuExtension, CommentsExtension, withCollaboration, useCreateBlockNote, BlockNoteView };
+globalThis.editorProbe = { BlockNoteSchema, SideMenuExtension, CommentsExtension, withCollaboration, useCreateBlockNote, BlockNoteView,
+  edit() {
+    const editor = BlockNoteEditor.create({ initialContent: [{ id: 'probe', type: 'paragraph', content: '初始正文' }] });
+    try {
+      editor.updateBlock('probe', { content: '已修改正文' });
+      editor.insertBlocks([{ id: 'added', type: 'paragraph', content: '新增段落' }], 'probe', 'after');
+      return editor.document.map(block => ({ id: block.id, text: block.content.map(part => part.text || '').join('') }));
+    } finally { editor._tiptapEditor.destroy(); }
+  }
+};
 `
 
-it('initializes bundled browser editor imports with one selection registry registration', async () => {
+it('initializes and edits the bundled browser editor with optional custom elements unavailable and one selection registry', async () => {
   const root = normalizePath(resolve('.'))
   const config = (await resolveConfig({ configFile: resolve('electron.vite.config.ts'), logLevel: 'silent' },
     'build', 'production')).config!.preload!
@@ -52,13 +61,22 @@ it('initializes bundled browser editor imports with one selection registry regis
   expect(normalizePath(owners[0]?.id || '').startsWith(root + '/node_modules/'), evidence).toBe(true)
   expect(registrations, evidence).toHaveLength(1)
 
-  const window = new Window({ url: 'http://127.0.0.1/' })
-  const exports = {}
-  Object.assign(window, { exports, module: { exports }, require: createRequire(import.meta.url), process, Buffer })
-  try {
-    expect(() => runInContext(code, createContext(window), { timeout: 5000 }), evidence).not.toThrow()
-    expect((window as unknown as Record<string, unknown>).editorProbe).toHaveProperty('BlockNoteSchema')
-  } finally {
-    await window.happyDOM.close()
+  for (const registry of ['null', 'undefined', 'available'] as const) {
+    const window = new Window({ url: 'http://127.0.0.1/' })
+    const exports = {}
+    Object.assign(window, { exports, module: { exports }, require: createRequire(import.meta.url), process, Buffer })
+    try {
+      // Model the isolated realm's unavailable global while keeping HappyDOM's
+      // own internal registry intact for document creation and teardown.
+      const isolatedCode = registry === 'available' ? code : `{ const customElements = ${registry};\n${code}\n}`
+      runInContext(isolatedCode, createContext(window), { timeout: 5000 })
+      const probe = (window as unknown as { editorProbe: { BlockNoteSchema: unknown; edit(): unknown } }).editorProbe
+      expect(probe).toHaveProperty('BlockNoteSchema')
+      expect(probe.edit(), `native editor transactions with ${registry} customElements`).toEqual([
+        { id: 'probe', text: '已修改正文' }, { id: 'added', text: '新增段落' }
+      ])
+    } finally {
+      await window.happyDOM.close()
+    }
   }
 }, 90000)
