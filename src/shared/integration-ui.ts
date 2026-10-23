@@ -261,10 +261,11 @@ export type IntegrationReply = SkillDetail | {
     type: 'cancelled';
 };
 export type SkillCommandSegment = {via:'menu';span:{start:number;end:number;draftRev:number}} | {via:'enter';token:string};
+export type SkillComposerPrefill = { text: string; selectionStart: number; selectionEnd: number };
 export interface IntegrationBridge {
     request(command: IntegrationCommand): Promise<IntegrationReply>;
     getPathForFile?(file: File): string;
     revealSource?(path: string): Promise<void>;
-    useSkill?(input: { id: string; revision: number; invocationName: string; name: string; signal?: AbortSignal; sessionId?: string; commandSegment?: SkillCommandSegment }): Promise<void>;
+    useSkill?(input: { id: string; revision: number; invocationName: string; name: string; signal?: AbortSignal; sessionId?: string; expectedDraftRev?: number; commandSegment?: SkillCommandSegment; prefill?: SkillComposerPrefill }): Promise<void>;
 }
 export const emptyConnectionDraft = (type: ConnectionDraft['type'] = 'api'): ConnectionDraft => ({ name: '', type, url: '', clientId: '', command: '', args: '', cwd: '', env: '', authType: 'none', headerName: 'X-API-Key', secret: '', toolsJson: '[]', openApiDocument: '', workspaceIds: '', allowPrivateNetwork: false });

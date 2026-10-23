@@ -35,6 +35,17 @@ return true;\n                    },`)
       return sherlockBoardsPage.installSkillCommand({command:scope.get("commandUi"),inputTriggers:scope.get("inputTriggers"),sessions});
     }, "EWork slash skill picker"));`)
   }
+  const navigationMarker = '/* sherlock:home-operations-navigation:v1 */'
+  if (!source.includes(navigationMarker)) {
+    const anchor = 'const composerBlocks = new ComposerBlockRegistry();'
+    if (source.split(anchor).length !== 2) throw Error('Home operations navigation anchor missing or ambiguous')
+    source = source.replace(anchor, `${anchor}
+      ${navigationMarker}
+      if (typeof workspaces !== "undefined") ctx.effect(() => {
+        if (window.top !== window) return;
+        return sherlockBoardsPage.installHomeOperationsNavigation({sessions,workspaces,inputHub,composerBlocks});
+      }, "Sherlock home operations navigation");`)
+  }
   const marker = '/* sherlock:integration-skill-composer:v1 */'
   if (source.includes(marker)) return source
   const anchor = 'const composerBlocks = new ComposerBlockRegistry();'

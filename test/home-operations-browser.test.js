@@ -23,7 +23,7 @@ beforeAll(async () => {
       import {mountDesktopShellStyles} from './src/preload/shell-style';
       import {mountHomeOperations} from './src/preload/home-operations';
       import {mountHomeThemes} from './src/preload/home-themes';
-      window.homeOperations={mount(themes=false){mountDesktopShellStyles(document);if(themes)this.disposeThemes=mountHomeThemes(document);this.original=document.querySelector('textarea');const before=[...document.querySelectorAll('style')];this.dispose=mountHomeOperations(document);this.ownStyles=[...document.querySelectorAll('style')].filter(style=>!before.includes(style))}};
+      window.homeOperations={mount(themes=false){mountDesktopShellStyles(document);if(themes)this.disposeThemes=mountHomeThemes(document);this.original=document.querySelector('textarea');const before=[...document.querySelectorAll('style')];this.dispose=mountHomeOperations(document,this.onAction?{onAction:this.onAction}:undefined);this.ownStyles=[...document.querySelectorAll('style')].filter(style=>!before.includes(style))}};
     ` }, bundle: true, format: 'iife', platform: 'browser', write: false,
     plugins: [{ name: 'home-operations-assets', setup(builder) {
       builder.onResolve({ filter: /\.(?:svg|png|jpe?g|webp)\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'home-inline' }))
@@ -1553,3 +1553,91 @@ it('keeps the tilted glass surface free of a second fixed rectangular shadow pla
   await writeFile(`${evidence}/tilt-plane-diagnostics.json`, JSON.stringify(observations, null, 2))
   for (const observation of observations) expect(observation.departureFromFollowingSurface, `${observation.dark ? 'dark' : 'light'} angle ${observation.angle} has no separate flat shadow plane`).toBeLessThan(.8)
 }, 20000)
+
+
+it('connects every quick-start card to its action once while a previous click is still pending', async () => {
+  const page = await fixture({ themes: true })
+  try {
+    await page.evaluate(() => {
+      window.homeOperations.dispose()
+      window.homeOperations.actionCalls = []
+      window.homeOperations.onAction = (card, context) => new Promise(resolve => {
+        window.homeOperations.actionCalls.push({ card, signal: context.signal, revealComposer: context.revealComposer })
+        window.homeOperations.finishAction = resolve
+      })
+      window.homeOperations.mount()
+    })
+    await toggle(page).click(); await waitState(page, 'operations')
+    const selectedTheme = await page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]').getAttribute('data-home-theme-id')
+    for (const [index, key] of ['board', 'note', 'ppt', 'report'].entries()) {
+      const card = page.locator(`.odyssey-operations-quick-card[data-card="${key}"]`)
+      await card.click()
+      await expect.poll(() => page.evaluate(() => window.homeOperations.actionCalls.length), { timeout: 1500 }).toBe(index + 1)
+      await card.dispatchEvent('click')
+      expect(await page.evaluate(() => window.homeOperations.actionCalls.length)).toBe(index + 1)
+      expect(await page.evaluate(() => { const action = window.homeOperations.actionCalls.at(-1); return action.signal instanceof AbortSignal && !action.signal.aborted && typeof action.revealComposer === 'function' })).toBe(true)
+      await page.evaluate(() => window.homeOperations.finishAction())
+      await nextPaint(page)
+    }
+    expect(await page.evaluate(() => window.homeOperations.actionCalls.map(action => action.card))).toEqual(['board', 'note', 'ppt', 'report'])
+    expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+    expect(await page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]').getAttribute('data-home-theme-id')).toBe(selectedTheme)
+  } finally { await page.close() }
+}, 15000)
+
+it.each(['ppt', 'report'])('waits for the native composer to settle before %s preparation and keeps a failed action visible', async card => {
+  const page = await fixture({ themes: true, reduced: false })
+  try {
+    await page.evaluate(() => {
+      window.homeOperations.dispose()
+      window.homeOperations.actionOrder = []
+      window.homeOperations.onAction = async (card, context) => {
+        window.homeOperations.actionOrder.push({ step: 'clicked', state: document.querySelector('[data-odyssey-home-operations-state]').dataset.odysseyHomeOperationsState })
+        await context.revealComposer()
+        const hero = document.querySelector('.wSkVaW_composerHero')
+        window.homeOperations.actionOrder.push({ step: 'ready', state: document.querySelector('[data-odyssey-home-operations-state]').dataset.odysseyHomeOperationsState, opacity: getComputedStyle(hero).opacity, inert: hero.inert })
+        throw Error('测试动作暂不可用，原有草稿已保留')
+      }
+      window.homeOperations.mount()
+    })
+    await toggle(page).click(); await waitState(page, 'operations')
+    await page.locator(`.odyssey-operations-quick-card[data-card="${card}"]`).click()
+    await waitState(page, 'input')
+    await expect.poll(() => page.evaluate(() => window.homeOperations.actionOrder.length)).toBe(2)
+    expect(await page.evaluate(() => window.homeOperations.actionOrder)).toEqual([{ step: 'clicked', state: 'operations' }, { step: 'ready', state: 'input', opacity: '1', inert: false }])
+    const alert = page.getByRole('alert')
+    await alert.waitFor({ state: 'visible' })
+    expect(await alert.textContent()).toContain('原有草稿已保留')
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+    expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
+    expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(1)
+  } finally { await page.close() }
+}, 15000)
+
+it('aborts a pending quick-start action when the homepage is left or disposed', async () => {
+  const page = await fixture()
+  try {
+    await page.evaluate(() => {
+      window.homeOperations.dispose()
+      window.homeOperations.onAction = (_card, context) => new Promise(resolve => { window.homeOperations.actionContext = context; window.homeOperations.finishAction = resolve })
+      window.homeOperations.mount()
+    })
+    await toggle(page).click(); await waitState(page, 'operations')
+    await page.locator('.odyssey-operations-quick-card[data-card="ppt"]').click()
+    await expect.poll(() => page.evaluate(() => !!window.homeOperations.actionContext)).toBe(true)
+    await page.evaluate(() => document.body.dataset.workspaceSurface = 'settings')
+    await expect.poll(() => page.evaluate(() => window.homeOperations.actionContext.signal.aborted)).toBe(true)
+    await page.evaluate(() => { window.homeOperations.finishAction(); window.homeOperations.previousActionContext = window.homeOperations.actionContext; delete document.body.dataset.workspaceSurface })
+    await expect.poll(() => region(page).count()).toBe(1)
+    await toggle(page).click(); await waitState(page, 'operations')
+    await page.locator('.odyssey-operations-quick-card[data-card="ppt"]').click()
+    await expect.poll(() => page.evaluate(() => window.homeOperations.actionContext !== window.homeOperations.previousActionContext)).toBe(true)
+    await page.evaluate(() => window.homeOperations.dispose())
+    expect(await page.evaluate(() => window.homeOperations.actionContext.signal.aborted)).toBe(true)
+    await page.evaluate(() => window.homeOperations.finishAction())
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+    expect(await region(page).count()).toBe(0)
+    expect(await page.getByRole('alert').count()).toBe(0)
+  } finally { await page.close() }
+})

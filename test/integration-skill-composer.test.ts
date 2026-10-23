@@ -5,6 +5,7 @@ import { Window } from 'happy-dom'
 import { afterEach, expect, it,vi } from 'vitest'
 import {SKILL_REFERENCE_SOURCE,decodeSkillReference} from '../src/shared/skill-reference'
 import { installSkillComposer,serializeSharedSkillDraft } from '../src/preload/integrations/skill-composer'
+import { createSkillUseBridge } from '../src/preload/integrations/skill-use'
 // @ts-expect-error The build patch is an untyped Node module.
 import { patchIntegrationSkillComposer } from '../scripts/lib/patch-integration-skill-composer.mjs'
 
@@ -46,6 +47,179 @@ function fixture(research = false) {
     cleanup.push(async () => { dispose(); await window.happyDOM.close() })
     return { document, window, textarea, shell, list, session, sent, panel, request, dispose, setChild: () => { subagent = {} }, block: () => { blocked = { reason: 'approval' } } }
 }
+
+const prefillReference = { id: 'builtin:efund-ppt-maker', revision: 3, invocationName: alias, label: 'efund-ppt-maker' }
+const prefillText = '请按公司风格制作PPT。\n主题：'
+const blankTopic = { text: prefillText, selectionStart: prefillText.length, selectionEnd: prefillText.length }
+
+it('rejects prepare expectedDraftRev after the same native session draft changes during snapshot lookup', async () => {
+    const f = fixture(), expectedDraftRev = f.shell.snapshot.draftRev
+    f.shell.setDraft('等待技能列表时新输入的正文')
+    f.shell.insertFilePaths(['/work/新材料.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot
+    expect(await f.request('prepare', { sessionId: 'current', expectedDraftRev })).toMatchObject({ ok: false, message: expect.stringContaining('草稿') })
+    expect(f.shell.snapshot).toBe(before)
+    expect(f.sent).toEqual([])
+})
+
+it.each([null, NaN, 1.5, '1', Number.MAX_SAFE_INTEGER + 1])('rejects invalid prepare expectedDraftRev without changing the native draft (%j)', async expectedDraftRev => {
+    const f = fixture(), before = f.shell.snapshot
+    expect(await f.request('prepare', { expectedDraftRev })).toMatchObject({ ok: false })
+    expect(f.shell.snapshot).toBe(before); expect(f.sent).toEqual([])
+})
+
+it('accepts matching prepare expectedDraftRev and retains the optional legacy prepare path', async () => {
+    const f = fixture(), before = f.shell.snapshot
+    expect(await f.request('prepare', { expectedDraftRev: before.draftRev })).toMatchObject({ ok: true, token: expect.any(String) })
+    expect(await f.request('prepare')).toMatchObject({ ok: true, token: expect.any(String) })
+    expect(f.shell.snapshot).toBe(before)
+})
+
+it('cancels a pending native focus frame when the skill-use signal aborts before its first RAF', async () => {
+    const f = fixture(), controller = new AbortController()
+    f.shell.insertFilePaths(['/work/保留.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot
+    const frames = vi.spyOn(f.window, 'requestAnimationFrame'), cancelled = vi.spyOn(f.window, 'cancelAnimationFrame')
+    const phases: string[] = []
+    const adapter = createSkillUseBridge(f.document, { request: async () => ({ type: 'skill-detail', ...prefillReference, invocationLabel: prefillReference.label, enabled: true, content: '# Actual skill' }) }, () => {
+        f.textarea.value = f.shell.snapshot.draft.replaceAll('\uFFFC', '\uE000')
+        f.document.querySelector('main')!.removeAttribute('inert')
+    })
+    f.document.querySelector('button')!.focus()
+    f.window.addEventListener('sherlock:skill-compose-request', (event: any) => {
+        phases.push(event.detail.phase)
+        // installSkillComposer has already scheduled the native focus frame.
+        if (event.detail.phase === 'focus') controller.abort()
+    })
+    try {
+        await expect(adapter.useSkill({ id: prefillReference.id, revision: prefillReference.revision, invocationName: alias, name: 'PPT制作助手', prefill: blankTopic, signal: controller.signal })).rejects.toThrow('变化')
+        expect(phases).toEqual(['prepare', 'insert', 'focus', 'cancel'])
+        expect(cancelled).toHaveBeenCalledWith(frames.mock.results[0]?.value)
+        await new Promise(resolve => f.window.requestAnimationFrame(resolve))
+        expect(f.document.activeElement).toBe(f.document.querySelector('button'))
+        expect(f.shell.snapshot.draft).toBe(`\uFFFC ${prefillText}\n\n${before.draft}`)
+        expect(f.shell.snapshot.occurrences[1].occurrenceId).toBe(before.occurrences[0].occurrenceId)
+        expect(f.shell.snapshot.imageIds).toEqual(['image-a']); expect(f.sent).toEqual([])
+    } finally { adapter.dispose() }
+})
+
+it.each([
+    blankTopic,
+    { text: '主题：待填写\n请先整理结构。', selectionStart: 3, selectionEnd: 6 },
+])('inserts prefill with a real native chip and focuses its relative topic range (%j)', async prefill => {
+    const f = fixture(); f.shell.setDraft('')
+    const prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot.draft).toBe(`\uFFFC ${prefill.text}`)
+    expect(f.shell.snapshot.occurrences).toHaveLength(1)
+    expect(decodeSkillReference(f.shell.snapshot.occurrences[0].ref)).toEqual(prefillReference)
+    expect(f.sent).toEqual([])
+    f.textarea.value = f.shell.snapshot.draft.replaceAll('\uFFFC', '\uE000')
+    f.document.querySelector('main')!.removeAttribute('inert')
+    expect(await f.request('focus', { token: prepared.token })).toMatchObject({ ok: true })
+    expect(f.document.activeElement).toBe(f.textarea)
+    expect([f.textarea.selectionStart, f.textarea.selectionEnd]).toEqual([2 + prefill.selectionStart, 2 + prefill.selectionEnd])
+})
+
+it.each(['原有正文', '  原有正文'])('inserts prefill above the verbatim old tail and preserves native attachments (%j)', async original => {
+    const f = fixture(); f.shell.setDraft(original); f.shell.insertFilePaths(['/work/材料.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot, old = before.occurrences[0]
+    const prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: blankTopic })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot.draft).toBe(`\uFFFC ${prefillText}\n\n${before.draft}`)
+    expect(f.shell.snapshot.occurrences).toHaveLength(2)
+    expect(f.shell.snapshot.occurrences[1]).toMatchObject({ occurrenceId: old.occurrenceId, ref: old.ref, offset: old.offset + prefillText.length + 4 })
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a']); expect(f.sent).toEqual([])
+    f.shell.undo(); f.shell.undo()
+    expect(f.shell.snapshot.draft).toBe(before.draft)
+    expect(f.shell.snapshot.occurrences).toEqual(before.occurrences)
+    expect(f.shell.snapshot.imageIds).toEqual(before.imageIds)
+})
+
+it('does not repeat prefill or change a native chip with existing body text', async () => {
+    const f = fixture(); f.shell.setDraft('用户已有需求')
+    f.shell.insertReference({ source: SKILL_REFERENCE_SOURCE, ref: JSON.stringify(prefillReference), label: '/efund-ppt-maker', clipboardText: '/efund-ppt-maker' }, { start: 0, end: 0, draftRev: f.shell.snapshot.draftRev })
+    f.shell.insertFilePaths(['/work/保留.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot, prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: blankTopic })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot).toBe(before)
+    expect(f.sent).toEqual([])
+})
+
+it('fills prefill behind an existing empty native skill chip without duplicating it', async () => {
+    const f = fixture(); f.shell.setDraft('')
+    f.shell.insertReference({ source: SKILL_REFERENCE_SOURCE, ref: JSON.stringify(prefillReference), label: '/efund-ppt-maker', clipboardText: '/efund-ppt-maker' }, { start: 0, end: 0, draftRev: f.shell.snapshot.draftRev })
+    const occurrence = f.shell.snapshot.occurrences[0], prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: blankTopic })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot.draft).toBe(`\uFFFC ${prefillText}`)
+    expect(f.shell.snapshot.occurrences).toEqual([occurrence])
+    expect(f.sent).toEqual([])
+})
+
+it('fills prefill behind a native skill chip with only attachments and preserves their identities', async () => {
+    const f = fixture(); f.shell.setDraft('')
+    f.shell.insertReference({ source: SKILL_REFERENCE_SOURCE, ref: JSON.stringify(prefillReference), label: '/efund-ppt-maker', clipboardText: '/efund-ppt-maker' }, { start: 0, end: 0, draftRev: f.shell.snapshot.draftRev })
+    f.shell.insertFilePaths(['/work/保留.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot, prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: blankTopic })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot.draft).toBe(`\uFFFC ${prefillText}\n\n${before.draft.slice(2)}`)
+    expect(f.shell.snapshot.occurrences[0]).toEqual(before.occurrences[0])
+    expect(f.shell.snapshot.occurrences[1]).toMatchObject({ occurrenceId: before.occurrences[1].occurrenceId, offset: before.occurrences[1].offset + prefillText.length + 2 })
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a']); expect(f.sent).toEqual([])
+})
+
+it('replaces a captured slash token with a chip and prefill without changing the following tail', async () => {
+    const f = fixture(); f.shell.setDraft('  /ski 原有正文')
+    const before = f.shell.snapshot, prepared = await f.request('prepare', { commandSegment: { via: 'menu', span: { start: 2, end: 6, draftRev: before.draftRev } } })
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: blankTopic })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot.draft).toBe(`  \uFFFC ${prefillText}\n\n 原有正文`)
+    expect(f.shell.snapshot.occurrences[0]).toMatchObject({ source: SKILL_REFERENCE_SOURCE, offset: 2 })
+    f.textarea.value = f.shell.snapshot.draft
+    f.document.querySelector('main')!.removeAttribute('inert')
+    expect(await f.request('focus', { token: prepared.token })).toMatchObject({ ok: true })
+    expect([f.textarea.selectionStart, f.textarea.selectionEnd]).toEqual([4 + prefillText.length, 4 + prefillText.length])
+    expect(f.sent).toEqual([])
+})
+
+it.each([
+    null, {}, { text: 12, selectionStart: 0, selectionEnd: 0 },
+    { text: 'a'.repeat(16001), selectionStart: 0, selectionEnd: 0 },
+    { text: '主题：', selectionStart: -1, selectionEnd: 0 },
+    { text: '主题：', selectionStart: 2, selectionEnd: 1 },
+    { text: '主题：', selectionStart: 0, selectionEnd: 4 },
+    { text: '主题：', selectionStart: 0.5, selectionEnd: 1 },
+    { text: '主题：', selectionStart: 0, selectionEnd: NaN },
+])('rejects invalid prefill before any native draft mutation (%#)', async prefill => {
+    const f = fixture(); f.shell.insertFilePaths(['/work/保留.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot, prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill })).toMatchObject({ ok: false })
+    expect(f.shell.snapshot).toBe(before)
+    expect(f.sent).toEqual([])
+})
+
+it('rejects prefill without a real reference before plain alias fallback can mutate the draft', async () => {
+    const f = fixture(), before = f.shell.snapshot, prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, prefill: blankTopic })).toMatchObject({ ok: false })
+    expect(f.shell.snapshot).toBe(before)
+    expect(f.sent).toEqual([])
+})
+
+it('accepts the 16000-character prefill limit and never submits it', async () => {
+    const f = fixture(); f.shell.setDraft('')
+    const text = 'a'.repeat(16000), prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: { text, selectionStart: 16000, selectionEnd: 16000 } })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot.draft).toBe(`\uFFFC ${text}`)
+    expect(f.sent).toEqual([])
+})
+
+it.each(['draft', 'session'])('keeps prefill out of a changed prepared session (%s)', async reason => {
+    const f = fixture(), prepared = await f.request('prepare')
+    if (reason === 'draft') f.shell.setDraft('后来输入')
+    else f.list.set({ current: 'another' })
+    const before = f.shell.snapshot
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: blankTopic })).toMatchObject({ ok: false })
+    expect(f.shell.snapshot).toBe(before); expect(f.sent).toEqual([])
+})
 
 it('prepends a native skill token without replacing text, image drafts or inline file references and never sends', async () => {
     const f = fixture()
