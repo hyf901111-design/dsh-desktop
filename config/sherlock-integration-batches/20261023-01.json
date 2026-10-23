@@ -618,6 +618,78 @@
         ],
         "recordedAt": "2026-10-23T05:30:21.898Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复首次安装 Notes 与 Workbench 补丁顺序",
+        "branch": "codex/feat/install-patch-order-20261023",
+        "baseCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
+        "tipCommit": "d90b250c272d47816a046c12e8817fa483872e36",
+        "commits": [
+          {
+            "commit": "d90b250c272d47816a046c12e8817fa483872e36",
+            "parents": [
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423"
+            ],
+            "subject": "修复：兼容工作台收据包装后的首次笔记补丁安装"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-install-order.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/notes-install-order.test.js",
+              "test/notes-activity.test.js",
+              "test/research-workbench-feedback.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "提交上重跑 3 文件 22 项全通过；覆盖原生 map、工作台 flatMap 中 Notes 的首次注入、原生答案与收据顺序、歧义拒绝和重复注入幂等。",
+            "verifiedCommit": "d90b250c272d47816a046c12e8817fa483872e36",
+            "completedAt": "2026-10-23T05:31:26.939Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "无空白错误，功能工作区干净。",
+            "verifiedCommit": "d90b250c272d47816a046c12e8817fa483872e36",
+            "completedAt": "2026-10-23T05:31:26.939Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "修改仅涉及安装时源补丁组合；功能工作区未构建或启动共享客户端。"
+        },
+        "acceptanceCriteria": [
+          "独立 npm ci --no-audit --no-fund 从干净依赖完整执行所有 postinstall 退出 0，未恢复任何旧产物。",
+          "工作台先安装 receipt flatMap 后，Notes 首次应用仍成功，原生答案与附属收据保序。",
+          "Notes 直接补丁重复执行字节幂等，对多个候选锚点拒绝注入。"
+        ],
+        "risks": [
+          "历史全量 frontend 重入可成功退出，但其他 Audio/Attachment 等补丁仍有既有字节差异；本次仅承诺 Notes 注入幂等。",
+          "真实客户端运行交由 integration 批次统一构建与用户验收。"
+        ],
+        "generatedAt": "2026-10-23T05:31:26.939Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -691,6 +763,26 @@
         "--check"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/notes-install-order.test.js",
+        "test/notes-activity.test.js",
+        "test/research-workbench-feedback.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
     }
   ],
   "mainSynchronizations": []
