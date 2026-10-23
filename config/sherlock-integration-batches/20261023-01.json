@@ -9,38 +9,42 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "完善研报完整性与默认HTML及PDF双格式交付",
+        "featureName": "修复客户端默认研报双格式入口并保留会话沙箱与凭据过滤",
         "branch": "codex/feat/ledger-research-20261023",
-        "baseCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
-        "tipCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
+        "baseCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
+        "tipCommit": "e626ebfae8133977632ee1d5d371fdceb5caeead",
         "commits": [
           {
-            "commit": "83433cf4a9b8a4a5c144b6f9eb377eb084a06b85",
+            "commit": "e2a6d044d17be94ea923fe881407352069edcbdb",
             "parents": [
-              "8595cba018c060cfc40428c8a5a19cad9e2d92b5"
+              "bd8060a61d498634e5836f46836b0ff9da4c2e1b"
             ],
-            "subject": "功能：增加隔离研报PDF打印宿主与认证导出接口"
+            "subject": "修复：通过会话受限研报工具私有传递PDF凭据"
           },
           {
-            "commit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
+            "commit": "e626ebfae8133977632ee1d5d371fdceb5caeead",
             "parents": [
-              "83433cf4a9b8a4a5c144b6f9eb377eb084a06b85"
+              "e2a6d044d17be94ea923fe881407352069edcbdb"
             ],
-            "subject": "功能：完善研报研究结构并默认交付网页与PDF"
+            "subject": "完善：将研报技能默认生成切换为客户端专用入口"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/plans/2026-10-23-equity-research-quality-pdf.md"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/specs/2026-10-23-equity-research-quality-pdf-design.md"
           },
           {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
             "status": "A",
-            "path": "scripts/verify-research-pdf.mjs"
+            "path": "packages/dsh-research-task-runtime/research-report-tool.js"
           },
           {
             "status": "M",
@@ -56,39 +60,11 @@
           },
           {
             "status": "M",
-            "path": "skills/ework-equity-research/references/report-style.md"
-          },
-          {
-            "status": "A",
-            "path": "skills/ework-equity-research/references/research-quality.md"
-          },
-          {
-            "status": "M",
             "path": "skills/ework-equity-research/references/workflow.md"
           },
           {
             "status": "M",
-            "path": "skills/ework-equity-research/scripts/lib/evidence.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-equity-research/scripts/lib/index.mjs"
-          },
-          {
-            "status": "A",
             "path": "skills/ework-equity-research/scripts/lib/pdf-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "skills/ework-equity-research/scripts/lib/quality.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-equity-research/scripts/lib/report.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-equity-research/scripts/lib/schema.mjs"
           },
           {
             "status": "M",
@@ -96,39 +72,11 @@
           },
           {
             "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/research/research-pdf.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-context-bridge.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/equity-research-cli.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/equity-research-pdf-client.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/equity-research-quality.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/macos-package-runtime.test.ts"
           },
           {
             "status": "A",
-            "path": "test/research-pdf-bridge.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-pdf.test.ts"
+            "path": "test/research-report-tool.test.js"
           }
         ],
         "checks": [
@@ -156,12 +104,13 @@
               "test/research-pdf-bridge.test.ts",
               "test/research-context-bridge.test.ts",
               "test/research-context-runtime.test.js",
+              "test/research-report-tool.test.js",
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "19个相关文件210项通过；独立审阅发现的图表语义/异常输入/共享计算DAG问题已红绿回归修复。",
-            "verifiedCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
-            "completedAt": "2026-10-23T05:44:52.280187+00:00",
+            "summary": "20个直接相关文件223项通过，含真实Subprocess/CLI、凭据过滤、会话沙箱、只读、取消与交付摘要完整性回归。",
+            "verifiedCommit": "e626ebfae8133977632ee1d5d371fdceb5caeead",
+            "completedAt": "2026-10-23T06:16:12.608522+00:00",
             "timeoutMs": 180000
           },
           {
@@ -172,8 +121,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
-            "completedAt": "2026-10-23T05:44:52.280187+00:00",
+            "verifiedCommit": "e626ebfae8133977632ee1d5d371fdceb5caeead",
+            "completedAt": "2026-10-23T06:16:12.608522+00:00",
             "timeoutMs": 180000
           },
           {
@@ -181,161 +130,33 @@
               "git",
               "diff",
               "--check",
-              "8595cba018c060cfc40428c8a5a19cad9e2d92b5..HEAD"
+              "bd8060a61d498634e5836f46836b0ff9da4c2e1b..HEAD"
             ],
             "outcome": "passed",
             "summary": "本次增量差异检查通过。",
-            "verifiedCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
-            "completedAt": "2026-10-23T05:44:52.280187+00:00",
+            "verifiedCommit": "e626ebfae8133977632ee1d5d371fdceb5caeead",
+            "completedAt": "2026-10-23T06:16:12.608522+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Node24.9 CLI未指定format，经真实认证bridge与隔离Electron43.4宿主生成茅台HTML+23页A4 PDF；全部哈希一致，中文/SVG/易方达配色/页码及全部页面已复核，6类排版问题修复。模型及原生客户端更新后的最终验收由集成构建继续完成，用户尚未接受。"
+          "summary": "研究正文与23页A4中文PDF逐页检查已通过；本次仅改变运行入口与私有凭据传递。原生Bash默认生成失败已定位，新增固定research_report入口并通过13项回归；集成本地包将继续不显式要求PDF的原生模型验收。用户尚未接受。"
         },
         "acceptanceCriteria": [
           "默认完整研究结构，论点证据、推论、假设、反证与观察及资料缺口均可检查。",
           "数值表图引用同次事实计算；同系列指标语义及可比期间一致，原文观察不可进入算术。",
           "默认同时生成HTML和PDF；PDF失败非零并保留明确交付记录，不伪装成功。",
-          "新客户端本地启动、技能可用，真实模型不额外请求PDF也生成双格式并打开预览。"
+          "新客户端本地启动、技能可用，真实模型不额外请求PDF也生成双格式并打开预览。",
+          "Bash继续过滤凭据；research_report仅执行内置CLI且只操作当前会话注册工作区。",
+          "只读禁止run，workspace-write沿用实际会话沙箱；输出必须为新目录，双格式必需哈希和实际PDF交付记录一致。"
         ],
         "risks": [
           "结构/引用检查不评价经济因果或专业签发，外部真实性与PDF提取忠实性仍须研究复核。",
           "茅台使用既有正式披露，行业、金融资金桥、预测与估值缺口明确，不冒充最新完整投资结论。",
           "本地测试未接受，不自动晋升main或公开发布。"
         ],
-        "generatedAt": "2026-10-23T05:45:04.321040+00:00"
-      },
-      "merged": {
-        "mergeCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-        "verificationCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/equity-research-engine.test.js",
-              "test/equity-research-cli.test.js",
-              "test/equity-research-report.test.js",
-              "test/bundled-equity-research-skill.test.js",
-              "test/integration-skill-policy.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-bundled-runtime.test.js",
-              "test/bundled-skill-routing.test.js",
-              "test/bundled-skill-parity.test.ts",
-              "test/bundled-finance-skill.test.js",
-              "test/financial-routing.test.js",
-              "test/financial-routing-review.test.js",
-              "test/macos-package-runtime.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/equity-research-engine.test.js test/equity-research-cli.test.js test/equity-research-report.test.js test/bundled-equity-research-skill.test.js test/integration-skill-policy.test.js test/integration-runtime.test.js test/integration-bundled-runtime.test.js test/bundled-skill-routing.test.js test/bundled-skill-parity.test.ts test/bundled-finance-skill.test.js test/financial-routing.test.js test/financial-routing-review.test.js test/macos-package-runtime.test.ts --maxWorkers=2",
-            "verifiedCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-            "completedAt": "2026-10-23T05:45:36.094Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-            "completedAt": "2026-10-23T05:45:36.094Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD",
-            "verifiedCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-            "completedAt": "2026-10-23T05:45:36.094Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/preload-editor-singleton.test.ts",
-              "test/sandbox-preload.test.js",
-              "test/research-canvas-wheel-preload.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/preload-editor-singleton.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts",
-            "verifiedCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-            "completedAt": "2026-10-23T05:45:36.094Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/preload-main-frame.test.ts",
-              "test/sandbox-preload.test.js",
-              "test/research-canvas-wheel-preload.test.ts",
-              "test/user-message-palette.test.js",
-              "test/figma-task-scrollbar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/preload-main-frame.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts test/user-message-palette.test.js test/figma-task-scrollbar.test.ts",
-            "verifiedCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-            "completedAt": "2026-10-23T05:45:36.094Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-            "completedAt": "2026-10-23T05:45:36.094Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "vitest",
-              "run",
-              "test/notes-install-order.test.js",
-              "test/notes-activity.test.js",
-              "test/research-workbench-feedback.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx --no-install vitest run test/notes-install-order.test.js test/notes-activity.test.js test/research-workbench-feedback.test.js",
-            "verifiedCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-            "completedAt": "2026-10-23T05:45:36.094Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "68072a163b733b98f65ed9ffb79c2f6cc9ba4ba5",
-            "completedAt": "2026-10-23T05:45:36.094Z",
-            "timeoutMs": 10000
-          }
-        ],
-        "recordedAt": "2026-10-23T05:45:36.094Z"
+        "generatedAt": "2026-10-23T06:16:12.608522+00:00"
       }
     },
     {
