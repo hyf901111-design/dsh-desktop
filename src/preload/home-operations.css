@@ -471,8 +471,8 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
 [data-odyssey-home-operations-layout="stacked"] .odyssey-home-operations {
   /* The measured pane viewport already reserves the header, toggle and dock.
      Share its remaining space, then scroll below readable minimum card sizes. */
-  --odyssey-operations-compact-case-height:clamp(220px,calc(var(--odyssey-operations-viewport-height,440px) - 356px),260px);
-  --odyssey-operations-compact-row-height:clamp(140px,calc((var(--odyssey-operations-viewport-height,440px) - var(--odyssey-operations-compact-case-height) - 62px) / 2),172px);
+  --odyssey-operations-compact-case-height:clamp(180px,calc(var(--odyssey-operations-viewport-height,440px) - 356px),260px);
+  --odyssey-operations-compact-row-height:clamp(100px,calc((var(--odyssey-operations-viewport-height,440px) - var(--odyssey-operations-compact-case-height) - 62px) / 2),172px);
   width:min(780px,calc(100% - 48px));
   height:var(--odyssey-operations-viewport-height,440px);
   max-height:var(--odyssey-operations-viewport-height,440px);
@@ -537,6 +537,14 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   overflow:hidden;
   text-overflow:ellipsis;
   line-height:26px;
+}
+/* A short center pane needs a compact text rhythm as well as shorter cards. */
+@container (max-height:879px) {
+  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-case-copy { top:16px; }
+  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title,
+  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-subtitle { font-size:22px; line-height:26px; }
+  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-trend { left:100px; top:5px; }
+  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-description { max-height:60px; font-size:14px; line-height:20px; }
 }
 @keyframes odyssey-operations-quick-ambient {
   0%,100% { translate:-4px 3px; scale:1; }
