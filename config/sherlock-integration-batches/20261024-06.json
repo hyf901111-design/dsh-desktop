@@ -147,6 +147,70 @@
           "本次native布局修复需main构建后复验；浏览器组合测试不替代正式客户端接受。"
         ],
         "generatedAt": "2026-10-23T21:01:06.328105+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c1c4dd18108601b98f784eaeab656bcc07c850c0",
+        "verificationCommit": "c1c4dd18108601b98f784eaeab656bcc07c850c0",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "c1c4dd18108601b98f784eaeab656bcc07c850c0",
+            "completedAt": "2026-10-23T21:05:53.331Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-browser.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guides.test.ts test/home-guides-review.test.ts test/home-guide-timeline.test.ts test/home-guide-native.test.js test/home-guide-native-browser.test.js test/home-guide-native-strip.test.js test/home-guide-notes-shell-browser.test.js test/home-guide-presentation-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "c1c4dd18108601b98f784eaeab656bcc07c850c0",
+            "completedAt": "2026-10-23T21:05:53.331Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c1c4dd18108601b98f784eaeab656bcc07c850c0",
+            "completedAt": "2026-10-23T21:05:53.331Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c1c4dd18108601b98f784eaeab656bcc07c850c0",
+            "completedAt": "2026-10-23T21:05:53.331Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-23T21:05:53.331Z"
       }
     }
   ],
