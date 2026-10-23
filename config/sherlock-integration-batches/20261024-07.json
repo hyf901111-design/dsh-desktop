@@ -104,6 +104,65 @@
           "系统物理鼠标偶发冻结仍未确认根因；字体加载优化不等于已根治。"
         ],
         "generatedAt": "2026-10-23T21:39:20.465073+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e92085e5e0f349f26034cb1c88a8c9421ea04e09",
+        "verificationCommit": "e92085e5e0f349f26034cb1c88a8c9421ea04e09",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "e92085e5e0f349f26034cb1c88a8c9421ea04e09",
+            "completedAt": "2026-10-23T21:40:17.310Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-browser.test.js",
+              "test/home-guide-native-strip.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native.test.js test/home-guide-native-browser.test.js test/home-guide-native-strip.test.js --maxWorkers=2",
+            "verifiedCommit": "e92085e5e0f349f26034cb1c88a8c9421ea04e09",
+            "completedAt": "2026-10-23T21:40:17.310Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e92085e5e0f349f26034cb1c88a8c9421ea04e09",
+            "completedAt": "2026-10-23T21:40:17.310Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "e92085e5e0f349f26034cb1c88a8c9421ea04e09",
+            "completedAt": "2026-10-23T21:40:17.310Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-23T21:40:17.310Z"
       }
     }
   ],
