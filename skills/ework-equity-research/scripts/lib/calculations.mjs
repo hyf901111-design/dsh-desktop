@@ -12,7 +12,7 @@ export function runCalculations(packet, facts, diagnostics) {
     const result = { ...calc, status: 'blocked', value: null, unit: null }
     try {
       if (!isObject(calc) || !idValid(calc.id) || ids.has(calc.id) ||
-          !['yoy', 'ratio', 'difference', 'sum', 'grossProfit', 'grossMargin'].includes(calc.op) ||
+          !['yoy', 'ratio', 'difference', 'periodDifference', 'sum', 'grossProfit', 'grossMargin'].includes(calc.op) ||
           !Array.isArray(calc.inputs) || calc.inputs.length > 32 ||
           (calc.op === 'sum' ? calc.inputs.length < 2 : calc.inputs.length !== 2)) {
         throw new Error('CALC_SCHEMA:计算需唯一id、支持的op及明确inputs（sum至少2项，其余恰好2项）')
@@ -25,7 +25,18 @@ export function runCalculations(packet, facts, diagnostics) {
       const [a, b] = inputs
       if (inputs.some(f => f.scope !== a.scope)) throw new Error('CALC_SCOPE:不能混用不同报表范围')
       if (inputs.some(f => f.unit !== a.unit)) throw new Error('CALC_UNIT:输入单位量纲必须相同；金额已先换算到元')
-      if (calc.op === 'yoy') {
+      let resultPeriod = a.period
+      if (calc.op === 'periodDifference') {
+        const first = periodKey(a.period), second = periodKey(b.period)
+        if (a.unit !== 'CNY') throw new Error('CALC_UNIT:跨期差额仅支持人民币金额')
+        const fiscal = /^(?:FY20\d{2}|20\d{2}(?:H[12]|Q[1-4]))$/
+        if (!first || !second || !fiscal.test(first) || !fiscal.test(second) ||
+            first.replace(/20\d{2}/, '') !== second.replace(/20\d{2}/, '') ||
+            Math.abs(Number(first.match(/20\d{2}/)[0]) - Number(second.match(/20\d{2}/)[0])) !== 1 || a.metric !== b.metric) {
+          throw new Error('CALC_PERIOD:跨期差额必须是同指标、同口径、相邻年度的相同期间')
+        }
+        resultPeriod = Number(first.match(/20\d{2}/)[0]) > Number(second.match(/20\d{2}/)[0]) ? a.period : b.period
+      } else if (calc.op === 'yoy') {
         const current = periodKey(a.period)
         const previous = periodKey(b.period)
         const shifted = current.replace(/20\d{2}/, year => String(Number(year) - 1))
@@ -48,7 +59,7 @@ export function runCalculations(packet, facts, diagnostics) {
       if (calc.op === 'sum') {
         value = inputs.reduce((sum, f) => sum.add(f.exactValue || f.value), decimal('0'))
         formula = calc.inputs.join(' + ')
-      } else if (['difference', 'grossProfit'].includes(calc.op)) {
+      } else if (['difference', 'periodDifference', 'grossProfit'].includes(calc.op)) {
         value = x.sub(y)
         formula = `${a.id} - ${b.id}`
       } else if (calc.op === 'grossMargin') {
@@ -62,7 +73,7 @@ export function runCalculations(packet, facts, diagnostics) {
       const unit = ['ratio', 'yoy', 'grossMargin'].includes(calc.op) ? 'ratio' : a.unit
       Object.assign(result, {
         status: 'calculated', value: value.toString(24), unit, formula, metric: calc.op,
-        scope: a.scope, period: a.period, sourceIds: [...new Set(inputs.flatMap(f => f.sourceIds))],
+        scope: a.scope, period: resultPeriod, sourceIds: [...new Set(inputs.flatMap(f => f.sourceIds))],
       })
       // Chained calculations consume the exact rational, never the rounded display string.
       values.set(calc.id, { ...result, exactValue: value })
