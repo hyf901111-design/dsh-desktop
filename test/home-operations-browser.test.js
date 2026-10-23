@@ -1374,6 +1374,49 @@ it.each([{ dark: false }, { dark: true }])('fits the complete heading and case a
   } finally { await page.close() }
 }, 15000)
 
+it.each([
+  { dark: false, paneWidth: 600, paneHeight: 760 },
+  { dark: true, paneWidth: 600, paneHeight: 760 },
+  { dark: false, paneWidth: 480, paneHeight: 704 },
+  { dark: true, paneWidth: 480, paneHeight: 704 }
+])('keeps compact case text separated and lower cards reachable in a reduced-height center pane %j', async options => {
+  const page = await fixture({ dark: options.dark, width: options.paneWidth + 780, height: options.paneHeight + 20, panelWidth: 480, deviceScaleFactor: 2, themes: true })
+  try {
+    await toggle(page).click()
+    await waitState(page, 'operations')
+    const geometry = await region(page).evaluate(section => {
+      const pane = section.closest('.pI_x6G_centerCol').getBoundingClientRect()
+      return { paneWidth: pane.width, paneHeight: pane.height, height: section.clientHeight, content: section.scrollHeight }
+    })
+    await writeFile(`${evidence}/compact-height-${options.paneWidth}-${options.paneHeight}-${options.dark ? 'dark' : 'light'}.json`, JSON.stringify(geometry, null, 2))
+    await page.screenshot({ path: `${evidence}/compact-height-${options.paneWidth}-${options.paneHeight}-${options.dark ? 'dark' : 'light'}-entry.png` })
+    expect(geometry.paneWidth).toBe(options.paneWidth); expect(geometry.paneHeight).toBe(options.paneHeight)
+    if (options.paneHeight === 760) expect(geometry.content, 'moderately short panes should fit all five cards at entry').toBeLessThanOrEqual(geometry.height + 1)
+    for (const index of [0, 1, 2]) {
+      await region(page).evaluate(section => { section.scrollTop = 0 })
+      await page.locator(`.odyssey-operations-pagination [data-case="${index}"]`).click()
+      await waitCase(page, index)
+      const copy = await page.locator('.odyssey-operations-usecase').evaluate(card => {
+        const rect = element => { const b = element.getBoundingClientRect(); return { y: b.y, bottom: b.bottom } }
+        const description = card.querySelector('.odyssey-operations-description')
+        return { title: rect(card.querySelector('.odyssey-operations-case-copy')), description: rect(description), pagination: rect(card.querySelector('.odyssey-operations-pagination')), text: { height: description.clientHeight, content: description.scrollHeight, size: parseFloat(getComputedStyle(description).fontSize) } }
+      })
+      expect(copy.description.y, 'the complete description starts below the title and subtitle').toBeGreaterThanOrEqual(copy.title.bottom + 4)
+      expect(copy.description.bottom).toBeLessThanOrEqual(copy.pagination.y - 4)
+      expect(copy.text.content, 'the description is not silently cropped').toBeLessThanOrEqual(copy.text.height + 1)
+      expect(copy.text.size).toBeGreaterThanOrEqual(14)
+    }
+    for (const card of await page.locator('.odyssey-operations-quick-card').all()) {
+      await card.scrollIntoViewIfNeeded()
+      expect(await card.evaluate(card => {
+        const b = card.getBoundingClientRect(), s = card.closest('[data-odyssey-home-operations]').getBoundingClientRect(), hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2), toggle = document.querySelector('[data-odyssey-home-operations-toggle]').getBoundingClientRect()
+        return b.top >= s.top && b.bottom <= s.bottom + 1 && b.bottom <= toggle.top - 16 && (hit === card || card.contains(hit))
+      })).toBe(true)
+    }
+    await page.screenshot({ path: `${evidence}/compact-height-${options.paneWidth}-${options.paneHeight}-${options.dark ? 'dark' : 'light'}-lower.png` })
+  } finally { await page.close() }
+}, 15000)
+
 it('adapts the operation collection to panel and short-pane resizing without carrying clipped content back into the full layout', async () => {
   const page = await fixture({ themes: true, deviceScaleFactor: 2 })
   const errors = []
