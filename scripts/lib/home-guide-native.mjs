@@ -158,9 +158,17 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false }) {
         check(ticket); react_dom.flushSync(() => workspace.updateSelection([watchlist, quote, news], 'replace'))
         await settle(ticket, () => !!ticket.host.querySelector('[data-financial-link]'))
       } else {
+        const size = workspace.getSnapshot().canvasSize
+        const overview = Math.min(size.width || 0, size.availableWidth || size.width || 0) >= 960
+        const toggle = overview ? toolbar()?.querySelector('[data-workbench-arrange-toggle]') : null
         const button = toolbar()?.querySelector('[data-research-global-arrange]')
-        if (button && !button.disabled) react_dom.flushSync(() => button.click())
-        else if (!workspace.organizeCanvas(new Map(), 'standard')) throw Error('画布暂时无法整理。')
+        if (toggle && !toggle.disabled) {
+          react_dom.flushSync(() => toggle.click())
+          const menu = () => [...document.querySelectorAll('[data-workbench-arrange-menu]')].find(el => el.dataset.eworkToolbarOwner === id)
+          await settle(ticket, () => !!menu()?.querySelector('[data-arrange-mode="three"]'))
+          react_dom.flushSync(() => menu().querySelector('[data-arrange-mode="three"]').click())
+        } else if (button && !button.disabled) react_dom.flushSync(() => button.click())
+        else if (!workspace.organizeCanvas(new Map(), overview ? 'three' : 'standard')) throw Error('画布暂时无法整理。')
         await settle(ticket, () => true, 16)
         // A stock-row focus can scroll its canvas. Finish the expert's arrange
         // at the document start so native component headers remain visible.

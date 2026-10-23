@@ -4,6 +4,8 @@ import { build } from 'esbuild'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { patchNoteSessionRuntime } from '../scripts/lib/notes-session.mjs'
 import { patchNotesSidebar } from '../scripts/lib/notes-sidebar.mjs'
+import { stripHomeGuidePresentationNative } from '../scripts/lib/home-guide-presentation-native.mjs'
+import { patchComposerDeliverablePreview } from '../scripts/lib/figma-composer-deliverable-preview.mjs'
 
 // Browser plugin not available. Use the existing Playwright/Chromium runtime;
 // this fixture mounts production native components and blocks all live providers.
@@ -14,9 +16,10 @@ const draft = '保留我的原生输入草稿\n第二行 🔎'
 let browser, runtimeSource, conversationSource, entry, styles
 
 beforeAll(async () => {
-  const { patchHomeGuideNative } = await import('../scripts/lib/home-guide-native.mjs')
+  const { patchHomeGuideNative, stripHomeGuideNative } = await import('../scripts/lib/home-guide-native.mjs')
   runtimeSource = patchNoteSessionRuntime(await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js', 'utf8'))
-  conversationSource = patchHomeGuideNative(patchNotesSidebar(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
+  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
+  conversationSource = patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native)))
     .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;')
   const assets = 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
   const frontend = await Promise.all((await readdir(assets)).filter(name => /^index-.*\.css$/.test(name)).map(name => readFile(`${assets}/${name}`, 'utf8')))
@@ -121,10 +124,14 @@ it('runs the offline board tutorial on the real native canvas and retains the or
     await expect.poll(() => widget(page, 'watchlist').locator('[data-stock-code]').count()).toBe(3)
     await expect.poll(() => widget(page, 'quote').locator('.ew-quote-price-line strong').textContent()).toContain('462.400')
     await succeeds(page, 'board-arrange')
+    await expect.poll(() => canvas(page).evaluate(el => Boolean(el.__eworkContentFit))).toBe(false)
+    expect(await page.locator('[data-ework-toolbar][data-ework-toolbar-owner="odyssey-home-guide:board"] .ew-arrange-tool').getAttribute('data-arrange-mode')).toBe('three')
     const geometry = await page.locator('#guide-host [data-research-node-id]').evaluateAll(cards => cards.map(card => { const box = card.getBoundingClientRect(); return { x: box.x, y: box.y, width: box.width, height: box.height } }))
     expect(geometry).toHaveLength(3)
     const top = await canvas(page).evaluate(el => el.getBoundingClientRect().top)
     expect(Math.min(...geometry.map(box=>box.y))).toBeGreaterThanOrEqual(top - 1)
+    const bottom = await canvas(page).evaluate(el => el.getBoundingClientRect().bottom)
+    expect(Math.max(...geometry.map(box=>box.y+box.height)), 'the completed overview shows all three native cards without a clipped lower row').toBeLessThanOrEqual(bottom - 12)
     expect(geometry.every(box => box.width > 100 && box.height > 100 && Object.values(box).every(Number.isFinite))).toBe(true)
     expect(await page.locator('#guide-host').textContent()).toMatch(/示例|演示/)
     await preserved(page)
