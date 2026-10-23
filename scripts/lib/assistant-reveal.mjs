@@ -24,7 +24,8 @@ export function createAssistantTextPaint(root,record,route){
  const fade=180,step=12,levels=32,maxTail=2200-fade,palettes=new Map(),prefix='ework-ai-reveal-'+Math.random().toString(36).slice(2)
  let frame=0,style,units=[],parts=[],names=[],disposed=false,selecting=false,quietUntil=0,lastStart,focused=doc.hasFocus?.()!==false
  const clear=()=>{view?.cancelAnimationFrame(frame);frame=0;units=[];for(const name of names)registry?.delete(name);delete root.dataset.aiRevealing;delete root.__eworkAssistantRevealEnd;delete record.handoff}
- const visible=()=>focused&&doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
+ // Electron can restore real focus without dispatching a window focus event.
+ const visible=()=>(typeof doc.hasFocus==='function'?doc.hasFocus():focused)&&doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
  // Only a different trusted seat in this same commit may resume these times.
  const inherited=record.handoff;delete record.handoff
  if(inherited&&transferRoute&&inherited.route!==route&&inherited.epoch===epoch&&(record.fresh||record.live)&&visible()&&!media?.matches){units=inherited.units;lastStart=inherited.lastStart;quietUntil=inherited.quietUntil??0;record.skipNext=false}
@@ -42,7 +43,8 @@ export function createAssistantTextPaint(root,record,route){
  const upper=(time)=>{let lo=0,hi=units.length;while(lo<hi){const mid=(lo+hi)>>>1;if(units[mid].at<=time)lo=mid+1;else hi=mid}return lo}
  const paletteFor=node=>{const color=view.getComputedStyle(node.parentElement).color;let palette=palettes.get(color);if(palette)return palette;if(palettes.size>=32)return palettes.values().next().value;palette={color,names:Array.from({length:levels},(_,i)=>prefix+'-'+palettes.size+'-'+i)};palettes.set(color,palette);names.push(...palette.names);style.textContent=[...palettes.values()].map(p=>p.names.map((name,i)=>'::highlight('+name+'){color:color-mix(in srgb,'+p.color+' '+i*100/levels+'%,transparent)}').join('')).join('')+'@media(prefers-reduced-motion:reduce){'+[...palettes.values()].map(p=>p.names.map(name=>'::highlight('+name+'){color:'+p.color+'}').join('')).join('')+'}';return palette}
  const paint=now=>{
-  frame=0;if(disposed||record.epoch!==epoch||media?.matches||!visible()||!root.isConnected){finish();return}
+  frame=0;if(disposed||record.epoch!==epoch||media?.matches){finish();return}
+  if(!visible()||!root.isConnected){suspend();return}
   for(const name of names)registry.delete(name)
   const groups=new Map(),done=upper(now-fade),pending=upper(now)
   // Each interval is split only at eligible TextNode boundaries, never per pending
@@ -58,13 +60,16 @@ export function createAssistantTextPaint(root,record,route){
  }
  const segment=(text,start)=>{const value=text.slice(start);if(typeof Intl.Segmenter==='function')return [...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(value)].map(p=>({from:start+p.index,to:start+p.index+p.segment.length}));let offset=start;return Array.from(value,p=>{const from=offset;offset+=p.length;return{from,to:offset}})}
  return{update(){
-  const{nodes,text}=collect(),previous=record.text,initial=!record.initialized,skip=record.skipNext,clock=view.performance.now();record.initialized=true;record.text=text;record.skipNext=false
+  const available=visible(),{nodes,text}=collect(),previous=record.text,initial=!record.initialized,skip=record.skipNext,clock=view.performance.now();record.initialized=true;record.text=text
+  // Every background update remains a baseline; returning consumes it once before
+  // genuinely later arrivals resume, even if the browser skipped focus events.
+  record.skipNext=!available
   // React may replace every Markdown node while preserving its logical text.
   // Refresh these ranges even when the provider has not appended another character.
   parts=nodes
   // Reclaim completed graphemes on actual renderer updates, never per frame.
   if(units.length)units=units.slice(upper(clock-fade))
-  if(disposed||record.epoch!==epoch||skip||media?.matches||!visible()||!(record.fresh||record.live)||initial&&!record.fresh){finish();lastStart=undefined;return}
+  if(disposed||record.epoch!==epoch||skip||media?.matches||!available||!(record.fresh||record.live)||initial&&!record.fresh){finish();lastStart=undefined;return}
   if(selecting||hasSelection()||clock<quietUntil||!registry||!view.Highlight){finish();return}
   if(!style){style=doc.createElement('style');style.dataset.assistantReveal='';doc.head.append(style)}
   for(const part of parts)part.palette=paletteFor(part.node)
