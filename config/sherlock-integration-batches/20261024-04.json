@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-04",
+  "branch": "codex/integration/20261024-04",
+  "baseMainCommit": "743b5cfd2e6620b24ab7c5bf07be15a03bdeb7bf",
+  "expectedMainCommit": "743b5cfd2e6620b24ab7c5bf07be15a03bdeb7bf",
+  "createdAt": "2026-10-23T18:11:26.423Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "预填主题空白保持选中时支持多技能选择",
+        "branch": "codex/feat/skill-menu-selected-topic-20261024",
+        "baseCommit": "743b5cfd2e6620b24ab7c5bf07be15a03bdeb7bf",
+        "tipCommit": "6286e956fd61b7ae4889089e551cf1b372ccf514",
+        "commits": [
+          {
+            "commit": "6286e956fd61b7ae4889089e551cf1b372ccf514",
+            "parents": [
+              "743b5cfd2e6620b24ab7c5bf07be15a03bdeb7bf"
+            ],
+            "subject": "修复：主题空白选中时允许继续添加多个技能标签"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-composer.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-skill-composer.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/integration-skill-composer.test.ts",
+              "test/integration-skill-use.test.ts",
+              "test/skill-command-menu.test.ts",
+              "test/home-operations-actions.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "实现者4个直接关联文件100项通过；独立10项真实Popup/nativeShell回归通过/tmp/selected-topic-independent-review-20261024.log，保留非命令正文与版本/ABA保护。",
+            "verifiedCommit": "6286e956fd61b7ae4889089e551cf1b372ccf514",
+            "completedAt": "2026-10-23T18:11:25.796044+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "实现者类型检查通过。",
+            "verifiedCommit": "6286e956fd61b7ae4889089e551cf1b372ccf514",
+            "completedAt": "2026-10-23T18:11:25.796044+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查通过；中文提交且源码干净。",
+            "verifiedCommit": "6286e956fd61b7ae4889089e551cf1b372ccf514",
+            "completedAt": "2026-10-23T18:11:25.796044+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "上一正式包原生捕获预填6全角空白选中后再选PPT的命令变更误判，当前真实Popup+bridge+SessionInputShell对应红绿，第二/第三技能、清空后编辑、附件保留、不发送均通过。新正式包需main本地构建后native核验。"
+        },
+        "acceptanceCriteria": [
+          "仅严格版本校验通过的全空白选区可被menu技能替换；非空正文和错误命令不放宽。",
+          "PPT/report预填默认主题选区可继续选择多个技能且可清空再编辑。",
+          "保留CAS/session/ABA/ticket/reference及文件图片，不自动发送。",
+          "按正式身份本地构建测试授权完成native核验；不发布不改版本。"
+        ],
+        "risks": [
+          "系统物理鼠标偶发锁住尚未证明根治；本修复覆盖实际多技能误报，不将其等同系统指针根因。"
+        ],
+        "generatedAt": "2026-10-23T18:11:25.796044+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/integration-skill-composer.test.ts",
+        "test/integration-skill-use.test.ts",
+        "test/skill-command-menu.test.ts",
+        "test/home-operations-actions.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
