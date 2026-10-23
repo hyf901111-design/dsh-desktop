@@ -888,6 +888,159 @@
           "本地测试不公证、不发布、不改版本、不推送，不accept或promote。"
         ],
         "generatedAt": "2026-10-23T11:07:38.309Z"
+      },
+      "merged": {
+        "mergeCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+        "verificationCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/equity-research-engine.test.js",
+              "test/equity-research-cli.test.js",
+              "test/equity-research-report.test.js",
+              "test/bundled-equity-research-skill.test.js",
+              "test/integration-skill-policy.test.js",
+              "test/integration-runtime.test.js",
+              "test/integration-bundled-runtime.test.js",
+              "test/bundled-skill-routing.test.js",
+              "test/bundled-skill-parity.test.ts",
+              "test/bundled-finance-skill.test.js",
+              "test/financial-routing.test.js",
+              "test/financial-routing-review.test.js",
+              "test/macos-package-runtime.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/equity-research-engine.test.js test/equity-research-cli.test.js test/equity-research-report.test.js test/bundled-equity-research-skill.test.js test/integration-skill-policy.test.js test/integration-runtime.test.js test/integration-bundled-runtime.test.js test/bundled-skill-routing.test.js test/bundled-skill-parity.test.ts test/bundled-finance-skill.test.js test/financial-routing.test.js test/financial-routing-review.test.js test/macos-package-runtime.test.ts --maxWorkers=2",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/preload-editor-singleton.test.ts",
+              "test/sandbox-preload.test.js",
+              "test/research-canvas-wheel-preload.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/preload-editor-singleton.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/preload-main-frame.test.ts",
+              "test/sandbox-preload.test.js",
+              "test/research-canvas-wheel-preload.test.ts",
+              "test/user-message-palette.test.js",
+              "test/figma-task-scrollbar.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/preload-main-frame.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts test/user-message-palette.test.js test/figma-task-scrollbar.test.ts",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/notes-install-order.test.js",
+              "test/notes-activity.test.js",
+              "test/research-workbench-feedback.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/notes-install-order.test.js test/notes-activity.test.js test/research-workbench-feedback.test.js",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/delivery-file-model.test.js",
+              "test/deliverable-cards.test.js",
+              "test/generated-file-preview.test.js",
+              "test/generated-file-finder.test.ts",
+              "test/markdown-file-links.test.js",
+              "test/local-path-links.test.ts",
+              "test/chat-file-preview-scope.test.ts",
+              "test/native-file-menu.test.ts",
+              "test/figma-native-file-menu.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/delivery-file-model.test.js test/deliverable-cards.test.js test/generated-file-preview.test.js test/generated-file-finder.test.ts test/markdown-file-links.test.js test/local-path-links.test.ts test/chat-file-preview-scope.test.ts test/native-file-menu.test.ts test/figma-native-file-menu.test.js --maxWorkers=2",
+            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
+            "completedAt": "2026-10-23T11:08:13.188Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-23T11:08:13.188Z"
       }
     }
   ],
