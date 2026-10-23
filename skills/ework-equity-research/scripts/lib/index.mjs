@@ -1,11 +1,11 @@
 import { realpath } from 'node:fs/promises'
-import { digest, verifySources, verifyFacts } from './evidence.mjs'
+import { digest, verifySources, verifyFacts, verifyObservations } from './evidence.mjs'
 import { schemaDiagnostics, diagnostic } from './schema.mjs'
 import { runCalculations } from './calculations.mjs'
 import { runDCF } from './dcf.mjs'
 const receipts = new WeakMap()
 export async function validatePacket(packet, { root } = {}) {
-  const result = { ok: false, diagnostics: [], facts: [], sources: [] }
+  const result = { ok: false, diagnostics: [], facts: [], observations: [], sources: [] }
   let input
   try {
     input = JSON.stringify(packet)
@@ -24,6 +24,7 @@ export async function validatePacket(packet, { root } = {}) {
     const checked = await verifySources(packet, base, result.diagnostics)
     result.sources = checked.sources
     result.facts = verifyFacts(packet, checked.sources, checked.texts, result.diagnostics)
+    result.observations = verifyObservations(packet, checked.sources, checked.texts, result.diagnostics)
   } catch (error) {
     result.diagnostics.push(diagnostic('ROOT', 'root', error.message))
   }
