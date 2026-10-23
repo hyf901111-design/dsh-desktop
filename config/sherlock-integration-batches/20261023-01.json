@@ -760,24 +760,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "任务完成后的明显文件交付卡片与打开方式",
+        "featureName": "完善文件类型图标、整卡右侧预览与稳定原生复制",
         "branch": "codex/feat/artifact-delivery-cards-20261023",
-        "baseCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
-        "tipCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
+        "baseCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
+        "tipCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
         "commits": [
           {
-            "commit": "af067755f937998d73db4a2df5fadfb5bdeb4f78",
+            "commit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
             "parents": [
-              "c9f12ede78e1613edfbb0d5f62eac6638e698423"
+              "59c7daf76b1045fc681df60393d88bbffb66b382"
             ],
-            "subject": "建立任务交付文件路径模型与来源核验规则"
-          },
-          {
-            "commit": "59c7daf76b1045fc681df60393d88bbffb66b382",
-            "parents": [
-              "af067755f937998d73db4a2df5fadfb5bdeb4f78"
-            ],
-            "subject": "新增任务文件交付卡片与友好打开方式菜单"
+            "subject": "完善文件类型图标、整卡预览与原生路径复制"
           }
         ],
         "files": [
@@ -786,40 +779,105 @@
             "path": "design-qa.md"
           },
           {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-10-23-artifact-delivery-cards.md"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/specs/2026-10-23-artifact-delivery-cards-design.md"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/deliverable-cards.mjs"
           },
           {
             "status": "A",
-            "path": "scripts/lib/delivery-file-model.mjs"
+            "path": "scripts/lib/delivery-file-icons.mjs"
           },
           {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/native-file-menu.ts"
+            "status": "C094",
+            "path": "scripts/lib/delivery-file-icons/LICENSE",
+            "previousPath": "LICENSE"
           },
           {
             "status": "A",
+            "path": "scripts/lib/delivery-file-icons/default_file.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_audio.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_csv.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_excel2.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_html.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_image.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_json.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_markdown.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_pdf2.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_powerpoint2.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_text.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_video.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_word2.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/file_type_zip.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-icons/provenance.json"
+          },
+          {
+            "status": "A",
+            "path": "src/main/delivery-file-clipboard.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
             "path": "test/deliverable-cards.test.js"
           },
           {
             "status": "A",
-            "path": "test/delivery-file-model.test.js"
+            "path": "test/delivery-file-clipboard.test.ts"
           },
           {
-            "status": "M",
-            "path": "test/native-file-menu.test.ts"
+            "status": "A",
+            "path": "test/delivery-file-icons.test.js"
           }
         ],
         "checks": [
@@ -829,8 +887,11 @@
               "--no-install",
               "vitest",
               "run",
+              "test/delivery-file-icons.test.js",
               "test/delivery-file-model.test.js",
               "test/deliverable-cards.test.js",
+              "test/delivery-file-clipboard.test.ts",
+              "test/ipc-trust.test.ts",
               "test/generated-file-preview.test.js",
               "test/generated-file-finder.test.ts",
               "test/markdown-file-links.test.js",
@@ -841,9 +902,9 @@
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "提交后9文件74项聚焦通过；新增回归均先RED后GREEN。",
-            "verifiedCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
-            "completedAt": "2026-10-23T11:07:38.309Z",
+            "summary": "后继提交12文件141项聚焦通过，覆盖原生复制写文本/受信任主窗、类型图标和整卡点击。",
+            "verifiedCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
+            "completedAt": "2026-10-23T11:26:21.340Z",
             "timeoutMs": 180000
           },
           {
@@ -854,8 +915,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
-            "completedAt": "2026-10-23T11:07:38.309Z",
+            "verifiedCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
+            "completedAt": "2026-10-23T11:26:21.340Z",
             "timeoutMs": 180000
           },
           {
@@ -863,184 +924,32 @@
               "git",
               "diff",
               "--check",
-              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+              "59c7daf76b1045fc681df60393d88bbffb66b382..HEAD"
             ],
             "outcome": "passed",
-            "summary": "功能范围空白检查通过，功能树干净。",
-            "verifiedCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
-            "completedAt": "2026-10-23T11:07:38.309Z",
+            "summary": "后继范围空白检查通过，功能树干净。",
+            "verifiedCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
+            "completedAt": "2026-10-23T11:26:21.340Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实补丁组件在IAB浅/深主题、820与360px内容宽度检查；长文件名换行、Escape回焦、自定义格式入口、无横向溢出与控制台错误。最终原生客户端由候选构建后检查。"
+          "summary": "第一轮实际客户端原会话/双格式卡片和PDF右侧预览通过；复制实际失败已复现，现由受信任主窗写文本修复。第二轮真实补丁组件14类资产中六类实际加载可见，浅/深和360px无溢出，卡片留白点选回调及柔和边框hover通过；需候选重构后复验原生复制。"
         },
         "acceptanceCriteria": [
-          "完成消息下集中展示PDF/PPT/HTML和用户指定文件，正式名称、类型与打开方式可见。",
-          "保留turn/seq边界、HTML/PDF去重及已核验研报结果，不采集网页或代码示例。",
-          "复用右侧预览、默认应用、文件管理器与复制路径；缺失或复制失败就地反馈。",
-          "保留上一轮研究技能与首页背景右键修复；本地构建保持应用打开供用户测试。"
+          "按类型显示真实PDF/PPT/Word/Excel等图标，未知类型通用图标。",
+          "卡片全主体含留白点击默认打开右侧预览，菜单按钮不触发预览。",
+          "hover不改变背景或加重阴影，仅轻微边框变化。",
+          "原生菜单后复制路径稳定走受信任主窗写文本通道，不增文件或剪贴板读取。",
+          "保留研报技能及此前修复，在候选本地构建并保持客户端打开。"
         ],
         "risks": [
-          "不把组件夹具当作原生客户端验收；候选需真实检查文件预览和原生菜单。",
-          "未知裸名沿用唯一文件查找；不同目录同名不能猜测合并。",
-          "本地测试不公证、不发布、不改版本、不推送，不accept或promote。"
+          "仅新增受信任主窗剪贴板文本写入，无剪贴板读取或文件读取权限。",
+          "图标MIT许可及固定来源随注入插件保留；不运行时联网。",
+          "不发布、不公证、不改版本、不推送，不accept/promote。"
         ],
-        "generatedAt": "2026-10-23T11:07:38.309Z"
-      },
-      "merged": {
-        "mergeCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-        "verificationCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/equity-research-engine.test.js",
-              "test/equity-research-cli.test.js",
-              "test/equity-research-report.test.js",
-              "test/bundled-equity-research-skill.test.js",
-              "test/integration-skill-policy.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-bundled-runtime.test.js",
-              "test/bundled-skill-routing.test.js",
-              "test/bundled-skill-parity.test.ts",
-              "test/bundled-finance-skill.test.js",
-              "test/financial-routing.test.js",
-              "test/financial-routing-review.test.js",
-              "test/macos-package-runtime.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/equity-research-engine.test.js test/equity-research-cli.test.js test/equity-research-report.test.js test/bundled-equity-research-skill.test.js test/integration-skill-policy.test.js test/integration-runtime.test.js test/integration-bundled-runtime.test.js test/bundled-skill-routing.test.js test/bundled-skill-parity.test.ts test/bundled-finance-skill.test.js test/financial-routing.test.js test/financial-routing-review.test.js test/macos-package-runtime.test.ts --maxWorkers=2",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/preload-editor-singleton.test.ts",
-              "test/sandbox-preload.test.js",
-              "test/research-canvas-wheel-preload.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/preload-editor-singleton.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/preload-main-frame.test.ts",
-              "test/sandbox-preload.test.js",
-              "test/research-canvas-wheel-preload.test.ts",
-              "test/user-message-palette.test.js",
-              "test/figma-task-scrollbar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/preload-main-frame.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts test/user-message-palette.test.js test/figma-task-scrollbar.test.ts",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "vitest",
-              "run",
-              "test/notes-install-order.test.js",
-              "test/notes-activity.test.js",
-              "test/research-workbench-feedback.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx --no-install vitest run test/notes-install-order.test.js test/notes-activity.test.js test/research-workbench-feedback.test.js",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 10000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "vitest",
-              "run",
-              "test/delivery-file-model.test.js",
-              "test/deliverable-cards.test.js",
-              "test/generated-file-preview.test.js",
-              "test/generated-file-finder.test.ts",
-              "test/markdown-file-links.test.js",
-              "test/local-path-links.test.ts",
-              "test/chat-file-preview-scope.test.ts",
-              "test/native-file-menu.test.ts",
-              "test/figma-native-file-menu.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx --no-install vitest run test/delivery-file-model.test.js test/deliverable-cards.test.js test/generated-file-preview.test.js test/generated-file-finder.test.ts test/markdown-file-links.test.js test/local-path-links.test.ts test/chat-file-preview-scope.test.ts test/native-file-menu.test.ts test/figma-native-file-menu.test.js --maxWorkers=2",
-            "verifiedCommit": "edc53bbf5fa8db2adcda1d5aa8c0a1d4bbfb3b5a",
-            "completedAt": "2026-10-23T11:08:13.188Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-23T11:08:13.188Z"
+        "generatedAt": "2026-10-23T11:26:21.340Z"
       }
     }
   ],
