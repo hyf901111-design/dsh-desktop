@@ -7,6 +7,7 @@ import { validatePacket, calculatePacket } from './lib/index.mjs'
 import { validateReport, renderReport } from './lib/report.mjs'
 import {reportCoverage,RESEARCH_SECTIONS} from './lib/quality.mjs'
 import {requestResearchPdf} from './lib/pdf-client.mjs'
+import {publicationMetadata} from './lib/publication.mjs'
 
 const VERSION = '1.1.1'
 const resourceRoot = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -75,7 +76,7 @@ async function main() {
       company: { name: options.company ?? '', ticker: options.ticker ?? '', currency: 'CNY' },
       asOf: options['as-of'] ?? '', financialAsOf: '', sources: [], facts: [], calculations: [],
       observations: [],
-      report: { profile:'full', title: '{{company}}研究报告', summary: [], theses:[], sections:Object.entries(RESEARCH_SECTIONS).map(([kind,title])=>({kind,title,status:'missing',paragraphs:[],gap:{missing:'尚未收集并核验所需资料。',impact:'本节暂不能形成有证据支持的结论。',nextStep:'补充原文证据、可比数据和研究判断。'}})) },
+      report: { profile:'full', publication:{reportType:'公司研究报告'},title: '{{company}}研究报告', summary: [], theses:[], sections:Object.entries(RESEARCH_SECTIONS).map(([kind,title])=>({kind,title,status:'missing',paragraphs:[],gap:{missing:'尚未收集并核验所需资料。',impact:'本节暂不能形成有证据支持的结论。',nextStep:'补充原文证据、可比数据和研究判断。'}})) },
     }
     const file = resolve(options.out)
     await mkdir(dirname(file), { recursive: true })
@@ -100,21 +101,23 @@ async function main() {
     await writeFile(join(out, 'validation.json'), json(validation), { flag: 'wx' })
     throw error
   }
-  const outputs = {}
-  async function output(name, bytes) {
+  const outputs = {},artifacts={}
+  async function output(key,name, bytes) {
     await writeFile(join(out, name), bytes, { flag: 'wx' })
     outputs[name] = hash(bytes)
+    artifacts[key]=name
   }
-  await output('evidence.json', json(result.evidence))
-  await output('calculations.json', json(result.calculation))
-  await output('validation.json', json(result.validation))
+  await output('evidence','evidence.json', json(result.evidence))
+  await output('calculations','calculations.json', json(result.calculation))
+  await output('validation','validation.json', json(result.validation))
   const coverage=reportCoverage(result.packet.report),delivery={requested:format==='both'?['html','pdf']:['html'],completed:[],pdf:{status:format==='both'?'pending':'not-requested'}}
   if (result.validation.ok) {
+    const {fileStem}=publicationMetadata(result.packet),htmlName=fileStem+'.html',pdfName=fileStem+'.pdf'
     const html=renderReport(result.packet,result.evidence,result.calculation)
-    await output('report.html',html);delivery.completed.push('html')
-    await output('report-quality.json',json(coverage))
+    await output('html',htmlName,html);delivery.completed.push('html')
+    await output('quality','report-quality.json',json(coverage))
     if(format==='both')try{
-      const pdf=await requestResearchPdf(html);await output('report.pdf',pdf);delivery.completed.push('pdf');delivery.pdf={status:'generated',bytes:pdf.length,sha256:outputs['report.pdf']}
+      const pdf=await requestResearchPdf(html);await output('pdf',pdfName,pdf);delivery.completed.push('pdf');delivery.pdf={status:'generated',bytes:pdf.length,sha256:outputs[pdfName]}
     }catch(error){delivery.pdf={status:'failed',error:error.message};process.exitCode=1}
   }
   const manifest = {
@@ -122,11 +125,11 @@ async function main() {
     delivery,researchCoverage:coverage,
     createdAt: new Date().toISOString(), inputSha256: result.inputSha256,
     engineSha256: await codeHash(), synthetic: result.packet.synthetic,
-    externalAuthenticity: 'unverified', outputs,
+    externalAuthenticity: 'unverified', artifacts:{...artifacts,manifest:'run.json'},outputs,
   }
   await writeFile(join(out, 'run.json'), json(manifest), { flag: 'wx' })
   if (!result.validation.ok) process.exitCode = 1
-  return { ok: result.validation.ok&&delivery.pdf.status!=='failed', out, status: manifest.status, delivery, researchCoverage:coverage, diagnostics: result.validation.diagnostics }
+  return { ok: result.validation.ok&&delivery.pdf.status!=='failed', out, status: manifest.status, delivery, artifacts:manifest.artifacts,researchCoverage:coverage, diagnostics: result.validation.diagnostics }
 }
 main().then(result => process.stdout.write(json(result))).catch(error => {
   process.stderr.write(json({ ok: false, error: error.message, code: error.code ?? 'COMMAND' }))

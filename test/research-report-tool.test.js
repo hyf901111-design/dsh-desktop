@@ -14,6 +14,7 @@ const cleanups=[]
 afterEach(async()=>{vi.unstubAllEnvs();for(const cleanup of cleanups.splice(0).reverse())await cleanup()})
 const digest=b=>createHash('sha256').update(b).digest('hex')
 const pdf=Buffer.from('%PDF-1.4\nfixed test PDF\n%%EOF')
+const stem='虚构算术演示公司（SYNTHETIC-NOT-A-SECURITY）2025年报公司研究简报_2026-10-23'
 async function fixture(){
  const root=await realpath(await mkdtemp(join(tmpdir(),'research-report-tool-')));cleanups.push(()=>rm(root,{recursive:true,force:true}))
  await cp(resolve('skills/ework-equity-research/examples/synthetic'),join(root,'input'),{recursive:true})
@@ -42,7 +43,7 @@ it('keeps ordinary Bash credential scrubbing and enables only the fixed report C
  expect(scrubbedParentEnv()).not.toHaveProperty('SHERLOCK_RESEARCH_CONTEXT_TOKEN')
  const doctor=await f.call({command:'doctor'});expect(doctor).toMatchObject({ok:true,command:'doctor',pdfRuntimeConfigured:true,defaultFormats:['html','pdf']})
  const result=await f.call({command:'run',input:'input/packet.json',out:'茅台研报-01'})
- expect(result).toMatchObject({ok:true,exitCode:0,status:'rendered-brief',delivery:{completed:['html','pdf']},artifacts:{html:join(f.root,'茅台研报-01/report.html'),pdf:join(f.root,'茅台研报-01/report.pdf')}})
+ expect(result).toMatchObject({ok:true,exitCode:0,status:'rendered-brief',artifactVerification:'verified',delivery:{completed:['html','pdf']},artifacts:{html:join(f.root,'茅台研报-01',stem+'.html'),pdf:join(f.root,'茅台研报-01',stem+'.pdf')}})
  expect(await readFile(result.artifacts.pdf)).toEqual(pdf)
  expect(f.state.hostCalls).toHaveLength(1);expect(f.state.hostCalls[0].html).toContain('虚构数据演示')
  expect(f.state.calls[1].argv).toEqual([process.execPath,resolve('skills/ework-equity-research/scripts/research.mjs'),'run','--input',join(f.root,'input/packet.json'),'--out',join(f.root,'茅台研报-01')])
@@ -101,7 +102,7 @@ it('fails closed when sandbox policy/backend is absent or its workspace is incon
 it('retains the nonzero PDF-failed manifest and successful HTML artifact without exposing credentials',async()=>{
  const f=await fixture();f.state.response.sha256='0'.repeat(64)
  const result=await f.call({command:'run',input:'input/packet.json',out:'failed-report'})
- expect(result).toMatchObject({ok:false,exitCode:1,status:'pdf-failed',delivery:{completed:['html'],pdf:{status:'failed'}},artifacts:{html:join(f.root,'failed-report/report.html'),manifest:join(f.root,'failed-report/run.json')}})
+ expect(result).toMatchObject({ok:false,exitCode:1,status:'pdf-failed',artifactVerification:'verified',delivery:{completed:['html'],pdf:{status:'failed'}},artifacts:{html:join(f.root,'failed-report',stem+'.html'),manifest:join(f.root,'failed-report/run.json')}})
  expect(result.artifacts.pdf).toBeUndefined();expect(JSON.stringify(result)).not.toContain(f.env.SHERLOCK_RESEARCH_CONTEXT_TOKEN)
 })
 
@@ -111,18 +112,42 @@ it('cancels the managed CLI process and preserves the partial HTML entrance',asy
  const pending=f.call({command:'run',input:'input/packet.json',out:'cancelled-report'},controller.signal)
  await ready;const pid=f.state.handles.at(-1).pid;controller.abort()
  const result=await pending
- expect(result).toMatchObject({ok:false,status:'cancelled',artifacts:{html:join(f.root,'cancelled-report/report.html')}})
+ expect(result).toMatchObject({ok:false,status:'cancelled',artifactVerification:'unverified',artifacts:{html:join(f.root,'cancelled-report',stem+'.html')}})
  await vi.waitFor(()=>expect(()=>process.kill(pid,0)).toThrow())
 })
 
 it('rejects a success manifest that omits the hashes of substituted HTML and PDF outputs',async()=>{
  const f=await fixture();f.state.afterExit=async()=>{
   const out=join(f.root,'tampered-report'),manifest=JSON.parse(await readFile(join(out,'run.json'),'utf8'))
-  delete manifest.outputs['report.html'];delete manifest.outputs['report.pdf']
-  await writeFile(join(out,'run.json'),JSON.stringify(manifest));await writeFile(join(out,'report.html'),'TAMPERED HTML');await writeFile(join(out,'report.pdf'),'TAMPERED PDF')
+  delete manifest.outputs[manifest.artifacts.html];delete manifest.outputs[manifest.artifacts.pdf]
+  await writeFile(join(out,'run.json'),JSON.stringify(manifest));await writeFile(join(out,manifest.artifacts.html),'TAMPERED HTML');await writeFile(join(out,manifest.artifacts.pdf),'TAMPERED PDF')
  }
  const result=await f.call({command:'run',input:'input/packet.json',out:'tampered-report'})
- expect(result).toMatchObject({ok:false,status:'integrity-failed',exitCode:0,artifacts:{html:join(f.root,'tampered-report/report.html')}})
+ expect(result).toMatchObject({ok:false,status:'integrity-failed',exitCode:0,artifactVerification:'unverified',artifacts:{html:join(f.root,'tampered-report',stem+'.html')}})
+})
+
+it.each(['missing-map','traversal','absolute','wrong-extension','different-stem','unknown-type','symlink'])('rejects unsafe or incomplete artifact mapping: %s',async kind=>{
+ const f=await fixture();f.state.afterExit=async()=>{
+  const out=join(f.root,'bad-map'),file=join(out,'run.json'),manifest=JSON.parse(await readFile(file,'utf8'))
+  if(kind==='missing-map')delete manifest.artifacts
+  if(kind==='traversal')manifest.artifacts.html='../input/packet.json'
+  if(kind==='absolute')manifest.artifacts.html=join(f.root,'input/packet.json')
+  if(kind==='wrong-extension')manifest.artifacts.html='report.json'
+  if(kind==='different-stem')manifest.artifacts.pdf='different-report.pdf'
+  if(kind==='unknown-type')manifest.artifacts.secret='secret.json'
+  if(kind==='symlink'){await rm(join(out,manifest.artifacts.html));await symlink(join(f.root,'input/packet.json'),join(out,manifest.artifacts.html))}
+  await writeFile(file,JSON.stringify(manifest))
+ }
+ const result=await f.call({command:'run',input:'input/packet.json',out:'bad-map'})
+ expect(result).toMatchObject({ok:false,status:'integrity-failed',artifactVerification:'unverified'})
+ for(const path of Object.values(result.artifacts))expect(path.startsWith(join(f.root,'bad-map')+'/')).toBe(true)
+})
+
+it('does not guess a partial report when cancellation leaves ambiguous HTML files',async()=>{
+ const f=await fixture();f.state.hang=true
+ const ready=new Promise(resolve=>{f.state.started=resolve}),controller=new AbortController(),pending=f.call({command:'run',input:'input/packet.json',out:'ambiguous'},controller.signal)
+ await ready;await writeFile(join(f.root,'ambiguous/second.html'),'ambiguous');controller.abort()
+ const result=await pending;expect(result).toMatchObject({ok:false,status:'cancelled',artifactVerification:'unverified'});expect(result.artifacts.html).toBeUndefined()
 })
 
 it.each(['bytes','sha256'])('rejects mismatched PDF delivery %s despite valid file hashes',async field=>{
