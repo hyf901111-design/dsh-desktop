@@ -163,6 +163,92 @@
           "正式新包最终只读主界面核验与包检查在构建后执行，不发送模型任务。"
         ],
         "generatedAt": "2026-10-23T15:20:35.545551+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b50e2c201964d1f2cae7abc74758f9a6dd9506cf",
+        "verificationCommit": "b50e2c201964d1f2cae7abc74758f9a6dd9506cf",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/integration-skill-composer.test.ts",
+              "test/integration-skill-use.test.ts",
+              "test/skill-command-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/home-operations-actions.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/integration-skill-composer.test.ts test/integration-skill-use.test.ts test/skill-command-menu.test.ts test/skill-command-patch.test.js test/home-operations-actions.test.ts --maxWorkers=2",
+            "verifiedCommit": "b50e2c201964d1f2cae7abc74758f9a6dd9506cf",
+            "completedAt": "2026-10-23T15:21:16.778Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-skill-chip-layout-browser.test.js",
+              "test/figma-inline-references-input.test.js",
+              "test/figma-inline-references-projection.test.js",
+              "test/figma-inline-references-patch.test.js",
+              "test/user-message-chip-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-skill-chip-layout-browser.test.js test/figma-inline-references-input.test.js test/figma-inline-references-projection.test.js test/figma-inline-references-patch.test.js test/user-message-chip-layout.test.js --maxWorkers=2",
+            "verifiedCommit": "b50e2c201964d1f2cae7abc74758f9a6dd9506cf",
+            "completedAt": "2026-10-23T15:21:16.778Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js -t center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable --maxWorkers=2",
+            "verifiedCommit": "b50e2c201964d1f2cae7abc74758f9a6dd9506cf",
+            "completedAt": "2026-10-23T15:21:16.778Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b50e2c201964d1f2cae7abc74758f9a6dd9506cf",
+            "completedAt": "2026-10-23T15:21:16.778Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "b50e2c201964d1f2cae7abc74758f9a6dd9506cf",
+            "completedAt": "2026-10-23T15:21:16.778Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-23T15:21:16.778Z"
       }
     }
   ],
