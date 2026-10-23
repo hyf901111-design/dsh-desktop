@@ -92,7 +92,7 @@ quote 必须与定位到的完整原文行逐字一致；valueLine 是取值所�
 ]
 ```
 
-按定义顺序执行，可引用之前计算的 ID。op 支持 `yoy`、`ratio`、`difference`、`sum`、`grossProfit`、`grossMargin`。sum 至少两项，其余恰好两项。所有输入须相同报表范围和归一化量纲；非同比还须同期间。同比须同指标且相隔一年同期间，基期必须为正。毛利两项依次为营业收入、营业成本。除零、缺失、混合口径均阻断；缺失值绝不自动补零。
+按定义顺序执行，可引用之前计算的 ID。op 支持 `yoy`、`ratio`、`difference`、`periodDifference`、`sum`、`grossProfit`、`grossMargin`。sum 至少两项，其余恰好两项。所有输入须相同报表范围和归一化量纲；除 `yoy` 与 `periodDifference` 外须同期间。`periodDifference` 只接受已核验原始金额事实，且须同指标、同范围、CNY 金额、相邻年度的相同财政频率（FY/H/Q），结果为第一个输入减第二个，结果期间取较新期；允许反向输入表达成本增加的负贡献。普通 `difference` 的同期间约束不变。同比须同指标且相隔一年同期间，基期必须为正。毛利两项依次为营业收入、营业成本。除零、缺失、混合口径均阻断；缺失值绝不自动补零。
 
 结果内部使用 BigInt 有理数，计算链沿用未舍入值；事实与普通计算的 JSON 十进制输出保留最多二十四位小数，DCF 结果展示保留十八位，HTML 展示另外舍入。没有自动预测、财报三表联动或填补债务的能力。
 
@@ -143,7 +143,7 @@ summary 的可选 label 也进入原有数字模板校验，不得隐藏手填�
 
 专题表：章节内 `tables:[{title,columns:[文字],rows:[[{text,refs?},...],...]}]`，最多八列八十行，单元格使用与段落一致的token与引用。
 
-专题柱图：`charts:[{title,series:[{name,refs:[fact或calcID,...]}]}]`。每系列两个至八个同指标、同单位、同口径、同频率期间；最多四系列，各系列期间对齐。禁止混画全年与半年，数据标签与来源自动生成。
+兼容的专题柱图（缺省 kind 为 bar）：`charts:[{title,series:[{name,refs:[fact或calcID,...]}]}]`。每系列两个至八个同指标、同单位、同口径、同频率期间；最多四系列，各系列期间对齐。禁止混画全年与半年，数据标签与来源自动生成。
 
 新增金额指标：`sellingExpenses` 销售费用、`administrativeExpenses` 管理费用、`taxesAndSurcharges` 税金及附加、`inventory` 存货、`contractLiabilities` 合同负债、`researchExpenses` 研发费用、`financeExpenses` 财务费用。资产负债表原文中文年月日可归一化为ISO事实期间，禁止伪造原文表头。
 
@@ -151,3 +151,6 @@ summary 的可选 label 也进入原有数字模板校验，不得隐藏手填�
 
 
 客户端调用入口为 `research_report`，参数只允许 `{command:"doctor"}`、`{command:"validate",input:"相对packet路径"}`、`{command:"run",input:"相对packet路径",out:"工作区根下一层新目录名"}`。不接受自定义脚本、env、format、工作区或会话身份。该工具在可信运行时内把PDF连接仅注入固定内置CLI；Bash的敏感环境过滤保持有效。
+
+
+多期 `line`、收入与同比 `combo`、严格闭合 `waterfall` 的结构和证据边界见 [研究图表标准](chart-quality.md)。不要给 report 或 chart 传入任意 SVG、脚本、图片路径、URL 或自定义 Logo；官方 Logo 由固定内置资源提供，计入 engineSha256。
