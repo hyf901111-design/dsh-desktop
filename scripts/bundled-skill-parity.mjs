@@ -2,6 +2,16 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readlinkSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
+const clientBundledSkillSlugs = ['efund-ppt-maker', 'ework-workbench-components', 'ework-free-data-sources', 'ework-finance-analysis', 'ework-equity-research']
+
+/** Every required builtin, including all nested scripts, must match the source. */
+export function verifyClientBundledSkillsParity({ sourceSkillRoot, packagedSkillRoot }) {
+  return clientBundledSkillSlugs.map(slug => verifyBundledSkillParity({
+    sourceSkillDirectory: path.join(sourceSkillRoot, slug),
+    packagedSkillDirectory: path.join(packagedSkillRoot, slug)
+  }))
+}
+
 function readMetadata(skillDirectory) {
   const metadataPath = path.join(skillDirectory, '_meta.json')
   if (!existsSync(metadataPath)) {

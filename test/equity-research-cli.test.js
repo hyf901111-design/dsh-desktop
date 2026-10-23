@@ -1,0 +1,41 @@
+import { afterEach, describe, expect, it } from 'vitest'
+import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { mkdtemp, cp, readFile, writeFile, readdir, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+const cli=resolve('skills/ework-equity-research/scripts/research.mjs'),temp=[]
+afterEach(async()=>{await Promise.all(temp.splice(0).map(p=>rm(p,{recursive:true,force:true})))})
+const invoke=(...args)=>spawnSync(process.execPath,[cli,...args],{encoding:'utf8',timeout:15000})
+async function fixture(){const root=await mkdtemp(join(tmpdir(),'equity-cli-'));temp.push(root);await cp(resolve('skills/ework-equity-research/examples/synthetic'),join(root,'input'),{recursive:true});return {root,input:join(root,'input/packet.json')}}
+describe('bundled research command workflow',()=>{
+ it('initializes safely and reports its real runtime without external dependencies',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'equity-init-'));temp.push(root);const out=join(root,'packet.json')
+  expect(invoke('doctor').status).toBe(0)
+  expect(invoke('init','--company','示例','--ticker','SYNTHETIC','--as-of','2026-10-23','--out',out).status).toBe(0)
+  const bytes=await readFile(out,'utf8');expect(JSON.parse(bytes).sources).toEqual([])
+  expect(invoke('init','--out',out).status).not.toBe(0);expect(await readFile(out,'utf8')).toBe(bytes)
+ })
+ it('produces a repeatable offline report, evidence and independently checkable output hashes',async()=>{
+  const f=await fixture();const a=join(f.root,'a'),b=join(f.root,'b')
+  const first=invoke('run','--input',f.input,'--out',a);expect(first.status,first.stderr+first.stdout).toBe(0)
+  const second=invoke('run','--input',f.input,'--out',b);expect(second.status,second.stderr+second.stdout).toBe(0)
+  for(const name of ['report.html','evidence.json','calculations.json','validation.json','run.json'])expect(await readdir(a)).toContain(name)
+  expect(await readFile(join(a,'calculations.json'),'utf8')).toBe(await readFile(join(b,'calculations.json'),'utf8'))
+  const manifest=JSON.parse(await readFile(join(a,'run.json'),'utf8'))
+  for(const [name,sha] of Object.entries(manifest.outputs))expect(createHash('sha256').update(await readFile(join(a,name))).digest('hex')).toBe(sha)
+  expect(invoke('run','--input',f.input,'--out',a).status).not.toBe(0)
+ })
+ it('blocks a tampered source and keeps a diagnostic instead of rendering success',async()=>{
+  const f=await fixture();await writeFile(join(f.root,'input/source.txt'),'changed source')
+  const out=join(f.root,'bad'),result=invoke('run','--input',f.input,'--out',out)
+  expect(result.status).not.toBe(0);expect(await readdir(out)).not.toContain('report.html')
+  expect(JSON.parse(await readFile(join(out,'validation.json'),'utf8')).ok).toBe(false)
+ })
+ it('blocks free financial prose and rejects ambiguous CLI options',async()=>{
+  const f=await fixture();const p=JSON.parse(await readFile(f.input,'utf8'));p.report={summary:[{text:'收入 9999 亿元。'}]};await writeFile(f.input,JSON.stringify(p))
+  const out=join(f.root,'bad');expect(invoke('run','--input',f.input,'--out',out).status).not.toBe(0)
+  const v=JSON.parse(await readFile(join(out,'validation.json'),'utf8'));expect(v.diagnostics.some(x=>x.code==='UNTEMPLATED_NUMBER')).toBe(true)
+  expect(invoke('run','--input',f.input,'--ot',out).status).not.toBe(0)
+ })
+})

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { localDependencyProblems } from './ensure-local-dependencies.mjs'
-import { verifyBundledSkillParity } from './bundled-skill-parity.mjs'
+import { verifyClientBundledSkillsParity } from './bundled-skill-parity.mjs'
 
 const args = process.argv.slice(2)
 const skipSignature = args.includes('--skip-signature')
@@ -129,12 +129,10 @@ try {
     const driverVersion = execFileSync(computerDriver, ['--version'], { encoding: 'utf8' }).trim()
     if (driverVersion !== 'cua-driver 0.28.2') throw new Error(`Unexpected computer driver: ${driverVersion}`)
     if (!existsSync(path.join(resourcesPath, 'native', 'cua-driver-MIT.txt'))) throw new Error('Computer driver license is missing')
-    const bundledSkills = ['efund-ppt-maker', 'ework-workbench-components', 'ework-free-data-sources', 'ework-finance-analysis'].map((slug) =>
-      verifyBundledSkillParity({
-        sourceSkillDirectory: path.resolve('skills', slug),
-        packagedSkillDirectory: path.join(resourcesPath, 'sherlock-skills', slug)
-      })
-    )
+    const bundledSkills = verifyClientBundledSkillsParity({
+      sourceSkillRoot: path.resolve('skills'),
+      packagedSkillRoot: path.join(resourcesPath, 'sherlock-skills')
+    })
 
     const updateRecovery = path.join(resourcesPath, 'update-recovery.cjs')
     if (!existsSync(updateRecovery)) throw new Error('macOS rename recovery helper is missing')
