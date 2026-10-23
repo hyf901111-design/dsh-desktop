@@ -91,6 +91,9 @@ function scopeMarkers(lines) {
   return scopes
 }
 function explicitUnits(line) {
+  // PDF text may concatenate the explicit unit and currency fields. Tokenize
+  // only this declared RMB pattern; original snapshot/quote bytes stay intact.
+  line = line.replace(/((?:^|[\s;；])单位\s*[:：]\s*(?:亿元|万元|元))(?=币种\s*[:：]\s*人民币(?:$|[\s;；()（）]))/gu, '$1 ')
   // Metric names such as 总股本 contain 股, but do not declare a unit.
   for (const term of Object.values(METRICS).flat().sort((a, b) => b.length - a.length)) line = line.replaceAll(term, ' ')
   const vocabulary = Object.values(UNITS).flatMap(unit => unit[2])
