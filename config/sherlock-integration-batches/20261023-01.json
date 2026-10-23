@@ -760,24 +760,20 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "完善文件类型图标、整卡右侧预览与稳定原生复制",
+        "featureName": "缩小任务文件交付卡片尺寸并收紧间距",
         "branch": "codex/feat/artifact-delivery-cards-20261023",
-        "baseCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
-        "tipCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
+        "baseCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
+        "tipCommit": "3591d0c060f0bd9925d58c850ee5e9b2a75fecbe",
         "commits": [
           {
-            "commit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
+            "commit": "3591d0c060f0bd9925d58c850ee5e9b2a75fecbe",
             "parents": [
-              "59c7daf76b1045fc681df60393d88bbffb66b382"
+              "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e"
             ],
-            "subject": "完善文件类型图标、整卡预览与原生路径复制"
+            "subject": "缩小文件交付卡片尺寸并收紧间距"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "design-qa.md"
-          },
           {
             "status": "M",
             "path": "docs/superpowers/specs/2026-10-23-artifact-delivery-cards-design.md"
@@ -785,99 +781,6 @@
           {
             "status": "M",
             "path": "scripts/lib/deliverable-cards.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons.mjs"
-          },
-          {
-            "status": "C094",
-            "path": "scripts/lib/delivery-file-icons/LICENSE",
-            "previousPath": "LICENSE"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/default_file.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_audio.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_csv.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_excel2.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_html.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_image.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_json.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_markdown.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_pdf2.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_powerpoint2.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_text.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_video.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_word2.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/file_type_zip.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/delivery-file-icons/provenance.json"
-          },
-          {
-            "status": "A",
-            "path": "src/main/delivery-file-clipboard.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/deliverable-cards.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/delivery-file-clipboard.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/delivery-file-icons.test.js"
           }
         ],
         "checks": [
@@ -887,36 +790,13 @@
               "--no-install",
               "vitest",
               "run",
-              "test/delivery-file-icons.test.js",
-              "test/delivery-file-model.test.js",
               "test/deliverable-cards.test.js",
-              "test/delivery-file-clipboard.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/generated-file-preview.test.js",
-              "test/generated-file-finder.test.ts",
-              "test/markdown-file-links.test.js",
-              "test/local-path-links.test.ts",
-              "test/chat-file-preview-scope.test.ts",
-              "test/native-file-menu.test.ts",
-              "test/figma-native-file-menu.test.js",
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "后继提交12文件141项聚焦通过，覆盖原生复制写文本/受信任主窗、类型图标和整卡点击。",
-            "verifiedCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
-            "completedAt": "2026-10-23T11:26:21.340Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过。",
-            "verifiedCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
-            "completedAt": "2026-10-23T11:26:21.340Z",
+            "summary": "本次纯CSS后继提交上1文件10项直接相关检查通过；日志/tmp/delivery-cards-compact-feature-check-20261023.log。",
+            "verifiedCommit": "3591d0c060f0bd9925d58c850ee5e9b2a75fecbe",
+            "completedAt": "2026-10-23T11:33:11.260Z",
             "timeoutMs": 180000
           },
           {
@@ -924,20 +804,22 @@
               "git",
               "diff",
               "--check",
-              "59c7daf76b1045fc681df60393d88bbffb66b382..HEAD"
+              "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e..HEAD"
             ],
             "outcome": "passed",
-            "summary": "后继范围空白检查通过，功能树干净。",
-            "verifiedCommit": "4356f845bcf0e0b2a7aabfe669147ca9b0bbb66e",
-            "completedAt": "2026-10-23T11:26:21.340Z",
-            "timeoutMs": 180000
+            "summary": "紧凑化后继范围空白检查通过，功能树干净。",
+            "verifiedCommit": "3591d0c060f0bd9925d58c850ee5e9b2a75fecbe",
+            "completedAt": "2026-10-23T11:33:11.260Z",
+            "timeoutMs": 10000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "第一轮实际客户端原会话/双格式卡片和PDF右侧预览通过；复制实际失败已复现，现由受信任主窗写文本修复。第二轮真实补丁组件14类资产中六类实际加载可见，浅/深和360px无溢出，卡片留白点选回调及柔和边框hover通过；需候选重构后复验原生复制。"
+          "outcome": "not-applicable",
+          "summary": "本轮只交接纯CSS紧凑化源码，真实客户端UI验收pending，需候选构建后测量卡片高度、长文件名和窄栏；不声称已完成。先前类型图标/整卡预览/原生复制及受信任桥检查证据仍保留于4356f845交接和候选审计。"
         },
         "acceptanceCriteria": [
+          "主卡内边距9×12px、文件图标24×26px、文件名13px、卡间距6px，单行约56px高；窄栏内边距8×10px。",
+          "长文件名自然换行，类型、打开方式与整卡右侧预览保持可用。",
           "按类型显示真实PDF/PPT/Word/Excel等图标，未知类型通用图标。",
           "卡片全主体含留白点击默认打开右侧预览，菜单按钮不触发预览。",
           "hover不改变背景或加重阴影，仅轻微边框变化。",
@@ -945,164 +827,13 @@
           "保留研报技能及此前修复，在候选本地构建并保持客户端打开。"
         ],
         "risks": [
+          "本次仅CSS和设计说明两文件变更，不新增141项或类型检查补跑；批次既有声明检查仍由执行器按约执行，旧证据保持原tip归属。",
+          "本轮真实客户端UI验收pending，由主agent候选构建后完成。",
           "仅新增受信任主窗剪贴板文本写入，无剪贴板读取或文件读取权限。",
           "图标MIT许可及固定来源随注入插件保留；不运行时联网。",
           "不发布、不公证、不改版本、不推送，不accept/promote。"
         ],
-        "generatedAt": "2026-10-23T11:26:21.340Z"
-      },
-      "merged": {
-        "mergeCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-        "verificationCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/equity-research-engine.test.js",
-              "test/equity-research-cli.test.js",
-              "test/equity-research-report.test.js",
-              "test/bundled-equity-research-skill.test.js",
-              "test/integration-skill-policy.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-bundled-runtime.test.js",
-              "test/bundled-skill-routing.test.js",
-              "test/bundled-skill-parity.test.ts",
-              "test/bundled-finance-skill.test.js",
-              "test/financial-routing.test.js",
-              "test/financial-routing-review.test.js",
-              "test/macos-package-runtime.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/equity-research-engine.test.js test/equity-research-cli.test.js test/equity-research-report.test.js test/bundled-equity-research-skill.test.js test/integration-skill-policy.test.js test/integration-runtime.test.js test/integration-bundled-runtime.test.js test/bundled-skill-routing.test.js test/bundled-skill-parity.test.ts test/bundled-finance-skill.test.js test/financial-routing.test.js test/financial-routing-review.test.js test/macos-package-runtime.test.ts --maxWorkers=2",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/preload-editor-singleton.test.ts",
-              "test/sandbox-preload.test.js",
-              "test/research-canvas-wheel-preload.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/preload-editor-singleton.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/preload-main-frame.test.ts",
-              "test/sandbox-preload.test.js",
-              "test/research-canvas-wheel-preload.test.ts",
-              "test/user-message-palette.test.js",
-              "test/figma-task-scrollbar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/preload-main-frame.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts test/user-message-palette.test.js test/figma-task-scrollbar.test.ts",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "vitest",
-              "run",
-              "test/notes-install-order.test.js",
-              "test/notes-activity.test.js",
-              "test/research-workbench-feedback.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx --no-install vitest run test/notes-install-order.test.js test/notes-activity.test.js test/research-workbench-feedback.test.js",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 10000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "vitest",
-              "run",
-              "test/delivery-file-model.test.js",
-              "test/deliverable-cards.test.js",
-              "test/generated-file-preview.test.js",
-              "test/generated-file-finder.test.ts",
-              "test/markdown-file-links.test.js",
-              "test/local-path-links.test.ts",
-              "test/chat-file-preview-scope.test.ts",
-              "test/native-file-menu.test.ts",
-              "test/figma-native-file-menu.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx --no-install vitest run test/delivery-file-model.test.js test/deliverable-cards.test.js test/generated-file-preview.test.js test/generated-file-finder.test.ts test/markdown-file-links.test.js test/local-path-links.test.ts test/chat-file-preview-scope.test.ts test/native-file-menu.test.ts test/figma-native-file-menu.test.js --maxWorkers=2",
-            "verifiedCommit": "c758120dc3485203c7e897a3dec04f2a954416fe",
-            "completedAt": "2026-10-23T11:27:36.056Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-23T11:27:36.056Z"
+        "generatedAt": "2026-10-23T11:33:11.260Z"
       }
     }
   ],
