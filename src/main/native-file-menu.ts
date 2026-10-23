@@ -1,8 +1,8 @@
 import type { MenuItemConstructorOptions } from 'electron'
 
-const supported = new Set(['open-new-tab', 'open-side', 'download', 'finder', 'relative', 'absolute'])
+const supported = new Set(['open-new-tab', 'open-side', 'default-app', 'download', 'finder', 'relative', 'absolute'])
 
-/** Display only; selected IDs return to the existing file-tree action handlers. */
+/** 仅展示菜单；文件树和交付卡片的动作 ID 交回调用者，菜单自身不打开文件。 */
 export function buildNativeFileMenu(
   value: unknown,
   choose: (id: string) => void

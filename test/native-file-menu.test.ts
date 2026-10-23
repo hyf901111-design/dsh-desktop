@@ -9,6 +9,16 @@ describe('native file menu', () => {
     ;(items[1]!.click as Function)()
     expect(choose).toHaveBeenCalledExactlyOnceWith('finder')
   })
+  it('returns default-app to the caller for delivery-card opening without running a file itself', () => {
+    const choose = vi.fn()
+    const items = buildNativeFileMenu([{ id: 'default-app', label: '使用默认应用打开', role: 'quit' }], choose)
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ id: 'default-app', label: '使用默认应用打开', enabled: true })
+    expect(items[0]).not.toHaveProperty('role')
+    expect(choose).not.toHaveBeenCalled()
+    ;(items[0]!.click as Function)()
+    expect(choose).toHaveBeenCalledExactlyOnceWith('default-app')
+  })
   it('does not admit unknown or duplicate actions, arbitrary roles or invalid inputs', () => {
     expect(buildNativeFileMenu(null, vi.fn())).toEqual([])
     expect(buildNativeFileMenu(Array(7).fill({ id: 'finder', label: 'x' }), vi.fn())).toEqual([])

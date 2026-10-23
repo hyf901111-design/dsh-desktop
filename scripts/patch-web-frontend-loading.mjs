@@ -33,6 +33,7 @@ import { patchQuestionCountdown } from './lib/question-countdown.mjs'
 import { patchGlmReasoningCapabilities } from './lib/glm-reasoning-capabilities.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
 import { patchRestoredFileMentions, patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
+import { patchDeliverableCards, patchDeliveryConversation } from './lib/deliverable-cards.mjs'
 import { patchInspectPortal, patchInspectConversation, patchInspectLayout } from './lib/inspect-sidebar.mjs'
 import { patchEmptyHeaderTitles, patchDesktopLocaleBridge, patchDesktopResearchDefaults } from './lib/desktop-locale-bridge.mjs'
 import { patchResearchResidentConversation } from './lib/research-resident-conversation.mjs'
@@ -210,6 +211,8 @@ const deliverablesPath=join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client
 writeFileSync(deliverablesPath, patchGeneratedFileMentions(readFileSync(deliverablesPath, 'utf8')))
 
 writeFileSync(conversationPath, patchRestoredFileMentions(readFileSync(conversationPath, 'utf8')))
+writeFileSync(deliverablesPath, patchDeliverableCards(readFileSync(deliverablesPath, 'utf8')))
+writeFileSync(conversationPath, patchDeliveryConversation(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchEmptyHeaderTitles(readFileSync(conversationPath, 'utf8')))
 
