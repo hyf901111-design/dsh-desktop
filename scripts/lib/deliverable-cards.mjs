@@ -1,15 +1,17 @@
 import {deliveryModelSource} from './delivery-file-model.mjs'
+import {deliveryIconSource} from './delivery-file-icons.mjs'
 
 export const DELIVERY_CARDS_CSS = `
 .ew-delivery{margin-top:20px;min-width:0;color:var(--dsw-alias-label-primary,#202124);font:400 14px/1.5 var(--odyssey-font-ui,system-ui,sans-serif)}
 .ew-delivery-heading{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:13px;font-weight:550;color:var(--dsw-alias-label-secondary,#666)}
 .ew-delivery-count{font-size:12px;font-weight:400;color:var(--dsw-alias-label-tertiary,#888)}
 .ew-delivery-list{display:flex;flex-direction:column;gap:10px;min-width:0}
-.ew-delivery-card{position:relative;display:flex;align-items:center;gap:12px;min-width:0;padding:14px 16px;border:1px solid var(--dsw-alias-border-l1,#e5e5e8);border-radius:12px;background:var(--dsw-alias-bg-base,#fff);transition:border-color .16s ease,background .16s ease}
-.ew-delivery-card:hover{border-color:var(--dsw-alias-border-l3,#bcbec5);background:var(--dsw-alias-interactive-bg-hover,#fafafa)}
+.ew-delivery-card{position:relative;display:flex;align-items:center;gap:12px;min-width:0;padding:14px 16px;border:1px solid var(--dsw-alias-border-l1,#e5e5e8);border-radius:12px;background:var(--dsw-alias-bg-base,#fff);transition:border-color .12s ease;cursor:pointer}
+.ew-delivery-card:hover{border-color:color-mix(in srgb,var(--dsw-alias-border-l1,#e5e5e8) 88%,var(--dsw-alias-label-secondary,#666))}
 .ew-delivery-open{display:flex;align-items:center;gap:14px;min-width:0;flex:1;padding:0;border:0;border-radius:8px;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
-.ew-delivery-icon{display:flex;align-items:center;justify-content:center;flex:none;width:46px;height:50px;border-radius:10px;background:color-mix(in srgb,currentColor 8%,transparent);color:#7f8794}
+.ew-delivery-icon{display:flex;align-items:center;justify-content:center;flex:none;width:46px;height:50px;border-radius:10px;background:transparent;color:#7f8794}
 .ew-delivery-icon svg{width:25px;height:25px}
+.ew-delivery-icon img{display:block;width:30px;height:32px;object-fit:contain}
 .ew-delivery-icon[data-kind=pdf]{color:#ef5962}.ew-delivery-icon[data-kind=presentation]{color:#d87941}.ew-delivery-icon[data-kind=sheet]{color:#38946b}.ew-delivery-icon[data-kind=document]{color:#4a7cca}.ew-delivery-icon[data-kind=web]{color:#5c85b6}.ew-delivery-icon[data-kind=media]{color:#9a71c4}
 .ew-delivery-info{min-width:0;flex:1}.ew-delivery-name{display:block;min-width:0;font-size:14px;font-weight:550;line-height:1.55;overflow-wrap:anywhere;white-space:normal}
 .ew-delivery-type{display:block;margin-top:3px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary,#83858b)}
@@ -58,7 +60,7 @@ function DeliveryFileCard({path,openFile,openSystemFile,canOpenSystem,localFiles
   if(busy)return
   setBusy(true)
   try {
-   if(action==='absolute'){if(await _deliveryIcons.writeClipboard(path)!==true)throw Error(en?'Unable to copy the path. Please try again.':'路径复制失败，请重试。');report(en?'Path copied':'路径已复制');return}
+   if(action==='absolute'){const copied=window.dshDesktop?.copyFilePath?(await window.dshDesktop.copyFilePath(path))?.ok===true:await _deliveryIcons.writeClipboard(path);if(copied!==true)throw Error(en?'Unable to copy the path. Please try again.':'路径复制失败，请重试。');report(en?'Path copied':'路径已复制');return}
    if(canCheck&&window.dshDesktop?.researchFilesAvailable){const values=await window.dshDesktop.researchFilesAvailable([path]);if(!alive.current)return;setAvailable(values[0]===true);if(values[0]!==true)throw Error(en?'File moved or not found.':'文件已移动或不存在，请确认后重试。')}
    if(action==='open-side')await openFile(path)
    else if(action==='default-app'){await openSystemFile(path);report(en?'Opened with the default application':'已请求用默认应用打开')}
@@ -84,9 +86,9 @@ function DeliveryFileCard({path,openFile,openSystemFile,canOpenSystem,localFiles
   const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(at+(event.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length
   buttons[next]?.focus()
  }
- return jsxs('div',{className:'ew-delivery-item',children:[jsxs('div',{className:'ew-delivery-card',ref:card,'data-file-path':path,children:[
+ return jsxs('div',{className:'ew-delivery-item',children:[jsxs('div',{className:'ew-delivery-card',ref:card,'data-file-path':path,onClick:event=>{if(!event.target.closest('button,[role="menu"]'))void perform('open-side')},children:[
   jsxs('button',{className:'ew-delivery-open',type:'button',title:path,'aria-label':(en?'Open ':'打开 ')+name,'aria-busy':busy||undefined,onClick:()=>perform('open-side'),children:[
-   jsx('span',{className:'ew-delivery-icon','data-kind':type.kind,'aria-hidden':true,children:jsx(_deliveryIcons.IconPaperclipOutline16,{size:25})}),
+   jsx('span',{className:'ew-delivery-icon','data-kind':type.kind,'aria-hidden':true,children:jsx('img',{src:deliveryIconForPath(path),alt:'',draggable:false})}),
    jsxs('span',{className:'ew-delivery-info',children:[jsx('span',{className:'ew-delivery-name',children:name}),jsx('span',{className:'ew-delivery-type',children:type.extension+(available===false?(en?' · File not found':' · 文件不存在'):'')})]})
   ]}),
   jsxs('button',{className:'ew-delivery-options',ref:options,type:'button','aria-label':(en?'Open options: ':'打开方式：')+name,'aria-haspopup':'menu','aria-expanded':menu!==null,disabled:busy,onClick:showMenu,children:[en?'Open with':'打开方式',jsx(_deliveryIcons.IconChevronDownOutline14,{size:14})]}),
@@ -111,7 +113,7 @@ function exact(source,before,after){if(source.split(before).length!==2)throw Err
 
 export function patchDeliverableCards(source){
  const marker='/* ework:delivery-cards:v1 */'
- const runtime=marker+'\nlet _deliveryIcons=require("@deepseek-ai/dsh-client-ui-primitives");\n'+deliveryModelSource+'\n'+[deliveryFileType,DeliveryFileCard,ProducedFiles].map(fn=>fn.toString()).join('\n')+'\n'+`if(typeof document!=='undefined'&&!document.getElementById('ework-delivery-cards')){const tag=document.createElement('style');tag.id='ework-delivery-cards';tag.textContent=${JSON.stringify(DELIVERY_CARDS_CSS)};document.head.appendChild(tag);}\n`
+ const runtime=marker+'\nlet _deliveryIcons=require("@deepseek-ai/dsh-client-ui-primitives");\n'+deliveryModelSource+'\n'+deliveryIconSource+'\n'+[deliveryFileType,DeliveryFileCard,ProducedFiles].map(fn=>fn.toString()).join('\n')+'\n'+`if(typeof document!=='undefined'&&!document.getElementById('ework-delivery-cards')){const tag=document.createElement('style');tag.id='ework-delivery-cards';tag.textContent=${JSON.stringify(DELIVERY_CARDS_CSS)};document.head.appendChild(tag);}\n`
  if(source.includes(marker)){
   const start=source.indexOf(marker),end=source.indexOf('\n\t\t//#endregion',start)
   if(end<0||source.indexOf(marker,start+marker.length)!==-1)throw Error('Delivery cards runtime anchor drifted')

@@ -1,0 +1,157 @@
+{
+  "repository": "https://github.com/vscode-icons/vscode-icons",
+  "commit": "c2ceed544135c55ff77e750e5a17bdc67eae0f61",
+  "commitApi": "https://api.github.com/repos/vscode-icons/vscode-icons/commits/master",
+  "licenseId": "MIT",
+  "license": {
+    "file": "LICENSE",
+    "originalPath": "LICENSE",
+    "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/LICENSE",
+    "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/8ae68c54bc21e9ea4633279e8791d2df14c2a603",
+    "gitBlobSha": "8ae68c54bc21e9ea4633279e8791d2df14c2a603",
+    "sha256": "6871eaa1f7a51fbc5f482bec82c3d30a0c61b6889865a03f998c2be9860bdb20",
+    "bytes": 1087
+  },
+  "assets": [
+    {
+      "type": "pdf",
+      "file": "file_type_pdf2.svg",
+      "originalPath": "icons/file_type_pdf2.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_pdf2.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/27549cc76425f13244b8afb151f706be98ad3487",
+      "gitBlobSha": "27549cc76425f13244b8afb151f706be98ad3487",
+      "sha256": "8f31343fee7c18a199db7e5226c729b21bfc7062d93d927ff77f6427e7cb50e0",
+      "bytes": 3040
+    },
+    {
+      "type": "powerpoint",
+      "file": "file_type_powerpoint2.svg",
+      "originalPath": "icons/file_type_powerpoint2.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_powerpoint2.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/04a651ba33bf5aab6ec7cb8521b59500ebfbd920",
+      "gitBlobSha": "04a651ba33bf5aab6ec7cb8521b59500ebfbd920",
+      "sha256": "f889badb15d5565d20a5c0074e873765d2beae0733a33a6a11e205630bfd03ff",
+      "bytes": 1056
+    },
+    {
+      "type": "word",
+      "file": "file_type_word2.svg",
+      "originalPath": "icons/file_type_word2.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_word2.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/c5ae915ab99bc117c4d457472cacd5a35b68c4d6",
+      "gitBlobSha": "c5ae915ab99bc117c4d457472cacd5a35b68c4d6",
+      "sha256": "d8f8a9933cf540973226eb8bfa2e4a8073c5282aaf0f626cbb5a602a4e703c2b",
+      "bytes": 934
+    },
+    {
+      "type": "excel",
+      "file": "file_type_excel2.svg",
+      "originalPath": "icons/file_type_excel2.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_excel2.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/6114270a273b416ee20e294afe626aff596cec2c",
+      "gitBlobSha": "6114270a273b416ee20e294afe626aff596cec2c",
+      "sha256": "bbec7fa42940e78d406da7c1f868f9396d4c7893d877f40f1450d0bcd404333b",
+      "bytes": 744
+    },
+    {
+      "type": "html",
+      "file": "file_type_html.svg",
+      "originalPath": "icons/file_type_html.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_html.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/ec627268ba0ebe0dd51dcc81a406d9eacdc39b88",
+      "gitBlobSha": "ec627268ba0ebe0dd51dcc81a406d9eacdc39b88",
+      "sha256": "6a5cfad64d74cee26abfb808dc62c17d0e4644412e63e44f4743833164b8e6e4",
+      "bytes": 544
+    },
+    {
+      "type": "csv",
+      "file": "file_type_csv.svg",
+      "originalPath": "icons/file_type_csv.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_csv.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/c6707b543c944b461779d5890580e929de03454d",
+      "gitBlobSha": "c6707b543c944b461779d5890580e929de03454d",
+      "sha256": "d9ae79508947257e90fa245ecffb550bab7837a6561da27841a701514003dd2c",
+      "bytes": 421
+    },
+    {
+      "type": "json",
+      "file": "file_type_json.svg",
+      "originalPath": "icons/file_type_json.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_json.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/1a342c4c64c2c092973e4473937eb9a402275489",
+      "gitBlobSha": "1a342c4c64c2c092973e4473937eb9a402275489",
+      "sha256": "d33c55591c627feb212664fbee28fa7ed002e4c3c2b5dfa21ea5bc714e744a39",
+      "bytes": 1384
+    },
+    {
+      "type": "text",
+      "file": "file_type_text.svg",
+      "originalPath": "icons/file_type_text.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_text.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/c40ef30fe47a68cc049cf946951f83645fabfc67",
+      "gitBlobSha": "c40ef30fe47a68cc049cf946951f83645fabfc67",
+      "sha256": "b8f380ee5bf76befed8c6fdae524f0c6a99a8370a14effb566dedebc878f4cbc",
+      "bytes": 421
+    },
+    {
+      "type": "markdown",
+      "file": "file_type_markdown.svg",
+      "originalPath": "icons/file_type_markdown.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_markdown.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/9089066138a14ba97c017e1769c021ee68407c8f",
+      "gitBlobSha": "9089066138a14ba97c017e1769c021ee68407c8f",
+      "sha256": "eae21ad9763bc5a13898ded2d105937d07f577bb9799825d777bd5607cd99f20",
+      "bytes": 319
+    },
+    {
+      "type": "archive",
+      "file": "file_type_zip.svg",
+      "originalPath": "icons/file_type_zip.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_zip.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/c653a190c9678be58ea3865544c9192c7800831b",
+      "gitBlobSha": "c653a190c9678be58ea3865544c9192c7800831b",
+      "sha256": "31ac191b609fb6727c0a7744edb86e5aff747ca3c9ddc9cafc96b90980cb93e2",
+      "bytes": 4005
+    },
+    {
+      "type": "image",
+      "file": "file_type_image.svg",
+      "originalPath": "icons/file_type_image.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_image.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/fc929d24b968e492da8071e8ada49f21f51be6b5",
+      "gitBlobSha": "fc929d24b968e492da8071e8ada49f21f51be6b5",
+      "sha256": "c5c20aeb38494b7790fe99c6eb6808a41212efff8179dd9dab068239ca5de680",
+      "bytes": 349
+    },
+    {
+      "type": "audio",
+      "file": "file_type_audio.svg",
+      "originalPath": "icons/file_type_audio.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_audio.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/21c4fc1bdb1945b9ecb2eaec82d855ae5e9309a9",
+      "gitBlobSha": "21c4fc1bdb1945b9ecb2eaec82d855ae5e9309a9",
+      "sha256": "07799b88761dd8d570825139e637483c5995b77ad4e30b1b610d0c38c7487f7c",
+      "bytes": 494
+    },
+    {
+      "type": "video",
+      "file": "file_type_video.svg",
+      "originalPath": "icons/file_type_video.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/file_type_video.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/85db0498745ff443cf28a6453d48ec5dc1be3458",
+      "gitBlobSha": "85db0498745ff443cf28a6453d48ec5dc1be3458",
+      "sha256": "0ac46767761a572219951d848c80afabac9736b4318369780c5c92bcc1ca00d2",
+      "bytes": 3321
+    },
+    {
+      "type": "file",
+      "file": "default_file.svg",
+      "originalPath": "icons/default_file.svg",
+      "sourceUrl": "https://raw.githubusercontent.com/vscode-icons/vscode-icons/c2ceed544135c55ff77e750e5a17bdc67eae0f61/icons/default_file.svg",
+      "downloadApi": "https://api.github.com/repos/vscode-icons/vscode-icons/git/blobs/85bead731d649e3cb868201af37ffa53c2eb357d",
+      "gitBlobSha": "85bead731d649e3cb868201af37ffa53c2eb357d",
+      "sha256": "3b146b45270fdb8b2c45c54c4229248ea1db84577577017171f32588b9a28591",
+      "bytes": 136
+    }
+  ]
+}

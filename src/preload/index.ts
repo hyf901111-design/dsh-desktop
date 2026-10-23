@@ -312,6 +312,8 @@ contextBridge.exposeInMainWorld(
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),
     showItemInFolder: (path: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('filesystem:show-item-in-folder', path),
+    copyFilePath: (path: string): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('filesystem:copy-file-path', path),
     researchFilesAvailable: (paths: string[]): Promise<boolean[]> =>
       ipcRenderer.invoke('research:files-available', paths),
     researchCanvasStorage: Object.freeze({

@@ -1,5 +1,5 @@
-// @vitest-environment jsdom
-import {afterEach, beforeAll, expect, it, vi} from 'vitest'
+import {afterAll, afterEach, beforeAll, expect, it, vi} from 'vitest'
+import {JSDOM} from 'jsdom'
 import * as React from 'react'
 import * as jsx from 'react/jsx-runtime'
 import {createRoot} from 'react-dom/client'
@@ -8,10 +8,14 @@ import {readFileSync} from 'node:fs'
 import {patchDeliverableCards, patchDeliveryConversation} from '../scripts/lib/deliverable-cards.mjs'
 
 let plugin, selector, root, mount
+let dom
+const previousGlobals=new Map()
 let copied=true
 const writeClipboard=vi.fn(async()=>copied)
 const source=()=>readFileSync('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8')
 beforeAll(()=>{
+ dom=new JSDOM('<!doctype html><html><head></head><body></body></html>',{url:'http://localhost/'})
+ for(const key of ['window','document','navigator','MouseEvent','KeyboardEvent']){previousGlobals.set(key,Object.getOwnPropertyDescriptor(globalThis,key));Object.defineProperty(globalThis,key,{configurable:true,value:dom.window[key]})}
  globalThis.IS_REACT_ACT_ENVIRONMENT=true
  let descriptor
  window.__ModuleLoader__={load:value=>descriptor=value}
@@ -20,6 +24,7 @@ beforeAll(()=>{
  const ctx={get:()=>({isLoopback:true,hostDescription:{},openPath:()=>{}}),conversationEvents:{register:()=>{}},locale:{register:()=>{},bind:()=>()=>''},effect:fn=>fn(),provide:()=>{},slots:{inject:(_key,fn)=>fn(),register:value=>{selector=value.select}}}
  plugin.apply(ctx)
 })
+afterAll(()=>{dom?.window.close();for(const [key,value] of previousGlobals){if(value)Object.defineProperty(globalThis,key,value);else delete globalThis[key]}})
 afterEach(async()=>{if(root)await act(()=>root.unmount());root=null;mount?.remove();delete window.dshDesktop;copied=true;vi.clearAllMocks()})
 async function render(props){mount=document.createElement('div');document.body.append(mount);root=createRoot(mount);await act(()=>root.render(React.createElement(plugin.ProducedFiles,{matched:[],openFile:()=>{},isLoopback:true,useHostDescription:()=>true,...props})));return mount}
 const click=async el=>{await act(()=>el.dispatchEvent(new MouseEvent('click',{bubbles:true})))}
@@ -52,6 +57,15 @@ it('opens the exact selected file and supports keyboard-dismissed open choices',
  await click(Array.from(el.querySelectorAll('[role=menuitem]')).find(e=>e.textContent.includes('默认应用')))
  expect(system).toHaveBeenCalledExactlyOnceWith('/work/report.pdf')
 })
+it('opens from the whole file-card region while keeping the options button independent',async()=>{
+ const open=vi.fn()
+ const el=await render({matched:['/work/report.pdf'],openFile:open})
+ await click(el.querySelector('.ew-delivery-card'))
+ expect(open).toHaveBeenCalledExactlyOnceWith('/work/report.pdf')
+ await click(el.querySelector('.ew-delivery-options'))
+ expect(open).toHaveBeenCalledTimes(1)
+ expect(el.querySelector('[role=menu]')).not.toBeNull()
+})
 it('reports a missing file in place instead of silently opening or claiming success',async()=>{
  window.dshDesktop={researchFilesAvailable:vi.fn(async()=>[false])}
  const open=vi.fn()
@@ -79,6 +93,16 @@ it('does not claim copy succeeded when the real clipboard contract returns false
  expect(writeClipboard).toHaveBeenCalledExactlyOnceWith('/work/report.pdf')
  expect(el.textContent).not.toContain('路径已复制')
  expect(el.querySelector('[role=alert]')).not.toBeNull()
+})
+it('uses native path copying after the OS menu returns instead of losing clipboard activation',async()=>{
+ copied=false
+ const nativeCopy=vi.fn(async()=>({ok:true}))
+ window.dshDesktop={copyFilePath:nativeCopy,showFileContextMenu:vi.fn(async()=> 'absolute')}
+ const el=await render({matched:['/work/正式报告（完整版）.pdf']})
+ await click(el.querySelector('.ew-delivery-options'))
+ expect(nativeCopy).toHaveBeenCalledExactlyOnceWith('/work/正式报告（完整版）.pdf')
+ expect(writeClipboard).not.toHaveBeenCalled()
+ expect(el.textContent).toContain('路径已复制')
 })
 it('does not use the legacy 512-character stat API to reject longer valid preview paths',async()=>{
  const path='/work/'+('nested/'.repeat(80))+'report.pdf',exists=vi.fn(async()=>[false]),open=vi.fn()
