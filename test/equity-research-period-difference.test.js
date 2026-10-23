@@ -30,6 +30,10 @@ describe('explicit comparable-period amount differences',()=>{
   const result=run([fact('r25','FY2025','100.00000000000000000001'),fact('r24','FY2024','100'),fact('c25','FY2025','50',{metric:'costOfRevenue'}),fact('c24','FY2024','49',{metric:'costOfRevenue'})],[op('revenueChange',['r25','r24']),op('costEffect',['c24','c25']),{id:'total',op:'sum',inputs:['revenueChange','costEffect']}])
   expect(result.diagnostics).toEqual([]);expect(result.values[2].value).toBe('-0.99999999999999999999');expect(result.values[2].period).toBe('FY2025')
  })
+ it('rejects derived op labels that hide different economic indicators',()=>{
+  const result=run([fact('r25','FY2025','100'),fact('c25','FY2025','40',{metric:'costOfRevenue'}),fact('cash24','FY2024','70',{metric:'cash'}),fact('debt24','FY2024','20',{metric:'debt'})],[{id:'gross','op':'difference',inputs:['r25','c25']},{id:'netCash','op':'difference',inputs:['cash24','debt24']},op('invalid',['gross','netCash'])])
+  expect(result.values[2].status).toBe('blocked');expect(result.diagnostics[0].code).toBe('CALC_INPUT')
+ })
  it('preserves the stricter same-period contract of ordinary difference',()=>{
   const result=run([fact('a','FY2025','120'),fact('b','FY2024','100')],[{id:'old',op:'difference',inputs:['a','b']}])
   expect(result.diagnostics[0].code).toBe('CALC_PERIOD')

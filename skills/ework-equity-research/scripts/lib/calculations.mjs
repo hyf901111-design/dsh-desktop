@@ -27,6 +27,8 @@ export function runCalculations(packet, facts, diagnostics) {
       if (inputs.some(f => f.unit !== a.unit)) throw new Error('CALC_UNIT:输入单位量纲必须相同；金额已先换算到元')
       let resultPeriod = a.period
       if (calc.op === 'periodDifference') {
+        // Derived op labels (e.g. two unrelated differences) are not a metric identity.
+        if (inputs.some(f => f.status !== 'verified')) throw new Error('CALC_INPUT:跨期差额只接受已核验原始金额事实，不能用派生运算名冒充同指标')
         const first = periodKey(a.period), second = periodKey(b.period)
         if (a.unit !== 'CNY') throw new Error('CALC_UNIT:跨期差额仅支持人民币金额')
         const fiscal = /^(?:FY20\d{2}|20\d{2}(?:H[12]|Q[1-4]))$/
