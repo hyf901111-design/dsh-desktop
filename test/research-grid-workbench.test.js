@@ -89,13 +89,13 @@ it.each(['share-statistics','metrics'])('快照 %s 随画布变窄保留完整�
  expect(state.contentHeight('b',{html,width:484,height:1000})).toBe(false)
  expect(state.contentHeight('a',{html:'stale',width:484,height:1000})).toBe(false)
 })
-it('金融快照整理遵守模板阅读宽度，窄两列合并且重复整理稳定',()=>{
+it('金融快照标准整理保留已有同行，通用最低宽不足才拆行，重复稳定',()=>{
  const g=createResearchGrid(),variants=['share-statistics','market-overview','currency-snapshot','watchlist']
  for(const width of [900,1000,1400,320]){
   const nodes=variants.map((variant,i)=>({id:variant,kind:'generated-container',containerSpec:{type:'html',html:`<style>body[data-sherlock-market="watchlist"]{}</style><body data-sherlock-market="${variant}"></body>`},preferred:{height:330+i*25}}))
   const before=nodes.map((n,i)=>item(n.id,i%2*20,Math.floor(i/2)*20,20,20)),next=g.arrange(nodes,before,width),shown=g.project(nodes,next,width)
-  expect(shown.every(n=>n.width>=Math.min(n.id==='share-statistics'?320:480,width-24)-.001)).toBe(true)
-  if(width===900)expect(shown.filter(n=>n.id!=='share-statistics').every(n=>n.width>=width-24-.001)).toBe(true)
+  expect(shown.every(n=>n.width>=Math.min(280,width-24)-.001)).toBe(true)
+  if(width>=900)expect(next.map(c=>c.w)).toEqual([20,20,20,20]);else expect(next.every(c=>c.w===40)).toBe(true)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
   expect(g.arrange(nodes,next,width)).toEqual(next)
  }
@@ -110,12 +110,13 @@ it('预置宽快照首次挂载使用整行，手动宽度仍可收窄到契约�
  expect(state.get().every(c=>c.x===0&&c.w===40)).toBe(true)
  const min=g.minimum(nodes[0],g.metrics(900));expect(min.w*g.metrics(900).step-10).toBeGreaterThanOrEqual(280);expect(min.w).toBeLessThan(40)
 })
-it('整理旧研究运营看板的窄列长尾补入宽列，柱状图保持模板高度',()=>{
+it('标准整理旧运营看板保持原行，独行长尾铺满且柱状图保留自然高度',()=>{
  for(const width of [810,1000]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('metrics',0,0,15,20),item('calendar',15,0,25,15),item('gantt',0,20,15,14),item('news',0,34,15,15),item('reports',0,49,15,29),item('bar',0,78,15,17)]
   const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width)
-  expect(next.filter(c=>c.x===15).length).toBeGreaterThanOrEqual(3)
-  expect(Math.max(...next.map(c=>c.y+c.h))).toBeLessThan(before.find(c=>c.id==='bar').y)
+  expect(next.find(c=>c.id==='metrics')).toMatchObject({x:0,y:0,w:15,h:20})
+  expect(next.find(c=>c.id==='calendar')).toMatchObject({x:15,y:0,w:25,h:20})
+  expect(next.filter(c=>!['metrics','calendar'].includes(c.id)).every(c=>c.x===0&&c.w===40)).toBe(true)
   expect(next.find(c=>c.id==='bar').h).toBe(17)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
   expect(g.arrange(nodes,next,width)).toEqual(next)
@@ -147,25 +148,27 @@ it('窄画板新工作台默认占满一列，手动拉框及普通单卡保留�
  state.reconcile({...snap,artifacts:[...snap.artifacts,{id:'manual',workbenchId:'manual',kind:'generated-container',width:320,height:220,sizeMode:'manual',preserveGenerationSize:true}]})
  expect(state.get().slice(0,2)).toEqual(before);expect(state.get().at(-1).w).toBeLessThan(40)
 })
-it('整理补满局部两列之间的空条，不因首排已覆盖全宽而保留下方错位列',()=>{
+it('标准整理填满局部行宽，不把原本不同行的错位卡片重新并列',()=>{
  for(const width of [1000,1230,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('gold',0,0,20,8),item('pharma',20,0,20,9),item('table',0,8,20,10),item('btc',22,9,18,10),item('stocks',0,18,20,12),item('news',22,19,18,22),item('report',0,30,20,36)]
   const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width)
   expect(next.find(c=>c.id==='gold')).toMatchObject({x:0,w:20})
   expect(next.find(c=>c.id==='pharma')).toMatchObject({x:20,w:20})
-  for(const id of ['btc','news'])expect(next.find(c=>c.id===id)).toMatchObject({x:20,w:20})
+  for(const id of ['table','btc','stocks','news','report'])expect(next.find(c=>c.id===id)).toMatchObject({x:0,w:40})
+  expect(next.find(c=>c.id==='gold').h).toBe(next.find(c=>c.id==='pharma').h)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
   expect(g.arrange(nodes,next,width)).toEqual(next)
  }
 })
-it('整理单列连续堆积的后续组件补入短列，大面积空缺不需要通栏边界才能消除',()=>{
+it('标准整理后续独行组件铺满，不把原行长尾移入上方短列',()=>{
  for(const width of [1000,1230,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('gold',0,0,22,8),item('pharma',22,0,18,8),item('table',0,8,22,10),item('btc',22,8,18,7),item('stocks',22,15,18,11),item('news',22,26,18,22),item('report',22,48,18,40),item('candle',22,88,18,16),item('heatmap',22,104,18,12)]
   const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
   expect(at('gold')).toMatchObject({x:0,y:0,w:22,h:8});expect(at('pharma')).toMatchObject({x:22,y:0,w:18,h:8})
   expect(at('table')).toMatchObject({x:0,y:8,w:22,h:10})
-  expect(next.filter(c=>['news','report','candle','heatmap'].includes(c.id)&&c.x===0).length).toBeGreaterThanOrEqual(2)
-  const bottom=Math.max(...next.map(c=>c.y+c.h));expect(bottom).toBeLessThan(90)
+  expect(at('btc')).toMatchObject({x:22,y:8,w:18,h:10})
+  expect(next.filter(c=>['stocks','news','report','candle','heatmap'].includes(c.id)).every(c=>c.x===0&&c.w===40)).toBe(true)
+  expect(at('report').y).toBe(at('news').y+at('news').h)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
   expect(g.arrange(nodes,next,width)).toEqual(next)
  }
@@ -242,13 +245,14 @@ describe('研究工作台网格事务',()=>{
  })
 })
 
-it('整理填满可用宽度，按内容分配独立高度和不等宽模块并保持稳定',()=>{
+it('标准整理填满行宽，同行按最大内容高度拉齐，不等宽比例保持稳定',()=>{
  const g=createResearchGrid(),nodes=[{id:'a',preferred:{width:640,height:290}},{id:'b',preferred:{width:340,height:200}},{id:'c',preferred:{width:600,height:460}}],before=[item('a',0,0,26,6),item('b',26,0,14,5),item('c',0,45,26,13)]
  const next=g.arrange(nodes,before,1000,700),bottom=Math.max(...next.map(c=>c.y+c.h))
  expect(next.map(c=>c.id)).toEqual(['a','b','c']);expect(new Set(next.map(c=>c.w)).size).toBeGreaterThan(1)
  expect(Math.max(...next.map(c=>c.x+c.w))).toBe(40)
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
- expect(g.project(nodes,next,1000).map(n=>n.height)).toEqual(nodes.map(n=>expect.closeTo(Math.ceil((n.preferred.height+10)/g.metrics(1000).step)*g.metrics(1000).step-10)))
+ const projected=g.project(nodes,next,1000);expect(projected[0].height).toBe(projected[1].height);expect(projected[0].height).toBeGreaterThanOrEqual(290);expect(projected[2].height).toBeGreaterThanOrEqual(460)
+ expect(next.find(c=>c.id==='c')).toMatchObject({x:0,w:40,y:next[0].h})
  expect(g.arrange(nodes,next,1000,700)).toEqual(next)
  expect(Math.min(...next.map(c=>c.w*g.metrics(1000).step-10))).toBeGreaterThanOrEqual(280)
 })
@@ -261,18 +265,18 @@ it('整理智能草稿仍满足输入区最小尺寸，三个草稿不会挤入�
  expect(new Set(next.map(n=>n.y)).size).toBeGreaterThan(1)
 })
 
-it('整理短图表不拉高到视口或同排长内容，长文章保持内容高度',()=>{
+it('标准整理短图表拉齐同排长文章，完整内容决定行高',()=>{
  const g=createResearchGrid(),nodes=[{id:'chart',preferred:{width:480,height:280}},{id:'article',preferred:{width:480,height:3400}}],before=[item('chart',0,0,20,25),item('article',20,0,20,25)]
  const shown=g.project(nodes,g.arrange(nodes,before,1000,1600),1000)
  expect(shown.find(n=>n.id==='chart').height).toBeGreaterThanOrEqual(280)
- expect(shown.find(n=>n.id==='chart').height).toBeLessThan(315)
+ expect(shown.find(n=>n.id==='chart').height).toBe(shown.find(n=>n.id==='article').height)
  expect(shown.find(n=>n.id==='article').height).toBeGreaterThanOrEqual(3400)
 })
 
-it('整理同排不等高卡片各自贴合内容，下面组件补入较短列',()=>{
+it('标准整理同行不等高卡片拉齐底边，后续同行仍在下一行',()=>{
  const g=createResearchGrid(),nodes=[{id:'a',preferred:{width:480,height:280}},{id:'b',preferred:{width:480,height:460}},{id:'c',preferred:{width:480,height:220}},{id:'d',preferred:{width:480,height:330}}],before=nodes.map((n,i)=>item(n.id,i%2*20,Math.floor(i/2)*24,20,24))
  const next=g.arrange(nodes,before,1000,1400),shown=g.project(nodes,next,1000)
- expect(shown.find(n=>n.id==='a').height).toBeLessThan(315)
+ expect(shown.find(n=>n.id==='a').height).toBe(shown.find(n=>n.id==='b').height)
  expect(shown.find(n=>n.id==='b').height).toBeGreaterThanOrEqual(460)
  expect(next.find(n=>n.id==='c').y).toBe(next.find(n=>n.id==='a').h)
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
@@ -306,13 +310,13 @@ it('不同宽高邻居的插入决策在四分之一行切换，不用半格近�
  expect(g.move(before,target,before,target,6.4).find(c=>c.id==='article').y).toBe(0)
 })
 
-it('ETF通栏图适配短列补位，避免把短表格拉成长空卡，重复整理稳定',()=>{
+it('ETF标准整理拉齐同排短表，后续通栏图保留整行且重复稳定',()=>{
  for(const width of [1000,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('donut',0,0,20,20),item('table',20,0,20,11),item('volume',0,20,40,17),item('candle',0,37,40,17)]
   const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
-  expect(at('donut')).toMatchObject({x:0,y:0,h:20});expect(at('table')).toMatchObject({x:20,y:0,h:11})
-  expect(at('volume')).toMatchObject({x:20,y:11,w:20,h:17})
-  expect(at('candle')).toMatchObject({x:0,y:20,w:20,h:17})
+  expect(at('donut')).toMatchObject({x:0,y:0,h:20});expect(at('table')).toMatchObject({x:20,y:0,h:20})
+  expect(at('volume')).toMatchObject({x:0,y:20,w:40,h:17})
+  expect(at('candle')).toMatchObject({x:0,y:37,w:40,h:17})
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
   expect(g.arrange(nodes,next,width)).toEqual(next)
  }
@@ -332,12 +336,12 @@ it('整理时宽表格缩至可用短列，不跳过短指标下方可容纳的�
  expect(g.arrange(nodes,next,1148)).toEqual(next)
 })
 
-it('ETF后续窄量价卡补入相邻短列，保持已有两列比例和重复稳定',()=>{
+it('ETF标准整理保留同行两列比例，后续独行量价卡铺满且重复稳定',()=>{
  for(const width of [1000,1334,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('candle',0,0,40,14),item('donut',0,14,27,16),item('table',27,14,13,9),item('volume',0,30,27,18)]
   const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
-  expect(at('candle')).toEqual(before[0]);expect(at('donut')).toEqual(before[1]);expect(at('table')).toEqual(before[2])
-  expect(at('volume')).toMatchObject({x:27,y:23,w:13,h:18})
+  expect(at('candle')).toEqual(before[0]);expect(at('donut')).toEqual(before[1]);expect(at('table')).toMatchObject({x:27,y:14,w:13,h:16})
+  expect(at('volume')).toMatchObject({x:0,y:30,w:40,h:18})
   expect(at('volume').w*m.step-m.gap).toBeGreaterThanOrEqual(280)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
   expect(g.arrange(nodes,next,width)).toEqual(next)
@@ -356,29 +360,29 @@ it('整理以当前左右列及列内顺序为准，忽略创建顺序并保留�
  expect(right).toMatchObject({x:24,y:0,w:16})
  expect(next.find(c=>c.id==='left-bottom')).toMatchObject({x:0,y:left.h,w:24})
  expect(next.find(c=>c.id==='right-bottom')).toMatchObject({x:24,y:right.h,w:16})
- expect(left.h).toBeLessThan(right.h)
+ expect(left.h).toBe(right.h)
  expect(g.arrange(nodes,next,1000)).toEqual(next)
  expect(next.map(c=>c.id)).toEqual(before.map(c=>c.id))
 })
 
-it('整理保留错位的两列，内容高度变化不丢失下面的细分列',()=>{
+it('标准整理以原行而非交叠列分组，内容测高后下行比例保持稳定',()=>{
  const g=createResearchGrid(),staggered=[item('left',0,0,20,10),item('right',20,20,20,10)],nodes=staggered.map(c=>({id:c.id,preferred:{height:220}}))
  const next=g.arrange(nodes,staggered,1400)
- expect(next).toEqual([expect.objectContaining({id:'left',x:0,y:0,w:20}),expect.objectContaining({id:'right',x:20,y:0,w:20})])
+ expect(next).toEqual([expect.objectContaining({id:'left',x:0,y:0,w:40}),expect.objectContaining({id:'right',x:0,y:next[0].h,w:40})])
  const before=[item('span',0,0,26,25),item('right',26,0,14,26),item('left',0,25,13,17),item('middle',13,25,13,10)]
  const nested=before.map((c,i)=>({id:c.id,preferred:{height:[651,421,185,663][i]}})),arranged=g.arrange(nested,before,1400)
- expect(arranged.map(c=>[c.x,c.w])).toEqual(before.map(c=>[c.x,c.w]))
+ expect(arranged.map(c=>[c.x,c.w])).toEqual([[0,26],[26,14],[0,20],[20,20]])
  expect(arranged.find(c=>c.id==='left').y).toBe(arranged.find(c=>c.id==='span').h)
  expect(arranged.find(c=>c.id==='middle').y).toBe(arranged.find(c=>c.id==='span').h)
  expect(g.arrange(nested,arranged,1400)).toEqual(arranged)
 })
 
-it('整理把跨在两列之间的浮动表格补入左列空位，适配宽度且不制造内部空白',()=>{
+it('标准整理将原本独行的浮动表格铺满，不越过先前行补位',()=>{
  const g=createResearchGrid(),before=[item('gold-metrics',0,0,20,9),item('chart',20,0,20,17),item('gold-table',0,9,20,10),item('summary',20,17,20,15),item('pharma-metrics',0,19,20,9),item('heatmap',20,32,20,12),item('floating-table',8,44,20,12),item('news',20,56,20,10),item('article',0,56,20,34)]
  const nodes=[...before].reverse().map(c=>({id:c.id,preferred:{height:c.h*g.metrics(1000).step-10}})),next=g.arrange(nodes,before,1000)
- expect(next.find(c=>c.id==='floating-table')).toMatchObject({x:0,y:28,w:20,h:12})
- expect(next.find(c=>c.id==='article')).toMatchObject({x:0,y:40,w:20,h:34})
- expect(next.find(c=>c.id==='heatmap')).toMatchObject({x:20,y:32,w:20,h:12})
+ expect(next.find(c=>c.id==='floating-table')).toMatchObject({x:0,y:63,w:40,h:12})
+ expect(next.find(c=>c.id==='article')).toMatchObject({x:0,y:75,w:20,h:34})
+ expect(next.find(c=>c.id==='heatmap')).toMatchObject({x:0,y:51,w:40,h:12})
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
  expect(g.arrange(nodes,next,1000)).toEqual(next)
 })
@@ -435,56 +439,55 @@ it('三列调宽逐个压缩，智能草稿最小宽度保持且规范高度不�
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
 })
 
-it('整理跨列组件上方的小空格补入相邻较短组件，不拉高长文章旁的短图',()=>{
+it('标准整理消除同行高度差，后续跨列组件保持下一行',()=>{
  const g=createResearchGrid(),m=g.metrics(800),before=[item('gold',0,0,20,12),item('chart',20,0,20,23),item('pharma',0,12,20,14),item('table',0,26,40,12)]
  const nodes=before.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,800)
  const chart=next.find(c=>c.id==='chart'),pharma=next.find(c=>c.id==='pharma'),table=next.find(c=>c.id==='table')
- expect(chart.y+chart.h).toBe(pharma.y+pharma.h)
- expect(table.y).toBe(chart.y+chart.h)
- expect(chart.h-23).toBe(3)
+ expect(chart.h).toBe(23);expect(pharma).toMatchObject({x:0,w:40,y:23,h:14})
+ expect(table.y).toBe(pharma.y+pharma.h)
  expect(g.arrange(nodes,next,800)).toEqual(next)
  const huge=[item('chart',0,0,20,12),item('article',20,0,20,100),item('link',0,100,40,20)]
  const arranged=g.arrange(huge.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),huge,800)
- expect(arranged.find(c=>c.id==='chart').h).toBe(12)
+ expect(arranged.find(c=>c.id==='chart').h).toBe(100)
  expect(arranged.every((a,i)=>arranged.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
  const short=[item('chart',0,0,20,7),item('peer',20,0,20,9),item('span',0,9,40,10)],sm=g.metrics(1000)
  const limited=g.arrange(short.map(c=>({id:c.id,preferred:{height:c.h*sm.step-sm.gap}})),short,1000)
- expect(limited.find(c=>c.id==='chart').h).toBe(7)
+ expect(limited.find(c=>c.id==='chart').h).toBe(9)
 })
 
-it('整理通栏前的大空位借用邻列末尾组件，保留基准与衍生关系并保持内容高度',()=>{
+it('标准整理不跨行借用衍生组件，基准行拉齐并让后续独行铺满',()=>{
  for(const width of [1000,1230,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('gold',0,0,20,8),item('chart',20,0,20,15),item('derived',0,8,20,14),item('pharma',0,22,20,8),item('table',0,30,40,9),item('summary',20,39,20,12)]
   const nodes=before.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap},...(c.id==='derived'?{creationMode:'selection',sourceNodeIds:['gold']}:{})}))
   const next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
-  expect(at('gold')).toMatchObject({x:0,y:0,h:8})
-  expect(at('derived')).toMatchObject({x:0,y:8})
-  expect(at('pharma')).toMatchObject({x:20,y:15,w:20,h:8})
+  expect(at('gold')).toMatchObject({x:0,y:0,h:15})
+  expect(at('derived')).toMatchObject({x:0,y:15,w:40,h:14})
+  expect(at('pharma')).toMatchObject({x:0,y:29,w:40,h:8})
   expect(at('chart')).toMatchObject({x:20,y:0,h:15})
-  expect(at('table')).toMatchObject({x:0,y:23,w:40,h:9})
-  expect(at('derived').y+at('derived').h).toBe(at('table').y)
+  expect(at('table')).toMatchObject({x:0,y:37,w:40,h:9})
+  expect(at('derived').y+at('derived').h).toBe(at('pharma').y)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
   expect(g.arrange(nodes,next,width)).toEqual(next)
  }
 })
 
-it('整理优先保持列内顺序，邻列无法补位时才将后续可容纳组件移入通栏前空位',()=>{
+it('标准整理保持原行顺序，后续指标和新闻不提至通栏前',()=>{
  const g=createResearchGrid(),m=g.metrics(1000),before=[item('report',0,0,20,40),item('chart',20,0,20,12),item('span',0,40,40,8),item('metrics',20,48,20,10),item('news',20,58,20,18)]
  const nodes=before.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,1000),at=id=>next.find(c=>c.id===id)
- expect(at('chart')).toMatchObject({x:20,y:0,h:12})
+ expect(at('chart')).toMatchObject({x:20,y:0,h:40})
  expect(at('report')).toMatchObject({x:0,y:0,h:40})
- expect(at('metrics')).toMatchObject({x:20,y:12,h:10})
- expect(at('news')).toMatchObject({x:20,y:22,h:18})
+ expect(at('metrics')).toMatchObject({x:0,y:48,w:40,h:10})
+ expect(at('news')).toMatchObject({x:0,y:58,w:40,h:18})
  expect(at('span')).toMatchObject({y:40,w:40,h:8})
  expect(g.arrange(nodes,next,1000)).toEqual(next)
 })
 
-it('整理三列宽度的余格也能容纳稍窄组件，补位遵循原左右阅读顺序',()=>{
+it('标准整理不把下行两卡变窄填入上行余格，行内左右顺序不变',()=>{
  const g=createResearchGrid(),m=g.metrics(1400),before=[item('report',0,0,26,40),item('chart',26,0,14,12),item('span',0,40,40,8),item('metrics',0,48,13,10),item('news',13,48,13,18)]
  const nodes=before.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,1400),at=id=>next.find(c=>c.id===id)
- expect(at('metrics')).toMatchObject({x:26,y:12,w:14,h:10})
- expect(at('news')).toMatchObject({x:26,y:22,w:14,h:18})
- expect(at('chart').h).toBe(12);expect(at('span').y).toBe(40)
+ expect(at('metrics')).toMatchObject({x:0,y:48,w:20,h:18})
+ expect(at('news')).toMatchObject({x:20,y:48,w:20,h:18})
+ expect(at('chart').h).toBe(40);expect(at('span').y).toBe(40)
  expect(g.arrange(nodes,next,1400)).toEqual(next)
 })
 
@@ -496,11 +499,12 @@ it('补位改变列边界后在本次整理内收敛，下一次不会再次横�
 })
 
 
-it('整理白酒看板合并不足最小列宽的冲突边界，指标与事件填满同一列',()=>{
+it('标准整理白酒看板保留每个原行，独行指标与事件分别铺满',()=>{
  for(const width of [946,1230,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('candle',0,17,18,16),item('metrics',0,33,24,12),item('trend',18,0,22,14),item('relative',0,45,18,14),item('table',18,14,22,13),item('weights',18,59,22,63),item('news',24,27,16,32),item('assistant',0,0,18,17)]
   const nodes=before.map(c=>({id:c.id,containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
-  expect(at('news')).toMatchObject({x:18,w:22});expect(at('metrics')).toMatchObject({x:0,w:18})
+  expect(at('news')).toMatchObject({x:0,w:40});expect(at('metrics')).toMatchObject({x:0,w:40})
+  expect(at('news').y+at('news').h).toBe(at('metrics').y)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
   expect(g.arrange(nodes,next,width)).toEqual(next)
  }

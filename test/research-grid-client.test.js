@@ -414,7 +414,7 @@ it('底部选择工具右侧的一键整理调用右键相同布局并补齐空�
  const before=f.workspace.getWorkbenchCells();expect(arrange.disabled).toBe(false)
  await f.event('click',arrange)
  const cells=f.workspace.getWorkbenchCells()
- expect(cells.map(({y})=>y)).toEqual([0,10,20]);expect(cells).not.toEqual(before)
+ expect(cells.map(({y})=>y)).toEqual([0,0,10]);expect(cells.find(c=>c.id==='a').h).toBe(cells.find(c=>c.id==='b').h);expect(cells.find(c=>c.id==='c')).toMatchObject({x:0,w:40});expect(cells).not.toEqual(before)
  expect(f.document.querySelector('[data-research-arrange-feedback]')?.textContent).toContain('已整理 3 个组件')
  expect(f.canvas.getAttribute('data-canvas-tool')).toBe('select')
 })
@@ -1296,12 +1296,12 @@ it('未选中时组件滚轮交给工作台，选中后仅在内部可滚时消�
  const relayed=await f.event('wheel',preview,{deltaX:0,deltaY:80,deltaMode:0,__sherlockCanvasPan:true})
  expect(relayed.defaultPrevented).toBe(true);expect(f.canvas.scrollTop).toBe(208)
 })
-it('整理保留当前左右位置关系并紧凑补位，可撤销且再次整理结果稳定',async()=>{
+it('标准整理保留当前同行关系且后续独行铺满，可撤销并保持重复稳定',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a',160,120),text('b',900,1000),text('c',250,2000)]);f.workspace.setWorkbenchWidth(1000)
  const before=f.workspace.getWorkbenchCells()
  expect(f.workspace.organizeCanvas()).toBe(true)
  const arranged=f.workspace.getWorkbenchCells(),a=arranged.find(c=>c.id==='a'),b=arranged.find(c=>c.id==='b'),c=arranged.find(c=>c.id==='c')
- expect(a.x).toBeLessThan(b.x);expect(c.x).toBeLessThan(b.x);expect(c.y).toBe(a.y+a.h)
+ expect(a).toMatchObject({x:0,y:0,w:20});expect(b).toMatchObject({x:20,y:0,w:20,h:a.h});expect(c).toMatchObject({x:0,w:40,y:a.h})
  expect(Math.min(...arranged.map(c=>c.x))).toBe(0);expect(Math.max(...arranged.map(c=>c.x+c.w))).toBe(40)
  const grid=(await import('../packages/dsh-research-task-runtime/research-grid.js')).createResearchGrid()
  expect(arranged.every((a,i)=>arranged.every((b,j)=>i===j||!grid.overlap(a,b)))).toBe(true)
@@ -1553,17 +1553,18 @@ it('整理的二次测高保留组件统一基础最小尺寸',async()=>{
  expect(f.canvas.__eworkContentFit).toBeUndefined()
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
-it('整理自然高度回报后仍填通栏前的大空位，并把整次补位保存在一步撤销中',async()=>{
+it('标准整理自然测高后保留原行并铺满独行，整次整理仍只撤销一步',async()=>{
  const f=await fixture(true),w=f.workspace,grid=(await import('../packages/dsh-research-task-runtime/research-grid.js')).createResearchGrid(),m=grid.metrics(1000)
  const before=[{id:'gold',x:0,y:0,w:20,h:8},{id:'chart',x:20,y:0,w:20,h:15},{id:'derived',x:0,y:8,w:20,h:14},{id:'pharma',x:0,y:22,w:20,h:8},{id:'table',x:0,y:30,w:40,h:9}]
  await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setArtifacts(before.map(c=>({...text(c.id),kind:'generated-container',containerPrompt:'内容',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:c.id,html:'<p>'+c.id+'</p>'},...(c.id==='derived'?{creationMode:'selection',sourceNodeIds:['gold']}:{})})));w.applyWorkbenchCells(before,true)})
  const frames=new Map(before.map(c=>[c.id,f.host.querySelector('[data-research-node-id="'+c.id+'"] iframe')]))
  for(const c of before)await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frames.get(c.id).contentWindow,data:{type:'sherlock-workbench-content-size',width:Math.round(c.w*m.step-m.gap-2),height:Math.floor(c.h*m.step-m.gap-58)}})))
  await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2});await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
+ for(const c of w.getWorkbenchCells()){const original=before.find(value=>value.id===c.id);await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frames.get(c.id).contentWindow,data:{type:'sherlock-workbench-content-size',width:Math.round(c.w*m.step-m.gap-2),height:Math.floor(original.h*m.step-m.gap-58)}})))}
  await act(async()=>new Promise(r=>setTimeout(r,700)))
  const packed=w.getWorkbenchCells(),at=id=>packed.find(c=>c.id===id)
- expect(at('pharma')).toMatchObject({x:20,y:15,h:8});expect(at('table')).toMatchObject({y:23,h:9})
- expect(at('chart').h).toBe(15);expect(at('derived').y+at('derived').h).toBe(23)
+ expect(at('gold').h).toBe(at('chart').h);expect(at('derived')).toMatchObject({x:0,w:40,y:at('gold').h})
+ expect(at('pharma')).toMatchObject({x:0,w:40,y:at('derived').y+at('derived').h});expect(at('table')).toMatchObject({x:0,w:40,y:at('pharma').y+at('pharma').h})
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
 it('导出向右展开仅三个格式，SVG按当前内容区比例并拒收非所属窗口回复',async()=>{
