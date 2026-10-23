@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
-import {runInNewContext,Script} from 'node:vm'
-import {it,expect} from 'vitest'
+import {Script} from 'node:vm'
+import {beforeAll,it,expect} from 'vitest'
 import {Window} from 'happy-dom'
 import {registerCanvasTools} from '../packages/dsh-research-task-runtime/canvas-tools.js'
 import {CanvasActionBridge} from '../src/main/state/canvas-action-bridge.ts'
@@ -12,15 +12,20 @@ const require=createRequire(import.meta.url)
 // Load them natively so Vitest's SSR import aliases do not enter that bundle.
 const {patchCanvasActionsClient}=require('../scripts/lib/canvas-actions-client.mjs')
 const {patchResearchGridWorkbench,restoreResearchGridWorkbench}=require('../scripts/lib/research-grid-workbench.mjs')
-async function fixture(){
+// Transform and compile the immutable 15 MB bundle once; VM globals and storage
+// remain isolated per test. Concurrent integration checks need a setup budget.
+let compiled
+beforeAll(()=>{
  const original=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const source=patchResearchGridWorkbench(patchCanvasActionsClient(restoreResearchGridWorkbench(original)))
  expect(patchResearchGridWorkbench(source)).toBe(source)
- new Script(source)
+ compiled=new Script(source)
+},20000)
+async function fixture(){
  const win=new Window();let descriptor
  win.__ModuleLoader__={load:d=>descriptor=d}
  const fake=new Proxy(function(){},{get:(_t,key)=>key===Symbol.toPrimitive?()=> '':fake,apply:()=>fake,construct:()=>fake})
- runInNewContext(source,{window:win,document:win.document,crypto,Event,AbortController,TextEncoder,TextDecoder,setTimeout,clearTimeout})
+ compiled.runInNewContext({window:win,document:win.document,crypto,Event,AbortController,TextEncoder,TextDecoder,setTimeout,clearTimeout})
  const bundle=descriptor.factory(id=>id==='react'||id==='react/jsx-runtime'?require(id):fake)
  const saved=new Map();let fail=false
  const storage={getItem:key=>saved.get(key)??null,setItem:(key,value)=>{if(fail&&key.includes('presentation'))return false;saved.set(key,value);return true}}
