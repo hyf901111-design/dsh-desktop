@@ -9,7 +9,7 @@ import {reportCoverage,RESEARCH_SECTIONS} from './lib/quality.mjs'
 import {requestResearchPdf} from './lib/pdf-client.mjs'
 import {publicationMetadata} from './lib/publication.mjs'
 
-const VERSION = '1.2.0'
+const VERSION = '1.3.0'
 const resourceRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const json = value => JSON.stringify(value, null, 2) + '\n'
@@ -40,9 +40,9 @@ async function readLimited(file, limit) {
   return bytes
 }
 async function codeHash() {
-  const paths = ['research.mjs', ...(await readdir(join(resourceRoot, 'scripts/lib'))).filter(p => p.endsWith('.mjs')).map(p => 'lib/' + p)].sort()
+  const paths = ['scripts/research.mjs', ...(await readdir(join(resourceRoot, 'scripts/lib'))).filter(p => p.endsWith('.mjs')).map(p => 'scripts/lib/' + p), 'assets/ework-odyssey-logo.svg'].sort()
   const h = createHash('sha256')
-  for (const name of paths) h.update(name + '\0').update(await readFile(join(resourceRoot, 'scripts', name)))
+  for (const name of paths) h.update(name + '\0').update(await readFile(join(resourceRoot, name)))
   return h.digest('hex')
 }
 async function inspect(file) {
