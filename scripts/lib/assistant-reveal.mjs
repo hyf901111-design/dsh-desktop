@@ -4,26 +4,30 @@ export function createAssistantRevealLedger(){
  const owners=new WeakMap();let sequence=0
  return{observe(owner,openState,order,nodes){
   if(!owner||!['object','function'].includes(typeof owner))return
-  let state=owners.get(owner);if(!state){state={id:++sequence,ready:false,high:-1,records:new Map()};owners.set(owner,state)}
-  const first=openState!=='open'||!state.ready
+  let state=owners.get(owner);if(!state){state={id:++sequence,ready:false,high:-1,epoch:0,records:new Map()};owners.set(owner,state)}
+  const first=openState!=='open'||!state.ready;if(first)state.epoch++
   for(const key of order){const node=nodes.get(key);if(node?.kind!=='assistant-step')continue
    let record=state.records.get(key)
-   if(!record){record={fresh:!first&&node.anchorSeq>state.high,live:false,initialized:false,text:''};state.records.set(key,record)}
-   if(first){record.fresh=false;record.live=false;record.initialized=false}
+   if(!record){record={fresh:!first&&node.anchorSeq>state.high,live:false,initialized:false,text:'',epoch:state.epoch};state.records.set(key,record)}
+   if(first){record.fresh=false;record.live=false;record.initialized=false;record.epoch=state.epoch;delete record.handoff}
    if(node.data?.status==='running')record.live=true
   }
   for(const key of order){const node=nodes.get(key);if(node?.kind==='assistant-step')state.high=Math.max(state.high,node.anchorSeq)}
   state.ready=openState==='open'
- },suspend(owner){const state=owners.get(owner);if(state)state.ready=false},record(owner,node){return owners.get(owner)?.records.get(node?.key)}}
+ },suspend(owner){const state=owners.get(owner);if(state){state.ready=false;state.epoch++;for(const record of state.records.values()){record.epoch=state.epoch;record.skipNext=true;delete record.handoff}}},record(owner,node){return owners.get(owner)?.records.get(node?.key)}}
 }
 
-export function createAssistantTextPaint(root,record){
+export function createAssistantTextPaint(root,record,route){
  if(!root||!record)return{update(){},dispose(){}}
  const doc=root.ownerDocument,view=doc.defaultView,media=view?.matchMedia?.('(prefers-reduced-motion: reduce)'),registry=view?.CSS?.highlights
+ const epoch=record.epoch,transferRoute=route==='progress'||route==='node'
  const fade=180,step=12,levels=32,maxTail=2200-fade,palettes=new Map(),prefix='ework-ai-reveal-'+Math.random().toString(36).slice(2)
  let frame=0,style,units=[],parts=[],names=[],disposed=false,selecting=false,quietUntil=0,lastStart,focused=doc.hasFocus?.()!==false
- const clear=()=>{view?.cancelAnimationFrame(frame);frame=0;units=[];for(const name of names)registry?.delete(name);delete root.dataset.aiRevealing;delete root.__eworkAssistantRevealEnd}
+ const clear=()=>{view?.cancelAnimationFrame(frame);frame=0;units=[];for(const name of names)registry?.delete(name);delete root.dataset.aiRevealing;delete root.__eworkAssistantRevealEnd;delete record.handoff}
  const visible=()=>focused&&doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
+ // Only a different trusted seat in this same commit may resume these times.
+ const inherited=record.handoff;delete record.handoff
+ if(inherited&&transferRoute&&inherited.route!==route&&inherited.epoch===epoch&&(record.fresh||record.live)&&visible()&&!media?.matches){units=inherited.units;lastStart=inherited.lastStart;record.skipNext=false}
  const finish=()=>clear();root.__eworkAssistantRevealFinish=finish
  const suspend=()=>{record.skipNext=true;finish()},background=()=>{focused=false;suspend()},foreground=()=>{focused=true},preference=()=>{if(media?.matches)finish()},visibility=()=>{if(doc.visibilityState==='hidden')background();else if(!visible())suspend()}
  media?.addEventListener?.('change',preference);doc.addEventListener('visibilitychange',visibility);view?.addEventListener('blur',background);view?.addEventListener('focus',foreground);doc.addEventListener('sherlock:workspace-surface-change',visibility)
@@ -37,7 +41,7 @@ export function createAssistantTextPaint(root,record){
  const upper=(time)=>{let lo=0,hi=units.length;while(lo<hi){const mid=(lo+hi)>>>1;if(units[mid].at<=time)lo=mid+1;else hi=mid}return lo}
  const paletteFor=node=>{const color=view.getComputedStyle(node.parentElement).color;let palette=palettes.get(color);if(palette)return palette;if(palettes.size>=32)return palettes.values().next().value;palette={color,names:Array.from({length:levels},(_,i)=>prefix+'-'+palettes.size+'-'+i)};palettes.set(color,palette);names.push(...palette.names);style.textContent=[...palettes.values()].map(p=>p.names.map((name,i)=>'::highlight('+name+'){color:color-mix(in srgb,'+p.color+' '+i*100/levels+'%,transparent)}').join('')).join('')+'@media(prefers-reduced-motion:reduce){'+[...palettes.values()].map(p=>p.names.map(name=>'::highlight('+name+'){color:'+p.color+'}').join('')).join('')+'}';return palette}
  const paint=now=>{
-  frame=0;if(disposed||media?.matches||!visible()||!root.isConnected){finish();return}
+  frame=0;if(disposed||record.epoch!==epoch||media?.matches||!visible()||!root.isConnected){finish();return}
   for(const name of names)registry.delete(name)
   const groups=new Map(),done=upper(now-fade),pending=upper(now)
   // Each interval is split only at eligible TextNode boundaries, never per pending
@@ -59,7 +63,7 @@ export function createAssistantTextPaint(root,record){
   parts=nodes
   // Reclaim completed graphemes on actual renderer updates, never per frame.
   if(units.length)units=units.slice(upper(clock-fade))
-  if(disposed||skip||media?.matches||!visible()||!(record.fresh||record.live)||initial&&!record.fresh){finish();lastStart=undefined;return}
+  if(disposed||record.epoch!==epoch||skip||media?.matches||!visible()||!(record.fresh||record.live)||initial&&!record.fresh){finish();lastStart=undefined;return}
   if(selecting||hasSelection()||clock<quietUntil||!registry||!view.Highlight){finish();return}
   if(!style){style=doc.createElement('style');style.dataset.assistantReveal='';doc.head.append(style)}
   for(const part of parts)part.palette=paletteFor(part.node)
@@ -82,12 +86,16 @@ export function createAssistantTextPaint(root,record){
    const future=upper(clock),tail=units.at(-1)?.at;if(tail>clock+maxTail){const origin=units[future]?.at??clock,span=tail-origin,available=Math.max(0,clock+maxTail-origin);for(let i=future;i<units.length;i++)units[i].at=span?origin+(units[i].at-origin)*available/span:clock+maxTail}
   }
   if(units.length){root.dataset.aiRevealing='';if(frame)view.cancelAnimationFrame(frame);paint(clock)}else finish()
- },dispose(){if(record.initialized&&record.text)record.skipNext=true;disposed=true;clear();delete root.__eworkAssistantRevealFinish;style?.remove();media?.removeEventListener?.('change',preference);doc.removeEventListener('visibilitychange',visibility);view?.removeEventListener('blur',background);view?.removeEventListener('focus',foreground);doc.removeEventListener('sherlock:workspace-surface-change',visibility);doc.removeEventListener('selectionchange',selection);doc.removeEventListener('pointerup',release,true);doc.removeEventListener('pointercancel',release,true);for(const type of ['pointerdown','keydown','copy','wheel'])root.removeEventListener(type,interact,true)}}
+ },dispose(){
+  const handoff=transferRoute&&units.length&&record.epoch===epoch&&!record.skipNext&&!media?.matches&&visible()&&!selecting&&!hasSelection()?{route,epoch,units,lastStart}:undefined
+  if(record.initialized&&record.text)record.skipNext=true;disposed=true;clear()
+  if(handoff){record.handoff=handoff;queueMicrotask(()=>{if(record.handoff===handoff)delete record.handoff})}
+  delete root.__eworkAssistantRevealFinish;style?.remove();media?.removeEventListener?.('change',preference);doc.removeEventListener('visibilitychange',visibility);view?.removeEventListener('blur',background);view?.removeEventListener('focus',foreground);doc.removeEventListener('sherlock:workspace-surface-change',visibility);doc.removeEventListener('selectionchange',selection);doc.removeEventListener('pointerup',release,true);doc.removeEventListener('pointercancel',release,true);for(const type of ['pointerdown','keydown','copy','wheel'])root.removeEventListener(type,interact,true)}}
 }
-export function useAssistantTextPaint(react,record,content){
+export function useAssistantTextPaint(react,record,content,route){
  const root=react.useRef(null),paint=react.useRef()
- react.useLayoutEffect(()=>()=>{paint.current?.dispose();paint.current=undefined},[record])
- react.useLayoutEffect(()=>{if(!paint.current||paint.current.root!==root.current){paint.current?.dispose();paint.current={root:root.current,...createAssistantTextPaint(root.current,record)}}paint.current.update()})
+ react.useLayoutEffect(()=>()=>{paint.current?.dispose();paint.current=undefined},[record,route,record?.epoch])
+ react.useLayoutEffect(()=>{if(!paint.current||paint.current.root!==root.current){paint.current?.dispose();paint.current={root:root.current,...createAssistantTextPaint(root.current,record,route)}}paint.current.update()})
  return root
 }
 
@@ -106,15 +114,25 @@ export function patchAssistantReveal(source){
  }else{
  const replace=(before,after)=>{if(source.split(before).length!==2)throw Error('Assistant reveal anchor drifted: '+before.slice(0,90));source=source.replace(before,after)}
  const anchor='const AssistantMarkdown = (0, react.memo)(function AssistantMarkdown({ blocks, streaming, interrupted, loadImage, mentions, openFile, t }) {'
- replace(anchor,helpers+anchor.replace('openFile, t','openFile, t, reveal')+'\nconst revealRef=useAssistantTextPaint(react,interrupted?undefined:reveal,blocks);')
+ replace(anchor,helpers+anchor.replace('openFile, t','openFile, t, reveal, revealRoute')+'\nconst revealRef=useAssistantTextPaint(react,interrupted?undefined:reveal,blocks,revealRoute);')
  replace('className: AssistantMarkdown_module_css_default.root,','ref:revealRef,\nclassName: AssistantMarkdown_module_css_default.root,')
- const viewStart=source.indexOf('function ChatView('),viewEnd=source.indexOf('//#endregion',viewStart),viewPart=source.slice(viewStart,viewEnd),open='const openState = useSession((s) => s.openState);';if(viewPart.split(open).length!==2)throw Error('Assistant reveal ChatView boundary drifted');source=source.slice(0,viewStart)+viewPart.replace(open,open+'\neworkAssistantRevealLedger.observe(useSession,openState,order,nodeStore);\nreact.useEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),[useSession]);')+source.slice(viewEnd)
+ const viewStart=source.indexOf('function ChatView('),viewEnd=source.indexOf('//#endregion',viewStart),viewPart=source.slice(viewStart,viewEnd),open='const openState = useSession((s) => s.openState);';if(viewPart.split(open).length!==2)throw Error('Assistant reveal ChatView boundary drifted');source=source.slice(0,viewStart)+viewPart.replace(open,open+'\neworkAssistantRevealLedger.observe(useSession,openState,order,nodeStore);\nreact.useLayoutEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),[useSession]);')+source.slice(viewEnd)
  replace('const routedOwner = {\n\t\t\t\t...owner,','const routedOwner = {\n\t\t\t\teworkRevealOwner:useSession,\n\t\t\t\t...owner,')
  replace('function AssistantNodeView({ node, useTurnData, openFile, loadImage, fileMentions, t }) {','function AssistantNodeView({ node, useTurnData, openFile, loadImage, fileMentions, t, eworkRevealOwner }) {')
  const content='const content = (0, react_jsx_runtime.jsx)(AssistantMarkdown, {\n\t\t\t\tblocks: visibleBlocks,'
- replace(content,content+'\nreveal:eworkAssistantRevealLedger.record(eworkRevealOwner,node),')
+ replace(content,content+'\nreveal:eworkAssistantRevealLedger.record(eworkRevealOwner,node),revealRoute:"node",')
  // Keep this keyed subtree mounted when a running message gains its final ID.
  replace('return messageId === void 0 ? content : (0, react_jsx_runtime.jsx)("div", {','return (0, react_jsx_runtime.jsx)("div", {')
+ }
+ // Cancel a previously queued bottom settle if the reader stopped following.
+ source=source.replace('settleConversationScrollBottom(el, requestAnimationFrame, () => {','settleConversationScrollBottom(el,callback=>requestAnimationFrame(()=>{if(atBottomRef.current)callback()}), () => {')
+ // Existing packaged helpers already have the v1 wiring, so upgrade its seats too.
+ source=source.replace('openFile, t, reveal })','openFile, t, reveal, revealRoute })').replace('useAssistantTextPaint(react,interrupted?undefined:reveal,blocks);','useAssistantTextPaint(react,interrupted?undefined:reveal,blocks,revealRoute);').replace('react.useEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),','react.useLayoutEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),')
+ if(!source.includes('/* ework:assistant-reveal-seats:v1 */')){
+  const progress='blocks: update.blocks,',node='reveal:eworkAssistantRevealLedger.record(eworkRevealOwner,node),'
+  if(source.split(progress).length!==2||source.split(node).length!==2)throw Error('Assistant reveal live seats drifted')
+  source=source.replace(progress,'/* ework:assistant-reveal-seats:v1 */ '+progress+'\nreveal:eworkAssistantRevealLedger.record(seatProps.useSession,activityNodes.find(node=>node.key===update.key)),revealRoute:"progress",')
+  if(!source.includes(node+'revealRoute:"node",'))source=source.replace(node,node+'revealRoute:"node",')
  }
  // Upgrade previously patched local/package assets as well as fresh upstream files.
  if(!source.includes('/* ework:assistant-reveal-follow:v1 */')){
