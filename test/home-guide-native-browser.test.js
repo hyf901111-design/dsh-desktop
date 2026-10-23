@@ -83,15 +83,15 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture({nativeLayout=false,width=1460}={}) {
-  const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion: 'reduce' }), errors = [], external = []
+async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce'}={}) {
+  const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion }), errors = [], external = []
   page.on('pageerror', error => errors.push(error.message))
   await page.route('**/*', route => {
     const url = new URL(route.request().url())
     if (url.origin !== 'https://guide.local') { external.push(route.request().url()); return route.abort() }
-    return route.fulfill({ contentType: url.pathname === '/' ? 'text/html' : 'application/json', body: url.pathname === '/' ? `<!doctype html><meta charset="utf-8"><title>Native homepage guide fixture</title><style>${styles}\nhtml,body{height:100%;margin:0}#native-root{height:100%;min-height:0}.pI_x6G_frame{display:grid;grid-template-columns:88px minmax(0,1fr);height:100vh}.pI_x6G_centerCol{position:relative;min-width:0;min-height:0}#guide-host{position:absolute;inset:70px 18px 70px;z-index:10}[data-home-guide="${runId}"]{position:absolute;inset:0;pointer-events:none}[data-home-guide="${runId}"]>#guide-host{pointer-events:auto}#outside-host{position:fixed;left:0;top:0}</style><div class="pI_x6G_frame"><aside></aside><main class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="${runId}"><div id="guide-host"></div></section></main></div><div id="outside-host"></div><div id="side-composer"></div><div id="side-history"></div><script>window.__ModuleLoader__={load:value=>window.descriptor=value};window.guideProbe={providerCalls:0,workspaceCalls:0,financialCalls:0,libraryCalls:0};window.dshDesktop={financialWidget:{request:async()=>{window.guideProbe.financialCalls++;throw Error('Global financial bridge must not be called')}},componentLibrary:{request:async()=>{window.guideProbe.libraryCalls++;throw Error('Global library bridge must not be called')}}};</script>` : '{"tasks":[],"plans":[]}' })
+    return route.fulfill({ contentType: url.pathname === '/' ? 'text/html' : 'application/json', body: url.pathname === '/' ? `<!doctype html><meta charset="utf-8"><title>Native homepage guide fixture</title><style>${styles}\nhtml,body{height:100%;margin:0}#native-root{height:100%;min-height:0}.pI_x6G_frame{display:grid;grid-template-columns:88px minmax(0,1fr);height:100vh}.pI_x6G_centerCol{position:relative;min-width:0;min-height:0}#guide-host{position:absolute;inset:${guideTop}px 18px ${guideBottom}px;z-index:10}[data-home-guide="${runId}"]{position:absolute;inset:0;pointer-events:none}[data-home-guide="${runId}"]>#guide-host{pointer-events:auto}#outside-host{position:fixed;left:0;top:0}</style><div class="pI_x6G_frame"><aside></aside><main class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="${runId}"><div id="guide-host"></div></section></main></div><div id="outside-host"></div><div id="side-composer"></div><div id="side-history"></div><script>window.__ModuleLoader__={load:value=>window.descriptor=value};window.guideProbe={providerCalls:0,workspaceCalls:0,financialCalls:0,libraryCalls:0};window.dshDesktop={financialWidget:{request:async()=>{window.guideProbe.financialCalls++;throw Error('Global financial bridge must not be called')}},componentLibrary:{request:async()=>{window.guideProbe.libraryCalls++;throw Error('Global library bridge must not be called')}}};</script>` : '{"tasks":[],"plans":[]}' })
   })
-  await page.setViewportSize({width,height:960})
+  await page.setViewportSize({width,height})
   await page.goto('https://guide.local/')
   await page.evaluate(value=>{window.guideProbe.nativeLayout=value},nativeLayout)
   await page.addScriptTag({ content: runtimeSource }); await page.evaluate(() => window.runtimeDescriptor = window.descriptor)
@@ -320,3 +320,55 @@ it.each(['session-change','unmount'])('releases research activation held by a gu
   expect(errors).toEqual([])
  }finally{await page.close()}
 },15000)
+
+
+it.each([{width:1380,height:900},{width:1380,height:768},{width:1080,height:900}])('finishes the native board above its toolbar at $width × $height',async size=>{
+ const {page,errors}=await fixture({nativeLayout:true,...size,guideTop:116,guideBottom:69,reducedMotion:'no-preference'})
+ try{
+  await page.evaluate(()=>{
+   const center=document.querySelector('.pI_x6G_centerCol'),root=document.querySelector('.wSkVaW_root'),guide=document.querySelector('[data-home-guide]')
+   center.dataset.homeGuideActive=guide.dataset.homeGuide;root.dataset.homeGuideResident=guide.dataset.homeGuide;guide.dataset.kind='board';window.guideProbe.view.update({view:'research'})
+  })
+  for(const step of ['mount-board','board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
+  await expect.poll(()=>canvas(page).evaluate(el=>Boolean(el.__eworkContentFit))).toBe(false)
+  const result=await page.evaluate(()=>{
+   const canvas=document.querySelector('#guide-host [data-research-canvas]'),toolbar=document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="odyssey-home-guide:board"]')
+   return {canvas:canvas.getBoundingClientRect().toJSON(),toolbar:toolbar.getBoundingClientRect().toJSON(),cards:[...canvas.querySelectorAll('[data-research-node-id]')].map(node=>({widget:node.querySelector('[data-financial-widget]')?.dataset.financialWidget,rect:node.getBoundingClientRect().toJSON(),footer:node.querySelector('.ew-financial-footer')?.getBoundingClientRect().toJSON(),chart:node.querySelector('[data-financial-chart]')?.getBoundingClientRect().toJSON()}))}
+  })
+  await page.screenshot({path:`${evidence}/final-${size.width}x${size.height}.png`})
+  await writeFile(`${evidence}/final-${size.width}x${size.height}.json`,JSON.stringify(result,null,2))
+  expect(result.cards).toHaveLength(3)
+  const safeBottom=Math.min(result.canvas.bottom-12,result.toolbar.top-12)
+  for(const {widget,rect,footer,chart} of result.cards){
+   expect(rect.top,widget+' header').toBeGreaterThanOrEqual(result.canvas.top+10)
+   expect(rect.bottom,widget+' footer must clear the native toolbar').toBeLessThanOrEqual(safeBottom+1)
+   expect(footer.height).toBeGreaterThanOrEqual(20)
+   expect(footer.bottom,widget+' provenance remains inside its native frame').toBeLessThanOrEqual(rect.bottom+1)
+   if(chart)expect(chart.height,'a useful native chart remains visible').toBeGreaterThan(80)
+  }
+  expect(await page.locator('[data-canvas-action-receipt][data-ework-toolbar-owner="odyssey-home-guide:board"]').count()).toBe(0)
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
+
+
+it('keeps a very short narrow board readable and reachable by native canvas scrolling',async()=>{
+ const {page,errors}=await fixture({nativeLayout:true,width:1080,height:640,guideTop:116,guideBottom:69,reducedMotion:'no-preference'})
+ try{
+  for(const step of ['mount-board','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
+  const root=canvas(page)
+  expect(await root.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true)
+  expect(await widget(page,'quote').locator('[data-financial-chart]').evaluate(el=>el.clientHeight)).toBeGreaterThan(80)
+  for(const name of ['watchlist','quote','news']){
+   const footer=widget(page,name).locator('.ew-financial-footer')
+   const delta=await footer.evaluate(el=>el.getBoundingClientRect().bottom-document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="odyssey-home-guide:board"]').getBoundingClientRect().top+16)
+   if(delta>0){await root.hover({position:{x:3,y:80}});await page.mouse.wheel(0,Math.ceil(delta));await page.waitForTimeout(60)}
+   const position=await footer.evaluate(el=>({footer:el.getBoundingClientRect().toJSON(),canvas:el.closest('[data-research-canvas]').getBoundingClientRect().toJSON(),toolbar:document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="odyssey-home-guide:board"]').getBoundingClientRect().toJSON()}))
+   expect(position.footer.top,name+' footer can be reached').toBeGreaterThanOrEqual(position.canvas.top)
+   expect(position.footer.bottom,name+' footer clears the toolbar').toBeLessThan(position.toolbar.top)
+  }
+  expect(await root.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
+  await page.screenshot({path:`${evidence}/final-1080x640-scroll.png`})
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
