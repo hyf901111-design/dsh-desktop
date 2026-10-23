@@ -58,6 +58,19 @@ const prefillReference = { id: 'builtin:efund-ppt-maker', revision: 3, invocatio
 const prefillText = '请按公司风格制作PPT。\n主题：'
 const blankTopic = { text: prefillText, selectionStart: prefillText.length, selectionEnd: prefillText.length }
 
+it('replaces prompt text and old skills through native edits while retaining attachment identities and undo', async () => {
+    const f = fixture(); f.shell.insertFilePaths(['/work/保留一.md', '/work/保留二.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot, prepared = await f.request('prepare')
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: { ...blankTopic, mode: 'replace' } })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot.draft).toBe(`\uFFFC ${prefillText}\n\n\uFFFC \uFFFC `)
+    expect(f.shell.snapshot.occurrences.slice(1).map(({ offset: _offset, ...item }: any) => item)).toEqual(before.occurrences.map(({ offset: _offset, ...item }: any) => item))
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a']); expect(f.sent).toEqual([])
+    for (let step = 0; step < 8 && f.shell.snapshot.draft !== before.draft; step++) f.shell.undo()
+    expect(f.shell.snapshot.draft).toBe(before.draft)
+    expect(f.shell.snapshot.occurrences).toEqual(before.occurrences)
+    expect(f.shell.snapshot.imageIds).toEqual(before.imageIds)
+})
+
 function nativeSkillMenuFixture() {
     const f = fixture()
     const skills = [
@@ -311,7 +324,7 @@ it('replaces a captured slash token with a chip and prefill without changing the
 })
 
 it.each([
-    null, {}, { text: 12, selectionStart: 0, selectionEnd: 0 },
+    null, {}, { ...blankTopic, mode: 'delete' }, { text: 12, selectionStart: 0, selectionEnd: 0 },
     { text: 'a'.repeat(16001), selectionStart: 0, selectionEnd: 0 },
     { text: '主题：', selectionStart: -1, selectionEnd: 0 },
     { text: '主题：', selectionStart: 2, selectionEnd: 1 },

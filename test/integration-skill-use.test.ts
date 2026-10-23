@@ -40,7 +40,7 @@ it('forwards prefill together with a freshly verified readable native skill refe
     const fresh = { ...detail, invocationLabel: 'efund-ppt-maker' };
     const f = fixture(async () => fresh);
     const text = '请按公司风格制作PPT。\n主题：';
-    const prefill = { text, selectionStart: text.length, selectionEnd: text.length };
+    const prefill = { text, selectionStart: text.length, selectionEnd: text.length, mode: 'replace' as const };
     await f.adapter.useSkill({ ...input, prefill });
     expect(f.phases[1]).toMatchObject({ phase: 'insert', prefill, reference: { id: fresh.id, revision: fresh.revision, invocationName: fresh.invocationName, label: fresh.invocationLabel } });
     expect(f.reveal).toHaveBeenCalledOnce();

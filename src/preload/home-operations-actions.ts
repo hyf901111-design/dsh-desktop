@@ -16,7 +16,7 @@ function prefill(card: 'ppt' | 'report', english: boolean): SkillComposerPrefill
       ? `请围绕「${SUBJECT}」制作一份符合公司品牌与模板规范的PPT，用于内部汇报。\n先梳理核心观点和页面大纲，再完成排版、图表与配图；语言简洁、重点清晰，并交付可编辑PPT文件。资料缺口请明确列出，不要编造。`
       : `请围绕研究主题「${SUBJECT}」撰写一份专业研究报告。\n先明确研究问题与分析框架，再检索并核对资料，结合数据形成结论；区分事实、判断和假设，标注来源与日期，并说明主要风险和信息缺口。请交付结构完整、可审阅的HTML和PDF报告。`
   const selectionStart = text.indexOf(SUBJECT)
-  return { text, selectionStart, selectionEnd: selectionStart + SUBJECT.length }
+  return { text, selectionStart, selectionEnd: selectionStart + SUBJECT.length, mode: 'replace' }
 }
 
 /** Uses native navigation and verified skill references; never submits a prompt. */

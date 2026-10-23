@@ -108,7 +108,7 @@ it.each([{ card: 'board', tab: 'research' }, { card: 'note', tab: 'notes' }] as 
   expect(f.shell.snapshot.draft).toBe('保留现有草稿'); expect(f.sent).toEqual([])
 })
 
-it.each(['ppt', 'report'] as const)('waits for the composer and inserts the exact builtin %s skill with a selected topic and preserved draft attachments', async card => {
+it.each(['ppt', 'report'] as const)('waits for the composer and replaces the old prompt with the exact builtin %s skill while preserving attachments', async card => {
   const f = fixture({ draft: '  原有需求\n补充说明' })
   f.shell.insertFilePaths(['/work/材料.md']); f.shell.addImages(['image-a']); f.projectNativeDraft()
   const before = f.shell.snapshot, oldFile = before.occurrences[0]
@@ -122,13 +122,48 @@ it.each(['ppt', 'report'] as const)('waits for the composer and inserts the exac
   expect(f.request).toHaveBeenCalledWith({ type: 'skill-detail', id: ids[card], revision: details[ids[card]]!.revision })
   const snapshot = f.shell.snapshot, reference = snapshot.occurrences.find((occurrence: any) => occurrence.source === SKILL_REFERENCE_SOURCE)
   expect(decodeSkillReference(reference.ref)).toMatchObject({ id: ids[card], invocationName: details[ids[card]]!.invocationName })
-  expect(snapshot.draft).toContain(before.draft)
+  expect(snapshot.draft).not.toContain('原有需求')
+  expect(snapshot.draft).not.toContain('补充说明')
   expect(snapshot.occurrences.find((occurrence: any) => occurrence.occurrenceId === oldFile.occurrenceId)).toMatchObject({ ref: oldFile.ref, source: oldFile.source })
   expect(snapshot.imageIds).toEqual(['image-a'])
   expect(f.textarea.selectionEnd).toBeGreaterThan(f.textarea.selectionStart)
   expect(f.textarea.value.slice(f.textarea.selectionStart, f.textarea.selectionEnd)).toMatch(/^[\u3000]+$/)
   if (card === 'ppt') expect(f.textarea.selectionEnd - f.textarea.selectionStart).toBe(6)
   expect(f.document.activeElement).toBe(f.textarea)
+  expect(f.sent).toEqual([])
+})
+
+it('replaces old skill tags and edited prompts across PPT→report→PPT and a repeated card without dropping native attachments', async () => {
+  const f = fixture({ draft: '旧手写提示词必须清空' })
+  const old = details[ids.report]!
+  const oldReference = { id: old.id, revision: old.revision, invocationName: old.invocationName, label: old.invocationLabel! }
+  f.shell.insertReference({ source: SKILL_REFERENCE_SOURCE, ref: JSON.stringify(oldReference), label: `/${oldReference.label}`, clipboardText: `/${oldReference.label}` }, { start: 0, end: 0, draftRev: f.shell.snapshot.draftRev })
+  f.shell.insertFilePaths(['/work/材料一.md', '/work/材料二.md']); f.shell.addImages(['image-a', 'image-b'])
+  // Interleave another skill between identical native attachment glyphs. A
+  // whole-draft diff must not accidentally keep that skill instead of a file.
+  const secondFile = f.shell.snapshot.occurrences.filter((item: any) => item.source !== SKILL_REFERENCE_SOURCE)[1]
+  f.shell.insertReference({ source: SKILL_REFERENCE_SOURCE, ref: JSON.stringify({ ...oldReference, id: ids.ppt, invocationName: details[ids.ppt]!.invocationName, label: details[ids.ppt]!.invocationLabel! }), label: '/efund-ppt-maker', clipboardText: '/efund-ppt-maker' }, { start: secondFile.offset, end: secondFile.offset, draftRev: f.shell.snapshot.draftRev })
+  const attachments = f.shell.snapshot.occurrences.filter((item: any) => item.source !== SKILL_REFERENCE_SOURCE).map(({ offset: _offset, ...item }: any) => item)
+  f.reveal.resolve()
+  let initialPpt = ''
+  for (const card of ['ppt', 'report', 'ppt', 'ppt'] as const) {
+    await f.actions.run(card, f.context)
+    const snapshot = f.shell.snapshot, skills = snapshot.occurrences.filter((item: any) => item.source === SKILL_REFERENCE_SOURCE)
+    expect(skills).toHaveLength(1)
+    expect(decodeSkillReference(skills[0].ref).id).toBe(ids[card])
+    expect(snapshot.draft).not.toContain('旧手写提示词必须清空')
+    expect(snapshot.draft).not.toContain('上次手动填写的主题')
+    expect(snapshot.occurrences.filter((item: any) => item.source !== SKILL_REFERENCE_SOURCE).map(({ offset: _offset, ...item }: any) => item)).toEqual(attachments)
+    expect(snapshot.imageIds).toEqual(['image-a', 'image-b'])
+    expect(f.textarea.value.slice(f.textarea.selectionStart, f.textarea.selectionEnd)).toBe('\u3000'.repeat(6))
+    expect(f.document.activeElement).toBe(f.textarea)
+    if (card === 'ppt') {
+      if (!initialPpt) initialPpt = snapshot.draft
+      else expect(snapshot.draft).toBe(initialPpt)
+      expect(snapshot.draft).not.toContain('请围绕研究主题')
+    } else expect(snapshot.draft).not.toContain('公司品牌与模板规范')
+    f.shell.insertText('上次手动填写的主题', { start: f.textarea.selectionStart, end: f.textarea.selectionEnd, draftRev: snapshot.draftRev })
+  }
   expect(f.sent).toEqual([])
 })
 

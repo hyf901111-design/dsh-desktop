@@ -261,7 +261,7 @@ export type IntegrationReply = SkillDetail | {
     type: 'cancelled';
 };
 export type SkillCommandSegment = {via:'menu';span:{start:number;end:number;draftRev:number}} | {via:'enter';token:string};
-export type SkillComposerPrefill = { text: string; selectionStart: number; selectionEnd: number };
+export type SkillComposerPrefill = { text: string; selectionStart: number; selectionEnd: number; mode?: 'replace' };
 export interface IntegrationBridge {
     request(command: IntegrationCommand): Promise<IntegrationReply>;
     getPathForFile?(file: File): string;

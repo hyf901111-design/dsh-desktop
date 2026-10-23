@@ -4,6 +4,7 @@ type InputSnapshot = { draft: string; draftRev: number; phase: string; researchC
 type InputShell = {
     disposed?: boolean
     readonly snapshot: InputSnapshot
+    setDraft?(text: string, editRange: { start: number; end: number; insertedLength: number }): void
     insertText(text: string, span: { start: number; end: number; draftRev: number }): boolean
     insertReference(reference:{source:string;ref:string;label:string;clipboardText:string},span:{start:number;end:number;draftRev:number}):boolean
 }
@@ -44,11 +45,11 @@ function matchesProjectedPrefix(value: string, prefix: string): boolean {
 function decodePrefill(value: unknown): SkillComposerPrefill | undefined {
     if (value === undefined) return undefined
     const prefill = value as SkillComposerPrefill | null
-    if (!prefill || typeof prefill !== 'object' || Array.isArray(prefill) || typeof prefill.text !== 'string' || prefill.text.length > 16_000 ||
+    if (!prefill || typeof prefill !== 'object' || Array.isArray(prefill) || typeof prefill.text !== 'string' || prefill.text.length > 16_000 || (prefill.mode !== undefined && prefill.mode !== 'replace') ||
         !Number.isSafeInteger(prefill.selectionStart) || !Number.isSafeInteger(prefill.selectionEnd) ||
         prefill.selectionStart < 0 || prefill.selectionEnd < prefill.selectionStart || prefill.selectionEnd > prefill.text.length)
         throw Error('预填内容或选择范围无效，原草稿已保留。')
-    return { text: prefill.text, selectionStart: prefill.selectionStart, selectionEnd: prefill.selectionEnd }
+    return { text: prefill.text, selectionStart: prefill.selectionStart, selectionEnd: prefill.selectionEnd, ...(prefill.mode ? { mode: prefill.mode } : {}) }
 }
 
 /** Expand method references while leaving shared file/artifact picks for the board adapter. */
@@ -200,7 +201,34 @@ export function installSkillComposer(deps: Dependencies): () => void {
             if (prefill && !reference) throw Error('预填内容需要有效的技能引用，原草稿已保留。')
             const prefix = `/${request.invocationName}`
             let selection: { start: number; end: number } | undefined
-            if(reference){
+            if(prefill?.mode==='replace'&&reference){
+                if(typeof shell.setDraft!=='function')throw Error('当前输入框暂不支持替换预填，原草稿已保留。')
+                const attachments=(snapshot.occurrences??[]).filter(o=>o.source!==SKILL_REFERENCE_SOURCE).sort((a,b)=>a.offset-b.offset)
+                if(attachments.some((o,index)=>!Number.isSafeInteger(o.offset)||o.offset<0||snapshot.draft[o.offset]!=='\uFFFC'||(index>0&&o.offset===attachments[index-1]!.offset)))throw Error('附件引用已变化，原草稿已保留，请重试。')
+                const changed=()=>Error('草稿发生变化，原输入已保留，请重试。')
+                const write=(start:number,end:number,text:string)=>{
+                    const {snapshot:before}=current(ticket)
+                    const next=before.draft.slice(0,start)+text+before.draft.slice(end)
+                    if(next===before.draft)return
+                    // Match native chip deletion: an explicit edit range keeps
+                    // identical placeholder glyphs from changing file identities.
+                    shell.setDraft!(next,{start,end,insertedLength:text.length})
+                    if(shell.snapshot.draftRev!==before.draftRev+1||shell.snapshot.draft!==next)throw changed()
+                    ticket.revision=before.draftRev+1
+                }
+                // Keep every non-skill attachment in order. Work right to left
+                // so these original offsets stay valid until the prefix is replaced.
+                for(let index=attachments.length-1;index>=0;index--){
+                    write(attachments[index]!.offset+1,attachments[index+1]?.offset??snapshot.draft.length,' ')
+                }
+                const {snapshot:before}=current(ticket)
+                const ref=encodeSkillReference(reference),label=`/${reference.label}`
+                if(!shell.insertReference({source:SKILL_REFERENCE_SOURCE,ref,label,clipboardText:label},{start:0,end:attachments[0]?.offset??before.draft.length,draftRev:before.draftRev}))throw changed()
+                ticket.revision=before.draftRev+1
+                current(ticket)
+                write(2,2,`${prefill.text}${attachments.length?'\n\n':''}`)
+                selection={start:2+prefill.selectionStart,end:2+prefill.selectionEnd}
+            }else if(reference){
                 const ref=encodeSkillReference(reference),label=`/${reference.label}`
                 const present=snapshot.occurrences?.find(o=>{
                     if(o.source!==SKILL_REFERENCE_SOURCE||snapshot.draft[o.offset]!=='\uFFFC')return false
