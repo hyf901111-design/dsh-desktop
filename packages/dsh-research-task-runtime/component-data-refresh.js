@@ -2,9 +2,14 @@ import { normalizeIndexedTableRows, templateDataIssue } from './template-data-co
 import {normalizeChartMetadata} from './chart-template-contract.js'
 import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 import {randomUUID,createHash} from 'node:crypto'
+import {isDeepStrictEqual} from 'node:util'
 import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
-import {newsSourceScopeIssue} from './news-source-scope.js'
+import {newsSourceScopeIssue,generalNewsScope} from './news-source-scope.js'
+import {filterScopedNewsArtifact} from './news-topic-filter.js'
+import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-query-coverage.js'
+import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
+import {normalizeKeyedTableProjection} from './table-projection.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
 const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize'])
@@ -42,15 +47,73 @@ function scalarMapping(value,mapping){
  }
  return value
 }
+// Strip display-only wrappers without interpreting their names or prose. Only
+// one real selector may survive; row selection remains in its original scope.
+export function sourceDisplaySelector(value,depth=0,budget={nodes:0}){
+ if(depth>12||++budget.nodes>256||!value||typeof value!=='object')return undefined
+ if(!Array.isArray(value)&&Object.keys(value).some(key=>forbidden.has(key)))return undefined
+ if(record(value)&&Object.hasOwn(value,'$map')){
+  const allowed=['$from','$path','$each','$map','$filter','$sortBy','$order','$take','$single','$optional']
+  if(Object.keys(value).some(key=>!allowed.includes(key)))return undefined
+  const child=sourceDisplaySelector(value.$map,depth+1,budget)
+  return child?{...value,$map:child}:undefined
+ }
+ if(record(value)&&Object.hasOwn(value,'$path')){
+  const allowed=['$from','$path','$each','$filter','$sortBy','$order','$take','$single','$optional']
+  const clean=Object.fromEntries(Object.entries(value).filter(([key])=>!['$prefix','$suffix','$default'].includes(key)))
+  return Object.keys(clean).every(key=>allowed.includes(key))?{...clean,$optional:true}:undefined
+ }
+ const children=Object.values(value).filter(child=>child&&typeof child==='object').map(child=>sourceDisplaySelector(child,depth+1,budget)).filter(Boolean)
+ return children.length===1?children[0]:undefined
+}
+// Only observed records already matched to the mapping's actual business
+// responses can establish canonical quote time or source-reported gaps.
+export function componentSourceMetadata(mapping,responses,records=[]){
+ const keys=new Set();let nodes=0,overflow=false
+ const visit=(value,depth=0)=>{
+  if(overflow)return
+  if(depth>24||++nodes>30000){overflow=true;return}
+  if(Array.isArray(value))value.forEach(child=>visit(child,depth+1))
+  else if(record(value)){if(typeof value.$from==='string')keys.add(value.$from);Object.values(value).forEach(child=>visit(child,depth+1))}
+ }
+ for(const key of ['items','rows','labels','series','candles'])visit(mapping?.[key])
+ if(overflow||!keys.size)return null
+ const matched=[]
+ for(const key of keys){
+  if(!Object.hasOwn(responses,key))return null
+  const observed=records.find(record=>record.purpose!=='discovery'&&isDeepStrictEqual(record.response,responses[key]))
+  if(!observed)return null
+  matched.push({key,response:observed.response})
+ }
+ const times=matched.map(({response})=>response.dataTime==null||response.dataTime===''?null:response.dataTime)
+ const valid=value=>value===null||typeof value==='string'&&/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?)?$/u.test(value)&&Number.isFinite(Date.parse(value))
+ return {matched,time:times.every(valid)&&new Set(times).size===1?times[0]:undefined,gaps:[...new Set(matched.flatMap(({response})=>Array.isArray(response.missingSymbols)?response.missingSymbols.filter(value=>typeof value==='string'&&value.trim()):[]))]}
+}
 /** Deliberately small JSON mapping language: no scripts, expressions or network. */
-export function evaluateMapping(mapping,responses,now=new Date(),row=responses,depth=0,budget={nodes:0}){
+export function evaluateMapping(mapping,responses,now=new Date(),row=responses,depth=0,budget={nodes:0},context=''){
  if(depth>24||++budget.nodes>30000)throw Error('字段映射超出限制')
- const next=(value,scope=row)=>evaluateMapping(value,responses,now,scope,depth+1,budget)
- if(Array.isArray(mapping)){if(mapping.length>2000)throw Error('数据记录过多');return mapping.map(v=>next(v))}
+ const next=(value,scope=row,childContext=context)=>evaluateMapping(value,responses,now,scope,depth+1,budget,childContext)
+ if(Array.isArray(mapping)){if(mapping.length>2000)throw Error('数据记录过多');return mapping.map(v=>next(v,row,context==='items'?'item':context))}
  if(!record(mapping))return mapping
  if(Object.keys(mapping).some(k=>forbidden.has(k)))throw Error('字段名称无效')
+ // Display templates only select observed scalar metadata; they are never a
+ // general mapping operator or a way to prove business values/units.
+ if(['display','optional-display','timestamp'].includes(context)&&Object.hasOwn(mapping,'$template')){
+  const format=mapping.$template,keys=Object.keys(mapping).filter(key=>key!=='$template')
+  const names=typeof format==='string'?[...format.matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/gu)].map(match=>match[1]):[]
+  const selector=(value,depth=0)=>depth<=12&&record(value)&&Object.keys(value).every(key=>['$from','$path','$each','$map','$filter','$sortBy','$order','$take','$single','$optional'].includes(key))&&(Object.hasOwn(value,'$map')?selector(value.$map,depth+1):typeof value.$path==='string')
+  if(context==='timestamp'&&keys.length!==1||typeof format!=='string'||!format.trim()||format.length>2000||!names.length||names.length>16||keys.length>8||/[{}]/u.test(format.replace(/\{[A-Za-z][A-Za-z0-9_]*\}/gu,''))||keys.some(key=>!/^[A-Za-z][A-Za-z0-9_]*$/u.test(key)||!names.includes(key)||!selector(mapping[key]))||names.some(name=>!Object.hasOwn(mapping,name)))throw Object.assign(Error('展示文本模板仅支持有限命名占位符及真实字段选择，不支持字面变量、默认值或嵌套模板'),{code:'UNSUPPORTED_DISPLAY_FORMAT'})
+  const values=Object.fromEntries(keys.map(key=>{
+   const value=next(mapping[key],row,'')
+   if(value!==null&&typeof value!=='string'&&!(typeof value==='number'&&Number.isFinite(value)))throw Object.assign(Error('展示文本模板变量必须是来源中的单个标量'),{code:'UNSUPPORTED_DISPLAY_FORMAT'})
+   return [key,value==null||value===''?'来源未提供':String(value)]
+  }))
+  // Template prose is not source evidence. Preserve only its actual selected
+  // scalars, so dates/providers cannot be forged in native cards or refresh.
+  return [...new Set(names)].map(name=>values[name]).join(' · ')
+ }
  const unknown=Object.keys(mapping).find(k=>k.startsWith('$')&&!mappingOperators.has(k))
- if(unknown)throw Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。')
+ if(unknown)throw Object.assign(Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。'),{code:'UNSUPPORTED_MAPPING_OPERATOR'})
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
  if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在')
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
@@ -82,7 +145,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   // conversions on the outer expression so units and precision apply once.
   const rowMapping=!Object.hasOwn(mapping,'$map')&&mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:mapping.$map
   if(mapping.$normalize!==undefined&&rowMapping===undefined)throw Error('归一化列表缺少数值选择：请提供 $map:{"$path":"真实数值字段"}，不能直接归一化整条记录')
-  let mapped=rows.map(item=>next(rowMapping,item))
+  let mapped=rows.map(item=>next(rowMapping,item,context==='items'?'item':context))
   if(mapping.$normalize!==undefined){
    if(mapping.$as==='number')mapped=mapped.map(value=>scalarMapping(value,{$as:'number'}))
    if(!mapped.length||mapped.some(value=>typeof value!=='number'||!Number.isFinite(value))||mapped[0]===0)throw Error('归一化需要完整有限数值列表及非零起点；缺失值不能填0')
@@ -96,7 +159,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  if(mapping.$filter!==undefined)throw Error('筛选必须指定列表 $each')
  if(Object.hasOwn(mapping,'$map')){
   if(!record(source)||mapping.$take!==undefined||mapping.$sortBy!==undefined||mapping.$order!==undefined||mapping.$single!==undefined&&mapping.$single!==true)throw Error('对象映射需要单个来源对象；列表请指定 $each')
-  return scalarMapping(next(mapping.$map,source),mapping)
+  return scalarMapping(next(mapping.$map,source,context==='items'?'item':context),mapping)
  }
  if(Object.hasOwn(mapping,'$path')){
   let value=path(source,mapping.$path)
@@ -114,12 +177,49 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   if(Object.keys(mapping).length!==1||typeof mapping.$default!=='string'||!mapping.$default.trim())throw Error('独立缺失说明只能使用非空文字；数值必须引用真实字段路径')
   return mapping.$default
  }
- return Object.fromEntries(Object.entries(mapping).map(([k,v])=>{if(k.startsWith('$'))throw Error('不支持的字段映射：'+k);return [k,next(v)]}))
+ return Object.fromEntries(Object.entries(mapping).flatMap(([k,v])=>{
+  if(k.startsWith('$'))throw Error('不支持的字段映射：'+k)
+  const childContext=context==='component'?(k==='asOf'?'timestamp':k==='note'?'optional-display':['subtitle','subject','range'].includes(k)?'display':k==='items'?'items':''):context==='item'?(['detail','source','url'].includes(k)?'optional-display':''):['display','optional-display','timestamp'].includes(context)?context:''
+  try{return [[k,next(v,row,childContext)]]}catch(error){
+   // Optional prose/link formatting cannot erase valid source values. Keep
+   // timestamps, scope fields, required paths and business payloads strict.
+   if(childContext==='optional-display'&&['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)){
+    const selector=k==='detail'?sourceDisplaySelector(v):undefined
+    if(selector)return [[k,next(selector,row,'')]]
+    return []
+   }
+   throw error
+  }
+ }))
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
-export function materializeComponentMapping(mapping,responses,now=new Date(),sourceRecords=[]){
+export function materializeComponentProjection(mapping,responses,now=new Date(),sourceRecords=[]){
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
- const data=normalizeChartMetadata(normalizeIndexedTableRows(evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now)))
+ const metadata=componentSourceMetadata(mapping,responses,sourceRecords)
+ const qualityAlias=mapping?.type==='kpi'&&Object.hasOwn(mapping,'missing')
+ if(qualityAlias){
+  const selector=mapping.missing
+  if(!record(selector)||Object.keys(selector).some(key=>!['$from','$path'].includes(key))||selector.$path!=='missingSymbols'||!metadata?.matched.some(source=>source.key===selector.$from&&Array.isArray(source.response.missingSymbols)&&source.response.missingSymbols.every(value=>typeof value==='string')))throw Error('来源缺失项必须引用已观察响应的 missingSymbols')
+ }
+ const asOf=mapping.asOf,body={...mapping}
+ if(qualityAlias)delete body.missing
+ if(Object.hasOwn(mapping,'asOf'))body.asOf=''
+ const projection=normalizeKeyedTableProjection(evaluateMapping(body,responses,now,responses,0,{nodes:0},'component'),mapping)
+ mapping=projection.mapping
+ let data=normalizeIndexedTableRows(projection.data)
+ if(!candle&&Object.hasOwn(mapping,'asOf')){
+  try{data.asOf=evaluateMapping(asOf,responses,now,responses,0,{nodes:0},'timestamp')}
+  catch(error){
+   if(!['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)||!metadata||metadata.time===undefined)throw error
+   // A broken presentation formatter cannot replace actual quote time with a
+   // fetched/current date. Disagreeing source times remain an error.
+   data.asOf=metadata.time??'来源未提供'
+  }
+ }
+ if(metadata?.gaps.length){
+  const gap='来源缺失项：'+metadata.gaps.join('、')
+  data.note=typeof data.note==='string'&&data.note.trim()?data.note+'\n'+gap:gap
+ }
  if(data.type==='chart'&&Array.isArray(data.labels)&&data.labels.every(label=>typeof label==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(label))&&Array.isArray(mapping.series)){
   for(const [i,series]of mapping.series.entries()){
    const values=series?.values
@@ -131,7 +231,7 @@ export function materializeComponentMapping(mapping,responses,now=new Date(),sou
  }
  if(candle){
   try{
-   const asOf=evaluateMapping(mapping.asOf,responses,now)
+   const asOf=evaluateMapping(mapping.asOf,responses,now,responses,0,{nodes:0},'timestamp')
    if(typeof asOf!=='string'||!asOf.trim())throw Error('K线数据日期必须是单个值')
    data.asOf=asOf
   }catch(error){
@@ -144,13 +244,24 @@ export function materializeComponentMapping(mapping,responses,now=new Date(),sou
    data.asOf=dates.reduce((a,b)=>a>b?a:b)+' · 数据截至最后交易日'
   }
  }
+ data=normalizeChartMetadata(data)
  // Multiple source selections naturally produce groups of item records. The
  // template owns a flat item list; preserve every record and its source order.
  // Never flatten table rows or arrays of scalar field values.
  if(Array.isArray(data?.items))data.items=data.items.flatMap(item=>Array.isArray(item)&&item.every(record)?item:[item])
  const display=value=>typeof value==='number'&&Number.isFinite(value)?String(value):value
  if(['kpi','dashboard'].includes(data?.type)||data?.type==='market'&&['metrics','fund-kpi','key-metrics'].includes(data.variant)){
-  if(Array.isArray(data.items))data.items=data.items.map(item=>({...item,value:display(item.value)}))
+  if(Array.isArray(data.items))data.items=data.items.map((item,index)=>{
+   const result={...item,value:display(item.value)},value=Array.isArray(mapping.items)?mapping.items[index]?.value:undefined
+   // A quote's sibling time belongs to the exact same selected source row.
+   // Retain it for every metric, including when prose supplied it only once
+   // per security. No current/global timestamp is substituted for row time.
+   if(result.detail==null&&record(value)&&typeof value.$each==='string'&&value.$single===true&&metadata?.matched.some(source=>source.key===value.$from)){
+    const select=Object.fromEntries(Object.entries(value).filter(([key])=>['$from','$each','$filter','$sortBy','$order','$take','$single'].includes(key)))
+    try{const time=evaluateMapping({...select,$map:{$path:'time',$optional:true}},responses,now);if(typeof time==='string'&&/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/u.test(time)&&Number.isFinite(Date.parse(time)))result.detail=time}catch{}
+   }
+   return result
+  })
  }
  if(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant)){
   if(Array.isArray(data.rows))data.rows=data.rows.map(row=>Array.isArray(row)?row.map(display):row)
@@ -165,7 +276,10 @@ export function materializeComponentMapping(mapping,responses,now=new Date(),sou
    return result
   })
  }
- return normalizeAnnouncementFeed(data,sourceRecords)
+ return {data:normalizeAnnouncementFeed(data,sourceRecords),mapping}
+}
+export function materializeComponentMapping(mapping,responses,now=new Date(),sourceRecords=[]){
+ return materializeComponentProjection(mapping,responses,now,sourceRecords).data
 }
 function rejectCredentials(value){
  if(!value||typeof value!=='object')return
@@ -283,8 +397,10 @@ export class ComponentDataRefresh {
   this.active.get(binding.id)?.controller.abort()
   this.records=this.records.filter(b=>b.id!==binding.id);this.records.push(binding);await this.persist();return structuredClone(binding)
  }
- async configure(id,patch){
+ async configure(id,patch,control={}){
   const b=this.records.find(b=>b.id===id&&b.ownerAccountId===this.options.owner());if(!b)throw Error('组件数据绑定不存在')
+  const check=()=>{control.signal?.throwIfAborted();if(!this.records.includes(b)||b.ownerAccountId!==this.options.owner()||control.expectedRevision!==undefined&&b.revision!==control.expectedRevision)throw Error('组件数据绑定版本已变化，请重新读取。')}
+  check()
   if(!record(patch)||Object.keys(patch).some(k=>!['enabled','intervalMinutes','deleted','sourceId'].includes(k))||patch.intervalMinutes!==undefined&&!interval(patch.intervalMinutes)||patch.enabled!==undefined&&typeof patch.enabled!=='boolean'||patch.sourceId!==undefined&&!sourceId(patch.sourceId))throw Error('刷新设置无效')
   let selected,requests,sources
   if(patch.sourceId!==undefined){
@@ -294,17 +410,21 @@ export class ComponentDataRefresh {
    for(const r of selected.requests){requests.push(await this.options.validateRequest({key:r.key,toolId:r.toolId,args:r.args},b));if(this.options.owner()!==owner||!this.records.includes(b)||b.revision!==revision)throw Error('数据配置已变化，请重试')}
    const issue=refreshNewsScopeIssue(selected.mapping,requests,b.newsScope??b.mapping.title,new Date(this.now()));if(issue)throw Error(issue)
   }
-  this.active.get(id)?.controller.abort();this.active.delete(id)
+  check();this.active.get(id)?.controller.abort();this.active.delete(id)
   if(patch.deleted===true)this.records=this.records.filter(row=>row!==b)
   else{Object.assign(b,patch);if(selected){b.sources=sources.map(s=>s.id===selected.id?{...s,requests}:s);b.requests=requests;b.mapping=selected.mapping;b.error=undefined;b.failures=0}b.revision++;if(b.intervalMinutes===0)b.enabled=false;b.status=b.enabled?'idle':'paused';b.nextRun=b.enabled?this.now()+b.intervalMinutes*60000:null}
   await this.persist();return structuredClone(b)
  }
  async tick(){if(this.stopped)return;for(const [key,run]of this.active)if(run.automatic&&!this.isVisible(this.records.find(b=>b.id===key)?.sessionId))run.controller.abort();const due=this.records.filter(b=>b.ownerAccountId===this.options.owner()&&b.enabled&&this.isVisible(b.sessionId)&&b.nextRun<=this.now());await Promise.allSettled(due.slice(0,4).map(b=>this.refresh(b.id,true)))}
- refresh(id,automatic=false){
-  if(this.active.has(id))return this.active.get(id).promise
+ refresh(id,automatic=false,control){
   const b=this.records.find(b=>b.id===id&&b.ownerAccountId===this.options.owner());if(!b||this.stopped)return Promise.reject(Error('组件数据绑定不存在'))
+  try{control?.signal?.throwIfAborted();if(control?.expectedRevision!==undefined&&b.revision!==control.expectedRevision)throw Error('组件数据绑定版本已变化，请重新读取。')}catch(error){return Promise.reject(error)}
+  if(this.active.has(id))return control?Promise.resolve({...structuredClone(b),status:'refreshing'}):this.active.get(id).promise
   if(automatic&&!this.isVisible(b.sessionId))return Promise.resolve()
-  const controller=new AbortController();const promise=this.run(structuredClone(b),controller.signal,automatic).finally(()=>{if(this.active.get(id)?.promise===promise)this.active.delete(id)})
+  const controller=new AbortController(),abort=()=>controller.abort(control?.signal?.reason)
+  control?.signal?.addEventListener('abort',abort,{once:true})
+  const target={...structuredClone(b),...(control?.guardId?{guardId:control.guardId}:{})}
+  const promise=this.run(target,controller.signal,automatic).finally(()=>{control?.signal?.removeEventListener('abort',abort);if(this.active.get(id)?.promise===promise)this.active.delete(id)})
   this.active.set(id,{promise,controller,automatic});return promise
  }
  async request(b,request,signal){
@@ -338,15 +458,19 @@ export class ComponentDataRefresh {
   const current=()=>this.records.find(row=>row.id===b.id&&row.revision===b.revision&&row.ownerAccountId===this.options.owner())
   const startedAt=this.now();const state=current();state.status='refreshing';state.lastAttempt=startedAt;await this.persist()
   try{
-   const before=await this.options.inspect(b),model=readTemplateModel(before.spec)
+   const before=await this.options.inspect(b,signal),model=readTemplateModel(before.spec)
    signal.throwIfAborted()
    if(!before.writable||!model||model.templateId!==b.templateId||model.version!==b.templateVersion)throw Error('组件模板已变化，请重新绑定数据')
    const scopeIssue=refreshNewsScopeIssue(b.mapping,b.requests,b.newsScope??model.data.title,new Date(startedAt))
    if(scopeIssue)throw Error(scopeIssue)
    const baseline=hash(before.spec)
-   const results=await Promise.all(b.requests.map(async r=>[r.key,await this.request(b,r,signal)]));signal.throwIfAborted()
+   const crypto=b.mapping?.type==='market'&&['metrics','table'].includes(b.mapping.variant)&&b.requests.every(isCryptoTickerRequest)
+   const outcomes=await Promise.allSettled(b.requests.map(r=>this.request(b,r,signal)));signal.throwIfAborted()
+   const results=outcomes.map((outcome,i)=>[b.requests[i].key,crypto?normalizeCryptoTickerResult(b.requests[i],outcome):outcome.status==='fulfilled'?outcome.value:(()=>{throw outcome.reason})()])
    const responses=Object.fromEntries(results)
-   const data=materializeComponentMapping(b.mapping,responses,new Date(startedAt),b.requests.map(request=>({tool:request.toolId,args:request.args,response:responses[request.key]})))
+   if(crypto&&!results.some(([,response])=>response.records?.length))throw Error('所有交易对本次均未取得行情；已保留上次内容')
+   const observed=b.requests.map(request=>({tool:request.toolId,args:request.args,response:responses[request.key]}))
+   const data=filterScopedNewsArtifact(materializeComponentMapping(b.mapping,responses,new Date(startedAt),observed),observed,b.newsScope??'',{general:generalNewsScope(b.newsScope??model.data.title)})
    data.title=model.data.title
    // A source recipe updates data; it cannot silently discard the chosen layout.
    if(model.data.layoutProfile!==undefined)data.layoutProfile=model.data.layoutProfile
@@ -354,13 +478,20 @@ export class ComponentDataRefresh {
    if(data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)){
     const issue=templateDataIssue(data);if(issue)throw Error(issue+'；已保留上次内容')
    }
-   const output=acceptArtifactOutput(JSON.stringify(data));if(!output)throw Error('接口数据不符合模板，已保留上次内容')
+   let output=acceptArtifactOutput(JSON.stringify(data));if(!output)throw Error('接口数据不符合模板，已保留上次内容')
+   const newsPlan=plannedNewsQueries(b.newsScope)
+   if(newsPlan&&data.type==='news'){
+    const coverage=newsCoverageState(newsPlan,observed)
+    output=acceptArtifactOutput(appendNewsCoverage(output,coverage,{refresh:coverage.entries.some(entry=>entry.status==='not_attempted')?'partial':undefined}))
+    if(!output)throw Error('接口数据与覆盖说明超过展示容量，已保留上次内容')
+   }
    const spec=JSON.parse(output),accepted=readTemplateModel(spec)
    if(!accepted||accepted.templateId!==b.templateId||accepted.version!==b.templateVersion)throw Error('接口数据不符合当前模板，已保留上次内容')
-   const unchanged=hash(model.data)===hash(accepted.data)
+   const coverageFragment=value=>value?.html?.match(/<aside data-news-query-coverage[\s\S]*?<\/aside>/u)?.[0]
+   const unchanged=hash(model.data)===hash(accepted.data)&&(!newsPlan||coverageFragment(before.spec)===coverageFragment(spec))
    await this.commit(b,async()=>{
     signal.throwIfAborted();if(!current()||automatic&&!this.isVisible(b.sessionId))return
-    const live=await this.options.inspect(b)
+    const live=await this.options.inspect(b,signal)
     signal.throwIfAborted();if(!current()||automatic&&!this.isVisible(b.sessionId))return
     if(!live.writable||hash(live.spec)!==baseline)throw Error('组件内容已被修改，本次数据未覆盖你的更改')
     if(!unchanged)await this.options.apply(b,live.revision,spec,signal)

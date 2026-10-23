@@ -17,6 +17,7 @@ export class CanvasActionBridge {
   }
   isAvailable(sessionId:string):boolean {const binding=this.bindings.get(sessionId);return !this.stopped&&!!binding&&binding.expires>=Date.now()&&this.options.canRead(sessionId)}
   async execute(value:any,signal?:AbortSignal):Promise<unknown> {
+    if(value?.guardId!==undefined&&(!validId(value.guardId)||value.source!=='component-data-refresh'||!['inspect','apply'].includes(value.method)))throw Error('画板操作内部校验标识无效。')
     const binding=this.bindings.get(value?.sessionId)
     if(this.stopped||!binding||binding.expires<Date.now()||!this.options.canRead(value.sessionId)||!['inspect','apply','undo','use'].includes(value.method)||this.pending.size>=20)throw Error('当前执行未绑定可访问的画板，请从画板右侧重新发送指令。')
     signal?.throwIfAborted()
@@ -27,7 +28,7 @@ export class CanvasActionBridge {
       const cleanup=()=>signal?.removeEventListener('abort',abort)
       signal?.addEventListener('abort',abort,{once:true})
       this.pending.set(requestId,{sessionId:value.sessionId,resolve,reject,timer,cleanup})
-      try{this.options.send({requestId,sessionId:value.sessionId,method:value.method,args:value.args,scheduled:value.scheduled===true,...(value.source==='component-data-refresh'?{source:'component-data-refresh'}:{}),selectedIds:binding.selectedIds,expiresAt:Date.now()+35000})}catch{clearTimeout(timer);cleanup();this.pending.delete(requestId);reject(Error('画板窗口不可用。'))}
+      try{this.options.send({requestId,sessionId:value.sessionId,method:value.method,args:value.args,scheduled:value.scheduled===true,...(value.source==='component-data-refresh'?{source:'component-data-refresh'}:{}),...(value.guardId!==undefined?{guardId:value.guardId}:{}),selectedIds:binding.selectedIds,expiresAt:Date.now()+35000})}catch{clearTimeout(timer);cleanup();this.pending.delete(requestId);reject(Error('画板窗口不可用。'))}
     })
   }
   respond(value:any):void {

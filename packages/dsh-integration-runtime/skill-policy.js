@@ -2,6 +2,16 @@ import { isAbsolute, join } from 'node:path'
 import { realpath, readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 
+// Only these client-owned research frameworks reserve readable slash names.
+export const stableBuiltinSkillAliases = Object.freeze({
+  'builtin:ework-finance-analysis': 'ework-finance-analysis',
+  'builtin:ework-equity-research': 'ework-equity-research'
+})
+
+export function stableBuiltinSkillAlias(id) {
+  return Object.hasOwn(stableBuiltinSkillAliases, id) ? stableBuiltinSkillAliases[id] : undefined
+}
+
 export function managedSkillInvocationName(skill) {
   return `ework-skill-${createHash('sha256').update(skill.id).digest('hex').slice(0, 16)}`
 }
@@ -35,12 +45,16 @@ export function registerLegacySkillPolicy(ctx, runtime) {
     options.signal?.throwIfAborted()
     remember()
     if (candidate.provider === 'ework-managed-skills') return !!enabledManagedSkill(runtime.snapshot, candidate.locator?.id, candidate.locator?.revision)
+    const snapshot = runtime.snapshot
+    const reservedId = Object.keys(stableBuiltinSkillAliases).find(id => stableBuiltinSkillAliases[id] === candidate.name || managedSkillInvocationName({ id }) === candidate.name)
+    // Stable names always address the client bundle, including after its toggle
+    // is switched off. A local/provider collision must not become a fallback.
+    if (reservedId && (snapshot?.skills.some(skill => skill.id === reservedId && skill.provider === 'bundled') || [...bundledDirectories.values()].includes(reservedId))) return false
     const directory = candidate.resourceBase?.kind === 'directory' ? candidate.resourceBase.path : candidate.locator?.directory
     if (typeof directory !== 'string') return true
     if (!initialized) return false
     let canonical
     try { canonical = await realpath(directory) } catch { return false }
-    const snapshot = runtime.snapshot
     if (!snapshot && candidate.source === 'bundled') return false
     const bundled = snapshot?.skills.filter(skill => skill.provider === 'bundled') ?? []
     let builtin = bundled.find(skill => skill.resourceRoot === canonical)
@@ -60,9 +74,8 @@ export function registerLegacySkillPolicy(ctx, runtime) {
     }
     if (builtinId) {
       if (!enabledManagedSkill(snapshot, builtinId)) return false
-      // Finance has a pinned model-invocable alias so a same-name local skill
-      // cannot replace the default framework named by the routing instruction.
-      if (builtinId === 'builtin:ework-finance-analysis') return false
+      // The managed provider owns both the model name and readable slash alias.
+      if (stableBuiltinSkillAlias(builtinId)) return false
     }
     const id = `local:${createHash('sha256').update(canonical).digest('hex')}`
     return !managedSources.has(id)

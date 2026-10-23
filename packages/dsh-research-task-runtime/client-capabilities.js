@@ -5,9 +5,21 @@ const identity=c=>JSON.stringify([c?.owner,c?.sessionId,c?.documentId,c?.mode])
 const statuses=new Set(['succeeded','pending','cancelled','failed','unavailable'])
 const definitions=[
  {id:'notes.components.create',description:'使用现有组件生成引擎在当前笔记末尾创建真实研究组件，显示实时进度并保存。prompt 必须包含用户要求、明确提供的数据和来源约束；数据缺失时不编造。等待创建完成回执后才能修改样式或导出，失败或待补充信息时停止后续操作。',parameters:object({prompt:{type:'string',minLength:1,maxLength:8000}},['prompt']),handler:'createComponent',notes:true,write:true},
- {id:'notes.export',description:'导出当前笔记为 PDF、Word 或 Markdown。包含当前已保存组件外观。path 为用户明确指定的绝对本地路径；未指定时打开原生保存对话框。先完成用户要求的样式变更再导出。',parameters:object({format:{type:'string',enum:['pdf','docx','md']},path:{type:'string',minLength:1,maxLength:4096}},['format']),handler:'exportNote',notes:true},
- {id:'notes.components.style',description:'持久化设置当前笔记内嵌研究组件的配色与顶栏。enterprise 是易方达主题。scope=note 明确操作全笔记所有研究组件（不需要选中）；scope=selected 仅操作当前选中组件。模糊目标先询问，不能推测其他文档。',parameters:object({scope:{type:'string',enum:['note','selected']},theme:{type:'string',enum:['light','dark','enterprise','openterminal','auto']},titleBar:{type:'boolean'}},['scope']),handler:'styleComponents',notes:true,write:true},
- {id:'canvas.inspect',description:'通过现有画布桥查看当前会话已绑定研究画布及可用操作，不能查看其他会话。',parameters:object({}),handler:'inspectCanvas'},
+ {id:'notes.export',description:'导出当前笔记为 PDF、Word 或 Markdown。包含当前已保存组件外观，不支持仅本次导出临时覆盖外观。path 为用户明确指定的绝对本地路径；未指定时打开原生保存对话框。先完成用户明确要求保存的样式变更再导出。',parameters:object({format:{type:'string',enum:['pdf','docx','md']},path:{type:'string',minLength:1,maxLength:4096}},['format']),handler:'exportNote',notes:true},
+ {id:'notes.components.style',description:'持久化设置当前笔记内嵌研究组件的配色、顶栏与外框，会修改并保存原笔记组件外观。enterprise 是易方达主题。titleBar=false 隐藏顶栏；frame=false 仅去除组件外层边框，保留表格内部边线和内容。没有仅本次导出的临时覆盖能力，不得把持久化变更声称为导出独立设置。scope=note 明确操作全笔记所有研究组件（不需要选中）；scope=selected 仅操作当前选中组件。模糊目标先询问，不能推测其他文档。',parameters:object({scope:{type:'string',enum:['note','selected']},theme:{type:'string',enum:['light','dark','enterprise','openterminal','auto']},titleBar:{type:'boolean'},frame:{type:'boolean'}},['scope']),handler:'styleComponents',notes:true,write:true},
+ {id:'notes.components.layout',description:'保存当前笔记研究组件的宽度和高度，与手动拖柄共享尺寸规则。scope=note明确操作整篇所有研究组件，scope=selected操作当前已引用的一个或多个研究组件。width=full清除手动宽度，随笔记可用宽度铺满；height=auto清除手动高度，按组件内容自动显示。数值为像素，宽度按实际笔记可用宽度限制；不可见组件按可见父容器测量，暂时无法测量时保留请求宽度，显示时再限制为可用宽度。高度限制为180至2400像素。至少指定width或height一项；保留正文、组件内容、配色与其他属性。只确认实际应用/保存，不以此代替修改图表内部布局。',parameters:object({scope:{type:'string',enum:['note','selected']},width:{anyOf:[{const:'full'},{type:'number',minimum:1,maximum:100000}]},height:{anyOf:[{const:'auto'},{type:'number',minimum:1,maximum:100000}]}},['scope']),handler:'layoutComponents',notes:true,write:true},
+ {id:'notes.blocks.align',description:'对齐当前笔记中的段落文字或研究组件容器。必须明确 target：paragraphs 仅正文段落，researchComponents 仅研究组件容器；两者不可混用。scope=note 操作该类全部块，scope=selected 仅当前已引用的该类块。left/center/right 与手动段落菜单共享处理器；保持正文、组件内容及现有宽度。',parameters:object({scope:{type:'string',enum:['note','selected']},target:{type:'string',enum:['paragraphs','researchComponents']},alignment:{type:'string',enum:['left','center','right']}},['scope','target','alignment']),handler:'alignBlocks',notes:true,write:true},
+ {id:'notes.components.inspect',description:'读取当前明确选中的单个笔记研究组件、真实 payload revision 及可编辑内容。返回 blockId 和 containerSpec；不能读取未选中组件或正文。修改已有组件先读取此能力。',parameters:object({}),handler:'inspectNoteComponent',notes:true,selected:true},
+ {id:'notes.components.apply',description:'将明确要求的修改直接应用并保存到当前选中的单个笔记研究组件。必须先 notes.components.inspect，沿用实际 blockId/revision，并提供完整 containerSpec；宿主校验结构与最新笔记版本，仅更新组件内容，保留正文、其他组件、尺寸及配色。解释/预览不调用；不得用此能力重新创建组件或修改未选中对象。',parameters:object({blockId:{type:'string',minLength:1,maxLength:256},revision:{type:'string',pattern:'^[a-f0-9]{64}$'},containerSpec:{type:'object',additionalProperties:true}},['blockId','revision','containerSpec']),handler:'applyNoteComponent',notes:true,write:true,selected:true,maxCallBytes:1500000},
+ {id:'notes.challenge.configure',description:'保存当前笔记的 AI 挑战等级和评论展开偏好。level：0关闭、1宽松、2标准、3严格、4抬杠；commentsExpanded=true展开、false收起评论。至少指定一项，不需要选中段落。沿用当前笔记真实调度器和既有用量预算，不改正文，不自动采纳建议。回执只确认设置的应用/保存及校验等待或运行状态，不代表已校验完成；会话处理、输入或笔记不可用时等待调度。没有评论或空间不足时仅保存展开偏好，不宣称评论已显示。',parameters:object({level:{type:'integer',minimum:0,maximum:4},commentsExpanded:{type:'boolean'}}),handler:'configureChallenge',notes:true,write:true},
+ {id:'notes.components.data',description:'仅操作当前明确单选、已保存且已绑定数据的生成组件。先action=inspect读取该组件脱敏绑定状态与真实revision；configure只能启停enabled、更新intervalMinutes(0仅手动，1至10080分钟)，refresh按已存配方立即取数；两者必须带本次host回执中最新的revision。configure会递增版本，随后refresh应使用其成功回执data.revision，不能继续照抄旧inspect版本；需要依赖新回执时拆为下一批调用。配置已保存不代表取数成功。失败保留旧内容和上次成功时间。不能传其他组件、来源、URL、请求参数或配方；原生金融控件不支持此能力。',parameters:object({action:{type:'string',enum:['inspect','configure','refresh']},revision:{type:'integer',minimum:1},settings:object({enabled:{type:'boolean'},intervalMinutes:{type:'integer',minimum:0,maximum:10080}})},['action']),handler:'componentData',notes:true,write:true,selected:true},
+ {id:'canvas.inspect',description:'通过现有画布桥查看当前会话已绑定研究画布及可用操作。省略ids列出全部组件与revision；提供实际ids读取对应组件可编辑内容。不能查看其他会话。',parameters:object({ids:{type:'array',maxItems:1000,items:{type:'string',minLength:1,maxLength:256}}}),handler:'inspectCanvas',canvas:true},
+ {id:'canvas.apply',description:'修改本轮当前研究画布；先canvas.inspect获取真实revision与可编辑字段。operations与现有画布处理器相同：remove/update/arrange/presentation。不能指定其他会话；按真实回执判断应用结果，冲突重新读取。',parameters:object({revision:{type:'string',minLength:1,maxLength:256},operations:{type:'array',minItems:1,maxItems:1000,items:object({op:{enum:['remove','update','arrange','presentation']},id:{type:'string',minLength:1,maxLength:256},ids:{type:'array',maxItems:1000,items:{type:'string',minLength:1,maxLength:256}},fields:{type:'object',additionalProperties:true}},['op'])}},['revision','operations']),handler:'applyCanvas',canvas:true,research:true,write:true,maxCallBytes:1500000},
+ {id:'canvas.undo',description:'撤销当前研究画布最近仍可撤销的操作；使用inspect最新revision及apply真实actionId，不猜操作标识。',parameters:object({revision:{type:'string',minLength:1,maxLength:256},actionId:{type:'string',minLength:1,maxLength:256}},['revision','actionId']),handler:'undoCanvas',canvas:true,research:true,write:true},
+ {id:'ui.zoom.in',description:'放大当前客户端窗口，与窗口菜单共享处理器；回执报告实际缩放。',parameters:object({}),handler:'zoomIn'},
+ {id:'ui.zoom.out',description:'缩小当前客户端窗口，与窗口菜单共享处理器；回执报告实际缩放。',parameters:object({}),handler:'zoomOut'},
+ {id:'ui.fullscreen.set',description:'设置当前客户端窗口是否全屏，复用窗口菜单处理器，重复相同设置不反向切换。',parameters:object({enabled:{type:'boolean'}},['enabled']),handler:'setFullscreen'},
+ {id:'ui.mode.set',description:'切换本轮当前会话的对话/研究/笔记视图，复用原生会话标签处理器；不能指定其他sessionId。完成后重新读取目录以捕获新模式上下文，旧目录不授权其他文档。切换视图仅确认导航，不代表笔记已导出或校验完成。',parameters:object({mode:{enum:['conversation','research','notes']}},['mode']),handler:'setMode'},
  {id:'ui.zoom.reset',description:'恢复当前客户端窗口的默认缩放，与菜单恢复默认缩放共享处理器。',parameters:object({}),handler:'resetZoom'},
 ]
 // Keep host validation independent of Harness plugin imports and their startup side effects.
@@ -17,7 +29,7 @@ const validators=new Map(definitions.map(d=>[d.id,validator.compile(d.parameters
 /** Registry owns semantic schemas; transports never become model-callable names. */
 export function createClientCapabilityRegistry(handlers={}){
  const entries=new Map(definitions.map(d=>[d.id,d]))
- const available=(d,c)=>!!handlers[d.handler]&&!!c?.sessionId&&!!c?.owner&&(!d.notes||c.mode==='notes')&&(!d.write||c.editable===true)
+ const available=(d,c)=>!!handlers[d.handler]&&!!c?.sessionId&&!!c?.owner&&(!d.notes||c.mode==='notes')&&(!d.canvas||c.mode!=='conversation'&&c.canvasAvailable!==false)&&(!d.research||c.mode==='research')&&(!d.write||c.editable===true)&&(!d.selected||c.selectedBlockIds?.length===1)
  return {
   catalog(context){return [...entries.values()].map(d=>({id:d.id,description:d.description,parameters:d.parameters,available:available(d,context)}))},
   get(id){return entries.get(id)},
@@ -26,9 +38,16 @@ export function createClientCapabilityRegistry(handlers={}){
    if(!d||!available(d,context))return {status:'unavailable',message:'当前上下文中该客户端能力不可用。'}
    if(!validators.get(d.id)(call.arguments))throw Error('客户端能力参数无效。')
    if(d.id==='notes.components.style'){
-    if(call.arguments.theme===undefined&&call.arguments.titleBar===undefined)throw Error('请指定需要修改的组件样式。')
+    if(call.arguments.theme===undefined&&call.arguments.titleBar===undefined&&call.arguments.frame===undefined)throw Error('请指定需要修改的组件样式。')
     if(call.arguments.scope==='selected'&&!context.selectedBlockIds?.length)throw Error('当前未选中组件，请明确使用整篇笔记范围或先选择组件。')
    }
+   if(d.id==='notes.components.layout'){
+    if(call.arguments.width===undefined&&call.arguments.height===undefined)throw Error('请指定需要修改的组件尺寸。')
+    if(call.arguments.scope==='selected'&&!context.selectedBlockIds?.length)throw Error('当前未选中组件，请明确使用整篇笔记范围或先选择组件。')
+   }
+   if(d.id==='notes.blocks.align'&&call.arguments.scope==='selected'&&!(call.arguments.target==='researchComponents'?context.selectedBlockIds:context.selectedParagraphIds)?.length)throw Error('当前未选中对应类型的段落或研究组件。')
+   if(d.id==='notes.challenge.configure'&&call.arguments.level===undefined&&call.arguments.commentsExpanded===undefined)throw Error('请指定AI挑战等级或评论展开偏好。')
+   if(d.id==='notes.components.data'){const a=call.arguments;if(a.action==='inspect'?(a.revision!==undefined||a.settings!==undefined):a.revision===undefined||a.action==='refresh'&&a.settings!==undefined||a.action==='configure'&&(!a.settings||!Object.keys(a.settings).length))throw Error('组件数据能力参数无效。')}
    signal?.throwIfAborted()
    return handlers[d.handler](call.arguments,context,signal,call.requestId)
   }
@@ -38,7 +57,7 @@ export function createCapabilityExecutor(registry,current){
  const receipts=new Map()
  return {async execute(call,context,signal){
   const receipt=(status,message)=>({requestId:call?.requestId,capability:call?.capability,status,message})
-  if(!call||typeof call.requestId!=='string'||!call.requestId||call.requestId.length>256||typeof call.capability!=='string'||JSON.stringify(call).length>16000)return receipt('failed','客户端调用格式无效。')
+  if(!call||typeof call.requestId!=='string'||!call.requestId||call.requestId.length>256||typeof call.capability!=='string'||JSON.stringify(call).length>(registry.get(call.capability)?.maxCallBytes??16000))return receipt('failed','客户端调用格式无效。')
   if(signal?.aborted)return receipt('cancelled','已取消，未继续执行。')
   if(identity(context)!==identity(current()))return receipt('unavailable','账号、会话或文档已变化，请重新发送请求。')
   const fingerprint=JSON.stringify([identity(context),call.capability,call.arguments]),old=receipts.get(call.requestId)
@@ -60,6 +79,32 @@ export function createCapabilityExecutor(registry,current){
 /** Display only: unknown adapter/model details and paths remain literal. */
 export function noteCapabilityReceiptMessage(receipt,locale='zh'){
  const message=receipt.message
+ if(receipt.effect?.kind==='layout'&&['applied','saved'].includes(receipt.effect.state)&&Array.isArray(receipt.effect.changedBlockIds)&&receipt.effect.changedBlockIds.every(id=>typeof id==='string')){
+  const key=receipt.effect.state==='saved'?'已保存 {count} 个组件的布局。':'已应用但未确认保存 {count} 个组件的布局。',render=language=>noteUiText(key,language).replace('{count}',String(receipt.effect.changedBlockIds.length))
+  if(!message)return render(locale)
+  for(const language of ['zh','en'])if(message.startsWith(render(language)))return render(locale)+noteUiError(message.slice(render(language).length),locale)
+ }
+ if(receipt.capability==='notes.components.data'&&typeof message==='string'&&message.startsWith('刷新未成功，已保留原有内容及上次成功记录。'))return noteUiText('刷新未成功，已保留原有内容及上次成功记录。',locale)+noteUiError(message.slice('刷新未成功，已保留原有内容及上次成功记录。'.length),locale)
+ if(receipt.effect?.kind==='data'&&['applied','saved'].includes(receipt.effect.state)&&['configure','refresh'].includes(receipt.effect.operation)&&typeof receipt.effect.blockId==='string'){
+  const effect=receipt.effect,base=effect.operation==='configure'?(effect.state==='saved'?'刷新设置已保存；尚未执行取数。':'刷新设置已应用，尚未确认保存。'):(effect.state==='saved'?'组件数据已刷新并保存。':'数据已应用，尚未确认保存。')
+  if(!message)return noteUiText(base,locale)
+  for(const prefix of [base,'刷新未成功，已保留原有内容及上次成功记录。'])if(message.startsWith(prefix))return noteUiText(prefix,locale)+noteUiError(message.slice(prefix.length),locale)
+ }
+
+ if(receipt.effect?.kind==='challenge'&&['applied','saved'].includes(receipt.effect.state)&&['off','idle','waiting','running','paused','limited','failed'].includes(receipt.effect.phase)&&Number.isInteger(receipt.effect.settings?.level)&&receipt.effect.settings.level>=0&&receipt.effect.settings.level<=4&&typeof receipt.effect.settings.commentsExpanded==='boolean'){
+  const effect=receipt.effect
+  const render=locale=>{
+   const t=value=>noteUiText(value,locale),settings=effect.settings
+   const phase=settings.level===0?'自动挑战已关闭。':effect.phase==='running'?'校验正在运行；本次回执仅确认设置。':effect.phase==='limited'?'校验等待用量恢复；本次回执仅确认设置。':effect.phase==='idle'?'当前没有运行中的校验；本次回执仅确认设置。':effect.phase==='failed'?'最近一次校验未完成；本次回执仅确认设置。':effect.phase==='waiting'||effect.phase==='paused'?'校验等待调度；本次回执仅确认设置。':'校验尚未启动；本次回执仅确认设置。'
+   return t(effect.state==='saved'?'AI挑战设置已保存。':'AI挑战设置已应用，尚未确认保存。')+t('等级：{level}；评论展开偏好：{comments}。').replace('{level}',t(['关闭','宽松','标准','严格','抬杠'][settings.level])).replace('{comments}',t(settings.commentsExpanded?'展开':'收起'))+t(phase)
+  }
+  const original=render('zh'),display=render(locale)
+  if(!message)return display
+  if(message.startsWith(original))return display+noteUiError(message.slice(original.length),locale)
+  const english=render('en')
+  if(message.startsWith(english))return display+message.slice(english.length)
+  return message
+ }
  if(locale!=='en'||typeof message!=='string')return message
  const fixedEffects=['已生成并保存组件','已生成组件，尚未确认保存','已插入组件占位块，尚未生成完成']
  if(fixedEffects.includes(message))return noteUiText(message,locale)
@@ -67,8 +112,8 @@ export function noteCapabilityReceiptMessage(receipt,locale='zh'){
  const translate=part=>{
   if(fixedEffects.includes(part))return noteUiText(part,locale)
   const fixed=noteUiError(part,locale);if(fixed!==part)return fixed
-  const count=/^(已保存|已应用但未确认保存) (\d{1,5}) 个组件的样式(。?)$/u.exec(part)
-  if(count)return noteUiText(count[1]+' {count} 个组件的样式'+count[3],locale).replace('{count}',()=>count[2])
+  const count=/^(已保存|已应用但未确认保存) (\d{1,5}) (个组件的样式|个块的对齐方式|个组件的内容|个组件的布局)(。?)$/u.exec(part)
+  if(count)return noteUiText(count[1]+' {count} '+count[3]+count[4],locale).replace('{count}',()=>count[2])
   return part
  }
  const effect=receipt.effect
@@ -77,7 +122,7 @@ export function noteCapabilityReceiptMessage(receipt,locale='zh'){
   const key=effect.state==='saved'?'文件已保存：{path}':'文件写入已开始，保存结果尚未确认：{path}'
   original=key.replace('{path}',()=>effect.path);display=noteUiText(key,locale).replace('{path}',()=>effect.path)
  }else if(effect&&'changedBlockIds'in effect&&Array.isArray(effect.changedBlockIds)){
-  const key=effect.state==='saved'?'已保存 {count} 个组件的样式':'已应用但未确认保存 {count} 个组件的样式'
+  const key=effect.kind==='alignment'?(effect.state==='saved'?'已保存 {count} 个块的对齐方式':'已应用但未确认保存 {count} 个块的对齐方式'):effect.kind==='layout'?(effect.state==='saved'?'已保存 {count} 个组件的布局':'已应用但未确认保存 {count} 个组件的布局'):effect.kind==='content'?(effect.state==='saved'?'已保存 {count} 个组件的内容':'已应用但未确认保存 {count} 个组件的内容'):effect.state==='saved'?'已保存 {count} 个组件的样式':'已应用但未确认保存 {count} 个组件的样式'
   original=key.replace('{count}',()=>String(effect.changedBlockIds.length));display=noteUiText(key,locale).replace('{count}',()=>String(effect.changedBlockIds.length))
  }else if(effect&&'blockId'in effect){
   original=effect.state==='saved'?'已生成并保存组件':effect.state==='applied'?'已生成组件，尚未确认保存':'已插入组件占位块，尚未生成完成';display=noteUiText(original,locale)
@@ -96,6 +141,6 @@ export function noteCapabilityReceiptMessage(receipt,locale='zh'){
  return message
 }
 export function capabilityReceiptText(receipts,locale='zh'){
- const names={'notes.components.create':'创建组件','notes.export':'导出笔记','notes.components.style':'组件样式','canvas.inspect':'查看画布','ui.zoom.reset':'恢复缩放'},labels={succeeded:'已完成',pending:'等待用户操作',cancelled:'已取消',failed:'失败',unavailable:'不可用'}
- return receipts.map(r=>`${noteUiText(names[r.capability]||r.capability,locale)}${locale==='en'?': ':'：'}${noteUiText(labels[r.status]||'未完成',locale)}${r.path?' — '+r.path:''}${r.message?(locale==='en'?'. ':'。')+noteCapabilityReceiptMessage(r,locale):''}`).join('\n')
+ const names={'notes.components.create':'创建组件','notes.export':'导出笔记','notes.components.style':'组件样式','notes.components.layout':'组件布局','notes.blocks.align':'笔记对齐','notes.components.inspect':'查看所选组件','notes.components.apply':'修改所选组件','notes.challenge.configure':'AI挑战设置','notes.components.data':'笔记组件数据','canvas.inspect':'查看画布','ui.zoom.reset':'恢复缩放','canvas.apply':'修改画布','canvas.undo':'撤销画布操作','ui.zoom.in':'放大窗口','ui.zoom.out':'缩小窗口','ui.fullscreen.set':'窗口全屏','ui.mode.set':'切换会话视图'},labels={succeeded:'已完成',pending:'等待用户操作',cancelled:'已取消',failed:'失败',unavailable:'不可用'}
+ return receipts.map(r=>`${noteUiText(names[r.capability]||r.capability,locale)}${locale==='en'?': ':'：'}${noteUiText(r.status==='pending'&&r.capability?.startsWith('canvas.')?'同步待确认':r.capability==='notes.components.data'&&r.status==='pending'?'刷新进行中':labels[r.status]||'未完成',locale)}${r.path?' — '+r.path:''}${r.message?(locale==='en'?'. ':'。')+noteCapabilityReceiptMessage(r,locale):''}`).join('\n')
 }

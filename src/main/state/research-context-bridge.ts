@@ -8,6 +8,8 @@ import type { ResearchCanvasStorage } from './research-canvas-storage'
 
 const CAPTURE_TTL_MS = 10 * 60 * 1000
 const MAX_BODY_BYTES = 8192
+const MAX_PDF_BODY_BYTES = 64 * 1024 * 1024
+const MAX_PDF_HTML_BYTES = 4 * 1024 * 1024
 const SUPPORTED_EXTENSIONS = new Set('.c .cc .cpp .css .csv .go .h .hpp .html .java .js .json .jsx .kt .log .md .mjs .py .rb .rs .sh .sql .swift .toml .ts .tsx .txt .xml .yaml .yml .pdf .pptx'.split(' '))
 type Node = Record<string, unknown>
 export type ResearchContextSource = { id: string; title: string; kind: string; text: string; status: string; path?: string; revision?: { size: number; mtimeMs: number }; truncated?: boolean; sourceNodeIds?: string[]; sourceUrl?: string }
@@ -17,6 +19,8 @@ type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes:
 type Options = {
   sessionCompleted?(value: { sessionId: string; seq: number; title: string; preview: string }): void
   canvasAction?(value: unknown,signal?:AbortSignal): Promise<unknown>
+  clientCapability?(value:unknown,signal?:AbortSignal):Promise<unknown>
+  researchPdf?(html: string, signal?: AbortSignal): Promise<unknown>
   scheduledTask?(value: unknown): Promise<unknown>
   canReadSession?(sessionId: string): boolean
   isSharedSession?(sessionId:string):boolean
@@ -103,6 +107,7 @@ export class ResearchContextBridge {
   private readonly maxStoredBytes: number
   private readonly token = randomBytes(32).toString('hex')
   private endpoint?: { url: string; token: string }
+  private pdfRequestActive = false
 
   constructor(private readonly options: Options) {
     this.now = options.now ?? Date.now
@@ -121,11 +126,15 @@ export class ResearchContextBridge {
         res.end(serialized)
       }
       if (!this.authorized(req)) return send(403, { error: '资料请求被拒绝。' })
-      if (!['/snapshot','/board-authority','/canvas-actions','/session-completed','/scheduled-tasks'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      if (!['/snapshot','/board-authority','/canvas-actions','/client-capabilities','/session-completed','/scheduled-tasks','/research-pdf'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      const isPdf = req.url === '/research-pdf'
+      // Reject concurrent uploads before collecting their potentially large HTML bodies.
+      if (isPdf && this.pdfRequestActive) return send(429, { error: 'PDF 生成忙碌，请稍后重试。' })
+      if (isPdf) this.pdfRequestActive = true
       try {
         const chunks: Buffer[] = []
         let size = 0
-        const maxBody = req.url === "/canvas-actions" ? 1600000 : req.url === "/scheduled-tasks" ? 32768 : MAX_BODY_BYTES
+        const maxBody = isPdf ? MAX_PDF_BODY_BYTES : ["/canvas-actions","/client-capabilities"].includes(req.url??'') ? 1600000 : req.url === "/scheduled-tasks" ? 32768 : MAX_BODY_BYTES
         if (Number(req.headers['content-length']) > maxBody) throw new Error()
         for await (const part of req) {
           const chunk = Buffer.from(part); size += chunk.length
@@ -133,6 +142,24 @@ export class ResearchContextBridge {
           chunks.push(chunk)
         }
         const raw=JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        if (isPdf) {
+          if (!raw || typeof raw !== 'object' || Array.isArray(raw) || Object.keys(raw).length !== 1 || typeof raw.html !== 'string' || !raw.html.trim() || Buffer.byteLength(raw.html, 'utf8') > MAX_PDF_HTML_BYTES) return send(400, { error: 'PDF 仅接受不超过 4 MiB 的 HTML 内容。' })
+          if (!this.options.researchPdf) return send(503, { error: 'PDF 生成服务未就绪。' })
+          const controller = new AbortController(), abort = () => controller.abort()
+          const close = () => { if (!res.writableEnded) abort() }
+          req.on('aborted', abort); res.on('close', close)
+          if (req.aborted || res.destroyed) abort()
+          try {
+            const result = await this.options.researchPdf(raw.html, controller.signal)
+            if (!res.destroyed) return send(200, result)
+          } catch (error) {
+            const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined
+            const status = code === 'busy' ? 429 : code === 'timeout' ? 408 : code === 'unavailable' ? 503 : 400
+            const message = code === 'busy' ? 'PDF 生成忙碌，请稍后重试。' : code === 'timeout' ? 'PDF 生成超时。' : code === 'aborted' ? 'PDF 生成已取消。' : code === 'unavailable' ? 'PDF 生成服务未就绪。' : 'PDF 生成失败。'
+            if (!res.destroyed) return send(status, { error: message })
+          } finally { req.off('aborted', abort); res.off('close', close) }
+          return
+        }
         if (req.url === '/scheduled-tasks') {
           if (!id(raw?.sessionId)) return send(400, { error: '定时任务会话无效。' })
           if (this.options.canReadSession?.(raw.sessionId) === false) return send(403, { error: '定时任务请求被拒绝。' })
@@ -146,12 +173,12 @@ export class ResearchContextBridge {
           this.options.sessionCompleted?.({ sessionId: raw.sessionId, seq: raw.seq, title: raw.title, preview: raw.preview ?? '' })
           return send(200, { ok: true })
         }
-        if(req.url==='/canvas-actions') {
+        if(req.url==='/canvas-actions'||req.url==='/client-capabilities') {
           const controller=new AbortController(),abort=()=>controller.abort()
           const close=()=>{if(!res.writableEnded)abort()}
           req.on('aborted',abort);res.on('close',close)
           if(req.aborted||res.destroyed)abort()
-          try { if(!this.options.canvasAction)throw Error('画布操作服务不可用。');return send(200,await this.options.canvasAction(raw,controller.signal)) }
+          try { const action=req.url==='/client-capabilities'?this.options.clientCapability:this.options.canvasAction;if(!action)throw Error('客户端操作服务不可用。');return send(200,await action(raw,controller.signal)) }
           catch(error){if(!res.destroyed)return send(400,{error:error instanceof Error?error.message:'画布操作失败。'})}
           finally{req.off('aborted',abort);res.off('close',close)}
           return
@@ -162,7 +189,8 @@ export class ResearchContextBridge {
         const capture = this.captures.get(input.captureId as string)
         if (!capture || capture.sessionId !== input.sessionId || this.stopped || this.options.canReadSession?.(capture.sessionId) === false) return send(404, { error: '资料捕获已失效。' })
         send(200, { sources: capture.sources })
-      } catch { send(400, { error: '资料请求无效。' }) }
+      } catch { if (!res.destroyed) send(400, { error: '资料请求无效。' }) }
+      finally { if (isPdf) this.pdfRequestActive = false }
     })
     server.requestTimeout = 10_000
     server.headersTimeout = 10_000

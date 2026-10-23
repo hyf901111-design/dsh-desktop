@@ -1,7 +1,7 @@
 import {parseResearchContainerSpec} from '../../../packages/dsh-research-task-runtime/artifact-validator.js'
 
 type Editor = {isEditable:boolean;readonly document:readonly any[];getBlock(id:string):any;updateBlock(id:string,value:any):unknown}
-type Options = {sessionId:string;editor:Editor;current():boolean;update?(blockId:string,node:Record<string,any>):void}
+type Options = {sessionId:string;editor:Editor;current():boolean;update?(blockId:string,node:Record<string,any>,value:any):void;authorize?(value:any):void;onApplied?(value:any,blockId:string):void}
 type Outcome = {result:Record<string,any>;error?:never}|{error:string;result?:never}
 type Receipt = {fingerprint:string;promise:Promise<Outcome>;pending:boolean}
 type Target = {block:any;node:Record<string,any>;payload:string}
@@ -18,6 +18,7 @@ async function payloadRevision(payload:string):Promise<string>{
 export function createNoteComponentDataActions(options:Options) {
  const transports=new Map<string,Receipt>(),operations=new Map<string,Receipt>(),cancelled=new Set<string>()
  const check=(value:any)=>{
+  options.authorize?.(value)
   if(!options.current())throw Error('笔记或账号状态已变化，请重新打开后刷新。')
   if(cancelled.has(value.requestId)||value.isCancelled?.())throw Error('组件数据刷新已取消。')
   if(!Number.isFinite(value.expiresAt)||value.expiresAt<=Date.now())throw Error('组件数据刷新请求已过期。')
@@ -77,8 +78,9 @@ export function createNoteComponentDataActions(options:Options) {
   const latest=unchanged(value,target)
   if(!options.editor.isEditable)throw Error('笔记当前不可编辑。')
   // No asynchronous work separates the final CAS check from the editor update.
-  if(options.update)options.update(latest.block.id,next)
+  if(options.update)options.update(latest.block.id,next,value)
   else options.editor.updateBlock(latest.block.id,{props:{...latest.block.props,payload}})
+  options.onApplied?.(value,latest.block.id)
   return {status:'applied',revision:nextRevision}
  }
  return async function handle(value:any):Promise<{requestId:string;sessionId:string;result?:Record<string,any>;error?:string}|undefined>{

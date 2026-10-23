@@ -1,6 +1,8 @@
 import { resolveBoundComponent } from './component-source-binding.js'
 import {financialWidgetDefaults,financialWidgetSpec} from './financial-widget-contract.js'
-import {generalNewsScope,NEWS_CAPACITY_MARKER} from './news-source-scope.js'
+import {generalNewsScope,NEWS_CAPACITY_MARKER,NEWS_DISPLAY_INSTRUCTION} from './news-source-scope.js'
+import {normalizeCryptoTickerResult} from './crypto-source-results.js'
+import {NEWS_QUERY_MARKER} from './news-query-coverage.js'
 
 // These recipes describe the bundled adapter's schema, never model-authored
 // paths, executable code, arbitrary URLs or connector credentials.
@@ -38,7 +40,7 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
         typeof parameters.pair==='string'&&/^[A-Z0-9]{5,14}$/u.test(parameters.pair)&&
         (!Object.hasOwn(parameters,'interval')||[1,5,15,30,60,240,1440,10080,21600].includes(parameters.interval))&&
         (!Object.hasOwn(parameters,'limit')||Number.isInteger(parameters.limit)&&parameters.limit>=1&&parameters.limit<=100)
-      if(strictParameters&&!supported)throw Error('Kraken面板仅接受合规pair及K线粒度interval、记录数limit，不接受任意URL、密钥或请求头')
+      if(strictParameters&&!supported)throw Error('Kraken面板存在不支持的参数；仅接受合规pair及K线粒度interval、记录数limit，不接受任意URL、密钥或请求头')
       // Planners may copy a history recipe into a ticker panel. These bounded
       // candle hints have no meaning for a quote snapshot; refresh is governed
       // exclusively by intervalMinutes. Never strip unknown or invalid keys.
@@ -76,12 +78,12 @@ function requiredQuoteFields(requirement,profile){
   return requirement.replace(new RegExp(`${exclusion}\\s*${field}(?:\\s*${separator}\\s*${field})*`,'giu'),(match,offset)=>
     /^\s*(?:[，,。.;；!！?？：:\n]|$)/u.test(requirement.slice(offset+match.length))?'':match)
 }
-export function publicDataQuoteTaskRequirement(value,type,requirement=''){
+export function publicDataQuoteTaskRequirement(value,type,requirement='',{explicitTableLayout=false}={}){
   if(!['quotes-table','quotes-metrics'].includes(value?.profile))return null
   const supported=validatePublicDataPanel(value,type,{strictParameters:true})
   const required=requiredQuoteFields(requirement,value.profile)
   const missing=new RegExp(quoteExtraField,'iu').test(required)||value.profile==='quotes-metrics'&&new RegExp(metricsExtraField,'iu').test(required)
-  if(!missing)return null
+  if(!missing&&!explicitTableLayout)return null
   const layout=supported.layoutProfile?'最终使用market的variant: table，顶层保留已校验的 "layoutProfile":"openterminal"（artifact.layoutProfile）。':'最终使用table的columns/rows，原规划的market/metrics仅是路由提示，不能替代本卡字段。'
   return {type:supported.layoutProfile?'market':'table',promptPrefix:supported.layoutProfile?'market.table；variant: table；\n':'',requirement:`宿主来源能力校正：${value.profile}直通仅展示固定报价字段，不能完整表达本卡要求；改由独立表格取数任务完成。${layout}保留原面板全部标的、字段、单位、时间及交互要求，复用已校验来源参数：${JSON.stringify(supported)}。继续遵从显式来源限制，不猜接口或改请求参数；来源未提供的字段逐项标注「来源未提供」，不能删列或用股价/涨跌幅替代估值、成交量等指标，不补模拟值或声称已开启刷新。`}
 }
@@ -92,6 +94,7 @@ export function publicDataNewsTaskType(value,type){
   return count>100?'html':count>40?value.layoutProfile==='openterminal'?'market':'table':type
 }
 const newsCapacityRequirement=(value,requirement)=>{
+  requirement+='\n'+NEWS_DISPLAY_INSTRUCTION
   const type=publicDataNewsTaskType(value,'news')
   if(type==='news')return requirement
   const representation=type==='html'?`自包含HTML搜索、主题/日期分组与分页视图；全部真实记录保留在底层数据中，分页仅改变当前可见条目，不删除记录。${value.layoutProfile==='openterminal'?'OpenTerminal阅读布局在HTML继承宿主主题视觉；不要设置HTML不支持的artifact.layoutProfile。':''}原周期更新要求仍保留（intervalMinutes:${value.intervalMinutes??1}）；现有HTML不支持宿主data-bound自动渲染，当前为快照，尚未绑定原周期更新要求，必须明确说明，不能声称自动刷新已启用`:value.layoutProfile==='openterminal'?'market.table；variant: table；顶层保留layoutProfile:openterminal':'table的columns/rows'
@@ -116,7 +119,7 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
     })
     if(new Set(requests.map(r=>r.symbol)).size!==requests.length)throw Error('免费源组件请求重复')
     const scope=JSON.stringify({requests,intervalMinutes:value.intervalMinutes??1,...(value.layoutProfile?{layoutProfile:value.layoutProfile}:{})})
-    return newsCapacityRequirement(value,`宿主来源能力校正：内置sina-news不支持symbol证券筛选，本卡改由一个独立news取数任务；不要把这些筛选参数再次提交给sina-news。保留原面板全部主题、字段与证券筛选元信息：${scope}。不得扩大为全市场新闻；仅使用原需求允许且能按标的检索的来源中实际取得的相关报道、原始标题、时间和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`)
+    return newsCapacityRequirement(value,`宿主来源能力校正：内置sina-news不支持symbol证券筛选，本卡改由一个独立news取数任务；不要把这些筛选参数再次提交给sina-news。保留原面板全部主题与字段；以下证券筛选元信息仅供执行和验证，不写入note：${scope}。不得扩大为全市场新闻；仅使用原需求允许且能按标的检索的来源中实际取得的相关报道、原始标题、时间和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`)
   }
   // Observed planners group company keyword searches in one news panel. The
   // adapter cannot execute them; retain their validated scope for a worker.
@@ -138,7 +141,8 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
     })
     if(new Set(queries.map(v=>JSON.stringify(v))).size!==queries.length)throw Error('免费源组件请求重复')
     const scope=JSON.stringify({queries,intervalMinutes:value.intervalMinutes??1,...(value.layoutProfile?{layoutProfile:value.layoutProfile}:{})})
-    return newsCapacityRequirement(value,`宿主来源能力校正：sina-news不支持主题关键词查询；已声明的定向新闻查询由一个独立news取数任务按对应来源能力执行。保留原面板全部主题、字段与筛选元信息：${scope}。不得扩大为全市场新闻；仅使用原需求允许的来源中实际取得的相关报道、时间、摘要和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`)
+    const coverage=queries.map(row=>({...row,source:row.source==='sina-news'?'eastmoney-news':row.source}))
+    return newsCapacityRequirement(value,`宿主来源能力校正：sina-news不支持主题关键词查询；已声明的定向新闻查询由一个独立news取数任务按对应来源能力执行。保留原面板全部主题与字段；以下筛选元信息仅供执行和验证，不写入note：${scope}。不得扩大为全市场新闻；仅使用原需求允许的来源中实际取得的相关报道、时间、摘要和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}\n${NEWS_QUERY_MARKER}\n${JSON.stringify(coverage)}`)
   }
   if(value?.profile!=='news'||!Array.isArray(value.requests)||value.requests.length!==1)return null
   const request=value.requests[0]
@@ -156,7 +160,7 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
   const scope=JSON.stringify({source:request.source,...(hasSymbols?{symbols}:{}),limit:parameters.limit??20,intervalMinutes:supported.intervalMinutes,...(supported.layoutProfile?{layoutProfile:supported.layoutProfile}:{})})
   if(!hasSymbols&&!themed)return newsCapacityRequirement(value,`本卡明确要求全市场财经总流。由普通单卡任务复用已校验请求取得全部真实记录：${scope}。保留来源、日期、原文链接和实际返回数量。`)
   const layout=supported.layoutProfile&&publicDataNewsTaskType(value,type)!=='html'?'最终news数据对象顶层必须保留已校验的 "layoutProfile":"openterminal"（即artifact.layoutProfile），沿用该内部布局。':''
-  return newsCapacityRequirement(value,`宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券或公司/行业主题筛选；本卡改由独立取数任务完成。保留原面板全部需求及筛选元信息：${scope}。${layout}${hasSymbols?'不得删除证券筛选后交付全市场新闻；':''}不得扩大为全市场新闻；只保留与原面板公司/行业主题及已声明证券匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`)
+  return newsCapacityRequirement(value,`宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券或公司/行业主题筛选；本卡改由独立取数任务完成。保留原面板全部需求；以下筛选元信息仅供执行和验证，不写入note：${scope}。${layout}${hasSymbols?'不得删除证券筛选后交付全市场新闻；':''}不得扩大为全市场新闻；只保留与原面板公司/行业主题及已声明证券匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`)
 }
 
 // A comparison chart may need several valid history requests, while the
@@ -225,16 +229,16 @@ function mappingFor(panel, responses) {
       return {...base,...metadata,variant:'table',
         columns:['交易对','最近成交','日内涨跌幅（UTC 00:00 起）','买一','卖一','24h最高','24h最低','24h成交量','价格单位','量单位','报价时点','获取时点'],
         rows:responses.map((_response,i)=>[
-          cell(i,'records.0.pair'),cell(i,'records.0.price'),cell(i,'records.0.changeTodayDetail'),
+          JSON.parse(panel.publicData.requests[i].parameters_json).pair,path(`q${i}`,'records.0.price',{$as:'string',$default:'本次未取得'}),path(`q${i}`,'display.changeTodayDetail',{$default:'来源未提供'}),
           ...['bid','ask','high24h','low24h','volume24h'].map(field=>cell(i,`records.0.${field}`)),
           cell(i,'units.price'),cell(i,'units.volume24h'),cell(i,'dataTime'),cell(i,'receivedAt')
         ])}
     }
     return { ...base, ...metadata,
-      items: responses.flatMap((response, i) => fields.map(([field, label]) => ({
-        label: `${response.units.volume24h ?? response.records[0].pair} ${label}`,
-        value: path(`q${i}`, `records.0.${field}`, { $as: 'string', $digits: field === 'volume24h' ? 4 : 2, $suffix: ` ${response.units[field === 'volume24h' ? 'volume24h' : 'price']}`, $optional: true }),
-        ...(field==='price'?{detail:path(`q${i}`,'records.0.changeTodayDetail',{$default:'日内涨跌幅：来源未提供有效UTC开盘价'})}:{})
+      items: responses.flatMap((_response, i) => fields.map(([field, label]) => ({
+        label: path(`q${i}`,'display.assetLabel',{$suffix:` ${label}`}),
+        value: path(`q${i}`, `display.${field}`, { $default: '来源未提供' }),
+        ...(field==='price'?{detail:path(`q${i}`,'display.changeTodayDetail',{$default:'日内涨跌幅：来源未提供有效UTC开盘价'})}:{})
       })))
     }
   }
@@ -251,12 +255,18 @@ function mappingFor(panel, responses) {
 }
 
 export async function preparePublicDataPanel(panel, client, signal, now = new Date()) {
-  const publicData = validatePublicDataPanel(panel.publicData, panel.type)
+  const crypto = panel.publicData?.profile === 'crypto-metrics'
+  const publicData = validatePublicDataPanel(panel.publicData, panel.type, { strictParameters: crypto })
   if(publicDataNewsTaskRequirement(publicData,panel.type,[panel.title,panel.prompt,panel.publicDataPrompt].filter(Boolean).join('\n')))throw Error('该新闻组件需要按原主题定向检索，不能直接读取无主题的财经总流；请重试以恢复相关取数。')
   const requests = publicData.requests.map((request, i) => ({ key: `q${i}`, tool: 'public_data_query', args: { operation: 'query', source: request.source, parameters_json: request.parameters_json } }))
-  const responses = await Promise.all(requests.map(request => client.query(request.args, signal)))
+  const outcomes = await Promise.allSettled(requests.map(request => client.query(request.args, signal)))
   signal?.throwIfAborted()
-  if (responses.some((response, i) => response?.sourceId !== requests[i].args.source || !Array.isArray(response.records) || !response.records.length)) throw Error('免费来源没有返回该组件所需的真实记录')
+  const responses = outcomes.map((outcome,i) => {
+    if(crypto)return normalizeCryptoTickerResult(requests[i],outcome)
+    if(outcome.status==='rejected')throw outcome.reason
+    return outcome.value
+  })
+  if (responses.some((response, i) => response?.sourceId !== requests[i].args.source || !Array.isArray(response.records) || !crypto&&!response.records.length) || !responses.some(response=>response.records.length)) throw Error('免费来源没有返回该组件所需的真实记录')
   const mapping = mappingFor({ ...panel, publicData }, responses)
   const result = resolveBoundComponent(JSON.stringify({ version: 1, type: 'data-bound', requests, mapping }), requests.map((r, i) => ({ tool: r.tool, args: r.args, response: responses[i] })), now)
   if (!result) throw Error('免费来源映射未通过模板校验')

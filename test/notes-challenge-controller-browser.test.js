@@ -10,14 +10,14 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountNotes}from'./src/preload/notes/mount';import{mountFloatingSurfaces}from'./src/preload/floating-surfaces';window.enableFloatingSurfaces=()=>mountFloatingSurfaces(document);import{YjsThreadStore}from'@blocknote/core/yjs';import{DefaultThreadStoreAuth}from'@blocknote/core/comments';import{findChallengeQuote}from'./src/preload/notes/challenge-anchors';import{CHALLENGE_KIND,CHALLENGE_USER}from'./src/preload/notes/challenge-controller';import{noteText}from'./src/shared/workspace-notes';import*as Y from'yjs';
  window.calls=[];window.jobs=[];window.saved={};window.drafts={};window.completed=0;
- const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{saved:window.saved[input.sessionId]?{...window.saved[input.sessionId],revision:0}:{title:input.sessionId,blocks:[{id:'p',type:'paragraph',content:${JSON.stringify(original)}}],yjs:'',revision:0}};if(method==='challenge')return new Promise((resolve,reject)=>window.jobs.push({input,resolve,reject}));if(method==='save'){window.saved[input.sessionId]=input.content;return{status:'saved',saved:{...input.content,revision:input.revision+1}}}return{}},draft:async input=>{window.drafts[input.sessionId]=input.content}};
+ const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{saved:window.saved[input.sessionId]?{...window.saved[input.sessionId],revision:0}:{title:input.sessionId,blocks:[{id:'p',type:'paragraph',content:${JSON.stringify(original)}}],yjs:'',revision:0}};if(method==='generate'){if(window.generationMode==='instant')return{kind:'conversation',markdown:'即时处理完成。'};if(window.generationMode==='failure')throw Error('fixture generation failure');return new Promise(resolve=>{window.finishGeneration=resolve})}if(method==='challenge')return new Promise((resolve,reject)=>window.jobs.push({input,resolve,reject}));if(method==='save'){window.saved[input.sessionId]=input.content;return{status:'saved',saved:{...input.content,revision:input.revision+1}}}return{}},draft:async input=>{window.drafts[input.sessionId]=input.content}};
  const host={register:(_mode,surface)=>{surface.style.left='0';document.body.append(surface)},open:()=>{},close:()=>{},current:()=>'notes'};let mounted=mountNotes(document,bridge,host);window.remount=()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)};
  window.switchNote=id=>{document.querySelector('[data-ework-notes-session]').dataset.eworkNotesSession=id;document.querySelector('[data-ework-note-view]').dataset.eworkNoteView=id;document.dispatchEvent(new CustomEvent('sherlock:notes-open',{detail:{sessionId:id}}))};
  window.messages=()=>window.challenge.threads[0]?.comments.filter(c=>!c.deletedAt).map(c=>noteText(c.body))||[];
  window.savedMessages=()=>{const doc=new Y.Doc();Y.applyUpdate(doc,Uint8Array.from(atob(window.drafts['note-a'].yjs),c=>c.charCodeAt(0)));return[...doc.getMap('threads').values()].flatMap(thread=>thread.get('comments').toArray().map(comment=>noteText(comment.get('body'))))};
  window.start=(kind='reply',text='请核实来源')=>{window.challenge.runAction(window.challenge.threads[0],kind,text).then(()=>window.completed++)};
  window.seed=async(override={})=>{const issue={blockId:'p',quote:'成度',category:'typo',message:'请核对这段用字。',evidence:[],...override},store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));const thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue,sourceText:window.editor.getBlock(issue.blockId).content.map(c=>c.text||'').join('')},initialComment:{body:[{type:'paragraph',content:[{type:'text',text:issue.message,styles:{}}]}]}});const range=findChallengeQuote(window.editor,issue.blockId,issue.quote);window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return thread.id};
- `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-styles',setup(b){b.onResolve({filter:/\.css\?inline$/},async args=>{const found=await b.resolve(args.path.slice(0,-7),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-controller',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.challenge=challenge;window.noteDoc=doc; const slashMenu = useMemo'),loader:'tsx'}))}}]})
+ `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-styles',setup(b){b.onResolve({filter:/\.css\?inline$/},async args=>{const found=await b.resolve(args.path.slice(0,-7),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-controller',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.challenge=challenge;window.noteDoc=doc;window.setNoteWriting=setWriting; const slashMenu = useMemo'),loader:'tsx'}))}}]})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -33,8 +33,99 @@ async function fixture(content=original,quote='成度'){
  const id=await page.evaluate(quote=>window.seed({quote}),quote);await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1)
  return{context,page,errors,id}
 }
-async function finish(page,value=answer,index=0){await page.evaluate(({value,index})=>window.jobs[index].resolve(value),{value,index})}
+// Successful mock reviews finish their returned coverage. Partial-review cases
+// explicitly supply an empty/subset completeBlockIds, as the runtime now does.
+async function finish(page,value=answer,index=0){
+ const response=value.completeBlockIds===undefined?{...value,completeBlockIds:value.coveredBlockIds??[]}:value
+ await page.evaluate(({value,index})=>window.jobs[index].resolve(value),{value:response,index})
+}
 async function start(page,kind='reply',text='请核实来源'){await page.evaluate(({kind,text})=>window.start(kind,text),{kind,text});await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)}
+
+it('configure API reads Yjs immediately and queues a changed level until ordinary writing stops',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id)
+  await page.evaluate(()=>window.setNoteWriting(true));await page.getByText('正在生成内容…',{exact:true}).waitFor()
+  const immediate=await page.evaluate(()=>{window.configuringController=window.challenge;window.configuringController.configure({level:3,commentsExpanded:false});return{configuration:window.configuringController.getConfiguration(),level:window.noteDoc.getMap('note-challenge').get('level'),commentsExpanded:window.noteDoc.getMap('note-challenge').get('marginExpanded')}})
+  expect(immediate).toEqual({configuration:{level:3,commentsExpanded:false,phase:'paused'},level:3,commentsExpanded:false})
+  await page.clock.fastForward(10000);expect(await page.evaluate(()=>window.jobs.length)).toBe(0)
+  await page.evaluate(()=>window.setNoteWriting(false));await page.clock.fastForward(1)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input)).toMatchObject({action:'review',level:3,changedIds:['p']})
+  expect(await page.evaluate(()=>window.configuringController.getConfiguration())).toEqual({level:3,commentsExpanded:false,phase:'running'})
+  expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('configure API keeps the running review and existing selection when repeated settings do not change preferences',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(()=>window.challenge.configure({level:3,commentsExpanded:false}));await page.clock.fastForward(1)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  const before=await page.evaluate(id=>{window.challenge.select(id);window.repeatedController=window.challenge;return{configuration:window.challenge.getConfiguration()}},id)
+  const repeated=await page.evaluate(()=>{let updates=0;const observer=()=>updates++;window.noteDoc.on('update',observer);window.repeatedController.configure({level:3,commentsExpanded:false});window.noteDoc.off('update',observer);return{configuration:window.repeatedController.getConfiguration(),updates}})
+  expect(repeated).toEqual({configuration:{level:3,commentsExpanded:false,phase:'running'},updates:0})
+  expect(before.configuration.phase).toBe('running');expect(await page.evaluate(()=>window.challenge.selected)).toBe(id)
+  await page.evaluate(()=>window.challenge.configure({commentsExpanded:true}))
+  expect(await page.evaluate(()=>window.repeatedController.getConfiguration())).toEqual({level:3,commentsExpanded:true,phase:'running'})
+  expect(await page.evaluate(()=>window.calls.filter(call=>call.method==='challenge-stop'))).toEqual([])
+  expect(await page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:[],checks:[{kind:'review',status:'partial',detail:'本轮深入检查尚未完整结束。'}]})
+  // The integrated scheduler retains partial work for its bounded supplement.
+  await expect.poll(()=>page.evaluate(()=>window.challenge.getConfiguration().phase)).toBe('waiting')
+  expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('configure API preserves the rolling review budget across level changes and disabling then enabling',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id)
+  await page.evaluate(()=>window.challenge.configure({level:2}));await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:['p'],checks:[],usage:{inputTokens:20,outputTokens:4000}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.getConfiguration().phase)).toBe('idle')
+  for(const settings of [{level:3},{level:4,commentsExpanded:false},{level:0},{level:4,commentsExpanded:true}]){
+   const configuration=await page.evaluate(settings=>{window.challenge.configure(settings);return window.challenge.getConfiguration()},settings)
+   expect(configuration.phase).toBe(settings.level===0?'off':'limited')
+   await page.clock.fastForward(1);expect(await page.evaluate(()=>window.jobs.length)).toBe(1)
+  }
+  await page.clock.fastForward(600000);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  expect(await page.evaluate(()=>window.jobs[1].input.level)).toBe(4);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('applies an explicit anchored edit with a separate output-control clause and saves the unchanged surrounding text',async()=>{
+ const source='前句保持。20人报名，15人到场，到场率90%。后句保持。'
+ const replacement='20人报名，15人到场，到场率75%。'
+ const{context,page,errors,id}=await fixture(source,'到场率90%');try{
+  await start(page,'reply','请直接修改原文，不要写审核、待核实或处理状态。')
+  await finish(page,{...answer,reply:{text:'按15÷20更正为75%。',replacement}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const expected='前句保持。'+replacement+'后句保持。'
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(expected)
+  const saved=await page.evaluate(id=>({resolved:window.noteDoc.getMap('threads').get(id).get('resolved'),records:window.noteDoc.getMap('note-replacement-reviews').size,body:window.saved['note-a'].blocks.find(block=>block.id==='p').content.map(c=>c.text||'').join('')}),id)
+  expect(saved.resolved).toBe(true);expect(saved.records).toBe(1)
+  expect(saved.body).toBe(expected)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('keeps a calculation rewrite with output controls as a saved preview until the human clicks replace',async()=>{
+ const source='前句保持。20人报名，15人到场，到场率90%。后句保持。'
+ const replacement='20人报名，15人到场，5人未到场。到场率以报名人数20人为分母、实际到场人数15人为分子，计算为15÷20×100%=75%。'
+ const request='请将到场率纠正为75%，并将这处表述扩写成约120字的完整计算说明：写明分母是报名20人、分子是到场15人、15除以20再乘100%的步骤，并说明其余5人未到场。保留数字和原意，不添加新的调查结果。给出可以直接替换的正文，不要写审核、待核实或处理状态。'
+ const{context,page,errors,id}=await fixture(source,'到场率90%');try{
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,'reply',request)
+  await finish(page,{...answer,reply:{text:'计算说明已生成，确认后可替换。',replacement}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(source)
+  expect(await page.evaluate(()=>window.challenge.threads[0].comments.at(-1).metadata.challengeReplacement.status)).toBe('pending')
+  expect(await page.evaluate(()=>window.savedMessages())).toContain('计算说明已生成，确认后可替换。')
+  await page.getByRole('button',{name:'替换到原文',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('前句保持。'+replacement+'后句保持。')
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
 
 it('localizes only fixed challenge reply failures while preserving user and model messages',async()=>{
  const{context,page,errors}=await fixture();try{
@@ -85,7 +176,7 @@ it('replaces a transport failure with a short retry message while retaining the 
  }finally{await context.close()}
 },15000)
 
-for(const route of ['close','resolve','switch','off','hidden'])it('ends a pending reply on '+route+' and ignores a late replacement',async()=>{
+for(const route of ['resolve','off'])it('ends a pending reply on '+route+' and ignores a late replacement',async()=>{
  const{context,page,errors,id}=await fixture();try{
   await start(page)
   await page.evaluate(({route,id})=>{window.challenge.setDraft(id,'保留新草稿');if(route==='close')window.challenge.close(id);if(route==='resolve')void window.challenge.resolve(id);if(route==='switch')window.switchNote('note-b');if(route==='off')window.challenge.setLevel(0);if(route==='hidden'){document.querySelector('.en-root').hidden=true;document.dispatchEvent(new Event('sherlock:workspace-surface-change'))}},{route,id})
@@ -105,7 +196,7 @@ for(const route of ['close','resolve','switch','off','hidden'])it('ends a pendin
 
 it('keeps a new action busy when an older cancelled request settles later and guards changed text',async()=>{
  const{context,page,errors,id}=await fixture();try{
-  await start(page);await page.evaluate(id=>{window.challenge.close(id);window.challenge.select(id);window.start('optimize')},id)
+  await start(page);await page.evaluate(id=>{window.challenge.setLevel(0);window.challenge.select(id);window.start('optimize')},id)
   await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
   await finish(page,{...answer,reply:{text:'旧建议',replacement:'旧替换'}})
   expect(await page.evaluate(()=>({id:window.challenge.busyId,kind:window.challenge.actionKind}))).toEqual({id,kind:'optimize'})
@@ -140,11 +231,16 @@ it('persists margin preference per note across resize, reload and switching with
 
 it('persists an optimization preview without editing and applies it only through the explicit replacement action',async()=>{
  const{context,page,errors,id}=await fixture();try{
-  await page.evaluate(id=>window.challenge.select(id),await page.evaluate(()=>window.challenge.threads[0].id));await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'这项结论的程度较高。'}})
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'这项结论的程度较高。'}})
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
   await expect.poll(()=>page.locator('.en-challenge-replacement-text').allTextContents()).toEqual(['这项结论的程度较高。'])
-  await expect.poll(()=>page.evaluate(()=>Object.keys(window.saved).length)).toBe(1);await page.evaluate(()=>window.remount());await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1);await page.evaluate(()=>window.challenge.select(window.challenge.threads[0].id));await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(1)
+  await expect.poll(()=>page.evaluate(()=>Object.keys(window.saved).length)).toBe(1)
+  await page.evaluate(()=>{window.previousChallenge=window.challenge;window.remount()})
+  // The old controller still exists until React mounts the restored editor.
+  // Wait for the new controller and the persisted thread, not the stale array.
+  await expect.poll(()=>page.evaluate(id=>window.challenge!==window.previousChallenge&&window.challenge.threads.some(thread=>thread.id===id),id)).toBe(true)
+  await page.evaluate(id=>window.challenge.select(id),id);await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(1)
   await page.locator('.en-challenge-card').screenshot({path:'/tmp/notes-challenge-v16-replacement-preview.png'});await page.locator('.en-challenge-replace').click()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
   expect(await page.locator('.en-challenge-replace').count()).toBe(0);expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
@@ -680,6 +776,56 @@ it('coalesces slider changes and starts the selected tier immediately after clos
   expect(await page.evaluate(()=>window.jobs[1].input.level)).toBe(4);expect(await trigger.getAttribute('aria-busy')).toBe('true');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+it('defers an immediate tier change during a writer request even before React commits its busy state',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install()
+  await page.evaluate(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'note-a',prompt:'请说明这篇笔记的处理范围',images:[]}}));window.challenge.setLevel(4)})
+  await expect.poll(()=>page.evaluate(()=>typeof window.finishGeneration)).toBe('function')
+  await page.clock.fastForward(10000);expect(await page.evaluate(()=>window.jobs.length)).toBe(0)
+  await page.evaluate(()=>window.finishGeneration({kind:'conversation',markdown:'本次仅解释处理范围。'}))
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input.level)).toBe(4)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],checks:[]})
+  await expect.poll(()=>page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it.each(['instant','failure','stop'])('starts the queued tier after a writer %s without relying on an intermediate React busy render',async mode=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install()
+  await page.evaluate(mode=>{window.generationMode=mode;document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'note-a',prompt:'请说明这篇笔记的处理范围',images:[]}}));window.challenge.setLevel(4)},mode)
+  if(mode==='stop')await page.getByRole('button',{name:'停止',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input.level)).toBe(4)
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],checks:[]})
+  await expect.poll(()=>page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('retains and saves an explicit tier review when its close handler is followed by a session switch in the same turn',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.clock.install()
+  const started=await page.evaluate(()=>{window.challenge.setPickerOpen(true);window.challenge.setLevel(4);window.challenge.setPickerOpen(false);const count=window.jobs.length;window.switchNote('note-b');return count})
+  expect(started).toBe(1)
+  await expect.poll(()=>page.locator('[data-note-editor-session="note-b"] .en-title').inputValue()).toBe('note-b')
+  expect(await page.locator('[data-note-editor-session="note-a"]').count()).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input.level)).toBe(4)
+  await finish(page,{version:1,issues:[{blockId:'p',quote:'较高',category:'question',message:'采用什么标准判断程度较高？',evidence:[]}],coveredBlockIds:['p'],checks:[]})
+  await expect.poll(()=>page.evaluate(()=>window.savedMessages().includes('采用什么标准判断程度较高？'))).toBe(true)
+  await expect.poll(()=>page.locator('[data-note-editor-session="note-a"]').count()).toBe(0)
+  expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(0)
+  await page.evaluate(()=>window.switchNote('note-a'))
+  await expect.poll(()=>page.locator('.en-title').inputValue()).toBe('note-a')
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads.some(t=>t.metadata.issue.message==='采用什么标准判断程度较高？'))).toBe(true)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(original)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
 it('releases a visible picker pause when the native header retargets its portal',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.clock.install();await page.evaluate(()=>{document.body.insertAdjacentHTML('beforeend','<div id="slot-a" data-en-challenge-tools="note-a"></div><div id="slot-b" data-en-challenge-tools="other"></div>')})
@@ -811,7 +957,7 @@ it('shows per-paragraph reviewed lines, exact unresolved counts and tier tooltip
 it('does not display a passed line after a partial depth response, a failed request, or disabling challenge',async()=>{
  const{context,page,errors,id}=await fixture();try{
   await page.clock.install();await page.evaluate(id=>window.challenge.resolve(id),id);await page.evaluate(()=>window.challenge.setLevel(3));await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
-  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:[],checks:[{kind:'review',status:'partial',detail:'深入检查未完成。'}]});await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('idle')
+  await finish(page,{version:1,issues:[],coveredBlockIds:['p'],completeBlockIds:[],checks:[{kind:'review',status:'partial',detail:'深入检查未完成。'}]});await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('waiting')
   expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
   await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-recheck',{detail:{sessionId:'note-a'}})));await page.clock.fastForward(5000);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
   await page.evaluate(()=>window.jobs[1].reject(Error('provider unavailable')));await page.clock.fastForward(1);expect(await page.locator('.en-challenge-paragraph-line').count()).toBe(0)
@@ -909,5 +1055,63 @@ it('keeps interrupted line fades continuous and does not let an old tier timer r
   await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2);await finish(page,done,1);await current.waitFor();expect(await current.getAttribute('aria-label')).toContain('严格模式')
   await page.evaluate(()=>window.challenge.setLevel(2));await page.clock.fastForward(1);await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(3);await finish(page,done,2);await current.waitFor();expect(await current.getAttribute('aria-label')).toContain('标准模式')
   await page.clock.fastForward(700);await expect.poll(()=>leaving.count()).toBe(0);expect(await current.count()).toBe(1);expect(await current.getAttribute('aria-label')).toContain('标准模式');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('anchors a wrapped replacement comparison to the clicked character instead of the full highlight bounds',async()=>{
+ const prefix='用于定位的背景说明文字'.repeat(4),quote='这段原始论述需要逐一核对各项假设，再根据实际资料调整结论，并保留准确的内容和范围。'.repeat(2),replacement=quote.replaceAll('原始论述','修订论述'),source=prefix+quote
+ const{context,page,errors,id}=await fixture(source,quote);try{
+  await page.evaluate(()=>{window.challenge.setMarginExpanded(false);window.editor.insertBlocks([{id:'filler',type:'paragraph',content:'其他正文内容。'.repeat(180)}],'p','after')});await start(page,'optimize');await finish(page,{...answer,reply:{text:'仅修订标记文字。',replacement:prefix+replacement}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await page.evaluate(id=>{const t=window.challenge.threads.find(t=>t.id===id),comment=t.comments.find(c=>c.metadata?.challengeReplacement);return window.challenge.applyReplacement(id,comment.id)},id)
+  const mark=page.locator('.en-replacement-mark');await mark.waitFor();const fragments=await mark.evaluateAll(elements=>elements.flatMap(el=>[...el.getClientRects()]).filter(r=>r.width>0&&r.height>0).map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom})))
+  expect(fragments.length).toBeGreaterThan(1);const first=fragments[0],point={x:first.left+Math.min(24,(first.right-first.left)/2),y:(first.top+first.bottom)/2}
+  const caret=await page.evaluate(point=>{const view=window.editor._tiptapEditor.view,p=view.posAtCoords({left:Math.floor(point.x),top:Math.floor(point.y)});return view.coordsAtPos(p.pos)},point)
+  await page.mouse.click(point.x,point.y);const popup=page.getByRole('dialog',{name:'替换对照'});await popup.waitFor()
+  const expected=await page.locator('.en-main').evaluate((el,x)=>{const a=el.getBoundingClientRect();return Math.max(a.left+16,Math.min(x,a.right-Math.min(360,a.width-32)-16))},caret.left)
+  await expect.poll(async()=>Math.abs((await popup.boundingBox()).x-expected)).toBeLessThanOrEqual(2)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text||'').join(''))).toBe(prefix+replacement)
+  const prior=await popup.boundingBox();await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop+=20);await expect.poll(async()=>Math.abs((await popup.boundingBox()).y-prior.y+20)).toBeLessThanOrEqual(2)
+  const currentFragments=await mark.evaluateAll(elements=>elements.flatMap(el=>[...el.getClientRects()]).filter(r=>r.width>0&&r.height>0).map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom}))),last=currentFragments.at(-1),next={x:last.left+Math.min(24,(last.right-last.left)/2),y:(last.top+last.bottom)/2}
+  const nextCaret=await page.evaluate(point=>{const view=window.editor._tiptapEditor.view,p=view.posAtCoords({left:Math.floor(point.x),top:Math.floor(point.y)});return view.coordsAtPos(p.pos)},next)
+  await page.mouse.click(next.x,next.y);await popup.waitFor();const nextExpected=await page.locator('.en-main').evaluate((el,x)=>{const a=el.getBoundingClientRect();return Math.max(a.left+16,Math.min(x,a.right-Math.min(360,a.width-32)-16))},nextCaret.left)
+  await expect.poll(async()=>Math.abs((await popup.boundingBox()).x-nextExpected)).toBeLessThanOrEqual(2)
+  await popup.getByRole('button',{name:'关闭替换对照'}).click();await mark.evaluate(el=>el.focus({preventScroll:true}));await page.keyboard.press('Enter');await popup.waitFor()
+  expect(await page.evaluate(()=>window.challenge.replacementReviews.popupAnchor??null)).toBeNull()
+  const fallback=await page.locator('.en-main').evaluate((el,left)=>{const a=el.getBoundingClientRect();return Math.max(a.left+16,Math.min(left,a.right-Math.min(360,a.width-32)-16))},currentFragments[0].left)
+  await expect.poll(async()=>Math.abs((await popup.boundingBox()).x-fallback)).toBeLessThanOrEqual(2)
+  expect(await popup.evaluate(el=>{const b=el.getBoundingClientRect(),a=document.querySelector('.en-main').getBoundingClientRect();return b.left>=a.left+16&&b.right<=a.right-16&&b.top>=a.top+16&&b.bottom<=a.bottom-16})).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+for(const kind of ['reply','optimize'])for(const route of ['close','blur','switch'])it('retains a started '+kind+' after '+route+' and saves only its originating note',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,kind,'请解释这处用字，不直接改写')
+  await page.evaluate(({route,id})=>{if(route==='close')window.challenge.close(id);if(route==='blur'){Object.defineProperty(document,'hasFocus',{configurable:true,value:()=>false});window.dispatchEvent(new Event('blur'))}if(route==='switch')window.switchNote('note-b')},{route,id})
+  if(route==='switch')await page.locator('[data-note-source-session="note-b"] .bn-editor').waitFor()
+  expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(0)
+  await finish(page,{...answer,reply:{text:'原会话后台结果。',...(kind==='optimize'?{replacement:'这项结论的程度较高。'}:{})}})
+  await expect.poll(()=>page.evaluate(()=>window.completed)).toBe(1)
+  await expect.poll(()=>page.evaluate(()=>JSON.stringify(window.saved['note-a']||{}).includes('yjs'))).toBe(true)
+  if(route==='switch'){await expect.poll(()=>page.locator('[data-note-source-session="note-a"]').count()).toBe(0);await page.evaluate(()=>window.switchNote('note-a'));await page.locator('[data-note-source-session="note-a"] .bn-editor').waitFor()}
+  if(route==='blur')await page.evaluate(()=>{Object.defineProperty(document,'hasFocus',{configurable:true,value:()=>true});window.dispatchEvent(new Event('focus'))})
+  await expect.poll(()=>page.evaluate(()=>window.messages().includes('原会话后台结果。'))).toBe(true)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
+  expect(await page.evaluate(()=>window.challenge.busyId||null)).toBeNull();expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it.each(['zh','en'])('explains a reply format failure in %s and reuses AI optimize without applying twice',async locale=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(({locale,id})=>{document.documentElement.dataset.odysseyLocale=locale;window.challenge.select(id)}, {locale,id});await start(page)
+  await page.evaluate(()=>window.jobs[0].reject(Error("Error invoking remote method 'notes:request': Error: 挑战检查结果格式无效。")))
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const message=await page.evaluate(()=>window.messages().at(-1));expect(message).toContain(locale==='en'?'format':'格式');expect(message).toContain(locale==='en'?'AI optimize':'AI优化')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
+  await page.getByRole('button',{name:locale==='en'?'AI optimize':'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  await page.evaluate(()=>window.start('optimize'));expect(await page.evaluate(()=>window.jobs.length)).toBe(2)
+  await finish(page,{...answer,reply:{text:'可重试的建议。',replacement:'这项结论的程度较高。'}},1)
+  const apply=page.getByRole('button',{name:locale==='en'?'Apply to note':'替换到原文',exact:true});await apply.waitFor();await apply.click()
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
+  expect(await page.evaluate(()=>window.noteDoc.getMap('note-replacement-reviews').size)).toBe(1);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

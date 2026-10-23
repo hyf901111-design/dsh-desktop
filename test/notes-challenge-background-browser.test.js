@@ -7,11 +7,13 @@ const review={version:1,issues:[{blockId:'p',quote:'审和',category:'typo',mess
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountNotes}from'./src/preload/notes/mount';import*as Y from'yjs';
- window.calls=[];window.jobs=[];window.saved={};window.drafts={};window.editors={};window.failSave={};window.holdSave={};window.saveJobs=[];window.referenceEvents=[];window.activityEvents=[];window.windowFocused=true;
+ window.calls=[];window.jobs=[];window.saved={};window.drafts={};window.editors={};window.failSave={};window.holdSave={};window.saveJobs=[];window.referenceEvents=[];window.activityEvents=[];window.windowFocused=true;window.externalReady={};window.externalEffects=[];const externalPending=new Map();let externalSequence=0;
  Object.defineProperty(document,'hasFocus',{value:()=>window.windowFocused});document.addEventListener('sherlock:notes-reference-state',event=>window.referenceEvents.push(event.detail));
  document.addEventListener('sherlock:notes-challenge-activity',event=>window.activityEvents.push(event.detail));
  const initial=id=>({title:id,blocks:id==='note-a'?[{id:'p',type:'paragraph',content:'材料已完成审和。'},{id:'clean',type:'paragraph',content:'共有十份材料。'}]:[{id:'b',type:'paragraph',content:'另一个会话的正文和草稿。'}],yjs:'',revision:0});
- const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{saved:window.saved[input.sessionId]||initial(input.sessionId)};if(method==='challenge')return new Promise(resolve=>window.jobs.push({input,resolve}));if(method==='save'){if(window.holdSave[input.sessionId])await new Promise(resolve=>window.saveJobs.push({input,resolve}));if(window.failSave[input.sessionId])throw Error('保存失败fixture');const saved={...input.content,revision:input.revision+1};window.saved[input.sessionId]=saved;return{status:'saved',saved}}return{}},draft:async input=>{window.drafts[input.sessionId]=input.content}};
+ const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='capability-ready'){window.externalReady[input.sessionId]=input;return{ok:true}}if(method==='capability-reply'){if(input.effect){window.externalEffects.push(input.effect);return{ok:true}}const job=externalPending.get(input.requestId);if(job){externalPending.delete(input.requestId);input.error?job.reject(Error(input.error)):job.resolve(input.result)}return{ok:true}}if(method==='load')return{saved:window.saved[input.sessionId]||initial(input.sessionId)};if(method==='challenge')return new Promise(resolve=>window.jobs.push({input,resolve}));if(method==='save'){if(window.holdSave[input.sessionId])await new Promise(resolve=>window.saveJobs.push({input,resolve}));if(window.failSave[input.sessionId])throw Error('保存失败fixture');const saved={...input.content,revision:input.revision+1};window.saved[input.sessionId]=saved;return{status:'saved',saved}}return{}},draft:async input=>{window.drafts[input.sessionId]=input.content}};
+ window.externalInvoke=(sessionId,action,args={})=>new Promise((resolve,reject)=>{const requestId='external-'+(++externalSequence);externalPending.set(requestId,{resolve,reject});document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{requestId,generationId:'harness:retention',sessionId,context:{documentId:window.externalReady[sessionId].documentId,owner:'alice',sessionId,mode:'notes',editable:true,selectedBlockIds:[],selectedParagraphIds:[]},action,args}}))});
+ document.addEventListener('sherlock:notes-capability-activity',event=>{window.capabilityActivity=event.detail});
  const host={register:(_mode,surface)=>{surface.style.left='0';document.body.append(surface)},open:()=>{},close:()=>{},current:()=>({surface:'notes'})};window.mounted=mountNotes(document,bridge,host);
  window.switchNote=id=>{document.querySelector('[data-ework-notes-session]').dataset.eworkNotesSession=id;document.querySelector('[data-ework-note-view]').dataset.eworkNoteView=id;document.dispatchEvent(new CustomEvent('sherlock:notes-open',{detail:{sessionId:id}}))};
  window.savedReview=id=>{const value=window.saved[id];if(!value?.yjs)return null;const doc=new Y.Doc();Y.applyUpdate(doc,Uint8Array.from(atob(value.yjs),c=>c.charCodeAt(0)));try{return{state:doc.getMap('note-challenge-results').get('state'),threads:doc.getMap('threads').size}}finally{doc.destroy()}};
@@ -38,7 +40,7 @@ it.each(['blur','mode'])('saves a started review after %s without a new hidden r
   expect(await page.evaluate(()=>window.calls.filter(call=>call.method==='challenge-stop').length)).toBe(0)
   await finish(page);await expect.poll(()=>page.evaluate(()=>window.savedReview('note-a')?.state?.entries?.length)).toBe(2)
   await page.clock.fastForward(60000);expect(await page.evaluate(()=>window.jobs.length)).toBe(1)
-  await page.evaluate(()=>{window.windowFocused=true;document.querySelector('.en-root').hidden=false;window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('sherlock:workspace-surface-change'))})
+  await page.evaluate(()=>{window.windowFocused=true;window.externalReady={};window.externalEffects=[];const externalPending=new Map();let externalSequence=0;document.querySelector('.en-root').hidden=false;window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('sherlock:workspace-surface-change'))})
   await expect.poll(()=>page.locator('.en-challenge-paragraph-line:not([data-exiting])').count()).toBe(2);expect(errors).toEqual([])
  }finally{await context.close()}
 })
@@ -112,3 +114,30 @@ it.each(['off','edit','identity'])('does not apply a late review after %s',async
   expect(errors).toEqual([])
  }finally{await context.close()}
 })
+
+
+it('retains the external editor until an applied mutation is saved across session switching, independently of challenge retention',async()=>{
+ const {context,page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>window.externalInvoke('note-a','context.acquire'))
+  await page.evaluate(()=>window.holdSave['note-a']=true)
+  const pending=page.evaluate(()=>window.externalInvoke('note-a','notes.blocks.align',{scope:'note',target:'paragraphs',alignment:'center'}))
+  await page.waitForFunction(()=>window.externalEffects.some(effect=>effect.state==='applied')&&window.saveJobs.length>0)
+  await page.evaluate(()=>{
+   document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-activity',{detail:{...window.capabilityActivity,retaining:false}}))
+   window.switchNote('note-b')
+  })
+  await page.locator('[data-note-source-session="note-b"]').waitFor();expect(await page.locator('[data-note-source-session="note-a"]').count()).toBe(1)
+  const saved=await page.evaluate(()=>{
+   const id=window.calls.findLast(call=>call.method==='capability-reply'&&call.input.effect)?.input.requestId
+   document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{sessionId:'note-a',requestId:id,cancel:true}}))
+   window.holdSave['note-a']=false;for(const job of window.saveJobs.splice(0))job.resolve()
+   return window.saved['note-b']||null
+  });expect(saved).toBeNull()
+  expect((await pending).status).toBe('cancelled')
+  expect(await page.evaluate(()=>window.saved['note-a'].blocks.filter(b=>b.type==='paragraph').every(b=>b.props.textAlignment==='center'))).toBe(true)
+  expect(await page.evaluate(()=>window.externalEffects.some(effect=>effect.state==='saved'))).toBe(true)
+  await expect.poll(()=>page.locator('[data-note-source-session="note-a"]').count()).toBe(0)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)

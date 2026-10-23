@@ -1,3 +1,5 @@
+import {patchAssistantReveal} from './lib/assistant-reveal.mjs'
+import {patchConversationThinkingStatus} from './lib/conversation-thinking-status.mjs'
 import {patchMemorySourceAnchors} from './lib/memory-source-anchors.mjs'
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
 import { patchNotesClient } from './lib/notes-client.mjs'
@@ -31,6 +33,7 @@ import { patchQuestionCountdown } from './lib/question-countdown.mjs'
 import { patchGlmReasoningCapabilities } from './lib/glm-reasoning-capabilities.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
 import { patchRestoredFileMentions, patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
+import { patchDeliverableCards, patchDeliveryConversation } from './lib/deliverable-cards.mjs'
 import { patchInspectPortal, patchInspectConversation, patchInspectLayout } from './lib/inspect-sidebar.mjs'
 import { patchEmptyHeaderTitles, patchDesktopLocaleBridge, patchDesktopResearchDefaults } from './lib/desktop-locale-bridge.mjs'
 import { patchResearchResidentConversation } from './lib/research-resident-conversation.mjs'
@@ -208,6 +211,8 @@ const deliverablesPath=join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client
 writeFileSync(deliverablesPath, patchGeneratedFileMentions(readFileSync(deliverablesPath, 'utf8')))
 
 writeFileSync(conversationPath, patchRestoredFileMentions(readFileSync(conversationPath, 'utf8')))
+writeFileSync(deliverablesPath, patchDeliverableCards(readFileSync(deliverablesPath, 'utf8')))
+writeFileSync(conversationPath, patchDeliveryConversation(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchEmptyHeaderTitles(readFileSync(conversationPath, 'utf8')))
 
@@ -258,6 +263,8 @@ writeFileSync(conversationPath, patchResearchGridWorkbench(patchCalendarToolClie
 const notesConversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 writeFileSync(notesConversationPath, patchMemorySourceAnchors(patchNoteSessionClient(patchNotesComposer(patchNotesClient(readFileSync(notesConversationPath, 'utf8'))))))
 writeFileSync(notesConversationPath, patchSessionViewPreferences(readFileSync(notesConversationPath, 'utf8')))
+writeFileSync(notesConversationPath, patchAssistantReveal(readFileSync(notesConversationPath, 'utf8')))
+writeFileSync(notesConversationPath, patchConversationThinkingStatus(readFileSync(notesConversationPath, 'utf8')))
 const notesRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
 writeFileSync(notesRuntimePath, patchNoteSessionRuntime(readFileSync(notesRuntimePath, 'utf8')))
 const modeClientPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js')

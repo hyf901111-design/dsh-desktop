@@ -1,6 +1,24 @@
 import { Window } from 'happy-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// Vitest stubs CSS modules, including ?raw assets. Read the installed palettes
+// for this preload integration test just as Vite's production raw loader does.
+// Keep the real theme generator and its missing-token guard active.
+vi.mock('@deepseek-ai/dsh-client-ui-theme/styles/design-platform.css?raw', async () => ({
+  default: (await import('node:fs')).readFileSync(
+    (await import('node:module')).createRequire(import.meta.url).resolve(
+      '@deepseek-ai/dsh-client-ui-theme/styles/design-platform.css'
+    ), 'utf8'
+  )
+}))
+vi.mock('@deepseek-ai/dsh-client-ui-theme/styles/shiki.css?raw', async () => ({
+  default: (await import('node:fs')).readFileSync(
+    (await import('node:module')).createRequire(import.meta.url).resolve(
+      '@deepseek-ai/dsh-client-ui-theme/styles/shiki.css'
+    ), 'utf8'
+  )
+}))
+
 const electronFakes = vi.hoisted(() => ({
   exposeInMainWorld: vi.fn(),
   invoke: vi.fn(async () => ({
@@ -54,6 +72,22 @@ afterEach(() => {
 })
 
 describe('preload frame boundary', () => {
+  it('mounts the original dark palette for sent messages in the trusted main frame', async () => {
+    Object.defineProperty(process, 'isMainFrame', { configurable: true, value: true })
+    await import('../src/preload/index')
+
+    browserWindow.document.body.insertAdjacentHTML('beforeend', `
+      <div class="srb-message" data-role="user"><code style="color:var(--shiki-token-keyword)">const answer</code></div>
+      <div class="srb-message" data-role="assistant">Assistant response</div>
+    `)
+    const userMessage = browserWindow.document.querySelector('[data-role="user"]')!
+    const assistantMessage = browserWindow.document.querySelector('[data-role="assistant"]')!
+    expect(browserWindow.getComputedStyle(userMessage).backgroundColor).toBe('#000')
+    expect(browserWindow.getComputedStyle(userMessage).getPropertyValue('--dsw-alias-label-primary')).not.toBe('')
+    expect(browserWindow.getComputedStyle(userMessage.firstElementChild!).color).toBe('#faa2c1')
+    expect(browserWindow.getComputedStyle(assistantMessage).getPropertyValue('--shiki-token-keyword')).toBe('')
+  })
+
   it('exposes only a frozen main-frame clipboard bridge with opaque asset requests', async () => {
     Object.defineProperty(process, 'isMainFrame', { configurable: true, value: true })
     await import('../src/preload/index')

@@ -25,7 +25,7 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 export const WORKBENCH_PATH = '/sherlock/research-workbenches/list';
-import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt, WORKBENCH_PANEL_TYPES as types} from './workbench-plan.js';
+import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt, workbenchQuoteSourceRequests, WORKBENCH_PANEL_TYPES as types} from './workbench-plan.js';
 import {NOTE_WORKBENCH_GUIDANCE} from './note-template-contract.js';
 import {RSS_WORKBENCH_GUIDANCE} from './rss-template-contract.js';
 import {SIMULATED_WORKBENCH_PRESETS} from './simulated-workbench-presets.js';
@@ -118,7 +118,11 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         const run = async () => {
             const input = validateWorkbench(args);
             // Resolve before queuing so ambiguous human restrictions remain explicit.
-            const contexts = new Map(originalRequest ? input.panels.filter(p => !p.artifact && !p.publicData).map(panel => [JSON.stringify([panel.title,panel.type,panel.prompt]), {sourcePolicy:input.dataMode !== 'simulated' ? workbenchSourcePolicy(originalRequest, panel) : {pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt},sourceRequirement:panel.prompt,...(usesHumanSourceScope({originalRequest,dataMode:input.dataMode}) ? {explicitScope:workbenchExplicitScope(originalRequest,panel)} : {}),workbenchRequest:{originalRequest:input.originalRequest,dataMode:input.dataMode ?? 'source'}}]) : []);
+            const contexts = new Map(originalRequest ? input.panels.filter(p => !p.artifact && !p.publicData).map(panel => {
+                const authored=args.panels?.find(value=>value?.title?.trim()===panel.title);
+                const publicSourceRequests=authored?workbenchQuoteSourceRequests(authored):undefined;
+                return [JSON.stringify([panel.title,panel.type,panel.prompt]), {sourcePolicy:input.dataMode !== 'simulated' ? workbenchSourcePolicy(originalRequest, panel, {publicSourceRequests}) : {pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt},sourceRequirement:panel.prompt,...(usesHumanSourceScope({originalRequest,dataMode:input.dataMode}) ? {explicitScope:workbenchExplicitScope(originalRequest,panel)} : {}),workbenchRequest:{originalRequest:input.originalRequest,dataMode:input.dataMode ?? 'source'}}];
+            }) : []);
             const panelContext = panel => contexts.get(JSON.stringify([panel.title,panel.type,panel.prompt]));
             const parentSessionId = exec.agent?.session?.id;
             if (!str(parentSessionId, 256) || !ctx.agents.get(parentSessionId))
@@ -257,7 +261,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         requests: { ...publicDataRequestsSchema, description: '兼容平铺写法，必须同时提供profile；优先写入publicData.requests。' },
                         artifact: { oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }], description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。deferred模式优先省略，null仅在该模式表示尚未提供数据；其他模式不接受null。真实来源/时点就近标注。' },
                         publicData: { type: 'object', additionalProperties: false, description: '嵌套于panel的常用免费源直通配置，例如 {"profile":"quotes-table","requests":[{"source":"tencent-quotes","parameters_json":"{\\"symbols\\":[\\"sh510300\\"]}"}],"intervalMinutes":1}。宿主并行取数、渲染模板并保存自动刷新；无需先query、抄写数据或逐卡模型。与artifact/模拟模式互斥。', properties: {
-                            profile: { type: 'string', required: true, enum: Object.keys(PUBLIC_DATA_PROFILES), description: 'quotes-table/quotes-metrics用tencent-quotes；crypto-metrics用kraken-ticker（最多2个pair）；price-volume用kraken-candles或tencent-history；candlestick仅tencent-history日线；news用sina-news且panel.type=news，其余panel.type=market。' },
+                            profile: { type: 'string', enum: Object.keys(PUBLIC_DATA_PROFILES), description: 'quotes-table/quotes-metrics用tencent-quotes；crypto-metrics用kraken-ticker（最多2个pair）；price-volume用kraken-candles或tencent-history；candlestick仅tencent-history日线；news用sina-news且panel.type=news，其余panel.type=market。应显式提供；仅单个腾讯报价请求且明确声明table类型、market.table或key/label列结构时，缺键可由宿主推导quotes-table。模糊或冲突的显示意图仍报错，显式配置不被覆盖。' },
                             intervalMinutes: { type: 'number', description: '默认1分钟；0仅手动；遵从用户指定的频率。' },
                             layoutProfile: { type: 'string', enum: ['openterminal'], description: '仅quotes-table、price-volume、news支持专用OpenTerminal布局；不改变原生金融组件或metrics布局。' },
                             requests: { ...publicDataRequestsSchema, required: true }

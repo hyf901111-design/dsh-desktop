@@ -1,0 +1,47 @@
+{
+  "provenance": "Sanitized owned native880420b4 planner first/second public arguments; no data values, headers or model configuration.",
+  "first": {
+    "dataMode": "source",
+    "panels": [
+      {
+        "publicData": {
+          "intervalMinutes": 0,
+          "requests": [
+            {
+              "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}",
+              "source": "tencent-quotes"
+            }
+          ]
+        },
+        "prompt": "真实调用腾讯行情源（tencent-quotes）获取中际旭创(300308)、新易盛(300502)、工业富联(601138)的真实报价，全部三家公司完整保留。按以下顺序展示七列，使用明确的key/label列声明，单位写在label中：code(证券代码)、name(公司名称)、price(最新价,元)、change_pct(涨跌幅,%)、volume(成交量,手)、amount(成交额,元)、quote_time(实际报价时点)。行数据必须由真实响应字段映射生成，不能手抄或编造数值；来源缺失的字段明确标注缺失。注明数据来源（腾讯行情）及原文链接。本次为手动静态快照，不开启自动刷新。按内容安排可阅读的宽高，完整保留列与公司。",
+        "size": "large",
+        "title": "三公司真实报价快照",
+        "type": "market"
+      }
+    ],
+    "title": "表格键值链路复验1023B"
+  },
+  "firstError": "Error: invalid arguments: missing required property \"panels[0].publicData.profile\"",
+  "corrected": {
+    "dataMode": "source",
+    "panels": [
+      {
+        "publicData": {
+          "intervalMinutes": 0,
+          "profile": "quotes-table",
+          "requests": [
+            {
+              "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\"]}",
+              "source": "tencent-quotes"
+            }
+          ]
+        },
+        "prompt": "真实调用腾讯行情源（tencent-quotes）获取中际旭创(300308)、新易盛(300502)、工业富联(601138)的真实报价，全部三家公司完整保留。按以下顺序展示七列，使用明确的key/label列声明，单位写在label中：code(证券代码)、name(公司名称)、price(最新价,元)、change_pct(涨跌幅,%)、volume(成交量,手)、amount(成交额,元)、quote_time(实际报价时点)。行数据必须由真实响应字段映射生成，不能手抄或编造数值；来源缺失的字段明确标注缺失。注明数据来源（腾讯行情）及原文链接。本次为手动静态快照，不开启自动刷新。按内容安排可阅读的宽高，完整保留列与公司。",
+        "size": "large",
+        "title": "三公司真实报价快照",
+        "type": "market"
+      }
+    ],
+    "title": "表格键值链路复验1023B"
+  }
+}

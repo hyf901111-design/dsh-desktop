@@ -82,6 +82,10 @@ describe('macOS package runtime verification', () => {
           path.join(projectRoot, 'skills', 'ework-finance-analysis'),
           path.join(packagedSkillRoot, 'ework-finance-analysis')
         )
+        symlinkSync(
+          path.join(projectRoot, 'skills', 'ework-equity-research'),
+          path.join(packagedSkillRoot, 'ework-equity-research')
+        )
 
         const strictResult = spawnSync(
           process.execPath,
@@ -108,6 +112,7 @@ describe('macOS package runtime verification', () => {
         expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.39.3 (source parity)')
         expect(result.stdout).toContain('bundled skill: ework-free-data-sources v1.0.8 (source parity)')
         expect(result.stdout).toContain('bundled skill: ework-finance-analysis v1.7.3 (source parity)')
+        expect(result.stdout).toContain('bundled skill: ework-equity-research v1.4.0 (source parity)')
         expect(result.stdout).toContain('package: verified')
       } finally {
         rmSync(temporaryRoot, { recursive: true, force: true })

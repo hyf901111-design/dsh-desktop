@@ -266,13 +266,14 @@ export function patchCanvasUseClient(source) {
     value=value.replace('flexDirection: "column", alignItems: "flex-start", gap: 8, marginTop: 8', 'flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 8, marginTop: 8')
 
     { // Idempotent even when other build patches regenerate surrounding helpers.
-      const replace=(a,b)=>{if(value.includes(b))return;if(!value.includes(a))throw Error('Disclosure scroll anchor missing: '+a);value=value.replace(a,b)}
+      const replace=(a,b,present=b)=>{if(value.includes(present))return;if(!value.includes(a))throw Error('Disclosure scroll anchor missing: '+a);value=value.replace(a,b)}
       replace('const toBottom = (el) => {', 'const toBottom = (el) => { delete el.dataset.conversationReading;')
-      replace('const settle = () => {\n\t\t\t\tel.scrollTop = el.scrollHeight;', 'const settle = () => {\n        if(el.dataset?.conversationReading)return;\n\t\t\t\tel.scrollTop = el.scrollHeight;')
+      replace('const settle = () => {\n\t\t\t\tel.scrollTop = el.scrollHeight;', 'const settle = () => {\n        if(el.dataset?.conversationReading)return;\n\t\t\t\tel.scrollTop = el.scrollHeight;', 'const settle = () => {\n        if(el.dataset?.conversationReading)return;')
       replace('const floor = Math.max(0, el.scrollHeight - el.clientHeight);', 'if(el.dataset.conversationAnchoring){observedTopRef.current=el.scrollTop;return;}\n        const floor = Math.max(0, el.scrollHeight - el.clientHeight);')
       replace('el.addEventListener("scroll", onScroll, { passive: true });', `el.addEventListener("scroll", onScroll, { passive: true });
-        const stopAnchoring=anchorConversationDisclosures(local,()=>[el],()=>{atBottomRef.current=false;setAtBottom(false);observedTopRef.current=el.scrollTop;});`)
-      replace('el.removeEventListener("scroll", onScroll);', 'el.removeEventListener("scroll", onScroll); stopAnchoring();')
+        const stopAnchoring=anchorConversationDisclosures(local,()=>[el],()=>{atBottomRef.current=false;setAtBottom(false);observedTopRef.current=el.scrollTop;});`, 'const stopAnchoring=anchorConversationDisclosures(local,()=>[el],()=>{atBottomRef.current=false;setAtBottom(false);observedTopRef.current=el.scrollTop;});')
+      const cleanup=value.indexOf('el.removeEventListener("scroll", onScroll);'),cleanupEnd=value.indexOf('};',cleanup)
+      if(!value.slice(cleanup,cleanupEnd).includes('stopAnchoring();'))replace('el.removeEventListener("scroll", onScroll);', 'el.removeEventListener("scroll", onScroll); stopAnchoring();')
     }
     if(!value.includes('/* EXECUTION_HEADER_FIRST */')) {
       const start=value.indexOf('function ExecutionStatusGroup(')

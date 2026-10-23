@@ -6,11 +6,12 @@ import { IntegrationError, type SkillInstall } from '../../shared/integrations';
 import { assertManagedPackagePath } from './package-resources';
 import { readSkillResource } from './skill-import';
 
-const slugs = ['efund-ppt-maker', 'ework-workbench-components', 'ework-free-data-sources', 'ework-finance-analysis'] as const;
+const slugs = ['efund-ppt-maker', 'ework-workbench-components', 'ework-free-data-sources', 'ework-finance-analysis', 'ework-equity-research'] as const;
 export const BUNDLED_PPT_SKILL_ID = 'builtin:efund-ppt-maker';
 export const BUNDLED_COMPONENT_SKILL_ID = 'builtin:ework-workbench-components';
 export const BUNDLED_FREE_DATA_SKILL_ID = 'builtin:ework-free-data-sources';
 export const BUNDLED_FINANCE_SKILL_ID = 'builtin:ework-finance-analysis';
+export const BUNDLED_EQUITY_RESEARCH_SKILL_ID = 'builtin:ework-equity-research';
 export const isBundledSkillId = (id: string): boolean => slugs.some(slug => id === `builtin:${slug}`);
 export interface BundledSkill {
     readonly skill: SkillInstall;

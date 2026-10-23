@@ -52,3 +52,27 @@ it('follows entry and delayed history, preserves manual reading, and resets on r
   stopAgain()
   await w.happyDOM.close()
 })
+
+it.each(['none','wheel','keyboard','pointer'])('yields the active reveal to the native frontier and preserves %s reader intent', async intent => {
+  const w = new Window()
+  w.document.body.innerHTML = '<section><div data-conversation-scroll><div data-chat-flow><p data-ai-revealing>已收到但仍逐字显现的正文</p></div></div></section>'
+  const panel = w.document.querySelector('section')!, port = panel.firstElementChild! as any
+  let height = 1200
+  Object.defineProperties(port, {clientHeight: {get: () => 300}, scrollHeight: {get: () => height}})
+  port.scrollTop=500
+  const stop=followResearchConversation(panel as unknown as HTMLElement)
+  await w.happyDOM.waitUntilComplete()
+  expect(port.scrollTop).toBe(500)
+  // A native frontier correction is programmatic, not an instruction to stop following.
+  port.scrollTop=400;port.dispatchEvent(new w.Event('scroll'))
+  if(intent==='wheel')panel.dispatchEvent(new w.WheelEvent('wheel',{deltaY:-20,bubbles:true}))
+  if(intent==='keyboard')panel.dispatchEvent(new w.KeyboardEvent('keydown',{key:'PageUp',bubbles:true}))
+  if(intent==='pointer')panel.dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true}))
+  if(intent!=='none'){port.scrollTop=350;port.dispatchEvent(new w.Event('scroll'))}
+  panel.querySelector('p')!.removeAttribute('data-ai-revealing')
+  height=1800;panel.querySelector('[data-chat-flow]')!.append(w.document.createElement('p'))
+  panel.dispatchEvent(new w.Event('sherlock:assistant-reveal-frame',{bubbles:true}))
+  await w.happyDOM.waitUntilComplete()
+  expect(port.scrollTop).toBe(intent==='none'?1800:350)
+  stop();await w.happyDOM.close()
+})

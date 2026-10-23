@@ -1,3 +1,5 @@
+import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
+import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import {installCalendarService} from './calendar/calendar-service'
@@ -137,6 +139,7 @@ import { findNoteComponent } from './notes/component-library'
 import { NoteNativeMenu } from './notes/native-menu'
 import { NoteFiles, noteFileOwnerPrefix } from './notes/files'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
+import { ResearchPdfRenderer } from './research/research-pdf'
 import {
   assertTrustedMainWindowEvent,
   registerPrivilegedMainWindowHandlers
@@ -787,6 +790,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     return { ok: true }
   })
 
+  registerDeliveryFileClipboard({ipcMain,getMainWindow:()=>mainWindow,writeText:value=>clipboard.writeText(value)})
   registerPrivilegedMainWindowHandlers({
     ipcMain,
     getMainWindow: () => mainWindow,
@@ -1269,8 +1273,23 @@ async function bootstrap(): Promise<void> {
   let isScheduledSession = (_id: string) => false
   let scheduledTaskRequest = (_value: unknown): Promise<unknown> => Promise.reject(Error('定时任务服务未就绪。'))
   const notifiedSessionTurns = new Map<string, number>()
+  const clientWindowAction=async(action:string,args:any)=>{
+    if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。')
+    if(action==='fullscreen'){if(mainWindow.isFullScreen()!==args.enabled){await executeDesktopMenuCommand('toggle-fullscreen');const until=Date.now()+4000;while(mainWindow&&!mainWindow.isDestroyed()&&mainWindow.isFullScreen()!==args.enabled&&Date.now()<until)await new Promise(r=>setTimeout(r,20));if(!mainWindow||mainWindow.isDestroyed()||mainWindow.isFullScreen()!==args.enabled)throw Error('全屏状态尚未确认。')}}
+    else if(['zoom-reset','zoom-in','zoom-out'].includes(action))await executeDesktopMenuCommand(action as any)
+    else throw Error('不支持的窗口操作。')
+    return{zoomLevel:mainWindow.webContents.getZoomLevel(),fullscreen:mainWindow.isFullScreen()}
+  }
+  let notesDocumentAdapter:import('./notes/document-capability-adapter').NoteDocumentAdapter|undefined
+  const clientCapabilities=new ClientCapabilityService({notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:sessionId=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}},canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
+  app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
+
+  const researchPdfRenderer = new ResearchPdfRenderer()
+  app.once('before-quit', () => researchPdfRenderer.dispose())
   researchContextBridge = new ResearchContextBridge({
+    researchPdf: (html, signal) => researchPdfRenderer.render(html, signal),
     scheduledTask: value => scheduledTaskRequest(value),
+    clientCapability:(value,signal)=>clientCapabilities.request(value,signal),
     sessionCompleted: ({ sessionId, seq, title, preview }) => {
       if (isScheduledSession(sessionId) || seq <= (notifiedSessionTurns.get(sessionId) ?? -1)) return
       notifiedSessionTurns.delete(sessionId)
@@ -1396,11 +1415,11 @@ async function bootstrap(): Promise<void> {
   const calendarNotes = new NotesStore(join(app.getPath('userData'),'workspace-notes'))
   const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
   const noteNativeMenu = new NoteNativeMenu({getWindow:()=>mainWindow,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession})
-  app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow,
+  app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow, onDocumentAdapter:adapter=>{notesDocumentAdapter=adapter},
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
-    canRead:canReadNoteSession,canWrite:sessionId=>!researchBoardsService?.isSharedSession(sessionId),canvasAvailable:sessionId=>canvasActions.isAvailable(sessionId),inspectCanvas:(sessionId,signal)=>canvasActions.execute({sessionId,method:'inspect',args:{}},signal),resetZoom:()=>executeDesktopMenuCommand('zoom-reset'),nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,
-    componentData:{request:(sessionId,args)=>{if(!noteComponentDataService)throw Error('组件数据刷新服务暂不可用。');return noteComponentDataService.request(sessionId,args)},visible:(sessionId,active)=>noteComponentDataService?.engine.setVisible(sessionId,active),reply:value=>noteComponentActions.respond(value)},
+    canRead:canReadNoteSession,canWrite:sessionId=>!researchBoardsService?.isSharedSession(sessionId),canvasAvailable:sessionId=>canvasActions.isAvailable(sessionId),inspectCanvas:(sessionId,signal,args)=>canvasActions.execute({sessionId,method:'inspect',args:args??{}},signal),resetZoom:()=>executeDesktopMenuCommand('zoom-reset'),windowAction:clientWindowAction,nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,
+    componentData:{request:(sessionId,args,control)=>{if(!noteComponentDataService)throw Error('组件数据刷新服务暂不可用。');return noteComponentDataService.request(sessionId,args,control)},visible:(sessionId,active)=>noteComponentDataService?.engine.setVisible(sessionId,active),reply:value=>noteComponentActions.respond(value)},
     captureSources:(sessionId,sources)=>{if(!researchContextBridge)throw Error('笔记资料服务暂不可用。');return researchContextBridge.captureSources(sessionId,sources)},
     files:new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
   }))

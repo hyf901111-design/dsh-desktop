@@ -1,0 +1,921 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261022-01",
+  "branch": "codex/integration/20261022-01",
+  "baseMainCommit": "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
+  "expectedMainCommit": "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
+  "createdAt": "2026-10-22T11:14:14.406Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "保护笔记写入保存窗口并在快速完成后恢复挑战队列",
+        "branch": "codex/feat/notes-challenge-v16-20261021",
+        "baseCommit": "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919",
+        "tipCommit": "7f632a08417b6c0121d66d403c3d996c38de6a5e",
+        "commits": [
+          {
+            "commit": "7f632a08417b6c0121d66d403c3d996c38de6a5e",
+            "parents": [
+              "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919"
+            ],
+            "subject": "按实际可见性持续逐字显示新回复并保留隐藏内容基线"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/assistant-reveal.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/assistant-reveal-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/assistant-reveal.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/assistant-reveal.test.js",
+              "test/assistant-reveal-browser.test.js",
+              "test/research-conversation-follow.test.ts",
+              "test/shared-native-conversation.test.js",
+              "test/notes-activity.test.js",
+              "test/notes-history-ready.test.js",
+              "test/markdown-file-links.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "85 passed across 7 directly related suites. Actual production execution/compact flow/assistant seat/ReasoningRow/DisclosureRow/Markdown tests reproduce strict-focus failures for a visible cold non-key document, a visible document after blur with three later public batches and no focus return, and a newly completed Notes result in a visible non-key window. All now preserve a pending suffix and neighboring alpha wave. Two hidden-with-no-React-commit return cases first reproduced unseen backlog replay, then became full baselines; repeated hidden/surface/blur events retain a committed baseline until consumption, while a new no-commit hidden interval starts conservatively. Visible blur state survives trusted progress-to-final handoff. Two independent session owners each exercise three consecutive turns retaining prior history and four delayed approximately 140-character public batches. Historical, epoch, selection/reduced/reading, final promotion, native/Research following and Notes paths remain passing. output/assistant-reveal-visible-surface-1023/focused.json.",
+            "verifiedCommit": "7f632a08417b6c0121d66d403c3d996c38de6a5e",
+            "completedAt": "2026-10-23T02:36:06.262662+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "--experimental-vm-modules",
+              "scripts/verify-frontend-patch-reentry.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Actual full frontend patch entry completes twice through in-memory write overlay: 30 virtual assets; protected reply/listener regions stable; guards and module syntax preserved; zero installed dependency writes. Complete asset byte equality remains false due to unrelated existing sink ordering.",
+            "verifiedCommit": "7f632a08417b6c0121d66d403c3d996c38de6a5e",
+            "completedAt": "2026-10-23T02:36:06.262662+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Passed on exact committed source.",
+            "verifiedCommit": "7f632a08417b6c0121d66d403c3d996c38de6a5e",
+            "completedAt": "2026-10-23T02:36:06.262662+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919..7f632a08417b6c0121d66d403c3d996c38de6a5e"
+            ],
+            "outcome": "passed",
+            "summary": "Passed; focused four-file successor.",
+            "verifiedCommit": "7f632a08417b6c0121d66d403c3d996c38de6a5e",
+            "completedAt": "2026-10-23T02:36:06.262662+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Isolated Chromium renders actual production execution routing and semantic Markdown while document.hasFocus remains false and visibilityState stays visible. Three newly arriving public batches keep independent character alpha and a pending suffix without any focus return event. A new Notes result in that same visible non-key condition also fades. Actual hidden and unmounted surfaces baseline catch-up without replay; standard return events directly permit later new text when background DOM was committed, while entirely paused rendering retains the first returned commit as a baseline. No native GUI/model invocation, installed dependency write or shared client build was performed. Root owns integrated native visual verification."
+        },
+        "acceptanceCriteria": [
+          "Paint eligibility uses actual document/DOM visibility, connected surface and existing history/epoch permissions. Keyboard focus and document.hasFocus do not block a visible window from revealing genuinely new received text.",
+          "Window blur closes the already queued old frontier when the surface remains visible; subsequent new batches remain eligible. Actual hidden state suspends and persists a return baseline. A real blur-to-focus return closes prior pending text once; repeated unrelated foreground events are no-ops.",
+          "Notes preparing/result provenance remains intact, but visible-window blur alone does not preemptively suppress the newly completed result. Actual document.hidden and row unmount protections remain.",
+          "Standard return can consume a baseline already committed while hidden. If no hidden React commit occurred, the first returned current content stays a full baseline; later true appends reveal. Repeated events in the same hidden interval do not erase its committed-baseline evidence, and new intervals/root/epoch start conservatively.",
+          "Visible blur state and quiet period are retained only through the existing trusted different-route same-commit handoff; no new token protocol, IPC or handshake is introduced.",
+          "Past history, selection/reduced motion, reader interruptions, semantic Markdown DOM, source text, clipboard and saved content remain protected; background generation itself continues."
+        ],
+        "risks": [
+          "The user observed the native missing fade and third-turn logs confirm sixteen normal public batches without retry, rewrite, tools or separate channels. Native document.hasFocus was not read, so the exact native focus value is not claimed. The deterministic visible-but-non-key production-hook failure is fixed and directly matches the overstrict eligibility gate.",
+          "Visibility means the existing DOM/document surface visibility, independently of whether the window is the macOS key app. A window behind another app can continue processing new reveal timelines; returning does not restart old text.",
+          "The complete asset is not byte-identical across full frontend entry passes due to unrelated existing sink insertion order; protected reply regions, unique guards and syntax are stable. Root performs native package build and visual acceptance."
+        ],
+        "generatedAt": "2026-10-23T02:36:06.262662+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+        "verificationCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-challenge-runtime.test.js",
+              "test/notes-challenge-depth.test.js",
+              "test/notes-challenge-forecast-completion.test.js",
+              "test/notes-challenge-review-identity.test.js",
+              "test/notes-challenge-review-keys.test.js",
+              "test/notes-challenge-consistency.test.js",
+              "test/notes-challenge-consensus.test.js",
+              "test/notes-challenge-consensus-method.test.js",
+              "test/notes-challenge-review-context.test.js",
+              "test/notes-challenge-scope.test.js",
+              "test/notes-challenge-infodb-skill.test.js",
+              "test/notes-recent-locale.test.js",
+              "test/notes-challenge-scheduler.test.ts",
+              "test/notes-challenge-controller-coverage.test.ts",
+              "test/notes-challenge-review-state.test.ts",
+              "test/notes-challenge-background.test.ts",
+              "test/notes-challenge-controller-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/client-capabilities.test.js",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-component-presentation.test.ts",
+              "test/notes-theme-export-browser.test.js",
+              "test/notes-client-capabilities-browser.test.js",
+              "test/notes-component-snapshots.test.ts",
+              "test/notes-export-snapshots.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-client-capability-service.test.ts",
+              "test/notes-client-capability-bridge.test.ts",
+              "test/notes-client-capability-runtime.test.js",
+              "test/notes-client-capability-editing.test.ts",
+              "test/research-canvas-presentation.test.js",
+              "test/research-canvas-structured-apply.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/client-capabilities-bundle.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/news-topic-delivery.test.js",
+              "test/news-source-scope.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/workbench-public-data.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "HEAD^",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
+            "verifiedCommit": "3b0f7aaed821359ecdc482a83be7f7d394e1ebd5",
+            "completedAt": "2026-10-23T02:38:08.151Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-23T02:38:08.151Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记数据同轮配置与刷新的可信版本衔接",
+        "branch": "codex/feat/client-capabilities-followup-20261022",
+        "baseCommit": "54832474d646ff450c69b08528847344a5d6484a",
+        "tipCommit": "0909b4a9c41429155ef722dcf3472c3e12f757a3",
+        "commits": [
+          {
+            "commit": "0909b4a9c41429155ef722dcf3472c3e12f757a3",
+            "parents": [
+              "54832474d646ff450c69b08528847344a5d6484a"
+            ],
+            "subject": "复用画布展示测试编译产物以稳定并行检查"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/research-canvas-presentation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-client-capability-service.test.ts",
+              "test/notes-client-capability-bridge.test.ts",
+              "test/notes-client-capability-runtime.test.js",
+              "test/notes-client-capability-editing.test.ts",
+              "test/research-canvas-presentation.test.js",
+              "test/research-canvas-structured-apply.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/client-capabilities-bundle.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "同原集成9文件maxWorkers2：102/102通过，整组6.20s；检查后只提交同一单文件未改源码。日志check.log。",
+            "verifiedCommit": "0909b4a9c41429155ef722dcf3472c3e12f757a3",
+            "completedAt": "2026-10-23T02:16:03.125775+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅测试fixture性能稳定性，不修改production、不构建或操作原生UI。"
+        },
+        "acceptanceCriteria": [
+          "beforeAll只做不可变source restore/patch、幂等断言及Script编译，20s显式hook预算。",
+          "每例仍独立Window、VM context、模块descriptor、factory运行、storage及session，原四例所有功能断言保留。",
+          "同原九文件检查maxWorkers2通过。"
+        ],
+        "risks": [
+          "本卡只关闭测试初始化重复开销导致的5s超时，非产品能力或原生验收；原生验收由root继续。"
+        ],
+        "generatedAt": "2026-10-23T02:16:03.125775+00:00"
+      },
+      "merged": {
+        "mergeCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+        "verificationCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-challenge-runtime.test.js",
+              "test/notes-challenge-depth.test.js",
+              "test/notes-challenge-forecast-completion.test.js",
+              "test/notes-challenge-review-identity.test.js",
+              "test/notes-challenge-review-keys.test.js",
+              "test/notes-challenge-consistency.test.js",
+              "test/notes-challenge-consensus.test.js",
+              "test/notes-challenge-consensus-method.test.js",
+              "test/notes-challenge-review-context.test.js",
+              "test/notes-challenge-scope.test.js",
+              "test/notes-challenge-infodb-skill.test.js",
+              "test/notes-recent-locale.test.js",
+              "test/notes-challenge-scheduler.test.ts",
+              "test/notes-challenge-controller-coverage.test.ts",
+              "test/notes-challenge-review-state.test.ts",
+              "test/notes-challenge-background.test.ts",
+              "test/notes-challenge-controller-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/client-capabilities.test.js",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-component-presentation.test.ts",
+              "test/notes-theme-export-browser.test.js",
+              "test/notes-client-capabilities-browser.test.js",
+              "test/notes-component-snapshots.test.ts",
+              "test/notes-export-snapshots.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-client-capability-service.test.ts",
+              "test/notes-client-capability-bridge.test.ts",
+              "test/notes-client-capability-runtime.test.js",
+              "test/notes-client-capability-editing.test.ts",
+              "test/research-canvas-presentation.test.js",
+              "test/research-canvas-structured-apply.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/client-capabilities-bundle.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/news-topic-delivery.test.js",
+              "test/news-source-scope.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/workbench-public-data.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "HEAD^",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
+            "verifiedCommit": "991ddb5b85d4fe3624a69a292ab5cfa6e8b7189e",
+            "completedAt": "2026-10-23T02:17:54.380Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-23T02:17:54.380Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按真实资料适配完整组件快照并按人类业务范围过滤新闻",
+        "branch": "codex/feat/component-data-sources-20261019",
+        "baseCommit": "736b9aa80d1c5d46ac172b6c2ea1ff3f964b0960",
+        "tipCommit": "865d7569e039234f841c9559f67705ad6a642e14",
+        "commits": [
+          {
+            "commit": "865d7569e039234f841c9559f67705ad6a642e14",
+            "parents": [
+              "736b9aa80d1c5d46ac172b6c2ea1ff3f964b0960"
+            ],
+            "subject": "标准整理保留原行并拉齐同行高度及铺满独行宽度"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-layout.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-standard-rows.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-auto-arrange-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-standard-rows.test.js",
+              "test/research-arrange-modes.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/workbench-auto-arrange.test.js",
+              "test/workbench-auto-arrange-browser.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=20000"
+            ],
+            "outcome": "passed",
+            "summary": "77 tests passed in 6 directly affected files including two real Chromium production-canvas cases; final-focused.log. New screenshot row/singleton/refit and 980px-template cases cover Standard, all explicit preset-mode tests retain their prior rules.",
+            "verifiedCommit": "865d7569e039234f841c9559f67705ad6a642e14",
+            "completedAt": "2026-10-23T02:07:20.696Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "-t",
+              "标准整理保留当前同行|底部选择工具右侧|整理展开菜单|三排整理等待|固定排数经过|整理原生|一次整理等待|整板整理挂载|整理的二次|标准整理自然测高|重复补丁恢复",
+              "--maxWorkers=1",
+              "--testTimeout=20000"
+            ],
+            "outcome": "passed",
+            "summary": "11 actual production-bundle direct client cases passed, 188 unrelated cases skipped: standard menu/core, native sizing, HTML refit/offscreen/undo, explicit columns, patch reentry; client-focused.log.",
+            "verifiedCommit": "865d7569e039234f841c9559f67705ad6a642e14",
+            "completedAt": "2026-10-23T02:07:20.696Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/financial-widget-client.test.js",
+              "-t",
+              "整理",
+              "--maxWorkers=1",
+              "--testTimeout=20000"
+            ],
+            "outcome": "passed",
+            "summary": "3 actual current-source financial client arrangement cases passed, 44 unrelated skipped; financial-client-focused.log. Fixture now reapplies current production serializers rather than relying on an older dependency-embedded grid.",
+            "verifiedCommit": "865d7569e039234f841c9559f67705ad6a642e14",
+            "completedAt": "2026-10-23T02:07:20.696Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "passed; typecheck.log",
+            "verifiedCommit": "865d7569e039234f841c9559f67705ad6a642e14",
+            "completedAt": "2026-10-23T02:07:20.696Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "passed; tracked clean seven-file Chinese commit, one production algorithm file and six directly related test files.",
+            "verifiedCommit": "865d7569e039234f841c9559f67705ad6a642e14",
+            "completedAt": "2026-10-23T02:07:20.696Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Real Chromium executes the patched production ResearchCanvas/workspace and its actual native-table/HTML content-size protocol. The screenshot-shaped note and short table remain side-by-side with equal 1403.75px height; the following timeline remains a separate full-width row (404.375px). Auto Standard and a second manual Standard yield identical cells, saved grid and a freshly constructed production Registry reload are identical, final timeline is reachable at scrollTop1540. This is isolated frontend proof; packaged-native acceptance belongs to root."
+        },
+        "acceptanceCriteria": [
+          "Standard uses current persisted row groups and left-to-right order. Same-row short cards expand to the maximum complete natural content height of that row; later rows are never narrowed or pulled into a previous row vacancy.",
+          "A component alone in its current row fills the full available grid width; row peers retain their relative widths subject to the general readable minimum. Existing 980px template recommendations do not force current peers onto separate rows; only a true 280px general/320px draft minimum that cannot fit can split them in their original order.",
+          "Subsequent actual native and HTML measurements run through the same Standard row policy so a filled short card does not shrink back or create a hole. The common manual and automatic entry continues to cover offscreen persisted components and save only after refit completion.",
+          "Explicit one-/two-/three-column modes retain their prior shortest-column algorithms. Manual selection, table content/scrolling, undo, grid persistence/reopen and patch restoration/idempotence remain covered by directly related checks.",
+          "Update superseded tests that explicitly required the opposite former Standard behavior (keeping short cards short and shrinking/pulling later cards into holes), while retaining their content-height, bounds, no-overlap and repeat-stability coverage."
+        ],
+        "risks": [
+          "Rows are identified by equal current persisted grid-top coordinates; deliberately staggered cards at different tops are treated as different reading rows and become full-width if alone. Standard intentionally preserves those rows rather than minimizing total document height.",
+          "A viewport narrower than the combined general minimum widths can still split a row in its original order. Existing maximum grid height and internal component scrolling contracts remain unchanged.",
+          "Packaged client/native acceptance has not occurred in this feature worktree; no shared build, native-client interaction, Integration mutation, source push, version bump or publication occurred. Root will merge this successor and rebuild the local test client."
+        ],
+        "generatedAt": "2026-10-23T02:07:20.696Z"
+      },
+      "merged": {
+        "mergeCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+        "verificationCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-challenge-runtime.test.js",
+              "test/notes-challenge-depth.test.js",
+              "test/notes-challenge-forecast-completion.test.js",
+              "test/notes-challenge-review-identity.test.js",
+              "test/notes-challenge-review-keys.test.js",
+              "test/notes-challenge-consistency.test.js",
+              "test/notes-challenge-consensus.test.js",
+              "test/notes-challenge-consensus-method.test.js",
+              "test/notes-challenge-review-context.test.js",
+              "test/notes-challenge-scope.test.js",
+              "test/notes-challenge-infodb-skill.test.js",
+              "test/notes-recent-locale.test.js",
+              "test/notes-challenge-scheduler.test.ts",
+              "test/notes-challenge-controller-coverage.test.ts",
+              "test/notes-challenge-review-state.test.ts",
+              "test/notes-challenge-background.test.ts",
+              "test/notes-challenge-controller-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/client-capabilities.test.js",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-component-presentation.test.ts",
+              "test/notes-theme-export-browser.test.js",
+              "test/notes-client-capabilities-browser.test.js",
+              "test/notes-component-snapshots.test.ts",
+              "test/notes-export-snapshots.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-client-capability-service.test.ts",
+              "test/notes-client-capability-bridge.test.ts",
+              "test/notes-client-capability-runtime.test.js",
+              "test/notes-client-capability-editing.test.ts",
+              "test/research-canvas-presentation.test.js",
+              "test/research-canvas-structured-apply.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/client-capabilities-bundle.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/news-topic-delivery.test.js",
+              "test/news-source-scope.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/workbench-public-data.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "HEAD^",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
+            "verifiedCommit": "8dcaaa0f8e21297dc743210913cc956c2ed335a0",
+            "completedAt": "2026-10-23T02:21:33.262Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-23T02:21:33.262Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/notes-challenge-runtime.test.js",
+        "test/notes-challenge-depth.test.js",
+        "test/notes-challenge-forecast-completion.test.js",
+        "test/notes-challenge-review-identity.test.js",
+        "test/notes-challenge-review-keys.test.js",
+        "test/notes-challenge-consistency.test.js",
+        "test/notes-challenge-consensus.test.js",
+        "test/notes-challenge-consensus-method.test.js",
+        "test/notes-challenge-review-context.test.js",
+        "test/notes-challenge-scope.test.js",
+        "test/notes-challenge-infodb-skill.test.js",
+        "test/notes-recent-locale.test.js",
+        "test/notes-challenge-scheduler.test.ts",
+        "test/notes-challenge-controller-coverage.test.ts",
+        "test/notes-challenge-review-state.test.ts",
+        "test/notes-challenge-background.test.ts",
+        "test/notes-challenge-controller-browser.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/client-capabilities.test.js",
+        "test/notes-client-capability-actions.test.ts",
+        "test/notes-component-presentation.test.ts",
+        "test/notes-theme-export-browser.test.js",
+        "test/notes-client-capabilities-browser.test.js",
+        "test/notes-component-snapshots.test.ts",
+        "test/notes-export-snapshots.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/notes-client-capability-service.test.ts",
+        "test/notes-client-capability-bridge.test.ts",
+        "test/notes-client-capability-runtime.test.js",
+        "test/notes-client-capability-editing.test.ts",
+        "test/research-canvas-presentation.test.js",
+        "test/research-canvas-structured-apply.test.js",
+        "test/workbench-openterminal.test.js",
+        "test/notes-capability-receipt-locale.test.js",
+        "test/client-capabilities-bundle.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/news-topic-delivery.test.js",
+        "test/news-source-scope.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-refresh.test.js",
+        "test/workbench-public-data.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "HEAD^",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

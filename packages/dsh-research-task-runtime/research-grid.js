@@ -236,64 +236,53 @@ export function createResearchGrid() {
     const resolved=new Map(compact(place(items,active)).map(c=>[c.id,c]))
     return items.map(c=>resolved.get(c.id))
   }
-  // Read the current canvas, not insertion order. Repeated horizontal edges
-  // identify its columns even when heights change. Snap isolated offsets into
-  // those columns, then fill vertical slots without stretching card content.
+  // Standard preserves the current reading rows. Grow shorter peers to their
+  // row's content height instead of pulling or narrowing a later row into it.
   function arrangeOnce(nodes,items,width) {
     const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
-    if(!ordered.length)return items.map(bounded)
-    const min=c=>minimum(byId.get(c.id),m,true)
-    let fitted=ordered.map(c=>{const w=Math.max(c.w,min(c).w);return {...c,w,x:Math.min(c.x,columns-w)}})
-    // Snapping can vacate an outer interval. Close it in this transaction,
-    // rather than growing the cards again on the next Arrange invocation.
-    for(let pass=0;pass<ordered.length*2+4;pass++){
-    const sized=fitted,intervals=[]
-    for(const c of [...sized].sort((a,b)=>a.x-b.x)){
-      const last=intervals.at(-1),right=c.x+c.w
-      if(last&&c.x<=last.right)last.right=Math.max(last.right,right)
-      else intervals.push({left:c.x,right})
+    // Current row intent takes precedence over a template's creation-time
+    // recommended width. Wide tables retain their own horizontal scrolling.
+    const rowMinimum=node=>{
+      if(!node?.containerSpec&&['generated-container','planning-card'].includes(node?.kind))return minimum({...node,workbenchSpan:false},m,true)
+      return minimum(node,m)
     }
-    const used=intervals.reduce((sum,r)=>sum+r.right-r.left,0)
-    const edge=value=>Math.round(intervals.reduce((sum,r)=>sum+clamp(value-r.left,0,r.right-r.left),0)/used*columns)
-    const mapped=sized.map(c=>({...c,x:edge(c.x),w:edge(c.x+c.w)-edge(c.x)})),counts=new Map()
-    for(const c of mapped)for(const at of [c.x,c.x+c.w])counts.set(at,(counts.get(at)||0)+1)
-    let boundaries=[0,...[...counts].filter(([at,count])=>at>0&&at<columns&&count>1).map(([at])=>at),columns].sort((a,b)=>a-b)
-    // Nearby repeated edges are rounding drift, not usable columns. Keep the
-    // stronger shared edge (outer edges always win) before fitting any cards.
-    const hadSharedEdges=boundaries.length>2,laneMinimum=Math.min(...ordered.map(c=>min(c).w))
-    for(let i=0;i<boundaries.length-1;){
-      const left=boundaries[i],right=boundaries[i+1]
-      if(right-left>=laneMinimum){i++;continue}
-      const remove=left===0?i+1:right===columns?i:(counts.get(left)||0)>=(counts.get(right)||0)?i+1:i
-      boundaries.splice(remove,1);i=Math.max(0,i-1)
+    const rows=[]
+    for(const cell of ordered){
+      let row=rows.at(-1)
+      if(!row||row.top!==cell.y){row={top:cell.y,cells:[]};rows.push(row)}
+      row.cells.push(cell)
     }
-    if(boundaries.length===2&&!hadSharedEdges){const lanes=Math.max(1,Math.min(3,ordered.length,Math.floor(columns/Math.max(...ordered.map(c=>min(c).w)))));boundaries=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes))}
-    const slot=c=>{
-      let best
-      for(let i=0;i<boundaries.length-1;i++)for(let j=i+1;j<boundaries.length;j++){
-        const x=boundaries[i],w=boundaries[j]-x
-        if(w<min(c).w)continue
-        const score=Math.abs(w-c.w)*2+Math.abs(x+w/2-(c.x+c.w/2))
-        if(!best||score<best.score)best={x,w,score}
+    const result=new Map();let top=0
+    const placeRow=cells=>{
+      const minima=cells.map(c=>rowMinimum(byId.get(c.id)).w)
+      // Only an actual reading minimum can split an existing row. Never borrow
+      // a following row's card to fill a slot or shrink a full-row component.
+      if(minima.reduce((sum,w)=>sum+w,0)>columns){
+        let part=[],used=0
+        cells.forEach((c,i)=>{if(part.length&&used+minima[i]>columns){placeRow(part);part=[];used=0}part.push(c);used+=minima[i]})
+        if(part.length)placeRow(part)
+        return
       }
-      return best
+      const widths=Array(cells.length),open=new Set(cells.map((_,i)=>i));let remaining=columns
+      while(open.size){
+        const weight=[...open].reduce((sum,i)=>sum+cells[i].w,0),limited=[...open].filter(i=>remaining*cells[i].w/weight<minima[i])
+        if(!limited.length){for(const i of open)widths[i]=remaining*cells[i].w/weight;break}
+        for(const i of limited){widths[i]=minima[i];remaining-=minima[i];open.delete(i)}
+      }
+      const spans=widths.map(Math.floor),fractions=widths.map((w,i)=>({i,remainder:w-spans[i]})).sort((a,b)=>b.remainder-a.remainder||a.i-b.i)
+      for(let spare=columns-spans.reduce((sum,w)=>sum+w,0),i=0;spare>0;spare--,i++)spans[fractions[i].i]++
+      const height=Math.max(...cells.map(c=>{const node=byId.get(c.id),preferred=node.preferred||node;return clamp(Math.max(rowMinimum(node).h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)}))
+      let left=0
+      cells.forEach((c,i)=>{result.set(c.id,{...c,x:left,y:top,w:spans[i],h:height});left+=spans[i]})
+      top+=height
     }
-    const next=mapped.map(c=>{const target=slot(c);return {...c,x:target.x,w:target.w}})
-    if(next.every((c,i)=>c.x===fitted[i].x&&c.w===fitted[i].w))break
-    fitted=next
-    }
-    const planned=fitted.map(c=>{
-      const n=byId.get(c.id),p=n.preferred||n
-      if(c.freePosition)return c
-      return {...c,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
-    })
-    const result=new Map(closeSmallGaps(fillColumnTails(fillVacancies(closeColumnGaps(planned),nodes,width),nodes,width),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
+    for(const row of rows)placeRow(row.cells)
+    return items.map(c=>result.get(c.id)||bounded(c))
   }
   function arrange(nodes,items,width,visibleHeight=0,mode='standard') {
     const requested={three:3,two:2,one:1}[mode]
-    // Initial preset dimensions guide creation. Standard Arrange follows the
-    // current grid edges, including unequal columns and spanning components;
-    // subsequent content measurements provide heights without changing lanes.
+    // Explicit column modes retain their independent shortest-column packing.
+    // Standard keeps existing row membership, including unequal peer widths.
     if(requested){
       const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
       // A chosen column count is explicit, including narrow viewports. Keep
@@ -309,8 +298,8 @@ export function createResearchGrid() {
       return items.map(c=>result.get(c.id)||bounded(c))
     }
     let next=items.map(({arrangeColumns,...c})=>bounded(c))
-    // Filling a vacancy may introduce a new repeated column edge. Settle that
-    // edge in the same transaction, including content measurement refits.
+    // A width minimum may split a row. Settle that boundary once, then keep it
+    // stable when later native or HTML measurements supply natural heights.
     for(let pass=0;pass<items.length*4+4;pass++){
       const fitted=arrangeOnce(nodes,next,width)
       if(fitted.every((c,i)=>['x','y','w','h'].every(k=>c[k]===next[i][k])))return fitted

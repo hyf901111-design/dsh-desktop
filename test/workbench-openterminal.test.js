@@ -37,6 +37,37 @@ it('存储写入失败时全看板仍能同时进入和退出试用',()=>{
  expect(a.get()).toBe('light');expect(b.get()).toBe('enterprise');expect(c.get()).toBeNull()
 })
 
+it('会话当前看板主题覆盖可持久化重建，不改变其他看板或全局试用',()=>{
+ const saved=new Map(),storage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)}
+ const a=createWorkbenchStyleState(storage,'a'),b=createWorkbenchStyleState(storage,'b')
+ a.set('dark');b.set('enterprise')
+ a.set('openterminal',{scope:'board'})
+ expect(a.get()).toBe('openterminal');expect(b.get()).toBe('enterprise')
+ expect(saved.get('ework.research.openterminal-trial.v1')).toBeUndefined()
+ expect(createWorkbenchStyleState(storage,'a').get()).toBe('openterminal')
+ b.set('openterminal')
+ a.set('light',{scope:'board'})
+ expect(a.get()).toBe('light');expect(b.get()).toBe('openterminal')
+ expect(createWorkbenchStyleState(storage,'a').get()).toBe('light')
+ expect(saved.get('ework.research.openterminal-trial.v1')).toBe('enabled')
+ // A manual picker choice releases the board override through the same setter.
+ expect(a.set('openterminal')).toBe(true);expect(a.get()).toBe('openterminal')
+ expect(JSON.parse(saved.get('ework.research.presentation.v1:a')).scope).toBeUndefined()
+ expect(a.set('dark')).toBe(true);expect(a.get()).toBe('dark');expect(b.get()).toBe('enterprise')
+})
+
+it.each([()=>false,()=>{throw Error('QuotaExceededError')}])('会话主题存储失败时不改变当前或其他看板且可重新提交',write=>{
+ const saved=new Map(),storage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)}
+ const a=createWorkbenchStyleState(storage,'a'),b=createWorkbenchStyleState(storage,'b')
+ a.set('dark');b.set('enterprise');storage.setItem=write
+ expect(()=>a.set('openterminal',{scope:'board'})).toThrow('看板样式未保存')
+ expect(a.get()).toBe('dark');expect(b.get()).toBe('enterprise')
+ storage.setItem=(k,v)=>saved.set(k,v)
+ expect(a.set('openterminal',{scope:'board'})).toBe(true)
+ expect(createWorkbenchStyleState(storage,'a').get()).toBe('openterminal')
+ expect(b.get()).toBe('enterprise')
+})
+
 it('生成组件的父子展示桥接收试用模板并使用深色，不接收任意外部样式',()=>{
  const w=new Window(),doc=w.document
  doc.body.innerHTML='<main data-ework-grid data-workbench-style="openterminal"><iframe></iframe></main>'

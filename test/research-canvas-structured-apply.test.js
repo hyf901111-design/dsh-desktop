@@ -25,7 +25,7 @@ it('declares a structured operation array in the actual dsh-tools schema and kee
  try{
   const tool=f.tools.get('research_canvas_apply'),schema=tool.parameters
   expect(schema.properties.operations?.type).toBe('array')
-  expect(schema.properties.operations.items.properties.op.enum).toEqual(['remove','update','arrange'])
+  expect(schema.properties.operations.items.properties.op.enum).toEqual(['remove','update','arrange','presentation'])
   expect(schema.properties.operations.items.properties.fields.type).toBe('object')
   expect(schema.required).toEqual(['requestId','revision'])
   expect(tool.description).toContain('优先使用 operations')

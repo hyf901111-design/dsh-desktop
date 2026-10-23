@@ -6,6 +6,9 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   preload: {
+    // Resolve the editor family from this checkout even when reused dependencies
+    // lead a transitive import to another worktree's physical package copy.
+    resolve: { dedupe: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'] },
     plugins: [{ name: 'sandbox-dom-ready', renderChunk: code => ({ code: wrapSandboxPreload(code), map: null }) }],
     ssr: { noExternal: true, resolve: { conditions: ['browser'] } },
     define: { 'process.env.NODE_ENV': '"production"' },

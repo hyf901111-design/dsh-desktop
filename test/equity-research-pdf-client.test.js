@@ -1,0 +1,23 @@
+import {it,expect} from 'vitest'
+import {createServer} from 'node:http'
+import {createHash} from 'node:crypto'
+import {spawn} from 'node:child_process'
+import {mkdtemp,cp,readFile,rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join,resolve} from 'node:path'
+const cli=resolve('skills/ework-equity-research/scripts/research.mjs')
+const digest=b=>createHash('sha256').update(b).digest('hex')
+const pdf=Buffer.from('%PDF-1.7\nfixture-pdf-for-protocol-test\n%%EOF')
+async function server(reply){const s=createServer(async(req,res)=>{let body='';for await(const b of req)body+=b;expect(req.url).toBe('/research-pdf');expect(req.headers.authorization).toBe('Bearer test-key');expect(JSON.parse(body).html).toContain('<html');res.setHeader('Content-Type','application/json');res.end(JSON.stringify(reply))});await new Promise(r=>s.listen(0,'127.0.0.1',r));return {url:`http://127.0.0.1:${s.address().port}`,close:()=>new Promise(r=>s.close(r))}}
+async function run(env){const dir=await mkdtemp(join(tmpdir(),'research-pdf-client-'));await cp(resolve('skills/ework-equity-research/examples/synthetic'),join(dir,'input'),{recursive:true});const out=join(dir,'out');const result=await new Promise(r=>{const p=spawn(process.execPath,[cli,'run','--input',join(dir,'input/packet.json'),'--out',out],{env:{...process.env,SHERLOCK_RESEARCH_CONTEXT_URL:'',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'',...env}});let stdout='',stderr='';p.stdout.on('data',b=>stdout+=b);p.stderr.on('data',b=>stderr+=b);p.on('close',code=>r({code,stdout,stderr}))});return {dir,out,result}}
+it('defaults to formally named dual delivery, verifies returned PDF and records its mapped digest',async()=>{const s=await server({pdfBase64:pdf.toString('base64'),bytes:pdf.length,sha256:digest(pdf)});let f;try{f=await run({SHERLOCK_RESEARCH_CONTEXT_URL:s.url,SHERLOCK_RESEARCH_CONTEXT_TOKEN:'test-key'});expect(f.result.code,f.result.stderr+f.result.stdout).toBe(0);const manifest=JSON.parse(await readFile(join(f.out,'run.json'),'utf8'));expect(await readFile(join(f.out,manifest.artifacts.pdf))).toEqual(pdf);expect(manifest.artifacts.pdf).toBe(manifest.artifacts.html.replace(/\.html$/,'.pdf'));expect(manifest.artifacts.pdf).toContain('2025年报公司研究简报_2026-10-23.pdf');expect(manifest.outputs[manifest.artifacts.pdf]).toBe(digest(pdf));expect(manifest.delivery.completed).toEqual(['html','pdf']);expect(manifest.outputs['report-quality.json']).toBeTruthy();expect(JSON.parse(f.result.stdout).artifacts).toEqual(manifest.artifacts)}finally{await s.close();if(f)await rm(f.dir,{recursive:true,force:true})}})
+it('retains formally named HTML and a failed delivery receipt if PDF runtime is absent',async()=>{const f=await run({});try{expect(f.result.code).not.toBe(0);const m=JSON.parse(await readFile(join(f.out,'run.json'),'utf8'));expect(await readFile(join(f.out,m.artifacts.html),'utf8')).toContain('<html');expect(m.status).toBe('pdf-failed');expect(m.delivery.completed).toEqual(['html']);expect(m.artifacts.pdf).toBeUndefined();expect(Object.keys(m.outputs).some(name=>name.endsWith('.pdf'))).toBe(false)}finally{await rm(f.dir,{recursive:true,force:true})}})
+it('rejects mismatched PDF hashes instead of claiming complete delivery',async()=>{const s=await server({pdfBase64:pdf.toString('base64'),bytes:pdf.length,sha256:'0'.repeat(64)});let f;try{f=await run({SHERLOCK_RESEARCH_CONTEXT_URL:s.url,SHERLOCK_RESEARCH_CONTEXT_TOKEN:'test-key'});expect(f.result.code).not.toBe(0);expect(JSON.parse(await readFile(join(f.out,'run.json'),'utf8')).status).toBe('pdf-failed')}finally{await s.close();if(f)await rm(f.dir,{recursive:true,force:true})}})
+
+it('fills HTML directory numbers only from a bounded complete actual PDF pagination map',async()=>{
+ const client=await import('../skills/ework-equity-research/scripts/lib/pdf-client.mjs')
+ expect(client.fillPrintedNavigation).toBeTypeOf('function')
+ const html='<html><body><a href="#section-valuation" data-publication-target="section-valuation"><span class="toc-page" data-publication-page="section-valuation">—</span></a><section id="section-valuation"></section></body></html>'
+ expect(client.fillPrintedNavigation(html,{pageCount:8,pages:{'section-valuation':5}})).toContain('data-publication-page="section-valuation">5</span>')
+ for(const pagination of [{pageCount:8,pages:{}},{pageCount:8,pages:{'section-valuation':9}},{pageCount:8,pages:{'section-valuation':'5'}},{pageCount:1000,pages:{'section-valuation':5}},{pageCount:8,pages:{'section-valuation':5,extra:1}}])expect(()=>client.fillPrintedNavigation(html,pagination)).toThrow()
+})

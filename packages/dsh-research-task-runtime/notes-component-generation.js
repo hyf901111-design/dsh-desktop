@@ -3,6 +3,7 @@ import {ResearchTaskRuntime,createSubagentAdapter,publicEventFromSessionEvent} f
 import {COMPONENT_BOUND_DATA_PROMPT} from './component-source-binding.js'
 import {FINANCIAL_WIDGET_GUIDANCE,financialWidgetDimensions} from './financial-widget-contract.js'
 import {readTemplateModel} from './component-template-registry.js'
+import {noteKrakenQuotePlan,noteKrakenQuoteGuidance,noteSourceIsOffline} from './notes-kraken-source.js'
 
 const terminal=new Set(['completed','failed','cancelled','interrupted'])
 /** Reuse the research component worker and validators, with a note-only result sink. */
@@ -11,7 +12,10 @@ export async function generateNoteComponent(ctx,input,requestedSignal,progress=(
  signal.throwIfAborted()
  const references=input.references??{scope:'none',components:[]}
  if(input.targetBlockId!==undefined&&(typeof input.targetBlockId!=='string'||references.scope!=='selection'||!references.components.some(item=>item.blockId===input.targetBlockId&&item.type==='research')))throw Error('组件不在当前引用范围内。')
- const adapter=createSubagentAdapter(ctx,{surface:'note'}),taskId='note-component-'+randomUUID(),parentSessionId=input.sessionId
+ const sourceInstruction=typeof input.sourceInstruction==='string'&&input.sourceInstruction.length<=8000?input.sourceInstruction:input.prompt
+ const sourcePlan=noteKrakenQuotePlan(sourceInstruction)
+ const componentPrompt=sourcePlan?sourceInstruction:noteSourceIsOffline(sourceInstruction)?sourceInstruction+'\n本组件呈现要求（不得改变以上禁止联网约束）：'+input.prompt:input.prompt
+ const adapter=createSubagentAdapter(ctx,{surface:'note',noteSourceGuidance:schemas=>noteKrakenQuoteGuidance(sourceInstruction,schemas)}),taskId='note-component-'+randomUUID(),parentSessionId=input.sessionId
  let runtime,sourceResult,childSessionId,stage='thinking',outputChars=0,phase='starting',tool,detail,complete
  let eventSeq=0,generationPartialText='',lastEmitAt=0
  const generationEvents=[],generationStartedAt=Date.now()
@@ -62,7 +66,7 @@ export async function generateNoteComponent(ctx,input,requestedSignal,progress=(
  try{
   emit()
   signal.addEventListener('abort',cancel,{once:true})
-  await runtime.start({parentSessionId,canvasNodeId:taskId,kind:'container',prompt:input.prompt})
+  await runtime.start({parentSessionId,canvasNodeId:taskId,kind:'container',prompt:componentPrompt})
   if(signal.aborted)cancel()
   const task=await done
   signal.throwIfAborted()

@@ -11,7 +11,7 @@ function fixture(answer) {
       calls.push(options)
       // Explicit no-issue acknowledgement for every supplied target in the new provider protocol.
       const payload = JSON.parse(options.messages[0].content[0].text)
-      const value = answer ?? { reviews: payload.targets.map(block => ({ blockId: block.id, issues: [] })) }
+      const value = answer ?? (payload.dimension==='viewpoint'?{dimension:'viewpoint',reviews:payload.targets.map(block=>({reviewKey:block.reviewKey,assessment:'not-applicable',issues:[]}))}:{ reviews: payload.targets.map(block => ({ blockId: block.id, issues: [] })) })
       yield { type: 'reasoning-delta', index: 0, text: 'PRIVATE REASONING' }; yield { type: 'text-delta', index: 1, text: JSON.stringify(value) }; yield { type: 'usage', usage: { inputTokens: 30, outputTokens: 10 } }; yield { type: 'finish', reason: { kind: 'stop' } }
     } }
   }
@@ -124,7 +124,7 @@ it('reports only bounded validation counts when every provider candidate is disc
   const f = fixture({ reviews: [{ blockId: 'a', issues: [candidate, { ...candidate, category: 'research' }, { ...candidate, category: 'PRIVATE-CATEGORY', basis: 'PRIVATE-BASIS' }, { ...candidate, category: 'uncertain', quote: 'PRIVATE-INVALID-QUOTE' }] }] })
   const result = await generateNoteChallenge(f.ctx, input)
   expect(result.issues).toEqual([])
-  expect(warn).toHaveBeenCalledTimes(2)
+  expect(warn).toHaveBeenCalledTimes(3)
   expect(JSON.parse(warn.mock.calls[0][0])).toMatchObject({ event: 'notes-challenge-review-identity', mode: 'block-id' })
   const logged = warn.mock.calls[1][0], report = JSON.parse(logged)
   expect(report).toMatchObject({ event: 'notes-challenge-review-filtered', candidates: 4, accepted: 0, categories: { fact: 1, research: 1, other: 1, uncertain: 1 }, bases: { 'general-knowledge': 3, other: 1 }, uniqueAnchors: 3, emptyEvidence: 4, acknowledgedAgreement: 0 })
@@ -137,8 +137,9 @@ it('does not emit filtered-candidate diagnostics for an ordinary empty review or
   const { generateNoteChallenge } = await load(), warn = vi.mocked(console.warn)
   const empty = fixture()
   expect((await generateNoteChallenge(empty.ctx, input)).issues).toEqual([])
-  expect(warn).toHaveBeenCalledTimes(1)
+  expect(warn).toHaveBeenCalledTimes(2)
   expect(JSON.parse(warn.mock.calls[0][0])).toMatchObject({ event: 'notes-challenge-review-identity', mode: 'block-id' })
+  expect(JSON.parse(warn.mock.calls[1][0])).toMatchObject({event:'notes-challenge-phase-candidates',phase:'primary',candidates:0,retained:0,filtered:0})
   const rejected = fixture({ reviews: [{ blockId: 'a', issues: [{ quote: '收入增长10%', basis: 'general-knowledge', category: 'fact', message: '请核对。', evidence: [] }] }] })
   warn.mockImplementation(text => { if (String(text).includes('notes-challenge-review-filtered')) throw Error('logger unavailable') })
   expect((await generateNoteChallenge(rejected.ctx, input)).issues).toEqual([])
@@ -208,7 +209,7 @@ it('accepts a fragmented short review across format recovery without charging re
   expect(result).toMatchObject({ issues: [], coveredBlockIds: ['a'] })
   expect(f.calls).toHaveLength(2)
   expect(f.calls.every(call => call.signal.aborted)).toBe(true)
-  expect(warn).toHaveBeenCalledTimes(2)
+  expect(warn).toHaveBeenCalledTimes(3)
   expect(JSON.parse(warn.mock.calls[0][0])).toMatchObject({ event:'notes-challenge-format-rejected', reason:'json-invalid', attempt:1 })
   expect(JSON.parse(warn.mock.calls[1][0])).toMatchObject({ event:'notes-challenge-review-identity', mode:'block-id', attempt:2 })
   expect(JSON.stringify(result)).not.toContain('PRIVATE')
@@ -359,11 +360,11 @@ it('does not retry output-size, tool-call or non-stop completion failures', asyn
   }
 })
 
-it('does not retry a syntactically valid result that fails the reply schema', async () => {
+it('uses the one shared regeneration allowance for a syntactically valid invalid reply schema', async () => {
   const { generateNoteChallenge } = await load(), f = textFixture('{"reply":{}}')
   const thread = { blockId: 'a', quote: '收入增长10%', category: 'question', message: '请核对来源。', messages: [{ role: 'user', text: '依据是什么？' }] }
   await expect(generateNoteChallenge(f.ctx, { ...input, action: 'reply', thread })).rejects.toThrow('格式不完整')
-  expect(f.calls).toHaveLength(1)
+  expect(f.calls).toHaveLength(2)
 })
 
 for (const [value, expected] of [
@@ -394,7 +395,7 @@ it('reports JSON format failure counts without logging content or changing a suc
   const { generateNoteChallenge } = await load(), bad = '{"PRIVATE-SECRET":"', f = textFixture([bad, '{"reviews":[{"blockId":"a","issues":[]}]}']), warn = vi.mocked(console.warn)
   expect((await generateNoteChallenge(f.ctx, input)).coveredBlockIds).toEqual(['a'])
   expect(f.calls).toHaveLength(2)
-  expect(warn).toHaveBeenCalledTimes(2)
+  expect(warn).toHaveBeenCalledTimes(3)
   expect(JSON.parse(warn.mock.calls[0][0])).toEqual({ event:'notes-challenge-format-rejected', action:'review', reason:'json-invalid', attempt:1, targetCount:1, anchorCount:0, jsonChars:bad.length, requestKey:expect.stringMatching(/^[a-f0-9]{12}$/u) })
   expect(JSON.parse(warn.mock.calls[1][0])).toMatchObject({ event:'notes-challenge-review-identity', mode:'block-id', attempt:2 })
   expect(f.calls[1].system).not.toContain('PRIVATE')
@@ -420,7 +421,7 @@ it('preserves every valid target review in one call while discarding extra unkno
   expect(result.issues).toEqual([{blockId:'a',quote:valid.quote,category:valid.category,message:valid.message,evidence:[]}])
   expect(result.coveredBlockIds).toEqual(['a','b']);expect(result.checks[0].status).toBe('completed')
   expect(f.calls).toHaveLength(1);expect(f.events).toEqual([])
-  expect(warn).toHaveBeenCalledTimes(2)
+  expect(warn).toHaveBeenCalledTimes(3)
   expect(JSON.parse(warn.mock.calls[0][0])).toMatchObject({event:'notes-challenge-review-identity',mode:'block-id'})
   const logged=warn.mock.calls[1][0]
   expect(JSON.parse(logged)).toEqual({event:'notes-challenge-review-extra-groups',action:'review',attempt:1,targetCount:2,reviewCount:4,ignoredGroups:2,unknownTitleIds:0,unknownContextIds:0,unknownNearTargetIds:0,unknownEmptyGroups:0,unknownNonStringIds:0,requestKey:expect.stringMatching(/^[a-f0-9]{12}$/u)})
@@ -432,7 +433,7 @@ it('does not treat discarded foreign candidates as filtered target candidates or
   const f=fixture({reviews:[{blockId:'a',issues:[]},{blockId:'PRIVATE-EXTERNAL',issues:[{quote:'收入增长10%',category:'fact',basis:'general-knowledge',message:'PRIVATE-TEXT',evidence:[]}]}]})
   const result=await generateNoteChallenge(f.ctx,input)
   expect(result).toMatchObject({issues:[],coveredBlockIds:['a']});expect(f.calls).toHaveLength(1)
-  expect(warn).toHaveBeenCalledTimes(2);expect(JSON.parse(warn.mock.calls[0][0]).event).toBe('notes-challenge-review-identity');expect(JSON.parse(warn.mock.calls[1][0]).event).toBe('notes-challenge-review-extra-groups')
+  expect(warn).toHaveBeenCalledTimes(3);expect(JSON.parse(warn.mock.calls[0][0]).event).toBe('notes-challenge-review-identity');expect(JSON.parse(warn.mock.calls[1][0]).event).toBe('notes-challenge-review-extra-groups')
   warn.mockImplementation(text=>{if(String(text).includes('notes-challenge-review-extra-groups'))throw Error('PRIVATE-LOGGER')})
   const again=await generateNoteChallenge(f.ctx,{...input,requestId:'another'})
   expect(again).toMatchObject({issues:[],coveredBlockIds:['a']});expect(f.calls).toHaveLength(2)
@@ -818,9 +819,9 @@ it('limits relaxed automatic review to spelling even if the provider returns fac
 })
 
 it('adds independently validated omissions and a concrete viewpoint question in the bounded adversarial audit',async()=>{
- const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text),issues=p.audit?[{quote:'水会在100℃结冰',category:'uncertain',basis:'general-knowledge',message:'常压下冰点应为0℃，是否需要修正？',evidence:[]},{quote:'收入是活动唯一价值',category:'question',basis:'note',message:'是否还应考虑教育和社区参与价值？',evidence:[]}]:[{quote:'提胶',category:'typo',basis:'note',message:'应为提交。',evidence:[]}];yield{type:'text-delta',index:0,text:JSON.stringify({reviews:[{reviewKey:p.targets[0].reviewKey,issues}]})};yield{type:'finish',reason:{kind:'stop'}}}
+ const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text),issues=p.dimension==='viewpoint'?[{quote:'收入是活动唯一价值',category:'question',basis:'note',questionType:'implication',message:'是否还应考虑教育和社区参与价值？',evidence:[]}]:p.audit?[{quote:'水会在100℃结冰',category:'uncertain',basis:'general-knowledge',message:'常压下冰点应为0℃，是否需要修正？',evidence:[]}]:[{quote:'提胶',category:'typo',basis:'note',message:'应为提交。',evidence:[]}];yield{type:'text-delta',index:0,text:JSON.stringify({...(p.dimension==='viewpoint'?{dimension:'viewpoint'}:{}),reviews:[{reviewKey:p.targets[0].reviewKey,...(p.dimension==='viewpoint'?{assessment:'questions'}:{}),issues}]})};yield{type:'finish',reason:{kind:'stop'}}}
  const result=await generateNoteChallenge(f.ctx,{...input,level:4,blocks:[{id:'a',type:'paragraph',text:'请提胶报告。水会在100℃结冰。收入是活动唯一价值。'}]})
- expect(f.calls).toHaveLength(2);expect(result.issues.map(i=>i.category)).toEqual(['typo','uncertain','question']);expect(JSON.parse(f.calls[1].messages[0].content[0].text).alreadyFound).toHaveLength(1);expect(result.checks).toContainEqual(expect.objectContaining({kind:'review',status:'completed',detail:expect.stringContaining('深度复查')}))
+ expect(f.calls).toHaveLength(3);expect(result.issues.map(i=>i.category)).toEqual(['typo','uncertain','question']);expect(JSON.parse(f.calls[1].messages[0].content[0].text).alreadyFound).toHaveLength(1);expect(JSON.parse(f.calls[2].messages[0].content[0].text).alreadyFound).toHaveLength(2);expect(result.completeBlockIds).toEqual(['a']);expect(result.checks).toContainEqual(expect.objectContaining({kind:'review',status:'completed',detail:expect.stringContaining('观点拓展')}))
 })
 it('returns validated primary findings with honest partial depth if the optional audit fails once',async()=>{
  const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);if(p.audit)throw Error('provider unavailable');yield{type:'text-delta',index:0,text:JSON.stringify({reviews:[{reviewKey:p.targets[0].reviewKey,issues:[{quote:'提胶',category:'typo',basis:'note',message:'应为提交。',evidence:[]}]}]})};yield{type:'finish',reason:{kind:'stop'}}}
@@ -833,7 +834,7 @@ it('credits an omitted primary block only after a valid independent audit actual
 })
 it('finishes all primary batches before spending remaining time on optional depth audits',async()=>{
  vi.useFakeTimers();const{generateNoteChallenge}=await load(),f=fixture(),blocks=Array.from({length:24},(_,i)=>({id:'p'+i,type:'paragraph',text:'第'+i+'段请提胶。'}))
- f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);if(p.audit)await new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(options.signal.reason),{once:true}));else{await new Promise(resolve=>setTimeout(resolve,24000));yield{type:'text-delta',index:0,text:JSON.stringify({reviews:p.targets.map(t=>({reviewKey:t.reviewKey,issues:[{quote:'提胶',category:'typo',basis:'note',message:'应为提交。',evidence:[]}]}))})};yield{type:'finish',reason:{kind:'stop'}}}}
+ f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);if(p.audit)await new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(options.signal.reason),{once:true}));else{await new Promise(resolve=>setTimeout(resolve,12000));yield{type:'text-delta',index:0,text:JSON.stringify({reviews:p.targets.map(t=>({reviewKey:t.reviewKey,issues:[{quote:'提胶',category:'typo',basis:'note',message:'应为提交。',evidence:[]}]}))})};yield{type:'finish',reason:{kind:'stop'}}}}
  const pending=generateNoteChallenge(f.ctx,{...input,level:4,blocks,changedIds:blocks.map(b=>b.id)});const checked=expect(pending).resolves.toMatchObject({coveredBlockIds:blocks.map(b=>b.id),issues:expect.arrayContaining([expect.objectContaining({blockId:'p0'}),expect.objectContaining({blockId:'p23'})])})
  await vi.advanceTimersByTimeAsync(59001);await checked
  expect(f.calls.slice(0,2).map(c=>JSON.parse(c.messages[0].content[0].text).audit||false)).toEqual([false,false])
@@ -844,7 +845,7 @@ it('keeps reviewer-only parenthetical reminders in the comment instead of new re
 })
 it('uses remaining bounded time for a useful depth response that takes more than twelve seconds',async()=>{
  vi.useFakeTimers();const{generateNoteChallenge}=await load(),f=fixture();f.ctx.llm.stream=async function*(options){f.calls.push(options);const p=JSON.parse(options.messages[0].content[0].text);await new Promise(resolve=>setTimeout(resolve,p.audit?18000:4000));yield{type:'text-delta',index:0,text:JSON.stringify({reviews:p.targets.map(t=>({reviewKey:t.reviewKey,issues:p.audit?[{quote:'只按收入评价活动',category:'question',basis:'note',message:'是否也应考虑参与者收获等价值？',evidence:[]}]:[]}))})};yield{type:'finish',reason:{kind:'stop'}}}
- const pending=generateNoteChallenge(f.ctx,{...input,level:4,blocks:[{id:'a',type:'paragraph',text:'计划只按收入评价活动。'}]});const checked=expect(pending).resolves.toMatchObject({issues:[expect.objectContaining({category:'question'})]});await vi.advanceTimersByTimeAsync(22001);await checked
+ const pending=generateNoteChallenge(f.ctx,{...input,level:3,blocks:[{id:'a',type:'paragraph',text:'计划只按收入评价活动。'}]});const checked=expect(pending).resolves.toMatchObject({issues:[expect.objectContaining({category:'question'})]});await vi.advanceTimersByTimeAsync(22001);await checked
 })
 
 it.each([[1,'minimal'],[2,'low'],[3,'medium'],[4,'medium']])('allocates supported reasoning effort for challenge level %i without using the parent maximum',async(level,effort)=>{

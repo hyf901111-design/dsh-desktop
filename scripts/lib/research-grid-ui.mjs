@@ -491,18 +491,57 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
 }
+export function workbenchNativeTableDimensions(node,tableRoot) {
+  if(tableRoot?.getAttribute('data-sherlock-market-native')!=='table'||!(tableRoot.getBoundingClientRect().width>0))return null
+  const view=tableRoot.ownerDocument.defaultView,pixels=value=>Math.max(0,parseFloat(value)||0)
+  const insets=element=>{const s=view.getComputedStyle(element);return pixels(s.paddingTop)+pixels(s.paddingBottom)+pixels(s.borderTopWidth)+pixels(s.borderBottomWidth)}
+  const margins=element=>{const s=view.getComputedStyle(element);return pixels(s.marginTop)+pixels(s.marginBottom)}
+  const children=Array.from(tableRoot.children).filter(el=>view.getComputedStyle(el).display!=='none')
+  let height=insets(tableRoot)+Math.max(0,children.length-1)*pixels(view.getComputedStyle(tableRoot).rowGap)
+  for(const element of children){
+    let natural=element.getBoundingClientRect().height
+    if(element.classList.contains('fund-native-table-wrap')){
+      const table=element.querySelector('table'),rows=Array.from(table?.querySelectorAll('tbody tr')||[]).slice(0,12)
+      natural=(table?.querySelector('thead')?.getBoundingClientRect().height||0)+rows.reduce((n,row)=>n+row.getBoundingClientRect().height,0)+insets(element)
+      if(element.scrollWidth>element.clientWidth+1)natural+=16
+    }else if(element.classList.contains('terminal-native-context'))natural=Math.min(240,Math.max(natural,element.scrollHeight)+pixels(view.getComputedStyle(element).borderTopWidth))
+    else if(element.classList.contains('terminal-native-readout'))natural=Math.min(136,Math.max(natural,element.scrollHeight))
+    height+=natural+margins(element)
+  }
+  const bounds=tableRoot.getBoundingClientRect(),card=tableRoot.closest('[data-research-node-id]')
+  if(!tableRoot.querySelector('.terminal-native-readout')){
+    const columns=Array.from(tableRoot.querySelectorAll('thead th')).map(el=>el.textContent),capacity=Math.max(24,Math.floor((bounds.width-20)/6))
+    const lines=Math.max(1,...Array.from(tableRoot.querySelectorAll('tbody tr')).map(row=>{
+      const text=Array.from(row.cells).map((cell,i)=>(columns[i]??'')+'：'+(cell.getAttribute('title')??cell.textContent)).join(' · ')
+      return Math.ceil([...text].reduce((n,c)=>n+(/[^\x00-\xff]/u.test(c)?2:1),0)/capacity)
+    }))
+    // A row selection reveals all source fields below the table. Reserve its
+    // wrapped reading area so that opening it does not hide the last data row.
+    height+=Math.min(136,lines*17)+12
+  }
+  // The native renderer can sit inside an inset host content wrapper. Measure
+  // that chrome too; it is additional to the table's own padding and source.
+  const chrome=card?Math.max(58,Math.min(200,Math.ceil(card.getBoundingClientRect().height-bounds.height))):58
+  const floor=researchMarketDimensions(node,true,bounds.width)?.height||0
+  return {width:656,height:Math.min(840,Math.max(floor,Math.ceil(height+chrome)))}
+}
 export function workbenchMeasuredDimensions(node,value,width=value?.width||node.width) {
   const preferred=researchOptimalDimensions({...node,width:0,height:0})
   if(researchCandleTemplate(node))return preferred
   const metrics=/<body\b[^>]*data-sherlock-market="metrics"/.test(node.containerSpec?.html||'')
     ?researchMarketDimensions(node,true,width):null
+  const table=/<body\b[^>]*data-sherlock-market="table"/.test(node.containerSpec?.html||'')
+    ?researchMarketDimensions(node,true,width):null
   // The explicit metrics measurement covers complete max-content tracks and
   // provenance. Its actual height replaces the conservative starting estimate.
   // Older clipped viewport reports still need that estimate as a safety floor.
-  const floor=metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0
+  const floor=table?.height||(metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0)
   const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist|price-performance|valuation-multiples|price-target|company-profile|financial-statements|revenue-geography|revenue-business|dividends|stock-splits|insider-trading|institutional-ownership|stock-ownership|company-filings|historical-price|charting)"/.test(node.containerSpec?.html||'')
   const chrome=value?.chromeHeight??(snapshot?68:58)
-  return {width:preferred.width,height:Math.max(floor,value?.height?value.height+chrome:preferred.height)}
+  const height=Math.max(floor,value?.height?value.height+chrome:preferred.height)
+  // A long provenance note must not grow a quote card into several screens.
+  // The fixed viewport retains both independently scrollable content regions.
+  return {width:preferred.width,height:metrics||table?Math.min(840,height):height}
 }
 export function measureWorkbenchContents(root,nodes) {
   const measured=new Map(),cache=root?.__eworkContentMeasurements
@@ -537,6 +576,8 @@ export function measureWorkbenchContents(root,nodes) {
     // content. Native snapshots are images of that viewport, so they must not
     // replace the readable template height after a manual resize.
     if(!body||body.querySelector('iframe,[data-research-native-web]')||card.hasAttribute('open'))continue
+    const nativeRoot=body.querySelector('[data-sherlock-market-native="table"]')
+    if(nativeRoot){const size=workbenchNativeTableDimensions(node,nativeRoot);if(size){measured.set(node.id,size);continue}}
     const attachments=body.querySelector('[data-research-attachment-preset]');
     if(attachments){measured.set(node.id,{width:preferred.width,height:Math.max(180,38+Math.max(attachments.offsetHeight,attachments.scrollHeight)+(card.querySelector('.odyssey-data-stamp')?24:0))});continue}
     const audio=body.querySelector('[data-research-audio-preset]')
@@ -578,16 +619,20 @@ export function measureWorkbenchContents(root,nodes) {
   return measured
 }
 export function useWorkbenchArrangePreview(node) {
-  const [active,setActive]=react.useState(false)
+  const current=()=>[...document.querySelectorAll('[data-research-canvas]')].some(root=>root.__eworkContentFit?.ids?.includes(node.id))
+  const [active,setActive]=react.useState(current)
   react.useLayoutEffect(()=>{
+    // A completed last panel can mount after the preview-start event. Read
+    // the same resident task so its offscreen HTML still participates in fit.
+    setActive(current())
     const receive=event=>{if(event.detail?.ids?.includes(node.id))setActive(event.detail.active===true)}
     window.addEventListener('ework:arrange-preview',receive)
     return()=>window.removeEventListener('ework:arrange-preview',receive)
   },[node.id])
   return active&&node.containerSpec?.type!=='web'
 }
-export function arrangeWorkbenchContents(root,workspace,measured,mode='standard') {
-  root.focus({preventScroll:true})
+export function arrangeWorkbenchContents(root,workspace,measured,mode='standard',options={}) {
+  if(options.focus!==false)root.focus({preventScroll:true})
   root.__eworkContentFit?.finish()
   const before=workspace.getSnapshot(),oldNodes=[...before.files,...before.artifacts],oldCache=new Map(root.__eworkContentMeasurements),view=root.ownerDocument.defaultView
   measured.__workbenchDeferred=true
@@ -606,7 +651,8 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     root.removeEventListener('pointerdown',finish,true);view.removeEventListener('keydown',finish,true)
     if(root.__eworkContentFit===task)delete root.__eworkContentFit
     view.dispatchEvent(new view.CustomEvent('ework:arrange-preview',{detail:{ids:arranged.map(n=>n.id),active:false}}))
-    if(unchanged())workspace.persist()
+    const durable=unchanged()?workspace.persist():false
+    options.onFinish?.(durable===true)
   }
   const refit=(native=false)=>{
     if(done)return
@@ -641,7 +687,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
     if(complete&&nativeReady){view.clearTimeout(settle);settle=view.setTimeout(finish,240)}
   }
-  const task={refit,finish};root.__eworkContentFit=task
+  const task={refit,finish,ids:arranged.map(n=>n.id)};root.__eworkContentFit=task
   view.dispatchEvent(new view.CustomEvent('ework:arrange-preview',{detail:{ids:arranged.map(n=>n.id),active:true}}))
   root.addEventListener('pointerdown',finish,true);view.addEventListener('keydown',finish,true)
   deadline=view.setTimeout(finish,6000);nativeTimer=view.setTimeout(()=>{nativeReady=true;refit(true)},380)
@@ -698,6 +744,7 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
   ]})
 }
 export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,selectTool,readOnly}) {
+  react.useEffect(()=>{const root=rootRef.current;if(root)return installWorkbenchAutoArrange(root,workspace,readOnly)},[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
     root.setAttribute('data-ework-grid','')
@@ -764,6 +811,14 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=width+'px';layer.style.setProperty('--grid-gap',m.gap+'px');layer.style.setProperty('--grid-step',m.step+'px');layer.style.setProperty('--grid-pattern',workbenchGridPattern(width))}
     const viewport=snapshot.viewport;if(!root.hasAttribute('data-grid-operation')){const scrollTop=Math.max(0,Math.min(bottom-visibleHeight,-viewport.y));if(Math.abs(root.scrollTop-scrollTop)>.5)root.scrollTop=scrollTop;if(Math.abs(viewport.y+scrollTop)>.5)workspace.setViewport({x:0,y:-scrollTop,scale:1})}
     root.__eworkScrollbars?.()
+    // Native market tables do not send iframe content reports. Fit their full
+    // rows and context on first completion and responsive width changes too.
+    let active=true
+    const tables=nodes.map(node=>({node,card:root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')})).map(item=>({...item,table:item.card?.querySelector('[data-sherlock-market-native="table"]')})).filter(item=>item.table)
+    const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const size=workbenchNativeTableDimensions(node,table);if(size)workspace.setWorkbenchContentHeight(node.id,{html:node.containerSpec.html,width:node.width,height:size.height})}}
+    const observer=new ResizeObserver(fitTables),mutations=new MutationObserver(fitTables)
+    for(const {table} of tables){observer.observe(table);for(const child of table.querySelectorAll('table,.terminal-native-context>*'))observer.observe(child);mutations.observe(table,{subtree:true,childList:true,characterData:true})}
+    fitTables();return()=>{active=false;observer.disconnect();mutations.disconnect()}
   },[snapshot])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])
 }

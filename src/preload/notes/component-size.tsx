@@ -1,32 +1,27 @@
 import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React, {useLayoutEffect, useRef, useState} from 'react'
+import {boundNoteComponentSize as bounded,noteComponentSizeBounds,noteComponentAvailableWidth,updateNoteComponentLayout} from './component-size-state'
 
 type Axis = 'width' | 'height'
 type Size = Partial<Record<Axis, number>>
 type Gesture = {axis:Axis; pointerId:number; start:number; value:number; next:number}
-const bounded = (value:number, min:number, max:number) => Math.round(Math.max(min, Math.min(max, value)))
 const finite = (value:unknown):value is number => typeof value === 'number' && Number.isFinite(value)
 
 /** Note dimensions are independent from the source research canvas geometry. */
 export function useNoteComponentSize({block,node,editor,root,naturalHeight}:{block:any;node:any;editor:any;root:React.RefObject<HTMLElement>;naturalHeight:number}) {
  const [available,setAvailable]=useState(0),[preview,setPreview]=useState<Size>(),gesture=useRef<Gesture>()
- const maxWidth=Math.max(1,available || 320),minWidth=Math.min(320,maxWidth),minHeight=180,maxHeight=2400
+ const {maxWidth,minWidth,minHeight,maxHeight}=noteComponentSizeBounds(available)
  const saved:Size=node.noteSize || {},height=bounded(preview?.height ?? (finite(saved.height)?saved.height:naturalHeight),minHeight,maxHeight)
  const width=bounded(preview?.width ?? (finite(saved.width)?saved.width:maxWidth),minWidth,maxWidth)
  useLayoutEffect(()=>{
   const parent=root.current?.parentElement;if(!parent)return
-  const measure=()=>{const style=getComputedStyle(parent),padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight),next=Math.max(1,Math.floor(parent.clientWidth-padding));setAvailable(old=>old===next?old:next)}
+  const measure=()=>{const next=noteComponentAvailableWidth(root.current);setAvailable(old=>old===next?old:next)}
   measure();const observer=new ResizeObserver(measure);observer.observe(parent);return()=>observer.disconnect()
  },[root,node.importStatus])
  const commit=(axis:Axis,value:number)=>{
   const current=editor?.getBlock(block.id);if(!editor?.isEditable || !current)return
-  let payload:any;try{payload=JSON.parse(current.props.payload)}catch{return}
-  const next=bounded(value,axis==='width'?minWidth:minHeight,axis==='width'?maxWidth:maxHeight)
-  if(payload.noteSize?.[axis]===next)return
-  const tiptap=editor._tiptapEditor,undo=tiptap.state.plugins.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(tiptap.state)?.undoManager
-  undo?.stopCapturing()
-  editor.updateBlock(block.id,{props:{payload:JSON.stringify({...payload,noteSize:{...payload.noteSize,[axis]:next}})}})
-  undo?.stopCapturing()
+  try{JSON.parse(current.props.payload)}catch{return}
+  updateNoteComponentLayout(editor,[block.id],{[axis]:bounded(value,axis==='width'?minWidth:minHeight,axis==='width'?maxWidth:maxHeight)},{availableWidth:()=>maxWidth})
  }
  const start=(axis:Axis,e:Pick<PointerEvent,'button'|'pointerId'|'clientX'|'clientY'|'preventDefault'|'stopPropagation'>,target:HTMLButtonElement)=>{
   if(e.button!==0 || !editor?.isEditable || gesture.current)return

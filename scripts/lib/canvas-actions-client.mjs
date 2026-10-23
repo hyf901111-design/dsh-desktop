@@ -40,7 +40,7 @@ function ResearchCanvasActionReceipt({workspace}) {
   const [hidden,setHidden]=react.useState(null),[error,setError]=react.useState(''),[busy,setBusy]=react.useState(false);
   react.useEffect(()=>{if(!receipt)return;setError('');const timer=setTimeout(()=>setHidden(receipt),6000);return()=>clearTimeout(timer);},[receipt]);
   if(!receipt||hidden===receipt)return null;
-  const label=error||(receipt.status==='pending'?'画布已更新，等待同步':receipt.canUndo?'已更新 '+receipt.changedIds.length+' 个组件':'已撤销画布操作');
+  const label=error||(receipt.status==='pending'?'画布已更新，等待同步':receipt.presentation?'已更新当前看板样式':receipt.canUndo?'已更新 '+receipt.changedIds.length+' 个组件':'已撤销画布操作');
   return react_jsx_runtime.jsxs('div',{'data-canvas-action-receipt':'','data-state':error?'error':'success',role:'status','aria-live':'polite',onPointerDown:e=>e.stopPropagation(),onClick:e=>e.stopPropagation(),children:[
     react_jsx_runtime.jsx('span',{children:label}),
     receipt.canUndo?react_jsx_runtime.jsx('button',{type:'button','data-canvas-action-undo':'',disabled:busy,children:busy?'撤销中…':'撤销',onClick:async()=>{setBusy(true);try{await workspace.canvasAction('undo',{requestId:crypto.randomUUID(),revision:receipt.revision,actionId:receipt.actionId});}catch(e){setError(e.message);}finally{setBusy(false);}}}):null,

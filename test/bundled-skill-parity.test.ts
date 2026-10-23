@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { verifyBundledSkillParity } from '../scripts/bundled-skill-parity.mjs'
+import * as skillParity from '../scripts/bundled-skill-parity.mjs'
 
 const scratchDirectories: string[] = []
 
@@ -12,12 +13,12 @@ function scratchDirectory(): string {
   return directory
 }
 
-function writeSkill(directory: string, version: string, body: string): void {
+function writeSkill(directory: string, version: string, body: string, slug = 'efund-ppt-maker'): void {
   mkdirSync(directory, { recursive: true })
   writeFileSync(
     path.join(directory, '_meta.json'),
     `${JSON.stringify({
-      slug: 'efund-ppt-maker',
+      slug,
       cnName: 'PPT制作助手',
       version,
       source: 'eSkill'
@@ -62,5 +63,24 @@ describe('packaged bundled skill parity', () => {
         packagedSkillDirectory: packaged
       })
     ).toThrow('packaged bundled skill content does not match source')
+  })
+
+  it('requires the report skill and its bundled scripts in the client package check', () => {
+    const root = scratchDirectory(), sourceSkillRoot = path.join(root, 'source'), packagedSkillRoot = path.join(root, 'packaged')
+    const slugs = ['efund-ppt-maker', 'ework-workbench-components', 'ework-free-data-sources', 'ework-finance-analysis', 'ework-equity-research']
+    for (const slug of slugs) {
+      writeSkill(path.join(sourceSkillRoot, slug), 'v1.0.0', 'same-content', slug)
+      if (slug !== 'ework-equity-research') writeSkill(path.join(packagedSkillRoot, slug), 'v1.0.0', 'same-content', slug)
+    }
+    const sourceScript = path.join(sourceSkillRoot, 'ework-equity-research', 'scripts')
+    mkdirSync(sourceScript); writeFileSync(path.join(sourceScript, 'report.py'), 'print("report")\n')
+    const verify = () => skillParity.verifyClientBundledSkillsParity({ sourceSkillRoot, packagedSkillRoot })
+    expect(verify).toThrow('packaged bundled skill is missing')
+    writeSkill(path.join(packagedSkillRoot, 'ework-equity-research'), 'v1.0.0', 'same-content', 'ework-equity-research')
+    expect(verify).toThrow('packaged bundled skill content does not match source')
+    const packagedScript = path.join(packagedSkillRoot, 'ework-equity-research', 'scripts')
+    mkdirSync(packagedScript); writeFileSync(path.join(packagedScript, 'report.py'), 'print("report")\n')
+    expect(verify()).toHaveLength(5)
+    expect(verify()).toContainEqual(expect.objectContaining({ slug: 'ework-equity-research', version: 'v1.0.0' }))
   })
 })
