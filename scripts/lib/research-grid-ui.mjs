@@ -619,16 +619,20 @@ export function measureWorkbenchContents(root,nodes) {
   return measured
 }
 export function useWorkbenchArrangePreview(node) {
-  const [active,setActive]=react.useState(false)
+  const current=()=>[...document.querySelectorAll('[data-research-canvas]')].some(root=>root.__eworkContentFit?.ids?.includes(node.id))
+  const [active,setActive]=react.useState(current)
   react.useLayoutEffect(()=>{
+    // A completed last panel can mount after the preview-start event. Read
+    // the same resident task so its offscreen HTML still participates in fit.
+    setActive(current())
     const receive=event=>{if(event.detail?.ids?.includes(node.id))setActive(event.detail.active===true)}
     window.addEventListener('ework:arrange-preview',receive)
     return()=>window.removeEventListener('ework:arrange-preview',receive)
   },[node.id])
   return active&&node.containerSpec?.type!=='web'
 }
-export function arrangeWorkbenchContents(root,workspace,measured,mode='standard') {
-  root.focus({preventScroll:true})
+export function arrangeWorkbenchContents(root,workspace,measured,mode='standard',options={}) {
+  if(options.focus!==false)root.focus({preventScroll:true})
   root.__eworkContentFit?.finish()
   const before=workspace.getSnapshot(),oldNodes=[...before.files,...before.artifacts],oldCache=new Map(root.__eworkContentMeasurements),view=root.ownerDocument.defaultView
   measured.__workbenchDeferred=true
@@ -647,7 +651,8 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     root.removeEventListener('pointerdown',finish,true);view.removeEventListener('keydown',finish,true)
     if(root.__eworkContentFit===task)delete root.__eworkContentFit
     view.dispatchEvent(new view.CustomEvent('ework:arrange-preview',{detail:{ids:arranged.map(n=>n.id),active:false}}))
-    if(unchanged())workspace.persist()
+    const durable=unchanged()?workspace.persist():false
+    options.onFinish?.(durable===true)
   }
   const refit=(native=false)=>{
     if(done)return
@@ -682,7 +687,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
     if(complete&&nativeReady){view.clearTimeout(settle);settle=view.setTimeout(finish,240)}
   }
-  const task={refit,finish};root.__eworkContentFit=task
+  const task={refit,finish,ids:arranged.map(n=>n.id)};root.__eworkContentFit=task
   view.dispatchEvent(new view.CustomEvent('ework:arrange-preview',{detail:{ids:arranged.map(n=>n.id),active:true}}))
   root.addEventListener('pointerdown',finish,true);view.addEventListener('keydown',finish,true)
   deadline=view.setTimeout(finish,6000);nativeTimer=view.setTimeout(()=>{nativeReady=true;refit(true)},380)
@@ -739,6 +744,7 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
   ]})
 }
 export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,selectTool,readOnly}) {
+  react.useEffect(()=>{const root=rootRef.current;if(root)return installWorkbenchAutoArrange(root,workspace,readOnly)},[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
     root.setAttribute('data-ework-grid','')

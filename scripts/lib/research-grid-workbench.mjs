@@ -15,6 +15,7 @@ import {installWorkbenchRefresh,workbenchRefreshCss} from '../../packages/dsh-re
 import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../../packages/dsh-research-task-runtime/workbench-scrollbars.js'
 import {noteAssistantDestinationFunction} from './notes-reply-actions.mjs'
+import {createWorkbenchAutoArrangeState,installWorkbenchAutoArrange} from './workbench-auto-arrange.mjs'
 const begin='/* EWORK_GRID_WORKBENCH_BEGIN */',end='/* EWORK_GRID_WORKBENCH_END */',meta='/* EWORK_GRID_RESTORE '
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__GRID_DARK__').replaceAll(':root','__GRID_ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
 const toolbarIcons=['link','voice'].map(name=>`body [data-ework-toolbar] .odyssey-global-${name}{background:currentColor!important;mask:center/20px 20px no-repeat url("data:image/svg+xml;base64,${readFileSync(new URL('../../build/figma-canvas-icons/tool-'+name+'.svg',import.meta.url)).toString('base64')}")}`).join('\n')
@@ -61,7 +62,7 @@ export function patchResearchGridWorkbench(source){
   change('ComponentDataStatusBar,{sessionId:componentDataSessionId,node}','ComponentDataStatusBar,{sessionId:componentDataSessionId,node,workbench:true}')
   change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':'', 'data-research-generation-stage': presentation.stage,")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
-  change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);')
+  change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);')
   change('const canvasActions = canvasWorkspaceActions({\n        snapshot:()=>snapshot,',`const canvasActions = canvasWorkspaceActions({
         snapshot:()=>snapshot,
         presentation:()=>({workbenchStyle:workbenchStyleState.get()||readResearchComponentTheme()}),
@@ -75,6 +76,7 @@ export function patchResearchGridWorkbench(source){
   // This is distinct from automatic voice/selection cards' readable task size.
   change('...(selectedCreate ? { creationMode: "selection" } : {}),','...(selectedCreate ? { creationMode: "selection" } : {}),\n...(value.preserveGenerationSize===true?{preserveGenerationSize:true}:{}),')
   change('const persistSnapshot = () => {','const persistSnapshot = () => {\nif(!workbenchGrid.save())return false;')
+  change('persist() { finalizeHistoryTransaction(); persistSnapshot(); if(collaborationGesture){collaborationGesture=false;sherlockBoardsAdapter?.finishGesture(sessionId);} },','persist() { finalizeHistoryTransaction(); const durable=persistSnapshot(); if(collaborationGesture){collaborationGesture=false;sherlockBoardsAdapter?.finishGesture(sessionId);} return durable; },')
   // Planning participates in local selection and geometry, but is not a
   // document node. Persist only selection belonging to durable components.
   change('setSelection(selection) { update({ selection: parseResearchCanvasSelection(JSON.stringify(selection), snapshot.files, snapshot.artifacts) }, true); },','setSelection(selection) { update({ selection: parseResearchCanvasSelection(JSON.stringify(selection), snapshot.files, [...snapshot.artifacts,...workbenchGrid.planningNodes()]) }, true); },')
@@ -85,6 +87,8 @@ export function patchResearchGridWorkbench(source){
   change('const viewport=researchCanvasViewportForAreaChange(current,next);','const viewport=root.hasAttribute("data-ework-grid")?current.viewport:researchCanvasViewportForAreaChange(current,next);')
   change('snapshot = researchWorkspaceSnapshot(researchWorkbenchGrowthViewport(snapshot,next));','snapshot = researchWorkspaceSnapshot(workbenchGrid.reconcile(workbenchGrid.enabled()?next:researchWorkbenchGrowthViewport(snapshot,next)));')
   const methods=`
+    pendingWorkbenchArrange:()=>collaborationCanWrite()?workbenchAutoArrange.ready(snapshot):[],
+    consumeWorkbenchArrange:ids=>workbenchAutoArrange.consume(ids),
     getWorkbenchTableColumns:(id,index,labels)=>workbenchTableColumns.get(id,index,labels),
     setWorkbenchTableColumns:(id,index,labels,state)=>workbenchTableColumns.set(id,index,labels,state),
     getWorkbenchStyle:()=>workbenchStyleState.get(),
@@ -102,6 +106,7 @@ export function patchResearchGridWorkbench(source){
   change('subscribeCanvasAction:listener=>{',methods+'subscribeCanvasAction:listener=>{')
   change('const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);',`for(const node of workbenchGrid.planningNodes())if((plan.createdAt??0)>=node.startedAt-1000)workbenchGrid.releasePlanning(node.id);
                     const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);`)
+  change("if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');","if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');\n                    if(collaborationCanWrite())workbenchAutoArrange.register(plan,existing);")
   change('return structuredClone({ files: s.files, artifacts: s.artifacts });','return structuredClone(w.getWorkbenchDocument?.()??{ files: s.files, artifacts: s.artifacts });')
   change('files: value.files,','files: value.files,\nworkbenchCells:workbenchGrid.get(),')
   change('const restoreHistory = (entry) => {','const restoreHistory = (entry) => {\nif(entry.workbenchCells)workbenchGrid.set(entry.workbenchCells);')
@@ -223,7 +228,7 @@ export function patchResearchGridWorkbench(source){
   change("workspace.createContainerDraft({x:((current.canvasSize.availableWidth||current.canvasSize.width||rootRef.current?.getBoundingClientRect().width||800)/2-vp.x)/vp.scale,y:((current.canvasSize.height||rootRef.current?.getBoundingClientRect().height||600)/2-vp.y)/vp.scale,width:485,height:400,sizeMode:'manual'},'link');", "const node=workspace.createContainerDraft({x:((current.canvasSize.availableWidth||current.canvasSize.width||rootRef.current?.getBoundingClientRect().width||800)/2-vp.x)/vp.scale,y:((current.canvasSize.height||rootRef.current?.getBoundingClientRect().height||600)/2-vp.y)/vp.scale,width:485,height:400,sizeMode:'manual'},'link');revealWorkbenchNode(rootRef.current,workspace,node?.id);")
   change('...(draftKind === "link" ? {title:"添加链接"} : {}),','...(draftKind === "link" ? {title:"添加链接"} : draftKind === "voice" ? {title:"语音组件"} : {}),')
   source=patchWorkbenchSelectedCreate(source,change)
-  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[financialRecordsActionPayload,financialRecordsCsv,codeTemplatePayload,workbenchText,useWorkbenchLocale,createResearchGrid,createWorkbenchGridState,workbenchScrollExtent,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,installWorkbenchChartMotion,installWorkbenchTableColumns,createWorkbenchTableColumnState,isWorkbenchScrollbarMessage,installWorkbenchScrollbars,workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,...Object.values(ui),...Object.values(workbenchStyle)].map(fn=>fn.toString()).join('\n')
+  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[financialRecordsActionPayload,financialRecordsCsv,codeTemplatePayload,workbenchText,useWorkbenchLocale,createResearchGrid,createWorkbenchGridState,workbenchScrollExtent,createWorkbenchAutoArrangeState,installWorkbenchAutoArrange,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,installWorkbenchChartMotion,installWorkbenchTableColumns,createWorkbenchTableColumnState,isWorkbenchScrollbarMessage,installWorkbenchScrollbars,workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,...Object.values(ui),...Object.values(workbenchStyle)].map(fn=>fn.toString()).join('\n')
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\nconst WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   change('d: "M3 3.5h10v9H3z"','d: "M9.5 2.25h-6a1.25 1.25 0 0 0-1.25 1.25v9a1.25 1.25 0 0 0 1.25 1.25H7M13.75 6.5v-3a1.25 1.25 0 0 0-1.25-1.25h-3"')
   change('d: "M8 5.5v5M5.5 8h5"','d: "M11.25 8v6.5M8 11.25h6.5"')
