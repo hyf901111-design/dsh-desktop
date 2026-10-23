@@ -374,6 +374,79 @@
           "本修正不更新依赖版本，不改变沙盒权限；最终原生行为以新签名包为准。"
         ],
         "generatedAt": "2026-10-23T04:23:47.963268+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ee72a57c49eb633cfa69a3c6d1a32a60933d72b9",
+        "verificationCommit": "ee72a57c49eb633cfa69a3c6d1a32a60933d72b9",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/equity-research-engine.test.js",
+              "test/equity-research-cli.test.js",
+              "test/equity-research-report.test.js",
+              "test/bundled-equity-research-skill.test.js",
+              "test/integration-skill-policy.test.js",
+              "test/integration-runtime.test.js",
+              "test/integration-bundled-runtime.test.js",
+              "test/bundled-skill-routing.test.js",
+              "test/bundled-skill-parity.test.ts",
+              "test/bundled-finance-skill.test.js",
+              "test/financial-routing.test.js",
+              "test/financial-routing-review.test.js",
+              "test/macos-package-runtime.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/equity-research-engine.test.js test/equity-research-cli.test.js test/equity-research-report.test.js test/bundled-equity-research-skill.test.js test/integration-skill-policy.test.js test/integration-runtime.test.js test/integration-bundled-runtime.test.js test/bundled-skill-routing.test.js test/bundled-skill-parity.test.ts test/bundled-finance-skill.test.js test/financial-routing.test.js test/financial-routing-review.test.js test/macos-package-runtime.test.ts --maxWorkers=2",
+            "verifiedCommit": "ee72a57c49eb633cfa69a3c6d1a32a60933d72b9",
+            "completedAt": "2026-10-23T04:24:35.786Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ee72a57c49eb633cfa69a3c6d1a32a60933d72b9",
+            "completedAt": "2026-10-23T04:24:35.786Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD",
+            "verifiedCommit": "ee72a57c49eb633cfa69a3c6d1a32a60933d72b9",
+            "completedAt": "2026-10-23T04:24:35.786Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/preload-editor-singleton.test.ts",
+              "test/sandbox-preload.test.js",
+              "test/research-canvas-wheel-preload.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/preload-editor-singleton.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts",
+            "verifiedCommit": "ee72a57c49eb633cfa69a3c6d1a32a60933d72b9",
+            "completedAt": "2026-10-23T04:24:35.786Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-23T04:24:35.786Z"
       }
     }
   ],
