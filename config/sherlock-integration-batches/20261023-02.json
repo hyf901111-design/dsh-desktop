@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261023-02",
+  "branch": "codex/integration/20261023-02",
+  "baseMainCommit": "b27382fd8a4d2f5ba3f5ce4be0e20776366b2db6",
+  "expectedMainCommit": "b27382fd8a4d2f5ba3f5ce4be0e20776366b2db6",
+  "createdAt": "2026-10-23T12:24:22.065Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话首页运营区域与独立切换",
+        "branch": "codex/feat/home-operations-20261023",
+        "baseCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
+        "tipCommit": "fd3c9c5bbd9f811a82b780ec1014ba2723da7171",
+        "commits": [
+          {
+            "commit": "6170d38e257a69eb6174acbc375ba01133f9b0f3",
+            "parents": [
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423"
+            ],
+            "subject": "功能：按设计稿接入对话首页运营卡片与吸附交互"
+          },
+          {
+            "commit": "75f920e46ea95735293ecf58b3dd6e44a1cabc26",
+            "parents": [
+              "6170d38e257a69eb6174acbc375ba01133f9b0f3"
+            ],
+            "subject": "修复：首页运营卡片居中与差时滑动交互"
+          },
+          {
+            "commit": "76660483bb0537b3626aab60da5a522ca24fc061",
+            "parents": [
+              "75f920e46ea95735293ecf58b3dd6e44a1cabc26"
+            ],
+            "subject": "优化：首页运营区位置与卡片悬停反馈"
+          },
+          {
+            "commit": "0014f77146796b15675c8197f710a0e51ffe76da",
+            "parents": [
+              "76660483bb0537b3626aab60da5a522ca24fc061"
+            ],
+            "subject": "优化：首页连续加减速与大卡片自动轮播"
+          },
+          {
+            "commit": "6a6419eb4b742fee63ac639a6f56581b373979de",
+            "parents": [
+              "0014f77146796b15675c8197f710a0e51ffe76da"
+            ],
+            "subject": "优化：首页独立切区、案例过渡与卡片可读性"
+          },
+          {
+            "commit": "b1cf928ce67ef9181df74c6ebe65466355e7c670",
+            "parents": [
+              "6a6419eb4b742fee63ac639a6f56581b373979de"
+            ],
+            "subject": "优化：首页卡片交叉融合、黑色材质与文字清晰度"
+          },
+          {
+            "commit": "4ff855aa3e171d351c21331743e0006c9f08bf1f",
+            "parents": [
+              "b1cf928ce67ef9181df74c6ebe65466355e7c670"
+            ],
+            "subject": "优化：首页黑色玻璃透光、渐变流动与计时轨道"
+          },
+          {
+            "commit": "9aa380374ae2f7f254ee548c023e5a592b06c42a",
+            "parents": [
+              "4ff855aa3e171d351c21331743e0006c9f08bf1f"
+            ],
+            "subject": "优化：首页悬停融合、滚轮切区与透明渐变卡片"
+          },
+          {
+            "commit": "fd3c9c5bbd9f811a82b780ec1014ba2723da7171",
+            "parents": [
+              "9aa380374ae2f7f254ee548c023e5a592b06c42a"
+            ],
+            "subject": "优化：四张小卡独立渐变流动并修复透视阴影"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-23-home-operations.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-23-home-operations-design.md"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/case-board-dark-glow.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/case-board-glow.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/case-note-dark-glow.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/case-note-glow.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/case-ppt-dark-glow.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/case-ppt-glow.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-dark-hover-board-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-dark-hover-note-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-dark-hover-ppt-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-dark-hover-report-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-dark-normal-board-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-dark-normal-note-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-dark-normal-ppt-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-dark-normal-report-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-light-hover-board-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-light-hover-note-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-light-hover-ppt-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-light-hover-report-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-light-normal-board-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-light-normal-note-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-light-normal-ppt-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/illustration-light-normal-report-sharp.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-assets/trend-up.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-carousel.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-case-transition.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-operations-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "faint moving ambient|all five card surfaces distinct|identical illustration controls|high-frequency checkerboard|moving glow image edge|all five cards and ambient fields static"
+            ],
+            "outcome": "passed",
+            "summary": "最终关联6项首轮5通过、1浮点等值误差；该唯一项六位小数归一后单复验通过。四卡实际渐变默认两两不同、共享时间不同步、文字/圆角/真实blur/reduced/hover能量通过。原base>=60/25、decor>=80%、文字>=4.5阈值保留。日志verification-task16-summary.txt，不宣称完整51项单轮或全仓检查。",
+            "verifiedCommit": "fd3c9c5bbd9f811a82b780ec1014ba2723da7171",
+            "completedAt": "2026-10-23T10:13:56.794002+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "all five card surfaces distinct"
+            ],
+            "outcome": "passed",
+            "summary": "最后唯一浮点误差修正后1通过，3.93s，50跳过。verification-task16-transmission-precision-final.txt。",
+            "verifiedCommit": "fd3c9c5bbd9f811a82b780ec1014ba2723da7171",
+            "completedAt": "2026-10-23T10:13:56.794002+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过；TS/assets恢复HEAD9aa并无后续修改。静态配图8项及透视收敛单复验通过；阴影共面像素单项和关联8项通过。日志verification-task14-summary.txt及typecheck.log。",
+            "verifiedCommit": "fd3c9c5bbd9f811a82b780ec1014ba2723da7171",
+            "completedAt": "2026-10-23T10:13:56.794002+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/electron-vite/bin/electron-vite.js",
+              "build"
+            ],
+            "outcome": "passed",
+            "summary": "最终直接构建通过3.44s，独立签名预览和out/preload SHA256一致14d8f2fadcad4bc6e2bf0932c2cfaec1b942ebdca6667c252f044a41e0a253f5；未走共享构建或发布。",
+            "verifiedCommit": "fd3c9c5bbd9f811a82b780ec1014ba2723da7171",
+            "completedAt": "2026-10-23T10:13:56.794002+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查、test文件node --check通过；最终CSS独立审查无Important；中文本地提交后源码干净。",
+            "verifiedCommit": "fd3c9c5bbd9f811a82b780ec1014ba2723da7171",
+            "completedAt": "2026-10-23T10:13:56.794002+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "独立客户端主界面已由CUA目视核对四张小卡不同的默认柔光；真实上/下滚轮切区成功。最终只读两秒采样确认16/18/17/20秒错相背景均持续变化，原16张彩色img副本无配图动画或内联SVG；标题16px、按钮无描边且上移32px，anchor无固定阴影。像素回归确认透视阴影共面、圆角无溢出，深浅色文字最低4.636。用户最终视觉接受及main集成不在本次声明中。"
+        },
+        "acceptanceCriteria": [
+          "五卡中性黑色玻璃，dark alpha.68/light.82，真实背景模糊、清晰文字与无静态描边；hover浅色更清透、深色统一PPT蓝。",
+          "输入区与运营区稳定互斥；底部固定无边按钮和首页垂直滚轮切换，保留原生输入节点、草稿、编辑/原生滚动/菜单/dock/缩放手势。按钮较前版上移32px。",
+          "五卡指针最大±5度透视、72ms平滑归位，静止transform:none。阴影跟随卡面，不留固定第二底面；无指针光圈或抬升。",
+          "四小卡300ms灰彩与底色融合、固定anchor触发，倾斜边缘和切区运动期间连续，无中途暗闪。",
+          "四小卡默认渐变清楚可辨，各有不同热点/尺度与16/18/17/20秒错相缓慢流动；减少动态效果时静止。原静态SVG配图不播放已取消的生长动效。",
+          "大卡6秒轮播和活动蓝白计时条、400ms真实加权交叉融合，12秒柔光、圆角覆盖和暂停/hidden/reduced清理有效。",
+          "快速开始标题16px。研究/笔记/PPT/报告点击业务按原要求暂不实现；未main晋升/推送/公开发布。"
+        ],
+        "risks": [
+          "功能仍在独立分支；未接管其他会话集成批次，未晋升main、未推送或正式发布。",
+          "独立预览为本地UI资料与进程级mock keychain；原资料、正式配置和共享客户端保留，本次不验收真实账户登录路径。",
+          "用户最终视觉/手感接受仍由其在打开的独立客户端中测试；相关浏览器像素检查不是该接受的替代。"
+        ],
+        "generatedAt": "2026-10-23T10:13:56.794002+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "test/home-theme-controller.test.ts",
+        "test/figma-home-entry-spacing.test.js",
+        "test/figma-home-materials.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/preload-main-frame.test.ts",
+        "test/sandbox-preload.test.js",
+        "test/research-canvas-wheel-preload.test.ts",
+        "test/preload-editor-singleton.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
