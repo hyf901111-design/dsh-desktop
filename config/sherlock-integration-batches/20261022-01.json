@@ -11,29 +11,25 @@
         "schemaVersion": 1,
         "featureName": "保护笔记写入保存窗口并在快速完成后恢复挑战队列",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "2db5831cd1c9b829fe5b796ab04eb110167143be",
-        "tipCommit": "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a",
+        "baseCommit": "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a",
+        "tipCommit": "437c6c606f600b974426b107bf39e7aca994ca66",
         "commits": [
           {
-            "commit": "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a",
+            "commit": "437c6c606f600b974426b107bf39e7aca994ca66",
             "parents": [
-              "2db5831cd1c9b829fe5b796ab04eb110167143be"
+              "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a"
             ],
-            "subject": "兼容逐字渐显后的前端补丁重复应用"
+            "subject": "保留最终回复新增文字的逐字渐显并隔离思考摘要"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/canvas-use-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/verify-frontend-patch-reentry.mjs"
+            "path": "scripts/lib/assistant-reveal.mjs"
           },
           {
             "status": "M",
-            "path": "test/assistant-reveal.test.js"
+            "path": "test/assistant-reveal-browser.test.js"
           }
         ],
         "checks": [
@@ -43,27 +39,17 @@
               "vitest",
               "run",
               "test/assistant-reveal.test.js",
-              "test/canvas-use.test.js"
+              "test/assistant-reveal-browser.test.js",
+              "test/research-conversation-follow.test.ts",
+              "test/shared-native-conversation.test.js",
+              "test/notes-activity.test.js",
+              "test/notes-history-ready.test.js",
+              "test/markdown-file-links.test.js"
             ],
             "outcome": "passed",
-            "summary": "29 passed. Actual patchCanvasUseClient(patchAssistantReveal(already-patched native asset)) first reproduced the build failure RED, then became byte-identical on replay with reading/frontier/atBottom guards and unique disclosure anchor preserved. output/assistant-reveal-build-reentry-1023/focused-final.json.",
-            "verifiedCommit": "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a",
-            "completedAt": "2026-10-23T00:35:54.576Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-task-conversation.test.js",
-              "-t",
-              "preserves editable canvas queue text when the full shell build patch is reapplied"
-            ],
-            "outcome": "passed",
-            "summary": "1 passed: actual full-shell patch followed by early CanvasUse re-entry remains unchanged. output/assistant-reveal-build-reentry-1023/shell-reentry.json.",
-            "verifiedCommit": "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a",
-            "completedAt": "2026-10-23T00:35:54.576Z",
+            "summary": "67 passed across 7 directly related suites. Actual production compactConversationFlow, ExecutionStatusGroup, AssistantNodeView, ReasoningRow, DisclosureRow and semantic Markdown run together in isolated Chromium. Two final-boundary tests first failed before source changes: pending public frontier was lost when reasoning summary entered the text timeline; a completed frontier exposed genuinely new final suffix immediately. Both now pass. Three additional wheel/key/copy quiet-period REDs now pass. Two independent owners, each with two consecutive turns and retained prior DOM, handle reasoning first, four approximately 140-character public batches separated by 2400ms, step-final promotion and turn closing. Natural layout growth does not cancel the native reveal follower. output/assistant-reveal-final-boundary-1023/focused.json.",
+            "verifiedCommit": "437c6c606f600b974426b107bf39e7aca994ca66",
+            "completedAt": "2026-10-23T00:59:17.135140+00:00",
             "timeoutMs": 180000
           },
           {
@@ -73,9 +59,9 @@
               "scripts/verify-frontend-patch-reentry.mjs"
             ],
             "outcome": "passed",
-            "summary": "The real scripts/patch-web-frontend-loading.mjs entry completes twice with every dependency write captured in memory. Both passes preserve exactly the same reply helper and native listener region, all three scroll guards, one disclosure anchor and valid final module syntax. 30 virtual assets; zero dependency writes. Full conversation byte equality is false due to unrelated existing sink insertion order; the verifier explicitly reports this and does not claim full-asset byte idempotence.",
-            "verifiedCommit": "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a",
-            "completedAt": "2026-10-23T00:35:54.576Z",
+            "summary": "Actual full frontend patch entry completes twice via in-memory write overlay. 30 virtual assets; reply helper/listener regions stable, guards preserved, final module syntax valid, zero dependency writes. Complete conversation byte equality remains false from unrelated existing sink ordering; no full-asset equality claim.",
+            "verifiedCommit": "437c6c606f600b974426b107bf39e7aca994ca66",
+            "completedAt": "2026-10-23T00:59:17.135140+00:00",
             "timeoutMs": 180000
           },
           {
@@ -86,8 +72,8 @@
             ],
             "outcome": "passed",
             "summary": "Passed on exact committed source.",
-            "verifiedCommit": "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a",
-            "completedAt": "2026-10-23T00:35:54.576Z",
+            "verifiedCommit": "437c6c606f600b974426b107bf39e7aca994ca66",
+            "completedAt": "2026-10-23T00:59:17.135140+00:00",
             "timeoutMs": 180000
           },
           {
@@ -95,191 +81,32 @@
               "git",
               "diff",
               "--check",
-              "2db5831cd1c9b829fe5b796ab04eb110167143be..2e8ccdfc6b9c89d97eb85a85435402b7fc84044a"
+              "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a..437c6c606f600b974426b107bf39e7aca994ca66"
             ],
             "outcome": "passed",
-            "summary": "Passed; focused three-file compatibility successor.",
-            "verifiedCommit": "2e8ccdfc6b9c89d97eb85a85435402b7fc84044a",
-            "completedAt": "2026-10-23T00:35:54.576Z",
+            "summary": "Passed; focused two-file successor.",
+            "verifiedCommit": "437c6c606f600b974426b107bf39e7aca994ca66",
+            "completedAt": "2026-10-23T00:59:17.135140+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "Build-time patch composition only. Existing runtime reading and reveal guards are preserved byte-for-byte by the tracked re-entry regression and actual two-pass frontend entry overlay. No shared client build or GUI/model action was performed."
+          "outcome": "passed",
+          "summary": "Isolated Chromium uses real production execution routing, actual ReasoningRow and DisclosureRow, and the real Markdown renderer. New final text stays pending and neighboring public characters retain a continuous alpha wave through promotion, whether previous units remain or have naturally completed. History/remount/blur/reduced/selection/follower checks pass. No shared client build, native GUI operation or model request was performed; integrated native acceptance remains root-owned."
         },
         "acceptanceCriteria": [
-          "Early CanvasUse patch re-entry recognizes the stable reading guard independently of the newly changed scroll assignment. It preserves assistantRevealScrollTop and the queued atBottom following guard.",
-          "The already-present disclosure anchor declaration and local cleanup are recognized even when a reveal-frame listener is inserted between existing lines; no duplicate declaration or cleanup is introduced.",
-          "Tracked actual asset composition is byte-stable and syntactically valid after repeated early-canvas and reveal patches.",
-          "The real frontend patch entry runs twice through a write-free filesystem overlay; this focused reply helper and native listener region are strictly equal on the second pass, required guards are unique and module syntax remains valid.",
-          "Normal first installation, editable canvas queue and full-shell patch composition continue passing."
+          "Thinking disclosure summary and expanded reasoning are excluded from the public reply paint baseline, without removing or editing their semantic DOM.",
+          "A trusted same-commit transition between progress and node seats preserves the existing baseline even when its prior frontier completed. Only genuinely new received final suffix is scheduled; previous public text is not replayed.",
+          "Transfer still requires matching record epoch, foreground visibility, different trusted route and single microtask consumption; history/remount and departure safeguards remain unchanged.",
+          "Reading quietUntil is transferred with an empty snapshot so immediate wheel/key/copy intervention cannot restart a final suffix during the quiet period.",
+          "Two new owners with two consecutive retained turns each remain eligible through reasoning-first delayed batches, promotions and closing; the existing actual native and Research follower checks pass."
         ],
         "risks": [
-          "The broader canvas-task-conversation file includes one pre-existing CSS assertion expecting 24px while the unchanged baseline 2db CSS computes 12px. The exact baseline test body reproduces the same 12px mismatch; no stylesheet/test expectation was changed. Evidence output/assistant-reveal-build-reentry-1023/baseline-spacing.json.",
-          "The complete conversation asset is not byte-identical across the two real entry passes because unrelated existing audio/financial sink insertions reorder. This fix asserts strict stability only for the reply helper/listener regions and explicitly reports full-asset inequality.",
-          "The overlay uses logical dependency identities for in-memory writes when the feature checkout dependencies are symlinked; it does not alter the real source guard or any installed dependency. Root performs the shared integration build."
+          "This fixes a confirmed final-promotion boundary. It does not establish the cause of the user-reported 08:45 whole-response missing wave; subsequent native captures under root found waves on multiple batches in two independent new sessions. Cold-history freshness gates were intentionally not changed.",
+          "The real ReasoningRow and DisclosureRow are rendered by the browser harness; only its unrelated summary-throttling scheduler is replaced with a stable callback. Integrated native verification is root-owned.",
+          "Whole-asset byte equality in the full patch re-entry verifier remains false because of unrelated existing sink ordering; protected reply regions and all required guards are stable."
         ],
-        "generatedAt": "2026-10-23T00:35:54.576Z"
-      },
-      "merged": {
-        "mergeCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-        "verificationCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "e0ecd84c376880af308448530ef41cb44d28a100",
-            "completedAt": "2026-10-23T00:36:34.010Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-23T00:36:34.010Z"
+        "generatedAt": "2026-10-23T00:59:17.135140+00:00"
       }
     },
     {
