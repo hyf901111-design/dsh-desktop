@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261023-05",
+  "branch": "codex/integration/20261023-05",
+  "baseMainCommit": "57a3eea7909280da8aef6011bcea4060c7fc9c87",
+  "expectedMainCommit": "57a3eea7909280da8aef6011bcea4060c7fc9c87",
+  "createdAt": "2026-10-23T15:20:36.266Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "技能标签布局、多技能选择与无滚动条窄窗修复",
+        "branch": "codex/feat/home-skill-input-fixes-20261023",
+        "baseCommit": "57a3eea7909280da8aef6011bcea4060c7fc9c87",
+        "tipCommit": "6b80751d8774fd02f40220c493977f2f09f00ec5",
+        "commits": [
+          {
+            "commit": "69a41ea95f5aaf98fc1f29d5d18f1d12743b038e",
+            "parents": [
+              "57a3eea7909280da8aef6011bcea4060c7fc9c87"
+            ],
+            "subject": "修复：技能标签等宽留白与连续多技能选择"
+          },
+          {
+            "commit": "6b80751d8774fd02f40220c493977f2f09f00ec5",
+            "parents": [
+              "69a41ea95f5aaf98fc1f29d5d18f1d12743b038e"
+            ],
+            "subject": "优化：窄窗运营五卡完整展示且取消内部滚动"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-23-home-skill-input-fixes.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-inline-references-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-composer.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-inline-references-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-skill-chip-layout-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-skill-composer.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/integration-skill-composer.test.ts",
+              "test/integration-skill-use.test.ts",
+              "test/skill-command-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/home-operations-actions.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "102项通过；原生菜单多技能、同ID更新、CAS/ABA、焦点及首页动作。/tmp/home-skill-input-composer-final-20261023.log",
+            "verifiedCommit": "6b80751d8774fd02f40220c493977f2f09f00ec5",
+            "completedAt": "2026-10-23T15:20:35.545551+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-skill-chip-layout-browser.test.js",
+              "test/figma-inline-references-input.test.js",
+              "test/figma-inline-references-projection.test.js",
+              "test/figma-inline-references-patch.test.js",
+              "test/user-message-chip-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "16项通过；真实技能chip文本+等padding、markeradvance、mixed文件/IME/清空/fontcleanup。/tmp/home-skill-chip-layout-font-ready-final-20261023.log",
+            "verifiedCommit": "6b80751d8774fd02f40220c493977f2f09f00ec5",
+            "completedAt": "2026-10-23T15:20:35.545551+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "13项通过，51无关跳过；实际深浅四尺寸五卡无scroll/无遮挡和宽态恢复。/tmp/home-skill-responsive-no-scroll-final-20261023.log",
+            "verifiedCommit": "6b80751d8774fd02f40220c493977f2f09f00ec5",
+            "completedAt": "2026-10-23T15:20:35.545551+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过 /tmp/home-skill-input-fixes-typecheck-final-20261023.log",
+            "verifiedCommit": "6b80751d8774fd02f40220c493977f2f09f00ec5",
+            "completedAt": "2026-10-23T15:20:35.545551+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查通过，两个中文提交且源码干净。",
+            "verifiedCommit": "6b80751d8774fd02f40220c493977f2f09f00ec5",
+            "completedAt": "2026-10-23T15:20:35.545551+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际Playwright技能标签深浅/窄框、4种pane尺寸深浅五卡fit均通过；原生Shell/Popup端到端菜单链路通过，独立审查最终无material。正式app四卡前轮已实测研究/笔记与PPT预填。当前新tip正式包待main本地构建后只读核验，不把浏览器检查当用户最终验收。"
+        },
+        "acceptanceCriteria": [
+          "技能按实际文字宽加一致左右padding，canonical UTF16草稿/选区/原生文件引用保持正确。",
+          "允许不同技能连续选择；同技能不重复且更新旧版本引用；正文/附件/图像保留，不自动发送。",
+          "窄窗运营不出现内部滚动条且五卡完整，不裁文字；实际400×600、480×704、600×760、600×880深浅均通过，宽态保持原样。",
+          "按用户明确指令在canonical main构建正式身份本地应用供测试，不用临时客户端、不发布、不改版本。"
+        ],
+        "risks": [
+          "用户确认结束鼠标自动化后系统指针不再锁住；未证明客户端pointer lock根因，不宣称源代码修复，最终交还人工操作前重置自动化会话。",
+          "正式新包最终只读主界面核验与包检查在构建后执行，不发送模型任务。"
+        ],
+        "generatedAt": "2026-10-23T15:20:35.545551+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/integration-skill-composer.test.ts",
+        "test/integration-skill-use.test.ts",
+        "test/skill-command-menu.test.ts",
+        "test/skill-command-patch.test.js",
+        "test/home-operations-actions.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-skill-chip-layout-browser.test.js",
+        "test/figma-inline-references-input.test.js",
+        "test/figma-inline-references-projection.test.js",
+        "test/figma-inline-references-patch.test.js",
+        "test/user-message-chip-layout.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "-t",
+        "center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
