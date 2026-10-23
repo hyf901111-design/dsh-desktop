@@ -1,11 +1,12 @@
 import {defineTool} from '@deepseek-ai/dsh-tools'
 import {createHash} from 'node:crypto'
-import {lstat,readFile,realpath,stat} from 'node:fs/promises'
-import {isAbsolute,join,relative,resolve,sep} from 'node:path'
+import {lstat,opendir,readFile,realpath,stat} from 'node:fs/promises'
+import {basename,isAbsolute,join,relative,resolve,sep} from 'node:path'
 import {bundledSkillEnabled} from './bundled-skill-preferences.js'
 
 const SLUG='ework-equity-research',MAX_INPUT=4*1024*1024,MAX_OUTPUT=64*1024*1024,JOB_TIMEOUT_MS=90_000
-const OUTPUTS=new Map([['report.html','html'],['report.pdf','pdf'],['run.json','manifest'],['validation.json','validation'],['evidence.json','evidence'],['calculations.json','calculations'],['report-quality.json','quality']])
+const FIXED_OUTPUTS=new Map([['manifest','run.json'],['validation','validation.json'],['evidence','evidence.json'],['calculations','calculations.json'],['quality','report-quality.json']])
+const ARTIFACT_TYPES=new Set(['html','pdf',...FIXED_OUTPUTS.keys()])
 const object=value=>value&&typeof value==='object'&&!Array.isArray(value)&&[Object.prototype,null].includes(Object.getPrototypeOf(value))
 const inside=(root,path)=>{const part=relative(root,path);return part!==''&&part!=='..'&&!part.startsWith('..'+sep)&&!isAbsolute(part)}
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex')
@@ -76,28 +77,58 @@ async function boundedRead(file,limit=MAX_OUTPUT){
  return bytes
 }
 
+function reportBasename(name,type){
+ return typeof name==='string'&&Buffer.byteLength(name)<=240&&name===name.normalize('NFC')&&!/^[. ]|[<>:"/\\|?*\p{Cc}\p{Cf}\u2028\u2029]/u.test(name)&&!/^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i.test(name)&&name.endsWith('.'+type)&&name.length>type.length+1
+}
+
+function manifestNames(manifest){
+ const names=manifest?.artifacts
+ if(!object(names)||names.manifest!=='run.json'||Object.keys(names).length>ARTIFACT_TYPES.size)throw Error('研报交付文件映射无效。')
+ for(const[key,name]of Object.entries(names))if(!ARTIFACT_TYPES.has(key)||(FIXED_OUTPUTS.has(key)?name!==FIXED_OUTPUTS.get(key):!reportBasename(name,key)))throw Error('研报交付文件名无效。')
+ if(names.pdf&&(!names.html||names.pdf.slice(0,-4)!==names.html.slice(0,-5)))throw Error('HTML 与 PDF 必须使用同一正式报告名。')
+ return names
+}
+
 async function resultArtifacts(root,out){
  if(!out)return{}
  const directory=join(root,out)
  try{if(await realpath(directory)!==directory)return{}}catch{return{}}
  const artifacts={}
- for(const[name,key]of OUTPUTS)try{const info=await lstat(join(directory,name));if(info.isFile()&&!info.isSymbolicLink())artifacts[key]=join(directory,name)}catch{}
+ const add=async(key,name)=>{try{const info=await lstat(join(directory,name));if(info.isFile()&&!info.isSymbolicLink())artifacts[key]=join(directory,name)}catch{}}
+ for(const[key,name]of FIXED_OUTPUTS)await add(key,name)
+ if(artifacts.manifest)try{
+  const names=manifestNames(JSON.parse(await boundedRead(artifacts.manifest,1024*1024)))
+  for(const key of['html','pdf'])if(names[key])await add(key,names[key])
+  return artifacts
+ }catch{}
+ // Cancellation can precede run.json. Recover only unambiguous safe regular
+ // report files from a bounded listing; these paths never establish success.
+ const candidates={html:[],pdf:[]};let entries=0
+ try{for await(const entry of await opendir(directory)){
+  if(++entries>16)return artifacts
+  if(!entry.isFile()||entry.isSymbolicLink())continue
+  for(const type of['html','pdf'])if(reportBasename(entry.name,type))candidates[type].push(entry.name)
+ }}catch{return artifacts}
+ for(const type of['html','pdf'])if(candidates[type].length===1)await add(type,candidates[type][0])
  return artifacts
 }
 
 async function verifiedManifest(artifacts,inputSha256){
  if(!artifacts.manifest)return undefined
  const manifest=JSON.parse(await boundedRead(artifacts.manifest,1024*1024))
- if(!object(manifest)||manifest.inputSha256!==inputSha256||!object(manifest.outputs)||Object.keys(manifest.outputs).length>OUTPUTS.size)throw Error('研报运行记录与输入不匹配。')
+ if(!object(manifest)||manifest.inputSha256!==inputSha256||!object(manifest.outputs)||Object.keys(manifest.outputs).length>=ARTIFACT_TYPES.size)throw Error('研报运行记录与输入不匹配。')
+ const names=manifestNames(manifest),typesByName=new Map(Object.entries(names).map(([key,name])=>[name,key]))
+ if(Object.keys(artifacts).some(key=>!Object.hasOwn(names,key)))throw Error('研报实际文件未列入交付映射。')
+ for(const[key,name]of Object.entries(names))if(!artifacts[key]||basename(artifacts[key])!==name||key!=='manifest'&&!Object.hasOwn(manifest.outputs,name))throw Error('研报文件映射缺少实际文件或摘要。')
  const dual=manifest.delivery?.pdf?.status==='generated'
- if(dual&&['report.html','report.pdf','evidence.json','calculations.json','validation.json','report-quality.json'].some(name=>!Object.hasOwn(manifest.outputs,name)))throw Error('双格式报告缺少必需的输出摘要。')
+ if(dual&&['html','pdf','evidence','calculations','validation','quality'].some(key=>!names[key]||!Object.hasOwn(manifest.outputs,names[key])))throw Error('双格式报告缺少必需的输出摘要。')
  for(const[name,expected]of Object.entries(manifest.outputs)){
-  const key=OUTPUTS.get(name)
-  if(!key||!artifacts[key]||!/^[a-f0-9]{64}$/.test(expected)||hash(await boundedRead(artifacts[key],name==='report.pdf'?32*1024*1024:MAX_OUTPUT))!==expected)throw Error('研报交付文件摘要校验失败。')
+  const key=typesByName.get(name)
+  if(!key||key==='manifest'||!artifacts[key]||typeof expected!=='string'||!/^[a-f0-9]{64}$/.test(expected)||hash(await boundedRead(artifacts[key],key==='pdf'?32*1024*1024:MAX_OUTPUT))!==expected)throw Error('研报交付文件摘要校验失败。')
  }
  if(dual){
   const pdf=await boundedRead(artifacts.pdf,32*1024*1024)
-  if(pdf.subarray(0,5).toString('ascii')!=='%PDF-'||manifest.delivery.pdf.bytes!==pdf.length||manifest.delivery.pdf.sha256!==hash(pdf)||manifest.outputs['report.pdf']!==manifest.delivery.pdf.sha256)throw Error('PDF 交付记录与实际字节不一致。')
+  if(pdf.subarray(0,5).toString('ascii')!=='%PDF-'||manifest.delivery.pdf.bytes!==pdf.length||manifest.delivery.pdf.sha256!==hash(pdf)||manifest.outputs[names.pdf]!==manifest.delivery.pdf.sha256)throw Error('PDF 交付记录与实际字节不一致。')
  }
  return manifest
 }
@@ -141,19 +172,19 @@ export function registerResearchReportTool(ctx,{env=process.env,timeoutMs=JOB_TI
     if(!ctx.subprocess?.spawn)fail('客户端托管进程服务未就绪。')
     handle=ctx.subprocess.spawn({argv,cwd:identity.root,stdio:{stdin:'ignore',stdout:{maxBytes:2*1024*1024},stderr:{maxBytes:8192}},graceMs:250,signal:controller.signal,env:childEnv})
     let outcome
-    try{outcome=await handle.done}catch{return{ok:false,command:args.command,status:controller.signal.aborted?'cancelled':'failed',exitCode:null,artifacts:await resultArtifacts(identity.root,args.out),error:'研报引擎进程未能完成。'}}
+    try{outcome=await handle.done}catch{return{ok:false,command:args.command,status:controller.signal.aborted?'cancelled':'failed',exitCode:null,artifactVerification:'unverified',artifacts:await resultArtifacts(identity.root,args.out),error:'研报引擎进程未能完成。'}}
     const artifacts=await resultArtifacts(identity.root,args.out)
-    if(controller.signal.aborted)return{ok:false,command:args.command,status:exec.signal?.aborted?'cancelled':'timeout',exitCode:outcome.exitCode,artifacts,error:exec.signal?.aborted?'研报生成已取消；已生成文件予以保留。':'研报生成超时；已生成文件予以保留。'}
+    if(controller.signal.aborted)return{ok:false,command:args.command,status:exec.signal?.aborted?'cancelled':'timeout',exitCode:outcome.exitCode,artifactVerification:'unverified',artifacts,error:exec.signal?.aborted?'研报生成已取消；已生成文件予以保留。':'研报生成超时；已生成文件予以保留。'}
     assertCurrent(ctx,identity,controller.signal)
     const stdout=handle.collected?.stdout?.readFrom(0)
     let result
-    try{if(!stdout||stdout.lossy)throw Error();result=JSON.parse(stdout.text)}catch{return{ok:false,command:args.command,status:'failed',exitCode:outcome.exitCode,artifacts,error:'研报引擎返回的运行记录无效。'}}
+    try{if(!stdout||stdout.lossy)throw Error();result=JSON.parse(stdout.text)}catch{return{ok:false,command:args.command,status:'failed',exitCode:outcome.exitCode,artifactVerification:'unverified',artifacts,error:'研报引擎返回的运行记录无效。'}}
     if(args.command==='doctor')return{ok:outcome.exitCode===0&&result.ok===true,command:'doctor',exitCode:outcome.exitCode,engineVersion:result.engineVersion,node:result.node,defaultFormats:result.defaultFormats,pdfRuntimeConfigured:result.pdfRuntimeConfigured===true}
     if(args.command==='validate')return{ok:outcome.exitCode===0&&result.ok===true,command:'validate',exitCode:outcome.exitCode,synthetic:result.synthetic===true,diagnostics:diagnostics(result.diagnostics)}
     let manifest
-    try{manifest=await verifiedManifest(artifacts,inputSha256)}catch{return{ok:false,command:'run',status:'integrity-failed',exitCode:outcome.exitCode,artifacts,error:'研报输入或交付文件摘要不一致，不能确认完成。'}}
+    try{manifest=await verifiedManifest(artifacts,inputSha256)}catch{return{ok:false,command:'run',status:'integrity-failed',exitCode:outcome.exitCode,artifactVerification:'unverified',artifacts,error:'研报输入或交付文件摘要不一致，不能确认完成。'}}
     const complete=outcome.exitCode===0&&result.ok===true&&manifest?.delivery?.pdf?.status==='generated'&&manifest.delivery.completed?.includes('html')&&manifest.delivery.completed?.includes('pdf')&&artifacts.html&&artifacts.pdf
-    return{ok:!!complete,command:'run',exitCode:outcome.exitCode,status:manifest?.status??'blocked',delivery:manifest?.delivery,researchCoverage:manifest?.researchCoverage,artifacts,diagnostics:diagnostics(result.diagnostics),...!complete?{error:'研报尚未完成双格式交付，请查看校验和运行记录。'}:{}}
+    return{ok:!!complete,command:'run',exitCode:outcome.exitCode,status:manifest?.status??'blocked',delivery:manifest?.delivery,researchCoverage:manifest?.researchCoverage,artifactVerification:manifest?'verified':'unverified',artifacts,diagnostics:diagnostics(result.diagnostics),...!complete?{error:'研报尚未完成双格式交付，请查看校验和运行记录。'}:{}}
    }
    const task=operation();state.done=task
    try{

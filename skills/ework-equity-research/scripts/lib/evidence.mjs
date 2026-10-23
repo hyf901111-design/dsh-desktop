@@ -130,7 +130,7 @@ export function verifyFacts(packet, sources, texts, diagnostics) {
           !UNITS[fact.unit] || !idValid(fact.sourceId)) throw new Error('FACT_SCHEMA:事实需唯一id、受支持metric/period/scope/unit/value/sourceId')
       ids.add(fact.id)
       const declared = normalized(fact.value, fact.unit)
-      const expectedUnit = fact.metric === 'shares' ? 'shares' : fact.metric === 'currentPrice' ? 'CNY_per_share' : fact.metric === 'grossMargin' ? 'ratio' : 'CNY'
+      const expectedUnit = fact.metric === 'shares' ? 'shares' : ['currentPrice','basicEarningsPerShare','dilutedEarningsPerShare','netAssetsPerShare'].includes(fact.metric) ? 'CNY_per_share' : ['grossMargin','returnOnEquity'].includes(fact.metric) ? 'ratio' : 'CNY'
       if (declared.unit !== expectedUnit) fail('UNIT_MISMATCH', `指标${fact.metric}要求${expectedUnit}量纲，增长率须使用明确计算`)
       const evidence = fact.evidence
       const loc = evidence?.locator
