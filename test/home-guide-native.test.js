@@ -14,7 +14,12 @@ async function fixture({sessionId='owner',subagentPanel=false}={}){
  doc.body.innerHTML='<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="owner"></header><textarea>原草稿</textarea></div><section data-home-guide="run-a"><div id="guide-host"></div></section></main><div id="outside"></div>'
  Object.defineProperty(win.HTMLElement.prototype,'clientWidth',{configurable:true,get(){return 1100}})
  Object.defineProperty(win.HTMLElement.prototype,'clientHeight',{configurable:true,get(){return 720}})
- win.HTMLElement.prototype.getBoundingClientRect=function(){return{x:0,y:0,left:0,top:0,right:1100,bottom:720,width:1100,height:720,toJSON(){return{}}}}
+ // Happy DOM has no layout engine. Expose native card inline geometry here;
+ // actual CSS transitions, viewport fitting and footer bounds run in Chromium.
+ win.HTMLElement.prototype.getBoundingClientRect=function(){
+  const card=this.hasAttribute('data-research-node-id'),width=card?parseFloat(this.style.width):1100,height=card?parseFloat(this.style.height):720,left=card?parseFloat(this.style.left)-width/2:0,top=card?parseFloat(this.style.top)-height/2:0
+  return{x:left,y:top,left,top,right:left+width,bottom:top+height,width,height,toJSON(){return{left,top,width,height}}}
+ }
  win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  let descriptor,liveCalls=0;win.dshDesktop={financialWidget:{request:()=>{liveCalls++;throw Error('must not use real provider')}},componentLibrary:{request:()=>{liveCalls++;throw Error('must not read real custom library')}}};win.__ModuleLoader__={load:d=>descriptor=d}
  const patched=patchHomeGuideNative(source).replace('exports.NativeHomeGuidePortal = NativeHomeGuidePortal;','exports.NativeHomeGuidePortal = NativeHomeGuidePortal;exports.__guideResident=homeGuideNativeResidentSession;')

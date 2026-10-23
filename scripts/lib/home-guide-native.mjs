@@ -225,13 +225,53 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false }) {
           react_dom.flushSync(() => menu().querySelector('[data-arrange-mode="three"]').click())
         } else if (button && !button.disabled) react_dom.flushSync(() => button.click())
         else if (!workspace.organizeCanvas(new Map(), overview ? 'three' : 'standard')) throw Error('画布暂时无法整理。')
-        await settle(ticket, () => true, 16)
-        // A stock-row focus can scroll its canvas. Finish the expert's arrange
-        // at the document start so native component headers remain visible.
         const canvas = ticket.host.querySelector('[data-research-canvas]')
-        if (canvas) canvas.scrollTop = 0
+        // Arrange performs a delayed native content measurement. Let it finish
+        // before the expert sizes this private board to its actual viewport.
+        await settle(ticket, () => !canvas?.__eworkContentFit)
+        if (canvas) {
+          canvas.scrollTop = 0
+          const bounds = canvas.getBoundingClientRect(), tools = toolbar()?.getBoundingClientRect()
+          const safeBottom = Math.min(bounds.bottom - 12, tools?.height > 0 ? tools.top - 12 : bounds.bottom - 12)
+          const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width)
+          const cells = workspace.getWorkbenchVisibleCells(), nodes = new Map(current.artifacts.map(node => [node.id, node]))
+          const rows = [...new Set(cells.map(cell => cell.y))].sort((a, b) => a - b).map(y => {
+            const members = cells.filter(cell => cell.y === y)
+            // Keep native labels, the three stock rows and a useful price chart
+            // readable. If these minima do not fit, retain native canvas scroll.
+            const minimum = Math.max(...members.map(cell => Math.ceil((({ watchlist: 238, quote: 280, news: 180 }[nodes.get(cell.id)?.containerSpec?.widget] || 160) + metrics.gap) / metrics.rowStep)))
+            const desired = Math.max(...members.map(cell => cell.h))
+            return { y, minimum, desired, height: Math.min(desired, minimum) }
+          })
+          const budget = Math.floor((safeBottom - bounds.top - metrics.inset + metrics.gap) / metrics.rowStep)
+          const desired = rows.reduce((sum, row) => sum + row.desired, 0), minimum = rows.reduce((sum, row) => sum + row.height, 0)
+          if (desired > budget && minimum <= budget) {
+            const capacity = desired - minimum, extra = budget - minimum
+            for (const row of rows) row.height += Math.floor(extra * (row.desired - row.height) / capacity)
+            let remaining = budget - rows.reduce((sum, row) => sum + row.height, 0)
+            for (const row of rows) if (remaining && row.height < row.desired) { row.height++; remaining-- }
+            let top = 0
+            const fitted = new Map()
+            for (const row of rows) {
+              for (const cell of cells.filter(cell => cell.y === row.y)) fitted.set(cell.id, { ...cell, y: top, h: Math.min(cell.h, row.height) })
+              top += row.height
+            }
+            if (!workspace.applyWorkbenchCells(cells.map(cell => fitted.get(cell.id)), false)) throw Error('教程画布暂时无法调整。')
+          }
+        }
+        // Dismiss only this demo's native edit receipt for the final overview.
+        const receipt = [...document.querySelectorAll('[data-canvas-action-receipt]')].find(node => node.dataset.eworkToolbarOwner === id)
+        react_dom.flushSync(() => receipt?.querySelector('[data-canvas-action-dismiss]')?.click())
+        // Finish at the document start so native component headers stay visible.
         react_dom.flushSync(() => { workspace.setViewport({ x: 0, y: 0, scale: 1 }); workspace.updateSelection([watchlist, quote, news], 'replace') })
-        await settle(ticket)
+        await settle(ticket, () => {
+          if (!canvas) return false
+          const origin = canvas.getBoundingClientRect()
+          return workspace.getSnapshot().artifacts.every(node => {
+            const card = canvas.querySelector('[data-research-node-id="' + CSS.escape(node.id) + '"]'), box = card?.getBoundingClientRect()
+            return box && Math.abs(box.left - origin.left - node.x + node.width / 2) < 2 && Math.abs(box.top - origin.top - node.y + node.height / 2) < 2 && Math.abs(box.width - node.width) < 2 && Math.abs(box.height - node.height) < 2
+          })
+        })
       }
     }
     const receive = event => {
