@@ -1,6 +1,7 @@
 import {decimal} from './numbers.mjs'
 import {officialLogo} from './brand.mjs'
 import {chartNeedsDetail} from './chart-contract.mjs'
+import {researchV5TargetCount,coverMarketAvailable,renderMarketCoverThumbnail} from './research-v5-layout.mjs'
 // Shared publication structure. Every displayed amount comes from the current
 // verified fact set; presentation never fills a missing field with zero.
 const FREQUENCIES={FY:'全年',H1:'半年度',H2:'下半年度',Q1:'第一季度',Q2:'第二季度',Q3:'第三季度',Q4:'第四季度',date:'时点'}
@@ -15,16 +16,17 @@ export function financialGroups(facts,metrics){
 }
 export const MAX_PUBLICATION_NAVIGATION_TARGETS=512
 export function publicationTargetCount(packet,facts,values,calculation,observationCount=0){
+ facts=facts.filter(f=>f.scope!=='市场')
  const report=packet.report??{},sections=report.sections??[]
  const ended=facts.filter(f=>periodEnd(f.period)<=(f.metric==='currentPrice'?packet.asOf:packet.financialAsOf))
  const scope=ended.some(f=>f.scope==='合并')?'合并':ended[0]?.scope
  const historical=financialGroups(ended.filter(f=>f.scope===scope),['revenue','netIncomeAttributableToParent']).filter(g=>['FY','H1'].includes(g.frequency)&&g.unit==='CNY').length
  const fy=ended.filter(f=>f.scope===scope&&f.normalizedUnit==='CNY'&&/^FY\d{4}$/.test(f.period))
  const common=[...new Set(fy.filter(f=>f.metric==='revenue').map(f=>f.period))].filter(period=>['revenue','netIncomeAttributableToParent'].every(metric=>fy.filter(f=>f.period===period&&f.metric===metric).length===1)).sort().slice(-3)
- const coverChart=common.length>=2?1:0
+ const coverChart=coverMarketAvailable(packet,calculation)||common.length>=2?1:0
  let count=5+sections.length+(report.theses?.length?1:0)+historical+coverChart+2
  count+=STATEMENTS.flatMap(([,metrics])=>financialGroups(ended.filter(f=>periodEnd(f.period)<=packet.financialAsOf),metrics)).reduce((n,g)=>n+Math.ceil(g.periods.length/5),0)
- count+=(calculation.calculations?.length?1:0)+(calculation.dcf?3:0)+(observationCount>0?1:0)
+ count+=(calculation.calculations?.length?1:0)+(calculation.dcf&&calculation.dcf.method!=='driver-fcff-v2'?3:0)+(observationCount>0?1:0)+researchV5TargetCount(calculation)
  for(const section of sections){
   count+=(section.tables??[]).length
   for(const chart of section.charts??[])count+=1+(chartNeedsDetail(chart)?1:0)
@@ -52,17 +54,20 @@ export function renderFinancialStatements(facts,h,index){
  facts=facts.filter(f=>periodEnd(f.period)<=h.financialAsOf)
  return `<section id="financial-statements" class="financial-statements"><h2>财务三表摘要</h2><p class="small">按报表范围、期间频率与单位分组；仅列财务基期已结束期间，摘要不替代完整财务报表。金额由同次证据事实换算，未核验项目不补零。</p>${STATEMENTS.map(([name,metrics])=>financialGroups(facts,metrics).map(g=>renderGroup(g,`${name} · ${g.scope} · ${g.label}`,h,index)).join('')).join('')||'<p>本稿没有可列示的已核验三表数据。</p>'}</section>`
 }
-export function renderPublicationCover({packet,metadata,title,coverage,facts,summary,scopeLabel},h,index){
+export function renderPublicationCover({packet,metadata,title,coverage,facts,summary,scopeLabel,calculation},h,index){
  facts=facts.filter(f=>periodEnd(f.period)<=(f.metric==='currentPrice'?packet.asOf:packet.financialAsOf))
  const {escape:e,formatted,values,labels,table,researchChart,sourceNote}=h,scope=facts.some(f=>f.scope==='合并')?'合并':facts[0]?.scope
  const basics=['currentPrice','shares','basicEarningsPerShare','returnOnEquity','netAssetsPerShare','assets','liabilities','cash','inventory','contractLiabilities'].flatMap(metric=>{const fs=facts.filter(f=>f.metric===metric&&(metric==='currentPrice'||f.scope===scope)).sort((a,b)=>periodEnd(b.period).localeCompare(periodEnd(a.period)));const latest=fs[0];if(!latest||fs.filter(f=>f.period===latest.period).length!==1)return [];return [latest]}).slice(0,8)
  const commonBasicPeriod=basics.length&&!basics.some(f=>f.metric==='currentPrice')&&new Set(basics.map(f=>f.period)).size===1?basics[0].period:null
  const basicRows=basics.map(f=>`<tr><td>${e(labels[f.metric]??f.metric)}${commonBasicPeriod?'':`<small>${e(f.period)}</small>`}</td><td class="number">${e(formatted(values.get(f.id)))}</td></tr>`)
  const fy=facts.filter(f=>f.scope===scope&&f.normalizedUnit==='CNY'&&/^FY\d{4}$/.test(f.period)),metrics=['revenue','netIncomeAttributableToParent'],common=[...new Set(fy.filter(f=>f.metric==='revenue').map(f=>f.period))].filter(period=>metrics.every(metric=>fy.filter(f=>f.period===period&&f.metric===metric).length===1)).sort().slice(-3)
- const chart=common.length>=2?researchChart({title:'历史年度收入与归母净利润',series:metrics.map(metric=>({name:labels[metric],refs:common.map(period=>fy.find(f=>f.period===period&&f.metric===metric).id)}))},packet,values,index,{narrow:true}):'<p class="small">缺少同口径、可比年度收入与利润，不绘制拼接图。</p>'
+ const chart=coverMarketAvailable(packet,calculation)?renderMarketCoverThumbnail(calculation.market,h,index):common.length>=2?researchChart({title:'历史年度收入与归母净利润',series:metrics.map(metric=>({name:labels[metric],refs:common.map(period=>fy.find(f=>f.period===period&&f.metric===metric).id)}))},packet,values,index,{narrow:true}):'<p class="small">缺少同口径、可比年度收入与利润，不绘制拼接图。</p>'
  const historical=financialGroups(facts.filter(f=>f.scope===scope),['revenue','netIncomeAttributableToParent']).filter(g=>['FY','H1'].includes(g.frequency)&&g.unit==='CNY').map(g=>({...g,periods:g.periods.slice(-2),metrics:['revenue','yoy:revenue','netIncomeAttributableToParent','yoy:netIncomeAttributableToParent','basicEarningsPerShare']}))
  const missingBasics=[['returnOnEquity','ROE'],['netAssetsPerShare','每股净资产']].filter(([metric])=>!facts.some(f=>f.metric===metric&&f.scope===scope)).map(([,label])=>label)
- return `<header class="publication-cover"><div class="cover-date"><span>${e(packet.asOf)} · 研究截止</span><span class="publication-brand official-logo" role="img" aria-label="EWork Odyssey">${officialLogo}</span></div><div class="cover-identity">${e(metadata.companyLabel)}（${e(packet.company.ticker)}）${packet.report?.publication?.industry?`<span>${e(packet.report.publication.industry)}</span>`:''}</div><h1>${e(title)}</h1><div class="cover-subtitle"><span>—— ${e(metadata.reportName)}</span><strong>${e(metadata.reportType)}</strong></div>${packet.synthetic?'<div class="synthetic"><strong>虚构数据演示</strong>：仅用于检查研究流程，不代表真实上市公司或行情。</div>':''}<div class="cover-layout"><aside class="cover-sidebar"><div class="rating-block"><h3>研究状态 <span class="unrated">未评级</span></h3><p class="small">${e(scopeLabel)}；行情及估值模型以本稿核验状态为准。</p></div><h3>财务基本数据</h3>${commonBasicPeriod?`<p class="small">${e(scope)} · 截至 ${e(commonBasicPeriod)}</p>`:''}${basicRows.length?table(['已核验项目','数值'],basicRows):'<p class="small">尚无可列示的已核验基本数据。</p>'}${sourceNote(basics.map(f=>f.id),true)}${basics.some(f=>f.metric==='currentPrice')?'<p class="small">报价时点单列；财务期末不代表行情时点。</p>':''}${missingBasics.length?`<p class="small">${e(missingBasics.join('、'))}尚未核验；每股收益见下方摘要。</p>`:''}${chart}</aside><div class="cover-main"><h2>投资要点</h2><div class="summary">${summary}</div></div></div><div class="cover-financial"><h3>历史财务摘要与预测状态</h3><div class="cover-history">${historical.map(g=>renderGroup(g,`历史财务摘要 · ${g.scope} · ${g.label}`,h,index,{cover:true})).join('')||'<p class="small">本稿没有可比历史实绩，未编造摘要。</p>'}</div><p class="forecast-status"><strong>预测与估值状态：</strong>${packet.dcf?'情景模型单列假设与价值桥；历史实绩不标注为预测值。':'盈利预测及估值未建模，不输出目标价或评级。上表仅为历史实绩。'}</p></div></header>`
+ const driver=calculation?.dcf?.method==='driver-fcff-v2'&&calculation.dcf.status==='calculated'?calculation.dcf:null
+ const basis=driver?`<div class="cover-basis"><p><strong>财务披露基期：</strong>${e(packet.financialAsOf)}（${e(metadata.financialPeriodLabel)}）</p><p class="small">财务披露来源：</p>${sourceNote(basics.filter(f=>f.metric!=='currentPrice').map(f=>f.id),true)}<p><strong>估值基准日：</strong>${e(driver.valuationAsOf)}</p>${driver.currentPrice?`<p><strong>经核验价格：</strong>${e(formatted({value:driver.currentPrice.value,unit:'CNY_per_share'}))}</p>${sourceNote(driver.currentPrice.sourceRefs??[],true)}`:''}<p class="small">估值参数来源：</p>${sourceNote(driver.wacc?.sourceRefs??[],true)}</div>`:''
+ const requirementGaps=packet.schemaVersion===2&&coverage.profile==='full'&&!coverage.researchRequirements?.complete?`<div class="note cover-research-gaps"><strong>研究资料尚不完整：</strong>${coverage.researchRequirements.missing.map(g=>`<p>${e(g.missing)} ${e(g.impact)} 后续：${e(g.nextStep)}</p>`).join('')}</div>`:''
+ return `<header class="publication-cover"><div class="cover-date"><span>${e(packet.asOf)} · 研究截止</span><span class="publication-brand official-logo" role="img" aria-label="EWork Odyssey">${officialLogo}</span></div><div class="cover-identity">${e(metadata.companyLabel)}（${e(packet.company.ticker)}）${packet.report?.publication?.industry?`<span>${e(packet.report.publication.industry)}</span>`:''}</div><h1>${e(title)}</h1><div class="cover-subtitle"><span>—— ${e(metadata.reportName)}</span></div>${packet.synthetic?'<div class="synthetic"><strong>虚构数据演示</strong>：仅用于检查研究流程，不代表真实上市公司或行情。</div>':''}<div class="cover-layout"><aside class="cover-sidebar"><div class="rating-block"><h3>研究状态 <span class="unrated">未评级</span></h3><p class="small">${e(scopeLabel)}；行情及估值模型以本稿核验状态为准。</p></div><h3>财务基本数据</h3>${commonBasicPeriod?`<p class="small">${e(scope)} · 截至 ${e(commonBasicPeriod)}</p>`:''}${basicRows.length?table(['已核验项目','数值'],basicRows):'<p class="small">尚无可列示的已核验基本数据。</p>'}${basis||sourceNote(basics.map(f=>f.id),true)}${basics.some(f=>f.metric==='currentPrice')?'<p class="small">报价时点单列；财务期末不代表行情时点。</p>':''}${missingBasics.length?`<p class="small">${e(missingBasics.join('、'))}尚未核验；每股收益见下方摘要。</p>`:''}${chart}</aside><div class="cover-main"><h2>投资要点</h2><div class="summary">${summary}</div>${requirementGaps}</div></div><div class="cover-financial"><h3>历史财务摘要与预测状态</h3><div class="cover-history">${historical.map(g=>renderGroup(g,`历史财务摘要 · ${g.scope} · ${g.label}`,h,index,{cover:true})).join('')||'<p class="small">本稿没有可比历史实绩，未编造摘要。</p>'}</div><p class="forecast-status"><strong>预测与估值状态：</strong>${driver?'驱动式DCF已列示经营预测、实际年限折现、终值、归属权益桥及敏感性；历史实绩与研究假设分开列示。':packet.dcf?'情景模型单列假设与价值桥；历史实绩不标注为预测值。':'盈利预测及估值未建模，不输出目标价或评级。上表仅为历史实绩。'}</p></div></header>`
 }
 export const publicationStyles=`
 :root{color-scheme:light}

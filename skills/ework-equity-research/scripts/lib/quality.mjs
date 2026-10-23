@@ -1,11 +1,13 @@
 import {chartDiagnostics} from './chart-contract.mjs'
+import {researchRequirements} from './requirements.mjs'
 const text=v=>typeof v==='string'&&v.trim().length>0&&v.length<=12000
 const error=(code,path,message)=>({severity:'error',code,path,message})
 export const RESEARCH_SECTIONS=Object.freeze({business:'公司与商业模式',industry:'行业与竞争',performance:'业绩与经营驱动',profitability:'盈利质量',balance:'资产负债与营运资本',cashflow:'现金流与资本配置',forecast:'预测与情景假设',valuation:'估值与敏感性',risks:'风险与反证',monitoring:'跟踪与验证'})
-export function reportCoverage(report={}){
+export function reportCoverage(report={},packet,calculation){
  report=report&&typeof report==='object'?report:{}
  const profile=report.profile??'brief',sections=(Array.isArray(report.sections)?report.sections:[]).map(s=>({kind:s?.kind,status:s?.status,title:s?.title}))
- return {profile,structureComplete:profile==='full'&&Object.keys(RESEARCH_SECTIONS).every(k=>sections.some(s=>s.kind===k)),hasGaps:profile!=='full'||sections.some(s=>s.status!=='supported'),sections,thesisCount:Array.isArray(report.theses)?report.theses.length:0,reliance:'structure-and-citations-only; economic reasoning requires analyst review'}
+ const requirements=packet?researchRequirements(packet,calculation):null
+ return {profile,structureComplete:profile==='full'&&Object.keys(RESEARCH_SECTIONS).every(k=>sections.some(s=>s.kind===k)),hasGaps:profile!=='full'||sections.some(s=>s.status!=='supported')||packet?.schemaVersion===2&&!requirements.complete,sections,thesisCount:Array.isArray(report.theses)?report.theses.length:0,...(requirements?{researchRequirements:requirements}:{}),reliance:'structure-and-citations-only; economic reasoning requires analyst review'}
 }
 export function qualityDiagnostics(report,values){
  const ds=[],fail=(code,path,message)=>ds.push(error(code,path,message))

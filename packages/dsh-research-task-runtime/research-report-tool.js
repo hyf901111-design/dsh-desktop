@@ -184,7 +184,7 @@ export function registerResearchReportTool(ctx,{env=process.env,timeoutMs=JOB_TI
     let manifest
     try{manifest=await verifiedManifest(artifacts,inputSha256)}catch{return{ok:false,command:'run',status:'integrity-failed',exitCode:outcome.exitCode,artifactVerification:'unverified',artifacts,error:'研报输入或交付文件摘要不一致，不能确认完成。'}}
     const complete=outcome.exitCode===0&&result.ok===true&&manifest?.delivery?.pdf?.status==='generated'&&manifest.delivery.completed?.includes('html')&&manifest.delivery.completed?.includes('pdf')&&artifacts.html&&artifacts.pdf
-    return{ok:!!complete,command:'run',exitCode:outcome.exitCode,status:manifest?.status??'blocked',delivery:manifest?.delivery,researchCoverage:manifest?.researchCoverage,artifactVerification:manifest?'verified':'unverified',artifacts,diagnostics:diagnostics(result.diagnostics),...!complete?{error:'研报尚未完成双格式交付，请查看校验和运行记录。'}:{}}
+    return{ok:!!complete,command:'run',exitCode:outcome.exitCode,status:manifest?.status??'blocked',delivery:manifest?.delivery,researchCoverage:manifest?.researchCoverage,researchRequirements:manifest?.researchRequirements,artifactVerification:manifest?'verified':'unverified',artifacts,diagnostics:diagnostics(result.diagnostics),...!complete?{error:'研报尚未完成双格式交付，请查看校验和运行记录。'}:{}}
    }
    const task=operation();state.done=task
    try{

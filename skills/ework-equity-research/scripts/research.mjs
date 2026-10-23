@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-import { readFile, writeFile, mkdir, realpath, readdir, stat } from 'node:fs/promises'
+import { readFile, writeFile, rename, mkdir, realpath, readdir, stat } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
 import { validatePacket, calculatePacket } from './lib/index.mjs'
 import { validateReport, renderReport } from './lib/report.mjs'
 import {reportCoverage,RESEARCH_SECTIONS} from './lib/quality.mjs'
-import {requestResearchPdf} from './lib/pdf-client.mjs'
+import {requestResearchPdfResult,fillPrintedNavigation} from './lib/pdf-client.mjs'
 import {publicationMetadata} from './lib/publication.mjs'
 
-const VERSION = '1.3.0'
+const VERSION = '1.4.0'
 const resourceRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const json = value => JSON.stringify(value, null, 2) + '\n'
@@ -72,11 +72,11 @@ async function main() {
   if (command === 'hash') return { sha256: hash(await readLimited(resolve(options.file), 64 * 1024 * 1024)) }
   if (command === 'init') {
     const packet = {
-      schemaVersion: 1, synthetic: false,
+      schemaVersion: 2, synthetic: false,
       company: { name: options.company ?? '', ticker: options.ticker ?? '', currency: 'CNY' },
-      asOf: options['as-of'] ?? '', financialAsOf: '', sources: [], facts: [], calculations: [],
+      asOf: options['as-of'] ?? '', valuationAsOf:'',financialAsOf: '', sources: [], facts: [], calculations: [],
       observations: [],
-      report: { profile:'full', publication:{reportType:'公司研究报告'},title: '{{company}}研究报告', summary: [], theses:[], sections:Object.entries(RESEARCH_SECTIONS).map(([kind,title])=>({kind,title,status:'missing',paragraphs:[],gap:{missing:'尚未收集并核验所需资料。',impact:'本节暂不能形成有证据支持的结论。',nextStep:'补充原文证据、可比数据和研究判断。'}})) },
+      report: { profile:'full', publication:{reportType:'公司深度研究与DCF情景估值报告'},title: '{{company}}研究报告', summary: [], theses:[], sections:Object.entries(RESEARCH_SECTIONS).map(([kind,title])=>({kind,title,status:'missing',paragraphs:[],gap:{missing:'尚未收集并核验所需资料。',impact:'本节暂不能形成有证据支持的结论。',nextStep:'补充原文证据、可比数据和研究判断。'}})) },
     }
     const file = resolve(options.out)
     await mkdir(dirname(file), { recursive: true })
@@ -110,26 +110,31 @@ async function main() {
   await output('evidence','evidence.json', json(result.evidence))
   await output('calculations','calculations.json', json(result.calculation))
   await output('validation','validation.json', json(result.validation))
-  const coverage=reportCoverage(result.packet.report),delivery={requested:format==='both'?['html','pdf']:['html'],completed:[],pdf:{status:format==='both'?'pending':'not-requested'}}
+  const coverage=reportCoverage(result.packet.report,result.packet,result.calculation),delivery={requested:format==='both'?['html','pdf']:['html'],completed:[],pdf:{status:format==='both'?'pending':'not-requested'}}
   if (result.validation.ok) {
     const {fileStem}=publicationMetadata(result.packet),htmlName=fileStem+'.html',pdfName=fileStem+'.pdf'
     const html=renderReport(result.packet,result.evidence,result.calculation)
     await output('html',htmlName,html);delivery.completed.push('html')
     await output('quality','report-quality.json',json(coverage))
     if(format==='both')try{
-      const pdf=await requestResearchPdf(html);await output('pdf',pdfName,pdf);delivery.completed.push('pdf');delivery.pdf={status:'generated',bytes:pdf.length,sha256:outputs[pdfName]}
+      const printed=await requestResearchPdfResult(html)
+      if(printed.pagination){
+        const finalHtml=fillPrintedNavigation(html,printed.pagination),pending=join(out,htmlName+'.pagination-tmp')
+        await writeFile(pending,finalHtml,{flag:'wx'});await rename(pending,join(out,htmlName));outputs[htmlName]=hash(finalHtml)
+      }else if(result.packet.schemaVersion===2)throw Error('PDF_PAGINATION_UNAVAILABLE:V5需由当前客户端返回真实目录分页，不能以空页码交付')
+      const pdf=printed.pdf;await output('pdf',pdfName,pdf);delivery.completed.push('pdf');delivery.pdf={status:'generated',bytes:pdf.length,sha256:outputs[pdfName],...(printed.pagination?{pageCount:printed.pagination.pageCount,navigationTargets:Object.keys(printed.pagination.pages).length}: {})}
     }catch(error){delivery.pdf={status:'failed',error:error.message};process.exitCode=1}
   }
   const manifest = {
     engineVersion: VERSION, status: !result.validation.ok?'blocked':delivery.pdf.status==='failed'?'pdf-failed':coverage.profile==='brief'?'rendered-brief':coverage.hasGaps?'rendered-with-gaps':'rendered-for-review',
-    delivery,researchCoverage:coverage,
+    delivery,researchCoverage:coverage,researchRequirements:coverage.researchRequirements,
     createdAt: new Date().toISOString(), inputSha256: result.inputSha256,
     engineSha256: await codeHash(), synthetic: result.packet.synthetic,
     externalAuthenticity: 'unverified', artifacts:{...artifacts,manifest:'run.json'},outputs,
   }
   await writeFile(join(out, 'run.json'), json(manifest), { flag: 'wx' })
   if (!result.validation.ok) process.exitCode = 1
-  return { ok: result.validation.ok&&delivery.pdf.status!=='failed', out, status: manifest.status, delivery, artifacts:manifest.artifacts,researchCoverage:coverage, diagnostics: result.validation.diagnostics }
+  return { ok: result.validation.ok&&delivery.pdf.status!=='failed', out, status: manifest.status, delivery, artifacts:manifest.artifacts,researchCoverage:coverage,researchRequirements:coverage.researchRequirements,diagnostics: result.validation.diagnostics }
 }
 main().then(result => process.stdout.write(json(result))).catch(error => {
   process.stderr.write(json({ ok: false, error: error.message, code: error.code ?? 'COMMAND' }))

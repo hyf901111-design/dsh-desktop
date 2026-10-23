@@ -2,7 +2,8 @@ import { readFile, realpath, stat } from 'node:fs/promises'
 import { resolve, relative, isAbsolute, dirname } from 'node:path'
 import { createHash } from 'node:crypto'
 import { displayDecimal } from './numbers.mjs'
-import { METRICS, UNITS, isObject, isText, isTimestamp, idValid, diagnostic, periodKey, normalized } from './schema.mjs'
+import { METRICS, UNITS, isObject, isText, isTimestamp, idValid, reservedResultId, diagnostic, periodKey, normalized } from './schema.mjs'
+import {resolveFactPeriodMapping,resolveFactScopeContext,resolveFactUnitMapping,issuerReportScope,isIssuerReportTitle,explicitScopeHeadings} from './fact-context.mjs'
 export const digest = value => createHash('sha256').update(value).digest('hex')
 const inside = (root, path) => {
   const rel = relative(root, path)
@@ -81,12 +82,12 @@ function unembedded(text, token, vocabulary) {
   return false
 }
 
-function scopeMarkers(lines) {
+function scopeMarkers(lines,allowedScopes=['合并','母公司']) {
   const scopes = new Set()
-  for (const line of lines) for (const scope of ['合并', '母公司']) {
+  for (const line of lines) for (const scope of allowedScopes) {
     if ((/^\s*(?:范围|报表范围|口径)\s*[:：]/.test(line) && line.includes(scope)) ||
-        new RegExp(`${scope}(?:资产负债表|利润表|现金流量表|财务报表)`).test(line) ||
-        new RegExp(`(?:^|[\\s:：()（）])${scope}(?=$|[\\s()（）])`).test(line)) scopes.add(scope)
+        new RegExp(`${escapeRE(scope)}(?:资产负债表|利润表|现金流量表|财务报表)`).test(line) ||
+        new RegExp(`(?:^|[\\s:：()（）])${escapeRE(scope)}(?=$|[\\s()（）])`).test(line)) scopes.add(scope)
   }
   return scopes
 }
@@ -122,6 +123,7 @@ function nearestPeriod(window, valueIndex, column) {
 export function verifyFacts(packet, sources, texts, diagnostics) {
   const facts = []
   const ids = new Set()
+  const allowedScopes=packet.schemaVersion===2?['合并','母公司','市场',...(packet.entityScopes??[])]:['合并','母公司']
   for (const [index, fact] of packet.facts.entries()) {
     const path = `facts[${index}]`
     const start = diagnostics.length
@@ -129,16 +131,19 @@ export function verifyFacts(packet, sources, texts, diagnostics) {
     const result = { ...fact, status: 'invalid' }
     try {
       if (!isObject(fact) || !idValid(fact.id) || ids.has(fact.id) || !METRICS[fact.metric] ||
-          !periodKey(fact.period) || !['合并', '母公司'].includes(fact.scope) ||
+          !periodKey(fact.period) || !allowedScopes.includes(fact.scope) ||
           !UNITS[fact.unit] || !idValid(fact.sourceId)) throw new Error('FACT_SCHEMA:事实需唯一id、受支持metric/period/scope/unit/value/sourceId')
       ids.add(fact.id)
+      if(packet.schemaVersion===2&&reservedResultId(fact.id))fail('FACT_SCHEMA','该ID前缀保留给同次模型结果，不能由输入事实覆盖')
       const declared = normalized(fact.value, fact.unit)
-      const expectedUnit = fact.metric === 'shares' ? 'shares' : ['currentPrice','basicEarningsPerShare','dilutedEarningsPerShare','netAssetsPerShare'].includes(fact.metric) ? 'CNY_per_share' : ['grossMargin','returnOnEquity'].includes(fact.metric) ? 'ratio' : 'CNY'
+      const expectedUnit = fact.metric === 'indexLevel'?'index_points':['shares','sharesChange','sharesCancelled','sharesIssued'].includes(fact.metric) ? 'shares' : ['currentPrice','cashDividendPerShare','basicEarningsPerShare','dilutedEarningsPerShare','netAssetsPerShare'].includes(fact.metric) ? 'CNY_per_share' : ['grossMargin','returnOnEquity'].includes(fact.metric) ? 'ratio' : 'CNY'
+      if(fact.periodBasis!==undefined&&!['cumulative','standalone'].includes(fact.periodBasis))fail('FACT_SCHEMA','periodBasis仅允许cumulative或standalone')
       if (declared.unit !== expectedUnit) fail('UNIT_MISMATCH', `指标${fact.metric}要求${expectedUnit}量纲，增长率须使用明确计算`)
       const evidence = fact.evidence
       const loc = evidence?.locator
       const lines = texts.get(fact.sourceId)
       if (!lines) throw new Error('SOURCE_UNVERIFIED:事实引用的来源不存在或快照完整性未通过')
+      const source = sources.find(s => s.id === fact.sourceId)
       if (!isObject(evidence) || !isObject(loc) ||
           !['quote', 'metricText', 'periodText', 'scopeText', 'unitText', 'valueText'].every(k => isText(evidence[k]))) throw new Error('FACT_SCHEMA:证据需quote、locator和五个原文字段metricText/periodText/scopeText/unitText/valueText')
       const { lineStart, lineEnd, column } = loc
@@ -150,22 +155,33 @@ export function verifyFacts(packet, sources, texts, diagnostics) {
       const row = lines[valueLine - 1]
       if (window.join('\n') !== evidence.quote) fail('QUOTE_MISMATCH', 'quote必须逐字等于指定行窗口（仅CRLF统一为LF）')
       if (!METRICS[fact.metric].includes(evidence.metricText) || !unembedded(row, evidence.metricText, Object.values(METRICS).flat())) fail('METRIC_MISMATCH', '指标必须是受控语义别名，并实际出现在数值所在行')
-      if (periodKey(evidence.periodText) !== periodKey(fact.period) ||
-          !window.some(line => containsToken(line, evidence.periodText))) fail('PERIOD_MISMATCH', '原文期间必须与事实期间一致且命中证据窗口')
-      const scopes = scopeMarkers(window)
+      const periodMapping=resolveFactPeriodMapping(packet,fact,lines)
+      if (!periodMapping&&(periodKey(evidence.periodText) !== periodKey(fact.period) ||
+          !window.some(line => containsToken(line, evidence.periodText)))) fail('PERIOD_MISMATCH', '原文期间必须与事实期间一致且命中证据窗口')
+      const scopeWindow=['合并','母公司'].includes(fact.scope)?window.filter(line=>!isIssuerReportTitle(packet,line)):window
+      const scopedContext=resolveFactScopeContext(packet,fact,lines,source)
+      const markerScopes=['合并','母公司','市场',...((packet.entityScopes??[]).includes(fact.scope)?[fact.scope]:[])]
+      const scopes = scopedContext??scopeMarkers(scopeWindow,markerScopes)
+      if(!scopedContext)for(const line of window)for(const scope of explicitScopeHeadings(line,allowedScopes))scopes.add(scope)
+      if(issuerReportScope(packet,fact,window))scopes.add(fact.scope)
       if (evidence.scopeText !== fact.scope || !scopes.has(fact.scope) || scopes.size !== 1) fail('SCOPE_MISMATCH', 'scopeText必须与scope相同，并逐字命中窗口')
-      const sourceUnit = Object.values(UNITS).find(unit => unit[2].includes(evidence.unitText))
+      const unitMapping=resolveFactUnitMapping(packet,fact)
+      const rawSourceUnit=Object.values(UNITS).find(unit => unit[2].includes(evidence.unitText))
+      const sourceUnit = unitMapping?[unitMapping.unit,unitMapping.scale,rawSourceUnit?.[2]??[]]:rawSourceUnit
       if (!sourceUnit || !unembedded(evidence.quote, evidence.unitText, Object.values(UNITS).flatMap(unit => unit[2])) ||
           sourceUnit[0] !== declared.unit) fail('UNIT_MISMATCH', '原文单位必须命中窗口且与声明单位量纲一致')
-      const rowUnits = explicitUnits(row)
-      const contextUnits = rowUnits.length ? rowUnits : window.slice(0, valueLine - lineStart).reverse().map(explicitUnits).find(units => units.length) || []
-      if (sourceUnit && (contextUnits.length !== 1 || contextUnits[0][1][0] !== sourceUnit[0] || contextUnits[0][1][1] !== sourceUnit[1])) fail('UNIT_MISMATCH', '数值行的显式单位优先；否则使用最近单位表头，禁止跨取不同量纲或倍率')
+      // In an explicitly mapped per-share amount, “A 股每股…” starts with a
+      // security class, not a competing share-count unit. Snapshot stays exact.
+      const unitRow=unitMapping?row.replace(/(^|\s)[ABH]\s*股(?=\s*每股)/gu,'$1'):row
+      const rowUnits = explicitUnits(unitRow)
+      const contextUnits = periodMapping?.shareQuantity?[['shares',UNITS.shares]]:rowUnits.length ? rowUnits : window.slice(0, valueLine - lineStart).reverse().map(explicitUnits).find(units => units.length) || []
+      if (rawSourceUnit && (contextUnits.length !== 1 || contextUnits[0][1][0] !== rawSourceUnit[0] || contextUnits[0][1][1] !== rawSourceUnit[1])) fail('UNIT_MISMATCH', '数值行的显式单位优先；否则使用最近单位表头，禁止跨取不同量纲或倍率')
       if (!containsNumber(row, evidence.valueText)) fail('NUMBER_MISSING', '原文数字必须作为完整数字token命中valueLine，其他行出现不算')
       const sourceValue = displayDecimal(evidence.valueText)
       if (sourceUnit && sourceValue.mul(sourceUnit[1]).cmp(declared.value) !== 0) fail('VALUE_MISMATCH', '原文数值按原文单位换算后与事实value/unit不一致')
       if (column !== undefined) {
         if (row.split('\t')[column - 1]?.trim() !== evidence.valueText) fail('CELL_MISMATCH', 'valueText必须等于指定TSV数据单元格')
-        if (nearestPeriod(window, valueLine - lineStart, column) !== periodKey(evidence.periodText)) fail('PERIOD_MISMATCH', '期间必须位于同一TSV列的表头')
+        if (!periodMapping&&nearestPeriod(window, valueLine - lineStart, column) !== periodKey(evidence.periodText)) fail('PERIOD_MISMATCH', '期间必须位于同一TSV列的表头')
         if (!nearestMetric(row.split('\t').slice(0, column - 1))?.includes(evidence.metricText)) fail('METRIC_MISMATCH', '指标标签必须位于数值列之前')
       } else {
         const rowMetrics = Object.entries(METRICS).filter(([, terms]) => terms.some(term => unembedded(row, term, Object.values(METRICS).flat())))
@@ -178,7 +194,6 @@ export function verifyFacts(packet, sources, texts, diagnostics) {
         const periods = new Set((context.join('\n').match(/FY20\d{2}|20\d{2}(?:Q[1-4]|H[12])|20\d{2}-\d{2}-\d{2}|20\d{2}年度|20\d{2}年|(?<!\d)20\d{2}(?!\d)/g) || []).map(periodKey))
         if (periods.size > 1) fail('AMBIGUOUS_PERIOD', '窗口包含多个期间，必须用TSV列明确绑定期间与数值')
       }
-      const source = sources.find(s => s.id === fact.sourceId)
       if (loc.page !== undefined && (!Number.isInteger(loc.page) || loc.page < 1 ||
           source.kind !== 'pdf-extract' || !source.extraction.pages.some(p => p.page === loc.page && p.lineStart <= valueLine && p.lineEnd >= valueLine))) fail('PAGE_UNVERIFIED', '页码须对应valueLine所在PDF提取页的行范围映射；映射仍是提取声明')
       if (!diagnostics.slice(start).some(d => d.severity === 'error')) {
@@ -202,7 +217,7 @@ export function verifyObservations(packet,sources,texts,diagnostics){
  for(const [index,item] of (packet.observations??[]).entries()){
   const result={...item,status:'invalid'},path=`observations[${index}]`
   try{
-   if(!isObject(item)||!idValid(item.id)||ids.has(item.id)||!idValid(item.sourceId)||!isText(item.quote)||item.quote.length>12000)throw Error('OBSERVATION_SCHEMA:原文观察需唯一id、sourceId、quote和locator')
+   if(!isObject(item)||!idValid(item.id)||ids.has(item.id)||packet.schemaVersion===2&&reservedResultId(item.id)||!idValid(item.sourceId)||!isText(item.quote)||item.quote.length>12000)throw Error('OBSERVATION_SCHEMA:原文观察需唯一id、sourceId、quote和locator，不能占用受控结果ID')
    ids.add(item.id)
    const lines=texts.get(item.sourceId),loc=item.locator
    if(!lines||!isObject(loc)||![loc.lineStart,loc.lineEnd].every(Number.isInteger)||loc.lineStart<1||loc.lineEnd<loc.lineStart||loc.lineEnd>lines.length||loc.lineEnd-loc.lineStart>40)throw Error('OBSERVATION_LOCATOR:原文观察必须定位已核验快照内的有界行窗口')

@@ -1,5 +1,5 @@
 import { decimal } from './numbers.mjs'
-import { idValid, isObject, diagnostic, periodKey } from './schema.mjs'
+import { idValid, reservedResultId, isObject, diagnostic, periodKey } from './schema.mjs'
 
 export function runCalculations(packet, facts, diagnostics) {
   const values = new Map(facts.filter(f => f.status === 'verified').map(f => [f.id, {
@@ -11,8 +11,9 @@ export function runCalculations(packet, facts, diagnostics) {
     const path = `calculations[${index}]`
     const result = { ...calc, status: 'blocked', value: null, unit: null }
     try {
-      if (!isObject(calc) || !idValid(calc.id) || ids.has(calc.id) ||
-          !['yoy', 'ratio', 'difference', 'periodDifference', 'sum', 'grossProfit', 'grossMargin'].includes(calc.op) ||
+      if (!isObject(calc) || !idValid(calc.id) || ids.has(calc.id) ||packet.schemaVersion===2&&reservedResultId(calc.id)||
+          packet.schemaVersion===2&&Object.keys(calc).some(k=>!['id','op','inputs','label'].includes(k))||
+          !['yoy', 'ratio', 'difference', 'periodDifference', 'quarterFromCumulative', 'sum', 'grossProfit', 'grossMargin'].includes(calc.op) ||
           !Array.isArray(calc.inputs) || calc.inputs.length > 32 ||
           (calc.op === 'sum' ? calc.inputs.length < 2 : calc.inputs.length !== 2)) {
         throw new Error('CALC_SCHEMA:计算需唯一id、支持的op及明确inputs（sum至少2项，其余恰好2项）')
@@ -26,7 +27,12 @@ export function runCalculations(packet, facts, diagnostics) {
       if (inputs.some(f => f.scope !== a.scope)) throw new Error('CALC_SCOPE:不能混用不同报表范围')
       if (inputs.some(f => f.unit !== a.unit)) throw new Error('CALC_UNIT:输入单位量纲必须相同；金额已先换算到元')
       let resultPeriod = a.period
-      if (calc.op === 'periodDifference') {
+      if (calc.op === 'quarterFromCumulative') {
+        const cutoff=f=>{const p=periodKey(f.period),year=p?.match(/20\d{2}/)?.[0];if(!year)return null;if(p==='FY'+year)return [year,12];if(p===year+'H1')return [year,6];if(p===year+'Q1')return [year,3];if(p===year+'Q3'&&f.periodBasis==='cumulative')return [year,9];return null}
+        const x=cutoff(a),y=cutoff(b)
+        if(inputs.some(f=>f.status!=='verified')||a.metric!==b.metric||a.unit!=='CNY'||!x||!y||x[0]!==y[0]||x[1]-y[1]!==3||a.periodBasis==='standalone'&&x[1]!==3||b.periodBasis==='standalone'&&y[1]!==3)throw Error('CALC_PERIOD:单季累计差分仅接受同年同指标同范围的原始金额：H1−Q1、Q3累计−H1、FY−Q3累计')
+        resultPeriod=x[0]+'Q'+x[1]/3
+      } else if (calc.op === 'periodDifference') {
         // Derived op labels (e.g. two unrelated differences) are not a metric identity.
         if (inputs.some(f => f.status !== 'verified')) throw new Error('CALC_INPUT:跨期差额只接受已核验原始金额事实，不能用派生运算名冒充同指标')
         const first = periodKey(a.period), second = periodKey(b.period)
@@ -61,7 +67,7 @@ export function runCalculations(packet, facts, diagnostics) {
       if (calc.op === 'sum') {
         value = inputs.reduce((sum, f) => sum.add(f.exactValue || f.value), decimal('0'))
         formula = calc.inputs.join(' + ')
-      } else if (['difference', 'periodDifference', 'grossProfit'].includes(calc.op)) {
+      } else if (['difference', 'periodDifference', 'quarterFromCumulative', 'grossProfit'].includes(calc.op)) {
         value = x.sub(y)
         formula = `${a.id} - ${b.id}`
       } else if (calc.op === 'grossMargin') {
@@ -74,7 +80,8 @@ export function runCalculations(packet, facts, diagnostics) {
       }
       const unit = ['ratio', 'yoy', 'grossMargin'].includes(calc.op) ? 'ratio' : a.unit
       Object.assign(result, {
-        status: 'calculated', value: value.toString(24), unit, formula, metric: calc.op,
+        status: 'calculated', value: value.toString(24), unit, formula, metric: calc.op==='quarterFromCumulative'?a.metric:calc.op,
+        ...(calc.op==='quarterFromCumulative'?{periodBasis:'standalone'}:{}),
         scope: a.scope, period: resultPeriod, sourceIds: [...new Set(inputs.flatMap(f => f.sourceIds))],
       })
       // Chained calculations consume the exact rational, never the rounded display string.

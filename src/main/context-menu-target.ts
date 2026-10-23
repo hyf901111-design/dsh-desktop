@@ -15,6 +15,14 @@ export function contextMenuTargetScript(x: number, y: number): string {
       const origin = captured && performance.now() - captured.time < 2000 && captured.element?.isConnected
         ? captured.element : document.elementFromPoint(${JSON.stringify(x)}, ${JSON.stringify(y)});
       if (!(origin instanceof Element)) return { values: [] };
+      // The atmospheric background is a sibling of the home page and ignores
+      // pointer events, so blank clicks can land on either the page or its column.
+      const page = origin.closest('[data-odyssey-page]');
+      const center = origin.closest('.pI_x6G_centerCol');
+      const home = page?.getAttribute('data-odyssey-page') === 'home' ? page : !page
+        ? Array.from(center?.querySelectorAll('[data-odyssey-page="home"]') ?? []).find(node => !node.closest('[data-odyssey-subagent-panel], [hidden], [aria-hidden="true"]')) : null;
+      const content = origin.closest('input, textarea, select, a, button, [role="button"], [role="textbox"], [contenteditable]:not([contenteditable="false"]), [data-path], img, video, audio, iframe, webview, [data-odyssey-subagent-panel], [role="dialog"], [role="menu"], [data-sherlock-settings-panel], .VOzbGW_overlay');
+      if (home && !content) return { values: [], suppressMenu: true };
       const values = [];
       // Use only the clicked file/link owner. Parent panels and stale text
       // selections can point at a completely different preview document.

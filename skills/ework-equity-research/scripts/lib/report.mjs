@@ -3,6 +3,9 @@ import {renderResearchChart} from './charts.mjs'
 import {publicationMetadata} from './publication.mjs'
 import {createPublicationIndex,renderPublicationCover,renderFinancialStatements,publicationStyles,publicationTargetCount,MAX_PUBLICATION_NAVIGATION_TARGETS} from './publication-layout.mjs'
 import {qualityDiagnostics,extraReportRows,visualDiagnostics,reportCoverage,RESEARCH_SECTIONS} from './quality.mjs'
+import {renderResearchV5} from './research-v5-layout.mjs'
+import {requirementsDiagnostics} from './requirements.mjs'
+import {modelValues} from './model-values.mjs'
 
 export const EFUND = Object.freeze({ navy:'#005096',blue:'#0078B4',cyan:'#1EB9E1',title:'#00BEE6',pale:'#B3EBFF',ink:'#3C3C3C',muted:'#969696',line:'#C1C6C8',yellow:'#FFC819' })
 const escape = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
@@ -13,7 +16,8 @@ const successfulCalculations=calculation=>(calculation?.calculations??[]).filter
 const items=(validation,calculation)=>new Map([
  ...(validation?.facts??[]).filter(f=>f.status==='verified').map(f=>[f.id,{...f,value:f.normalizedValue,unit:f.normalizedUnit}]),
  ...(validation?.observations??[]).filter(o=>o.status==='verified').map(o=>[o.id,{...o,type:'observation'}]),
- ...successfulCalculations(calculation).map(c=>[c.id,c])
+ ...successfulCalculations(calculation).map(c=>[c.id,c]),
+ ...modelValues(calculation)
 ])
 const rows=report=>[...(report?.summary??[]).map((p,i)=>[p,`report.summary[${i}]`]),...(report?.sections??[]).flatMap((s,i)=>[
  [{text:s.title},`report.sections[${i}].title`],...(s.paragraphs??[]).map((p,j)=>[p,`report.sections[${i}].paragraphs[${j}]`])])]
@@ -22,10 +26,10 @@ function formatted(item,format='auto') {
  if(format==='yi'){if(unit!=='CNY')throw Error('亿元格式仅适用于人民币金额');return group(formatDecimal(value,{scale:'100000000'}))+' 亿元'}
  if(format==='pct'){if(unit!=='ratio')throw Error('百分比格式仅适用于比例');return group(decimal(value).mul('100').toString(2,true))+'%'}
  if(!['auto','raw'].includes(format))throw Error('不支持的展示格式')
- if(format==='raw')return group(decimal(value).toString())+' '+({CNY:'元',shares:'股',CNY_per_share:'元/股',ratio:'倍'}[unit]??unit)
+ if(format==='raw')return group(decimal(value).toString())+' '+({CNY:'元',shares:'股',CNY_per_share:'元/股',ratio:'倍',percentage_points:'个百分点',index_points:'点'}[unit]??unit)
  if(unit==='CNY')return formatted(item,'yi')
  if(unit==='ratio')return formatted(item,'pct')
- return group(formatDecimal(value,{places:unit==='shares'?0:2}))+' '+({shares:'股',CNY_per_share:'元/股'}[unit]??unit)
+ return group(formatDecimal(value,{places:unit==='shares'?0:2}))+' '+({shares:'股',CNY_per_share:'元/股',percentage_points:'个百分点',index_points:'点'}[unit]??unit)
 }
 function tokenValue(token,packet,values){
  if(['company','ticker','asOf','financialAsOf'].includes(token))return token==='company'?packet.company.name:token==='ticker'?packet.company.ticker:packet[token]
@@ -41,7 +45,7 @@ export function validateReport(packet,validation,calculation){
  if(report.summary!==undefined&&!Array.isArray(report.summary)||report.sections!==undefined&&!Array.isArray(report.sections))return [...ds,diagnostic('REPORT_SCHEMA','report','summary/sections 必须是数组')]
  if((report.summary?.length??0)>30||(report.sections?.length??0)>30)return [...ds,diagnostic('REPORT_SCHEMA','report','报告章节或摘要超出范围')]
  try{publicationMetadata(packet)}catch(error){ds.push(diagnostic('REPORT_PUBLICATION','report.publication',error.message))}
- ds.push(...qualityDiagnostics(report,values))
+ ds.push(...qualityDiagnostics(report,values),...requirementsDiagnostics(packet,calculation,values))
  const visuals=visualDiagnostics(report,values);ds.push(...visuals)
  if(visuals.length)return ds
  let paragraphs
@@ -107,15 +111,16 @@ function dcfSection(dcf,index){
 export function renderReport(packet,validation,calculation){
  const errors=validateReport(packet,validation,calculation)
  if(errors.length)throw Object.assign(Error('报告校验未通过'),{diagnostics:errors})
- const values=items(validation,calculation),facts=(validation.facts??[]).filter(f=>f.status==='verified'),report=packet.report??{}
+ const values=items(validation,calculation),facts=(validation.facts??[]).filter(f=>f.status==='verified'&&f.scope!=='市场'),report=packet.report??{}
  const title=report.title?tokenValueFree(report.title,packet,values):`${packet.company.name}研究报告`
  const summary=(report.summary??[]).map(p=>{const html=paragraph({...p,refs:[...(p.refs??[]),...textIds({text:p.label??''})]},packet,values);return p.label?html.replace('<p>',`<p><strong class="summary-label">${escape(tokenValueFree(p.label,packet,values))}：</strong>`):html}).join('')||'<p>请结合下方事实与计算结果形成研究判断，补充支持证据、反证和下次观察条件。</p>'
- const coverage=reportCoverage(report),metadata=publicationMetadata(packet),index=createPublicationIndex(escape)
+ const coverage=reportCoverage(report,packet,calculation),metadata=publicationMetadata(packet),index=createPublicationIndex(escape)
  const scopeLabel=coverage.profile==='full'?(coverage.hasGaps?'研究稿 · 存在资料缺口':'完整研究稿 · 需复核'):'财报简析 · 非完整研究'
  const helpers={escape,formatted,values,table,financialAsOf:packet.financialAsOf,labels:LABELS,researchChart,sourceNote:(ids,compact)=>sourceNote(ids,packet,values,compact)}
- const cover=renderPublicationCover({packet,metadata,title,coverage,facts,summary,scopeLabel},helpers,index)
+ const cover=renderPublicationCover({packet,metadata,title,coverage,facts,summary,scopeLabel,calculation},helpers,index)
  const sectionEntries=(report.sections??[]).map((s,i,all)=>({...s,anchor:`section-${Object.hasOwn(RESEARCH_SECTIONS,s.kind)&&all.filter(x=>x.kind===s.kind).length===1?s.kind:`analysis-${i+1}`}`}))
  const sections=sectionEntries.map((s,i)=>structuredSection(s,packet,values,index,i+1,s.anchor)).join('')
+ const v5=renderResearchV5(calculation,helpers,index,{startNumber:sectionEntries.length})
  const financialStatements=renderFinancialStatements(facts,helpers,index)
  const observationRows=(validation.observations??[]).filter(o=>o.status==='verified').map((o,i)=>`<tr><td title="${escape(o.id)}">O${String(i+1).padStart(2,'0')}<small class="screen-only">${escape(o.id)}</small></td><td>${escape(o.quote)}</td><td><a href="#source-${escape(o.sourceId)}">[${packet.sources.findIndex(s=>s.id===o.sourceId)+1}]</a><small>${escape(o.locator.page?'PDF页 '+o.locator.page:'行 '+o.locator.lineStart)}</small></td></tr>`)
  const factRows=facts.map(f=>`<tr><td>${escape(LABELS[f.metric]??f.metric)}<small>${escape(f.id)}</small></td><td>${escape(f.period)}<small>${escape(f.scope)}</small></td><td class="number">${escape(formatted(values.get(f.id)))}</td><td><a href="#source-${escape(f.sourceId)}">${escape(f.sourceId)}</a><small>${escape(f.evidence?.locator?.page?'PDF页 '+f.evidence.locator.page:'行 '+f.evidence?.locator?.lineStart)}${f.evidence?.locator?.column?' / 列 '+escape(f.evidence.locator.column):''}</small></td></tr>`)
@@ -124,12 +129,12 @@ export function renderReport(packet,validation,calculation){
  const diagnostics=[...new Set([...(validation.diagnostics??[]),...(calculation.diagnostics??[])].map(d=>d.message))].map(message=>`<li>${escape(message)}</li>`).join('')
  const factTable=numberedTable('财务事实与原始定位',['指标 / 事实ID','期间 / 范围','原始事实换算展示','来源 / 定位'],factRows,index)
  const calculationTable=calcRows.length?numberedTable('确定性计算明细',['计算ID','运算','输入引用','结果'],calcRows,index):''
- const dcf=dcfSection(calculation.dcf,index)
+ const dcf=calculation.dcf?.method==='driver-fcff-v2'?'':dcfSection(calculation.dcf,index)
  const observationTable=observationRows.length?numberedTable('披露原文与研究观察',['观察ID','原文摘录','来源 / 定位'],observationRows,index):''
  const sourceTable=numberedTable('来源台账',['来源编号','原始资料','发布日期 / 访问时点'],sourceRows,index)
- const navigation=index.navigation(sectionEntries.map(s=>({...s,title:tokenValueFree(s.title,packet,values)})),!!report.theses?.length)
+ const navigation=index.navigation([...sectionEntries.map(s=>({...s,title:tokenValueFree(s.title,packet,values)})),...v5.sections],!!report.theses?.length)
  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="author" content="EWork Odyssey"><link rel="icon" href="data:,"><title>${escape(metadata.reportName)}</title><style>
 :root{--navy:${EFUND.navy};--blue:${EFUND.blue};--cyan:${EFUND.cyan};--title:${EFUND.title};--pale:${EFUND.pale};--ink:${EFUND.ink};--muted:${EFUND.muted};--line:${EFUND.line};--yellow:${EFUND.yellow}}${publicationStyles}
-</style></head><body><main data-publication-name="${escape(metadata.reportName)}">${cover}${navigation}<div class="body-content">${thesisSection(report,packet,values)}${sections}${financialStatements}<section id="fact-evidence"><div class="section-heading"><h2>附录：财务事实与证据</h2><p class="small">快照及字段核对通过；外部真实性未认证。PDF提取与关键行列仍应回到原件复核。</p></div>${factTable}</section><section id="calculation-evidence"><h2>附录：确定性计算</h2>${calculationTable||'<p>本稿未执行独立计算。</p>'}<p class="small">金额、比例和同比由程序计算；展示舍入与未舍入结果分开保存。</p></section>${dcf}${observationTable?`<section class="observations"><div class="section-heading"><h2>附录：披露原文与研究观察</h2><p class="small">逐字快照摘录；用于支持研究判断，不作为确定性数值事实或计算输入。</p></div>${observationTable}</section>`:''}<section id="source-ledger"><h2>来源台账</h2>${sourceTable}</section><div class="publication-disclosure"><section id="limitations"><h2>假设、局限与待复核</h2><p>本报告由 EWork Odyssey 辅助整理，数值按同次证据与确定性程序处理。研究判断仍需结合原始披露、业务背景与专业复核。</p><ul><li>快照一致性和字段匹配不能证明外部来源真实、完整或当前有效，阅读时应以所列研究截止日、财务期间及报表范围理解数据。</li><li>历史披露与情景假设分别列示；资料缺失和模型未完成的范围已明确说明，不以版式完整替代证据完整。</li><li>定量文字使用事实/计算引用；自然语言数量词和因果判断仍需人工复核。</li><li>未提供经核对的现价时，不生成现价估值或投资评级；历史数据不冒充当前数据。</li>${diagnostics}</ul><p class="small"><a href="evidence.json">证据台账</a> · <a href="calculations.json">计算结果</a> · <a href="validation.json">校验记录</a> · <a href="run.json">运行记录</a></p></section><footer>本报告供研究与复核使用，不构成投资建议。公司披露、程序推导和研究假设应分别理解；没有证券研究员专业签发。易方达配色仅为视觉规范，不能代表公司或原始来源认可报告结论。</footer></div></div></main></body></html>`
+</style></head><body><main data-publication-name="${escape(metadata.reportName)}">${cover}${navigation}<div class="body-content">${thesisSection(report,packet,values)}${sections}${v5.html}${financialStatements}<section id="fact-evidence"><div class="section-heading"><h2>附录：财务事实与证据</h2><p class="small">快照及字段核对通过；外部真实性未认证。PDF提取与关键行列仍应回到原件复核。</p></div>${factTable}</section><section id="calculation-evidence"><h2>附录：确定性计算</h2>${calculationTable||'<p>本稿未执行独立计算。</p>'}<p class="small">金额、比例和同比由程序计算；展示舍入与未舍入结果分开保存。</p></section>${dcf}${observationTable?`<section class="observations"><div class="section-heading"><h2>附录：披露原文与研究观察</h2><p class="small">逐字快照摘录；用于支持研究判断，不作为确定性数值事实或计算输入。</p></div>${observationTable}</section>`:''}<section id="source-ledger"><h2>来源台账</h2>${sourceTable}</section><div class="publication-disclosure"><section id="limitations"><h2>假设、局限与待复核</h2><p>本报告由 EWork Odyssey 辅助整理，数值按同次证据与确定性程序处理。研究判断仍需结合原始披露、业务背景与专业复核。</p><ul><li>快照一致性和字段匹配不能证明外部来源真实、完整或当前有效，阅读时应以所列研究截止日、财务期间及报表范围理解数据。</li><li>历史披露与情景假设分别列示；资料缺失和模型未完成的范围已明确说明，不以版式完整替代证据完整。</li><li>定量文字使用事实/计算引用；自然语言数量词和因果判断仍需人工复核。</li><li>未提供经核对的现价时，不生成现价估值或投资评级；历史数据不冒充当前数据。</li>${diagnostics}</ul><p class="small"><a href="evidence.json">证据台账</a> · <a href="calculations.json">计算结果</a> · <a href="validation.json">校验记录</a> · <a href="run.json">运行记录</a></p></section><footer>本报告供研究与复核使用，不构成投资建议。公司披露、程序推导和研究假设应分别理解；没有证券研究员专业签发。易方达配色仅为视觉规范，不能代表公司或原始来源认可报告结论。</footer></div></div></main></body></html>`
 }
 function tokenValueFree(text,packet,values){return text.replace(/\{\{([^{}]+)\}\}/g,(_all,token)=>tokenValue(token,packet,values))}
