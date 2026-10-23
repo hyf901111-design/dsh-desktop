@@ -56,3 +56,19 @@ it('cleans up a signal that was already aborted before mounting',async()=>{
   expect(result).toBe('AbortError');await page.waitForTimeout(100);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+
+it('still times out a genuinely unavailable editor while the guide is playing',async()=>{
+ const{context,page,errors}=await fixture();try{
+  const result=await page.evaluate(async()=>{
+   window.guide.dispose();const host=document.querySelector('#guide'),query=host.querySelector
+   // Hold the real mounted editor's readiness boundary closed, without replacing
+   // the editor, scheduler or the guide's timing code with a test implementation.
+   host.querySelector=function(selector){return selector==='.bn-editor'?null:query.call(this,selector)}
+   const started=performance.now()
+   try{await window.mountAnotherGuide(new AbortController().signal);return{completed:true}}
+   catch(error){return{message:error.message,elapsed:performance.now()-started}}
+   finally{host.querySelector=query}
+  })
+  expect(result.message).toContain('未就绪');expect(result.elapsed).toBeGreaterThanOrEqual(6900);expect(result.elapsed).toBeLessThan(9500);expect(await page.locator('.bn-editor').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)

@@ -27,8 +27,15 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   try{await Promise.race([options.waitUntilPlaying(),cancelled]);assert()}finally{signal.removeEventListener('abort',stop)}
  }
  const until=async<T,>(read:()=>T|undefined|false|null,timeout=7000):Promise<T>=>{
-  const start=performance.now()
-  while(true){assert();const value=read();if(value)return value;if(performance.now()-start>timeout)throw Error('演示步骤未就绪，请重新播放。');await delay(32)}
+  let deadline=performance.now()+timeout
+  while(true){
+   // A review result may be held behind the same pause gate. Pausing must not
+   // spend the readiness budget while the result is intentionally withheld.
+   const waiting=performance.now();await playing();deadline+=performance.now()-waiting
+   const value=read();if(value)return value
+   if(performance.now()>deadline)throw Error('演示步骤未就绪，请重新播放。')
+   await delay(32)
+  }
  }
  const frame=async()=>{await delay(34);assert()}
  const fingerprint=()=>JSON.stringify(editor!.snapshot())

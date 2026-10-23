@@ -60,3 +60,17 @@ it('suppresses user-note loading until an asynchronous original-tab restore has 
   await page.waitForTimeout(100);expect(await page.evaluate(()=>window.nativeNoteLoads)).toBe(0);expect(await page.locator('html[data-home-guide-transition]').count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+
+it('keeps the real note editor alive through a long paused review and completes after resuming',async()=>{
+ const{context,page,errors,logs}=await fixture();try{
+  await page.evaluate(()=>window.guides.start('note'))
+  await page.waitForFunction(()=>document.querySelector('[data-home-guide] .en-challenge-grade')?.textContent.includes('严格')&&!document.querySelector('.en-challenge-popover')&&document.querySelectorAll('[data-home-guide] .bn-editor [data-bn-thread-id]').length<3,{},{timeout:15000})
+  await page.getByRole('button',{name:'暂停',exact:true}).click();await page.waitForTimeout(11200)
+  expect(await page.locator('[data-home-guide] .bn-editor').count()).toBe(1)
+  expect(await page.locator('[data-home-guide] [role=status]').innerText()).not.toContain('未就绪')
+  await page.getByRole('button',{name:'继续',exact:true}).click()
+  await expect.poll(()=>page.locator('[data-home-guide] .odyssey-home-guide-count').innerText(),{timeout:15000}).toBe('演示完成')
+  expect(await page.locator('[data-home-guide] .bn-editor').innerText()).toContain('同比增长10%');expect(await page.evaluate(()=>window.nativeNoteLoads)).toBe(0)
+  await page.getByRole('button',{name:'退出示例教程'}).click();expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([]);expect(logs).toEqual([])
+ }finally{await context.close()}
+},35000)
