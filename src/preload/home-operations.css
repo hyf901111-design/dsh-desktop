@@ -289,8 +289,19 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   font:inherit;
   cursor:pointer;
   isolation:isolate;
+  transition:background-color 220ms ease;
   -webkit-app-region:no-drag;
 }
+/* A uniform tint follows each illustration's color family across the glass. */
+.odyssey-operations-quick-card[data-card="board"] { --odyssey-operations-card-tint:rgb(215 239 242 / .57); }
+.odyssey-operations-quick-card[data-card="note"] { --odyssey-operations-card-tint:rgb(226 226 246 / .57); }
+.odyssey-operations-quick-card[data-card="ppt"] { --odyssey-operations-card-tint:rgb(221 230 249 / .57); }
+.odyssey-operations-quick-card[data-card="report"] { --odyssey-operations-card-tint:rgb(216 239 232 / .57); }
+[data-ds-dark-theme] .odyssey-operations-quick-card[data-card="board"] { --odyssey-operations-card-tint:rgb(19 44 53 / .68); }
+[data-ds-dark-theme] .odyssey-operations-quick-card[data-card="note"] { --odyssey-operations-card-tint:rgb(35 34 59 / .68); }
+[data-ds-dark-theme] .odyssey-operations-quick-card[data-card="ppt"] { --odyssey-operations-card-tint:rgb(25 36 64 / .68); }
+[data-ds-dark-theme] .odyssey-operations-quick-card[data-card="report"] { --odyssey-operations-card-tint:rgb(19 43 39 / .68); }
+.odyssey-operations-quick-card:is(:hover,:focus-visible) { background-color:var(--odyssey-operations-card-tint); }
 .odyssey-operations-quick-label {
   position:absolute;
   left:13.1px;

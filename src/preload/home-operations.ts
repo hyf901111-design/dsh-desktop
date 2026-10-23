@@ -191,9 +191,12 @@ export function mountHomeOperations(doc: Document = document): () => void {
     const viewportHeight = stacked ? Math.min(664.294, Math.max(96, bottomLimit - headerBottom - 72)) : DESIGN_HEIGHT * scale
     const centeredTop = (bounds.height - 345.344 * scale) / 2 - 36 * scale
     const targetTop = Math.max(minimumTop, Math.min(centeredTop, bottomLimit - viewportHeight))
-    // Both surfaces use our last painted offset. Reading animated CSS values
-    // on wheel events would add forced layout and can restart an animation.
-    const inputTop = composer.bottom - bounds.top + renderedHeroOffset + 28
+    // Space from the visible input surface, excluding the hero's transparent
+    // bottom padding. Re-query because the resident composer can replace slots.
+    const inputCard = hero.querySelector<HTMLElement>('.uV2eYG_card')?.getBoundingClientRect()
+    const inputBottom = inputCard && inputCard.width > 0 && inputCard.height > 0 ? inputCard.bottom + 20 : composer.bottom + 28
+    // Restore the native layout coordinate using our last painted offset.
+    const inputTop = inputBottom - bounds.top + renderedHeroOffset
     geometry = { inputTop, targetTop, shift: Math.max(1, inputTop - targetTop), scale, viewportHeight }
     css('--odyssey-operations-top', `${inputTop}px`)
     css('--odyssey-operations-input-top', `${inputTop}px`)
@@ -324,8 +327,8 @@ export function mountHomeOperations(doc: Document = document): () => void {
         const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width))
         const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
         const tilt = tiltStates.get(card) || { rx: 0, ry: 0, targetX: 0, targetY: 0, lastTime: 0 }
-        tilt.targetX = (.5 - y) * 3
-        tilt.targetY = (x - .5) * 3
+        tilt.targetX = (.5 - y) * 6
+        tilt.targetY = (x - .5) * 6
         tiltStates.set(card, tilt)
         animate()
       })

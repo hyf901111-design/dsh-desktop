@@ -101,6 +101,23 @@ it('adds the homepage operations area while preserving the native composer node 
   } finally { await page.close() }
 })
 
+it('places the input preview below the visible composer card with twenty pixels of clear space', async () => {
+  const page = await fixture({ width: 1823, height: 1115, themes: true })
+  try {
+    const geometry = await page.evaluate(() => {
+      const card = document.querySelector('.uV2eYG_card').getBoundingClientRect(), preview = document.querySelector('[data-odyssey-home-operations]').getBoundingClientRect()
+      return { gap: preview.top - card.bottom, editorBottom: document.querySelector('textarea').getBoundingClientRect().bottom, previewTop: preview.top }
+    })
+    expect(geometry.gap).toBeGreaterThanOrEqual(18)
+    expect(geometry.gap).toBeLessThanOrEqual(22)
+    expect(geometry.previewTop).toBeGreaterThan(geometry.editorBottom)
+    await page.screenshot({ path: `${evidence}/input-preview-20px.png` })
+    await page.locator('textarea').click()
+    expect(await page.evaluate(() => document.activeElement === window.homeOperations.original)).toBe(true)
+    expect(await state(page)).toBe('input')
+  } finally { await page.close() }
+})
+
 it('snaps in both directions with the arrow, exposed composer area, and non-editing arrow keys', async () => {
   const page = await fixture()
   try {
@@ -159,7 +176,7 @@ it('moves the composer first when opening and the cards first when returning, wi
   const page = await fixture({ width: 1823, height: 1115, reduced: false })
   try {
     const positions = () => page.evaluate(() => {
-      const hero = document.querySelector('.wSkVaW_composerHero').getBoundingClientRect(), cards = document.querySelector('[data-odyssey-home-operations]').getBoundingClientRect()
+      const hero = document.querySelector('.uV2eYG_card').getBoundingClientRect(), cards = document.querySelector('[data-odyssey-home-operations]').getBoundingClientRect()
       return { hero: hero.y, cards: cards.y, gap: cards.y - hero.bottom }
     })
     const observations = [await positions()]
@@ -182,7 +199,7 @@ it('moves the composer first when opening and the cards first when returning, wi
       observations.push(await positions())
     }
     expect(await progress(page)).toBe(0)
-    for (const observation of observations) expect(observation.gap).toBeGreaterThanOrEqual(27)
+    for (const observation of observations) expect(observation.gap).toBeGreaterThanOrEqual(19)
   } finally { await page.close() }
 }, 15000)
 
@@ -405,29 +422,49 @@ it('colors only the hovered illustration without changing its neighbors', async 
   } finally { await page.close() }
 }, 15000)
 
-it('keeps hovering free of pointer glow, brightening, shadows, and vertical lift', async () => {
-  const page = await fixture({ reduced: false })
-  try {
-    await toggle(page).click()
-    await waitState(page, 'operations')
-    for (const card of await page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card').all()) {
-      await page.mouse.move(1, 1)
-      const rest = await card.evaluate(element => { const style = getComputedStyle(element); return { background: style.backgroundColor, shadow: style.boxShadow } })
-      await card.hover({ position: { x: 30, y: 30 } })
-      await page.waitForTimeout(320)
-      const hover = await card.evaluate(element => {
-        const style = getComputedStyle(element), matrix = new DOMMatrixReadOnly(style.transform)
-        return { background: style.backgroundColor, shadow: style.boxShadow, verticalLift: matrix.m42, lights: [...element.querySelectorAll('.odyssey-operations-pointer-light')].map(light => { const style = getComputedStyle(light); return style.display === 'none' ? 0 : Number(style.opacity) }) }
-      })
-      expect(hover.lights.every(opacity => opacity === 0)).toBe(true)
-      expect(hover.background).toBe(rest.background)
-      expect(hover.shadow).toBe(rest.shadow)
-      expect(Math.abs(hover.verticalLift)).toBeLessThan(.1)
-    }
-  } finally { await page.close() }
+it('adds distinct reversible glass tints to the four quick cards without pointer glow, shadows, or lift', async () => {
+  for (const dark of [false, true]) {
+    const page = await fixture({ reduced: false, dark })
+    try {
+      await toggle(page).click()
+      await waitState(page, 'operations')
+      const tints = []
+      const appearance = card => card.evaluate(element => { const style = getComputedStyle(element); return { background: style.backgroundColor, image: style.backgroundImage, shadow: style.boxShadow } })
+      for (const card of await page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card').all()) {
+        await page.mouse.move(1, 1)
+        const rest = await appearance(card), kind = await card.getAttribute('data-card')
+        await card.hover({ position: { x: 30, y: 30 } })
+        await page.waitForTimeout(320)
+        const hover = await card.evaluate(element => {
+          const style = getComputedStyle(element), matrix = new DOMMatrixReadOnly(style.transform)
+          return { background: style.backgroundColor, image: style.backgroundImage, shadow: style.boxShadow, verticalLift: matrix.m42, lights: [...element.querySelectorAll('.odyssey-operations-pointer-light')].map(light => { const style = getComputedStyle(light); return style.display === 'none' ? 0 : Number(style.opacity) }) }
+        })
+        expect(hover.lights.every(opacity => opacity === 0)).toBe(true)
+        if (kind) {
+          expect(`${hover.background}|${hover.image}`).not.toBe(`${rest.background}|${rest.image}`)
+          tints.push(`${hover.background}|${hover.image}`)
+          const [red, green, blue, alpha = 1] = hover.background.match(/[\d.]+/g).map(Number)
+          expect(alpha).toBeGreaterThan(0)
+          expect(alpha).toBeLessThan(.85)
+          expect(Math.max(red, green, blue) - Math.min(red, green, blue)).toBeLessThan(90)
+          if (kind === 'report') { expect(green).toBeGreaterThan(blue); expect(blue).toBeGreaterThan(red) }
+          else if (kind === 'note') { expect(blue).toBeGreaterThan(red); expect(red).toBeGreaterThanOrEqual(green) }
+          else { expect(blue).toBeGreaterThan(green); expect(green).toBeGreaterThan(red) }
+        } else {
+          expect(hover.background).toBe(rest.background)
+          expect(hover.image).toBe(rest.image)
+        }
+        expect(hover.shadow).toBe(rest.shadow)
+        expect(Math.abs(hover.verticalLift)).toBeLessThan(.1)
+        await page.mouse.move(1, 1)
+        await expect.poll(() => appearance(card)).toEqual(rest)
+      }
+      expect(new Set(tints).size).toBe(4)
+    } finally { await page.close() }
+  }
 }, 15000)
 
-it('gives all five cards the same gentle tilt and keeps a stationary pointer stable', async () => {
+it('gives all five cards a stronger bounded tilt and keeps a stationary pointer stable', async () => {
   const page = await fixture({ reduced: false })
   try {
     await toggle(page).click()
@@ -437,7 +474,7 @@ it('gives all five cards the same gentle tilt and keeps a stationary pointer sta
     for (const card of await cards.all()) {
       await page.mouse.move(1, 1)
       await page.waitForTimeout(340)
-      const bounds = await card.boundingBox(), point = { x: bounds.x + bounds.width * .2, y: bounds.y + bounds.height * .25 }
+      const bounds = await card.boundingBox(), point = { x: bounds.x + bounds.width * .16, y: bounds.y + bounds.height * .16 }
       await page.mouse.move(point.x, point.y)
       await page.waitForTimeout(420)
       const samples = []
@@ -452,8 +489,8 @@ it('gives all five cards the same gentle tilt and keeps a stationary pointer sta
       expect(samples.at(-1).tilt).toBeGreaterThan(.001)
       for (const name of ['rx', 'ry']) {
         const values = samples.map(sample => sample[name])
-        expect(Math.abs(values.at(-1))).toBeGreaterThan(.1)
-        expect(Math.max(...values.map(Math.abs))).toBeLessThanOrEqual(1.6)
+        expect(Math.abs(values.at(-1))).toBeGreaterThan(1.7)
+        expect(Math.max(...values.map(Math.abs))).toBeLessThanOrEqual(3.1)
         expect(Math.max(...values) - Math.min(...values)).toBeLessThan(.03)
       }
     }
