@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-07",
+  "branch": "codex/integration/20261024-07",
+  "baseMainCommit": "5e5d04687dd111349dd5ad4c6b7c6e9b93554195",
+  "expectedMainCommit": "5e5d04687dd111349dd5ad4c6b7c6e9b93554195",
+  "createdAt": "2026-10-23T21:39:59.567Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按正式窗口实际画布高度收束研究教程成稿",
+        "branch": "codex/feat/home-guide-viewport-20261024",
+        "baseCommit": "5e5d04687dd111349dd5ad4c6b7c6e9b93554195",
+        "tipCommit": "dd260c305ea5b183ce0d42d1ee5966a753b9c30b",
+        "commits": [
+          {
+            "commit": "dd260c305ea5b183ce0d42d1ee5966a753b9c30b",
+            "parents": [
+              "5e5d04687dd111349dd5ad4c6b7c6e9b93554195"
+            ],
+            "subject": "按原生可用视口收束教程看板并等待布局稳定"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip聚焦3文件26项、完整patch pipeline、类型检查通过；/tmp/home-guide-viewport-handoff-focused-20261024.log。",
+            "verifiedCommit": "dd260c305ea5b183ce0d42d1ee5966a753b9c30b",
+            "completedAt": "2026-10-23T21:39:20.465073+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-browser.test.js",
+              "test/home-guide-native-strip.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip聚焦3文件26项、完整patch pipeline、类型检查通过；/tmp/home-guide-viewport-handoff-focused-20261024.log。",
+            "verifiedCommit": "dd260c305ea5b183ce0d42d1ee5966a753b9c30b",
+            "completedAt": "2026-10-23T21:39:20.465073+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip聚焦3文件26项、完整patch pipeline、类型检查通过；/tmp/home-guide-viewport-handoff-focused-20261024.log。",
+            "verifiedCommit": "dd260c305ea5b183ce0d42d1ee5966a753b9c30b",
+            "completedAt": "2026-10-23T21:39:20.465073+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip聚焦3文件26项、完整patch pipeline、类型检查通过；/tmp/home-guide-viewport-handoff-focused-20261024.log。",
+            "verifiedCommit": "dd260c305ea5b183ce0d42d1ee5966a753b9c30b",
+            "completedAt": "2026-10-23T21:39:20.465073+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原生组件真实浏览器1380×900/1380×768/1080×900三类画布，所有卡片/数据源页脚在工具栏上方；极短窗保留可读原生滚动。正式5e5d046窗口已验侧栏/唯一工具栏、浅深色和右栏窄卡片、笔记/PPT播放；本次高度修复需main构建后复验。"
+        },
+        "acceptanceCriteria": [
+          "只调整私有教程workspace行高/Y，不缩放字号或改正常研究画布。",
+          "等待原生延迟整理和实际动画端点，成稿不被工具栏或footer遮住。",
+          "不写用户数据，不改左右栏状态；中文提交后从干净main本地正式构建。"
+        ],
+        "risks": [
+          "本次视口修复仍待正式客户端复验。",
+          "系统物理鼠标偶发冻结仍未确认根因；字体加载优化不等于已根治。"
+        ],
+        "generatedAt": "2026-10-23T21:39:20.465073+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native.test.js",
+        "test/home-guide-native-browser.test.js",
+        "test/home-guide-native-strip.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
