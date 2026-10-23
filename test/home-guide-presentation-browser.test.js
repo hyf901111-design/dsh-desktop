@@ -122,3 +122,48 @@ it('cleans a late native tab open after abort without closing any pre-existing u
   expect(await page.evaluate(()=>window.probe.sent)).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
+
+it('restores the original closed panel and exact active user tab when the tutorial still owns the sidebar',async()=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>{const {service}=window.probe;service.openTab({id:'later-user-file',type:'existing-file',title:'稍后文件'},{sessionId:'owner'});service.activateTab('user-file',{sessionId:'owner'});service.setPanelState({open:false},{sessionId:'owner'})})
+  await page.evaluate(()=>window.probe.mount())
+  for(const step of ['brief','plan','layout','deliver','open'])await page.evaluate(step=>window.probe.step(step),step)
+  expect(await page.evaluate(()=>window.probe.store.getSnapshot().state.panelOpen)).toBe(true)
+  await page.evaluate(()=>window.probe.dispose())
+  expect(await page.evaluate(()=>window.probe.store.getSnapshot().state.panelOpen)).toBe(false)
+  expect(await page.evaluate(()=>{const s=window.probe.store.getSnapshot().state;return window.probe.flat(s.splits).find(leaf=>leaf.id===s.activePane)?.active})).toBe('user-file')
+  expect(await page.evaluate(()=>window.probe.tabs())).toEqual([...f.baselineTabs,'later-user-file'])
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('preserves a user tab or panel change including a complete away-and-back revision during the tutorial',async()=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>window.probe.service.setPanelState({open:false},{sessionId:'owner'}))
+  await page.evaluate(()=>window.probe.mount())
+  for(const step of ['brief','plan','layout','deliver','open'])await page.evaluate(step=>window.probe.step(step),step)
+  await page.evaluate(()=>{const {service}=window.probe;service.activateTab('user-file',{sessionId:'owner'});service.setPanelState({open:false},{sessionId:'owner'});service.activateTab('home-presentation:run-ppt',{sessionId:'owner'});service.setPanelState({open:true},{sessionId:'owner'})})
+  await page.evaluate(()=>window.probe.dispose())
+  expect(await page.evaluate(()=>window.probe.store.getSnapshot().state.panelOpen)).toBe(true)
+  expect(await page.evaluate(()=>window.probe.tabs())).toEqual(f.baselineTabs)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('does not reopen the panel when the user changes it during a delayed asset grant',async()=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>{window.probe.service.setPanelState({open:false},{sessionId:'owner'});const request=window.dshDesktop.homeGuideAssets.request;window.dshDesktop.homeGuideAssets.request=input=>input.action==='grant'?new Promise(resolve=>{window.probe.releaseGrant=()=>request(input).then(resolve)}):request(input)})
+  await page.evaluate(()=>window.probe.mount())
+  for(const step of ['brief','plan','layout','deliver'])await page.evaluate(step=>window.probe.step(step),step)
+  await page.evaluate(()=>{window.probe.opening=window.probe.step('open').then(()=>true,()=>false)})
+  await page.waitForFunction(()=>typeof window.probe.releaseGrant==='function')
+  await page.evaluate(()=>{const {service}=window.probe;service.setPanelState({open:true},{sessionId:'owner'});service.setPanelState({open:false},{sessionId:'owner'});window.probe.releaseGrant()})
+  expect(await page.evaluate(()=>window.probe.opening)).toBe(false)
+  expect(await page.evaluate(()=>window.probe.store.getSnapshot().state.panelOpen)).toBe(false)
+  expect(await page.evaluate(()=>window.probe.tabs())).toEqual(f.baselineTabs)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)

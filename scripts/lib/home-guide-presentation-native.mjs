@@ -1,6 +1,15 @@
 const START='/* odyssey:home-guide-presentation:start:v1 */'
 const END='/* odyssey:home-guide-presentation:end:v1 */'
 
+function homePresentationSidebarSnapshot(service,sessionId){
+ const snapshot=service.getSnapshot?.(),state=snapshot?.state
+ if(snapshot?.sessionId!==sessionId||!state)return null
+ const leaves=node=>!node?[]:node.kind==='leaf'?[node]:(node.children??[]).flatMap(leaves)
+ const panels=[...leaves(state.splits),...leaves(state.bottomSplits)]
+ return{open:state.panelOpen,activeTab:panels.find(leaf=>leaf.id===state.activePane)?.active??null,
+  signature:JSON.stringify([state.panelOpen,state.activePane,panels.map(leaf=>[leaf.id,leaf.active,leaf.tabs.map(tab=>tab.id)])])}
+}
+
 function NativeHomePresentationContent({ticket}){
  const shell=ticket.shell
  const useInput=select=>react.useSyncExternalStore(shell.state.subscribe,()=>select(shell.snapshot),()=>select(shell.snapshot))
@@ -31,9 +40,35 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
    return host
   }
   const check=ticket=>{if(stopped||owned.current!==ticket||ticket.controller.signal.aborted||hostFor(ticket.detail)!==ticket.host)throw changed()}
+  const observeSidebar=ticket=>{
+   if(ticket.sidebar)return
+   const service=ticket.service,before=homePresentationSidebarSnapshot(service,sessionId)
+   if(!before||typeof service.subscribeState!=='function')return
+   const guard={before,last:before.signature,revision:0,ownedRevision:0,writing:0,lost:false}
+   ticket.sidebar=guard
+   ticket.offSidebar=service.subscribeState(()=>{
+    const next=homePresentationSidebarSnapshot(service,sessionId),signature=next?.signature??null
+    if(signature===guard.last)return
+    guard.last=signature;guard.revision++
+    if(guard.writing)guard.ownedRevision=guard.revision;else guard.lost=true
+   })
+  }
+  const sidebarWrite=(ticket,write)=>{
+   const guard=ticket.sidebar;if(guard)guard.writing++
+   try{return write()}finally{if(guard)guard.writing--}
+  }
   const release=ticket=>{
    ticket.controller.abort();ticket.shell.dispose?.()
+   const guard=ticket.sidebar,current=homePresentationSidebarSnapshot(ticket.service??{},sessionId)
+   // A changed-away-and-back selection is still a user revision. Never infer
+   // ownership only from the final tab ID or undo a user's later panel choice.
+   const restore=guard&&!guard.lost&&guard.revision===guard.ownedRevision&&current?.signature===guard.last&&current.activeTab===ticket.tabId
+   ticket.offSidebar?.();ticket.offSidebar=null
    if(ticket.tabOpened){ticket.tabOpened=false;try{ticket.service?.closeTab(ticket.tabId,{sessionId})}catch{}}
+   if(restore){
+    try{if(guard.before.activeTab)ticket.service.activateTab(guard.before.activeTab,{sessionId})}catch{}
+    try{if(typeof guard.before.open==='boolean')ticket.service.setPanelState({open:guard.before.open},{sessionId})}catch{}
+   }
    ticket.unregister?.();ticket.unregister=null
    void ticket.assets?.request({action:'release',runId:ticket.detail.runId}).catch(()=>{})
   }
@@ -48,14 +83,16 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
    ticket.opening=(async()=>{
     const deps=HomePresentationNativeDeps,service=deps?.researchSidebar.service,office=deps?.researchOfficePreview.service
     if(!service||!office?.supports?.('pptx')||typeof office.Component!=='function'||!ticket.assets?.request)throw Error('原生演示文稿预览尚未就绪，请重试。')
-    ticket.service=service
+    ticket.service=service;observeSidebar(ticket)
     const grant=ticket.grant??await ticket.assets.request({action:'grant',assetId:'company-presentation',runId:ticket.detail.runId})
     try{
-     check(ticket);if(!grant?.url||grant.readOnly!==true)throw Error('预置文件授权不可用。');ticket.grant=grant
+     check(ticket);if(ticket.sidebar?.lost)throw Error('右栏状态已更改，请重新播放。')
+     if(!grant?.url||grant.readOnly!==true)throw Error('预置文件授权不可用。');ticket.grant=grant
      if(!ticket.unregister)ticket.unregister=service.registerTab({id:ticket.tabType,title:()=> '演示文稿示例',hidden:true,single:false,component:()=>react.createElement(office.Component,{sourceUrl:grant.url,kind:'pptx',title:grant.name,readOnly:true})})
      ticket.tabOpened=true
-     await service.openTab({id:ticket.tabId,type:ticket.tabType,title:grant.name,meta:{sherlockPanel:'right',homeGuideRunId:ticket.detail.runId}},{sessionId})
-     check(ticket);service.setPanelState({open:true},{sessionId})
+     await sidebarWrite(ticket,()=>service.openTab({id:ticket.tabId,type:ticket.tabType,title:grant.name,meta:{sherlockPanel:'right',homeGuideRunId:ticket.detail.runId}},{sessionId}))
+     check(ticket);if(ticket.sidebar?.lost)throw Error('右栏状态已更改，请重新播放。')
+     sidebarWrite(ticket,()=>service.setPanelState({open:true},{sessionId}))
     }catch(error){
      if(ticket.controller.signal.aborted||owned.current!==ticket){try{service.closeTab(ticket.tabId,{sessionId})}catch{};void ticket.assets.request({action:'release',runId:ticket.detail.runId}).catch(()=>{})}
      throw error
@@ -111,7 +148,7 @@ function NativePresentationConversationRoot(props){
 }
 function one(source,before,after){if(source.split(before).length!==2)throw Error('Home presentation native anchor drifted: '+before.slice(0,80));return source.replace(before,after)}
 export function patchHomeGuidePresentationNative(source){
- const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[NativeHomePresentationContent,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[homePresentationSidebarSnapshot,NativeHomePresentationContent,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
  if(source.includes(START)){
   const start=source.indexOf(START),end=source.indexOf(END,start)
   if(end<0||source.indexOf(START,start+START.length)>=0||!source.includes('function NativePresentationConversationRoot('))throw Error('Home presentation native refresh anchor drifted')
