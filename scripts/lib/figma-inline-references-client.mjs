@@ -96,6 +96,10 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
   const skillKey = JSON.stringify([...new Set(occurrences.filter(item => item.source === 'ework-managed-skill' && typeof item.label === 'string').map(item => item.label))].sort())
   const literals = [...new Set([...draft].filter(char => char >= '\uE000' && char <= '\uF8FF'))].sort().join('')
   const fontRef = react.useRef(null)
+  const fontCache = react.useRef(new Map())
+  // Definition reuse belongs to this input's lifetime, not an individual
+  // measured-label effect. Registration still belongs to that effect below.
+  react.useLayoutEffect(() => () => { fontCache.current.clear() }, [])
   react.useLayoutEffect(() => {
     const el = inputRef.current
     if (!el || typeof FontFace !== "function" || !document.fonts) return
@@ -103,6 +107,18 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
     let generation = 0
     let pendingKey = null
     const faces = new Map()
+    const loadFace = (family, source, options) => {
+      const cache = fontCache.current
+      const key = JSON.stringify([family, source, options.unicodeRange, options.sizeAdjust])
+      const cached = cache.get(key)
+      if (cached) { cache.delete(key); cache.set(key, cached); return cached }
+      const loading = new FontFace(family, source, options).load()
+      cache.set(key, loading)
+      while (cache.size > 32) cache.delete(cache.keys().next().value)
+      // A failed load must not poison retries or remove a newer replacement.
+      void loading.catch(() => { if (cache.get(key) === loading) cache.delete(key) })
+      return loading
+    }
     async function loadFont() {
       if (stopped) return
       const style = getComputedStyle(el), size = Number.parseFloat(style.fontSize)
@@ -131,20 +147,20 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
       const current = ++generation
       pendingKey = key
       const family = 'SherlockReferenceCell' + size + (marker?.charCodeAt(0) ?? 0)
-      const face = new FontFace(family, 'url(data:font/ttf;base64,' + fontData + ')', {
+      const face = loadFace(family, 'url(data:font/ttf;base64,' + fontData + ')', {
         unicodeRange: 'U+FFFC' + (marker ? ',U+' + marker.charCodeAt(0).toString(16) : ''),
         sizeAdjust: (1000 / size) + '%'
       })
       try {
-        const skillFaces = skillCells.map(cell => {
+        const skillLoads = skillCells.map(cell => {
           const name = 'SherlockSkillCell' + size + 'x' + cell.marker.charCodeAt(0) + 'w' + cell.width
-          return new FontFace(name, 'url(data:font/ttf;base64,' + skillReferenceCellFont(fontData, cell.width) + ')', {unicodeRange: 'U+' + cell.marker.charCodeAt(0).toString(16), sizeAdjust: (1000 / size) + '%'})
+          return loadFace(name, 'url(data:font/ttf;base64,' + skillReferenceCellFont(fontData, cell.width) + ')', {unicodeRange: 'U+' + cell.marker.charCodeAt(0).toString(16), sizeAdjust: (1000 / size) + '%'})
         })
-        await Promise.all([face, ...skillFaces].map(face => face.load()))
+        const [baseFace, ...skillFaces] = await Promise.all([face, ...skillLoads])
         if (stopped || current !== generation) return
         for (const oldFace of faces.values()) document.fonts.delete(oldFace)
         faces.clear()
-        for (const loaded of [face, ...skillFaces]) { document.fonts.add(loaded); faces.set(loaded.family, loaded) }
+        for (const loaded of [baseFace, ...skillFaces]) { document.fonts.add(loaded); faces.set(loaded.family, loaded) }
         const next = {key, size, marker, family, skillKey, literals, skillCells, families: [...skillFaces.map(face => face.family), family]}
         fontRef.current = next
         setFont(next)

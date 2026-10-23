@@ -71,3 +71,45 @@ body .gdEzaW_bubble {
 body[data-ds-dark-theme] .gdEzaW_bubble { background:#2d2d2d; color:#e5e5e5; }
 body .gdEzaW_bubble p { margin:0; font:inherit; }
 body .gdEzaW_bubble .gdEzaW_refChip { margin-inline-end:4px!important; }
+
+/* Figma 2947:369026/369110/369066/369152: native skill-owned delivery previews. */
+.uV2eYG_root[data-odyssey-deliverable-preview] { container-type:inline-size; }
+body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] {
+  --odyssey-deliverable-slot:128px; --odyssey-deliverable-gap:20px;
+  --odyssey-composer-fill:rgba(255,255,255,.5)!important; --odyssey-composer-backdrop:blur(12px)!important;
+  position:relative; min-height:199px; max-height:384px; padding:0; gap:0;
+}
+body[data-ds-dark-theme] .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] { --odyssey-composer-fill:rgba(0,0,0,.49)!important; }
+body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] .uV2eYG_scroll {
+  min-height:151px; max-height:336px; flex:0 1 auto; overflow-y:auto; overscroll-behavior:contain;
+}
+body .uV2eYG_root[data-odyssey-deliverable-preview] :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) {
+  padding:15px 17px 8px calc(17px + var(--odyssey-deliverable-slot) + var(--odyssey-deliverable-gap))!important;
+  font-size:16px!important; line-height:24px!important;
+}
+body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_mirror { min-height:151px; }
+body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] .uV2eYG_row { min-height:48px; flex:0 0 48px; box-sizing:border-box; padding:8px 11px 8px 8px; }
+.odyssey-deliverable-preview { position:absolute; z-index:2; left:17px; top:15px; width:var(--odyssey-deliverable-slot); height:128px; pointer-events:none; user-select:none; }
+.odyssey-deliverable-artboard { position:absolute; left:50%; top:8px; transform:translateX(-50%); display:grid; place-items:center; }
+.odyssey-deliverable-preview[data-odyssey-deliverable-art=ppt] .odyssey-deliverable-artboard { width:122.185px; height:77.018px; }
+.odyssey-deliverable-preview[data-odyssey-deliverable-art=report] .odyssey-deliverable-artboard { width:89.045px; height:113.837px; }
+.odyssey-deliverable-cover { position:relative; box-sizing:border-box; background:#fff; border:solid rgba(255,255,255,.28); border-radius:2.4px; overflow:hidden; }
+.odyssey-deliverable-cover[data-format=ppt] { width:116px; height:65.25px; transform:rotate(-6deg); opacity:.94; border-width:.435px; box-shadow:0 4.265px 13.647px -2.647px rgba(0,0,0,.16); }
+.odyssey-deliverable-cover[data-format=report] { width:80px; height:107.273px; transform:rotate(5deg); border-width:.409px; box-shadow:0 4.545px 14.545px -3px rgba(0,0,0,.16); }
+.odyssey-deliverable-cover > :is(span,img),.odyssey-deliverable-crop { position:absolute; box-sizing:border-box; display:block; }
+.odyssey-deliverable-cover > .odyssey-deliverable-template { inset:0; width:100%; height:100%; object-fit:cover; }
+.odyssey-deliverable-crop { overflow:hidden; }
+.odyssey-deliverable-crop .odyssey-deliverable-template { position:absolute; left:-757.583333%; top:0; width:916.666667%; height:118.573798%; max-width:none; object-fit:cover; }
+.odyssey-deliverable-blank { background:#fff; }
+.odyssey-deliverable-cyan { background:#1eb9e1; }
+.odyssey-deliverable-navy { background:#005096; }
+.odyssey-deliverable-skeleton { background:#d4d8dc; border-radius:.5px; }
+.odyssey-deliverable-logo { object-fit:contain; }
+@container (max-width:540px) {
+  body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] { --odyssey-deliverable-slot:124px; --odyssey-deliverable-gap:12px; }
+}
+@container (max-width:410px) {
+  .odyssey-deliverable-preview { display:none; }
+  body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] { --odyssey-deliverable-slot:0px; --odyssey-deliverable-gap:0px; min-height:126px; }
+  body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] .uV2eYG_scroll,body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_mirror { min-height:78px; }
+}

@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { OFFICE_SPREADSHEET_THEME_MARKER, patchOfficeSpreadsheetTheme } from './office-spreadsheet-theme.mjs'
+import {patchHomeGuidePresentationOffice,stripHomeGuidePresentationOffice} from './home-guide-presentation-native.mjs'
 
 const PATCH_MARKER = '/* sherlock:office-preview-service:v1 */'
 const PRE_THEME_CLIENT_SHA256 = 'be2bb640433d2e7a80f1beb7992bba871c2e2f8748fbc950ae3adcdc3977e143'
@@ -131,6 +132,7 @@ function alignPptxZipEntryLimit(source) {
  * changes the lifecycle or registration points.
  */
 export function patchSherlockOfficePreviewClient(source) {
+  source = stripHomeGuidePresentationOffice(source)
   source = stripPptxEditorPatch(source)
   if (source.includes(PATCH_MARKER)) {
     let migrated = source.includes('...(kind === "pptx" ? { toolbar: "inline" } : {})')
@@ -480,6 +482,6 @@ export async function patchSherlockOfficePreviewPackage(packageDirectory) {
   }
   const clientPath = path.join(packageDirectory, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
-  const patched = patchPptxEditor(patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(source))))
+  const patched = patchHomeGuidePresentationOffice(patchPptxEditor(patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(source)))))
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
 }

@@ -11,6 +11,8 @@ import { patchSessionListStreamPerformance } from './lib/session-list-stream-per
 import { patchWorkbenchPlanningSessionCatalog, patchWorkbenchPlanningSessionAppend } from './lib/workbench-planning-session.mjs'
 import { patchStandardModeClient, patchStandardModeRuntime } from './lib/standard-mode-only.mjs'
 import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
+import {patchHomeGuideNative,stripHomeGuideNative} from './lib/home-guide-native.mjs'
+import {patchHomeGuidePresentationNative,stripHomeGuidePresentationNative} from './lib/home-guide-presentation-native.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
 import {patchAudioClient} from './lib/audio-client.mjs'
@@ -53,6 +55,7 @@ import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
 import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
 import { patchFigmaInlineReferences } from './lib/figma-inline-references-client.mjs'
+import { patchComposerDeliverablePreview } from './lib/figma-composer-deliverable-preview.mjs'
 import { patchConversationFileReference } from './lib/sidebar-file-reference.mjs'
 import { patchFigmaTrajectory } from './lib/figma-trajectory-client.mjs'
 import { patchFigmaCanvasGestures } from './lib/figma-canvas-gestures.mjs'
@@ -160,7 +163,7 @@ patchStyles(asset('.css'))
 
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(gridConversationPath,restoreResearchGridWorkbench(readFileSync(gridConversationPath,'utf8')))
+writeFileSync(gridConversationPath,restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(readFileSync(gridConversationPath,'utf8')))))
 await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
@@ -284,3 +287,9 @@ for (const runtime of ['lib/index.js', 'lib/types/index.js']) {
   const path = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-session', runtime)
   writeFileSync(path, patchWorkbenchPlanningSessionAppend(readFileSync(path, 'utf8')))
 }
+
+// Input runtime helpers must survive the later native-component refreshes.
+writeFileSync(conversationPath, patchComposerDeliverablePreview(readFileSync(conversationPath, 'utf8')))
+
+// Tutorial portals use the final resident components, after all source refreshes.
+writeFileSync(conversationPath, patchHomeGuidePresentationNative(patchHomeGuideNative(readFileSync(conversationPath, 'utf8'))))

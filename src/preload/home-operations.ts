@@ -8,7 +8,7 @@ type Motion = 'idle' | 'settling'
 export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
 export type HomeOperationActionContext = { signal: AbortSignal; revealComposer(): Promise<void> }
 type Card = HomeOperationCard
-type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void> }
+type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: Exclude<Card, 'report'>, context: HomeOperationActionContext): Promise<void> }
 const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
 const DESIGN_WIDTH = 780
@@ -56,7 +56,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   let heroWasInert = false
   let section: HTMLElement | null = null, toggle: HTMLButtonElement | null = null
   let heading: HTMLElement | null = null
-  let usecase: HTMLElement | null = null
+  let usecase: HTMLElement | null = null, exampleButton: HTMLButtonElement | null = null
   let carousel: HomeOperationsCarousel | null = null
   let caseTransition: HomeOperationsCaseTransition | null = null
   let frame = 0, motionFrame = 0, lastMotionTime = 0
@@ -132,6 +132,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       layer.querySelector('.odyssey-operations-description')!.textContent = text[2]
     }
     if (usecase) { usecase.dataset.case = String(caseIndex); usecase.setAttribute('aria-label', `${selected[0]} · ${selected[1]}`) }
+    exampleButton?.setAttribute('aria-label', (locale() === 'en' ? 'Play example: ' : '播放示例：') + selected[1])
     for (const [index, button] of pages.entries()) {
       button.setAttribute('aria-label', copy().cases[index]![1])
       button.setAttribute('aria-pressed', String(index === caseIndex))
@@ -193,7 +194,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     section.setAttribute('aria-hidden', String(!expanded))
     hero.inert = !collapsed || heroWasInert
     toggle.setAttribute('aria-expanded', String(intent === 'operations'))
-    for (const button of [...quickCards, ...pages]) button.tabIndex = expanded ? 0 : -1
+    for (const button of [...quickCards, ...pages, ...(exampleButton ? [exampleButton] : [])]) button.tabIndex = expanded ? 0 : -1
     caseTransition?.setVisible(visible && !section.hidden && cardsProgress > .0001)
     carousel?.setVisible(visible && expanded && motion === 'idle' && !section.hidden && shown(section))
   }
@@ -299,7 +300,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   }
   const setActionBusy = (busy: boolean) => {
     section?.setAttribute('aria-busy', String(busy))
-    for (const card of quickCards) card.disabled = busy
+    for (const card of [...quickCards, ...(exampleButton ? [exampleButton] : [])]) card.disabled = busy
   }
   const revealComposer = (signal: AbortSignal) => new Promise<void>((resolve, reject) => {
     if (signal.aborted || !setSection('input')) { reject(Error('首页已变化，请重新点击卡片。')); return }
@@ -317,12 +318,16 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     signal.addEventListener('abort', abort, { once: true })
     check()
   })
-  const runAction = async (card: Card) => {
-    if (!options.onAction || actionController || !visible || motion !== 'idle' || state !== 'operations') return
+  const runAction = async (card: Card, example = false) => {
+    if ((example ? !options.onExample : !options.onAction) || actionController || !visible || motion !== 'idle' || state !== 'operations') return
     clearFeedback()
     const controller = new win.AbortController()
     actionController = controller; setActionBusy(true)
-    try { await options.onAction(card, { signal: controller.signal, revealComposer: () => revealComposer(controller.signal) }) }
+    try {
+      const context = { signal: controller.signal, revealComposer: () => revealComposer(controller.signal) }
+      if (example && card !== 'report') await options.onExample!(card, context)
+      else await options.onAction!(card, context)
+    }
     catch (error) {
       if (controller.signal.aborted || disposed) return
       feedback = doc.createElement('div'); feedback.dataset.odysseyOperationsFeedback = ''; feedback.setAttribute('role', 'alert')
@@ -468,6 +473,9 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     heading = doc.createElement('h2'); heading.className = 'odyssey-operations-heading'
     const grid = doc.createElement('div'); grid.className = 'odyssey-operations-grid'
     usecase = doc.createElement('article'); usecase.className = 'odyssey-operations-usecase'
+    exampleButton = doc.createElement('button'); exampleButton.type = 'button'; exampleButton.className = 'odyssey-operations-example-open'; exampleButton.dataset.odysseyOperationsOpenExample = ''; exampleButton.tabIndex = -1
+    exampleButton.addEventListener('click', () => { void runAction((['board', 'note', 'ppt'] as const)[caseIndex]!, true) })
+    usecase.append(exampleButton)
     const createCaseLayer = (index: number) => {
       const layer = doc.createElement('div')
       const field = doc.createElement('div'); field.className = 'odyssey-operations-gradient-field'; field.setAttribute('aria-hidden', 'true')
@@ -529,7 +537,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if (host) { delete host.dataset.odysseyHomeOperationsState; delete host.dataset.odysseyHomeOperationsLayout; delete host.dataset.odysseyHomeOperationsMotion; for (const name of variables) host.style.removeProperty(name) }
     section?.remove(); toggle?.remove()
     section = toggle = null; root = hero = host = null
-    heading = usecase = null
+    heading = usecase = null; exampleButton = null
     quickCards.length = pages.length = 0
     renderedTheme = renderedLocale = ''; visible = false; state = intent = 'input'; motion = 'idle'
     progress = targetProgress = renderedHeroOffset = velocity = 0
