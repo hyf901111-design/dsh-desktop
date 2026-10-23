@@ -99,6 +99,56 @@
           "系统物理鼠标间歇冻结尚未稳定复现或证明解决，本修复只覆盖现场首页阻塞。"
         ],
         "generatedAt": "2026-10-23T17:44:18.086825+00:00"
+      },
+      "merged": {
+        "mergeCommit": "bf788b8b3ee173409d3195b012025f65823cc1e4",
+        "verificationCommit": "bf788b8b3ee173409d3195b012025f65823cc1e4",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/blank-compaction-home.test.js",
+              "test/notes-session.test.js",
+              "test/notes-activity.test.js",
+              "test/notes-install-order.test.js",
+              "test/notes-history-ready.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/blank-compaction-home.test.js test/notes-session.test.js test/notes-activity.test.js test/notes-install-order.test.js test/notes-history-ready.test.js --maxWorkers=2",
+            "verifiedCommit": "bf788b8b3ee173409d3195b012025f65823cc1e4",
+            "completedAt": "2026-10-23T17:45:19.712Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "bf788b8b3ee173409d3195b012025f65823cc1e4",
+            "completedAt": "2026-10-23T17:45:19.712Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "bf788b8b3ee173409d3195b012025f65823cc1e4",
+            "completedAt": "2026-10-23T17:45:19.712Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-23T17:45:19.712Z"
       }
     }
   ],
