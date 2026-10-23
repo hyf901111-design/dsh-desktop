@@ -24,7 +24,7 @@ export function createNotesActivityStore(doc) {
     rows.set(next.sessionId, [...history.filter(value => value.requestId !== row.requestId), row].slice(-20))
     notify()
   }
-  const background=()=>{for(const record of reveals.values())record.skipNext=true}
+  const background=()=>{if(doc?.visibilityState==='hidden')for(const record of reveals.values())record.skipNext=true}
   const visibility=()=>{if(doc?.visibilityState==='hidden')background()}
   doc?.defaultView?.addEventListener('blur',background)
   doc?.addEventListener('visibilitychange',visibility)
