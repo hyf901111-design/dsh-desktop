@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-01",
+  "branch": "codex/integration/20261024-01",
+  "baseMainCommit": "27b4a5286758b60ff2852cdd52d9d1fd9e23d7af",
+  "expectedMainCommit": "27b4a5286758b60ff2852cdd52d9d1fd9e23d7af",
+  "createdAt": "2026-10-23T16:16:31.832Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首页预填替换、窄窗卡片排版与多技能字体重复加载修复",
+        "branch": "codex/feat/home-card-replace-layout-20261023",
+        "baseCommit": "27b4a5286758b60ff2852cdd52d9d1fd9e23d7af",
+        "tipCommit": "dd9454eb2d7cfd58faebeb7afc1238eb610edf4b",
+        "commits": [
+          {
+            "commit": "a3cd8d1ed5741d44cd09580cc5ede38e3294f433",
+            "parents": [
+              "27b4a5286758b60ff2852cdd52d9d1fd9e23d7af"
+            ],
+            "subject": "修复：首页创建卡片替换旧提示词和技能标签"
+          },
+          {
+            "commit": "4c781fa3415e9776f0e210ac8eaf4fe30392c5b5",
+            "parents": [
+              "a3cd8d1ed5741d44cd09580cc5ede38e3294f433"
+            ],
+            "subject": "修复：多技能标签字体加载去重并刷新已有客户端补丁"
+          },
+          {
+            "commit": "dd9454eb2d7cfd58faebeb7afc1238eb610edf4b",
+            "parents": [
+              "4c781fa3415e9776f0e210ac8eaf4fe30392c5b5"
+            ],
+            "subject": "优化：首页窄窗卡片比例配图尺寸与大卡内文排版"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-inline-references-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-actions.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-composer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/integration-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-inline-references-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-actions.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-skill-chip-layout-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-skill-composer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-skill-use.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/integration-skill-composer.test.ts",
+              "test/integration-skill-use.test.ts",
+              "test/skill-command-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/home-operations-actions.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "105项通过，创建卡片替换旧正文/技能、附件保留、多技能菜单、CAS与焦点。/tmp/home-card-replace-final-composer-20261024.log",
+            "verifiedCommit": "dd9454eb2d7cfd58faebeb7afc1238eb610edf4b",
+            "completedAt": "2026-10-23T16:16:02.359090+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-skill-chip-layout-browser.test.js",
+              "test/figma-inline-references-input.test.js",
+              "test/figma-inline-references-projection.test.js",
+              "test/figma-inline-references-patch.test.js",
+              "test/user-message-chip-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "18项通过，pending字体同key去重、乱序与清理、已有补丁包刷新和真实输入行为。/tmp/home-card-replace-final-projection-20261024.log",
+            "verifiedCommit": "dd9454eb2d7cfd58faebeb7afc1238eb610edf4b",
+            "completedAt": "2026-10-23T16:16:02.359090+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "center pane|compact app window|small-pane|panel and short-pane|grid centered|every quick card reachable",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "24项直接相关尺寸检查通过、50无关跳过；实际800x640/1080x752深浅，英文550/600/700、布局恢复、无内部scroll/外卡裁断。/tmp/home-card-replace-final-layout-20261024.log",
+            "verifiedCommit": "dd9454eb2d7cfd58faebeb7afc1238eb610edf4b",
+            "completedAt": "2026-10-23T16:16:02.359090+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。/tmp/home-card-replace-final-types-20261024.log",
+            "verifiedCommit": "dd9454eb2d7cfd58faebeb7afc1238eb610edf4b",
+            "completedAt": "2026-10-23T16:16:02.359090+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查通过，独立中文提交、源码干净。",
+            "verifiedCommit": "dd9454eb2d7cfd58faebeb7afc1238eb610edf4b",
+            "completedAt": "2026-10-23T16:16:02.359090+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "当前tip真实Chromium针对性检查通过，截图核验左大右四卡比例与原尺寸配图；独立review修复英文截断后通过。真实InputBar正常/延迟字体60轮多技能添加删除复核无残留，重复字体创建减少约51–52%。正式身份客户端在main本地构建后再核验，不把browser检查当作最终用户视觉验收。"
+        },
+        "acceptanceCriteria": [
+          "首页PPT/报告卡片预填替换旧正文与旧技能，保留文件/图片，手动多技能仍可用，不自动发送。",
+          "窄窗大卡标题副标题分行且内文留距，右侧四卡配图保持原尺寸与边缘锚定；五卡无内部scroll且外卡不截断。",
+          "同pending key不重复创建字体；尺寸变化、迟到加载、清理及已打补丁包升级正确。",
+          "按用户明确要求纳入正式身份客户端供本地测试；不发布、不改版本。"
+        ],
+        "risks": [
+          "系统物理鼠标间歇冻结未能稳定复现，pending字体去重是已证实的重复工作修复，尚未证明冻结根因或解决；不使用全局鼠标解锁或系统设置绕过。",
+          "最终正式包来源/包完整性/原账户主界面在构建后核验。"
+        ],
+        "generatedAt": "2026-10-23T16:16:02.359090+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/integration-skill-composer.test.ts",
+        "test/integration-skill-use.test.ts",
+        "test/skill-command-menu.test.ts",
+        "test/skill-command-patch.test.js",
+        "test/home-operations-actions.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-skill-chip-layout-browser.test.js",
+        "test/figma-inline-references-input.test.js",
+        "test/figma-inline-references-projection.test.js",
+        "test/figma-inline-references-patch.test.js",
+        "test/user-message-chip-layout.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "-t",
+        "center pane|compact app window|small-pane|panel and short-pane|grid centered|every quick card reachable",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
