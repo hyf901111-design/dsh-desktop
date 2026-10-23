@@ -94,7 +94,7 @@ export function createAssistantTextPaint(root,record,route){
 }
 export function useAssistantTextPaint(react,record,content,route){
  const root=react.useRef(null),paint=react.useRef()
- react.useLayoutEffect(()=>()=>{paint.current?.dispose();paint.current=undefined},[record,route])
+ react.useLayoutEffect(()=>()=>{paint.current?.dispose();paint.current=undefined},[record,route,record?.epoch])
  react.useLayoutEffect(()=>{if(!paint.current||paint.current.root!==root.current){paint.current?.dispose();paint.current={root:root.current,...createAssistantTextPaint(root.current,record,route)}}paint.current.update()})
  return root
 }
