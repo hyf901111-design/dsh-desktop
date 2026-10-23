@@ -1,4 +1,5 @@
 import {registerClientTools} from './client-tools.js'
+import {registerResearchReportTool} from './research-report-tool.js'
 import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
 import {calendarEventEvidenceIssue,calendarEventRepairEvidence} from './calendar-event-evidence.js'
 import {articleTimelineRequired,restoreArticleTimelineScope} from './article-timeline-provenance.js'
@@ -69,7 +70,7 @@ import { selectedResearchExcerpt } from './context-index.js'
 import { MAX_RESEARCH_HTML_BYTES, RESEARCH_HTML_LIMIT_ERROR } from './html-artifact.js'
 
 export const name = 'sherlock-research-task-runtime'
-export const inject = ['llm', 'agentDefaultModel', 'systemPrompt', 'agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'skills', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy', 'attachments', 'sessionTitle']
+export const inject = ['llm', 'agentDefaultModel', 'systemPrompt', 'agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'skills', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy', 'attachments', 'sessionTitle', 'subprocess']
 
 export const MAX_ACTIVE_PER_PARENT = 10
 // Heavy free-form pages keep two slots. Fixed-template data tasks can share
@@ -2988,6 +2989,7 @@ export async function apply(ctx) {
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     const disposeClientTools = registerClientTools(ctx)
+    const disposeResearchReportTool = registerResearchReportTool(ctx)
     let context
     try {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
@@ -2997,6 +2999,7 @@ export async function apply(ctx) {
       disposeModelQueue()
       disposeCompletionNotifications()
       disposeCanvasTools();disposeClientTools()
+      void disposeResearchReportTool()
       disposeRoutes()
       disposeScheduledTitle()
       disposeScheduledTaskTool()
@@ -3017,6 +3020,7 @@ export async function apply(ctx) {
       await sharedExecutor.dispose()
       await disposeWorkbench()
       disposeCanvasTools();disposeClientTools()
+      await disposeResearchReportTool()
       await context.dispose()
       disposeRoutes()
       disposeScheduledTitle()

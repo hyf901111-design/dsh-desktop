@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto'
 const MAX_PDF=32*1024*1024,MAX_JSON=Math.ceil(MAX_PDF/3)*4+65536
 export async function requestResearchPdf(html,environment=process.env){
  const endpoint=environment.SHERLOCK_RESEARCH_CONTEXT_URL,token=environment.SHERLOCK_RESEARCH_CONTEXT_TOKEN
- if(!endpoint||!token)throw Error('PDF_RUNTIME_UNAVAILABLE:请在EWork客户端会话中运行以使用内置PDF引擎；仅需HTML时显式使用 --format html')
+ if(!endpoint||!token)throw Error('PDF_RUNTIME_UNAVAILABLE:请在EWork客户端调用 research_report 专用入口；Bash按设计不携带PDF服务凭据。开发检查且明确只需HTML时可使用 --format html')
  const url=new URL(endpoint)
  if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||!url.port||url.username||url.password||!['','/'].includes(url.pathname)||url.search||url.hash)throw Error('PDF_RUNTIME_INVALID:PDF服务必须是客户端提供的本机端点')
  const response=await fetch(new URL('/research-pdf',url),{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({html}),signal:AbortSignal.timeout(55000),redirect:'error'})
