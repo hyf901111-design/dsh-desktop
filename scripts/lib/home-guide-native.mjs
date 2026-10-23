@@ -219,6 +219,43 @@ function replaceOne(source, anchor, next) {
   return source.replace(anchor, next)
 }
 
+/** Restore the native anchors before older source patches run again. */
+export function stripHomeGuideNative(source) {
+  const owned = [START, END, 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider']
+  if (!source.includes(START)) {
+    if (owned.some(token => source.includes(token))) throw Error('Home guide native partial patch drifted')
+    return source
+  }
+  if (source.split(START).length !== 2 || source.split(END).length !== 2) throw Error('Home guide native runtime anchor drifted')
+  const start = source.indexOf(START), end = source.indexOf(END, start)
+  if (end < start || source[end + END.length] !== '\n') throw Error('Home guide native runtime boundary drifted')
+  const runtime = source.slice(start, end)
+  for (const anchor of [
+    'const HomeGuideNativeFinancialContext = react.createContext(null);',
+    'let homeGuideNativeSharedResource = null;',
+    'function homeGuideNativeSampleProvider(', 'function homeGuideNativeResource(',
+    'function NativeHomeGuidePortal(', 'function ConversationRoot(props)'
+  ]) if (runtime.split(anchor).length !== 2) throw Error('Home guide native runtime anchor drifted: ' + anchor)
+  source = source.slice(0, start) + source.slice(end + END.length + 1)
+  source = replaceOne(source, 'function HomeGuideNativeOriginalConversationRoot({ subagentPanel=false,', 'function ConversationRoot({ subagentPanel=false,')
+  const hook = 'const homeGuideProvider = react.useContext(HomeGuideNativeFinancialContext);'
+  for (const signature of [
+    'function FinancialWidget({node,sessionId,visible,onSpecChange}){',
+    "function FinancialSymbolSearch({onPick,onClose,readOnly=false,variant='watchlist',symbols=[],displayValue=null}){",
+    'function FinancialLibrary({rootRef,workspace,sessionId}){'
+  ]) source = replaceOne(source, signature + '\n ' + hook, signature)
+  for (const [patched, native] of [
+    ['const bridge=homeGuideProvider??window.dshDesktop?.financialWidget;', 'const bridge=window.dshDesktop?.financialWidget;'],
+    ["await (homeGuideProvider??window.dshDesktop?.financialWidget)?.request({action:'search',query:text.trim()})", "await window.dshDesktop?.financialWidget?.request({action:'search',query:text.trim()})"],
+    ["const load=react.useCallback(async()=>{if(homeGuideProvider){setItems([]);setError('');return;}if(!window.dshDesktop?.componentLibrary?.request)return;", 'const load=react.useCallback(async()=>{if(!window.dshDesktop?.componentLibrary?.request)return;'],
+    ["className:'ew-grid-menu ew-financial-library','data-home-guide-native-library':homeGuideProvider?.runId,", "className:'ew-grid-menu ew-financial-library',"],
+    ["'data-financial-place':widget,disabled:busy||Boolean(homeGuideProvider&&!['watchlist','quote','news'].includes(widget)),", "'data-financial-place':widget,disabled:busy,"],
+    ['\n\t\texports.NativeHomeGuidePortal = NativeHomeGuidePortal;', '']
+  ]) source = replaceOne(source, patched, native)
+  if (owned.some(token => source.includes(token))) throw Error('Home guide native partial references remain after strip')
+  return source
+}
+
 /** Add an isolated native React portal without replacing any conversation child. */
 export function patchHomeGuideNative(source) {
   const definitions = START + '\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeSampleProvider, homeGuideNativeResource, NativeHomeGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
