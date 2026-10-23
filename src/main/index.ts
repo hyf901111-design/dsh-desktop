@@ -1,4 +1,5 @@
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
+import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import {installCalendarService} from './calendar/calendar-service'
@@ -789,6 +790,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     return { ok: true }
   })
 
+  registerDeliveryFileClipboard({ipcMain,getMainWindow:()=>mainWindow,writeText:value=>clipboard.writeText(value)})
   registerPrivilegedMainWindowHandlers({
     ipcMain,
     getMainWindow: () => mainWindow,
