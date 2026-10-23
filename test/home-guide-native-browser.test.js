@@ -70,7 +70,7 @@ beforeAll(async () => {
       const shared={sessionId:'${sessionId}',useSession,useSessions,useStore,actions,views,t};
       const inputProps={useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:(_name,select)=>select?.(undefined),sessionId:'${sessionId}',t};
       const renderSlot=(name,props={},scope={})=>name==='conversation.view'&&scope.only==='research'?<native.ResearchCanvas sessionId='${sessionId}' t={t} researchWorkspaces={registry} {...props}/>:name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<main data-native-history="">已有会话内容</main>:null;
-      const root=createRoot(document.querySelector('#native-root'));window.guideProbe.researchActivations=[];const setResearchActive=(id,active)=>window.guideProbe.researchActivations.push({id,active});
+      const root=createRoot(document.querySelector('#native-root'));window.guideProbe.researchActivations=[];window.guideProbe.researchActiveSessions=new Set();const setResearchActive=(id,active)=>{window.guideProbe.researchActivations.push({id,active});if(active)window.guideProbe.researchActiveSessions.add(id);else window.guideProbe.researchActiveSessions.delete(id)};
       function App(){const [current,setCurrent]=React.useState({sessionId:'${sessionId}',subagentPanel:false});window.guideProbe.setContext=setCurrent;return <native.ConversationRoot {...shared} {...current} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{window.guideProbe.workspaceCalls++;throw Error('Tutorial must not open a workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'教程浏览器验收',sessionIds:['${sessionId}']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={setResearchActive}/>}
       Object.assign(window.guideProbe,{native,shell,registry,memory,view,session,sidebar,dispose(){root.unmount();frameRoot?.unmount();disposers.reverse().forEach(stop=>stop())}});root.render(<App/>);
     ` },
@@ -291,9 +291,32 @@ it('keeps an already open user research panel, width and active file intact acro
   await expect.poll(()=>page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('guide')
   const during=await page.evaluate(()=>({writes:window.guideProbe.rightChanges,activation:window.guideProbe.researchActivations,panel:window.guideProbe.rightPanel.panelOpen,width:window.guideProbe.rightPanel.width,tab:window.guideProbe.rightPanel.splits.active}))
   expect(during).toEqual({writes:[],activation:[],panel:true,width:420,tab:'user-file'})
+  await page.evaluate(()=>{
+   const center=document.querySelector('.pI_x6G_centerCol'),root=document.querySelector('.wSkVaW_root'),guide=document.querySelector('[data-home-guide]')
+   guide.dataset.homeGuide='replayed-run';center.dataset.homeGuideActive='replayed-run';root.dataset.homeGuideResident='replayed-run'
+  })
+  await page.waitForTimeout(60)
+  expect(await page.evaluate(()=>window.guideProbe.researchActivations)).toEqual([])
   await page.evaluate(()=>{delete document.querySelector('.pI_x6G_centerCol').dataset.homeGuideActive;delete document.querySelector('.wSkVaW_root').dataset.homeGuideResident})
   await expect.poll(()=>page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('research')
-  expect(await page.evaluate(()=>({writes:window.guideProbe.rightChanges,panel:window.guideProbe.rightPanel.panelOpen,width:window.guideProbe.rightPanel.width,tab:window.guideProbe.rightPanel.splits.active}))).toEqual({writes:[],panel:true,width:420,tab:'user-file'})
+  expect(await page.evaluate(()=>({writes:window.guideProbe.rightChanges,activation:window.guideProbe.researchActivations,panel:window.guideProbe.rightPanel.panelOpen,width:window.guideProbe.rightPanel.width,tab:window.guideProbe.rightPanel.splits.active}))).toEqual({writes:[],activation:[],panel:true,width:420,tab:'user-file'})
   await preserved(page);expect(errors).toEqual([])
  }finally{await page.close()}
 },20000)
+
+it.each(['session-change','unmount'])('releases research activation held by a guide on %s',async end=>{
+ const {page,errors}=await fixture({nativeLayout:true})
+ try{
+  await page.evaluate(()=>window.guideProbe.view.update({view:'research'}))
+  await expect.poll(()=>page.evaluate(()=>window.guideProbe.researchActiveSessions.has('guide-browser-session'))).toBe(true)
+  await page.evaluate(()=>{
+   const center=document.querySelector('.pI_x6G_centerCol'),root=document.querySelector('.wSkVaW_root'),guide=document.querySelector('[data-home-guide]')
+   center.dataset.homeGuideActive=guide.dataset.homeGuide;root.dataset.homeGuideResident=guide.dataset.homeGuide;guide.dataset.kind='board'
+  })
+  await expect.poll(()=>page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('guide')
+  expect(await page.evaluate(()=>window.guideProbe.researchActiveSessions.has('guide-browser-session'))).toBe(true)
+  await page.evaluate(end=>end==='unmount'?window.guideProbe.dispose():window.guideProbe.setContext({sessionId:'next-session',subagentPanel:false}),end)
+  await expect.poll(()=>page.evaluate(()=>window.guideProbe.researchActiveSessions.has('guide-browser-session'))).toBe(false)
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)

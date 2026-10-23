@@ -24,6 +24,15 @@ it('restores the exact native source before earlier patches refresh and is a no-
  expect(guide.stripHomeGuideNative('const ordinary = 1;')).toBe('const ordinary = 1;')
  new Script(native)
 })
+it('upgrades the previous resident effect and still restores the native activation effect exactly',()=>{
+ const current=guide.patchHomeGuideNative(withoutPresentation(installed))
+ const legacyEffect='(0, react.useEffect)(() => {\n\t\t\t\tif (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tif (!homeGuideNativeResidentSession(sessionId,subagentPanel)) setResearchActive(sessionId, false);\n\t\t\t\t};\n\t\t\t}, [research, homeGuideResident, sessionId, setResearchActive]);'
+ const legacy=current.replace('/* odyssey:home-guide-resident-isolation:v2 */','/* odyssey:home-guide-resident-isolation:v1 */').replace('useHomeGuideNativeResearchActivation(sessionId,research,homeGuideResident,setResearchActive);',legacyEffect)
+ new Script(legacy)
+ expect(guide.patchHomeGuideNative(legacy)).toBe(current)
+ expect(guide.stripHomeGuideNative(legacy)).toBe(guide.stripHomeGuideNative(current))
+ expect(guide.stripHomeGuideNative(current)).not.toContain('useHomeGuideNativeResearchActivation')
+})
 it('rejects unknown partial markers, aliases and provider hooks instead of leaving an orphan reference',()=>{
  const board=guide.patchHomeGuideNative(withoutPresentation(installed))
  for(const partial of [
