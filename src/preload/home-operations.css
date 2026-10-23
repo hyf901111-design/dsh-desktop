@@ -1,0 +1,572 @@
+/* Figma 2608:719274: the native composer, theme background and dock stay in place.
+   The controller measures the resident hero and supplies pane-local coordinates. */
+[data-odyssey-home-operations-state] {
+  --odyssey-operations-duration:620ms;
+  --odyssey-operations-ease:cubic-bezier(.45,0,.18,1);
+  --odyssey-operations-hover-duration:300ms;
+  --odyssey-operations-hover-ease:cubic-bezier(.22,.61,.36,1);
+  --odyssey-operations-scale:1;
+  --odyssey-operations-scroll-progress:0;
+  --odyssey-operations-ink:#26313a;
+  --odyssey-operations-secondary:#4b5663;
+  --odyssey-operations-glass:rgb(249 251 253 / .82);
+  --odyssey-operations-backdrop-blur:18px;
+  --odyssey-operations-surface-gradient:linear-gradient(160deg,rgb(255 255 255 / .42) 0%,rgb(255 255 255 / 0) 48%,rgb(116 143 177 / .055) 100%);
+  --odyssey-operations-card-shadow:0 5px 18px rgb(38 49 65 / .07),0 1px 2px rgb(38 49 65 / .04);
+  --odyssey-operations-track:rgb(91 101 112 / .5);
+  --odyssey-operations-progress:linear-gradient(90deg,#3e70c8,#91b2eb);
+  overflow:hidden;
+}
+[data-ds-dark-theme] [data-odyssey-home-operations-state] {
+  --odyssey-operations-ink:#f5f7fc;
+  --odyssey-operations-secondary:#e5e8ef;
+  --odyssey-operations-glass:rgb(35 36 38 / .68);
+  --odyssey-operations-backdrop-blur:24px;
+  --odyssey-operations-surface-gradient:linear-gradient(to bottom,rgb(0 0 0 / .12) 0%,rgb(0 0 0 / .12) 22%,transparent 40%,transparent 50%,rgb(0 0 0 / .14) 70%,rgb(0 0 0 / .14) 100%),linear-gradient(160deg,rgb(255 255 255 / .12) 0%,rgb(255 255 255 / .018) 46%,rgb(0 0 0 / .08) 100%);
+  --odyssey-operations-card-shadow:0 8px 24px rgb(0 0 0 / .24),0 2px 6px rgb(0 0 0 / .10);
+  --odyssey-operations-track:rgb(176 178 182 / .32);
+  --odyssey-operations-progress:linear-gradient(90deg,#9bbff5,#e2edff);
+  --odyssey-operations-float-one-first:-34px -22px;
+  --odyssey-operations-float-one-second:38px 26px;
+  --odyssey-operations-float-two-first:42px 24px;
+  --odyssey-operations-float-two-second:-32px -20px;
+  --odyssey-operations-breathe-scale:1.09 1.06;
+}
+[data-odyssey-operations-composer] {
+  translate:0 calc(-1 * var(--odyssey-operations-hero-offset,0px));
+  opacity:var(--odyssey-operations-hero-opacity,1);
+  visibility:visible;
+  transition:none;
+}
+[data-odyssey-home-operations-state="operations"] [data-odyssey-operations-composer] {
+  pointer-events:none;
+}
+.odyssey-home-operations {
+  position:absolute;
+  left:var(--odyssey-operations-center-x,50%);
+  top:var(--odyssey-operations-input-top,var(--odyssey-operations-top,525px));
+  width:780px;
+  height:382px;
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  color:var(--odyssey-operations-ink);
+  font-family:"Noto Sans SC","PingFang SC",sans-serif;
+  text-align:left;
+  transform:translateX(-50%) scale(var(--odyssey-operations-scale));
+  transform-origin:center top;
+  translate:0 calc(-1 * var(--odyssey-operations-offset,0px));
+  opacity:var(--odyssey-operations-opacity,0);
+  visibility:visible;
+  transition:none;
+  isolation:isolate;
+  -webkit-app-region:no-drag;
+  z-index:3;
+}
+.odyssey-home-operations *, .odyssey-operations-toggle { box-sizing:border-box; }
+.odyssey-home-operations[hidden], .odyssey-operations-toggle[hidden] { display:none !important; }
+[data-odyssey-home-operations-state="input"][data-odyssey-home-operations-motion="idle"] .odyssey-home-operations,
+[data-odyssey-home-operations-state="operations"][data-odyssey-home-operations-motion="idle"] [data-odyssey-operations-composer] {
+  visibility:hidden;
+  pointer-events:none;
+}
+[data-odyssey-home-operations-state="input"] .odyssey-operations-quick-card,
+[data-odyssey-home-operations-state="input"] .odyssey-operations-pagination { pointer-events:none; }
+.odyssey-operations-heading {
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+  margin:0;
+  padding:0;
+  color:inherit;
+  font:500 16px/24px "Noto Sans SC","PingFang SC",sans-serif;
+}
+.odyssey-operations-grid {
+  position:absolute;
+  left:0;
+  top:36px;
+  width:780px;
+  height:346px;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+}
+.odyssey-operations-tilt-anchor {
+  position:relative;
+  min-width:0;
+  border-radius:10.5px;
+  /* The pointer anchor stays still while the card and its shadow share a plane. */
+  box-shadow:none;
+}
+.odyssey-operations-usecase-anchor { flex:none; width:376px; height:346px; }
+.odyssey-operations-quick-anchor { width:100%; height:100%; }
+.odyssey-operations-usecase,
+.odyssey-operations-quick-card {
+  position:relative;
+  overflow:hidden;
+  border:0;
+  border-radius:10.5px;
+  outline:0;
+  background-color:var(--odyssey-operations-card-surface,var(--odyssey-operations-glass));
+  background-image:var(--odyssey-operations-surface-gradient);
+  /* Filtering on the surface can sample the page behind its rounded clip. */
+  backdrop-filter:blur(var(--odyssey-operations-backdrop-blur)) saturate(.85);
+  -webkit-backdrop-filter:blur(var(--odyssey-operations-backdrop-blur)) saturate(.85);
+  box-shadow:var(--odyssey-operations-card-shadow);
+  color:inherit;
+  clip-path:none;
+  transform:none;
+  transform-style:flat;
+  transition:background-color var(--odyssey-operations-hover-duration) var(--odyssey-operations-hover-ease);
+}
+.odyssey-operations-usecase[data-odyssey-operations-tilting],
+.odyssey-operations-quick-card[data-odyssey-operations-tilting] {
+  transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+}
+.odyssey-operations-usecase {
+  width:100%;
+  height:100%;
+  isolation:isolate;
+}
+.odyssey-operations-case-stack {
+  position:absolute;
+  inset:0;
+  isolation:auto;
+  pointer-events:none;
+}
+.odyssey-operations-case-layer {
+  position:absolute;
+  inset:0;
+  opacity:0;
+  mix-blend-mode:normal;
+  pointer-events:none;
+}
+.odyssey-operations-case-stack[data-odyssey-operations-case-blending] { isolation:isolate; }
+.odyssey-operations-case-stack[data-odyssey-operations-case-blending] .odyssey-operations-case-layer { mix-blend-mode:plus-lighter; }
+.odyssey-operations-gradient-field {
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  border-radius:inherit;
+  clip-path:inset(0 round 10.5px);
+  pointer-events:none;
+  isolation:isolate;
+  z-index:-1;
+}
+.odyssey-operations-gradient-field > .glow,
+.odyssey-operations-glow {
+  position:absolute;
+  display:block;
+  /* Every animated SVG boundary stays beyond the rounded card at all phases. */
+  left:-48px;
+  top:-48px;
+  width:calc(100% + 96px);
+  height:calc(100% + 96px);
+  margin:0;
+  padding:0;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+  pointer-events:none;
+  will-change:translate,scale;
+}
+.odyssey-operations-gradient-field > .one,
+.odyssey-operations-glow.one {
+  background-image:var(--odyssey-operations-glow-one-image);
+  opacity:var(--odyssey-operations-glow-one-opacity,.16);
+  animation:odyssey-operations-float-one 12s ease-in-out infinite,odyssey-operations-breathe 12s ease-in-out infinite;
+}
+.odyssey-operations-gradient-field > .two,
+.odyssey-operations-glow.two {
+  background-image:var(--odyssey-operations-glow-two-image);
+  /* The original static vector already owns the fill's 36% / 48% opacity. */
+  opacity:var(--odyssey-operations-glow-two-opacity,.5);
+  animation:odyssey-operations-float-two 12s ease-in-out infinite,odyssey-operations-breathe 12s ease-in-out infinite;
+}
+.odyssey-operations-case-layer[data-case="1"],
+.odyssey-operations-case-layer[data-case="2"] {
+  /* Final light-card variation: 58% group, 42% / 48% radial fills. */
+  --odyssey-operations-glow-one-opacity:.2436;
+  --odyssey-operations-glow-two-opacity:.58;
+}
+[data-ds-dark-theme] .odyssey-operations-gradient-field > .glow,
+[data-ds-dark-theme] .odyssey-operations-glow {
+  opacity:.76;
+  mix-blend-mode:plus-lighter;
+}
+.odyssey-operations-case-copy {
+  position:absolute;
+  left:21px;
+  top:24px;
+  width:345px;
+}
+.odyssey-operations-title,
+.odyssey-operations-subtitle {
+  margin:0;
+  padding:0;
+  color:inherit;
+  font:400 26px/36px "Noto Sans SC","PingFang SC",sans-serif;
+  white-space:nowrap;
+}
+.odyssey-operations-title { display:flex; align-items:center; gap:12px; }
+.odyssey-operations-title > strong { font-weight:700; }
+.odyssey-operations-trend {
+  position:absolute;
+  display:block;
+  left:116px;
+  top:8px;
+  width:17px;
+  height:17px;
+  pointer-events:none;
+}
+html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex:none; }
+.odyssey-operations-description {
+  position:absolute;
+  left:23px;
+  top:228px;
+  width:298px;
+  margin:0;
+  padding:0;
+  color:var(--odyssey-operations-secondary);
+  font:400 16px/22px "Noto Sans SC","PingFang SC",sans-serif;
+  white-space:pre-line;
+  overflow-wrap:break-word;
+}
+.odyssey-operations-pagination {
+  position:absolute;
+  left:0;
+  right:0;
+  top:301px;
+  height:26px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4.5px;
+}
+.odyssey-operations-pagination > button {
+  display:grid;
+  place-items:center;
+  position:relative;
+  width:34px;
+  height:26px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:3px;
+  appearance:none;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+}
+.odyssey-operations-pagination > button > i {
+  position:relative;
+  display:block;
+  width:34px;
+  height:4px;
+  border-radius:2px;
+  background:var(--odyssey-operations-track);
+}
+.odyssey-operations-pagination > button[aria-pressed="true"] > i::before {
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  width:calc(var(--odyssey-operations-case-progress,0) * 100%);
+  height:4px;
+  border-radius:2px;
+  background:var(--odyssey-operations-progress);
+  opacity:1;
+}
+.odyssey-operations-quick-grid {
+  position:relative;
+  flex:none;
+  width:394px;
+  height:346px;
+  display:grid;
+  grid-template-columns:196px 188px;
+  grid-template-rows:164px 172px;
+  gap:10px;
+}
+.odyssey-operations-quick-card {
+  width:100%;
+  height:100%;
+  margin:0;
+  padding:0;
+  appearance:none;
+  color:inherit;
+  text-align:left;
+  font:inherit;
+  cursor:pointer;
+  isolation:isolate;
+  --odyssey-operations-card-tint:rgb(235 245 255 / .72);
+  --odyssey-operations-ambient-one-size:64% 70%;
+  --odyssey-operations-ambient-one-at:88% 10%;
+  --odyssey-operations-ambient-two-size:88% 90%;
+  --odyssey-operations-ambient-two-at:15% 90%;
+  --odyssey-operations-ambient-motion:odyssey-operations-quick-ambient;
+  --odyssey-operations-ambient-duration:16s;
+  --odyssey-operations-ambient-delay:0s;
+  --odyssey-operations-ambient-direction:normal;
+  -webkit-app-region:no-drag;
+}
+.odyssey-operations-quick-card[data-card="note"] {
+  --odyssey-operations-ambient-one-size:120% 96%;
+  --odyssey-operations-ambient-one-at:100% 96%;
+  --odyssey-operations-ambient-two-size:78% 76%;
+  --odyssey-operations-ambient-two-at:104% 18%;
+  --odyssey-operations-ambient-motion:odyssey-operations-quick-ambient-cross;
+  --odyssey-operations-ambient-duration:18s;
+  --odyssey-operations-ambient-delay:-5s;
+}
+.odyssey-operations-quick-card[data-card="ppt"] {
+  --odyssey-operations-ambient-one-size:88% 58%;
+  --odyssey-operations-ambient-one-at:108% 28%;
+  --odyssey-operations-ambient-two-size:96% 90%;
+  --odyssey-operations-ambient-two-at:92% 104%;
+  --odyssey-operations-ambient-duration:17s;
+  --odyssey-operations-ambient-delay:-9s;
+  --odyssey-operations-ambient-direction:reverse;
+}
+.odyssey-operations-quick-card[data-card="report"] {
+  --odyssey-operations-ambient-one-size:125% 100%;
+  --odyssey-operations-ambient-one-at:0% 102%;
+  --odyssey-operations-ambient-two-size:92% 72%;
+  --odyssey-operations-ambient-two-at:72% -6%;
+  --odyssey-operations-ambient-motion:odyssey-operations-quick-ambient-cross;
+  --odyssey-operations-ambient-duration:20s;
+  --odyssey-operations-ambient-delay:-13s;
+  --odyssey-operations-ambient-direction:reverse;
+}
+.odyssey-operations-quick-card::before {
+  content:"";
+  position:absolute;
+  inset:-24px;
+  border-radius:inherit;
+  background:radial-gradient(ellipse var(--odyssey-operations-ambient-one-size) at var(--odyssey-operations-ambient-one-at),rgb(161 188 225 / .32),transparent 82%),radial-gradient(ellipse var(--odyssey-operations-ambient-two-size) at var(--odyssey-operations-ambient-two-at),rgb(190 211 239 / .30),transparent 85%);
+  pointer-events:none;
+  animation:var(--odyssey-operations-ambient-motion) var(--odyssey-operations-ambient-duration) ease-in-out var(--odyssey-operations-ambient-delay) infinite var(--odyssey-operations-ambient-direction);
+  z-index:-1;
+}
+[data-ds-dark-theme] .odyssey-operations-quick-card::before {
+  background:radial-gradient(ellipse var(--odyssey-operations-ambient-one-size) at var(--odyssey-operations-ambient-one-at),rgb(207 200 188 / .18),transparent 82%),radial-gradient(ellipse var(--odyssey-operations-ambient-two-size) at var(--odyssey-operations-ambient-two-at),rgb(177 195 216 / .16),transparent 85%);
+}
+/* All four cards share the approved presentation-blue glass tint. */
+[data-ds-dark-theme] .odyssey-operations-quick-card { --odyssey-operations-card-tint:rgb(30 42 65 / .68); }
+.odyssey-operations-quick-anchor:hover > .odyssey-operations-quick-card,
+.odyssey-operations-quick-card:focus-visible { --odyssey-operations-card-surface:var(--odyssey-operations-card-tint); }
+.odyssey-operations-quick-label {
+  position:absolute;
+  left:13px;
+  top:12px;
+  height:26px;
+  display:flex;
+  align-items:center;
+  color:inherit;
+  font:400 14px/22px "Noto Sans SC","PingFang SC",sans-serif;
+  white-space:nowrap;
+  pointer-events:none;
+  z-index:2;
+}
+.odyssey-operations-illustration {
+  position:absolute;
+  left:var(--odyssey-operations-art-x,1px);
+  top:var(--odyssey-operations-art-y,42px);
+  width:var(--odyssey-operations-art-width,222px);
+  height:var(--odyssey-operations-art-height,153px);
+  pointer-events:none;
+}
+.odyssey-operations-quick-card[data-card="note"] {
+  --odyssey-operations-art-x:5px;
+  --odyssey-operations-art-y:38px;
+  --odyssey-operations-art-width:221px;
+  --odyssey-operations-art-height:170px;
+}
+.odyssey-operations-quick-card[data-card="ppt"] {
+  --odyssey-operations-art-x:-2px;
+  --odyssey-operations-art-y:38px;
+  --odyssey-operations-art-width:233px;
+  --odyssey-operations-art-height:154px;
+}
+.odyssey-operations-quick-card[data-card="report"] {
+  --odyssey-operations-art-x:5px;
+  --odyssey-operations-art-y:38px;
+  --odyssey-operations-art-width:219px;
+  --odyssey-operations-art-height:156px;
+}
+.odyssey-operations-illustration img {
+  position:absolute;
+  display:block;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:fill;
+  pointer-events:none;
+  mix-blend-mode:normal;
+  transition:opacity var(--odyssey-operations-hover-duration) var(--odyssey-operations-hover-ease);
+}
+.odyssey-operations-quick-card[data-odyssey-operations-illustration-blending] .odyssey-operations-illustration,
+.odyssey-operations-quick-card[data-odyssey-operations-illustration-blending] .odyssey-operations-illustration-pass { isolation:isolate; }
+.odyssey-operations-quick-card[data-odyssey-operations-illustration-blending] .odyssey-operations-illustration img { mix-blend-mode:plus-lighter; }
+.odyssey-operations-illustration .normal { filter:grayscale(1); }
+.odyssey-operations-illustration .colored { opacity:0; }
+.odyssey-operations-illustration > img {
+  mask-image:linear-gradient(to bottom,#000 40%,transparent 65%);
+  -webkit-mask-image:linear-gradient(to bottom,#000 40%,transparent 65%);
+}
+.odyssey-operations-illustration-pass { position:absolute; inset:0; pointer-events:none; }
+.odyssey-operations-illustration-pass.near {
+  filter:blur(1.2px);
+  mask-image:linear-gradient(to bottom,transparent 40%,#000 65%,transparent 85%);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 40%,#000 65%,transparent 85%);
+}
+.odyssey-operations-illustration-pass.middle {
+  filter:blur(2.5px);
+  mask-image:linear-gradient(to bottom,transparent 65%,#000 85%,transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 65%,#000 85%,transparent 100%);
+}
+.odyssey-operations-illustration-pass.far {
+  filter:blur(5px);
+  mask-image:linear-gradient(to bottom,transparent 85%,#000 100%);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 85%,#000 100%);
+}
+.odyssey-operations-quick-anchor:hover > .odyssey-operations-quick-card .normal,
+.odyssey-operations-quick-card:focus-visible .normal { opacity:0; }
+.odyssey-operations-quick-anchor:hover > .odyssey-operations-quick-card .colored,
+.odyssey-operations-quick-card:focus-visible .colored { opacity:1; }
+.odyssey-operations-toggle {
+  position:absolute;
+  left:50%;
+  top:var(--odyssey-operations-toggle-top,549px);
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  appearance:none;
+  background:rgb(255 255 255 / .42);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  color:rgb(102 102 102 / .9);
+  transform:translateX(-50%);
+  transition:background 180ms ease;
+  cursor:pointer;
+  -webkit-app-region:no-drag;
+  z-index:5;
+}
+.odyssey-operations-toggle svg { display:block; width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; transition:rotate var(--odyssey-operations-duration) var(--odyssey-operations-ease); }
+.odyssey-operations-toggle:hover { background:rgb(255 255 255 / .68); }
+.odyssey-operations-toggle[aria-expanded="true"] svg { rotate:180deg; }
+[data-ds-dark-theme] .odyssey-operations-toggle { background:rgb(166 168 173 / .18); border-color:rgb(190 190 190 / .09); color:rgb(245 245 245 / .75); }
+[data-ds-dark-theme] .odyssey-operations-toggle:hover { background:rgb(180 180 180 / .29); }
+.odyssey-operations-toggle:focus-visible,
+.odyssey-operations-pagination button:focus-visible,
+.odyssey-operations-quick-anchor:has(:focus-visible) { outline:2px solid var(--ds-focus-ring,#578cf5); outline-offset:4px; border-radius:10.5px; }
+/* Keep the shell's focus reset from hiding these keyboard targets. */
+[data-odyssey-home-operations-state] > .odyssey-operations-toggle:focus-visible,
+[data-odyssey-home-operations-state] .odyssey-operations-pagination > button:focus-visible { outline:2px solid var(--ds-focus-ring,#578cf5) !important; }
+/* Narrow panes retain readable type and scroll the card collection vertically. */
+[data-odyssey-home-operations-layout="stacked"] .odyssey-home-operations {
+  width:min(780px,calc(100% - 48px));
+  height:var(--odyssey-operations-viewport-height,440px);
+  max-height:var(--odyssey-operations-viewport-height,440px);
+  transform:translateX(-50%);
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgb(128 128 128 / .22) transparent;
+  padding-bottom:4px;
+}
+[data-odyssey-home-operations-layout="stacked"][data-odyssey-home-operations-state="input"] .odyssey-home-operations {
+  overflow:hidden;
+}
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-grid {
+  width:100%;
+  height:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding-bottom:4px;
+}
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-usecase {
+  width:100%;
+  height:260px;
+}
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-usecase-anchor { width:100%; height:260px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-case-copy { width:calc(100% - 42px); }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title,
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-subtitle {
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title > strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-description {
+  top:164px;
+  width:calc(100% - 46px);
+  max-height:66px;
+  overflow:hidden;
+}
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-pagination { top:224px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-quick-grid {
+  width:100%;
+  height:354px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(2,172px);
+}
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-quick-label {
+  display:block;
+  max-width:calc(100% - 26px);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  line-height:26px;
+}
+@keyframes odyssey-operations-quick-ambient {
+  0%,100% { translate:-4px 3px; scale:1; }
+  50% { translate:6px -4px; scale:1.025; }
+}
+@keyframes odyssey-operations-quick-ambient-cross {
+  0%,100% { translate:4px -3px; scale:1; }
+  50% { translate:-5px 5px; scale:1.025; }
+}
+@keyframes odyssey-operations-float-one {
+  0%,100% { translate:0 0; }
+  33.333333% { translate:var(--odyssey-operations-float-one-first,-18px -12px); }
+  66.666667% { translate:var(--odyssey-operations-float-one-second,22px 16px); }
+}
+@keyframes odyssey-operations-float-two {
+  0%,100% { translate:0 0; }
+  33.333333% { translate:var(--odyssey-operations-float-two-first,24px 12px); }
+  66.666667% { translate:var(--odyssey-operations-float-two-second,-16px -8px); }
+}
+@keyframes odyssey-operations-breathe {
+  0%,100% { scale:1 1; }
+  50% { scale:var(--odyssey-operations-breathe-scale,1.06 1.04); }
+}
+@media (prefers-reduced-motion:reduce) {
+  [data-odyssey-operations-composer], .odyssey-home-operations,
+  .odyssey-operations-toggle, .odyssey-operations-toggle svg,
+  .odyssey-operations-usecase, .odyssey-operations-quick-card, .odyssey-operations-illustration img { transition:none; }
+  .odyssey-operations-gradient-field > .glow, .odyssey-operations-glow { animation:none; will-change:auto; }
+  .odyssey-operations-quick-card::before { animation:none; }
+  .odyssey-operations-usecase, .odyssey-operations-quick-card { transform:none !important; }
+  .odyssey-operations-pagination > button[aria-pressed="true"] > i::before { width:100%; }
+}
+
+/* Exact Gaussian radial stops and transforms from the final native Figma fills.
+   Only the group/fill opacity differs between the light and dark surfaces. */
+.odyssey-operations-case-layer[data-case="0"] {
+  --odyssey-operations-glow-one-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20380%20448%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3CradialGradient%20id%3D%22g%22%20gradientUnits%3D%22userSpaceOnUse%22%20cx%3D%220%22%20cy%3D%220%22%20r%3D%2210%22%20gradientTransform%3D%22matrix%2822.1152%203.88897%20-2.560925%2020.24147%20-43.60081%20137.4433%29%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.04166667%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.992218%22%2F%3E%3Cstop%20offset%3D%220.08333334%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.9692332%22%2F%3E%3Cstop%20offset%3D%220.125%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.9321025%22%2F%3E%3Cstop%20offset%3D%220.1666667%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.8824969%22%2F%3E%3Cstop%20offset%3D%220.2083333%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.8225775%22%2F%3E%3Cstop%20offset%3D%220.25%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.7548396%22%2F%3E%3Cstop%20offset%3D%220.2916667%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.6819407%22%2F%3E%3Cstop%20offset%3D%220.3333333%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.6065307%22%2F%3E%3Cstop%20offset%3D%220.375%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.531096%22%2F%3E%3Cstop%20offset%3D%220.4166667%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.4578333%22%2F%3E%3Cstop%20offset%3D%220.4583333%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.3885581%22%2F%3E%3Cstop%20offset%3D%220.5%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.3246525%22%2F%3E%3Cstop%20offset%3D%220.5416667%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.2670518%22%2F%3E%3Cstop%20offset%3D%220.5833333%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.2162652%22%2F%3E%3Cstop%20offset%3D%220.625%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.1724216%22%2F%3E%3Cstop%20offset%3D%220.6666667%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.1353353%22%2F%3E%3Cstop%20offset%3D%220.7083333%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.104579%22%2F%3E%3Cstop%20offset%3D%220.75%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.07955951%22%2F%3E%3Cstop%20offset%3D%220.7916667%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.05958732%22%2F%3E%3Cstop%20offset%3D%220.8333333%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.04393693%22%2F%3E%3Cstop%20offset%3D%220.875%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.03189479%22%2F%3E%3Cstop%20offset%3D%220.9166667%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.02279418%22%2F%3E%3Cstop%20offset%3D%220.9583333%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220.01603771%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ffbf4f%22%20stop-opacity%3D%220%22%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23g%29%22%20d%3D%22M0%200H380V448H0Z%22%2F%3E%3C%2Fsvg%3E");
+}
+.odyssey-operations-case-layer[data-case="1"] {
+  --odyssey-operations-glow-one-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20380%20448%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3CradialGradient%20id%3D%22g%22%20gradientUnits%3D%22userSpaceOnUse%22%20cx%3D%220%22%20cy%3D%220%22%20r%3D%2210%22%20gradientTransform%3D%22matrix%2822.1152%203.88897%20-2.560925%2020.24147%20-43.60081%20137.4433%29%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.04166667%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.992218%22%2F%3E%3Cstop%20offset%3D%220.08333334%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.9692332%22%2F%3E%3Cstop%20offset%3D%220.125%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.9321025%22%2F%3E%3Cstop%20offset%3D%220.1666667%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.8824969%22%2F%3E%3Cstop%20offset%3D%220.2083333%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.8225775%22%2F%3E%3Cstop%20offset%3D%220.25%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.7548396%22%2F%3E%3Cstop%20offset%3D%220.2916667%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.6819407%22%2F%3E%3Cstop%20offset%3D%220.3333333%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.6065307%22%2F%3E%3Cstop%20offset%3D%220.375%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.531096%22%2F%3E%3Cstop%20offset%3D%220.4166667%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.4578333%22%2F%3E%3Cstop%20offset%3D%220.4583333%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.3885581%22%2F%3E%3Cstop%20offset%3D%220.5%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.3246525%22%2F%3E%3Cstop%20offset%3D%220.5416667%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.2670518%22%2F%3E%3Cstop%20offset%3D%220.5833333%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.2162652%22%2F%3E%3Cstop%20offset%3D%220.625%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.1724216%22%2F%3E%3Cstop%20offset%3D%220.6666667%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.1353353%22%2F%3E%3Cstop%20offset%3D%220.7083333%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.104579%22%2F%3E%3Cstop%20offset%3D%220.75%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.07955951%22%2F%3E%3Cstop%20offset%3D%220.7916667%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.05958732%22%2F%3E%3Cstop%20offset%3D%220.8333333%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.04393693%22%2F%3E%3Cstop%20offset%3D%220.875%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.03189479%22%2F%3E%3Cstop%20offset%3D%220.9166667%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.02279418%22%2F%3E%3Cstop%20offset%3D%220.9583333%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220.01603771%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23e7c4ac%22%20stop-opacity%3D%220%22%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23g%29%22%20d%3D%22M0%200H380V448H0Z%22%2F%3E%3C%2Fsvg%3E");
+}
+.odyssey-operations-case-layer[data-case="2"] {
+  --odyssey-operations-glow-one-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20380%20448%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3CradialGradient%20id%3D%22g%22%20gradientUnits%3D%22userSpaceOnUse%22%20cx%3D%220%22%20cy%3D%220%22%20r%3D%2210%22%20gradientTransform%3D%22matrix%2822.1152%203.88897%20-2.560925%2020.24147%20395.2%20134.4%29%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.04166667%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.992218%22%2F%3E%3Cstop%20offset%3D%220.08333334%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.9692332%22%2F%3E%3Cstop%20offset%3D%220.125%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.9321025%22%2F%3E%3Cstop%20offset%3D%220.1666667%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.8824969%22%2F%3E%3Cstop%20offset%3D%220.2083333%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.8225775%22%2F%3E%3Cstop%20offset%3D%220.25%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.7548396%22%2F%3E%3Cstop%20offset%3D%220.2916667%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.6819407%22%2F%3E%3Cstop%20offset%3D%220.3333333%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.6065307%22%2F%3E%3Cstop%20offset%3D%220.375%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.531096%22%2F%3E%3Cstop%20offset%3D%220.4166667%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.4578333%22%2F%3E%3Cstop%20offset%3D%220.4583333%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.3885581%22%2F%3E%3Cstop%20offset%3D%220.5%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.3246525%22%2F%3E%3Cstop%20offset%3D%220.5416667%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.2670518%22%2F%3E%3Cstop%20offset%3D%220.5833333%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.2162652%22%2F%3E%3Cstop%20offset%3D%220.625%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.1724216%22%2F%3E%3Cstop%20offset%3D%220.6666667%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.1353353%22%2F%3E%3Cstop%20offset%3D%220.7083333%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.104579%22%2F%3E%3Cstop%20offset%3D%220.75%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.07955951%22%2F%3E%3Cstop%20offset%3D%220.7916667%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.05958732%22%2F%3E%3Cstop%20offset%3D%220.8333333%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.04393693%22%2F%3E%3Cstop%20offset%3D%220.875%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.03189479%22%2F%3E%3Cstop%20offset%3D%220.9166667%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.02279418%22%2F%3E%3Cstop%20offset%3D%220.9583333%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220.01603771%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23d7ccaa%22%20stop-opacity%3D%220%22%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23g%29%22%20d%3D%22M0%200H380V448H0Z%22%2F%3E%3C%2Fsvg%3E");
+}
