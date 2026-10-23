@@ -77,6 +77,42 @@
           "只改窄栏CSS与对应布局测试；最终真实窗口将用正式身份本地应用核验。"
         ],
         "generatedAt": "2026-10-23T14:33:05.813526+00:00"
+      },
+      "merged": {
+        "mergeCommit": "31c365d1162058671e478a01e51ff4e31e05ff11",
+        "verificationCommit": "31c365d1162058671e478a01e51ff4e31e05ff11",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "600px Retina center pane|reduced-height center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js -t 600px Retina center pane|reduced-height center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable --maxWorkers=2",
+            "verifiedCommit": "31c365d1162058671e478a01e51ff4e31e05ff11",
+            "completedAt": "2026-10-23T14:34:06.449Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "31c365d1162058671e478a01e51ff4e31e05ff11",
+            "completedAt": "2026-10-23T14:34:06.449Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-23T14:34:06.449Z"
       }
     }
   ],
