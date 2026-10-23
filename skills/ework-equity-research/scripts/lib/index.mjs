@@ -3,6 +3,10 @@ import { digest, verifySources, verifyFacts, verifyObservations } from './eviden
 import { schemaDiagnostics, diagnostic } from './schema.mjs'
 import { runCalculations } from './calculations.mjs'
 import { runDCF } from './dcf.mjs'
+import { runMarket } from './market.mjs'
+import { runQuarterly } from './quarterly.mjs'
+import { runForecastDCF } from './forecast-dcf.mjs'
+import { alignmentDiagnostics } from './alignment.mjs'
 const receipts = new WeakMap()
 export async function validatePacket(packet, { root } = {}) {
   const result = { ok: false, diagnostics: [], facts: [], observations: [], sources: [] }
@@ -33,7 +37,7 @@ export async function validatePacket(packet, { root } = {}) {
   // Keep a private immutable copy: a caller cannot forge verification by editing a returned fact.
   receipts.set(result, {
     digest: result.packetSha256, facts: structuredClone(result.facts),
-    diagnostics: structuredClone(result.diagnostics),
+    diagnostics: structuredClone(result.diagnostics), observations:structuredClone(result.observations),
   })
   return result
 }
@@ -49,7 +53,12 @@ export function calculatePacket(packet, validated) {
   }
   result.diagnostics = structuredClone(receipt.diagnostics)
   result.calculations = runCalculations(packet, receipt.facts, result.diagnostics)
-  result.dcf = runDCF(packet, receipt.facts, result.diagnostics)
+  result.dcf = packet.dcf?.method==='driver-fcff-v2'
+    ? runForecastDCF(packet,receipt.facts,result.calculations,result.diagnostics,receipt.observations)
+    : runDCF(packet, receipt.facts, result.diagnostics)
+  result.market=runMarket(packet,receipt.facts,result.diagnostics,receipt.observations)
+  result.quarterly=runQuarterly(packet,receipt.facts,result.calculations,result.diagnostics,receipt.observations)
+  result.diagnostics.push(...alignmentDiagnostics(packet,{facts:receipt.facts},result))
   result.ok = !result.diagnostics.some(d => d.severity === 'error')
   return result
 }

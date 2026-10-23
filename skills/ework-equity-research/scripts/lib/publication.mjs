@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto'
 import {isDate} from './schema.mjs'
 
-const TYPES=new Set(['公司研究报告','财报点评报告','公司研究简报'])
+const TYPES=new Set(['公司研究报告','财报点评报告','公司研究简报','公司深度研究与DCF情景估值报告'])
 const forbidden=/[<>:"/\\|?*\p{Cc}\p{Cf}\u2028\u2029]/gu
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)
 const invalid=field=>{throw Error(`${field} 无效；请使用有界纯文本和受支持的报告类别。`)}

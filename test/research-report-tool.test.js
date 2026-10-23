@@ -44,6 +44,7 @@ it('keeps ordinary Bash credential scrubbing and enables only the fixed report C
  const doctor=await f.call({command:'doctor'});expect(doctor).toMatchObject({ok:true,command:'doctor',pdfRuntimeConfigured:true,defaultFormats:['html','pdf']})
  const result=await f.call({command:'run',input:'input/packet.json',out:'茅台研报-01'})
  expect(result).toMatchObject({ok:true,exitCode:0,status:'rendered-brief',artifactVerification:'verified',delivery:{completed:['html','pdf']},artifacts:{html:join(f.root,'茅台研报-01',stem+'.html'),pdf:join(f.root,'茅台研报-01',stem+'.pdf')}})
+ expect(result.researchRequirements).toMatchObject({standard:'legacy-v1',complete:false})
  expect(await readFile(result.artifacts.pdf)).toEqual(pdf)
  expect(f.state.hostCalls).toHaveLength(1);expect(f.state.hostCalls[0].html).toContain('虚构数据演示')
  expect(f.state.calls[1].argv).toEqual([process.execPath,resolve('skills/ework-equity-research/scripts/research.mjs'),'run','--input',join(f.root,'input/packet.json'),'--out',join(f.root,'茅台研报-01')])

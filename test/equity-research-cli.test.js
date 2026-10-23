@@ -13,7 +13,7 @@ describe('bundled research command workflow',()=>{
   const root=await mkdtemp(join(tmpdir(),'equity-init-'));temp.push(root);const out=join(root,'packet.json')
   expect(invoke('doctor').status).toBe(0)
   expect(invoke('init','--company','示例','--ticker','SYNTHETIC','--as-of','2026-10-23','--out',out).status).toBe(0)
-  const bytes=await readFile(out,'utf8');expect(JSON.parse(bytes).sources).toEqual([]);expect(JSON.parse(bytes).report.publication).toEqual({reportType:'公司研究报告'})
+  const bytes=await readFile(out,'utf8');expect(JSON.parse(bytes).sources).toEqual([]);expect(JSON.parse(bytes).schemaVersion).toBe(2);expect(JSON.parse(bytes).valuationAsOf).toBe('');expect(JSON.parse(bytes).report.profile).toBe('full');expect(JSON.parse(bytes).report.publication).toEqual({reportType:'公司深度研究与DCF情景估值报告'})
   expect(invoke('init','--out',out).status).not.toBe(0);expect(await readFile(out,'utf8')).toBe(bytes)
  })
  it('produces a repeatable offline report, evidence and independently checkable output hashes',async()=>{
