@@ -9,6 +9,9 @@ export const METRICS = {
   nonOperatingAssets: ['非经营资产', 'nonOperatingAssets'], minorityInterest: ['少数股东权益', 'minorityInterest'], shares: ['总股本', 'shares'],
   currentPrice: ['现价', '收盘价', 'currentPrice'], grossProfit: ['毛利润', 'grossProfit'], grossMargin: ['毛利率', 'grossMargin'],
   assets: ['资产总计', 'assets'], liabilities: ['负债合计', 'liabilities'],
+  sellingExpenses: ['销售费用','Selling expenses'], administrativeExpenses: ['管理费用','Administrative expenses'],
+  taxesAndSurcharges: ['税金及附加'], inventory: ['存货'], contractLiabilities: ['合同负债'],
+  researchExpenses: ['研发费用'], financeExpenses: ['财务费用'],
 }
 export const UNITS = {
   CNY: ['CNY', '1', ['元', '人民币元', 'CNY']], CNY_10K: ['CNY', '10000', ['万元', '人民币万元']], CNY_100M: ['CNY', '100000000', ['亿元', '人民币亿元']],
@@ -23,6 +26,8 @@ export const idValid = id => typeof id === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{
 export const diagnostic = (code, path, message, severity = 'error') => ({ severity, code, path, message })
 export function periodKey(value) {
   if (typeof value !== 'string') return null
+  value=value.replace(/\s/g,'').replace(/^(20\d{2})年(\d{1,2})月(\d{1,2})日$/,(_,y,m,d)=>`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`)
+  if(/^20\d{2}-\d{2}-\d{2}$/.test(value))return isDate(value)?value:null
   const p = value.replace(/^(20\d{2})年(?:半年度|上半年)$/, '$1H1').replace(/^(20\d{2})年度$/, 'FY$1').replace(/^(20\d{2})年$/, 'FY$1').replace(/^(20\d{2})$/, 'FY$1')
   return /^(?:FY20\d{2}|20\d{2}(?:Q[1-4]|H[12])|20\d{2}-\d{2}-\d{2})$/.test(p) ? p : null
 }
@@ -41,5 +46,7 @@ export function schemaDiagnostics(packet) {
     if (key === 'calculations' && packet[key] === undefined) continue
     if (!Array.isArray(packet[key]) || packet[key].length > 1000 || (key !== 'calculations' && !packet[key].length)) fail(key, `${key}必须是数组，sources/facts不能为空，最多1000项`)
   }
+  if(packet.report!==undefined&&!isObject(packet.report))fail('report','report必须是JSON对象')
+  if(packet.observations!==undefined&&(!Array.isArray(packet.observations)||packet.observations.length>300))fail('observations','原文观察必须是最多300项的数组')
   return errors
 }

@@ -117,3 +117,22 @@ quote 必须与定位到的完整原文行逐字一致；valueLine 是取值所�
 - `bridge` 包含 `cash,debt,nonOperatingAssets,minorityInterest,shares`，每项是**已核对事实ID**；均须与 financialAsOf 日期及 scope 完全一致，非负、股本为正。缺失任何项都不估值，明确披露的零可以用原文零事实。
 - `currentPrice` 可选，引用经核对 `currentPrice` 指标，元/股且为正，事实中必须有 `asOf` 价格时点且与研究日同日。否则不计算相对现价差异。
 - 模型输出 `perShareValue`，不自动评级；完整未来期末折现未处理研究日至财年末的 stub period，不能冒充交易日目标价。含金融子公司的现金/资产、经营性与非经营性划分必须研究复核，避免重复加回。
+
+
+## 完整研究与专题展示（引擎版本起始于一代增强版）
+
+`report.profile` 默认由 init 写为 `full`；旧输入缺省为 `brief` 并显式标记非完整研究。完整输入需 `summary`、`theses` 及唯一覆盖 `business/industry/performance/profitability/balance/cashflow/forecast/valuation/risks/monitoring` 的章节。
+
+`theses` 每项：`statement/inference/assumption/falsifier/monitoring` 为研究文字字符串，`evidenceRefs` 引用已核验事实、计算或原文观察。全部定量仍使用数值token。
+
+`sections` 每项增加 `kind` 与 `status: supported|partial|missing`。已支持章节需有证据支持正文；partial/missing 需 `gap: {missing,impact,nextStep}`。支持与否由作者声明，程序检查引用与范围，不能替代分析师判断。
+
+`observations` 为逐字披露摘录：`{id,sourceId,quote,locator:{lineStart,lineEnd,page}}`。最多三百项、每项窗口最多四十一行；PDF需正确页码且窗口位于同一提取页。与facts/calculations共用唯一ID。正文用refs引用，或用 `{{observation:ID}}` 展示原文。其数字是披露摘录，不能作为算术输入；需要计算时另建严格的fact。
+
+专题表：章节内 `tables:[{title,columns:[文字],rows:[[{text,refs?},...],...]}]`，最多八列八十行，单元格使用与段落一致的token与引用。
+
+专题柱图：`charts:[{title,series:[{name,refs:[fact或calcID,...]}]}]`。每系列两个至八个同指标、同单位、同口径、同频率期间；最多四系列，各系列期间对齐。禁止混画全年与半年，数据标签与来源自动生成。
+
+新增金额指标：`sellingExpenses` 销售费用、`administrativeExpenses` 管理费用、`taxesAndSurcharges` 税金及附加、`inventory` 存货、`contractLiabilities` 合同负债、`researchExpenses` 研发费用、`financeExpenses` 财务费用。资产负债表原文中文年月日可归一化为ISO事实期间，禁止伪造原文表头。
+
+`run` 默认输出HTML+PDF，`--format html` 为明确的单格式选项。PDF导出失败时仍保留HTML与诊断但非零退出，manifest status为pdf-failed；不能把快照/算术通过说成双格式已交付。

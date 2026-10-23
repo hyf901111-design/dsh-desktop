@@ -192,3 +192,23 @@ export function verifyFacts(packet, sources, texts, diagnostics) {
   }
   return facts
 }
+
+// Observations preserve exact source language; they never enter arithmetic as facts.
+export function verifyObservations(packet,sources,texts,diagnostics){
+ const observations=[],ids=new Set([...(packet.facts??[]),...(packet.calculations??[])].map(x=>x.id))
+ for(const [index,item] of (packet.observations??[]).entries()){
+  const result={...item,status:'invalid'},path=`observations[${index}]`
+  try{
+   if(!isObject(item)||!idValid(item.id)||ids.has(item.id)||!idValid(item.sourceId)||!isText(item.quote)||item.quote.length>12000)throw Error('OBSERVATION_SCHEMA:原文观察需唯一id、sourceId、quote和locator')
+   ids.add(item.id)
+   const lines=texts.get(item.sourceId),loc=item.locator
+   if(!lines||!isObject(loc)||![loc.lineStart,loc.lineEnd].every(Number.isInteger)||loc.lineStart<1||loc.lineEnd<loc.lineStart||loc.lineEnd>lines.length||loc.lineEnd-loc.lineStart>40)throw Error('OBSERVATION_LOCATOR:原文观察必须定位已核验快照内的有界行窗口')
+   if(lines.slice(loc.lineStart-1,loc.lineEnd).join('\n')!==item.quote)throw Error('OBSERVATION_QUOTE:原文观察必须逐字匹配快照，不接受改写或旧核验状态')
+   const source=sources.find(s=>s.id===item.sourceId)
+   if(source?.kind==='pdf-extract'&&(!Number.isInteger(loc.page)||!source.extraction.pages.some(p=>p.page===loc.page&&p.lineStart<=loc.lineStart&&p.lineEnd>=loc.lineEnd)))throw Error('OBSERVATION_LOCATOR:PDF观察需正确页码和完整页行范围')
+   result.status='verified'
+  }catch(error){const[code,...message]=error.message.split(':');diagnostics.push(diagnostic(code,path,message.join(':')))}
+  observations.push(result)
+ }
+ return observations
+}
