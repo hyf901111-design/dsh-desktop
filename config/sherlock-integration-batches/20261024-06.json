@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-06",
+  "branch": "codex/integration/20261024-06",
+  "baseMainCommit": "84e0eb2849c5f4e9ded396f0dfc1b3c1e8e61b25",
+  "expectedMainCommit": "84e0eb2849c5f4e9ded396f0dfc1b3c1e8e61b25",
+  "createdAt": "2026-10-23T21:03:30.230Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "原生首页教程侧栏与工具栏隔离及会话激活清理",
+        "branch": "codex/feat/home-guide-native-layout-20261024",
+        "baseCommit": "84e0eb2849c5f4e9ded396f0dfc1b3c1e8e61b25",
+        "tipCommit": "615f4c4ea099e41e5b52e9dc3fa90c7337365b67",
+        "commits": [
+          {
+            "commit": "8590b947051791c317fc630b39b65bde0a83cf24",
+            "parents": [
+              "84e0eb2849c5f4e9ded396f0dfc1b3c1e8e61b25"
+            ],
+            "subject": "修复：为教程退出过渡绑定原会话所有权"
+          },
+          {
+            "commit": "29c89292db005bd1611fe858683799176efe5f92",
+            "parents": [
+              "8590b947051791c317fc630b39b65bde0a83cf24"
+            ],
+            "subject": "隔离教程期间原生研究布局与驻留工具栏副作用"
+          },
+          {
+            "commit": "815094690a55af051f98c9c05f6566aed572ae6c",
+            "parents": [
+              "29c89292db005bd1611fe858683799176efe5f92"
+            ],
+            "subject": "文档：记录正式客户端教程验收与原生布局修复范围"
+          },
+          {
+            "commit": "615f4c4ea099e41e5b52e9dc3fa90c7337365b67",
+            "parents": [
+              "815094690a55af051f98c9c05f6566aed572ae6c"
+            ],
+            "subject": "修复教程切换会话与卸载时研究激活未释放"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-10-24-home-guided-examples.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-strip.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确功能tip聚焦验证：8文件51项通过；pipeline、typecheck、diff check通过。日志/tmp/home-guide-native-layout-handoff-focused-20261024.log及同前缀final-pipeline/final-typecheck。",
+            "verifiedCommit": "615f4c4ea099e41e5b52e9dc3fa90c7337365b67",
+            "completedAt": "2026-10-23T21:01:06.328105+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-browser.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "精确功能tip聚焦验证：8文件51项通过；pipeline、typecheck、diff check通过。日志/tmp/home-guide-native-layout-handoff-focused-20261024.log及同前缀final-pipeline/final-typecheck。",
+            "verifiedCommit": "615f4c4ea099e41e5b52e9dc3fa90c7337365b67",
+            "completedAt": "2026-10-23T21:01:06.328105+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确功能tip聚焦验证：8文件51项通过；pipeline、typecheck、diff check通过。日志/tmp/home-guide-native-layout-handoff-focused-20261024.log及同前缀final-pipeline/final-typecheck。",
+            "verifiedCommit": "615f4c4ea099e41e5b52e9dc3fa90c7337365b67",
+            "completedAt": "2026-10-23T21:01:06.328105+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确功能tip聚焦验证：8文件51项通过；pipeline、typecheck、diff check通过。日志/tmp/home-guide-native-layout-handoff-focused-20261024.log及同前缀final-pipeline/final-typecheck。",
+            "verifiedCommit": "615f4c4ea099e41e5b52e9dc3fa90c7337365b67",
+            "completedAt": "2026-10-23T21:01:06.328105+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实AppFrame/ConversationRoot/ResearchCanvas/ResearchSidebarCoordinator组合验证三类教程不改变原布局、工具栏唯一，延迟退出、会话切换、卸载清理及退出后正常研究行为。正式身份84e0eb28的笔记/PPT真实播放通过；本修复仍待main构建后原生验收。"
+        },
+        "acceptanceCriteria": [
+          "保持真实模式标签和原Root/InputBar，隔离教程期间驻留研究自动侧栏与body Portal。",
+          "同session重播/退出保留已有研究状态；切session/unmount释放旧研究激活。",
+          "退出过渡只属于精确原session/run，避免异步一帧触发研究自动收左。",
+          "按已授权正式客户端本地测试流程从干净main构建，不发布、不推送、不递增版本。"
+        ],
+        "risks": [
+          "物理系统指针偶发冻结仍未确认根因或根治；当前只修复有红绿证据的字体重复加载与原生教程缺陷。",
+          "本次native布局修复需main构建后复验；浏览器组合测试不替代正式客户端接受。"
+        ],
+        "generatedAt": "2026-10-23T21:01:06.328105+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guides.test.ts",
+        "test/home-guides-review.test.ts",
+        "test/home-guide-timeline.test.ts",
+        "test/home-guide-native.test.js",
+        "test/home-guide-native-browser.test.js",
+        "test/home-guide-native-strip.test.js",
+        "test/home-guide-notes-shell-browser.test.js",
+        "test/home-guide-presentation-browser.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
