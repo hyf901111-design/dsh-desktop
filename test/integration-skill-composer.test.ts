@@ -6,6 +6,9 @@ import { afterEach, expect, it,vi } from 'vitest'
 import {SKILL_REFERENCE_SOURCE,decodeSkillReference} from '../src/shared/skill-reference'
 import { installSkillComposer,serializeSharedSkillDraft } from '../src/preload/integrations/skill-composer'
 import { createSkillUseBridge } from '../src/preload/integrations/skill-use'
+import { installSkillCommand } from '../src/preload/integrations/skill-command'
+import { installSkillCommandBridge } from '../src/preload/integrations/skill-command-bridge'
+import type { IntegrationBridge } from '../src/shared/integration-ui'
 // @ts-expect-error The build patch is an untyped Node module.
 import { patchIntegrationSkillComposer } from '../scripts/lib/patch-integration-skill-composer.mjs'
 
@@ -16,6 +19,9 @@ runInNewContext(source.slice(0, source.indexOf('\n//# sourceMappingURL=client.js
 function fakeModule(): any { let fake: any; fake = new Proxy(function () {}, { get: () => fake, apply: () => fake, construct: () => ({}) }); return fake }
 function store(initial: any) { let value = initial; return { getSnapshot: () => value, set: (next: any) => { value = next }, subscribe: () => () => {} } }
 const client = descriptor.factory((id: string) => id.startsWith('react') ? require(id) : id === '@deepseek-ai/dsh-client-runtime/client' ? { createSnapshotStore: store } : fakeModule())
+let commandDescriptor: any
+runInNewContext(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js', 'utf8'), { window: { __ModuleLoader__: { load: (value: any) => { commandDescriptor = value } } }, AbortController, console, setTimeout, clearTimeout })
+const commandClient = commandDescriptor.factory((id: string) => id.startsWith('react') ? require(id) : id === '@deepseek-ai/dsh-client-runtime/client' ? { createSnapshotStore: store } : fakeModule())
 const alias = 'ework-skill-0123456789abcdef'
 const cleanup: Array<() => Promise<void>> = []
 afterEach(async () => { for (const close of cleanup.splice(0)) await close() })
@@ -51,6 +57,129 @@ function fixture(research = false) {
 const prefillReference = { id: 'builtin:efund-ppt-maker', revision: 3, invocationName: alias, label: 'efund-ppt-maker' }
 const prefillText = '请按公司风格制作PPT。\n主题：'
 const blankTopic = { text: prefillText, selectionStart: prefillText.length, selectionEnd: prefillText.length }
+
+function nativeSkillMenuFixture() {
+    const f = fixture()
+    const skills = [
+        { ...prefillReference, name: 'PPT制作助手' },
+        { id: 'builtin:ework-equity-research', revision: 5, invocationName: 'ework-skill-fedcba9876543210', label: 'ework-equity-research', name: '研报写作' },
+    ]
+    const request: IntegrationBridge['request'] = async command => {
+        if (command.type === 'snapshot') return { type: 'snapshot', snapshot: { revision: 1, rows: skills.map(skill => ({ ...skill, invocationLabel: skill.label, kind: 'skill', tab: 'skills', description: '内置技能', source: 'EWork 内置', enabled: true, status: '已启用' })) } }
+        if (command.type === 'skill-detail') {
+            const skill = skills.find(skill => skill.id === command.id)!
+            return { type: 'skill-detail', ...skill, invocationLabel: skill.label, enabled: true, content: '# Actual native skill' }
+        }
+        throw Error('Unexpected integration command')
+    }
+    const project = () => {
+        f.textarea.value = f.shell.snapshot.draft.replaceAll('\uFFFC', '\uE000')
+        f.document.querySelector('main')!.removeAttribute('inert')
+    }
+    const adapter = createSkillUseBridge(f.document, { request }, project)
+    const bridge = installSkillCommandBridge(f.document, { request, useSkill: adapter.useSkill })
+    let contribution: any
+    const unregister = installSkillCommand({ document: f.document, command: { register: value => { contribution = value; return () => {} } }, sessions: { subagentAddress: () => undefined } })
+    const popup = new commandClient.PopupSelectController({ consume: (segment: any) => f.shell.consumeToken(segment.via === 'menu' ? { kind: 'span', span: segment.span } : { kind: 'bare-token', token: segment.token }), focusComposer: () => { project(); f.textarea.focus() } })
+    const segments: Array<{ start: number; end: number; draftRev: number }> = []
+    const open = async (start: number, end = start) => {
+        const span = { start, end, draftRev: f.shell.snapshot.draftRev }
+        segments.push(span)
+        commandClient.CommandUiRuntime.prototype.openPopup.call({ scopeFor: () => ({}), popupFor: () => popup }, 'skills', contribution.ui, { sessionId: 'current' }, { via: 'menu', span })
+        await vi.waitFor(() => expect(popup.state.getSnapshot().status).toBe('ready'))
+    }
+    const select = async (id: string) => {
+        const index = popup.state.getSnapshot().options.findIndex((option: any) => option.id === id)
+        expect(index).toBeGreaterThanOrEqual(0)
+        await popup.select(index)
+    }
+    const close = cleanup.pop()!
+    cleanup.push(async () => { popup.dismiss(); unregister(); bridge.dispose(); adapter.dispose(); await close() })
+    return { ...f, skills, popup, segments, open, select }
+}
+
+it('uses a fresh native menu span to add multiple distinct skill chips and retain body, attachments and focus', async () => {
+    const f = nativeSkillMenuFixture()
+    f.shell.insertFilePaths(['/work/材料.md']); f.shell.addImages(['image-a'])
+    const original = f.shell.snapshot, file = original.occurrences[0]
+    await f.open(0); await f.select(f.skills[0]!.id)
+    expect(f.popup.state.getSnapshot().open).toBe(false)
+    expect(f.textarea.selectionStart).toBe(2)
+    await f.open(2); await f.select(f.skills[1]!.id)
+    expect(f.popup.state.getSnapshot()).toMatchObject({ open: false, error: null })
+    expect(f.shell.snapshot.draft).toBe(`\uFFFC \uFFFC ${original.draft}`)
+    expect(f.shell.snapshot.occurrences.filter((item: any) => item.source === SKILL_REFERENCE_SOURCE).map((item: any) => decodeSkillReference(item.ref).id)).toEqual(f.skills.map(skill => skill.id))
+    expect(f.shell.snapshot.occurrences[2]).toMatchObject({ occurrenceId: file.occurrenceId, offset: file.offset + 4 })
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a'])
+    expect(f.document.activeElement).toBe(f.textarea)
+    expect([f.textarea.selectionStart, f.textarea.selectionEnd]).toEqual([4, 4])
+    expect(f.segments[1]!.draftRev).toBeGreaterThan(f.segments[0]!.draftRev)
+    expect(f.sent).toEqual([])
+})
+
+it('does not duplicate an existing native skill when selected again at a different menu caret', async () => {
+    const f = nativeSkillMenuFixture()
+    await f.open(0); await f.select(f.skills[0]!.id)
+    const before = f.shell.snapshot
+    await f.open(0); await f.select(f.skills[1]!.id)
+    const both = f.shell.snapshot
+    // A leading empty launcher span is already valid; duplicate detection must
+    // look past the different first chip instead of minting the same label again.
+    await f.open(0); await f.select(f.skills[0]!.id)
+    expect(f.popup.state.getSnapshot().open).toBe(false)
+    expect(f.shell.snapshot.draft).toBe(both.draft)
+    expect(f.shell.snapshot.draftRev).toBe(both.draftRev)
+    expect(f.shell.snapshot.occurrences).toEqual(both.occurrences)
+    expect(f.shell.snapshot.occurrences).toHaveLength(before.occurrences.length + 1)
+    expect([f.textarea.selectionStart, f.textarea.selectionEnd]).toEqual([4, 4])
+    expect(f.sent).toEqual([])
+})
+
+it.each([false, true])('refreshes an existing skill reference in place after catalog updates while preserving its original gap=%s', async keepGap => {
+    const f = nativeSkillMenuFixture()
+    await f.open(0); await f.select(f.skills[0]!.id)
+    if (!keepGap) f.shell.insertText('', { start: 1, end: 2, draftRev: f.shell.snapshot.draftRev })
+    f.shell.insertFilePaths(['/work/保留材料.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot
+    f.skills[0]!.revision++
+    f.skills[0]!.invocationName = 'ework-skill-1111111111111111'
+    f.skills[0]!.label = 'updated-ppt-maker'
+    await f.open(before.draft.length); await f.select(f.skills[0]!.id)
+    expect(f.popup.state.getSnapshot()).toMatchObject({ open: false, error: null })
+    const refs = f.shell.snapshot.occurrences.filter((item: any) => item.source === SKILL_REFERENCE_SOURCE)
+    expect(refs).toHaveLength(1)
+    expect(decodeSkillReference(refs[0].ref)).toMatchObject({ id: f.skills[0]!.id, revision: f.skills[0]!.revision, invocationName: f.skills[0]!.invocationName, label: f.skills[0]!.label })
+    expect(f.shell.snapshot.draft).toBe(before.draft)
+    expect(f.shell.snapshot.occurrences.filter((item: any) => item.source !== SKILL_REFERENCE_SOURCE)).toEqual(before.occurrences.filter((item: any) => item.source !== SKILL_REFERENCE_SOURCE))
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a'])
+    expect(f.sent).toEqual([])
+})
+
+it('consumes only a newly typed slash token when an existing skill is selected after the body', async () => {
+    const f = nativeSkillMenuFixture()
+    await f.open(0); await f.select(f.skills[0]!.id)
+    f.shell.insertFilePaths(['/work/保留.md']); f.shell.addImages(['image-a'])
+    const before = f.shell.snapshot, start = before.draft.length
+    f.shell.insertText('/skills', { start, end: start, draftRev: before.draftRev })
+    await f.open(start, start + 7); await f.select(f.skills[0]!.id)
+    expect(f.popup.state.getSnapshot()).toMatchObject({ open: false, error: null })
+    expect(f.shell.snapshot.draft).toBe(before.draft)
+    expect(f.shell.snapshot.occurrences).toEqual(before.occurrences)
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a']); expect(f.sent).toEqual([])
+})
+
+it.each([false, true])('keeps the strict native menu revision guard after additional skills even for ABA=%s', async aba => {
+    const f = nativeSkillMenuFixture()
+    await f.open(0); await f.select(f.skills[0]!.id)
+    await f.open(2)
+    const original = f.shell.snapshot.draft
+    f.shell.setDraft(original + '后来输入')
+    if (aba) f.shell.setDraft(original)
+    const before = f.shell.snapshot
+    await f.select(f.skills[1]!.id)
+    expect(f.popup.state.getSnapshot()).toMatchObject({ open: true, error: expect.stringContaining('草稿') })
+    expect(f.shell.snapshot).toBe(before); expect(f.sent).toEqual([])
+})
 
 it('rejects prepare expectedDraftRev after the same native session draft changes during snapshot lookup', async () => {
     const f = fixture(), expectedDraftRev = f.shell.snapshot.draftRev
@@ -381,6 +510,33 @@ it('focuses a native composer whose inline-reference renderer projects the place
     expect(await f.request('focus', { token: prepared.token })).toMatchObject({ ok: true })
     expect(f.textarea.selectionStart).toBe(30)
     expect(f.shell.snapshot.occurrences).toHaveLength(1)
+})
+
+it.each(['\uE001', '\uF8FF'])('focuses an individually measured skill marker %s while preserving literal private-use text', async marker => {
+    const f = fixture()
+    f.shell.setDraft('保留正文')
+    const prepared = await f.request('prepare')
+    const text = '\uE321 主题：　'
+    const result = await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: { text, selectionStart: text.length - 1, selectionEnd: text.length } })
+    expect(result).toMatchObject({ ok: true })
+    f.textarea.value = f.shell.snapshot.draft.replaceAll('\uFFFC', marker)
+    f.document.querySelector('main')!.removeAttribute('inert')
+    expect(await f.request('focus', { token: prepared.token })).toMatchObject({ ok: true })
+    expect(f.textarea.value.slice(f.textarea.selectionStart, f.textarea.selectionEnd)).toBe('　')
+    expect(f.shell.snapshot.draft).toContain('\uE321')
+    expect(f.sent).toEqual([])
+})
+
+it('does not treat literal private-use draft characters as interchangeable reference markers', async () => {
+    const f = fixture(), prepared = await f.request('prepare')
+    const text = '\uE321 主题：　'
+    await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference, prefill: { text, selectionStart: text.length - 1, selectionEnd: text.length } })
+    const before = f.shell.snapshot
+    f.textarea.value = before.draft.replaceAll('\uFFFC', '\uE002').replace('\uE321', '\uE322')
+    f.document.querySelector('main')!.removeAttribute('inert')
+    expect(await f.request('focus', { token: prepared.token })).toMatchObject({ ok: false })
+    expect(f.shell.snapshot).toBe(before)
+    expect(f.sent).toEqual([])
 })
 
 it('opens the native compact research panel exactly once after leaving the integrations surface', async () => {

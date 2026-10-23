@@ -1329,7 +1329,7 @@ it('keeps the toggle at one low fixed position throughout state changes and hove
   } finally { await page.close() }
 }, 15000)
 
-it.each([{ dark: false }, { dark: true }])('fits the complete heading and case above scrollable quick starts in a 600px Retina center pane %j', async options => {
+it.each([{ dark: false }, { dark: true }])('fits all five cards without scrolling in a 600px Retina center pane %j', async options => {
   const page = await fixture({ ...options, width: 1380, height: 900, panelWidth: 480, deviceScaleFactor: 2, themes: true })
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
@@ -1356,7 +1356,6 @@ it.each([{ dark: false }, { dark: true }])('fits the complete heading and case a
     expect(initial.scrollHeight, 'a 600×880 center pane should fit the compact collection at entry').toBeLessThanOrEqual(initial.clientHeight + 1)
     for (const card of initial.cards) expect(card.bottom, 'the lower quick-start row is complete before scrolling').toBeLessThanOrEqual(initial.section.bottom + 1)
     for (const card of await page.locator('.odyssey-operations-quick-card').all()) {
-      await card.scrollIntoViewIfNeeded()
       const reached = await card.evaluate(card => {
         const bounds = card.getBoundingClientRect(), clip = card.closest('[data-odyssey-home-operations]').getBoundingClientRect(), hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
         return { inside: bounds.top >= clip.top && bounds.bottom <= clip.bottom + 1, hit: card === hit || card.contains(hit), bottom: bounds.bottom, toggleTop: document.querySelector('[data-odyssey-home-operations-toggle]').getBoundingClientRect().top }
@@ -1378,22 +1377,25 @@ it.each([
   { dark: false, paneWidth: 600, paneHeight: 760 },
   { dark: true, paneWidth: 600, paneHeight: 760 },
   { dark: false, paneWidth: 480, paneHeight: 704 },
-  { dark: true, paneWidth: 480, paneHeight: 704 }
-])('keeps compact case text separated and lower cards reachable in a reduced-height center pane %j', async options => {
+  { dark: true, paneWidth: 480, paneHeight: 704 },
+  { dark: false, paneWidth: 400, paneHeight: 600 },
+  { dark: true, paneWidth: 400, paneHeight: 600 }
+])('fits compact case text and all five cards without scrolling in a reduced-height center pane %j', async options => {
   const page = await fixture({ dark: options.dark, width: options.paneWidth + 780, height: options.paneHeight + 20, panelWidth: 480, deviceScaleFactor: 2, themes: true })
   try {
     await toggle(page).click()
     await waitState(page, 'operations')
     const geometry = await region(page).evaluate(section => {
       const pane = section.closest('.pI_x6G_centerCol').getBoundingClientRect()
-      return { paneWidth: pane.width, paneHeight: pane.height, height: section.clientHeight, content: section.scrollHeight }
+      return { paneWidth: pane.width, paneHeight: pane.height, height: section.clientHeight, content: section.scrollHeight, overflowY: getComputedStyle(section).overflowY, scrollTop: section.scrollTop }
     })
     await writeFile(`${evidence}/compact-height-${options.paneWidth}-${options.paneHeight}-${options.dark ? 'dark' : 'light'}.json`, JSON.stringify(geometry, null, 2))
     await page.screenshot({ path: `${evidence}/compact-height-${options.paneWidth}-${options.paneHeight}-${options.dark ? 'dark' : 'light'}-entry.png` })
     expect(geometry.paneWidth).toBe(options.paneWidth); expect(geometry.paneHeight).toBe(options.paneHeight)
-    if (options.paneHeight === 760) expect(geometry.content, 'moderately short panes should fit all five cards at entry').toBeLessThanOrEqual(geometry.height + 1)
+    expect(geometry.content, 'all five cards fit without an inner scroll container').toBeLessThanOrEqual(geometry.height + 1)
+    expect(['auto', 'scroll']).not.toContain(geometry.overflowY)
+    expect(geometry.scrollTop).toBe(0)
     for (const index of [0, 1, 2]) {
-      await region(page).evaluate(section => { section.scrollTop = 0 })
       await page.locator(`.odyssey-operations-pagination [data-case="${index}"]`).click()
       await waitCase(page, index)
       const copy = await page.locator('.odyssey-operations-usecase').evaluate(card => {
@@ -1407,11 +1409,12 @@ it.each([
       expect(copy.text.size).toBeGreaterThanOrEqual(14)
     }
     for (const card of await page.locator('.odyssey-operations-quick-card').all()) {
-      await card.scrollIntoViewIfNeeded()
       expect(await card.evaluate(card => {
         const b = card.getBoundingClientRect(), s = card.closest('[data-odyssey-home-operations]').getBoundingClientRect(), hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2), toggle = document.querySelector('[data-odyssey-home-operations-toggle]').getBoundingClientRect()
-        return b.top >= s.top && b.bottom <= s.bottom + 1 && b.bottom <= toggle.top - 16 && (hit === card || card.contains(hit))
+        const art = card.querySelector('.odyssey-operations-illustration').getBoundingClientRect(), label = card.querySelector('.odyssey-operations-quick-label').getBoundingClientRect()
+        return b.top >= s.top && b.bottom <= s.bottom + 1 && b.bottom <= toggle.top - 16 && art.top >= label.bottom && art.bottom <= b.bottom + 1 && (hit === card || card.contains(hit))
       })).toBe(true)
+      await card.click()
     }
     await page.screenshot({ path: `${evidence}/compact-height-${options.paneWidth}-${options.paneHeight}-${options.dark ? 'dark' : 'light'}-lower.png` })
   } finally { await page.close() }
@@ -1429,9 +1432,8 @@ it('adapts the operation collection to panel and short-pane resizing without car
     await page.evaluate(() => { document.body.style.setProperty('--dsh-sidebar-width', '480px'); document.querySelector('[data-dsh-panel-host]').dataset.odysseyPanelRight = 'open' })
     await expect.poll(() => region(page).evaluate(section => section.scrollHeight - section.clientHeight)).toBeLessThanOrEqual(1)
     await page.setViewportSize({ width: 1180, height: 720 })
-    await expect.poll(() => region(page).evaluate(section => section.scrollHeight - section.clientHeight)).toBeGreaterThan(20)
+    await expect.poll(() => region(page).evaluate(section => section.scrollHeight - section.clientHeight)).toBeLessThanOrEqual(1)
     const report = page.locator('.odyssey-operations-quick-card[data-card="report"]')
-    await report.scrollIntoViewIfNeeded()
     expect(await dispatchWheel(page, '.odyssey-operations-quick-card[data-card="report"]', 120)).toBe(false)
     const bottom = await report.evaluate(card => {
       const rect = card.getBoundingClientRect(), clip = card.closest('[data-odyssey-home-operations]').getBoundingClientRect(), hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
@@ -1455,7 +1457,7 @@ it('adapts the operation collection to panel and short-pane resizing without car
   } finally { await page.close() }
 }, 15000)
 
-it('keeps small-pane content natively scrollable while only the bottom button returns to input', async () => {
+it('keeps every small-pane card visible without inner scrolling while the bottom button returns to input', async () => {
   const page = await fixture({ width: 1040, height: 640, reduced: true })
   try {
     await page.locator('[data-dsh-panel-host]').evaluate(element => element.dataset.odysseyPanelRight = 'open')
@@ -1472,11 +1474,11 @@ it('keeps small-pane content natively scrollable while only the bottom button re
     })
     expect(Math.min(...layout.fonts)).toBeGreaterThanOrEqual(12)
     for (const target of layout.targets) { expect(target.width).toBeGreaterThanOrEqual(24); expect(target.height).toBeGreaterThanOrEqual(24) }
-    expect(layout.scrollHeight).toBeGreaterThan(layout.clientHeight)
+    expect(layout.scrollHeight).toBeLessThanOrEqual(layout.clientHeight + 1)
     const operations = region(page)
     await operations.hover()
     await page.mouse.wheel(0, 900)
-    await expect.poll(() => operations.evaluate(section => section.scrollTop)).toBeGreaterThan(0)
+    await expect.poll(() => operations.evaluate(section => section.scrollTop)).toBe(0)
     expect(await state(page)).toBe('operations')
     await operations.evaluate(section => section.scrollTop = section.scrollHeight)
     const report = page.locator('.odyssey-operations-quick-card[data-card="report"]')
