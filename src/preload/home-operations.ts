@@ -244,16 +244,22 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       const dockHeight = Number.parseFloat(dockStyle.height) || dock.offsetHeight || 64
       toggleTop = bounds.height - (Number.isFinite(expandedBottom) ? expandedBottom : 24) - dockHeight * (Number.isFinite(dockScale) ? dockScale : 1) - 44 - toggleHeight
     }
-    const effectiveWidth = Math.min(composer.width, Math.max(1, bounds.width - 48))
-    const stacked = effectiveWidth < 620
-    host.dataset.odysseyHomeOperationsLayout = stacked ? 'stacked' : 'wide'
-    const minimumTop = Math.max(64, headerBottom + 24), bottomLimit = toggleTop - 24
+    // The collection belongs to the pane, independently of the native input's
+    // narrower max-width when the file panel is open.
+    const paneWidth = Math.max(1, bounds.width - 48)
+    const stacked = bounds.width < 550, fluid = !stacked && paneWidth < DESIGN_WIDTH
+    host.dataset.odysseyHomeOperationsLayout = stacked ? 'stacked' : fluid ? 'fluid' : 'wide'
+    const minimumTop = Math.max(stacked ? 56 : 64, headerBottom + (stacked ? 16 : 24))
+    const bottomLimit = toggleTop - (stacked ? 16 : 24)
+    const availableHeight = Math.max(96, bottomLimit - minimumTop)
     const heightScale = Math.max(.22, (bottomLimit - minimumTop) / DESIGN_HEIGHT)
-    const scale = stacked ? 1 : Math.max(.2, Math.min(1, effectiveWidth / DESIGN_WIDTH, heightScale))
-    const viewportHeight = stacked ? Math.min(664.294, Math.max(96, bottomLimit - headerBottom - 72)) : DESIGN_HEIGHT * scale
-    const physicalWidth = stacked ? Math.min(DESIGN_WIDTH, Math.max(1, bounds.width - 48)) : DESIGN_WIDTH * scale
+    const scale = stacked || fluid ? 1 : Math.max(.2, Math.min(1, heightScale))
+    const physicalWidth = stacked ? Math.max(1, bounds.width - 32) : fluid ? paneWidth : DESIGN_WIDTH * scale
+    const viewportHeight = stacked ? Math.min(620, availableHeight)
+      : fluid ? Math.min(availableHeight, (locale() === 'en' ? 346 : Math.max(260, Math.min(346, Math.round(physicalWidth * .5)))) + 36)
+      : DESIGN_HEIGHT * scale
     const centeredLeft = snap(bounds.left + (bounds.width - physicalWidth) / 2) - bounds.left
-    const centeredTop = (bounds.height - 346 * scale) / 2 - 36 * scale
+    const centeredTop = stacked || fluid ? (bounds.height - viewportHeight) / 2 - 18 : (bounds.height - 346 * scale) / 2 - 36 * scale
     const targetTop = snap(bounds.top + Math.max(minimumTop, Math.min(centeredTop, bottomLimit - viewportHeight))) - bounds.top
     // Space from the visible input surface, excluding the hero's transparent
     // bottom padding. Re-query because the resident composer can replace slots.

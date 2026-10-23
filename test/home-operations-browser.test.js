@@ -51,12 +51,12 @@ function hero() {
   </div>`
 }
 
-async function fixture({ dark = false, reduced = true, width = 1380, height = 900, route = 'home', surface = '', child = false, themes = false, clock = false, panelWidth = 0, deviceScaleFactor = 1 } = {}) {
+async function fixture({ dark = false, reduced = true, width = 1380, height = 900, route = 'home', surface = '', child = false, themes = false, clock = false, panelWidth = 0, deviceScaleFactor = 1, sidebarWidth = 280 } = {}) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor, reducedMotion: reduced ? 'reduce' : 'no-preference' })
   if (clock) await page.clock.install({ time: new Date('2026-10-23T00:00:00Z') })
   await page.route('**/*', request => request.abort())
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>${frontend}\n${native}\n${portalCss}</style><body ${dark ? 'data-ds-dark-theme' : ''} ${surface ? `data-workspace-surface="${surface}"` : ''} ${panelWidth ? `style="--dsh-sidebar-width:${panelWidth}px"` : ''}>
-    <div id="root"><div data-slot="root" style="display:contents"><div class="pI_x6G_frame" data-dsh-frame="true" style="grid-template-columns:280px minmax(0,1fr) 0px">
+    <div id="root"><div data-slot="root" style="display:contents"><div class="pI_x6G_frame" data-dsh-frame="true" style="grid-template-columns:${sidebarWidth}px minmax(0,1fr) 0px">
       <aside></aside><main class="pI_x6G_centerCol" data-pane="conversation"><div data-slot="conversation" style="display:contents"><div class="wSkVaW_root" data-phase="${route === 'home' ? 'hero' : 'active'}" data-odyssey-page="${route}">
         <div data-slot="conversation.session.header" style="display:contents"><header class="wSkVaW_header" data-srb-session-header data-odyssey-home-header="true"><button aria-label="对话">对话</button></header></div>
         <div class="wSkVaW_scrollBody" data-conversation-scroll></div><div data-center-composer-host><div data-composer-portal-host><div class="wSkVaW_composerSeat" data-composer-seat><div data-slot="conversation.composer" style="display:contents"><div data-chain-overlay-fallback="conversation.composer" style="display:contents">${hero()}</div></div></div></div></div>
@@ -1329,6 +1329,108 @@ it('keeps the toggle at one low fixed position throughout state changes and hove
   } finally { await page.close() }
 }, 15000)
 
+it.each([
+  { width:800, height:640, panelWidth:0, dark:false },
+  { width:800, height:640, panelWidth:0, dark:true },
+  { width:1080, height:752, panelWidth:372, dark:false },
+  { width:1080, height:752, panelWidth:372, dark:true }
+])('retains the left-case and right-four-card composition with readable text and expansive artwork in the actual compact app window %j',async options=>{
+ const page=await fixture({...options,sidebarWidth:88,themes:true,deviceScaleFactor:2})
+ const label=`replacement-${options.width}-${options.height}-${options.dark?'dark':'light'}`
+ const errors=[];page.on('pageerror',error=>errors.push(error.message))
+ try{
+  await toggle(page).click();await waitState(page,'operations');await nextPaint(page)
+  const geometry=await page.evaluate(()=>{
+   const section=document.querySelector('[data-odyssey-home-operations]'),rect=el=>{const b=el.getBoundingClientRect();return {x:b.x,y:b.y,right:b.right,bottom:b.bottom,width:b.width,height:b.height}}
+   return {pane:rect(section.parentElement),section:rect(section),case:rect(section.querySelector('.odyssey-operations-usecase')),cards:[...section.querySelectorAll('.odyssey-operations-quick-card')].map(card=>{const label=card.querySelector('.odyssey-operations-quick-label');return {bounds:rect(card),font:parseFloat(getComputedStyle(label).fontSize)*label.getBoundingClientRect().height/label.offsetHeight,image:rect(card.querySelector('.odyssey-operations-illustration')),fit:getComputedStyle(card.querySelector('img')).objectFit}}),overflow:section.scrollHeight-section.clientHeight}
+  })
+  await writeFile(`${evidence}/${label}.json`,JSON.stringify(geometry,null,2))
+  const withArt=PNG.sync.read(await page.screenshot({path:`${evidence}/${label}.png`,scale:'css'}))
+  expect(geometry.cards[0].bounds.x,'the four quick starts stay to the right of the tall case').toBeGreaterThan(geometry.case.right+5)
+  expect(geometry.case.height).toBeGreaterThanOrEqual(260)
+  expect(geometry.case.width).toBeGreaterThanOrEqual(240)
+  expect(geometry.overflow).toBeLessThanOrEqual(1)
+  for(const card of geometry.cards){
+   expect(card.bounds.height,'quick starts retain a useful artwork area').toBeGreaterThanOrEqual(120)
+   expect(card.bounds.width).toBeGreaterThanOrEqual(128)
+   expect(card.font,'quick-start type is not scaled down with the whole composition').toBeGreaterThanOrEqual(13)
+   expect(card.fit).not.toBe('contain')
+   expect(card.image.width/card.bounds.width).toBeGreaterThanOrEqual(.9)
+   expect(card.bounds.bottom).toBeLessThanOrEqual(geometry.section.bottom+1)
+  }
+  for(const index of [0,1,2]){
+   await page.locator(`.odyssey-operations-pagination [data-case="${index}"]`).click();await waitCase(page,index)
+   const copy=await page.locator('.odyssey-operations-usecase').evaluate(card=>{
+    const r=el=>{const b=el.getBoundingClientRect();return {x:b.x,y:b.y,bottom:b.bottom,right:b.right}},description=card.querySelector('.odyssey-operations-description')
+    return {card:r(card),title:r(card.querySelector('.odyssey-operations-title')),subtitle:r(card.querySelector('.odyssey-operations-subtitle')),description:r(description),pagination:r(card.querySelector('.odyssey-operations-pagination')),height:description.clientHeight,content:description.scrollHeight}
+   })
+   expect(copy.subtitle.y,'title and subtitle remain separate lines').toBeGreaterThanOrEqual(copy.title.bottom)
+   expect(copy.title.x-copy.card.x).toBeGreaterThanOrEqual(18)
+   expect(copy.title.y-copy.card.y).toBeGreaterThanOrEqual(18)
+   expect(copy.description.y-copy.subtitle.bottom,'the title block has breathing room above the description').toBeGreaterThanOrEqual(16)
+   expect(copy.pagination.y-copy.description.bottom).toBeGreaterThanOrEqual(8)
+   expect(copy.card.bottom-copy.pagination.bottom).toBeGreaterThanOrEqual(12)
+   expect(copy.content).toBeLessThanOrEqual(copy.height+1)
+  }
+  await page.addStyleTag({content:'.odyssey-operations-illustration{visibility:hidden!important}'})
+  const withoutArt=PNG.sync.read(await page.screenshot({scale:'css'})),coverage=[]
+  for(const card of geometry.cards){
+   let painted=0,total=0,left=Infinity,right=-Infinity
+   for(let y=Math.ceil(card.bounds.y+42);y<card.bounds.bottom-5;y++)for(let x=Math.ceil(card.bounds.x+5);x<card.bounds.right-5;x++){
+    const at=(y*withArt.width+x)*4,difference=[0,1,2].reduce((sum,c)=>sum+Math.abs(withArt.data[at+c]-withoutArt.data[at+c]),0)/3
+    total++;if(difference>3){painted++;left=Math.min(left,x);right=Math.max(right,x)}
+   }
+   coverage.push({fraction:painted/total,width:(right-left)/card.bounds.width})
+  }
+  await writeFile(`${evidence}/${label}-artwork.json`,JSON.stringify(coverage,null,2))
+  for(const art of coverage){expect(art.fraction,'the real illustration occupies the card face instead of becoming a centered icon').toBeGreaterThan(.25);expect(art.width).toBeGreaterThan(.7)}
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
+
+it.each([
+  { paneWidth:550, paneHeight:620, dark:false },
+  { paneWidth:600, paneHeight:620, dark:true },
+  { paneWidth:700, paneHeight:620, dark:false },
+  { paneWidth:550, paneHeight:760, dark:true },
+  { paneWidth:600, paneHeight:760, dark:false },
+  { paneWidth:700, paneHeight:760, dark:true }
+])('keeps complete English case text and every card inside a fluid center pane %j', async options => {
+  const page = await fixture({ width:options.paneWidth+290, height:options.paneHeight+20, dark:options.dark, themes:true, deviceScaleFactor:2 })
+  try {
+    await page.evaluate(() => { document.documentElement.dataset.odysseyLocale='en' })
+    await toggle(page).click(); await waitState(page,'operations')
+    for (const index of [0,1,2]) {
+      await page.locator(`.odyssey-operations-pagination [data-case="${index}"]`).click(); await waitCase(page,index)
+      const geometry = await region(page).evaluate(section => {
+        const rect = element => { const b=element.getBoundingClientRect(); return { x:b.x, y:b.y, right:b.right, bottom:b.bottom } }
+        const card=section.querySelector('.odyssey-operations-usecase'), text=selector=>{
+          const element=card.querySelector(selector), range=document.createRange(); range.selectNodeContents(element)
+          return { ...rect(element), ink:rect(range) }
+        }
+        return { pane:section.parentElement.getBoundingClientRect().width, card:rect(card), title:text('.odyssey-operations-title strong'), subtitle:text('.odyssey-operations-subtitle'), copy:rect(card.querySelector('.odyssey-operations-case-copy')), description:text('.odyssey-operations-description'), pagination:rect(card.querySelector('.odyssey-operations-pagination')), region:rect(section), cards:[...section.querySelectorAll('.odyssey-operations-quick-card')].map(quick=>({ ...rect(quick), artworkWidth:quick.querySelector('.odyssey-operations-illustration').getBoundingClientRect().width, fit:getComputedStyle(quick.querySelector('img')).objectFit })), overflowX:section.scrollWidth-section.clientWidth, overflowY:section.scrollHeight-section.clientHeight }
+      })
+      expect(geometry.pane).toBe(options.paneWidth)
+      for (const text of [geometry.title,geometry.subtitle,geometry.description]) {
+        expect(text.ink.x,'English text begins inside the case').toBeGreaterThanOrEqual(geometry.card.x+12)
+        expect(text.ink.right,'English words must not be clipped by the card edge').toBeLessThanOrEqual(geometry.card.right-12)
+      }
+      expect(geometry.subtitle.y).toBeGreaterThanOrEqual(geometry.title.bottom)
+      expect(geometry.description.y).toBeGreaterThanOrEqual(geometry.copy.bottom+8)
+      expect(geometry.description.bottom).toBeLessThanOrEqual(geometry.pagination.y-8)
+      expect(geometry.overflowX).toBeLessThanOrEqual(1); expect(geometry.overflowY).toBeLessThanOrEqual(1)
+      for (const card of geometry.cards) {
+        expect(card.x).toBeGreaterThanOrEqual(geometry.region.x)
+        expect(card.right).toBeLessThanOrEqual(geometry.region.right+1)
+        expect(card.y).toBeGreaterThanOrEqual(geometry.region.y)
+        expect(card.bottom).toBeLessThanOrEqual(geometry.region.bottom+1)
+        expect(card.artworkWidth/(card.right-card.x)).toBeGreaterThanOrEqual(.9)
+        expect(card.fit).not.toBe('contain')
+      }
+    }
+  } finally { await page.close() }
+},15000)
+
 it.each([{ dark: false }, { dark: true }])('fits all five cards without scrolling in a 600px Retina center pane %j', async options => {
   const page = await fixture({ ...options, width: 1380, height: 900, panelWidth: 480, deviceScaleFactor: 2, themes: true })
   const errors = []
@@ -1412,7 +1514,7 @@ it.each([
       expect(await card.evaluate(card => {
         const b = card.getBoundingClientRect(), s = card.closest('[data-odyssey-home-operations]').getBoundingClientRect(), hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2), toggle = document.querySelector('[data-odyssey-home-operations-toggle]').getBoundingClientRect()
         const art = card.querySelector('.odyssey-operations-illustration').getBoundingClientRect(), label = card.querySelector('.odyssey-operations-quick-label').getBoundingClientRect()
-        return b.top >= s.top && b.bottom <= s.bottom + 1 && b.bottom <= toggle.top - 16 && art.top >= label.bottom && art.bottom <= b.bottom + 1 && (hit === card || card.contains(hit))
+        return b.top >= s.top && b.bottom <= s.bottom + 1 && b.bottom <= toggle.top - 16 && art.top >= label.bottom && art.width >= b.width * .9 && getComputedStyle(card).overflow === 'hidden' && getComputedStyle(card.querySelector('img')).objectFit !== 'contain' && (hit === card || card.contains(hit))
       })).toBe(true)
       await card.click()
     }
@@ -1432,6 +1534,8 @@ it('adapts the operation collection to panel and short-pane resizing without car
     await page.evaluate(() => { document.body.style.setProperty('--dsh-sidebar-width', '480px'); document.querySelector('[data-dsh-panel-host]').dataset.odysseyPanelRight = 'open' })
     await expect.poll(() => region(page).evaluate(section => section.scrollHeight - section.clientHeight)).toBeLessThanOrEqual(1)
     await page.setViewportSize({ width: 1180, height: 720 })
+    await expect.poll(() => page.locator('.pI_x6G_centerCol').evaluate(pane => ({width:pane.clientWidth,layout:pane.dataset.odysseyHomeOperationsLayout}))).toEqual({width:400,layout:'stacked'})
+    await nextPaint(page)
     await expect.poll(() => region(page).evaluate(section => section.scrollHeight - section.clientHeight)).toBeLessThanOrEqual(1)
     const report = page.locator('.odyssey-operations-quick-card[data-card="report"]')
     expect(await dispatchWheel(page, '.odyssey-operations-quick-card[data-card="report"]', 120)).toBe(false)
@@ -1442,6 +1546,8 @@ it('adapts the operation collection to panel and short-pane resizing without car
     expect(bottom.inside).toBe(true); expect(bottom.hit).toBe(true); expect(bottom.toggleGap).toBeGreaterThanOrEqual(16)
     await page.screenshot({ path: `${evidence}/responsive-400-short-scrolled.png` })
     await page.setViewportSize({ width: 1380, height: 900 })
+    await expect.poll(() => page.locator('.pI_x6G_centerCol').evaluate(pane => ({width:pane.clientWidth,layout:pane.dataset.odysseyHomeOperationsLayout}))).toEqual({width:600,layout:'fluid'})
+    await nextPaint(page)
     await expect.poll(() => region(page).evaluate(section => ({ top: section.scrollTop, overflow: section.scrollHeight - section.clientHeight }))).toEqual({ top: 0, overflow: 0 })
     const heading = await page.locator('.odyssey-operations-heading').boundingBox(), bounds = await region(page).boundingBox()
     expect(heading.y).toBeGreaterThanOrEqual(bounds.y)

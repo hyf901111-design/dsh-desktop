@@ -35,11 +35,12 @@ beforeAll(async()=>{
  await mkdir(evidence,{recursive:true})
 },30000)
 afterAll(()=>browser?.close())
-async function fixture(dark=false){
+async function fixture(dark=false,{beforeRuntime,waitReady=true}={}){
  const page=await browser.newPage({viewport:{width:760,height:360},deviceScaleFactor:2})
  await page.setContent(`<title>Native reference projection layout</title><style>${native}\n${readFileSync('src/preload/figma-inline-references.css','utf8')}body{margin:32px;background:${dark?'#1f1f1f':'#fafafa'};--dsw-alias-label-primary:${dark?'#eee':'#222'};--dsw-font-family:system-ui;--dsh-composer-side-clearance:0;--dsh-composer-card-max-width:700px}.uV2eYG_card{font:16px/24px system-ui;background:${dark?'#292929':'white'};padding:12px}.uV2eYG_grow{width:100%}</style><body ${dark?'data-ds-dark-theme':''}><main id="fixture"></main></body>`)
+ await beforeRuntime?.(page)
  await page.addScriptTag({content:runtime})
- await page.waitForFunction(()=>window.chips?.view.ready)
+ if(waitReady)await page.waitForFunction(()=>window.chips?.view.ready)
  return page
 }
 it.each([false,true])('sizes skill labels to their visible text with symmetric padding while native file slots stay unchanged (dark=%s)',async dark=>{
@@ -95,5 +96,50 @@ it('keeps the textarea mirror and visible reference layer wrapped together in a 
   expect(Math.abs(layout.mirror-layout.backdrop)).toBeLessThanOrEqual(1)
   expect(layout.input).toBe(layout.mirror);expect(layout.overflow).toBe(false)
   await page.screenshot({path:resolve(evidence,'chip-narrow.png')})
+ }finally{await page.close()}
+},15000)
+
+it('coalesces pending font batches while ready and resize callbacks reenter, and still applies the latest measured width',async()=>{
+ const page=await fixture(false,{waitReady:false,beforeRuntime:page=>page.evaluate(()=>{
+  const probe=window.fontProbe={created:[],release:[],observers:[]}
+  const Font=window.FontFace
+  window.FontFace=class extends Font{
+   constructor(...args){super(...args);probe.created.push(args[0])}
+   load(){const loaded=super.load(),released=new Promise(resolve=>probe.release.push(resolve));return Promise.all([loaded,released]).then(([face])=>face)}
+  }
+  const Resize=window.ResizeObserver
+  window.ResizeObserver=class extends Resize{
+   constructor(callback){super(callback);probe.observers.push({callback,observer:this})}
+  }
+  probe.notify=()=>{for(const entry of probe.observers)entry.callback([],entry.observer)}
+  probe.finish=()=>probe.release.splice(0).forEach(resolve=>resolve())
+ })})
+ try{
+  await page.waitForFunction(()=>window.fontProbe.created.length>=3)
+  await page.evaluate(async()=>{await document.fonts.ready;for(let i=0;i<4;i++)window.fontProbe.notify()})
+  await page.waitForTimeout(35)
+  expect(await page.evaluate(()=>window.fontProbe.created.length),'the same pending base and two skill fonts are loaded once').toBe(3)
+  await page.evaluate(()=>window.fontProbe.finish())
+  await page.waitForFunction(()=>window.chips.view.ready)
+  await page.setViewportSize({width:180,height:360})
+  await page.waitForFunction(()=>window.fontProbe.created.length>=6)
+  await page.evaluate(()=>{for(let i=0;i<4;i++)window.fontProbe.notify()})
+  expect(await page.evaluate(()=>window.fontProbe.created.length),'a different measured width starts one new batch').toBe(6)
+  // Return to the already committed width before the narrow batch finishes.
+  // The old pending batch must not overwrite that newer geometry when it resolves.
+  await page.setViewportSize({width:760,height:360})
+  await page.waitForFunction(()=>window.fontProbe.created.length>=9)
+  await page.evaluate(()=>window.fontProbe.finish())
+  await page.waitForFunction(()=>window.chips.view.ready)
+  const restored=await page.locator('.uV2eYG_chip[data-reference-source="ework-managed-skill"]').evaluateAll(chips=>chips.map(chip=>chip.getBoundingClientRect().width))
+  expect(restored[0]).toBeCloseTo(111,0)
+  expect(restored[1]).toBeCloseTo(145,0)
+  expect(await page.evaluate(()=>[...document.fonts].filter(face=>face.family.startsWith('Sherlock')).length)).toBe(3)
+  await page.setViewportSize({width:180,height:360})
+  await page.waitForFunction(()=>window.fontProbe.created.length>=12)
+  await page.evaluate(()=>{window.chips.dispose();window.fontProbe.notify();window.fontProbe.finish()})
+  await page.waitForTimeout(50)
+  expect(await page.evaluate(()=>window.fontProbe.created.length),'stale ready/resize callbacks after disposal do not create fonts').toBe(12)
+  expect(await page.evaluate(()=>[...document.fonts].filter(face=>face.family.startsWith('Sherlock')).length)).toBe(0)
  }finally{await page.close()}
 },15000)

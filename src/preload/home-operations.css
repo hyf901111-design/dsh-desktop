@@ -467,116 +467,99 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
 /* Keep the shell's focus reset from hiding these keyboard targets. */
 [data-odyssey-home-operations-state] > .odyssey-operations-toggle:focus-visible,
 [data-odyssey-home-operations-state] .odyssey-operations-pagination > button:focus-visible { outline:2px solid var(--ds-focus-ring,#578cf5) !important; }
-/* Narrow panes fit the five-card collection to the measured visible area. */
-[data-odyssey-home-operations-layout="stacked"] .odyssey-home-operations {
-  /* The measured pane viewport already reserves the header, toggle and dock.
-     Fit all five cards into that exact budget, without an inner scroll area. */
-  --odyssey-operations-compact-case-height:min(260px,calc((var(--odyssey-operations-viewport-height,440px) - 40px) * .52));
-  --odyssey-operations-compact-row-height:calc((var(--odyssey-operations-viewport-height,440px) - var(--odyssey-operations-compact-case-height) - 48px) / 2);
-  width:min(780px,calc(100% - 48px));
-  height:var(--odyssey-operations-viewport-height,440px);
-  max-height:var(--odyssey-operations-viewport-height,440px);
+/* Pane-sized layouts keep type and artwork at their native scale. */
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-home-operations {
+  width:calc(100% - 48px);
+  height:var(--odyssey-operations-viewport-height,320px);
   transform:translateX(-50%);
   overflow:visible;
-  overscroll-behavior:contain;
   padding:0;
 }
-[data-odyssey-home-operations-layout="stacked"][data-odyssey-home-operations-state="input"] .odyssey-home-operations {
-  overflow:hidden;
-}
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-heading {
-  position:relative;
-  height:24px;
-  margin-bottom:8px;
-}
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-grid {
-  position:relative;
-  top:auto;
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-grid {
   width:100%;
-  height:calc(100% - 32px);
-  min-height:0;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  padding-bottom:0;
+  height:calc(100% - 36px);
+  display:grid;
+  grid-template-columns:minmax(0,.96fr) minmax(0,1fr);
+  gap:12px;
 }
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-usecase {
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-usecase-anchor,
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-usecase {
   width:100%;
   height:100%;
 }
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-usecase-anchor { width:100%; height:var(--odyssey-operations-compact-case-height); }
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-case-copy { width:calc(100% - 42px); }
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title,
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-subtitle {
-  max-width:100%;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title > strong {
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-description {
-  top:auto;
-  bottom:44px;
-  width:calc(100% - 46px);
-  max-height:none;
-  overflow:visible;
-}
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-pagination { top:auto; bottom:10px; }
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-quick-grid {
-  width:100%;
-  height:calc(var(--odyssey-operations-compact-row-height) * 2 + 8px);
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  grid-template-rows:repeat(2,var(--odyssey-operations-compact-row-height));
-  gap:8px;
-}
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-quick-label {
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-case-copy {
   display:block;
-  max-width:calc(100% - 26px);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  top:8px;
-  left:10px;
+  left:20px;
+  top:24px;
+  width:calc(100% - 40px);
+}
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-title,
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-subtitle {
+  font-size:22px;
+  line-height:30px;
+  max-width:100%;
+}
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-trend { left:100px; top:7px; }
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-description {
+  top:auto;
+  left:20px;
+  bottom:64px;
+  width:calc(100% - 40px);
+  font-size:14px;
+  line-height:21px;
+}
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-pagination { top:auto; bottom:16px; }
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-quick-grid {
+  width:100%;
+  height:100%;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-quick-card { display:block; }
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-quick-label {
+  top:12px;
+  left:12px;
+  max-width:calc(100% - 24px);
   height:22px;
   line-height:22px;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-quick-card { display:block; }
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-illustration {
-  left:6px;
-  top:34px;
-  width:calc(100% - 12px);
-  height:max(0px,calc(100% - 34px));
+/* Artwork remains an edge-anchored workbench fragment at its original size. */
+:is([data-odyssey-home-operations-layout="fluid"],[data-odyssey-home-operations-layout="stacked"]) .odyssey-operations-illustration {
+  left:var(--odyssey-operations-art-x,1px);
+  top:var(--odyssey-operations-art-y,42px);
+  width:var(--odyssey-operations-art-width,222px);
+  height:var(--odyssey-operations-art-height,153px);
 }
-[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-illustration img {
-  object-fit:contain;
-  object-position:center top;
+[data-odyssey-home-operations-layout="stacked"] .odyssey-home-operations { width:calc(100% - 32px); }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-grid {
+  --odyssey-operations-case-height:clamp(168px,calc(var(--odyssey-operations-viewport-height,440px) * .43),228px);
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:var(--odyssey-operations-case-height) minmax(0,1fr);
+  gap:10px;
 }
-/* A short center pane needs a compact text rhythm as well as shorter cards. */
-@container (max-height:879px) {
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-case-copy { top:16px; }
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title,
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-subtitle { font-size:22px; line-height:26px; }
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-trend { left:100px; top:5px; }
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-description { font-size:14px; line-height:20px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-case-copy { top:16px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title,
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-subtitle { font-size:20px; line-height:24px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-trend { left:92px; top:4px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-description { bottom:42px; line-height:18px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-pagination { bottom:8px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-quick-label { top:10px; }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-illustration { top:36px; }
+/* Longer English headlines wrap within the fluid case; its measured height
+   reserves their extra lines without shrinking the adjacent artwork. */
+html[data-odyssey-locale="en"] [data-odyssey-home-operations-layout="fluid"] .odyssey-operations-case-copy { top:20px; }
+html[data-odyssey-locale="en"] [data-odyssey-home-operations-layout="fluid"] .odyssey-operations-title,
+html[data-odyssey-locale="en"] [data-odyssey-home-operations-layout="fluid"] .odyssey-operations-subtitle {
+  font-size:20px;
+  line-height:26px;
+  white-space:normal;
 }
-/* A short pane uses one headline row so the complete description and the
-   26px pagination target still fit above the two compact quick-start rows. */
-@container (max-height:740px) {
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-case-copy {
-    display:flex;
-    align-items:center;
-    gap:12px;
-    top:10px;
-    left:16px;
-    width:calc(100% - 32px);
-  }
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title { flex:none; gap:6px; font-size:20px; line-height:26px; }
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-subtitle { font-size:16px; line-height:24px; }
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-trend { position:static; flex:none; }
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-description { left:16px; width:calc(100% - 32px); bottom:34px; line-height:18px; }
-  [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-pagination { bottom:4px; }
-}
+html[data-odyssey-locale="en"] [data-odyssey-home-operations-layout="fluid"] .odyssey-operations-title > strong { min-width:0; }
+html[data-odyssey-locale="en"] [data-odyssey-home-operations-layout="fluid"] .odyssey-operations-description { bottom:48px; line-height:20px; }
+html[data-odyssey-locale="en"] [data-odyssey-home-operations-layout="fluid"] .odyssey-operations-pagination { bottom:12px; }
 @keyframes odyssey-operations-quick-ambient {
   0%,100% { translate:-4px 3px; scale:1; }
   50% { translate:6px -4px; scale:1.025; }
