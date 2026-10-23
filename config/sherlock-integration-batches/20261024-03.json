@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-03",
+  "branch": "codex/integration/20261024-03",
+  "baseMainCommit": "e44fc886875d3d927f92d582da93e1875015b48e",
+  "expectedMainCommit": "e44fc886875d3d927f92d582da93e1875015b48e",
+  "createdAt": "2026-10-23T17:44:18.847Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "空白会话的无历史压缩管理回执不遮挡首页",
+        "branch": "codex/feat/blank-compaction-home-20261024",
+        "baseCommit": "e44fc886875d3d927f92d582da93e1875015b48e",
+        "tipCommit": "0c881cf61aba00b32f70e1d987856ec2856e050d",
+        "commits": [
+          {
+            "commit": "0c881cf61aba00b32f70e1d987856ec2856e050d",
+            "parents": [
+              "e44fc886875d3d927f92d582da93e1875015b48e"
+            ],
+            "subject": "修复：空白会话的无历史整理回执不再遮挡首页"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-conversation-vacancy.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-session.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/blank-compaction-home.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/blank-compaction-home.test.js",
+              "test/notes-session.test.js",
+              "test/notes-activity.test.js",
+              "test/notes-install-order.test.js",
+              "test/notes-history-ready.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "32项通过，真实registry/commandDefinition/runtime→Root/Header恢复空白首页且draft、history、blank位保留，未知/运行/失败/真实摘要和已安装补丁升级均覆盖。/tmp/blank-compaction-home-handoff-checks-20261024.log",
+            "verifiedCommit": "0c881cf61aba00b32f70e1d987856ec2856e050d",
+            "completedAt": "2026-10-23T17:44:18.086825+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过，/tmp/blank-compaction-home-types-20261024.log",
+            "verifiedCommit": "0c881cf61aba00b32f70e1d987856ec2856e050d",
+            "completedAt": "2026-10-23T17:44:18.086825+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查通过，中文提交且源码干净。",
+            "verifiedCommit": "0c881cf61aba00b32f70e1d987856ec2856e050d",
+            "completedAt": "2026-10-23T17:44:18.086825+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "正式客户端只读React状态精确确认唯一visible manual-compaction success/No compactable history yet./compaction:null压低homepage。实际native代码browser回归现恢复page home/title新会话/phaseblank，输入节点及原草稿不变，独立review通过。正式新包仍需main构建后核验。"
+        },
+        "acceptanceCriteria": [
+          "仅精确成功无历史管理回执不算可见聊天，UI与runtime共享规则。",
+          "运行/失败/真实摘要/来源事件/未知节点维持可见，不修改原生blank位或持久历史。",
+          "不清用户数据，按正式身份本地构建授权完成首页及卡片预填实际核验。"
+        ],
+        "risks": [
+          "另外compact-execution-status35项有2项scroll stub querySelectorAll错误，在canonical e44同样失败；不属本次回归，保留基线证据/tmp/blank-compaction-baseline-scroll-20261024.log。",
+          "系统物理鼠标间歇冻结尚未稳定复现或证明解决，本修复只覆盖现场首页阻塞。"
+        ],
+        "generatedAt": "2026-10-23T17:44:18.086825+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/blank-compaction-home.test.js",
+        "test/notes-session.test.js",
+        "test/notes-activity.test.js",
+        "test/notes-install-order.test.js",
+        "test/notes-history-ready.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
