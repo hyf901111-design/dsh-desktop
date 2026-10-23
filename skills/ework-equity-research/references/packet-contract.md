@@ -136,3 +136,6 @@ quote 必须与定位到的完整原文行逐字一致；valueLine 是取值所�
 新增金额指标：`sellingExpenses` 销售费用、`administrativeExpenses` 管理费用、`taxesAndSurcharges` 税金及附加、`inventory` 存货、`contractLiabilities` 合同负债、`researchExpenses` 研发费用、`financeExpenses` 财务费用。资产负债表原文中文年月日可归一化为ISO事实期间，禁止伪造原文表头。
 
 `run` 默认输出HTML+PDF，`--format html` 为明确的单格式选项。PDF导出失败时仍保留HTML与诊断但非零退出，manifest status为pdf-failed；不能把快照/算术通过说成双格式已交付。
+
+
+客户端调用入口为 `research_report`，参数只允许 `{command:"doctor"}`、`{command:"validate",input:"相对packet路径"}`、`{command:"run",input:"相对packet路径",out:"工作区根下一层新目录名"}`。不接受自定义脚本、env、format、工作区或会话身份。该工具在可信运行时内把PDF连接仅注入固定内置CLI；Bash的敏感环境过滤保持有效。

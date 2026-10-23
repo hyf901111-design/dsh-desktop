@@ -11,10 +11,9 @@ description: Use when the user asks to write, update, or verify a listed-company
 
 用户从技能列表选择“研报写作”，或输入 `/ework-equity-research 给贵州茅台写一份研报`。自然语言明确要求研报时也可加载。停用后不继续调用本技能。
 
-加载技能时返回的资源目录为 `SKILL_ROOT`，不能猜测为当前工作目录。先读 [运行与输入约定](references/workflow.md)，用现有 Bash/文件工具执行资源目录中的 Node 脚本：
+加载技能时返回的资源目录为 `SKILL_ROOT`，不能猜测为当前工作目录。先读 [运行与输入约定](references/workflow.md)。在客户端使用专用 `research_report` 工具做环境检查、校验和默认双格式生成；服务凭据由客户端内部传递，不经过 Bash，也不让用户配置或复制。资源目录中的 Node 脚本只作为初始化、取哈希和开发检查的工具：
 
 ```sh
-node "<SKILL_ROOT>/scripts/research.mjs" doctor
 node "<SKILL_ROOT>/scripts/research.mjs" init --company "贵州茅台" --ticker "600519.SH" --as-of "<实际研究日>" --out "<会话工作区>/research/packet.json"
 ```
 
@@ -31,10 +30,15 @@ node "<SKILL_ROOT>/scripts/research.mjs" init --company "贵州茅台" --ticker 
 
 ## 计算与写作
 
-```sh
-node "<SKILL_ROOT>/scripts/research.mjs" validate --input "<工作区>/research/packet.json"
-node "<SKILL_ROOT>/scripts/research.mjs" run --input "<工作区>/research/packet.json" --out "<工作区>/research/run-<本次唯一名称>"
+依次调用实际可见的专用工具，不把下面参数当成 Bash 命令：
+
+```json
+{"command":"doctor"}
+{"command":"validate","input":"research/packet.json"}
+{"command":"run","input":"research/packet.json","out":"research-run-本次唯一名称"}
 ```
+
+工具名为 `research_report`，input 是当前会话工作区内的相对路径，out 是工作区根目录下一层尚不存在的目录名。不要传脚本、环境变量、会话ID或绝对路径。固定执行客户端内置引擎，不接受任意程序。工具不可用或失败时保留真实状态；不能搜索凭据、取消环境过滤或启动无认证替代服务。
 
 同比分解、差额、比例和合计用结构化计算请求交给程序。可选 FCFF 情景估值要求显式预测假设和逐项股权桥，不以勾稽通过替代估值合理性。固定完整年期折现不等于滚动到当前交易日的目标价；金融业务混合、预收款及股本变化需明确复核。
 
@@ -44,6 +48,6 @@ node "<SKILL_ROOT>/scripts/research.mjs" run --input "<工作区>/research/packe
 
 ## 交付
 
-`run` 默认同时生成 `report.html` 与 `report.pdf`，并输出 `evidence.json`、`calculations.json`、`validation.json`、`report-quality.json`、`run.json`。PDF 由客户端内置引擎从同一 HTML 导出，无需另装打印软件。报告固定使用易方达蓝青配色，样式规则见 [报告与配色](references/report-style.md)；无需让用户再选主题。打开实际 HTML 与 PDF，检查中文、分页、表格、图表、来源及页码，修正后重新生成。只有 `run.json.delivery.completed` 同时包含 html/pdf 且文件存在才可声称双格式交付；PDF 失败时命令非零退出、保留 HTML 和失败记录，应修复并重试新目录。除用户明确只要网页或开发检查外，不使用 `--format html` 跳过 PDF。
+`research_report` 的 `run` 默认同时生成 `report.html` 与 `report.pdf`，并输出 `evidence.json`、`calculations.json`、`validation.json`、`report-quality.json`、`run.json`。PDF 由客户端内置引擎从同一 HTML 导出，无需另装打印软件。报告固定使用易方达蓝青配色，样式规则见 [报告与配色](references/report-style.md)；无需让用户再选主题。打开实际 HTML 与 PDF，检查中文、分页、表格、图表、来源及页码，修正后重新生成。只有 `run.json.delivery.completed` 同时包含 html/pdf 且文件存在才可声称双格式交付；PDF 失败时命令非零退出、保留 HTML 和失败记录，应修复并重试新目录。客户端任务不能使用 Bash `run` 代替该专用工具。Bash 会按设计过滤敏感环境变量，它的 `doctor` 不能据此判断客户端 PDF 服务不可用；不要以 `--format html` 跳过默认 PDF。用户明确只要网页的特殊要求可用 CLI 单格式检查，并清楚说明实际交付。
 
 向用户同时给 HTML 与 PDF 文件入口和主要判断，再简述数据截止、尚未解决的关键问题。所有产物保存在会话文件区，原始输入与输出 hash 关联到本次运行。校验状态表示“快照与字段核对”，不声称外部来源真实或证券研究员专业签发。当前版本不提供原版 LEDGER 五角色盲评、自动滚动三表模型或全链路 Excel 重算保证。
