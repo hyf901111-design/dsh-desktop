@@ -1,4 +1,6 @@
 import {decimal} from './numbers.mjs'
+import {officialLogo} from './brand.mjs'
+import {chartNeedsDetail} from './chart-contract.mjs'
 // Shared publication structure. Every displayed amount comes from the current
 // verified fact set; presentation never fills a missing field with zero.
 const FREQUENCIES={FY:'全年',H1:'半年度',H2:'下半年度',Q1:'第一季度',Q2:'第二季度',Q3:'第三季度',Q4:'第四季度',date:'时点'}
@@ -19,13 +21,13 @@ export function publicationTargetCount(packet,facts,values,calculation,observati
  const historical=financialGroups(ended.filter(f=>f.scope===scope),['revenue','netIncomeAttributableToParent']).filter(g=>['FY','H1'].includes(g.frequency)&&g.unit==='CNY').length
  const fy=ended.filter(f=>f.scope===scope&&f.normalizedUnit==='CNY'&&/^FY\d{4}$/.test(f.period))
  const common=[...new Set(fy.filter(f=>f.metric==='revenue').map(f=>f.period))].filter(period=>['revenue','netIncomeAttributableToParent'].every(metric=>fy.filter(f=>f.period===period&&f.metric===metric).length===1)).sort().slice(-3)
- const coverChart=common.length>=2&&fy.some(f=>common.includes(f.period)&&['revenue','netIncomeAttributableToParent'].includes(f.metric)&&decimal(f.normalizedValue).cmp('0')!==0)?1:0
+ const coverChart=common.length>=2?1:0
  let count=5+sections.length+(report.theses?.length?1:0)+historical+coverChart+2
  count+=STATEMENTS.flatMap(([,metrics])=>financialGroups(ended.filter(f=>periodEnd(f.period)<=packet.financialAsOf),metrics)).reduce((n,g)=>n+Math.ceil(g.periods.length/5),0)
  count+=(calculation.calculations?.length?1:0)+(calculation.dcf?3:0)+(observationCount>0?1:0)
  for(const section of sections){
   count+=(section.tables??[]).length
-  for(const chart of section.charts??[]){const nonzero=chart.series.some(series=>series.refs.some(id=>decimal(values.get(id).value).cmp('0')!==0));if(nonzero)count+=1+(chart.series.length>2||chart.series[0].refs.length>3?1:0)}
+  for(const chart of section.charts??[])count+=1+(chartNeedsDetail(chart)?1:0)
  }
  return count
 }
@@ -60,7 +62,7 @@ export function renderPublicationCover({packet,metadata,title,coverage,facts,sum
  const chart=common.length>=2?researchChart({title:'历史年度收入与归母净利润',series:metrics.map(metric=>({name:labels[metric],refs:common.map(period=>fy.find(f=>f.period===period&&f.metric===metric).id)}))},packet,values,index,{narrow:true}):'<p class="small">缺少同口径、可比年度收入与利润，不绘制拼接图。</p>'
  const historical=financialGroups(facts.filter(f=>f.scope===scope),['revenue','netIncomeAttributableToParent']).filter(g=>['FY','H1'].includes(g.frequency)&&g.unit==='CNY').map(g=>({...g,periods:g.periods.slice(-2),metrics:['revenue','yoy:revenue','netIncomeAttributableToParent','yoy:netIncomeAttributableToParent','basicEarningsPerShare']}))
  const missingBasics=[['returnOnEquity','ROE'],['netAssetsPerShare','每股净资产']].filter(([metric])=>!facts.some(f=>f.metric===metric&&f.scope===scope)).map(([,label])=>label)
- return `<header class="publication-cover"><div class="cover-date"><span>${e(packet.asOf)} · 研究截止</span><span class="publication-brand">EWork Odyssey <small>投资研究</small></span></div><div class="cover-identity">${e(metadata.companyLabel)}（${e(packet.company.ticker)}）${packet.report?.publication?.industry?`<span>${e(packet.report.publication.industry)}</span>`:''}</div><h1>${e(title)}</h1><div class="cover-subtitle"><span>—— ${e(metadata.reportName)}</span><strong>${e(metadata.reportType)}</strong></div>${packet.synthetic?'<div class="synthetic"><strong>虚构数据演示</strong>：仅用于检查研究流程，不代表真实上市公司或行情。</div>':''}<div class="cover-layout"><aside class="cover-sidebar"><div class="rating-block"><h3>研究状态 <span class="unrated">未评级</span></h3><p class="small">${e(scopeLabel)}；行情及估值模型以本稿核验状态为准。</p></div><h3>财务基本数据</h3>${commonBasicPeriod?`<p class="small">${e(scope)} · 截至 ${e(commonBasicPeriod)}</p>`:''}${basicRows.length?table(['已核验项目','数值'],basicRows):'<p class="small">尚无可列示的已核验基本数据。</p>'}${sourceNote(basics.map(f=>f.id),true)}${basics.some(f=>f.metric==='currentPrice')?'<p class="small">报价时点单列；财务期末不代表行情时点。</p>':''}${missingBasics.length?`<p class="small">${e(missingBasics.join('、'))}尚未核验；每股收益见下方摘要。</p>`:''}${chart}</aside><div class="cover-main"><h2>投资要点</h2><div class="summary">${summary}</div></div></div><div class="cover-financial"><h3>历史财务摘要与预测状态</h3><div class="cover-history">${historical.map(g=>renderGroup(g,`历史财务摘要 · ${g.scope} · ${g.label}`,h,index,{cover:true})).join('')||'<p class="small">本稿没有可比历史实绩，未编造摘要。</p>'}</div><p class="forecast-status"><strong>预测与估值状态：</strong>${packet.dcf?'情景模型单列假设与价值桥；历史实绩不标注为预测值。':'盈利预测及估值未建模，不输出目标价或评级。上表仅为历史实绩。'}</p></div></header>`
+ return `<header class="publication-cover"><div class="cover-date"><span>${e(packet.asOf)} · 研究截止</span><span class="publication-brand official-logo" role="img" aria-label="EWork Odyssey">${officialLogo}</span></div><div class="cover-identity">${e(metadata.companyLabel)}（${e(packet.company.ticker)}）${packet.report?.publication?.industry?`<span>${e(packet.report.publication.industry)}</span>`:''}</div><h1>${e(title)}</h1><div class="cover-subtitle"><span>—— ${e(metadata.reportName)}</span><strong>${e(metadata.reportType)}</strong></div>${packet.synthetic?'<div class="synthetic"><strong>虚构数据演示</strong>：仅用于检查研究流程，不代表真实上市公司或行情。</div>':''}<div class="cover-layout"><aside class="cover-sidebar"><div class="rating-block"><h3>研究状态 <span class="unrated">未评级</span></h3><p class="small">${e(scopeLabel)}；行情及估值模型以本稿核验状态为准。</p></div><h3>财务基本数据</h3>${commonBasicPeriod?`<p class="small">${e(scope)} · 截至 ${e(commonBasicPeriod)}</p>`:''}${basicRows.length?table(['已核验项目','数值'],basicRows):'<p class="small">尚无可列示的已核验基本数据。</p>'}${sourceNote(basics.map(f=>f.id),true)}${basics.some(f=>f.metric==='currentPrice')?'<p class="small">报价时点单列；财务期末不代表行情时点。</p>':''}${missingBasics.length?`<p class="small">${e(missingBasics.join('、'))}尚未核验；每股收益见下方摘要。</p>`:''}${chart}</aside><div class="cover-main"><h2>投资要点</h2><div class="summary">${summary}</div></div></div><div class="cover-financial"><h3>历史财务摘要与预测状态</h3><div class="cover-history">${historical.map(g=>renderGroup(g,`历史财务摘要 · ${g.scope} · ${g.label}`,h,index,{cover:true})).join('')||'<p class="small">本稿没有可比历史实绩，未编造摘要。</p>'}</div><p class="forecast-status"><strong>预测与估值状态：</strong>${packet.dcf?'情景模型单列假设与价值桥；历史实绩不标注为预测值。':'盈利预测及估值未建模，不输出目标价或评级。上表仅为历史实绩。'}</p></div></header>`
 }
 export const publicationStyles=`
 :root{color-scheme:light}
@@ -80,7 +82,7 @@ small{display:block}
 .publication-cover{position:relative;border-top:11px solid var(--navy);padding-top:15px}
 .cover-date{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;font-size:13px}
 .publication-brand{position:absolute;right:0;top:15px;font-weight:700;font-size:20px;color:var(--navy);text-align:right;white-space:nowrap}
-.publication-brand small{font-weight:400;font-size:10px;letter-spacing:4px}
+.official-logo svg{display:block;width:108px;height:auto}.publication-brand{line-height:0}
 .cover-identity{margin-top:9px;font-size:16px;font-weight:600}
 .cover-identity span{margin-left:22px}
 .cover-subtitle{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;border-bottom:2px solid var(--cyan);padding-bottom:9px;font-size:15px}
@@ -180,7 +182,7 @@ main{margin:0;padding:0;max-width:none}
 .publication-cover{border-top-width:2.7mm;padding-top:3mm;break-after:page}
 .cover-date{font-size:9pt}
 .publication-brand{top:3mm;font-size:14pt}
-.publication-brand small{font-size:7pt}
+.official-logo svg{width:30mm;height:auto}
 .cover-identity{font-size:11pt;margin-top:1.5mm}
 h1{font-size:20pt;margin:6mm 0 2mm;line-height:1.45}
 .cover-subtitle{font-size:10pt;padding-bottom:2mm;gap:4mm}
@@ -211,11 +213,11 @@ h1{font-size:20pt;margin:6mm 0 2mm;line-height:1.45}
 .publication-contents h2:first-child{margin-top:0}
 .publication-contents h2{font-size:12pt;margin-top:4mm}
 .contents-list{font-size:9pt}
-.contents-list li{padding:.7mm 0}
+.contents-list li{padding:.4mm 0}
 .visual-index{gap:6mm}
 .visual-index h3{font-size:9pt;margin:2mm 0}
 .visual-index ul{font-size:7.2pt;line-height:1.55}
-.visual-index li{margin:.7mm 0}
+.visual-index li{margin:.3mm 0}
 .body-content{margin-top:0}
 h2{font-size:12pt;margin:7mm 0 3mm;padding-bottom:1.5mm}
 h3{font-size:10pt}
@@ -240,7 +242,7 @@ tr{break-inside:avoid}
 .table-meta{break-after:avoid}
 .chart-grid{gap:4mm}
 .chart-grid figure{margin:3mm 0}
-.chart-grid.single svg{max-height:60mm}
+.chart-grid.single figure:not(.wide) svg{max-height:60mm}
 figure{break-inside:avoid;padding-top:2mm}
 figcaption{font-size:8.5pt;break-after:avoid}
 .legend{font-size:7pt;margin:1.5mm 0}

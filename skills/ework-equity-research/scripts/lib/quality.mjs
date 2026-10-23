@@ -1,4 +1,4 @@
-import {createHash} from 'node:crypto'
+import {chartDiagnostics} from './chart-contract.mjs'
 const text=v=>typeof v==='string'&&v.trim().length>0&&v.length<=12000
 const error=(code,path,message)=>({severity:'error',code,path,message})
 export const RESEARCH_SECTIONS=Object.freeze({business:'公司与商业模式',industry:'行业与竞争',performance:'业绩与经营驱动',profitability:'盈利质量',balance:'资产负债与营运资本',cashflow:'现金流与资本配置',forecast:'预测与情景假设',valuation:'估值与敏感性',risks:'风险与反证',monitoring:'跟踪与验证'})
@@ -37,19 +37,9 @@ export function extraReportRows(report){
    for(const [k,column] of (t?.columns??[]).entries())result.push([{text:column},path+`.columns[${k}]`])
    for(const [r,row] of (t?.rows??[]).entries())for(const [c,cell] of row.entries())result.push([cell,path+`.rows[${r}][${c}]`])
   }
-  for(const [j,c] of (s.charts??[]).entries()){result.push([{text:c?.title},`report.sections[${i}].charts[${j}].title`]);for(const [k,series]of(c?.series??[]).entries())result.push([{text:series?.name},`report.sections[${i}].charts[${j}].series[${k}].name`])}
+  for(const [j,c] of (s.charts??[]).entries()){result.push([{text:c?.title},`report.sections[${i}].charts[${j}].title`]);for(const [k,series]of(c?.series??[]).entries())result.push([{text:series?.name},`report.sections[${i}].charts[${j}].series[${k}].name`]);for(const [k,step]of(c?.steps??[]).entries())result.push([{text:step?.label},`report.sections[${i}].charts[${j}].steps[${k}].label`])}
  }
  return result
-}
-function semanticKey(id,values,memo,seen=new Set()){
- if(memo.has(id))return memo.get(id)
- if(seen.has(id))return 'invalid-cycle'
- const value=values.get(id);if(!value)return 'missing:'+id
- const next=new Set(seen);next.add(id)
- const inputs=value.op?(value.inputs??[]).map(input=>semanticKey(input,values,memo,next)):[]
- const structure=value.op?[value.op,...(value.op==='sum'?inputs.sort():inputs)]:['fact',value.metric]
- const key=createHash('sha256').update(JSON.stringify(structure)).digest('hex')
- memo.set(id,key);return key
 }
 export function visualDiagnostics(report,values){
  const memo=new Map(),ds=[],fail=(path,message,code='REPORT_VISUAL')=>ds.push(error(code,path,message))
@@ -57,19 +47,7 @@ export function visualDiagnostics(report,values){
   if(!s||typeof s!=='object'){fail(`report.sections[${i}]`,'章节必须是对象');continue}
   if(!Array.isArray(s.tables??[])||!Array.isArray(s.charts??[])||(s.tables?.length??0)>8||(s.charts?.length??0)>8){fail(`report.sections[${i}]`,'专题表图必须是有界数组');continue}
   for(const [j,t]of(s.tables??[]).entries())if(!t||!Array.isArray(t.columns)||!t.columns.length||t.columns.length>8||!Array.isArray(t.rows)||!t.rows.length||t.rows.length>80||t.rows.some(r=>!Array.isArray(r)||r.length!==t.columns.length))fail(`report.sections[${i}].tables[${j}]`,'专题表格需要等宽列与有界行')
-  for(const[j,c]of(s.charts??[]).entries()){
-   const path=`report.sections[${i}].charts[${j}]`,series=c?.series
-   if(!Array.isArray(series)||!series.length||series.length>4){fail(path,'图表需要有界series','REPORT_CHART');continue}
-   let periods,unit,scope,frequency
-   for(const v of series){
-    if(!Array.isArray(v?.refs)||v.refs.length<2||v.refs.length>8){fail(path,'每条系列需引用可比期间','REPORT_CHART');continue}
-    const rows=v.refs.map(id=>values.get(id))
-    if(rows.some(x=>!x||x.type==='observation'||!x.period)){fail(path,'图表只能引用有期间的数值事实/计算','REPORT_CHART');continue}
-    const ps=rows.map(x=>x.period),freq=p=>p.startsWith('FY')?'FY':/^20\d{2}H[12]$/.test(p)?p.slice(4):/^20\d{2}Q[1-4]$/.test(p)?p.slice(4):'date'
-    periods??=JSON.stringify(ps);unit??=rows[0].unit;scope??=rows[0].scope;frequency??=freq(ps[0])
-    if(new Set(ps).size!==ps.length||JSON.stringify(ps)!==periods||rows.some(x=>x.unit!==unit||x.scope!==scope||freq(x.period)!==frequency||semanticKey(x.id,values,memo)!==semanticKey(rows[0].id,values,memo)))fail(path,'禁止混合全年/中期、口径、量纲或同系列不同指标；各系列期间须对齐','REPORT_CHART')
-   }
-  }
+  for(const[j,c]of(s.charts??[]).entries())ds.push(...chartDiagnostics(c,values,`report.sections[${i}].charts[${j}]`,memo))
  }
  return ds
 }
