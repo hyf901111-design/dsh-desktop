@@ -448,6 +448,74 @@
         ],
         "recordedAt": "2026-10-23T04:24:35.786Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复预加载主框架测试真实主题样式读取",
+        "branch": "codex/feat/preload-css-test-20261023",
+        "baseCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
+        "tipCommit": "7e69884113e947bd8d047a39d304633d86017031",
+        "commits": [
+          {
+            "commit": "7e69884113e947bd8d047a39d304633d86017031",
+            "parents": [
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423"
+            ],
+            "subject": "测试：读取真实主题样式修复预加载主框架回归"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/preload-main-frame.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/preload-main-frame.test.ts",
+              "test/sandbox-preload.test.js",
+              "test/research-canvas-wheel-preload.test.ts",
+              "test/user-message-palette.test.js",
+              "test/figma-task-scrollbar.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "5 个相关文件、13 项通过；原 3 项 CSS 失败已修复，新增真实计算样式与用户/助手作用域回归，Chromium 原深色调色板对比通过。日志 /tmp/ework-css-focused-20261023.log",
+            "verifiedCommit": "7e69884113e947bd8d047a39d304633d86017031",
+            "completedAt": "2026-10-23T05:29:27.211Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "源码差异格式校验通过；工作区干净。",
+            "verifiedCommit": "7e69884113e947bd8d047a39d304633d86017031",
+            "completedAt": "2026-10-23T05:29:27.211Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅修复测试资产加载边界；生产代码和全局 Vitest 配置不变。直接相关 Chromium 配色检查通过，未在功能 worktree 构建或替换共享客户端。"
+        },
+        "acceptanceCriteria": [
+          "原主框架 3 项测试恢复，子框架安全边界断言保持通过",
+          "从安装的真实 CSS 读取内容，保持生产缺失主题 guard 启用",
+          "新增主框架用户消息黑底、深色语法色及助手无泄漏的实际计算样式断言"
+        ],
+        "risks": [
+          "功能 worktree 使用 canonical node_modules 符号链接，仅用于源码测试；根会话须在最终独立依赖候选中重跑此聚焦集合。"
+        ],
+        "generatedAt": "2026-10-23T05:29:27.211Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -500,6 +568,27 @@
         "test/research-canvas-wheel-preload.test.ts"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/preload-main-frame.test.ts",
+        "test/sandbox-preload.test.js",
+        "test/research-canvas-wheel-preload.test.ts",
+        "test/user-message-palette.test.js",
+        "test/figma-task-scrollbar.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
