@@ -176,6 +176,72 @@
           "本次不验证技能执行后的PPT/研报生成质量，只准备可编辑草稿且不发送。"
         ],
         "generatedAt": "2026-10-23T14:06:12.780901+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8e216ea14ade03afc6f8ff631812b6cb45aeecd2",
+        "verificationCommit": "8e216ea14ade03afc6f8ff631812b6cb45aeecd2",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-actions.test.ts",
+              "test/home-operations-navigation.test.ts",
+              "test/integration-skill-use.test.ts",
+              "test/integration-skill-composer.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-actions.test.ts test/home-operations-navigation.test.ts test/integration-skill-use.test.ts test/integration-skill-composer.test.ts --maxWorkers=2",
+            "verifiedCommit": "8e216ea14ade03afc6f8ff631812b6cb45aeecd2",
+            "completedAt": "2026-10-23T14:07:37.232Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "600px Retina center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable|quick-start|revealComposer",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js -t 600px Retina center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable|quick-start|revealComposer --maxWorkers=2",
+            "verifiedCommit": "8e216ea14ade03afc6f8ff631812b6cb45aeecd2",
+            "completedAt": "2026-10-23T14:07:37.232Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8e216ea14ade03afc6f8ff631812b6cb45aeecd2",
+            "completedAt": "2026-10-23T14:07:37.232Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "8e216ea14ade03afc6f8ff631812b6cb45aeecd2",
+            "completedAt": "2026-10-23T14:07:37.232Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-23T14:07:37.232Z"
       }
     }
   ],
