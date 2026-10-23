@@ -295,6 +295,73 @@
           "用户最终视觉/手感接受仍由其在打开的独立客户端中测试；相关浏览器像素检查不是该接受的替代。"
         ],
         "generatedAt": "2026-10-23T10:13:56.794002+00:00"
+      },
+      "merged": {
+        "mergeCommit": "72c61cf56061c424ab1effee8dfa2943da63d041",
+        "verificationCommit": "72c61cf56061c424ab1effee8dfa2943da63d041",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "test/home-theme-controller.test.ts",
+              "test/figma-home-entry-spacing.test.js",
+              "test/figma-home-materials.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js test/home-theme-controller.test.ts test/figma-home-entry-spacing.test.js test/figma-home-materials.test.js --maxWorkers=2",
+            "verifiedCommit": "72c61cf56061c424ab1effee8dfa2943da63d041",
+            "completedAt": "2026-10-23T12:39:27.631Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/preload-main-frame.test.ts",
+              "test/sandbox-preload.test.js",
+              "test/research-canvas-wheel-preload.test.ts",
+              "test/preload-editor-singleton.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/preload-main-frame.test.ts test/sandbox-preload.test.js test/research-canvas-wheel-preload.test.ts test/preload-editor-singleton.test.ts --maxWorkers=2",
+            "verifiedCommit": "72c61cf56061c424ab1effee8dfa2943da63d041",
+            "completedAt": "2026-10-23T12:39:27.631Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "72c61cf56061c424ab1effee8dfa2943da63d041",
+            "completedAt": "2026-10-23T12:39:27.631Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "72c61cf56061c424ab1effee8dfa2943da63d041",
+            "completedAt": "2026-10-23T12:39:27.631Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-23T12:39:27.631Z"
       }
     }
   ],
