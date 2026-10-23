@@ -33,14 +33,16 @@ for(const provisional of [false,true]){
  assert.deepEqual(calls.slice(1),[['selected',null],['restore',true,3],['track','甲\uFFFC乙尾',3],['focus',{preventScroll:true}]])
  if(provisional){assert.equal(ref.current.has(2),false);assert.equal(ref.current.has(99),true)}
 }
-const inputStart=patched.indexOf('\t\tfunction InputBar('),inputEnd=patched.indexOf('\n\t\t//#endregion',inputStart)
+// Subagent row composition retains InputBar but removes its generated indent.
+const inputStart=patched.search(/^[\t ]*function InputBar\(/m),inputEnd=patched.indexOf('\n\t\t//#endregion',inputStart)
 const actualInput=patched.slice(inputStart,inputEnd)
 assert.match(actualInput,/onPaste,/) // Original structured-paste and copy/cut handlers remain installed.
 assert.match(actualInput,/onCopyOrCut\(e, false\)/)
 assert.match(actualInput,/keyboard\.moveReferenceOccurrence\(occurrenceId, targetOffset\)/)
 assert.match(actualInput,/keyboard\.submit\(resolveSubmitMode/)
 assert.match(actualInput,/children: figmaReferences.ready \? figmaReferences.projection.text \+ "\\n" : measurement/)
-assert.equal(patched.slice(inputEnd).includes('sherlock-inline-reference-remove'),false)
-assert.equal(patched.slice(inputEnd),source.slice(source.indexOf('\n\t\t//#endregion',source.indexOf('\t\tfunction InputBar('))))
+// The packaged tail already includes shell CSS for the remove button. Compare
+// it exactly so the patch cannot introduce handlers outside InputBar.
+assert.equal(patched.slice(inputEnd),source.slice(source.indexOf('\n\t\t//#endregion',source.search(/^[\t ]*function InputBar\(/m))))
 
 })

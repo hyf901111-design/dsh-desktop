@@ -29,6 +29,18 @@ type Ticket = { sessionId: string; shell: InputShell; revision: number; expires:
 const REQUEST = 'sherlock:skill-compose-request'
 const REPLY = 'sherlock:skill-compose-reply'
 
+// The inline-reference renderer gives measured chips one UTF-16 placeholder.
+// Only canonical reference positions may differ; literal PUA draft text stays exact.
+function matchesProjectedPrefix(value: string, prefix: string): boolean {
+    if (value.length < prefix.length) return false
+    for (let index = 0; index < prefix.length; index++) {
+        if (value[index] === prefix[index]) continue
+        const code = value.charCodeAt(index)
+        if (prefix[index] !== '\uFFFC' || code < 0xE000 || code > 0xF8FF) return false
+    }
+    return true
+}
+
 function decodePrefill(value: unknown): SkillComposerPrefill | undefined {
     if (value === undefined) return undefined
     const prefill = value as SkillComposerPrefill | null
@@ -105,7 +117,7 @@ export function installSkillComposer(deps: Dependencies): () => void {
                 // Native file chips project their placeholder glyph in the textarea. The
                 // newly inserted plain prefix remains identical and determines this caret.
                 const prefix = ticket.shell.snapshot.draft.slice(0, ticket.caret)
-                const input = inputs(ticket.sessionId).find(element => !element.disabled && !element.readOnly && !element.closest('[hidden],[aria-hidden="true"],[inert]') && element.checkVisibility() && (element.value.startsWith(prefix)||element.value.startsWith(prefix.replace(/\uFFFC/g,'\uE000'))))
+                const input = inputs(ticket.sessionId).find(element => !element.disabled && !element.readOnly && !element.closest('[hidden],[aria-hidden="true"],[inert]') && element.checkVisibility() && matchesProjectedPrefix(element.value, prefix))
                 if (!input) {
                     retry()
                     return
@@ -141,7 +153,7 @@ export function installSkillComposer(deps: Dependencies): () => void {
                     const segment = request.commandSegment as {via?:string;span?:{start:number;end:number;draftRev:number};token?:string}
                     if(segment?.via==='menu') {
                         const s=segment.span
-                        if(!s || !Number.isSafeInteger(s.start) || !Number.isSafeInteger(s.end) || s.start<0 || s.end<s.start || s.end>snapshot.draft.length || s.draftRev!==snapshot.draftRev || snapshot.draft.slice(0,s.start).trim()) throw Error('草稿已变化，请重新打开技能菜单。')
+                        if(!s || !Number.isSafeInteger(s.start) || !Number.isSafeInteger(s.end) || s.start<0 || s.end<s.start || s.end>snapshot.draft.length || s.draftRev!==snapshot.draftRev) throw Error('草稿已变化，请重新打开技能菜单。')
                         const token=snapshot.draft.slice(s.start,s.end)
                         if(token && (!token.startsWith('/') || !'skills'.startsWith(token.slice(1)))) throw Error('技能命令已变化，原输入已保留。')
                         span={start:s.start,end:s.end}
@@ -190,17 +202,38 @@ export function installSkillComposer(deps: Dependencies): () => void {
             let selection: { start: number; end: number } | undefined
             if(reference){
                 const ref=encodeSkillReference(reference),label=`/${reference.label}`
-                const present=snapshot.occurrences?.some(o=>o.offset===ticket.span.start&&o.source===SKILL_REFERENCE_SOURCE&&o.ref===ref)
+                const present=snapshot.occurrences?.find(o=>{
+                    if(o.source!==SKILL_REFERENCE_SOURCE||snapshot.draft[o.offset]!=='\uFFFC')return false
+                    try{return decodeSkillReference(o.ref).id===reference.id}catch{return false}
+                })
+                let referenceOffset=present?.offset??ticket.span.start
+                if(present){
+                    // A repeat selection consumes only this menu's slash token;
+                    // the existing native chip, body and other references stay put.
+                    if(ticket.span.end>ticket.span.start){
+                        if(!shell.insertText('',{...ticket.span,draftRev:ticket.revision}))throw Error('草稿发生变化，原输入已保留，请重试。')
+                        if(ticket.span.end<=referenceOffset)referenceOffset-=ticket.span.end-ticket.span.start
+                    }
+                    if(present.ref!==ref){
+                        const keepGap=shell.snapshot.draft[referenceOffset+1]===' '
+                        if(!shell.insertReference({source:SKILL_REFERENCE_SOURCE,ref,label,clipboardText:label},{start:referenceOffset,end:referenceOffset+1,draftRev:shell.snapshot.draftRev}))throw Error('草稿发生变化，原输入已保留，请重试。')
+                        // Native insertion adds a separator; an in-place refresh must
+                        // preserve a gap the user deliberately removed as well.
+                        if(!keepGap&&!shell.insertText('',{start:referenceOffset+1,end:referenceOffset+2,draftRev:shell.snapshot.draftRev}))throw Error('草稿发生变化，原输入已保留，请重试。')
+                    }
+                    const caret=referenceOffset+1+(shell.snapshot.draft[referenceOffset+1]===' '?1:0)
+                    selection={start:caret,end:caret}
+                }
                 if(!present&&!shell.insertReference({source:SKILL_REFERENCE_SOURCE,ref,label,clipboardText:label},{...ticket.span,draftRev:ticket.revision}))throw Error('草稿发生变化，原输入已保留，请重试。')
                 if (prefill) {
-                    const oldTail = snapshot.draft.slice(present ? ticket.span.start + 1 : ticket.span.end)
-                    const hasBody = present && oldTail.replace(/\uFFFC/g, '').trim().length > 0
+                    const oldTail = present ? shell.snapshot.draft.slice(referenceOffset + 1) : snapshot.draft.slice(ticket.span.end)
+                    const hasBody = present && shell.snapshot.draft.replace(/\uFFFC/g, '').trim().length > 0
                     if (!hasBody) {
                         // The native chip adds a space unless the original tail already
                         // begins with one. Preserve that original tail verbatim.
                         const nativeGap = !present && oldTail[0] !== ' '
                         const existingGap = present && oldTail[0] === ' '
-                        const start = ticket.span.start + 1 + (nativeGap || existingGap ? 1 : 0)
+                        const start = referenceOffset + 1 + (nativeGap || existingGap ? 1 : 0)
                         const gap = nativeGap || existingGap ? '' : ' '
                         const tail = existingGap ? oldTail.slice(1) : oldTail
                         const text = `${gap}${prefill.text}${tail ? '\n\n' : ''}`

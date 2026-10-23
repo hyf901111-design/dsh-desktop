@@ -32,6 +32,9 @@
   flex:1 1 0!important; min-width:0!important; font:inherit!important;
   line-height:20px!important; text-overflow:ellipsis!important; overflow:hidden!important; white-space:nowrap!important;
 }
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chip[data-reference-source="ework-managed-skill"] .uV2eYG_chipLabelText {
+  flex:0 1 auto!important;
+}
 .uV2eYG_root[data-figma-inline-ready] .uV2eYG_chip[data-selected] .uV2eYG_chipLabel {
   background:#eaf1fc!important; box-shadow:inset 0 0 0 1px #78a4e8!important;
 }
