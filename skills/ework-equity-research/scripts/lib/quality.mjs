@@ -15,7 +15,7 @@ export function qualityDiagnostics(report,values){
  const sections=Array.isArray(report.sections)?report.sections:[],seen=new Set()
  for(const [i,s] of sections.entries()){
   const path=`report.sections[${i}]`
-  if(!s||!RESEARCH_SECTIONS[s.kind]||seen.has(s.kind)||!['supported','partial','missing'].includes(s.status)){fail('RESEARCH_STRUCTURE',path,'完整研究章节需唯一受控kind及supported/partial/missing状态');continue}
+  if(!s||!Object.hasOwn(RESEARCH_SECTIONS,s.kind)||seen.has(s.kind)||!['supported','partial','missing'].includes(s.status)){fail('RESEARCH_STRUCTURE',path,'完整研究章节需唯一受控kind及supported/partial/missing状态');continue}
   seen.add(s.kind)
   if(s.status!=='supported'&&!['missing','impact','nextStep'].every(k=>text(s.gap?.[k])))fail('RESEARCH_GAP',path,'资料不足章节必须说明缺失资料、结论影响与补充动作')
   if(s.status==='supported'&&(!Array.isArray(s.paragraphs)||!s.paragraphs.length||!s.paragraphs.some(p=>Array.isArray(p?.refs)&&p.refs.some(id=>values.has(id))||[...(typeof p?.text==='string'?p.text:'').matchAll(/\{\{([^{}]+)\}\}/g)].some(m=>values.has(m[1].replace(/^(?:period:|observation:)/,'').split('|')[0])))))fail('SECTION_EVIDENCE',path,'已支持章节需要可追溯事实或原文观察，不能只填无来源结论')
@@ -27,6 +27,7 @@ export function qualityDiagnostics(report,values){
 }
 export function extraReportRows(report){
  const result=[]
+ for(const [i,p] of (report.summary??[]).entries())if(p?.label!==undefined)result.push([{text:p.label},`report.summary[${i}].label`])
  for(const [i,t] of (report.theses??[]).entries())for(const key of ['statement','inference','assumption','falsifier','monitoring'])result.push([{text:t?.[key],refs:['statement','inference'].includes(key)?t?.evidenceRefs:undefined},`report.theses[${i}].${key}`])
  for(const [i,s] of (report.sections??[]).entries()){
   if(s.gap)for(const key of ['missing','impact','nextStep'])result.push([{text:s.gap[key]},`report.sections[${i}].gap.${key}`])
