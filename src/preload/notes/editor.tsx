@@ -47,7 +47,15 @@ import {ChallengeToolbar,ChallengeComments,ManualNoteThreads} from './challenge-
 import {NoteReplacementPopover,NoteReplacementHighlights} from './replacement-review'
 import {noteEditFingerprint,noteEditTimestamp,noteHasSavedContent,noteEditDate} from './edit-date'
 
-type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; active?:boolean; activityId?:string; navigate(view: string): void }
+/** A local guide receives only document operations for its own isolated NotesApp. */
+export type NotesGuideEditorApi = {
+  snapshot(): {title:string;blocks:any[]}
+  setDocument(title:string,blocks:any[]):void
+  appendBlock(block:any):void
+  updateText(blockId:string,text:string):void
+}
+export type NotesGuideBinding = {ready(api:NotesGuideEditorApi):void;dispose?(api:NotesGuideEditorApi):void}
+type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; active?:boolean; activityId?:string; navigate(view: string): void;guide?:NotesGuideBinding }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
 const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: boolean; navigate(view: string): void; editor?: any; importing?:Set<string> } | null>(null)
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
@@ -248,6 +256,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     finally{state.busy=false;if(state.target!==title)void persistEngagement()}
   }
   const engage = () => {
+    if(props.guide)return
     recordSidebarSessionUse(props.sessionId)
     document.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId:props.sessionId}}))
     const state=engagement.current;state.started=true;state.target=titleRef.current;clearTimeout(state.timer)
@@ -257,6 +266,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const save = () => {
     clearTimeout(saveTimer.current)
     saveQueue.current = saveQueue.current.then(async () => {
+      if(props.guide&&disposed.current)return
       const content = snapshot(), fingerprint = JSON.stringify(content)
       if (fingerprint === lastWritten.current) return
       try {
@@ -300,9 +310,10 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const commentChanged = () => changed(); doc.getMap('threads').observeDeep(commentChanged)
     const flush = (e: KeyboardEvent) => { if (editorActive()&&(e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save() } }
     window.addEventListener('keydown', flush)
-    return () => { disposed.current = true; epoch.current++; clearTimeout(saveTimer.current); clearTimeout(engagement.current.timer);void persistEngagement(); off(); offSelection(); doc.getMap('threads').unobserveDeep(commentChanged); window.removeEventListener('keydown', flush); if (request.current) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(request.current,'stopped'); void props.bridge.request('stop', { sessionId: props.sessionId, requestId: request.current }) }; save() }
+    return () => { disposed.current = true; epoch.current++; clearTimeout(saveTimer.current); clearTimeout(engagement.current.timer);if(!props.guide)void persistEngagement(); off(); offSelection(); doc.getMap('threads').unobserveDeep(commentChanged); window.removeEventListener('keydown', flush); if (!props.guide&&request.current) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(request.current,'stopped'); void props.bridge.request('stop', { sessionId: props.sessionId, requestId: request.current }) }; if(!props.guide)save() }
   }, [])
   useEffect(()=>{
+    if(props.guide)return
     let live=true
     const isVisible=()=>editorActive()&&document.visibilityState!=='hidden'
     const handle=createNoteComponentDataActions({sessionId:props.sessionId,editor,current:()=>live&&!disposed.current&&!props.recovery&&isVisible(),update:updateSystemComponent,authorize:value=>{if(value.guardId!==undefined&&!noteDataCapability.current)throw Error('组件数据操作已过期或不可用。');noteDataCapability.current?.authorize(value)},onApplied:(value,id)=>noteDataCapability.current?.onApplied(value,id)})
@@ -313,6 +324,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     return()=>{live=false;clearInterval(timer);document.removeEventListener('sherlock:notes-component-data-action',receive);document.removeEventListener('visibilitychange',visible);document.removeEventListener('sherlock:workspace-surface-change',visible);void props.bridge.request('component-data-visible',{sessionId:props.sessionId,active:false}).catch(()=>{})}
   },[editor,props.sessionId,props.recovery,props.bridge,props.active])
   useEffect(()=>{
+    if(props.guide)return
     let live=true
     const dataCapability=createNoteDataCapability({editor,refreshGuard:dataRefreshGuard.current,selected:()=>{const captured=references.capture();return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]},request:(method,args)=>props.bridge.request(method,{sessionId:props.sessionId,...args}),persist:persistConfirmed,report:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect})})
     noteDataCapability.current=dataCapability
@@ -409,11 +421,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }
   useNoteDragAndDrop({editor,root:scroll,sessionId:props.sessionId,clientId:client.current,readOnly:!!props.recovery||props.active===false,dropFiles,finish:()=>setFileDrag(false)})
   useNoteReplyInsertion({editor,sessionId:props.sessionId,root:scroll,readOnly:!!props.recovery||props.active===false})
-  const publishComposer = (value: {running?: boolean;ready?: boolean}) => {if(editorActive())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:!props.recovery,running:!!request.current||!!externalCapabilities.current?.pending(),...value}}))}
-  const setNativeDraft = (text?: string, focus=false) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))
-  const commitNativeDraft = (admission?:ComposerAdmission) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))
-  const rollbackNativeDraft = (admission?:ComposerAdmission) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-rollback',{detail:{sessionId:props.sessionId,admission}}))
-  const publishTask = (requestId:string,phase:string,value:Record<string,unknown>={}) => {document.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:props.sessionId,requestId,phase,...value}}));if(['accepted','discarded'].includes(phase))void props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId,phase}).catch(()=>{})}
+  const publishComposer = (value: {running?: boolean;ready?: boolean}) => {if(!props.guide&&editorActive())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:!props.recovery,running:!!request.current||!!externalCapabilities.current?.pending(),...value}}))}
+  const setNativeDraft = (text?: string, focus=false) => {if(!props.guide)document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))}
+  const commitNativeDraft = (admission?:ComposerAdmission) => {if(!props.guide)document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))}
+  const rollbackNativeDraft = (admission?:ComposerAdmission) => {if(!props.guide)document.dispatchEvent(new CustomEvent('sherlock:notes-composer-rollback',{detail:{sessionId:props.sessionId,admission}}))}
+  const publishTask = (requestId:string,phase:string,value:Record<string,unknown>={}) => {if(props.guide)return;document.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:props.sessionId,requestId,phase,...value}}));if(['accepted','discarded'].includes(phase))void props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId,phase}).catch(()=>{})}
   const lastRequest=useRef<{prompt:string;images:any[];admission?:ComposerAdmission;captured:typeof selection.current;fingerprint:string;context:NoteReferenceContext;draftBlockId?:string}>()
   const generatingBlock = useRef('')
   const activeGeneration=useRef<{requestId:string;blockId:string;expected:string}>()
@@ -534,6 +546,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const regenerate=()=>{const previous=lastRequest.current;if(!previous||request.current)return;if(preview)publishTask(preview.requestId,'discarded');const range=editor.getExtension(NoteAiSelection)?.currentRange();void generate(previous.prompt,previous.images,previous.admission,{...previous,captured:{...previous.captured,...(range||{from:0,to:0}),text:range?editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n'):''}})}
   const commands = useRef({generate,stop,exportNote:(_format?:string)=>{}});commands.current={generate,stop,exportNote:(format?:string)=>{void exportNote(format)}}
   useEffect(()=>{
+    if(props.guide)return
     const progress=(event:Event)=>{
       const value=(event as CustomEvent).detail
       if(value?.sessionId!==props.sessionId||value.requestId!==request.current)return
@@ -606,6 +619,20 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const challenge=useNoteChallenge({editor,doc,bridge:props.bridge,sessionId:props.sessionId,title,scroll,busy:writing||externalBusy,isBusy:()=>!!request.current||!!externalCapabilities.current?.pending(),recovery:!!props.recovery,active:props.active,activityId:props.activityId,persist:changed,persistConfirmed})
   challengeController.current=challenge
   challengeScheduleSync.current=challenge.syncScheduling
+  // The guide is an explicit prop, never a global event channel that can control a user's editor.
+  useEffect(()=>{
+    if(!props.guide)return
+    let live=true
+    const assert=()=>{if(!live||disposed.current||!editorActive())throw new DOMException('演示编辑器已关闭。','AbortError')}
+    const api:NotesGuideEditorApi={
+      snapshot:()=>{assert();return {title:titleRef.current,blocks:structuredClone(editor.document)}},
+      setDocument:(nextTitle,blocks)=>{assert();titleRef.current=nextTitle;setTitle(nextTitle);editor.replaceBlocks(editor.document,blocks);changed()},
+      appendBlock:block=>{assert();editor.insertBlocks([block],editor.document.at(-1),'after')},
+      updateText:(blockId,text)=>{assert();if(!editor.getBlock(blockId))throw Error('演示段落已变化。');editor.updateBlock(blockId,{content:text})}
+    }
+    props.guide.ready(api)
+    return()=>{live=false;props.guide?.dispose?.(api);doc.destroy()}
+  },[editor,props.guide])
   const editedDate=editedAt?noteEditDate(editedAt,document.documentElement.dataset.odysseyLocale):undefined
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
   const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("正在生成内容…")}</span><button onClick={stop}>{t("停止")}</button></div> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
