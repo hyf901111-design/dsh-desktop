@@ -1,5 +1,7 @@
 import {readFileSync} from 'node:fs'
-import {Script} from 'node:vm'
+import {Script,runInNewContext} from 'node:vm'
+import {createRequire} from 'node:module'
+import {Window} from 'happy-dom'
 import {expect,it} from 'vitest'
 import {patchHomeGuidePresentationNative,patchHomeGuidePresentationOffice,stripHomeGuidePresentationOffice} from '../scripts/lib/home-guide-presentation-native.mjs'
 import {patchSherlockOfficePreviewClient,patchSherlockOfficePreviewPackage} from '../scripts/lib/patch-sherlock-office-preview.mjs'
@@ -29,6 +31,31 @@ it('fails closed on drift and remains composable with the separate board guide w
  expect(()=>new Script(patched)).not.toThrow();expect(patchHomeGuidePresentationNative(patched)).toBe(patched)
  const refresh=patchHomeGuidePresentationNative(patchHomeGuideNative(patched))
  expect(refresh===patched).toBe(true)
+})
+it('strictly strips the installed PPT wrapper before legacy passes and reconstructs the same native Root',async()=>{
+ const {stripHomeGuidePresentationNative:strip}=await import('../scripts/lib/home-guide-presentation-native.mjs')
+ expect(typeof strip).toBe('function')
+ const {patchHomeGuideNative}=await import('../scripts/lib/home-guide-native.mjs')
+ const pristine=strip(source),board=patchHomeGuideNative(pristine),patched=patchHomeGuidePresentationNative(board)
+ expect(strip(patched)===board).toBe(true)
+ expect(strip(strip(patched))===board).toBe(true)
+ expect(patchHomeGuidePresentationNative(strip(patched))===patched).toBe(true)
+ expect(strip('function ConversationRoot(){}')).toBe('function ConversationRoot(){}')
+ for(const partial of [patched.replace('/* odyssey:home-guide-presentation:start:v1 */',''),patched.replace('/* odyssey:home-guide-presentation:end:v1 */',''),patched.replace('exports.NativeHomePresentationPortal = NativeHomePresentationPortal;',''),patched.replace('/* odyssey:home-presentation-binding:v1 */',''),patched.replace('ConversationRoot=NativePresentationConversationRoot;',''),patched+'\nconst invalidReference=HomePresentationNativeDeps;'])expect(()=>strip(partial)).toThrow(/strip.*drifted/)
+ const require=createRequire(import.meta.url),win=new Window(),fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
+ const load=text=>{
+  let descriptor;win.__ModuleLoader__={load:value=>descriptor=value}
+  runInNewContext(text,{window:win,document:win.document,navigator:win.navigator,localStorage:win.localStorage,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLInputElement:win.HTMLInputElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,crypto,setTimeout,clearTimeout,setInterval,clearInterval,console})
+  return descriptor.factory(id=>['react','react/jsx-runtime','react-dom'].includes(id)?require(id):fake)
+ }
+ try{
+  const original=load(strip(patched));expect(original.ConversationRoot.name).toBe('ConversationRoot');expect(original.NativeHomePresentationPortal).toBeUndefined()
+  const native=load(patched.replace('exports.ConversationRoot = ConversationRoot;','exports.__original=HomePresentationOriginalConversationRoot;\nexports.ConversationRoot = ConversationRoot;'))
+  const tree=native.ConversationRoot({sessionId:'fixture-native'})
+  expect(tree.props.children[0].type).toBe(native.__original)
+  expect(tree.props.children[0].props.sessionId).toBe('fixture-native')
+  expect(tree.props.children[1].type).toBe(native.NativeHomePresentationPortal)
+ }finally{await win.happyDOM.close()}
 })
 it('upgrades an installed Office package and keeps its readonly branch idempotent through fingerprint validation',async()=>{
  const raw=readFileSync('/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/build/sherlock-plugin-profile/vendor/@huanlin/dsh-plugin-better-sidebar-plugin-office/lib/client.js','utf8')

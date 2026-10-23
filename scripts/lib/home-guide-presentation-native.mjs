@@ -147,6 +147,32 @@ function NativePresentationConversationRoot(props){
  return react.createElement(react.Fragment,null,react.createElement(HomePresentationOriginalConversationRoot,props),react.createElement(NativeHomePresentationPortal,{sessionId:props.sessionId,subagentPanel:props.subagentPanel}))
 }
 function one(source,before,after){if(source.split(before).length!==2)throw Error('Home presentation native anchor drifted: '+before.slice(0,80));return source.replace(before,after)}
+const PRESENTATION_BINDING='/* odyssey:home-presentation-binding:v1 */'
+const PRESENTATION_EFFECT='ctx.effect(()=>{const deps={researchSidebar,researchOfficePreview,t};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
+const PRESENTATION_EXPORT='exports.NativeHomePresentationPortal = NativeHomePresentationPortal;'
+
+/** Restore the prior (possibly board-wrapped) Root before exact legacy transforms. */
+export function stripHomeGuidePresentationNative(source){
+ const ownedNames=['HomePresentationNativeDeps','HomePresentationOriginalConversationRoot','NativeHomePresentationContent','NativeHomePresentationPortal','NativePresentationConversationRoot','homePresentationSidebarSnapshot']
+ const traces=[START,END,PRESENTATION_BINDING,...ownedNames]
+ const drift=()=>{throw Error('Home presentation native strip anchor drifted')}
+ if(!source.includes(START)){if(traces.some(value=>source.includes(value)))drift();return source}
+ if(source.split(START).length!==2||source.split(END).length!==2||source.split(PRESENTATION_BINDING).length!==2||source.split(PRESENTATION_EXPORT).length!==2)drift()
+ const start=source.indexOf(START),end=source.indexOf(END,start)
+ if(end<start)drift()
+ const block=source.slice(start,end+END.length)
+ if(!block.startsWith(START+'\nlet HomePresentationNativeDeps=null;\n')||!block.endsWith('\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END))drift()
+ for(const name of ['NativeHomePresentationContent','NativeHomePresentationPortal','NativePresentationConversationRoot'])if(block.split('function '+name+'(').length!==2)drift()
+ if(block.includes('homePresentationSidebarSnapshot')&&block.split('function homePresentationSidebarSnapshot(').length!==2)drift()
+ const effects=[PRESENTATION_EFFECT,PRESENTATION_EFFECT.replace('researchOfficePreview,t','researchOfficePreview')]
+ const bindings=effects.map(effect=>'\n'+PRESENTATION_BINDING+'\n'+effect).filter(binding=>source.includes(binding))
+ if(bindings.length!==1||source.split('const composerBlocks = new ComposerBlockRegistry();'+bindings[0]).length!==2||!source.includes('\n'+PRESENTATION_EXPORT))drift()
+ let restored=source.slice(0,start)+source.slice(end+END.length+(source[end+END.length]==='\n'?1:0))
+ restored=restored.replace(bindings[0],'').replace('\n'+PRESENTATION_EXPORT,'')
+ if(traces.some(value=>restored.includes(value)))drift()
+ return restored
+}
+
 export function patchHomeGuidePresentationNative(source){
  const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[homePresentationSidebarSnapshot,NativeHomePresentationContent,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
  if(source.includes(START)){
@@ -154,9 +180,8 @@ export function patchHomeGuidePresentationNative(source){
   if(end<0||source.indexOf(START,start+START.length)>=0||!source.includes('function NativePresentationConversationRoot('))throw Error('Home presentation native refresh anchor drifted')
   source=source.slice(0,start)+definitions+source.slice(end+END.length)
  }else source=one(source,'exports.ConversationRoot = ConversationRoot;',definitions+'\nexports.ConversationRoot = ConversationRoot;')
- const binding='/* odyssey:home-presentation-binding:v1 */'
- if(!source.includes(binding))source=one(source,'const composerBlocks = new ComposerBlockRegistry();','const composerBlocks = new ComposerBlockRegistry();\n'+binding+'\nctx.effect(()=>{const deps={researchSidebar,researchOfficePreview,t};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");')
- if(!source.includes('exports.NativeHomePresentationPortal = NativeHomePresentationPortal;'))source=one(source,'exports.ConversationRoot = ConversationRoot;','exports.ConversationRoot = ConversationRoot;\nexports.NativeHomePresentationPortal = NativeHomePresentationPortal;')
+ if(!source.includes(PRESENTATION_BINDING))source=one(source,'const composerBlocks = new ComposerBlockRegistry();','const composerBlocks = new ComposerBlockRegistry();\n'+PRESENTATION_BINDING+'\n'+PRESENTATION_EFFECT)
+ if(!source.includes(PRESENTATION_EXPORT))source=one(source,'exports.ConversationRoot = ConversationRoot;','exports.ConversationRoot = ConversationRoot;\n'+PRESENTATION_EXPORT)
  return source
 }
 
