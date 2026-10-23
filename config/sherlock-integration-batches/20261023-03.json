@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261023-03",
+  "branch": "codex/integration/20261023-03",
+  "baseMainCommit": "fdd11d8c36cf5c989b60bb198626d24c7f4603a9",
+  "expectedMainCommit": "fdd11d8c36cf5c989b60bb198626d24c7f4603a9",
+  "createdAt": "2026-10-23T14:06:40.618Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首页四卡原生导航、技能预填与窄栏适配",
+        "branch": "codex/feat/home-operations-actions-20261023",
+        "baseCommit": "fdd11d8c36cf5c989b60bb198626d24c7f4603a9",
+        "tipCommit": "42a1f6dc14d259eec7cff61d6e2dbdfa1a597b82",
+        "commits": [
+          {
+            "commit": "d69c025ef92fb2cd47ba7ed61f942aa98d77870e",
+            "parents": [
+              "fdd11d8c36cf5c989b60bb198626d24c7f4603a9"
+            ],
+            "subject": "功能：首页四卡接入原生视图与技能预填并保护草稿"
+          },
+          {
+            "commit": "42a1f6dc14d259eec7cff61d6e2dbdfa1a597b82",
+            "parents": [
+              "d69c025ef92fb2cd47ba7ed61f942aa98d77870e"
+            ],
+            "subject": "优化：首页窄栏按可视高度完整展示运营卡片"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-23-home-operations-actions.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-23-home-operations-actions-design.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-integration-skill-composer.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-actions.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-navigation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-composer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-use.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/integration-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-operations-actions.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-operations-navigation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-skill-composer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-skill-use.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-actions.test.ts",
+              "test/home-operations-navigation.test.ts",
+              "test/integration-skill-use.test.ts",
+              "test/integration-skill-composer.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "106项通过；真实SessionInputShell覆盖四动作、主题选区、附件草稿保留、取消、ABA与catalog期间编辑版本保护。/tmp/home-actions-feature-freeze2-20261023.log",
+            "verifiedCommit": "42a1f6dc14d259eec7cff61d6e2dbdfa1a597b82",
+            "completedAt": "2026-10-23T14:06:12.780901+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "600px Retina center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable|quick-start|revealComposer",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "窄栏尺寸/原生滚动8项通过，新四卡动作4项另轮通过，未跑完整浏览器套件。/tmp/home-operations-responsive-final-20261023.log；/tmp/home-operations-actions-browser-initial-20261023.log",
+            "verifiedCommit": "42a1f6dc14d259eec7cff61d6e2dbdfa1a597b82",
+            "completedAt": "2026-10-23T14:06:12.780901+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过 /tmp/home-actions-typecheck-freeze2-20261023.log；窄栏仅CSS改动，不影响TS。",
+            "verifiedCommit": "42a1f6dc14d259eec7cff61d6e2dbdfa1a597b82",
+            "completedAt": "2026-10-23T14:06:12.780901+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "提交前全部相关差异检查通过；两个中文提交，源码干净。",
+            "verifiedCommit": "42a1f6dc14d259eec7cff61d6e2dbdfa1a597b82",
+            "completedAt": "2026-10-23T14:06:12.780901+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Playwright真实渲染深浅600×880 DPR2五卡完整、400短窗滚动、恢复宽屏原布局与输入节点保留；四卡单击与动画后输入解锁通过。独立审查最后无material问题。正式客户端四入口实测待用户明确要求的main本地构建后完成，不以浏览器或源码检查替代。"
+        },
+        "acceptanceCriteria": [
+          "看板/笔记卡进入原生research/notes视图，既有工作区和会话复用。",
+          "PPT/研报卡回输入区后添加真实内置技能标签和可编辑模板，六全角主题留白被选中，不自动发送。",
+          "已有草稿、图片与引用保留；同技能重复不叠加模板；会话变化、取消与草稿版本变更后不写旧请求。",
+          "窄栏按实际内容区宽高适配，600×880默认五卡完整，短窗可原生滚动，底部按钮/主题dock互不遮盖。",
+          "按用户最新明确指令集成本地main构建正式身份客户端用于测试，不上传、不改版本、不发布。"
+        ],
+        "risks": [
+          "正式客户端尚需打包后四入口及真实窄栏验证；浏览器渲染与真实Shell测试不等于用户最终验收。",
+          "本次不验证技能执行后的PPT/研报生成质量，只准备可编辑草稿且不发送。"
+        ],
+        "generatedAt": "2026-10-23T14:06:12.780901+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-actions.test.ts",
+        "test/home-operations-navigation.test.ts",
+        "test/integration-skill-use.test.ts",
+        "test/integration-skill-composer.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "-t",
+        "600px Retina center pane|panel and short-pane resizing|small-pane content|grid centered|every quick card reachable|quick-start|revealComposer",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
