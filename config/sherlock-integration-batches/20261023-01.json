@@ -291,6 +291,90 @@
         ],
         "recordedAt": "2026-10-23T04:03:03.784Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复跨目录依赖复用导致预加载编辑器重复注册中断",
+        "branch": "codex/feat/preload-editor-singleton-20261023",
+        "baseCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
+        "tipCommit": "f6ac5df75b17542ed08061a07e119326b7ebe2c5",
+        "commits": [
+          {
+            "commit": "f6ac5df75b17542ed08061a07e119326b7ebe2c5",
+            "parents": [
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423"
+            ],
+            "subject": "修复：统一预加载编辑器依赖避免重复注册中断桌面接口"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "electron.vite.config.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/preload-editor-singleton.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/preload-editor-singleton.test.ts",
+              "test/sandbox-preload.test.js",
+              "test/research-canvas-wheel-preload.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "3文件4项通过；真实Vite产物唯一编辑器模块owner/一次注册，HappyDOM+VM完整初始化通过；原配置实测两份根/两次注册并抛RangeError。",
+            "verifiedCommit": "f6ac5df75b17542ed08061a07e119326b7ebe2c5",
+            "completedAt": "2026-10-23T04:23:47.963268+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "f6ac5df75b17542ed08061a07e119326b7ebe2c5",
+            "completedAt": "2026-10-23T04:23:47.963268+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "本次变更空白检查通过。",
+            "verifiedCommit": "f6ac5df75b17542ed08061a07e119326b7ebe2c5",
+            "completedAt": "2026-10-23T04:23:47.963268+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "构建配置修正，非新界面；实机旧包DevTools已捕获重复注册异常。修改后真实bundle初始化回归通过，最终原生目录/技能/报告预览仍需本集成重新构建验收。"
+        },
+        "acceptanceCriteria": [
+          "preload从当前checkout统一解析BlockNote三包，单次MultipleNodeSelection注册。",
+          "真实bundle初始化不抛异常并保留既有沙盒与桥接边界。",
+          "重建后目录桥、技能选择和报告预览恢复；保持本地测试应用打开。"
+        ],
+        "risks": [
+          "既有preload-main-frame源码测试4项在复用依赖目录下仍失败（独立Vitest外部化解析；临时inline还暴露CSS装载问题），未修改该测试配置，也未宣称其通过。",
+          "本修正不更新依赖版本，不改变沙盒权限；最终原生行为以新签名包为准。"
+        ],
+        "generatedAt": "2026-10-23T04:23:47.963268+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -330,6 +414,17 @@
         "diff",
         "--check",
         "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/preload-editor-singleton.test.ts",
+        "test/sandbox-preload.test.js",
+        "test/research-canvas-wheel-preload.test.ts"
       ],
       "timeoutMs": 180000
     }
