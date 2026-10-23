@@ -96,7 +96,7 @@ export function mergeNoteConversationFlow(flow,nodeStore,rows){
 
 export function patchNotesActivity(source) {
   const marker='/* ework:notes-activity:v1 */',anchor='function ConversationRoot('
-  const helpers=`${marker}\n${noteActivityLocaleHelpers()}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${noteActionClientHelpers()}\n${[noteConversationVacant,useNotesConversationRows,EWorkNoteMessageReference,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
+  const helpers=`${marker}\n${noteActivityLocaleHelpers()}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${noteActionClientHelpers()}\n${[isHomeConversationContentNode,noteConversationVacant,useNotesConversationRows,EWorkNoteMessageReference,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
   if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
   else {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位任务过程面板。')
@@ -162,5 +162,5 @@ export function patchNotesActivity(source) {
 }
 import { noteFileClientHelpers, patchNotesFiles } from './notes-files.mjs'
 import { noteComponentClientHelpers, patchNotesComponents } from './notes-components.mjs'
-import {noteConversationVacant,patchNoteConversationVacancy} from './notes-conversation-vacancy.mjs'
+import {isHomeConversationContentNode,noteConversationVacant,patchNoteConversationVacancy} from './notes-conversation-vacancy.mjs'
 import {noteActionClientHelpers,patchNoteAssistantDestination,patchNoteReplyActionRow} from './notes-reply-actions.mjs'

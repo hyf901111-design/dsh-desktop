@@ -1,3 +1,5 @@
+import {patchHomeConversationRuntime} from './notes-conversation-vacancy.mjs'
+
 /** Promote note edits through the native session ledger and durable title event. */
 export function installNoteSessionTitles(sessions, doc) {
   const edited = event => {
@@ -21,6 +23,7 @@ export function patchNoteSessionClient(source) {
 }
 
 export function patchNoteSessionRuntime(source) {
+  source = patchHomeConversationRuntime(source)
   const marker = '/* ework:retain-edited-note:v1 */'
   if (source.includes(marker)) return source
   const anchor = 'noteAgentPreset(sessionId, agentPreset) {\n\t\t\t\tthis.manager.noteAgentPreset(sessionId, agentPreset);'
