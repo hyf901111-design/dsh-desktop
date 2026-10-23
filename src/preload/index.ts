@@ -33,6 +33,7 @@ import { mountDesktopShellStyles } from './shell-style'
 import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
 import { mountHomeThemes } from './home-themes'
+import { mountHomeOperations } from './home-operations'
 import { mountFigmaResizeFeedback } from './figma-resize-feedback'
 import { mountFigmaScrollbars } from './figma-scrollbars'
 import { mountFigmaTaskScrollbar } from './figma-task-scrollbar'
@@ -204,6 +205,7 @@ function initializeUi(): void {
       get: () => ipcRenderer.sendSync('desktop-home-theme:get'),
       set: theme => ipcRenderer.sendSync('desktop-home-theme:set', theme) === true
     }), { once: true })
+    window.addEventListener('unload', mountHomeOperations(document), { once: true })
     window.addEventListener('unload', mountFigmaResizeFeedback(document), { once: true })
     if (process.platform === 'darwin') window.addEventListener('unload', mountWindowResize(document, edge => ipcRenderer.send('desktop-window:resize', edge)), { once: true })
     window.addEventListener('unload', mountFigmaResponsiveHeader(document), { once: true })
