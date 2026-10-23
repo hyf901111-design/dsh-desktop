@@ -1,5 +1,6 @@
 import styles from './home-operations.css?raw'
 import { OPERATIONS_CASE_GLOWS, OPERATIONS_ILLUSTRATIONS, OPERATIONS_TREND_UP } from './home-operations-assets'
+import { createHomeOperationsCarousel, type HomeOperationsCarousel } from './home-operations-carousel'
 
 type Section = 'input' | 'operations'
 type Motion = 'idle' | 'tracking' | 'settling'
@@ -8,6 +9,11 @@ const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
 const DESIGN_WIDTH = 780
 const DESIGN_HEIGHT = 381.344
+const MOTION_FREQUENCY = 14
+const smootherStep = (value: number) => {
+  const t = Math.max(0, Math.min(1, value))
+  return t * t * t * (t * (t * 6 - 15) + 10)
+}
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
 const COPY = {
   zh: {
@@ -47,9 +53,10 @@ export function mountHomeOperations(doc: Document = document): () => void {
   let section: HTMLElement | null = null, toggle: HTMLButtonElement | null = null, returnHit: HTMLButtonElement | null = null
   let heading: HTMLElement | null = null, caseTitle: HTMLElement | null = null, caseSubtitle: HTMLElement | null = null, caseDescription: HTMLElement | null = null
   let usecase: HTMLElement | null = null
-  let frame = 0, paintFrame = 0, settleFrame = 0, settleTimer = 0
+  let carousel: HomeOperationsCarousel | null = null
+  let frame = 0, motionFrame = 0, settleTimer = 0, lastMotionTime = 0
   let progress = 0, renderedHeroOffset = 0, motion: Motion = 'idle', intent: Section = 'input'
-  let lastWheel = 0, velocity = 0
+  let targetProgress = 0, lastWheel = 0, wheelDirection = 0, velocity = 0
   let geometry = { inputTop: 0, targetTop: 0, shift: 1, scale: 1, viewportHeight: 0 }
   let renderedLocale = '', renderedTheme = ''
   const quickCards: HTMLButtonElement[] = [], pages: HTMLButtonElement[] = []
@@ -128,9 +135,9 @@ export function mountHomeOperations(doc: Document = document): () => void {
     updateGlow()
   }
   const cancelSettlement = () => {
-    if (settleFrame) win.cancelAnimationFrame(settleFrame)
+    if (motionFrame) win.cancelAnimationFrame(motionFrame)
     if (settleTimer) win.clearTimeout(settleTimer)
-    settleFrame = settleTimer = 0
+    motionFrame = settleTimer = 0; lastMotionTime = 0
   }
   const paint = () => {
     if (!visible || !host || !hero || !section || !toggle || !returnHit) return
@@ -144,8 +151,8 @@ export function mountHomeOperations(doc: Document = document): () => void {
       if (collapsed) section.scrollTop = 0
     }
     host.dataset.odysseyHomeOperationsMotion = motion
-    const heroProgress = Math.min(1, progress / .72)
-    const cardsProgress = Math.max(0, Math.min(1, (progress - .2) / .8))
+    const heroProgress = smootherStep(progress / .86)
+    const cardsProgress = smootherStep((progress - .14) / .86)
     renderedHeroOffset = geometry.shift * heroProgress
     css('--odyssey-operations-progress-value', String(progress))
     css('--odyssey-operations-scroll-progress', String(cardsProgress))
@@ -160,10 +167,35 @@ export function mountHomeOperations(doc: Document = document): () => void {
     toggle.setAttribute('aria-expanded', String(intent === 'operations'))
     returnHit.hidden = !expanded; returnHit.tabIndex = expanded ? 0 : -1
     for (const button of [...quickCards, ...pages]) button.tabIndex = expanded ? 0 : -1
+    carousel?.setVisible(visible && motion === 'idle')
   }
-  const schedulePaint = () => {
-    if (paintFrame) return
-    paintFrame = win.requestAnimationFrame(() => { paintFrame = 0; paint() })
+  const startMotion = () => {
+    if (reduced.matches) { progress = targetProgress; velocity = 0; paint(); return }
+    if (motionFrame) return
+    lastMotionTime = win.performance.now()
+    const step = (now: number) => {
+      motionFrame = 0
+      if (disposed || !visible) return
+      const elapsed = Math.max(.001, Math.min(.05, (now - lastMotionTime) / 1000))
+      lastMotionTime = now
+      // Exact integration of a critically damped position/velocity system.
+      // Retargeting changes its force, preserving the visible position and speed.
+      const displacement = progress - targetProgress
+      const response = velocity + MOTION_FREQUENCY * displacement
+      const decay = Math.exp(-MOTION_FREQUENCY * elapsed)
+      progress = targetProgress + (displacement + response * elapsed) * decay
+      velocity = (velocity - MOTION_FREQUENCY * response * elapsed) * decay
+      const endpoint = targetProgress === 0 || targetProgress === 1
+      const resting = Math.abs(targetProgress - progress) < (endpoint ? .008 : .00002) && Math.abs(velocity) < (endpoint ? .12 : .0005)
+      if (resting) {
+        progress = targetProgress; velocity = 0
+        if (endpoint) motion = 'idle'
+      }
+      paint()
+      if (!resting) motionFrame = win.requestAnimationFrame(step)
+      else lastMotionTime = 0
+    }
+    motionFrame = win.requestAnimationFrame(step)
   }
   const measure = () => {
     if (!visible || !host || !hero || !section) return
@@ -214,28 +246,16 @@ export function mountHomeOperations(doc: Document = document): () => void {
   }
   const setSection = (next: Section, force = false) => {
     if (!visible || !host || !hero || !section || !toggle || !returnHit) return false
-    cancelSettlement()
-    if (paintFrame) win.cancelAnimationFrame(paintFrame)
-    paintFrame = 0; intent = next; velocity = lastWheel = 0
+    if (settleTimer) win.clearTimeout(settleTimer)
+    settleTimer = 0; intent = next; lastWheel = wheelDirection = 0
     clearPointers()
-    const destination = next === 'operations' ? 1 : 0
-    if (force || reduced.matches || Math.abs(destination - progress) < .0001) {
-      progress = destination; motion = 'idle'; updateLabels(); measure()
+    targetProgress = next === 'operations' ? 1 : 0
+    if (force || reduced.matches) {
+      cancelSettlement(); progress = targetProgress; velocity = 0; motion = 'idle'; updateLabels(); measure()
       return true
     }
-    const start = progress, startedAt = win.performance.now()
-    const duration = Math.max(180, Math.min(300, Math.abs(destination - start) * 300))
     motion = 'settling'; updateLabels(); paint()
-    const step = (now: number) => {
-      settleFrame = 0
-      if (disposed || !visible) return
-      const time = Math.max(0, Math.min(1, (now - startedAt) / duration))
-      progress = start + (destination - start) * (1 - (1 - time) ** 3)
-      if (time === 1) { progress = destination; motion = 'idle' }
-      paint()
-      if (time < 1) settleFrame = win.requestAnimationFrame(step)
-    }
-    settleFrame = win.requestAnimationFrame(step)
+    startMotion()
     return true
   }
   const toggleSection = () => setSection((motion === 'idle' ? state : intent) === 'input' ? 'operations' : 'input')
@@ -250,29 +270,30 @@ export function mountHomeOperations(doc: Document = document): () => void {
     if (progress >= .9999 && host?.dataset.odysseyHomeOperationsLayout === 'stacked' && event.target instanceof win.Node && section?.contains(event.target)) {
       const remaining = section.scrollHeight - section.clientHeight - section.scrollTop
       if (event.deltaY > 0 && remaining > .5 || event.deltaY < 0 && section.scrollTop > .5) {
-        cancelSettlement(); velocity = lastWheel = 0; intent = 'operations'; motion = 'idle'; paint()
+        cancelSettlement(); velocity = lastWheel = wheelDirection = 0; targetProgress = 1; intent = 'operations'; motion = 'idle'; paint()
         return
       }
     }
     event.preventDefault()
-    cancelSettlement()
+    if (settleTimer) win.clearTimeout(settleTimer)
+    settleTimer = 0
     const now = win.performance.now()
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host?.clientHeight || 600 : 1)
-    const elapsed = lastWheel ? Math.max(8, Math.min(64, now - lastWheel)) : 16
-    const speed = Math.max(-2, Math.min(2, delta / elapsed))
-    velocity = !lastWheel || now - lastWheel > 180 ? speed : velocity * .45 + speed * .55
+    const direction = Math.sign(delta)
+    const continuing = motion === 'tracking' && now - lastWheel <= 180 && direction === wheelDirection
+    targetProgress = Math.max(0, Math.min(1, (continuing ? targetProgress : progress) + delta / geometry.shift))
     const previousIntent = intent
-    lastWheel = now; intent = delta > 0 ? 'operations' : 'input'
+    lastWheel = now; wheelDirection = direction; intent = delta > 0 ? 'operations' : 'input'
     if (motion !== 'tracking') clearPointers()
     motion = 'tracking'
-    progress = Math.max(0, Math.min(1, progress + delta / geometry.shift))
+    carousel?.setVisible(false)
     if (intent !== previousIntent) updateLabels()
-    schedulePaint()
+    startMotion()
     settleTimer = win.setTimeout(() => {
       settleTimer = 0
-      const projected = progress + velocity * 90 / geometry.shift
+      const projected = targetProgress + velocity * .16
       setSection(projected >= .5 ? 'operations' : 'input')
-    }, 110)
+    }, 100)
   }
   const onKey = (event: KeyboardEvent) => {
     if (!visible || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !['ArrowDown', 'ArrowUp'].includes(event.key) || avoidInput(event.target) || popupShown()) return
@@ -360,7 +381,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
     for (let index = 0; index < 3; index++) {
       const page = doc.createElement('button'); page.type = 'button'; page.dataset.case = String(index); page.tabIndex = -1
       page.append(doc.createElement('i'))
-      page.addEventListener('click', () => { if (state === 'operations') { caseIndex = index; updateCase() } })
+      page.addEventListener('click', () => { if (state === 'operations') carousel?.select(index) })
       pages.push(page); pagination.append(page)
     }
     usecase.append(field, caseCopy, caseDescription, pagination)
@@ -388,12 +409,12 @@ export function mountHomeOperations(doc: Document = document): () => void {
     toggle.addEventListener('click', toggleSection)
     returnHit = doc.createElement('button'); returnHit.type = 'button'; returnHit.className = 'odyssey-operations-return-hit'; returnHit.tabIndex = -1; returnHit.hidden = true
     returnHit.addEventListener('click', () => setSection('input'))
+    carousel = createHomeOperationsCarousel({ win, card: usecase, initialIndex: caseIndex, onChange: index => { caseIndex = index; updateCase() } })
   }
   const resize = new win.ResizeObserver(measure)
   const detach = () => {
     cancelSettlement()
-    if (paintFrame) win.cancelAnimationFrame(paintFrame)
-    paintFrame = 0
+    carousel?.dispose(); carousel = null
     clearPointers(); resize.disconnect(); restoreHero()
     host?.removeEventListener('wheel', onWheel)
     if (host) { delete host.dataset.odysseyHomeOperationsState; delete host.dataset.odysseyHomeOperationsLayout; delete host.dataset.odysseyHomeOperationsMotion; for (const name of variables) host.style.removeProperty(name) }
@@ -402,7 +423,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
     heading = caseTitle = caseSubtitle = caseDescription = usecase = null
     quickCards.length = pages.length = 0
     renderedTheme = renderedLocale = ''; visible = false; state = intent = 'input'; motion = 'idle'
-    progress = renderedHeroOffset = velocity = lastWheel = 0
+    progress = targetProgress = renderedHeroOffset = velocity = lastWheel = wheelDirection = 0
     geometry = { inputTop: 0, targetTop: 0, shift: 1, scale: 1, viewportHeight: 0 }
   }
   const attach = (nextHost: HTMLElement, nextRoot: HTMLElement, nextHero: HTMLElement) => {
@@ -447,9 +468,8 @@ export function mountHomeOperations(doc: Document = document): () => void {
   const onVisibility = () => {
     if (!doc.hidden) { sync(); return }
     cancelSettlement()
-    if (paintFrame) win.cancelAnimationFrame(paintFrame)
-    paintFrame = 0; clearPointers(); intent = state; motion = 'idle'; velocity = lastWheel = 0
-    progress = state === 'operations' ? 1 : 0
+    clearPointers(); intent = state; motion = 'idle'; velocity = lastWheel = wheelDirection = 0
+    progress = targetProgress = state === 'operations' ? 1 : 0
     paint()
   }
   const onReduced = () => { clearPointers(); if (reduced.matches && motion !== 'idle') setSection(intent, true); else measure() }
