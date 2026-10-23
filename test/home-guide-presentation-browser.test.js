@@ -1,169 +1,108 @@
-import {readFileSync} from 'node:fs'
-import {mkdir} from 'node:fs/promises'
-import {resolve} from 'node:path'
+import {readFile,mkdir} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
+import {join} from 'node:path'
 import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
-import {patchHomeGuidePresentationNative,patchHomeGuidePresentationOffice,stripHomeGuidePresentationOffice} from '../scripts/lib/home-guide-presentation-native.mjs'
-import {ResearchFilePreviewRegistry} from '../src/main/state/research-file-preview'
-import {createHomeGuideAssetService} from '../src/main/home-guide-assets'
-
-const vendor='/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/build/sherlock-plugin-profile/vendor'
-const runtimeSource=readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
-const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
-const conversationSource=patchHomeGuidePresentationNative(source).replace('exports.NativeHomePresentationPortal = NativeHomePresentationPortal;','exports.NativeHomePresentationPortal = NativeHomePresentationPortal;exports.__input=InputBar;exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
-const sidebarSource=readFileSync(vendor+'/dsh-better-sidebar/lib/client.js','utf8').replace('exports.apply = apply;','exports.apply = apply;exports.__store=createSidebarStore;exports.__service=createBetterSidebarService;exports.__content=TabContent;')
-const officeSource=patchHomeGuidePresentationOffice(stripHomeGuidePresentationOffice(readFileSync(vendor+'/@huanlin/dsh-plugin-better-sidebar-plugin-office/lib/client.js','utf8')))
-const evidence='/tmp/home-presentation-guide-20261024'
-let browser,entry
+import {createUserMessage} from '@deepseek-ai/dsh-llm'
+import {presentationRuntimeFixture} from './fixtures/home-presentation-runtime.js'
+import {patchHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
+const evidence='/tmp/home-presentation-natural-20261024'
+let browser,entry,conversationSource,runtimeSource
 beforeAll(async()=>{
- const result=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot} from 'react-dom/client';
- import {mountHomePresentationGuide} from './src/preload/home-guide-presentation';
- const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),empty=()=>null;
- const primitives=new Proxy({Tooltip:({children})=>children},{get:(target,key)=>target[key]??empty});
- const modules=id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:empty,AttachmentRail:empty}:fake;
- const runtime=window.descriptors.runtime.factory(modules),native=window.descriptors.conversation.factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?runtime:modules(id)),sidebar=window.descriptors.sidebar.factory(modules),office=window.descriptors.office.factory(modules);
- const shell=new native.SessionInputShell({actx:{},defaultSink:()=>{window.probe.sent++}});shell.setDraft('原生草稿：保留光标与节点');
- const store=sidebar.__store();store.setSession('owner');const service=sidebar.__service(store);
- service.registerTab({id:'existing-file',title:'原文件',hidden:true,component:()=> <div data-existing-file>原有用户标签</div>});service.openTab({id:'user-file',type:'existing-file',title:'原文件'},{sessionId:'owner'});
- const flat=node=>!node?[]:node.kind==='leaf'||Array.isArray(node.tabs)?[node]:[...flat(node.first??node.a??node.children?.[0]),...flat(node.second??node.b??node.children?.[1])];
- window.probe={sent:0,assets:0,service,store,native,shell,flat,guide:null,releaseGrant:null};
- native.__bind({researchSidebar:{service},researchOfficePreview:{service:office.officePreviewService}});
- const props={useSession:select=>select({running:false,promptError:null,subagent:null,removed:false}),useInput:select=>React.useSyncExternalStore(shell.state.subscribe,()=>select(shell.snapshot),()=>select(shell.snapshot)),inputActions:shell.actions,keyboard:shell,renderSlot:()=>null,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:(_key,select)=>select?.(undefined),sessionId:'owner',t:key=>key,variant:'hero'};
- function App(){const [context,setContext]=React.useState({sessionId:'owner',subagentPanel:false});window.probe.context=setContext;return <><native.__input {...props}/><native.NativeHomePresentationPortal {...context}/></>}
- function Right(){const snapshot=React.useSyncExternalStore(fn=>store.subscribe(fn),()=>store.getSnapshot(),()=>store.getSnapshot());const leaves=flat(snapshot.state?.splits);return <>{leaves.flatMap(leaf=>leaf.tabs.map(tab=><div key={tab.id} data-native-sidebar-tab={tab.id} style={{display:leaf.active===tab.id?'block':'none',height:'100%'}}><sidebar.__content tab={tab} sessionId="owner" cwd="" visible={leaf.active===tab.id} store={store} ctx={{betterSidebar:service}}/></div>))}</>}
- const root=createRoot(document.querySelector('#ordinary')),right=createRoot(document.querySelector('#right'));root.render(<App/>);right.render(<Right/>);
- Object.assign(window.probe,{async mount(){this.guide=await mountHomePresentationGuide(document,document.querySelector('#guide-host'),{signal:(this.controller=new AbortController()).signal,sessionId:'owner',runId:'run-ppt'})},step:name=>window.probe.guide.runStep(name),dispose(){this.guide?.dispose()},unmount(){root.unmount();right.unmount()},tabs(){return flat(store.getSnapshot().state?.splits).flatMap(leaf=>leaf.tabs.map(tab=>tab.id))}});
- `},bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"production"'}})
- entry=result.outputFiles[0].text
+ runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
+ conversationSource=patchHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__Todo=TodoDock;exports.__User=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
+ const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
+ import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomePresentationGuide}from'./src/preload/home-guide-presentation';
+ let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});const empty=()=>null;
+ const primitives=new Proxy({Tooltip:({children})=>children,MarkdownText:({text})=><div style={{whiteSpace:'pre-wrap'}}>{text}</div>,Markdown:({text})=><div>{text}</div>},{get:(target,key)=>target[key]??empty});
+ const cordis={Service:class{constructor(ctx){this.ctx=ctx}}};
+ const modules=id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/cordis'?cordis:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:empty,AttachmentRail:empty,ImageGallery:empty}:fake;
+ const rt=window.runtimeDescriptor.factory(modules),native=window.conversationDescriptor.factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?rt:modules(id));
+ const disposers=[],ctx={get:()=>undefined,reflect:{provide(){}},effect(start){const stop=start();if(typeof stop==='function')disposers.push(stop);return stop??(()=>{})}};
+ const events=new rt.ConversationEventRegistry(ctx),viewRegistry=new rt.ConversationViewRegistry(ctx);native.__register({...ctx,conversationEvents:events,conversationViews:viewRegistry});
+ const sessionsRuntime=new rt.SessionRuntime(ctx,{sessions:{}},{},{events,views:viewRegistry}),session=sessionsRuntime.manager.get('demo');session.openState='open';session.installWindow([],false);
+ const store=initial=>{let value=initial;const listeners=new Set();return{getSnapshot:()=>value,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},update:patch=>{value={...value,...patch};listeners.forEach(fn=>fn())}}};
+ const view=store({view:'chat',draft:'',selection:null}),summary=store({byId:{demo:{id:'demo',displayTitle:'公司风格演示示例',cwd:window.cwd,blank:true}}}),projections=store({todos:null});
+ const shell=new native.SessionInputShell({actx:{},defaultSink:async text=>{const before=shell.snapshot;await window.nativeBackend({action:'send',text});shell.commitSend(before.imageIds,before.draft)}}),inputHub={shell:()=>shell};
+ const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),useSession=use({subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()}),useInput=use(shell.state),useStore=use(view),useSessions=use(summary),useProjection=name=>use(projections)(s=>s[name]);
+ const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'}]},actions={setView:value=>view.update({view:value}),setDraft:draft=>view.update({draft}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
+ const t=(key,args)=>key==='todo.progress.total'?args.done+'/'+args.total:({'hero.headline':'探索更远，洞见更深。','input.send':'发送消息','input.placeholder':'描述你的任务…','todo.title':'任务清单'})[key]??key;
+ const shared={sessionId:'demo',useSession,useSessions,useStore,actions,views,t},inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection,sessionId:'demo',t};
+ const sidebarState={composerHost:null,conversationHost:null},sidebarStore={subscribe:()=>()=>{},getSnapshot:()=>sidebarState},sidebar={storeFor:()=>sidebarStore,publish(){},enter(){},leave(){},service:{async openFile(scope,path){window.probe.opened.push({scope,path});await window.nativeBackend({action:'verify-file',path});document.querySelector('#right').textContent='公司风格演示示例.pptx · 原生文件路径已校验'}}};
+ const openFile=path=>sidebar.service.openFile({sessionId:'demo',cwd:window.cwd},path),renderSlot=(name,props={},scope={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.input.dock'?<native.__Todo useSession={useSession} useProjection={useProjection} t={t}/>:name==='conversation.view'?<native.__Chat {...shared} {...props} renderSlot={renderSlot} openFile={openFile} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>[]}/>:name==='conversation.chat.node'&&scope.entryKey==='user'?<native.__User {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.__Assistant {...props} useTurnData={()=>null} t={t}/>:scope.fallback??null;
+ window.probe={native,shell,session,opened:[],cues:[],guide:null,events:[],refresh:async()=>{const data=await window.nativeBackend({action:'history'});window.probe.events=data.events;session.blankBit=!data.events.some(e=>e.type==='user/message');session.installWindow(data.events.map(event=>({event,view:event.type})),false);projections.update({todos:data.events.findLast(e=>e.type==='todo/write')?.data.todos??null})}};
+ native.__bind({inputHub,researchSidebar:sidebar,getHomeGuideSession:id=>window.probe.registered===false?undefined:{kind:'ppt',sessionId:id,cwd:window.cwd}});
+ const registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true}),root=createRoot(document.querySelector('#native-root'));
+ root.render(<native.ConversationRoot {...shared} useProjection={useProjection} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{throw Error('Must not create another workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例',sessionIds:['demo']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/>);
+ window.addEventListener('sherlock:home-guide-cue',event=>window.probe.cues.push({label:event.detail.label,tag:event.detail.target.tagName}));
+ const timer=setInterval(()=>window.probe.refresh(),30);
+ Object.assign(window.probe,{async mount(fresh=true){this.guide=await mountHomePresentationGuide(document,document.querySelector('#guide-host'),{signal:(this.controller=new AbortController()).signal,sessionId:'demo',cwd:window.cwd,runId:'run-1',fresh})},step:step=>window.probe.guide.runStep(step),play(playing){window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'demo',runId:'run-1',playing}}))},dispose(){this.guide?.dispose()},unmount(){clearInterval(timer);root.unmount();shell.dispose();disposers.reverse().forEach(fn=>fn())}});
+ `},bundle:true,platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"development"'}})
+ entry=output.outputFiles[0].text
  const pw=await import(/* @vite-ignore */pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
- browser=await pw.chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell',args:['--enable-unsafe-swiftshader']})
+ browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
  await mkdir(evidence,{recursive:true})
 },30000)
 afterAll(()=>browser?.close())
 async function fixture(){
- const registry=new ResearchFilePreviewRegistry({storage:{load:()=>[],save:()=>true}}),service=createHomeGuideAssetService({registry,companyPresentationPath:resolve('skills/efund-ppt-maker/assets/efund-ework-onepage.pptx')})
- const page=await browser.newPage({viewport:{width:1440,height:960},reducedMotion:'reduce'}),errors=[],requests=[]
- page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(6000)
- await page.exposeFunction('__assetRequest',async input=>{requests.push(input);return service.request(input)})
- await page.route('https://presentation-guide.test/**',async route=>{
+ const f=await presentationRuntimeFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion:'reduce'}),errors=[]
+ page.on('pageerror',e=>errors.push(e.stack??e.message))
+ const backend=async input=>{
+  if(input.action==='history')return{events:f.agent.session.events}
+  if(input.action==='send'){f.agent.followup(createUserMessage({content:[{type:'text',text:input.text}],source:{kind:'user'}}));return{ok:true}}
+  if(input.action==='verify-file'){expect(await readFile(input.path)).toEqual(f.bytes);return{ok:true}}
+  const method={prepare:'prepare',playback:'playback',checkpoint:'checkpoint',dispose:'disposeRun'}[input.action]
+  if(!method)throw Error('unknown command');return{ok:true,...await f.runtime[method](input)}
+ }
+ await page.exposeFunction('nativeBackend',backend)
+ await page.route('**/*',async route=>{
   const url=new URL(route.request().url())
-  if(url.pathname==='/capability'){const response=await registry.handle(new Request(url.searchParams.get('url')));return route.fulfill({status:response.status,contentType:response.headers.get('content-type')??'',body:Buffer.from(await response.arrayBuffer())})}
-  return route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><main class="pI_x6G_centerCol"><header data-srb-session-header data-ework-notes-session="owner"></header><div id="ordinary"></div><section data-home-guide="run-ppt"><div id="guide-host"></div></section></main><aside id="right"></aside>'})
+  if(url.origin!=='https://presentation.local')return route.abort()
+  if(url.pathname==='/sherlock/home-guide/presentation'){try{return route.fulfill({contentType:'application/json',body:JSON.stringify(await backend(route.request().postDataJSON()))})}catch(error){return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({ok:false,message:error.message})})}}
+  return route.fulfill({contentType:url.pathname==='/'?'text/html':'application/json',body:url.pathname==='/'?'<meta charset="utf-8"><div class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="run-1"><div id="guide-host"></div></section></div><aside id="right"></aside><script>window.__ModuleLoader__={load:d=>window.descriptor=d}</script>':'{}'})
  })
- await page.goto('https://presentation-guide.test/')
- await page.evaluate(()=>{window.descriptors={};window.__ModuleLoader__={load:d=>window.descriptor=d};window.dshDesktop={homeGuideAssets:{request:input=>window.__assetRequest(input)}};const original=window.fetch;window.fetch=(url,options)=>original(String(url).startsWith('sherlock-preview:')?'/capability?url='+encodeURIComponent(url):url,options)})
- for(const[name,script]of Object.entries({runtime:runtimeSource,conversation:conversationSource,sidebar:sidebarSource,office:officeSource})){await page.addScriptTag({content:script});await page.evaluate(name=>{window.descriptors[name]=window.descriptor},name)}
- const nativeCSS=[...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match=>JSON.parse(match[1])).join('\n')
- const styles=['figma-final-shell','figma-home','figma-panels','figma-inline-references','figma-reading'].map(name=>readFileSync('src/preload/'+name+'.css','utf8')).join('\n')
- await page.addStyleTag({content:nativeCSS+'\n'+styles+'\nhtml,body{margin:0;height:100%}.pI_x6G_centerCol{position:relative;width:860px;height:100vh}#ordinary{padding:20px}#guide-host{position:absolute;inset:180px 10px 20px;background:#f5f5f5}#right{position:absolute;left:860px;top:0;width:580px;height:100vh;overflow:hidden}[data-home-presentation-native]>.uV2eYG_root{flex:none}.uV2eYG_root{max-width:780px}body{--odyssey-font-ui:system-ui;--dsw-font-family:system-ui;--dsw-alias-bg-base:#fff;--dsw-alias-label-primary:#222}'})
- await page.addScriptTag({content:entry});await page.waitForSelector('#ordinary textarea')
- await page.evaluate(()=>{window.probe.original=document.querySelector('#ordinary textarea')})
- const baselineTabs=await page.evaluate(()=>window.probe.tabs())
- return{page,errors,requests,service,baselineTabs,close:async()=>{await page.close();service.dispose()}}
+ await page.goto('https://presentation.local/');await page.evaluate(cwd=>window.cwd=cwd,f.cwd)
+ await page.addScriptTag({content:runtimeSource});await page.evaluate(()=>window.runtimeDescriptor=window.descriptor)
+ await page.addScriptTag({content:conversationSource});await page.evaluate(()=>window.conversationDescriptor=window.descriptor)
+ const styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading'].map(n=>readFile('src/preload/'+n+'.css','utf8')))).join('\n')
+ await page.addStyleTag({content:styles+'\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;height:100vh;width:1000px}#native-root{height:100%}[data-home-guide]{position:absolute;inset:0;pointer-events:none}#right{position:fixed;left:1000px;top:60px;width:350px;padding:15px}.wSkVaW_root{height:100%}'})
+ await page.addScriptTag({content:entry});await page.waitForSelector('textarea',{timeout:4000}).catch(async error=>{throw Error(JSON.stringify({errors,body:await page.locator('body').innerText()})+' '+error.message)})
+ await page.evaluate(()=>window.probe.original=document.querySelector('textarea'))
+ return{...f,page,errors,close:async()=>{await page.evaluate(()=>window.probe.unmount()).catch(()=>{});await page.close();await f.dispose()}}
 }
-it('runs real native InputBar/TodoPanel and previews the exact PPTX in a real sidebar tab without touching the user draft',async()=>{
+it('types and sends through the resident native InputBar, renders persisted chat/tasks and opens the ordinary workspace file',async()=>{
  const f=await fixture(),{page}=f
  try{
-  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.step('brief'))
-  expect(await page.locator('#guide-host textarea').inputValue()).toContain('EWork Odyssey')
-  await page.waitForSelector('#guide-host .uV2eYG_chip[data-reference-source="ework-managed-skill"]')
-  await page.evaluate(()=>window.probe.step('plan'));expect(await page.locator('#guide-host [data-testid="todo-panel"]').count()).toBe(1)
-  expect(await page.locator('#guide-host [data-status="in_progress"]').count()).toBe(1)
-  await page.evaluate(()=>window.probe.step('layout'));await page.evaluate(()=>window.probe.step('deliver'))
-  expect(await page.locator('#guide-host [data-status="completed"]').count()).toBe(3)
+  await page.evaluate(()=>window.probe.mount());expect(await page.locator('textarea').count()).toBe(1)
+  await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>window.probe.step('brief'))
+  expect(await page.locator('textarea').inputValue()).toContain('离线预置')
+  await page.screenshot({path:evidence+'/01-native-brief.png'})
+  await page.evaluate(()=>window.probe.step('send')).catch(async error=>{throw Error(JSON.stringify({errors:f.errors,pageErrors:f.errors,snapshot:await page.evaluate(()=>window.probe.shell.snapshot),events:f.agent.session.events},null,2)+error.message)});await page.evaluate(()=>window.probe.step('plan'))
+  await page.waitForSelector('[data-testid="todo-panel"]',{timeout:3000}).catch(async error=>{throw Error(JSON.stringify({pageErrors:f.errors,body:await page.locator('body').innerText(),events:f.agent.session.events.map(e=>e.type)},null,2)+error.message)});expect(await page.locator('[data-status="in_progress"]').count()).toBe(1)
+  await page.evaluate(()=>window.probe.step('layout'));await page.screenshot({path:evidence+'/02-native-plan.png'})
+  await page.evaluate(()=>window.probe.step('deliver'));await f.agent.whenIdle();await page.evaluate(()=>window.probe.refresh())
+  expect(await page.locator('[data-status="completed"]').count()).toBe(3)
+  expect(await page.locator('[data-chat-flow-kind="user"]').count()).toBe(1)
+  expect(await page.locator('[data-chat-flow-kind="assistant-step"]').count()).toBeGreaterThan(0)
   await page.evaluate(()=>window.probe.step('open'))
-  await page.waitForFunction(()=>document.querySelectorAll('#right [data-slide-index]').length>0)
-  expect(await page.locator('#right .sherlock-ppt-editor').count()).toBe(0)
-  expect(await page.locator('#right [data-pptx-node-id]').count()).toBeGreaterThan(0)
-  expect(await page.evaluate(()=>window.probe.tabs().includes('user-file'))).toBe(true)
-  expect(await page.evaluate(()=>window.probe.original===document.querySelector('#ordinary textarea'))).toBe(true)
-  expect(await page.locator('#ordinary textarea').inputValue()).toBe('原生草稿：保留光标与节点')
-  expect(await page.evaluate(()=>window.probe.sent)).toBe(0)
-  await page.screenshot({path:evidence+'/real-input-todo-office.png'})
-  await page.evaluate(()=>window.probe.dispose())
-  expect(await page.locator('#guide-host textarea').count()).toBe(0)
-  expect(await page.evaluate(()=>window.probe.tabs())).toEqual(f.baselineTabs)
-  expect(f.requests.map(r=>r.action)).toEqual(['grant','release']);expect(f.errors).toEqual([])
+  expect(await page.evaluate(()=>window.probe.opened[0].path)).toBe(join(f.cwd,'公司风格演示示例.pptx'))
+  expect(await page.evaluate(()=>window.probe.original===document.querySelector('textarea'))).toBe(true)
+  expect(await page.evaluate(()=>window.probe.cues.map(c=>c.label))).toEqual(expect.arrayContaining(['输入演示目标','发送演示需求','打开可编辑文件']))
+  await page.screenshot({path:evidence+'/03-native-delivery.png'})
+  await page.evaluate(()=>window.probe.dispose());await f.ctx.sessions.flush(f.agent.session)
+  expect((await f.ctx.sessionPersistence.inspect('demo')).events.some(e=>e.type==='assistant/message')).toBe(true)
+  expect(await readFile(join(f.cwd,'公司风格演示示例.pptx'))).toEqual(f.bytes);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
-
-it('cancels an in-flight grant, rejects stale commands and cleans only its tab on session/context changes',async()=>{
+it('pauses before sending, aborts on lost ownership, and revisits without replacing the native draft',async()=>{
  const f=await fixture(),{page}=f
  try{
-  await page.evaluate(()=>{const request=window.dshDesktop.homeGuideAssets.request;window.dshDesktop.homeGuideAssets.request=input=>input.action==='grant'?new Promise(resolve=>{window.probe.releaseGrant=()=>request(input).then(resolve)}):request(input)})
-  await page.evaluate(()=>window.probe.mount())
-  for(const step of ['brief','plan','layout','deliver'])await page.evaluate(step=>window.probe.step(step),step)
-  await page.evaluate(()=>{window.probe.opening=window.probe.step('open').then(()=>true,()=>false)})
-  await page.waitForFunction(()=>typeof window.probe.releaseGrant==='function')
-  await page.evaluate(()=>{window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed',{detail:{sessionId:'other'}}));window.probe.releaseGrant()})
-  expect(await page.evaluate(()=>window.probe.opening)).toBe(false)
-  expect(await page.evaluate(()=>window.probe.tabs())).toEqual(f.baselineTabs)
-  expect(await page.locator('#guide-host textarea').count()).toBe(0)
-  expect(await page.evaluate(()=>window.probe.original===document.querySelector('#ordinary textarea'))).toBe(true)
-  expect(f.requests.at(-1).action).toBe('release');expect(f.errors).toEqual([])
- }finally{await f.close()}
-},20000)
-
-it('cleans a late native tab open after abort without closing any pre-existing user tab',async()=>{
- const f=await fixture(),{page}=f
- try{
-  await page.locator('#ordinary textarea').focus();await page.locator('#ordinary textarea').evaluate(input=>input.setSelectionRange(2,4))
-  await page.evaluate(()=>window.probe.mount())
-  expect(await page.evaluate(()=>document.activeElement===window.probe.original&&window.probe.original.selectionStart===2&&window.probe.original.selectionEnd===4)).toBe(true)
-  for(const step of ['brief','plan','layout','deliver'])await page.evaluate(step=>window.probe.step(step),step)
-  await page.evaluate(()=>{const original=window.probe.service.openTab;window.probe.service.openTab=(seed,scope)=>new Promise(resolve=>{window.probe.lateOpen=()=>{original(seed,scope);resolve()}});window.probe.opening=window.probe.step('open').then(()=>true,()=>false)})
-  await page.waitForFunction(()=>typeof window.probe.lateOpen==='function')
-  await page.evaluate(()=>{window.probe.controller.abort();window.probe.lateOpen()})
-  expect(await page.evaluate(()=>window.probe.opening)).toBe(false)
-  await expect.poll(()=>page.evaluate(()=>window.probe.tabs())).toEqual(f.baselineTabs)
-  expect(await page.locator('#guide-host textarea').count()).toBe(0)
-  expect(await page.evaluate(()=>window.probe.sent)).toBe(0);expect(f.errors).toEqual([])
- }finally{await f.close()}
-},20000)
-
-it('restores the original closed panel and exact active user tab when the tutorial still owns the sidebar',async()=>{
- const f=await fixture(),{page}=f
- try{
-  await page.evaluate(()=>{const {service}=window.probe;service.openTab({id:'later-user-file',type:'existing-file',title:'稍后文件'},{sessionId:'owner'});service.activateTab('user-file',{sessionId:'owner'});service.setPanelState({open:false},{sessionId:'owner'})})
-  await page.evaluate(()=>window.probe.mount())
-  for(const step of ['brief','plan','layout','deliver','open'])await page.evaluate(step=>window.probe.step(step),step)
-  expect(await page.evaluate(()=>window.probe.store.getSnapshot().state.panelOpen)).toBe(true)
-  await page.evaluate(()=>window.probe.dispose())
-  expect(await page.evaluate(()=>window.probe.store.getSnapshot().state.panelOpen)).toBe(false)
-  expect(await page.evaluate(()=>{const s=window.probe.store.getSnapshot().state;return window.probe.flat(s.splits).find(leaf=>leaf.id===s.activePane)?.active})).toBe('user-file')
-  expect(await page.evaluate(()=>window.probe.tabs())).toEqual([...f.baselineTabs,'later-user-file'])
-  expect(f.errors).toEqual([])
- }finally{await f.close()}
-},20000)
-
-it('preserves a user tab or panel change including a complete away-and-back revision during the tutorial',async()=>{
- const f=await fixture(),{page}=f
- try{
-  await page.evaluate(()=>window.probe.service.setPanelState({open:false},{sessionId:'owner'}))
-  await page.evaluate(()=>window.probe.mount())
-  for(const step of ['brief','plan','layout','deliver','open'])await page.evaluate(step=>window.probe.step(step),step)
-  await page.evaluate(()=>{const {service}=window.probe;service.activateTab('user-file',{sessionId:'owner'});service.setPanelState({open:false},{sessionId:'owner'});service.activateTab('home-presentation:run-ppt',{sessionId:'owner'});service.setPanelState({open:true},{sessionId:'owner'})})
-  await page.evaluate(()=>window.probe.dispose())
-  expect(await page.evaluate(()=>window.probe.store.getSnapshot().state.panelOpen)).toBe(true)
-  expect(await page.evaluate(()=>window.probe.tabs())).toEqual(f.baselineTabs)
-  expect(f.errors).toEqual([])
- }finally{await f.close()}
-},20000)
-
-it('does not reopen the panel when the user changes it during a delayed asset grant',async()=>{
- const f=await fixture(),{page}=f
- try{
-  await page.evaluate(()=>{window.probe.service.setPanelState({open:false},{sessionId:'owner'});const request=window.dshDesktop.homeGuideAssets.request;window.dshDesktop.homeGuideAssets.request=input=>input.action==='grant'?new Promise(resolve=>{window.probe.releaseGrant=()=>request(input).then(resolve)}):request(input)})
-  await page.evaluate(()=>window.probe.mount())
-  for(const step of ['brief','plan','layout','deliver'])await page.evaluate(step=>window.probe.step(step),step)
-  await page.evaluate(()=>{window.probe.opening=window.probe.step('open').then(()=>true,()=>false)})
-  await page.waitForFunction(()=>typeof window.probe.releaseGrant==='function')
-  await page.evaluate(()=>{const {service}=window.probe;service.setPanelState({open:true},{sessionId:'owner'});service.setPanelState({open:false},{sessionId:'owner'});window.probe.releaseGrant()})
-  expect(await page.evaluate(()=>window.probe.opening)).toBe(false)
-  expect(await page.evaluate(()=>window.probe.store.getSnapshot().state.panelOpen)).toBe(false)
-  expect(await page.evaluate(()=>window.probe.tabs())).toEqual(f.baselineTabs)
-  expect(f.errors).toEqual([])
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await page.waitForTimeout(100);expect(await page.locator('textarea').inputValue()).toBe('');expect(f.agent.session.events.some(e=>e.type==='user/message')).toBe(false)
+  await page.evaluate(()=>{document.querySelector('[data-home-guide]').remove()});expect(await page.evaluate(()=>window.probe.pending)).toBe(false)
+  await page.evaluate(()=>{const node=document.createElement('section');node.dataset.homeGuide='run-1';node.innerHTML='<div id="guide-host"></div>';document.querySelector('.pI_x6G_centerCol').append(node);window.probe.shell.setDraft('保留我回访时输入的文字')})
+  await page.evaluate(()=>window.probe.mount(false));expect(await page.locator('textarea').inputValue()).toBe('保留我回访时输入的文字')
+  expect(await page.evaluate(()=>window.probe.original===document.querySelector('textarea'))).toBe(true)
+  expect(f.agent.session.events.some(e=>e.type==='user/message')).toBe(false);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)

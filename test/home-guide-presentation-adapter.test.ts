@@ -14,8 +14,8 @@ it('correlates native replies, preserves the host and enforces one ordered guide
  try{
   const guide=await mountHomePresentationGuide(doc as any,host as any,{signal:scope.signal,sessionId:'owner',runId:'run'})
   await expect(guide.runStep('layout')).rejects.toThrow(/顺序/)
-  for(const step of ['brief','plan','layout','deliver','open'] as const)await guide.runStep(step)
-  expect(commands).toEqual(['mount','brief','plan','layout','deliver','open'])
+  for(const step of ['brief','send','plan','layout','deliver','open'] as const)await guide.runStep(step)
+  expect(commands).toEqual(['mount','brief','send','plan','layout','deliver','open'])
   expect(host.childElementCount).toBe(0);expect(doc.querySelector('textarea')).toBe(input)
   guide.dispose();guide.dispose();expect(commands.at(-1)).toBe('dispose');expect(commands.filter(c=>c==='dispose')).toHaveLength(1)
   await expect(guide.runStep('open')).rejects.toThrow()
