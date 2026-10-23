@@ -1,0 +1,25 @@
+.odyssey-home-guide {
+  position:fixed;display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+  z-index:24;min-width:0;min-height:0;overflow:hidden;
+  color:var(--dsw-alias-text-primary,#26313a);background:var(--dsw-alias-bg-base,#f7f8fa);
+  font:14px/1.5 "Noto Sans SC","PingFang SC",sans-serif;
+  border-radius:0 0 12px 12px;-webkit-app-region:no-drag;
+}
+[data-ds-dark-theme] .odyssey-home-guide { color:#eceef2;background:#111214; }
+.odyssey-home-guide-header,.odyssey-home-guide-footer { display:flex;align-items:center;gap:12px;padding:12px 20px;min-width:0;background:rgb(130 136 145 / .055); }
+.odyssey-home-guide-header strong { font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.odyssey-home-guide-header>button { margin-left:auto; }
+.odyssey-home-guide-badge { font-size:11px;opacity:.6;flex:none; }
+.odyssey-home-guide button { -webkit-app-region:no-drag; }
+.odyssey-home-guide-header button,.odyssey-home-guide-footer button { border:0;border-radius:7px;padding:6px 12px;color:inherit;background:rgb(130 136 145 / .12);font:inherit;cursor:pointer;flex:none; }
+.odyssey-home-guide-header button:hover,.odyssey-home-guide-footer button:hover { background:rgb(130 136 145 / .2); }
+.odyssey-home-guide-header button:focus-visible,.odyssey-home-guide-footer button:focus-visible { outline:2px solid #7da5e8;outline-offset:2px; }
+.odyssey-home-guide button:disabled { opacity:.4;cursor:default; }
+.odyssey-home-guide-content { position:relative;min-width:0;min-height:0;overflow:hidden;width:100%;height:100%; }
+.odyssey-home-guide-content.en-root { position:relative!important;inset:auto!important;border:0;border-radius:0;display:block!important; }
+.odyssey-home-guide-footer { padding-top:10px;padding-bottom:14px; }
+.odyssey-home-guide-footer>div { flex:1;min-width:0; }
+.odyssey-home-guide-footer p { margin:0;font-size:13px;line-height:20px; }
+.odyssey-home-guide-count { display:block;font-size:11px;opacity:.55;margin-bottom:2px; }
+[data-home-guide-active] .odyssey-home-operations,[data-home-guide-active] .odyssey-operations-toggle,[data-home-guide-active] [data-odyssey-theme-dock],[data-home-guide-resident] .wSkVaW_composerHero { visibility:hidden!important;pointer-events:none!important; }
+@media (max-width:700px) { .odyssey-home-guide-header,.odyssey-home-guide-footer { padding-left:12px;padding-right:12px;gap:8px; }.odyssey-home-guide-badge { display:none; }.odyssey-home-guide-footer p { font-size:12px; }.odyssey-home-guide-footer button { padding:6px 9px; } }

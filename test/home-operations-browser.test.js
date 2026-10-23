@@ -23,7 +23,7 @@ beforeAll(async () => {
       import {mountDesktopShellStyles} from './src/preload/shell-style';
       import {mountHomeOperations} from './src/preload/home-operations';
       import {mountHomeThemes} from './src/preload/home-themes';
-      window.homeOperations={mount(themes=false){mountDesktopShellStyles(document);if(themes)this.disposeThemes=mountHomeThemes(document);this.original=document.querySelector('textarea');const before=[...document.querySelectorAll('style')];this.dispose=mountHomeOperations(document,this.onAction?{onAction:this.onAction}:undefined);this.ownStyles=[...document.querySelectorAll('style')].filter(style=>!before.includes(style))}};
+      window.homeOperations={mount(themes=false){mountDesktopShellStyles(document);if(themes)this.disposeThemes=mountHomeThemes(document);this.original=document.querySelector('textarea');const before=[...document.querySelectorAll('style')];this.dispose=mountHomeOperations(document,{onAction:this.onAction,onExample:this.onExample});this.ownStyles=[...document.querySelectorAll('style')].filter(style=>!before.includes(style))}};
     ` }, bundle: true, format: 'iife', platform: 'browser', write: false,
     plugins: [{ name: 'home-operations-assets', setup(builder) {
       builder.onResolve({ filter: /\.(?:svg|png|jpe?g|webp)\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'home-inline' }))
@@ -1874,4 +1874,25 @@ it('aborts a pending quick-start action when the homepage is left or disposed', 
     expect(await region(page).count()).toBe(0)
     expect(await page.getByRole('alert').count()).toBe(0)
   } finally { await page.close() }
+})
+
+
+it('starts only the visible large-card example by click or keyboard, never by its tracks', async () => {
+  const page = await fixture()
+  await page.evaluate(() => { window.examples=[]; window.homeOperations.onExample=async card=>window.examples.push(card);window.homeOperations.dispose();window.homeOperations.mount() })
+  await toggle(page).click(); await waitState(page,'operations')
+  const card=page.locator('.odyssey-operations-usecase')
+  const open=card.locator('[data-odyssey-operations-open-example]')
+  expect(await open.getAttribute('type')).toBe('button')
+  await card.click({position:{x:70,y:90}})
+  await expect.poll(()=>page.evaluate(()=>window.examples)).toEqual(['board'])
+  await page.locator('.odyssey-operations-pagination button[data-case="1"]').click()
+  await waitCase(page,1)
+  expect(await page.evaluate(()=>window.examples)).toEqual(['board'])
+  await open.focus(); await page.keyboard.press('Enter')
+  await expect.poll(()=>page.evaluate(()=>window.examples)).toEqual(['board','note'])
+  await page.locator('.odyssey-operations-pagination button[data-case="2"]').click();await waitCase(page,2)
+  await open.focus();await page.keyboard.press('Space')
+  await expect.poll(()=>page.evaluate(()=>window.examples)).toEqual(['board','note','ppt'])
+  await page.close()
 })

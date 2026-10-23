@@ -1,6 +1,7 @@
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
 import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
+import { createHomeGuideAssetService, registerHomeGuideAssetHandlers } from './home-guide-assets'
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import {installCalendarService} from './calendar/calendar-service'
 import {SharedCalendarStore} from './calendar/shared-calendar-store'
@@ -1250,10 +1251,16 @@ async function bootstrap(): Promise<void> {
     storage: new FileResearchPreviewAuthorizationStorage(app.getPath('userData')),
     workspaceResolver: new HarnessWorkspaceFileResolver(dshHome)
   })
+  const homeGuideAssets = createHomeGuideAssetService({
+    registry: researchFilePreviewRegistry,
+    companyPresentationPath: app.isPackaged ? join(process.resourcesPath, 'sherlock-skills/efund-ppt-maker/assets/efund-ework-onepage.pptx') : join(app.getAppPath(), 'skills/efund-ppt-maker/assets/efund-ework-onepage.pptx')
+  })
+  registerHomeGuideAssetHandlers({ ipcMain, getMainWindow: () => mainWindow, service: homeGuideAssets })
+  app.once('before-quit', () => homeGuideAssets.dispose())
   registerPptxEditorHandlers({ ipcMain, getMainWindow: () => mainWindow, service: new PptxEditorService({
     resolveWorkspace: id => new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),
-    resolveCapability: url => researchFilePreviewRegistry!.resolvePptxEditSource(url),
-    resolveEditIdentity: identity => researchFilePreviewRegistry!.resolvePptxEditIdentity(identity),
+    resolveCapability: url => homeGuideAssets.resolveEditableCapability(url),
+    resolveEditIdentity: identity => homeGuideAssets.resolveEditableIdentity(identity),
     refreshPreview: async identity => (await researchFilePreviewRegistry!.restore(identity))?.url ?? null
   }) })
   const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))

@@ -35,6 +35,7 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
     entry.capabilityRetaining=value.retaining;render()
   }
   const open = (event?: Event) => {
+    if (document.querySelector('[data-home-guide]') || document.documentElement.hasAttribute('data-home-guide-transition')) return
     const id = document.querySelector<HTMLElement>('[data-ework-notes-session]')?.dataset.eworkNotesSession || ''
     if (!id || ((event as CustomEvent | undefined)?.detail?.sessionId && (event as CustomEvent).detail.sessionId !== id)) return
     sessionId = id; host.open('notes'); render()
@@ -43,13 +44,14 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
   const close = (event: Event) => { if ((event as CustomEvent).detail?.sessionId === sessionId) host.close('notes') }
   let locale = document.documentElement.dataset.odysseyLocale
   const sync = () => {
+    if (document.querySelector('[data-home-guide]') || document.documentElement.hasAttribute('data-home-guide-transition')) return
     if (locale !== document.documentElement.dataset.odysseyLocale) { locale = document.documentElement.dataset.odysseyLocale; surface.setAttribute('aria-label',t('工作区笔记'));render() }
     const id = document.querySelector<HTMLElement>('[data-ework-notes-session]')?.dataset.eworkNotesSession
     const anchor = id ? document.querySelector('[data-ework-note-view="' + CSS.escape(id) + '"]') : null
     if (anchor && (anchor !== lastAnchor || !host.current()) && !document.querySelector('.VOzbGW_overlay')) { lastAnchor = anchor; open() }
     else if (!anchor) lastAnchor = null
   }
-  const observer = new MutationObserver(() => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; sync() }) }); observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-ework-notes-session', 'data-odyssey-locale'] })
+  const observer = new MutationObserver(() => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; sync() }) }); observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-ework-notes-session', 'data-odyssey-locale', 'data-home-guide-transition'] })
   const theme = new MutationObserver(render); theme.observe(surface, { attributes: true, attributeFilter: ['data-dark'] })
   const identity = () => { resetting=true;entries.clear();reactRoot?.unmount();reactRoot=undefined;sessionId='';host.close('notes');resetting=false;document.dispatchEvent(new CustomEvent('sherlock:notes-reset')) }
   document.addEventListener('sherlock:notes-capability-activity',capabilityActivity);document.addEventListener('sherlock:notes-challenge-activity',activity);document.addEventListener('sherlock:notes-open', open); document.addEventListener('sherlock:notes-close', close); document.addEventListener('click', onNativeTabClick, true); sync()

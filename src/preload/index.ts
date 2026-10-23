@@ -34,6 +34,9 @@ import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
 import { mountHomeThemes } from './home-themes'
 import { mountHomeOperations } from './home-operations'
+import { mountHomeGuides } from './home-guides'
+import { mountHomeNotesGuide } from './home-guide-notes'
+import { mountHomePresentationGuide } from './home-guide-presentation'
 import { createHomeOperationsActions } from './home-operations-actions'
 import { mountFigmaResizeFeedback } from './figma-resize-feedback'
 import { mountFigmaScrollbars } from './figma-scrollbars'
@@ -247,7 +250,8 @@ function initializeUi(): void {
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
-  const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { onAction: homeActions.run }) : () => {}
+  const homeGuides = mountHomeGuides(document, { mountNotes: mountHomeNotesGuide, mountPresentation: mountHomePresentationGuide })
+  const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { onAction: homeActions.run, onExample: kind => homeGuides.start(kind) }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
@@ -256,10 +260,10 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) })
   scheduledView.mount()
-  const resetIntegrationIdentity = () => { noteIdentityEpoch++; noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
-  window.addEventListener('unload', () => { disposeHomeOperations(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
+  window.addEventListener('unload', () => { disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,
@@ -311,6 +315,7 @@ contextBridge.exposeInMainWorld(
       }
     }),
     researchBoards: createResearchBoardsBridge(ipcRenderer),
+    homeGuideAssets: Object.freeze({ request: (input: unknown) => ipcRenderer.invoke('home-guide:assets', input) }),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
       ipcRenderer.invoke('ui:file-context-menu', items),
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),

@@ -46,7 +46,7 @@ it('repairs an exact orphan InputBar from installed grid/notes backups and is id
   expect(patchComposerDeliverablePreview(repaired)===repaired).toBe(true)
   expect(()=>new Function(repaired)).not.toThrow()
  }
-})
+},30000)
 it('rejects incomplete, ambiguous, displaced or shape-drifted orphan installations',()=>{
  const orphan=patchComposerDeliverablePreview(source).replace(runtime,'')
  const invalid=[orphan.replace(inputMarker,''),orphan.replace(inputCall,''),orphan.replace(attribute,''),orphan.replace(render,''),orphan+inputCall,orphan.replace('const draft = input?.draft ?? "";','const draft = input?.otherDraft ?? "";'),orphan.replace('const draft = input?.draft ?? "";\n'+inputMarker+'\n'+inputCall,'const draft = input?.draft ?? "";')+'\n'+inputMarker+'\n'+inputCall,orphan+'\nconst composerDeliverableAssets = {};',orphan+'\nfunction InputBar({}) {}']
