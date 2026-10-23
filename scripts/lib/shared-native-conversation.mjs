@@ -75,6 +75,10 @@ function SharedResearchDiscussion(props) {
   const order = props.useSession(s => s.chat.order)
   const nodeStore = props.useSession(s => s.chat.nodes)
   const timeline = props.useSession(s => s.chat.timeline)
+  const openState = props.useSession(s => s.openState)
+  const revealLedger=typeof eworkAssistantRevealLedger==='undefined'?undefined:eworkAssistantRevealLedger
+  revealLedger?.observe(props.useSession,openState,order,nodeStore)
+  react.useLayoutEffect(()=>()=>revealLedger?.suspend(props.useSession),[props.useSession])
   const selectedCallId = props.useStore(s => s.selection?.callId)
   const cwd = props.useSessions(s => s.byId[props.sessionId]?.cwd)
   const nativeProps = react.useMemo(() => ({ ...props, sharedSnapshot: { order, nodeStore, timeline, selectedCallId, cwd } }), [props, order, nodeStore, timeline, selectedCallId, cwd])

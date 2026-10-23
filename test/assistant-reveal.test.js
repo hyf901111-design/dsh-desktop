@@ -31,3 +31,13 @@ it('refreshes an already patched runtime helper without duplicating its native w
  const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchAssistantReveal(source),stale=next.replace('focused=doc.hasFocus?.()!==false','focused=false/* previous packaged helper */')
  expect(stale).not.toBe(next);expect(patchAssistantReveal(stale)).toBe(next);expect(patchAssistantReveal(next)).toBe(next)
 })
+it('upgrades an already installed v1 reply seat to live progress and synchronous view revocation',()=>{
+ const next=patchAssistantReveal(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const old=next.replace('openFile, t, reveal, revealRoute })','openFile, t, reveal })').replace('useAssistantTextPaint(react,interrupted?undefined:reveal,blocks,revealRoute);','useAssistantTextPaint(react,interrupted?undefined:reveal,blocks);').replace('revealRoute:"node",','').replace('/* ework:assistant-reveal-seats:v1 */ blocks: update.blocks,\nreveal:eworkAssistantRevealLedger.record(seatProps.useSession,activityNodes.find(node=>node.key===update.key)),revealRoute:"progress",','blocks: update.blocks,').replace('react.useLayoutEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),','react.useEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),').replace('settleConversationScrollBottom(el,callback=>requestAnimationFrame(()=>{if(atBottomRef.current)callback()}), () => {','settleConversationScrollBottom(el, requestAnimationFrame, () => {')
+ expect(old).not.toBe(next);expect(patchAssistantReveal(old)).toBe(next)
+})
+it('revokes a pending host transfer synchronously when its foreground view epoch ends',()=>{
+ const ledger=createAssistantRevealLedger(),owner=()=>{},nodes=new Map();ledger.observe(owner,'open',[],nodes);nodes.set('new',node('new',20,'running'));ledger.observe(owner,'open',['new'],nodes)
+ const record=ledger.record(owner,nodes.get('new')),epoch=record.epoch;record.handoff={route:'progress',epoch,units:[{from:0,to:1,at:0}]};ledger.suspend(owner)
+ expect(record.epoch).toBeGreaterThan(epoch);expect(record.handoff).toBeUndefined();expect(record.skipNext).toBe(true)
+})
