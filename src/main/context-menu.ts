@@ -11,12 +11,13 @@ async function clickedElementPathCandidates(
   window: BrowserWindow,
   x: number,
   y: number
-): Promise<{ values: string[]; sessionId?: string; fileName?: string; targeted?: boolean }> {
+): Promise<{ values: string[]; sessionId?: string; fileName?: string; targeted?: boolean; suppressMenu?: boolean }> {
   if (window.isDestroyed()) return { values: [] }
   try {
     const result = await window.webContents.executeJavaScript(contextMenuTargetScript(x, y), true)
     if (!result || !Array.isArray(result.values)) return { values: [] }
     return {
+      suppressMenu: result.suppressMenu === true,
       targeted: result.targeted === true,
       values: result.values.filter((value: unknown): value is string => typeof value === 'string'),
       fileName: typeof result.fileName === 'string' ? result.fileName : undefined,
@@ -46,7 +47,7 @@ export function installContextMenu(
     }))
   window.webContents.on('context-menu', async (_event, params) => {
     const elementCandidates = await clickedElementPathCandidates(window, params.x, params.y)
-    if (window.isDestroyed()) return
+    if (window.isDestroyed() || elementCandidates.suppressMenu && !params.isEditable) return
     // Workspace lookup failure must not suppress the standard context menu.
     const cwd = elementCandidates.sessionId
       ? await resolveRoot?.(elementCandidates.sessionId).catch(() => null)
