@@ -129,8 +129,12 @@ export function patchNotesActivity(source) {
     const flow='const renderFlow=react.useMemo(()=>mergeCanvasTaskFlow(nativeRenderFlow,nodeStore,canvasTasks),[nativeRenderFlow,nodeStore,canvasTasks]);'
     if(source.split(flow).length!==2)throw Error('无法定位共用会话记录。')
     source=source.replace(flow,`/* ework:notes-common-conversation:v1 */ const canvasRenderFlow=react.useMemo(()=>mergeCanvasTaskFlow(nativeRenderFlow,nodeStore,canvasTasks),[nativeRenderFlow,nodeStore,canvasTasks]);const noteRows=useNotesConversationRows(sessionId);const renderFlow=react.useMemo(()=>mergeNoteConversationFlow(canvasRenderFlow,nodeStore,noteRows),[canvasRenderFlow,nodeStore,noteRows]);`)
-    const render='renderFlow.map((entry) => {'
-    if(source.split(render).length!==2)throw Error('无法定位共用会话气泡。')
+    // Workbench installs its receipt wrapper before Notes on a clean install.
+    // Insert inside the owned entry renderer so its outer receipt ordering stays intact.
+    const renders=['renderFlow.map((entry) => {','renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{']
+    const matches=renders.flatMap(render=>Array.from({length:source.split(render).length-1},()=>render))
+    if(matches.length!==1)throw Error('无法定位共用会话气泡。')
+    const [render]=matches
     source=source.replace(render,render+"if(entry.kind==='note-conversation')return react.createElement(EWorkNoteConversationRow,{key:entry.key,row:entry.row,t,loadImage});")
   }
   if(!source.includes('/* ework:notes-native-progress:v1 */')) {
