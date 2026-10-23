@@ -1,11 +1,17 @@
 import { createHash } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResearchPdfRenderer } from '../src/main/research/research-pdf'
+import { paginationPdf } from './helpers/research-pagination-pdf'
 
-const mock = vi.hoisted(() => ({ windows: [] as any[], sessions: [] as any[], load: undefined as undefined | (() => Promise<void>), print: undefined as undefined | (() => Promise<Buffer>) }))
+const mock = vi.hoisted(() => ({ windows: [] as any[], sessions: [] as any[], load: undefined as undefined | (() => Promise<void>), print: undefined as undefined | (() => Promise<Buffer>), inspect: undefined as undefined | ((...args: any[]) => Promise<any>) }))
+vi.mock('../src/main/research/research-pdf-navigation', async original => {
+  const actual = await original<typeof import('../src/main/research/research-pdf-navigation')>()
+  return { ...actual, readPublicationPagination: (...args: Parameters<typeof actual.readPublicationPagination>) => mock.inspect ? mock.inspect(...args) : actual.readPublicationPagination(...args) }
+})
 vi.mock('electron', async () => {
   const { EventEmitter } = await import('node:events')
   return {
+    app: { isPackaged: false, getAppPath: () => process.cwd() },
     session: { fromPartition: vi.fn((partition, options) => {
       const value = Object.assign(new EventEmitter(), {
         partition, options, webRequest: { onBeforeRequest: vi.fn() },
@@ -31,11 +37,57 @@ vi.mock('electron', async () => {
 })
 
 const renderers: ResearchPdfRenderer[] = []
-beforeEach(() => { mock.windows = []; mock.sessions = []; mock.load = undefined; mock.print = undefined })
+beforeEach(() => { mock.windows = []; mock.sessions = []; mock.load = undefined; mock.print = undefined; mock.inspect = undefined })
 afterEach(() => { for (const renderer of renderers.splice(0)) renderer.dispose() })
 function renderer(timeoutMs = 1000) { const value = new ResearchPdfRenderer({ timeoutMs }); renderers.push(value); return value }
 
 describe('isolated research report PDF renderer', () => {
+  it('fills actual destination pages in a second print and verifies that pagination stays stable', async () => {
+    const html = '<title>正式研究报告名</title><nav><a href="#section-business" data-publication-target="section-business"><span>业务</span><span data-publication-page="section-business">—</span></a><a href="#chart-1" data-publication-target="chart-1"><span>图表</span><span data-publication-page="chart-1">—</span></a></nav><h2 id="section-business">业务</h2><figure id="chart-1">图表</figure>'
+    const pdf = paginationPdf({ 'section-business': 3, 'chart-1': 4 })
+    mock.print = async () => pdf
+    const result = await renderer(5000).render(html)
+    expect(mock.windows[0].webContents.printToPDF).toHaveBeenCalledTimes(2)
+    const finalHtml = Buffer.from(mock.windows[0].loadURL.mock.calls[1][0].split(',')[1], 'base64').toString('utf8')
+    expect(finalHtml).toContain('data-publication-page="section-business">3</span>')
+    expect(finalHtml).toContain('data-publication-page="chart-1">4</span>')
+    expect(result).toMatchObject({ sha256: createHash('sha256').update(pdf).digest('hex'), pagination: { pageCount: 4, pages: { 'section-business': 3, 'chart-1': 4 } } })
+    expect(mock.windows[0].webContents.printToPDF).toHaveBeenCalledWith(expect.objectContaining({ generateDocumentOutline: true, generateTaggedPDF: true, headerTemplate: expect.stringContaining('class="title"'), footerTemplate: expect.stringContaining('声明') }))
+  })
+
+  it('refuses a second print with changed destinations instead of publishing incorrect page numbers', async () => {
+    let prints = 0
+    mock.print = async () => paginationPdf({ 'chart-1': ++prints === 1 ? 3 : 4 })
+    const html = '<a href="#chart-1" data-publication-target="chart-1"><span data-publication-page="chart-1">—</span></a><figure id="chart-1">图</figure>'
+    await expect(renderer(5000).render(html)).rejects.toMatchObject({ code: 'render-failed' })
+    expect(prints).toBe(2); expect(mock.windows[0].destroyed).toBe(true)
+  })
+
+  it('cancels the second loading pass and releases the isolated job', async () => {
+    let loads = 0
+    mock.load = async () => { if (++loads === 2) await new Promise(() => {}) }
+    mock.print = async () => paginationPdf({ 'chart-1': 3 })
+    const html = '<a href="#chart-1" data-publication-target="chart-1"><span data-publication-page="chart-1">—</span></a><figure id="chart-1">图</figure>'
+    const controller = new AbortController(), pending = renderer(5000).render(html, controller.signal)
+    await vi.waitFor(() => expect(loads).toBe(2))
+    controller.abort(); await expect(pending).rejects.toMatchObject({ code: 'aborted' })
+    expect(mock.windows[0].destroyed).toBe(true)
+    expect(mock.sessions[0].closeAllConnections).toHaveBeenCalled()
+  })
+
+  it.each([1, 2])('propagates the job deadline into parsing pass %i and cleans the isolated window', async pass => {
+    let parses = 0, parserAbortObserved = false
+    mock.inspect = async (_pdf, _targets, _modules, signal: AbortSignal) => {
+      if (++parses !== pass) return { pageCount: 4, pages: { 'chart-1': 3 } }
+      return await new Promise((_resolve, reject) => signal.addEventListener('abort', () => { parserAbortObserved = true; reject(signal.reason) }, { once: true }))
+    }
+    mock.print = async () => paginationPdf({ 'chart-1': 3 })
+    const html = '<a href="#chart-1" data-publication-target="chart-1"><span data-publication-page="chart-1">—</span></a><figure id="chart-1">图</figure>'
+    await expect(renderer(30).render(html)).rejects.toMatchObject({ code: 'timeout' })
+    expect(parserAbortObserved).toBe(true)
+    expect(mock.windows[0].destroyed).toBe(true)
+    expect(mock.sessions[0].closeAllConnections).toHaveBeenCalled()
+  })
   it('prints the supplied HTML in a hidden sandbox and returns verified bytes and digest', async () => {
     const service = renderer()
     const pdf = Buffer.from('%PDF-1.7\nreport\n%%EOF')
