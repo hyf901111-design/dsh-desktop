@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
+import { PNG } from 'pngjs'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 
 const evidence = '/tmp/ework-home-operations-20261023'
@@ -74,6 +75,7 @@ const state = page => page.locator('[data-odyssey-home-operations-state]').getAt
 const toggle = page => page.locator('[data-odyssey-home-operations-toggle]')
 const root = page => page.locator('main > [data-slot="conversation"] > .wSkVaW_root')
 const waitState = (page, value) => expect.poll(() => state(page), { timeout: 2500 }).toBe(value)
+const waitCase = (page, index) => expect.poll(() => page.locator('.odyssey-operations-usecase').evaluate(card => ({ index: card.dataset.case, opacity: Number(getComputedStyle(card.querySelector('.odyssey-operations-case-copy')).opacity) })), { timeout: 1500 }).toEqual({ index: String(index), opacity: 1 })
 const progress = page => page.locator('[data-odyssey-home-operations-state]').evaluate(host => parseFloat(getComputedStyle(host).getPropertyValue('--odyssey-operations-progress-value')))
 const nextPaint = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 async function startMotionProbe(page, duration = 1500) {
@@ -81,7 +83,7 @@ async function startMotionProbe(page, duration = 1500) {
     const host = document.querySelector('[data-odyssey-home-operations-state]'), hero = document.querySelector('.uV2eYG_card'), cards = document.querySelector('[data-odyssey-home-operations]')
     const probe = window.homeOperations.probe = { samples: [], events: [], done: false }, start = performance.now()
     const sample = time => {
-      probe.samples.push({ time, raw: parseFloat(getComputedStyle(host).getPropertyValue('--odyssey-operations-progress-value')), hero: hero.getBoundingClientRect().y, cards: cards.getBoundingClientRect().y, motion: host.dataset.odysseyHomeOperationsMotion })
+      probe.samples.push({ time, raw: parseFloat(getComputedStyle(host).getPropertyValue('--odyssey-operations-progress-value')), hero: hero.getBoundingClientRect().y, cards: cards.getBoundingClientRect().y, heroVisible: !hero.hidden && getComputedStyle(hero).display !== 'none' && Number(getComputedStyle(hero.closest('.wSkVaW_composerHero')).opacity) > 0, cardsVisible: !cards.hidden && getComputedStyle(cards).display !== 'none' && Number(getComputedStyle(cards).opacity) > 0, motion: host.dataset.odysseyHomeOperationsMotion })
       if (time - start < duration) requestAnimationFrame(sample)
       else probe.done = true
     }
@@ -93,6 +95,7 @@ async function finishMotionProbe(page) {
   return page.evaluate(() => window.homeOperations.probe.samples)
 }
 function curveSpeeds(samples, key) {
+  if (key !== 'raw') samples = samples.filter(sample => sample[`${key}Visible`])
   const distance = Math.abs(samples.at(-1)[key] - samples[0][key])
   return samples.slice(1).map((sample, index) => ({ time: sample.time, delta: Math.abs(sample[key] - samples[index][key]) / distance, frameMs: sample.time - samples[index].time, speed: Math.abs(sample[key] - samples[index][key]) / distance / ((sample.time - samples[index].time) / 1000) })).filter(sample => sample.delta > .00001)
 }
@@ -102,6 +105,16 @@ function expectSmoothTravel(samples, key) {
   expect(peak, `${key} accelerates after departure`).toBeGreaterThan(median(speeds.slice(0, 3).map(sample => sample.speed)) * 1.2)
   expect(median(speeds.slice(-3).map(sample => sample.speed)), `${key} slows before arrival`).toBeLessThan(peak * .25)
   expect(Math.max(...speeds.map(sample => sample.delta * 16.667 / sample.frameMs)), `${key} has no abrupt frame jump`).toBeLessThan(.18)
+}
+const luminance = rgb => rgb.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((total, value, index) => total + value * [.2126, .7152, .0722][index], 0)
+const contrastRatio = (foreground, background) => { const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b); return (values[1] + .05) / (values[0] + .05) }
+function patchRgb(png, x, y, radius = 1) {
+  const result = [0, 0, 0]
+  for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+    const offset = (Math.max(0, Math.min(png.height - 1, Math.round(y) + dy)) * png.width + Math.max(0, Math.min(png.width - 1, Math.round(x) + dx))) * 4
+    for (let channel = 0; channel < 3; channel++) result[channel] += png.data[offset + channel] / (radius * 2 + 1) ** 2
+  }
+  return result
 }
 async function dispatchWheel(page, selector, deltaY) {
   return page.locator(selector).first().evaluate((target, deltaY) => {
@@ -129,110 +142,58 @@ it('adds the homepage operations area while preserving the native composer node 
   } finally { await page.close() }
 })
 
-it('places the input preview below the visible composer card with twenty pixels of clear space', async () => {
+it('shows one complete region at each endpoint without an operations preview or composer ghost', async () => {
   const page = await fixture({ width: 1823, height: 1115, themes: true })
+  const appearance = locator => locator.evaluate(element => {
+    const style = getComputedStyle(element), rect = element.getBoundingClientRect(), hit = rect.width && rect.height ? document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) : null
+    return { unpainted: element.hidden || style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0, hit: hit === element || !!hit && element.contains(hit) }
+  })
   try {
-    const geometry = await page.evaluate(() => {
-      const card = document.querySelector('.uV2eYG_card').getBoundingClientRect(), preview = document.querySelector('[data-odyssey-home-operations]').getBoundingClientRect()
-      return { gap: preview.top - card.bottom, editorBottom: document.querySelector('textarea').getBoundingClientRect().bottom, previewTop: preview.top }
-    })
-    expect(geometry.gap).toBeGreaterThanOrEqual(18)
-    expect(geometry.gap).toBeLessThanOrEqual(22)
-    expect(geometry.previewTop).toBeGreaterThan(geometry.editorBottom)
-    await page.screenshot({ path: `${evidence}/input-preview-20px.png` })
+    expect((await appearance(region(page))).unpainted).toBe(true)
+    expect((await appearance(region(page))).hit).toBe(false)
     await page.locator('textarea').click()
     expect(await page.evaluate(() => document.activeElement === window.homeOperations.original)).toBe(true)
-    expect(await state(page)).toBe('input')
+    await page.screenshot({ path: `${evidence}/input-exclusive.png` })
+    await toggle(page).click(); await waitState(page, 'operations')
+    expect((await appearance(page.locator('.wSkVaW_composerHero'))).unpainted).toBe(true)
+    expect((await appearance(region(page))).unpainted).toBe(false)
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
   } finally { await page.close() }
 })
 
-it('snaps in both directions with the arrow, exposed composer area, and non-editing arrow keys', async () => {
+it('switches regions only with the bottom button, including its Enter and Space activation', async () => {
   const page = await fixture()
   try {
-    await toggle(page).click()
-    await waitState(page, 'operations')
-    await page.locator('.odyssey-operations-return-hit').click()
-    await waitState(page, 'input')
-    await page.locator('textarea').blur()
-    await page.keyboard.press('ArrowDown')
-    await waitState(page, 'operations')
-    await page.keyboard.press('ArrowUp')
-    await waitState(page, 'input')
+    await toggle(page).focus(); await page.keyboard.press('Enter'); await waitState(page, 'operations')
+    await page.keyboard.press('Space'); await waitState(page, 'input')
+    await toggle(page).click(); await waitState(page, 'operations')
+    await toggle(page).click(); await waitState(page, 'input')
     expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
     expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
   } finally { await page.close() }
 }, 15000)
 
-it('groups one wheel gesture into one snap and allows a later reverse gesture', async () => {
+
+
+
+
+
+
+it('leaves page wheel, arrow keys, and region clicks alone instead of navigating between regions', async () => {
   const page = await fixture()
   try {
-    await page.locator('textarea').blur()
-    for (let index = 0; index < 8; index++) await dispatchWheel(page, '.pI_x6G_centerCol', 48)
-    await waitState(page, 'operations')
-    for (let index = 0; index < 8; index++) await dispatchWheel(page, '.pI_x6G_centerCol', 48)
+    expect(await page.locator('.odyssey-operations-return-hit').count()).toBe(0)
+    expect(await dispatchWheel(page, '.pI_x6G_centerCol', 800)).toBe(false)
+    expect(await dispatchKey(page, 'body', 'ArrowDown')).toBe(false)
+    await region(page).dispatchEvent('click')
+    expect(await state(page)).toBe('input')
+    await toggle(page).click(); await waitState(page, 'operations')
+    expect(await dispatchWheel(page, '.pI_x6G_centerCol', -800)).toBe(false)
+    expect(await dispatchKey(page, 'body', 'ArrowUp')).toBe(false)
+    await region(page).dispatchEvent('click')
     expect(await state(page)).toBe('operations')
-    for (let index = 0; index < 8; index++) await dispatchWheel(page, '.pI_x6G_centerCol', -60)
-    await waitState(page, 'input')
   } finally { await page.close() }
-}, 15000)
-
-it('tracks small wheel deltas continuously and reverses before the gesture settles', async () => {
-  const page = await fixture({ reduced: false, clock: true })
-  try {
-    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
-    await page.locator('textarea').blur()
-    const positions = () => page.evaluate(() => ({ hero: document.querySelector('.wSkVaW_composerHero').getBoundingClientRect().y, operations: document.querySelector('[data-odyssey-home-operations]').getBoundingClientRect().y }))
-    const before = await positions()
-    await dispatchWheel(page, '.pI_x6G_centerCol', 4)
-    await page.clock.runFor(32)
-    const first = await positions(), firstProgress = await progress(page)
-    expect(Math.abs(first.operations - before.operations)).toBeLessThan(.1)
-    expect(firstProgress).toBeGreaterThan(0)
-    expect(firstProgress).toBeLessThan(1)
-    await dispatchWheel(page, '.pI_x6G_centerCol', 8)
-    await page.clock.runFor(32)
-    const continued = await progress(page)
-    expect(continued).toBeGreaterThan(firstProgress)
-    await dispatchWheel(page, '.pI_x6G_centerCol', 24)
-    await page.clock.runFor(80)
-    expect((await positions()).hero).toBeLessThan(before.hero - .05)
-    await dispatchWheel(page, '.pI_x6G_centerCol', -64)
-    await page.clock.runFor(1600)
-    expect(await progress(page)).toBe(0)
-  } finally { await page.close() }
-}, 15000)
-
-it('moves the composer first when opening and the cards first when returning, without crossing', async () => {
-  const page = await fixture({ width: 1823, height: 1115, reduced: false, clock: true })
-  try {
-    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
-    const positions = () => page.evaluate(() => {
-      const hero = document.querySelector('.uV2eYG_card').getBoundingClientRect(), cards = document.querySelector('[data-odyssey-home-operations]').getBoundingClientRect()
-      return { hero: hero.y, cards: cards.y, gap: cards.y - hero.bottom }
-    })
-    const observations = [await positions()]
-    for (let index = 0; index < 48 && await progress(page) < 1; index++) {
-      await dispatchWheel(page, '.pI_x6G_centerCol', 64)
-      await page.clock.runFor(32)
-      observations.push(await positions())
-    }
-    expect(await progress(page)).toBe(1)
-    const expanded = await positions()
-    await dispatchWheel(page, '.pI_x6G_centerCol', -64)
-    for (let index = 0; index < 8 && (await positions()).cards < expanded.cards + .05; index++) await page.clock.runFor(32)
-    const firstReturn = await positions()
-    expect(firstReturn.cards).toBeGreaterThan(expanded.cards + .05)
-    expect(Math.abs(firstReturn.hero - expanded.hero)).toBeLessThan(.1)
-    observations.push(firstReturn)
-    for (let index = 0; index < 48 && await progress(page) > 0; index++) {
-      await dispatchWheel(page, '.pI_x6G_centerCol', -64)
-      await page.clock.runFor(32)
-      observations.push(await positions())
-    }
-    expect(await progress(page)).toBe(0)
-    for (const observation of observations) expect(observation.gap).toBeGreaterThanOrEqual(19)
-  } finally { await page.close() }
-}, 15000)
+})
 
 it('lets the return button immediately reverse an unfinished transition', async () => {
   const page = await fixture({ reduced: false })
@@ -261,28 +222,7 @@ it('accelerates and decelerates the actual composer and cards throughout button 
   } finally { await page.close() }
 }, 10000)
 
-it('smooths wheel targets and carries rendered motion through quiet settlement', async () => {
-  const page = await fixture({ reduced: false, clock: true })
-  try {
-    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
-    await startMotionProbe(page, 1400)
-    for (let index = 0; index < 3; index++) { await dispatchWheel(page, '.pI_x6G_centerCol', 24); await page.clock.runFor(32) }
-    await page.clock.runFor(1450)
-    const samples = await finishMotionProbe(page)
-    await writeFile(`${evidence}/motion-wheel-samples.json`, JSON.stringify(samples, null, 2))
-    const moving = samples.filter(sample => sample.raw > 0), firstTime = moving[0].time
-    const early = moving.filter(sample => sample.time < firstTime + 80)
-    expect(new Set(early.map(sample => sample.raw.toFixed(5))).size).toBeGreaterThanOrEqual(4)
-    const settling = samples.findIndex((sample, index) => index > 3 && sample.motion === 'settling' && samples[index - 1].motion === 'tracking')
-    expect(settling).toBeGreaterThan(3)
-    for (const key of ['raw', 'hero']) {
-      const speed = index => Math.abs(samples[index][key] - samples[index - 1][key]) / (samples[index].time - samples[index - 1].time)
-      const before = speed(settling - 1), after = speed(settling + 1)
-      expect(before, `${key} keeps moving until settlement`).toBeGreaterThan(.00001)
-      expect(after / before, `${key} does not restart at a new speed`).toBeLessThan(3)
-    }
-  } finally { await page.close() }
-}, 10000)
+
 
 it('preserves editing, textarea scrolling, and menu keyboard/wheel behavior', async () => {
   const page = await fixture()
@@ -424,11 +364,66 @@ it('fills the active case track and automatically loops the three examples on th
     expect(track).toBeGreaterThan(.4)
     expect(track).toBeLessThan(.6)
     for (const nextCase of ['1', '2', '0']) {
-      await page.clock.runFor(nextCase === '1' ? 3200 : 6000)
+      const elapsed = await page.locator('.odyssey-operations-usecase').evaluate(card => parseFloat(getComputedStyle(card).getPropertyValue('--odyssey-operations-case-progress')))
+      await page.clock.runFor((1 - elapsed) * 6000 + 350)
       expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(nextCase)
     }
   } finally { await page.close() }
 }, 20000)
+
+it('fades old case content out before committing and fades new content in for manual and automatic changes', async () => {
+  const page = await fixture({ reduced: false, clock: true })
+  const title = () => page.locator('.odyssey-operations-title strong').textContent()
+  const opacity = () => page.locator('.odyssey-operations-case-copy').evaluate(copy => Number(getComputedStyle(copy).opacity))
+  try {
+    await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
+    const oldTitle = await title()
+    await page.locator('.odyssey-operations-pagination button').nth(1).evaluate(button => button.click())
+    expect(await title()).toBe(oldTitle)
+    await page.clock.runFor(55)
+    expect(await title()).toBe(oldTitle)
+    expect(await opacity()).toBeGreaterThan(0); expect(await opacity()).toBeLessThan(1)
+    await page.clock.runFor(70)
+    expect(await title()).not.toBe(oldTitle)
+    expect(await opacity()).toBeGreaterThan(0); expect(await opacity()).toBeLessThan(1)
+    await page.clock.runFor(200); expect(await opacity()).toBe(1)
+    const beforeAutomatic = await title()
+    const elapsed = await page.locator('.odyssey-operations-usecase').evaluate(card => parseFloat(getComputedStyle(card).getPropertyValue('--odyssey-operations-case-progress')))
+    await page.clock.runFor((1 - elapsed) * 6000 + 55)
+    expect(await title()).toBe(beforeAutomatic)
+    expect(await opacity()).toBeGreaterThan(0); expect(await opacity()).toBeLessThan(1)
+    await page.clock.runFor(80)
+    expect(await title()).not.toBe(beforeAutomatic)
+    expect(await opacity()).toBeGreaterThan(0); expect(await opacity()).toBeLessThan(1)
+    await page.clock.runFor(220); expect(await opacity()).toBe(1)
+  } finally { await page.close() }
+}, 20000)
+
+it('keeps only the latest rapid case request and removes unfinished fades on disposal', async () => {
+  const page = await fixture({ reduced: false, clock: true })
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  try {
+    await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
+    await page.evaluate(() => {
+      const card = document.querySelector('.odyssey-operations-usecase'); window.homeOperations.committedCases = []
+      new MutationObserver(() => window.homeOperations.committedCases.push(card.dataset.case)).observe(card, { attributes: true, attributeFilter: ['data-case'] })
+    })
+    await page.locator('.odyssey-operations-pagination button').nth(1).evaluate(button => button.click()); await page.clock.runFor(40)
+    await page.locator('.odyssey-operations-pagination button').nth(2).evaluate(button => button.click()); await page.clock.runFor(350)
+    expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('2')
+    expect(await page.evaluate(() => window.homeOperations.committedCases.includes('1'))).toBe(false)
+    expect(await page.locator('.odyssey-operations-case-copy').evaluate(copy => Number(getComputedStyle(copy).opacity))).toBe(1)
+    await page.locator('.odyssey-operations-pagination button').first().evaluate(button => button.click()); await page.clock.runFor(40)
+    await page.evaluate(() => window.homeOperations.dispose()); await page.clock.runFor(1000)
+    expect(await region(page).count()).toBe(0)
+    await page.evaluate(() => window.homeOperations.mount()); await page.clock.runFor(64)
+    expect(await page.locator('.odyssey-operations-case-copy, .odyssey-operations-description, .odyssey-operations-gradient-field').evaluateAll(elements => elements.every(element => Number(getComputedStyle(element).opacity) === 1))).toBe(true)
+    expect(errors).toEqual([])
+  } finally { await page.close() }
+}, 15000)
 
 it('pauses case timing for hover, keyboard focus, hidden pages, and route cleanup, and resets manual selections', async () => {
   const page = await fixture({ reduced: false, clock: true })
@@ -446,10 +441,12 @@ it('pauses case timing for hover, keyboard focus, hidden pages, and route cleanu
     await page.mouse.move(1, 1); await page.clock.runFor(900)
     expect(await caseProgress()).toBeGreaterThan(beforeHover + .1)
     await page.locator('.odyssey-operations-pagination button').nth(2).evaluate(button => button.click())
-    expect(await caseProgress()).toBeLessThan(.01)
+    await page.clock.runFor(350)
+    const resetProgress = await caseProgress()
+    expect(resetProgress).toBeLessThan(.06)
     await page.clock.runFor(1000)
-    expect(await caseProgress()).toBeGreaterThan(.12)
-    expect(await caseProgress()).toBeLessThan(.2)
+    expect(await caseProgress() - resetProgress).toBeGreaterThan(.13)
+    expect(await caseProgress() - resetProgress).toBeLessThan(.19)
     await page.locator('.odyssey-operations-pagination button').first().focus()
     await page.keyboard.press('Tab')
     expect(await page.evaluate(() => document.activeElement.matches(':focus-visible'))).toBe(true)
@@ -467,6 +464,9 @@ it('pauses case timing for hover, keyboard focus, hidden pages, and route cleanu
     await page.evaluate(() => document.body.dataset.workspaceSurface = 'settings'); await page.clock.runFor(12000)
     expect(await region(page).count()).toBe(0)
     await page.evaluate(() => delete document.body.dataset.workspaceSurface); await page.clock.runFor(64)
+    const inputCase = await page.locator('.odyssey-operations-usecase').getAttribute('data-case')
+    await page.clock.runFor(12000)
+    expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(inputCase)
     await page.evaluate(() => window.homeOperations.dispose()); await page.clock.runFor(12000)
     expect(await region(page).count()).toBe(0)
   } finally { await page.close() }
@@ -484,6 +484,7 @@ it('keeps automatic case timing disabled for reduced motion while manual paging 
     expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('2')
     const fill = await page.locator('.odyssey-operations-pagination [aria-pressed="true"] i').evaluate(track => parseFloat(getComputedStyle(track, '::before').width) / track.clientWidth)
     expect(fill).toBeCloseTo(1, 2)
+    expect(await page.locator('.odyssey-operations-case-copy, .odyssey-operations-description, .odyssey-operations-gradient-field').evaluateAll(elements => elements.every(element => Number(getComputedStyle(element).opacity) === 1))).toBe(true)
   } finally { await page.close() }
 }, 15000)
 
@@ -527,6 +528,7 @@ it('renders the exported trend arrow and distinct final Figma light fields for a
       const fields = []
       for (let index = 0; index < 3; index++) {
         await page.locator('.odyssey-operations-pagination button').nth(index).click()
+        await waitCase(page, index)
         fields.push(await page.locator('.odyssey-operations-glow.two').evaluate(async glow => {
           const style = getComputedStyle(glow), src = style.backgroundImage.slice(4, -1).replace(/^["']|["']$/g, '')
           const image = new Image(); image.src = src; await image.decode()
@@ -574,7 +576,7 @@ it('adds one reversible presentation-blue glass tint to all four quick cards wit
       await toggle(page).click()
       await waitState(page, 'operations')
       const tints = []
-      const appearance = card => card.evaluate(element => { const style = getComputedStyle(element); return { background: style.backgroundColor, image: style.backgroundImage, shadow: style.boxShadow } })
+      const appearance = card => card.evaluate(element => { const style = getComputedStyle(element); return { background: style.backgroundColor, image: style.backgroundImage, shadow: style.boxShadow, anchorShadow: getComputedStyle(element.closest('.odyssey-operations-tilt-anchor')).boxShadow } })
       for (const card of await page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card').all()) {
         await page.mouse.move(1, 1)
         const rest = await appearance(card), kind = await card.getAttribute('data-card')
@@ -582,7 +584,7 @@ it('adds one reversible presentation-blue glass tint to all four quick cards wit
         await page.waitForTimeout(320)
         const hover = await card.evaluate(element => {
           const style = getComputedStyle(element), matrix = new DOMMatrixReadOnly(style.transform)
-          return { background: style.backgroundColor, image: style.backgroundImage, shadow: style.boxShadow, verticalLift: matrix.m42, lights: [...element.querySelectorAll('.odyssey-operations-pointer-light')].map(light => { const style = getComputedStyle(light); return style.display === 'none' ? 0 : Number(style.opacity) }) }
+          return { background: style.backgroundColor, image: style.backgroundImage, shadow: style.boxShadow, anchorShadow: getComputedStyle(element.closest('.odyssey-operations-tilt-anchor')).boxShadow, verticalLift: matrix.m42, lights: [...element.querySelectorAll('.odyssey-operations-pointer-light')].map(light => { const style = getComputedStyle(light); return style.display === 'none' ? 0 : Number(style.opacity) }) }
         })
         expect(hover.lights.every(opacity => opacity === 0)).toBe(true)
         if (kind) {
@@ -590,14 +592,16 @@ it('adds one reversible presentation-blue glass tint to all four quick cards wit
           tints.push(`${hover.background}|${hover.image}`)
           const [red, green, blue, alpha = 1] = hover.background.match(/[\d.]+/g).map(Number)
           expect(alpha).toBeGreaterThan(0)
-          expect(alpha).toBeLessThan(.85)
+          const restChannels = rest.background.match(/[\d.]+/g).map(Number)
+          expect(alpha).toBeGreaterThanOrEqual((restChannels[3] ?? 1) - .001)
           expect(Math.max(red, green, blue) - Math.min(red, green, blue)).toBeLessThan(90)
-          expect([red, green, blue, alpha]).toEqual(dark ? [25, 36, 64, .68] : [221, 230, 249, .57])
+          expect([red, green, blue]).toEqual(dark ? [25, 36, 64] : [221, 230, 249])
         } else {
           expect(hover.background).toBe(rest.background)
           expect(hover.image).toBe(rest.image)
         }
         expect(hover.shadow).toBe(rest.shadow)
+        expect(hover.anchorShadow).toBe(rest.anchorShadow)
         expect(Math.abs(hover.verticalLift)).toBeLessThan(.1)
         await page.mouse.move(1, 1)
         await expect.poll(() => appearance(card)).toEqual(rest)
@@ -606,6 +610,48 @@ it('adds one reversible presentation-blue glass tint to all four quick cards wit
     } finally { await page.close() }
   }
 }, 15000)
+
+it('keeps all five card surfaces distinct and description text readable over black, white, and busy backgrounds', async () => {
+  const observations = []
+  for (const dark of [false, true]) {
+    const page = await fixture({ dark, reduced: true })
+    try {
+      await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+      for (const [name, background] of [['black', '#000'], ['white', '#fff'], ['busy', 'repeating-linear-gradient(45deg,#00afff 0 18px,#ff8a00 18px 36px,#101820 36px 54px,#fcfcfc 54px 72px)']]) {
+        await page.locator('.pI_x6G_centerCol').evaluate((host, background) => host.style.setProperty('background', background, 'important'), background)
+        await region(page).screenshot({ path: `${evidence}/material-${dark ? 'dark' : 'light'}-${name}.png` })
+        const geometry = await page.evaluate(() => {
+          const description = document.querySelector('.odyssey-operations-description'), bounds = description.getBoundingClientRect()
+          return { foreground: getComputedStyle(description).color.match(/[\d.]+/g).map(Number), description: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }, cards: [...document.querySelectorAll('.odyssey-operations-usecase, .odyssey-operations-quick-card')].map(card => { const bounds = card.getBoundingClientRect(); return { x: bounds.x, y: bounds.y, width: bounds.width } }) }
+        })
+        await page.locator('.odyssey-operations-description').evaluate(description => description.style.visibility = 'hidden')
+        const png = PNG.sync.read(await page.screenshot())
+        await page.locator('.odyssey-operations-description').evaluate(description => description.style.removeProperty('visibility'))
+        const cards = geometry.cards.map(card => patchRgb(png, card.x + card.width * .65, card.y + 6))
+        const edgeSeparation = geometry.cards.map(card => {
+          const outside = patchRgb(png, card.x + card.width * .65, card.y - 5)
+          // A one-pixel outline must remain distinguishable at fractional layout coordinates.
+          return Math.max(...[-2, -1, 0, 1, 2].map(dy => patchRgb(png, card.x + card.width * .65, card.y + dy, 0).reduce((sum, value, channel) => sum + Math.abs(value - outside[channel]), 0) / 3))
+        })
+        const ratios = []
+        for (const x of [.1, .5, .9]) for (const y of [.2, .5, .8]) ratios.push(contrastRatio(geometry.foreground.slice(0, 3), patchRgb(png, geometry.description.x + geometry.description.width * x, geometry.description.y + geometry.description.height * y)))
+        observations.push({ dark, name, cards, edgeSeparation, minimumDescriptionContrast: Math.min(...ratios) })
+      }
+    } finally { await page.close() }
+  }
+  await writeFile(`${evidence}/material-readability.json`, JSON.stringify(observations, null, 2))
+  for (const dark of [false, true]) {
+    const modes = observations.filter(observation => observation.dark === dark)
+    for (let card = 0; card < 5; card++) for (let channel = 0; channel < 3; channel++) {
+      const values = modes.map(observation => observation.cards[card][channel])
+      expect(Math.max(...values) - Math.min(...values), `${dark ? 'dark' : 'light'} card ${card} suppresses background variation`).toBeLessThan(40)
+    }
+  }
+  for (const observation of observations) {
+    expect(observation.minimumDescriptionContrast, `${observation.dark ? 'dark' : 'light'} ${observation.name} description contrast`).toBeGreaterThanOrEqual(4.5)
+    expect(Math.min(...observation.edgeSeparation), `${observation.dark ? 'dark' : 'light'} ${observation.name} card edge separation`).toBeGreaterThan(4)
+  }
+}, 20000)
 
 it('gives all five cards a stronger bounded tilt and keeps a stationary pointer stable', async () => {
   const page = await fixture({ reduced: false })
@@ -675,6 +721,7 @@ it('keeps every moving glow image edge outside the rounded card at several anima
       await page.evaluate(dark => document.body.toggleAttribute('data-ds-dark-theme', dark), dark)
       for (let index = 0; index < 3; index++) {
         await page.locator('.odyssey-operations-pagination button').nth(index).click()
+        await waitCase(page, index)
         for (const phase of [0, 3000, 4000, 6000, 8000, 9000, 11900]) {
           await page.locator('.odyssey-operations-usecase').evaluate((card, phase) => {
             for (const animation of card.getAnimations({ subtree: true })) {
@@ -742,7 +789,7 @@ it('keeps the toggle at one low fixed position throughout state changes and hove
   } finally { await page.close() }
 }, 15000)
 
-it('keeps small-pane text readable and scrolls to the lower quick cards before returning to input', async () => {
+it('keeps small-pane content natively scrollable while only the bottom button returns to input', async () => {
   const page = await fixture({ width: 1040, height: 640, reduced: true })
   try {
     await page.locator('[data-dsh-panel-host]').evaluate(element => element.dataset.odysseyPanelRight = 'open')
@@ -781,7 +828,10 @@ it('keeps small-pane text readable and scrolls to the lower quick cards before r
     expect(await state(page)).toBe('operations')
     await operations.evaluate(section => section.scrollTop = 0)
     await operations.hover({ position: { x: 20, y: 20 } })
-    for (let index = 0; index < 8 && await progress(page) > 0; index++) { await page.mouse.wheel(0, -96); await nextPaint(page) }
+    await page.mouse.wheel(0, -300)
+    await nextPaint(page)
+    expect(await state(page)).toBe('operations')
+    await toggle(page).click()
     await waitState(page, 'input')
   } finally { await page.close() }
 }, 15000)
