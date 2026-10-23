@@ -101,6 +101,7 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
     if (!el || typeof FontFace !== "function" || !document.fonts) return
     let stopped = false
     let generation = 0
+    let pendingKey = null
     const faces = new Map()
     async function loadFont() {
       if (stopped) return
@@ -123,9 +124,12 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
         }
       }
       const key = size + ':' + (marker ?? '') + ':' + JSON.stringify(skillCells)
-      if (fontRef.current?.key === key) return
+      // A different pending width can still replace the committed font. Only
+      // reuse that committed key when no other batch is in flight.
+      if (pendingKey === key || (pendingKey === null && fontRef.current?.key === key)) return
       if (fontRef.current !== null) setFont(null)
       const current = ++generation
+      pendingKey = key
       const family = 'SherlockReferenceCell' + size + (marker?.charCodeAt(0) ?? 0)
       const face = new FontFace(family, 'url(data:font/ttf;base64,' + fontData + ')', {
         unicodeRange: 'U+FFFC' + (marker ? ',U+' + marker.charCodeAt(0).toString(16) : ''),
@@ -149,13 +153,15 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
           fontRef.current = null
           setFont(null)
         }
+      } finally {
+        if (current === generation) pendingKey = null
       }
     }
     void loadFont()
     void document.fonts.ready?.then(loadFont)
     const resize = new ResizeObserver(loadFont)
     resize.observe(el)
-    return () => { stopped = true; resize.disconnect(); fontRef.current = null; for (const face of faces.values()) document.fonts.delete(face) }
+    return () => { stopped = true; pendingKey = null; resize.disconnect(); fontRef.current = null; for (const face of faces.values()) document.fonts.delete(face) }
   }, [marker, fontData, skillKey, literals])
   const ready = font !== null && font.marker === marker && font.skillKey === skillKey && font.literals === literals
   const skillCells = ready ? occurrences.flatMap(item => {
@@ -218,13 +224,14 @@ export function patchFigmaInlineReferences(source) {
   const functions = [referenceMarkerForDraft, projectReferenceDraft, retainedReferenceCells, unprojectReferenceEdit, skillReferenceCellFont, useReferenceProjection];
   const familyValue = 'figmaReferences.families.map(family => JSON.stringify(family)).join(",")';
   if (source.includes('/* sherlock-figma-inline-reference-v1 */')) {
-    if (source.includes(skillWidthMarker)) return source;
-    for (const fn of [projectReferenceDraft, unprojectReferenceEdit, useReferenceProjection]) {
+    const refresh = source.includes(skillWidthMarker) ? [useReferenceProjection] : [projectReferenceDraft, unprojectReferenceEdit, useReferenceProjection];
+    for (const fn of refresh) {
       const start = source.indexOf('\nfunction ' + fn.name + '(');
       const end = source.indexOf('\n}\n', start);
       if (start < 0 || end < start) throw Error('Skill reference projection upgrade anchor drifted: ' + fn.name);
       source = source.slice(0, start + 1) + fn.toString() + source.slice(end + 2);
     }
+    if (source.includes(skillWidthMarker)) return source;
     source = replaceOne(source, '\nfunction referenceMarkerForDraft(', '\n' + skillWidthMarker + '\n' + [retainedReferenceCells, skillReferenceCellFont].map(fn => fn.toString()).join('\n') + '\nfunction referenceMarkerForDraft(');
     return replaceOne(source, 'JSON.stringify(figmaReferences.family)', familyValue);
   }

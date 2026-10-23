@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import { it } from 'vitest'
-import {patchFigmaInlineReferences} from '../scripts/lib/figma-inline-references-client.mjs'
+import {patchFigmaInlineReferences,useReferenceProjection} from '../scripts/lib/figma-inline-references-client.mjs'
 const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
 it('upgrades the previous inline projection without rendering an additional backdrop caret', () => {
  const current=patchFigmaInlineReferences(source)
@@ -10,6 +10,18 @@ it('upgrades the previous inline projection without rendering an additional back
  assert.equal(current.includes(native),true)
  assert.equal(patchFigmaInlineReferences(current.replace(native,old)),current)
  assert.equal(patchFigmaInlineReferences(current),current)
+})
+it('refreshes the projection hook in an already patched skill-width package without changing native handlers',()=>{
+ const current=patchFigmaInlineReferences(source)
+ const start=current.indexOf('\nfunction useReferenceProjection('),end=current.indexOf('\n}\n',start)+2
+ assert(start>=0&&end>start)
+ const previous='function useReferenceProjection() {\n  throw Error("previous packaged hook")\n}'
+ const installed=current.slice(0,start+1)+previous+current.slice(end)
+ const upgraded=patchFigmaInlineReferences(installed)
+ assert.equal(upgraded.includes(previous),false,'an installed skill-width hook must receive the pending-font fix')
+ assert.equal(upgraded,current)
+ assert(upgraded.includes(useReferenceProjection.toString()))
+ assert.equal(patchFigmaInlineReferences(upgraded),upgraded)
 })
 it('preserves business handlers, exact occurrence deletion and provisional cleanup', () => {
 const patched=patchFigmaInlineReferences(source)
