@@ -46,8 +46,12 @@ node "<SKILL_ROOT>/scripts/research.mjs" init --company "贵州茅台" --ticker 
 
 完整研究通过稳定章节 kind 声明业务、行业、业绩、盈利、资产负债、现金流、预测、估值、风险与跟踪的覆盖状态；核心论点填 `theses` 中证据、推论、假设、反证和观察条件。部分或缺失资料必须填 `gap` 的缺项、结论影响和补充动作，不能只加空标题。使用引用数值的专题表和同频率图表解释业务驱动；原文观察 `observations` 需逐字定位，不进入确定性计算。按真实问题取舍，不为页数或图表数量凑内容；没有核验行情/同行/预期，相关结论就写缺口。
 
+## 正式研报编排
+
+写作前阅读 [正式研报封面与内页规范](references/publication-format.md)。使用投研摘要封面：观点大标题、正式报告副标题、公司代码/行业/日期、投资要点、基本数据与趋势图、盈利摘要及预测估值状态；正文提供目录/图表索引、编号专题、三表摘要与证据附录。填 `report.publication` 的真实公司简称、受控报告类别与行业，`report.title` 写本次观点。摘要可加短 `label`，所有数值仍走 token，不写样例公司的数字、评级或作者。资料不足时保留要素和缺口说明，继续核对可用资料。
+
 ## 交付
 
-`research_report` 的 `run` 默认同时生成 `report.html` 与 `report.pdf`，并输出 `evidence.json`、`calculations.json`、`validation.json`、`report-quality.json`、`run.json`。PDF 由客户端内置引擎从同一 HTML 导出，无需另装打印软件。报告固定使用易方达蓝青配色，样式规则见 [报告与配色](references/report-style.md)；无需让用户再选主题。打开实际 HTML 与 PDF，检查中文、分页、表格、图表、来源及页码，修正后重新生成。只有 `run.json.delivery.completed` 同时包含 html/pdf 且文件存在才可声称双格式交付；PDF 失败时命令非零退出、保留 HTML 和失败记录，应修复并重试新目录。客户端任务不能使用 Bash `run` 代替该专用工具。Bash 会按设计过滤敏感环境变量，它的 `doctor` 不能据此判断客户端 PDF 服务不可用；不要以 `--format html` 跳过默认 PDF。用户明确只要网页的特殊要求可用 CLI 单格式检查，并清楚说明实际交付。
+`research_report` 的 `run` 默认同时生成同一正式报告名的 `.html` 与 `.pdf`，名称含公司、证券代码、财务期别、报告类别与研究日期；不再交付通用 `report.html/report.pdf`。机器文件仍为 `evidence.json`、`calculations.json`、`validation.json`、`report-quality.json`、`run.json`。从工具 `artifacts` 的实际绝对路径或 `run.json.artifacts` 映射读取文件名，不能猜测、改名或手填旧文件名。PDF 由客户端内置引擎从同一 HTML 导出，无需另装打印软件。报告固定使用易方达蓝青配色，样式规则见 [报告与配色](references/report-style.md)；无需让用户再选主题。打开实际 HTML 与 PDF，检查中文、分页、表格、图表、来源及真实目录页码，修正后重新生成。只有 `run.json.delivery.completed` 同时包含 html/pdf、产物存在且摘要通过才可声称双格式交付；PDF 失败时命令非零退出、保留 HTML 和失败记录，应修复并重试新目录。客户端任务不能使用 Bash `run` 代替该专用工具。Bash 会按设计过滤敏感环境变量，它的 `doctor` 不能据此判断客户端 PDF 服务不可用；不要以 `--format html` 跳过默认 PDF。用户明确只要网页的特殊要求可用 CLI 单格式检查，并清楚说明实际交付。
 
-向用户同时给 HTML 与 PDF 文件入口和主要判断，再简述数据截止、尚未解决的关键问题。所有产物保存在会话文件区，原始输入与输出 hash 关联到本次运行。校验状态表示“快照与字段核对”，不声称外部来源真实或证券研究员专业签发。当前版本不提供原版 LEDGER 五角色盲评、自动滚动三表模型或全链路 Excel 重算保证。
+向用户同时给正式名称的 HTML 与 PDF 入口和主要判断，再简述数据截止、尚未解决的关键问题。所有报告及辅助 JSON 入口均用工具回执中的完整绝对路径构造 Markdown 文件链接，避免裸文件名被解析成工作区根目录的错误位置。所有产物保存在会话文件区，原始输入与输出 hash 关联到本次运行。校验状态表示“快照与字段核对”，不声称外部来源真实或证券研究员专业签发。当前版本不提供原版 LEDGER 五角色盲评、自动滚动三表模型或全链路 Excel 重算保证。

@@ -9,7 +9,7 @@ import {reportCoverage,RESEARCH_SECTIONS} from './lib/quality.mjs'
 import {requestResearchPdf} from './lib/pdf-client.mjs'
 import {publicationMetadata} from './lib/publication.mjs'
 
-const VERSION = '1.1.1'
+const VERSION = '1.2.0'
 const resourceRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const json = value => JSON.stringify(value, null, 2) + '\n'

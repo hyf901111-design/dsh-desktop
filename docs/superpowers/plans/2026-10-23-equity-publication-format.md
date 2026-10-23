@@ -38,12 +38,14 @@
 
 ### Task 2: 摘要封面、正式内页、目录与财务摘要
 
-**Files:** `scripts/lib/report.mjs`，必要时拆出 `publication-layout.mjs`；`quality.mjs` 的 label 校验；新增正式版式测试；必要的 `src/main/research/research-pdf.ts`/宿主测试由 root 协调。
+**Files:** `scripts/lib/report.mjs`，必要时拆出 `publication-layout.mjs`；`quality.mjs` 的 label 校验；新增正式版式测试；`src/main/research/research-pdf.ts`、目录解析 helper 与宿主测试；schema/evidence 的 EPS/ROE 严格事实能力及聚焦回归。
 
 **Interfaces:** 消费同次 verified facts/calculations、publicationMetadata、已有段落/表格/SVG helpers；保持 validateReport/renderReport 公共签名。summary label 必须进入已有模板/数字校验。
 
 - [ ] 建立红回归：两层封面/基本数据/财务摘要、目录/图表索引、编号与来源、逃逸/缺数据/全年中期分隔。
 - [ ] 实现封面与正文样式，三表摘要和可点击导航；禁止捏造页码、行情或作者。
+- [ ] 真实内部 Link destinations 得到目录/图表页码，固定几何槽填数后第二遍目的页验证；保留禁JS/离线/取消与资源限制，输出正式页眉页脚和书签。
+- [ ] EPS/ROE 输入只扩受控别名与正确单位，真实TSV/hash核验与错误口径红绿回归；不搬参考数字。
 - [ ] 真实打印茅台稿，逐页比对参考的结构与数据要素；修复版式后重新生成。
 - [ ] 聚焦验证并精确中文提交。
 

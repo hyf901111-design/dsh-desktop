@@ -118,6 +118,18 @@ quote 必须与定位到的完整原文行逐字一致；valueLine 是取值所�
 - `currentPrice` 可选，引用经核对 `currentPrice` 指标，元/股且为正，事实中必须有 `asOf` 价格时点且与研究日同日。否则不计算相对现价差异。
 - 模型输出 `perShareValue`，不自动评级；完整未来期末折现未处理研究日至财年末的 stub period，不能冒充交易日目标价。含金融子公司的现金/资产、经营性与非经营性划分必须研究复核，避免重复加回。
 
+## 正式出版元数据
+
+`report.title` 为观点主标题。可选 `report.publication` 只允许 `companyShortName`、`reportType`、`industry`；简称和行业为最多八十 Unicode 字符的纯文本。reportType 只允许“公司研究报告”“财报点评报告”“公司研究简报”，full 缺省公司研究报告、brief 缺省公司研究简报。财务期别从 financialAsOf 推导，研究日期取 asOf；引擎计算正式副标题及安全双文件名，不接收自定义路径。
+
+```json
+{"title":"渠道重塑中的盈利与现金再验证","publication":{"companyShortName":"贵州茅台","reportType":"公司研究报告","industry":"白酒"},"summary":[{"label":"中期业绩","text":"{{period:revenue26h1}}营业收入{{revenue26h1|yi}}。"}]}
+```
+
+summary 的可选 label 也进入原有数字模板校验，不得隐藏手填数字。新增可核验披露指标 `basicEarningsPerShare`、`dilutedEarningsPerShare`、`netAssetsPerShare` 只接受 CNY_per_share；`returnOnEquity` 只接受 ratio/percent。指标必须匹配原文受控别名和实际单位，不能将每股收益当现价或任意比率当ROE。
+
+`run.json.artifacts` 将 html/pdf/evidence/calculations/validation/quality/manifest 映射到实际 basename，仅列实际文件；`outputs` 以实际 basename 为键保存 hash。辅助 JSON 名稳定，双报告名是正式名称。客户端回执给实际绝对路径；成功须显式映射、必需摘要与 PDF 字节记录一致，失败/取消恢复的入口不构成已验证交付。
+
 
 ## 完整研究与专题展示（引擎版本起始于一代增强版）
 
