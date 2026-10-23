@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "保护笔记写入保存窗口并在快速完成后恢复挑战队列",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "437c6c606f600b974426b107bf39e7aca994ca66",
-        "tipCommit": "b949f54ce21c8e7d03ab52a4febb3648b96b4064",
+        "baseCommit": "b949f54ce21c8e7d03ab52a4febb3648b96b4064",
+        "tipCommit": "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919",
         "commits": [
           {
-            "commit": "b949f54ce21c8e7d03ab52a4febb3648b96b4064",
+            "commit": "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919",
             "parents": [
-              "437c6c606f600b974426b107bf39e7aca994ca66"
+              "b949f54ce21c8e7d03ab52a4febb3648b96b4064"
             ],
-            "subject": "恢复切换应用或会话后的逐字渐显并跳过后台补播"
+            "subject": "在真实焦点恢复事件中同步正文基线以继续逐字渐显"
           }
         ],
         "files": [
@@ -47,9 +47,9 @@
               "test/markdown-file-links.test.js"
             ],
             "outcome": "passed",
-            "summary": "73 passed across 7 directly related suites. Five actual production-hook browser REDs became green: restored document.hasFocus without window focus event, with/without visibility return event, background-born public seat, DOM hiding during active paint, and actual focus loss without blur. Actual session-view unmount, background received text, remount baseline and later append also pass. Real production compact flow, execution feed, assistant seat, ReasoningRow/DisclosureRow and Markdown renderer remain in the fixture; previous final-boundary, two-owner/two-turn batches, epoch, handoff, reading and history cases continue passing. Synthetic focus tests now set document.hasFocus alongside events, so missing-event return is independently testable. output/assistant-reveal-focus-return-1023/focused.json and red-summary.json.",
-            "verifiedCommit": "b949f54ce21c8e7d03ab52a4febb3648b96b4064",
-            "completedAt": "2026-10-23T01:06:59.984987+00:00",
+            "summary": "78 passed across 7 directly related suites. Four new production-hook REDs on b949 became green: after background DOM has caught up, standard focus, visibility-only, visibility-before-focus and focus-before-visibility return events must permit the next genuinely new append without any intervening React commit or same-text render. Before the fix all four exposed the new suffix at alpha 1 instead of pending alpha 0. Explicit-focus older tests now also directly append, with the artificial same-text return render removed. A new guard case verifies repeated foreground focus/visibility and unrelated workspace events do not change an active frontier. Existing missing-event conservative baseline, background-render-pause, session reentry, final promotion, reasoning and reading cases continue passing. output/assistant-reveal-event-resume-1023/focused.json.",
+            "verifiedCommit": "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919",
+            "completedAt": "2026-10-23T01:12:39.062626+00:00",
             "timeoutMs": 180000
           },
           {
@@ -59,9 +59,9 @@
               "scripts/verify-frontend-patch-reentry.mjs"
             ],
             "outcome": "passed",
-            "summary": "Actual full frontend patch entry completes twice via in-memory write overlay. 30 virtual assets; protected reply/listener regions stable, guards preserved, module syntax valid and zero dependency writes. Complete asset byte equality remains false due to unrelated existing sink ordering.",
-            "verifiedCommit": "b949f54ce21c8e7d03ab52a4febb3648b96b4064",
-            "completedAt": "2026-10-23T01:06:59.984987+00:00",
+            "summary": "Actual full frontend patch entry completes twice through in-memory write overlay: 30 virtual assets, protected reply/listener regions stable, guards and syntax valid, zero installed dependency writes. Complete asset byte equality remains false from unrelated existing sink ordering.",
+            "verifiedCommit": "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919",
+            "completedAt": "2026-10-23T01:12:39.062626+00:00",
             "timeoutMs": 180000
           },
           {
@@ -72,8 +72,8 @@
             ],
             "outcome": "passed",
             "summary": "Passed on exact committed source.",
-            "verifiedCommit": "b949f54ce21c8e7d03ab52a4febb3648b96b4064",
-            "completedAt": "2026-10-23T01:06:59.984987+00:00",
+            "verifiedCommit": "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919",
+            "completedAt": "2026-10-23T01:12:39.062626+00:00",
             "timeoutMs": 180000
           },
           {
@@ -81,191 +81,32 @@
               "git",
               "diff",
               "--check",
-              "437c6c606f600b974426b107bf39e7aca994ca66..b949f54ce21c8e7d03ab52a4febb3648b96b4064"
+              "b949f54ce21c8e7d03ab52a4febb3648b96b4064..8c9dae566e4b673a2f2d689acc9a7f2ab59e7919"
             ],
             "outcome": "passed",
             "summary": "Passed; focused two-file successor.",
-            "verifiedCommit": "b949f54ce21c8e7d03ab52a4febb3648b96b4064",
-            "completedAt": "2026-10-23T01:06:59.984987+00:00",
+            "verifiedCommit": "8c9dae566e4b673a2f2d689acc9a7f2ab59e7919",
+            "completedAt": "2026-10-23T01:12:39.062626+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Isolated Chromium exercises real production execution routing, actual ReasoningRow/DisclosureRow and complete semantic Markdown. The document focus API changes independently of window focus events. Background batches remain fully readable; the first restored current content is baselined once; genuinely later public text regains neighboring character alpha and a pending suffix. Session view closes while text continues in its stored state, returns without replay, then later actual append fades. No GUI, actual model call, installed dependency write or shared build was performed. Integrated native app-switch verification remains root-owned."
+          "summary": "Real production execution routing and semantic Markdown render in isolated Chromium. Standard document/window return events baseline the currently committed background DOM immediately; no React same-content render is inserted before the next real public append. All four event orders reveal that append with a pending suffix and neighboring alpha wave, while the already visible prefix remains fully readable. Missing-all-event fallback deliberately retains one conservative current-content baseline. No native GUI, model request, installed dependency mutation or shared client build was performed."
         },
         "acceptanceCriteria": [
-          "When document.hasFocus exists it is read live instead of trusting the cached window-focus event state; the event cache remains a fallback only for environments lacking the API.",
-          "Visibility availability is captured before skipNext; every unavailable update retains the return-baseline flag rather than consuming it in the background.",
-          "Active paint which discovers actual focus loss, DOM hiding or disconnection suspends the current visual queue and marks the next current content as a baseline, even without blur/workspace events.",
-          "Returning without a window focus event exposes prior background content immediately once; genuinely later appended public text resumes gradual character reveal.",
-          "Existing epoch, fresh/live history gates, trusted same-commit final handoff, reading quiet period, reasoning exclusion and real native/Research following continue passing; background generation itself is not cancelled."
+          "Standard focus/visibility return events synchronously baseline current DOM only when a baseline is actually pending, the record is initialized and belongs to the same epoch, and its connected root is truly visible and focused.",
+          "The next genuinely new append after a standard return resumes character reveal without requiring an artificial same-text React commit.",
+          "Repeated focus and unrelated visible workspace events with skipNext false are no-ops and do not interrupt a current front edge.",
+          "Fresh/live/epoch permissions and reading quietUntil remain unchanged; background queue is cleared, old public text is not replayed and reasoning is excluded from the public baseline.",
+          "If all return events are missing, b949 live-focus fallback still baselines the first restored commit once before later appends recover; actual session unmount/reentry protections continue passing."
         ],
         "risks": [
-          "The user confirmed switching apps or sessions during the failed response. The deterministic missing-window-focus and background-render-pause paths now reproduce and are fixed. Native OS app-switch verification on the integrated package remains root-owned.",
-          "On foreground return the first current content deliberately becomes a complete baseline to avoid replaying background catch-up; later actual arrivals fade. Already received background content is not animated retroactively.",
-          "The full patch re-entry verifier reports complete asset byte inequality from unrelated existing sink insertion order; protected reply regions, guards and syntax are stable."
+          "The old native standard app-switch control already worked when the normal window focus event was delivered. This successor closes the b949 event-baseline boundary found by direct production-hook REDs; it does not claim native reproduction of missing OS focus events.",
+          "With no return events at all, the first subsequent render conservatively shows its complete current content; only later arrivals animate. Without an arrival-protocol change, the presentation layer cannot identify unseen source updates that have not yet committed to DOM.",
+          "The complete asset is not byte-identical across full frontend entry passes because unrelated existing sink insertion order changes. Protected reply regions, unique guards and final syntax are stable."
         ],
-        "generatedAt": "2026-10-23T01:06:59.984987+00:00"
-      },
-      "merged": {
-        "mergeCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-        "verificationCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-depth.test.js",
-              "test/notes-challenge-forecast-completion.test.js",
-              "test/notes-challenge-review-identity.test.js",
-              "test/notes-challenge-review-keys.test.js",
-              "test/notes-challenge-consistency.test.js",
-              "test/notes-challenge-consensus.test.js",
-              "test/notes-challenge-consensus-method.test.js",
-              "test/notes-challenge-review-context.test.js",
-              "test/notes-challenge-scope.test.js",
-              "test/notes-challenge-infodb-skill.test.js",
-              "test/notes-recent-locale.test.js",
-              "test/notes-challenge-scheduler.test.ts",
-              "test/notes-challenge-controller-coverage.test.ts",
-              "test/notes-challenge-review-state.test.ts",
-              "test/notes-challenge-background.test.ts",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-challenge-runtime.test.js test/notes-challenge-depth.test.js test/notes-challenge-forecast-completion.test.js test/notes-challenge-review-identity.test.js test/notes-challenge-review-keys.test.js test/notes-challenge-consistency.test.js test/notes-challenge-consensus.test.js test/notes-challenge-consensus-method.test.js test/notes-challenge-review-context.test.js test/notes-challenge-scope.test.js test/notes-challenge-infodb-skill.test.js test/notes-recent-locale.test.js test/notes-challenge-scheduler.test.ts test/notes-challenge-controller-coverage.test.ts test/notes-challenge-review-state.test.ts test/notes-challenge-background.test.ts test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "3b23f06eb3709a56ca01b1e02d4ec0f5b0664722"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 3b23f06eb3709a56ca01b1e02d4ec0f5b0664722",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/client-capabilities.test.js",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-component-presentation.test.ts",
-              "test/notes-theme-export-browser.test.js",
-              "test/notes-client-capabilities-browser.test.js",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-export-snapshots.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/client-capabilities.test.js test/notes-client-capability-actions.test.ts test/notes-component-presentation.test.ts test/notes-theme-export-browser.test.js test/notes-client-capabilities-browser.test.js test/notes-component-snapshots.test.ts test/notes-export-snapshots.test.ts --maxWorkers=2",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-client-capability-editing.test.ts",
-              "test/research-canvas-presentation.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/notes-capability-receipt-locale.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/notes-client-capability-service.test.ts test/notes-client-capability-bridge.test.ts test/notes-client-capability-runtime.test.js test/notes-client-capability-editing.test.ts test/research-canvas-presentation.test.js test/research-canvas-structured-apply.test.js test/workbench-openterminal.test.js test/notes-capability-receipt-locale.test.js test/client-capabilities-bundle.test.js --maxWorkers=2",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/news-topic-delivery.test.js",
-              "test/news-source-scope.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/news-topic-delivery.test.js test/news-source-scope.test.js test/component-source-binding.test.js test/component-data-refresh.test.js test/workbench-public-data.test.js --maxWorkers=2",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "HEAD^",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff HEAD^ --check",
-            "verifiedCommit": "736052d96572cadd4a84249fdf1572ab4fca46cf",
-            "completedAt": "2026-10-23T01:08:20.704Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-23T01:08:20.704Z"
+        "generatedAt": "2026-10-23T01:12:39.062626+00:00"
       }
     },
     {
