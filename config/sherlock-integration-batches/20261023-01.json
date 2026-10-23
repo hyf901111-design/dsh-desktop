@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261023-01",
+  "branch": "codex/integration/20261023-01",
+  "baseMainCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
+  "expectedMainCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
+  "createdAt": "2026-10-23T04:02:36.355Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "内置研报写作规范、证据台账与易方达配色确定性报告",
+        "branch": "codex/feat/ledger-research-20261023",
+        "baseCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
+        "tipCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
+        "commits": [
+          {
+            "commit": "030b937c73454afc3d1c65fdd7924ad6c4336421",
+            "parents": [
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423"
+            ],
+            "subject": "文档：明确内置研报能力方案与本地验收路径"
+          },
+          {
+            "commit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
+            "parents": [
+              "030b937c73454afc3d1c65fdd7924ad6c4336421"
+            ],
+            "subject": "功能：内置研报规范证据台账与确定性计算技能"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-23-equity-research-skill.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-23-equity-research-skill-design.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/skill-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/skill-priority.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/skill-provider.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/bundled-skill-parity.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/bundled-skill-parity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-packaged-macos.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/SKILL.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/examples/synthetic/packet.json"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/examples/synthetic/source.txt"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/references/packet-contract.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/references/provenance.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/references/report-style.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/references/workflow.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/scripts/lib/calculations.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/scripts/lib/dcf.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/scripts/lib/evidence.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/scripts/lib/index.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/scripts/lib/numbers.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/scripts/lib/report.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/scripts/lib/schema.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-equity-research/scripts/research.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/bundled-skills.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/bundled-equity-research-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-skill-parity.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/equity-research-cli.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/equity-research-engine.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/equity-research-report.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-bundled-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/macos-package-runtime.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/equity-research-engine.test.js",
+              "test/equity-research-cli.test.js",
+              "test/equity-research-report.test.js",
+              "test/bundled-equity-research-skill.test.js",
+              "test/integration-skill-policy.test.js",
+              "test/integration-runtime.test.js",
+              "test/integration-bundled-runtime.test.js",
+              "test/bundled-skill-routing.test.js",
+              "test/bundled-skill-parity.test.ts",
+              "test/bundled-finance-skill.test.js",
+              "test/financial-routing.test.js",
+              "test/financial-routing-review.test.js",
+              "test/macos-package-runtime.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "13个直接相关测试文件153项通过；独立复核原5类误引全部被阻断，合法单位列与回溯访问通过；真实茅台12事实10计算及HTML产物通过。",
+            "verifiedCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
+            "completedAt": "2026-10-23T04:02:04.188181+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
+            "completedAt": "2026-10-23T04:02:04.188181+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "本次修改空白检查通过。",
+            "verifiedCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
+            "completedAt": "2026-10-23T04:02:04.188181+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已实际浏览器检查合成HTML桌面/窄屏与DCF假设价值桥；8个真实财报页目视复核。功能无新增独立客户端页面，原生技能入口及完整主界面将在本批次本地构建后核验，用户接受尚未发生。"
+        },
+        "acceptanceCriteria": [
+          "内置研报写作默认启用，主动选择、明确研报路由及关闭状态有效。",
+          "错指标列、错期、单位倍率、未来披露与量纲冲突阻断。",
+          "同次证据/计算引用输出易方达蓝青HTML，失败无成功报告。",
+          "integration候选依本地测试手册构建并打开真实主界面及技能入口；用户亲自测试。"
+        ],
+        "risks": [
+          "快照与字段核验不认证外部真实性和PDF提取忠实性。",
+          "FCFF仅手工固定完整年期，不处理估值日至年末stub period；不生成评级。",
+          "本地测试候选尚未由用户接受，不自动晋升main或公开发布。"
+        ],
+        "generatedAt": "2026-10-23T04:02:04.188181+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/equity-research-engine.test.js",
+        "test/equity-research-cli.test.js",
+        "test/equity-research-report.test.js",
+        "test/bundled-equity-research-skill.test.js",
+        "test/integration-skill-policy.test.js",
+        "test/integration-runtime.test.js",
+        "test/integration-bundled-runtime.test.js",
+        "test/bundled-skill-routing.test.js",
+        "test/bundled-skill-parity.test.ts",
+        "test/bundled-finance-skill.test.js",
+        "test/financial-routing.test.js",
+        "test/financial-routing-review.test.js",
+        "test/macos-package-runtime.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
