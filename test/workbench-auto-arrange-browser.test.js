@@ -20,7 +20,7 @@ beforeAll(async()=>{
  const registry=new bundle.ResearchWorkspaceRegistry(localStorage),workspace=registry.for('auto-browser'),host=document.getElementById('host'),root=createRoot(host);
  const render=(sessionId='auto-browser')=>root.render(React.createElement(bundle.ResearchCanvas,{sessionId,t:x=>x,researchWorkspaces:registry,selectionGeneration:{disabled:false},actions:{}}));
  let calls=0;const original=workspace.organizeCanvas;workspace.organizeCanvas=function(...args){calls++;return original.apply(this,args)};
- window.fixture={workspace,registry,render,calls:()=>calls};render();`
+ window.fixture={bundle,workspace,registry,render,calls:()=>calls};render();`
  script=(await build({stdin:{contents:entry,resolveDir:process.cwd(),sourcefile:'auto-arrange-browser-entry.js'},bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent'})).outputFiles[0].text
 },20000)
 afterAll(async()=>browser?.close())
@@ -55,5 +55,35 @@ it('production canvas waits for the batch, measures offscreen iframe content, th
   if(process.env.SHERLOCK_TEST_EVIDENCE_DIR){await mkdir(process.env.SHERLOCK_TEST_EVIDENCE_DIR,{recursive:true});await writeFile(join(process.env.SHERLOCK_TEST_EVIDENCE_DIR,'auto-arrange-browser.json'),JSON.stringify(result,null,2)+'\n');await page.screenshot({path:join(process.env.SHERLOCK_TEST_EVIDENCE_DIR,'auto-arrange-browser.png')})}
   expect(errors).toEqual([]);expect(result.calls).toBe(1);expect(result.focused).toBe('chat');expect(result.measurements.sort()).toEqual(batch.panels.map(p=>p.nodeId).sort());expect(result.heights.every(h=>h>500)).toBe(true);expect(result.offscreen.length).toBeGreaterThan(0);expect(result.overlap).toBe(false);expect(result.saved).toEqual({pending:[],done:[batch.id]})
   await page.evaluate(p=>{fixture.workspace.applyWorkbench(p);fixture.render('other')},batch);await page.waitForTimeout(80);await page.evaluate(()=>fixture.render());await page.waitForTimeout(180);expect(await page.evaluate(()=>fixture.calls())).toBe(1)
+ }finally{await page.close()}
+},25000)
+
+it('production Standard keeps the note/table row filled after native and HTML refit, with the next timeline full width',async()=>{
+ const page=await browser.newPage({viewport:{width:1240,height:760}}),errors=[]
+ page.on('pageerror',error=>errors.push(error.message))
+ try{
+  await page.route('https://auto-arrange.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\nhtml,body{margin:0}#host{width:1000px;height:700px}[data-research-canvas]{width:1000px!important;height:700px!important}</style><div id="host"></div><textarea id="chat"></textarea>`}))
+  await page.goto('https://auto-arrange.test/');await page.addScriptTag({content:script});await page.waitForSelector('[data-ework-grid]')
+  await page.evaluate(()=>{
+   const specs=[{version:1,type:'html',title:'左侧完整笔记',html:'<html><body><h2>完整笔记</h2>'+Array.from({length:42},(_,i)=>'<p>研究说明 '+i+'：完整原始资料，保持段落阅读。</p>').join('')+'</body></html>'},
+    {version:1,type:'table',title:'右侧短表',columns:['字段','实际数值'],rows:[['收入',0],['同比',-120],['报告期','2026-06-30']]},
+    {version:1,type:'html',title:'下行时间线',html:'<html><body><h2>后续时间线</h2><ol>'+Array.from({length:14},(_,i)=>'<li>阶段 '+i+'：完整事件记录，不挤入上方行内。</li>').join('')+'</ol></body></html>'}]
+   fixture.workspace.applyWorkbench({id:'rows-plan',createdAt:Date.now(),panels:specs.map((spec,i)=>({nodeId:['note','short-table','timeline'][i],title:spec.title,prompt:'保持原资料完整',taskId:'rows-task-'+i,preparedOutput:JSON.stringify(spec),x:i===1?500:0,y:i===2?1200:0,width:480,height:i===0?1100:300,size:'large'}))})
+   fixture.workspace.applyWorkbenchCells([{id:'note',x:0,y:0,w:20,h:48},{id:'short-table',x:20,y:0,w:20,h:13},{id:'timeline',x:0,y:50,w:20,h:25}],true)
+   document.getElementById('chat').focus()
+  })
+  await page.waitForFunction(()=>fixture.calls()===1&&fixture.workspace.pendingWorkbenchArrange().length===0,null,{timeout:9000})
+  const first=await page.evaluate(()=>fixture.workspace.getWorkbenchCells()),note=first.find(c=>c.id==='note'),table=first.find(c=>c.id==='short-table'),timeline=first.find(c=>c.id==='timeline')
+  expect(note).toMatchObject({x:0,y:0,w:20});expect(table).toMatchObject({x:20,y:0,w:20,h:note.h});expect(timeline).toMatchObject({x:0,w:40,y:note.h});expect(note.h).toBeGreaterThan(35)
+  expect(await page.evaluate(()=>document.activeElement.id)).toBe('chat');expect(errors).toEqual([])
+  await page.locator('[data-research-global-arrange]').click();await page.waitForFunction(()=>!document.querySelector('[data-research-canvas]').__eworkContentFit)
+  const second=await page.evaluate(()=>fixture.workspace.getWorkbenchCells());expect(second).toEqual(first);expect(await page.evaluate(()=>fixture.calls())).toBe(2)
+  const restored=await page.evaluate(()=>{
+   const snapshot=fixture.workspace.getSnapshot(),cells=fixture.workspace.getWorkbenchCells(),root=document.querySelector('[data-research-canvas]');root.scrollTop=root.scrollHeight
+   const reopened=new fixture.bundle.ResearchWorkspaceRegistry(localStorage).for('auto-browser');reopened.setWorkbenchWidth(1000)
+   return {cells,reopenedCells:reopened.getWorkbenchCells(),savedCells:JSON.parse(localStorage.getItem('ework.research.grid.v1:auto-browser')).cells,heights:snapshot.artifacts.map(n=>({id:n.id,height:n.height})),scrollTop:root.scrollTop,done:JSON.parse(localStorage.getItem('sherlock.workbench.auto-arrange.v1:auto-browser'))}
+  })
+  expect(restored.scrollTop).toBeGreaterThan(0);expect(restored.savedCells).toEqual(second);expect(restored.reopenedCells).toEqual(second)
+  if(process.env.SHERLOCK_TEST_EVIDENCE_DIR){await mkdir(process.env.SHERLOCK_TEST_EVIDENCE_DIR,{recursive:true});await writeFile(join(process.env.SHERLOCK_TEST_EVIDENCE_DIR,'standard-rows-browser.json'),JSON.stringify(restored,null,2)+'\n');await page.screenshot({path:join(process.env.SHERLOCK_TEST_EVIDENCE_DIR,'standard-rows-browser.png')})}
  }finally{await page.close()}
 },25000)
