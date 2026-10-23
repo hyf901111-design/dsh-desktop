@@ -1,5 +1,6 @@
 const START = '/* odyssey:home-guide-native:start:v1 */'
 const END = '/* odyssey:home-guide-native:end:v1 */'
+const RESIDENT = '/* odyssey:home-guide-resident-isolation:v1 */'
 
 function homeGuideNativeSampleProvider() {
   const symbols = [
@@ -40,6 +41,32 @@ function homeGuideNativeResource() {
   const id = 'odyssey-home-guide:board'
   homeGuideNativeSharedResource = { id, memory, registry, workspace: registry.for(id), provider: homeGuideNativeSampleProvider(), owner: null }
   return homeGuideNativeSharedResource
+}
+
+function homeGuideNativeResidentSession(sessionId, subagentPanel = false) {
+  if (!sessionId || subagentPanel || window.top !== window) return false
+  const centers = [...document.querySelectorAll('.pI_x6G_centerCol')]
+  for (const center of centers) {
+    const root = [...center.querySelectorAll('.wSkVaW_root')].find(node => !node.closest('[data-odyssey-subagent-panel]'))
+    const header = root?.querySelector('[data-srb-session-header][data-ework-notes-session]')
+    if (header?.dataset.eworkNotesSession !== sessionId) continue
+    const runId = center.dataset.homeGuideActive
+    const guide = [...center.querySelectorAll('[data-home-guide]')].find(node => node.dataset.homeGuide === runId)
+    if (runId && root.dataset.homeGuideResident === runId && ['board', 'note', 'ppt'].includes(guide?.dataset.kind)) return true
+    const html = document.documentElement
+    if (html.dataset.homeGuideTransition && html.dataset.homeGuideTransitionSession === sessionId) return true
+  }
+  return false
+}
+
+function useHomeGuideNativeResident(sessionId, subagentPanel = false) {
+  const snapshot = react.useCallback(() => homeGuideNativeResidentSession(sessionId, subagentPanel), [sessionId, subagentPanel])
+  const subscribe = react.useCallback(listener => {
+    const observer = new window.MutationObserver(listener)
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-home-guide-active', 'data-home-guide-resident', 'data-home-guide-transition', 'data-home-guide-transition-session', 'data-ework-notes-session'] })
+    return () => observer.disconnect()
+  }, [])
+  return react.useSyncExternalStore(subscribe, snapshot, () => false)
 }
 
 function NativeHomeGuidePortal({ sessionId, subagentPanel = false }) {
@@ -227,9 +254,22 @@ function replaceOne(source, anchor, next) {
   return source.replace(anchor, next)
 }
 
+function residentChanges() {
+  return [
+    ["const sidebarMode=research || activeView==='notes';", RESIDENT + "\nconst homeGuideResident=useHomeGuideNativeResident(sessionId,subagentPanel);\nconst sidebarMode=(research || activeView==='notes')&&!homeGuideResident;"],
+    ['if (sessionId === void 0) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tsetResearchActive(sessionId, false);\n\t\t\t\t};', 'if (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tif (!homeGuideNativeResidentSession(sessionId,subagentPanel)) setResearchActive(sessionId, false);\n\t\t\t\t};'],
+    ['}, [research, sessionId, setResearchActive]);', '}, [research, homeGuideResident, sessionId, setResearchActive]);'],
+    ['if (sessionId === void 0) return;\n\t\t\t\tconst previous = researchStateRef.current;', 'if (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tconst previous = researchStateRef.current;'],
+    ['}, [resolvedActions, detailsSelection, sidebarMode, researchSidebar, sessionId]);', '}, [resolvedActions, detailsSelection, sidebarMode, homeGuideResident, researchSidebar, sessionId]);'],
+    ['"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",', '"data-odyssey-page": homeGuideResident ? "guide" : research ? "research" : hero ? "home" : "conversation",'],
+    ['function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {', 'function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {\n  const homeGuideResident=useHomeGuideNativeResident(sessionId)'],
+    ["return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?", "return homeGuideResident ? null : react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?"]
+  ]
+}
+
 /** Restore the native anchors before older source patches run again. */
 export function stripHomeGuideNative(source) {
-  const owned = [START, END, 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider']
+  const owned = [START, END, RESIDENT, 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident']
   if (!source.includes(START)) {
     if (owned.some(token => source.includes(token))) throw Error('Home guide native partial patch drifted')
     return source
@@ -245,6 +285,7 @@ export function stripHomeGuideNative(source) {
     'function NativeHomeGuidePortal(', 'function ConversationRoot(props)'
   ]) if (runtime.split(anchor).length !== 2) throw Error('Home guide native runtime anchor drifted: ' + anchor)
   source = source.slice(0, start) + source.slice(end + END.length + 1)
+  if (source.includes(RESIDENT)) for (const [native, patched] of residentChanges()) source = replaceOne(source, patched, native)
   source = replaceOne(source, 'function HomeGuideNativeOriginalConversationRoot({ subagentPanel=false,', 'function ConversationRoot({ subagentPanel=false,')
   const hook = 'const homeGuideProvider = react.useContext(HomeGuideNativeFinancialContext);'
   for (const signature of [
@@ -266,7 +307,7 @@ export function stripHomeGuideNative(source) {
 
 /** Add an isolated native React portal without replacing any conversation child. */
 export function patchHomeGuideNative(source) {
-  const definitions = START + '\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeSampleProvider, homeGuideNativeResource, NativeHomeGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
+  const definitions = START + '\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeSampleProvider, homeGuideNativeResource, homeGuideNativeResidentSession, useHomeGuideNativeResident, NativeHomeGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
   if (source.includes(START)) {
     const first = source.indexOf(START), end = source.indexOf(END, first)
     if (end < 0 || source.indexOf(START, first + START.length) >= 0 || !source.includes('function HomeGuideNativeOriginalConversationRoot(')) throw Error('Home guide native refresh anchor drifted')
@@ -292,5 +333,7 @@ export function patchHomeGuideNative(source) {
   if (!source.includes(place)) source = replaceOne(source, "'data-financial-place':widget,disabled:busy,", place)
   const exportPortal = 'exports.NativeHomeGuidePortal = NativeHomeGuidePortal;'
   if (!source.includes(exportPortal)) source = replaceOne(source, 'exports.ConversationRoot = ConversationRoot;', 'exports.ConversationRoot = ConversationRoot;\n\t\t' + exportPortal)
+  if (!source.includes(RESIDENT)) for (const [native, patched] of residentChanges()) source = replaceOne(source, native, patched)
+  else for (const [, patched] of residentChanges()) if (source.split(patched).length !== 2) throw Error('Home guide resident isolation anchor drifted')
   return source
 }

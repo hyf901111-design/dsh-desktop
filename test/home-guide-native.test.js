@@ -17,7 +17,8 @@ async function fixture({sessionId='owner',subagentPanel=false}={}){
  win.HTMLElement.prototype.getBoundingClientRect=function(){return{x:0,y:0,left:0,top:0,right:1100,bottom:720,width:1100,height:720,toJSON(){return{}}}}
  win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  let descriptor,liveCalls=0;win.dshDesktop={financialWidget:{request:()=>{liveCalls++;throw Error('must not use real provider')}},componentLibrary:{request:()=>{liveCalls++;throw Error('must not read real custom library')}}};win.__ModuleLoader__={load:d=>descriptor=d}
- runInNewContext(patchHomeGuideNative(source),{window:win,document:doc,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLInputElement:win.HTMLInputElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,crypto,setTimeout,clearTimeout,setInterval,clearInterval,console})
+ const patched=patchHomeGuideNative(source).replace('exports.NativeHomeGuidePortal = NativeHomeGuidePortal;','exports.NativeHomeGuidePortal = NativeHomeGuidePortal;exports.__guideResident=homeGuideNativeResidentSession;')
+ runInNewContext(patched,{window:win,document:doc,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLInputElement:win.HTMLInputElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,crypto,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),native=descriptor.factory(id=>['react','react/jsx-runtime','react-dom'].includes(id)?require(id):fake)
  const host=doc.createElement('div');doc.body.append(host);const root=createRoot(host)
  await React.act(async()=>root.render(React.createElement(native.NativeHomeGuidePortal,{sessionId,subagentPanel})))
@@ -33,6 +34,20 @@ it('patches installed native code idempotently and refreshes its own serialized 
  const old=patched.replace('function NativeHomeGuidePortal(', '/* previous runtime */\nfunction NativeHomeGuidePortal(')
  expect(patchHomeGuideNative(old)).toBe(patched)
  expect(()=>patchHomeGuideNative('function unrelated(){}')).toThrow(/anchor|锚点/i)
+})
+it('isolates only the matching live main run or an exact-session exit lease',async()=>{
+ const f=await fixture(),center=f.doc.querySelector('.pI_x6G_centerCol'),root=f.doc.querySelector('.wSkVaW_root'),guide=f.doc.querySelector('[data-home-guide]'),header=root.querySelector('[data-ework-notes-session]'),html=f.doc.documentElement
+ center.dataset.homeGuideActive='run-a';root.dataset.homeGuideResident='run-a';guide.dataset.kind='board'
+ expect(f.native.__guideResident('owner')).toBe(true)
+ expect(f.native.__guideResident('other')).toBe(false);expect(f.native.__guideResident('owner',true)).toBe(false)
+ guide.dataset.homeGuide='stale-run';expect(f.native.__guideResident('owner')).toBe(false)
+ guide.dataset.homeGuide='run-a';delete center.dataset.homeGuideActive;delete root.dataset.homeGuideResident
+ expect(f.native.__guideResident('owner')).toBe(false)
+ html.dataset.homeGuideTransition='exit-a';html.dataset.homeGuideTransitionSession='other'
+ expect(f.native.__guideResident('owner')).toBe(false)
+ html.dataset.homeGuideTransitionSession='owner';expect(f.native.__guideResident('owner')).toBe(true)
+ header.dataset.eworkNotesSession='other';expect(f.native.__guideResident('owner')).toBe(false)
+ delete html.dataset.homeGuideTransition;expect(f.native.__guideResident('other')).toBe(false)
 })
 it('rejects unknown commands and a host outside the matching center tutorial without mounting',async()=>{
  const f=await fixture()

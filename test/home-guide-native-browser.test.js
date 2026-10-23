@@ -1,9 +1,10 @@
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
+import { createRequire } from 'node:module'
 import { build } from 'esbuild'
+import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDeclaration } from 'typescript'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { patchNoteSessionRuntime } from '../scripts/lib/notes-session.mjs'
-import { patchNotesSidebar } from '../scripts/lib/notes-sidebar.mjs'
 import { stripHomeGuidePresentationNative } from '../scripts/lib/home-guide-presentation-native.mjs'
 import { patchComposerDeliverablePreview } from '../scripts/lib/figma-composer-deliverable-preview.mjs'
 
@@ -13,6 +14,8 @@ const evidence = '/tmp/home-guide-native-browser-20261024'
 const runId = 'guide-browser-run'
 const sessionId = 'guide-browser-session'
 const draft = '保留我的原生输入草稿\n第二行 🔎'
+// Serialize the production functions without Vitest's imported-binding rewrites.
+const {patchNotesSidebar}=createRequire(import.meta.url)('../scripts/lib/notes-sidebar.mjs')
 let browser, runtimeSource, conversationSource, entry, styles
 
 beforeAll(async () => {
@@ -24,11 +27,17 @@ beforeAll(async () => {
   const assets = 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
   const frontend = await Promise.all((await readdir(assets)).filter(name => /^index-.*\.css$/.test(name)).map(name => readFile(`${assets}/${name}`, 'utf8')))
   const bundles = await Promise.all(['layout', 'conversation', 'agent-preset'].map(name => readFile(`node_modules/@deepseek-ai/dsh-client-ui-${name}/lib/client.js`, 'utf8')))
+  const layoutSyntax = createSourceFile('layout.js', bundles[0], ScriptTarget.Latest, false, ScriptKind.JS), layoutFunctions = new Map()
+  const visit = node => { if (isFunctionDeclaration(node) && node.name) layoutFunctions.set(node.name.text, node.getText(layoutSyntax)); forEachChild(node, visit) }; visit(layoutSyntax)
+  const frame = ['clampWidth','computeColumns','CenterColumn','DetailsColumn','DragHandle','SidebarDragHandle','AppFrame','createLayoutStore'].map(name=>layoutFunctions.get(name)).join('\n')
   styles = [...frontend, ...bundles.flatMap(source => [...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match => JSON.parse(match[1]))),
     ...conversationSource.matchAll(/tag\.textContent \+?= ("(?:[^"\\]|\\.)*");/g)].map(value => typeof value === 'string' ? value : JSON.parse(value[1])).join('\n')
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
       import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';
+      const react=React,react_jsx_runtime=jsx,react_dom=dom,COLLAPSED_SIDEBAR_WIDTH=80,SIDEBAR_AUTO_COLLAPSE=1024,_deepseek_ai_dsh_client_runtime_client={defineStore:spec=>spec};
+      const AppFrame_module_css_default={frame:'pI_x6G_frame',sidebarCol:'pI_x6G_sidebarCol',centerCol:'pI_x6G_centerCol',detailsCol:'pI_x6G_detailsCol',handle:'pI_x6G_handle',overlayLayer:'pI_x6G_overlayLayer'};
+      ${frame}
       let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
       const cordis=new Proxy({Service:class{constructor(ctx){this.ctx=ctx}}},{get:(target,key)=>target[key]??fake});
       const primitives=new Proxy({Tooltip:({children})=>children,MarkdownText:({text})=><p>{text}</p>},{get:(target,key)=>target[key]??(()=>null)});
@@ -41,15 +50,29 @@ beforeAll(async () => {
       const view=store({view:'chat',selection:null}),summary=store({byId:{'${sessionId}':{id:'${sessionId}',displayTitle:'教程浏览器验收',blank:true,cwd:'/tmp/guide-browser'}}}),memory=new Map(),storage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>{memory.set(key,value);return true}},registry=new native.ResearchWorkspaceRegistry(storage);
       const shell=new native.SessionInputShell({actx:{},defaultSink:()=>{window.guideProbe.providerCalls++;throw Error('Tutorial must not send a prompt')}});shell.setDraft(${JSON.stringify(draft)});
       const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),sessionStore={subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()},useSession=use(sessionStore),useInput=use(shell.state),useStore=use(view),useSessions=use(summary);
-      const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'},{id:'research',label:'研究'}]},actions={setView:value=>view.update({view:value}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
-      const sidebarState={composerHost:document.querySelector('#side-composer'),conversationHost:document.querySelector('#side-history')},sidebarStore={subscribe:()=>()=>{},getSnapshot:()=>sidebarState},sidebar={storeFor:()=>sidebarStore,publish(){},enter(){},leave(){}};
+      const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'},{id:'research',label:'研究'},{id:'notes',label:'笔记'}]},actions={setView:value=>view.update({view:value}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
+      let frameRoot;
+      if(window.guideProbe.nativeLayout){
+        const nativeHost=document.getElementById('native-root'),guide=document.querySelector('[data-home-guide]'),oldFrame=document.querySelector('.pI_x6G_frame'),host=document.createElement('div');host.style.height='100%';oldFrame.remove();document.body.prepend(host);
+        const spec=createLayoutStore(),state=store(spec.init());window.guideProbe.layout=state;window.guideProbe.layoutChanges=[];
+        const layoutActions=Object.fromEntries(Object.entries(spec.actions).map(([name,fn])=>[name,(...args)=>{const next={...state.getSnapshot()};fn(next,...args);window.guideProbe.layoutChanges.push(name);state.update(next)}]));
+        const NativeFrame=()=>React.createElement(AppFrame,{actions:layoutActions,useStore:select=>select(React.useSyncExternalStore(state.subscribe,state.getSnapshot,state.getSnapshot)),useSessions:select=>select({byId:{}}),renderSlot:name=>name==='sidebar'?React.createElement('aside',{'data-real-layout-sidebar':''},'原生侧栏'):name==='conversation'?React.createElement('div',{style:{display:'contents'},ref:node=>{if(node&&!node.contains(nativeHost))node.append(nativeHost,guide)}}):null});
+        frameRoot=createRoot(host);dom.flushSync(()=>frameRoot.render(React.createElement(NativeFrame)));
+      }
+      const sidebarState={composerHost:document.querySelector('#side-composer'),conversationHost:document.querySelector('#side-history')},sidebarStore={subscribe:()=>()=>{},getSnapshot:()=>sidebarState};
+      let sidebar={storeFor:()=>sidebarStore,publish(){},enter(){},leave(){}};
+      if(window.guideProbe.nativeLayout){
+        sidebar=new native.ResearchSidebarCoordinator();sidebar.setComposerHost('${sessionId}',sidebarState.composerHost);sidebar.setConversationHost('${sessionId}',sidebarState.conversationHost);
+        const panel={panelOpen:false,width:384,activePane:'main',splits:{kind:'leaf',id:'main',tabs:[],active:null}};window.guideProbe.rightPanel=panel;window.guideProbe.rightChanges=[];
+        sidebar.service={getSnapshot:()=>({sessionId:'${sessionId}',state:panel}),openTab:tab=>{if(!panel.splits.tabs.some(t=>t.id===tab.id))panel.splits.tabs.push(tab);panel.splits.active=tab.id},closeTab:id=>{panel.splits.tabs=panel.splits.tabs.filter(t=>t.id!==id)},activateTab:id=>{panel.splits.active=id},updateTab(){},setPanelState:patch=>{window.guideProbe.rightChanges.push(patch);if(typeof patch.open==='boolean')panel.panelOpen=patch.open;if(patch.width!==undefined)panel.width=patch.width}};
+      }
       const t=key=>({'hero.headline':'探索更远，洞见更深。','hero.chooseWorkspace':'选择工作区'})[key]||key;
       const shared={sessionId:'${sessionId}',useSession,useSessions,useStore,actions,views,t};
       const inputProps={useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:(_name,select)=>select?.(undefined),sessionId:'${sessionId}',t};
-      const renderSlot=(name,props={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<main data-native-history="">已有会话内容</main>:null;
-      const root=createRoot(document.querySelector('#native-root'));
-      function App(){const [current,setCurrent]=React.useState({sessionId:'${sessionId}',subagentPanel:false});window.guideProbe.setContext=setCurrent;return <native.ConversationRoot {...shared} {...current} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{window.guideProbe.workspaceCalls++;throw Error('Tutorial must not open a workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'教程浏览器验收',sessionIds:['${sessionId}']}]})} researchWorkspaces={registry} researchSidebar={sidebar}/>}
-      Object.assign(window.guideProbe,{native,shell,registry,memory,view,session,dispose(){root.unmount();disposers.reverse().forEach(stop=>stop())}});root.render(<App/>);
+      const renderSlot=(name,props={},scope={})=>name==='conversation.view'&&scope.only==='research'?<native.ResearchCanvas sessionId='${sessionId}' t={t} researchWorkspaces={registry} {...props}/>:name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<main data-native-history="">已有会话内容</main>:null;
+      const root=createRoot(document.querySelector('#native-root'));window.guideProbe.researchActivations=[];const setResearchActive=(id,active)=>window.guideProbe.researchActivations.push({id,active});
+      function App(){const [current,setCurrent]=React.useState({sessionId:'${sessionId}',subagentPanel:false});window.guideProbe.setContext=setCurrent;return <native.ConversationRoot {...shared} {...current} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{window.guideProbe.workspaceCalls++;throw Error('Tutorial must not open a workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'教程浏览器验收',sessionIds:['${sessionId}']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={setResearchActive}/>}
+      Object.assign(window.guideProbe,{native,shell,registry,memory,view,session,sidebar,dispose(){root.unmount();frameRoot?.unmount();disposers.reverse().forEach(stop=>stop())}});root.render(<App/>);
     ` },
     bundle: true, platform: 'browser', format: 'iife', write: false, define: { 'process.env.NODE_ENV': '"production"' }
   })
@@ -60,7 +83,7 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture() {
+async function fixture({nativeLayout=false,width=1460}={}) {
   const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion: 'reduce' }), errors = [], external = []
   page.on('pageerror', error => errors.push(error.message))
   await page.route('**/*', route => {
@@ -68,7 +91,9 @@ async function fixture() {
     if (url.origin !== 'https://guide.local') { external.push(route.request().url()); return route.abort() }
     return route.fulfill({ contentType: url.pathname === '/' ? 'text/html' : 'application/json', body: url.pathname === '/' ? `<!doctype html><meta charset="utf-8"><title>Native homepage guide fixture</title><style>${styles}\nhtml,body{height:100%;margin:0}#native-root{height:100%;min-height:0}.pI_x6G_frame{display:grid;grid-template-columns:88px minmax(0,1fr);height:100vh}.pI_x6G_centerCol{position:relative;min-width:0;min-height:0}#guide-host{position:absolute;inset:70px 18px 70px;z-index:10}[data-home-guide="${runId}"]{position:absolute;inset:0;pointer-events:none}[data-home-guide="${runId}"]>#guide-host{pointer-events:auto}#outside-host{position:fixed;left:0;top:0}</style><div class="pI_x6G_frame"><aside></aside><main class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="${runId}"><div id="guide-host"></div></section></main></div><div id="outside-host"></div><div id="side-composer"></div><div id="side-history"></div><script>window.__ModuleLoader__={load:value=>window.descriptor=value};window.guideProbe={providerCalls:0,workspaceCalls:0,financialCalls:0,libraryCalls:0};window.dshDesktop={financialWidget:{request:async()=>{window.guideProbe.financialCalls++;throw Error('Global financial bridge must not be called')}},componentLibrary:{request:async()=>{window.guideProbe.libraryCalls++;throw Error('Global library bridge must not be called')}}};</script>` : '{"tasks":[],"plans":[]}' })
   })
+  await page.setViewportSize({width,height:960})
   await page.goto('https://guide.local/')
+  await page.evaluate(value=>{window.guideProbe.nativeLayout=value},nativeLayout)
   await page.addScriptTag({ content: runtimeSource }); await page.evaluate(() => window.runtimeDescriptor = window.descriptor)
   await page.addScriptTag({ content: conversationSource }); await page.evaluate(() => window.conversationDescriptor = window.descriptor)
   await page.addScriptTag({ content: entry })
@@ -198,3 +223,77 @@ it('does not accept homepage tutorial requests from a subagent panel', async () 
     expect(errors).toEqual([])
   } finally { await page.close() }
 }, 10000)
+
+it.each([['board','research'],['note','notes'],['ppt','chat']])('preserves native layout and resident identity during a %s guide, then restores native behavior',async(kind,view)=>{
+ const {page,errors}=await fixture({nativeLayout:true,width:1240})
+ try{
+  const initial=await page.evaluate(()=>({left:document.querySelector('.pI_x6G_centerCol').getBoundingClientRect().left,sidebar:window.guideProbe.layout.getSnapshot().sidebar,panel:{...window.guideProbe.rightPanel}}))
+  await page.evaluate(({kind,view,runId})=>{
+   const center=document.querySelector('.pI_x6G_centerCol'),root=document.querySelector('.wSkVaW_root'),guide=document.querySelector('[data-home-guide]')
+   center.dataset.homeGuideActive=runId;root.dataset.homeGuideResident=runId;guide.dataset.kind=kind
+   window.guideProbe.view.update({view})
+  },{kind,view,runId})
+  await page.waitForTimeout(100)
+  expect(errors).toEqual([])
+  const active=await page.evaluate(()=>({left:document.querySelector('.pI_x6G_centerCol').getBoundingClientRect().left,sidebar:window.guideProbe.layout.getSnapshot().sidebar,panelOpen:window.guideProbe.rightPanel.panelOpen,rightWrites:window.guideProbe.rightChanges,page:document.querySelector('.wSkVaW_root').dataset.odysseyPage}))
+  expect(active.panelOpen,'guide navigation must not open the resident conversation panel').toBe(false)
+  expect(active.rightWrites).toEqual([])
+  expect(active.sidebar,'the real AppFrame must not automatically collapse the left sidebar').toBe(initial.sidebar)
+  expect(active.left).toBe(initial.left)
+  expect(active.page).toBe('guide')
+  expect(await page.locator('[data-srb-tabs] [data-conversation-view-id="'+view+'"]').getAttribute('aria-selected')).toBe('true')
+  expect(await page.evaluate(()=>window.guideProbe.researchActivations.filter(item=>item.active))).toEqual([])
+  if(kind==='board'){
+   await succeeds(page,'mount-board')
+   const owners=await page.locator('[data-ework-toolbar]').evaluateAll(nodes=>nodes.map(node=>node.dataset.eworkToolbarOwner))
+   expect(owners).toEqual(['odyssey-home-guide:board'])
+   await page.setViewportSize({width:1460,height:960})
+   for(const step of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
+   await expect.poll(()=>canvas(page).evaluate(el=>Boolean(el.__eworkContentFit))).toBe(false)
+   const overview=await page.locator('#guide-host [data-research-node-id]').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()))
+   const viewport=await canvas(page).boundingBox()
+   expect(overview).toHaveLength(3)
+   expect(Math.max(...overview.map(box=>box.bottom))).toBeLessThanOrEqual(viewport.y+viewport.height-12)
+   expect(await page.evaluate(()=>window.guideProbe.rightChanges)).toEqual([])
+   await page.screenshot({path:`${evidence}/native-layout-board.png`})
+   await writeFile(`${evidence}/native-layout-board.json`,JSON.stringify({overview,viewport,owners,initial,active},null,2))
+   await succeeds(page,'dispose')
+   await page.setViewportSize({width:1240,height:960})
+  }
+  await preserved(page)
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuideTransition='exit-lease';document.documentElement.dataset.homeGuideTransitionSession='guide-browser-session';delete document.querySelector('.pI_x6G_centerCol').dataset.homeGuideActive;delete document.querySelector('.wSkVaW_root').dataset.homeGuideResident})
+  await page.waitForTimeout(100)
+  expect(await page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('guide')
+  expect(await page.evaluate(()=>window.guideProbe.rightChanges)).toEqual([])
+  expect(await page.evaluate(()=>window.guideProbe.layout.getSnapshot().sidebar)).toBe(initial.sidebar)
+  await page.evaluate(()=>{window.guideProbe.view.update({view:'chat'});delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession})
+  await page.waitForTimeout(60)
+  expect(await page.evaluate(()=>window.guideProbe.layout.getSnapshot().sidebar)).toBe(initial.sidebar)
+  expect(await page.evaluate(()=>window.guideProbe.rightPanel.panelOpen)).toBe(false)
+  await page.evaluate(()=>window.guideProbe.view.update({view:'research'}))
+  await expect.poll(()=>page.evaluate(()=>window.guideProbe.rightPanel.panelOpen)).toBe(true)
+  await expect.poll(()=>page.evaluate(()=>window.guideProbe.layout.getSnapshot().sidebar)).toBe(0)
+  await expect.poll(()=>page.locator(`[data-ework-toolbar][data-ework-toolbar-owner="${sessionId}"]`).count()).toBe(1)
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
+
+it('keeps an already open user research panel, width and active file intact across a guide',async()=>{
+ const {page,errors}=await fixture({nativeLayout:true})
+ try{
+  await page.evaluate(()=>window.guideProbe.view.update({view:'research'}))
+  await expect.poll(()=>page.evaluate(()=>window.guideProbe.rightPanel.panelOpen)).toBe(true)
+  await page.evaluate(()=>{
+   const probe=window.guideProbe;probe.sidebar.service.setPanelState({open:true,width:420});probe.sidebar.service.openTab({id:'user-file',type:'file'});probe.rightChanges.length=0;probe.researchActivations.length=0
+   const center=document.querySelector('.pI_x6G_centerCol'),root=document.querySelector('.wSkVaW_root'),guide=document.querySelector('[data-home-guide]')
+   center.dataset.homeGuideActive=guide.dataset.homeGuide;root.dataset.homeGuideResident=guide.dataset.homeGuide;guide.dataset.kind='board'
+  })
+  await expect.poll(()=>page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('guide')
+  const during=await page.evaluate(()=>({writes:window.guideProbe.rightChanges,activation:window.guideProbe.researchActivations,panel:window.guideProbe.rightPanel.panelOpen,width:window.guideProbe.rightPanel.width,tab:window.guideProbe.rightPanel.splits.active}))
+  expect(during).toEqual({writes:[],activation:[],panel:true,width:420,tab:'user-file'})
+  await page.evaluate(()=>{delete document.querySelector('.pI_x6G_centerCol').dataset.homeGuideActive;delete document.querySelector('.wSkVaW_root').dataset.homeGuideResident})
+  await expect.poll(()=>page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('research')
+  expect(await page.evaluate(()=>({writes:window.guideProbe.rightChanges,panel:window.guideProbe.rightPanel.panelOpen,width:window.guideProbe.rightPanel.width,tab:window.guideProbe.rightPanel.splits.active}))).toEqual({writes:[],panel:true,width:420,tab:'user-file'})
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
