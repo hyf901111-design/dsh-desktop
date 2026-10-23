@@ -59,10 +59,12 @@ export function mountHomeOperations(doc: Document = document): () => void {
   let frame = 0, motionFrame = 0, lastMotionTime = 0
   let progress = 0, renderedHeroOffset = 0, motion: Motion = 'idle', intent: Section = 'input'
   let targetProgress = 0, velocity = 0
+  let wheelTime = 0, wheelDirection = 0, wheelDistance = 0, wheelConsumed = false, wheelNavigated = false
   let geometry = { inputTop: 0, targetTop: 0, shift: 1, scale: 1, viewportHeight: 0 }
   let renderedLocale = '', renderedTheme = ''
   const quickCards: HTMLButtonElement[] = [], pages: HTMLButtonElement[] = []
   const pointerFrames = new Map<HTMLElement, number>()
+  const illustrationTimers = new Map<HTMLElement, number>()
   const tiltStates = new Map<HTMLElement, { rx: number, ry: number, targetX: number, targetY: number, lastTime: number }>()
   const variables = ['--odyssey-operations-top', '--odyssey-operations-input-top', '--odyssey-operations-center-x', '--odyssey-operations-shift', '--odyssey-operations-scale', '--odyssey-operations-viewport-height', '--odyssey-operations-toggle-top', '--odyssey-operations-available-height', '--odyssey-operations-edge-start', '--odyssey-operations-duration', '--odyssey-operations-progress-value', '--odyssey-operations-scroll-progress', '--odyssey-operations-offset', '--odyssey-operations-hero-offset', '--odyssey-operations-hero-opacity', '--odyssey-operations-opacity']
   const locale = () => doc.documentElement.dataset.odysseyLocale === 'en' ? 'en' : 'zh'
@@ -79,7 +81,17 @@ export function mountHomeOperations(doc: Document = document): () => void {
     return true
   }
   const settingsShown = () => [...doc.querySelectorAll('.VOzbGW_overlay,[data-sherlock-settings-panel]')].some(shown)
+  const popupShown = () => [...doc.querySelectorAll('[role="menu"],[role="listbox"],[role="dialog"],[aria-modal="true"]')].some(shown)
   const own = (node: Node): boolean => node === section || node === toggle || !!section?.contains(node) || !!toggle?.contains(node)
+  const clearIllustrationBlend = (card: HTMLElement) => {
+    const pending = illustrationTimers.get(card)
+    if (pending) win.clearTimeout(pending)
+    illustrationTimers.delete(card)
+    delete card.dataset.odysseyOperationsIllustrationBlending
+  }
+  const clearIllustrationBlends = () => {
+    for (const card of illustrationTimers.keys()) clearIllustrationBlend(card)
+  }
   const clearPointers = () => {
     for (const pending of pointerFrames.values()) win.cancelAnimationFrame(pending)
     for (const card of [...quickCards, ...(usecase ? [usecase] : [])]) {
@@ -88,6 +100,10 @@ export function mountHomeOperations(doc: Document = document): () => void {
     }
     pointerFrames.clear()
     tiltStates.clear()
+  }
+  const resetWheel = () => {
+    wheelTime = wheelDirection = wheelDistance = 0
+    wheelConsumed = wheelNavigated = false
   }
   const restoreHero = () => {
     if (!hero) return
@@ -155,7 +171,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
       if (state !== endpoint || host.dataset.odysseyHomeOperationsState !== endpoint) {
         state = endpoint; host.dataset.odysseyHomeOperationsState = endpoint; updateLabels()
       }
-      if (collapsed) section.scrollTop = 0
+      if (collapsed) { section.scrollTop = 0; clearIllustrationBlends() }
     }
     host.dataset.odysseyHomeOperationsMotion = motion
     const heroProgress = smootherStep(progress / .86)
@@ -214,14 +230,14 @@ export function mountHomeOperations(doc: Document = document): () => void {
     const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom - bounds.top) : 44
     const dock = host.querySelector<HTMLElement>('[data-odyssey-theme-dock]')
     const toggleHeight = toggle ? Number.parseFloat(win.getComputedStyle(toggle).height) || 32 : 32
-    let toggleTop = bounds.height - 72
+    let toggleTop = bounds.height - 104
     if (dock) {
       const dockStyle = win.getComputedStyle(dock)
       // Use the expanded envelope even while the dock is collapsed or moving.
       const expandedBottom = Number.parseFloat(dockStyle.getPropertyValue('--theme-dock-bottom'))
       const dockScale = Number.parseFloat(dockStyle.getPropertyValue('--theme-dock-scale'))
       const dockHeight = Number.parseFloat(dockStyle.height) || dock.offsetHeight || 64
-      toggleTop = bounds.height - (Number.isFinite(expandedBottom) ? expandedBottom : 24) - dockHeight * (Number.isFinite(dockScale) ? dockScale : 1) - 12 - toggleHeight
+      toggleTop = bounds.height - (Number.isFinite(expandedBottom) ? expandedBottom : 24) - dockHeight * (Number.isFinite(dockScale) ? dockScale : 1) - 44 - toggleHeight
     }
     const effectiveWidth = Math.min(composer.width, Math.max(1, bounds.width - 48))
     const stacked = effectiveWidth < 620
@@ -266,6 +282,40 @@ export function mountHomeOperations(doc: Document = document): () => void {
     return true
   }
   const toggleSection = () => setSection((motion === 'idle' ? state : intent) === 'input' ? 'operations' : 'input')
+  const preserveNativeWheel = (target: EventTarget | null) => {
+    if (!(target instanceof win.Element) || !host?.contains(target)) return true
+    if (target.closest('textarea,input,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"],[role="listbox"],[role="dialog"],[data-odyssey-theme-dock]')) return true
+    const control = target.closest('button,a,[role="button"],[role="slider"],[role="combobox"]')
+    if (control && !own(control)) return true
+    // The stacked collection owns its complete scroll gesture, including edges.
+    if (host.dataset.odysseyHomeOperationsLayout === 'stacked' && section?.contains(target)) return true
+    for (let node: Element | null = target; node && node !== host; node = node.parentElement) {
+      const element = node as HTMLElement
+      if (element.scrollHeight > element.clientHeight + 1 && /auto|scroll/.test(win.getComputedStyle(element).overflowY)) return true
+    }
+    return false
+  }
+  const onWheel = (event: WheelEvent) => {
+    if (!visible || event.defaultPrevented || event.ctrlKey || event.metaKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY) || preserveNativeWheel(event.target) || popupShown()) return
+    const now = win.performance.now()
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host?.clientHeight || 600 : 1)
+    const direction = Math.sign(delta)
+    if (now - wheelTime > 350 || direction !== wheelDirection) {
+      wheelDistance = 0; wheelConsumed = wheelNavigated = false
+    }
+    wheelTime = now; wheelDirection = direction
+    if (wheelConsumed) {
+      if (wheelNavigated) event.preventDefault()
+      return
+    }
+    wheelDistance += Math.abs(delta)
+    if (wheelDistance < 34) return
+    wheelConsumed = true
+    const next = direction > 0 ? 'operations' : 'input'
+    if (next === (motion === 'idle' ? state : intent)) return
+    event.preventDefault()
+    wheelNavigated = setSection(next)
+  }
   const imagePair = (parent: HTMLElement) => {
     for (const name of ['normal', 'colored']) {
       const image = doc.createElement('img')
@@ -314,8 +364,8 @@ export function mountHomeOperations(doc: Document = document): () => void {
         const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width))
         const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
         const tilt = tiltStates.get(card) || { rx: 0, ry: 0, targetX: 0, targetY: 0, lastTime: 0 }
-        tilt.targetX = (.5 - y) * 6
-        tilt.targetY = (x - .5) * 6
+        tilt.targetX = (.5 - y) * 10
+        tilt.targetY = (x - .5) * 10
         tiltStates.set(card, tilt)
         card.dataset.odysseyOperationsTilting = ''
         animate()
@@ -328,6 +378,37 @@ export function mountHomeOperations(doc: Document = document): () => void {
       }
       anchor.addEventListener('pointerleave', leave)
       anchor.addEventListener('pointercancel', leave)
+      anchor.addEventListener('pointerdown', event => {
+        if (event.pointerType !== 'touch') return
+        const pending = pointerFrames.get(card)
+        if (pending) win.cancelAnimationFrame(pending)
+        pointerFrames.delete(card); tiltStates.delete(card)
+        card.style.removeProperty('--rx'); card.style.removeProperty('--ry')
+        delete card.dataset.odysseyOperationsTilting
+        clearIllustrationBlend(card)
+      })
+    }
+    const bindIllustrationBlend = (anchor: HTMLElement, card: HTMLButtonElement) => {
+      const blend = () => {
+        if (!visible || section?.hidden || reduced.matches) { clearIllustrationBlend(card); return }
+        clearIllustrationBlend(card)
+        card.dataset.odysseyOperationsIllustrationBlending = ''
+        // CSS owns both opacities, so a reversal continues from their current mix.
+        illustrationTimers.set(card, win.setTimeout(() => clearIllustrationBlend(card), 320))
+      }
+      const onPointer = (event: PointerEvent) => {
+        if (event.pointerType === 'touch') clearIllustrationBlend(card)
+        else blend()
+      }
+      anchor.addEventListener('pointerenter', onPointer)
+      anchor.addEventListener('pointerleave', onPointer)
+      anchor.addEventListener('pointercancel', () => clearIllustrationBlend(card))
+      let keyboardFocused = false
+      card.addEventListener('focusin', () => { keyboardFocused = card.matches(':focus-visible'); if (keyboardFocused) blend() })
+      card.addEventListener('focusout', () => { if (keyboardFocused) { keyboardFocused = false; blend() } })
+      card.addEventListener('transitionend', event => {
+        if (event.propertyName === 'opacity' && event.target instanceof win.HTMLImageElement && event.target.closest('.odyssey-operations-illustration')) clearIllustrationBlend(card)
+      })
     }
     section = doc.createElement('section'); section.className = 'odyssey-home-operations'; section.dataset.odysseyHomeOperations = ''
     section.hidden = true; section.inert = true
@@ -373,7 +454,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
       for (const level of ['near', 'middle', 'far']) { const pass = doc.createElement('div'); pass.className = `odyssey-operations-illustration-pass ${level}`; imagePair(pass); illustration.append(pass) }
       card.append(label, illustration)
       const anchor = doc.createElement('div'); anchor.className = 'odyssey-operations-tilt-anchor odyssey-operations-quick-anchor'
-      anchor.append(card); bindTilt(anchor, card)
+      anchor.append(card); bindTilt(anchor, card); bindIllustrationBlend(anchor, card)
       quickCards.push(card); quickGrid.append(anchor)
     }
     grid.append(usecaseAnchor, quickGrid); section.append(heading, grid)
@@ -388,7 +469,9 @@ export function mountHomeOperations(doc: Document = document): () => void {
     cancelSettlement()
     carousel?.dispose(); carousel = null
     caseTransition?.dispose(); caseTransition = null
-    clearPointers(); resize.disconnect(); restoreHero()
+    clearPointers(); clearIllustrationBlends(); resize.disconnect(); restoreHero()
+    host?.removeEventListener('wheel', onWheel)
+    resetWheel()
     if (host) { delete host.dataset.odysseyHomeOperationsState; delete host.dataset.odysseyHomeOperationsLayout; delete host.dataset.odysseyHomeOperationsMotion; for (const name of variables) host.style.removeProperty(name) }
     section?.remove(); toggle?.remove()
     section = toggle = null; root = hero = host = null
@@ -402,6 +485,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
     detach(); host = nextHost; root = nextRoot; hero = nextHero; heroWasInert = hero.inert
     hero.dataset.odysseyOperationsComposer = ''
     createSection(); host.append(section!, toggle!)
+    host.addEventListener('wheel', onWheel, { passive: false })
     resize.observe(host); resize.observe(hero)
     const header = root.querySelector('.wSkVaW_header,[data-srb-session-header]')
     if (header) resize.observe(header)
@@ -439,11 +523,12 @@ export function mountHomeOperations(doc: Document = document): () => void {
   const onVisibility = () => {
     if (!doc.hidden) { sync(); return }
     cancelSettlement()
-    clearPointers(); intent = state; motion = 'idle'; velocity = 0
+    resetWheel()
+    clearPointers(); clearIllustrationBlends(); intent = state; motion = 'idle'; velocity = 0
     progress = targetProgress = state === 'operations' ? 1 : 0
     paint()
   }
-  const onReduced = () => { clearPointers(); if (reduced.matches && motion !== 'idle') setSection(intent, true); else measure() }
+  const onReduced = () => { clearPointers(); clearIllustrationBlends(); if (reduced.matches && motion !== 'idle') setSection(intent, true); else measure() }
   doc.addEventListener('visibilitychange', onVisibility)
   doc.addEventListener('sherlock:workspace-surface-change', scheduleSync)
   reduced.addEventListener('change', onReduced)
