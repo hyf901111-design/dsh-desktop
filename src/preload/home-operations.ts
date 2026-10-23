@@ -2,6 +2,7 @@ import styles from './home-operations.css?raw'
 import { OPERATIONS_CASE_GLOWS, OPERATIONS_ILLUSTRATIONS, OPERATIONS_TREND_UP } from './home-operations-assets'
 
 type Section = 'input' | 'operations'
+type Motion = 'idle' | 'tracking' | 'settling'
 type Card = 'board' | 'note' | 'ppt' | 'report'
 const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
@@ -46,11 +47,15 @@ export function mountHomeOperations(doc: Document = document): () => void {
   let section: HTMLElement | null = null, toggle: HTMLButtonElement | null = null, returnHit: HTMLButtonElement | null = null
   let heading: HTMLElement | null = null, caseTitle: HTMLElement | null = null, caseSubtitle: HTMLElement | null = null, caseDescription: HTMLElement | null = null
   let usecase: HTMLElement | null = null
-  let frame = 0, lockUntil = 0, wheelSum = 0, lastWheel = 0, lastDirection = 0
+  let frame = 0, paintFrame = 0, settleFrame = 0, settleTimer = 0
+  let progress = 0, renderedHeroOffset = 0, motion: Motion = 'idle', intent: Section = 'input'
+  let lastWheel = 0, velocity = 0
+  let geometry = { inputTop: 0, targetTop: 0, shift: 1, scale: 1, viewportHeight: 0 }
   let renderedLocale = '', renderedTheme = ''
   const quickCards: HTMLButtonElement[] = [], pages: HTMLButtonElement[] = []
-  const pointerFrames = new Map<HTMLButtonElement, number>()
-  const variables = ['--odyssey-operations-top', '--odyssey-operations-input-top', '--odyssey-operations-shift', '--odyssey-operations-scale', '--odyssey-operations-viewport-height', '--odyssey-operations-toggle-top', '--odyssey-operations-return-left', '--odyssey-operations-return-top', '--odyssey-operations-return-width', '--odyssey-operations-return-height', '--odyssey-operations-available-height', '--odyssey-operations-edge-start', '--odyssey-operations-duration']
+  const pointerFrames = new Map<HTMLElement, number>()
+  const tiltStates = new Map<HTMLElement, { rx: number, ry: number, targetX: number, targetY: number, lastTime: number }>()
+  const variables = ['--odyssey-operations-top', '--odyssey-operations-input-top', '--odyssey-operations-shift', '--odyssey-operations-scale', '--odyssey-operations-viewport-height', '--odyssey-operations-toggle-top', '--odyssey-operations-return-left', '--odyssey-operations-return-top', '--odyssey-operations-return-width', '--odyssey-operations-return-height', '--odyssey-operations-available-height', '--odyssey-operations-edge-start', '--odyssey-operations-duration', '--odyssey-operations-progress-value', '--odyssey-operations-scroll-progress', '--odyssey-operations-offset', '--odyssey-operations-hero-offset', '--odyssey-operations-hero-opacity', '--odyssey-operations-hero-blur', '--odyssey-operations-opacity', '--odyssey-operations-blur']
   const locale = () => doc.documentElement.dataset.odysseyLocale === 'en' ? 'en' : 'zh'
   const copy = () => COPY[locale()]
   const css = (name: string, value: string) => {
@@ -68,13 +73,12 @@ export function mountHomeOperations(doc: Document = document): () => void {
   const popupShown = () => [...doc.querySelectorAll('[role="menu"],[role="listbox"],[role="dialog"],[aria-modal="true"]')].some(shown)
   const own = (node: Node): boolean => node === section || node === toggle || node === returnHit || !!section?.contains(node) || !!toggle?.contains(node) || !!returnHit?.contains(node)
   const clearPointers = () => {
-    for (const card of quickCards) {
-      const pending = pointerFrames.get(card)
-      if (pending) win.cancelAnimationFrame(pending)
+    for (const pending of pointerFrames.values()) win.cancelAnimationFrame(pending)
+    for (const card of [...quickCards, ...(usecase ? [usecase] : [])]) {
       card.style.removeProperty('--rx'); card.style.removeProperty('--ry')
-      card.style.removeProperty('--mx'); card.style.removeProperty('--my')
     }
     pointerFrames.clear()
+    tiltStates.clear()
   }
   const restoreHero = () => {
     if (!hero) return
@@ -108,7 +112,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
       button.querySelector('.odyssey-operations-quick-label')!.textContent = text.cards[index]!
       button.setAttribute('aria-label', text.cards[index]!)
     }
-    const label = state === 'input' ? text.down : text.up
+    const label = (motion === 'idle' ? state : intent) === 'input' ? text.down : text.up
     if (toggle) { toggle.setAttribute('aria-label', label); toggle.title = label }
     returnHit?.setAttribute('aria-label', text.back)
     updateCase()
@@ -123,73 +127,115 @@ export function mountHomeOperations(doc: Document = document): () => void {
     }
     updateGlow()
   }
+  const cancelSettlement = () => {
+    if (settleFrame) win.cancelAnimationFrame(settleFrame)
+    if (settleTimer) win.clearTimeout(settleTimer)
+    settleFrame = settleTimer = 0
+  }
+  const paint = () => {
+    if (!visible || !host || !hero || !section || !toggle || !returnHit) return
+    progress = Math.max(0, Math.min(1, progress))
+    const collapsed = progress <= .0001, expanded = progress >= .9999
+    if (collapsed || expanded) {
+      const endpoint = expanded ? 'operations' : 'input'
+      if (state !== endpoint || host.dataset.odysseyHomeOperationsState !== endpoint) {
+        state = endpoint; host.dataset.odysseyHomeOperationsState = endpoint; updateLabels()
+      }
+      if (collapsed) section.scrollTop = 0
+    }
+    host.dataset.odysseyHomeOperationsMotion = motion
+    const heroProgress = Math.min(1, progress / .72)
+    const cardsProgress = Math.max(0, Math.min(1, (progress - .2) / .8))
+    renderedHeroOffset = geometry.shift * heroProgress
+    css('--odyssey-operations-progress-value', String(progress))
+    css('--odyssey-operations-scroll-progress', String(cardsProgress))
+    css('--odyssey-operations-hero-offset', `${renderedHeroOffset}px`)
+    css('--odyssey-operations-offset', `${geometry.shift * cardsProgress}px`)
+    css('--odyssey-operations-hero-opacity', String(1 - .7 * heroProgress))
+    css('--odyssey-operations-hero-blur', `${3 * heroProgress}px`)
+    css('--odyssey-operations-opacity', String(.6 + .4 * cardsProgress))
+    css('--odyssey-operations-blur', `${.35 * (1 - cardsProgress)}px`)
+    section.setAttribute('aria-hidden', String(!expanded))
+    hero.inert = !collapsed || heroWasInert
+    toggle.setAttribute('aria-expanded', String(intent === 'operations'))
+    returnHit.hidden = !expanded; returnHit.tabIndex = expanded ? 0 : -1
+    for (const button of [...quickCards, ...pages]) button.tabIndex = expanded ? 0 : -1
+  }
+  const schedulePaint = () => {
+    if (paintFrame) return
+    paintFrame = win.requestAnimationFrame(() => { paintFrame = 0; paint() })
+  }
   const measure = () => {
     if (!visible || !host || !hero || !section) return
     const bounds = host.getBoundingClientRect(), composer = hero.getBoundingClientRect()
     if (bounds.width <= 0 || bounds.height <= 0 || composer.width <= 0) return
-    // The independent CSS translate may be partway through its transition.
-    // Subtract its current value to recover the unchanged native layout box.
-    const translated = win.getComputedStyle(hero).translate.trim().split(/\s+/)
-    const translateY = translated.length > 1 ? Number.parseFloat(translated[1]!) || 0 : 0
     const header = root?.querySelector<HTMLElement>('.wSkVaW_header,[data-srb-session-header]')
     const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom - bounds.top) : 44
     const dock = host.querySelector<HTMLElement>('[data-odyssey-theme-dock]')
-    let bottomReserve = 84
+    const toggleHeight = toggle ? Number.parseFloat(win.getComputedStyle(toggle).height) || 32 : 32
+    let toggleTop = bounds.height - 72
     if (dock) {
       const dockStyle = win.getComputedStyle(dock)
-      // The dock's animated bottom becomes negative when collapsed. Reserve
-      // its expanded envelope so it can reappear without covering the arrow.
+      // Use the expanded envelope even while the dock is collapsed or moving.
       const expandedBottom = Number.parseFloat(dockStyle.getPropertyValue('--theme-dock-bottom'))
       const dockScale = Number.parseFloat(dockStyle.getPropertyValue('--theme-dock-scale'))
       const dockHeight = Number.parseFloat(dockStyle.height) || dock.offsetHeight || 64
-      const toggleHeight = toggle ? Number.parseFloat(win.getComputedStyle(toggle).height) || 32 : 32
-      bottomReserve = (Number.isFinite(expandedBottom) ? expandedBottom : 24) + dockHeight * (Number.isFinite(dockScale) ? dockScale : 1) + 24 + toggleHeight + 12
+      toggleTop = bounds.height - (Number.isFinite(expandedBottom) ? expandedBottom : 24) - dockHeight * (Number.isFinite(dockScale) ? dockScale : 1) - 12 - toggleHeight
     }
     const effectiveWidth = Math.min(composer.width, Math.max(1, bounds.width - 48))
     const stacked = effectiveWidth < 620
     host.dataset.odysseyHomeOperationsLayout = stacked ? 'stacked' : 'wide'
-    const widthScale = Math.min(1, effectiveWidth / DESIGN_WIDTH)
-    const heightScale = Math.max(.22, (bounds.height - headerBottom - bottomReserve) / (DESIGN_HEIGHT + 140))
-    const scale = stacked ? 1 : Math.max(.2, Math.min(widthScale, heightScale))
-    const inputTop = composer.bottom - bounds.top - translateY + 28
-    const minimumTop = Math.max(64, headerBottom + 20)
-    const targetTop = stacked ? headerBottom + 72 : Math.max(minimumTop, Math.min(headerBottom + 140 * scale, bounds.height - DESIGN_HEIGHT * scale - bottomReserve))
-    const viewportHeight = stacked ? Math.max(96, bounds.height - targetTop - bottomReserve) : DESIGN_HEIGHT * scale
-    const shift = Math.max(0, inputTop - targetTop)
-    css('--odyssey-operations-top', `${state === 'input' ? inputTop : targetTop}px`)
+    const minimumTop = Math.max(64, headerBottom + 24), bottomLimit = toggleTop - 24
+    const heightScale = Math.max(.22, (bottomLimit - minimumTop) / DESIGN_HEIGHT)
+    const scale = stacked ? 1 : Math.max(.2, Math.min(1, effectiveWidth / DESIGN_WIDTH, heightScale))
+    const viewportHeight = stacked ? Math.min(664.294, Math.max(96, bottomLimit - headerBottom - 72)) : DESIGN_HEIGHT * scale
+    const centeredTop = (bounds.height - 345.344 * scale) / 2 - 36 * scale
+    const targetTop = Math.max(minimumTop, Math.min(centeredTop, bottomLimit - viewportHeight))
+    // Both surfaces use our last painted offset. Reading animated CSS values
+    // on wheel events would add forced layout and can restart an animation.
+    const inputTop = composer.bottom - bounds.top + renderedHeroOffset + 28
+    geometry = { inputTop, targetTop, shift: Math.max(1, inputTop - targetTop), scale, viewportHeight }
+    css('--odyssey-operations-top', `${inputTop}px`)
     css('--odyssey-operations-input-top', `${inputTop}px`)
-    css('--odyssey-operations-shift', `${shift}px`)
+    css('--odyssey-operations-shift', `${geometry.shift}px`)
     css('--odyssey-operations-scale', String(scale))
     css('--odyssey-operations-viewport-height', `${viewportHeight}px`)
-    css('--odyssey-operations-toggle-top', `${state === 'input' ? inputTop - 54 : targetTop + viewportHeight + 24}px`)
+    css('--odyssey-operations-toggle-top', `${toggleTop}px`)
     css('--odyssey-operations-return-left', `${composer.left - bounds.left}px`)
     css('--odyssey-operations-return-top', `${headerBottom + 8}px`)
     css('--odyssey-operations-return-width', `${composer.width}px`)
     css('--odyssey-operations-return-height', `${Math.max(0, targetTop - headerBottom - 24)}px`)
     css('--odyssey-operations-available-height', `${Math.max(0, bounds.height - headerBottom)}px`)
     css('--odyssey-operations-edge-start', `${Math.max(headerBottom, bounds.height - 140)}px`)
+    paint()
   }
   const setSection = (next: Section, force = false) => {
     if (!visible || !host || !hero || !section || !toggle || !returnHit) return false
-    const now = win.performance.now()
-    if (next === state && !force || !force && now < lockUntil) return false
-    state = next
-    const expanded = next === 'operations'
-    host.dataset.odysseyHomeOperationsState = next
-    css('--odyssey-operations-duration', expanded ? '620ms' : '480ms')
-    section.setAttribute('aria-hidden', String(!expanded))
-    if (!expanded) section.scrollTop = 0
-    toggle.setAttribute('aria-expanded', String(expanded))
-    returnHit.tabIndex = expanded ? 0 : -1
-    returnHit.hidden = !expanded
-    for (const button of [...quickCards, ...pages]) button.tabIndex = expanded ? 0 : -1
-    hero.inert = expanded || heroWasInert
+    cancelSettlement()
+    if (paintFrame) win.cancelAnimationFrame(paintFrame)
+    paintFrame = 0; intent = next; velocity = lastWheel = 0
     clearPointers()
-    updateLabels(); measure()
-    wheelSum = 0
-    lockUntil = force || reduced.matches ? now : now + (expanded ? 720 : 580)
+    const destination = next === 'operations' ? 1 : 0
+    if (force || reduced.matches || Math.abs(destination - progress) < .0001) {
+      progress = destination; motion = 'idle'; updateLabels(); measure()
+      return true
+    }
+    const start = progress, startedAt = win.performance.now()
+    const duration = Math.max(180, Math.min(300, Math.abs(destination - start) * 300))
+    motion = 'settling'; updateLabels(); paint()
+    const step = (now: number) => {
+      settleFrame = 0
+      if (disposed || !visible) return
+      const time = Math.max(0, Math.min(1, (now - startedAt) / duration))
+      progress = start + (destination - start) * (1 - (1 - time) ** 3)
+      if (time === 1) { progress = destination; motion = 'idle' }
+      paint()
+      if (time < 1) settleFrame = win.requestAnimationFrame(step)
+    }
+    settleFrame = win.requestAnimationFrame(step)
     return true
   }
+  const toggleSection = () => setSection((motion === 'idle' ? state : intent) === 'input' ? 'operations' : 'input')
   const avoidInput = (target: EventTarget | null) => {
     if (!(target instanceof win.Element)) return true
     if (target.closest('textarea,input,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"],[role="listbox"],[role="dialog"],[data-odyssey-theme-dock]')) return true
@@ -198,20 +244,32 @@ export function mountHomeOperations(doc: Document = document): () => void {
   }
   const onWheel = (event: WheelEvent) => {
     if (!visible || event.defaultPrevented || event.ctrlKey || event.metaKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY) || avoidInput(event.target) || popupShown()) return
-    if (state === 'operations' && host?.dataset.odysseyHomeOperationsLayout === 'stacked' && event.target instanceof win.Node && section?.contains(event.target)) {
+    if (progress >= .9999 && host?.dataset.odysseyHomeOperationsLayout === 'stacked' && event.target instanceof win.Node && section?.contains(event.target)) {
       const remaining = section.scrollHeight - section.clientHeight - section.scrollTop
       if (event.deltaY > 0 && remaining > .5 || event.deltaY < 0 && section.scrollTop > .5) {
-        wheelSum = 0; lastWheel = 0
+        cancelSettlement(); velocity = lastWheel = 0; intent = 'operations'; motion = 'idle'; paint()
         return
       }
     }
     event.preventDefault()
-    const now = win.performance.now(), direction = Math.sign(event.deltaY)
-    if (now - lastWheel > 180 || direction !== lastDirection) wheelSum = 0
-    lastWheel = now; lastDirection = direction
-    if (now < lockUntil) { wheelSum = 0; return }
-    wheelSum += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host?.clientHeight || 600 : 1)
-    if (Math.abs(wheelSum) >= 34) { setSection(direction > 0 ? 'operations' : 'input'); wheelSum = 0 }
+    cancelSettlement()
+    const now = win.performance.now()
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host?.clientHeight || 600 : 1)
+    const elapsed = lastWheel ? Math.max(8, Math.min(64, now - lastWheel)) : 16
+    const speed = Math.max(-2, Math.min(2, delta / elapsed))
+    velocity = !lastWheel || now - lastWheel > 180 ? speed : velocity * .45 + speed * .55
+    const previousIntent = intent
+    lastWheel = now; intent = delta > 0 ? 'operations' : 'input'
+    if (motion !== 'tracking') clearPointers()
+    motion = 'tracking'
+    progress = Math.max(0, Math.min(1, progress + delta / geometry.shift))
+    if (intent !== previousIntent) updateLabels()
+    schedulePaint()
+    settleTimer = win.setTimeout(() => {
+      settleTimer = 0
+      const projected = progress + velocity * 90 / geometry.shift
+      setSection(projected >= .5 ? 'operations' : 'input')
+    }, 110)
   }
   const onKey = (event: KeyboardEvent) => {
     if (!visible || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !['ArrowDown', 'ArrowUp'].includes(event.key) || avoidInput(event.target) || popupShown()) return
@@ -227,6 +285,59 @@ export function mountHomeOperations(doc: Document = document): () => void {
     }
   }
   const createSection = () => {
+    const bindTilt = (anchor: HTMLElement, card: HTMLElement) => {
+      const animate = () => {
+        if (pointerFrames.has(card)) return
+        const current = tiltStates.get(card)
+        if (current) current.lastTime = 0
+        const tick = (time: number) => {
+          const tilt = tiltStates.get(card)
+          if (!tilt || state !== 'operations' || !visible || reduced.matches) {
+            pointerFrames.delete(card)
+            return
+          }
+          const elapsed = Math.min(48, time - (tilt.lastTime || time - 16.667))
+          tilt.lastTime = time
+          const response = 1 - Math.exp(-elapsed / 72)
+          tilt.rx += (tilt.targetX - tilt.rx) * response
+          tilt.ry += (tilt.targetY - tilt.ry) * response
+          const settled = Math.max(Math.abs(tilt.targetX - tilt.rx), Math.abs(tilt.targetY - tilt.ry)) < .003
+          if (settled) { tilt.rx = tilt.targetX; tilt.ry = tilt.targetY }
+          card.style.setProperty('--rx', `${tilt.rx.toFixed(4)}deg`)
+          card.style.setProperty('--ry', `${tilt.ry.toFixed(4)}deg`)
+          if (settled) {
+            pointerFrames.delete(card)
+            if (!tilt.targetX && !tilt.targetY) {
+              card.style.removeProperty('--rx'); card.style.removeProperty('--ry')
+              tiltStates.delete(card)
+            }
+          } else pointerFrames.set(card, win.requestAnimationFrame(tick))
+        }
+        pointerFrames.set(card, win.requestAnimationFrame(tick))
+      }
+      anchor.addEventListener('pointermove', event => {
+        if (state !== 'operations' || !visible || reduced.matches || event.pointerType === 'touch') return
+        // The layout anchor never tilts, so a resting pointer cannot feed the
+        // card's animated bounds back into its next target angle.
+        const bounds = anchor.getBoundingClientRect()
+        if (!bounds.width || !bounds.height) return
+        const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width))
+        const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
+        const tilt = tiltStates.get(card) || { rx: 0, ry: 0, targetX: 0, targetY: 0, lastTime: 0 }
+        tilt.targetX = (.5 - y) * 3
+        tilt.targetY = (x - .5) * 3
+        tiltStates.set(card, tilt)
+        animate()
+      })
+      const leave = () => {
+        const tilt = tiltStates.get(card)
+        if (!tilt) return
+        tilt.targetX = 0; tilt.targetY = 0
+        animate()
+      }
+      anchor.addEventListener('pointerleave', leave)
+      anchor.addEventListener('pointercancel', leave)
+    }
     section = doc.createElement('section'); section.className = 'odyssey-home-operations'; section.dataset.odysseyHomeOperations = ''
     section.setAttribute('aria-hidden', 'true')
     heading = doc.createElement('h2'); heading.className = 'odyssey-operations-heading'
@@ -250,6 +361,9 @@ export function mountHomeOperations(doc: Document = document): () => void {
       pages.push(page); pagination.append(page)
     }
     usecase.append(field, caseCopy, caseDescription, pagination)
+    const usecaseAnchor = doc.createElement('div'); usecaseAnchor.className = 'odyssey-operations-tilt-anchor odyssey-operations-usecase-anchor'
+    usecaseAnchor.append(usecase)
+    bindTilt(usecaseAnchor, usecase)
     const quickGrid = doc.createElement('div'); quickGrid.className = 'odyssey-operations-quick-grid'
     for (const key of CARDS) {
       const card = doc.createElement('button'); card.type = 'button'; card.className = `odyssey-operations-quick-card ${key}`; card.dataset.card = key; card.tabIndex = -1
@@ -257,50 +371,36 @@ export function mountHomeOperations(doc: Document = document): () => void {
       const illustration = doc.createElement('div'); illustration.className = 'odyssey-operations-illustration'; illustration.setAttribute('aria-hidden', 'true')
       imagePair(illustration)
       for (const level of ['near', 'middle', 'far']) { const pass = doc.createElement('div'); pass.className = `odyssey-operations-illustration-pass ${level}`; imagePair(pass); illustration.append(pass) }
-      const light = doc.createElement('i'); light.className = 'odyssey-operations-pointer-light'; light.setAttribute('aria-hidden', 'true')
-      card.append(label, illustration, light)
-      card.addEventListener('pointermove', event => {
-        if (state !== 'operations' || !visible || reduced.matches || event.pointerType === 'touch') return
-        const pending = pointerFrames.get(card)
-        if (pending) win.cancelAnimationFrame(pending)
-        const xPosition = event.clientX, yPosition = event.clientY
-        pointerFrames.set(card, win.requestAnimationFrame(() => {
-          pointerFrames.delete(card)
-          const bounds = card.getBoundingClientRect()
-          if (!bounds.width || !bounds.height) return
-          const x = Math.max(0, Math.min(1, (xPosition - bounds.left) / bounds.width)), y = Math.max(0, Math.min(1, (yPosition - bounds.top) / bounds.height))
-          card.style.setProperty('--rx', `${(.5 - y) * 6}deg`); card.style.setProperty('--ry', `${(x - .5) * 6}deg`)
-          card.style.setProperty('--mx', `${x * 100}%`); card.style.setProperty('--my', `${y * 100}%`)
-        }))
-      })
-      card.addEventListener('pointerleave', () => {
-        const pending = pointerFrames.get(card)
-        if (pending) win.cancelAnimationFrame(pending)
-        pointerFrames.delete(card)
-        card.style.removeProperty('--rx'); card.style.removeProperty('--ry'); card.style.removeProperty('--mx'); card.style.removeProperty('--my')
-      })
-      quickCards.push(card); quickGrid.append(card)
+      card.append(label, illustration)
+      const anchor = doc.createElement('div'); anchor.className = 'odyssey-operations-tilt-anchor odyssey-operations-quick-anchor'
+      anchor.append(card); bindTilt(anchor, card)
+      quickCards.push(card); quickGrid.append(anchor)
     }
-    grid.append(usecase, quickGrid); section.append(heading, grid)
+    grid.append(usecaseAnchor, quickGrid); section.append(heading, grid)
     section.addEventListener('click', event => {
       if (state === 'input') { event.preventDefault(); event.stopImmediatePropagation(); setSection('operations') }
     }, true)
     toggle = doc.createElement('button'); toggle.type = 'button'; toggle.className = 'odyssey-operations-toggle'; toggle.dataset.odysseyHomeOperationsToggle = ''; toggle.setAttribute('aria-expanded', 'false')
     toggle.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    toggle.addEventListener('click', () => setSection(state === 'input' ? 'operations' : 'input'))
+    toggle.addEventListener('click', toggleSection)
     returnHit = doc.createElement('button'); returnHit.type = 'button'; returnHit.className = 'odyssey-operations-return-hit'; returnHit.tabIndex = -1; returnHit.hidden = true
     returnHit.addEventListener('click', () => setSection('input'))
   }
   const resize = new win.ResizeObserver(measure)
   const detach = () => {
+    cancelSettlement()
+    if (paintFrame) win.cancelAnimationFrame(paintFrame)
+    paintFrame = 0
     clearPointers(); resize.disconnect(); restoreHero()
     host?.removeEventListener('wheel', onWheel)
-    if (host) { delete host.dataset.odysseyHomeOperationsState; delete host.dataset.odysseyHomeOperationsLayout; for (const name of variables) host.style.removeProperty(name) }
+    if (host) { delete host.dataset.odysseyHomeOperationsState; delete host.dataset.odysseyHomeOperationsLayout; delete host.dataset.odysseyHomeOperationsMotion; for (const name of variables) host.style.removeProperty(name) }
     section?.remove(); toggle?.remove(); returnHit?.remove()
     section = toggle = returnHit = null; root = hero = host = null
     heading = caseTitle = caseSubtitle = caseDescription = usecase = null
     quickCards.length = pages.length = 0
-    renderedTheme = renderedLocale = ''; visible = false; state = 'input'; wheelSum = lockUntil = 0
+    renderedTheme = renderedLocale = ''; visible = false; state = intent = 'input'; motion = 'idle'
+    progress = renderedHeroOffset = velocity = lastWheel = 0
+    geometry = { inputTop: 0, targetTop: 0, shift: 1, scale: 1, viewportHeight: 0 }
   }
   const attach = (nextHost: HTMLElement, nextRoot: HTMLElement, nextHero: HTMLElement) => {
     detach(); host = nextHost; root = nextRoot; hero = nextHero; heroWasInert = hero.inert
@@ -341,8 +441,15 @@ export function mountHomeOperations(doc: Document = document): () => void {
   changes.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-page', 'data-ds-dark-theme', 'data-workspace-surface', 'class', 'style', 'hidden', 'aria-hidden'] })
   const localeChanges = new win.MutationObserver(scheduleSync)
   localeChanges.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
-  const onVisibility = () => { if (doc.hidden) clearPointers(); else sync() }
-  const onReduced = () => { clearPointers(); measure() }
+  const onVisibility = () => {
+    if (!doc.hidden) { sync(); return }
+    cancelSettlement()
+    if (paintFrame) win.cancelAnimationFrame(paintFrame)
+    paintFrame = 0; clearPointers(); intent = state; motion = 'idle'; velocity = lastWheel = 0
+    progress = state === 'operations' ? 1 : 0
+    paint()
+  }
+  const onReduced = () => { clearPointers(); if (reduced.matches && motion !== 'idle') setSection(intent, true); else measure() }
   doc.addEventListener('visibilitychange', onVisibility)
   doc.addEventListener('sherlock:workspace-surface-change', scheduleSync)
   doc.addEventListener('keydown', onKey)

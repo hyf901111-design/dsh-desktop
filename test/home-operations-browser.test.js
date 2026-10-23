@@ -73,6 +73,8 @@ const state = page => page.locator('[data-odyssey-home-operations-state]').getAt
 const toggle = page => page.locator('[data-odyssey-home-operations-toggle]')
 const root = page => page.locator('main > [data-slot="conversation"] > .wSkVaW_root')
 const waitState = (page, value) => expect.poll(() => state(page)).toBe(value)
+const progress = page => page.locator('[data-odyssey-home-operations-state]').evaluate(host => parseFloat(getComputedStyle(host).getPropertyValue('--odyssey-operations-progress-value')))
+const nextPaint = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 async function dispatchWheel(page, selector, deltaY) {
   return page.locator(selector).first().evaluate((target, deltaY) => {
     const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY })
@@ -124,8 +126,75 @@ it('groups one wheel gesture into one snap and allows a later reverse gesture', 
     await waitState(page, 'operations')
     for (let index = 0; index < 8; index++) await dispatchWheel(page, '.pI_x6G_centerCol', 48)
     expect(await state(page)).toBe('operations')
-    await page.waitForTimeout(850)
-    await dispatchWheel(page, '.pI_x6G_centerCol', -80)
+    for (let index = 0; index < 8; index++) await dispatchWheel(page, '.pI_x6G_centerCol', -60)
+    await waitState(page, 'input')
+  } finally { await page.close() }
+}, 15000)
+
+it('tracks small wheel deltas continuously and reverses before the gesture settles', async () => {
+  const page = await fixture({ reduced: false })
+  try {
+    await page.locator('textarea').blur()
+    const positions = () => page.evaluate(() => ({ hero: document.querySelector('.wSkVaW_composerHero').getBoundingClientRect().y, operations: document.querySelector('[data-odyssey-home-operations]').getBoundingClientRect().y }))
+    const before = await positions()
+    await dispatchWheel(page, '.pI_x6G_centerCol', 4)
+    await nextPaint(page)
+    const first = await positions(), firstProgress = await progress(page)
+    expect(first.hero).toBeLessThan(before.hero - .05)
+    expect(Math.abs(first.operations - before.operations)).toBeLessThan(.1)
+    expect(firstProgress).toBeGreaterThan(0)
+    expect(firstProgress).toBeLessThan(1)
+    await dispatchWheel(page, '.pI_x6G_centerCol', 8)
+    await nextPaint(page)
+    const continued = await progress(page)
+    expect(continued).toBeGreaterThan(firstProgress)
+    await dispatchWheel(page, '.pI_x6G_centerCol', -6)
+    await nextPaint(page)
+    expect(await progress(page)).toBeLessThan(continued)
+    await expect.poll(async () => { const value = await progress(page); return value === 0 || value === 1 }).toBe(true)
+  } finally { await page.close() }
+}, 15000)
+
+it('moves the composer first when opening and the cards first when returning, without crossing', async () => {
+  const page = await fixture({ width: 1823, height: 1115, reduced: false })
+  try {
+    const positions = () => page.evaluate(() => {
+      const hero = document.querySelector('.wSkVaW_composerHero').getBoundingClientRect(), cards = document.querySelector('[data-odyssey-home-operations]').getBoundingClientRect()
+      return { hero: hero.y, cards: cards.y, gap: cards.y - hero.bottom }
+    })
+    const observations = [await positions()]
+    for (let index = 0; index < 24 && await progress(page) < 1; index++) {
+      await dispatchWheel(page, '.pI_x6G_centerCol', 64)
+      await nextPaint(page)
+      observations.push(await positions())
+    }
+    expect(await progress(page)).toBe(1)
+    const expanded = await positions()
+    await dispatchWheel(page, '.pI_x6G_centerCol', -4)
+    await nextPaint(page)
+    const firstReturn = await positions()
+    expect(firstReturn.cards).toBeGreaterThan(expanded.cards + .05)
+    expect(Math.abs(firstReturn.hero - expanded.hero)).toBeLessThan(.1)
+    observations.push(firstReturn)
+    for (let index = 0; index < 24 && await progress(page) > 0; index++) {
+      await dispatchWheel(page, '.pI_x6G_centerCol', -64)
+      await nextPaint(page)
+      observations.push(await positions())
+    }
+    expect(await progress(page)).toBe(0)
+    for (const observation of observations) expect(observation.gap).toBeGreaterThanOrEqual(27)
+  } finally { await page.close() }
+}, 15000)
+
+it('lets the return button immediately reverse an unfinished transition', async () => {
+  const page = await fixture({ reduced: false })
+  try {
+    await toggle(page).click()
+    await nextPaint(page)
+    expect(await progress(page)).toBeGreaterThan(0)
+    expect(await progress(page)).toBeLessThan(1)
+    await toggle(page).click()
+    await expect.poll(() => progress(page)).toBe(0)
     await waitState(page, 'input')
   } finally { await page.close() }
 }, 15000)
@@ -311,7 +380,7 @@ it('renders the exported trend arrow and distinct final Figma light fields for a
   } finally { await page.close() }
 }, 15000)
 
-it('colors only the hovered card and applies restrained perspective without shifting its neighbors', async () => {
+it('colors only the hovered illustration without changing its neighbors', async () => {
   const page = await fixture({ reduced: false })
   try {
     await toggle(page).click()
@@ -331,10 +400,165 @@ it('colors only the hovered card and applies restrained perspective without shif
     expect(hovered.slice(1).every(card => card.normal === 1 && card.colored === 0)).toBe(true)
     expect(hovered[0].transform).not.toBe('none')
     expect(hovered[0].tilt).toBeGreaterThan(0)
-    const rotation = await cards.first().evaluate(card => ['--rx', '--ry'].map(name => Math.abs(parseFloat(card.style.getPropertyValue(name)))))
-    for (const angle of rotation) { expect(angle).toBeGreaterThan(1.8); expect(angle).toBeLessThanOrEqual(3) }
     await page.mouse.move(1, 1)
     await expect.poll(async () => (await appearance()).every(card => card.normal === 1 && card.colored === 0)).toBe(true)
+  } finally { await page.close() }
+}, 15000)
+
+it('keeps hovering free of pointer glow, brightening, shadows, and vertical lift', async () => {
+  const page = await fixture({ reduced: false })
+  try {
+    await toggle(page).click()
+    await waitState(page, 'operations')
+    for (const card of await page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card').all()) {
+      await page.mouse.move(1, 1)
+      const rest = await card.evaluate(element => { const style = getComputedStyle(element); return { background: style.backgroundColor, shadow: style.boxShadow } })
+      await card.hover({ position: { x: 30, y: 30 } })
+      await page.waitForTimeout(320)
+      const hover = await card.evaluate(element => {
+        const style = getComputedStyle(element), matrix = new DOMMatrixReadOnly(style.transform)
+        return { background: style.backgroundColor, shadow: style.boxShadow, verticalLift: matrix.m42, lights: [...element.querySelectorAll('.odyssey-operations-pointer-light')].map(light => { const style = getComputedStyle(light); return style.display === 'none' ? 0 : Number(style.opacity) }) }
+      })
+      expect(hover.lights.every(opacity => opacity === 0)).toBe(true)
+      expect(hover.background).toBe(rest.background)
+      expect(hover.shadow).toBe(rest.shadow)
+      expect(Math.abs(hover.verticalLift)).toBeLessThan(.1)
+    }
+  } finally { await page.close() }
+}, 15000)
+
+it('gives all five cards the same gentle tilt and keeps a stationary pointer stable', async () => {
+  const page = await fixture({ reduced: false })
+  try {
+    await toggle(page).click()
+    await waitState(page, 'operations')
+    const cards = page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card')
+    expect(await cards.count()).toBe(5)
+    for (const card of await cards.all()) {
+      await page.mouse.move(1, 1)
+      await page.waitForTimeout(340)
+      const bounds = await card.boundingBox(), point = { x: bounds.x + bounds.width * .2, y: bounds.y + bounds.height * .25 }
+      await page.mouse.move(point.x, point.y)
+      await page.waitForTimeout(420)
+      const samples = []
+      for (let index = 0; index < 12; index++) {
+        await card.dispatchEvent('pointermove', { clientX: point.x, clientY: point.y, pointerType: 'mouse', bubbles: true })
+        await page.waitForTimeout(18)
+        samples.push(await card.evaluate(element => {
+          const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform)
+          return { rx: parseFloat(element.style.getPropertyValue('--rx')) || 0, ry: parseFloat(element.style.getPropertyValue('--ry')) || 0, tilt: Math.abs(matrix.m13) + Math.abs(matrix.m23) }
+        }))
+      }
+      expect(samples.at(-1).tilt).toBeGreaterThan(.001)
+      for (const name of ['rx', 'ry']) {
+        const values = samples.map(sample => sample[name])
+        expect(Math.abs(values.at(-1))).toBeGreaterThan(.1)
+        expect(Math.max(...values.map(Math.abs))).toBeLessThanOrEqual(1.6)
+        expect(Math.max(...values) - Math.min(...values)).toBeLessThan(.03)
+      }
+    }
+  } finally { await page.close() }
+}, 20000)
+
+it('keeps all five cards and ambient fields static for reduced motion', async () => {
+  const page = await fixture({ reduced: true })
+  try {
+    await toggle(page).click()
+    await waitState(page, 'operations')
+    for (const card of await page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card').all()) {
+      await card.hover({ position: { x: 20, y: 20 } })
+      await card.dispatchEvent('pointermove', { clientX: 20, clientY: 20, pointerType: 'mouse', bubbles: true })
+      const motion = await card.evaluate(element => {
+        const style = getComputedStyle(element)
+        return { transform: style.transform, transition: style.transitionDuration, ambient: [...element.querySelectorAll('.odyssey-operations-glow')].map(glow => getComputedStyle(glow).animationName) }
+      })
+      expect(motion.transform).toBe('none')
+      expect(motion.transition.split(',').every(value => parseFloat(value) <= .001)).toBe(true)
+      expect(motion.ambient.every(name => name === 'none')).toBe(true)
+    }
+  } finally { await page.close() }
+}, 15000)
+
+it('keeps every moving glow image edge outside the rounded card at several animation phases', async () => {
+  const page = await fixture({ reduced: false })
+  try {
+    await toggle(page).click()
+    await waitState(page, 'operations')
+    await page.mouse.move(1, 1)
+    const parentClip = await region(page).evaluate(section => {
+      const style = getComputedStyle(section)
+      return { mask: style.maskImage, clip: style.clipPath, overflowX: style.overflowX, overflowY: style.overflowY }
+    })
+    expect(parentClip).toEqual({ mask: 'none', clip: 'none', overflowX: 'visible', overflowY: 'visible' })
+    const observations = []
+    for (const dark of [false, true]) {
+      await page.evaluate(dark => document.body.toggleAttribute('data-ds-dark-theme', dark), dark)
+      for (let index = 0; index < 3; index++) {
+        await page.locator('.odyssey-operations-pagination button').nth(index).click()
+        for (const phase of [0, 3000, 4000, 6000, 8000, 9000, 11900]) {
+          await page.locator('.odyssey-operations-usecase').evaluate((card, phase) => {
+            for (const animation of card.getAnimations({ subtree: true })) {
+              if (animation.effect?.target?.classList.contains('odyssey-operations-glow')) { animation.pause(); animation.currentTime = phase }
+            }
+          }, phase)
+          await nextPaint(page)
+          observations.push(await page.locator('.odyssey-operations-usecase').evaluate(card => {
+            const bounds = card.getBoundingClientRect(), style = getComputedStyle(card), field = getComputedStyle(card.querySelector('.odyssey-operations-gradient-field'))
+            return { clipped: ['hidden', 'clip'].includes(style.overflow), radius: parseFloat(style.borderTopLeftRadius), fieldClipped: ['hidden', 'clip'].includes(field.overflow), fieldRadius: parseFloat(field.borderTopLeftRadius), margins: [...card.querySelectorAll('.odyssey-operations-glow')].map(glow => {
+              const rect = glow.getBoundingClientRect()
+              return [bounds.left - rect.left, bounds.top - rect.top, rect.right - bounds.right, rect.bottom - bounds.bottom]
+            }) }
+          }))
+          if (index === 0 && [0, 3000, 4000, 8000, 9000].includes(phase)) await page.locator('.odyssey-operations-usecase').screenshot({ path: `${evidence}/glow-${dark ? 'dark' : 'light'}-phase-${phase}.png`, animations: 'allow' })
+        }
+      }
+    }
+    for (const observation of observations) {
+      expect(observation.clipped).toBe(true)
+      expect(observation.radius).toBeGreaterThan(0)
+      expect(observation.fieldClipped).toBe(true)
+      expect(observation.fieldRadius).toBeGreaterThan(0)
+      expect(observation.margins).toHaveLength(2)
+      for (const margins of observation.margins) expect(Math.min(...margins)).toBeGreaterThanOrEqual(-1)
+    }
+    for (const dark of [false, true]) {
+      await page.evaluate(dark => document.body.toggleAttribute('data-ds-dark-theme', dark), dark)
+      await page.locator('.odyssey-operations-usecase').hover({ position: { x: 30, y: 30 } })
+      await page.waitForTimeout(420)
+      await page.locator('.odyssey-operations-usecase').screenshot({ path: `${evidence}/large-tilt-edge-${dark ? 'dark' : 'light'}.png`, animations: 'allow' })
+    }
+  } finally { await page.close() }
+}, 20000)
+
+it('centers the actual card grid in a tall homepage pane', async () => {
+  const page = await fixture({ width: 1823, height: 1115, themes: true })
+  try {
+    await toggle(page).click()
+    await waitState(page, 'operations')
+    const geometry = await page.evaluate(() => {
+      const pane = document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(), grid = document.querySelector('.odyssey-operations-grid').getBoundingClientRect()
+      return { paneCenter: pane.y + pane.height / 2, gridCenter: grid.y + grid.height / 2 }
+    })
+    expect(Math.abs(geometry.gridCenter - geometry.paneCenter)).toBeLessThanOrEqual(12)
+  } finally { await page.close() }
+})
+
+it('keeps the toggle at one low fixed position throughout state changes and hover', async () => {
+  const page = await fixture({ width: 1823, height: 1115, themes: true, reduced: false })
+  try {
+    const pane = await page.locator('.pI_x6G_centerCol').boundingBox(), initial = await toggle(page).boundingBox(), positions = [initial.y]
+    expect(initial.y - pane.y).toBeGreaterThan(pane.height * .75)
+    await toggle(page).hover()
+    for (const delay of [30, 80, 180]) { await page.waitForTimeout(delay); positions.push((await toggle(page).boundingBox()).y) }
+    await toggle(page).click()
+    for (const delay of [0, 30, 80, 180, 360]) { await page.waitForTimeout(delay); positions.push((await toggle(page).boundingBox()).y) }
+    await waitState(page, 'operations')
+    const dock = await page.locator('[data-odyssey-theme-dock]').boundingBox(), expanded = await toggle(page).boundingBox()
+    expect(expanded.y + expanded.height).toBeLessThanOrEqual(dock.y - 10)
+    await toggle(page).click()
+    await waitState(page, 'input')
+    positions.push((await toggle(page).boundingBox()).y)
+    expect(Math.max(...positions) - Math.min(...positions)).toBeLessThan(.5)
   } finally { await page.close() }
 }, 15000)
 
@@ -377,7 +601,7 @@ it('keeps small-pane text readable and scrolls to the lower quick cards before r
     expect(await state(page)).toBe('operations')
     await operations.evaluate(section => section.scrollTop = 0)
     await operations.hover({ position: { x: 20, y: 20 } })
-    await page.mouse.wheel(0, -120)
+    for (let index = 0; index < 8 && await progress(page) > 0; index++) { await page.mouse.wheel(0, -96); await nextPaint(page) }
     await waitState(page, 'input')
   } finally { await page.close() }
 }, 15000)
@@ -461,12 +685,13 @@ it.each([
     const layout = await page.evaluate(() => {
       const host = document.querySelector('.pI_x6G_centerCol'), bounds = host.getBoundingClientRect()
       const section = host.querySelector('[data-odyssey-home-operations]')
-      return { overflow: host.scrollWidth > host.clientWidth || section.scrollWidth > section.clientWidth, stacked: host.dataset.odysseyHomeOperationsLayout === 'stacked', cards: [...host.querySelectorAll('.odyssey-operations-quick-card')].map(card => {
+      return { overflow: host.scrollWidth > host.clientWidth, horizontalScroll: section.scrollWidth > section.clientWidth && ['auto', 'scroll'].includes(getComputedStyle(section).overflowX), stacked: host.dataset.odysseyHomeOperationsLayout === 'stacked', cards: [...host.querySelectorAll('.odyssey-operations-quick-card')].map(card => {
         const rect = card.getBoundingClientRect(), hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
         return { width: rect.width, height: rect.height, inside: rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1 && rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1, hit: card === hit || card.contains(hit) }
       }) }
     })
     expect(layout.overflow).toBe(false)
+    expect(layout.horizontalScroll).toBe(false)
     expect(layout.cards).toHaveLength(4)
     for (const card of layout.cards) {
       expect(card.width).toBeGreaterThan(80)

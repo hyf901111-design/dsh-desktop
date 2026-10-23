@@ -4,10 +4,10 @@
   --odyssey-operations-duration:620ms;
   --odyssey-operations-ease:cubic-bezier(.45,0,.18,1);
   --odyssey-operations-scale:1;
+  --odyssey-operations-scroll-progress:0;
   --odyssey-operations-ink:#26313a;
   --odyssey-operations-secondary:#5b6570;
   --odyssey-operations-glass:rgb(255 255 255 / .42);
-  --odyssey-operations-glass-hover:rgb(255 255 255 / .53);
   --odyssey-operations-track:rgb(91 101 112 / .5);
   --odyssey-operations-progress:#477ef3;
   overflow:hidden;
@@ -16,26 +16,22 @@
   --odyssey-operations-ink:#f5f7fc;
   --odyssey-operations-secondary:#858585;
   --odyssey-operations-glass:rgb(0 0 0 / .49);
-  --odyssey-operations-glass-hover:rgb(0 0 0 / .53);
   --odyssey-operations-track:rgb(73 73 73 / .5);
   --odyssey-operations-progress:#5e91f2;
 }
 [data-odyssey-operations-composer] {
-  translate:0 0;
-  transition:translate var(--odyssey-operations-duration) var(--odyssey-operations-ease),
-    opacity var(--odyssey-operations-duration) var(--odyssey-operations-ease),
-    filter var(--odyssey-operations-duration) var(--odyssey-operations-ease);
+  translate:0 calc(-1 * var(--odyssey-operations-hero-offset,0px));
+  opacity:var(--odyssey-operations-hero-opacity,1);
+  filter:blur(var(--odyssey-operations-hero-blur,0px));
+  transition:none;
 }
 [data-odyssey-home-operations-state="operations"] [data-odyssey-operations-composer] {
-  translate:0 calc(-1 * var(--odyssey-operations-shift,330px));
-  opacity:.3;
-  filter:blur(3px);
   pointer-events:none;
 }
 .odyssey-home-operations {
   position:absolute;
   left:50%;
-  top:var(--odyssey-operations-top,525px);
+  top:var(--odyssey-operations-input-top,var(--odyssey-operations-top,525px));
   width:780px;
   height:381.344px;
   margin:0;
@@ -46,9 +42,13 @@
   text-align:left;
   transform:translateX(-50%) scale(var(--odyssey-operations-scale));
   transform-origin:center top;
-  transition:top var(--odyssey-operations-duration) var(--odyssey-operations-ease),
-    opacity var(--odyssey-operations-duration) var(--odyssey-operations-ease),
-    filter var(--odyssey-operations-duration) var(--odyssey-operations-ease);
+  translate:0 calc(-1 * var(--odyssey-operations-offset,0px));
+  opacity:var(--odyssey-operations-opacity,.6);
+  filter:blur(var(--odyssey-operations-blur,.35px));
+  transition:none;
+  --odyssey-operations-mask-expansion:calc(var(--odyssey-operations-scroll-progress) * 800px);
+  mask-image:linear-gradient(to bottom,#000 0px,#000 calc(72px + var(--odyssey-operations-mask-expansion)),rgb(0 0 0 / .82) calc(112px + var(--odyssey-operations-mask-expansion)),rgb(0 0 0 / .35) calc(168px + var(--odyssey-operations-mask-expansion)),transparent calc(226px + var(--odyssey-operations-mask-expansion)));
+  -webkit-mask-image:linear-gradient(to bottom,#000 0px,#000 calc(72px + var(--odyssey-operations-mask-expansion)),rgb(0 0 0 / .82) calc(112px + var(--odyssey-operations-mask-expansion)),rgb(0 0 0 / .35) calc(168px + var(--odyssey-operations-mask-expansion)),transparent calc(226px + var(--odyssey-operations-mask-expansion)));
   isolation:isolate;
   -webkit-app-region:no-drag;
   z-index:3;
@@ -56,17 +56,18 @@
 .odyssey-home-operations *, .odyssey-operations-toggle, .odyssey-operations-return-hit { box-sizing:border-box; }
 .odyssey-home-operations[hidden], .odyssey-operations-toggle[hidden], .odyssey-operations-return-hit[hidden] { display:none !important; }
 [data-odyssey-home-operations-state="input"] .odyssey-home-operations {
-  opacity:.6;
-  filter:blur(.35px);
   cursor:pointer;
-  /* Only the upper preview remains legible beside the resident composer. */
-  mask-image:linear-gradient(to bottom,#000 0px,#000 72px,rgb(0 0 0 / .82) 112px,rgb(0 0 0 / .35) 168px,transparent 226px);
-  -webkit-mask-image:linear-gradient(to bottom,#000 0px,#000 72px,rgb(0 0 0 / .82) 112px,rgb(0 0 0 / .35) 168px,transparent 226px);
+}
+/* The fully open mask is opaque already. Remove its painting boundary so
+   the outer edge of a tilted card retains its complete rounded corners. */
+[data-odyssey-home-operations-state="operations"][data-odyssey-home-operations-motion="idle"] .odyssey-home-operations {
+  mask-image:none;
+  -webkit-mask-image:none;
 }
 /* Backdrop passes blur the preview already painted below them. They do not
    duplicate the native editor or add inert copies to the accessibility tree. */
-[data-odyssey-home-operations-state="input"] .odyssey-home-operations::before,
-[data-odyssey-home-operations-state="input"] .odyssey-home-operations::after {
+.odyssey-home-operations::before,
+.odyssey-home-operations::after {
   content:"";
   position:absolute;
   left:-12px;
@@ -74,15 +75,16 @@
   top:60px;
   height:180px;
   pointer-events:none;
+  opacity:calc(1 - var(--odyssey-operations-scroll-progress));
   z-index:4;
 }
-[data-odyssey-home-operations-state="input"] .odyssey-home-operations::before {
+.odyssey-home-operations::before {
   backdrop-filter:blur(4px);
   -webkit-backdrop-filter:blur(4px);
   mask-image:linear-gradient(to bottom,transparent 0%,#000 52%,transparent 100%);
   -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 52%,transparent 100%);
 }
-[data-odyssey-home-operations-state="input"] .odyssey-home-operations::after {
+.odyssey-home-operations::after {
   backdrop-filter:blur(9px);
   -webkit-backdrop-filter:blur(9px);
   mask-image:linear-gradient(to bottom,transparent 22%,#000 90%);
@@ -90,7 +92,6 @@
 }
 [data-odyssey-home-operations-state="input"] .odyssey-operations-quick-card,
 [data-odyssey-home-operations-state="input"] .odyssey-operations-pagination { pointer-events:none; }
-[data-odyssey-home-operations-state="operations"] .odyssey-home-operations { opacity:1; filter:none; }
 .odyssey-operations-heading {
   position:absolute;
   left:0;
@@ -110,8 +111,10 @@
   display:flex;
   align-items:flex-start;
   gap:9.527px;
-  perspective:900px;
 }
+.odyssey-operations-tilt-anchor { position:relative; min-width:0; }
+.odyssey-operations-usecase-anchor { flex:none; width:376.19px; height:345.238px; }
+.odyssey-operations-quick-anchor { width:100%; height:100%; }
 .odyssey-operations-usecase,
 .odyssey-operations-quick-card {
   position:relative;
@@ -122,17 +125,22 @@
   backdrop-filter:blur(7.143px);
   -webkit-backdrop-filter:blur(7.143px);
   color:inherit;
+  clip-path:inset(0 round 10.5px);
+  transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+  transform-style:flat;
+  transition:none;
 }
 .odyssey-operations-usecase {
-  flex:none;
-  width:376.19px;
-  height:345.238px;
+  width:100%;
+  height:100%;
   isolation:isolate;
 }
 .odyssey-operations-gradient-field {
   position:absolute;
   inset:0;
   overflow:hidden;
+  border-radius:inherit;
+  clip-path:inset(0 round 10.5px);
   pointer-events:none;
   isolation:isolate;
   z-index:-1;
@@ -141,10 +149,11 @@
 .odyssey-operations-glow {
   position:absolute;
   display:block;
-  left:0;
-  top:-.77px;
-  width:380px;
-  height:448px;
+  /* Every animated SVG boundary stays beyond the rounded card at all phases. */
+  left:-48px;
+  top:-48px;
+  width:calc(100% + 96px);
+  height:calc(100% + 96px);
   margin:0;
   padding:0;
   background-repeat:no-repeat;
@@ -268,7 +277,6 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   grid-template-columns:196.429px 188.095px;
   grid-template-rows:163.095px 171.429px;
   gap:10.718px 9.527px;
-  perspective:900px;
 }
 .odyssey-operations-quick-card {
   width:100%;
@@ -281,9 +289,6 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   font:inherit;
   cursor:pointer;
   isolation:isolate;
-  transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(var(--odyssey-operations-lift,0px));
-  transform-style:preserve-3d;
-  transition:transform 320ms ease-out,background 220ms ease,box-shadow 220ms ease;
   -webkit-app-region:no-drag;
 }
 .odyssey-operations-quick-label {
@@ -357,25 +362,8 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   mask-image:linear-gradient(to bottom,transparent 85%,#000 100%);
   -webkit-mask-image:linear-gradient(to bottom,transparent 85%,#000 100%);
 }
-.odyssey-operations-quick-card:is(:hover,:focus-visible) {
-  --odyssey-operations-lift:-2px;
-  background:var(--odyssey-operations-glass-hover);
-  box-shadow:0 10px 24px rgb(75 95 115 / .07);
-  transition-duration:220ms;
-}
-[data-ds-dark-theme] .odyssey-operations-quick-card:is(:hover,:focus-visible) { box-shadow:0 10px 24px rgb(0 0 0 / .1); }
 .odyssey-operations-quick-card:is(:hover,:focus-visible) .normal { opacity:0; }
 .odyssey-operations-quick-card:is(:hover,:focus-visible) .colored { opacity:1; }
-.odyssey-operations-pointer-light {
-  position:absolute;
-  inset:0;
-  background:radial-gradient(150px circle at var(--mx,50%) var(--my,50%),rgb(255 255 255 / .25),transparent 80%);
-  opacity:0;
-  pointer-events:none;
-  transition:opacity 200ms ease;
-}
-[data-ds-dark-theme] .odyssey-operations-pointer-light { background:radial-gradient(150px circle at var(--mx,50%) var(--my,50%),rgb(255 255 255 / .065),transparent 80%); }
-.odyssey-operations-quick-card:hover .odyssey-operations-pointer-light { opacity:1; }
 .odyssey-operations-toggle {
   position:absolute;
   left:50%;
@@ -394,15 +382,14 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   -webkit-backdrop-filter:blur(12px);
   color:rgb(102 102 102 / .9);
   transform:translateX(-50%);
-  transition:top var(--odyssey-operations-duration) var(--odyssey-operations-ease),background 180ms ease,translate 180ms ease;
+  transition:background 180ms ease;
   cursor:pointer;
   -webkit-app-region:no-drag;
   z-index:5;
 }
 .odyssey-operations-toggle svg { display:block; width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; transition:rotate var(--odyssey-operations-duration) var(--odyssey-operations-ease); }
-.odyssey-operations-toggle:hover { background:rgb(255 255 255 / .68); translate:0 1px; }
-[data-odyssey-home-operations-state="operations"] .odyssey-operations-toggle svg { rotate:180deg; }
-[data-odyssey-home-operations-state="operations"] .odyssey-operations-toggle:hover { translate:0 -1px; }
+.odyssey-operations-toggle:hover { background:rgb(255 255 255 / .68); }
+.odyssey-operations-toggle[aria-expanded="true"] svg { rotate:180deg; }
 [data-ds-dark-theme] .odyssey-operations-toggle { background:rgb(166 168 173 / .18); border-color:rgb(190 190 190 / .09); color:rgb(245 245 245 / .75); }
 [data-ds-dark-theme] .odyssey-operations-toggle:hover { background:rgb(180 180 180 / .29); }
 .odyssey-operations-return-hit {
@@ -426,7 +413,7 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
 .odyssey-operations-toggle:focus-visible,
 .odyssey-operations-return-hit:focus-visible,
 .odyssey-operations-pagination button:focus-visible,
-.odyssey-operations-quick-card:focus-visible { outline:2px solid var(--ds-focus-ring,#578cf5); outline-offset:4px; }
+.odyssey-operations-tilt-anchor:has(:focus-visible) { outline:2px solid var(--ds-focus-ring,#578cf5); outline-offset:4px; border-radius:10.5px; }
 /* Narrow panes retain readable type and scroll the card collection vertically. */
 [data-odyssey-home-operations-layout="stacked"] .odyssey-home-operations {
   width:min(780px,calc(100% - 48px));
@@ -455,6 +442,7 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   width:100%;
   height:260px;
 }
+[data-odyssey-home-operations-layout="stacked"] .odyssey-operations-usecase-anchor { width:100%; height:260px; }
 [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-case-copy { width:calc(100% - 42px); }
 [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-title,
 [data-odyssey-home-operations-layout="stacked"] .odyssey-operations-subtitle {
@@ -503,10 +491,9 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
 @media (prefers-reduced-motion:reduce) {
   [data-odyssey-operations-composer], .odyssey-home-operations,
   .odyssey-operations-toggle, .odyssey-operations-toggle svg,
-  .odyssey-operations-quick-card, .odyssey-operations-quick-card:is(:hover,:focus-visible), .odyssey-operations-illustration img,
-  .odyssey-operations-pointer-light { transition:none; }
+  .odyssey-operations-usecase, .odyssey-operations-quick-card, .odyssey-operations-illustration img { transition:none; }
   .odyssey-operations-gradient-field > .glow, .odyssey-operations-glow { animation:none; will-change:auto; }
-  .odyssey-operations-quick-card { transform:none !important; }
+  .odyssey-operations-usecase, .odyssey-operations-quick-card { transform:none !important; }
 }
 
 /* Exact Gaussian radial stops and transforms from the final native Figma fills.
