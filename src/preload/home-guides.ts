@@ -83,10 +83,14 @@ export function mountHomeGuides(document: Document, adapters: Adapters) {
     releaseTransition()
     const token = win.crypto.randomUUID()
     document.documentElement.dataset.homeGuideTransition = token
+    document.documentElement.dataset.homeGuideTransitionSession = sessionId
     let frame = 0
     const cleanup = () => {
       observer.disconnect(); win.clearTimeout(timer); if (frame) win.cancelAnimationFrame(frame)
-      if (document.documentElement.dataset.homeGuideTransition === token) delete document.documentElement.dataset.homeGuideTransition
+      if (document.documentElement.dataset.homeGuideTransition === token) {
+        delete document.documentElement.dataset.homeGuideTransition
+        delete document.documentElement.dataset.homeGuideTransitionSession
+      }
     }
     const check = () => {
       const tab = document.querySelector('[data-srb-session-header][data-ework-notes-session] [data-srb-tabs] [data-conversation-view-id="' + view + '"]')

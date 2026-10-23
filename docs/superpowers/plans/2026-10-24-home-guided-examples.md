@@ -40,7 +40,7 @@ Interfaces: mountHomeGuides(document,{notes,presentation})返回start(kind,conte
 - [x] 时间轴红测：有序执行、暂停冻结、取消后无后续步骤、重播不并发。
 - [x] 实现公共控制、center pane定位、退出/身份/会话取消与焦点恢复。
 - [x] 大卡click/Enter/Space触发当前case；轨道点击不启动。
-- [ ] 运行聚焦测试并中文提交。
+- [x] 运行聚焦测试并中文提交。
 
 ### Task 3: 研究教程原生适配
 
@@ -48,9 +48,9 @@ Files: scripts/lib/home-guide-native.mjs、test/home-guide-native*.test.js。
 
 Interface: patchHomeGuideNative(source)；window home-guide-native request/reply，命令限定mount-board/board-* /dispose。
 
-- [ ] 真实nativeCanvas红测→内存registry/provider→组件库/创建/联动/增加/整理。
-- [ ] 取消/重挂载/原会话不变/无外部provider请求/幂等升级验证。
-- [ ] 中文提交。
+- [x] 真实nativeCanvas红测→内存registry/provider→组件库/创建/联动/增加/整理。
+- [x] 取消/重挂载/原会话不变/无外部provider请求/幂等升级验证。
+- [x] 中文提交。
 
 ### Task 4: 笔记教程
 
@@ -58,9 +58,9 @@ Files: src/preload/home-guide-notes.tsx、home-guide-notes-data.ts、notes/edito
 
 Interface: mountHomeNotesGuide(document,host,{signal,onStatus?})→runStep(write/challenge/select/replace)/dispose。
 
-- [ ] 真实NotesApp红测→内存NotesBridge→分批样文、严格挑战、标记优化替换。
-- [ ] 默认编辑器行为回归、取消后不再写入与无正式IPC验证。
-- [ ] 中文提交。
+- [x] 真实NotesApp红测→内存NotesBridge→分批样文、严格挑战、标记优化替换。
+- [x] 默认编辑器行为回归、取消后不再写入与无正式IPC验证。
+- [x] 中文提交。
 
 ### Task 5: PPT教程与精确预览
 
@@ -68,9 +68,9 @@ Files: src/main/home-guide-assets.ts、scripts/lib/home-guide-presentation-nativ
 
 Interface: mountHomePresentationGuide(document,host,{signal,sessionId,runId})→runStep(brief/plan/layout/deliver/open)/dispose。
 
-- [ ] 预置asset枚举授权、拒绝任意路径、取消与revoke红测。
-- [ ] 私有真实InputBar/TodoPanel+真实右栏Office预览，不伪造用户任务。
-- [ ] 真实浏览器组件和native readiness检查后中文提交。
+- [x] 预置asset枚举授权、拒绝任意路径、取消与revoke红测。
+- [x] 私有真实InputBar/TodoPanel+真实右栏Office预览，不伪造用户任务。
+- [x] 真实浏览器组件和native readiness检查后中文提交。
 
 ### Task 6: 聚焦复核与正式身份本地交付
 
@@ -87,3 +87,12 @@ Interface: mountHomePresentationGuide(document,host,{signal,sessionId,runId})→
 - 额外实现取舍：教程模式用owned-click真实原生tab，原生笔记surface在scopedguide/恢复lease期间抑制，私有NotesApp仍真实渲染；用户导航不强制恢复，身份切换不抢旧焦点。
 - 完整patch pipeline在前端原生补丁前先严格卸载教程wrapper，末尾重补输入helper和教程，已连续两遍exit0，最终四个runtime区段各1。曾经发现的孤立helper/Root锚点错误已有独立红绿。
 - 只跑直接关联组件/教程/字体/输入测试，没有运行全产品套件。
+
+## 正式身份客户端验收与后续修复
+
+- 批次20261024-05已集成到本地main `84e0eb28`；按本地测试手册构建1.3.5，签名、完整包检查及源码一致性通过。没有公证、发布、推送或递增版本。
+- 原生笔记教程完整完成：真实笔记标签、严格挑战、标记、增速20%→10%替换；退出回原对话，原草稿保持空白，右栏恢复关闭。
+- 原生PPT教程完整完成：真实InputBar和任务面板、PPTX交付、右侧Office实际渲染，退出保留原文件页签并恢复原右栏开合。
+- 原生连续添加三个技能后全部删除、输入并删除空格，未出现草稿变化报错，输入与页面响应正常。本次未复现物理指针冻结，不能据此确认已修复；只读系统/进程采样也无同期冻结证据。
+- 原生看板发现浏览器旧fixture未覆盖的问题：驻留画布工具栏Portal与教程重叠，真实Research模式自动开右栏/收左栏导致画布变窄，退出左栏不恢复。后续分支增加精确会话/运行作用域的驻留副作用隔离，以及退出过渡所有权，保留真实模式标签和InputBar；真实AppFrame/Root/Canvas/Coordinator组合回归已覆盖。
+- 后续提交必须再次通过集成门禁并从干净main构建，随后复验原生看板布局、退出恢复与宽窄卡片；Task6仍待最终原生验收。系统鼠标偶发冻结仍需冻结瞬间HID计数与CGEvent光标坐标的同步证据。

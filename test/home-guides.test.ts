@@ -3,7 +3,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { mountHomeGuides } from '../src/preload/home-guides'
 
 let dispose = () => {}
-afterEach(() => { dispose(); document.body.innerHTML = ''; vi.useRealTimers() })
+afterEach(() => { dispose(); document.body.innerHTML = ''; delete document.documentElement.dataset.homeGuideTransition; delete document.documentElement.dataset.homeGuideTransitionSession; vi.useRealTimers() })
 function fixture() {
   document.body.innerHTML = '<div class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="session-a"><button>原标签页</button></header><textarea>原有草稿</textarea></div></div>'
   const text = document.querySelector('textarea')!
@@ -84,4 +84,28 @@ test('identity cancellation leaves the new account interface focused', async () 
   expect(document.activeElement).toBe(dialog)
   expect(document.querySelector('[data-home-guide]')).toBeNull()
   expect(text.value).toBe('原有草稿')
+})
+
+test('keeps the original session as the owner of asynchronous native view restoration', async () => {
+  const { controller } = fixture()
+  document.querySelector('header')!.innerHTML = '<div data-srb-tabs><button data-conversation-view-id="chat" aria-selected="true">对话</button><button data-conversation-view-id="notes" aria-selected="false">笔记</button></div>'
+  await controller.start('note')
+  controller.reset()
+  expect(document.documentElement.dataset.homeGuideTransition).toBeTruthy()
+  expect(document.documentElement.dataset.homeGuideTransitionSession).toBe('session-a')
+  controller.reset(false)
+  expect(document.documentElement.dataset.homeGuideTransition).toBeUndefined()
+  expect(document.documentElement.dataset.homeGuideTransitionSession).toBeUndefined()
+})
+
+test('does not clear a replacement native view restoration lease owned by another run', async () => {
+  const { controller } = fixture()
+  document.querySelector('header')!.innerHTML = '<div data-srb-tabs><button data-conversation-view-id="chat" aria-selected="true">对话</button></div>'
+  await controller.start('note')
+  controller.reset()
+  document.documentElement.dataset.homeGuideTransition = 'replacement-run'
+  document.documentElement.dataset.homeGuideTransitionSession = 'session-b'
+  controller.dispose()
+  expect(document.documentElement.dataset.homeGuideTransition).toBe('replacement-run')
+  expect(document.documentElement.dataset.homeGuideTransitionSession).toBe('session-b')
 })
