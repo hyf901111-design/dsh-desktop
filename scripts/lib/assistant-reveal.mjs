@@ -27,7 +27,7 @@ export function createAssistantTextPaint(root,record,route){
  const visible=()=>focused&&doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
  // Only a different trusted seat in this same commit may resume these times.
  const inherited=record.handoff;delete record.handoff
- if(inherited&&transferRoute&&inherited.route!==route&&inherited.epoch===epoch&&(record.fresh||record.live)&&visible()&&!media?.matches){units=inherited.units;lastStart=inherited.lastStart;record.skipNext=false}
+ if(inherited&&transferRoute&&inherited.route!==route&&inherited.epoch===epoch&&(record.fresh||record.live)&&visible()&&!media?.matches){units=inherited.units;lastStart=inherited.lastStart;quietUntil=inherited.quietUntil??0;record.skipNext=false}
  const finish=()=>clear();root.__eworkAssistantRevealFinish=finish
  const suspend=()=>{record.skipNext=true;finish()},background=()=>{focused=false;suspend()},foreground=()=>{focused=true},preference=()=>{if(media?.matches)finish()},visibility=()=>{if(doc.visibilityState==='hidden')background();else if(!visible())suspend()}
  media?.addEventListener?.('change',preference);doc.addEventListener('visibilitychange',visibility);view?.addEventListener('blur',background);view?.addEventListener('focus',foreground);doc.addEventListener('sherlock:workspace-surface-change',visibility)
@@ -37,7 +37,8 @@ export function createAssistantTextPaint(root,record,route){
  const hasSelection=()=>{const selected=doc.getSelection?.();if(!selected||selected.isCollapsed||!selected.rangeCount)return false;try{return selected.getRangeAt(0).intersectsNode(root)}catch{return false}}
  const selection=()=>{if(hasSelection())finish()}
  doc.addEventListener('selectionchange',selection)
- const collect=()=>{const nodes=[],walker=doc.createTreeWalker(root,4,{acceptNode(node){return node.parentElement?.closest('button,svg,style,script,[aria-hidden="true"],.katex-mathml')?2:1}});let node,text='';while(node=walker.nextNode()){nodes.push({node,start:text.length,end:text.length+node.data.length});text+=node.data}return{nodes,text}}
+ // Reasoning disclosure summaries are separate from the public reply timeline.
+ const collect=()=>{const nodes=[],walker=doc.createTreeWalker(root,4,{acceptNode(node){return node.parentElement?.closest('button,svg,style,script,[aria-hidden="true"],[data-variant="think"],.katex-mathml')?2:1}});let node,text='';while(node=walker.nextNode()){nodes.push({node,start:text.length,end:text.length+node.data.length});text+=node.data}return{nodes,text}}
  const upper=(time)=>{let lo=0,hi=units.length;while(lo<hi){const mid=(lo+hi)>>>1;if(units[mid].at<=time)lo=mid+1;else hi=mid}return lo}
  const paletteFor=node=>{const color=view.getComputedStyle(node.parentElement).color;let palette=palettes.get(color);if(palette)return palette;if(palettes.size>=32)return palettes.values().next().value;palette={color,names:Array.from({length:levels},(_,i)=>prefix+'-'+palettes.size+'-'+i)};palettes.set(color,palette);names.push(...palette.names);style.textContent=[...palettes.values()].map(p=>p.names.map((name,i)=>'::highlight('+name+'){color:color-mix(in srgb,'+p.color+' '+i*100/levels+'%,transparent)}').join('')).join('')+'@media(prefers-reduced-motion:reduce){'+[...palettes.values()].map(p=>p.names.map(name=>'::highlight('+name+'){color:'+p.color+'}').join('')).join('')+'}';return palette}
  const paint=now=>{
@@ -87,7 +88,9 @@ export function createAssistantTextPaint(root,record,route){
   }
   if(units.length){root.dataset.aiRevealing='';if(frame)view.cancelAnimationFrame(frame);paint(clock)}else finish()
  },dispose(){
-  const handoff=transferRoute&&units.length&&record.epoch===epoch&&!record.skipNext&&!media?.matches&&visible()&&!selecting&&!hasSelection()?{route,epoch,units,lastStart}:undefined
+  // A final seat may add genuinely new text after the old frontier has finished.
+  // Preserve the baseline and reading quiet period even when there are no units.
+  const handoff=transferRoute&&record.initialized&&record.epoch===epoch&&!record.skipNext&&!media?.matches&&visible()&&!selecting&&!hasSelection()?{route,epoch,units,lastStart,quietUntil}:undefined
   if(record.initialized&&record.text)record.skipNext=true;disposed=true;clear()
   if(handoff){record.handoff=handoff;queueMicrotask(()=>{if(record.handoff===handoff)delete record.handoff})}
   delete root.__eworkAssistantRevealFinish;style?.remove();media?.removeEventListener?.('change',preference);doc.removeEventListener('visibilitychange',visibility);view?.removeEventListener('blur',background);view?.removeEventListener('focus',foreground);doc.removeEventListener('sherlock:workspace-surface-change',visibility);doc.removeEventListener('selectionchange',selection);doc.removeEventListener('pointerup',release,true);doc.removeEventListener('pointercancel',release,true);for(const type of ['pointerdown','keydown','copy','wheel'])root.removeEventListener(type,interact,true)}}
