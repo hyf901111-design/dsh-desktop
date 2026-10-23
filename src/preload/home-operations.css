@@ -96,8 +96,8 @@
   position:relative;
   min-width:0;
   border-radius:10.5px;
-  /* The static layout frame carries the shadow outside the clipped artwork. */
-  box-shadow:var(--odyssey-operations-card-shadow);
+  /* The pointer anchor stays still while the card and its shadow share a plane. */
+  box-shadow:none;
 }
 .odyssey-operations-usecase-anchor { flex:none; width:376px; height:346px; }
 .odyssey-operations-quick-anchor { width:100%; height:100%; }
@@ -113,9 +113,9 @@
   /* Filtering on the surface can sample the page behind its rounded clip. */
   backdrop-filter:blur(var(--odyssey-operations-backdrop-blur)) saturate(.85);
   -webkit-backdrop-filter:blur(var(--odyssey-operations-backdrop-blur)) saturate(.85);
-  box-shadow:none;
+  box-shadow:var(--odyssey-operations-card-shadow);
   color:inherit;
-  clip-path:inset(0 round 10.5px);
+  clip-path:none;
   transform:none;
   transform-style:flat;
   transition:background-color var(--odyssey-operations-hover-duration) var(--odyssey-operations-hover-ease);
@@ -299,20 +299,56 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   cursor:pointer;
   isolation:isolate;
   --odyssey-operations-card-tint:rgb(235 245 255 / .72);
+  --odyssey-operations-ambient-one-size:64% 70%;
+  --odyssey-operations-ambient-one-at:88% 10%;
+  --odyssey-operations-ambient-two-size:88% 90%;
+  --odyssey-operations-ambient-two-at:15% 90%;
+  --odyssey-operations-ambient-motion:odyssey-operations-quick-ambient;
+  --odyssey-operations-ambient-duration:16s;
+  --odyssey-operations-ambient-delay:0s;
+  --odyssey-operations-ambient-direction:normal;
   -webkit-app-region:no-drag;
+}
+.odyssey-operations-quick-card[data-card="note"] {
+  --odyssey-operations-ambient-one-size:120% 96%;
+  --odyssey-operations-ambient-one-at:100% 96%;
+  --odyssey-operations-ambient-two-size:78% 76%;
+  --odyssey-operations-ambient-two-at:104% 18%;
+  --odyssey-operations-ambient-motion:odyssey-operations-quick-ambient-cross;
+  --odyssey-operations-ambient-duration:18s;
+  --odyssey-operations-ambient-delay:-5s;
+}
+.odyssey-operations-quick-card[data-card="ppt"] {
+  --odyssey-operations-ambient-one-size:88% 58%;
+  --odyssey-operations-ambient-one-at:108% 28%;
+  --odyssey-operations-ambient-two-size:96% 90%;
+  --odyssey-operations-ambient-two-at:92% 104%;
+  --odyssey-operations-ambient-duration:17s;
+  --odyssey-operations-ambient-delay:-9s;
+  --odyssey-operations-ambient-direction:reverse;
+}
+.odyssey-operations-quick-card[data-card="report"] {
+  --odyssey-operations-ambient-one-size:125% 100%;
+  --odyssey-operations-ambient-one-at:0% 102%;
+  --odyssey-operations-ambient-two-size:92% 72%;
+  --odyssey-operations-ambient-two-at:72% -6%;
+  --odyssey-operations-ambient-motion:odyssey-operations-quick-ambient-cross;
+  --odyssey-operations-ambient-duration:20s;
+  --odyssey-operations-ambient-delay:-13s;
+  --odyssey-operations-ambient-direction:reverse;
 }
 .odyssey-operations-quick-card::before {
   content:"";
   position:absolute;
   inset:-24px;
   border-radius:inherit;
-  background:radial-gradient(ellipse 58% 72% at 12% 78%,rgb(170 195 230 / .18),transparent 72%),radial-gradient(ellipse 66% 74% at 88% 22%,rgb(255 255 255 / .26),transparent 72%);
+  background:radial-gradient(ellipse var(--odyssey-operations-ambient-one-size) at var(--odyssey-operations-ambient-one-at),rgb(161 188 225 / .32),transparent 82%),radial-gradient(ellipse var(--odyssey-operations-ambient-two-size) at var(--odyssey-operations-ambient-two-at),rgb(190 211 239 / .30),transparent 85%);
   pointer-events:none;
-  animation:odyssey-operations-quick-ambient 16s ease-in-out infinite;
+  animation:var(--odyssey-operations-ambient-motion) var(--odyssey-operations-ambient-duration) ease-in-out var(--odyssey-operations-ambient-delay) infinite var(--odyssey-operations-ambient-direction);
   z-index:-1;
 }
 [data-ds-dark-theme] .odyssey-operations-quick-card::before {
-  background:radial-gradient(ellipse 58% 72% at 12% 78%,rgb(200 214 230 / .085),transparent 72%),radial-gradient(ellipse 66% 74% at 88% 22%,rgb(160 184 213 / .055),transparent 72%);
+  background:radial-gradient(ellipse var(--odyssey-operations-ambient-one-size) at var(--odyssey-operations-ambient-one-at),rgb(207 200 188 / .18),transparent 82%),radial-gradient(ellipse var(--odyssey-operations-ambient-two-size) at var(--odyssey-operations-ambient-two-at),rgb(177 195 216 / .16),transparent 85%);
 }
 /* All four cards share the approved presentation-blue glass tint. */
 [data-ds-dark-theme] .odyssey-operations-quick-card { --odyssey-operations-card-tint:rgb(30 42 65 / .68); }
@@ -492,8 +528,12 @@ html[data-odyssey-locale="en"] .odyssey-operations-trend { position:static; flex
   line-height:26px;
 }
 @keyframes odyssey-operations-quick-ambient {
-  0%,100% { translate:0 0; scale:1; }
+  0%,100% { translate:-4px 3px; scale:1; }
   50% { translate:6px -4px; scale:1.025; }
+}
+@keyframes odyssey-operations-quick-ambient-cross {
+  0%,100% { translate:4px -3px; scale:1; }
+  50% { translate:-5px 5px; scale:1.025; }
 }
 @keyframes odyssey-operations-float-one {
   0%,100% { translate:0 0; }

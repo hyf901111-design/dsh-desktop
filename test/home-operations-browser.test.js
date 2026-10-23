@@ -851,6 +851,7 @@ it('keeps all five card surfaces distinct and description text readable over bla
     const page = await fixture({ dark, reduced: true })
     try {
       await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+      await page.addStyleTag({ content: '.home-operations-material-probe-off::before { visibility:hidden !important; }' })
       for (const [name, background] of [['black', '#000'], ['white', '#fff'], ['busy', 'repeating-linear-gradient(45deg,#00afff 0 18px,#ff8a00 18px 36px,#101820 36px 54px,#fcfcfc 54px 72px)']]) {
         await page.locator('.pI_x6G_centerCol').evaluate((host, background) => host.style.setProperty('background', background, 'important'), background)
         await region(page).screenshot({ path: `${evidence}/material-${dark ? 'dark' : 'light'}-${name}.png` })
@@ -860,8 +861,14 @@ it('keeps all five card surfaces distinct and description text readable over bla
         })
         await page.locator('.odyssey-operations-description, .odyssey-operations-quick-label').evaluateAll(elements => elements.forEach(element => element.style.visibility = 'hidden'))
         const png = PNG.sync.read(await page.screenshot())
+        // Compare the underlying glass separately so a decorative color hotspot
+        // is not mistaken for a change to the material's background opacity.
+        await page.locator('.odyssey-operations-quick-card').evaluateAll(cards => cards.forEach(card => card.classList.add('home-operations-material-probe-off')))
+        const material = PNG.sync.read(await page.screenshot())
+        await page.locator('.odyssey-operations-quick-card').evaluateAll(cards => cards.forEach(card => card.classList.remove('home-operations-material-probe-off')))
         await page.locator('.odyssey-operations-description, .odyssey-operations-quick-label').evaluateAll(elements => elements.forEach(element => element.style.removeProperty('visibility')))
         const cards = geometry.cards.map(card => patchRgb(png, card.x + card.width * .65, card.y + 6))
+        const materialCards = geometry.cards.map(card => patchRgb(material, card.x + card.width * .65, card.y + 6))
         const edgeSeparation = geometry.cards.map(card => {
           const outside = patchRgb(png, card.x + card.width * .65, card.y - 5)
           // Measure the material edge at native pixel resolution.
@@ -870,7 +877,7 @@ it('keeps all five card surfaces distinct and description text readable over bla
         const ratios = []
         for (const x of [.1, .5, .9]) for (const y of [.2, .5, .8]) ratios.push(contrastRatio(geometry.foreground.slice(0, 3), patchRgb(png, geometry.description.x + geometry.description.width * x, geometry.description.y + geometry.description.height * y)))
         const labelRatios = geometry.labels.flatMap(label => [.1, .5, .9].map(x => contrastRatio(label.color, patchRgb(png, label.x + label.width * x, label.y + label.height * .5))))
-        observations.push({ dark, name, cards, edgeSeparation, minimumDescriptionContrast: Math.min(...ratios), minimumLabelContrast: Math.min(...labelRatios) })
+        observations.push({ dark, name, cards, materialCards, edgeSeparation, minimumDescriptionContrast: Math.min(...ratios), minimumLabelContrast: Math.min(...labelRatios) })
       }
     } finally { await page.close() }
   }
@@ -882,10 +889,13 @@ it('keeps all five card surfaces distinct and description text readable over bla
       expect(Math.max(...values) - Math.min(...values), `${dark ? 'dark' : 'light'} card ${card} balances backdrop transmission with a visible glass face`).toBeLessThan(dark ? 85 : 60)
     }
     for (let card = 1; card < 5; card++) {
-      const black = modes.find(mode => mode.name === 'black').cards[card], white = modes.find(mode => mode.name === 'white').cards[card]
+      const black = modes.find(mode => mode.name === 'black').materialCards[card], white = modes.find(mode => mode.name === 'white').materialCards[card]
       const transmission = white.reduce((sum, value, channel) => sum + value - black[channel], 0) / 3
       expect(transmission, `${dark ? 'dark' : 'light'} quick card ${card} transmits a stronger amount of its backdrop`).toBeGreaterThanOrEqual(dark ? 60 : 25)
       if (dark) expect(transmission).toBeLessThanOrEqual(80)
+      const decoratedBlack = modes.find(mode => mode.name === 'black').cards[card], decoratedWhite = modes.find(mode => mode.name === 'white').cards[card]
+      const decoratedTransmission = decoratedWhite.reduce((sum, value, channel) => sum + value - decoratedBlack[channel], 0) / 3
+      expect(Number(decoratedTransmission.toFixed(6)), 'the visible ambient retains most of the glass transmission').toBeGreaterThanOrEqual(Number((transmission * .8).toFixed(6)))
     }
   }
   for (const observation of observations) {
@@ -968,7 +978,16 @@ it('gives all five cards a stronger bounded tilt and keeps a stationary pointer 
       await page.waitForTimeout(340)
       const bounds = await card.boundingBox(), point = { x: bounds.x + bounds.width * .06, y: bounds.y + bounds.height * .06 }
       await page.mouse.move(point.x, point.y)
-      await page.waitForTimeout(420)
+      let previousPose, stableFrames = 0
+      // Frame scheduling can stretch the damping tail during concurrent builds.
+      // Observe convergence before testing a genuinely stationary pointer.
+      await expect.poll(async () => {
+        await nextPaint(page)
+        const pose = await card.evaluate(element => ['--rx', '--ry'].map(name => parseFloat(element.style.getPropertyValue(name)) || 0))
+        stableFrames = previousPose && pose.every((value, index) => Math.abs(value - previousPose[index]) < .003) ? stableFrames + 1 : 0
+        previousPose = pose
+        return stableFrames
+      }, { timeout: 2000, intervals: [16, 32, 48] }).toBeGreaterThanOrEqual(3)
       const samples = []
       for (let index = 0; index < 12; index++) {
         await card.dispatchEvent('pointermove', { clientX: point.x, clientY: point.y, pointerType: 'mouse', bubbles: true })
@@ -1044,7 +1063,7 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
       }))
       const frames = []
       const seek = fraction => page.locator('.odyssey-operations-quick-card').evaluateAll((cards, fraction) => {
-        for (const card of cards) for (const animation of card.getAnimations({ subtree: true })) if ('animationName' in animation) { animation.pause(); animation.currentTime = Number(animation.effect.getTiming().duration) * fraction }
+        for (const card of cards) for (const animation of card.getAnimations({ subtree: true })) if ('animationName' in animation) { animation.pause(); animation.currentTime = 16000 * fraction }
       }, fraction)
       for (const phase of [0, .25, .5, .75]) {
         await seek(phase)
@@ -1066,7 +1085,24 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
         for (let from = 0; from < frames.length; from++) for (let to = from + 1; to < frames.length; to++) phaseDifferences.push(difference(frames[from], frames[to], card))
         const outside = [[card.x - 2, card.y + card.height / 2], [card.x + card.width + 2, card.y + card.height / 2], [card.x + card.width / 2, card.y - 2], [card.x + 1, card.y + 1]]
         const outsideDifference = Math.max(...outside.map(([x, y]) => patchRgb(frames[0], x, y, 0).reduce((sum, value, channel) => sum + Math.abs(value - patchRgb(plain, x, y, 0)[channel]), 0) / 3))
-        observations.push({ dark, index, decorationDifference: difference(frames[0], plain, card), maximumPhaseDifference: Math.max(...phaseDifferences), outsideDifference })
+        const headerPatches = []
+        for (let y = 8; y < 40; y += 4) for (let x = 8; x < card.width - 8; x += 4) {
+          const actual = patchRgb(frames[0], card.x + x, card.y + y), bare = patchRgb(plain, card.x + x, card.y + y)
+          headerPatches.push(actual.reduce((sum, value, channel) => sum + Math.abs(value - bare[channel]), 0) / 3)
+        }
+        const ambientSignatures = frames.map(frame => [.1, .3, .5, .7, .9].flatMap(x => [8, 16, 24, 32].flatMap(y => {
+          const actual = patchRgb(frame, card.x + card.width * x, card.y + y), bare = patchRgb(plain, card.x + card.width * x, card.y + y)
+          return actual.map((value, channel) => value - bare[channel])
+        })))
+        observations.push({ dark, index, decorationDifference: difference(frames[0], plain, card), visibleHeaderDifference: Math.max(...headerPatches), maximumPhaseDifference: Math.max(...phaseDifferences), outsideDifference, ambientSignatures })
+      }
+      if (dark) {
+        await page.locator('.odyssey-operations-quick-label').evaluateAll(labels => labels.forEach(label => label.style.removeProperty('visibility')))
+        await page.locator('.pI_x6G_centerCol').evaluate(host => host.style.setProperty('background', '#606060', 'important'))
+        await page.locator('.odyssey-operations-quick-card').evaluateAll(cards => cards.forEach(card => card.classList.remove('home-operations-ambient-probe-off')))
+        await region(page).screenshot({ path: `${evidence}/ambient-small-dark-gray-on.png` })
+        await page.locator('.odyssey-operations-quick-card').evaluateAll(cards => cards.forEach(card => card.classList.add('home-operations-ambient-probe-off')))
+        await region(page).screenshot({ path: `${evidence}/ambient-small-dark-gray-off.png` })
       }
     } finally { await page.close() }
   }
@@ -1074,11 +1110,26 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
   for (const observation of observations) {
     if ('minimumLabelContrast' in observation) expect(observation.minimumLabelContrast, `${observation.dark ? 'dark' : 'light'} card ${observation.index} label at phase ${observation.phase}`).toBeGreaterThanOrEqual(4.5)
     else {
-      expect(observation.decorationDifference, 'the ambient layer changes real painted pixels').toBeGreaterThan(.02)
-      expect(observation.decorationDifference, 'the ambient layer remains faint').toBeLessThan(8)
+      expect(observation.decorationDifference, 'the ambient gradient is visibly present beyond the opaque artwork').toBeGreaterThan(3)
+      expect(observation.visibleHeaderDifference, 'a visible header patch reveals the gradient instead of hiding it beneath the illustration').toBeGreaterThan(5)
+      expect(observation.decorationDifference, 'the ambient layer remains restrained').toBeLessThan(10)
       expect(observation.maximumPhaseDifference, 'the ambient layer moves subtly over its full cycle').toBeGreaterThan(.02)
       expect(observation.outsideDifference, 'the ambient layer remains inside the clipped card').toBeLessThanOrEqual(1)
     }
+  }
+  const pairDifferences = []
+  const signatureDistance = (first, second) => first.reduce((sum, value, index) => sum + Math.abs(value - second[index]), 0) / first.length
+  for (const dark of [false, true]) {
+    const cards = observations.filter(observation => observation.dark === dark && 'ambientSignatures' in observation)
+    for (const [index, first] of cards.entries()) for (const second of cards.slice(index + 1)) {
+      const motion = card => card.ambientSignatures.slice(1).flatMap(signature => signature.map((value, index) => value - card.ambientSignatures[0][index]))
+      pairDifferences.push({ dark, cards: [first.index, second.index], defaultDifference: signatureDistance(first.ambientSignatures[0], second.ambientSignatures[0]), motionDifference: signatureDistance(motion(first), motion(second)) })
+    }
+  }
+  await writeFile(`${evidence}/ambient-small-card-variation.json`, JSON.stringify(pairDifferences, null, 2))
+  for (const pair of pairDifferences) {
+    expect(pair.defaultDifference, 'each default gradient paints a different visible field, independently of its illustration').toBeGreaterThan(.8)
+    expect(pair.motionDifference, 'the four visible gradient fields do not change in identical lockstep').toBeGreaterThan(.15)
   }
 }, 20000)
 
@@ -1451,3 +1502,54 @@ it.each([
     expect(errors).toEqual([])
   } finally { await page.close() }
 }, 15000)
+
+it('keeps the tilted glass surface free of a second fixed rectangular shadow plane', async () => {
+  const observations = []
+  const roundedDistance = (x, y, width, height, radius) => {
+    const qx = Math.abs(x - width / 2) - (width / 2 - radius), qy = Math.abs(y - height / 2) - (height / 2 - radius)
+    return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - radius
+  }
+  for (const dark of [false, true]) {
+    const page = await fixture({ dark, reduced: false, clock: true })
+    try {
+      await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+      await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
+      await page.locator('.pI_x6G_centerCol').evaluate((pane, dark) => pane.style.setProperty('background', dark ? 'linear-gradient(155deg,#13171c,#272d35)' : 'linear-gradient(155deg,#e3e7ed,#f4f6f9)', 'important'), dark)
+      await region(page).evaluate(section => { for (const animation of section.getAnimations({ subtree: true })) if ('animationName' in animation) { animation.pause(); animation.currentTime = 0 } })
+      const card = page.locator('.odyssey-operations-usecase'), anchor = page.locator('.odyssey-operations-usecase-anchor'), box = await anchor.boundingBox()
+      for (const [index, fraction] of [.06, .94].entries()) {
+        await page.mouse.move(box.x + box.width * fraction, box.y + box.height * fraction); await page.clock.runFor(700)
+        const geometry = await card.evaluate(card => {
+          const style = getComputedStyle(card), matrix = new DOMMatrixReadOnly(style.transform), anchor = card.parentElement.getBoundingClientRect(), origin = style.transformOrigin.split(' ').map(Number.parseFloat)
+          return { x: anchor.x, y: anchor.y, width: card.offsetWidth, height: card.offsetHeight, radius: parseFloat(style.borderRadius), origin, matrix: [matrix.m11, matrix.m21, matrix.m41, matrix.m14, matrix.m24, matrix.m44, matrix.m12, matrix.m22, matrix.m42], transform: style.transform }
+        })
+        expect(geometry.transform).not.toBe('none')
+        const frames = {}
+        const capture = async name => { frames[name] = PNG.sync.read(await page.screenshot({ path: `${evidence}/tilt-plane-${dark ? 'dark' : 'light'}-${index}-${name}.png` })) }
+        await capture('original')
+        await anchor.evaluate(anchor => anchor.style.setProperty('box-shadow', 'none', 'important')); await capture('shadow-off')
+        await card.evaluate(card => { card.style.setProperty('backdrop-filter', 'none', 'important'); card.style.setProperty('-webkit-backdrop-filter', 'none', 'important') }); await capture('both-off')
+        await anchor.evaluate(anchor => anchor.style.removeProperty('box-shadow')); await capture('backdrop-off')
+        await card.evaluate(card => { card.style.removeProperty('backdrop-filter'); card.style.removeProperty('-webkit-backdrop-filter'); card.style.setProperty('box-shadow', 'var(--odyssey-operations-card-shadow)', 'important'); card.style.setProperty('clip-path', 'none', 'important') })
+        await anchor.evaluate(anchor => anchor.style.setProperty('box-shadow', 'none', 'important')); await capture('following-shadow-control')
+        const points = []
+        const [a, b, c, g, h, i, d, e, f] = geometry.matrix
+        for (let y = Math.ceil(geometry.y - 20); y < geometry.y + geometry.height + 20; y++) for (let x = Math.ceil(geometry.x - 20); x < geometry.x + geometry.width + 20; x++) {
+          const localX = x + .5 - geometry.x, localY = y + .5 - geometry.y
+          const flatDistance = roundedDistance(localX, localY, geometry.width, geometry.height, geometry.radius)
+          if (flatDistance < .5 || flatDistance > 18) continue
+          const sx = localX - geometry.origin[0], sy = localY - geometry.origin[1]
+          const A = a - sx * g, B = b - sx * h, C = sx * i - c, D = d - sy * g, E = e - sy * h, F = sy * i - f, determinant = A * E - B * D
+          const px = (C * E - B * F) / determinant + geometry.origin[0], py = (A * F - C * D) / determinant + geometry.origin[1]
+          if (roundedDistance(px, py, geometry.width, geometry.height, geometry.radius) > flatDistance + 1.5) points.push([x, y])
+        }
+        expect(points.length, 'perspective reveals part of the original flat anchor footprint').toBeGreaterThan(100)
+        const difference = (first, second) => points.reduce((sum, [x, y]) => sum + patchRgb(frames[first], x, y, 0).reduce((total, value, channel) => total + Math.abs(value - patchRgb(frames[second], x, y, 0)[channel]), 0) / 3, 0) / points.length
+        observations.push({ dark, angle: index, samples: points.length, fixedShadowContribution: difference('original', 'shadow-off'), outsideBackdropContribution: difference('shadow-off', 'both-off'), departureFromFollowingSurface: difference('original', 'following-shadow-control') })
+        await card.evaluate(card => { card.style.removeProperty('box-shadow'); card.style.removeProperty('clip-path') }); await anchor.evaluate(anchor => anchor.style.removeProperty('box-shadow'))
+      }
+    } finally { await page.close() }
+  }
+  await writeFile(`${evidence}/tilt-plane-diagnostics.json`, JSON.stringify(observations, null, 2))
+  for (const observation of observations) expect(observation.departureFromFollowingSurface, `${observation.dark ? 'dark' : 'light'} angle ${observation.angle} has no separate flat shadow plane`).toBeLessThan(.8)
+}, 20000)
