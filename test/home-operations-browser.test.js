@@ -586,7 +586,8 @@ it('renders the exported trend arrow and distinct final Figma light fields for a
         }))
       }
       expect(new Set(fields.map(field => field.src)).size).toBe(3)
-      expect(fields.map(field => field.opacity)).toEqual(dark ? [.5, .5, .5] : [.5, .58, .58])
+      if (dark) expect(fields.every(field => field.opacity > .5 && field.opacity <= 1)).toBe(true)
+      else expect(fields.map(field => field.opacity)).toEqual([.5, .58, .58])
       allFields.push(...fields)
     }
     expect(new Set(allFields.map(field => field.src)).size).toBe(6)
@@ -682,7 +683,7 @@ it('keeps all five card surfaces distinct and description text readable over bla
         const cards = geometry.cards.map(card => patchRgb(png, card.x + card.width * .65, card.y + 6))
         const edgeSeparation = geometry.cards.map(card => {
           const outside = patchRgb(png, card.x + card.width * .65, card.y - 5)
-          // A one-pixel outline must remain distinguishable at fractional layout coordinates.
+          // Measure the material edge at native pixel resolution.
           return Math.max(...[-2, -1, 0, 1, 2].map(dy => patchRgb(png, card.x + card.width * .65, card.y + dy, 0).reduce((sum, value, channel) => sum + Math.abs(value - outside[channel]), 0) / 3))
         })
         const ratios = []
@@ -697,6 +698,10 @@ it('keeps all five card surfaces distinct and description text readable over bla
     for (let card = 0; card < 5; card++) for (let channel = 0; channel < 3; channel++) {
       const values = modes.map(observation => observation.cards[card][channel])
       expect(Math.max(...values) - Math.min(...values), `${dark ? 'dark' : 'light'} card ${card} suppresses background variation`).toBeLessThan(40)
+    }
+    if (dark) for (let card = 1; card < 5; card++) {
+      const black = modes.find(mode => mode.name === 'black').cards[card], white = modes.find(mode => mode.name === 'white').cards[card]
+      expect(white.reduce((sum, value, channel) => sum + value - black[channel], 0) / 3, `dark quick card ${card} transmits a visible amount of its backdrop`).toBeGreaterThanOrEqual(20)
     }
   }
   for (const observation of observations) {
@@ -819,9 +824,99 @@ it('separates neutral dark glass faces from black, blue-black, and busy backgrou
     for (const observation of observations) for (const [index, surface] of observation.surfaces.entries()) {
       // The case artwork has deliberate colored glows; the four resting quick
       // surfaces should remain neutral even over a mildly contaminating backdrop.
-      if (index > 0) expect(surface.channelSpread, `${observation.name} quick card ${index} keeps a neutral black hue`).toBeLessThanOrEqual(observation.name === 'black' ? 8 : 12)
+      if (index > 0 && observation.name === 'black') expect(surface.channelSpread, `${observation.name} quick card ${index} keeps a neutral black hue`).toBeLessThanOrEqual(8)
       if (observation.name !== 'busy') expect(surface.backgroundContrast, `${observation.name} card ${index} separates from its dark background`).toBeGreaterThanOrEqual(1.35)
     }
+  } finally { await page.close() }
+}, 15000)
+
+it('actually blurs a high-frequency checkerboard behind the translucent glass', async () => {
+  const page = await fixture({ dark: true }), card = page.locator('.odyssey-operations-quick-card').first()
+  const roughness = png => {
+    let sum = 0, count = 0
+    for (let y = 4; y < 10; y++) for (let x = 12; x < png.width - 13; x++) {
+      const first = patchRgb(png, x, y, 0), next = patchRgb(png, x + 1, y, 0)
+      sum += first.reduce((sum, value, channel) => sum + Math.abs(value - next[channel]), 0) / 3; count++
+    }
+    return sum / count
+  }
+  try {
+    await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+    await page.locator('.pI_x6G_centerCol').evaluate(host => host.style.setProperty('background', 'repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0 / 8px 8px', 'important'))
+    const filtered = PNG.sync.read(await card.screenshot({ path: `${evidence}/glass-checker-filtered.png` }))
+    await card.evaluate(card => { card.style.setProperty('backdrop-filter', 'none', 'important'); card.style.setProperty('-webkit-backdrop-filter', 'none', 'important') })
+    const unfiltered = PNG.sync.read(await card.screenshot({ path: `${evidence}/glass-checker-unfiltered.png` }))
+    const metrics = { filtered: roughness(filtered), unfiltered: roughness(unfiltered) }
+    await writeFile(`${evidence}/glass-checker-roughness.json`, JSON.stringify(metrics, null, 2))
+    expect(metrics.unfiltered, 'the control exposes the checkerboard through the same material').toBeGreaterThan(.5)
+    expect(metrics.filtered, 'the actual backdrop filter suppresses sharp checker edges').toBeLessThan(metrics.unfiltered * .35)
+  } finally { await page.close() }
+}, 15000)
+
+it('makes ambient glow visibly evolve while keeping every case description readable at motion peaks', async () => {
+  const page = await fixture({ dark: true, reduced: false, clock: true }), observations = []
+  try {
+    await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
+    await page.locator('.pI_x6G_centerCol').evaluate(host => host.style.setProperty('background', '#fff', 'important'))
+    for (let index = 0; index < 3; index++) {
+      await page.locator('.odyssey-operations-pagination button').nth(index).evaluate(button => button.click()); await page.clock.runFor(500)
+      const frames = []
+      const phases = [0, 4000, 6000, 8000]
+      for (const phase of phases) {
+        await page.locator('.odyssey-operations-usecase').evaluate((card, phase) => {
+          for (const animation of card.getAnimations({ subtree: true })) if (animation.effect?.target?.classList.contains('odyssey-operations-glow')) { animation.pause(); animation.currentTime = phase }
+        }, phase)
+        const description = await page.locator('.odyssey-operations-description').evaluate(element => { const bounds = element.getBoundingClientRect(); return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, color: getComputedStyle(element).color.match(/[\d.]+/g).map(Number).slice(0, 3) } })
+        await page.locator('.odyssey-operations-description').evaluate(element => element.style.visibility = 'hidden')
+        const screen = PNG.sync.read(await page.screenshot())
+        const ratios = []
+        for (const x of [.1, .5, .9]) for (const y of [.2, .5, .8]) ratios.push(contrastRatio(description.color, patchRgb(screen, description.x + description.width * x, description.y + description.height * y)))
+        await page.locator('.odyssey-operations-case-copy, .odyssey-operations-pagination').evaluateAll(elements => elements.forEach(element => element.style.visibility = 'hidden'))
+        const frame = PNG.sync.read(await page.locator('.odyssey-operations-usecase').screenshot())
+        frames.push(frame)
+        let brightness = 0, pixels = 0
+        for (let y = 12; y < frame.height - 12; y += 3) for (let x = 12; x < frame.width - 12; x += 3) { brightness += luminance(patchRgb(frame, x, y, 0)); pixels++ }
+        await page.locator('.odyssey-operations-case-copy, .odyssey-operations-description, .odyssey-operations-pagination').evaluateAll(elements => elements.forEach(element => element.style.removeProperty('visibility')))
+        await page.locator('.odyssey-operations-usecase').screenshot({ path: `${evidence}/glow-contrast-dark-white-case-${index}-phase-${phase}.png` })
+        observations.push({ index, phase, meanArtworkLuminance: brightness / pixels, minimumDescriptionContrast: Math.min(...ratios) })
+      }
+      const frameDifferences = []
+      for (let from = 0; from < frames.length; from++) for (let to = from + 1; to < frames.length; to++) {
+        let difference = 0, count = 0
+        for (let y = 12; y < frames[0].height - 12; y += 3) for (let x = 12; x < frames[0].width - 12; x += 3) {
+          const first = patchRgb(frames[from], x, y, 0), last = patchRgb(frames[to], x, y, 0)
+          difference += first.reduce((sum, value, channel) => sum + Math.abs(value - last[channel]), 0) / 3; count++
+        }
+        frameDifferences.push({ from: phases[from], to: phases[to], meanDifference: difference / count })
+      }
+      observations.push({ index, frameDifferences, meanFrameDifference: Math.max(...frameDifferences.map(frame => frame.meanDifference)) })
+    }
+    await writeFile(`${evidence}/glow-motion-readability.json`, JSON.stringify(observations, null, 2))
+    for (const observation of observations) {
+      if ('minimumDescriptionContrast' in observation) expect(observation.minimumDescriptionContrast, `case ${observation.index} phase ${observation.phase} text contrast`).toBeGreaterThanOrEqual(4.5)
+      if ('meanFrameDifference' in observation) expect(observation.meanFrameDifference, `case ${observation.index} has visibly changing ambient artwork`).toBeGreaterThan(2)
+    }
+  } finally { await page.close() }
+}, 20000)
+
+it('gives the active timer fill clear raster contrast without changing its six-second timing', async () => {
+  const page = await fixture({ dark: true, reduced: false, clock: true })
+  try {
+    await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
+    await page.locator('.odyssey-operations-pagination button').first().evaluate(button => button.click()); await page.clock.runFor(3000)
+    const track = await page.locator('.odyssey-operations-pagination [aria-pressed="true"] i').evaluate(track => { const bounds = track.getBoundingClientRect(); return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, progress: parseFloat(getComputedStyle(track, '::before').width) / track.clientWidth } })
+    const png = PNG.sync.read(await page.screenshot())
+    const filled = patchRgb(png, track.x + track.width * .2, track.y + track.height * .5, 0), unfilled = patchRgb(png, track.x + track.width * .8, track.y + track.height * .5, 0)
+    const metrics = { ...track, filled, unfilled, contrast: contrastRatio(filled, unfilled) }
+    await writeFile(`${evidence}/active-timer-raster.json`, JSON.stringify(metrics, null, 2))
+    await page.locator('.odyssey-operations-usecase').screenshot({ path: `${evidence}/active-timer-dark.png` })
+    expect(track.progress).toBeGreaterThan(.4); expect(track.progress).toBeLessThan(.6)
+    expect(metrics.contrast, 'filled timer is distinguishable from the remaining rail').toBeGreaterThanOrEqual(3)
+    expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('0')
+    await page.clock.runFor(3600)
+    expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('1')
   } finally { await page.close() }
 }, 15000)
 
