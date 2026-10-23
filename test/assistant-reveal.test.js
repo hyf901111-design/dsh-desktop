@@ -1,5 +1,7 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
+import {Script} from 'node:vm'
+import {patchCanvasUseClient} from '../scripts/lib/canvas-use-client.mjs'
 import {createAssistantRevealLedger,patchAssistantReveal} from '../scripts/lib/assistant-reveal.mjs'
 import {createNotesActivityStore,patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 const node=(key,seq,status='settled')=>({key,kind:'assistant-step',anchorSeq:seq,data:{status}})
@@ -40,4 +42,12 @@ it('revokes a pending host transfer synchronously when its foreground view epoch
  const ledger=createAssistantRevealLedger(),owner=()=>{},nodes=new Map();ledger.observe(owner,'open',[],nodes);nodes.set('new',node('new',20,'running'));ledger.observe(owner,'open',['new'],nodes)
  const record=ledger.record(owner,nodes.get('new')),epoch=record.epoch;record.handoff={route:'progress',epoch,units:[{from:0,to:1,at:0}]};ledger.suspend(owner)
  expect(record.epoch).toBeGreaterThan(epoch);expect(record.handoff).toBeUndefined();expect(record.skipNext).toBe(true)
+})
+
+it('re-enters the early canvas patch after reply reveal without losing either scroll guard',()=>{
+ const raw=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),revealed=patchAssistantReveal(patchCanvasUseClient(raw))
+ const replayed=patchCanvasUseClient(revealed)
+ expect(replayed).toBe(revealed);expect(patchAssistantReveal(replayed)).toBe(replayed);expect(()=>new Script(replayed)).not.toThrow()
+ expect(replayed).toContain('if(el.dataset?.conversationReading)return;');expect(replayed).toContain('el.scrollTop = assistantRevealScrollTop(el) ?? el.scrollHeight;');expect(replayed).toContain('settleConversationScrollBottom(el,callback=>requestAnimationFrame(()=>{if(atBottomRef.current)callback()}), () => {')
+ expect(replayed.match(/const stopAnchoring=anchorConversationDisclosures\(local,/g)).toHaveLength(1)
 })
