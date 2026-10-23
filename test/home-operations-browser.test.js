@@ -75,7 +75,7 @@ const state = page => page.locator('[data-odyssey-home-operations-state]').getAt
 const toggle = page => page.locator('[data-odyssey-home-operations-toggle]')
 const root = page => page.locator('main > [data-slot="conversation"] > .wSkVaW_root')
 const waitState = (page, value) => expect.poll(() => state(page), { timeout: 2500 }).toBe(value)
-const waitCase = (page, index) => expect.poll(() => page.locator('.odyssey-operations-usecase').evaluate(card => ({ index: card.dataset.case, opacity: Number(getComputedStyle(card.querySelector('.odyssey-operations-case-copy')).opacity) })), { timeout: 1500 }).toEqual({ index: String(index), opacity: 1 })
+const waitCase = (page, index) => expect.poll(() => page.locator('.odyssey-operations-usecase').evaluate(card => { const layers = card.querySelectorAll('[data-odyssey-operations-case-layer]'); return { index: card.dataset.case, layers: layers.length || 1, opacity: Number(getComputedStyle(layers[0] || card.querySelector('.odyssey-operations-case-copy')).opacity) } }), { timeout: 1500 }).toEqual({ index: String(index), layers: 1, opacity: 1 })
 const progress = page => page.locator('[data-odyssey-home-operations-state]').evaluate(host => parseFloat(getComputedStyle(host).getPropertyValue('--odyssey-operations-progress-value')))
 const nextPaint = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 async function startMotionProbe(page, duration = 1500) {
@@ -365,38 +365,70 @@ it('fills the active case track and automatically loops the three examples on th
     expect(track).toBeLessThan(.6)
     for (const nextCase of ['1', '2', '0']) {
       const elapsed = await page.locator('.odyssey-operations-usecase').evaluate(card => parseFloat(getComputedStyle(card).getPropertyValue('--odyssey-operations-case-progress')))
-      await page.clock.runFor((1 - elapsed) * 6000 + 350)
+      await page.clock.runFor((1 - elapsed) * 6000 + 500)
       expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(nextCase)
     }
   } finally { await page.close() }
 }, 20000)
 
-it('fades old case content out before committing and fades new content in for manual and automatic changes', async () => {
-  const page = await fixture({ reduced: false, clock: true })
-  const title = () => page.locator('.odyssey-operations-title strong').textContent()
-  const opacity = () => page.locator('.odyssey-operations-case-copy').evaluate(copy => Number(getComputedStyle(copy).opacity))
+it('crossfades different old and new cases together without an empty or dim interval', async () => {
+  const page = await fixture({ dark: true, reduced: false, clock: true })
+  const samples = []
+  const snapshot = () => page.locator('.odyssey-operations-usecase').evaluate(card => {
+    const actual = [...card.querySelectorAll('[data-odyssey-operations-case-layer]')]
+    const layers = actual.length ? actual : [card.querySelector('.odyssey-operations-case-copy')]
+    return { layers: layers.map(layer => ({ text: layer.textContent.trim(), opacity: Number(getComputedStyle(layer).opacity), hidden: layer.getAttribute('aria-hidden') === 'true', inert: layer.inert })), pages: card.querySelectorAll('.odyssey-operations-pagination').length, bounds: { width: card.clientWidth, height: card.clientHeight } }
+  })
+  const raster = async () => {
+    const elements = page.locator('.odyssey-operations-case-copy, .odyssey-operations-description, .odyssey-operations-pagination')
+    await elements.evaluateAll(elements => elements.forEach(element => element.style.visibility = 'hidden'))
+    const png = PNG.sync.read(await page.locator('.odyssey-operations-usecase').screenshot())
+    await elements.evaluateAll(elements => elements.forEach(element => element.style.removeProperty('visibility')))
+    return png
+  }
+  const light = (png, baseline) => {
+    let sum = 0
+    for (let y = 12; y < png.height - 12; y += 3) for (let x = 12; x < png.width - 12; x += 3) sum += Math.max(0, luminance(patchRgb(png, x, y, 0)) - luminance(patchRgb(baseline, x, y, 0)))
+    return sum
+  }
   try {
     await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
     await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
-    const oldTitle = await title()
+    await page.addStyleTag({ content: '.odyssey-operations-glow { animation-play-state:paused !important; }' })
+    await page.locator('.odyssey-operations-gradient-field').evaluateAll(fields => fields.forEach(field => field.style.visibility = 'hidden'))
+    const baseline = await raster()
+    await page.locator('.odyssey-operations-gradient-field').evaluateAll(fields => fields.forEach(field => field.style.removeProperty('visibility')))
+    const start = await snapshot(), startLight = light(await raster(), baseline)
     await page.locator('.odyssey-operations-pagination button').nth(1).evaluate(button => button.click())
-    expect(await title()).toBe(oldTitle)
-    await page.clock.runFor(55)
-    expect(await title()).toBe(oldTitle)
-    expect(await opacity()).toBeGreaterThan(0); expect(await opacity()).toBeLessThan(1)
-    await page.clock.runFor(70)
-    expect(await title()).not.toBe(oldTitle)
-    expect(await opacity()).toBeGreaterThan(0); expect(await opacity()).toBeLessThan(1)
-    await page.clock.runFor(200); expect(await opacity()).toBe(1)
-    const beforeAutomatic = await title()
+    let previous = 0
+    for (const time of [55, 100, 160, 240, 500]) {
+      await page.clock.runFor(time - previous); previous = time
+      samples.push({ time, ...await snapshot(), glowLight: light(await raster(), baseline) })
+      if (time === 160) await page.locator('.odyssey-operations-usecase').screenshot({ path: `${evidence}/case-crossfade-160ms.png` })
+    }
+    await writeFile(`${evidence}/case-crossfade-samples.json`, JSON.stringify({ start, startLight, samples }, null, 2))
+    const ending = samples.at(-1), referenceLight = Math.min(startLight, ending.glowLight)
+    expect(referenceLight, 'the browser raster contains the ambient glow').toBeGreaterThan(.1)
+    for (const sample of samples.slice(0, -1)) {
+      const painted = sample.layers.filter(layer => layer.opacity > .01)
+      expect(new Set(painted.map(layer => layer.text)).size, `both cases remain painted at ${sample.time}ms`).toBeGreaterThanOrEqual(2)
+      expect(painted.reduce((sum, layer) => sum + layer.opacity, 0), `case weights at ${sample.time}ms`).toBeCloseTo(1, 2)
+      expect(sample.glowLight, `no glow blackout at ${sample.time}ms`).toBeGreaterThan(referenceLight * .65)
+      expect(sample.pages).toBe(1); expect(sample.bounds).toEqual(start.bounds)
+      expect(painted.filter(layer => !layer.hidden && !layer.inert).length).toBe(1)
+      expect(painted.filter(layer => layer.hidden).every(layer => layer.inert)).toBe(true)
+    }
+    expect(ending.layers).toHaveLength(1); expect(ending.layers[0].opacity).toBe(1)
+    expect(await page.getByRole('heading', { level: 3 }).count()).toBe(1)
+    const beforeAutomatic = ending.layers[0].text
     const elapsed = await page.locator('.odyssey-operations-usecase').evaluate(card => parseFloat(getComputedStyle(card).getPropertyValue('--odyssey-operations-case-progress')))
-    await page.clock.runFor((1 - elapsed) * 6000 + 55)
-    expect(await title()).toBe(beforeAutomatic)
-    expect(await opacity()).toBeGreaterThan(0); expect(await opacity()).toBeLessThan(1)
-    await page.clock.runFor(80)
-    expect(await title()).not.toBe(beforeAutomatic)
-    expect(await opacity()).toBeGreaterThan(0); expect(await opacity()).toBeLessThan(1)
-    await page.clock.runFor(220); expect(await opacity()).toBe(1)
+    await page.clock.runFor((1 - elapsed) * 6000 + 160)
+    const automatic = await snapshot(), painted = automatic.layers.filter(layer => layer.opacity > .01)
+    expect(painted.some(layer => layer.text === beforeAutomatic)).toBe(true)
+    expect(painted.some(layer => layer.text !== beforeAutomatic)).toBe(true)
+    expect(painted.reduce((sum, layer) => sum + layer.opacity, 0)).toBeCloseTo(1, 2)
+    await page.clock.runFor(500)
+    expect((await snapshot()).layers).toHaveLength(1)
   } finally { await page.close() }
 }, 20000)
 
@@ -407,15 +439,33 @@ it('keeps only the latest rapid case request and removes unfinished fades on dis
   try {
     await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
     await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100))
-    await page.evaluate(() => {
-      const card = document.querySelector('.odyssey-operations-usecase'); window.homeOperations.committedCases = []
-      new MutationObserver(() => window.homeOperations.committedCases.push(card.dataset.case)).observe(card, { attributes: true, attributeFilter: ['data-case'] })
-    })
-    await page.locator('.odyssey-operations-pagination button').nth(1).evaluate(button => button.click()); await page.clock.runFor(40)
-    await page.locator('.odyssey-operations-pagination button').nth(2).evaluate(button => button.click()); await page.clock.runFor(350)
+    const layers = () => page.locator('[data-odyssey-operations-case-layer]').evaluateAll(layers => layers.map(layer => ({ index: layer.dataset.case, opacity: Number(getComputedStyle(layer).opacity) })))
+    await page.locator('.odyssey-operations-pagination button').nth(1).evaluate(button => button.click()); await page.clock.runFor(120)
+    const beforeRetarget = await layers()
+    await page.locator('.odyssey-operations-pagination button').nth(2).evaluate(button => button.click())
+    const afterRetarget = await layers()
+    // Retargeting can advance the last rendered frame by less than one frame,
+    // but must retain the current mixture instead of clearing or restarting it.
+    for (const before of beforeRetarget) expect(Math.abs(afterRetarget.find(layer => layer.index === before.index)?.opacity - before.opacity)).toBeLessThan(.06)
+    expect(afterRetarget.reduce((sum, layer) => sum + layer.opacity, 0)).toBeCloseTo(1, 2)
+    await page.clock.runFor(160)
+    const continuing = await layers()
+    expect(continuing.filter(layer => layer.opacity > .01).length).toBeGreaterThanOrEqual(2)
+    expect(continuing.reduce((sum, layer) => sum + layer.opacity, 0)).toBeCloseTo(1, 2)
+    await page.clock.runFor(500)
     expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('2')
-    expect(await page.evaluate(() => window.homeOperations.committedCases.includes('1'))).toBe(false)
-    expect(await page.locator('.odyssey-operations-case-copy').evaluate(copy => Number(getComputedStyle(copy).opacity))).toBe(1)
+    expect(await layers()).toEqual([{ index: '2', opacity: 1 }])
+    expect(await page.getByRole('heading', { level: 3 }).count()).toBe(1)
+    await page.locator('.odyssey-operations-pagination button').first().evaluate(button => button.click()); await page.clock.runFor(80)
+    await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')) })
+    expect(await layers()).toEqual([{ index: '0', opacity: 1 }])
+    await page.clock.runFor(1000)
+    expect(await layers()).toEqual([{ index: '0', opacity: 1 }])
+    await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')) })
+    await page.locator('.odyssey-operations-pagination button').nth(1).evaluate(button => button.click()); await page.clock.runFor(80)
+    await page.emulateMedia({ reducedMotion: 'reduce' }); await page.clock.runFor(16)
+    expect(await layers()).toEqual([{ index: '1', opacity: 1 }])
+    await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.clock.runFor(16)
     await page.locator('.odyssey-operations-pagination button').first().evaluate(button => button.click()); await page.clock.runFor(40)
     await page.evaluate(() => window.homeOperations.dispose()); await page.clock.runFor(1000)
     expect(await region(page).count()).toBe(0)
@@ -441,9 +491,9 @@ it('pauses case timing for hover, keyboard focus, hidden pages, and route cleanu
     await page.mouse.move(1, 1); await page.clock.runFor(900)
     expect(await caseProgress()).toBeGreaterThan(beforeHover + .1)
     await page.locator('.odyssey-operations-pagination button').nth(2).evaluate(button => button.click())
-    await page.clock.runFor(350)
+    await page.clock.runFor(500)
     const resetProgress = await caseProgress()
-    expect(resetProgress).toBeLessThan(.06)
+    expect(resetProgress).toBeLessThan(.09)
     await page.clock.runFor(1000)
     expect(await caseProgress() - resetProgress).toBeGreaterThan(.13)
     expect(await caseProgress() - resetProgress).toBeLessThan(.19)
@@ -576,15 +626,15 @@ it('adds one reversible presentation-blue glass tint to all four quick cards wit
       await toggle(page).click()
       await waitState(page, 'operations')
       const tints = []
-      const appearance = card => card.evaluate(element => { const style = getComputedStyle(element); return { background: style.backgroundColor, image: style.backgroundImage, shadow: style.boxShadow, anchorShadow: getComputedStyle(element.closest('.odyssey-operations-tilt-anchor')).boxShadow } })
+      const appearance = card => card.evaluate(element => { const style = getComputedStyle(element), material = getComputedStyle(element, '::before'), paint = material.content === 'none' ? style : material; return { background: paint.backgroundColor, image: paint.backgroundImage, shadow: style.boxShadow, materialShadow: paint.boxShadow, anchorShadow: getComputedStyle(element.closest('.odyssey-operations-tilt-anchor')).boxShadow } })
       for (const card of await page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card').all()) {
         await page.mouse.move(1, 1)
         const rest = await appearance(card), kind = await card.getAttribute('data-card')
         await card.hover({ position: { x: 30, y: 30 } })
         await page.waitForTimeout(320)
         const hover = await card.evaluate(element => {
-          const style = getComputedStyle(element), matrix = new DOMMatrixReadOnly(style.transform)
-          return { background: style.backgroundColor, image: style.backgroundImage, shadow: style.boxShadow, anchorShadow: getComputedStyle(element.closest('.odyssey-operations-tilt-anchor')).boxShadow, verticalLift: matrix.m42, lights: [...element.querySelectorAll('.odyssey-operations-pointer-light')].map(light => { const style = getComputedStyle(light); return style.display === 'none' ? 0 : Number(style.opacity) }) }
+          const style = getComputedStyle(element), material = getComputedStyle(element, '::before'), paint = material.content === 'none' ? style : material, matrix = new DOMMatrixReadOnly(style.transform)
+          return { background: paint.backgroundColor, image: paint.backgroundImage, shadow: style.boxShadow, materialShadow: paint.boxShadow, anchorShadow: getComputedStyle(element.closest('.odyssey-operations-tilt-anchor')).boxShadow, verticalLift: matrix.m42, lights: [...element.querySelectorAll('.odyssey-operations-pointer-light')].map(light => { const style = getComputedStyle(light); return style.display === 'none' ? 0 : Number(style.opacity) }) }
         })
         expect(hover.lights.every(opacity => opacity === 0)).toBe(true)
         if (kind) {
@@ -595,12 +645,14 @@ it('adds one reversible presentation-blue glass tint to all four quick cards wit
           const restChannels = rest.background.match(/[\d.]+/g).map(Number)
           expect(alpha).toBeGreaterThanOrEqual((restChannels[3] ?? 1) - .001)
           expect(Math.max(red, green, blue) - Math.min(red, green, blue)).toBeLessThan(90)
-          expect([red, green, blue]).toEqual(dark ? [25, 36, 64] : [221, 230, 249])
+          expect(blue).toBeGreaterThan(red + 10)
+          expect(blue).toBeGreaterThan(green + 4)
         } else {
           expect(hover.background).toBe(rest.background)
           expect(hover.image).toBe(rest.image)
         }
         expect(hover.shadow).toBe(rest.shadow)
+        expect(hover.materialShadow).toBe(rest.materialShadow)
         expect(hover.anchorShadow).toBe(rest.anchorShadow)
         expect(Math.abs(hover.verticalLift)).toBeLessThan(.1)
         await page.mouse.move(1, 1)
@@ -649,9 +701,69 @@ it('keeps all five card surfaces distinct and description text readable over bla
   }
   for (const observation of observations) {
     expect(observation.minimumDescriptionContrast, `${observation.dark ? 'dark' : 'light'} ${observation.name} description contrast`).toBeGreaterThanOrEqual(4.5)
-    expect(Math.min(...observation.edgeSeparation), `${observation.dark ? 'dark' : 'light'} ${observation.name} card edge separation`).toBeGreaterThan(4)
   }
 }, 20000)
+
+it('keeps idle card text planar and unfiltered while drawing no card borders', async () => {
+  const alignment = []
+  for (const dark of [false, true]) for (const width of [1380, 1823]) {
+    const page = await fixture({ dark, width, height: 1115, reduced: false })
+    try {
+      await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+      const observations = await page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card').evaluateAll(cards => cards.map(card => {
+        const style = getComputedStyle(card), anchor = getComputedStyle(card.closest('.odyssey-operations-tilt-anchor'))
+        const copy = card.querySelector('.odyssey-operations-case-copy, .odyssey-operations-quick-label')
+        const textStyles = []
+        for (let element = copy; element && element !== card.parentElement; element = element.parentElement) {
+          const style = getComputedStyle(element)
+          textStyles.push({ filter: style.filter, opacity: Number(style.opacity), transform: style.transform })
+        }
+        return { transform: style.transform, borders: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth].map(parseFloat), outline: style.outlineStyle, cardShadow: style.boxShadow, anchorShadow: anchor.boxShadow, textStyles }
+      }))
+      for (const observation of observations) {
+        expect(observation.borders.every(width => width === 0)).toBe(true)
+        expect(observation.outline).toBe('none')
+        expect(`${observation.cardShadow} ${observation.anchorShadow}`).not.toContain('inset')
+        expect(observation.transform, 'idle cards do not rasterize text through perspective').toBe('none')
+        for (const style of observation.textStyles) {
+          expect(style.filter).toBe('none'); expect(style.opacity).toBe(1)
+          expect(style.transform).not.toContain('matrix3d')
+          if (style.transform !== 'none') expect(style.transform).toMatch(/^matrix\(1, 0, 0, 1, /)
+        }
+      }
+      const textPixels = await page.locator('.odyssey-operations-title, .odyssey-operations-subtitle, .odyssey-operations-description, .odyssey-operations-quick-label').evaluateAll(elements => elements.map(element => { const bounds = element.getBoundingClientRect(); return { name: element.className, x: bounds.x * devicePixelRatio, y: bounds.y * devicePixelRatio } }))
+      alignment.push({ dark, width, textPixels })
+      for (const text of textPixels) for (const axis of ['x', 'y']) expect(Math.abs(text[axis] - Math.round(text[axis])), `${width}px ${text.name} ${axis} aligns to device pixels`).toBeLessThanOrEqual(.03)
+      await page.locator('.odyssey-operations-case-copy').screenshot({ path: `${evidence}/text-clarity-${dark ? 'dark' : 'light'}-${width}.png` })
+    } finally { await page.close() }
+  }
+  await writeFile(`${evidence}/text-device-pixel-alignment.json`, JSON.stringify(alignment, null, 2))
+}, 15000)
+
+it('shows an outside focus ring for keyboard navigation and leaves pointer-hover cards unframed', async () => {
+  const page = await fixture()
+  try {
+    await toggle(page).click(); await waitState(page, 'operations')
+    const cards = page.locator('.odyssey-operations-quick-card')
+    await page.locator('.odyssey-operations-pagination button').last().focus()
+    for (const card of await cards.all()) {
+      await page.keyboard.press('Tab')
+      const focus = await card.evaluate(element => {
+        const style = getComputedStyle(element.closest('.odyssey-operations-quick-anchor'))
+        return { focused: document.activeElement === element, visible: element.matches(':focus-visible'), style: style.outlineStyle, width: parseFloat(style.outlineWidth), offset: parseFloat(style.outlineOffset) }
+      })
+      expect(focus.focused && focus.visible).toBe(true)
+      expect(focus.style).not.toBe('none'); expect(focus.width).toBeGreaterThanOrEqual(2); expect(focus.offset).toBeGreaterThan(0)
+    }
+    await region(page).screenshot({ path: `${evidence}/keyboard-focus-quick-card.png` })
+    await page.evaluate(() => document.activeElement.blur()); await page.mouse.click(1, 1)
+    for (const card of await cards.all()) {
+      await card.hover({ position: { x: 30, y: 30 } })
+      expect(await card.evaluate(element => getComputedStyle(element.closest('.odyssey-operations-quick-anchor')).outlineStyle)).toBe('none')
+      expect(await card.evaluate(element => getComputedStyle(element).outlineStyle)).toBe('none')
+    }
+  } finally { await page.close() }
+}, 15000)
 
 it('gives all five cards a stronger bounded tilt and keeps a stationary pointer stable', async () => {
   const page = await fixture({ reduced: false })
@@ -672,19 +784,46 @@ it('gives all five cards a stronger bounded tilt and keeps a stationary pointer 
         await page.waitForTimeout(18)
         samples.push(await card.evaluate(element => {
           const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform)
-          return { rx: parseFloat(element.style.getPropertyValue('--rx')) || 0, ry: parseFloat(element.style.getPropertyValue('--ry')) || 0, tilt: Math.abs(matrix.m13) + Math.abs(matrix.m23) }
+          return { rx: parseFloat(element.style.getPropertyValue('--rx')) || 0, ry: parseFloat(element.style.getPropertyValue('--ry')) || 0, tilt: Math.abs(matrix.m13) + Math.abs(matrix.m23), textTransform: getComputedStyle(element.querySelector('.odyssey-operations-case-copy, .odyssey-operations-quick-label')).transform }
         }))
       }
       expect(samples.at(-1).tilt).toBeGreaterThan(.001)
+      expect(samples.every(sample => sample.textTransform === 'none')).toBe(true)
       for (const name of ['rx', 'ry']) {
         const values = samples.map(sample => sample[name])
         expect(Math.abs(values.at(-1))).toBeGreaterThan(1.7)
         expect(Math.max(...values.map(Math.abs))).toBeLessThanOrEqual(3.1)
         expect(Math.max(...values) - Math.min(...values)).toBeLessThan(.03)
       }
+      await page.mouse.move(1, 1)
+      await expect.poll(() => card.evaluate(element => ({ flag: element.hasAttribute('data-odyssey-operations-tilting'), transform: getComputedStyle(element).transform }))).toEqual({ flag: false, transform: 'none' })
     }
   } finally { await page.close() }
 }, 20000)
+
+it('separates neutral dark glass faces from black, blue-black, and busy backgrounds', async () => {
+  const page = await fixture({ dark: true, reduced: true }), observations = []
+  try {
+    await toggle(page).click(); await waitState(page, 'operations'); await page.mouse.move(1, 1)
+    for (const [name, background] of [['black', '#000'], ['blue-black', '#101b2c'], ['busy', 'repeating-linear-gradient(45deg,#00afff 0 18px,#ff8a00 18px 36px,#101820 36px 54px,#fcfcfc 54px 72px)']]) {
+      await page.locator('.pI_x6G_centerCol').evaluate((host, background) => host.style.setProperty('background', background, 'important'), background)
+      const cards = await page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card').evaluateAll(elements => elements.map(card => { const bounds = card.getBoundingClientRect(); return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } }))
+      const png = PNG.sync.read(await page.screenshot())
+      await region(page).screenshot({ path: `${evidence}/material-refined-dark-${name}.png` })
+      observations.push({ name, surfaces: cards.map(card => {
+        const face = patchRgb(png, card.x + card.width * .65, card.y + 7), outside = patchRgb(png, card.x + card.width * .65, card.y - 5)
+        return { face, channelSpread: Math.max(...face) - Math.min(...face), faceLuminance: luminance(face), backgroundContrast: contrastRatio(face, outside) }
+      }) })
+    }
+    await writeFile(`${evidence}/material-refined-dark-readability.json`, JSON.stringify(observations, null, 2))
+    for (const observation of observations) for (const [index, surface] of observation.surfaces.entries()) {
+      // The case artwork has deliberate colored glows; the four resting quick
+      // surfaces should remain neutral even over a mildly contaminating backdrop.
+      if (index > 0) expect(surface.channelSpread, `${observation.name} quick card ${index} keeps a neutral black hue`).toBeLessThanOrEqual(observation.name === 'black' ? 8 : 12)
+      if (observation.name !== 'busy') expect(surface.backgroundContrast, `${observation.name} card ${index} separates from its dark background`).toBeGreaterThanOrEqual(1.35)
+    }
+  } finally { await page.close() }
+}, 15000)
 
 it('keeps all five cards and ambient fields static for reduced motion', async () => {
   const page = await fixture({ reduced: true })
@@ -731,7 +870,7 @@ it('keeps every moving glow image edge outside the rounded card at several anima
           await nextPaint(page)
           observations.push(await page.locator('.odyssey-operations-usecase').evaluate(card => {
             const bounds = card.getBoundingClientRect(), style = getComputedStyle(card), field = getComputedStyle(card.querySelector('.odyssey-operations-gradient-field'))
-            return { clipped: ['hidden', 'clip'].includes(style.overflow), radius: parseFloat(style.borderTopLeftRadius), fieldClipped: ['hidden', 'clip'].includes(field.overflow), fieldRadius: parseFloat(field.borderTopLeftRadius), margins: [...card.querySelectorAll('.odyssey-operations-glow')].map(glow => {
+            return { clipped: ['hidden', 'clip'].includes(style.overflow), radius: parseFloat(style.borderTopLeftRadius), fieldClipped: ['hidden', 'clip'].includes(field.overflow), fieldRadius: Math.max(parseFloat(field.borderTopLeftRadius), parseFloat(field.clipPath.match(/round\s+([\d.]+)px/)?.[1] || '0')), margins: [...card.querySelectorAll('.odyssey-operations-glow')].map(glow => {
               const rect = glow.getBoundingClientRect()
               return [bounds.left - rect.left, bounds.top - rect.top, rect.right - bounds.right, rect.bottom - bounds.bottom]
             }) }

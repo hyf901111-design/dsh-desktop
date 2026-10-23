@@ -9,7 +9,7 @@ type Card = 'board' | 'note' | 'ppt' | 'report'
 const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
 const DESIGN_WIDTH = 780
-const DESIGN_HEIGHT = 381.344
+const DESIGN_HEIGHT = 382
 const MOTION_FREQUENCY = 14
 const smootherStep = (value: number) => {
   const t = Math.max(0, Math.min(1, value))
@@ -52,7 +52,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
   let host: HTMLElement | null = null, root: HTMLElement | null = null, hero: HTMLElement | null = null
   let heroWasInert = false
   let section: HTMLElement | null = null, toggle: HTMLButtonElement | null = null
-  let heading: HTMLElement | null = null, caseTitle: HTMLElement | null = null, caseSubtitle: HTMLElement | null = null, caseDescription: HTMLElement | null = null
+  let heading: HTMLElement | null = null
   let usecase: HTMLElement | null = null
   let carousel: HomeOperationsCarousel | null = null
   let caseTransition: HomeOperationsCaseTransition | null = null
@@ -64,7 +64,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
   const quickCards: HTMLButtonElement[] = [], pages: HTMLButtonElement[] = []
   const pointerFrames = new Map<HTMLElement, number>()
   const tiltStates = new Map<HTMLElement, { rx: number, ry: number, targetX: number, targetY: number, lastTime: number }>()
-  const variables = ['--odyssey-operations-top', '--odyssey-operations-input-top', '--odyssey-operations-shift', '--odyssey-operations-scale', '--odyssey-operations-viewport-height', '--odyssey-operations-toggle-top', '--odyssey-operations-available-height', '--odyssey-operations-edge-start', '--odyssey-operations-duration', '--odyssey-operations-progress-value', '--odyssey-operations-scroll-progress', '--odyssey-operations-offset', '--odyssey-operations-hero-offset', '--odyssey-operations-hero-opacity', '--odyssey-operations-opacity']
+  const variables = ['--odyssey-operations-top', '--odyssey-operations-input-top', '--odyssey-operations-center-x', '--odyssey-operations-shift', '--odyssey-operations-scale', '--odyssey-operations-viewport-height', '--odyssey-operations-toggle-top', '--odyssey-operations-available-height', '--odyssey-operations-edge-start', '--odyssey-operations-duration', '--odyssey-operations-progress-value', '--odyssey-operations-scroll-progress', '--odyssey-operations-offset', '--odyssey-operations-hero-offset', '--odyssey-operations-hero-opacity', '--odyssey-operations-opacity']
   const locale = () => doc.documentElement.dataset.odysseyLocale === 'en' ? 'en' : 'zh'
   const copy = () => COPY[locale()]
   const css = (name: string, value: string) => {
@@ -84,6 +84,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
     for (const pending of pointerFrames.values()) win.cancelAnimationFrame(pending)
     for (const card of [...quickCards, ...(usecase ? [usecase] : [])]) {
       card.style.removeProperty('--rx'); card.style.removeProperty('--ry')
+      delete card.dataset.odysseyOperationsTilting
     }
     pointerFrames.clear()
     tiltStates.clear()
@@ -96,13 +97,19 @@ export function mountHomeOperations(doc: Document = document): () => void {
   const updateGlow = () => {
     if (!usecase) return
     const theme = doc.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'
-    usecase.style.setProperty('--odyssey-operations-glow-two-image', `url("${OPERATIONS_CASE_GLOWS[theme][caseIndex]}")`)
+    for (const layer of usecase.querySelectorAll<HTMLElement>('[data-odyssey-operations-case-layer]')) {
+      const index = Number(layer.dataset.case)
+      layer.style.setProperty('--odyssey-operations-glow-two-image', `url("${OPERATIONS_CASE_GLOWS[theme][index]}")`)
+    }
   }
   const updateCase = () => {
     const selected = copy().cases[caseIndex]!
-    if (caseTitle) caseTitle.textContent = selected[0]
-    if (caseSubtitle) caseSubtitle.textContent = selected[1]
-    if (caseDescription) caseDescription.textContent = selected[2]
+    for (const layer of usecase?.querySelectorAll<HTMLElement>('[data-odyssey-operations-case-layer]') || []) {
+      const text = copy().cases[Number(layer.dataset.case)]!
+      layer.querySelector('.odyssey-operations-title strong')!.textContent = text[0]
+      layer.querySelector('.odyssey-operations-subtitle')!.textContent = text[1]
+      layer.querySelector('.odyssey-operations-description')!.textContent = text[2]
+    }
     if (usecase) { usecase.dataset.case = String(caseIndex); usecase.setAttribute('aria-label', `${selected[0]} · ${selected[1]}`) }
     for (const [index, button] of pages.entries()) {
       button.setAttribute('aria-label', copy().cases[index]![1])
@@ -201,6 +208,8 @@ export function mountHomeOperations(doc: Document = document): () => void {
     if (!visible || !host || !hero || !section) return
     const bounds = host.getBoundingClientRect(), composer = hero.getBoundingClientRect()
     if (bounds.width <= 0 || bounds.height <= 0 || composer.width <= 0) return
+    const pixelRatio = win.devicePixelRatio || 1
+    const snap = (coordinate: number) => Math.round(coordinate * pixelRatio) / pixelRatio
     const header = root?.querySelector<HTMLElement>('.wSkVaW_header,[data-srb-session-header]')
     const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom - bounds.top) : 44
     const dock = host.querySelector<HTMLElement>('[data-odyssey-theme-dock]')
@@ -221,21 +230,24 @@ export function mountHomeOperations(doc: Document = document): () => void {
     const heightScale = Math.max(.22, (bottomLimit - minimumTop) / DESIGN_HEIGHT)
     const scale = stacked ? 1 : Math.max(.2, Math.min(1, effectiveWidth / DESIGN_WIDTH, heightScale))
     const viewportHeight = stacked ? Math.min(664.294, Math.max(96, bottomLimit - headerBottom - 72)) : DESIGN_HEIGHT * scale
-    const centeredTop = (bounds.height - 345.344 * scale) / 2 - 36 * scale
-    const targetTop = Math.max(minimumTop, Math.min(centeredTop, bottomLimit - viewportHeight))
+    const physicalWidth = stacked ? Math.min(DESIGN_WIDTH, Math.max(1, bounds.width - 48)) : DESIGN_WIDTH * scale
+    const centeredLeft = snap(bounds.left + (bounds.width - physicalWidth) / 2) - bounds.left
+    const centeredTop = (bounds.height - 346 * scale) / 2 - 36 * scale
+    const targetTop = snap(bounds.top + Math.max(minimumTop, Math.min(centeredTop, bottomLimit - viewportHeight))) - bounds.top
     // Space from the visible input surface, excluding the hero's transparent
     // bottom padding. Re-query because the resident composer can replace slots.
     const inputCard = hero.querySelector<HTMLElement>('.uV2eYG_card')?.getBoundingClientRect()
     const inputBottom = inputCard && inputCard.width > 0 && inputCard.height > 0 ? inputCard.bottom + 20 : composer.bottom + 28
     // Restore the native layout coordinate using our last painted offset.
-    const inputTop = inputBottom - bounds.top + renderedHeroOffset
+    const inputTop = snap(inputBottom + renderedHeroOffset) - bounds.top
     geometry = { inputTop, targetTop, shift: Math.max(1, inputTop - targetTop), scale, viewportHeight }
     css('--odyssey-operations-top', `${inputTop}px`)
     css('--odyssey-operations-input-top', `${inputTop}px`)
+    css('--odyssey-operations-center-x', `${centeredLeft + physicalWidth / 2}px`)
     css('--odyssey-operations-shift', `${geometry.shift}px`)
     css('--odyssey-operations-scale', String(scale))
     css('--odyssey-operations-viewport-height', `${viewportHeight}px`)
-    css('--odyssey-operations-toggle-top', `${toggleTop}px`)
+    css('--odyssey-operations-toggle-top', `${snap(bounds.top + toggleTop) - bounds.top}px`)
     css('--odyssey-operations-available-height', `${Math.max(0, bounds.height - headerBottom)}px`)
     css('--odyssey-operations-edge-start', `${Math.max(headerBottom, bounds.height - 140)}px`)
     paint()
@@ -286,6 +298,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
             pointerFrames.delete(card)
             if (!tilt.targetX && !tilt.targetY) {
               card.style.removeProperty('--rx'); card.style.removeProperty('--ry')
+              delete card.dataset.odysseyOperationsTilting
               tiltStates.delete(card)
             }
           } else pointerFrames.set(card, win.requestAnimationFrame(tick))
@@ -304,6 +317,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
         tilt.targetX = (.5 - y) * 6
         tilt.targetY = (x - .5) * 6
         tiltStates.set(card, tilt)
+        card.dataset.odysseyOperationsTilting = ''
         animate()
       })
       const leave = () => {
@@ -321,16 +335,24 @@ export function mountHomeOperations(doc: Document = document): () => void {
     heading = doc.createElement('h2'); heading.className = 'odyssey-operations-heading'
     const grid = doc.createElement('div'); grid.className = 'odyssey-operations-grid'
     usecase = doc.createElement('article'); usecase.className = 'odyssey-operations-usecase'
-    const field = doc.createElement('div'); field.className = 'odyssey-operations-gradient-field'; field.setAttribute('aria-hidden', 'true')
-    for (const name of ['one', 'two']) { const glow = doc.createElement('i'); glow.className = `odyssey-operations-glow glow ${name}`; field.append(glow) }
-    const caseCopy = doc.createElement('div'); caseCopy.className = 'odyssey-operations-case-copy'
-    const title = doc.createElement('h3'); title.className = 'odyssey-operations-title'
-    caseTitle = doc.createElement('strong')
-    const trend = doc.createElement('img'); trend.className = 'odyssey-operations-trend'; trend.src = OPERATIONS_TREND_UP; trend.alt = ''; trend.setAttribute('aria-hidden', 'true'); trend.draggable = false
-    title.append(caseTitle, trend)
-    caseSubtitle = doc.createElement('p'); caseSubtitle.className = 'odyssey-operations-subtitle'
-    caseCopy.append(title, caseSubtitle)
-    caseDescription = doc.createElement('p'); caseDescription.className = 'odyssey-operations-description'
+    const createCaseLayer = (index: number) => {
+      const layer = doc.createElement('div')
+      const field = doc.createElement('div'); field.className = 'odyssey-operations-gradient-field'; field.setAttribute('aria-hidden', 'true')
+      for (const name of ['one', 'two']) { const glow = doc.createElement('i'); glow.className = `odyssey-operations-glow glow ${name}`; field.append(glow) }
+      const text = copy().cases[index]!
+      const caseCopy = doc.createElement('div'); caseCopy.className = 'odyssey-operations-case-copy'
+      const title = doc.createElement('h3'); title.className = 'odyssey-operations-title'
+      const strong = doc.createElement('strong'); strong.textContent = text[0]
+      const trend = doc.createElement('img'); trend.className = 'odyssey-operations-trend'; trend.src = OPERATIONS_TREND_UP; trend.alt = ''; trend.setAttribute('aria-hidden', 'true'); trend.draggable = false
+      title.append(strong, trend)
+      const subtitle = doc.createElement('p'); subtitle.className = 'odyssey-operations-subtitle'; subtitle.textContent = text[1]
+      caseCopy.append(title, subtitle)
+      const description = doc.createElement('p'); description.className = 'odyssey-operations-description'; description.textContent = text[2]
+      const theme = doc.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'
+      layer.style.setProperty('--odyssey-operations-glow-two-image', `url("${OPERATIONS_CASE_GLOWS[theme][index]}")`)
+      layer.append(field, caseCopy, description)
+      return layer
+    }
     const pagination = doc.createElement('div'); pagination.className = 'odyssey-operations-pagination'
     for (let index = 0; index < 3; index++) {
       const page = doc.createElement('button'); page.type = 'button'; page.dataset.case = String(index); page.tabIndex = -1
@@ -338,7 +360,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
       page.addEventListener('click', () => { if (state === 'operations') carousel?.select(index) })
       pages.push(page); pagination.append(page)
     }
-    usecase.append(field, caseCopy, caseDescription, pagination)
+    usecase.append(pagination)
     const usecaseAnchor = doc.createElement('div'); usecaseAnchor.className = 'odyssey-operations-tilt-anchor odyssey-operations-usecase-anchor'
     usecaseAnchor.append(usecase)
     bindTilt(usecaseAnchor, usecase)
@@ -358,7 +380,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
     toggle = doc.createElement('button'); toggle.type = 'button'; toggle.className = 'odyssey-operations-toggle'; toggle.dataset.odysseyHomeOperationsToggle = ''; toggle.setAttribute('aria-expanded', 'false')
     toggle.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     toggle.addEventListener('click', toggleSection)
-    caseTransition = createHomeOperationsCaseTransition({ win, card: usecase, initialIndex: caseIndex, onCommit: index => { caseIndex = index; updateCase() } })
+    caseTransition = createHomeOperationsCaseTransition({ win, card: usecase, initialIndex: caseIndex, createLayer: createCaseLayer, onCommit: index => { caseIndex = index; updateCase() } })
     carousel = createHomeOperationsCarousel({ win, card: usecase, initialIndex: caseIndex, onChange: index => caseTransition?.select(index) })
   }
   const resize = new win.ResizeObserver(measure)
@@ -370,7 +392,7 @@ export function mountHomeOperations(doc: Document = document): () => void {
     if (host) { delete host.dataset.odysseyHomeOperationsState; delete host.dataset.odysseyHomeOperationsLayout; delete host.dataset.odysseyHomeOperationsMotion; for (const name of variables) host.style.removeProperty(name) }
     section?.remove(); toggle?.remove()
     section = toggle = null; root = hero = host = null
-    heading = caseTitle = caseSubtitle = caseDescription = usecase = null
+    heading = usecase = null
     quickCards.length = pages.length = 0
     renderedTheme = renderedLocale = ''; visible = false; state = intent = 'input'; motion = 'idle'
     progress = targetProgress = renderedHeroOffset = velocity = 0
