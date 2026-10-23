@@ -137,4 +137,21 @@ describe('V5 deep research publication',()=>{
   expect(xs).toHaveLength(3);expect(xs[2]-xs[1]).toBeGreaterThan((xs[1]-xs[0])*10)
   expect(JSON.stringify(s)).toBe(before)
  })
+ it('keeps complete first and last full-day dates inside the market plot',()=>{
+  const f=fixture(),market=f.calculation.market
+  market.rows=Array.from({length:243},(_,i)=>({...market.rows[i%3],date:new Date(Date.UTC(2025,9,22)+Math.round(i*365/242)*86400000).toISOString().slice(0,10)}))
+  const html=renderReport(f.packet,f.validation,f.calculation),figure=[...html.matchAll(/<figure\b[\s\S]*?<\/figure>/g)].find(m=>m[0].includes('aria-label="一年股价与基准表现"'))[0]
+  const dates=[...figure.matchAll(/<text([^>]*)>(20\d\d-\d\d-\d\d)<\/text>/g)]
+  expect(dates[0][2]).toBe('2025-10-22');expect(dates.at(-1)[2]).toBe('2026-10-22')
+  expect(dates.length).toBeLessThanOrEqual(5)
+  expect(dates[0][1]).toContain('text-anchor="start"');expect(dates.at(-1)[1]).toContain('text-anchor="end"')
+  expect(dates.slice(1,-1).every(m=>m[1].includes('text-anchor="middle"'))).toBe(true)
+ })
+ it('separates dual-axis point values when both quarterly maxima share a period',()=>{
+  const f=fixture();f.calculation.quarterly.quarters.forEach((q,i)=>{q.revenue=['100000000','200000000','400000000','300000000'][i];q.revenueYoY=['0.05','-0.1','0.2','-0.03'][i]})
+  const before=JSON.stringify(f.calculation),html=renderReport(f.packet,f.validation,f.calculation),figure=[...html.matchAll(/<figure\b[\s\S]*?<\/figure>/g)].find(m=>m[0].includes('aria-label="季度营业收入与同比"'))[0]
+  const centerLabelY=text=>Number([...figure.matchAll(/<text\b([^>]*)>([^<]+)<\/text>/g)].find(m=>m[2]===text&&m[1].includes('text-anchor="middle"'))[1].match(/\by="([^"]+)"/)[1])
+  expect(Math.abs(centerLabelY('4.00')-centerLabelY('20.0'))).toBeGreaterThanOrEqual(18)
+  expect(figure).toContain('>4.00</text>');expect(figure).toContain('>20.0</text>');expect(JSON.stringify(f.calculation)).toBe(before)
+ })
 })

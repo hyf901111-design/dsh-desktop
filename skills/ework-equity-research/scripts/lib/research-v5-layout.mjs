@@ -140,21 +140,28 @@ export function renderMarketCoverThumbnail(market,helpers,index){
 }
 function seriesSvg(node,e){
  const width=760,x0=78,x1=node.kind==='combo'?678:730,top=36,bottom=220,labels=node.labels,left=node.series.filter(s=>!s.right),right=node.series.find(s=>s.right),d=domain(left.flatMap(s=>s.values),{focus:left[0]?.unit==='index'}),rd=right?domain(right.values):null,group=(x1-x0)/Math.max(1,labels.length),xd=node.xValues?domain(node.xValues,{focus:true}):null,x=i=>xd?at(node.xValues[i],xd,x1,x0):x0+(i+.5)*group,colors=['#005096','#1EB9E1','#0078B4','#FFC819']
+ const labelPositions=labels.map(()=>[])
+ const pointLabelY=(p,s,j)=>{
+  if(node.kind!=='combo'||!s.right)return node.kind==='line'&&j%2?p.y+18:p.y-9
+  const min=top-16,max=bottom-14,occupied=labelPositions[p.i]
+  const candidates=[Math.min(max,p.y+18),Math.max(min,p.y-18),...occupied.flatMap(y=>[Math.min(max,y+22),Math.max(min,y-22)])]
+  return candidates.find(y=>occupied.every(existing=>Math.abs(y-existing)>=18))??min
+ }
  let svg=axes(d,{e,x0,x1,top,bottom,unit:left[0]?.unit??'number'});if(rd)svg+=axes(rd,{e,x0,x1,top,bottom,unit:right.unit,right:true})
  for(const[j,s]of node.series.entries()){
-  const sd=s.right?rd:d,color=colors[j%colors.length],isLine=node.kind==='line'||s.right,points=s.values.map((v,i)=>available(v)?{v,x:x(i),y:at(v,sd,top,bottom)}:null)
+  const sd=s.right?rd:d,color=colors[j%colors.length],isLine=node.kind==='line'||s.right,points=s.values.map((v,i)=>available(v)?{v,i,x:x(i),y:at(v,sd,top,bottom)}:null)
   if(isLine){
    // Missing observations split paths instead of silently joining a data gap.
    let current=[];const paths=[];for(const point of points){if(point)current.push(point);else if(current.length){paths.push(current);current=[]}}if(current.length)paths.push(current)
    svg+=paths.map(path=>`<polyline points="${path.map(p=>p.x+','+p.y).join(' ')}" stroke="${color}" stroke-width="2.5" fill="none"/>`).join('')
-   if(labels.length<=14)svg+=points.filter(Boolean).map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3.6" fill="${color}" stroke="white"/><text class="point-value" data-series="${j}" x="${p.x}" y="${node.kind==='line'&&j%2?p.y+18:p.y-9}" text-anchor="middle">${e(axisText(p.v,s.unit))}</text>`).join('')
+   if(labels.length<=14)svg+=points.filter(Boolean).map(p=>{const y=pointLabelY(p,s,j);labelPositions[p.i].push(y);return `<circle cx="${p.x}" cy="${p.y}" r="3.6" fill="${color}" stroke="white"/>${node.kind==='combo'&&s.right&&Math.abs(y-p.y)>24?`<line class="point-label-leader" x1="${p.x}" x2="${p.x}" y1="${p.y}" y2="${y+4}" stroke="${color}" stroke-width="0.8"/>`:''}<text class="point-value" data-series="${j}" x="${p.x}" y="${y}" text-anchor="middle"${node.kind==='combo'&&s.right?' style="paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round"':''}>${e(axisText(p.v,s.unit))}</text>`}).join('')
   }else{
    const bars=node.kind==='combo'?1:left.length,barWidth=Math.min(36,group*.75/bars),offset=node.kind==='combo'?0:(j-(bars-1)/2)*barWidth,zero=at('0',sd,top,bottom)
-   svg+=points.filter(Boolean).map(p=>`<rect x="${p.x+offset-barWidth/2}" y="${Math.min(zero,p.y)}" width="${barWidth-2}" height="${Math.abs(zero-p.y)}" fill="${color}"/>${labels.length<=8?`<text x="${p.x+offset}" y="${p.y<=zero?p.y-8:p.y+16}" text-anchor="middle">${e(axisText(p.v,s.unit))}</text>`:''}`).join('')
+   svg+=points.filter(Boolean).map(p=>{const y=p.y<=zero?p.y-8:p.y+16;if(labels.length<=8)labelPositions[p.i].push(y);return `<rect x="${p.x+offset-barWidth/2}" y="${Math.min(zero,p.y)}" width="${barWidth-2}" height="${Math.abs(zero-p.y)}" fill="${color}"/>${labels.length<=8?`<text x="${p.x+offset}" y="${y}" text-anchor="middle">${e(axisText(p.v,s.unit))}</text>`:''}`}).join('')
   }
  }
- const step=Math.max(1,Math.ceil(labels.length/7))
- svg+=labels.map((label,i)=>i%step===0||i===labels.length-1?`<text x="${x(i)}" y="${bottom+27}" text-anchor="middle">${e(label)}</text>`:'').join('')
+ const dateAxis=labels.every(label=>/^20\d\d-\d\d-\d\d$/.test(label)),step=Math.max(1,Math.ceil(dateAxis?(labels.length-1)/4:labels.length/7))
+ svg+=labels.map((label,i)=>i%step===0||i===labels.length-1?`<text x="${x(i)}" y="${bottom+27}" text-anchor="${dateAxis&&i===0?'start':dateAxis&&i===labels.length-1?'end':'middle'}">${e(label)}</text>`:'').join('')
  return `<div class="legend">${node.series.map((s,i)=>`<span style="border-left:9px solid ${colors[i%colors.length]}">${e(s.name)}${node.kind==='combo'?(s.right?'（右轴）':'（左轴）'):''}</span>`).join('')}</div><svg viewBox="0 0 ${width} 275" role="img" aria-label="${e(node.title)}">${svg}</svg>`
 }
 function bridgeSvg(node,e){
