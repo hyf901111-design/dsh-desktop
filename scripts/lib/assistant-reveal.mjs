@@ -22,15 +22,16 @@ export function createAssistantTextPaint(root,record,route){
  const doc=root.ownerDocument,view=doc.defaultView,media=view?.matchMedia?.('(prefers-reduced-motion: reduce)'),registry=view?.CSS?.highlights
  const epoch=record.epoch,transferRoute=route==='progress'||route==='node'
  const fade=180,step=12,levels=32,maxTail=2200-fade,palettes=new Map(),prefix='ework-ai-reveal-'+Math.random().toString(36).slice(2)
- let frame=0,style,units=[],parts=[],names=[],disposed=false,selecting=false,quietUntil=0,lastStart,focused=doc.hasFocus?.()!==false
+ let frame=0,style,units=[],parts=[],names=[],disposed=false,selecting=false,quietUntil=0,lastStart,hiddenCommitted=false,blurred=false
  const clear=()=>{view?.cancelAnimationFrame(frame);frame=0;units=[];for(const name of names)registry?.delete(name);delete root.dataset.aiRevealing;delete root.__eworkAssistantRevealEnd;delete record.handoff}
- // Electron can restore real focus without dispatching a window focus event.
- const visible=()=>(typeof doc.hasFocus==='function'?doc.hasFocus():focused)&&doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
+ // A non-key Electron window can still be visible to the reader. New arrivals
+ // are gated by actual surface visibility, independently of keyboard focus.
+ const visible=()=>doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
  // Only a different trusted seat in this same commit may resume these times.
  const inherited=record.handoff;delete record.handoff
- if(inherited&&transferRoute&&inherited.route!==route&&inherited.epoch===epoch&&(record.fresh||record.live)&&visible()&&!media?.matches){units=inherited.units;lastStart=inherited.lastStart;quietUntil=inherited.quietUntil??0;record.skipNext=false}
+ if(inherited&&transferRoute&&inherited.route!==route&&inherited.epoch===epoch&&(record.fresh||record.live)&&visible()&&!media?.matches){units=inherited.units;lastStart=inherited.lastStart;quietUntil=inherited.quietUntil??0;blurred=inherited.blurred??false;record.skipNext=false}
  const finish=()=>clear();root.__eworkAssistantRevealFinish=finish
- const suspend=()=>{record.skipNext=true;finish()},background=()=>{focused=false;suspend()},foreground=()=>{focused=true;resume()},preference=()=>{if(media?.matches)finish()},visibility=()=>{if(doc.visibilityState==='hidden')background();else if(!visible())suspend();else resume()}
+ const suspend=()=>{if(!record.skipNext)hiddenCommitted=false;record.skipNext=true;finish()},background=()=>{blurred=true;if(visible())finish();else suspend()},foreground=()=>{if(blurred&&visible())finish();blurred=false;resume()},preference=()=>{if(media?.matches)finish()},visibility=()=>{if(doc.visibilityState==='hidden')background();else if(!visible())suspend();else resume()}
  media?.addEventListener?.('change',preference);doc.addEventListener('visibilitychange',visibility);view?.addEventListener('blur',background);view?.addEventListener('focus',foreground);doc.addEventListener('sherlock:workspace-surface-change',visibility)
  const interact=event=>{if(event.type==='pointerdown')selecting=true;quietUntil=view.performance.now()+180;finish()},release=()=>{selecting=false}
  for(const type of ['pointerdown','keydown','copy','wheel'])root.addEventListener(type,interact,true)
@@ -40,9 +41,9 @@ export function createAssistantTextPaint(root,record,route){
  doc.addEventListener('selectionchange',selection)
  // Reasoning disclosure summaries are separate from the public reply timeline.
  const collect=()=>{const nodes=[],walker=doc.createTreeWalker(root,4,{acceptNode(node){return node.parentElement?.closest('button,svg,style,script,[aria-hidden="true"],[data-variant="think"],.katex-mathml')?2:1}});let node,text='';while(node=walker.nextNode()){nodes.push({node,start:text.length,end:text.length+node.data.length});text+=node.data}return{nodes,text}}
- // Real return events settle the DOM already committed in the background without
- // requiring React to render it again before a genuinely new fragment arrives.
- const resume=()=>{if(!record.skipNext||!record.initialized||record.epoch!==epoch||!root.isConnected||!visible())return;const{text}=collect();finish();record.text=text;record.skipNext=false;lastStart=undefined}
+ // Real return events can settle a baseline already committed while hidden. If
+ // rendering paused entirely, keep the first returned commit as its baseline.
+ const resume=()=>{if(!record.skipNext||!hiddenCommitted||!record.initialized||record.epoch!==epoch||!root.isConnected||!visible())return;const{text}=collect();finish();record.text=text;record.skipNext=false;hiddenCommitted=false;lastStart=undefined}
  const upper=(time)=>{let lo=0,hi=units.length;while(lo<hi){const mid=(lo+hi)>>>1;if(units[mid].at<=time)lo=mid+1;else hi=mid}return lo}
  const paletteFor=node=>{const color=view.getComputedStyle(node.parentElement).color;let palette=palettes.get(color);if(palette)return palette;if(palettes.size>=32)return palettes.values().next().value;palette={color,names:Array.from({length:levels},(_,i)=>prefix+'-'+palettes.size+'-'+i)};palettes.set(color,palette);names.push(...palette.names);style.textContent=[...palettes.values()].map(p=>p.names.map((name,i)=>'::highlight('+name+'){color:color-mix(in srgb,'+p.color+' '+i*100/levels+'%,transparent)}').join('')).join('')+'@media(prefers-reduced-motion:reduce){'+[...palettes.values()].map(p=>p.names.map(name=>'::highlight('+name+'){color:'+p.color+'}').join('')).join('')+'}';return palette}
  const paint=now=>{
@@ -66,7 +67,7 @@ export function createAssistantTextPaint(root,record,route){
   const available=visible(),{nodes,text}=collect(),previous=record.text,initial=!record.initialized,skip=record.skipNext,clock=view.performance.now();record.initialized=true;record.text=text
   // Every background update remains a baseline; returning consumes it once before
   // genuinely later arrivals resume, even if the browser skipped focus events.
-  record.skipNext=!available
+  record.skipNext=!available;hiddenCommitted=!available
   // React may replace every Markdown node while preserving its logical text.
   // Refresh these ranges even when the provider has not appended another character.
   parts=nodes
@@ -98,7 +99,7 @@ export function createAssistantTextPaint(root,record,route){
  },dispose(){
   // A final seat may add genuinely new text after the old frontier has finished.
   // Preserve the baseline and reading quiet period even when there are no units.
-  const handoff=transferRoute&&record.initialized&&record.epoch===epoch&&!record.skipNext&&!media?.matches&&visible()&&!selecting&&!hasSelection()?{route,epoch,units,lastStart,quietUntil}:undefined
+  const handoff=transferRoute&&record.initialized&&record.epoch===epoch&&!record.skipNext&&!media?.matches&&visible()&&!selecting&&!hasSelection()?{route,epoch,units,lastStart,quietUntil,blurred}:undefined
   if(record.initialized&&record.text)record.skipNext=true;disposed=true;clear()
   if(handoff){record.handoff=handoff;queueMicrotask(()=>{if(record.handoff===handoff)delete record.handoff})}
   delete root.__eworkAssistantRevealFinish;style?.remove();media?.removeEventListener?.('change',preference);doc.removeEventListener('visibilitychange',visibility);view?.removeEventListener('blur',background);view?.removeEventListener('focus',foreground);doc.removeEventListener('sherlock:workspace-surface-change',visibility);doc.removeEventListener('selectionchange',selection);doc.removeEventListener('pointerup',release,true);doc.removeEventListener('pointercancel',release,true);for(const type of ['pointerdown','keydown','copy','wheel'])root.removeEventListener(type,interact,true)}}
