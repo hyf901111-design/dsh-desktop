@@ -138,6 +138,7 @@ import { findNoteComponent } from './notes/component-library'
 import { NoteNativeMenu } from './notes/native-menu'
 import { NoteFiles, noteFileOwnerPrefix } from './notes/files'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
+import { ResearchPdfRenderer } from './research/research-pdf'
 import {
   assertTrustedMainWindowEvent,
   registerPrivilegedMainWindowHandlers
@@ -1281,7 +1282,10 @@ async function bootstrap(): Promise<void> {
   const clientCapabilities=new ClientCapabilityService({notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:sessionId=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}},canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
+  const researchPdfRenderer = new ResearchPdfRenderer()
+  app.once('before-quit', () => researchPdfRenderer.dispose())
   researchContextBridge = new ResearchContextBridge({
+    researchPdf: (html, signal) => researchPdfRenderer.render(html, signal),
     scheduledTask: value => scheduledTaskRequest(value),
     clientCapability:(value,signal)=>clientCapabilities.request(value,signal),
     sessionCompleted: ({ sessionId, seq, title, preview }) => {
