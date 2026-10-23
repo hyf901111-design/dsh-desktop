@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-02",
+  "branch": "codex/integration/20261024-02",
+  "baseMainCommit": "144598b9c85fa1cc8488c377d9b0feab3e73ecd9",
+  "expectedMainCommit": "144598b9c85fa1cc8488c377d9b0feab3e73ecd9",
+  "createdAt": "2026-10-23T16:51:17.220Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复正式客户端隔离预加载的编辑器启动中断",
+        "branch": "codex/feat/preload-custom-elements-20261024",
+        "baseCommit": "144598b9c85fa1cc8488c377d9b0feab3e73ecd9",
+        "tipCommit": "a4af9720482caf35daf16a9fb09e6af1a3e9595c",
+        "commits": [
+          {
+            "commit": "a4af9720482caf35daf16a9fb09e6af1a3e9595c",
+            "parents": [
+              "144598b9c85fa1cc8488c377d9b0feab3e73ecd9"
+            ],
+            "subject": "修复：隔离预加载环境缺少自定义元素接口时编辑器启动失败"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "electron.vite.config.ts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/preload-custom-elements.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/preload-custom-elements.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/preload-custom-elements.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/preload-editor-singleton.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/preload-custom-elements.test.ts",
+              "test/preload-editor-singleton.test.ts",
+              "test/sandbox-preload.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "16项通过（13个能力保护单测+3个真实编辑器/sandbox检查），真实编辑器在null/undefined/正常registry均能导入与执行编辑事务。/tmp/home-preload-startup-unit-final-20261024.log、/tmp/home-preload-startup-focused-final-20261024.log",
+            "verifiedCommit": "a4af9720482caf35daf16a9fb09e6af1a3e9595c",
+            "completedAt": "2026-10-23T16:50:44.658607+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过，/tmp/home-preload-startup-types-final-20261024.log",
+            "verifiedCommit": "a4af9720482caf35daf16a9fb09e6af1a3e9595c",
+            "completedAt": "2026-10-23T16:50:44.658607+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查通过，中文提交后源码干净。",
+            "verifiedCommit": "a4af9720482caf35daf16a9fb09e6af1a3e9595c",
+            "completedAt": "2026-10-23T16:50:44.658607+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "正式包上一tip已通过native DevTools准确定位customElements:null的两tag注册fatal；当前修复真实完整编辑器bundle在相同null/undefined条件可导入并编辑，测试红绿；新正式包需main构建后核验真实主界面。"
+        },
+        "acceptanceCriteria": [
+          "仅对preload中的emoji-mart注册增加接口能力检查，保留正常registry行为与sandbox/contextIsolation。",
+          "真实编辑器缺可选customElements能力时能导入、编辑，单例registry不重复。",
+          "遵照用户正式客户端本地构建测试授权，完成native主界面与首页动作核验，不发公开版本。"
+        ],
+        "risks": [
+          "本变更修复编辑器依赖导入fatal，不承诺隔离环境中的可选emoji picker能力，也不视为系统鼠标冻结根因修复。"
+        ],
+        "generatedAt": "2026-10-23T16:50:44.658607+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/preload-custom-elements.test.ts",
+        "test/preload-editor-singleton.test.ts",
+        "test/sandbox-preload.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
