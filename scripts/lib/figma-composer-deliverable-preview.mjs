@@ -58,15 +58,41 @@ export function patchComposerDeliverablePreview(source) {
     const start = source.indexOf(startMarker), end = source.indexOf(endMarker, start) + endMarker.length
     return source.slice(0,start) + block.trimEnd() + source.slice(end)
   }
-  if (source.includes(endMarker) || source.includes(inputMarker)) throw Error('Composer deliverable preview installed patch drifted')
+  if (source.includes(endMarker)) throw Error('Composer deliverable preview installed patch drifted')
   const start = source.search(/^[\t ]*function InputBar\(\{/m), end = source.indexOf('\n\t\t//#endregion', start)
   if (start < 0 || end < 0) throw Error('Composer deliverable preview InputBar boundary drifted')
   let input = source.slice(start,end)
   const draft = 'const draft = input?.draft ?? "";'
-  input = replaceOne(input, draft, `${draft}\n${inputMarker}\nconst deliverablePreviewKind = composerDeliverableKind(draft, input?.occurrences ?? []);`)
   const root = 'className: clsx(InputBar_module_css_default.root, variant === "hero" && InputBar_module_css_default.hero),'
-  input = replaceOne(input, root, `${root}\n"data-odyssey-deliverable-preview": deliverablePreviewKind,`)
   const scroll = '\t\t\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\t\t\tref: scrollRef,'
-  input = replaceOne(input, scroll, 'renderComposerDeliverablePreview(react_jsx_runtime, deliverablePreviewKind, composerDeliverableAssets),\n' + scroll)
+  const call = 'const deliverablePreviewKind = composerDeliverableKind(draft, input?.occurrences ?? []);'
+  const attribute = '"data-odyssey-deliverable-preview": deliverablePreviewKind,'
+  const render = 'renderComposerDeliverablePreview(react_jsx_runtime, deliverablePreviewKind, composerDeliverableAssets),'
+  const insertions = [[draft,`${draft}\n${inputMarker}\n${call}`],[root,`${root}\n${attribute}`],[scroll,render+'\n'+scroll]]
+  if ([inputMarker,call,attribute,render].some(value=>source.includes(value))) {
+    // Legacy grid/notes restorers can replace the range before InputBar while
+    // keeping its augmented body. Repair only that exact, complete orphan.
+    const markers = [inputMarker,call,attribute,render]
+    if ((source.match(/^[\t ]*function InputBar\(\{/gm)??[]).length!==1 ||
+        markers.some(value=>source.split(value).length!==2||input.split(value).length!==2) ||
+        ['function composerDeliverableKind(', 'function renderComposerDeliverablePreview(', 'const composerDeliverableAssets ='].some(value=>source.includes(value)) ||
+        ['composerDeliverableKind','renderComposerDeliverablePreview','composerDeliverableAssets'].some(name=>(source.match(new RegExp('\\b'+name+'\\b','g'))??[]).length!==1))
+      throw Error('Composer deliverable preview installed patch drifted')
+    let native = input
+    for (const [anchor,installed] of insertions) {
+      if (native.split(installed).length!==2) throw Error('Composer deliverable preview installed patch drifted')
+      native = native.replace(installed,anchor)
+    }
+    let verified = native
+    for (const [anchor,installed] of insertions) {
+      if (verified.split(anchor).length!==2) throw Error('Composer deliverable preview installed patch drifted')
+      verified = verified.replace(anchor,installed)
+    }
+    if (verified!==input) throw Error('Composer deliverable preview installed patch drifted')
+    return source.slice(0,start) + block + input + source.slice(end)
+  }
+  if (['function composerDeliverableKind(', 'function renderComposerDeliverablePreview(', 'const composerDeliverableAssets ='].some(value=>source.includes(value)))
+    throw Error('Composer deliverable preview installed patch drifted')
+  for (const [anchor,installed] of insertions) input = replaceOne(input,anchor,installed)
   return source.slice(0,start) + block + input + source.slice(end)
 }

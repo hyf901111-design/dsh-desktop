@@ -66,6 +66,15 @@ it('shows a decorative delivery preview from a real native skill occurrence with
  }finally{await page.close()}
 },15000)
 
+it('runs the real installed InputBar after the complete dependency pipeline without missing preview definitions',async()=>{
+ const page=await fixture()
+ try{
+  await page.evaluate(()=>window.previewFixture.add('ppt'))
+  await expect.poll(()=>page.locator('[data-odyssey-deliverable-art="ppt"]').count()).toBe(1)
+  expect(await page.evaluate(()=>window.submissions)).toBe(0)
+ }finally{await page.close()}
+},15000)
+
 it.each([{kind:'ppt',dark:false},{kind:'ppt',dark:true},{kind:'report',dark:false},{kind:'report',dark:true},{kind:'ppt',dark:true,mode:'conversation'},{kind:'report',dark:false,mode:'conversation'}])('matches the accepted native input layout and real assets ($kind dark=$dark mode=$mode)',async({kind,dark,mode})=>{
  const page=await fixture({dark,mode})
  try{
