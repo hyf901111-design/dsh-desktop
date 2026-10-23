@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-05",
+  "branch": "codex/integration/20261024-05",
+  "baseMainCommit": "46b0615310d262619ea594b1c4c9f1d350896663",
+  "expectedMainCommit": "46b0615310d262619ea594b1c4c9f1d350896663",
+  "createdAt": "2026-10-23T20:07:16.203Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首页三类原生操作教程、输入交付物示意与字体加载优化",
+        "branch": "codex/feat/home-guided-examples-20261024",
+        "baseCommit": "46b0615310d262619ea594b1c4c9f1d350896663",
+        "tipCommit": "1070aa765aa35b18b69aa728bd9a50a4da1d2554",
+        "commits": [
+          {
+            "commit": "4e4fa9bc6b5dc0405f0eb12780fadfb48fd63ece",
+            "parents": [
+              "46b0615310d262619ea594b1c4c9f1d350896663"
+            ],
+            "subject": "增加技能输入框内的演示文稿与研报示意封面"
+          },
+          {
+            "commit": "303d43eda0b2530bc6f9a9ec2342ddd521d47c4e",
+            "parents": [
+              "4e4fa9bc6b5dc0405f0eb12780fadfb48fd63ece"
+            ],
+            "subject": "新增独立内存研究教程原生画布与离线联动适配"
+          },
+          {
+            "commit": "856b4d396b3cf02183d5a83cbb935fcd971e500a",
+            "parents": [
+              "303d43eda0b2530bc6f9a9ec2342ddd521d47c4e"
+            ],
+            "subject": "接入演示文稿原生教程与只读示例文件预览"
+          },
+          {
+            "commit": "cb5a4eec0c48f5efb4cefcb17987d447ebdb6796",
+            "parents": [
+              "856b4d396b3cf02183d5a83cbb935fcd971e500a"
+            ],
+            "subject": "功能：接入真实笔记编辑器的首页演示教程"
+          },
+          {
+            "commit": "85f86c57a2a543cc87347d2fd171d08524bcfe95",
+            "parents": [
+              "cb5a4eec0c48f5efb4cefcb17987d447ebdb6796"
+            ],
+            "subject": "恢复演示教程右栏状态并保护用户后续选择"
+          },
+          {
+            "commit": "60c367f668bb440c352e298f426bdac3465889c8",
+            "parents": [
+              "85f86c57a2a543cc87347d2fd171d08524bcfe95"
+            ],
+            "subject": "严格修复输入示意卡片补丁遗失运行定义"
+          },
+          {
+            "commit": "d6c3f8c57382505e2f1faa0a387264819f4a98b0",
+            "parents": [
+              "60c367f668bb440c352e298f426bdac3465889c8"
+            ],
+            "subject": "复用输入框技能字体加载并限制实例缓存"
+          },
+          {
+            "commit": "760b49f8151c7f53336cbec7152e2adf46b6368d",
+            "parents": [
+              "d6c3f8c57382505e2f1faa0a387264819f4a98b0"
+            ],
+            "subject": "支持演示教程补丁严格卸载与重复应用"
+          },
+          {
+            "commit": "08b6009f3ab5286d8794a35e1636e43f6bee5f6a",
+            "parents": [
+              "760b49f8151c7f53336cbec7152e2adf46b6368d"
+            ],
+            "subject": "验证：覆盖窄窗笔记教程与原生标签页恢复"
+          },
+          {
+            "commit": "2e3f1d64ba7432c0b41467f9bc7aca98c60dbb24",
+            "parents": [
+              "08b6009f3ab5286d8794a35e1636e43f6bee5f6a"
+            ],
+            "subject": "严格还原教程包装以支持原生补丁重复执行"
+          },
+          {
+            "commit": "5e09d495f8210e4811d3d4e3fe974484a567d453",
+            "parents": [
+              "2e3f1d64ba7432c0b41467f9bc7aca98c60dbb24"
+            ],
+            "subject": "修复：笔记教程长暂停不消耗步骤等待时限"
+          },
+          {
+            "commit": "138f9dda9605464315e1d0be6bc5aa337bae59c5",
+            "parents": [
+              "5e09d495f8210e4811d3d4e3fe974484a567d453"
+            ],
+            "subject": "接通首页三类原生操作教程并完善取消与上下文恢复"
+          },
+          {
+            "commit": "1070aa765aa35b18b69aa728bd9a50a4da1d2554",
+            "parents": [
+              "138f9dda9605464315e1d0be6bc5aa337bae59c5"
+            ],
+            "subject": "修正教程浏览器补丁顺序并以原生三排收束看板"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-24-home-guided-examples.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-24-home-guided-examples-design.md"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-composer-deliverable-preview.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-inline-references-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-office-preview.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/home-guide-assets.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guide-notes-data.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guide-presentation.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guide-timeline.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/input-deliverable-assets/README.md"
+          },
+          {
+            "status": "C100",
+            "path": "src/preload/input-deliverable-assets/efund-logo.png",
+            "previousPath": "skills/efund-ppt-maker/assets/brand/efund-logo.png"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/input-deliverable-assets/efund-template.png"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/mount.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-reference-font-cache.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-reference-font-reuse-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-assets.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-native-strip.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-data.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-shell-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-presentation-adapter.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-presentation-patch.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-timeline.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guides-review.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-skill-chip-layout-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/input-deliverable-preview-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/input-deliverable-preview-patch.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-browser.test.js",
+              "test/home-guide-native-strip.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "当前精确功能tip聚焦验证；详细证据/tmp/home-guides-handoff-focused-20261024.log、/tmp/home-guides-final-typecheck.log。",
+            "verifiedCommit": "1070aa765aa35b18b69aa728bd9a50a4da1d2554",
+            "completedAt": "2026-10-23T20:05:50.038007+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "当前精确功能tip聚焦验证；详细证据/tmp/home-guides-handoff-focused-20261024.log、/tmp/home-guides-final-typecheck.log。",
+            "verifiedCommit": "1070aa765aa35b18b69aa728bd9a50a4da1d2554",
+            "completedAt": "2026-10-23T20:05:50.038266+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "当前精确功能tip聚焦验证；详细证据/tmp/home-guides-handoff-focused-20261024.log、/tmp/home-guides-final-typecheck.log。",
+            "verifiedCommit": "1070aa765aa35b18b69aa728bd9a50a4da1d2554",
+            "completedAt": "2026-10-23T20:05:50.038268+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实浏览器组件：输入/封面/教程18文件90项通过，看板14项通过，入口/短窗7项通过；复用原生Root/InputBar/TodoPanel/ResearchCanvas/NotesApp/Office。尚待main正式身份客户端原生验收，未将浏览器结果视为用户接受。"
+        },
+        "acceptanceCriteria": [
+          "完整输入示意任意真实技能入口触发，删除不换textarea或丢正文/选区。",
+          "三个大卡教程真实组件且示例数据隔离，不发模型、不覆写用户资料；可暂停重播取消。",
+          "切会话/身份/迟到操作及PPT右栏状态按所有权保护；窄pane不出现运营区内层滚动条。",
+          "按用户正式客户端本地测试授权，经main构建，不发布、不推送、不改版本。"
+        ],
+        "risks": [
+          "系统物理鼠标偶发冻结仍未定位，字体22次重复构造降为6种定义复用不等同已证明根治。",
+          "正式客户端深浅/宽窄三教程及退出恢复仍需本地构建后原生核验。"
+        ],
+        "generatedAt": "2026-10-23T20:06:47.343171+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guides.test.ts",
+        "test/home-guides-review.test.ts",
+        "test/home-guide-timeline.test.ts",
+        "test/home-guide-native.test.js",
+        "test/home-guide-native-browser.test.js",
+        "test/home-guide-native-strip.test.js",
+        "test/home-guide-notes-data.test.ts",
+        "test/home-guide-notes-browser.test.js",
+        "test/home-guide-notes-shell-browser.test.js",
+        "test/home-guide-presentation-adapter.test.ts",
+        "test/home-guide-presentation-patch.test.js",
+        "test/home-guide-presentation-browser.test.js",
+        "test/home-guide-assets.test.ts",
+        "test/figma-reference-font-cache.test.js",
+        "test/figma-reference-font-reuse-browser.test.js",
+        "test/input-deliverable-preview-patch.test.js",
+        "test/input-deliverable-preview-browser.test.js",
+        "test/home-skill-chip-layout-browser.test.js",
+        "test/figma-inline-references-input.test.js",
+        "test/figma-inline-references-patch.test.js",
+        "test/figma-inline-references-projection.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "-t",
+        "starts only|small-pane|panel and short|idle card text|preserves editing|quick-start action|four quick",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
