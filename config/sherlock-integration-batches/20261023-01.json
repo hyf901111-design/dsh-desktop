@@ -756,6 +756,139 @@
         ],
         "recordedAt": "2026-10-23T05:32:01.703Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "任务完成后的明显文件交付卡片与打开方式",
+        "branch": "codex/feat/artifact-delivery-cards-20261023",
+        "baseCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
+        "tipCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
+        "commits": [
+          {
+            "commit": "af067755f937998d73db4a2df5fadfb5bdeb4f78",
+            "parents": [
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423"
+            ],
+            "subject": "建立任务交付文件路径模型与来源核验规则"
+          },
+          {
+            "commit": "59c7daf76b1045fc681df60393d88bbffb66b382",
+            "parents": [
+              "af067755f937998d73db4a2df5fadfb5bdeb4f78"
+            ],
+            "subject": "新增任务文件交付卡片与友好打开方式菜单"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "design-qa.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-23-artifact-delivery-cards.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-23-artifact-delivery-cards-design.md"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/deliverable-cards.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/delivery-file-model.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/native-file-menu.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/deliverable-cards.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/delivery-file-model.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/native-file-menu.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/delivery-file-model.test.js",
+              "test/deliverable-cards.test.js",
+              "test/generated-file-preview.test.js",
+              "test/generated-file-finder.test.ts",
+              "test/markdown-file-links.test.js",
+              "test/local-path-links.test.ts",
+              "test/chat-file-preview-scope.test.ts",
+              "test/native-file-menu.test.ts",
+              "test/figma-native-file-menu.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "提交后9文件74项聚焦通过；新增回归均先RED后GREEN。",
+            "verifiedCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
+            "completedAt": "2026-10-23T11:07:38.309Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
+            "completedAt": "2026-10-23T11:07:38.309Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "功能范围空白检查通过，功能树干净。",
+            "verifiedCommit": "59c7daf76b1045fc681df60393d88bbffb66b382",
+            "completedAt": "2026-10-23T11:07:38.309Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实补丁组件在IAB浅/深主题、820与360px内容宽度检查；长文件名换行、Escape回焦、自定义格式入口、无横向溢出与控制台错误。最终原生客户端由候选构建后检查。"
+        },
+        "acceptanceCriteria": [
+          "完成消息下集中展示PDF/PPT/HTML和用户指定文件，正式名称、类型与打开方式可见。",
+          "保留turn/seq边界、HTML/PDF去重及已核验研报结果，不采集网页或代码示例。",
+          "复用右侧预览、默认应用、文件管理器与复制路径；缺失或复制失败就地反馈。",
+          "保留上一轮研究技能与首页背景右键修复；本地构建保持应用打开供用户测试。"
+        ],
+        "risks": [
+          "不把组件夹具当作原生客户端验收；候选需真实检查文件预览和原生菜单。",
+          "未知裸名沿用唯一文件查找；不同目录同名不能猜测合并。",
+          "本地测试不公证、不发布、不改版本、不推送，不accept或promote。"
+        ],
+        "generatedAt": "2026-10-23T11:07:38.309Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -849,6 +982,25 @@
         "--check"
       ],
       "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/delivery-file-model.test.js",
+        "test/deliverable-cards.test.js",
+        "test/generated-file-preview.test.js",
+        "test/generated-file-finder.test.ts",
+        "test/markdown-file-links.test.js",
+        "test/local-path-links.test.ts",
+        "test/chat-file-preview-scope.test.ts",
+        "test/native-file-menu.test.ts",
+        "test/figma-native-file-menu.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
