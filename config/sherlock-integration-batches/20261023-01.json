@@ -232,6 +232,64 @@
           "本地测试候选尚未由用户接受，不自动晋升main或公开发布。"
         ],
         "generatedAt": "2026-10-23T04:02:04.188181+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
+        "verificationCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/equity-research-engine.test.js",
+              "test/equity-research-cli.test.js",
+              "test/equity-research-report.test.js",
+              "test/bundled-equity-research-skill.test.js",
+              "test/integration-skill-policy.test.js",
+              "test/integration-runtime.test.js",
+              "test/integration-bundled-runtime.test.js",
+              "test/bundled-skill-routing.test.js",
+              "test/bundled-skill-parity.test.ts",
+              "test/bundled-finance-skill.test.js",
+              "test/financial-routing.test.js",
+              "test/financial-routing-review.test.js",
+              "test/macos-package-runtime.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/equity-research-engine.test.js test/equity-research-cli.test.js test/equity-research-report.test.js test/bundled-equity-research-skill.test.js test/integration-skill-policy.test.js test/integration-runtime.test.js test/integration-bundled-runtime.test.js test/bundled-skill-routing.test.js test/bundled-skill-parity.test.ts test/bundled-finance-skill.test.js test/financial-routing.test.js test/financial-routing-review.test.js test/macos-package-runtime.test.ts --maxWorkers=2",
+            "verifiedCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
+            "completedAt": "2026-10-23T04:03:03.784Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
+            "completedAt": "2026-10-23T04:03:03.784Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD",
+            "verifiedCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
+            "completedAt": "2026-10-23T04:03:03.784Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-23T04:03:03.784Z"
       }
     }
   ],
