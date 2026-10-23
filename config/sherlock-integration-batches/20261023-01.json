@@ -9,158 +9,126 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "内置研报写作规范、证据台账与易方达配色确定性报告",
+        "featureName": "完善研报完整性与默认HTML及PDF双格式交付",
         "branch": "codex/feat/ledger-research-20261023",
-        "baseCommit": "c9f12ede78e1613edfbb0d5f62eac6638e698423",
-        "tipCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
+        "baseCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
+        "tipCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
         "commits": [
           {
-            "commit": "030b937c73454afc3d1c65fdd7924ad6c4336421",
+            "commit": "83433cf4a9b8a4a5c144b6f9eb377eb084a06b85",
             "parents": [
-              "c9f12ede78e1613edfbb0d5f62eac6638e698423"
+              "8595cba018c060cfc40428c8a5a19cad9e2d92b5"
             ],
-            "subject": "文档：明确内置研报能力方案与本地验收路径"
+            "subject": "功能：增加隔离研报PDF打印宿主与认证导出接口"
           },
           {
-            "commit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
+            "commit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
             "parents": [
-              "030b937c73454afc3d1c65fdd7924ad6c4336421"
+              "83433cf4a9b8a4a5c144b6f9eb377eb084a06b85"
             ],
-            "subject": "功能：内置研报规范证据台账与确定性计算技能"
+            "subject": "功能：完善研报研究结构并默认交付网页与PDF"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "docs/superpowers/plans/2026-10-23-equity-research-skill.md"
+            "path": "docs/superpowers/plans/2026-10-23-equity-research-quality-pdf.md"
           },
           {
             "status": "A",
-            "path": "docs/superpowers/specs/2026-10-23-equity-research-skill-design.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-integration-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-integration-runtime/skill-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-integration-runtime/skill-priority.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-integration-runtime/skill-provider.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/bundled-skill-parity.d.mts"
-          },
-          {
-            "status": "M",
-            "path": "scripts/bundled-skill-parity.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-packaged-macos.mjs"
+            "path": "docs/superpowers/specs/2026-10-23-equity-research-quality-pdf-design.md"
           },
           {
             "status": "A",
+            "path": "scripts/verify-research-pdf.mjs"
+          },
+          {
+            "status": "M",
             "path": "skills/ework-equity-research/SKILL.md"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "skills/ework-equity-research/_meta.json"
           },
           {
-            "status": "A",
-            "path": "skills/ework-equity-research/examples/synthetic/packet.json"
-          },
-          {
-            "status": "A",
-            "path": "skills/ework-equity-research/examples/synthetic/source.txt"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "skills/ework-equity-research/references/packet-contract.md"
           },
           {
-            "status": "A",
-            "path": "skills/ework-equity-research/references/provenance.md"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "skills/ework-equity-research/references/report-style.md"
           },
           {
             "status": "A",
+            "path": "skills/ework-equity-research/references/research-quality.md"
+          },
+          {
+            "status": "M",
             "path": "skills/ework-equity-research/references/workflow.md"
           },
           {
-            "status": "A",
-            "path": "skills/ework-equity-research/scripts/lib/calculations.mjs"
-          },
-          {
-            "status": "A",
-            "path": "skills/ework-equity-research/scripts/lib/dcf.mjs"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "skills/ework-equity-research/scripts/lib/evidence.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "skills/ework-equity-research/scripts/lib/index.mjs"
           },
           {
             "status": "A",
-            "path": "skills/ework-equity-research/scripts/lib/numbers.mjs"
+            "path": "skills/ework-equity-research/scripts/lib/pdf-client.mjs"
           },
           {
             "status": "A",
+            "path": "skills/ework-equity-research/scripts/lib/quality.mjs"
+          },
+          {
+            "status": "M",
             "path": "skills/ework-equity-research/scripts/lib/report.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "skills/ework-equity-research/scripts/lib/schema.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "skills/ework-equity-research/scripts/research.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/integrations/bundled-skills.ts"
+            "path": "src/main/index.ts"
           },
           {
             "status": "A",
-            "path": "test/bundled-equity-research-skill.test.js"
+            "path": "src/main/research/research-pdf.ts"
           },
           {
             "status": "M",
-            "path": "test/bundled-skill-parity.test.ts"
+            "path": "src/main/state/research-context-bridge.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/equity-research-cli.test.js"
           },
           {
             "status": "A",
-            "path": "test/equity-research-engine.test.js"
+            "path": "test/equity-research-pdf-client.test.js"
           },
           {
             "status": "A",
-            "path": "test/equity-research-report.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/integration-bundled-runtime.test.js"
+            "path": "test/equity-research-quality.test.js"
           },
           {
             "status": "M",
             "path": "test/macos-package-runtime.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-pdf-bridge.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-pdf.test.ts"
           }
         ],
         "checks": [
@@ -172,6 +140,8 @@
               "test/equity-research-engine.test.js",
               "test/equity-research-cli.test.js",
               "test/equity-research-report.test.js",
+              "test/equity-research-quality.test.js",
+              "test/equity-research-pdf-client.test.js",
               "test/bundled-equity-research-skill.test.js",
               "test/integration-skill-policy.test.js",
               "test/integration-runtime.test.js",
@@ -182,12 +152,16 @@
               "test/financial-routing.test.js",
               "test/financial-routing-review.test.js",
               "test/macos-package-runtime.test.ts",
+              "test/research-pdf.test.ts",
+              "test/research-pdf-bridge.test.ts",
+              "test/research-context-bridge.test.ts",
+              "test/research-context-runtime.test.js",
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "13个直接相关测试文件153项通过；独立复核原5类误引全部被阻断，合法单位列与回溯访问通过；真实茅台12事实10计算及HTML产物通过。",
-            "verifiedCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
-            "completedAt": "2026-10-23T04:02:04.188181+00:00",
+            "summary": "19个相关文件210项通过；独立审阅发现的图表语义/异常输入/共享计算DAG问题已红绿回归修复。",
+            "verifiedCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
+            "completedAt": "2026-10-23T05:44:52.280187+00:00",
             "timeoutMs": 180000
           },
           {
@@ -198,8 +172,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
-            "completedAt": "2026-10-23T04:02:04.188181+00:00",
+            "verifiedCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
+            "completedAt": "2026-10-23T05:44:52.280187+00:00",
             "timeoutMs": 180000
           },
           {
@@ -207,89 +181,31 @@
               "git",
               "diff",
               "--check",
-              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
+              "8595cba018c060cfc40428c8a5a19cad9e2d92b5..HEAD"
             ],
             "outcome": "passed",
-            "summary": "本次修改空白检查通过。",
-            "verifiedCommit": "8595cba018c060cfc40428c8a5a19cad9e2d92b5",
-            "completedAt": "2026-10-23T04:02:04.188181+00:00",
+            "summary": "本次增量差异检查通过。",
+            "verifiedCommit": "bd8060a61d498634e5836f46836b0ff9da4c2e1b",
+            "completedAt": "2026-10-23T05:44:52.280187+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已实际浏览器检查合成HTML桌面/窄屏与DCF假设价值桥；8个真实财报页目视复核。功能无新增独立客户端页面，原生技能入口及完整主界面将在本批次本地构建后核验，用户接受尚未发生。"
+          "summary": "真实Node24.9 CLI未指定format，经真实认证bridge与隔离Electron43.4宿主生成茅台HTML+23页A4 PDF；全部哈希一致，中文/SVG/易方达配色/页码及全部页面已复核，6类排版问题修复。模型及原生客户端更新后的最终验收由集成构建继续完成，用户尚未接受。"
         },
         "acceptanceCriteria": [
-          "内置研报写作默认启用，主动选择、明确研报路由及关闭状态有效。",
-          "错指标列、错期、单位倍率、未来披露与量纲冲突阻断。",
-          "同次证据/计算引用输出易方达蓝青HTML，失败无成功报告。",
-          "integration候选依本地测试手册构建并打开真实主界面及技能入口；用户亲自测试。"
+          "默认完整研究结构，论点证据、推论、假设、反证与观察及资料缺口均可检查。",
+          "数值表图引用同次事实计算；同系列指标语义及可比期间一致，原文观察不可进入算术。",
+          "默认同时生成HTML和PDF；PDF失败非零并保留明确交付记录，不伪装成功。",
+          "新客户端本地启动、技能可用，真实模型不额外请求PDF也生成双格式并打开预览。"
         ],
         "risks": [
-          "快照与字段核验不认证外部真实性和PDF提取忠实性。",
-          "FCFF仅手工固定完整年期，不处理估值日至年末stub period；不生成评级。",
-          "本地测试候选尚未由用户接受，不自动晋升main或公开发布。"
+          "结构/引用检查不评价经济因果或专业签发，外部真实性与PDF提取忠实性仍须研究复核。",
+          "茅台使用既有正式披露，行业、金融资金桥、预测与估值缺口明确，不冒充最新完整投资结论。",
+          "本地测试未接受，不自动晋升main或公开发布。"
         ],
-        "generatedAt": "2026-10-23T04:02:04.188181+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
-        "verificationCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/equity-research-engine.test.js",
-              "test/equity-research-cli.test.js",
-              "test/equity-research-report.test.js",
-              "test/bundled-equity-research-skill.test.js",
-              "test/integration-skill-policy.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-bundled-runtime.test.js",
-              "test/bundled-skill-routing.test.js",
-              "test/bundled-skill-parity.test.ts",
-              "test/bundled-finance-skill.test.js",
-              "test/financial-routing.test.js",
-              "test/financial-routing-review.test.js",
-              "test/macos-package-runtime.test.ts",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/equity-research-engine.test.js test/equity-research-cli.test.js test/equity-research-report.test.js test/bundled-equity-research-skill.test.js test/integration-skill-policy.test.js test/integration-runtime.test.js test/integration-bundled-runtime.test.js test/bundled-skill-routing.test.js test/bundled-skill-parity.test.ts test/bundled-finance-skill.test.js test/financial-routing.test.js test/financial-routing-review.test.js test/macos-package-runtime.test.ts --maxWorkers=2",
-            "verifiedCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
-            "completedAt": "2026-10-23T04:03:03.784Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
-            "completedAt": "2026-10-23T04:03:03.784Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check c9f12ede78e1613edfbb0d5f62eac6638e698423..HEAD",
-            "verifiedCommit": "7e489128c66ccc4bc05b7cb06183fee801cdd7b3",
-            "completedAt": "2026-10-23T04:03:03.784Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-23T04:03:03.784Z"
+        "generatedAt": "2026-10-23T05:45:04.321040+00:00"
       }
     },
     {
