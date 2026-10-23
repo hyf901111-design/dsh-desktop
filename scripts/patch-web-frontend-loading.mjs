@@ -53,6 +53,7 @@ import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
 import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
 import { patchFigmaInlineReferences } from './lib/figma-inline-references-client.mjs'
+import { patchComposerDeliverablePreview } from './lib/figma-composer-deliverable-preview.mjs'
 import { patchConversationFileReference } from './lib/sidebar-file-reference.mjs'
 import { patchFigmaTrajectory } from './lib/figma-trajectory-client.mjs'
 import { patchFigmaCanvasGestures } from './lib/figma-canvas-gestures.mjs'
@@ -165,6 +166,7 @@ await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 writeFileSync(conversationPath, patchResearchNativeWeb(patchCanvasCreationTools(patchFigmaRefinementConversation(patchFigmaCanvasGestures(patchConversationFileReference(patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8')))))))))
+writeFileSync(conversationPath, patchComposerDeliverablePreview(readFileSync(conversationPath, 'utf8')))
 
 const trajectoryPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-trajectory/lib/client.js')
 writeFileSync(trajectoryPath, patchFigmaTrajectory(readFileSync(trajectoryPath, 'utf8')))
