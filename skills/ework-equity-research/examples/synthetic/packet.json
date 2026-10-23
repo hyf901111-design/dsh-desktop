@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "company": {
+    "name": "虚构算术演示公司",
+    "ticker": "SYNTHETIC-NOT-A-SECURITY",
+    "currency": "CNY"
+  },
+  "asOf": "2026-10-23",
+  "financialAsOf": "2025-12-31",
+  "sources": [
+    {
+      "id": "synthetic-annual",
+      "title": "纯虚构离线演示台账",
+      "publisher": "演示生成器（非真实发布者）",
+      "kind": "text-snapshot",
+      "textFile": "source.txt",
+      "sha256": "c23f04ceeaacf0c8df809dcdda447e23f41dbce39b0f9bac2a4161fdd7e6b413",
+      "publishedAt": "2026-03-01",
+      "accessedAt": "2026-10-23T00:00:00Z"
+    }
+  ],
+  "facts": [
+    {
+      "id": "revenue24",
+      "metric": "revenue",
+      "period": "FY2024",
+      "scope": "合并",
+      "unit": "CNY_10K",
+      "value": "10000",
+      "sourceId": "synthetic-annual",
+      "evidence": {
+        "quote": "范围：合并\n单位：万元\n指标\tFY2024\tFY2025\n营业收入\t10000\t12000",
+        "locator": {
+          "lineStart": 2,
+          "lineEnd": 5,
+          "valueLine": 5,
+          "column": 2
+        },
+        "metricText": "营业收入",
+        "periodText": "FY2024",
+        "scopeText": "合并",
+        "unitText": "万元",
+        "valueText": "10000"
+      }
+    },
+    {
+      "id": "revenue25",
+      "metric": "revenue",
+      "period": "FY2025",
+      "scope": "合并",
+      "unit": "CNY_10K",
+      "value": "12000",
+      "sourceId": "synthetic-annual",
+      "evidence": {
+        "quote": "范围：合并\n单位：万元\n指标\tFY2024\tFY2025\n营业收入\t10000\t12000",
+        "locator": {
+          "lineStart": 2,
+          "lineEnd": 5,
+          "valueLine": 5,
+          "column": 3
+        },
+        "metricText": "营业收入",
+        "periodText": "FY2025",
+        "scopeText": "合并",
+        "unitText": "万元",
+        "valueText": "12000"
+      }
+    },
+    {
+      "id": "cost25",
+      "metric": "costOfRevenue",
+      "period": "FY2025",
+      "scope": "合并",
+      "unit": "CNY_10K",
+      "value": "7200",
+      "sourceId": "synthetic-annual",
+      "evidence": {
+        "quote": "范围：合并\n单位：万元\n指标\tFY2024\tFY2025\n营业收入\t10000\t12000\n营业成本\t6000\t7200",
+        "locator": {
+          "lineStart": 2,
+          "lineEnd": 6,
+          "valueLine": 6,
+          "column": 3
+        },
+        "metricText": "营业成本",
+        "periodText": "FY2025",
+        "scopeText": "合并",
+        "unitText": "万元",
+        "valueText": "7200"
+      }
+    },
+    {
+      "id": "cash",
+      "metric": "cash",
+      "period": "2025-12-31",
+      "scope": "合并",
+      "unit": "CNY_10K",
+      "value": "2000",
+      "sourceId": "synthetic-annual",
+      "evidence": {
+        "quote": "货币资金 2025-12-31 合并 2000 万元",
+        "locator": {
+          "lineStart": 7,
+          "lineEnd": 7
+        },
+        "metricText": "货币资金",
+        "periodText": "2025-12-31",
+        "scopeText": "合并",
+        "unitText": "万元",
+        "valueText": "2000"
+      }
+    },
+    {
+      "id": "debt",
+      "metric": "debt",
+      "period": "2025-12-31",
+      "scope": "合并",
+      "unit": "CNY_10K",
+      "value": "1000",
+      "sourceId": "synthetic-annual",
+      "evidence": {
+        "quote": "有息债务 2025-12-31 合并 1000 万元",
+        "locator": {
+          "lineStart": 8,
+          "lineEnd": 8
+        },
+        "metricText": "有息债务",
+        "periodText": "2025-12-31",
+        "scopeText": "合并",
+        "unitText": "万元",
+        "valueText": "1000"
+      }
+    },
+    {
+      "id": "nonOperatingAssets",
+      "metric": "nonOperatingAssets",
+      "period": "2025-12-31",
+      "scope": "合并",
+      "unit": "CNY_10K",
+      "value": "500",
+      "sourceId": "synthetic-annual",
+      "evidence": {
+        "quote": "非经营资产 2025-12-31 合并 500 万元",
+        "locator": {
+          "lineStart": 9,
+          "lineEnd": 9
+        },
+        "metricText": "非经营资产",
+        "periodText": "2025-12-31",
+        "scopeText": "合并",
+        "unitText": "万元",
+        "valueText": "500"
+      }
+    },
+    {
+      "id": "minorityInterest",
+      "metric": "minorityInterest",
+      "period": "2025-12-31",
+      "scope": "合并",
+      "unit": "CNY_10K",
+      "value": "200",
+      "sourceId": "synthetic-annual",
+      "evidence": {
+        "quote": "少数股东权益 2025-12-31 合并 200 万元",
+        "locator": {
+          "lineStart": 10,
+          "lineEnd": 10
+        },
+        "metricText": "少数股东权益",
+        "periodText": "2025-12-31",
+        "scopeText": "合并",
+        "unitText": "万元",
+        "valueText": "200"
+      }
+    },
+    {
+      "id": "shares",
+      "metric": "shares",
+      "period": "2025-12-31",
+      "scope": "合并",
+      "unit": "shares_10K",
+      "value": "1000",
+      "sourceId": "synthetic-annual",
+      "evidence": {
+        "quote": "总股本 2025-12-31 合并 1000 万股",
+        "locator": {
+          "lineStart": 11,
+          "lineEnd": 11
+        },
+        "metricText": "总股本",
+        "periodText": "2025-12-31",
+        "scopeText": "合并",
+        "unitText": "万股",
+        "valueText": "1000"
+      }
+    }
+  ],
+  "calculations": [
+    {
+      "id": "revenueYoY",
+      "op": "yoy",
+      "inputs": [
+        "revenue25",
+        "revenue24"
+      ]
+    },
+    {
+      "id": "grossProfit25",
+      "op": "grossProfit",
+      "inputs": [
+        "revenue25",
+        "cost25"
+      ]
+    },
+    {
+      "id": "grossMargin25",
+      "op": "grossMargin",
+      "inputs": [
+        "revenue25",
+        "cost25"
+      ]
+    }
+  ],
+  "dcf": {
+    "scope": "合并",
+    "asOf": "2026-10-23",
+    "currency": "CNY",
+    "forecastTiming": "year-end-fixed-periods",
+    "scenarios": [
+      {
+        "id": "bear",
+        "fcff": [
+          "8000000",
+          "8000000",
+          "8000000"
+        ],
+        "wacc": "0.12",
+        "terminalGrowth": "0",
+        "assumption": "纯虚构保守假设：未来三个完整年度FCFF不增长；WACC为12%，永续增长为0。"
+      },
+      {
+        "id": "base",
+        "fcff": [
+          "10000000",
+          "11000000",
+          "12000000"
+        ],
+        "wacc": "0.1",
+        "terminalGrowth": "0.02",
+        "assumption": "纯虚构基准假设：手工输入未来三个完整年度FCFF；WACC为10%，永续增长为2%。"
+      },
+      {
+        "id": "bull",
+        "fcff": [
+          "12000000",
+          "14400000",
+          "16000000"
+        ],
+        "wacc": "0.09",
+        "terminalGrowth": "0.025",
+        "assumption": "纯虚构乐观假设：手工输入FCFF增长；WACC为9%，永续增长为2.5%。"
+      }
+    ],
+    "bridge": {
+      "cash": "cash",
+      "debt": "debt",
+      "nonOperatingAssets": "nonOperatingAssets",
+      "minorityInterest": "minorityInterest",
+      "shares": "shares"
+    }
+  },
+  "report": {
+    "title": "虚构算术演示公司：证据与计算演示",
+    "summary": [
+      {
+        "text": "本报告使用纯虚构的原文快照演示证据台账与确定性计算；没有真实证券或投资评级。"
+      },
+      {
+        "text": "示例营业收入为{{revenue25}}，同比为{{revenueYoY}}。",
+        "refs": [
+          "revenue25",
+          "revenueYoY"
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "title": "成本与毛利",
+        "paragraphs": [
+          {
+            "text": "营业成本为{{cost25}}，据此计算毛利润{{grossProfit25}}与毛利率{{grossMargin25}}。",
+            "refs": [
+              "cost25",
+              "grossProfit25",
+              "grossMargin25"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "research": {
+    "thesis": "这是确定性计算的演示输入，不代表投资观点。",
+    "risks": [
+      "本地快照哈希与文本匹配不认证原始发布者真实性。",
+      "DCF均为手工假设，仅作完整未来期末折现；未处理估值日stub period。"
+    ],
+    "monitoring": [
+      "真实研究应使用官方原文快照、清晰财务口径与已核验价格时点。"
+    ]
+  }
+}

@@ -1,11 +1,11 @@
 import { join } from 'node:path'
-import { enabledManagedSkill, managedSkillInvocationName, registerLegacySkillPolicy } from './skill-policy.js'
+import { enabledManagedSkill, managedSkillInvocationName, registerLegacySkillPolicy, stableBuiltinSkillAlias } from './skill-policy.js'
 
 const PROVIDER = 'ework-managed-skills'
 const invocation = { modelInvocable: true, userInvocable: true }
 const bundledInvocation = { modelInvocable: false, userInvocable: true }
-// Builtin aliases pin explicit user picks; automatic discovery keeps the native provider.
-const invocationFor = skill => skill.provider === 'bundled' && skill.id !== 'builtin:ework-finance-analysis' ? bundledInvocation : invocation
+// Other builtins keep native model discovery; the two reserved frameworks use managed IDs.
+const invocationFor = skill => skill.provider === 'bundled' && !stableBuiltinSkillAlias(skill.id) ? bundledInvocation : invocation
 
 /** Registry invalidation reaches model discovery, the skill tool, and slash consumers. */
 export function registerManagedSkillProvider(ctx, runtime) {
@@ -24,7 +24,7 @@ export function registerManagedSkillProvider(ctx, runtime) {
           name: managedSkillInvocationName(skill), description: `${skill.name}：${skill.description}`, source: skill.source, provider: PROVIDER,
           rank: 250, invocation: invocationFor(skill), resourceBase: { kind: 'directory', path: skill.resourceRoot },
           locator: { id: skill.id, revision: skill.revision, runtimeEpoch: snapshot.runtimeEpoch, ownerAccountId: snapshot.ownerAccountId }
-        };return skill.id==='builtin:ework-finance-analysis'?[candidate,{...candidate,name:'ework-finance-analysis',rank:650,invocation:bundledInvocation}]:[candidate]})
+        };const alias=skill.provider==='bundled'&&stableBuiltinSkillAlias(skill.id);return alias?[candidate,{...candidate,name:alias,rank:650,invocation:bundledInvocation}]:[candidate]})
       },
       async get(candidate, options) {
         await runtime.sync()
@@ -46,7 +46,7 @@ export function registerManagedSkillProvider(ctx, runtime) {
         if (!result || result.name !== skill.name || typeof result.description !== 'string' || typeof result.content !== 'string' || Buffer.byteLength(result.content) > 2 * 1024 * 1024 || result.directory !== skill.resourceRoot) throw Error('技能内容与安装记录不一致，请重新导入')
         return {
           name: candidate.name, description: `${skill.name}：${skill.description}`, source: skill.source, provider: PROVIDER,
-          invocation: candidate.name==='ework-finance-analysis'?bundledInvocation:invocationFor(skill), resourceBase: { kind: 'directory', path: result.directory }, path: join(result.directory, 'SKILL.md'), content: result.content
+          invocation: candidate.name===stableBuiltinSkillAlias(skill.id)?bundledInvocation:invocationFor(skill), resourceBase: { kind: 'directory', path: result.directory }, path: join(result.directory, 'SKILL.md'), content: result.content
         }
       }
     }

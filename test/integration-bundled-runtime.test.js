@@ -26,7 +26,7 @@ const encryption = { isEncryptionAvailable: () => true, encryptString: value => 
 const bundledContent = '---\nname: efund-ppt-maker\ndescription: Builtin PPT fixture\n---\n\n# 内置 1.1.1 正文\n\n必须使用本目录的模板。\n'
 const personalContent = '---\nname: efund-ppt-maker\ndescription: Personal PPT fixture\n---\n\n个人同名技能，内容与内置完全不同。\n'
 
-async function fixture(personal = false, finance = false) {
+async function fixture(personal = false, finance = false, equity = false) {
     const root = await realpath(await mkdtemp(join(tmpdir(), 'ework-bundled-runtime-')))
     const bundledRoot = join(root, 'bundled'), skillRoot = join(bundledRoot, 'efund-ppt-maker'), personalRoot = join(root, 'personal'), workspace = join(root, 'workspace')
     let service, bridge, runtime
@@ -42,6 +42,11 @@ async function fixture(personal = false, finance = false) {
         const financeRoot=join(bundledRoot,'ework-finance-analysis');await mkdir(financeRoot)
         await writeFile(join(financeRoot,'SKILL.md'),bundledContent.replace('efund-ppt-maker','ework-finance-analysis'))
         await writeFile(join(financeRoot,'_meta.json'),JSON.stringify({slug:'ework-finance-analysis',cnName:'基础金融分析逻辑',version:'v1.7.3',source:'eSkill'}))
+    }
+    if(equity){
+        const equityRoot=join(bundledRoot,'ework-equity-research');await mkdir(equityRoot)
+        await writeFile(join(equityRoot,'SKILL.md'),bundledContent.replace('efund-ppt-maker','ework-equity-research'))
+        await writeFile(join(equityRoot,'_meta.json'),JSON.stringify({slug:'ework-equity-research',cnName:'研报写作',version:'v1.0.0',source:'eSkill'}))
     }
     if (personal) {
         await mkdir(join(personalRoot, 'efund-ppt-maker'), { recursive: true })
@@ -165,4 +170,16 @@ it('a copied readable finance slash name loads the same pinned builtin and respe
  expect((await f.ctx.skills.get(name,f.lookup)).resourceBase.path).toBe(skill.resourceRoot)
  const reply=await f.service.request({type:'set-enabled',kind:'skill',id,enabled:false,meta:{requestId:'disable-readable-alias',expectedRevision:skill.revision}});await f.service.operations.wait(reply.operation.id)
  await expect(step()).rejects.toThrow('所选技能未能加载')
+})
+
+it('assembles report routing and expands both pinned slash names, then blocks both immediately after disabling',async()=>{
+ const f=await fixture(false,false,true),id='builtin:ework-equity-research',skill=f.service.runtimeSnapshot().skills.find(s=>s.id===id),alias=managedSkillInvocationName(skill)
+ const before=await f.ctx.systemPrompt.assemble({agent:f.agent,scope:f.agent})
+ expect(before.contexts.find(c=>c.name==='ework:equity-research-skill')?.text).toContain(alias)
+ const step=name=>{const messages=[createUserMessage({content:[{type:'text',text:'/'+name+' 撰写公司研报'}],source:{kind:'user'}})];return f.ctx.waterfall(scopeTarget(f.ctx,f.agent),'agent/pre-step',{agent:f.agent,messages,turn:0,step:0,signal:new AbortController().signal},()=>Promise.resolve({kind:'enter',messages}))}
+ for(const name of [alias,'ework-equity-research']) expect((await step(name)).messages.find(m=>m.source.kind==='skill-invocation')?.content[0].text).toContain('内置 1.1.1 正文')
+ const reply=await f.service.request({type:'set-enabled',kind:'skill',id,enabled:false,meta:{requestId:'disable-equity-route',expectedRevision:skill.revision}});await f.service.operations.wait(reply.operation.id)
+ const after=await f.ctx.systemPrompt.assemble({agent:f.agent,scope:f.agent})
+ expect(after.contexts.find(c=>c.name==='ework:equity-research-skill')).toBeUndefined()
+ for(const name of [alias,'ework-equity-research']) await expect(step(name)).rejects.toThrow('所选技能未能加载')
 })

@@ -11,6 +11,11 @@ export interface BundledSkillParityResult {
 
 export function bundledSkillFingerprint(root: string): string
 
+export function verifyClientBundledSkillsParity(options: {
+  sourceSkillRoot: string
+  packagedSkillRoot: string
+}): BundledSkillParityResult[]
+
 export function verifyBundledSkillParity(
   options: BundledSkillParityOptions
 ): BundledSkillParityResult
