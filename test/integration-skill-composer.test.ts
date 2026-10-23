@@ -108,8 +108,65 @@ function nativeSkillMenuFixture() {
     }
     const close = cleanup.pop()!
     cleanup.push(async () => { popup.dismiss(); unregister(); bridge.dispose(); adapter.dispose(); await close() })
-    return { ...f, skills, popup, segments, open, select }
+    return { ...f, skills, popup, segments, open, select, useSkill: adapter.useSkill }
 }
+
+it('adds second and third native skills after replacement prefill leaves its fullwidth topic selected, then remains editable after clearing', async () => {
+    const f = nativeSkillMenuFixture(), topic = '\u3000'.repeat(6)
+    f.skills.push({ id: 'builtin:ework-free-data-sources', revision: 4, invocationName: 'ework-skill-1111111111111111', label: 'ework-free-data-sources', name: '基础数据源' })
+    f.shell.insertFilePaths(['/work/保留.md']); f.shell.addImages(['image-a'])
+    const file = f.shell.snapshot.occurrences[0]
+    for (const [index, text] of [`PPT主题「${topic}」\n制作演示文稿。`, `研究主题「${topic}」\n撰写研究报告。`].entries()) {
+        const skill = f.skills[index]!, selectionStart = text.indexOf(topic)
+        await f.useSkill({ id: skill.id, revision: skill.revision, invocationName: skill.invocationName, name: skill.name, sessionId: 'current', prefill: { mode: 'replace', text, selectionStart, selectionEnd: selectionStart + topic.length } })
+    }
+    expect(f.shell.snapshot.draft).not.toContain('PPT主题')
+    expect(f.textarea.value.slice(f.textarea.selectionStart, f.textarea.selectionEnd)).toBe(topic)
+    await f.open(f.textarea.selectionStart, f.textarea.selectionEnd); await f.select(f.skills[0]!.id)
+    expect(f.popup.state.getSnapshot()).toMatchObject({ open: false, error: null })
+    await f.open(f.textarea.selectionStart, f.textarea.selectionEnd); await f.select(f.skills[2]!.id)
+    expect(f.popup.state.getSnapshot()).toMatchObject({ open: false, error: null })
+    expect(f.shell.snapshot.occurrences.filter((item: any) => item.source === SKILL_REFERENCE_SOURCE).map((item: any) => decodeSkillReference(item.ref).id)).toEqual([f.skills[1]!.id, f.skills[0]!.id, f.skills[2]!.id])
+    expect(f.shell.snapshot.occurrences.find((item: any) => item.occurrenceId === file.occurrenceId)).toMatchObject({ ref: file.ref, source: file.source })
+    expect(f.shell.snapshot.draft).toContain('撰写研究报告。')
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a'])
+    expect(f.document.activeElement).toBe(f.textarea)
+    f.shell.setDraft('')
+    await f.open(0); await f.select(f.skills[0]!.id)
+    expect(f.popup.state.getSnapshot()).toMatchObject({ open: false, error: null })
+    const caret = f.textarea.selectionStart
+    expect(f.shell.insertText('清空后仍可编辑', { start: caret, end: caret, draftRev: f.shell.snapshot.draftRev })).toBe(true)
+    expect(f.shell.snapshot.draft).toBe('\uFFFC 清空后仍可编辑')
+    expect(f.sent).toEqual([])
+})
+
+it.each([' ', '\u3000'.repeat(6), '\n\t\r\n \u3000'])('accepts only a fresh all-whitespace native menu selection (%j)', async whitespace => {
+    const f = fixture(); f.shell.setDraft(`正文${whitespace}尾文`)
+    const span = { start: 2, end: 2 + whitespace.length, draftRev: f.shell.snapshot.draftRev }
+    const prepared = await f.request('prepare', { commandSegment: { via: 'menu', span } })
+    expect(prepared).toMatchObject({ ok: true })
+    expect(await f.request('insert', { token: prepared.token, invocationName: alias, reference: prefillReference })).toMatchObject({ ok: true })
+    expect(f.shell.snapshot.draft).toBe('正文\uFFFC 尾文')
+    expect(f.sent).toEqual([])
+})
+
+it.each(['普通正文', ' \u3000正文 ', '/other', '/skills changed'])('rejects a native menu selection containing non-command text (%j)', async text => {
+    const f = fixture(); f.shell.setDraft(`前${text}后`)
+    const before = f.shell.snapshot
+    expect(await f.request('prepare', { commandSegment: { via: 'menu', span: { start: 1, end: 1 + text.length, draftRev: before.draftRev } } })).toMatchObject({ ok: false, message: expect.stringContaining('技能命令已变化') })
+    expect(f.shell.snapshot).toBe(before); expect(f.sent).toEqual([])
+})
+
+it.each([false, true])('rejects stale whitespace menu selections even when the draft text returns (ABA=%s)', async aba => {
+    const f = fixture(), text = `主题「${'\u3000'.repeat(6)}」`
+    f.shell.setDraft(text)
+    const span = { start: 3, end: 9, draftRev: f.shell.snapshot.draftRev }
+    f.shell.setDraft(text + '后来输入')
+    if (aba) f.shell.setDraft(text)
+    const before = f.shell.snapshot
+    expect(await f.request('prepare', { commandSegment: { via: 'menu', span } })).toMatchObject({ ok: false, message: expect.stringContaining('草稿') })
+    expect(f.shell.snapshot).toBe(before); expect(f.sent).toEqual([])
+})
 
 it('uses a fresh native menu span to add multiple distinct skill chips and retain body, attachments and focus', async () => {
     const f = nativeSkillMenuFixture()
