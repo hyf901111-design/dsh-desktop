@@ -49,13 +49,13 @@ beforeAll(async () => {
       const events=new runtime.ConversationEventRegistry(ctx),viewsRegistry=new runtime.ConversationViewRegistry(ctx),sessionsRuntime=new runtime.SessionRuntime(ctx,{sessions:{}},{},{events,views:viewsRegistry}),session=sessionsRuntime.manager.get('${sessionId}');
       session.openState='open';session.installWindow([],false);
       const store=initial=>{let value=initial;const listeners=new Set();return{getSnapshot:()=>value,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},update:patch=>{value={...value,...patch};for(const fn of listeners)fn()}}};
-      const view=store({view:'chat',selection:null}),summary=store({current:'${sessionId}',byId:{'${sessionId}':{id:'${sessionId}',displayTitle:'教程浏览器验收',blank:true,cwd:'/tmp/guide-browser'}}}),memory=new Map(window.guideProbe.diskEntries||[]),storage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>{memory.set(key,value);return true}},registry=new native.ResearchWorkspaceRegistry(storage);
+      const workspaceList=store({phase:'ready',items:window.guideProbe.workspaceItems??[{workspaceId:'w',title:'教程浏览器验收',sessionIds:['${sessionId}']}]}),view=store({view:'chat',selection:null,draft:''}),summary=store({current:'${sessionId}',byId:{'${sessionId}':{id:'${sessionId}',displayTitle:'教程浏览器验收',blank:true,cwd:'/tmp/guide-browser'}}}),memory=new Map(window.guideProbe.diskEntries||[]),storage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>{memory.set(key,value);return true}},registry=new native.ResearchWorkspaceRegistry(storage);
 
-      const shell=new native.SessionInputShell({actx:{},defaultSink:()=>{window.guideProbe.providerCalls++;throw Error('Tutorial must not send a prompt')}});shell.setDraft(${JSON.stringify(draft)});
+      const shell=new native.SessionInputShell({actx:{},defaultSink:()=>{window.guideProbe.providerCalls++;throw Error('Tutorial must not send a prompt')}});shell.setDraft(window.guideProbe.initialDraft??${JSON.stringify(draft)});
       const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),sessionStore={subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()},useSession=use(sessionStore),useInput=use(shell.state),useStore=use(view),useSessions=use(summary);
       window.dshDesktop.researchCanvasStorage=storage;
-      memory.set('sherlock.home-guide.sessions.v1:account%3Aowner',JSON.stringify({version:1,scope:'account:owner',entries:[{kind:'board',sessionId:'${sessionId}',cwd:'/tmp/guide-browser',title:'自选行情示例看板',createdAt:1}]}));
-      const guidePage=guidePageModule.createResearchBoardsPage({document,sessions:{list:summary,binding:()=>({session}),open:id=>summary.update({current:id})},workspaces:{list:store({items:[]}),api:{host:{describe:async()=>({result:{ok:true,value:{cwd:'/tmp'}}})}}},researchWorkspaces:registry,inputHub:{shells:new Map([['${sessionId}',shell]])},bridge:{isSharedSession:()=>false,subscribe:()=>()=>{},getSnapshot:async()=>({version:1,eventSeq:1,account:{status:'ready',generation:1,user:{userId:'owner'}},favorites:[],boards:[],current:null,recoveries:[],notifications:{cursor:0,pendingCount:0,unreadCount:0,notifications:[]}}),invoke:async()=>({ok:true,value:null})}});
+      if(window.guideProbe.seedGuideRegistration!==false&&window.guideProbe.guideKind!==false)memory.set('sherlock.home-guide.sessions.v1:account%3Aowner',JSON.stringify({version:1,scope:'account:owner',entries:[{kind:window.guideProbe.guideKind??'board',sessionId:'${sessionId}',cwd:'/tmp/guide-browser',title:window.guideProbe.guideKind==='note'?'AI 护航研究笔记示例':window.guideProbe.guideKind==='ppt'?'公司风格演示示例':'自选行情示例看板',createdAt:1}]}));
+      const guidePage=guidePageModule.createResearchBoardsPage({document,sessions:{list:summary,binding:()=>({session}),open:id=>summary.update({current:id})},workspaces:{list:workspaceList,api:{host:{describe:async()=>({result:{ok:true,value:{cwd:'/tmp'}}})}}},researchWorkspaces:registry,inputHub:{shells:new Map([['${sessionId}',shell]])},bridge:{isSharedSession:()=>false,subscribe:()=>()=>{},getSnapshot:async()=>({version:1,eventSeq:1,account:{status:'ready',generation:1,user:{userId:window.guideProbe.accountOwner??'owner'}},favorites:[],boards:[],current:null,recoveries:[],notifications:{cursor:0,pendingCount:0,unreadCount:0,notifications:[]}}),invoke:async()=>({ok:true,value:null})}});
       native.__setGuidePage(guidePage);disposers.push(()=>guidePage.dispose());
 
       const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'},{id:'research',label:'研究'},{id:'notes',label:'笔记'}]},actions={setView:value=>view.update({view:value}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
@@ -79,8 +79,8 @@ beforeAll(async () => {
       const inputProps={useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:(_name,select)=>select?.(undefined),sessionId:'${sessionId}',t};
       const renderSlot=(name,props={},scope={})=>name==='conversation.view'&&scope.only==='research'?<native.ResearchCanvas sessionId='${sessionId}' t={t} researchWorkspaces={registry} {...props}/>:name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<main data-native-history="">已有会话内容</main>:null;
       const root=createRoot(document.querySelector('#native-root'));window.guideProbe.researchActivations=[];window.guideProbe.researchActiveSessions=new Set();const setResearchActive=(id,active)=>{window.guideProbe.researchActivations.push({id,active});if(active)window.guideProbe.researchActiveSessions.add(id);else window.guideProbe.researchActiveSessions.delete(id)};
-      function App(){const [current,setCurrent]=React.useState({sessionId:'${sessionId}',subagentPanel:false});window.guideProbe.setContext=setCurrent;return <native.ConversationRoot {...shared} {...current} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{window.guideProbe.workspaceCalls++;throw Error('Tutorial must not open a workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'教程浏览器验收',sessionIds:['${sessionId}']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={setResearchActive}/>}
-      Object.assign(window.guideProbe,{native,shell,registry,memory,view,session,sidebar,dispose(){root.unmount();frameRoot?.unmount();disposers.reverse().forEach(stop=>stop())}});root.render(<App/>);
+      function App(){const [current,setCurrent]=React.useState({sessionId:'${sessionId}',subagentPanel:false});window.guideProbe.setContext=setCurrent;return <native.ConversationRoot {...shared} {...current} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{window.guideProbe.workspaceCalls++;throw Error('Tutorial must not open a workspace')}} useWorkspaces={use(workspaceList)} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={setResearchActive}/>}
+      Object.assign(window.guideProbe,{native,shell,registry,memory,view,session,sidebar,guidePage,workspaceList,dispose(){root.unmount();frameRoot?.unmount();disposers.reverse().forEach(stop=>stop())}});root.render(<App/>);
     ` },
     bundle: true, platform: 'browser', format: 'iife', write: false, define: { 'process.env.NODE_ENV': '"production"' }
   })
@@ -91,9 +91,9 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[]}={}) {
+async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration}={}) {
   const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion }), errors = [], external = []
-  page.on('pageerror', error => errors.push(error.message))
+  page.on('pageerror', error => errors.push(error.stack||error.message))
   await page.route('**/*', route => {
     const url = new URL(route.request().url())
     if (url.origin !== 'https://guide.local') { external.push(route.request().url()); return route.abort() }
@@ -101,11 +101,11 @@ async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,gui
   })
   await page.setViewportSize({width,height})
   await page.goto('https://guide.local/')
-  await page.evaluate(value=>{window.guideProbe.nativeLayout=value},nativeLayout)
+  await page.evaluate(value=>{Object.assign(window.guideProbe,value)},{nativeLayout,workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration})
   await page.addScriptTag({ content: runtimeSource }); await page.evaluate(() => window.runtimeDescriptor = window.descriptor)
   await page.addScriptTag({ content: conversationSource }); await page.evaluate(() => window.conversationDescriptor = window.descriptor)
   await page.addScriptTag({ content: entry })
-  await page.waitForSelector('textarea', { timeout: 3000 })
+  await page.waitForSelector('textarea', { timeout: 3000 }).catch(error=>{throw Error(JSON.stringify(errors)+' '+error.message)})
   await page.evaluate(() => { window.guideProbe.originalInput = document.querySelector('textarea'); window.guideProbe.originalRoot = document.querySelector('.wSkVaW_root'); document.querySelector('[data-srb-session-header]')?.setAttribute('data-ework-notes-session', 'guide-browser-session') })
   expect(errors).toEqual([])
   return { page, errors, external }
@@ -405,3 +405,40 @@ it('retains the saved example and offline source after leaving the guide and rec
   expect(second.errors).toEqual([])
  }finally{await second.page.close()}
 },20000)
+
+it.each(['note','ppt'])('keeps a registered %s example editable on the real blank Chat hero after tab return and renderer revisit',async kind=>{
+ const options={workspaceItems:[],guideKind:kind,initialDraft:''},first=await fixture(options);let diskEntries
+ try{
+  const page=first.page,root=page.locator('.wSkVaW_root'),input=page.locator('textarea.uV2eYG_input')
+  expect(await root.getAttribute('data-odyssey-page')).toBe('home')
+  expect(await page.locator('.wSkVaW_composerHero').textContent()).toContain(kind==='note'?'AI 护航研究笔记示例':'公司风格演示示例')
+  expect(await input.isEditable()).toBe(true)
+  await page.locator('[data-conversation-view-id="notes"]').click();await page.locator('[data-conversation-view-id="chat"]').click()
+  expect(await page.evaluate(()=>document.querySelector('textarea.uV2eYG_input')===window.guideProbe.originalInput)).toBe(true)
+  expect(await input.isEditable()).toBe(true)
+  await input.fill('继续编辑已经保存的示例');expect(await page.locator('button.uV2eYG_primary').isDisabled()).toBe(false)
+  expect(await page.evaluate(()=>({calls:window.guideProbe.workspaceCalls,items:window.guideProbe.workspaceList.getSnapshot().items}))).toEqual({calls:0,items:[]})
+  diskEntries=await page.evaluate(()=>[...window.guideProbe.memory]);expect(first.errors).toEqual([])
+ }finally{await first.page.close()}
+ const second=await fixture({...options,diskEntries,seedGuideRegistration:false})
+ try{expect(await second.page.locator('textarea.uV2eYG_input').isEditable()).toBe(true);expect(second.errors).toEqual([])}finally{await second.page.close()}
+},10000)
+it.each([{guideKind:false,accountOwner:'owner'},{guideKind:'ppt',accountOwner:'other'}])('keeps an ordinary or other-account projectless hero disabled ($guideKind/$accountOwner)',async options=>{
+ const {page,errors}=await fixture({...options,workspaceItems:[],initialDraft:''})
+ try{
+  expect(await page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('home')
+  expect(await page.locator('textarea.uV2eYG_input').isEditable()).toBe(false)
+  expect(await page.locator('button.uV2eYG_primary').isDisabled()).toBe(true)
+  expect(await page.evaluate(()=>window.guideProbe.guidePage.directoryChoice('guide-browser-session'))).toBe(null)
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+it('prefers an existing real Workspace over the registered example directory',async()=>{
+ const {page,errors}=await fixture({guideKind:'ppt',initialDraft:'',workspaceItems:[{workspaceId:'existing',title:'已关联真实工作区',path:'/tmp/guide-browser',sessionIds:['guide-browser-session']}]})
+ try{
+  expect(await page.locator('.wSkVaW_composerHero').textContent()).toContain('已关联真实工作区')
+  expect(await page.evaluate(()=>window.guideProbe.guidePage.directoryChoice('guide-browser-session'))).toBe(null)
+  expect(await page.locator('textarea.uV2eYG_input').isEditable()).toBe(true)
+  expect(await page.evaluate(()=>window.guideProbe.workspaceCalls)).toBe(0);expect(errors).toEqual([])
+ }finally{await page.close()}
+})

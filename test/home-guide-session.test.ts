@@ -13,7 +13,7 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   let emit: (event: any) => void = () => {}, sequence = 0
   const state: any = { version: 1, eventSeq: 1, account: { status: 'ready', generation: 1, user: { userId: 'owner' } }, favorites: [], boards: [], current: null, recoveries: [], notifications: { cursor: 0, unreadCount: 0, pendingCount: 0, notifications: [] } }
   const canvases = new Map<string, any>()
-  const workspaces = { list: store({ items: [] }), api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: '/workspace' } } }) } }, archiveSession: async (id: string) => { archived.push(id) } }
+  const workspaces = { list: store({ items: [] as any[] }), api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: '/workspace' } } }) } }, archiveSession: async (id: string) => { archived.push(id) } }
   const sessions = { list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) }, async create({ cwd }: any) { requests.push(['create', cwd]); await createGate; const id = 'guide-' + (++sequence); list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd, blank: true, title: '新对话' } } }); return id }, binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], subscribe: () => () => {}, rename: async (title: string) => list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { ...list.getSnapshot().byId[id], title, displayTitle: title } } }) } } } }
   ;(win as any).dshDesktop = { researchCanvasStorage: { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
   globalThis.Event = win.Event as unknown as typeof Event
@@ -26,7 +26,7 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   const reply = async (id: string) => { await expect.poll(() => replies.find(value => value.requestId === id), { timeout: 500 }).toBeTruthy(); return replies.find(value => value.requestId === id) }
   await Promise.resolve(); await Promise.resolve()
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
-  return { win, page, sessions, state, requests, opened, archived, disk, replies, send, reply, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
+  return { win, page, sessions, workspaces, state, requests, opened, archived, disk, replies, send, reply, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
 it('prepares a real dedicated board without navigation, reuses it and opens only a registered matching session', async () => {
   const f = await fixture(), a = f.send(), b = f.send()
@@ -69,4 +69,17 @@ it('rejects account A to B to A creation even if an upstream generation is uncha
   f.setOwner('other', false); f.setOwner('owner', false); finish()
   expect((await f.reply(id)).ok).toBe(false)
   expect(f.opened).toEqual([]); expect(f.disk.size).toBe(0)
+})
+
+it('offers only a registered owned example directory and yields to a real Workspace', async () => {
+ const f=await fixture(),note=await f.reply(f.send('note')),ppt=await f.reply(f.send('ppt'))
+ expect(f.page.directoryChoice(note.sessionId)).toEqual({path:note.cwd,label:note.title})
+ expect(f.page.directoryChoice(ppt.sessionId)).toEqual({path:ppt.cwd,label:ppt.title})
+ expect(f.page.directoryChoice('original')).toBe(null)
+ f.workspaces.list.set({items:[{workspaceId:'real',path:ppt.cwd,title:'已关联真实工作区',sessionIds:[ppt.sessionId]}]})
+ expect(f.page.directoryChoice(ppt.sessionId)).toBe(null)
+ const before=f.sessions.list.getSnapshot();f.sessions.list.set({...before,byId:{...before.byId,[note.sessionId]:{...before.byId[note.sessionId],cwd:'/another'}}})
+ expect(f.page.directoryChoice(note.sessionId)).toBe(null)
+ f.setOwner('other');expect(f.page.directoryChoice(ppt.sessionId)).toBe(null)
+ expect(f.opened).toEqual([]);expect(f.requests.filter(item=>item[0]==='create')).toHaveLength(2)
 })
