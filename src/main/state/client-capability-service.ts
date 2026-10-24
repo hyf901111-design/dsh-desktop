@@ -1,4 +1,6 @@
 import {randomUUID} from 'node:crypto'
+import {canonicalConversationComponentInput} from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js'
+import type {ConversationComponentCapabilityAdapter,ConversationComponentVisibleContext,ConversationComponentExecutionIdentity} from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js'
 import {createClientCapabilityHost} from '../../../packages/dsh-research-task-runtime/client-capability-host.js'
 import type {ClientCapabilityContext} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import type {NoteDocumentAdapter,NoteDocumentLease} from '../notes/document-capability-adapter'
@@ -6,7 +8,7 @@ import {registerTrustedMainWindowHandler,type TrustedWindow} from '../ipc-trust'
 const validId=(v:any)=>typeof v==='string'&&v.length>0&&v.length<=256
 const modes=['conversation','research','notes']
 type Binding={sessionId:string;mode:ClientCapabilityContext['mode'];owner:string;generation:string;expires:number;controller:AbortController;windowIdentity:unknown}
-type Options={notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
+type Options={conversationComponents?:ConversationComponentCapabilityAdapter;notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
 /** A fresh visible-header binding is distinct from the long-lived canvas data
  * binding. A background task or child can never borrow a visible parent lease. */
 export class ClientCapabilityService{
@@ -27,6 +29,10 @@ export class ClientCapabilityService{
   return{ok:true}
  }
  private current(sessionId:string){const b=this.binding;return b&&b.sessionId===sessionId&&b.owner===this.options.owner()&&b.windowIdentity===this.options.windowIdentity?.()&&b.expires>this.now()&&this.options.canRead(sessionId)&&!this.options.scheduled(sessionId)?b:undefined}
+ currentVisibleContext():ConversationComponentVisibleContext|undefined{
+  const binding=this.binding&&this.current(this.binding.sessionId)
+  return binding?{ownerAccountId:binding.owner,sessionId:binding.sessionId,mode:binding.mode,generation:binding.generation}:undefined
+ }
  async request(input:any,signal?:AbortSignal){
   if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','sourceInstruction','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute'].includes(input.method)||input.method==='catalog'&&input.call!==undefined)throw Error('客户端操作请求无效。')
   if(input.sourceInstruction!==undefined&&(typeof input.sourceInstruction!=='string'||input.sourceInstruction.length>8000)||input.authorityId!==undefined&&!validId(input.authorityId)||(input.authorityId===undefined)!==(input.sourceInstruction===undefined)||(input.authorityId===undefined)!==(input.authoritySeq===undefined)||input.authoritySeq!==undefined&&(!Number.isSafeInteger(input.authoritySeq)||input.authoritySeq<0))throw Error('客户端请求来源无效。')
@@ -57,7 +63,18 @@ export class ClientCapabilityService{
     if(!leaseCurrent()){notes?.dispose();throw Error('客户端请求已被较新用户输入替代，请重新读取能力目录。')}
     const context:ClientCapabilityContext={owner:binding.owner,sessionId:binding.sessionId,documentId:binding.generation,mode:binding.mode,editable:this.options.canWrite?.(binding.sessionId)??true,selectedBlockIds:[],canvasAvailable:binding.mode==='research'&&this.options.canvasAvailable(binding.sessionId),...notes?.context}
     const current=()=>leaseCurrent()&&(!notes||notes.current())?context:undefined
-    const host=createClientCapabilityHost({current,handlers:notes?.handlers,
+    const conversationComponents=this.options.conversationComponents
+    const conversationIdentity:ConversationComponentExecutionIdentity|undefined=context.mode==='conversation'&&conversationComponents?{
+     ownerAccountId:binding.owner,sessionId:binding.sessionId,turnId:input.turnId,mode:'conversation',
+     ...(authorityId?{authorityId,authoritySeq:sequence}:{}),windowGeneration:binding.generation,
+     current:()=>!!current()&&(this.options.canWrite?.(binding.sessionId)??true)
+    }:undefined
+    const host=createClientCapabilityHost({current,handlers:{...notes?.handlers,...conversationIdentity&&conversationComponents?{
+     createConversationComponent:async(args,_context,signal,requestId)=>{
+      if(!signal||!requestId||!conversationIdentity.current())throw Error('当前对话组件操作身份已失效。')
+      signal.throwIfAborted();return conversationComponents.create(args,conversationIdentity,signal,requestId)
+     }
+    }:{}},
      canvas:context.canvasAvailable?async(method,args,_context,signal)=>{if(!current())throw Error('当前会话已变化。');return this.options.canvas(binding.sessionId,method,args,signal)}:undefined,
      window:async(action,args,_context,signal)=>{signal?.throwIfAborted();if(!current())throw Error('当前会话已变化。');return this.options.window(action,args)},
      navigate:async(mode,_context,signal)=>{
@@ -74,7 +91,7 @@ export class ClientCapabilityService{
   if(!turn||turn.catalogRequired||turn.generation!==binding.generation)throw Error('请先重新读取当前客户端能力目录。')
   const call=input.call
   if(!call||Object.keys(call).some(k=>!['requestId','capability','arguments'].includes(k))||!validId(call.requestId)||!validId(call.capability)||JSON.stringify(call).length>1500000)throw Error('客户端调用格式无效。')
-  const fingerprint=JSON.stringify([call.capability,call.arguments]),old=turn.receipts.get(call.requestId)
+  const fingerprint=JSON.stringify([call.capability,call.capability==='conversation.components.create'?canonicalConversationComponentInput(call.arguments):call.arguments]),old=turn.receipts.get(call.requestId)
   if(old){if(old.fingerprint!==fingerprint)throw Error('请求标识已用于不同操作。');return old.promise}
   if(turn.receipts.size>=32)throw Error('本轮客户端操作数量已达上限。')
   const context=turn.context

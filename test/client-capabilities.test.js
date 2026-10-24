@@ -3,7 +3,7 @@ const module = await import('../packages/dsh-research-task-runtime/client-capabi
 it('registers bounded semantic handlers with schemas instead of accepting arbitrary IPC',()=>{
  expect(module, 'typed capability registry has not been implemented').not.toBeNull()
  const registry=module.createClientCapabilityRegistry({exportNote:async()=>({status:'succeeded',path:'/tmp/report.pdf'}),styleComponents:async()=>({status:'succeeded'}),inspectCanvas:async()=>({status:'succeeded'}),resetZoom:async()=>({status:'succeeded'})})
- expect(registry.catalog(context).map(x=>x.id)).toEqual(['notes.components.create','notes.export','notes.components.style','notes.components.layout','notes.blocks.align','notes.components.inspect','notes.components.apply','notes.challenge.configure','notes.components.data','canvas.inspect','canvas.apply','canvas.undo','ui.zoom.in','ui.zoom.out','ui.fullscreen.set','ui.mode.set','ui.zoom.reset'])
+ expect(registry.catalog(context).map(x=>x.id)).toEqual(['conversation.components.create','notes.components.create','notes.export','notes.components.style','notes.components.layout','notes.blocks.align','notes.components.inspect','notes.components.apply','notes.challenge.configure','notes.components.data','canvas.inspect','canvas.apply','canvas.undo','ui.zoom.in','ui.zoom.out','ui.fullscreen.set','ui.mode.set','ui.zoom.reset'])
  expect(registry.catalog(context).every(x=>x.parameters.additionalProperties===false)).toBe(true)
 })
 const context={owner:'alice',sessionId:'note',documentId:'doc',mode:'notes',editable:true,selectedBlockIds:[],componentBlockIds:['one','two']}
@@ -73,4 +73,27 @@ it('accepts schema boundary lengths without coercing or mutating validated argum
   expect(await registry.execute({capability,arguments:args},context)).toEqual({status:'succeeded'})
   expect(effects.at(-1)).toBe(args);expect(JSON.stringify(args)).toBe(before)
  }
+})
+it('offers strict conversation create only for an editable conversation with an installed handler',async()=>{
+ const calls=[],registry=module.createClientCapabilityRegistry({createConversationComponent:async args=>{calls.push(args);return{status:'succeeded'}}})
+ const artifact={version:1,type:'table',title:'模拟表格',columns:['模拟列'],rows:[[17]]}
+ const conversation={...context,mode:'conversation'}
+ const find=c=>registry.catalog(c).find(item=>item.id==='conversation.components.create')
+ expect(find(conversation)?.available).toBe(true);expect(find({...conversation,editable:false})?.available).toBe(false)
+ expect(find(context)?.available).toBe(false);expect(find({...context,mode:'research'})?.available).toBe(false)
+ expect(module.createClientCapabilityRegistry({}).catalog(conversation).find(item=>item.id==='conversation.components.create')?.available).toBe(false)
+ const entry=find(conversation);expect(entry.parameters.additionalProperties).toBe(false)
+ for(const name of ['files','gallery','calendar-tool','web','iframe','audio','youtube','linkedWatchlistId','linkedSourceId'])expect(entry.description).toContain(name)
+ await expect(registry.execute({capability:'conversation.components.create',arguments:{artifact,sessionId:'forged'}},conversation)).rejects.toThrow()
+ await expect(registry.execute({capability:'conversation.components.create',arguments:{artifact:{...artifact,path:'/private'}}},conversation)).rejects.toThrow()
+ expect(await registry.execute({capability:'conversation.components.create',arguments:{artifact}},conversation)).toEqual({status:'succeeded'});expect(calls).toHaveLength(1)
+})
+it('keeps conversation create idempotency stable when object keys are reordered',async()=>{
+ const context={owner:'alice',sessionId:'chat',documentId:'visible-window',mode:'conversation',editable:true,selectedBlockIds:[]},calls=[]
+ const registry=module.createClientCapabilityRegistry({createConversationComponent:async args=>{calls.push(args);return{status:'succeeded',message:'已保存模拟组件'}}}),executor=module.createCapabilityExecutor(registry,()=>context)
+ const artifact={version:1,type:'table',title:'模拟表格',columns:['模拟列'],rows:[[17]]},call={requestId:'stable',capability:'conversation.components.create',arguments:{artifact,title:'模拟表格'}}
+ const first=await executor.execute(call,context)
+ expect(first.status).toBe('succeeded')
+ expect(await executor.execute({...call,arguments:{title:'模拟表格',artifact:{rows:[[17]],columns:['模拟列'],title:'模拟表格',type:'table',version:1}}},context)).toEqual(first)
+ expect(calls).toHaveLength(1)
 })

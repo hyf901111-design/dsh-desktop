@@ -62,3 +62,16 @@ it('admits a real SDK user fork only through its own visible binding, not its pa
   expect(()=>service.bind({sessionId:fork.id,mode:'conversation',active:true})).toThrow('不可用');expect(mutations).toBe(1)
  }finally{dispose();service.dispose();await endpoint.stop();await ctx.fiber.dispose()}
 })
+it('returns a verified saved conversation receipt when cancellation arrives after RPC JSON acknowledgement',async()=>{
+ for(const corrupt of [false,true]){
+  const controller=new AbortController(),tools=new Map<string,any>()
+  const receipt={requestId:'saved',capability:'conversation.components.create',status:'succeeded',effect:{kind:'conversation-component',state:'saved',componentId:'c'},data:{renderManifest:{version:1,kind:'conversation-component',componentId:corrupt?'wrong':'c',sessionId:'s',turnId:'1',requestId:'saved',status:'ready'}},message:'已保存模拟组件。'}
+  const dispose=registerClientTools({tools:{register:(tool:any)=>{tools.set(tool.name,tool);return()=>tools.delete(tool.name)}}},{env:{SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1234',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'simulated-token'},fetch:async()=>({ok:true,json:async()=>{controller.abort();return receipt}}) as Response})
+  const exec={agent:{session:{id:'s',header:{},events:[{type:'turn/start',data:{turn:1}}]}},signal:controller.signal}
+  try{
+   const result=tools.get('client_action').execute({requestId:'saved',capability:'conversation.components.create',arguments:{artifact:{version:1,type:'markdown',title:'模拟',content:'模拟正文'}}},exec)
+   if(corrupt)await expect(result).rejects.toThrow()
+   else expect(JSON.parse(await result)).toEqual(receipt)
+  }finally{dispose()}
+ }
+})

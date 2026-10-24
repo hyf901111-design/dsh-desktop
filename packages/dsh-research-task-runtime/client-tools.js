@@ -1,5 +1,6 @@
 import {defineTool} from '@deepseek-ai/dsh-tools'
 import {canvasHumanRequest} from './canvas-task-routing.js'
+import {parseConversationComponentManifest} from './conversation-component-contract.js'
 
 export const CLIENT_TOOL_NAMES=['client_capabilities','client_action']
 const MAX_CALL_BYTES=1500000
@@ -99,6 +100,13 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
           })
           const result=await response.json()
           if(!response.ok)throw Error(typeof result?.error==='string'?result.error:'客户端操作失败。')
+          if(call?.capability==='conversation.components.create'&&result?.status==='succeeded'){
+            const manifest=parseConversationComponentManifest(result.data?.renderManifest)
+            if(result.requestId!==call.requestId||result.capability!==call.capability||result.effect?.kind!=='conversation-component'||result.effect.state!=='saved'||!manifest||result.effect.componentId!==manifest.componentId||manifest.requestId!==call.requestId||manifest.sessionId!==identity.sessionId||manifest.turnId!==identity.turnId)throw Error('对话组件保存回执无效。')
+            // A committed host effect remains a fact after cancellation; the
+            // caller may stop the next action but cannot erase this receipt.
+            return JSON.stringify(result)
+          }
           controller.signal.throwIfAborted()
           return JSON.stringify(result)
         }finally{clearTimeout(timer);controllers.delete(controller);exec.signal?.removeEventListener('abort',abort)}

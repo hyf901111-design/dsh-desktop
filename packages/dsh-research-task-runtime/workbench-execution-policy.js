@@ -1,61 +1,12 @@
 import {DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
-import { canvasHumanRequest } from './canvas-task-routing.js'
+import {componentCreationRequest,latestClientModeForAuthority} from './conversation-components-policy.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import { workbenchPlanningContext } from './workbench-planning-context.js'
 import { LIVE_WORKBENCH_PRESETS } from './live-workbench-presets.js'
 
-// Prompt assembly runs before the first claimed message is committed as
-// user/message. Include the authored inbox entry so the first model call sees
-// the planning policy, rather than adding it only after an initial tool batch.
-function planningHumanRequest(session) {
-  for (const event of [...(session?.events ?? [])].reverse()) {
-    if (event.type === 'user/message' && event.data?.source?.kind === 'user')
-      return canvasHumanRequest({ events: [event] })
-    if (event.type === 'agent/inbox/spliced') {
-      const message = [...(event.data?.inserted ?? [])].reverse().find(value => value.source?.kind === 'user')
-      if (message) return canvasHumanRequest({ events: [{ type: 'user/message', data: message }] })
-    }
-  }
-  return null
-}
-
 export function workbenchCreationRequest(session) {
-  if (session?.header?.parentSession || session?.header?.origin === 'subagent') return null
-  const human = planningHumanRequest(session)
-  const request = human?.text?.replace(/```[\s\S]*?```/g, '').replace(/^>.*$/gm, '')
-  if (!request) return null
-  // Inspect only affirmative action clauses. Generation status is a noun,
-  // and temporary negation must not suppress a separate requested addition.
-  // Keep this boundary aligned with the renderer's serializable classifier.
-  const text = request.split(/[，,。；;！？!?\n]+|(?=另外|另行|同时|然后|但是|但|并且|并(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|建(?:一个|一套|一张|个|套|张)))/u).filter(clause => {
-    // Past creation describes an existing object; it is not a new action.
-    const action = clause.replace(/已(?:经)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加)/gu, '')
-      .replace(/建立(?:数据|来源|刷新|现有|已有|当前|组件|卡片|的)*(?:绑定|映射|关联|连接|关系)/gu, '')
-    // New build synonyms require an imperative head and a new canvas object.
-    // Object-before-verb status/binding statements cannot establish this intent.
-    const build = /^(?:(?:另外|另行|同时|然后|并且|并|请|麻烦|帮我|给我|替我|为我|我想|我需要|先|再|立即|马上)\s*)*(?:建立|建(?!议|筑|模))(.+)$/u.exec(action.trim())?.[1]
-    const operand = build?.split(/(?:用于|用来|给|为|到|在)(?=(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|看板|仪表盘|组件|卡片))|(?:并且?|然后|同时)(?=(?:绑定|配置|添加|连接|关联|启用|设置))/u)[0]
-    // Domain modifiers precede the canvas noun (客户关系管理工作台);
-    // binding complements follow it (工作台的数据源绑定).
-    const object = operand?.match(/工作台|看板|仪表盘|组件|卡片|绑定|映射|关联|连接|关系/gu)?.at(-1)
-    const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
-    const create = createBuild || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
-    const denied = /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|规划|做(?:一个|一套|一张|个|套|张)|建)/u.test(clause)
-    const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
-    return create && !denied && !inspection
-  }).join('；')
-  if (!text || /(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|建立|搭建|制作|构建|规划|做一个|建)/u.test(text)) return null
-  if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(request) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|建立|搭建|制作|做一个|建)/u.test(text)) return null
-  if (/(?:优化|调整|修复|解释|设计).{0,20}(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/u.test(text)) return null
-  if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|看板|仪表盘))/u.test(text)) return null
-  const board = /工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text)
-  const component = /组件|卡片|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图/iu.test(text)
-  // New canvas cards use the same host planning tool. Coding requests and
-  // existing-board edits retain their original model controls and workflow.
-  const framework = /\b(?:React|Vue|Svelte|SwiftUI|Angular|TSX|JSX)\b/iu.test(request)
-  const sourceFile = /\.[cm]?[jt]sx?\b/iu.test(request)
-  if ((framework && sourceFile) || /(?:组件|卡片).{0,12}(?:源码|源代码)/iu.test(request) || (!board && (framework || sourceFile))) return null
-  return board || component ? human : null
+  const request=componentCreationRequest(session)
+  return request && (request.target==='workbench' || latestClientModeForAuthority(session)==='research') ? request : null
 }
 
 export const WORKBENCH_EARLY_PLAN = DATASET_VIEW_GUIDANCE+'【工作台首次规划】先确定用户领域的问题、信息结构和1–10个面板，立即调用 research_workbench_create；不要先写报告或读取skill/源码/完整模板规范。模拟场景多卡复用同一批对象且组合视图能够表达时，先提供一份完整sharedDatasets及各卡view，宿主直接准备，避免逐卡重造数据和代码；用户要求的范围超过容量或交互未覆盖时才沿其他原路径，不缩小范围。只规划用户要求的数量，不追加无关金融/KPI卡。组合视图无法表达、用户允许自洽模拟数据且缺完整记录时，使用 dataMode:"simulated"、generationMode:"deferred"，panels每项仅含title/prompt/type/size及可选layout，完全省略artifact。sharedContext只写跨卡共用的事实、日期、容量、单位与必要合计分配；使用同一份紧凑预算/时间轴，不写逐行明细或序列。宿主会把原始用户需求和sharedContext送给受限并行子卡，由子卡生成完整且显著标注模拟的数据，不能偷换成固定行业样例。每项prompt只写该卡问题、字段、范围与必要交互。按内容选择类型：排期用gantt/calendar/timeline，人员/物资/预算明细用table，执行用tasks/progress，风险用alerts或table，审批用approval，录入用form，正文用note，代码配置用code，指标仅用于真正的汇总读数，图表用chart并在prompt写chart变体；不为凑模板改写用户领域。按信息结构规划标题、独立筛选栏、图表/内容、点选详情和底部备注/来源；宽排程、宽对照与图表详情并排用layout:wide，其他standard，不能所有卡同宽同结构。普通table仅支持平面行、排序和搜索，不能逐行展开详情；有详情的时序记录可用timeline/calendar等支持说明的模板，用户明确要求可筛选展开的表格或模板表达不了的业务交互时用html；模拟场景仍保留deferred和sharedContext，单卡离线生成自包含HTML，保留原始约束；真实记录保持source性质和来源要求。已有完整数据可沿原artifact路径直接提交；标准确定性preset仍按原规则单独提交，不能混用deferred。真实数据未取得时省略artifact，按来源声明待取字段，不捏造记录；已有真实记录可直接artifact，不重复查询。工具返回accepted只表示规划已受理、面板生成中，prepared才表示内容已准备好，然后结束主会话本轮；不再逐卡检查、重复建卡或制作报告。'
