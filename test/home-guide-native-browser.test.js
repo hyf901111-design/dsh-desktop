@@ -140,6 +140,35 @@ async function preserved(page) {
 const canvas = page => page.locator('#guide-host [data-research-canvas]')
 const widget = (page, name) => page.locator(`#guide-host [data-financial-widget="${name}"]`)
 
+it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged real controls, visible port paths and typed search at $width × $height',async size=>{
+ const {page,errors,external}=await fixture({nativeLayout:true,...size,guideTop:116,guideBottom:69})
+ try{
+  await succeeds(page,'mount-board')
+  await page.evaluate(()=>{
+   document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
+   window.guideProbe.pointerCues=[];window.guideProbe.typed=[]
+   document.addEventListener('input',event=>{if(event.target.getAttribute?.('role')==='combobox')window.guideProbe.typed.push(event.target.value)},true)
+   window.addEventListener('sherlock:home-guide-cue',event=>{
+    const d=event.detail;if(!d.requestId)return
+    const rect=target=>{const r=target.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}},canvas=document.querySelector('#guide-host [data-research-canvas]')
+    window.guideProbe.pointerCues.push({action:d.action,target:d.target.dataset.financialPortNode,from:d.fromTarget?.dataset.financialPortNode,toSide:d.target.dataset.financialPort,fromSide:d.fromTarget?.dataset.financialPort,targetRect:rect(d.target),fromRect:d.fromTarget?rect(d.fromTarget):null,canvas:rect(canvas)})
+    window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))
+   })
+  })
+  // The central pointer is represented only by its acknowledged contract here;
+  // native components, search, layout and persistence remain the real renderer.
+  for(const step of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
+  const result=await page.evaluate(()=>{const p=window.guideProbe,snapshot=p.registry.for('guide-browser-session').getSnapshot();return{cues:p.pointerCues,typed:p.typed,nodes:snapshot.artifacts.map(n=>({id:n.id,spec:n.containerSpec})),stored:JSON.parse(p.memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session'))}})
+  const watch=result.nodes.find(n=>n.spec.widget==='watchlist'),quote=result.nodes.find(n=>n.spec.widget==='quote'),news=result.nodes.find(n=>n.spec.widget==='news'),drags=result.cues.filter(cue=>cue.action==='drag')
+  expect(drags.map(cue=>[cue.from,cue.fromSide,cue.target,cue.toSide])).toEqual([[watch.id,'output',quote.id,'input'],[quote.id,'output',news.id,'input']])
+  for(const cue of drags)for(const box of [cue.fromRect,cue.targetRect]){expect(box.width).toBeGreaterThan(0);expect(box.y).toBeGreaterThanOrEqual(cue.canvas.y-1);expect(box.bottom).toBeLessThanOrEqual(cue.canvas.bottom+1)}
+  expect(result.typed).toEqual(['0','00','007','0070','00700']);expect(watch.spec.symbols).toHaveLength(3);expect(quote.spec.symbols[0].code).toBe('00700');expect(quote.spec.linkedWatchlistId).toBe(watch.id);expect(news.spec.linkedSourceId).toBe(quote.id)
+  expect(result.stored.map(node=>node.id).sort()).toEqual(result.nodes.map(node=>node.id).sort())
+  expect(await page.locator('#guide-host .ew-financial-connection-line').count()).toBe(2)
+  await preserved(page);expect(errors).toEqual([]);expect(external).toEqual([])
+ }finally{await page.close()}
+},20000)
+
 it('runs the offline board tutorial on the real native canvas and retains the original ConversationRoot and InputBar', async () => {
   const { page, errors, external } = await fixture()
   try {
