@@ -123,6 +123,26 @@ it.each(['failed','importing'])('does not expose removal of a readonly stored in
  }finally{await v.context.close()}
 },15000)
 
+it.each([false,true])('keeps Cmd+A and plain-text paste inside the active PPT field in real Notes (explicit range: %s)',async explicitRange=>{
+ const v=await fixture(620),{page}=v
+ try{
+  const paragraph=page.locator('[data-pptx-field-id]').first()
+  await paragraph.click()
+  if(explicitRange)await paragraph.evaluate(el=>{el.focus({preventScroll:true});const range=document.createRange();range.selectNodeContents(el);range.collapse(false);getSelection().removeAllRanges();getSelection().addRange(range)})
+  const original=await paragraph.evaluate(el=>({id:el.dataset.pptxFieldId,text:el.textContent,focused:document.activeElement===el}))
+  expect(original.focused).toBe(true)
+  const note=await page.evaluate(()=>JSON.stringify(window.noteEditor.document))
+  await page.keyboard.press('Meta+A')
+  const selection=await paragraph.evaluate(el=>{const range=getSelection();return{focused:document.activeElement===el,contained:el.contains(range.anchorNode)&&el.contains(range.focusNode),text:range.toString()}})
+  const replacement='仅修改当前演示文稿段落'
+  // Use the real paste handler and input/autosave path, without the OS clipboard.
+  await page.evaluate(text=>{const clipboardData=new DataTransfer();clipboardData.setData('text/plain',text);document.activeElement.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData}))},replacement)
+  await expect.poll(async()=>({selection,noteUnchanged:await page.evaluate(note=>JSON.stringify(window.noteEditor.document)===note,note),saves:await page.evaluate(()=>window.pptSaves.map(request=>({edits:request.edits,objects:request.objects})))}),{timeout:1500}).toEqual({selection:{focused:true,contained:true,text:original.text},noteUnchanged:true,saves:[{edits:[{id:original.id,text:replacement}],objects:[]}]})
+  expect(await paragraph.textContent()).toBe(replacement)
+  expect(v.errors).toEqual([])
+ }finally{await v.context.close()}
+},20000)
+
 for(const width of [360,686])it(`clips selection to the ${width}px Notes reader while keeping the draggable toolbar outside the card`,async()=>{
  const v=await fixture(width),{page,reader,toolbar,outline}=v
  try{
