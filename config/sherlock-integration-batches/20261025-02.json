@@ -135,6 +135,84 @@
           "此前系统鼠标间歇冻结无已证实根因；本次修复仅对话压缩投影，不能宣称一并解决。"
         ],
         "generatedAt": "2026-10-24T17:34:19.820Z"
+      },
+      "merged": {
+        "mergeCommit": "8d4dffa8b6bf1f0d6321e8ab3cabb868ea0afce1",
+        "verificationCommit": "8d4dffa8b6bf1f0d6321e8ab3cabb868ea0afce1",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "8d4dffa8b6bf1f0d6321e8ab3cabb868ea0afce1",
+            "completedAt": "2026-10-24T17:40:21.268Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "8d4dffa8b6bf1f0d6321e8ab3cabb868ea0afce1",
+            "completedAt": "2026-10-24T17:40:21.268Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8d4dffa8b6bf1f0d6321e8ab3cabb868ea0afce1",
+            "completedAt": "2026-10-24T17:40:21.268Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-presentation-host.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-presentation-replay.test.js",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-editor-mode.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-component-interaction.test.tsx",
+              "test/conversation-compaction-lifecycle.test.js",
+              "test/conversation-component-stream-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-presentation-host.test.js test/home-presentation-runtime.test.js test/home-presentation-replay.test.js test/pptx-direct-editor.test.ts test/pptx-selection-viewport.test.js test/pptx-editor-mode.test.ts test/pptx-editor-ui.test.ts test/notes-inline-files.test.tsx test/notes-component-interaction.test.tsx test/conversation-compaction-lifecycle.test.js test/conversation-component-stream-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "8d4dffa8b6bf1f0d6321e8ab3cabb868ea0afce1",
+            "completedAt": "2026-10-24T17:40:21.268Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "8d4dffa8b6bf1f0d6321e8ab3cabb868ea0afce1",
+            "completedAt": "2026-10-24T17:40:21.268Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-10-24T17:40:21.268Z"
       }
     }
   ],
