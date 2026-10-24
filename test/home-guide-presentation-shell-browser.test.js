@@ -15,7 +15,7 @@ beforeAll(async()=>{
  conversationSource=patchHomeGuideNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;')
  styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomeGuides}from'./src/preload/home-guides';
+ import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
  const empty=()=>null,primitives=new Proxy({Tooltip:({children})=>children},{get:(target,key)=>target[key]??empty}),cordis={Service:class{constructor(ctx){this.ctx=ctx}}};
  const modules=id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/cordis'?cordis:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:empty,AttachmentRail:empty}:fake;
@@ -35,9 +35,10 @@ beforeAll(async()=>{
  const sidebarState={composerHost:null,conversationHost:null},sidebar={storeFor:()=>({subscribe:()=>()=>{},getSnapshot:()=>sidebarState}),publish(){},enter(){},leave(){}},registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true});
  const root=createRoot(document.querySelector('#native-root'));root.render(<native.ConversationRoot {...shared} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例工作区',sessionIds:['shell-demo']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/>);
  let guideStatus=()=>{};const adapter=async(_document,_host,options)=>{guideStatus=options.onStatus;return{runStep:async()=>{},dispose(){}}},controller=mountHomeGuides(document,{mountNotes:adapter,mountPresentation:adapter});
+ const disposeOperations=window.shellCase.operations?mountHomeOperations(document,{onExample:(kind,context)=>playHomeGuideFromOperations(controller,kind,context)}):()=>{};
  const receive=event=>{const request=event.detail;window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:request.requestId,ok:true,sessionId:'shell-demo',cwd:'/tmp/shell-demo',title:'公司风格演示示例',fresh:true}}))};window.addEventListener('sherlock:home-guide-session-request',receive);
- window.shellProbe={sent:0,shell,controller,status:text=>guideStatus(text),async start(){await controller.start('ppt');document.querySelector('.odyssey-home-guide-footer button').click()},async close(){await controller.reset(false)},async dispose(){await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
- `},bundle:true,platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
+ window.shellProbe={sent:0,shell,controller,status:text=>guideStatus(text),async start(){await controller.start('ppt');document.querySelector('.odyssey-home-guide-footer button').click()},async close(){await controller.reset(false)},async dispose(){disposeOperations();await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
+ `},bundle:true,loader:{'.svg':'dataurl'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
  entry=output.outputFiles[0].text
  const mod=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href),pw=mod.default??mod
  browser=await pw.chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -45,11 +46,11 @@ beforeAll(async()=>{
 },30000)
 afterAll(()=>browser?.close())
 
-async function fixture({width,height,hero}){
+async function fixture({width,height,hero,operations=false}){
  const page=await browser.newPage({viewport:{width:1380,height},reducedMotion:'reduce'}),errors=[]
  page.on('pageerror',error=>errors.push(error.message))
  await page.route('**/*',route=>route.fulfill({contentType:route.request().url().endsWith('/')?'text/html':'application/json',body:route.request().url().endsWith('/')?'<meta charset="utf-8"><title>PPT tutorial shell geometry</title><main class="pI_x6G_centerCol"><div id="native-root"></div></main><script>window.__ModuleLoader__={load:d=>window.descriptor=d}</script>':'{"plans":[]}'}))
- await page.goto('https://presentation-shell.local/');await page.evaluate(value=>window.shellCase=value,{width,height,hero})
+ await page.goto('https://presentation-shell.local/');await page.evaluate(value=>window.shellCase=value,{width,height,hero,operations})
  await page.addScriptTag({content:runtimeSource});await page.evaluate(()=>window.runtimeDescriptor=window.descriptor)
  await page.addScriptTag({content:conversationSource});await page.evaluate(()=>window.conversationDescriptor=window.descriptor)
  await page.addStyleTag({content:styles+`\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;width:${width}px;height:100vh}#native-root{height:100%;min-height:0}[data-native-history]{padding:12px 24px;font-size:14px;line-height:24px}`})
@@ -61,6 +62,33 @@ async function geometry(page){return page.evaluate(()=>{
  const rect=node=>{const r=node.getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height}},resident=document.querySelector('.wSkVaW_root'),input=document.querySelector('textarea'),send=resident.querySelector('button.uV2eYG_primary'),footer=document.querySelector('.odyssey-home-guide-footer'),hit=node=>{const r=node.getBoundingClientRect(),top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return node===top||node.contains(top)},scroll=resident.querySelector('.wSkVaW_scrollBody')
  return{phase:resident.dataset.phase,input:rect(input),send:rect(send),footer:footer?rect(footer):null,sendHit:hit(send),inputHit:hit(input),sameInput:input===window.originalShellInput,heroVisible:!resident.querySelector('.wSkVaW_composerHero')||getComputedStyle(resident.querySelector('.wSkVaW_composerHero')).visibility==='visible',scroll:rect(scroll),scrollable:scroll.scrollHeight>scroll.clientHeight,resident:rect(resident)}
 })}
+
+// The existing native hero and session deliberately survive prepare/open here.
+// This exercises the operations handover independently of backend navigation.
+for(const value of [{width:1000,height:900},{width:620,height:480}]){
+ it(`keeps the original input usable when PPT playback starts from operations at ${value.width}×${value.height}`,async()=>{
+  const f=await fixture({...value,hero:true,operations:true}),{page}=f
+  try{
+   await page.getByRole('button',{name:'切换到快速开始',exact:true}).click()
+   await expect.poll(()=>page.locator('.wSkVaW_composerHero').evaluate(node=>node.inert)).toBe(true)
+   await page.getByRole('button',{name:'了解PPT制作能力',exact:true}).click()
+   await page.getByRole('button',{name:'播放示例：了解PPT制作能力',exact:true}).click()
+   await page.waitForSelector('[data-home-guide-kind="ppt"]')
+   await page.getByRole('button',{name:'暂停',exact:true}).click()
+   expect(await page.locator('.wSkVaW_composerHero').evaluate(node=>node.inert)).toBe(false)
+   expect(await page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-state')).toBe('input')
+   expect(await geometry(page)).toMatchObject({phase:'hero',sameInput:true,heroVisible:true,inputHit:true,sendHit:true})
+   const input=page.locator('textarea'),box=await input.boundingBox(),before=await input.inputValue()
+   await page.mouse.click(box.x+box.width/2,box.y+box.height/2);await page.keyboard.type('PPT_ENTRY_KEYBOARD_PROBE')
+   expect(await input.evaluate(node=>document.activeElement===node)).toBe(true)
+   expect(await input.inputValue()).toContain('PPT_ENTRY_KEYBOARD_PROBE');expect(await input.inputValue()).not.toBe(before)
+   expect(await page.evaluate(()=>window.shellProbe.shell.snapshot.draft)).toBe(await input.inputValue())
+   await page.getByRole('button',{name:'结束示例教程',exact:true}).click()
+   await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
+   expect(await geometry(page)).toMatchObject({sameInput:true,heroVisible:true,inputHit:true,sendHit:true});expect(f.errors).toEqual([])
+  }finally{await f.close()}
+ },15000)
+}
 
 // Playback controls stay small and above the real conversation. They must not
 // reserve a second surface below the composer or intercept its native input.

@@ -35,7 +35,7 @@ import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
 import { mountHomeThemes } from './home-themes'
 import { mountHomeOperations } from './home-operations'
-import { mountHomeGuides } from './home-guides'
+import { mountHomeGuides, playHomeGuideFromOperations } from './home-guides'
 import { mountHomeNotesGuide } from './home-guide-notes'
 import { mountHomePresentationGuide } from './home-guide-presentation'
 import { createHomeOperationsActions } from './home-operations-actions'
@@ -253,7 +253,7 @@ function initializeUi(): void {
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
   const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuide(session.sessionId), revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide })
-  const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { onAction: homeActions.run, onExample: kind => homeGuides.start(kind,{replay:true}) }) : () => {}
+  const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { onAction: homeActions.run, onExample: (kind, context) => playHomeGuideFromOperations(homeGuides,kind,context) }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),

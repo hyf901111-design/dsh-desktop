@@ -41,6 +41,13 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
  ]}
 }
 const aborted=()=>Object.assign(Error('教程已结束。'),{name:'AbortError'})
+/** Return the native composer before a tutorial reuses its existing hero. */
+export async function playHomeGuideFromOperations(controller:Pick<ReturnType<typeof mountHomeGuides>,'start'>,kind:HomeGuideKind,context:{signal:AbortSignal;revealComposer():Promise<void>}){
+ if(context.signal.aborted)throw aborted()
+ await context.revealComposer()
+ if(context.signal.aborted)throw aborted()
+ await controller.start(kind,{replay:true})
+}
 function setControl(button:HTMLButtonElement,icon:'pause'|'play'|'next'|'replay'|'exit',label:string){
  const paths={pause:'M6 4v12M14 4v12',play:'m6 3 10 7-10 7Z',next:'m7 4 7 6-7 6',replay:'M4 7a7 7 0 1 1 0 6M4 2v5h5',exit:'m5 5 10 10M15 5 5 15'}
  button.className=icon==='exit'?'odyssey-home-guide-exit':'odyssey-home-guide-button';button.setAttribute('aria-label',label);button.title=label;button.dataset.control=icon
