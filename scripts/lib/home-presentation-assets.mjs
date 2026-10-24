@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto'
 export function verifyHomePresentationAssets(runtimeRoot) {
  const dir=join(runtimeRoot,'node_modules','dsh-research-task-runtime','assets','home-presentation')
  const manifest=JSON.parse(readFileSync(join(dir,'source-metadata.json'),'utf8'))
- if(manifest.schemaVersion!==1||manifest.sourceFile!=='source-report.pdf'||manifest.presentationFile!=='company-research-briefing.pptx'||manifest.sourcePages!==28||manifest.presentationSlides!==8||manifest.pageOutline?.length!==8)throw Error('Invalid research presentation manifest')
+ if(manifest.schemaVersion!==1||manifest.sourceFile!=='source-report.pdf'||manifest.presentationFile!=='company-research-briefing.pptx'||manifest.sourcePages!==28||!Number.isInteger(manifest.presentationSlides)||manifest.presentationSlides<2||manifest.presentationSlides>32||manifest.pageOutline?.length!==manifest.presentationSlides)throw Error('Invalid research presentation manifest')
  for(const[file,hash]of[[manifest.sourceFile,manifest.sourceSha256],[manifest.presentationFile,manifest.presentationSha256]]){
   const data=readFileSync(join(dir,file))
   if(!/^[0-9a-f]{64}$/.test(hash)||createHash('sha256').update(data).digest('hex')!==hash)throw Error('Research tutorial asset checksum mismatch: '+file)

@@ -61,8 +61,8 @@ Files: `home-presentation-runtime.js`, `home-guide-presentation-native.mjs`, `ho
 
 - [x] 用真实 InputBar 发送，独立离线 adapter 驱动正常 AgentLoop、任务和消息事件。
 - [ ] 修复 prepare 的异步取消竞态，不遗留作用于普通消息的执行器。
-- [x] 使用 efund-ppt-maker 制作八页可编辑中文公司规范成稿，并检查封面/母版/页脚/字体和逐页渲染。
-- [ ] 真实添加 Vanguard 原 PDF 附件和公司技能，规划与八页纲要一致。
+- [x] 使用 efund-ppt-maker 制作含规范目录、专业研读观点与原生数据图表的可编辑中文公司规范成稿，并检查封面/母版/页脚/字体和逐页渲染。
+- [ ] 真实添加 Vanguard 原 PDF 附件和公司技能，规划与最终页面纲要一致。
 - [ ] 固定 hash 校验后复制 PDF/PPTX 到示例目录，使用普通文件交付和 Office 预览，退出不撤销或删除。
 - [ ] 原生文件/会话重访验收。
 
