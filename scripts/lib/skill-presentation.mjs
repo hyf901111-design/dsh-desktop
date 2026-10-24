@@ -61,7 +61,11 @@ function patchSentReferencePresentation(source){
  if(start<0||end<0)throw Error('Sent reference bubble anchor drifted')
  const bubble=source.slice(start,end)
  if(source.includes(marker)){
-  if(source.split(runtime).length!==2||bubble.split(after).length!==2||bubble.split(rawCopy).length!==2)throw Error('Sent reference presentation anchor drifted')
+  const runtimeStart=source.indexOf(marker),runtimeEnd=source.indexOf('function projectUserText(',runtimeStart)
+  // Vite adds line-terminal ASI semicolons to function.toString(); Node's
+  // installer leaves them implicit. Compare the complete bounded helper only.
+  const canonical=value=>value.replace(/;(?=\r?$)/gm,'')
+  if(source.split(marker).length!==2||runtimeEnd<runtimeStart||canonical(source.slice(runtimeStart,runtimeEnd))!==canonical(runtime)||bubble.split(after).length!==2||bubble.split(rawCopy).length!==2)throw Error('Sent reference presentation anchor drifted')
   return source
  }
  const patched=once(once(bubble,before,after),'actions?.(projectSkillText(research.text))',rawCopy)
