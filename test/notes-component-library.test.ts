@@ -35,3 +35,8 @@ it('finds only persisted nested note components by their identity', () => {
   expect(findNoteComponent(blocks,'missing')).toBeUndefined()
   expect(findNoteComponent([{...blocks[0],children:[{id:'b',type:'research',props:{payload:'invalid'}}]}],node.id)).toBeUndefined()
 })
+it('restores a saved native financial configuration as independent note instances with fresh IDs',()=>{
+ const store=new ComponentLibraryStore('/unused-library'),spec={version:1,type:'financial-widget',widget:'quote',title:'模拟行情',symbols:[{code:'AAPL',market:'US',name:'模拟标的'}],period:'1w',adjustment:'none',indicators:['MA'],market:'all',query:'',dataSource:'backup'},saved={id:'custom-template',kind:'generated-container',x:0,y:0,title:'模拟行情',generationStatus:'completed',containerSpec:spec}
+ store.read=()=>({node:structuredClone(saved) as any});const a=noteLibraryNode(store,'saved-native','owner'),b=noteLibraryNode(store,'saved-native','owner');expect(a.id).not.toBe(b.id);expect(noteLibrarySpec(a.containerSpec)).toBeTruthy();a.containerSpec.period='1y';expect(b.containerSpec.period).toBe('1w');expect(spec.period).toBe('1w')
+ expect(noteLibrarySpec({...spec,price:17})).toBeNull()
+})

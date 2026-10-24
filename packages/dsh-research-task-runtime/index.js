@@ -17,6 +17,7 @@ import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
+import {registerConversationComponentsPolicy} from './conversation-components-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
 import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, articleTimelineSourceProven, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, retainVerifiedFeedItems, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import {compactStatementEvidence,truncatedStatementEvidence} from './statement-evidence.js'
@@ -2980,6 +2981,7 @@ export async function apply(ctx) {
     const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
     const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx)
+    const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx)
     const disposeModelQueue = registerWorkbenchModelQueue(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
@@ -2998,6 +3000,7 @@ export async function apply(ctx) {
     } catch (error) {
       disposePublicData(); disposeSourceGuidance?.()
       disposeWorkbenchPolicy()
+      disposeConversationComponentsPolicy()
       disposeModelQueue()
       disposeCompletionNotifications()
       disposeCanvasTools();disposeClientTools()
@@ -3014,6 +3017,7 @@ export async function apply(ctx) {
     return async () => {
       disposePublicData(); disposeSourceGuidance?.()
       disposeWorkbenchPolicy()
+      disposeConversationComponentsPolicy()
       disposeModelQueue()
       disposeCompletionNotifications()
       await disposeShared()

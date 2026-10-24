@@ -12,6 +12,18 @@ import re
 from pathlib import Path
 
 
+def rendered_bounds(element):
+    layout = element.get('textLayout', {})
+    if not isinstance(layout, dict):
+        return None
+    box = layout.get('bbox')
+    if (layout.get('source') == 'rendered' and isinstance(box, list) and len(box) == 4
+            and all(type(v) in (int, float) and math.isfinite(v) for v in box)
+            and box[2] > 0 and box[3] > 0):
+        return box
+    return None
+
+
 def audit_layout(data):
     elements = [e for e in data.get('elements', []) if e.get('scope') == 'slide' and len(e.get('bbox', [])) == 4]
     width = float(data.get('slide', {}).get('frame', {}).get('width', 960))
@@ -24,14 +36,16 @@ def audit_layout(data):
     if narrative:
         boxes = {}
         for name, e in narrative.items():
-            layout = e.get('textLayout', {})
-            box = layout.get('bbox')
-            if (layout.get('source') != 'rendered' or not isinstance(box, list) or len(box) != 4
-                    or any(type(v) not in (int, float) or not math.isfinite(v) for v in box)
-                    or box[2] <= 0 or box[3] <= 0):
+            box = rendered_bounds(e)
+            if box is None:
                 add('narrative-rendered-bounds-required', e)
             else:
                 boxes[name] = box
+                x, y, w, h = e['bbox']
+                if (box[0] < x - 2 * scale or box[1] < y - 2 * scale
+                        or box[0] + box[2] > x + w + 2 * scale
+                        or box[1] + box[3] > y + h + 2 * scale):
+                    add('narrative-text-outside-frame', e)
         if len(boxes) == 2:
             title, body = boxes['standard-narrative-title'], boxes['standard-narrative-body']
             gap = body[1] - title[1] - title[3]
@@ -39,11 +53,44 @@ def audit_layout(data):
             # tolerance for renderer rounding. Shape bounds cannot prove it.
             if not 10 * scale <= gap <= 18 * scale:
                 add('narrative-title-body-gap', *narrative.values())
+        body = boxes.get('standard-narrative-body')
+        if body:
+            for callout in elements:
+                if not any(token in label(callout) for token in
+                           ('takeaway', 'recommendation', 'suggestion', 'advice', 'conclusion', 'callout', 'summary-block')):
+                    continue
+                x, y, w, h = callout['bbox']
+                if (min(body[0] + body[2], x + w) - max(body[0], x) > 2 * scale
+                        and y + h > body[1] and y - body[1] - body[3] < 14 * scale):
+                    add('narrative-callout-clearance', narrative['standard-narrative-body'], callout)
+    # Category and value text are separate chart slots. A number may be inside
+    # its own data bar, but it must never cover a category's rendered glyphs.
+    categories = [e for e in elements if str(e.get('text', '')).strip() and
+                  (label(e).startswith('chart-label-') or e.get('textRole') == 'chart-category-label')]
+    values = [e for e in elements if str(e.get('text', '')).strip() and
+              (label(e).startswith('chart-value-') or e.get('textRole') == 'chart-value-label')]
+    if categories and values:
+        ink = {}
+        for e in categories + values:
+            box = rendered_bounds(e)
+            if box is None:
+                add('chart-rendered-bounds-required', e)
+            else:
+                ink[id(e)] = box
+        for category in categories:
+            for value in values:
+                a, b = ink.get(id(category)), ink.get(id(value))
+                if (a is not None and b is not None
+                        and min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]) > scale
+                        and min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]) > scale):
+                    add('chart-category-value-overlap', category, value)
     for e in elements:
         name = label(e)
         if any(x in name for x in ('footer', 'source-note', 'page-number', 'page-title')): continue
         text = str(e.get('text', '')).strip()
         layout = e.get('textLayout', {})
+        if not isinstance(layout, dict):
+            layout = {}
         if text and layout.get('lineCount', 0) > 1:
             lines = layout.get('lines')
             if not isinstance(lines, list) or not all(isinstance(line, str) for line in lines) or len(lines) != layout['lineCount'] or layout.get('source') != 'rendered':

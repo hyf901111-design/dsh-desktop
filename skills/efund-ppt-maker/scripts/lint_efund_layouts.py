@@ -10,6 +10,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+from check_efund_readability import rendered_bounds
 
 LEGAL_RE = re.compile(r"(?:风险提示|免责声明|Risk Reminder|Disclaimer|附注)", re.I)
 BUILD_MODES = {"reuse", "controlled-recomposition", "original-in-brand-shell"}
@@ -995,13 +996,17 @@ def analyze_file(
                     slide,
                 )
             )
-        actual_bottom = body_box[1] + max(body_box[3], required_height or body_box[3])
+        # A tall top-anchored frame can contain blank space. Prefer the final
+        # glyph bounds; only retain the height estimate when ink is unavailable.
+        ink = rendered_bounds(body)
+        actual_box = ink or [body_box[0], body_box[1], body_box[2], max(body_box[3], required_height or body_box[3])]
+        actual_bottom = actual_box[1] + actual_box[3]
         for callout in callouts:
             callout_box = callout["_box"]
-            if horizontal_intersection(body_box, callout_box) <= 4:
+            if horizontal_intersection(actual_box, callout_box) <= 4:
                 continue
             gap = callout_box[1] - actual_bottom
-            if -callout_box[3] < gap < 16.0:
+            if callout_box[1] + callout_box[3] > actual_box[1] and gap < 16.0:
                 findings.append(
                     issue(
                         "error",

@@ -11,6 +11,8 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 
 必须先读取 [delivery-111.md](references/delivery-111.md) 和 [delivery-110.md](references/delivery-110.md)。本版统一封面副标题为 18pt，增加实际换行、文图间距、流程留白与原生字体检查；继续执行标题白色、主题效果、目录样式和最终视觉验收门禁。此前版本的“零错误”不代表新门禁通过。
 
+制作与验收同时执行 [成品包与实际文字边界检查](references/package-and-render-checks.md)：模板新建稿须清理未列入演示的模板页；原生数据图表仅在需求明确时按实际引用计数；标题换行、正文结论框和正负图表标签以最终字形边界核验，品牌 Logo 必须逐页实看。
+
 先读取 [delivery-109.md](references/delivery-109.md)：封面副标题统一常规不加粗；目录首行上方无横线，其他行分隔保留；逐页声明 `layoutChoice`，适用正文默认采用左侧标题与正文、右侧图表。
 
 标题必须继承源模板的完整标题框，不能只继承字号再从左上角重新绘制；普通正文表格默认完全无描边（目录行分隔按 1.0.9 单独检查）；分章材料在每章正文之前重复目录，并仅高亮下一章。目录必须按源模板紧凑排列，章节少时保留下方留白，不得为铺满页面拉大行距。目录规则见 [toc-spacing-108.md](references/toc-spacing-108.md)，制作目录前必须读取。其余执行细则和成品检查见 [delivery-107.md](references/delivery-107.md)，创作前和导出后都必须读取。
@@ -127,6 +129,8 @@ python "$SKILL_DIR/scripts/qa_efund_pptx.py" "$FINAL_PPTX" \
 
 `shape-shadow-forbidden` 是硬错误；任何可见幻灯片对象不得含外阴影、内阴影或预设阴影效果。
 
+从模板新建稿另运行 `check_efund_package.py "$FINAL_PPTX" --require-clean-slide-tree --json-output "$QA_DIR/efund-package.json"`。仅在需求明确要求原生图表数量时附加 `--min-native-charts N`，不能数 ZIP 中孤立的 chart 文件，也不能对合法形状信息图无条件要求原生图表。具体计数口径和保留现有附页的处理见 [成品包检查](references/package-and-render-checks.md)。
+
 第三道，检查文案自然度和业务具体性：
 
 ```bash
@@ -168,6 +172,8 @@ python "$SKILL_DIR/scripts/lint_efund_layouts.py" "$LAYOUT_DIR/final" \
 `standard-narrative-text-overflow`、`narrative-callout-clearance`、`chart-label-mark-overlap`、`advisory-callout-not-left-aligned` 同样是硬错误：标准解释正文的真实排版高度必须装入文本框，下方总结块须留足 16px，图表类别标签不得与柱、点、面积或数值标记相交，建议/结论浅色框必须左对齐；版式应随内容关系变化，不设双区页数量配额。模式 B/C 表格若使用 `grouped-table-*` 命名，`grouped-table-separator-line` 必须为零；不得用“模板有意重叠”或“线条较细”放行。
 
 封面 `cover-text-edge-whitespace`、数据表 `table-header-not-vertically-centered` / `table-column-alignment-mismatch` / `table-column-insets-mismatch` / `table-cell-insets-not-explicit` / `table-header-vertical-insets-mismatch` / `table-layout-exception-invalid`、说明区 `narrative-text-not-top-anchored` / `narrative-text-pair-missing` / `narrative-rendered-bounds-required` / `narrative-title-body-gap` 均为硬错误。检查必须读取最终 PPTX 单元格/文本框属性和真实渲染文字边界，不能只信任规划坐标或映射中的声明。
+
+`narrative-text-outside-frame`、`narrative-callout-clearance`、`chart-category-value-overlap` 和 `chart-rendered-bounds-required` 同样须解决。小标题一旦换行，必须按实际文字高度重新安排正文；同栏下方结论框不能盖住正文。类别与正负数值的文字边界均须独立回读，不把图表总框或不可见文字的估算位置当作渲染证据。
 
 同列单元格边距相同但段落缩进不同，触发 `table-column-paragraph-indent-mismatch`；段首/段尾空白触发 `table-cell-edge-whitespace`。数字/短标签例外保留真实 `a:br` 换行后再核验，不能把多行内容拼成一行放行。本次 XML 表格布局 guard 仅覆盖原生 `a:tbl`；合法的拼文本框表格继续按表格契约声明 header/body 列关系、回读最终渲染文字边界并逐表视觉复核，证据不足时明确保持待复核，不以外框对齐或原生表格零错误代替其文本验收。
 

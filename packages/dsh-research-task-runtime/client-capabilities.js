@@ -1,9 +1,11 @@
 import Ajv from 'ajv'
+import {normalizeConversationComponentArtifact,canonicalConversationComponentInput} from './conversation-component-contract.js'
 import {noteUiText,noteUiError} from './notes-locale.js'
 const object=(properties,required=[])=>({type:'object',properties,required,additionalProperties:false})
 const identity=c=>JSON.stringify([c?.owner,c?.sessionId,c?.documentId,c?.mode])
 const statuses=new Set(['succeeded','pending','cancelled','failed','unavailable'])
 const definitions=[
+ {id:'conversation.components.create',description:'主智能体直接提交已完成的 version:1 artifact 或原生 financial-widget spec，在当前对话回复中保存独立原生组件；不接受 prompt/recipe，不默认子智能体，不创建隐藏画布，不导航。仅接受规范化后的 financial-widget/chart/table/kpi/markdown/html/mind-map/summary；market/fund/news/reports/timeline/gantt/calendar/operations 等现有结构模板经宿主受限 HTML renderer 接受。原生仅 watchlist/quote/indices/news/announcements，股票与ETF优先 quote 配置，不填价格或OHLC；场外基金走实际 fund 数据与既有模板。files/gallery/calendar-tool/web/iframe/audio/youtube 尚无对话授权 adapter，明确拒绝。对话没有链接节点，拒绝 linkedWatchlistId/linkedSourceId，提供独立 symbols/query。输入JSON UTF-8最多1MiB；source仅保留已提供来源、时间和缺失，不宣称模型来源已核验。宿主写盘后才返回 saved effect 和 ready manifest。',parameters:object({artifact:{type:'object',additionalProperties:true},title:{type:'string',minLength:1,maxLength:120}},['artifact']),handler:'createConversationComponent',conversation:true,write:true,maxCallBytes:1500000},
  {id:'notes.components.create',description:'使用现有组件生成引擎在当前笔记末尾创建真实研究组件，显示实时进度并保存。prompt 必须包含用户要求、明确提供的数据和来源约束；数据缺失时不编造。等待创建完成回执后才能修改样式或导出，失败或待补充信息时停止后续操作。',parameters:object({prompt:{type:'string',minLength:1,maxLength:8000}},['prompt']),handler:'createComponent',notes:true,write:true},
  {id:'notes.export',description:'导出当前笔记为 PDF、Word 或 Markdown。包含当前已保存组件外观，不支持仅本次导出临时覆盖外观。path 为用户明确指定的绝对本地路径；未指定时打开原生保存对话框。先完成用户明确要求保存的样式变更再导出。',parameters:object({format:{type:'string',enum:['pdf','docx','md']},path:{type:'string',minLength:1,maxLength:4096}},['format']),handler:'exportNote',notes:true},
  {id:'notes.components.style',description:'持久化设置当前笔记内嵌研究组件的配色、顶栏与外框，会修改并保存原笔记组件外观。enterprise 是易方达主题。titleBar=false 隐藏顶栏；frame=false 仅去除组件外层边框，保留表格内部边线和内容。没有仅本次导出的临时覆盖能力，不得把持久化变更声称为导出独立设置。scope=note 明确操作全笔记所有研究组件（不需要选中）；scope=selected 仅操作当前选中组件。模糊目标先询问，不能推测其他文档。',parameters:object({scope:{type:'string',enum:['note','selected']},theme:{type:'string',enum:['light','dark','enterprise','openterminal','auto']},titleBar:{type:'boolean'},frame:{type:'boolean'}},['scope']),handler:'styleComponents',notes:true,write:true},
@@ -29,7 +31,7 @@ const validators=new Map(definitions.map(d=>[d.id,validator.compile(d.parameters
 /** Registry owns semantic schemas; transports never become model-callable names. */
 export function createClientCapabilityRegistry(handlers={}){
  const entries=new Map(definitions.map(d=>[d.id,d]))
- const available=(d,c)=>!!handlers[d.handler]&&!!c?.sessionId&&!!c?.owner&&(!d.notes||c.mode==='notes')&&(!d.canvas||c.mode!=='conversation'&&c.canvasAvailable!==false)&&(!d.research||c.mode==='research')&&(!d.write||c.editable===true)&&(!d.selected||c.selectedBlockIds?.length===1)
+ const available=(d,c)=>!!handlers[d.handler]&&!!c?.sessionId&&!!c?.owner&&(!d.notes||c.mode==='notes')&&(!d.conversation||c.mode==='conversation')&&(!d.canvas||c.mode!=='conversation'&&c.canvasAvailable!==false)&&(!d.research||c.mode==='research')&&(!d.write||c.editable===true)&&(!d.selected||c.selectedBlockIds?.length===1)
  return {
   catalog(context){return [...entries.values()].map(d=>({id:d.id,description:d.description,parameters:d.parameters,available:available(d,context)}))},
   get(id){return entries.get(id)},
@@ -48,6 +50,7 @@ export function createClientCapabilityRegistry(handlers={}){
    if(d.id==='notes.blocks.align'&&call.arguments.scope==='selected'&&!(call.arguments.target==='researchComponents'?context.selectedBlockIds:context.selectedParagraphIds)?.length)throw Error('当前未选中对应类型的段落或研究组件。')
    if(d.id==='notes.challenge.configure'&&call.arguments.level===undefined&&call.arguments.commentsExpanded===undefined)throw Error('请指定AI挑战等级或评论展开偏好。')
    if(d.id==='notes.components.data'){const a=call.arguments;if(a.action==='inspect'?(a.revision!==undefined||a.settings!==undefined):a.revision===undefined||a.action==='refresh'&&a.settings!==undefined||a.action==='configure'&&(!a.settings||!Object.keys(a.settings).length))throw Error('组件数据能力参数无效。')}
+   if(d.id==='conversation.components.create')normalizeConversationComponentArtifact(call.arguments)
    signal?.throwIfAborted()
    return handlers[d.handler](call.arguments,context,signal,call.requestId)
   }
@@ -60,7 +63,7 @@ export function createCapabilityExecutor(registry,current){
   if(!call||typeof call.requestId!=='string'||!call.requestId||call.requestId.length>256||typeof call.capability!=='string'||JSON.stringify(call).length>(registry.get(call.capability)?.maxCallBytes??16000))return receipt('failed','客户端调用格式无效。')
   if(signal?.aborted)return receipt('cancelled','已取消，未继续执行。')
   if(identity(context)!==identity(current()))return receipt('unavailable','账号、会话或文档已变化，请重新发送请求。')
-  const fingerprint=JSON.stringify([identity(context),call.capability,call.arguments]),old=receipts.get(call.requestId)
+  const fingerprint=JSON.stringify([identity(context),call.capability,call.capability==='conversation.components.create'?canonicalConversationComponentInput(call.arguments):call.arguments]),old=receipts.get(call.requestId)
   if(old)return old.fingerprint===fingerprint?old.promise:receipt('failed','请求标识已用于不同操作。')
   // Keep all receipts for this bounded conversation; never evict an executed call.
   if(receipts.size>=32)return receipt('failed','本轮客户端操作数量已达上限。')
@@ -141,6 +144,6 @@ export function noteCapabilityReceiptMessage(receipt,locale='zh'){
  return message
 }
 export function capabilityReceiptText(receipts,locale='zh'){
- const names={'notes.components.create':'创建组件','notes.export':'导出笔记','notes.components.style':'组件样式','notes.components.layout':'组件布局','notes.blocks.align':'笔记对齐','notes.components.inspect':'查看所选组件','notes.components.apply':'修改所选组件','notes.challenge.configure':'AI挑战设置','notes.components.data':'笔记组件数据','canvas.inspect':'查看画布','ui.zoom.reset':'恢复缩放','canvas.apply':'修改画布','canvas.undo':'撤销画布操作','ui.zoom.in':'放大窗口','ui.zoom.out':'缩小窗口','ui.fullscreen.set':'窗口全屏','ui.mode.set':'切换会话视图'},labels={succeeded:'已完成',pending:'等待用户操作',cancelled:'已取消',failed:'失败',unavailable:'不可用'}
+ const names={'conversation.components.create':'创建对话组件','notes.components.create':'创建组件','notes.export':'导出笔记','notes.components.style':'组件样式','notes.components.layout':'组件布局','notes.blocks.align':'笔记对齐','notes.components.inspect':'查看所选组件','notes.components.apply':'修改所选组件','notes.challenge.configure':'AI挑战设置','notes.components.data':'笔记组件数据','canvas.inspect':'查看画布','ui.zoom.reset':'恢复缩放','canvas.apply':'修改画布','canvas.undo':'撤销画布操作','ui.zoom.in':'放大窗口','ui.zoom.out':'缩小窗口','ui.fullscreen.set':'窗口全屏','ui.mode.set':'切换会话视图'},labels={succeeded:'已完成',pending:'等待用户操作',cancelled:'已取消',failed:'失败',unavailable:'不可用'}
  return receipts.map(r=>`${noteUiText(names[r.capability]||r.capability,locale)}${locale==='en'?': ':'：'}${noteUiText(r.status==='pending'&&r.capability?.startsWith('canvas.')?'同步待确认':r.capability==='notes.components.data'&&r.status==='pending'?'刷新进行中':labels[r.status]||'未完成',locale)}${r.path?' — '+r.path:''}${r.message?(locale==='en'?'. ':'。')+noteCapabilityReceiptMessage(r,locale):''}`).join('\n')
 }

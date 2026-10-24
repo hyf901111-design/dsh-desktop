@@ -3,6 +3,8 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { sanitizeResearchClipboardNode, type ClipboardNode } from './research-canvas-clipboard';
 import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-trust';
+import { financialWidgetSpec } from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js';
+import { detachConversationComponentNode, type JsonObject } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
 type Recipe = {
     templateId: string;
     templateVersion: string;
@@ -23,11 +25,13 @@ type Entry = {
 };
 const label = (v: unknown) => { if (typeof v !== 'string' || !v.trim() || v.trim().length > 120)
     throw Error('组件名称需为 1–120 个字符'); return v.trim(); };
-export function canSaveCustomComponent(node: any) { return Boolean(node && ['generated-container', 'generated-summary', 'generated-mind-map'].includes(node.kind) && node.generationStatus === 'completed' && !['financial-widget', 'calendar-tool'].includes(node.containerSpec?.type) && (node.containerSpec || typeof node.excerpt === 'string' && node.excerpt.trim())); }
+export function canSaveCustomComponent(node: any) { return Boolean(node && ['generated-container', 'generated-summary', 'generated-mind-map'].includes(node.kind) && node.generationStatus === 'completed' && node.containerSpec?.type !== 'calendar-tool' && (node.containerSpec?.type !== 'financial-widget' || financialWidgetSpec(node.containerSpec) !== null) && (node.containerSpec || typeof node.excerpt === 'string' && node.excerpt.trim())); }
 function snapshot(value: unknown) {
     if (!canSaveCustomComponent(value))
         throw Error('请先完成组件生成，再添加至组件库');
-    const node = structuredClone(sanitizeResearchClipboardNode(value));
+    const clean = sanitizeResearchClipboardNode(value);
+    const node = structuredClone((clean.containerSpec as any)?.type === 'financial-widget'
+        ? detachConversationComponentNode(clean as JsonObject) as ClipboardNode : clean);
     // Keep content and geometry, discard links into the originating board/session.
     for (const key of ['sourceNodeIds', 'generationSources', 'creationMode', 'messageId'])
         delete node[key];

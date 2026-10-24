@@ -81,3 +81,16 @@ it('IPC仅信任主窗口，保存从真实画布读取当前节点而非调用�
     expect(() => handler({ ...event, senderFrame: { processId: 1, routingId: 3 } }, { action: 'list' })).toThrow('main EWork Odyssey window');
     await expect(handler(event, { action: 'save', sessionId: 'session', nodeId: 'missing' })).rejects.toThrow();
 });
+it('saves a strict native financial snapshot with independent configuration and no external links',async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),{file,store}=await fixture(),spec={...financialWidgetDefaults('quote')!,symbols:[{code:'AAPL',market:'US',name:'模拟标的'}],period:'1w',dataSource:'backup',linkedWatchlistId:'external-board'},original={...node(),title:'模拟行情',displayName:'模拟行情',containerSpec:spec}
+ const saved=await store.add(original,undefined,'owner'),reopened=new ComponentLibraryStore(file);await reopened.load();expect(reopened.list()).toContainEqual(saved)
+ const restored=reopened.read(saved.id,'owner').node;expect(restored).toMatchObject({id:'custom-template',x:0,y:0,containerSpec:{symbols:spec.symbols,period:'1w',dataSource:'backup'}});expect(restored.containerSpec).not.toHaveProperty('linkedWatchlistId');expect(restored).not.toHaveProperty('messageId')
+ ;(restored.containerSpec as any).period='1y';expect((reopened.read(saved.id).node.containerSpec as any).period).toBe('1w');expect(spec.period).toBe('1w')
+ for(const key of ['price','script'])await expect(store.add({...original,containerSpec:{...spec,[key]:17}})).rejects.toThrow();expect(store.list()).toHaveLength(1)
+})
+it('retains linked security news semantics through save, reload and independent note or research placement',async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),{noteLibraryNode}=await import('../src/main/notes/component-library'),{file,store}=await fixture(),spec={...financialWidgetDefaults('news')!,symbols:[{code:'AAPL',market:'US',name:'苹果'}],query:'',linkedSourceId:'source-security'},original={...node(),title:'证券新闻',displayName:'证券新闻',containerSpec:spec},entry=await store.add(original),restart=new ComponentLibraryStore(file);await restart.load()
+ const research=restart.read(entry.id).node,noteA=noteLibraryNode(restart,entry.id,'owner'),noteB=noteLibraryNode(restart,entry.id,'owner');for(const placed of [research,noteA,noteB]){expect(placed.containerSpec).toMatchObject({type:'financial-widget',widget:'news',query:'苹果',symbols:spec.symbols});expect(placed.containerSpec).not.toHaveProperty('linkedSourceId')}
+ expect(noteA.id).not.toBe(noteB.id);noteA.containerSpec.query='副本查询';expect(noteB.containerSpec.query).toBe('苹果');expect(spec.query).toBe('')
+ await expect(store.add({...original,containerSpec:{...spec,symbols:[]}})).rejects.toThrow();expect(store.list()).toHaveLength(1)
+})

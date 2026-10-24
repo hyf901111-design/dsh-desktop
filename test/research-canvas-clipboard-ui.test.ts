@@ -23,7 +23,8 @@ async function fixture(desktop: any = {}, win?: Window) {
   const window: any = win ?? {}
   Object.assign(window, { dshDesktop: desktop, __ModuleLoader__: { load: (value: any) => { descriptor = value } } })
   const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-  runInNewContext(source, { window, document: win?.document, localStorage: win?.localStorage, navigator: win?.navigator, HTMLElement: win?.HTMLElement, HTMLTextAreaElement: win?.HTMLTextAreaElement, Text: win?.Text, ResizeObserver: win?.ResizeObserver, requestAnimationFrame: win?.requestAnimationFrame.bind(win), cancelAnimationFrame: win?.cancelAnimationFrame.bind(win), AbortController, TextDecoder, TextEncoder, setTimeout, clearTimeout })
+  // Production wrappers observe this actual Happy DOM tree; keep its browser constructors.
+  runInNewContext(source, { window, document: win?.document, localStorage: win?.localStorage, navigator: win?.navigator, CSS: win?.CSS, DOMParser: win?.DOMParser, CustomEvent: win?.CustomEvent, Event: win?.Event, HTMLElement: win?.HTMLElement, HTMLTextAreaElement: win?.HTMLTextAreaElement, Text: win?.Text, ResizeObserver: win?.ResizeObserver, MutationObserver: win?.MutationObserver, requestAnimationFrame: win?.requestAnimationFrame.bind(win), cancelAnimationFrame: win?.cancelAnimationFrame.bind(win), AbortController, TextDecoder, TextEncoder, structuredClone, setTimeout, clearTimeout, setInterval, clearInterval })
   const bundle = descriptor.factory((id: string) => {
     if (id === 'react') return react
     if (id === 'react/jsx-runtime') return requireModule(id)
@@ -552,4 +553,11 @@ describe('rendered canvas clipboard ownership', () => {
     expect(m.registry.for('another').getSnapshot().files).toHaveLength(0)
     expect(revokeNode).toHaveBeenCalledWith({ sessionId: 'target', nodeId })
   })
+})
+
+it('persists an independent copied linked-news instance with the original security query through a real research workspace transaction',async()=>{
+ const {mkdtemp,rm}=await import('node:fs/promises'),{tmpdir}=await import('node:os'),{join}=await import('node:path'),{ResearchCanvasClipboard}=await import('../src/main/state/research-canvas-clipboard'),{financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),root=await mkdtemp(join(tmpdir(),'linked-news-workspace-'));cleanups.push(()=>rm(root,{recursive:true,force:true}))
+ let html='',text='';const clipboard=new ResearchCanvasClipboard({userDataPath:root,registry:{} as any,revealFile:()=>{},clipboard:{availableFormats:()=>[],readBuffer:()=>Buffer.alloc(0),readText:()=>text,readHTML:()=>html,readImage:()=>({isEmpty:()=>true,toPNG:()=>Buffer.alloc(0),getSize:()=>({width:0,height:0})}),write:value=>{html=value.html;text=value.text}}}),spec={...financialWidgetDefaults('news')!,symbols:[{code:'AAPL',market:'US',name:'苹果'}],query:'',linkedSourceId:'old-security'},source={id:'old-news',kind:'generated-container',x:0,y:0,title:'证券新闻',generationStatus:'completed',containerSpec:spec},f=await fixture()
+ expect(await clipboard.copy({sessionId:'source',nodes:[source]})).toEqual({ok:true});const snapshot=await clipboard.read();await f.workspace.insertClipboardNodes(snapshot,{x:100,y:150});const inserted=f.workspace.getSnapshot().artifacts[0];expect(inserted.id).not.toBe('old-news');expect(inserted.containerSpec).toMatchObject({widget:'news',query:'苹果',symbols:spec.symbols});expect(inserted.containerSpec).not.toHaveProperty('linkedSourceId')
+ const restored=f.bundle.createResearchWorkspaceSession(f.storage,'target').getSnapshot().artifacts[0];expect(restored.id).toBe(inserted.id);expect(restored.containerSpec.query).toBe('苹果');const copy=structuredClone(restored);copy.containerSpec.query='副本查询';expect(source.containerSpec.query).toBe('');expect(f.bundle.createResearchWorkspaceSession(f.storage,'target').getSnapshot().artifacts[0].containerSpec.query).toBe('苹果')
 })

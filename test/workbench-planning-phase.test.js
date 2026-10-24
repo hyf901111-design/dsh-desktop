@@ -11,11 +11,14 @@ import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import {componentCreationRequest} from '../packages/dsh-research-task-runtime/conversation-components-policy.js'
 import { registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
 import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import { AIRLINE_REAL_WORKBENCH_REQUEST, AFFIRMATIVE_WORKBENCH_REQUESTS, NON_CREATION_WORKBENCH_REQUESTS } from './fixtures/workbench-creation-requests.js'
 
 const session = (text, id = 'u') => ({ header: {}, events: [{ type: 'user/message', data: { id, source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
+const admitResearchMode=s=>{s.events.push({type:'tool/call',data:{name:'client_capabilities',callId:'mode-catalog',arguments:'{}'}},{type:'tool/result',data:{message:{source:{kind:'tool',callId:'mode-catalog'},content:[{type:'tool-result',isError:false,content:[{type:'text',text:JSON.stringify({mode:'research',capabilities:[]})}]}]}}});return s}
+const researchSession=text=>admitResearchMode(session(text))
 const accepted = (s, isError = false) => s.events.push(
   { type: 'tool/call', data: { name: 'research_workbench_create', callId: 'create', arguments: { panels: [] } } },
   { type: 'tool/result', data: { message: { source: { callId: 'create' }, content: [{ type: 'tool-result', isError, content: [{ type: 'text', text: JSON.stringify({ planId: 'plan', status: 'accepted' }) }] }] } } }
@@ -59,6 +62,7 @@ describe('工作台首次规划阶段预算', () => {
     for (const inbox of [false, true]) {
       const s = session(text)
       if (inbox) s.events = [{ type: 'agent/inbox/spliced', data: { inserted: s.events.map(event => event.data) } }]
+      if(componentCreationRequest(s)?.target==='component')admitResearchMode(s)
       s.append = (type, data) => s.events.push({ type, data })
       const h = harness(undefined, planningTools), agent = { session: s }
       expect(workbenchCreationRequest(s)?.text).toBe(text)
@@ -122,11 +126,11 @@ describe('工作台首次规划阶段预算', () => {
       '本轮不新建工作台\n请创建一张排期卡片。',
       '本轮不修改当前工作台，同时新建一个独立行业研究工作台。',
       '请检查当前已有工作台，并创建一张折线图组件。'
-    ]) expect(workbenchCreationRequest(session(text)), text).not.toBeNull()
+    ]) expect(workbenchCreationRequest(researchSession(text)), text).not.toBeNull()
   })
-  it('gives explicit new single-component requests the same bounded planning phase and restores Max after acceptance', async () => {
+  it('gives explicit new single-component requests the same bounded planning phase in known research mode and restores Max after acceptance', async () => {
     for (const text of ['创建一个装置撤展交接组件，用8条模拟记录，点击查看完整说明', '请生成一张古籍修复流转卡片，用虚构记录']) {
-      const h = harness(), agent = { session: session(text) }
+      const h = harness(), agent = { session: researchSession(text) }
       expect(workbenchCreationRequest(agent.session)?.text).toBe(text)
       const planned = await h.request(agent, config)
       expect(planned).toEqual({ ...config, reasoningEffort: 'low', maxTokens: 4096 })
@@ -138,7 +142,7 @@ describe('工作台首次规划阶段预算', () => {
 
   it('does not expand a single popular ETF quote component into the eight-panel workbench preset', () => {
     const h = harness(undefined, [{ name: 'public_data_query' }])
-    const text = h.text({ session: session('创建一个国内热门基金报价组件') })
+    const text = h.text({ session: researchSession('创建一个国内热门基金报价组件') })
     expect(text).toContain('panel.publicData')
     expect(text).not.toContain('"preset":"cn-hot-etf-live"')
   })
@@ -373,7 +377,7 @@ describe('工作台首次规划阶段预算', () => {
     const request = wireRequest(), original = structuredClone(request)
     await h.context(agent, request)
     expect(request).toEqual(original)
-    const child = { session: { ...session('创建物流工作台'), header: { parentSession: 'parent' } } }
+    const child = { session: { ...session('创建物流工作台'), header: { parentSession: 'parent', origin: 'subagent' } } }
     expect((await h.context(child, request)).tools).toBe(planningTools)
   })
 

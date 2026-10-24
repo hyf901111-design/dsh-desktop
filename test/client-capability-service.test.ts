@@ -81,3 +81,61 @@ it('reports current shared-canvas write permission and rejects a recreated windo
  writable=true;catalog=await h.catalog();expect(catalog.capabilities.find((d:any)=>d.id==='canvas.apply').available).toBe(true)
  windowId='replacement';await expect(h.action('ui.zoom.in')).rejects.toThrow('绑定');expect(h.calls).toHaveLength(0)
 })
+const simulatedArtifact={version:1,type:'table',title:'模拟组件',columns:['模拟列'],rows:[[17]]}
+function savedConversationReceipt(requestId:string,identity:any){return{status:'succeeded' as const,effect:{kind:'conversation-component' as const,state:'saved' as const,componentId:'component'},data:{renderManifest:{version:1 as const,kind:'conversation-component' as const,status:'ready' as const,componentId:'component',sessionId:identity.sessionId,turnId:identity.turnId,requestId}},message:'已保存模拟组件。'}}
+it('injects real conversation identity, keeps create independent of navigation, and projects only a valid visible lease',async()=>{
+ const h=harness();let windowId='window-a';h.o.windowIdentity=()=>windowId
+ const create=vi.fn(async(_args:any,identity:any,_signal:AbortSignal,requestId:string)=>savedConversationReceipt(requestId,identity));h.o.conversationComponents={create};h.bind('conversation')
+ const authority={sourceInstruction:'创建一个模拟组件',authorityId:'human-auth',authoritySeq:7}
+ const catalog:any=await h.service.request({sessionId:'s',turnId:'7',method:'catalog',...authority})
+ expect(catalog.capabilities.find((item:any)=>item.id==='conversation.components.create').available).toBe(true)
+ const visible=h.service.currentVisibleContext();expect(visible).toMatchObject({ownerAccountId:'alice',sessionId:'s',mode:'conversation',generation:expect.any(String)})
+ expect(Object.keys(visible!)).toEqual(['ownerAccountId','sessionId','mode','generation'])
+ const call={requestId:'create',capability:'conversation.components.create',arguments:{artifact:simulatedArtifact}}
+ const result:any=await h.service.request({sessionId:'s',turnId:'7',method:'execute',call,...authority})
+ expect(result).toMatchObject({requestId:'create',capability:'conversation.components.create',status:'succeeded',effect:{kind:'conversation-component',state:'saved'},data:{renderManifest:{turnId:'7'}}})
+ const [args,identity,signal,requestId]=create.mock.calls[0]!
+ expect(args).toEqual({artifact:simulatedArtifact});expect(requestId).toBe('create');expect(signal).toBeInstanceOf(AbortSignal)
+ expect(identity).toMatchObject({ownerAccountId:'alice',sessionId:'s',turnId:'7',mode:'conversation',authorityId:'human-auth',authoritySeq:7,windowGeneration:visible?.generation})
+ expect(identity.current()).toBe(true);expect(h.calls).toEqual([])
+ const spoofed=await h.service.request({sessionId:'s',turnId:'7',method:'execute',call:{...call,requestId:'spoof',arguments:{artifact:simulatedArtifact,identity:{ownerAccountId:'other'}}},...authority})
+ expect(spoofed).toMatchObject({status:'failed'});expect(create).toHaveBeenCalledTimes(1)
+ windowId='window-b';expect(h.service.currentVisibleContext()).toBeUndefined();expect(identity.current()).toBe(false)
+})
+it('uses canonical conversation arguments for its host replay cache',async()=>{
+ const h=harness(),create=vi.fn(async(_args:any,identity:any,_signal:AbortSignal,id:string)=>savedConversationReceipt(id,identity));h.o.conversationComponents={create};h.bind('conversation');await h.catalog()
+ const first=await h.action('conversation.components.create',{artifact:simulatedArtifact,title:'模拟组件'},'stable')
+ expect(first).toMatchObject({status:'succeeded'})
+ expect(await h.action('conversation.components.create',{title:'模拟组件',artifact:{rows:[[17]],columns:['模拟列'],title:'模拟组件',type:'table',version:1}},'stable')).toEqual(first);expect(create).toHaveBeenCalledTimes(1)
+})
+it.each(['mode','owner','window','authority'])('revokes an in-flight conversation creation when %s changes',async change=>{
+ const h=harness();let windowId='first';h.o.windowIdentity=()=>windowId;h.bind('conversation')
+ let entered!:()=>void;const ready=new Promise<void>(resolve=>entered=resolve);let identity:any
+ h.o.conversationComponents={create:async(_args:any,value:any,signal:AbortSignal,id:string)=>{identity=value;entered();await new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(Error('lease cancelled')),{once:true}));return savedConversationReceipt(id,value)}}
+ const authority={sourceInstruction:'创建模拟组件',authorityId:'a',authoritySeq:1}
+ await h.service.request({sessionId:'s',turnId:'1',method:'catalog',...authority})
+ const pending=h.service.request({sessionId:'s',turnId:'1',method:'execute',call:{requestId:'pending',capability:'conversation.components.create',arguments:{artifact:simulatedArtifact}},...authority});await ready
+ if(change==='mode')h.bind('research');if(change==='owner')h.changeOwner();if(change==='window')windowId='replacement'
+ if(change==='authority')await h.service.request({sessionId:'s',turnId:'1',method:'catalog',sourceInstruction:'停止旧请求',authorityId:'b',authoritySeq:2})
+ expect(identity.current()).toBe(false);expect(await pending).toMatchObject({status:'cancelled'})
+})
+it('preserves an already saved component receipt when cancellation follows the committed write',async()=>{
+ const h=harness(),controller=new AbortController();h.o.conversationComponents={create:async(_args:any,identity:any,_signal:AbortSignal,id:string)=>{controller.abort();return savedConversationReceipt(id,identity)}};h.bind('conversation');await h.catalog()
+ const result=await h.service.request({sessionId:'s',turnId:'1',method:'execute',call:{requestId:'saved',capability:'conversation.components.create',arguments:{artifact:simulatedArtifact}}},controller.signal)
+ expect(result).toMatchObject({status:'succeeded',effect:{kind:'conversation-component',state:'saved'}})
+})
+it('reads an existing committed receipt without creating, restoring an old authority, or trusting a caller lease',async()=>{
+ const h=harness(),create=vi.fn(async(_args:any,identity:any,_signal:AbortSignal,id:string)=>savedConversationReceipt(id,identity))
+ h.o.conversationComponents={create};h.bind('conversation')
+ const authority={sourceInstruction:'创建模拟组件',authorityId:'original-human',authoritySeq:1},call={requestId:'persisted',capability:'conversation.components.create',arguments:{artifact:simulatedArtifact}}
+ const read=()=>h.service.request({sessionId:'s',turnId:'1',method:'receipt',call,...authority})
+ expect(await read()).toMatchObject({status:'cancelled'});expect(create).not.toHaveBeenCalled()
+ await h.service.request({sessionId:'s',turnId:'1',method:'catalog',...authority});await h.service.request({sessionId:'s',turnId:'1',method:'execute',call,...authority})
+ const newer={sourceInstruction:'只读取不要创建',authorityId:'newer-human',authoritySeq:2}
+ await h.service.request({sessionId:'s',turnId:'1',method:'catalog',...newer})
+ expect(await read()).toMatchObject({status:'succeeded',effect:{kind:'conversation-component',state:'saved'}});expect(create).toHaveBeenCalledTimes(1)
+ expect(await h.service.request({sessionId:'s',turnId:'1',method:'execute',call:{requestId:'new-zoom',capability:'ui.zoom.in',arguments:{}},...newer})).toMatchObject({status:'succeeded'})
+ await expect(h.service.request({sessionId:'s',turnId:'1',method:'receipt',call:{...call,arguments:{artifact:{...simulatedArtifact,title:'不同内容'}}},...authority})).rejects.toThrow('不一致')
+ await expect(h.service.request({sessionId:'s',turnId:'1',method:'receipt',call,...newer})).rejects.toThrow('不一致')
+ h.bind('notes');expect(await read()).toMatchObject({status:'succeeded'});h.changeOwner();expect(await read()).toMatchObject({status:'cancelled'});expect(create).toHaveBeenCalledTimes(1)
+})

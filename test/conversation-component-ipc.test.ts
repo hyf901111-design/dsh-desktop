@@ -1,0 +1,19 @@
+import {expect,it,vi} from 'vitest'
+import {installConversationComponentHandlers} from '../src/main/conversation-components/ipc'
+import {createConversationComponentsBridge} from '../src/preload/conversation-components'
+const methods=['read','updateNativeSpec','queryNative','readNativeSnapshot','copy','saveLibrary','reference','resolveReference'] as const
+it('only installs the eight frozen trusted main-window handlers and removes them on disposal',async()=>{
+ const handlers=new Map<string,any>(),removeHandler=vi.fn((channel:string)=>handlers.delete(channel)),ipcMain={handle:(channel:string,fn:any)=>handlers.set(channel,fn),removeHandler},webContents={mainFrame:{processId:1,routingId:2}},window={isDestroyed:()=>false,webContents},service=Object.fromEntries(methods.map(m=>[m,vi.fn(async(value:any)=>({method:m,value}))]))
+ const dispose=installConversationComponentHandlers({ipcMain,getWindow:()=>window,service:service as any})
+ expect([...handlers.keys()].sort()).toEqual(methods.map(m=>'conversation-components:'+m).sort())
+ const event={sender:webContents,senderFrame:webContents.mainFrame},input={sessionId:'s',componentId:'c'}
+ expect(await handlers.get('conversation-components:read')(event,input)).toEqual({method:'read',value:input})
+ for(const untrusted of [{...event,sender:{}},{...event,senderFrame:{processId:1,routingId:3}},{...event,senderFrame:null},{...event,senderFrame:{processId:99,routingId:2}}])expect(()=>handlers.get('conversation-components:copy')(untrusted,input)).toThrow(/main EWork Odyssey window/)
+ expect(service.copy).not.toHaveBeenCalled();dispose();expect(handlers.size).toBe(0)
+})
+it('the frozen preload bridge exposes fixed typed methods and never an arbitrary channel API',async()=>{
+ const invoke=vi.fn(async(channel:string,value:unknown)=>({channel,value})),bridge=createConversationComponentsBridge(invoke),target={sessionId:'s',componentId:'c'}
+ expect(Object.isFrozen(bridge)).toBe(true);expect(Object.keys(bridge).sort()).toEqual([...methods].sort());expect(bridge).not.toHaveProperty('invoke')
+ await bridge.read(target);await bridge.copy(target);await bridge.saveLibrary(target);await bridge.reference(target);await bridge.updateNativeSpec({...target,expectedRevision:1,spec:{version:1}});await bridge.queryNative({...target,expectedRevision:1,query:{action:'quotes'}});await bridge.readNativeSnapshot!({...target,expectedRevision:1,query:{action:'quotes'}});await bridge.resolveReference({sessionId:'s',reference:{version:1,kind:'conversation-component',sessionId:'s',componentId:'c',revision:1,title:'模拟'}})
+ expect(invoke.mock.calls.map(([channel])=>channel)).toEqual(['read','copy','saveLibrary','reference','updateNativeSpec','queryNative','readNativeSnapshot','resolveReference'].map(m=>'conversation-components:'+m))
+})

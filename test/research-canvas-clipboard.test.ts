@@ -321,3 +321,20 @@ describe('durable research clipboard', () => {
     expect(await handlers.get('research:clipboard:read')!({ sender: window.webContents, senderFrame: window.webContents.mainFrame })).toEqual({ kind: 'empty' })
   })
 })
+
+it('copies and restores strict native financial configuration through the opaque envelope, detached from the source',async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),f=await fixture(),spec={...financialWidgetDefaults('quote')!,symbols:[{code:'AAPL',market:'US',name:'模拟标的'}],period:'1w',adjustment:'forward',indicators:['MA','VOL'],dataSource:'backup',refreshMinutes:5,refreshEnabled:true,linkedWatchlistId:'old-board'}
+ const node={id:'source-id',kind:'generated-container',x:11,y:22,width:716,height:600,title:'模拟行情',generationStatus:'completed',containerSpec:spec,messageId:'private-message',sourceNodeIds:['old'],generationSources:[{id:'old',type:'text',title:'old'}],generationTaskId:'old-task',ownerAccountId:'private-account'}
+ expect(await f.service.copy({sessionId:'s',nodes:[node]})).toEqual({ok:true});expect(f.clipboard.html).toContain('sherlock-research-clipboard');expect(f.clipboard.html).not.toContain('private-account');expect(f.clipboard.html).not.toContain('AAPL')
+ const reopened=new ResearchCanvasClipboard(f.options),read=await reopened.read();expect(read.kind).toBe('components');if(read.kind!=='components')throw Error('expected components')
+ const restored=read.nodes[0]!;expect(restored).toMatchObject({id:'source-id',kind:'generated-container',x:11,y:22,containerSpec:{symbols:spec.symbols,period:'1w',adjustment:'forward',indicators:['MA','VOL'],dataSource:'backup',refreshMinutes:5,refreshEnabled:true}})
+ for(const key of ['messageId','sourceNodeIds','generationSources','generationTaskId','ownerAccountId'])expect(restored).not.toHaveProperty(key)
+ expect(restored.containerSpec).not.toHaveProperty('linkedWatchlistId');expect(node.containerSpec.linkedWatchlistId).toBe('old-board')
+ for(const key of ['price','script','unknown'])expect((await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...spec,[key]:17}}]})).ok).toBe(false)
+})
+it('freezes a linked security news query when copying and refuses unresolved links instead of changing the content target',async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),f=await fixture(),spec={...financialWidgetDefaults('news')!,symbols:[{code:'AAPL',market:'US',name:'苹果'}],query:'',linkedSourceId:'source-security'},node={id:'news',kind:'generated-container',x:0,y:0,title:'证券新闻',generationStatus:'completed',containerSpec:spec}
+ expect(await f.service.copy({sessionId:'s',nodes:[node]})).toEqual({ok:true});const result=await f.service.read();if(result.kind!=='components')throw Error('expected components');const independent=structuredClone(result.nodes[0]!.containerSpec) as any;expect(independent.query).toBe('苹果');expect(independent).not.toHaveProperty('linkedSourceId');independent.query='副本查询';expect(spec.query).toBe('');expect(spec.linkedSourceId).toBe('source-security')
+ expect((await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...spec,symbols:[]}}]})).ok).toBe(false)
+ expect(await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...financialWidgetDefaults('news')!,query:''}}]})).toEqual({ok:true});const generic=await f.service.read();if(generic.kind!=='components')throw Error('expected generic news');expect((generic.nodes[0]!.containerSpec as any).query).toBe('')
+})

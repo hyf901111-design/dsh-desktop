@@ -2,6 +2,8 @@ import {parseAudioSpec} from '../../../packages/dsh-research-task-runtime/audio-
 import {parseDerivedSpec} from '../../../packages/dsh-research-task-runtime/derived-template-contract.js'
 import {parseYoutubeSpec} from '../../../packages/dsh-research-task-runtime/youtube-template-contract.js'
 import {parseIframeSpec} from '../../../packages/dsh-research-task-runtime/iframe-template-contract.js'
+import {financialWidgetSpec} from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js'
+import {detachConversationComponentNode,type JsonObject} from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js'
 import { createHash, randomBytes } from 'node:crypto'
 import { parseResearchHtmlArtifact, RESEARCH_HTML_LIMIT_ERROR } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 import { constants, realpathSync } from 'node:fs'
@@ -91,7 +93,12 @@ function sanitizeNode(value: unknown): ClipboardNode {
   if (input.kind === 'web-link') { output.url = publicUrl(input.url); output.titleMode = ['custom', 'manual'].includes(String(input.titleMode)) ? 'custom' : 'auto' }
   if (input.containerSpec !== undefined) {
     const spec = record(input.containerSpec)
-    if (spec.type === 'summary' || spec.type === 'mind-map' && Object.hasOwn(spec,'source')) {
+    if (spec.type === 'financial-widget') {
+      const financial = financialWidgetSpec(spec)
+      if (financial === null) throw new Error('金融组件配置无效。')
+      // Freeze the effective linked-news query using the single cross-surface contract.
+      output.containerSpec = detachConversationComponentNode({ ...output, containerSpec: financial as unknown as JsonObject } as JsonObject).containerSpec
+    } else if (spec.type === 'summary' || spec.type === 'mind-map' && Object.hasOwn(spec,'source')) {
       const derived=parseDerivedSpec(spec)
       if(derived===null)throw new Error('派生组件结果或来源无效。')
       output.containerSpec=derived
@@ -121,7 +128,12 @@ function sanitizeNode(value: unknown): ClipboardNode {
       : ['queued', 'running', 'pending'].includes(String(input.generationStatus)) ? 'interrupted'
       : ['draft', 'failed', 'cancelled', 'interrupted'].includes(String(input.generationStatus)) ? input.generationStatus
       : input.containerSpec !== undefined || typeof input.excerpt === 'string' && input.excerpt.trim() ? 'completed' : 'failed'
-    if (input.kind === 'generated-container') output.refreshMinutes = 0
+    if (input.kind === 'generated-container') {
+      output.refreshMinutes = 0
+      // The existing research paste canonicalizer requires this string metadata.
+      // Conversation snapshots have completed content and need no generation prompt.
+      if (output.containerPrompt === undefined) output.containerPrompt = ''
+    }
   }
   if (input.creationMode === 'selection') output.creationMode = 'selection'
   if (input.sourceNodeIds !== undefined) {
@@ -141,6 +153,9 @@ function sanitizeNode(value: unknown): ClipboardNode {
     })
   }
   if (input.kind === 'file' && opaque(input.assetId)) output.assetId = input.assetId
+  if ((output.containerSpec as RecordValue | undefined)?.type === 'financial-widget') {
+    for (const key of ['messageId', 'sourceNodeIds', 'generationSources', 'creationMode']) delete output[key]
+  }
   return output
 }
 // Reusable personal templates pass through the same bounded content contract as

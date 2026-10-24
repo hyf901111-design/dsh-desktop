@@ -1,4 +1,7 @@
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
+import {ConversationComponentStore} from './state/conversation-components'
+import {createConversationComponentService} from './conversation-components/service'
+import {installConversationComponentHandlers} from './conversation-components/ipc'
 import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import { createHomeGuideAssetService, registerHomeGuideAssetHandlers } from './home-guide-assets'
@@ -1288,7 +1291,9 @@ async function bootstrap(): Promise<void> {
     return{zoomLevel:mainWindow.webContents.getZoomLevel(),fullscreen:mainWindow.isFullScreen()}
   }
   let notesDocumentAdapter:import('./notes/document-capability-adapter').NoteDocumentAdapter|undefined
-  const clientCapabilities=new ClientCapabilityService({notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:sessionId=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}},canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
+  let conversationComponentsService:ReturnType<typeof createConversationComponentService>|undefined
+  let conversationComponentsReady=false
+  const clientCapabilities=new ClientCapabilityService({get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:sessionId=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}},canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
   const researchPdfRenderer = new ResearchPdfRenderer()
@@ -1520,6 +1525,16 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
   registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openClientLink(mainWindow,url))
   noteComponentLibrary=await installComponentLibrary({ipcMain,getWindow:()=>mainWindow,file:join(app.getPath('userData'),'component-library.json'),readCanvas:id=>researchBoardsService?.isSharedSession(id)?researchBoardsService.readSharedCanvas(id):readStoredResearchCanvas(researchCanvasStorage,id),getBinding:(sessionId,nodeId)=>componentDataService?.engine.list(sessionId).find((b:any)=>b.nodeId===nodeId),owner:integrationOwner})
+  const conversationComponentStore=new ConversationComponentStore(join(app.getPath('userData'),'conversation-components.json'))
+  try{await conversationComponentStore.load();conversationComponentsReady=true}catch(error){console.error('[conversation-components] 读取失败，原文件已保留',error)}
+  conversationComponentsService=createConversationComponentService({
+    store:conversationComponentStore,owner:()=>integrationOwner()||'local',
+    canReadSession:id=>!isScheduledSession(id)&&canReadNoteSession(id),
+    currentVisibleContext:()=>clientCapabilities.currentVisibleContext(),
+    nativeQuery:query=>financialWidgetData.query(query),
+    clipboard:()=>researchClipboardService,library:()=>noteComponentLibrary
+  })
+  app.once('before-quit',installConversationComponentHandlers({ipcMain,getWindow:()=>mainWindow,service:conversationComponentsService}))
   await installCalendarService({shared:researchBoardsService?new SharedCalendarStore(researchBoardsService):undefined,getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>{
     if(readStoredResearchCanvas(researchCanvasStorage,target.sessionId).artifacts.some((n:any)=>n.id===target.nodeId&&n.containerSpec?.type==='calendar-tool'))return true
     try{return canReadNoteSession(target.sessionId)&&findNoteComponent(calendarNotes.load(integrationOwner()||'local',target.sessionId).saved.blocks,target.nodeId)?.containerSpec?.type==='calendar-tool'}catch{return false}
