@@ -1,0 +1,72 @@
+import { Window } from 'happy-dom'
+import { afterEach, expect, it, vi } from 'vitest'
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => Object.fromEntries(['StateDot','Modal','Button','IconTrashOutline16','Menu','IconPlusOutline16','IconEllipsisOutline16','IconSearchOutline16','IconFolderOpenOutline16','IconEditOutline16','IconTriangleRightFill14'].map(name => [name, () => null])))
+import { createResearchBoardsPage } from '../src/preload/research-boards-ui'
+
+const cleanup: Array<() => void> = []
+afterEach(() => cleanup.splice(0).reverse().forEach(stop => stop()))
+function store<T>(value: T) { const listeners = new Set<() => void>(); return { getSnapshot: () => value, subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, set(next: T) { value = next; listeners.forEach(fn => fn()) } } }
+async function fixture({ disk = new Map<string, string>(), byId = {} as Record<string, any>, createGate = Promise.resolve() } = {}) {
+  const oldEvent = globalThis.Event, oldDocument = globalThis.document
+  const win = new Window({ url: 'http://localhost:43210' }), requests: any[] = [], opened: string[] = [], archived: string[] = []
+  const list = store<{ current: string; byId: Record<string, any> }>({ current: 'original', byId: { original: { id: 'original', title: '我的研究', cwd: '/workspace' }, ...byId } })
+  let emit: (event: any) => void = () => {}, sequence = 0
+  const state: any = { version: 1, eventSeq: 1, account: { status: 'ready', generation: 1, user: { userId: 'owner' } }, favorites: [], boards: [], current: null, recoveries: [], notifications: { cursor: 0, unreadCount: 0, pendingCount: 0, notifications: [] } }
+  const canvases = new Map<string, any>()
+  const workspaces = { list: store({ items: [] }), api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: '/workspace' } } }) } }, archiveSession: async (id: string) => { archived.push(id) } }
+  const sessions = { list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) }, async create({ cwd }: any) { requests.push(['create', cwd]); await createGate; const id = 'guide-' + (++sequence); list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd, blank: true, title: '新对话' } } }); return id }, binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], subscribe: () => () => {}, rename: async (title: string) => list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { ...list.getSnapshot().byId[id], title, displayTitle: title } } }) } } } }
+  ;(win as any).dshDesktop = { researchCanvasStorage: { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
+  globalThis.Event = win.Event as unknown as typeof Event
+  globalThis.document = win.document as unknown as Document
+  const page = createResearchBoardsPage({ document: win.document as unknown as Document, sessions, workspaces, inputHub: { shells: new Map() }, researchWorkspaces: { for(id: string) { if (!canvases.has(id)) canvases.set(id, { getSnapshot: () => ({ files: [], artifacts: [] }), subscribe: () => () => {}, persist: () => true }); return canvases.get(id) } }, bridge: { isSharedSession: () => false, getSnapshot: async () => state, subscribe: (fn: (event: any) => void) => { emit = fn; return () => {} }, invoke: async (action: string, input: any) => { requests.push([action, input]); if (action === 'local.directory' && input.mode === 'reserve') return { ok: true, value: { directoryId: 'd-' + requests.length, path: '/workspace/examples/' + requests.length } }; if (action === 'favorite.add') { const item = { ...input.identity, favoriteId: 'f-' + requests.length, dedicated: true }; state.favorites.push(item); return { ok: true, value: item } } return { ok: true, value: null } } } } as any)
+  const replies: any[] = []
+  win.addEventListener('sherlock:home-guide-session-reply', (event: any) => replies.push(event.detail))
+  let requestId = 0
+  const send = (kind = 'board', command = 'prepare', extra = {}) => { const id = 'r-' + (++requestId); win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-session-request', { detail: { requestId: id, kind, command, ...extra } })); return id }
+  const reply = async (id: string) => { await expect.poll(() => replies.find(value => value.requestId === id), { timeout: 500 }).toBeTruthy(); return replies.find(value => value.requestId === id) }
+  await Promise.resolve(); await Promise.resolve()
+  cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
+  return { win, page, sessions, state, requests, opened, archived, disk, replies, send, reply, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
+}
+it('prepares a real dedicated board without navigation, reuses it and opens only a registered matching session', async () => {
+  const f = await fixture(), a = f.send(), b = f.send()
+  const first = await f.reply(a), second = await f.reply(b)
+  expect(first).toMatchObject({ ok: true, fresh: true, sessionId: 'guide-1' }); expect(second.sessionId).toBe(first.sessionId)
+  expect(f.requests.filter(item => item[0] === 'create')).toHaveLength(1)
+  expect(f.requests.filter(item => item[0] === 'favorite.add')).toHaveLength(1)
+  expect(f.opened).toEqual([]); expect(f.sessions.list.getSnapshot().current).toBe('original')
+  expect((await f.reply(f.send('board', 'open', { sessionId: first.sessionId }))).ok).toBe(true)
+  expect(f.opened).toEqual([first.sessionId]); expect(f.archived).toEqual([])
+  expect((await f.reply(f.send('note', 'open', { sessionId: first.sessionId }))).ok).toBe(false)
+})
+it('creates ordinary note and presentation sessions, and replay keeps the previous result', async () => {
+  const f = await fixture(), note = await f.reply(f.send('note')), ppt = await f.reply(f.send('ppt'))
+  expect(note.ok).toBe(true); expect(ppt.ok).toBe(true); expect(note.sessionId).not.toBe(ppt.sessionId)
+  expect(f.requests.filter(item => item[0] === 'favorite.add')).toHaveLength(0)
+  const replay = await f.reply(f.send('note', 'prepare', { replay: true }))
+  expect(replay.ok).toBe(true); expect(replay.sessionId).not.toBe(note.sessionId)
+  expect(f.sessions.list.getSnapshot().byId[note.sessionId]).toBeTruthy(); expect(f.opened).toEqual([])
+})
+it('uses main-backed registration across renderer recreation and isolates account ownership', async () => {
+  const a = await fixture(), first = await a.reply(a.send())
+  expect(a.disk.size).toBeGreaterThan(0)
+  const b = await fixture({ disk: a.disk, byId: a.sessions.list.getSnapshot().byId })
+  const repeated = await b.reply(b.send()); expect(repeated.sessionId).toBe(first.sessionId); expect(repeated.fresh).toBe(false)
+  expect(b.requests.filter(item => item[0] === 'create')).toHaveLength(0)
+  b.setOwner('other'); expect((await b.reply(b.send('board', 'open', { sessionId: first.sessionId }))).ok).toBe(false)
+})
+it('does not navigate or publish success for creation that outlives identity change or disposal', async () => {
+  let finish!: () => void; const f = await fixture({ createGate: new Promise<void>(resolve => { finish = resolve }) }), id = f.send()
+  await expect.poll(() => f.requests.some(item => item[0] === 'create')).toBe(true)
+  f.setOwner('other'); finish(); expect((await f.reply(id)).ok).toBe(false); expect(f.opened).toEqual([])
+  f.page.dispose(); const count = f.replies.length; f.send(); await new Promise(resolve => setTimeout(resolve, 20)); expect(f.replies).toHaveLength(count)
+})
+
+it('rejects account A to B to A creation even if an upstream generation is unchanged', async () => {
+  let finish!: () => void
+  const f = await fixture({ createGate: new Promise<void>(resolve => { finish = resolve }) }), id = f.send()
+  await expect.poll(() => f.requests.some(item => item[0] === 'create')).toBe(true)
+  f.setOwner('other', false); f.setOwner('owner', false); finish()
+  expect((await f.reply(id)).ok).toBe(false)
+  expect(f.opened).toEqual([]); expect(f.disk.size).toBe(0)
+})

@@ -10,8 +10,10 @@ import {
 import path from 'node:path'
 
 const RESEARCH_CANVAS_STORAGE_DIRECTORY = 'research-canvas'
+const HOME_GUIDE_SESSION_PREFIX = 'sherlock.home-guide.sessions.v1:'
 const WORKBENCH_TRIAL_KEY = 'ework.research.openterminal-trial.v1'
 const RESEARCH_CANVAS_STORAGE_PREFIXES = [
+  HOME_GUIDE_SESSION_PREFIX,
   'sherlock.research.canvas.files.v1:',
   'sherlock.research.canvas.artifacts.v1:',
   'sherlock.research.canvas.selection.v1:',
@@ -52,6 +54,21 @@ function validTableColumnPreference(value: string): boolean {
   } catch { return false }
 }
 
+function validHomeGuideRegistry(key: string, value: string): boolean {
+  try {
+    if (value.length > 512_000) return false
+    const record = JSON.parse(value)
+    const scope = decodeURIComponent(key.slice(HOME_GUIDE_SESSION_PREFIX.length))
+    if (scope !== 'local' && !/^account:[^\x00-\x1f]{1,200}$/.test(scope)) return false
+    if (!record || Array.isArray(record) || Object.keys(record).sort().join(',') !== 'entries,scope,version' || record.version !== 1 || record.scope !== scope || !Array.isArray(record.entries) || record.entries.length > 100) return false
+    const ids = new Set<string>()
+    return record.entries.every((entry: any) => {
+      if (!entry || Array.isArray(entry) || Object.keys(entry).sort().join(',') !== 'createdAt,cwd,kind,sessionId,title' || !['board','note','ppt'].includes(entry.kind) || typeof entry.sessionId !== 'string' || !/^[a-zA-Z0-9:_-]{1,256}$/.test(entry.sessionId) || ids.has(entry.sessionId) || typeof entry.cwd !== 'string' || !path.isAbsolute(entry.cwd) || entry.cwd.length > 4096 || /[\x00-\x1f]/.test(entry.cwd) || typeof entry.title !== 'string' || !entry.title.trim() || entry.title.length > 256 || /[\x00-\x1f]/.test(entry.title) || !Number.isSafeInteger(entry.createdAt) || entry.createdAt <= 0) return false
+      ids.add(entry.sessionId); return true
+    })
+  } catch { return false }
+}
+
 export function researchCanvasStoragePath(userDataPath: string, key: string): string {
   const digest = createHash('sha256').update(key).digest('hex')
   return path.join(userDataPath, RESEARCH_CANVAS_STORAGE_DIRECTORY, `${digest}.json`)
@@ -75,6 +92,7 @@ export class ResearchCanvasStorage {
     if (!validResearchCanvasStorageKey(key) || !validResearchCanvasStorageValue(value)) {
       return false
     }
+    if (key.startsWith(HOME_GUIDE_SESSION_PREFIX) && !validHomeGuideRegistry(key, value)) return false
     if (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(value)) return false
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
     if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(value)) return false
@@ -118,6 +136,7 @@ export class ResearchCanvasStorage {
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
       const record = parsed as { key?: unknown; value?: unknown }
       if (record.key !== key || !validResearchCanvasStorageValue(record.value) ||
+          (key.startsWith(HOME_GUIDE_SESSION_PREFIX) && !validHomeGuideRegistry(key, record.value)) ||
           (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(record.value)) ||
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
           (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(record.value)) ||

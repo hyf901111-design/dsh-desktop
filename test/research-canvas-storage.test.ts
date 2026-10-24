@@ -24,6 +24,18 @@ afterEach(() => {
 })
 
 describe('desktop Research canvas storage', () => {
+  it('persists an account-scoped guide registry and rejects malformed or cross-scope records', () => {
+    const directory = temporaryUserData(), key = 'sherlock.home-guide.sessions.v1:account%3Aowner'
+    const registry = { version: 1, scope: 'account:owner', entries: [{ kind: 'board', sessionId: 'example-board', cwd: '/workspace/example', title: '自选行情示例看板', createdAt: 1 }] }
+    const storage = new ResearchCanvasStorage(directory), value = JSON.stringify(registry)
+    expect(storage.setItem(key, value)).toBe(true)
+    expect(new ResearchCanvasStorage(directory).getItem(key)).toBe(value)
+    for (const bad of [null, {...registry, scope:'account:other'}, {...registry, version:2}, {...registry, extra:true}, {...registry, entries:[...registry.entries,...registry.entries]}, {...registry, entries:[{...registry.entries[0],kind:'unknown'}]}, {...registry, entries:[{...registry.entries[0],cwd:'relative'}]}]) expect(storage.setItem(key, JSON.stringify(bad))).toBe(false)
+    expect(storage.getItem(key)).toBe(value)
+    writeFileSync(researchCanvasStoragePath(directory,key), JSON.stringify({key,value:JSON.stringify({...registry,scope:'account:other'})}))
+    expect(new ResearchCanvasStorage(directory).getItem(key)).toBeNull()
+  })
+
   it('persists only supported per-session tabs and clears a deleted session preference', () => {
     const directory = temporaryUserData(), key = 'ework.session.view.v1:session-tab'
     const storage = new ResearchCanvasStorage(directory)

@@ -23,7 +23,7 @@ beforeAll(async () => {
   runtimeSource = patchNoteSessionRuntime(await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js', 'utf8'))
   const native = stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
   conversationSource = patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native)))
-    .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;')
+    .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};exports.__page=sherlockBoardsPage;')
   const assets = 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
   const frontend = await Promise.all((await readdir(assets)).filter(name => /^index-.*\.css$/.test(name)).map(name => readFile(`${assets}/${name}`, 'utf8')))
   const bundles = await Promise.all(['layout', 'conversation', 'agent-preset'].map(name => readFile(`node_modules/@deepseek-ai/dsh-client-ui-${name}/lib/client.js`, 'utf8')))
@@ -32,6 +32,7 @@ beforeAll(async () => {
   const frame = ['clampWidth','computeColumns','CenterColumn','DetailsColumn','DragHandle','SidebarDragHandle','AppFrame','createLayoutStore'].map(name=>layoutFunctions.get(name)).join('\n')
   styles = [...frontend, ...bundles.flatMap(source => [...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match => JSON.parse(match[1]))),
     ...conversationSource.matchAll(/tag\.textContent \+?= ("(?:[^"\\]|\\.)*");/g)].map(value => typeof value === 'string' ? value : JSON.parse(value[1])).join('\n')
+  const pageBundle = await build({stdin:{contents:"export * from './src/preload/research-boards-ui.ts'",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'browser',format:'cjs',write:false,external:['react','@deepseek-ai/dsh-client-ui-primitives'],target:'chrome120',logLevel:'silent'})
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
       import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';
@@ -41,15 +42,22 @@ beforeAll(async () => {
       let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
       const cordis=new Proxy({Service:class{constructor(ctx){this.ctx=ctx}}},{get:(target,key)=>target[key]??fake});
       const primitives=new Proxy({Tooltip:({children})=>children,MarkdownText:({text})=><p>{text}</p>},{get:(target,key)=>target[key]??(()=>null)});
+      const guidePageModule=(()=>{const module={exports:{}},exports=module.exports,require=id=>id==='react'?React:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:fake;${pageBundle.outputFiles[0].text};return module.exports})();
       const runtime=window.runtimeDescriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='@deepseek-ai/cordis'?cordis:fake);
       const native=window.conversationDescriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/dsh-client-runtime/client'?runtime:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:()=>null,AttachmentRail:()=>null}:fake);
       const disposers=[],ctx={get:()=>undefined,reflect:{provide(){}},effect(start){const stop=start();if(typeof stop==='function')disposers.push(stop);return typeof stop==='function'?stop:()=>{}}};
       const events=new runtime.ConversationEventRegistry(ctx),viewsRegistry=new runtime.ConversationViewRegistry(ctx),sessionsRuntime=new runtime.SessionRuntime(ctx,{sessions:{}},{},{events,views:viewsRegistry}),session=sessionsRuntime.manager.get('${sessionId}');
       session.openState='open';session.installWindow([],false);
       const store=initial=>{let value=initial;const listeners=new Set();return{getSnapshot:()=>value,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},update:patch=>{value={...value,...patch};for(const fn of listeners)fn()}}};
-      const view=store({view:'chat',selection:null}),summary=store({byId:{'${sessionId}':{id:'${sessionId}',displayTitle:'教程浏览器验收',blank:true,cwd:'/tmp/guide-browser'}}}),memory=new Map(),storage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>{memory.set(key,value);return true}},registry=new native.ResearchWorkspaceRegistry(storage);
+      const view=store({view:'chat',selection:null}),summary=store({current:'${sessionId}',byId:{'${sessionId}':{id:'${sessionId}',displayTitle:'教程浏览器验收',blank:true,cwd:'/tmp/guide-browser'}}}),memory=new Map(window.guideProbe.diskEntries||[]),storage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>{memory.set(key,value);return true}},registry=new native.ResearchWorkspaceRegistry(storage);
+
       const shell=new native.SessionInputShell({actx:{},defaultSink:()=>{window.guideProbe.providerCalls++;throw Error('Tutorial must not send a prompt')}});shell.setDraft(${JSON.stringify(draft)});
       const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),sessionStore={subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()},useSession=use(sessionStore),useInput=use(shell.state),useStore=use(view),useSessions=use(summary);
+      window.dshDesktop.researchCanvasStorage=storage;
+      memory.set('sherlock.home-guide.sessions.v1:account%3Aowner',JSON.stringify({version:1,scope:'account:owner',entries:[{kind:'board',sessionId:'${sessionId}',cwd:'/tmp/guide-browser',title:'自选行情示例看板',createdAt:1}]}));
+      const guidePage=guidePageModule.createResearchBoardsPage({document,sessions:{list:summary,binding:()=>({session}),open:id=>summary.update({current:id})},workspaces:{list:store({items:[]}),api:{host:{describe:async()=>({result:{ok:true,value:{cwd:'/tmp'}}})}}},researchWorkspaces:registry,inputHub:{shells:new Map([['${sessionId}',shell]])},bridge:{isSharedSession:()=>false,subscribe:()=>()=>{},getSnapshot:async()=>({version:1,eventSeq:1,account:{status:'ready',generation:1,user:{userId:'owner'}},favorites:[],boards:[],current:null,recoveries:[],notifications:{cursor:0,pendingCount:0,unreadCount:0,notifications:[]}}),invoke:async()=>({ok:true,value:null})}});
+      native.__setGuidePage(guidePage);disposers.push(()=>guidePage.dispose());
+
       const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'},{id:'research',label:'研究'},{id:'notes',label:'笔记'}]},actions={setView:value=>view.update({view:value}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
       let frameRoot;
       if(window.guideProbe.nativeLayout){
@@ -83,13 +91,13 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce'}={}) {
+async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[]}={}) {
   const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion }), errors = [], external = []
   page.on('pageerror', error => errors.push(error.message))
   await page.route('**/*', route => {
     const url = new URL(route.request().url())
     if (url.origin !== 'https://guide.local') { external.push(route.request().url()); return route.abort() }
-    return route.fulfill({ contentType: url.pathname === '/' ? 'text/html' : 'application/json', body: url.pathname === '/' ? `<!doctype html><meta charset="utf-8"><title>Native homepage guide fixture</title><style>${styles}\nhtml,body{height:100%;margin:0}#native-root{height:100%;min-height:0}.pI_x6G_frame{display:grid;grid-template-columns:88px minmax(0,1fr);height:100vh}.pI_x6G_centerCol{position:relative;min-width:0;min-height:0}#guide-host{position:absolute;inset:${guideTop}px 18px ${guideBottom}px;z-index:10}[data-home-guide="${runId}"]{position:absolute;inset:0;pointer-events:none}[data-home-guide="${runId}"]>#guide-host{pointer-events:auto}#outside-host{position:fixed;left:0;top:0}</style><div class="pI_x6G_frame"><aside></aside><main class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="${runId}"><div id="guide-host"></div></section></main></div><div id="outside-host"></div><div id="side-composer"></div><div id="side-history"></div><script>window.__ModuleLoader__={load:value=>window.descriptor=value};window.guideProbe={providerCalls:0,workspaceCalls:0,financialCalls:0,libraryCalls:0};window.dshDesktop={financialWidget:{request:async()=>{window.guideProbe.financialCalls++;throw Error('Global financial bridge must not be called')}},componentLibrary:{request:async()=>{window.guideProbe.libraryCalls++;throw Error('Global library bridge must not be called')}}};</script>` : '{"tasks":[],"plans":[]}' })
+    return route.fulfill({ contentType: url.pathname === '/' ? 'text/html' : 'application/json', body: url.pathname === '/' ? `<!doctype html><meta charset="utf-8"><title>Native homepage guide fixture</title><style>${styles}\nhtml,body{height:100%;margin:0}#native-root{height:100%;min-height:0}.pI_x6G_frame{display:grid;grid-template-columns:88px minmax(0,1fr);height:100vh}.pI_x6G_centerCol{position:relative;min-width:0;min-height:0}#guide-host{position:absolute;inset:${guideTop}px 18px ${guideBottom}px;z-index:10}[data-home-guide="${runId}"]{position:absolute;inset:0;pointer-events:none}[data-home-guide="${runId}"]>#guide-host{pointer-events:auto}#outside-host{position:fixed;left:0;top:0}</style><div class="pI_x6G_frame"><aside></aside><main class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="${runId}"><div id="guide-host"></div></section></main></div><div id="outside-host"></div><div id="side-composer"></div><div id="side-history"></div><script>window.__ModuleLoader__={load:value=>window.descriptor=value};window.guideProbe={providerCalls:0,workspaceCalls:0,financialCalls:0,libraryCalls:0,diskEntries:${JSON.stringify(diskEntries)}};window.dshDesktop={financialWidget:{request:async()=>{window.guideProbe.financialCalls++;throw Error('Global financial bridge must not be called')}},componentLibrary:{request:async()=>{window.guideProbe.libraryCalls++;throw Error('Global library bridge must not be called')}}};</script>` : '{"tasks":[],"plans":[]}' })
   })
   await page.setViewportSize({width,height})
   await page.goto('https://guide.local/')
@@ -103,14 +111,15 @@ async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,gui
   return { page, errors, external }
 }
 
-async function command(page, name, overrides = {}) {
-  return page.evaluate(({ name, overrides, runId, sessionId }) => new Promise(resolve => {
+async function command(page, name, overrides = {}, replyTimeout = 8000) {
+  return page.evaluate(({ name, overrides, runId, sessionId, replyTimeout }) => new Promise(resolve => {
     const requestId = 'browser-request-' + crypto.randomUUID()
-    const timeout = setTimeout(() => { window.removeEventListener('sherlock:home-guide-native-reply', reply); resolve({ timeout: true, command: name }) }, 2500)
+    const timeout = setTimeout(() => { window.removeEventListener('sherlock:home-guide-native-reply', reply); resolve({ timeout: true, command: name }) }, replyTimeout)
     const reply = event => { if (event.detail?.requestId !== requestId) return; clearTimeout(timeout); window.removeEventListener('sherlock:home-guide-native-reply', reply); resolve(event.detail) }
     window.addEventListener('sherlock:home-guide-native-reply', reply)
+    if(name==='mount-board'&&!Object.keys(overrides).length){const center=document.querySelector('.pI_x6G_centerCol'),root=document.querySelector('.wSkVaW_root'),guide=document.querySelector('[data-home-guide]');center.dataset.homeGuideActive=runId;root.dataset.homeGuideResident=runId;guide.dataset.kind='board'}
     window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-request', { detail: { requestId, runId, sessionId, command: name, hostId: 'guide-host', ...overrides } }))
-  }), { name, overrides, runId, sessionId })
+  }), { name, overrides, runId, sessionId, replyTimeout })
 }
 async function succeeds(page, name, overrides) { expect(await command(page, name, overrides), name).toMatchObject({ runId, ok: true }) }
 async function preserved(page) {
@@ -118,7 +127,7 @@ async function preserved(page) {
   expect(await page.evaluate(() => document.querySelector('.wSkVaW_root') === window.guideProbe.originalRoot)).toBe(true)
   expect(await page.locator('textarea.uV2eYG_input').inputValue()).toBe(draft)
   expect(await page.evaluate(() => window.guideProbe.shell.snapshot.draft)).toBe(draft)
-  expect(await page.evaluate(() => window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.length)).toBe(0)
+  expect(await page.evaluate(() => { const {registry,memory}=window.guideProbe,nodes=registry.for('guide-browser-session').getSnapshot().artifacts; return !nodes.length||JSON.stringify(JSON.parse(memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session')).map(n=>n.id))===JSON.stringify(nodes.map(n=>n.id)) })).toBe(true)
 }
 const canvas = page => page.locator('#guide-host [data-research-canvas]')
 const widget = (page, name) => page.locator(`#guide-host [data-financial-widget="${name}"]`)
@@ -150,7 +159,7 @@ it('runs the offline board tutorial on the real native canvas and retains the or
     await expect.poll(() => widget(page, 'quote').locator('.ew-quote-price-line strong').textContent()).toContain('462.400')
     await succeeds(page, 'board-arrange')
     await expect.poll(() => canvas(page).evaluate(el => Boolean(el.__eworkContentFit))).toBe(false)
-    expect(await page.locator('[data-ework-toolbar][data-ework-toolbar-owner="odyssey-home-guide:board"] .ew-arrange-tool').getAttribute('data-arrange-mode')).toBe('three')
+    expect(await page.locator('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"] .ew-arrange-tool').getAttribute('data-arrange-mode')).toBe('three')
     const geometry = await page.locator('#guide-host [data-research-node-id]').evaluateAll(cards => cards.map(card => { const box = card.getBoundingClientRect(); return { x: box.x, y: box.y, width: box.width, height: box.height } }))
     expect(geometry).toHaveLength(3)
     const top = await canvas(page).evaluate(el => el.getBoundingClientRect().top)
@@ -188,12 +197,12 @@ it('rejects other sessions and hosts outside the requesting guide ownership boun
   const { page, errors } = await fixture()
   try {
     for (const overrides of [{ sessionId: 'another-session' }, { hostId: 'outside-host' }, { runId: 'another-run' }, { hostId: 'missing-host' }]) {
-      const reply = await command(page, 'mount-board', overrides)
+      const reply = await command(page, 'mount-board', overrides, 300)
       expect(reply.ok, JSON.stringify({ overrides, reply })).not.toBe(true)
       expect(await page.locator('[data-research-canvas]').count()).toBe(0)
     }
     await succeeds(page, 'mount-board')
-    const reply = await command(page, 'board-watchlist', { sessionId: 'another-session' })
+    const reply = await command(page, 'board-watchlist', { sessionId: 'another-session' }, 300)
     expect(reply.ok).not.toBe(true)
     expect(await page.locator('#guide-host [data-financial-widget]').count()).toBe(0)
     await preserved(page); expect(errors).toEqual([])
@@ -245,8 +254,9 @@ it.each([['board','research'],['note','notes'],['ppt','chat']])('preserves nativ
   expect(await page.evaluate(()=>window.guideProbe.researchActivations.filter(item=>item.active))).toEqual([])
   if(kind==='board'){
    await succeeds(page,'mount-board')
+   expect(await page.locator('[data-research-canvas]').count(),'one real workspace has one measuring canvas while guided').toBe(1)
    const owners=await page.locator('[data-ework-toolbar]').evaluateAll(nodes=>nodes.map(node=>node.dataset.eworkToolbarOwner))
-   expect(owners).toEqual(['odyssey-home-guide:board'])
+   expect(owners).toEqual(['guide-browser-session'])
    await page.setViewportSize({width:1460,height:960})
    for(const step of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
    await expect.poll(()=>canvas(page).evaluate(el=>Boolean(el.__eworkContentFit))).toBe(false)
@@ -266,7 +276,8 @@ it.each([['board','research'],['note','notes'],['ppt','chat']])('preserves nativ
   expect(await page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('guide')
   expect(await page.evaluate(()=>window.guideProbe.rightChanges)).toEqual([])
   expect(await page.evaluate(()=>window.guideProbe.layout.getSnapshot().sidebar)).toBe(initial.sidebar)
-  await page.evaluate(()=>{window.guideProbe.view.update({view:'chat'});delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession})
+  await page.locator('[data-srb-tabs] [data-conversation-view-id="chat"]').click()
+  await page.evaluate(()=>{delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession})
   await page.waitForTimeout(60)
   expect(await page.evaluate(()=>window.guideProbe.layout.getSnapshot().sidebar)).toBe(initial.sidebar)
   expect(await page.evaluate(()=>window.guideProbe.rightPanel.panelOpen)).toBe(false)
@@ -332,7 +343,7 @@ it.each([{width:1380,height:900},{width:1380,height:768},{width:1080,height:900}
   for(const step of ['mount-board','board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
   await expect.poll(()=>canvas(page).evaluate(el=>Boolean(el.__eworkContentFit))).toBe(false)
   const result=await page.evaluate(()=>{
-   const canvas=document.querySelector('#guide-host [data-research-canvas]'),toolbar=document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="odyssey-home-guide:board"]')
+   const canvas=document.querySelector('#guide-host [data-research-canvas]'),toolbar=document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"]')
    return {canvas:canvas.getBoundingClientRect().toJSON(),toolbar:toolbar.getBoundingClientRect().toJSON(),cards:[...canvas.querySelectorAll('[data-research-node-id]')].map(node=>({widget:node.querySelector('[data-financial-widget]')?.dataset.financialWidget,rect:node.getBoundingClientRect().toJSON(),footer:node.querySelector('.ew-financial-footer')?.getBoundingClientRect().toJSON(),chart:node.querySelector('[data-financial-chart]')?.getBoundingClientRect().toJSON()}))}
   })
   await page.screenshot({path:`${evidence}/final-${size.width}x${size.height}.png`})
@@ -346,7 +357,7 @@ it.each([{width:1380,height:900},{width:1380,height:768},{width:1080,height:900}
    expect(footer.bottom,widget+' provenance remains inside its native frame').toBeLessThanOrEqual(rect.bottom+1)
    if(chart)expect(chart.height,'a useful native chart remains visible').toBeGreaterThan(80)
   }
-  expect(await page.locator('[data-canvas-action-receipt][data-ework-toolbar-owner="odyssey-home-guide:board"]').count()).toBe(0)
+  expect(await page.locator('[data-canvas-action-receipt][data-ework-toolbar-owner="guide-browser-session"]').count()).toBe(0)
   await preserved(page);expect(errors).toEqual([])
  }finally{await page.close()}
 },20000)
@@ -357,13 +368,15 @@ it('keeps a very short narrow board readable and reachable by native canvas scro
  try{
   for(const step of ['mount-board','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
   const root=canvas(page)
+  expect(await page.locator('[data-research-canvas]').count()).toBe(1)
+  expect(await root.evaluate(el=>Math.abs(window.guideProbe.registry.for('guide-browser-session').getSnapshot().canvasSize.height-el.getBoundingClientRect().height))).toBeLessThan(1)
   expect(await root.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true)
   expect(await widget(page,'quote').locator('[data-financial-chart]').evaluate(el=>el.clientHeight)).toBeGreaterThan(80)
   for(const name of ['watchlist','quote','news']){
    const footer=widget(page,name).locator('.ew-financial-footer')
-   const delta=await footer.evaluate(el=>el.getBoundingClientRect().bottom-document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="odyssey-home-guide:board"]').getBoundingClientRect().top+16)
+   const delta=await footer.evaluate(el=>el.getBoundingClientRect().bottom-document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"]').getBoundingClientRect().top+16)
    if(delta>0){await root.hover({position:{x:3,y:80}});await page.mouse.wheel(0,Math.ceil(delta));await page.waitForTimeout(60)}
-   const position=await footer.evaluate(el=>({footer:el.getBoundingClientRect().toJSON(),canvas:el.closest('[data-research-canvas]').getBoundingClientRect().toJSON(),toolbar:document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="odyssey-home-guide:board"]').getBoundingClientRect().toJSON()}))
+   const position=await footer.evaluate(el=>({footer:el.getBoundingClientRect().toJSON(),canvas:el.closest('[data-research-canvas]').getBoundingClientRect().toJSON(),toolbar:document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"]').getBoundingClientRect().toJSON()}))
    expect(position.footer.top,name+' footer can be reached').toBeGreaterThanOrEqual(position.canvas.top)
    expect(position.footer.bottom,name+' footer clears the toolbar').toBeLessThan(position.toolbar.top)
   }
@@ -371,4 +384,24 @@ it('keeps a very short narrow board readable and reachable by native canvas scro
   await page.screenshot({path:`${evidence}/final-1080x640-scroll.png`})
   await preserved(page);expect(errors).toEqual([])
  }finally{await page.close()}
+},20000)
+
+it('retains the saved example and offline source after leaving the guide and recreating the native renderer',async()=>{
+ const first=await fixture({nativeLayout:true});let diskEntries,ids
+ try{
+  await first.page.evaluate(()=>{const center=document.querySelector('.pI_x6G_centerCol'),root=document.querySelector('.wSkVaW_root'),guide=document.querySelector('[data-home-guide]');center.dataset.homeGuideActive=guide.dataset.homeGuide;root.dataset.homeGuideResident=guide.dataset.homeGuide;guide.dataset.kind='board';window.guideProbe.view.update({view:'research'})})
+  await succeeds(first.page,'mount-board');await succeeds(first.page,'board-watchlist');await succeeds(first.page,'dispose')
+  diskEntries=await first.page.evaluate(()=>[...window.guideProbe.memory]);ids=await first.page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(node=>node.id))
+  await preserved(first.page);expect(first.errors).toEqual([])
+ }finally{await first.page.close()}
+ const second=await fixture({nativeLayout:true,diskEntries})
+ try{
+  await second.page.evaluate(()=>window.guideProbe.view.update({view:'research'}))
+  await expect.poll(()=>second.page.locator('.wSkVaW_root [data-financial-widget=watchlist] .ew-watch-price').first().textContent()).toContain('1,456.80')
+  expect(await second.page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(node=>node.id))).toEqual(ids)
+  expect(await second.page.locator('[data-home-guide-native]').count()).toBe(0)
+  expect(await second.page.evaluate(()=>({financial:window.guideProbe.financialCalls,library:window.guideProbe.libraryCalls}))).toEqual({financial:0,library:0})
+  expect(await second.page.locator('textarea.uV2eYG_input').inputValue()).toBe(draft)
+  expect(second.errors).toEqual([])
+ }finally{await second.page.close()}
 },20000)

@@ -689,6 +689,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       next.account.generation < state.account.generation
     )
       return
+    if (next.account.generation !== state.account.generation || next.account.user?.userId !== state.account.user?.userId) { guideIdentityRevision++; guideRequests.clear() }
     if (next.account.generation !== state.account.generation) {
       clearEditors()
       activeSession = null
@@ -706,6 +707,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
     eventSeq = next.eventSeq
     state = next
+    if (state.account.status !== 'loading') { for (const waiter of guideReadyWaiters) waiter.resolve(); guideReadyWaiters.clear() }
     watchFavoriteDeletion()
     if (next.current) acceptView(next.current)
     if (next.account.status === 'signedOut') clearEditors()
@@ -792,7 +794,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     notify()
   }
   cleanups.push(bridge.subscribe(receive))
-  void bridge.getSnapshot().then(receiveState).catch(showError)
+  void bridge.getSnapshot().then(receiveState).catch(error => { for (const waiter of guideReadyWaiters) waiter.reject(error); guideReadyWaiters.clear(); showError(error) })
   function prime(id: string) {
     win.sessionStorage.setItem(
       'sherlock.conversation.initial-research-session.v1',
@@ -818,6 +820,126 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id
   }
+  type GuideKind = 'board' | 'note' | 'ppt'
+  type GuideSession = { kind: GuideKind; sessionId: string; cwd: string; title: string; createdAt: number }
+  const guidePrefix = 'sherlock.home-guide.sessions.v1:'
+  let guideIdentityRevision = 0
+  const guideRecords = new Map<string, GuideSession[]>()
+  const guideFlights = new Map<string, Promise<GuideSession>>()
+  const guideRequests = new Map<string, { fingerprint: string; promise: Promise<Record<string, unknown>>; owner?: string; generation?: number; revision?: number }>()
+  const guideReadyWaiters = new Set<{ resolve(): void; reject(error: Error): void }>()
+  const guideTitles = { board: '自选行情示例看板', note: 'AI 护航研究笔记示例', ppt: '公司风格演示示例' }
+  const guideOwner = () => state.account.user?.userId ? 'account:' + state.account.user.userId : 'local'
+  const guideStorage = () => {
+    const storage = (win as Window & { dshDesktop?: { researchCanvasStorage?: { getItem(key: string): string | null; setItem(key: string, value: string): boolean } } }).dshDesktop?.researchCanvasStorage
+    if (!storage?.getItem || !storage?.setItem) throw Error('示例保存服务尚未就绪，请稍后重试。')
+    return storage
+  }
+  const guideRegistry = (owner = guideOwner()): GuideSession[] => {
+    const cached = guideRecords.get(owner)
+    if (cached) return cached
+    const raw = guideStorage().getItem(guidePrefix + encodeURIComponent(owner))
+    let entries: GuideSession[] = []
+    if (raw) {
+      const value = JSON.parse(raw)
+      if (value?.version !== 1 || value.scope !== owner || !Array.isArray(value.entries)) throw Error('示例记录暂时无法读取。')
+      entries = value.entries.filter((entry: GuideSession) => entry && ['board', 'note', 'ppt'].includes(entry.kind) && typeof entry.sessionId === 'string' && typeof entry.cwd === 'string' && typeof entry.title === 'string' && Number.isFinite(entry.createdAt))
+    }
+    guideRecords.set(owner, entries)
+    return entries
+  }
+  const guideSessionAvailable = (entry: GuideSession) => {
+    const summary = deps.sessions.list.getSnapshot().byId[entry.sessionId]
+    const archived = deps.workspaces.list.getSnapshot().archivedSessionIds ?? []
+    return summary && !summary.removed && !summary.subagent && summary.cwd === entry.cwd && !archived.includes(entry.sessionId)
+  }
+  const getHomeGuideSession = (id: string): GuideSession | undefined => {
+    if (disposed || state.account.status === 'loading') return
+    try { return guideRegistry().find(entry => entry.sessionId === id && guideSessionAvailable(entry)) } catch { return }
+  }
+  const whenHomeGuideSessionsReady = () => {
+    if (disposed) return Promise.reject(Error('示例页面已关闭。'))
+    if (state.account.status !== 'loading') return Promise.resolve()
+    return new Promise<void>((resolve, reject) => guideReadyWaiters.add({ resolve, reject }))
+  }
+  const prepareHomeGuideSession = async (kind: GuideKind, replay: boolean) => {
+    await whenHomeGuideSessionsReady()
+    const owner = guideOwner(), generation = state.account.generation, identityRevision = guideIdentityRevision
+    const valid = () => {
+      if (disposed || guideOwner() !== owner || state.account.generation !== generation || identityRevision !== guideIdentityRevision) throw Error('账号或页面已变化，请重新打开示例。')
+    }
+    valid()
+    const records = guideRegistry(owner)
+    const previous = !replay && [...records].reverse().find(entry => entry.kind === kind && guideSessionAvailable(entry))
+    if (previous) return { ...previous, fresh: false }
+    const key = JSON.stringify([owner, generation, identityRevision, kind, replay])
+    let flight = guideFlights.get(key)
+    if (!flight) {
+      flight = (async () => {
+        if (records.filter(guideSessionAvailable).length >= 100) throw Error('已保存较多示例，请先整理不再需要的示例会话。')
+        const title = guideTitles[kind] + (replay ? ' · 练习副本' : '')
+        const basePath = await defaultDirectory(); valid()
+        const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath }); valid()
+        const sessionId = await deps.sessions.create({ cwd: directory.path }); valid()
+        const binding = deps.sessions.binding(sessionId)
+        if (!binding?.session?.rename) throw Error('示例会话尚未就绪，请稍后重试。')
+        await binding.session.rename(title); valid()
+        await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId }); valid()
+        await call('local.directory', { mode: 'ensure', sessionId }); valid()
+        const entry: GuideSession = { kind, sessionId, cwd: directory.path, title, createdAt: Date.now() }
+        if (kind === 'board') {
+          const value = identity(sessionId)
+          if (!value) throw Error('示例看板尚未就绪。')
+          await call('favorite.add', { identity: { ...value, title }, dedicated: true }); valid()
+          temporaryBoards.keep(sessionId)
+        }
+        const latest = guideRegistry(owner).filter(guideSessionAvailable)
+        if (latest.length >= 100) throw Error('已保存较多示例，请先整理不再需要的示例会话。')
+        const next = [...latest, entry]
+        if (guideStorage().setItem(guidePrefix + encodeURIComponent(owner), JSON.stringify({ version: 1, scope: owner, entries: next })) !== true) throw Error('示例保存失败，已创建的会话仍保留在本地。')
+        guideRecords.set(owner, next); notify()
+        return entry
+      })()
+      guideFlights.set(key, flight)
+      void flight.finally(() => { if (guideFlights.get(key) === flight) guideFlights.delete(key) }).catch(() => {})
+    }
+    const entry = await flight; valid()
+    return { ...entry, fresh: true }
+  }
+  const receiveHomeGuideSession = (event: Event) => {
+    const request = (event as CustomEvent).detail
+    if (disposed || !request || Array.isArray(request) || typeof request.requestId !== 'string' || !request.requestId || request.requestId.length > 200) return
+    const { requestId, kind, command } = request
+    const reply = (value: Record<string, unknown>, record?: { owner?: string; generation?: number; revision?: number }) => {
+      if (disposed) return
+      const stale = value.ok === true && record && (record.owner !== guideOwner() || record.generation !== state.account.generation || record.revision !== guideIdentityRevision)
+      win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-session-reply', { detail: { requestId, ...(stale ? { ok: false, message: '账号或页面已变化，请重新打开示例。' } : value) } }))
+    }
+    if (!['board','note','ppt'].includes(kind) || !['prepare','open'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command === 'open' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
+    const fingerprint = JSON.stringify([kind, command, request.replay === true, request.sessionId])
+    const prior = guideRequests.get(requestId)
+    if (prior) { if (prior.fingerprint !== fingerprint) reply({ ok: false, message: '示例请求标识已使用。' }); else void prior.promise.then(value => reply(value, prior)); return }
+    const record = { fingerprint, promise: undefined as unknown as Promise<Record<string, unknown>>, owner: undefined as string | undefined, generation: undefined as number | undefined, revision: undefined as number | undefined }
+    const promise = (async () => {
+      await whenHomeGuideSessionsReady()
+      record.owner = guideOwner(); record.generation = state.account.generation; record.revision = guideIdentityRevision
+      if (command === 'prepare') { const entry = await prepareHomeGuideSession(kind, request.replay === true); return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: entry.fresh } }
+      const owner = guideOwner(), generation = state.account.generation, origin = current(), identityRevision = guideIdentityRevision
+      await whenHomeGuideSessionsReady()
+      if (disposed || owner !== guideOwner() || generation !== state.account.generation || current() !== origin || identityRevision !== guideIdentityRevision) throw Error('账号或页面已变化，请重新打开示例。')
+      const entry = getHomeGuideSession(request.sessionId)
+      if (!entry || entry.kind !== kind) throw Error('该示例不属于当前账号，或会话已移除。')
+      navigation++
+      deps.sessions.open(entry.sessionId)
+      if (kind === 'board') selectBoardSession(entry.sessionId)
+      return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: false }
+    })().catch(error => ({ ok: false, message: error instanceof Error ? error.message : '示例暂时无法打开，请稍后重试。' }))
+    record.promise = promise
+    guideRequests.set(requestId, record)
+    if (guideRequests.size > 128) guideRequests.delete(guideRequests.keys().next().value!)
+    void promise.then(value => reply(value, record))
+  }
+
   async function openBoard(boardId: string) {
     // The account-scoped directory already identifies pinned local sessions.
     // Open the shell now; activate remains the authoritative fresh permission read.
@@ -1318,6 +1440,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     isLoading: (id: string) => activations.has(id),
     activationError: (id: string) => activationErrors.get(id),
     openBoard,
+    getHomeGuideSession,
+    homeGuideSessionsReady: () => !disposed && state.account.status !== 'loading',
+    whenHomeGuideSessionsReady,
     submitShared,
     flushCanvas,
     prepareForUpdate,
@@ -1516,6 +1641,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       void bridge.invoke('board.activate', { localSessionId: null })
     }
   }
+  win.addEventListener('sherlock:home-guide-session-request', receiveHomeGuideSession)
+  cleanups.push(() => { win.removeEventListener('sherlock:home-guide-session-request', receiveHomeGuideSession); for (const waiter of guideReadyWaiters) waiter.reject(Error('示例页面已关闭。')); guideReadyWaiters.clear() })
   installBoardUiStyles(doc)
   if (deps.slots) mountBoardSlots(api, deps.slots, doc)
   return api
