@@ -85,10 +85,14 @@ async function fixture(legacyKind?: string) {
   const createWorkspace = workspaces.create.bind(workspaces)
   workspaces.create = async (input: any) => { calls.push(['workspace.create', input]); await workspaceGate; if (failCreate) throw Error('工作区创建失败'); return createWorkspace(input) }
   const createSession = api.sessions.create
-  api.sessions.create = async (input: any) => {
+  api.sessions.create = async input => {
     if (input.payload.workspaceId) {
       calls.push(['workspace.attach', input.payload])
-      if (failAttach) return { rpcId: input.rpcId, result: { ok: false, error: { code: 'workspace-attach-failed', message: '工作区绑定失败', details: {} } } }
+      if (failAttach) {
+        const sessionId = input.payload.sessionId
+        if (!sessionId) throw Error('测试绑定请求必须指定既有会话。')
+        return { rpcId: input.rpcId, result: { ok: false, error: { code: 'workspace-attach-failed', message: '工作区绑定失败', details: { sessionId, workspaceId: input.payload.workspaceId } } } }
+      }
     }
     return createSession(input)
   }
@@ -110,7 +114,7 @@ async function fixture(legacyKind?: string) {
   const reply = async (id: string) => { await expect.poll(() => replies.find(row => row.requestId === id), { timeout: 1500 }).toBeTruthy(); return replies.find(row => row.requestId === id) }
   await Promise.resolve(); await Promise.resolve()
   cleanup.push(async () => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; await win.happyDOM.abort(); await closeHost(); await rm(root, { recursive: true, force: true }) })
-  return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, headers: () => sessionStore.list().map(session => session.header), async coldSession(id: string) { await ctx.sessions.flush(ctx.agents.get(SessionId(id))!.session); await handles.get(id)!.dispose() }, gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
+  return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, headers: () => sessionStore.list().map(session => session.header), async coldSession(id: string) { await sessionStore.flush(ctx.agents.get(SessionId(id))!.session); await handles.get(id)!.dispose() }, gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
 
 it.each(['board', 'note', 'ppt'])('registers a durable Workspace through the production browser transport and binds the same %s session before success', async kind => {
@@ -200,7 +204,7 @@ it('does not register a successful/fresh example or favorite when creating its W
 
 it('refuses to attach when a Workspace response does not identify the exact reserved example directory', async () => {
   const f = await fixture(), create = f.workspaces.create
-  f.workspaces.create = async input => ({ ...await create(input), path: f.root })
+  f.workspaces.create = async (input: { path: string }) => ({ ...await create(input), path: f.root })
   expect(await f.reply(f.send('ppt'))).toMatchObject({ ok: false })
   expect(f.calls.filter(row => row[0] === 'workspace.attach')).toEqual([])
   expect(f.disk.size).toBe(0); expect(f.opened).toEqual([])
