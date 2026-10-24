@@ -79,3 +79,11 @@ describe('conversation component shared contract (all records are simulated fixt
   expect(()=>contract.detachConversationComponentNode({...node,containerSpec:{...node.containerSpec,prices:[17]}})).toThrow()
  })
 })
+it('freezes the effective linked-news query before detaching and refuses a lost source',()=>{
+ const news={version:1,type:'financial-widget',widget:'news',title:'模拟证券新闻',symbols:quote.symbols,period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:'',linkedSourceId:'quote-node'}
+ const node={id:'news',kind:'generated-container',x:0,y:0,containerSpec:news}
+ expect(contract.detachConversationComponentNode(node).containerSpec).toMatchObject({query:'模拟测试标的',symbols:quote.symbols})
+ expect(()=>contract.detachConversationComponentNode({...node,containerSpec:{...news,symbols:[]}})).toThrow(/查询|来源|标的/)
+ const {linkedSourceId,...independent}=news
+ expect(contract.detachConversationComponentNode({...node,containerSpec:{...independent,symbols:[]}}).containerSpec.query).toBe('')
+})

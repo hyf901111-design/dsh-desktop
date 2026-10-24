@@ -1,7 +1,7 @@
 import {acceptArtifactOutput} from './artifact-output.js'
 import {parseResearchContainerSpec} from './artifact-validator.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
-import {financialWidgetSpec,financialWidgetDimensions} from './financial-widget-contract.js'
+import {financialWidgetSpec,financialWidgetDimensions,financialNewsQuery} from './financial-widget-contract.js'
 import {researchHtmlText} from './html-artifact.js'
 
 const MAX_INPUT_BYTES=1024*1024
@@ -25,7 +25,10 @@ function detachedSpec(value){
  if(!spec)throw Error('对话组件内容不符合现有组件格式。')
  if(spec.type==='financial-widget'){
   const {linkedWatchlistId,linkedSourceId,...config}=spec
-  // A linked news widget may already have its independent query; preserve it.
+  if(spec.widget==='news'&&spec.linkedSourceId){
+   config.query=financialNewsQuery(spec)
+   if(!config.query.trim())throw Error('联动新闻缺少可恢复的独立标的查询，不能复制为全市场新闻。')
+  }
   const parsed=financialWidgetSpec(config);if(!parsed)throw Error('金融组件配置无效。');return parsed
  }
  if((spec.type==='summary'||spec.type==='mind-map')&&spec.source){

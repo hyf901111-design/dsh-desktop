@@ -67,6 +67,9 @@ export interface ConversationComponentExecutionIdentity {
   current():boolean;
 }
 export interface ConversationComponentCapabilityAdapter {
+  /** Host-only readback of an already committed request; never creates or refreshes. */
+  recover?(args:ConversationComponentCreateArguments,
+    identity:ConversationComponentExecutionIdentity, requestId:string):Promise<ConversationComponentCreateReceipt|undefined>;
   create(args:ConversationComponentCreateArguments,
     identity:ConversationComponentExecutionIdentity, signal:AbortSignal,
     requestId:string):Promise<ConversationComponentCreateReceipt>;
