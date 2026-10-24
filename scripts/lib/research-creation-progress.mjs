@@ -104,10 +104,12 @@ function odysseyCreationDeal(sessionId, plan, origin) {
 function odysseyCreationEmit(sessionId) {
   window.dispatchEvent(new CustomEvent('odyssey:creation-progress', { detail: { sessionId, intent: odysseyCreationIntents.get(sessionId) ?? null } }));
 }
-function odysseyCreationAnnounce(sessionId, draft, subagentPanel, busy) {
+function odysseyCreationAnnounce(sessionId, draft, subagentPanel, busy, research = false) {
   if (!sessionId || subagentPanel || busy || sherlockShared(sessionId)) return;
   const request = (${classifyResearchCreationRequest.toString()})(draft);
-  if (!request) return;
+  // Chat components are saved by the main agent; only the canvas owns a
+  // provisional component plan. An explicit workbench may still enter it.
+  if (!request || request.kind === 'component' && !research) return;
   odysseyCreationIntents.set(sessionId, { ...request, id: crypto.randomUUID(), startedAt: Date.now(), state: 'planning', sawRunning: false });
   odysseyCreationEmit(sessionId);
   const current = odysseyCreationIntents.get(sessionId);
@@ -136,7 +138,7 @@ function odysseyCreationRetry(sessionId) {
   const current = odysseyCreationIntents.get(sessionId);
   if (!current || !['failed', 'stopped'].includes(current.state)) return;
   const detail = { sessionId, request: current.request, handled: false };
-  odysseyCreationAnnounce(sessionId, current.request, false, false);
+  odysseyCreationAnnounce(sessionId, current.request, false, false, true);
   window.dispatchEvent(new CustomEvent('odyssey:creation-retry', { detail }));
   if (!detail.handled) { odysseyCreationIntents.set(sessionId, current); odysseyCreationEmit(sessionId); }
 }
@@ -248,16 +250,18 @@ export function patchResearchCreationProgress(source) {
     if (finish < at) throw Error('Creation progress helper is incomplete')
     source = source.slice(0, at) + helper + source.slice(finish)
   } else source = replaceOnce(source, end, helper + end)
+  const announce = 'odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning, researchCanvasWorkspace !== void 0);'
+  source = source.replaceAll('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);', announce)
   source = source.replace('ResearchCreationPlanningCard, { intent: creationIntent, onDismiss:', 'ResearchCreationPlanningCard, { intent: creationIntent, sessionId, onDismiss:')
   const queuedSubmit = 'keyboard.submit(canvasRunning && subagent === null ? "queue" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));';
   const plainSubmit = 'keyboard.submit(resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));';
-  if (!source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\tkeyboard.submit')) {
+  if (!source.includes(announce+'\n\t\t\t\tkeyboard.submit')) {
     const submit = source.includes(queuedSubmit) ? queuedSubmit : plainSubmit;
-    source = replaceOnce(source, submit, 'odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\t' + submit);
+    source = replaceOnce(source, submit, announce+'\n\t\t\t\t' + submit);
   }
-  if (!source.includes('/* EWORK_PRIMARY_SUBMIT_POLICY_V1 */') && !source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit();')) source = replaceOnce(source,
+  if (!source.includes('/* EWORK_PRIMARY_SUBMIT_POLICY_V1 */') && !source.includes(announce+' inputActions.submit();')) source = replaceOnce(source,
     'if (!empty && !disabled && !machineBusy) inputActions.submit();',
-    'if (!empty && !disabled && !machineBusy) { odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit(); }')
+    'if (!empty && !disabled && !machineBusy) { '+announce+' inputActions.submit(); }')
   const workspaceAnchor = 'const workspace = (0, react.useMemo)(() => researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);'
   if (!source.includes('/* ODYSSEY_CREATION_CANVAS_STATE */')) source = replaceAfter(source, 'function ResearchCanvas({', workspaceAnchor, `${workspaceAnchor}
             /* ODYSSEY_CREATION_CANVAS_STATE */
@@ -290,10 +294,13 @@ export function patchResearchCreationProgress(source) {
   source = source.replace('sessionId, viewport, canvasSize:snapshot.canvasSize, onDismiss: () => odysseyCreationFinish(sessionId)',
     'sessionId, viewport, canvasSize:snapshot.canvasSize, workspace, onDismiss: () => odysseyCreationFinish(sessionId)')
   const actionAnchor = 'workbenchActions.current = resolvedActions;'
+  const oldNavigation = "const update = event => { if (event.detail?.sessionId === sessionId && event.detail.intent?.state === 'planning') workbenchActions.current.setView?.('research'); };"
+  const navigation = oldNavigation.replace("event.detail.intent?.state === 'planning'", "event.detail.intent?.state === 'planning' && event.detail.intent.kind === 'workbench'")
+  if (source.includes('/* ODYSSEY_CREATION_SESSION_LIFECYCLE */') && !source.includes(navigation)) source=replaceOnce(source,oldNavigation,navigation)
   if (!source.includes('/* ODYSSEY_CREATION_SESSION_LIFECYCLE */')) source = replaceOnce(source, actionAnchor, `${actionAnchor}
             /* ODYSSEY_CREATION_SESSION_LIFECYCLE */
             react.useEffect(() => {
-              const update = event => { if (event.detail?.sessionId === sessionId && event.detail.intent?.state === 'planning') workbenchActions.current.setView?.('research'); };
+              ${navigation}
               window.addEventListener('odyssey:creation-progress', update);
               return () => window.removeEventListener('odyssey:creation-progress', update);
             }, [sessionId]);

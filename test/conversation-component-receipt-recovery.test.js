@@ -86,7 +86,7 @@ for(const phase of ['after-save','before-save'])it(`real SDK loop persists a tru
   const nodes=new Map([['actual-disk-receipt',node],['actual-aborted-tail',{kind:'turn-error',data:{turn:resultEvent.data.turn}}]])
   const flow=[{kind:'execution',key:'actual-execution:1',turn:resultEvent.data.turn,nodeKeys:['actual-disk-receipt']},{kind:'node',key:'actual-aborted-tail'}]
   const anchors=[...conversationComponentReceiptAnchors(flow,nodes,'receipt-session')]
-  if(phase==='after-save')expect(anchors).toEqual([['actual-aborted-tail',[JSON.parse(diskResult.content[0].text).data.renderManifest]]])
+  if(phase==='after-save')expect(anchors).toEqual([['actual-disk-receipt',[JSON.parse(diskResult.content[0].text).data.renderManifest]]])
   else expect(anchors).toEqual([])
   // Exercise steering invalidation against the real SDK's durable inbox splice.
   agent.inject({role:'user',source:{kind:'user'},content:[{type:'text',text:'改为另一项需求'}]})

@@ -1,9 +1,13 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
+import {Window} from 'happy-dom'
 import {planningResponseMetadata,advancePlanningHeartbeat,planningFeedbackState,researchPlanningRequest,patchResearchPlanningFeedback} from '../scripts/lib/research-planning-feedback.mjs'
 import {classifyResearchCreationRequest,patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench,patchResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
+const currentClient=()=>restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
 const model=(text='private reasoning')=>({key:'m',kind:'assistant-step',data:{blocks:[{kind:'reasoning',text}]}})
 it('projects actual response metadata without retaining private reasoning or tool payloads',()=>{
  const meta=planningResponseMetadata([model(),{key:'t',kind:'tool-call',data:{root:{name:'read',argsRaw:'private/path'}}}])
@@ -37,24 +41,30 @@ it('limits the feedback to the matching user creation turn, excluding ordinary c
 })
 it('shows transport feedback for a single-component creation without exposing private response content',()=>{
  const nodes=new Map([['single',{kind:'user',location:{kind:'turn',turn:{turn:7}},data:{content:[{text:'创建一个装置撤展交接组件，用8条模拟记录'}]}}]])
- const request=researchPlanningRequest(['single'],nodes,7,classifyResearchCreationRequest,parts=>parts.map(p=>p.text).join(''))
+ const request=researchPlanningRequest(['single'],nodes,7,classifyResearchCreationRequest,parts=>parts.map(p=>p.text).join(''),true)
  expect(request).toMatchObject({kind:'component'})
  const meta=planningResponseMetadata([model('PRIVATE_SINGLE_COMPONENT_REASONING')])
  expect(planningFeedbackState(meta,advancePlanningHeartbeat(null,meta,12000),0,15000,true).phase).toBe('responding')
  expect(JSON.stringify(meta)).not.toContain('PRIVATE_SINGLE_COMPONENT_REASONING')
  expect(researchPlanningRequest(['single'],nodes,8,classifyResearchCreationRequest,parts=>parts.map(p=>p.text).join(''))).toBeNull()
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const original=currentClient()
  const current=patchResearchCreationProgress(original)
- const legacy=current.replace("return request?.kind==='workbench'||request?.kind==='component'?request:null", "return request?.kind==='workbench'?request:null")
+ const legacy=current.replace("return request?.kind==='workbench'||research&&request?.kind==='component'?request:null", "return request?.kind==='workbench'?request:null")
  const reinstalled=patchResearchCreationProgress(legacy),start=reinstalled.indexOf('/* ework:planning-feedback:v1 */'),end=reinstalled.indexOf('const ExecutionStatusGroup =',start)
  const installed=runInNewContext(reinstalled.slice(start,end)+';researchPlanningRequest',{})
- expect(installed(['single'],nodes,7,classifyResearchCreationRequest,parts=>parts.map(p=>p.text).join(''))).toMatchObject({kind:'component'})
+ expect(installed(['single'],nodes,7,classifyResearchCreationRequest,parts=>parts.map(p=>p.text).join(''),true)).toMatchObject({kind:'component'})
+})
+it('does not label a conversation-native component response as research planning',()=>{
+ const text='请在当前对话中生成1个原生表格组件，使用用户提供的模拟数据。不创建工作台，不切换视图。',nodes=new Map([['user',{kind:'user',data:{turn:1,content:[{text}]}}]])
+ const read=parts=>parts.map(part=>part.text).join('')
+ expect(researchPlanningRequest(['user'],nodes,1,classifyResearchCreationRequest,read,false)).toBeNull()
+ expect(researchPlanningRequest(['user'],nodes,1,classifyResearchCreationRequest,read,true)).toMatchObject({kind:'component'})
 })
 it('excludes coding requests from fresh and previously installed planning feedback',()=>{
  const nodes=new Map([['coding',{kind:'user',data:{turn:3,content:[{text:'创建一个React组件，写入src/Card.tsx'}]}}],['single',{kind:'user',data:{turn:4,content:[{text:'创建一个装置撤展交接组件，用8条模拟记录'}]}}]])
  const read=parts=>parts.map(p=>p.text).join('')
  expect(researchPlanningRequest([...nodes.keys()],nodes,3,classifyResearchCreationRequest,read)).toBeNull()
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const original=currentClient()
  const fresh=patchResearchCreationProgress(original)
  const oldHelper="function researchPlanningRequest(order,nodeStore,turn,classify,readText) {\n if(turn===null||turn===undefined)return null\n for(let i=order.length-1;i>=0;i--){\n  const node=nodeStore.get(order[i]);if(node?.kind!=='user')continue\n  const location=node.location,number=node.data?.turn??location?.turn?.turn??location?.turn\n  if(number!==turn)continue\n  const request=classify(readText(node.data?.content||[]))\n  return request?.kind==='workbench'||request?.kind==='component'?request:null\n }\n return null\n}"
  const legacy=fresh.replace(researchPlanningRequest.toString(),oldHelper)
@@ -62,15 +72,15 @@ it('excludes coding requests from fresh and previously installed planning feedba
   const start=source.indexOf('/* ework:planning-feedback:v1 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
   const installed=runInNewContext(source.slice(start,end)+';researchPlanningRequest',{})
   expect(installed([...nodes.keys()],nodes,3,classifyResearchCreationRequest,read)).toBeNull()
-  expect(installed([...nodes.keys()],nodes,4,classifyResearchCreationRequest,read)).toMatchObject({kind:'component'})
+  expect(installed([...nodes.keys()],nodes,4,classifyResearchCreationRequest,read,true)).toMatchObject({kind:'component'})
   expect(patchResearchCreationProgress(source)).toBe(source)
  }
 })
 it('refreshes the actual inlined classifier when upgrading an installed planning report',()=>{
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const original=currentClient()
  const fresh=patchResearchCreationProgress(original)
  const prefix='const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,'
- const suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text) : null;'
+ const suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text,researchPlanningSurface) : null;'
  const start=fresh.indexOf(prefix),end=fresh.indexOf(suffix,start)
  const legacyClassifier='function oldClassify(text){return /生成/.test(text)&&/工作台|组件/.test(text)?{kind:"workbench",request:text}:null}'
  const legacy=patchResearchGridWorkbench(fresh.slice(0,start+prefix.length)+legacyClassifier+fresh.slice(end))
@@ -79,13 +89,13 @@ it('refreshes the actual inlined classifier when upgrading an installed planning
  const callStart=reinstalled.indexOf(prefix),callEnd=reinstalled.indexOf(suffix,callStart)+suffix.length
  const nodes=new Map([['repair',{kind:'user',data:{turn:6,content:[{text:'修复现有工作台的图表生成失败问题，保留原组件和数据。'}]}}]])
  const request=runInNewContext(reinstalled.slice(helpersStart,helpersEnd)+reinstalled.slice(callStart,callEnd)+';planningRequest',{
-  entry:{running:true,turn:6},runningTurnNumber:6,order:['repair'],nodeStore:nodes,parseResearchPrompt:text=>({text}),contentParts:parts=>({text:parts.map(p=>p.text).join('')})
+  entry:{running:true,turn:6},runningTurnNumber:6,researchPlanningSurface:false,order:['repair'],nodeStore:nodes,parseResearchPrompt:text=>({text}),contentParts:parts=>({text:parts.map(p=>p.text).join('')})
  })
  expect(request).toBeNull()
  expect(reinstalled.slice(callStart,callEnd)).not.toContain('function oldClassify')
 },15000)
 it('patches the real progress component and its owning turn without duplicating the report on reinstall',()=>{
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const original=currentClient()
  const patched=patchResearchCreationProgress(original)
  expect(patchResearchCreationProgress(patched)).toBe(patched)
  expect(patched).toContain('data-research-planning-feedback')
@@ -94,11 +104,20 @@ it('patches the real progress component and its owning turn without duplicating 
  const start=patched.indexOf('/* ework:planning-feedback:v1 */'),end=patched.indexOf('const ExecutionStatusGroup =',start)
  const statuses=[]
  const react={useRef:()=>({current:null})},jsx=(type,props)=>({type,props})
- const Feedback=runInNewContext(patched.slice(start,end)+';ResearchPlanningFeedback',{react,react_jsx_runtime:{jsx,jsxs:jsx},document:{documentElement:{dataset:{}}}})
+ const win=new Window()
+ const Feedback=runInNewContext(patched.slice(start,end)+';ResearchPlanningFeedback',{react,react_jsx_runtime:{jsx,jsxs:jsx},document:win.document})
  const view=Feedback({meta:planningResponseMetadata([model('SECRET_REASONS')]),startedAt:0,now:20000,running:true})
  expect(JSON.stringify(view)).not.toContain('SECRET_REASONS')
  expect(view.props['data-research-planning-feedback']).toBe('responding')
  expect(view.props.children[0].props.children).toContain('已收到模型响应')
+ void win.happyDOM.abort()
+})
+it('upgrades the legacy production planning call without a surface argument exactly once',()=>{
+ const fresh=patchResearchCreationProgress(currentClient()),surface='const researchPlanningSurface = useStore((s) => s.view === "research");',suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text,researchPlanningSurface) : null;'
+ const legacy=fresh.replace('\n'+surface,'').replace(suffix,',parts=>parseResearchPrompt(contentParts(parts).text).text) : null;'),upgraded=patchResearchCreationProgress(legacy)
+ expect(upgraded.includes(surface)).toBe(true);expect(upgraded.includes(suffix)).toBe(true)
+ expect(patchResearchCreationProgress(upgraded)===upgraded).toBe(true)
+ expect(()=>patchResearchCreationProgress(fresh.replace(surface,'const researchPlanningSurface = unknownSurface;'))).toThrow(/surface anchor drifted/)
 })
 it('recognizes code-mode nested host receipts without interpreting arguments or unrelated result text',()=>{
  const receipt={kind:'tool-result',call:{name:'research_workbench_create',argsRaw:'PRIVATE'},content:[{type:'text',text:'{"planId":"p","status":"accepted","panels":[{}]}'}]}
@@ -117,7 +136,7 @@ it('retains only verified plan identities and deduplicates repeated receipts for
  expect(planningResponseMetadata([{key:'bad',kind:'tool-call',data:{root:failed}}]).plans).toEqual([])
 })
 it('marks ordinary composer cancellation as stopping before the actual session stops',()=>{
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const original=currentClient()
  const patched=patchResearchCreationProgress(original),start=patched.indexOf('stop=()=>{/* ODYSSEY_PLANNING_COMPOSER_STOP */'),end=patched.indexOf(';',patched.indexOf('ordinaryStop?.()',start))+1
  expect(start).toBeGreaterThan(-1)
  const intents=new Map([['s',{id:'intent',state:'planning'}]]),events=[]
@@ -133,7 +152,7 @@ it('uses the event timestamp when reopening a running conversation instead of in
  expect(advancePlanningHeartbeat(beat,{...meta,lastActivityAt:145000},150000).lastAt).toBe(145000)
 })
 it('also installs on an older client without the planning-card action hook',()=>{
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const original=currentClient()
  const prior=original
   .replace(/\/\* ODYSSEY_CREATION_CARD_ACTIONS \*\/[\s\S]*?resolveSubmitMode, subagent\]\);/u,'')
   .replace(/stop=\(\)=>\{\/\* ODYSSEY_PLANNING_COMPOSER_STOP \*\/[\s\S]*?ordinaryStop\?\.\(\)\};/u,'stop=()=>{if(canvasRunning)void canvasExecution.stop().catch(error=>showToast(error.message));ordinaryStop?.()};')
@@ -145,7 +164,7 @@ it('also installs on an older client without the planning-card action hook',()=>
  expect(patchResearchCreationProgress(patched)).toBe(patched)
 })
 it('projects the latest actual assistant event time, including after transcript hydration',()=>{
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const original=currentClient()
  const patched=patchResearchCreationProgress(original),start=patched.indexOf('function projectAssistant('),end=patched.indexOf('/** Per-step Assistant',start)
  const project=runInNewContext(patched.slice(start,end)+';projectAssistant',{finalNode:()=>undefined,compactBlocks:x=>x,hasVisibleContent:()=>true})
  const state={turn:2,step:1,blocks:[{kind:'reasoning',text:'PRIVATE'}],firstVisibleTime:100,firstVisibleSeq:2}
@@ -161,7 +180,7 @@ it('never presents an ended accepted plan as currently generating',()=>{
  expect(ended.phase).toBe('ended')
  expect(ended.title).not.toContain('正在')
  expect(ended.detail).not.toContain('正在')
- const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const original=currentClient()
  const patched=patchResearchCreationProgress(original)
  const at=patched.indexOf('const planningRequest=entry.running'),line=patched.slice(at,patched.indexOf('return (0, react_jsx_runtime.jsx)(ExecutionStatusGroup',at))
  for(const [running,turn,active] of [[false,1,2],[true,1,2],[false,2,2]]){
