@@ -88,6 +88,62 @@ describe('explicit final-message delivery links', () => {
 })
 
 describe('delivery path merging', () => {
+  it('recognises explicit final delivery inline-code paths without changing Markdown parsing', () => {
+    const text = '已完成，交付文件如下：\n- PPTX：`/work/out/正式报告（完整版）.pptx`\n- PDF 预览：`out/正式报告.pdf`'
+    expect(deliveryPathsFromMarkdown(text, '/work')).toEqual([])
+    expect(mergeDeliveryPaths([], text, '/work')).toEqual(['/work/out/正式报告（完整版）.pptx', '/work/out/正式报告.pdf'])
+  })
+  it.each([
+    ['交付文件：`out/模型.custom-format`', '/work/out/模型.custom-format'],
+    ['Final deliverables:\n- PPTX: `out/final.pptx`', '/work/out/final.pptx'],
+    ['已完成。PPTX：`out/final.pptx`', '/work/out/final.pptx'],
+    ['已完成。**PPTX**：`out/final.pptx`', '/work/out/final.pptx'],
+    ['**交付文件**：`out/final.pptx`', '/work/out/final.pptx'],
+    ['Finished. **PPTX**: `out/final.pptx`', '/work/out/final.pptx'],
+    ['已完成，交付文件：``out/收益100%.pdf``', '/work/out/收益100%.pdf'],
+    ['交付文件：`out/a%20b.pdf`', '/work/out/a%20b.pdf'],
+    ['交付文件：`out/年度 预测😀/正式报告 (终稿).pptx`', '/work/out/年度 预测😀/正式报告 (终稿).pptx'],
+    ['交付文件：`C:\\work\\out\\final.pptx`', 'C:/work/out/final.pptx'],
+    ['交付文件：`.\\out\\final.pptx`', '/work/out/final.pptx']
+  ])('recognises an explicitly delivered local path: %s', (text, path) => {
+    expect(mergeDeliveryPaths([], text, '/work')).toEqual([path])
+  })
+  it.each([
+    '当前候选文件：`out/候选.pptx`，尚未通过原生验收，本轮不正式交付。',
+    '已完成结构校验，尚未正式交付。\n交付文件：`out/候选.pptx`',
+    '交付文件：`out/候选.pptx`，仍待验收。',
+    '交付文件：`out/候选.pptx`，还没通过检查。',
+    '已完成文件生成。\n\n交付文件：`out/候选.pptx`\n\n注意：当前仍待原生验收，暂不能正式交付。',
+    '已完成，交付文件如下：\n- PPT：`out/候选.pptx`\n\n原生验收尚未完成，不能正式交付。',
+    '非交付文件：`out/review.pptx`',
+    '已完成文件生成，暂不作为正式交付文件：`out/review.pptx`',
+    '交付文件：`out/review.pptx`，等待 PowerPoint 原生验收。',
+    '交付文件：`out/review.pptx`，原生验收仍待完成。',
+    'Deliverables: `out/review.pptx`, awaiting native QA.',
+    'Candidate deliverables: `out/draft.pptx`, not yet ready.',
+    '已完成。参考文件：`out/source.pdf`',
+    '已完成。参考报告：`out/source.pdf`',
+    '已完成。原始PPT：`out/source.pptx`',
+    '已完成。输入 PDF：`out/source.pdf`',
+    '已完成。\n\n> 交付文件：`out/quoted.pdf`',
+    '已完成。运行命令：`python out/generate.py`',
+    '交付文件：`python out/generate.py`',
+    '交付文件：`/usr/bin/python /work/out/final.pptx`',
+    '交付文件：`./generate.py out/final.pptx`',
+    '交付文件：`https://example.com/report.pdf`',
+    '交付文件：`file:///work/report.pdf`',
+    '交付文件：`out/folder/`',
+    '交付文件：`report.pdf`',
+    '交付文件：\n```text\n`out/fenced.pptx`\n```',
+    '交付文件：`out/report.pptx',
+    '交付文件：\n- PPTX: `out/one\ntwo.pptx`'
+  ])('does not infer delivery from candidate, reference, command or invalid code paths: %s', text => {
+    expect(mergeDeliveryPaths([], text, '/work')).toEqual([])
+  })
+  it('deduplicates inline paths with produced files and explicit links and respects the link destination', () => {
+    const text = '已完成，交付文件如下：\n- PPTX：`out/final.pptx` [下载](out/final.pptx)\n- PDF：[`out/label.pdf`](out/actual.pdf)'
+    expect(mergeDeliveryPaths(['out/final.pptx'], text, '/work')).toEqual(['/work/out/final.pptx', '/work/out/actual.pdf'])
+  })
   it('keeps produced order, then final-link order, with canonical deduplication', () => {
     expect(mergeDeliveryPaths(['out/报告.pdf', '/work/out/报告.pdf', 'out/自定义.abc'], '[PDF](./out/报告.pdf) [PPT](out/方案.pptx)', '/work'))
       .toEqual(['/work/out/报告.pdf', '/work/out/自定义.abc', '/work/out/方案.pptx'])
@@ -160,6 +216,8 @@ it('ships self-contained injected functions with identical behavior', () => {
   const model = runInNewContext(deliveryModelSource + ';({normaliseDeliveryPath,deliveryPathsFromMarkdown,mergeDeliveryPaths,verifiedResearchDeliveryPaths})')
   expect(Array.from(model.mergeDeliveryPaths(['out/报告.pdf'], '[PDF](out/报告.pdf) [PPT](out/方案.pptx)', '/work')))
     .toEqual(['/work/out/报告.pdf', '/work/out/方案.pptx'])
+  expect(Array.from(model.mergeDeliveryPaths([], '已完成，交付文件如下：\n- PPT：`out/方案.pptx`', '/work')))
+    .toEqual(['/work/out/方案.pptx'])
   expect(Array.from(model.verifiedResearchDeliveryPaths(researchMessage())))
     .toEqual(['/work/outputs/正式报告.html', '/work/outputs/正式报告.pdf'])
 })
