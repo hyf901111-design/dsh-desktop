@@ -372,6 +372,98 @@
           "之前间歇性系统鼠标冻结尚无已证实根因，不将本次编辑模式改动当作已解决。"
         ],
         "generatedAt": "2026-10-24T14:59:53.677003+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4bf64e0bb360fe1c226b4b10329baf01cbb6adfe",
+        "verificationCommit": "4bf64e0bb360fe1c226b4b10329baf01cbb6adfe",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "4bf64e0bb360fe1c226b4b10329baf01cbb6adfe",
+            "completedAt": "2026-10-24T15:14:39.826Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "4bf64e0bb360fe1c226b4b10329baf01cbb6adfe",
+            "completedAt": "2026-10-24T15:14:39.826Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4bf64e0bb360fe1c226b4b10329baf01cbb6adfe",
+            "completedAt": "2026-10-24T15:14:39.826Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/delivery-file-model.test.js",
+              "test/deliverable-cards.test.js",
+              "test/conversation-component-stream-browser.test.js",
+              "test/delivery-file-clipboard.test.ts",
+              "test/delivery-file-icons.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/home-presentation-assets-package.test.js",
+              "test/home-presentation-replay.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-presentation-host.test.js",
+              "test/component-pptx-mode.test.ts",
+              "test/conversation-component-interaction.test.js",
+              "test/conversation-component-renderer.test.js",
+              "test/notes-file-views.test.js",
+              "test/research-office-resize.test.js",
+              "test/pptx-editor-mode.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/sidebar-pptx-toolbar.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-stable-refresh.test.ts",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-scroll-viewport.test.js",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/delivery-file-model.test.js test/deliverable-cards.test.js test/conversation-component-stream-browser.test.js test/delivery-file-clipboard.test.ts test/delivery-file-icons.test.js test/bundled-ppt-skill.test.ts test/home-presentation-assets-package.test.js test/home-presentation-replay.test.js test/home-presentation-runtime.test.js test/home-presentation-host.test.js test/component-pptx-mode.test.ts test/conversation-component-interaction.test.js test/conversation-component-renderer.test.js test/notes-file-views.test.js test/research-office-resize.test.js test/pptx-editor-mode.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/sidebar-pptx-toolbar.test.ts test/pptx-direct-editor.test.ts test/pptx-stable-refresh.test.ts test/pptx-selection-viewport.test.js test/pptx-scroll-viewport.test.js test/notes-inline-files.test.tsx test/notes-component-interaction.test.tsx --maxWorkers=2",
+            "verifiedCommit": "4bf64e0bb360fe1c226b4b10329baf01cbb6adfe",
+            "completedAt": "2026-10-24T15:14:39.826Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "4bf64e0bb360fe1c226b4b10329baf01cbb6adfe",
+            "completedAt": "2026-10-24T15:14:39.826Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-10-24T15:14:39.826Z"
       }
     }
   ],
