@@ -88,3 +88,9 @@ it('saves a strict native financial snapshot with independent configuration and 
  ;(restored.containerSpec as any).period='1y';expect((reopened.read(saved.id).node.containerSpec as any).period).toBe('1w');expect(spec.period).toBe('1w')
  for(const key of ['price','script'])await expect(store.add({...original,containerSpec:{...spec,[key]:17}})).rejects.toThrow();expect(store.list()).toHaveLength(1)
 })
+it('retains linked security news semantics through save, reload and independent note or research placement',async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),{noteLibraryNode}=await import('../src/main/notes/component-library'),{file,store}=await fixture(),spec={...financialWidgetDefaults('news')!,symbols:[{code:'AAPL',market:'US',name:'苹果'}],query:'',linkedSourceId:'source-security'},original={...node(),title:'证券新闻',displayName:'证券新闻',containerSpec:spec},entry=await store.add(original),restart=new ComponentLibraryStore(file);await restart.load()
+ const research=restart.read(entry.id).node,noteA=noteLibraryNode(restart,entry.id,'owner'),noteB=noteLibraryNode(restart,entry.id,'owner');for(const placed of [research,noteA,noteB]){expect(placed.containerSpec).toMatchObject({type:'financial-widget',widget:'news',query:'苹果',symbols:spec.symbols});expect(placed.containerSpec).not.toHaveProperty('linkedSourceId')}
+ expect(noteA.id).not.toBe(noteB.id);noteA.containerSpec.query='副本查询';expect(noteB.containerSpec.query).toBe('苹果');expect(spec.query).toBe('')
+ await expect(store.add({...original,containerSpec:{...spec,symbols:[]}})).rejects.toThrow();expect(store.list()).toHaveLength(1)
+})

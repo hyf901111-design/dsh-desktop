@@ -332,3 +332,9 @@ it('copies and restores strict native financial configuration through the opaque
  expect(restored.containerSpec).not.toHaveProperty('linkedWatchlistId');expect(node.containerSpec.linkedWatchlistId).toBe('old-board')
  for(const key of ['price','script','unknown'])expect((await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...spec,[key]:17}}]})).ok).toBe(false)
 })
+it('freezes a linked security news query when copying and refuses unresolved links instead of changing the content target',async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),f=await fixture(),spec={...financialWidgetDefaults('news')!,symbols:[{code:'AAPL',market:'US',name:'苹果'}],query:'',linkedSourceId:'source-security'},node={id:'news',kind:'generated-container',x:0,y:0,title:'证券新闻',generationStatus:'completed',containerSpec:spec}
+ expect(await f.service.copy({sessionId:'s',nodes:[node]})).toEqual({ok:true});const result=await f.service.read();if(result.kind!=='components')throw Error('expected components');const independent=structuredClone(result.nodes[0]!.containerSpec) as any;expect(independent.query).toBe('苹果');expect(independent).not.toHaveProperty('linkedSourceId');independent.query='副本查询';expect(spec.query).toBe('');expect(spec.linkedSourceId).toBe('source-security')
+ expect((await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...spec,symbols:[]}}]})).ok).toBe(false)
+ expect(await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...financialWidgetDefaults('news')!,query:''}}]})).toEqual({ok:true});const generic=await f.service.read();if(generic.kind!=='components')throw Error('expected generic news');expect((generic.nodes[0]!.containerSpec as any).query).toBe('')
+})
