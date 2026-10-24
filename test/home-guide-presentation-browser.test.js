@@ -12,7 +12,7 @@ beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  conversationSource=patchHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__Todo=TodoDock;exports.__User=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomePresentationGuide}from'./src/preload/home-guide-presentation';
+ import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomePresentationGuide}from'./src/preload/home-guide-presentation';import{installSkillComposer}from'./src/preload/integrations/skill-composer';import{createSkillUseBridge}from'./src/preload/integrations/skill-use';import{installSkillCommandBridge}from'./src/preload/integrations/skill-command-bridge';
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});const empty=()=>null;
  const primitives=new Proxy({Tooltip:({children})=>children,MarkdownText:({text})=><div style={{whiteSpace:'pre-wrap'}}>{text}</div>,Markdown:({text})=><div>{text}</div>},{get:(target,key)=>target[key]??empty});
  const cordis={Service:class{constructor(ctx){this.ctx=ctx}}};
@@ -23,15 +23,20 @@ beforeAll(async()=>{
  const sessionsRuntime=new rt.SessionRuntime(ctx,{sessions:{}},{},{events,views:viewRegistry}),session=sessionsRuntime.manager.get('demo');session.openState='open';session.installWindow([],false);
  const store=initial=>{let value=initial;const listeners=new Set();return{getSnapshot:()=>value,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},update:patch=>{value={...value,...patch};listeners.forEach(fn=>fn())}}};
  const view=store({view:'chat',draft:'',selection:null}),summary=store({byId:{demo:{id:'demo',displayTitle:'公司风格演示示例',cwd:window.cwd,blank:true}}}),projections=store({todos:null});
- const shell=new native.SessionInputShell({actx:{},defaultSink:async text=>{const before=shell.snapshot;await window.nativeBackend({action:'send',text});shell.commitSend(before.imageIds,before.draft)}}),inputHub={shell:()=>shell};
+ const inputTriggers={adjudicate:async()=>undefined,serializeReference:(source,ref,signal)=>source==='chat-file'?native.chatFileReferenceCodec.serialize(ref,signal):Promise.resolve('/'+JSON.parse(ref).invocationName)};const shell=new native.SessionInputShell({actx:{},inputTriggers:()=>inputTriggers,defaultSink:async text=>{const before=shell.snapshot;await window.nativeBackend({action:'send',text});shell.commitSend(before.imageIds,before.draft)}}),inputHub={shell:()=>shell};
  const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),useSession=use({subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()}),useInput=use(shell.state),useStore=use(view),useSessions=use(summary),useProjection=name=>use(projections)(s=>s[name]);
  const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'}]},actions={setView:value=>view.update({view:value}),setDraft:draft=>view.update({draft}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
  const t=(key,args)=>key==='todo.progress.total'?args.done+'/'+args.total:({'hero.headline':'探索更远，洞见更深。','input.send':'发送消息','input.placeholder':'描述你的任务…','todo.title':'任务清单'})[key]??key;
  const shared={sessionId:'demo',useSession,useSessions,useStore,actions,views,t},inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection,sessionId:'demo',t};
- const sidebarState={composerHost:null,conversationHost:null},sidebarStore={subscribe:()=>()=>{},getSnapshot:()=>sidebarState},sidebar={storeFor:()=>sidebarStore,publish(){},enter(){},leave(){},service:{async openFile(scope,path){window.probe.opened.push({scope,path});await window.nativeBackend({action:'verify-file',path});document.querySelector('#right').textContent='公司风格演示示例.pptx · 原生文件路径已校验'}}};
+ const sidebarState={composerHost:null,conversationHost:null},sidebarStore={subscribe:()=>()=>{},getSnapshot:()=>sidebarState},sidebar={storeFor:()=>sidebarStore,publish(){},enter(){},leave(){},service:{async openFile(scope,path){window.probe.opened.push({scope,path});await window.nativeBackend({action:'verify-file',path});document.querySelector('#right').textContent='人工智能周期与资产配置.pptx · 原生文件路径已校验'}}};
  const openFile=path=>sidebar.service.openFile({sessionId:'demo',cwd:window.cwd},path),renderSlot=(name,props={},scope={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.input.dock'?<native.__Todo useSession={useSession} useProjection={useProjection} t={t}/>:name==='conversation.view'?<native.__Chat {...shared} {...props} renderSlot={renderSlot} openFile={openFile} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>[]}/>:name==='conversation.chat.node'&&scope.entryKey==='user'?<native.__User {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.__Assistant {...props} useTurnData={()=>null} t={t}/>:scope.fallback??null;
  window.probe={native,shell,session,opened:[],cues:[],guide:null,events:[],refresh:async()=>{const data=await window.nativeBackend({action:'history'});window.probe.events=data.events;session.blankBit=!data.events.some(e=>e.type==='user/message');session.installWindow(data.events.map(event=>({event,view:event.type})),false);projections.update({todos:data.events.findLast(e=>e.type==='todo/write')?.data.todos??null})}};
  native.__bind({inputHub,researchSidebar:sidebar,getHomeGuideSession:id=>window.probe.registered===false?undefined:{kind:'ppt',sessionId:id,cwd:window.cwd}});
+ const skill={id:'builtin:efund-ppt-maker',revision:1,label:'efund-ppt-maker',invocationName:'ework-skill-180a6a3f86f8942e',name:'PPT制作助手',enabled:true,usable:true};
+ const request=async input=>input.type==='snapshot'?{type:'snapshot',snapshot:{rows:[{...skill,kind:'skill',description:'公司规范'}]}}:{...skill,type:'skill-detail',invocationLabel:skill.label};
+ const skillUse=createSkillUseBridge(document,{request},()=>{}),skillBridge=installSkillCommandBridge(document,{request,useSkill:skillUse.useSkill}),skillComposer=installSkillComposer({document,inputHub,sessions:{list:{getSnapshot:()=>({current:'demo'})},binding:()=>({session:{getSnapshot:()=>({})}}),subagentAddress:()=>undefined},composerBlocks:{storeFor:()=>({getSnapshot:()=>undefined})},researchSidebar:{stores:new Map(),service:sidebar.service}});
+ disposers.push(()=>{skillBridge.dispose();skillUse.dispose();skillComposer()});
+
  const registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true}),root=createRoot(document.querySelector('#native-root'));
  root.render(<native.ConversationRoot {...shared} useProjection={useProjection} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{throw Error('Must not create another workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例',sessionIds:['demo']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/>);
  window.addEventListener('sherlock:home-guide-cue',event=>window.probe.cues.push({label:event.detail.label,tag:event.detail.target.tagName}));
@@ -75,7 +80,11 @@ it('types and sends through the resident native InputBar, renders persisted chat
  try{
   await page.evaluate(()=>window.probe.mount());expect(await page.locator('textarea').count()).toBe(1)
   await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>window.probe.step('brief'))
-  expect(await page.locator('textarea').inputValue()).toContain('离线预置')
+  expect(await page.locator('textarea').inputValue()).toContain('Vanguard')
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.map(ref=>ref.source))).toEqual(['ework-managed-skill','chat-file'])
+  expect(await page.locator('[data-reference-source="chat-file"]').count()).toBe(1)
+  expect(await page.locator('[data-reference-source="ework-managed-skill"]').count()).toBe(1)
+  expect(await readFile(join(f.cwd,'Vanguard-2026经济与市场展望.pdf'))).toEqual(f.sourceBytes)
   await page.screenshot({path:evidence+'/01-native-brief.png'})
   await page.evaluate(()=>window.probe.step('send')).catch(async error=>{throw Error(JSON.stringify({errors:f.errors,pageErrors:f.errors,snapshot:await page.evaluate(()=>window.probe.shell.snapshot),events:f.agent.session.events},null,2)+error.message)});await page.evaluate(()=>window.probe.step('plan'))
   await page.waitForSelector('[data-testid="todo-panel"]',{timeout:3000}).catch(async error=>{throw Error(JSON.stringify({pageErrors:f.errors,body:await page.locator('body').innerText(),events:f.agent.session.events.map(e=>e.type)},null,2)+error.message)});expect(await page.locator('[data-status="in_progress"]').count()).toBe(1)
@@ -85,13 +94,13 @@ it('types and sends through the resident native InputBar, renders persisted chat
   expect(await page.locator('[data-chat-flow-kind="user"]').count()).toBe(1)
   expect(await page.locator('[data-chat-flow-kind="assistant-step"]').count()).toBeGreaterThan(0)
   await page.evaluate(()=>window.probe.step('open'))
-  expect(await page.evaluate(()=>window.probe.opened[0].path)).toBe(join(f.cwd,'公司风格演示示例.pptx'))
+  expect(await page.evaluate(()=>window.probe.opened[0].path)).toBe(join(f.cwd,'人工智能周期与资产配置.pptx'))
   expect(await page.evaluate(()=>window.probe.original===document.querySelector('textarea'))).toBe(true)
-  expect(await page.evaluate(()=>window.probe.cues.map(c=>c.label))).toEqual(expect.arrayContaining(['输入演示目标','发送演示需求','打开可编辑文件']))
+  expect(await page.evaluate(()=>window.probe.cues.map(c=>c.label))).toEqual(expect.arrayContaining(['添加原始研报 PDF','选择公司 PPT 制作技能','填写研报转换要求','发送演示需求','打开可编辑文件']))
   await page.screenshot({path:evidence+'/03-native-delivery.png'})
   await page.evaluate(()=>window.probe.dispose());await f.ctx.sessions.flush(f.agent.session)
   expect((await f.ctx.sessionPersistence.inspect('demo')).events.some(e=>e.type==='assistant/message')).toBe(true)
-  expect(await readFile(join(f.cwd,'公司风格演示示例.pptx'))).toEqual(f.bytes);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
+  expect(await readFile(join(f.cwd,'人工智能周期与资产配置.pptx'))).toEqual(f.bytes);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
 it('pauses before sending, aborts on lost ownership, and revisits without replacing the native draft',async()=>{
