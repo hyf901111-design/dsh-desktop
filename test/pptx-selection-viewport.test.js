@@ -15,12 +15,14 @@ let browser,script,css,officeScript,bytes,model
 beforeAll(async()=>{
  const conversation=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const reader=conversation.slice(conversation.indexOf('function supportsResearchOfficePreview('),conversation.indexOf('function ResearchCanvasFileCard('))
+ const sharedIdentity=conversation.match(/const sherlockShared = [^\n]+/)[0]
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
   import React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot} from 'react-dom/client';
   import {WorkbenchChrome,WorkbenchTitle,WorkbenchIcon} from './scripts/lib/research-grid-ui.mjs';
   import {createNoteFileViewStore,EWorkNoteFileViews} from './scripts/lib/notes-files.mjs';import {NotesApp} from './src/preload/notes/editor';
   import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
-  const react=React,react_jsx_runtime=jsx,useWorkbenchLocale=()=>{},workbenchText=x=>x;${reader}
+  const react=React,react_jsx_runtime=jsx,useWorkbenchLocale=()=>{},workbenchText=x=>x;${sharedIdentity}${reader}
+  window.useComponentPptxMode=useComponentPptxMode;window.componentPptxModeHost=componentPptxModeHost;window.sherlockShared=sherlockShared;
   window.react=React;window.react_jsx_runtime=jsx;window.react_dom=dom;window.WorkbenchChrome=WorkbenchChrome;window.WorkbenchTitle=WorkbenchTitle;window.WorkbenchIcon=WorkbenchIcon;
   window.componentDataStatusStore={subscribe:()=>()=>{},read:()=>null};window.componentRssStatusView=()=>null;
   window.ResearchAttachmentLocalPreview=${ResearchAttachmentLocalPreview.toString()};window.eworkNoteFileViews=createNoteFileViewStore(document);
@@ -51,15 +53,27 @@ async function fixture(width){
  await page.route('http://127.0.0.1/pptx-selection-fixture',route=>route.fulfill({contentType:'text/html',body:'<style>html,body{margin:0}#notes{position:fixed;top:90px;left:30px;width:1030px;height:680px;overflow:hidden}.en-editor-host{height:100%}.en-file-native-reader{width:100%;height:100%;min-height:0}</style><section id="notes" class="en-root"><div class="en-editor-host"></div></section>'}))
  await page.route('http://127.0.0.1/fixture.pptx',route=>route.fulfill({body:bytes}))
  await page.goto('http://127.0.0.1/pptx-selection-fixture');await page.addStyleTag({content:css})
- await page.evaluate(model=>{window.pptSaves=[];window.sherlockPptEditor={open:async()=>({ok:true,document:model}),save:async request=>{window.pptSaves.push(request);return{ok:true,document:{...model,version:'2'.repeat(64)}}}};const original=window.fetch;window.fetch=(url,options)=>original(String(url).startsWith('sherlock-preview:')?'/fixture.pptx':url,options)},model)
+ await page.evaluate(model=>{window.pptSaves=[];window.pptOpenCalls=0;window.sherlockPptEditor={open:async()=>{window.pptOpenCalls++;return{ok:true,document:model}},save:async request=>{window.pptSaves.push(request);return{ok:true,document:{...model,version:'2'.repeat(64)}}}};const original=window.fetch;window.fetch=(url,options)=>original(String(url).startsWith('sherlock-preview:')?'/fixture.pptx':url,options)},model)
  await page.addScriptTag({content:script});await page.addScriptTag({content:officeScript});await page.evaluate(width=>window.mountNotes(width),width)
  await page.locator('.en-title').waitFor();await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,window.fixtureBlocks))
- try{await page.locator('[data-pptx-paragraph][contenteditable=true]').first().waitFor()}catch(error){console.log({errors,body:await page.locator('body').innerText()});throw error}
+ try{
+  await page.locator('[data-pptx-paragraph]').first().waitFor()
+  expect(await page.evaluate(()=>window.pptOpenCalls)).toBe(0)
+  expect(await page.locator('[data-pptx-paragraph][contenteditable=true]').count()).toBe(0)
+  expect(await page.locator('.sherlock-ppt-selection').count()).toBe(0)
+  // Use the actual Notes file component footer rather than bypassing its host.
+  await page.getByRole('button',{name:'选中文件并操作预览',exact:true}).click()
+  const edit=page.locator('.en-file-native-reader [data-component-pptx-edit]')
+  await edit.waitFor();expect(await edit.getAttribute('aria-pressed')).toBe('false')
+  await edit.click()
+  await page.locator('[data-pptx-paragraph][contenteditable=true]').first().waitFor()
+  expect(await page.evaluate(()=>window.pptOpenCalls)).toBe(1)
+  expect(await edit.getAttribute('aria-pressed')).toBe('true')
+ }catch(error){console.log({errors,body:await page.locator('body').innerText()});throw error}
  // This Notes baseline fills the document width; size the component viewport
  // explicitly so both cases exercise the claimed native-reader dimensions.
  await page.locator('.en-note-file').evaluate((el,width)=>{el.style.width=width+'px'},width)
  await expect.poll(()=>page.locator('.dsh_32k8zk_editorPptxHost').evaluate(el=>el.clientWidth)).toBe(width)
- await page.getByRole('button',{name:'选中文件并操作预览',exact:true}).click()
  const paragraph=page.locator('[data-pptx-paragraph][contenteditable=true]').first();await paragraph.click()
  await page.getByRole('toolbar',{name:'对象格式'}).waitFor()
  await page.evaluate(()=>{window.selectedPptNode=document.querySelector('[data-pptx-field-id]').closest('[data-pptx-node-id]')})

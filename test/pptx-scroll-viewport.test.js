@@ -18,7 +18,7 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),contents:`
   import React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot} from 'react-dom/client';
   window.__ModuleLoader__={load:descriptor=>{window.office=descriptor.factory(id=>({'react':React,'react/jsx-runtime':jsx,'react-dom':dom}[id]))}};
-  window.mountPpt=()=>createRoot(document.getElementById('surface')).render(React.createElement(window.office.officePreviewService.Component,{kind:'pptx',sourceUrl:'sherlock-preview://viewport-fixture/',title:'多页演示.pptx'}));
+  window.mountPpt=()=>createRoot(document.getElementById('surface')).render(React.createElement(window.office.officePreviewService.Component,{kind:'pptx',sourceUrl:'sherlock-preview://viewport-fixture/',title:'多页演示.pptx',onToolbarState:state=>{window.pptModeState=state},onToolbarControls:controls=>{window.pptModeControls=controls}}));
  `},bundle:true,platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'}})
  hostScript=output.outputFiles[0].text
  const raw=await readFile('build/sherlock-plugin-profile/vendor/@huanlin/dsh-plugin-better-sidebar-plugin-office/lib/client.js','utf8')
@@ -44,6 +44,20 @@ beforeAll(async()=>{
 },20000)
 afterAll(async()=>{await browser?.close()})
 
+async function enterEditor(page){
+ await page.locator('[data-pptx-paragraph]').first().waitFor({timeout:5000})
+ expect(await page.evaluate(()=>window.pptModeState?.mode)).toBe('preview')
+ expect(await page.evaluate(()=>window.pptOpenCalls)).toBe(0)
+ expect(await page.locator('[data-pptx-paragraph][contenteditable=true]').count()).toBe(0)
+ expect(await page.locator('.sherlock-ppt-selection').count()).toBe(0)
+ // Exercise the same host control exposed to the production toolbar, explicitly.
+ expect(await page.evaluate(()=>window.pptModeControls.setMode('edit'))).toBe(true)
+ await page.locator('[data-pptx-paragraph][contenteditable=true]').first().waitFor({timeout:5000})
+ expect(await page.evaluate(()=>window.pptOpenCalls)).toBe(1)
+ expect(await page.evaluate(()=>window.pptModeState?.mode)).toBe('edit')
+}
+
+
 it('upgrades an installed v6 scheduler and keeps the next application and pinned input identical',()=>{
  expect(upgradedResizeScript).toBe(resizeScript)
  expect(patchPptxResize(upgradedResizeScript)).toBe(upgradedResizeScript)
@@ -58,12 +72,12 @@ for(const width of [360,820])it(`keeps the ${width}px editable PPT viewport boun
   await page.route('http://127.0.0.1/fixture.pptx',route=>route.fulfill({body:bytes}))
   await page.goto('http://127.0.0.1/pptx-viewport-fixture')
   await page.evaluate(model=>{
-   window.__fitJobs=[]
-   window.sherlockPptEditor={open:async()=>({ok:true,document:model}),save:async()=>({ok:false,error:'只读回归样本'})}
+   window.__fitJobs=[];window.pptOpenCalls=0
+   window.sherlockPptEditor={open:async()=>{window.pptOpenCalls++;return{ok:true,document:model}},save:async()=>({ok:false,error:'只读回归样本'})}
    const original=window.fetch;window.fetch=(url,options)=>original(String(url).startsWith('sherlock-preview:')?'/fixture.pptx':url,options)
   },documentModel)
   await page.addScriptTag({content:hostScript});await page.addScriptTag({content:officeScript});await page.evaluate(()=>window.mountPpt())
-  try{await page.locator('[data-pptx-paragraph][contenteditable=true]').first().waitFor({timeout:5000})}catch(error){console.log({errors,body:await page.locator('body').innerText(),paragraphs:await page.locator('[data-pptx-paragraph]').count()});throw error}
+  try{await enterEditor(page)}catch(error){console.log({errors,body:await page.locator('body').innerText(),paragraphs:await page.locator('[data-pptx-paragraph]').count()});throw error}
   const viewport=page.locator('.dsh_32k8zk_editorPptxHost')
   const intervals=await page.evaluate(()=>{
    const xml=children=>{const tag=children.includes('tickLblSkip')?'catAx':'dateAx';return'<c:'+tag+' xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">'+children+'</c:'+tag+'>'}
@@ -181,11 +195,11 @@ it('keeps warm scroll notifications free of display metric reads before the next
   await page.route('http://127.0.0.1/fixture.pptx',route=>route.fulfill({body:bytes}))
   await page.goto('http://127.0.0.1/warm-scroll-fixture')
   await page.evaluate(model=>{
-   window.__fitJobs=[];window.sherlockPptEditor={open:async()=>({ok:true,document:model}),save:async()=>({ok:false,error:'只读回归样本'})}
+   window.__fitJobs=[];window.pptOpenCalls=0;window.sherlockPptEditor={open:async()=>{window.pptOpenCalls++;return{ok:true,document:model}},save:async()=>({ok:false,error:'只读回归样本'})}
    const original=window.fetch;window.fetch=(url,options)=>original(String(url).startsWith('sherlock-preview:')?'/fixture.pptx':url,options)
   },documentModel)
   await page.addScriptTag({content:hostScript});await page.addScriptTag({content:officeScript});await page.evaluate(()=>window.mountPpt())
-  await page.locator('[data-pptx-paragraph][contenteditable=true]').first().waitFor()
+  await enterEditor(page)
   const result=await page.evaluate(()=>{
    const viewer=window.__pptxViewer,root=document.querySelector('.dsh_32k8zk_editorPptxHost'),original=viewer.getDisplayMetrics
    let reads=0;viewer.getDisplayMetrics=function(){reads++;return original.call(this)}
