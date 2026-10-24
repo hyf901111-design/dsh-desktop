@@ -23,7 +23,8 @@ async function fixture(desktop: any = {}, win?: Window) {
   const window: any = win ?? {}
   Object.assign(window, { dshDesktop: desktop, __ModuleLoader__: { load: (value: any) => { descriptor = value } } })
   const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-  runInNewContext(source, { window, document: win?.document, localStorage: win?.localStorage, navigator: win?.navigator, HTMLElement: win?.HTMLElement, HTMLTextAreaElement: win?.HTMLTextAreaElement, Text: win?.Text, ResizeObserver: win?.ResizeObserver, requestAnimationFrame: win?.requestAnimationFrame.bind(win), cancelAnimationFrame: win?.cancelAnimationFrame.bind(win), AbortController, TextDecoder, TextEncoder, setTimeout, clearTimeout })
+  // Production wrappers observe this actual Happy DOM tree; keep its browser constructors.
+  runInNewContext(source, { window, document: win?.document, localStorage: win?.localStorage, navigator: win?.navigator, CSS: win?.CSS, DOMParser: win?.DOMParser, CustomEvent: win?.CustomEvent, Event: win?.Event, HTMLElement: win?.HTMLElement, HTMLTextAreaElement: win?.HTMLTextAreaElement, Text: win?.Text, ResizeObserver: win?.ResizeObserver, MutationObserver: win?.MutationObserver, requestAnimationFrame: win?.requestAnimationFrame.bind(win), cancelAnimationFrame: win?.cancelAnimationFrame.bind(win), AbortController, TextDecoder, TextEncoder, structuredClone, setTimeout, clearTimeout, setInterval, clearInterval })
   const bundle = descriptor.factory((id: string) => {
     if (id === 'react') return react
     if (id === 'react/jsx-runtime') return requireModule(id)
