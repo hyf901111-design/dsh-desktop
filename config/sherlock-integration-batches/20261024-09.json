@@ -150,6 +150,84 @@
           "额外运行的research-boards-ui通知聚合case在fec262a6基线同红，与本次目录修改无关，未修改通知模块。"
         ],
         "generatedAt": "2026-10-24T02:28:02.999808+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c5932537e9da4d011bf5ccd199e862dba6a375df",
+        "verificationCommit": "c5932537e9da4d011bf5ccd199e862dba6a375df",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "c5932537e9da4d011bf5ccd199e862dba6a375df",
+            "completedAt": "2026-10-24T02:29:42.401Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-session.test.ts",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "test/home-guide-presentation-adapter.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-session.test.ts test/home-guide-presentation-binding.test.ts test/home-guide-presentation-patch.test.js test/home-guide-presentation-browser.test.js test/home-guide-presentation-adapter.test.ts --maxWorkers=2",
+            "verifiedCommit": "c5932537e9da4d011bf5ccd199e862dba6a375df",
+            "completedAt": "2026-10-24T02:29:42.401Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "keeps a registered|ordinary or other-account|prefers an existing|reselects",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native-browser.test.js -t keeps a registered|ordinary or other-account|prefers an existing|reselects --maxWorkers=1",
+            "verifiedCommit": "c5932537e9da4d011bf5ccd199e862dba6a375df",
+            "completedAt": "2026-10-24T02:29:42.401Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c5932537e9da4d011bf5ccd199e862dba6a375df",
+            "completedAt": "2026-10-24T02:29:42.401Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c5932537e9da4d011bf5ccd199e862dba6a375df",
+            "completedAt": "2026-10-24T02:29:42.401Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T02:29:42.401Z"
       }
     }
   ],
