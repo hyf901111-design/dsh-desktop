@@ -11,9 +11,9 @@
   "sourceSha256": "af3b10b6b05f8ee4734b35bfaeb3f272a370133a7949b7203f87cacf4c9de229",
   "presentationTitle": "人工智能周期与资产配置",
   "presentationSubtitle": "领航集团二〇二六年展望研读",
-  "presentationSlides": 8,
+  "presentationSlides": 16,
   "presentationFile": "company-research-briefing.pptx",
-  "presentationSha256": "643ea5e679bd37f992f889fbf753a9b22d5f4f4c92ec024a3321493ccf2da356",
+  "presentationSha256": "6cc70ec5fccfa8f376d4f6e28d01861e976204c7de53b791bf3ecbdbb18f7748",
   "sourceFile": "source-report.pdf",
   "template": "efund-template-v6.pptx",
   "templateSha256": "47ee51d95ddc14330c60bd5c8ccc4391654888c4d4ef998a6e1d9a8b136530fc",
@@ -27,87 +27,972 @@
       "sourcePages": [
         1
       ],
-      "asOf": "2025-12",
-      "layout": "standard-cover"
+      "layout": "standard-cover",
+      "kind": "cover"
     },
     {
       "slide": 2,
-      "title": "增长前景与估值压力",
-      "sourcePages": [
-        1,
-        4,
-        17
-      ],
-      "asOf": "2025-12",
-      "layout": "comparison"
+      "title": "目录：增长与投资周期",
+      "sourcePages": [],
+      "layout": "standard-toc",
+      "kind": "toc",
+      "chapterId": "cycle",
+      "activeChapterId": "cycle"
     },
     {
       "slide": 3,
-      "title": "AI资本开支仍在扩张",
+      "title": "研报结论与研读框架",
+      "sourcePages": [
+        2,
+        9,
+        15,
+        17
+      ],
+      "layout": "evidence-summary",
+      "kind": "content",
+      "asOf": "宏观2025-12-10；情景2025-09-30",
+      "chapterId": "cycle"
+    },
+    {
+      "slide": 4,
+      "title": "增长与通胀的区域差异",
+      "sourcePages": [
+        2
+      ],
+      "layout": "dual-chart",
+      "kind": "content",
+      "asOf": "2025-12-10",
+      "chapterId": "cycle"
+    },
+    {
+      "slide": 5,
+      "title": "资本开支与资金覆盖",
+      "sourcePages": [
+        5,
+        9
+      ],
+      "layout": "left-text-right-visual",
+      "kind": "content",
+      "asOf": "2025-11-05",
+      "chapterId": "cycle"
+    },
+    {
+      "slide": 6,
+      "title": "劳动力证据与扩散检验",
+      "sourcePages": [
+        12
+      ],
+      "layout": "dual-chart",
+      "kind": "content",
+      "asOf": "2025-08-31",
+      "chapterId": "cycle"
+    },
+    {
+      "slide": 7,
+      "title": "目录：AI情景与资本回报",
+      "sourcePages": [],
+      "layout": "standard-toc",
+      "kind": "toc",
+      "chapterId": "returns",
+      "activeChapterId": "returns"
+    },
+    {
+      "slide": 8,
+      "title": "AI情景的美股回报区间",
+      "sourcePages": [
+        17
+      ],
+      "layout": "left-text-right-visual",
+      "kind": "content",
+      "asOf": "2025-09-30",
+      "chapterId": "returns"
+    },
+    {
+      "slide": 9,
+      "title": "资本回报对关键假设敏感",
+      "sourcePages": [
+        17
+      ],
+      "layout": "left-text-right-visual",
+      "kind": "content",
+      "asOf": "2025-10-25",
+      "chapterId": "returns"
+    },
+    {
+      "slide": 10,
+      "title": "情景中点加权的研读计算",
+      "sourcePages": [
+        17
+      ],
+      "layout": "calculation-evidence",
+      "kind": "content",
+      "asOf": "2025-09-30情景；本稿计算",
+      "chapterId": "returns"
+    },
+    {
+      "slide": 11,
+      "title": "目录：配置逻辑与研究跟踪",
+      "sourcePages": [],
+      "layout": "standard-toc",
+      "kind": "toc",
+      "chapterId": "allocation",
+      "activeChapterId": "allocation"
+    },
+    {
+      "slide": 12,
+      "title": "资产预期回报与配置角色",
+      "sourcePages": [
+        15,
+        18,
+        26
+      ],
+      "layout": "left-text-right-visual",
+      "kind": "content",
+      "asOf": "VCMM模拟截至2025-10-31",
+      "chapterId": "allocation"
+    },
+    {
+      "slide": 13,
+      "title": "跨情景的配置角色矩阵",
+      "sourcePages": [
+        15,
+        18,
+        19
+      ],
+      "layout": "full-width-table",
+      "kind": "content",
+      "asOf": "本稿研读判断，依据2025-12报告",
+      "chapterId": "allocation"
+    },
+    {
+      "slide": 14,
+      "title": "观察指标与风险边界",
+      "sourcePages": [
+        9,
+        12,
+        17,
+        19
+      ],
+      "layout": "research-monitor",
+      "kind": "content",
+      "asOf": "数据日期分别见表",
+      "chapterId": "allocation"
+    },
+    {
+      "slide": 15,
+      "title": "研究提要与结论",
+      "sourcePages": [
+        2,
+        9,
+        15,
+        17,
+        18,
+        26
+      ],
+      "layout": "synthesis-flow",
+      "kind": "content",
+      "asOf": "本稿研究提要",
+      "chapterId": "allocation"
+    },
+    {
+      "slide": 16,
+      "title": "谢谢",
+      "sourcePages": [],
+      "layout": "standard-closing",
+      "kind": "closing"
+    }
+  ],
+  "editableObjects": {
+    "nativeCharts": 9,
+    "nativeTables": 6,
+    "nativeText": true,
+    "nativeChartEmbeddedWorkbooks": 9,
+    "nativeTocTables": 3,
+    "nativeResearchTables": 3
+  },
+  "validation": {
+    "powerPointVersion": "16.74",
+    "nativeOpenedWithoutRepair": true,
+    "nativePagesInspected": 16,
+    "pdfPagesInspected": 16,
+    "templateCoverExactMatch": true,
+    "sourceNumbersVerified": true,
+    "packageIntegrityErrors": 0,
+    "deliveryErrors": 0,
+    "layoutErrors": 0,
+    "readabilityErrors": 0,
+    "typographyErrors": 0,
+    "writingStyleErrors": 0,
+    "privacyErrors": 0,
+    "nativeTableTextRunsChecked": 65,
+    "encodedTextScriptsChecked": 414,
+    "qaEvidenceDirectory": "output/home-presentation-rich-qa-20261024",
+    "nativeVisualReview": "passed",
+    "independentPdfVisualReview": "review-required-for-toc-separators",
+    "independentPdfIsDeliverable": false,
+    "independentPdfLimitation": "LibreOffice未显示目录前两行下边，PowerPoint16.74原生三条单线正确。"
+  },
+  "presentationBytes": 769660,
+  "chapters": [
+    {
+      "id": "cycle",
+      "title": "增长与投资周期",
+      "directorySlide": 2,
+      "contentSlides": [
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "returns",
+      "title": "AI情景与资本回报",
+      "directorySlide": 7,
+      "contentSlides": [
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": "allocation",
+      "title": "配置逻辑与研究跟踪",
+      "directorySlide": 11,
+      "contentSlides": [
+        12,
+        13,
+        14,
+        15
+      ]
+    }
+  ],
+  "figures": [
+    {
+      "id": "macro-growth",
+      "presentationSlide": 4,
+      "sourcePages": [
+        2
+      ],
+      "asOf": "2025-12-10",
+      "unit": "%",
+      "categories": [
+        "美国",
+        "欧元区",
+        "中国"
+      ],
+      "series": [
+        {
+          "name": "GDP增长",
+          "values": [
+            2.25,
+            1.2,
+            4.5
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": 0,
+        "max": 5,
+        "majorUnit": 1
+      },
+      "comment": "美国为2026Q4对2025Q4同比；欧元区和中国为全年GDP增速。",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "report-data",
+      "forecast": true
+    },
+    {
+      "id": "macro-inflation",
+      "presentationSlide": 4,
+      "sourcePages": [
+        2
+      ],
+      "asOf": "2025-12-10",
+      "unit": "%",
+      "categories": [
+        "美国",
+        "欧元区",
+        "中国"
+      ],
+      "series": [
+        {
+          "name": "核心通胀",
+          "values": [
+            2.6,
+            1.8,
+            1
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": 0,
+        "max": 3,
+        "majorUnit": 1
+      },
+      "comment": "美国和欧元区为四季度同比，中国为全年均值；美国core PCE、其余core CPI。",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "report-data",
+      "forecast": true
+    },
+    {
+      "id": "capex-cash",
+      "presentationSlide": 5,
+      "sourcePages": [
+        9
+      ],
+      "asOf": "2025-11-05",
+      "unit": "万亿美元",
+      "categories": [
+        "资本开支",
+        "可用资金"
+      ],
+      "series": [
+        {
+          "name": "累计规模",
+          "values": [
+            2.1,
+            2.4
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": 0,
+        "max": 3,
+        "majorUnit": 1
+      },
+      "comment": "PDF第9页图标为回购后留存现金流，脚注6说明2.4万亿合计含存量现金。本稿使用可用资金口径，不解释成纯现金流覆盖。",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "report-data",
+      "forecast": true
+    },
+    {
+      "id": "labor-jobs",
+      "presentationSlide": 6,
+      "sourcePages": [
+        12
+      ],
+      "asOf": "2025-08-31",
+      "unit": "%",
+      "categories": [
+        "高AI暴露职业",
+        "其余职业"
+      ],
+      "series": [
+        {
+          "name": "2015–2019",
+          "values": [
+            1,
+            1.1
+          ]
+        },
+        {
+          "name": "2023Q2–2025Q2",
+          "values": [
+            1.7,
+            0.8
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": 0,
+        "max": 2,
+        "majorUnit": 0.5
+      },
+      "comment": "",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "report-data",
+      "forecast": false
+    },
+    {
+      "id": "labor-wages",
+      "presentationSlide": 6,
+      "sourcePages": [
+        12
+      ],
+      "asOf": "2025-08-31",
+      "unit": "%",
+      "categories": [
+        "高AI暴露职业",
+        "其余职业"
+      ],
+      "series": [
+        {
+          "name": "2015–2019",
+          "values": [
+            0.1,
+            0.5
+          ]
+        },
+        {
+          "name": "2023Q2–2025Q2",
+          "values": [
+            3.8,
+            0.7
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": 0,
+        "max": 4,
+        "majorUnit": 1
+      },
+      "comment": "",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "report-data",
+      "forecast": false
+    },
+    {
+      "id": "scenario-range",
+      "presentationSlide": 8,
+      "sourcePages": [
+        17
+      ],
+      "asOf": "2025-09-30",
+      "unit": "%",
+      "categories": [
+        "超预期 10%",
+        "基准 60%",
+        "失望 30%"
+      ],
+      "series": [
+        {
+          "name": "区间下限",
+          "values": [
+            8,
+            5,
+            -2
+          ]
+        },
+        {
+          "name": "区间上限",
+          "values": [
+            10,
+            7,
+            2
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": -4,
+        "max": 12,
+        "majorUnit": 4
+      },
+      "comment": "",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "report-data",
+      "forecast": true
+    },
+    {
+      "id": "npv-sensitivity",
+      "presentationSlide": 9,
+      "sourcePages": [
+        17
+      ],
+      "asOf": "2025-10-25",
+      "unit": "万亿美元",
+      "categories": [
+        "高折现/弱",
+        "高折现/强",
+        "低折现/弱",
+        "低折现/强"
+      ],
+      "series": [
+        {
+          "name": "净现值",
+          "values": [
+            -2.7,
+            -1.7,
+            -1,
+            4.1
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": -4,
+        "max": 6,
+        "majorUnit": 2
+      },
+      "comment": "",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "report-data",
+      "forecast": true
+    },
+    {
+      "id": "midpoint-contributions",
+      "presentationSlide": 10,
+      "sourcePages": [
+        17
+      ],
+      "asOf": "2025-09-30情景；本稿计算",
+      "unit": "百分点",
+      "categories": [
+        "超预期",
+        "基准",
+        "失望"
+      ],
+      "series": [
+        {
+          "name": "贡献",
+          "values": [
+            0.9,
+            3.6,
+            0
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": 0,
+        "max": 4,
+        "majorUnit": 1
+      },
+      "comment": "原始情景概率×回报区间中点，非VCMM模型重算",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "reading-calculation",
+      "forecast": true
+    },
+    {
+      "id": "asset-returns",
+      "presentationSlide": 12,
+      "sourcePages": [
+        15,
+        18
+      ],
+      "asOf": "VCMM 2025-10-31",
+      "unit": "%",
+      "categories": [
+        "美国优质债券",
+        "美国价值股",
+        "非美股票"
+      ],
+      "series": [
+        {
+          "name": "预测回报",
+          "values": [
+            4,
+            7,
+            6
+          ]
+        }
+      ],
+      "valueAxis": {
+        "min": 0,
+        "max": 8,
+        "majorUnit": 2
+      },
+      "comment": "约数；十年期预期回报率。6%对应非美股票整体，不是非美成熟市场单独预测。VCMM模拟截至2025-10-31。",
+      "editable": true,
+      "nativeObject": "chart",
+      "evidenceType": "report-data",
+      "forecast": true
+    }
+  ],
+  "dataSummary": {
+    "macro": {
+      "sourcePages": [
+        2
+      ],
+      "asOf": "2025-12-10",
+      "forecastYear": 2026,
+      "regions": [
+        "美国",
+        "欧元区",
+        "中国"
+      ],
+      "realGdpGrowthPct": [
+        2.25,
+        1.2,
+        4.5
+      ],
+      "coreInflationPct": [
+        2.6,
+        1.8,
+        1.0
+      ],
+      "gdpBasis": [
+        "四季度同比",
+        "全年同比",
+        "全年同比"
+      ],
+      "inflationBasis": [
+        "四季度core PCE同比",
+        "四季度core CPI同比",
+        "全年core CPI均值"
+      ]
+    },
+    "capitalSpending": {
       "sourcePages": [
         5,
         9
       ],
       "asOf": "2025-11-05",
-      "layout": "left-text-right-visual"
+      "period": "2025–2027",
+      "unit": "USD trillion",
+      "capex": 2.1,
+      "availableFunding": 2.4,
+      "fundingBasis": "原报告第9页脚注6：回购后留存现金流及存量现金；图示资金口径",
+      "readingCoverageRatio": 1.1428571428571428,
+      "coverageIsReadingCalculation": true
     },
-    {
-      "slide": 4,
-      "title": "2026年基准宏观预测",
+    "labor": {
       "sourcePages": [
-        2
+        12
       ],
-      "asOf": "2025-12-10",
-      "layout": "full-width-table"
+      "asOf": "2025-08-31",
+      "periods": [
+        "2015–2019",
+        "2023Q2–2025Q2"
+      ],
+      "unit": "annualized percent",
+      "groups": [
+        "高AI暴露职业",
+        "其余职业"
+      ],
+      "jobsPre": [
+        1.0,
+        1.1
+      ],
+      "jobsPost": [
+        1.7,
+        0.8
+      ],
+      "realWagesPre": [
+        0.1,
+        0.5
+      ],
+      "realWagesPost": [
+        3.8,
+        0.7
+      ],
+      "causalInterpretation": false
     },
-    {
-      "slide": 5,
-      "title": "AI情景与美股长期回报",
+    "equityScenarios": {
       "sourcePages": [
         17
       ],
       "asOf": "2025-09-30",
-      "layout": "left-text-right-visual"
+      "horizonYears": 10,
+      "annualized": true,
+      "probabilityPct": [
+        10,
+        60,
+        30
+      ],
+      "returnLowerPct": [
+        8,
+        5,
+        -2
+      ],
+      "returnUpperPct": [
+        10,
+        7,
+        2
+      ],
+      "reportedWeightedReturnRangePct": [
+        4,
+        5
+      ]
     },
-    {
-      "slide": 6,
-      "title": "相对配置逻辑",
+    "npvSensitivity": {
+      "sourcePages": [
+        17
+      ],
+      "asOf": "2025-10-25",
+      "unit": "USD trillion",
+      "discountRatePct": [
+        25,
+        10
+      ],
+      "businessValueCapturePct": [
+        20,
+        70
+      ],
+      "combinations": [
+        "25%/20%",
+        "25%/70%",
+        "10%/20%",
+        "10%/70%"
+      ],
+      "npv": [
+        -2.7,
+        -1.7,
+        -1.0,
+        4.1
+      ],
+      "baselineNpv": -0.9,
+      "baselineDiscountRatePct": 15,
+      "baselineValueCapturePct": 40,
+      "investmentIncludingRAndD": 3.1,
+      "investmentPeriod": "2025–2027",
+      "expectedEbitDiscountYears": 25,
+      "depreciationYears": 7,
+      "assumedEbitdaMarginPct": 37,
+      "perimeterDiffersFromCapex21": true
+    },
+    "longTermReturns": {
       "sourcePages": [
         15,
-        18
-      ],
-      "asOf": "2025-12",
-      "layout": "left-text-right-visual"
-    },
-    {
-      "slide": 7,
-      "title": "结论与后续观察",
-      "sourcePages": [
-        17,
         18,
         26
       ],
-      "asOf": "2025-12",
-      "layout": "synthesis-matrix"
+      "modelSimulationAsOf": "2025-10-31",
+      "horizonYears": 10,
+      "annualized": true,
+      "approximate": true,
+      "assets": [
+        "美国优质债券",
+        "美国价值股",
+        "非美股票整体"
+      ],
+      "expectedReturnPct": [
+        4,
+        7,
+        6
+      ],
+      "nonUsDevelopedMarketReturnNotSeparatelyEstimated": true
     },
-    {
-      "slide": 8,
-      "title": "谢谢",
-      "sourcePages": [],
-      "layout": "standard-closing"
+    "readingCalculations": [
+      {
+        "presentationSlide": 5,
+        "expression": "2.4 / 2.1",
+        "value": 1.1428571428571428,
+        "display": "约1.14倍",
+        "kind": "funding-coverage"
+      },
+      {
+        "presentationSlide": 10,
+        "expression": "10% × 9% + 60% × 6% + 30% × 0%",
+        "valuePct": 4.5,
+        "contributionPercentagePoints": [
+          0.9,
+          3.6,
+          0
+        ],
+        "kind": "probability-weighted-range-midpoints",
+        "notVcmmRecalculation": true
+      }
+    ],
+    "researchJudgments": {
+      "presentationSlides": [
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        12,
+        13,
+        14,
+        15
+      ],
+      "author": "本稿研读分析",
+      "causalEvidenceClaimed": false,
+      "specificInvestmentOrders": false,
+      "inventedVolatilityOrValuationMultiples": false
     }
-  ],
-  "editableObjects": {
-    "nativeCharts": 1,
-    "nativeTables": 3,
-    "nativeText": true
   },
-  "validation": {
-    "powerPointVersion": "16.74",
-    "nativeOpenedWithoutRepair": true,
-    "nativePagesInspected": 8,
-    "pdfPagesInspected": 8,
-    "templateCoverExactMatch": true,
-    "sourceNumbersVerified": true
+  "source": {
+    "file": "source-report.pdf",
+    "sha256": "af3b10b6b05f8ee4734b35bfaeb3f272a370133a7949b7203f87cacf4c9de229",
+    "title": "Vanguard economic and market outlook for 2026: AI exuberance: Economic upside, stock market downside",
+    "publisher": "Vanguard",
+    "date": "2025-12-10",
+    "url": "https://corporate.vanguard.com/content/dam/corp/research/pdf/isg_vemo_2026.pdf",
+    "pages": 28
+  },
+  "presentation": {
+    "file": "company-research-briefing.pptx",
+    "sha256": "6cc70ec5fccfa8f376d4f6e28d01861e976204c7de53b791bf3ecbdbb18f7748",
+    "title": "人工智能周期与资产配置",
+    "pages": 16,
+    "outline": [
+      {
+        "slide": 1,
+        "title": "人工智能周期与资产配置",
+        "sourcePages": [
+          1
+        ],
+        "layout": "standard-cover",
+        "kind": "cover"
+      },
+      {
+        "slide": 2,
+        "title": "目录：增长与投资周期",
+        "sourcePages": [],
+        "layout": "standard-toc",
+        "kind": "toc",
+        "chapterId": "cycle",
+        "activeChapterId": "cycle"
+      },
+      {
+        "slide": 3,
+        "title": "研报结论与研读框架",
+        "sourcePages": [
+          2,
+          9,
+          15,
+          17
+        ],
+        "layout": "evidence-summary",
+        "kind": "content",
+        "asOf": "宏观2025-12-10；情景2025-09-30",
+        "chapterId": "cycle"
+      },
+      {
+        "slide": 4,
+        "title": "增长与通胀的区域差异",
+        "sourcePages": [
+          2
+        ],
+        "layout": "dual-chart",
+        "kind": "content",
+        "asOf": "2025-12-10",
+        "chapterId": "cycle"
+      },
+      {
+        "slide": 5,
+        "title": "资本开支与资金覆盖",
+        "sourcePages": [
+          5,
+          9
+        ],
+        "layout": "left-text-right-visual",
+        "kind": "content",
+        "asOf": "2025-11-05",
+        "chapterId": "cycle"
+      },
+      {
+        "slide": 6,
+        "title": "劳动力证据与扩散检验",
+        "sourcePages": [
+          12
+        ],
+        "layout": "dual-chart",
+        "kind": "content",
+        "asOf": "2025-08-31",
+        "chapterId": "cycle"
+      },
+      {
+        "slide": 7,
+        "title": "目录：AI情景与资本回报",
+        "sourcePages": [],
+        "layout": "standard-toc",
+        "kind": "toc",
+        "chapterId": "returns",
+        "activeChapterId": "returns"
+      },
+      {
+        "slide": 8,
+        "title": "AI情景的美股回报区间",
+        "sourcePages": [
+          17
+        ],
+        "layout": "left-text-right-visual",
+        "kind": "content",
+        "asOf": "2025-09-30",
+        "chapterId": "returns"
+      },
+      {
+        "slide": 9,
+        "title": "资本回报对关键假设敏感",
+        "sourcePages": [
+          17
+        ],
+        "layout": "left-text-right-visual",
+        "kind": "content",
+        "asOf": "2025-10-25",
+        "chapterId": "returns"
+      },
+      {
+        "slide": 10,
+        "title": "情景中点加权的研读计算",
+        "sourcePages": [
+          17
+        ],
+        "layout": "calculation-evidence",
+        "kind": "content",
+        "asOf": "2025-09-30情景；本稿计算",
+        "chapterId": "returns"
+      },
+      {
+        "slide": 11,
+        "title": "目录：配置逻辑与研究跟踪",
+        "sourcePages": [],
+        "layout": "standard-toc",
+        "kind": "toc",
+        "chapterId": "allocation",
+        "activeChapterId": "allocation"
+      },
+      {
+        "slide": 12,
+        "title": "资产预期回报与配置角色",
+        "sourcePages": [
+          15,
+          18,
+          26
+        ],
+        "layout": "left-text-right-visual",
+        "kind": "content",
+        "asOf": "VCMM模拟截至2025-10-31",
+        "chapterId": "allocation"
+      },
+      {
+        "slide": 13,
+        "title": "跨情景的配置角色矩阵",
+        "sourcePages": [
+          15,
+          18,
+          19
+        ],
+        "layout": "full-width-table",
+        "kind": "content",
+        "asOf": "本稿研读判断，依据2025-12报告",
+        "chapterId": "allocation"
+      },
+      {
+        "slide": 14,
+        "title": "观察指标与风险边界",
+        "sourcePages": [
+          9,
+          12,
+          17,
+          19
+        ],
+        "layout": "research-monitor",
+        "kind": "content",
+        "asOf": "数据日期分别见表",
+        "chapterId": "allocation"
+      },
+      {
+        "slide": 15,
+        "title": "研究提要与结论",
+        "sourcePages": [
+          2,
+          9,
+          15,
+          17,
+          18,
+          26
+        ],
+        "layout": "synthesis-flow",
+        "kind": "content",
+        "asOf": "本稿研究提要",
+        "chapterId": "allocation"
+      },
+      {
+        "slide": 16,
+        "title": "谢谢",
+        "sourcePages": [],
+        "layout": "standard-closing",
+        "kind": "closing"
+      }
+    ]
   }
 }
