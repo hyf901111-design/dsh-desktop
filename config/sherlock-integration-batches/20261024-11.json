@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-11",
+  "branch": "codex/integration/20261024-11",
+  "baseMainCommit": "8f58ce7b9e02b81a649ab6b4f3649b24304db907",
+  "expectedMainCommit": "8f58ce7b9e02b81a649ab6b4f3649b24304db907",
+  "createdAt": "2026-10-24T04:45:03.252Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复教程冷恢复并优化公司PPT技能的文本排版门禁",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "8f58ce7b9e02b81a649ab6b4f3649b24304db907",
+        "tipCommit": "020930be467a21da2c2e9d4780f0a55f7ad37899",
+        "commits": [
+          {
+            "commit": "5b28f2902a4c0a7adc8a56e3b36cea7f7eb45a82",
+            "parents": [
+              "8f58ce7b9e02b81a649ab6b4f3649b24304db907"
+            ],
+            "subject": "测试：覆盖首页示例的真实工作区传输契约"
+          },
+          {
+            "commit": "2132a202cb7ed4c530ade5a581458ac38a08ab1b",
+            "parents": [
+              "5b28f2902a4c0a7adc8a56e3b36cea7f7eb45a82"
+            ],
+            "subject": "修复：首页PPT示例重启后的会话恢复与工作区绑定"
+          },
+          {
+            "commit": "b761a9f6903dfb5b3daac1be947d5297740a79f4",
+            "parents": [
+              "2132a202cb7ed4c530ade5a581458ac38a08ab1b"
+            ],
+            "subject": "修正内置PPT技能的封面空白、表格对齐与说明区顶部排版"
+          },
+          {
+            "commit": "020930be467a21da2c2e9d4780f0a55f7ad37899",
+            "parents": [
+              "b761a9f6903dfb5b3daac1be947d5297740a79f4"
+            ],
+            "subject": "修复：首页示例工作区测试的真实类型契约"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/home-guide-session-catalog.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/authoring-guide.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/cover-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/delivery-111.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/design-system.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/layout-design-playbook.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/runtime-compatibility.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/table-layout-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/typography-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_cover.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_delivery.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_readability.py"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-text-layout.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-session-catalog.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-workspace.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip补丁管线、50项直接测试、类型和diff检查通过；日志/tmp/ppt-kimi-final-*-20261024.log。",
+            "verifiedCommit": "020930be467a21da2c2e9d4780f0a55f7ad37899",
+            "completedAt": "2026-10-24T04:44:32.685418+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-session-catalog.test.js",
+              "test/home-guide-workspace.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/home-presentation-host.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/efund-ppt-text-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip补丁管线、50项直接测试、类型和diff检查通过；日志/tmp/ppt-kimi-final-*-20261024.log。",
+            "verifiedCommit": "020930be467a21da2c2e9d4780f0a55f7ad37899",
+            "completedAt": "2026-10-24T04:44:32.685418+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip补丁管线、50项直接测试、类型和diff检查通过；日志/tmp/ppt-kimi-final-*-20261024.log。",
+            "verifiedCommit": "020930be467a21da2c2e9d4780f0a55f7ad37899",
+            "completedAt": "2026-10-24T04:44:32.685418+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip补丁管线、50项直接测试、类型和diff检查通过；日志/tmp/ppt-kimi-final-*-20261024.log。",
+            "verifiedCommit": "020930be467a21da2c2e9d4780f0a55f7ad37899",
+            "completedAt": "2026-10-24T04:44:32.685418+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "本批次修复真实Host记录的unknown home-guide/presentation冷恢复错误，并按用户PowerPoint截图修正技能/QA；真实冷恢复回归和旧成稿XML均复现并验证；正式包回访和新Kimi任务在main构建后继续，不冒充已通过。"
+        },
+        "acceptanceCriteria": [
+          "同一PPT示例的已落盘事件可由两套真实Session目录读回并绑定原身份，未知必需事件继续拒绝。",
+          "公司技能禁止封面槽位首尾空白、描述表格表头垂直居中且与正文同列左对齐/内边距一致、左说明正文顶部排列并核对实际文字间距。",
+          "不修改已有成品冒充Kimi生成；用户要求真实EWork KimiK3任务和代表性PPT仍待本地构建后执行。",
+          "只从干净main构建正式身份本地客户端，不发布/不推送/不加版本号/不公证。"
+        ],
+        "risks": [
+          "新包原生PPT回访、真实Kimi成稿和教程素材替换尚未完成。"
+        ],
+        "generatedAt": "2026-10-24T04:44:32.685418+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-session-catalog.test.js",
+        "test/home-guide-workspace.test.ts",
+        "test/home-guide-session.test.ts",
+        "test/home-presentation-host.test.js",
+        "test/home-presentation-runtime.test.js",
+        "test/efund-ppt-text-layout.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
