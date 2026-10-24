@@ -6,12 +6,15 @@ non-hidden presentation slides. It does not measure chart quality or replace
 render review. Shape-based infographics require no native charts by default.
 """
 import argparse
+import hashlib
+from io import BytesIO
 import json
 import posixpath
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from zipfile import ZipFile
 import xml.etree.ElementTree as ET
+from efund_chart_properties import audit_chart_properties
 
 P = 'http://schemas.openxmlformats.org/presentationml/2006/main'
 C = 'http://schemas.openxmlformats.org/drawingml/2006/chart'
@@ -43,7 +46,7 @@ def resolve_target(part, target):
 
 def audit(pptx, require_clean_slide_tree=False, min_native_charts=None):
     issues = []
-    result = {'ok': False, 'issues': issues, 'slideCount': 0,
+    result = {'ok': False, 'issues': issues, 'sha256': None, 'slideCount': 0,
               'visibleSlideCount': 0, 'nativeChartCount': 0,
               'chartObjectCount': 0, 'referencedChartParts': [],
               'unlistedSlideParts': [], 'unlistedSlideRelationships': []}
@@ -56,7 +59,10 @@ def audit(pptx, require_clean_slide_tree=False, min_native_charts=None):
     if not valid_minimum:
         add('native-chart-minimum-invalid')
     try:
-        with ZipFile(pptx) as archive:
+        snapshot = Path(pptx).read_bytes()
+        result['sha256'] = hashlib.sha256(snapshot).hexdigest()
+        with ZipFile(BytesIO(snapshot)) as archive:
+            issues.extend(audit_chart_properties(archive))
             members = set(archive.namelist())
             roots = {}
 

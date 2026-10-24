@@ -152,3 +152,105 @@ with tempfile.TemporaryDirectory() as d:
 print('passed')
 ` ).trim()).toBe('passed')
 })
+
+const axes = String.raw`
+def chart_axes(first='-2068027336',second='-2113994440'):
+ return f'<c:chartSpace xmlns:c="{C}"><c:chart><c:plotArea><c:barChart><c:axId val="{first}"/><c:axId val="{second}"/></c:barChart><c:catAx><c:axId val="{first}"/><c:crossAx val="{second}"/></c:catAx><c:valAx><c:axId val="{second}"/><c:crossAx val="{first}"/><c:crossesAt val="-3"/></c:valAx></c:plotArea></c:chart></c:chartSpace>'
+`
+it('rejects the actual signed axis IDs and unsigned wrap overflow in every chart, without requiring a chart quota',()=>{
+ expect(python(axes+String.raw`
+for values in [('-2068027336','-2113994440'),('2226939960','2180972856')]:
+ for mode in ('visible','hidden','orphan'):
+  p=package(charts={'slide1.xml':['chartA.xml']} if mode!='orphan' else {},hidden=('slide1.xml',) if mode=='hidden' else ())
+  p['ppt/charts/chartA.xml']=chart_axes(*values)
+  r=check(p)
+  assert not r['ok'] and 'chart-axis-id-out-of-range' in codes(r), (mode,r)
+  errors=[i for i in r['issues'] if i['code']=='chart-axis-id-out-of-range']
+  assert len(errors)==6 and all(i['part']=='ppt/charts/chartA.xml' and i['xpath'] for i in errors), errors
+print('passed')
+`).trim()).toBe('passed')
+})
+it('runs the same axis safety guard in structure QA and binds the package result to the inspected bytes',()=>{
+ expect(python(axes+String.raw`
+import hashlib,re
+from qa_efund_pptx import analyze
+with tempfile.TemporaryDirectory() as d:
+ path=Path(d)/'deck.pptx';p=package(charts={'slide1.xml':['chartA.xml']});p['ppt/charts/chartA.xml']=chart_axes()
+ p['ppt/presentation.xml']=p['ppt/presentation.xml'].replace('</p:presentation>','<p:sldSz cx="9144000" cy="5143500"/></p:presentation>')
+ with zipfile.ZipFile(path,'w') as z:
+  for name,data in p.items():z.writestr(name,data)
+ assert 'chart-axis-id-out-of-range' in codes(analyze(path))
+ assert audit(path)['sha256']==hashlib.sha256(path.read_bytes()).hexdigest()
+print('passed')
+`).trim()).toBe('passed')
+})
+it('hashes and audits one byte snapshot when a generator replaces the path during validation',()=>{
+ expect(python(axes+String.raw`
+import io,hashlib
+from unittest.mock import patch
+import check_efund_package as module
+def packed(parts):
+ data=io.BytesIO()
+ with zipfile.ZipFile(data,'w') as z:
+  for name,value in parts.items():z.writestr(name,value)
+ return data.getvalue()
+bad=package(charts={'slide1.xml':['chartA.xml']});bad['ppt/charts/chartA.xml']=chart_axes()
+good={**bad,'ppt/charts/chartA.xml':chart_axes('1','2')}
+bad_bytes,good_bytes=packed(bad),packed(good)
+with tempfile.TemporaryDirectory() as d:
+ path=Path(d)/'live.pptx';path.write_bytes(bad_bytes);original_read=Path.read_bytes
+ def read_and_replace(self):
+  snapshot=original_read(self)
+  if self==path:self.write_bytes(good_bytes)
+  return snapshot
+ with patch.object(Path,'read_bytes',read_and_replace):r=module.audit(path)
+ assert r['sha256']==hashlib.sha256(bad_bytes).hexdigest()
+ assert not r['ok'] and 'chart-axis-id-out-of-range' in codes(r),r
+ assert path.read_bytes()==good_bytes
+print('passed')
+`).trim()).toBe('passed')
+})
+it('reassigns declared axes consistently to small positive IDs and preserves negative data and legal charts',()=>{
+ expect(python(axes+String.raw`
+import xml.etree.ElementTree as ET
+from efund_chart_properties import normalize_axis_ids,chart_axis_issues
+for values in [('-2068027336','-2113994440'),('2226939960','2180972856')]:
+ root=ET.fromstring(chart_axes(*values))
+ # A data value with a negative sign is unrelated to the axis identity.
+ data=ET.SubElement(root.find('.//{'+C+'}barChart'),'{'+C+'}ser')
+ ET.SubElement(ET.SubElement(data,'{'+C+'}val'),'{'+C+'}v').text='-3'
+ assert len(chart_axis_issues(root,'chart.xml'))==6
+ assert normalize_axis_ids(root)==6
+ assert [x.get('val') for x in root.iter() if x.tag in ('{'+C+'}axId','{'+C+'}crossAx')]==['1','2','1','2','2','1']
+ assert root.find('.//{'+C+'}crossesAt').get('val')=='-3'
+ assert root.find('.//{'+C+'}ser/{'+C+'}val/{'+C+'}v').text=='-3'
+ assert not chart_axis_issues(root,'chart.xml')
+ after=ET.tostring(root);assert normalize_axis_ids(root)==0 and ET.tostring(root)==after
+for values in [('2118791784','2140495176'),('0','2147483647')]:
+ legal=ET.fromstring(chart_axes(*values));before=ET.tostring(legal)
+ assert normalize_axis_ids(legal)==0 and ET.tostring(legal)==before
+print('passed')
+`).trim()).toBe('passed')
+})
+it('refuses ambiguous axis graphs and malformed values atomically instead of guessing or taking absolute values',()=>{
+ expect(python(axes+String.raw`
+import xml.etree.ElementTree as ET
+from efund_chart_properties import normalize_axis_ids,chart_axis_issues
+for value in ('','abc','1.5','4294967296','-2147483649','１２'):
+ root=ET.fromstring(chart_axes());root.find('.//{'+C+'}crossAx').set('val',value);before=ET.tostring(root)
+ assert chart_axis_issues(root,'chart.xml')
+ try:normalize_axis_ids(root);assert False,value
+ except ValueError:pass
+ assert ET.tostring(root)==before
+for mode in ('duplicate','unresolved','missing'):
+ root=ET.fromstring(chart_axes())
+ if mode=='duplicate':root.find('.//{'+C+'}valAx/{'+C+'}axId').set('val','-2068027336')
+ if mode=='unresolved':root.find('.//{'+C+'}crossAx').set('val','12345')
+ if mode=='missing':root.find('.//{'+C+'}catAx').remove(root.find('.//{'+C+'}catAx/{'+C+'}axId'))
+ before=ET.tostring(root)
+ try:normalize_axis_ids(root);assert False,mode
+ except ValueError:pass
+ assert ET.tostring(root)==before
+print('passed')
+`).trim()).toBe('passed')
+})
