@@ -536,6 +536,128 @@
           "当前PPT为真实任务草稿且尚有待修订项目，未将旧Codex文件冒充EWork新成品。"
         ],
         "generatedAt": "2026-10-24T06:41:38.310644+00:00"
+      },
+      "merged": {
+        "mergeCommit": "08971f31db37ae9c19e54ed3db93a17020fef3c1",
+        "verificationCommit": "08971f31db37ae9c19e54ed3db93a17020fef3c1",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "08971f31db37ae9c19e54ed3db93a17020fef3c1",
+            "completedAt": "2026-10-24T06:52:19.017Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node --check node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js",
+            "verifiedCommit": "08971f31db37ae9c19e54ed3db93a17020fef3c1",
+            "completedAt": "2026-10-24T06:52:19.017Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/client-capabilities.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capability-transport.test.ts",
+              "test/component-library-store.test.ts",
+              "test/composer-inline-tags-browser.test.js",
+              "test/conversation-component-contract.test.js",
+              "test/conversation-component-interaction.test.js",
+              "test/conversation-component-ipc.test.ts",
+              "test/conversation-component-offline.test.js",
+              "test/conversation-component-receipt-recovery.test.js",
+              "test/conversation-component-reference.test.js",
+              "test/conversation-component-renderer.test.js",
+              "test/conversation-component-service.test.ts",
+              "test/conversation-component-store.test.ts",
+              "test/conversation-components-policy.test.js",
+              "test/custom-component-library-client.test.js",
+              "test/efund-ppt-package.test.js",
+              "test/efund-ppt-rendered-fit.test.js",
+              "test/figma-inline-references-patch.test.js",
+              "test/financial-widget-client.test.js",
+              "test/notes-component-library.test.ts",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-workbench-feedback.test.js",
+              "test/figma-inline-references-input.test.js",
+              "test/figma-inline-references-projection.test.js",
+              "test/skill-command-patch.test.js",
+              "test/skill-command-menu.test.ts",
+              "test/integration-skill-composer.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/home-skill-chip-layout-browser.test.js",
+              "test/efund-ppt-107.test.js",
+              "test/efund-ppt-108.test.js",
+              "test/efund-ppt-109.test.js",
+              "test/efund-ppt-110.test.js",
+              "test/efund-ppt-111.test.js",
+              "test/efund-ppt-layout-lint.test.ts",
+              "test/efund-ppt-text-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/client-capabilities.test.js test/client-capability-service.test.ts test/client-capability-transport.test.ts test/component-library-store.test.ts test/composer-inline-tags-browser.test.js test/conversation-component-contract.test.js test/conversation-component-interaction.test.js test/conversation-component-ipc.test.ts test/conversation-component-offline.test.js test/conversation-component-receipt-recovery.test.js test/conversation-component-reference.test.js test/conversation-component-renderer.test.js test/conversation-component-service.test.ts test/conversation-component-store.test.ts test/conversation-components-policy.test.js test/custom-component-library-client.test.js test/efund-ppt-package.test.js test/efund-ppt-rendered-fit.test.js test/figma-inline-references-patch.test.js test/financial-widget-client.test.js test/notes-component-library.test.ts test/research-canvas-clipboard.test.ts test/research-workbench-feedback.test.js test/figma-inline-references-input.test.js test/figma-inline-references-projection.test.js test/skill-command-patch.test.js test/skill-command-menu.test.ts test/integration-skill-composer.test.ts test/slash-menu-expanded.test.js test/home-skill-chip-layout-browser.test.js test/efund-ppt-107.test.js test/efund-ppt-108.test.js test/efund-ppt-109.test.js test/efund-ppt-110.test.js test/efund-ppt-111.test.js test/efund-ppt-layout-lint.test.ts test/efund-ppt-text-layout.test.js --maxWorkers=2",
+            "verifiedCommit": "08971f31db37ae9c19e54ed3db93a17020fef3c1",
+            "completedAt": "2026-10-24T06:52:19.017Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "-t",
+              "persists an independent copied linked-news instance",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/research-canvas-clipboard-ui.test.ts -t persists an independent copied linked-news instance --maxWorkers=2",
+            "verifiedCommit": "08971f31db37ae9c19e54ed3db93a17020fef3c1",
+            "completedAt": "2026-10-24T06:52:19.017Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "08971f31db37ae9c19e54ed3db93a17020fef3c1",
+            "completedAt": "2026-10-24T06:52:19.017Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "08971f31db37ae9c19e54ed3db93a17020fef3c1",
+            "completedAt": "2026-10-24T06:52:19.017Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T06:52:19.017Z"
       }
     }
   ],
