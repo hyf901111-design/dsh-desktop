@@ -1,4 +1,4 @@
-import {noteCapabilityReceiptMessage} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import {noteCapabilityReceiptMessage} from '../../../packages/dsh-research-task-runtime/client-capability-receipts.js'
 import type {CapabilityStyleEffect,CapabilityCreateEffect,CapabilityDataEffect,CapabilityChallengeConfiguration,CapabilityChallengeEffect,ClientCapabilityArguments} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {NoteContent} from '../../shared/workspace-notes'
