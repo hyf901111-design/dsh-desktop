@@ -354,6 +354,90 @@
           "独立LibreOffice QA PDF目录分隔线与PowerPoint原生渲染存在差异，PDF非交付物，交付PPTX原生正确。"
         ],
         "generatedAt": "2026-10-24T01:25:27.614417+00:00"
+      },
+      "merged": {
+        "mergeCommit": "627851cc89d7f9544608c74e756f8cedcccee5f5",
+        "verificationCommit": "627851cc89d7f9544608c74e756f8cedcccee5f5",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/ensure-local-dependencies.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
+            "verifiedCommit": "627851cc89d7f9544608c74e756f8cedcccee5f5",
+            "completedAt": "2026-10-24T01:28:42.803Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "627851cc89d7f9544608c74e756f8cedcccee5f5",
+            "completedAt": "2026-10-24T01:28:42.803Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-timeline.test.ts",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-browser.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-session.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/home-guide-notes-data.test.ts",
+              "test/home-guide-notes-browser.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-adapter.test.ts",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "test/home-presentation-assets-package.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-timeline.test.ts test/home-guides.test.ts test/home-guides-review.test.ts test/home-guide-native.test.js test/home-guide-native-browser.test.js test/home-guide-native-strip.test.js test/home-guide-session.test.ts test/research-canvas-storage.test.ts test/home-guide-notes-data.test.ts test/home-guide-notes-browser.test.js test/home-guide-notes-shell-browser.test.js test/home-presentation-runtime.test.js test/home-guide-presentation-browser.test.js test/home-guide-presentation-patch.test.js test/home-guide-presentation-adapter.test.ts test/home-guide-presentation-shell-browser.test.js test/home-presentation-assets-package.test.js --maxWorkers=2",
+            "verifiedCommit": "627851cc89d7f9544608c74e756f8cedcccee5f5",
+            "completedAt": "2026-10-24T01:28:42.803Z",
+            "timeoutMs": 360000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "627851cc89d7f9544608c74e756f8cedcccee5f5",
+            "completedAt": "2026-10-24T01:28:42.803Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "627851cc89d7f9544608c74e756f8cedcccee5f5",
+            "completedAt": "2026-10-24T01:28:42.803Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T01:28:42.803Z"
       }
     }
   ],
