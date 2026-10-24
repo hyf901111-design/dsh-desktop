@@ -3,12 +3,16 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { mkdtemp, realpath, rm, mkdir, writeFile, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import * as cordis from '@deepseek-ai/cordis'
 import { Context, Service } from '@deepseek-ai/cordis'
+import * as slots from '@deepseek-ai/dsh-client-ui-slots'
+import { runInNewContext } from 'node:vm'
 import Storage from '@deepseek-ai/dsh-storage'
 import { JsonStorageBackend } from '@deepseek-ai/dsh-storage-json'
 import { DomainFacility } from '@deepseek-ai/dsh-storage-domain'
 import WorkspaceRegistry from '@deepseek-ai/dsh-workspace'
 import { SessionStore, SessionId } from '@deepseek-ai/dsh-session'
+import { JsonlSessionPersistence } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
@@ -17,15 +21,29 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import SessionTitleService from '@deepseek-ai/dsh-session-title'
-import { createApiProxy } from '@deepseek-ai/dsh-host-apiproxy'
+import { createApiProxy, toFetchHandler } from '@deepseek-ai/dsh-host-apiproxy'
 // @ts-expect-error The production runtime is plain JavaScript without declarations.
 import { resolveCapabilityContext } from '../packages/dsh-integration-runtime/context.js'
+// @ts-expect-error The production runtime is plain JavaScript without declarations.
+import { BoardDirectories } from '../packages/dsh-research-task-runtime/board-directories.js'
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => Object.fromEntries(['StateDot','Modal','Button','IconTrashOutline16','Menu','IconPlusOutline16','IconEllipsisOutline16','IconSearchOutline16','IconFolderOpenOutline16','IconEditOutline16','IconTriangleRightFill14'].map(name => [name, () => null])))
 import { createResearchBoardsPage } from '../src/preload/research-boards-ui'
 
 const cleanup: Array<() => Promise<void>> = []
 afterEach(async () => { for (const stop of cleanup.splice(0).reverse()) await stop() })
 function store<T>(value: T) { const listeners = new Set<() => void>(); return { getSnapshot: () => value, subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, set(next: T) { value = next; listeners.forEach(fn => fn()) } } }
+
+async function loadBrowserRuntime(name: string, dependencies: Record<string, unknown> = {}) {
+  const source = await readFile('node_modules/@deepseek-ai/' + name + '/lib/client.js', 'utf8')
+  let descriptor: { factory(require: (id: string) => unknown): any } | undefined
+  runInNewContext(source, { window: { __ModuleLoader__: { load(value: typeof descriptor) { descriptor = value } } }, AbortController, AbortSignal, Response, TextDecoder, URL, console, crypto, queueMicrotask, setTimeout, clearTimeout })
+  if (!descriptor) throw Error('Browser runtime did not register: ' + name)
+  return descriptor.factory(id => { if (id in dependencies) return dependencies[id]; throw Error('Unexpected browser runtime dependency: ' + id) })
+}
+const browserRuntimes = Promise.all([
+  loadBrowserRuntime('dsh-client-connection'),
+  loadBrowserRuntime('dsh-client-runtime', { '@deepseek-ai/cordis': cordis, '@deepseek-ai/dsh-client-ui-slots': slots })
+])
 
 async function fixture(legacyKind?: string) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'home-guide-workspace-'))), ctx = new Context()
@@ -34,34 +52,42 @@ async function fixture(legacyKind?: string) {
   ctx.storage.backend.register('json', backend)
   const domain = new DomainFacility(ctx, { backend: 'json' }); ctx.provide('storageDomain', domain)
   const sessionStore = new SessionStore(ctx)
+  new JsonlSessionPersistence(ctx, { root: join(root, 'history'), compression: 'none' })
   new AgentRegistry(ctx); new LlmRuntime(ctx); new SystemPrompt(ctx, {}); new ToolRuntime(ctx); new SkillRegistry(ctx)
   new AgentLoop(ctx, { agents: [], maxParallelToolCalls: 1 }); new UserQuestionService(ctx)
   new SessionTitleService(ctx, { fallbackMaxWords: 10, fallbackMaxBytes: 100, maxTitleBytes: 256 })
-  ctx.provide('sessionPersistence', { list: async () => sessionStore.list().map(session => session.header) })
   const registry = new WorkspaceRegistry(ctx); await registry[Service.init]()
+  const directories = new BoardDirectories(ctx, join(root, 'directories'))
   const api = createApiProxy(ctx, { cwd: root, defaultModelSelection: () => ({ provider: 'unused', model: 'unused' }) })
   const oldEvent = globalThis.Event, oldDocument = globalThis.document
   const win = new Window({ url: 'http://localhost:43210' }), disk = new Map<string, string>(), opened: string[] = [], calls: any[] = []
   globalThis.Event = win.Event as unknown as typeof Event; globalThis.document = win.document as unknown as Document
   const list = store<any>({ current: 'original', byId: { original: { id: 'original', title: '用户原会话', cwd: root, blank: false } } })
   let sequence = 0, emit: (event: any) => void = () => {}, failCreate = false, failAttach = false, workspaceGate = Promise.resolve(), hostClosed = false
-  const closeHost = async () => { if (hostClosed) return; hostClosed = true; await ctx.fiber.dispose(); await domain.closeAll(); await backend.close() }
+  const closeHost = async () => { if (hostClosed) return; hostClosed = true; directories.dispose(); await ctx.fiber.dispose(); await domain.closeAll(); await backend.close() }
   const state: any = { version: 1, eventSeq: 1, account: { status: 'ready', generation: 1, user: { userId: 'owner' } }, favorites: [], boards: [], current: null, recoveries: [], notifications: { cursor: 0, unreadCount: 0, pendingCount: 0, notifications: [] } }
-  const request = (handler: any, payload: any) => handler({ rpcId: 'host-' + (++sequence), payload })
   const unwrap = (reply: any) => { if (!reply.result.ok) throw Error(reply.result.error.message); return reply.result.value }
-  const workspaceSnapshot = async () => {
-    const value = unwrap(await request(api.workspace.list, {}))
-    workspaces.list.set(value)
+  const [{ AbstractApiClient }, { WorkspaceRuntime }] = await browserRuntimes
+  const carrier = toFetchHandler(api)
+  class HostClient extends AbstractApiClient {
+    doFetch(input: URL, init: RequestInit) { return carrier.fetch(input, init) }
   }
-  const workspaces = {
-    list: store<any>({ items: [], archivedSessionIds: [] }),
-    async create(input: any) { calls.push(['workspace.create', input]); await workspaceGate; if (failCreate) throw Error('工作区创建失败'); const value = unwrap(await request(api.workspace.create, input)); await workspaceSnapshot(); return value.workspace },
-    api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: root } } }) }, sessions: { async create(input: any) { calls.push(['workspace.attach', input]); if (failAttach) return { result: { ok: false, error: { message: '工作区绑定失败' } } }; const reply = await request(api.sessions.create, input); await workspaceSnapshot(); return reply } } },
-  }
+  const wire = new HostClient()
   const sessions = {
     list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) },
-    async create(input: any) { calls.push(['session.create', input]); const id = unwrap(await request(api.sessions.create, input)).sessionId; list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd: ctx.agents.get(id)!.session.header.cwd, blank: true, title: '新对话' } } }); return id },
-    binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], subscribe: () => () => {}, async rename(title: string) { unwrap(await request(api.sessions.rename, { sessionId: id, title })); const current = list.getSnapshot(); list.set({ ...current, byId: { ...current.byId, [id]: { ...current.byId[id], title, displayTitle: title } } }) } } } },
+    async create(input: any) { calls.push(['session.create', input]); const id = unwrap(await wire.sessions.create(input)).sessionId; list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd: ctx.agents.get(id)!.session.header.cwd, blank: true, title: '新对话' } } }); return id },
+    binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], subscribe: () => () => {}, async rename(title: string) { unwrap(await wire.sessions.rename({ sessionId: id, title })); const current = list.getSnapshot(); list.set({ ...current, byId: { ...current.byId, [id]: { ...current.byId[id], title, displayTitle: title } } }) } } } },
+  }
+  const workspaces = new WorkspaceRuntime(ctx, wire, sessions)
+  const createWorkspace = workspaces.create.bind(workspaces)
+  workspaces.create = async (input: any) => { calls.push(['workspace.create', input]); await workspaceGate; if (failCreate) throw Error('工作区创建失败'); return createWorkspace(input) }
+  const createSession = api.sessions.create
+  api.sessions.create = async (input: any) => {
+    if (input.payload.workspaceId) {
+      calls.push(['workspace.attach', input.payload])
+      if (failAttach) return { rpcId: input.rpcId, result: { ok: false, error: { code: 'workspace-attach-failed', message: '工作区绑定失败', details: {} } } }
+    }
+    return createSession(input)
   }
   ;(win as any).dshDesktop = { researchCanvasStorage: { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
   let legacy: { sessionId: string; cwd: string } | undefined
@@ -72,7 +98,7 @@ async function fixture(legacyKind?: string) {
   }
   const page = createResearchBoardsPage({ document: win.document as unknown as Document, sessions, workspaces, inputHub: { shells: new Map() }, researchWorkspaces: { for: () => ({ getSnapshot: () => ({ files: [], artifacts: [] }), subscribe: () => () => {}, persist: () => true }) }, bridge: { isSharedSession: () => false, getSnapshot: async () => state, subscribe: (fn: any) => { emit = fn; return () => {} }, invoke: async (action: string, input: any) => {
     calls.push([action, input])
-    if (action === 'local.directory' && input.mode === 'reserve') { const path = join(root, 'examples', 'example-' + (++sequence)); return { ok: true, value: { directoryId: 'directory-' + sequence, path } } }
+    if (action === 'local.directory') return { ok: true, value: await directories.run(input) }
     if (action === 'favorite.add') { const item = { ...input.identity, favoriteId: 'favorite-' + sequence, dedicated: true }; state.favorites.push(item); return { ok: true, value: item } }
     return { ok: true, value: null }
   } } } as any)
@@ -81,15 +107,16 @@ async function fixture(legacyKind?: string) {
   const reply = async (id: string) => { await expect.poll(() => replies.find(row => row.requestId === id), { timeout: 1500 }).toBeTruthy(); return replies.find(row => row.requestId === id) }
   await Promise.resolve(); await Promise.resolve()
   cleanup.push(async () => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; await win.happyDOM.abort(); await closeHost(); await rm(root, { recursive: true, force: true }) })
-  return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, request, unwrap, closeHost, legacy, headers: () => sessionStore.list().map(session => session.header), gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
+  return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, headers: () => sessionStore.list().map(session => session.header), gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
 
-it.each(['board', 'note', 'ppt'])('registers a real durable Workspace and binds the same %s session before success', async kind => {
+it.each(['board', 'note', 'ppt'])('registers a durable Workspace through the production browser transport and binds the same %s session before success', async kind => {
   const f = await fixture(), ids = [f.send(kind), f.send(kind)], [first, concurrent] = await Promise.all(ids.map(f.reply))
   expect(first).toMatchObject({ ok: true, fresh: true }); expect(concurrent.sessionId).toBe(first.sessionId)
   const workspace = await f.registry.resolveByPath(first.cwd)
   expect(workspace, 'reserved directories alone do not satisfy the runtime guard').toBeDefined()
   expect(workspace!.sessionIds).toEqual([first.sessionId])
+  expect(f.workspaces.list.getSnapshot().items).toContainEqual(expect.objectContaining({ workspaceId: workspace!.id, path: first.cwd, sessionIds: [first.sessionId] }))
   const agent = f.ctx.agents.get(first.sessionId)!
   expect(agent.session.events.some(event => event.type === 'user/message')).toBe(false)
   expect(await resolveCapabilityContext(f.ctx, agent, { ownerAccountId: 'owner', runtimeEpoch: 'test-epoch' })).toMatchObject({ sessionId: first.sessionId, workspaceId: workspace!.id })
