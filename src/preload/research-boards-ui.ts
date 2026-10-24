@@ -826,6 +826,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   let guideIdentityRevision = 0
   const guideRecords = new Map<string, GuideSession[]>()
   const guideFlights = new Map<string, Promise<GuideSession>>()
+  const guideWorkspaceFlights = new Map<string, { guards: Set<() => void>; promise?: Promise<void> }>()
+  let guideSelectedSession = current(), guideSelectionRevision = 0, guideSelectedAttempt = ''
   const guideRequests = new Map<string, { fingerprint: string; promise: Promise<Record<string, unknown>>; owner?: string; generation?: number; revision?: number }>()
   const guideReadyWaiters = new Set<{ resolve(): void; reject(error: Error): void }>()
   const guideTitles = { board: '自选行情示例看板', note: 'AI 护航研究笔记示例', ppt: '公司风格演示示例' }
@@ -862,6 +864,57 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (state.account.status !== 'loading') return Promise.resolve()
     return new Promise<void>((resolve, reject) => guideReadyWaiters.add({ resolve, reject }))
   }
+  const guideWorkspaceKey = (entry: GuideSession) => JSON.stringify([guideOwner(), state.account.generation, guideIdentityRevision, entry.sessionId, entry.cwd])
+  const hasGuideWorkspace = (entry: GuideSession) => deps.workspaces.list.getSnapshot().items.some((workspace: { workspaceId?: string; path?: string; sessionIds?: readonly string[] }) => workspace.workspaceId && workspace.path === entry.cwd && workspace.sessionIds?.includes(entry.sessionId))
+  const ensureGuideWorkspace = async (entry: GuideSession, valid: () => void) => {
+    valid()
+    if (!guideSessionAvailable(entry)) throw Error('示例会话已变化，请重新打开。')
+    if (hasGuideWorkspace(entry)) return
+    const key = guideWorkspaceKey(entry)
+    let flight = guideWorkspaceFlights.get(key)
+    if (!flight) { flight = { guards: new Set() }; guideWorkspaceFlights.set(key, flight) }
+    flight.guards.add(valid)
+    if (!flight.promise) {
+      const record = flight
+      const check = () => {
+        if (!guideSessionAvailable(entry)) throw Error('示例会话已变化，请重新打开。')
+        // A prepare request and a direct revisit may share the Host operation.
+        // Continue only while at least one requester still owns its context.
+        for (const guard of record.guards) { try { guard(); return } catch {} }
+        throw Error('账号或页面已变化，请重新打开示例。')
+      }
+      record.promise = (async () => {
+        check()
+        if (!deps.workspaces.create || !deps.workspaces.api?.sessions?.create) throw Error('示例工作区服务尚未就绪，请稍后重试。')
+        // The Host resolves an existing canonical path before creating a Workspace.
+        const workspace = await deps.workspaces.create({ path: entry.cwd }); check()
+        if (!workspace || typeof workspace.workspaceId !== 'string' || !workspace.workspaceId || workspace.path !== entry.cwd) throw Error('示例工作区目录不一致，请重新打开示例。')
+        if (!Array.isArray(workspace.sessionIds) || !workspace.sessionIds.includes(entry.sessionId)) {
+          // Reuse the same Agent without SessionRuntime.create's blank-summary upsert.
+          const reply = await deps.workspaces.api.sessions.create({ workspaceId: workspace.workspaceId, sessionId: entry.sessionId }); check()
+          if (!reply?.result?.ok || reply.result.value?.sessionId !== entry.sessionId) throw Error('示例会话工作区绑定失败，请稍后重试。')
+        }
+        await deps.workspaces.refresh?.(); check()
+      })().finally(() => { if (guideWorkspaceFlights.get(key) === record) guideWorkspaceFlights.delete(key) })
+    }
+    try { await flight.promise; valid() } finally { flight.guards.delete(valid) }
+  }
+  const repairSelectedGuideWorkspace = () => {
+    const selected = current()
+    if (guideSelectedSession !== selected) { guideSelectedSession = selected; guideSelectionRevision++; guideSelectedAttempt = '' }
+    const entry = selected && getHomeGuideSession(selected)
+    if (!entry || hasGuideWorkspace(entry)) return
+    const owner = guideOwner(), generation = state.account.generation, identityRevision = guideIdentityRevision, selectionRevision = guideSelectionRevision
+    const key = JSON.stringify([guideWorkspaceKey(entry), selectionRevision])
+    if (guideSelectedAttempt === key) return
+    guideSelectedAttempt = key
+    const valid = () => {
+      if (disposed || guideOwner() !== owner || state.account.generation !== generation || guideIdentityRevision !== identityRevision || current() !== selected || guideSelectionRevision !== selectionRevision) throw Error('账号或页面已变化，请重新打开示例。')
+    }
+    void ensureGuideWorkspace(entry, valid).then(() => { try { valid(); notify() } catch {} }, () => {})
+  }
+  listeners.add(repairSelectedGuideWorkspace)
+  cleanups.push(() => listeners.delete(repairSelectedGuideWorkspace), deps.workspaces.list.subscribe(() => { repairSelectedGuideWorkspace(); notify() }))
   const prepareHomeGuideSession = async (kind: GuideKind, replay: boolean) => {
     await whenHomeGuideSessionsReady()
     const owner = guideOwner(), generation = state.account.generation, identityRevision = guideIdentityRevision
@@ -871,11 +924,11 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     valid()
     const records = guideRegistry(owner)
     const previous = !replay && [...records].reverse().find(entry => entry.kind === kind && guideSessionAvailable(entry))
-    if (previous) return { ...previous, fresh: false }
     const key = JSON.stringify([owner, generation, identityRevision, kind, replay])
     let flight = guideFlights.get(key)
     if (!flight) {
       flight = (async () => {
+        if (previous) { await ensureGuideWorkspace(previous, valid); return previous }
         if (records.filter(guideSessionAvailable).length >= 100) throw Error('已保存较多示例，请先整理不再需要的示例会话。')
         const title = guideTitles[kind] + (replay ? ' · 练习副本' : '')
         const basePath = await defaultDirectory(); valid()
@@ -887,6 +940,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId }); valid()
         await call('local.directory', { mode: 'ensure', sessionId }); valid()
         const entry: GuideSession = { kind, sessionId, cwd: directory.path, title, createdAt: Date.now() }
+        await ensureGuideWorkspace(entry, valid); valid()
         if (kind === 'board') {
           const value = identity(sessionId)
           if (!value) throw Error('示例看板尚未就绪。')
@@ -904,7 +958,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       void flight.finally(() => { if (guideFlights.get(key) === flight) guideFlights.delete(key) }).catch(() => {})
     }
     const entry = await flight; valid()
-    return { ...entry, fresh: true }
+    return { ...entry, fresh: !previous }
   }
   const receiveHomeGuideSession = (event: Event) => {
     const request = (event as CustomEvent).detail
@@ -1478,14 +1532,13 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       await activate(id, true)
     },
     directoryChoice(id: string) {
+      // Registered examples become usable only through a real native Workspace.
+      // A saved directory label is not evidence that the Host can execute there.
+      if (getHomeGuideSession(id)) return null
       const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
       if (deps.bridge.isSharedSession(id)) return {path:identity(id)?.cwd,label:'新建看板目录'}
       if (f) return { path: f.directoryPath ?? f.cwd, workspaceId: f.workspaceId, label: f.workspaceTitle ?? '新建看板目录' }
-      // A registered example owns a real session directory without becoming a
-      // user Workspace. Keep the native Workspace choice authoritative if present.
-      if (deps.workspaces.list.getSnapshot().items.some((workspace: { sessionIds?: readonly string[] }) => workspace.sessionIds?.includes(id))) return null
-      const example = getHomeGuideSession(id)
-      return example ? { path: example.cwd, label: example.title } : null
+      return null
     },
     async associateProject(id: string, workspaceId: string) {
       const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
@@ -1493,6 +1546,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         if (!getHomeGuideSession(id)) throw Error('该示例目录不属于当前账号，或会话目录已变化。')
         return id
       }
+      const example = !f && getHomeGuideSession(id)
+      if (example && deps.workspaces.list.getSnapshot().items.some((workspace: { workspaceId: string; path?: string; sessionIds?: readonly string[] }) => workspace.workspaceId === workspaceId && workspace.path === example.cwd && workspace.sessionIds?.includes(id))) return id
       if (win.localStorage.getItem('sherlock.research.directory-locked.v1:' + id) === 'true' || deps.researchWorkspaces.for(id).getSnapshot().files.length > 0) throw Error('画板已有资料，项目目录已固定')
       if (!f) return null
       const workspace = workspaceId === '::board-directory' ? null : deps.workspaces.list.getSnapshot().items.find((w: { workspaceId: string; path: string; title: string }) => w.workspaceId === workspaceId)

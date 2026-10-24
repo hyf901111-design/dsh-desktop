@@ -13,7 +13,7 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   let emit: (event: any) => void = () => {}, sequence = 0
   const state: any = { version: 1, eventSeq: 1, account: { status: 'ready', generation: 1, user: { userId: 'owner' } }, favorites: [], boards: [], current: null, recoveries: [], notifications: { cursor: 0, unreadCount: 0, pendingCount: 0, notifications: [] } }
   const canvases = new Map<string, any>()
-  const workspaces = { list: store({ items: [] as any[] }), api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: '/workspace' } } }) } }, archiveSession: async (id: string) => { archived.push(id) } }
+  const workspaces = { list: store({ items: [] as any[] }), create: async ({path}: {path:string}) => { requests.push(['workspace.create',path]); const existing=workspaces.list.getSnapshot().items.find(item=>item.path===path);if(existing)return existing;const item={workspaceId:'workspace:'+path,path,sessionIds:[]};workspaces.list.set({items:[...workspaces.list.getSnapshot().items,item]});return item }, api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: '/workspace' } } }) }, sessions: {create:async(input:any)=>{requests.push(['workspace.attach',input]);workspaces.list.set({items:workspaces.list.getSnapshot().items.map(item=>item.workspaceId===input.workspaceId?{...item,sessionIds:[input.sessionId]}:item)});return {result:{ok:true,value:{sessionId:input.sessionId}}}}} }, archiveSession: async (id: string) => { archived.push(id) } }
   const sessions = { list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) }, async create({ cwd }: any) { requests.push(['create', cwd]); await createGate; const id = 'guide-' + (++sequence); list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd, blank: true, title: '新对话' } } }); return id }, binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], subscribe: () => () => {}, rename: async (title: string) => list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { ...list.getSnapshot().byId[id], title, displayTitle: title } } }) } } } }
   ;(win as any).dshDesktop = { researchCanvasStorage: { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
   globalThis.Event = win.Event as unknown as typeof Event
@@ -71,10 +71,11 @@ it('rejects account A to B to A creation even if an upstream generation is uncha
   expect(f.opened).toEqual([]); expect(f.disk.size).toBe(0)
 })
 
-it('offers only a registered owned example directory and yields to a real Workspace', async () => {
+it('uses the real Workspace membership instead of a virtual registered-example directory', async () => {
  const f=await fixture(),note=await f.reply(f.send('note')),ppt=await f.reply(f.send('ppt'))
- expect(f.page.directoryChoice(note.sessionId)).toEqual({path:note.cwd,label:note.title})
- expect(f.page.directoryChoice(ppt.sessionId)).toEqual({path:ppt.cwd,label:ppt.title})
+ expect(f.page.directoryChoice(note.sessionId)).toBe(null)
+ expect(f.page.directoryChoice(ppt.sessionId)).toBe(null)
+ expect(f.workspaces.list.getSnapshot().items).toEqual(expect.arrayContaining([expect.objectContaining({path:note.cwd,sessionIds:[note.sessionId]}),expect.objectContaining({path:ppt.cwd,sessionIds:[ppt.sessionId]})]))
  expect(f.page.directoryChoice('original')).toBe(null)
  f.workspaces.list.set({items:[{workspaceId:'real',path:ppt.cwd,title:'已关联真实工作区',sessionIds:[ppt.sessionId]}]})
  expect(f.page.directoryChoice(ppt.sessionId)).toBe(null)
@@ -87,6 +88,7 @@ it('offers only a registered owned example directory and yields to a real Worksp
 it('keeps a registered same-owner example when its current directory is selected and rejects foreign or stale directory placeholders',async()=>{
  const f=await fixture(),note=await f.reply(f.send('note')),ppt=await f.reply(f.send('ppt'))
  for(const entry of [note,ppt])expect(await f.page.associateProject(entry.sessionId,'::board-directory')).toBe(entry.sessionId)
+ for(const entry of [note,ppt])expect(await f.page.associateProject(entry.sessionId,'workspace:'+entry.cwd)).toBe(entry.sessionId)
  expect(f.opened).toEqual([]);expect(f.archived).toEqual([]);expect(f.requests.filter(row=>row[0]==='create')).toHaveLength(2)
  await expect(f.page.associateProject('original','::board-directory')).rejects.toThrow()
  const before=f.sessions.list.getSnapshot();f.sessions.list.set({...before,byId:{...before.byId,[note.sessionId]:{...before.byId[note.sessionId],cwd:'/another'}}})
