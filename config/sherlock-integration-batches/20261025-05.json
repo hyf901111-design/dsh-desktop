@@ -85,6 +85,81 @@
           "需新正式包从真实首页首次打开看板验证，不以重播通过替代首挂。"
         ],
         "generatedAt": "2026-10-24T23:23:03.163939+00:00"
+      },
+      "merged": {
+        "mergeCommit": "bac146d9b6ad8c2e6a363bf12d53686f9dd0ee93",
+        "verificationCommit": "bac146d9b6ad8c2e6a363bf12d53686f9dd0ee93",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "bac146d9b6ad8c2e6a363bf12d53686f9dd0ee93",
+            "completedAt": "2026-10-24T23:25:48.875Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "bac146d9b6ad8c2e6a363bf12d53686f9dd0ee93",
+            "completedAt": "2026-10-24T23:25:48.875Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-pointer.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native.test.js test/home-guide-native-strip.test.js test/home-guide-pointer.test.ts --maxWorkers=2",
+            "verifiedCommit": "bac146d9b6ad8c2e6a363bf12d53686f9dd0ee93",
+            "completedAt": "2026-10-24T23:25:48.875Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "waits for a stable current native library target",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native-browser.test.js -t waits for a stable current native library target --maxWorkers=2",
+            "verifiedCommit": "bac146d9b6ad8c2e6a363bf12d53686f9dd0ee93",
+            "completedAt": "2026-10-24T23:25:48.875Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "bac146d9b6ad8c2e6a363bf12d53686f9dd0ee93",
+            "completedAt": "2026-10-24T23:25:48.875Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-24T23:25:48.875Z"
       }
     }
   ],
