@@ -23,7 +23,7 @@
 ## 执行命令
 
 ```bash
-python "$SKILL_DIR/scripts/sanitize_pptx_metadata.py" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/sanitize_pptx_metadata.py" \
   "$SOURCE_PPTX" "$CLEAN_PPTX" \
   --replace-map "$REPLACEMENT_MAP" \
   --clear-notes --remove-comments --remove-thumbnails \
@@ -33,7 +33,7 @@ python "$SKILL_DIR/scripts/sanitize_pptx_metadata.py" \
 图片部件替换示例：
 
 ```bash
-python "$SKILL_DIR/scripts/sanitize_pptx_metadata.py" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/sanitize_pptx_metadata.py" \
   "$SOURCE_PPTX" "$CLEAN_PPTX" \
   --replace-part "ppt/media/image1.png=$SCRATCH/anonymous-image1.png"
 ```
@@ -41,7 +41,7 @@ python "$SKILL_DIR/scripts/sanitize_pptx_metadata.py" \
 每个项目把已识别的敏感字面值逐项加入隐私审计：
 
 ```bash
-python "$SKILL_DIR/scripts/audit_pptx_privacy.py" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/audit_pptx_privacy.py" \
   "$CLEAN_PPTX" \
   --deny-text "<姓名或内部代号>" \
   --deny-text "<精确内部指标>" \

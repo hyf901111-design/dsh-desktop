@@ -81,7 +81,7 @@ V6 中文/双语/英文/联名封面和 AI 技术封面的右侧山水品牌图�
 内置配置：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_cover.py" "$FINAL_PPTX" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_cover.py" "$FINAL_PPTX" \
   --final-slide 1 --profile "$COVER_PROFILE" \
   --json-output "$QA_DIR/efund-cover.json"
 ```
@@ -89,7 +89,7 @@ python "$SKILL_DIR/scripts/check_efund_cover.py" "$FINAL_PPTX" \
 用户模板：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_cover.py" "$FINAL_PPTX" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_cover.py" "$FINAL_PPTX" \
   --final-slide 1 \
   --reference-pptx "$SOURCE_PPTX" --reference-slide "$SOURCE_COVER_SLIDE" \
   --json-output "$QA_DIR/efund-cover.json"

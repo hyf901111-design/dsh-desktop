@@ -27,7 +27,7 @@ V6 目录数字沿用源稿 `1EB9E1`，不能用通用品牌青替换；列宽�
 生成 `visual-review.json`：顶层 `pptxSha256`、`pdfSha256`、`method`（image-capable-model 或 human）、`reviewer`，以及按页码完整有序的 `pages`。每页含 `page` 和 `pptx`/`pdf` 两份记录，分别含 `image`（相对报告路径）、`imageSha256`、`renderer`、具体 `notes`、`checks`。checks 中 titleColor/noShadow/tocStyle/overflow/brandFurniture 均需真实审阅后记为 pass。未看过图片必须保持 pending，严禁为过门禁补写虚假观察。
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_visual_review.py" "$FINAL_PPTX" --pdf "$FINAL_PDF" --review "$QA_DIR/visual-review.json" --json-output "$QA_DIR/efund-visual-review.json"
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_visual_review.py" "$FINAL_PPTX" --pdf "$FINAL_PDF" --review "$QA_DIR/visual-review.json" --json-output "$QA_DIR/efund-visual-review.json"
 ```
 
 此脚本只核验记录完整性与文件哈希，不替代视觉判断。修改最终文件或图像后重新渲染、复核、计算哈希并重跑全部受影响门禁。没有视觉能力时可以交付明确标注“待视觉复核”的草稿和检查结果，但任务不得宣称“全部质量门禁通过”或把视觉复核标为已完成。不得将“未执行”写进偏差日志后自行视为已豁免。

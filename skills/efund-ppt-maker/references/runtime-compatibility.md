@@ -25,6 +25,7 @@
 - 模板、预览和品牌资产始终通过 `SKILL_DIR/assets/...` 访问。
 - 不在成品、记录或脚本参数中写入开发机器的用户名、主目录或绝对路径。
 - 临时文件写入独立 scratch 目录；正式输出只包含 PPTX 和用户要求的交付附件。
+- 内置技能目录及签名应用 Resources 保持只读。每次 Python 调用使用 `PYTHONDONTWRITEBYTECODE=1 python -B`，包括 `python3`、venv/绝对路径解释器和导入技能 helper 的临时脚本；Bash 调用之间不保留 `export`，不得只在第一次设置。`-B` 不替代对显式编译的限制：禁止在 Resources 内运行 `py_compile` / `compileall`，需要编译或修改时先把技能复制到 scratch。
 - 对外发布前运行 `scripts/sanitize_pptx_metadata.py` 清理编辑者、修改者、时间戳、应用名称和自定义属性；清理后的 PPTX 必须重新通过结构 QA 与逐页渲染检查。
 
 ## 3. 布局 JSON 接口

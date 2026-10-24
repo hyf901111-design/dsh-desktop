@@ -21,9 +21,10 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 
 1. 读取 [cover-contract.md](references/cover-contract.md)、[writing-style-contract.md](references/writing-style-contract.md)、[design-system.md](references/design-system.md)、[layout-catalog.md](references/layout-catalog.md)、[table-layout-contract.md](references/table-layout-contract.md)、[typography-contract.md](references/typography-contract.md)、[privacy-contract.md](references/privacy-contract.md) 和 [runtime-compatibility.md](references/runtime-compatibility.md)。
 2. 新建、续写、改已有页、总结用户改版，或需要规划叙事、图片和高密度页面时，读取 [authoring-guide.md](references/authoring-guide.md) 和 [layout-design-playbook.md](references/layout-design-playbook.md)。
-3. 运行 `python "$SKILL_DIR/scripts/check_efund_font_asset.py"`，确认 `assets/fonts/STHeiti_YFD.ttf` 存在、哈希正确，并包含 `华文黑体_易方达` / `STHeiti_YFD` 字体名。渲染器找不到该字体时，优先使用技能内字体资产完成本次进程级字体注册；不得静默回退到微软雅黑、苹方或系统黑体。
+3. 运行 `PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_font_asset.py"`，确认 `assets/fonts/STHeiti_YFD.ttf` 存在、哈希正确，并包含 `华文黑体_易方达` / `STHeiti_YFD` 字体名。渲染器找不到该字体时，优先使用技能内字体资产完成本次进程级字体注册；不得静默回退到微软雅黑、苹方或系统黑体。
 4. 开始编辑前验证当前运行环境具备：读取与复制 PPTX、保留母版/组合/主题、对象级编辑、逐页渲染、对象几何与字体检查。缺少任一关键能力时停止并说明缺口，不得静默降级为从空白页重画。
 5. 将 `SKILL_DIR` 解析为本技能目录；所有资源路径必须相对 `SKILL_DIR`，不得写入开发机器的绝对路径。临时文件放在项目外的 scratch 目录，最终 PPTX 放在用户指定位置或项目 `outputs/`。
+6. 内置技能目录（尤其签名应用的 Resources）只读。所有 Python 调用都使用 `PYTHONDONTWRITEBYTECODE=1 python -B`；`python3`、venv 或绝对路径解释器，以及导入技能 helper 的临时生成脚本同样加 `-B`。每次 Bash 调用是新 shell，单次 `export` 不会跨调用保留，须在每条命令中带上设置。禁止在应用 Resources 内执行 `py_compile` / `compileall` 或写入缓存、临时文件；需要显式编译或修改脚本时，先完整复制到独立 scratch 后操作。
 
 ## 选择唯一品牌来源
 
@@ -105,7 +106,7 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 先运行 1.1.1 成品校验（字段定义见 delivery-107.md）：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_delivery.py" "$FINAL_PPTX" --source "$SOURCE_PPTX" --map "$QA_DIR/template-frame-map.json" --json-output "$QA_DIR/efund-delivery.json"
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_delivery.py" "$FINAL_PPTX" --source "$SOURCE_PPTX" --map "$QA_DIR/template-frame-map.json" --json-output "$QA_DIR/efund-delivery.json"
 ```
 
 检查最终 PPTX 的标题几何与文本框属性、表格边线、每章目录位置及实际高亮颜色。不得手写一个“通过”的报告替代运行结果。PowerPoint 打开若出现修复提示或 [Repaired]，即使 ZIP 可读也不能交付，必须先修复结构并重新打开确认。
@@ -113,7 +114,7 @@ python "$SKILL_DIR/scripts/check_efund_delivery.py" "$FINAL_PPTX" --source "$SOU
 第一道，检查封面硬合同。内置封面配置：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_cover.py" "$FINAL_PPTX" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_cover.py" "$FINAL_PPTX" \
   --final-slide 1 --profile "$COVER_PROFILE" \
   --json-output "$QA_DIR/efund-cover.json"
 ```
@@ -123,15 +124,15 @@ python "$SKILL_DIR/scripts/check_efund_cover.py" "$FINAL_PPTX" \
 第二道，检查 PPTX 结构：
 
 ```bash
-python "$SKILL_DIR/scripts/qa_efund_pptx.py" "$FINAL_PPTX" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/qa_efund_pptx.py" "$FINAL_PPTX" \
   --json-output "$QA_DIR/efund-structure.json"
 ```
 
 `shape-shadow-forbidden` 是硬错误；任何可见幻灯片对象不得含外阴影、内阴影或预设阴影效果。
 
-所有最终候选都另运行 `check_efund_package.py "$FINAL_PPTX" --json-output "$QA_DIR/efund-package.json"`；从模板新建稿增加 `--require-clean-slide-tree`。仅在需求明确要求原生图表数量时附加 `--min-native-charts N`，不能数 ZIP 中孤立的 chart 文件，也不能对合法形状信息图无条件要求原生图表。具体计数口径和保留现有附页的处理见 [成品包检查](references/package-and-render-checks.md)。
+所有最终候选都另运行 `PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" --json-output "$QA_DIR/efund-package.json"`；从模板新建稿增加 `--require-clean-slide-tree`。仅在需求明确要求原生图表数量时附加 `--min-native-charts N`，不能数 ZIP 中孤立的 chart 文件，也不能对合法形状信息图无条件要求原生图表。具体计数口径和保留现有附页的处理见 [成品包检查](references/package-and-render-checks.md)。
 
-结构与包检查均默认校验包内全部原生图表的轴 ID，包括隐藏页和孤立图表。`chart-axis-id-out-of-range` / `chart-axis-graph-invalid` 是硬错误：`c:axId`、`c:crossAx` 必须满足 `0..2147483647` 且引用一致，不能把负值取绝对值或加 `2^32` 后交付。生成器须在保存前使用 `efund_chart_properties.py` 的 `normalize_axis_ids(chartSpace)`，或在导出 PDF 前通过 `normalize_efund_text.py DRAFT NEW_OUTPUT` 生成新文件，再重跑两道门禁。该工具按轴声明顺序同时重编号所有引用；不改数据、零交叉值、图表类型、文字或几何。重复声明、悬空引用和未知数值必须修正生成过程，不自动猜测。
+结构与包检查均默认校验包内全部原生图表的轴 ID，包括隐藏页和孤立图表。`chart-axis-id-out-of-range` / `chart-axis-graph-invalid` 是硬错误：`c:axId`、`c:crossAx` 必须满足 `0..2147483647` 且引用一致，不能把负值取绝对值或加 `2^32` 后交付。生成器须在保存前使用 `efund_chart_properties.py` 的 `normalize_axis_ids(chartSpace)`，或在导出 PDF 前通过 `PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/normalize_efund_text.py" DRAFT NEW_OUTPUT` 生成新文件，再重跑两道门禁。该工具按轴声明顺序同时重编号所有引用；不改数据、零交叉值、图表类型、文字或几何。重复声明、悬空引用和未知数值必须修正生成过程，不自动猜测。
 
 包报告的 `sha256` 必须与最后一次清理、规范化或重新保存后的交付文件一致；改了 PPTX 后须重新校验、渲染和原生打开。轴检查是已知故障门禁，不等于完整 OOXML 校验，更不能代替目标 PowerPoint 无修复打开的真实证据。
 
@@ -142,7 +143,7 @@ python "$SKILL_DIR/scripts/qa_efund_pptx.py" "$FINAL_PPTX" \
 第三道，检查文案自然度和业务具体性：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_writing_style.py" "$FINAL_PPTX" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_writing_style.py" "$FINAL_PPTX" \
   --map "$QA_DIR/template-frame-map.json" \
   --json-output "$QA_DIR/efund-writing-style.json" \
   --warnings-as-errors
@@ -153,7 +154,7 @@ python "$SKILL_DIR/scripts/check_efund_writing_style.py" "$FINAL_PPTX" \
 第四道，检查继承与原创文本的字号保真：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_typography.py" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_typography.py" \
   --source-pptx "$SOURCE_PPTX" \
   --final-pptx "$FINAL_PPTX" \
   --map "$QA_DIR/template-frame-map.json" \
@@ -166,7 +167,7 @@ python "$SKILL_DIR/scripts/check_efund_typography.py" \
 第五道，使用当前环境的对象检查能力导出符合 [runtime-compatibility.md](references/runtime-compatibility.md) 约定的逐页 `*.layout.json`，再检查布局：
 
 ```bash
-python "$SKILL_DIR/scripts/lint_efund_layouts.py" "$LAYOUT_DIR/final" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/lint_efund_layouts.py" "$LAYOUT_DIR/final" \
   --map "$QA_DIR/template-frame-map.json" \
   --json-output "$QA_DIR/efund-layout.json"
 ```
@@ -194,12 +195,12 @@ PowerPoint 可能延迟到访问某张图表页才触发修复。原生验收必
 正式外发前按 [privacy-contract.md](references/privacy-contract.md) 清理文档属性、自定义属性、备注正文、批注、旧缩略图、外部关系和嵌入 Office 对象，避免保留编辑者、运行环境、工具链或业务敏感信息：
 
 ```bash
-python "$SKILL_DIR/scripts/sanitize_pptx_metadata.py" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/sanitize_pptx_metadata.py" \
   "$FINAL_PPTX" "$OUTPUT_DIR/final-clean.pptx" \
   --clear-notes --remove-comments --remove-thumbnails \
   --neutralize-external-links
 
-python "$SKILL_DIR/scripts/audit_pptx_privacy.py" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/audit_pptx_privacy.py" \
   "$OUTPUT_DIR/final-clean.pptx" \
   --require-redacted-notes --require-no-comments \
   --require-no-thumbnails --require-no-external-links \

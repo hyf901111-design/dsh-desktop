@@ -9,7 +9,7 @@
 从模板新建交付件时运行：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
   --require-clean-slide-tree --json-output "$QA_DIR/efund-package.json"
 ```
 
@@ -26,7 +26,7 @@ python "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
 **只有需求明确要求原生数据图表数量时**，从需求取下限并增加参数，例如最低六张：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
   --require-clean-slide-tree --min-native-charts 6 \
   --json-output "$QA_DIR/efund-package.json"
 ```
@@ -57,7 +57,7 @@ Microsoft 的 [dLblPos 实现说明](https://learn.microsoft.com/en-us/openspecs
 
 **仅标记的情景点与连线图分开制作。** 若 LINE 用于呈现互相独立的情景点，逐点颜色写到 `point.marker.format`，保持系列 `ln/noFill`；不要通过通用 `point.format` 在 `c:dPt` 下写外层 `spPr` 来上色。已实测外层点样式在 LibreOffice 中不连线、原生 PowerPoint 中却出现蓝色连接线；仅去除该情景点图的两处外层点样式后，原生连线消失，彩色 marker、零轴和带符号标签保持。不能据此在通用 normalizer 中删除所有 `dPt/spPr`，因为真正连线图可能有意按点定制线条。按数据语义选择点/线后，分别核对原生与备用渲染的实际效果。
 
-`qa_efund_pptx.py` 与 `check_efund_package.py` 默认执行同一轴范围、引用及折线标签位置门禁，逐项输出 part、位置和值；检查全部 `chartSpace`，包括隐藏和孤立图表，但不把它们计入可见图表配额。`normalize_efund_text.py DRAFT NEW_OUTPUT` 已调用同一生成 helper，仍只写新文件。生成、规范化及清理完成后再跑门禁，不能在检查后写回未规范化的旧稿。
+`qa_efund_pptx.py` 与 `check_efund_package.py` 默认执行同一轴范围、引用及折线标签位置门禁，逐项输出 part、位置和值；检查全部 `chartSpace`，包括隐藏和孤立图表，但不把它们计入可见图表配额。`PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/normalize_efund_text.py" DRAFT NEW_OUTPUT` 已调用同一生成 helper，仍只写新文件。生成、规范化及清理完成后再跑门禁，不能在检查后写回未规范化的旧稿。
 
 这项检查覆盖已复现的轴问题，不是全量 OOXML schema 证明。2026-10-24 的隔离回归中，官方 Open XML SDK 3.5.1 / Office2019 对原稿报告 42 个负轴 ID 错误；对仅改写这 42 个属性的新副本报告零错误。schema 零错误、ZIP 可读、LibreOffice 可渲染和 PDF 正常均不能替代目标 PowerPoint 对最终哈希文件无修复打开；出现修复提示或删除内容即保持失败，不得填写 `nativeOpen: pass`。
 
