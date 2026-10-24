@@ -38,7 +38,7 @@ beforeAll(async () => {
   const pageBundle = await build({stdin:{contents:"export * from './src/preload/research-boards-ui.ts'",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'browser',format:'cjs',write:false,external:['react','@deepseek-ai/dsh-client-ui-primitives'],target:'chrome120',logLevel:'silent'})
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
-      import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{Menu as NativeMenu}from'@deepseek-ai/dsh-client-ui-primitives';
+      import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{Menu as NativeMenu}from'@deepseek-ai/dsh-client-ui-primitives';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';
       const react=React,react_jsx_runtime=jsx,react_dom=dom,COLLAPSED_SIDEBAR_WIDTH=80,SIDEBAR_AUTO_COLLAPSE=1024,_deepseek_ai_dsh_client_runtime_client={defineStore:spec=>spec};
       const AppFrame_module_css_default={frame:'pI_x6G_frame',sidebarCol:'pI_x6G_sidebarCol',centerCol:'pI_x6G_centerCol',detailsCol:'pI_x6G_detailsCol',handle:'pI_x6G_handle',overlayLayer:'pI_x6G_overlayLayer'};
       ${frame}
@@ -87,7 +87,7 @@ beforeAll(async () => {
       const renderSlot=(name,props={},scope={})=>name==='conversation.view'&&scope.only==='research'?<native.ResearchCanvas sessionId='${sessionId}' t={t} researchWorkspaces={registry} {...props}/>:name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.hero.workspace'?<WorkspacePickFlow {...props} t={key=>key==='menu.addWorkspace'?'添加工作区…':key} useWorkspaces={use(workspaceList)} createWorkspace={async()=>{window.guideProbe.workspaceCalls++;throw Error('Must not create a Workspace')}} useDirectoryFlow={()=>true} renderDirectoryFlow={()=>null}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<main data-native-history="">已有会话内容</main>:null;
       const root=createRoot(document.querySelector('#native-root'));window.guideProbe.researchActivations=[];window.guideProbe.researchActiveSessions=new Set();const setResearchActive=(id,active)=>{window.guideProbe.researchActivations.push({id,active});if(active)window.guideProbe.researchActiveSessions.add(id);else window.guideProbe.researchActiveSessions.delete(id)};
       function App(){const [current,setCurrent]=React.useState({sessionId:'${sessionId}',subagentPanel:false});window.guideProbe.setContext=setCurrent;return <native.ConversationRoot {...shared} {...current} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async id=>{window.guideProbe.workspaceCalls++;return nativeWorkspaceSelect(id)}} useWorkspaces={use(workspaceList)} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={setResearchActive}/>}
-      Object.assign(window.guideProbe,{native,shell,registry,memory,view,session,sidebar,guidePage,workspaceList,dispose(){root.unmount();frameRoot?.unmount();disposers.reverse().forEach(stop=>stop())}});root.render(<App/>);
+      Object.assign(window.guideProbe,{native,shell,registry,memory,view,session,sidebar,guidePage,workspaceList,createPointer:options=>createHomeGuidePointer(document,options),dispose(){root.unmount();frameRoot?.unmount();disposers.reverse().forEach(stop=>stop())}});root.render(<App/>);
     ` },
     bundle: true, platform: 'browser', format: 'iife', write: false, define: { 'process.env.NODE_ENV': '"production"' },loader:{'.css':'empty'}
   })
@@ -139,6 +139,52 @@ async function preserved(page) {
 }
 const canvas = page => page.locator('#guide-host [data-research-canvas]')
 const widget = (page, name) => page.locator(`#guide-host [data-financial-widget="${name}"]`)
+
+it.each(['initially-hidden','stale-hidden-copy','duplicate-visible','paused-hidden','disposed-hidden'])('waits for a stable current native library target with %s before the real shared pointer',async kind=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1380,height:900,guideTop:116,guideBottom:69})
+ try{
+  await succeeds(page,'mount-board')
+  await page.evaluate(kind=>{
+   const p=window.guideProbe,toolbar=document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"]'),button=toolbar.querySelector('[data-financial-library]')
+   p.readyToolbar=toolbar;p.readyButton=button;p.readinessCues=[];p.readinessFrames=0;document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
+   const countFrame=()=>{p.readinessFrames++;requestAnimationFrame(countFrame)};requestAnimationFrame(countFrame)
+   window.addEventListener('sherlock:home-guide-native-request',event=>{if(event.detail.command==='board-library')p.readinessStartFrame=p.readinessFrames})
+   if(kind.endsWith('hidden'))toolbar.style.setProperty('visibility','hidden','important')
+   else{const old=toolbar.cloneNode(true);old.dataset.previousToolbar='';if(kind==='stale-hidden-copy')old.style.setProperty('visibility','hidden','important');toolbar.before(old);p.previousToolbar=old}
+   p.readinessPointer=p.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})
+   window.addEventListener('sherlock:home-guide-cue',event=>{
+    const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return
+    const target=[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===d.targetToken)
+    p.readinessCues.push({sameButton:target===p.readyButton,visibility:getComputedStyle(target).visibility,frames:p.readinessFrames-p.readinessStartFrame})
+    const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}))
+    void p.readinessPointer.perform({target,action:d.action}).then(()=>reply(true),error=>reply(false,error.message))
+   })
+  },kind)
+  const pending=command(page,'board-library').catch(error=>({error:error.message}))
+  if(kind!=='stale-hidden-copy'){
+   await page.waitForTimeout(90)
+   expect(await page.evaluate(()=>window.guideProbe.readinessCues)).toEqual([])
+   expect(await page.locator('[data-home-guide-native-library]').count()).toBe(0)
+   if(kind==='disposed-hidden'){
+    await succeeds(page,'dispose');expect(await pending).toMatchObject({ok:false})
+    expect(await page.evaluate(()=>window.guideProbe.readinessCues)).toEqual([]);expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+    await preserved(page);expect(errors).toEqual([]);return
+   }
+   if(kind==='paused-hidden')await page.evaluate(()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:false}})))
+   await page.evaluate(()=>{window.guideProbe.readyToolbar.style.removeProperty('visibility');window.guideProbe.previousToolbar?.remove()})
+   if(kind==='paused-hidden'){
+    await page.waitForTimeout(90);expect(await page.evaluate(()=>window.guideProbe.readinessCues)).toEqual([])
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:true}})))
+   }
+  }
+  expect(await pending).toMatchObject({ok:true})
+  const cues=await page.evaluate(()=>window.guideProbe.readinessCues)
+  expect(cues).toHaveLength(1);expect(cues[0]).toMatchObject({sameButton:true,visibility:'visible'});expect(cues[0].frames).toBeGreaterThanOrEqual(2)
+  expect(await page.locator('[data-home-guide-native-library]').count()).toBe(1)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.evaluate(()=>window.guideProbe.readinessPointer?.dispose()).catch(()=>{});await page.close()}
+},15000)
 
 it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged real controls, visible port paths and typed search at $width × $height',async size=>{
  const {page,errors,external}=await fixture({nativeLayout:true,...size,guideTop:116,guideBottom:69})
