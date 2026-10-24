@@ -2,6 +2,7 @@
 """Check actual PPTX title anchors, explicit table edges, and chapter navigation."""
 import argparse
 import json
+import re
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from check_efund_portability import check_portable_slide, check_title_paint, check_toc_style
@@ -21,6 +22,127 @@ def check_table(cell):
         if line is None or line.find('a:noFill', NS) is None:
             return ['table-border-visible']
     return []
+
+
+def paragraph_text(paragraph):
+    return ''.join('\n' if child.tag == '{'+NS['a']+'}br' else
+                   '\t' if child.tag == '{'+NS['a']+'}tab' else
+                   ''.join(t.text or '' for t in child.findall('.//a:t', NS))
+                   for child in paragraph if child.tag != '{'+NS['a']+'}pPr')
+
+
+def cell_text(cell):
+    return '\n'.join(paragraph_text(p) for p in cell.findall('a:txBody/a:p', NS))
+
+
+def paragraph_indent(cell, paragraph):
+    props = paragraph.find('a:pPr', NS)
+    level = int(props.get('lvl', '0')) if props is not None else 0
+    inherited = cell.find(f'a:txBody/a:lstStyle/a:lvl{level+1}pPr', NS)
+    defaults = cell.find('a:txBody/a:lstStyle/a:defPPr', NS)
+    return tuple(next((node.get(key) for node in (props, inherited, defaults)
+                       if node is not None and node.get(key) is not None), '0')
+                 for key in ('marL', 'marR', 'indent'))
+
+
+def check_data_table_layout(root, page):
+    """Check final native cells, with narrowly declared numeric/label columns.
+
+    TOC geometry and alignment belong to the exact source-template checks.
+    Ordinary data columns use left alignment for both header and body.
+    """
+    if page.get('pageKind') != 'content':
+        return []
+    tables = {object_id(frame): frame.find('.//a:tbl', NS)
+              for frame in root.findall('.//p:graphicFrame', NS)
+              if frame.find('.//a:tbl', NS) is not None}
+    errors, alignments = [], {}
+    exceptions = page.get('tableLayoutExceptions', [])
+    if not isinstance(exceptions, list):
+        errors.append('table-layout-exception-invalid')
+        exceptions = []
+    for exception in exceptions:
+        if not isinstance(exception, dict):
+            errors.append('table-layout-exception-invalid'); continue
+        table_id, kind = str(exception.get('tableId', '')), exception.get('kind')
+        columns = exception.get('columns')
+        table = tables.get(table_id)
+        if (table is None or kind not in ('numeric-columns', 'short-label-columns')
+                or not str(exception.get('reason', '')).strip()
+                or not isinstance(columns, list) or not columns
+                or any(type(c) is not int or c < 0 for c in columns)
+                or len(set(columns)) != len(columns)):
+            errors.append('table-layout-exception-invalid'); continue
+        rows = [row.findall('a:tc', NS) for row in table.findall('a:tr', NS)]
+        for column in columns:
+            key = (table_id, column)
+            if not rows or any(column >= len(row) for row in rows) or key in alignments:
+                errors.append('table-layout-exception-invalid'); continue
+            body = [cell_text(row[column]) for row in rows[1:] if cell_text(row[column])]
+            if kind == 'numeric-columns':
+                valid = body and all(value in ('-', '—', 'N/A', 'n/a') or
+                                     (re.search(r'\d', value) and '\n' not in value and
+                                      re.fullmatch(r'[\d\s.,，+\-−–—~～%％()（）/×:：年月日万亿倍元美人民币bpsBPSeE]+', value))
+                                     for value in body)
+            else:
+                valid = body and all('\n' not in value and len(value) <= 8 for value in body)
+            if not valid:
+                errors.append('table-layout-exception-invalid'); continue
+            alignments[key] = 'r' if kind == 'numeric-columns' else 'ctr'
+    for table_id, table in tables.items():
+        rows = [row.findall('a:tc', NS) for row in table.findall('a:tr', NS)]
+        column_insets, column_indents = {}, {}
+        for row_index, cells in enumerate(rows):
+            for column, cell in enumerate(cells):
+                props = cell.find('a:tcPr', NS)
+                if row_index == 0 and (props is None or props.get('anchor') != 'ctr'):
+                    errors.append('table-header-not-vertically-centered')
+                if row_index == 0 and (props is None or props.get('marT') is None
+                                       or props.get('marT') != props.get('marB')):
+                    errors.append('table-header-vertical-insets-mismatch')
+                insets = tuple(props.get(k) if props is not None else None for k in ('marL', 'marR'))
+                if None in insets:
+                    errors.append('table-cell-insets-not-explicit')
+                if column not in column_insets:
+                    column_insets[column] = insets
+                elif insets != column_insets[column]:
+                    errors.append('table-column-insets-mismatch')
+                expected = alignments.get((table_id, column), 'l')
+                for paragraph in cell.findall('a:txBody/a:p', NS):
+                    text = paragraph_text(paragraph)
+                    if not text.strip():
+                        continue
+                    if text != text.strip():
+                        errors.append('table-cell-edge-whitespace')
+                    ppr = paragraph.find('a:pPr', NS)
+                    if ppr is None or ppr.get('algn') != expected:
+                        errors.append('table-column-alignment-mismatch')
+                    indent = paragraph_indent(cell, paragraph)
+                    if column not in column_indents:
+                        column_indents[column] = indent
+                    elif indent != column_indents[column]:
+                        errors.append('table-column-paragraph-indent-mismatch')
+    return sorted(set(errors))
+
+
+def check_narrative_anchors(root, page):
+    if page.get('pageKind') != 'content':
+        return []
+    names = {'standard-narrative-title', 'standard-narrative-body'}
+    shapes = {}
+    for shape in root.findall('.//p:sp', NS):
+        nv = shape.find('p:nvSpPr/p:cNvPr', NS)
+        if nv is not None and nv.get('name') in names:
+            shapes[nv.get('name')] = shape
+    errors = []
+    selected = page.get('layoutChoice', {}).get('selected') == 'left-text-right-visual'
+    if (shapes or selected) and set(shapes) != names:
+        errors.append('narrative-text-pair-missing')
+    for shape in shapes.values():
+        props = shape.find('p:txBody/a:bodyPr', NS)
+        if props is None or props.get('anchor') != 't':
+            errors.append('narrative-text-not-top-anchored')
+    return sorted(set(errors))
 
 
 def check_chapters(chapters, pages, require_toc=True):
@@ -206,6 +328,8 @@ def audit(pptx, source, mapping):
             root = xml_root(output, part)
             for code in check_portable_slide(output, part): add(code, number)
             for code in check_layout_choice(page): add(code, number)
+            for code in check_data_table_layout(root, page): add(code, number)
+            for code in check_narrative_anchors(root, page): add(code, number)
             if page.get('pageKind') == 'toc':
                 for code in check_toc_rules(root, page): add(code, number)
             # Tables must override inherited styles explicitly, including merged edges.

@@ -371,6 +371,17 @@ def compare_text(
     if reference is None or final is None:
         return [issue("cover-text-body-mismatch", f"Shape ID {identifier} 文本框结构已改变", scope)]
     findings: list[dict[str, str]] = []
+    # Placeholder runs can contain a leading space even when the slot geometry
+    # is correct. It is editable text, not part of the locked brand furniture.
+    if scope != "cover-layout":
+        for index, paragraph in enumerate(final_element.findall("./p:txBody/a:p", NS), 1):
+            text = "".join(node.text or "" for node in paragraph.findall(".//a:t", NS))
+            if text and text != text.strip():
+                findings.append(issue(
+                    "cover-text-edge-whitespace",
+                    f"Shape ID {identifier} 第 {index} 段含段首或段尾占位空白；清空空白 run，保留格式和几何",
+                    scope,
+                ))
     if reference["paragraphCount"] != final["paragraphCount"]:
         findings.append(
             issue(
