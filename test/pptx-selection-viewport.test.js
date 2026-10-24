@@ -10,10 +10,11 @@ const {patchSherlockOfficePreviewClient}=requireModule('../scripts/lib/patch-she
 const {patchPptxResize,stripPptxResizePatch}=requireModule('../scripts/lib/pptx-resize-settle.mjs')
 const {patchPptxEditor}=requireModule('../scripts/lib/pptx-editor-ui.mjs')
 const {ResearchAttachmentLocalPreview}=requireModule('../scripts/lib/attachment-client.mjs')
+const {patchComponentPptxMode}=requireModule('../scripts/lib/component-pptx-mode.mjs')
 let browser,script,css,officeScript,bytes,model
 
 beforeAll(async()=>{
- const conversation=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const conversation=patchComponentPptxMode(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const reader=conversation.slice(conversation.indexOf('function supportsResearchOfficePreview('),conversation.indexOf('function ResearchCanvasFileCard('))
  const sharedIdentity=conversation.match(/const sherlockShared = [^\n]+/)[0]
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
@@ -29,11 +30,11 @@ beforeAll(async()=>{
   window.eworkNoteOfficePreview={subscribe:()=>()=>{},getSnapshot:()=>window.office.officePreviewService};
   window.dshDesktop={researchPreview:{restore:async()=>({url:'sherlock-preview://selection-fixture/',authorizationId:'fixture-grant',capabilityToken:'fixture'}),release(){}}};
   window.__ModuleLoader__={load:descriptor=>{window.office=descriptor.factory(id=>({'react':React,'react/jsx-runtime':jsx,'react-dom':dom}[id]))}};
-  window.mountNotes=width=>{
+  window.mountNotes=(width,importStatus,readOnly=false)=>{
    const views=document.createElement('div');document.body.append(views);createRoot(views).render(<EWorkNoteFileViews sessionId="selection-fixture" active/>);
-   window.fixtureBlocks=[{id:'fixture-file-block',type:'attachment',props:{payload:JSON.stringify({id:'fixture-file',name:'多页演示.pptx',source:'computer',authorizationId:'fixture-grant',noteSize:{width,height:520}})}},...Array.from({length:30},(_,i)=>({id:'tail-'+i,type:'paragraph',content:'后续笔记段落 '+i}))];
+   window.fixtureBlocks=[{id:'fixture-file-block',type:'attachment',props:{payload:JSON.stringify({id:'fixture-file',name:'多页演示.pptx',path:'/fixture/多页演示.pptx',source:'computer',authorizationId:'fixture-grant',noteDisplay:'inline',noteSize:{width,height:520},...(importStatus?{importStatus}:{})})}},...Array.from({length:30},(_,i)=>({id:'tail-'+i,type:'paragraph',content:'后续笔记段落 '+i}))];
    const bridge={request:async(method,input)=>method==='load'?{saved:{title:'选择边界验收',blocks:window.fixtureBlocks,yjs:'',revision:0}}:method==='file-bind'?{previewSessionId:'selection-fixture'}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:method==='library-list'?[]:{},draft:async()=>{}};
-   createRoot(document.querySelector('.en-editor-host')).render(<NotesApp sessionId="selection-fixture" bridge={bridge} dark={false} navigate={()=>{}}/>);
+   createRoot(document.querySelector('.en-editor-host')).render(<NotesApp sessionId="selection-fixture" bridge={bridge} active={!readOnly} dark={false} navigate={()=>{}}/>);
   };
  `},bundle:true,conditions:['browser','import','style'],platform:'browser',format:'iife',write:false,outfile:'selection-fixture.js',loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'expose-fixture-note-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}}]})
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text
@@ -45,7 +46,7 @@ beforeAll(async()=>{
 },30000)
 afterAll(async()=>{await browser?.close()})
 
-async function fixture(width){
+async function fixture(width,startEdit=true,importStatus,readOnly=false){
  const context=await browser.newContext({viewport:{width:1100,height:850}}),page=await context.newPage(),errors=[]
  page.setDefaultTimeout(5000)
  page.on('pageerror',error=>errors.push(error.message))
@@ -54,13 +55,15 @@ async function fixture(width){
  await page.route('http://127.0.0.1/fixture.pptx',route=>route.fulfill({body:bytes}))
  await page.goto('http://127.0.0.1/pptx-selection-fixture');await page.addStyleTag({content:css})
  await page.evaluate(model=>{window.pptSaves=[];window.pptOpenCalls=0;window.sherlockPptEditor={open:async()=>{window.pptOpenCalls++;return{ok:true,document:model}},save:async request=>{window.pptSaves.push(request);return{ok:true,document:{...model,version:'2'.repeat(64)}}}};const original=window.fetch;window.fetch=(url,options)=>original(String(url).startsWith('sherlock-preview:')?'/fixture.pptx':url,options)},model)
- await page.addScriptTag({content:script});await page.addScriptTag({content:officeScript});await page.evaluate(width=>window.mountNotes(width),width)
+ await page.addScriptTag({content:script});await page.addScriptTag({content:officeScript});await page.evaluate(args=>window.mountNotes(...args),[width,importStatus,readOnly])
  await page.locator('.en-title').waitFor();await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,window.fixtureBlocks))
+ if(importStatus){await page.locator('.en-file-import').waitFor();return{page,context,errors}}
  try{
   await page.locator('[data-pptx-paragraph]').first().waitFor()
   expect(await page.evaluate(()=>window.pptOpenCalls)).toBe(0)
   expect(await page.locator('[data-pptx-paragraph][contenteditable=true]').count()).toBe(0)
   expect(await page.locator('.sherlock-ppt-selection').count()).toBe(0)
+  if(!startEdit)return{page,context,errors}
   // Use the actual Notes file component footer rather than bypassing its host.
   await page.getByRole('button',{name:'选中文件并操作预览',exact:true}).click()
   const edit=page.locator('.en-file-native-reader [data-component-pptx-edit]')
@@ -80,6 +83,45 @@ async function fixture(width){
  return{page,context,errors,reader:page.locator('.dsh_32k8zk_editorPptxHost'),toolbar:page.getByRole('toolbar',{name:'对象格式',includeHidden:true}),outline:page.locator('.sherlock-ppt-selection')}
  }catch(error){await context.close();throw error}
 }
+
+it('restores a stored inline PPT as a bounded full Notes component with one shared footer and reference action',async()=>{
+ const v=await fixture(620,false),{page}=v
+ try{
+  const card=page.locator('.en-note-file'),header=card.locator('.en-file-header .ew-grid-header'),footer=card.locator('[data-component-pptx-footer]')
+  expect(await card.evaluate(el=>el.classList.contains('en-inline-document'))).toBe(false)
+  await header.waitFor();expect(await header.getByRole('button',{name:'组件更多操作',exact:true}).count()).toBe(1)
+  expect(await header.getByRole('button',{name:'针对组件提问',exact:true}).count()).toBe(1)
+  expect(await footer.count()).toBe(1);expect(await footer.locator('[data-component-pptx-file-info]').textContent()).toContain('多页演示.pptx')
+  expect(await footer.locator('[data-component-pptx-file-info]').getAttribute('title')).toBe('/fixture/多页演示.pptx')
+  const bounds=await card.locator('.en-file-host').boundingBox();expect(bounds.height).toBeGreaterThanOrEqual(180);expect(bounds.height).toBeLessThanOrEqual(600)
+  const payload=await page.evaluate(()=>window.noteEditor.document.find(block=>block.id==='fixture-file-block').props.payload)
+  expect(JSON.parse(payload)).toMatchObject({id:'fixture-file',authorizationId:'fixture-grant',noteDisplay:'inline',noteSize:{width:620,height:520}})
+  await page.evaluate(()=>{window.noteRefEvents=[];window.noteFocusEvents=[];document.addEventListener('sherlock:notes-reference-component',event=>window.noteRefEvents.push(event.detail));document.addEventListener('sherlock:notes-composer-draft',event=>window.noteFocusEvents.push(event.detail))})
+  await header.getByRole('button',{name:'针对组件提问',exact:true}).click()
+  expect(await page.evaluate(()=>window.noteRefEvents.at(-1))).toMatchObject({sessionId:'selection-fixture',blockId:'fixture-file-block'})
+  expect(await page.evaluate(()=>window.noteFocusEvents.at(-1))).toEqual({sessionId:'selection-fixture',focus:true})
+  expect(await page.evaluate(()=>window.pptOpenCalls)).toBe(0);expect(await page.evaluate(()=>window.pptSaves)).toEqual([])
+  await header.getByRole('button',{name:'组件更多操作',exact:true}).click();await page.getByRole('menuitem',{name:'编辑',exact:true}).click()
+  await expect.poll(()=>footer.locator('[data-component-pptx-edit]').getAttribute('aria-label')).toBe('关闭编辑模式')
+  expect(await page.evaluate(()=>window.pptOpenCalls)).toBe(1)
+  await footer.getByRole('button',{name:'关闭编辑模式',exact:true}).click();await expect.poll(()=>footer.locator('[data-component-pptx-edit]').getAttribute('aria-label')).toBe('编辑')
+  expect(await page.evaluate(()=>window.pptSaves)).toEqual([])
+  expect(await page.evaluate(()=>window.noteEditor.document.find(block=>block.id==='fixture-file-block').props.payload)).toBe(payload)
+  expect(v.errors).toEqual([])
+ }finally{await v.context.close()}
+},20000)
+
+it.each(['failed','importing'])('does not expose removal of a readonly stored inline PPT during %s recovery',async status=>{
+ const v=await fixture(620,false,status,true)
+ try{
+  expect(await v.page.locator('.en-file-import').count()).toBe(1)
+  expect(await v.page.getByRole('button',{name:'移除笔记中的文件',exact:true}).count()).toBe(0)
+  expect(await v.page.evaluate(()=>window.noteEditor.isEditable)).toBe(false)
+  expect(await v.page.evaluate(()=>window.noteEditor.document.filter(block=>block.type==='attachment').length)).toBe(1)
+  expect(await v.page.evaluate(()=>window.pptOpenCalls)).toBe(0)
+  expect(v.errors).toEqual([])
+ }finally{await v.context.close()}
+},15000)
 
 for(const width of [360,686])it(`clips selection to the ${width}px Notes reader while keeping the draggable toolbar outside the card`,async()=>{
  const v=await fixture(width),{page,reader,toolbar,outline}=v

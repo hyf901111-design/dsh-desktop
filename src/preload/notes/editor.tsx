@@ -136,28 +136,30 @@ const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payl
 function FileBlock({block}:any){
   const context=useContext(Context)!,node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:t("上次文件导入已中断，请重新插入文件。")}:value}catch{return {id:block.id,name:t("文件"),importStatus:'failed',error:t("文件记录暂不可用。")} as NoteFileNode}},[block.props.payload])
   const presentation=noteFilePresentation(node)
-  return presentation==='media'||presentation==='file'||node.importStatus&&node.noteDisplay==='inline'?<InlineNoteFileBlock block={block} node={node} context={context}/>:<ComponentFileBlock block={block} inline={presentation==='document'}/>
+  return presentation==='media'||presentation==='file'||node.importStatus&&node.noteDisplay==='inline'&&presentation!=='component'?<InlineNoteFileBlock block={block} node={node} context={context}/>:<ComponentFileBlock block={block} inline={presentation==='document'}/>
 }
-function ComponentFileBlock({block,inline=false}:any){
+function ComponentFileBlock({block,inline:requestedInline=false}:any){
   const interaction=useNoteComponentInteraction()
   const context=useContext(Context)!,host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),[height,setHeight]=useState(520),[bound,setBound]=useState<string>(),[fileError,setFileError]=useState('')
   const node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:t("上次文件导入已中断，请重新拖入文件。")}:value}catch{return {id:block.id,name:t("文件"),importStatus:'failed',error:t("文件记录暂不可用。")} as NoteFileNode}},[block.props.payload])
+  const inline=requestedInline&&!/\.pptx$/i.test(node.name)
   const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height})
-  const remove=()=>{if(node.importStatus)void context.bridge.request('file-revoke',{sessionId:context.sessionId,nodeId:node.id}).catch(()=>{});context.editor.removeBlocks([block.id])}
+  const remove=()=>{if(!context.editor?.isEditable)return;if(node.importStatus)void context.bridge.request('file-revoke',{sessionId:context.sessionId,nodeId:node.id}).catch(()=>{});context.editor.removeBlocks([block.id])}
   useEffect(()=>{let live=true;setBound(undefined);setFileError('');if(!node.importStatus)void context.bridge.request('file-bind',{sessionId:context.sessionId,nodeId:node.id,authorizationId:node.authorizationId}).then(value=>{if(live)setBound(value.previewSessionId)}).catch(e=>{if(live)setFileError(e.message)});return()=>{live=false}},[context.sessionId,node.id,node.authorizationId,node.importStatus])
   useEffect(()=>{
     const publish=()=>{if(host.current&&!node.importStatus&&bound)document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,hostId:host.current.id,sessionId:context.sessionId,headerId:'en-file-header-'+instance.current,dark:context.dark,readOnly:!context.editor?.isEditable,inline,node:{...node,height:size.height,previewSessionId:bound}}}))}
     const action=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.instanceId!==instance.current||value.sessionId!==context.sessionId)return
       if(value.action==='remove')remove()
-      else if(value.action==='rename'&&typeof value.name==='string'&&value.name.trim().length<=512)context.editor.updateBlock(block.id,{props:{payload:JSON.stringify({...node,displayName:value.name.trim()||node.name})}})
+      else if(value.action==='rename'&&context.editor?.isEditable&&typeof value.name==='string'&&value.name.trim().length<=512)context.editor.updateBlock(block.id,{props:{payload:JSON.stringify({...node,displayName:value.name.trim()||node.name})}})
       else if(value.action==='reveal')void context.bridge.request('file-reveal',{sessionId:context.sessionId,nodeId:node.id,authorizationId:node.authorizationId}).catch(e=>setFileError(e.message))
+      else if(value.action==='reference'){interaction.select();document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:context.sessionId,focus:true}}))}
       else if(value.action==='size'&&Number.isFinite(value.height))setHeight(old=>{const next=Math.min(800,Math.max(180,Math.round(value.height)));return Math.abs(next-old)>2?next:old})
     }
     publish();document.addEventListener('sherlock:notes-files-sync-request',publish);document.addEventListener('sherlock:notes-file-action',action)
     return()=>{document.removeEventListener('sherlock:notes-files-sync-request',publish);document.removeEventListener('sherlock:notes-file-action',action)}
   },[node,size.height,context.sessionId,context.dark,bound,inline])
   useEffect(()=>()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,remove:true}}))},[])
-  if(node.importStatus)return <section className="en-research en-note-file en-file-import" contentEditable={false}><header className="en-research-header"><strong>{node.name}</strong><button aria-label={t("移除笔记中的文件")} onClick={remove}>×</button></header><div className="en-component-empty" role={node.importStatus==='failed'?'alert':'status'}>{t(node.error||'')||t("正在导入文件…")}</div></section>
+  if(node.importStatus)return <section className="en-research en-note-file en-file-import" contentEditable={false}><header className="en-research-header"><strong>{node.name}</strong>{context.editor?.isEditable?<button aria-label={t("移除笔记中的文件")} onClick={remove}>×</button>:null}</header><div className="en-component-empty" role={node.importStatus==='failed'?'alert':'status'}>{t(node.error||'')||t("正在导入文件…")}</div></section>
   return <section className={'en-research en-note-file'+(inline?' en-inline-file en-inline-document':'')} ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-note-research-block={block.id} data-note-session={context.sessionId} data-research-node-id={node.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
     <div id={'en-file-header-'+instance.current} className="en-file-header" draggable={!!context.editor?.isEditable}><header className={inline?'en-inline-document-caption en-file-header-fallback':'en-research-header en-file-header-fallback'}><strong>{node.displayName||node.name}</strong></header></div>
     <div ref={host} id={'en-file-'+instance.current} className="en-file-host" data-note-file={node.id} data-note-session={context.sessionId} style={{height:inline&&fileError?'auto':size.height}}><div className="en-file-fallback" role={fileError?'alert':'status'}>{t(fileError)||t("正在读取文件预览…")}</div>{!inline&&!interaction.selected?<button className="en-component-scroll-guard" aria-label={t("选中文件并操作预览")} onClick={interaction.select}/>:null}</div>

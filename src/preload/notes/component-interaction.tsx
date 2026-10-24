@@ -15,6 +15,8 @@ export function useNoteComponentInteraction(){
    }
    // The reader's object tools live in document.body, outside the note frame.
    if(element.querySelector('[data-ppt-editor]')&&target?.closest?.('.sherlock-ppt-selection,.sherlock-ppt-format'))return
+   const fileMenu=target?.closest<HTMLElement>('[data-note-file-menu]')
+   if(fileMenu?.dataset.noteFileMenu&&fileMenu.dataset.noteFileMenu===element.querySelector('.en-file-header')?.id)return
    if(target?.closest?.('[data-ework-notes-composer-host]'))return
    setSelected(false)
   }

@@ -21,6 +21,8 @@ function mediaKind(node:NoteFileNode):NoteMediaKind|undefined{
 export function noteFilePresentation(node:NoteFileNode):'media'|'document'|'file'|'component'{
  if(mediaKind(node))return 'media'
  if(node.previewEligible===false)return 'file'
+ // Existing slash-inserted PPTs keep their payload, but use the complete reader chrome.
+ if(extension(node)==='pptx')return 'component'
  if(node.noteDisplay==='inline')return documentExtensions.has(extension(node))?'document':'file'
  return 'component'
 }

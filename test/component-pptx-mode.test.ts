@@ -20,7 +20,7 @@ const cleanups:Array<()=>Promise<void>>=[]
 afterEach(async()=>{for(const cleanup of cleanups.splice(0).reverse())await cleanup()})
 
 const pptxDocument={id:'native-component',version:'1',editToken:'edit-token',slides:[{index:0,part:'ppt/slides/slide1.xml',nodes:[{id:'ppt/slides/slide1.xml#node:2',nodeId:'2',part:'ppt/slides/slide1.xml',type:'shape',name:'标题',geometry:{x:0,y:0,width:200,height:100,rotation:0}}],fields:[{id:'title',nodeId:'2',paragraphIndex:0,label:'标题',text:'原始标题'}]}]}
-async function fixture(readOnly=false,surface='reader',actual=false){
+async function fixture(readOnly=false,surface='reader',actual=false,storedInline=false){
  const win=new Window({url:'https://component-pptx.test/'}),previous=new Map(['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]))
  for(const[key,value]of Object.entries({window:win,document:win.document,navigator:win.navigator,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,key,{configurable:true,value})
  win.HTMLElement.prototype.getBoundingClientRect=function(){return new win.DOMRect(0,0,800,600)}
@@ -45,12 +45,12 @@ async function fixture(readOnly=false,surface='reader',actual=false){
  const host=win.document.createElement('section');host.dataset.researchNodeId='ppt';win.document.body.append(host)
  const mount=win.document.createElement('div');win.document.body.append(mount);const root=createRoot(mount as any),node={id:'ppt',name:'demo.pptx',path:'/work/demo.pptx',authorizationId:'a',previewSessionId:'s'}
  let showMenu:()=>void=()=>{}
- function Research(){const[menu,setMenu]=React.useState(false);showMenu=()=>setMenu(true);return React.createElement(React.Fragment,null,createPortal(React.createElement(api.Office,{node,sessionId:'s',kind:'pptx',visible:true,service:officePreview,readOnly}),host),menu&&React.createElement(api.Menu,{target:{node,root:host,left:0,top:0,sessionId:'s'},workspace:{},readOnly,onClose:()=>setMenu(false)}))}
+ function Research(){const[menu,setMenu]=React.useState(false);showMenu=()=>setMenu(true);return React.createElement(React.Fragment,null,createPortal(React.createElement(api.Office,{node,sessionId:'s',kind:'pptx',visible:true,service:officePreview,readOnly}),host as unknown as Element),menu&&React.createElement(api.Menu,{target:{node,root:host,left:0,top:0,sessionId:'s'},workspace:{},readOnly,onClose:()=>setMenu(false)}))}
  const header=win.document.createElement('header'),reader=win.document.createElement('div');if(surface==='notes'){host.append(header,reader)}
- const entry={instanceId:'note-instance',sessionId:'s',host:reader,header,node,readOnly}
+ const entry={instanceId:'note-instance',sessionId:'s',host:reader,header,node,readOnly,inline:storedInline}
  await act(async()=>root.render(surface==='notes'?React.createElement(api.Note,{entry,officePreview}):React.createElement(Research)))
  cleanups.push(async()=>{await act(async()=>root.unmount());await win.happyDOM.abort();for(const[key,value]of previous){if(value)Object.defineProperty(globalThis,key,value);else delete(globalThis as any)[key]}})
- return{win,host,root,api,modes,previewMounts,restore,bridge,officePreview,async menu(){await act(async()=>{if(surface==='notes')(header.querySelector('[data-workbench-more]') as any).click();else showMenu()})}}
+ return{win,host,header,entry,root,api,modes,previewMounts,restore,bridge,officePreview,async menu(){await act(async()=>{if(surface==='notes')(header.querySelector('[data-workbench-more]') as any).click();else showMenu()})}}
 }
 
 it('forwards native PPT mode controls to a right-aligned component footer',async()=>{
@@ -64,6 +64,18 @@ it('keeps a readonly PPT preview without editable component controls',async()=>{
  const f=await fixture(true)
  expect(f.host.querySelector('[data-native-pptx-preview]')).not.toBeNull()
  expect(f.host.querySelector('[data-component-pptx-edit]')).toBeNull()
+})
+it.each([false,true])('gives an existing inline PPT a full shared header and one real-info footer (readonly %s)',async readOnly=>{
+ const f=await fixture(readOnly,'notes',true,true),before=JSON.stringify(f.entry.node)
+ expect(f.header.querySelector('.ew-grid-header')).not.toBeNull()
+ expect(f.header.querySelector('[data-workbench-more]')).not.toBeNull()
+ expect(f.header.querySelector('.en-inline-document-caption')).toBeNull()
+ expect(f.host.querySelectorAll('[data-component-pptx-footer]')).toHaveLength(1)
+ expect(f.host.querySelector('[data-component-pptx-file-info]')?.textContent).toContain('demo.pptx')
+ expect(f.host.querySelector('[data-component-pptx-file-info]')?.getAttribute('title')).toContain('/work/demo.pptx')
+ expect(Boolean(f.host.querySelector('[data-component-pptx-edit]'))).toBe(!readOnly)
+ expect(f.bridge.open).not.toHaveBeenCalled();expect(f.bridge.save).not.toHaveBeenCalled()
+ expect(JSON.stringify(f.entry.node)).toBe(before)
 })
 it.each(['research','notes'])('shares real central mode between %s menu and footer and saves safely before leaving edit',async surface=>{
  const f=await fixture(false,surface,true)
@@ -138,4 +150,9 @@ it('installs and strips the actual resident representation without changing grid
  expect(restoreResearchGridWorkbench(installed).trim()).toBe(base.trim())
  expect(patchResearchGridWorkbench(installed)).toBe(installed)
  expect(()=>patchComponentPptxMode(patched.replace('Component: service.Component, readOnly:','Component: null, readOnly:'))).toThrow(/drifted/)
+ const currentBinding=patched.match(/\.\.\.\(kind === "pptx" \? \{ Component: service\.Component, readOnly:[^\n]+\n\s*sourceUrl: preview\.descriptor\.url,/)! [0]
+ const oldBinding=currentBinding.replace('fileInfo: { name: node.name, path: node.path }, ','')
+ const mixed=patched.replace('/* EWORK_GRID_RESTORE ','/* duplicated legacy props\n'+oldBinding+'\n'+oldBinding+'\n*/\n/* EWORK_GRID_RESTORE ')
+ expect(()=>stripComponentPptxMode(mixed)).toThrow(/drifted/)
+ expect(()=>patchComponentPptxMode(mixed)).toThrow(/drifted/)
 },15000)

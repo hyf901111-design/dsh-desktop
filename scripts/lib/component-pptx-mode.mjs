@@ -23,7 +23,7 @@ export function useComponentPptxMode(target, active = true) {
   return value ? { ...value.state, toggleMode: () => value.host.isConnected && value.host.__eworkPptxMode?.controls?.toggleMode?.() } : null
 }
 
-export function PptxComponentEditorHost({ Component, readOnly = false, ...props }) {
+export function PptxComponentEditorHost({ Component, readOnly = false, fileInfo, ...props }) {
   const h = react.createElement, host = react.useRef(null), current = react.useRef({ state: null, controls: null }), [state, setState] = react.useState(null)
   const publish = () => {
     const element = host.current
@@ -43,30 +43,33 @@ export function PptxComponentEditorHost({ Component, readOnly = false, ...props 
   }, [])
   react.useLayoutEffect(() => { publish(); return () => { if (host.current) delete host.current.__eworkPptxMode } }, [])
   const label = state?.mode === 'edit' ? '关闭编辑模式' : '编辑'
+  const fileName = typeof fileInfo?.name === 'string' ? fileInfo.name : '', canEdit = state?.modes && state.editable && !readOnly
   return h('div', { ref: host, 'data-component-pptx-mode-host': '', style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0, height: '100%' } },
     h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0 } }, h(Component, { ...props, readOnly, toolbar: 'host', onToolbarState: receiveState, onToolbarControls: receiveControls })),
-    state?.modes && state.editable && !readOnly ? h('footer', { 'data-component-pptx-footer': '', style: { display: 'flex', flex: 'none', justifyContent: 'flex-end', padding: '4px 8px', borderTop: '1px solid var(--grid-border, #8883)' } },
-      h('button', { type: 'button', 'data-component-pptx-edit': '', 'aria-label': label, 'aria-pressed': state.mode === 'edit', 'aria-busy': state.modeBusy || undefined, title: label, disabled: state.modeBusy || typeof current.current.controls?.toggleMode !== 'function', onPointerDown: event => event.stopPropagation(), onClick: event => { event.stopPropagation(); void current.current.controls?.toggleMode?.() }, style: { display: 'inline-flex', alignItems: 'center', gap: 5, minHeight: 24, border: 0, borderRadius: 4, padding: '2px 6px', background: 'transparent', color: 'inherit', font: 'inherit', cursor: 'pointer' } }, h('span', { className: 'ew-grid-icon ew-grid-icon-edit', 'aria-hidden': true }), label)) : null)
+    fileName || canEdit ? h('footer', { 'data-component-pptx-footer': '', style: { display: 'flex', flex: 'none', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minHeight: 32, boxSizing: 'border-box', padding: '4px 8px', borderTop: '1px solid var(--grid-border, #8883)' } },
+      fileName ? h('span', { 'data-component-pptx-file-info': '', title: fileInfo.path || fileName, style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, opacity: .72 } }, 'PPTX · '+fileName) : null,
+      canEdit ? h('button', { type: 'button', 'data-component-pptx-edit': '', 'data-note-export-omit': '', 'aria-label': label, 'aria-pressed': state.mode === 'edit', 'aria-busy': state.modeBusy || undefined, title: label, disabled: state.modeBusy || typeof current.current.controls?.toggleMode !== 'function', onPointerDown: event => event.stopPropagation(), onClick: event => { event.stopPropagation(); void current.current.controls?.toggleMode?.() }, style: { display: 'inline-flex', flex: 'none', alignItems: 'center', gap: 5, minHeight: 24, border: 0, borderRadius: 4, padding: '2px 6px', background: 'transparent', color: 'inherit', font: 'inherit', cursor: 'pointer' } }, h('span', { className: 'ew-grid-icon ew-grid-icon-edit', 'aria-hidden': true }), label) : null) : null)
 }
 
 const begin = '/* EWORK_COMPONENT_PPTX_MODE_BEGIN */', end = '/* EWORK_COMPONENT_PPTX_MODE_END */'
 const replacements = [
   ['function ResearchCanvasOfficePreview({ node, sessionId, kind, visible, service, resizing }) {', 'function ResearchCanvasOfficePreview({ node, sessionId, kind, visible, service, resizing, readOnly = false }) {'],
   ['const Component = service.Component;', 'const Component = kind === "pptx" ? PptxComponentEditorHost : service.Component;'],
-  ['sourceUrl: preview.descriptor.url,', '...(kind === "pptx" ? { Component: service.Component, readOnly: readOnly || node.readOnly === true || sherlockShared(sessionId) && sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit !== true, ...(typeof node.path === "string" && node.path ? { refreshSource: { sessionId, path: node.path } } : {}) } : {}),\n                        sourceUrl: preview.descriptor.url,']
+  ['sourceUrl: preview.descriptor.url,', '...(kind === "pptx" ? { Component: service.Component, readOnly: readOnly || node.readOnly === true || sherlockShared(sessionId) && sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit !== true, fileInfo: { name: node.name, path: node.path }, ...(typeof node.path === "string" && node.path ? { refreshSource: { sessionId, path: node.path } } : {}) } : {}),\n                        sourceUrl: preview.descriptor.url,', '...(kind === "pptx" ? { Component: service.Component, readOnly: readOnly || node.readOnly === true || sherlockShared(sessionId) && sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit !== true, ...(typeof node.path === "string" && node.path ? { refreshSource: { sessionId, path: node.path } } : {}) } : {}),\n                        sourceUrl: preview.descriptor.url,']
 ]
 export function stripComponentPptxMode(source) {
   const metadata = source.indexOf('/* EWORK_GRID_RESTORE '), suffix = metadata < 0 ? '' : source.slice(metadata)
   if (metadata >= 0) source = source.slice(0, metadata)
   const first = source.indexOf(begin), last = source.indexOf(end, first)
   if (first < 0) {
-    if (last >= 0 || replacements.some(([, installed]) => source.includes(installed))) throw Error('PPT component mode orphaned props')
+    if (last >= 0 || replacements.some(([, ...installed]) => installed.some(value => source.includes(value)))) throw Error('PPT component mode orphaned props')
     return source + suffix
   }
   if (last < first || source.indexOf(begin, first + begin.length) >= 0 || source.indexOf(end, last + end.length) >= 0) throw Error('PPT component mode helper boundary drifted')
-  for (const [original, installed] of replacements) {
-    if (source.split(installed).length !== 2) throw Error('PPT component mode installed renderer drifted')
-    source = source.replace(installed, original)
+  for (const [original, ...variants] of replacements) {
+    const matches = [...new Set(variants)].map(installed => ({ installed, count: source.split(installed).length - 1 })).filter(value => value.count > 0)
+    if (matches.length !== 1 || matches[0].count !== 1) throw Error('PPT component mode installed renderer drifted')
+    source = source.replace(matches[0].installed, original)
   }
   return source.slice(0, first) + source.slice(last + end.length + 1) + suffix
 }
