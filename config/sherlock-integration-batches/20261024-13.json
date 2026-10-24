@@ -148,6 +148,77 @@
           "源检查只是验收之一，不能代替逐页实际视觉复核。"
         ],
         "generatedAt": "2026-10-24T07:27:03.166089+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2fc59ce098012405ba1a0b50e4435abe24b5588b",
+        "verificationCommit": "2fc59ce098012405ba1a0b50e4435abe24b5588b",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "2fc59ce098012405ba1a0b50e4435abe24b5588b",
+            "completedAt": "2026-10-24T07:31:58.878Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PYTHONDONTWRITEBYTECODE=1",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-timeline.test.ts",
+              "test/home-guides.test.ts",
+              "test/home-presentation-runtime.test.js",
+              "test/home-presentation-host.test.js",
+              "test/home-guide-presentation-adapter.test.ts",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "test/efund-ppt-rendered-fit.test.js",
+              "test/efund-ppt-text-layout.test.js",
+              "test/efund-ppt-layout-lint.test.ts",
+              "test/efund-ppt-package.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：env PYTHONDONTWRITEBYTECODE=1 npx --no-install vitest run test/home-guide-timeline.test.ts test/home-guides.test.ts test/home-presentation-runtime.test.js test/home-presentation-host.test.js test/home-guide-presentation-adapter.test.ts test/home-guide-presentation-binding.test.ts test/home-guide-presentation-patch.test.js test/home-guide-presentation-browser.test.js test/home-guide-presentation-shell-browser.test.js test/efund-ppt-rendered-fit.test.js test/efund-ppt-text-layout.test.js test/efund-ppt-layout-lint.test.ts test/efund-ppt-package.test.js --maxWorkers=2",
+            "verifiedCommit": "2fc59ce098012405ba1a0b50e4435abe24b5588b",
+            "completedAt": "2026-10-24T07:31:58.878Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2fc59ce098012405ba1a0b50e4435abe24b5588b",
+            "completedAt": "2026-10-24T07:31:58.878Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2fc59ce098012405ba1a0b50e4435abe24b5588b",
+            "completedAt": "2026-10-24T07:31:58.878Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T07:31:58.878Z"
       }
     }
   ],
