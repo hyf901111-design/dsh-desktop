@@ -14,6 +14,7 @@ import ToolRuntime from '@deepseek-ai/dsh-tools'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
+import BasicCompactionEngine from '@deepseek-ai/dsh-compaction-basic'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import SessionTitleService from '@deepseek-ai/dsh-session-title'
@@ -30,7 +31,7 @@ import {HOME_PRESENTATION_PATH,createHomePresentationBrief} from '../../packages
 
 // Real production services on private temporary storage. The only model adapter
 // is a local recorder; any escaped preset request is immediately observable.
-export async function presentationHostFixture({bindWorkspace=true}={}){
+export async function presentationHostFixture({bindWorkspace=true,autoCompaction=false}={}){
  const root=await realpath(await mkdtemp(join(tmpdir(),'home-presentation-host-'))),cwd=join(root,'examples','presentation'),home=join(root,'profile')
  await mkdir(cwd,{recursive:true});await mkdir(home)
  const previousHome=process.env.DSH_HOME;process.env.DSH_HOME=home
@@ -42,6 +43,7 @@ export async function presentationHostFixture({bindWorkspace=true}={}){
  new SessionStore(ctx);new AgentRegistry(ctx);new LlmRuntime(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx);new SkillRegistry(ctx);new TokenMeter(ctx)
  new JsonlSessionPersistence(ctx,{root:join(root,'sessions'),compression:'none',packChunks:false,writeBatchMaxDelayMs:1})
  new AgentLoop(ctx,{agents:[],maxParallelToolCalls:1});new UserQuestionService(ctx)
+ if(autoCompaction)new BasicCompactionEngine(ctx,{thresholdRatio:0.05,retainTokens:0})
  new SessionTitleService(ctx,{fallbackMaxWords:10,fallbackMaxBytes:100,maxTitleBytes:256})
  const registry=new WorkspaceRegistry(ctx);await registry[Service.init]()
  class Outside extends LlmAdapter{async resolveModel(provider,model){return{provider,id:model,name:model,context:{contextWindow:32000},defaultMaxTokens:512}}async *stream(request){outside.push(request);yield{type:'finish',reason:{kind:'stop'}}}}

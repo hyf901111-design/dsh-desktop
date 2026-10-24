@@ -82,7 +82,16 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
  class PresetAdapter extends LlmAdapter{
   async resolveModel(provider,model){return{provider,id:model,name:'离线预置演示',context:{contextWindow:32000},defaultMaxTokens:1024}}
   async *stream(request){
-   const run=current({sessionId:request.sessionId,runId:runs.get(request.sessionId)?.runId});await wait(run,()=>run.playing,request.signal)
+   const run=current({sessionId:request.sessionId,runId:runs.get(request.sessionId)?.runId});request.signal?.throwIfAborted()
+   // Host maintenance uses this same routed adapter. Return local metadata,
+   // never tutorial steps or tools, so compaction cannot consume the cursor.
+   if(request.purpose!==undefined){
+    if(!['compaction','session-title'].includes(request.purpose))throw Error('离线预置示例不接受此类辅助请求。')
+    const title=run.metadata.presentationTitle??run.metadata.presentation?.title??'人工智能周期与资产配置'
+    const text=request.purpose==='session-title'?title:`当前为《${title}》离线预置演示，按教程检查点继续，不调用外部模型。原研报：${HOME_PRESENTATION_SOURCE_FILE}；成稿：${HOME_PRESENTATION_FILE}（${run.published?'已保存':'尚未保存'}）。`
+    yield{type:'block-start',index:0,blockType:'text'};yield{type:'text-delta',index:0,text};yield{type:'block-end',index:0,block:{type:'text',text}};yield{type:'finish',reason:{kind:'stop'}};return
+   }
+   await wait(run,()=>run.playing,request.signal)
    // The ordinary skill middleware durably appends trusted instructions as
    // user/message too. Only human prompts define this run's exact admission.
    const user=run.agent.session.events.filter(e=>e.type==='user/message'&&e.data.source?.kind==='user')
