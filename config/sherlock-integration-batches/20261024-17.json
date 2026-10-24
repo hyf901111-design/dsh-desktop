@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-17",
+  "branch": "codex/integration/20261024-17",
+  "baseMainCommit": "f6a9207a3bd8e393ee3cbc18f940ffb1d8ee3e6b",
+  "expectedMainCommit": "f6a9207a3bd8e393ee3cbc18f940ffb1d8ee3e6b",
+  "createdAt": "2026-10-24T11:16:24.566Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复PPT图表原生打开兼容性并拦截不完整验收",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "f6a9207a3bd8e393ee3cbc18f940ffb1d8ee3e6b",
+        "tipCommit": "74c5745050ae9313d5d2f52c8cf0a7f9bb96434d",
+        "commits": [
+          {
+            "commit": "4a84eeacf9d916fcc1b57045f4c556e185d80ef2",
+            "parents": [
+              "f6a9207a3bd8e393ee3cbc18f940ffb1d8ee3e6b"
+            ],
+            "subject": "校验并规范化原生图表轴标识，绑定包检查字节快照"
+          },
+          {
+            "commit": "74c5745050ae9313d5d2f52c8cf0a7f9bb96434d",
+            "parents": [
+              "4a84eeacf9d916fcc1b57045f4c556e185d80ef2"
+            ],
+            "subject": "约束折线标签位置并要求最终稿逐页原生验收"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/delivery-111.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/package-and-render-checks.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_package.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_visual_review.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/efund_chart_properties.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/normalize_efund_text.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/qa_efund_pptx.py"
+          },
+          {
+            "status": "M",
+            "path": "test/efund-ppt-110.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-chart-label-position.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-native-visit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/efund-ppt-package.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/efund-ppt-107.test.js",
+              "test/efund-ppt-108.test.js",
+              "test/efund-ppt-109.test.js",
+              "test/efund-ppt-110.test.js",
+              "test/efund-ppt-111.test.js",
+              "test/efund-ppt-chart-label-position.test.js",
+              "test/efund-ppt-layout-lint.test.ts",
+              "test/efund-ppt-native-visit.test.js",
+              "test/efund-ppt-package.test.js",
+              "test/efund-ppt-rendered-fit.test.js",
+              "test/efund-ppt-text-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "内置PPT直接相关门禁/规范化/页访问证据回归；/tmp/ppt-native-final-0-20261024.log",
+            "verifiedCommit": "74c5745050ae9313d5d2f52c8cf0a7f9bb96434d",
+            "completedAt": "2026-10-24T11:14:28.021164+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "内置PPT直接相关门禁/规范化/页访问证据回归；/tmp/ppt-native-final-1-20261024.log",
+            "verifiedCommit": "74c5745050ae9313d5d2f52c8cf0a7f9bb96434d",
+            "completedAt": "2026-10-24T11:14:28.042649+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实PowerPoint对原2aa文件弹修复，实际修复删除P13整页；仅轴改正cb7在P13延迟加载仍弹修复。完整共享normalizer产物b562与单变量label-top对照字节一致，Root通过CUA逐页访问20页并关闭重开P13均无修复。证据/tmp/ework-ppt-repair-investigation-20261024-182629/native-label-top-probe。此为修正产物原生验收；正式客户端内置skill尚须本批main重建。"
+        },
+        "acceptanceCriteria": [
+          "默认门禁拒绝轴ID越界/非法引用及已证实的LINE标签位置兼容性问题。",
+          "生成normalizer同步重编号轴声明和引用，按图表类型修复已知标签位置，不改变图表数据与条形图合法outEnd。",
+          "最终视觉检查要求实际最终hash、完整PowerPoint逐页访问与无修复/内容丢失记录，封面打开或LO预览不冒充原生通过。",
+          "原始失败文件、实际PowerPoint修复副本和单变量A/B证据保留；实际EWork任务在新版正式内置skill生效后继续生成。",
+          "仅本地正式身份客户端；不加版本、不公证、上传、公开发布或推送，不跑产品全功能测试。"
+        ],
+        "risks": [
+          "原始EWork任务输出仍为bad2aa并处于idle，须用正式更新后内置skill处理并重新逐页验收，不将/tmp修正副本冒充任务交付。",
+          "marker-only样式误连线已另做原生单变量证明，属于实际生成脚本后续修订，未对合法point样式做通用剥除。",
+          "鼠标偶发冻结根因仍未确认。"
+        ],
+        "generatedAt": "2026-10-24T11:14:28.042686+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/efund-ppt-107.test.js",
+        "test/efund-ppt-108.test.js",
+        "test/efund-ppt-109.test.js",
+        "test/efund-ppt-110.test.js",
+        "test/efund-ppt-111.test.js",
+        "test/efund-ppt-chart-label-position.test.js",
+        "test/efund-ppt-layout-lint.test.ts",
+        "test/efund-ppt-native-visit.test.js",
+        "test/efund-ppt-package.test.js",
+        "test/efund-ppt-rendered-fit.test.js",
+        "test/efund-ppt-text-layout.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
