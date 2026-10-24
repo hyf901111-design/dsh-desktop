@@ -43,19 +43,21 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
    await playing(ticket)
    const valid=(visible=false)=>{check(ticket);if(!target?.isConnected||target.ownerDocument!==document||target.disabled||target.readOnly||target.getAttribute('aria-disabled')==='true'||target.closest('[inert]'))throw changed();if(visible){const rect=target.getBoundingClientRect();if(rect.width<=0||rect.height<=0||rect.right<=0||rect.bottom<=0||rect.left>=window.innerWidth||rect.top>=window.innerHeight)throw changed()}}
    valid()
-   const marker=document.documentElement.dataset.homeGuidePointerRun,requestId=window.crypto.randomUUID(),detail={runId:ticket.detail.runId,requestId,target,label,action}
+   const marker=document.documentElement.dataset.homeGuidePointerRun,requestId=window.crypto.randomUUID(),detail={runId:ticket.detail.runId,requestId,label,action}
    if(marker&&marker!==ticket.detail.runId)throw changed()
    target.scrollIntoView?.({block:'nearest',inline:'nearest'})
    if(marker){
+    const targetToken=detail.runId+':'+requestId+':target';detail.targetToken=targetToken
     await new Promise((resolve,reject)=>{
      let remaining=10000,last=window.performance.now()
-     const clean=()=>{window.clearInterval(timer);window.removeEventListener('sherlock:home-guide-cue-reply',receive);ticket.controller.signal.removeEventListener('abort',abort)}
+     const clean=()=>{window.clearInterval(timer);window.removeEventListener('sherlock:home-guide-cue-reply',receive);ticket.controller.signal.removeEventListener('abort',abort);if(target.getAttribute('data-home-guide-cue-target')===targetToken)target.removeAttribute('data-home-guide-cue-target')}
      const abort=()=>{clean();reject(changed())},receive=event=>{const reply=event.detail;if(reply?.runId!==detail.runId||reply.requestId!==requestId)return;clean();reply.ok?resolve():reject(Error(reply.message||'操作目标暂不可用。'))}
      const timer=window.setInterval(()=>{const now=window.performance.now();if(ticket.playing&&!document.hidden)remaining-=now-last;last=now;if(remaining<=0){clean();reject(Error('操作提示暂未就绪，请重试。'))}},100)
-     window.addEventListener('sherlock:home-guide-cue-reply',receive);ticket.controller.signal.addEventListener('abort',abort,{once:true});window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail}))
+     window.addEventListener('sherlock:home-guide-cue-reply',receive);ticket.controller.signal.addEventListener('abort',abort,{once:true})
+     try{target.setAttribute('data-home-guide-cue-target',targetToken);window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail}))}catch(error){clean();reject(error)}
     })
    }else{
-    window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail}))
+    window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail:{...detail,target}}))
     for(let ms=0;ms<650;ms+=50){await playing(ticket);await delay(ticket,50)}
    }
    await playing(ticket);valid(true);if(marker&&document.documentElement.dataset.homeGuidePointerRun!==marker)throw changed()

@@ -49,7 +49,7 @@ beforeAll(async()=>{
 
  const registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true}),root=createRoot(document.querySelector('#native-root'));
  root.render(<><native.ConversationRoot {...shared} useProjection={useProjection} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{throw Error('Must not create another workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例',sessionIds:['demo']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/><SkillMenus/></>);
- window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;window.probe.cues.push({label:cue.label,tag:cue.target.tagName,requestId:cue.requestId,action:cue.action,filePath:cue.target.closest('.ew-delivery-card')?.dataset.filePath,skillOption:cue.target.closest('[data-ework-command="skills"]')?cue.target.textContent:null});if(window.probe.autoAck!==false&&cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))});
+ window.addEventListener('sherlock:home-guide-cue',event=>{const raw=event.detail,cue=typeof raw.targetToken==='string'?JSON.parse(JSON.stringify(raw)):raw,target=typeof cue.targetToken==='string'?[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue.targetToken):cue.target;window.probe.cues.push({label:cue.label,tag:target?.tagName,requestId:cue.requestId,action:cue.action,targetToken:cue.targetToken,keys:Object.keys(raw).sort(),jsonOnly:Object.values(raw).every(value=>typeof value==='string'),payload:cue.targetToken?cue:null,tokenPresent:!!cue.targetToken&&target?.getAttribute('data-home-guide-cue-target')===cue.targetToken,filePath:target?.closest('.ew-delivery-card')?.dataset.filePath,skillOption:target?.closest('[data-ework-command="skills"]')?target.textContent:null});if(window.probe.autoAck!==false&&cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected}}))});
  const timer=setInterval(()=>window.probe.refresh(),30);
  Object.assign(window.probe,{async mount(fresh=true){this.guide=await mountHomePresentationGuide(document,document.querySelector('#guide-host'),{signal:(this.controller=new AbortController()).signal,sessionId:'demo',cwd:window.cwd,runId:'run-1',fresh})},step:step=>window.probe.guide.runStep(step),play(playing){window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'demo',runId:'run-1',playing}}))},dispose(){this.guide?.dispose()},unmount(){clearInterval(timer);root.unmount();shell.dispose();disposers.reverse().forEach(fn=>fn())}});
  `},bundle:true,platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"development"'}})
@@ -95,11 +95,66 @@ it('waits for the real pointer acknowledgement and never adds attachments after 
   await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
   await expect.poll(()=>page.evaluate(()=>window.probe.cues.length)).toBe(1)
   const cue=await page.evaluate(()=>window.probe.cues[0]);expect(cue.requestId).toBeTruthy();expect(cue.action).toBe('click')
+  expect(cue.jsonOnly).toBe(true);expect(cue.tokenPresent).toBe(true);expect(cue.keys).toEqual(['action','label','requestId','runId','targetToken'])
+  expect(cue.targetToken).toBe(`run-1:${cue.requestId}:target`)
+  expect(cue.payload).toEqual({runId:'run-1',requestId:cue.requestId,label:cue.label,action:'click',targetToken:cue.targetToken})
   expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.length)).toBe(0)
+  await page.evaluate(()=>{const cue=window.probe.cues[0];for(const detail of [{runId:'other-run',requestId:cue.requestId},{runId:'run-1',requestId:'other-request'}])window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{...detail,ok:true}}))})
+  expect(await page.locator('textarea').getAttribute('data-home-guide-cue-target')).toBe(cue.targetToken)
   await page.evaluate(()=>{window.probe.play(false);const cue=window.probe.cues[0];window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:cue.requestId,ok:true}}))})
   await page.waitForTimeout(150);expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.length)).toBe(0)
+  expect(await page.locator('textarea').getAttribute('data-home-guide-cue-target')).toBeNull()
   await page.evaluate(()=>window.probe.dispose());expect(await page.evaluate(()=>window.probe.pending)).toBe(false)
   expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.length)).toBe(0);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('cleans a pending token on cancellation before the pointer can acknowledge',async()=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.autoAck=false})
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true))
+  await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await expect.poll(()=>page.evaluate(()=>window.probe.cues.length)).toBe(1)
+  const cue=await page.evaluate(()=>window.probe.cues[0]);expect(cue.targetToken).toBe(`run-1:${cue.requestId}:target`)
+  expect(await page.locator('textarea').getAttribute('data-home-guide-cue-target')).toBe(cue.targetToken)
+  await page.evaluate(()=>window.probe.dispose());expect(await page.evaluate(()=>window.probe.pending)).toBe(false)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.length)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it.each([false,true])('cleans a failed acknowledgement without removing another token (replaced=%s)',async replaced=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.autoAck=false})
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true))
+  await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await expect.poll(()=>page.evaluate(()=>window.probe.cues.length)).toBe(1)
+  const cue=await page.evaluate(()=>window.probe.cues[0]);expect(cue.tokenPresent).toBe(true)
+  await page.evaluate(replaced=>{if(replaced)document.querySelector('textarea').setAttribute('data-home-guide-cue-target','other-run:other-request:target');const cue=window.probe.cues[0];window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:cue.requestId,ok:false,message:'目标不可用'}}))},replaced)
+  expect(await page.evaluate(()=>window.probe.pending)).toBe(false)
+  expect(await page.locator('textarea').getAttribute('data-home-guide-cue-target')).toBe(replaced?'other-run:other-request:target':null)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.length)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('cleans the token if dispatch fails before any pointer reply',async()=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';const dispatch=window.dispatchEvent;window.dispatchEvent=function(event){if(event.type==='sherlock:home-guide-cue')throw Error('cue dispatch failed');return dispatch.call(this,event)}})
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true))
+  expect(await page.evaluate(()=>window.probe.step('brief').then(()=>true,()=>false))).toBe(false)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.length)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('retains the DOM cue only for a standalone fixture without the real pointer marker',async()=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true))
+  await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await expect.poll(()=>page.evaluate(()=>window.probe.cues.length)).toBe(1)
+  const cue=await page.evaluate(()=>window.probe.cues[0]);expect(cue.tag).toBe('TEXTAREA');expect(cue.keys).toContain('target');expect(cue.targetToken).toBeUndefined()
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+  await page.evaluate(()=>window.probe.dispose());expect(await page.evaluate(()=>window.probe.pending)).toBe(false);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 it('preserves a concurrent user draft while the first pointer acknowledgement is pending',async()=>{
@@ -156,6 +211,8 @@ it('types and sends through the resident native InputBar, renders persisted chat
   expect(await page.evaluate(()=>window.probe.cues.at(-1).filePath)).toBe(join(f.cwd,'人工智能周期与资产配置.pptx'))
   expect(await page.evaluate(()=>window.probe.cues.some(cue=>cue.skillOption?.includes('PPT制作助手')))).toBe(true)
   expect(await page.evaluate(()=>new Set(window.probe.cues.map(cue=>cue.requestId)).size===window.probe.cues.length)).toBe(true)
+  expect(await page.evaluate(()=>window.probe.cues.every(cue=>cue.jsonOnly&&cue.tokenPresent&&cue.targetToken==='run-1:'+cue.requestId+':target'))).toBe(true)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   expect(await page.evaluate(()=>window.probe.original===document.querySelector('textarea'))).toBe(true)
   expect(await page.evaluate(()=>window.probe.cues.map(c=>c.label))).toEqual(expect.arrayContaining(['添加原始研报 PDF','选择公司 PPT 制作技能','填写研报转换要求','发送演示需求','打开可编辑文件']))
   await page.screenshot({path:evidence+'/03-native-delivery.png'})
