@@ -61,7 +61,7 @@ function actionCall(args){
 }
 
 export function registerClientTools(ctx,{env=process.env,fetch:request=globalThis.fetch}={}){
-  const disposers=[],controllers=new Set()
+  const disposers=[],controllers=new Set(),savedExecutions=new Map()
   let disposed=false
   for(const method of ['catalog','execute']){
     const parameters=method==='catalog'?{}:{
@@ -76,6 +76,12 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
         :'执行当前客户端能力目录明确声明且可用的操作。先查询 client_capabilities，再按返回的精确参数调用。只根据宿主回执说明实际应用、保存、等待、取消或失败状态，不以解释或模型输出冒充操作完成；失败不绕过权限。目标会话和模式由宿主核验，子任务不能借用父会话权限。',
       parameters,
       output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result}]},
+      finalizeContent:(exec,result)=>{
+        const saved=savedExecutions.get(exec.token)
+        savedExecutions.delete(exec.token)
+        if(!saved||!result?.isError||!exec.signal?.aborted)return
+        return [{type:'text',text:JSON.stringify({...saved,cancelledAfterSave:true,message:'组件已保存，后续操作已取消。'})}]
+      },
       execute:async(args,exec)=>{
         if(disposed)throw Error('客户端能力服务已停止。')
         if(!object(args)||method==='catalog'&&Object.keys(args).length)throw Error('客户端操作参数无效。')
@@ -92,26 +98,45 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
         // The existing Notes create bridge owns a 250s generation budget plus
         // a bounded final-effect acknowledgement. Other actions remain 120s.
         const timer=setTimeout(abort,call?.capability==='notes.components.create'?260000:120000)
-        try{
+        const post=async(operation,transportSignal)=>{
           const response=await request(`${endpoint.origin}/client-capabilities`,{
-            method:'POST',redirect:'error',signal:controller.signal,
+            method:'POST',redirect:'error',signal:transportSignal,
             headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},
-            body:JSON.stringify({...identity,method,...(call?{call}:{})})
+            body:JSON.stringify({...identity,method:operation,...(call?{call}:{})})
           })
           const result=await response.json()
           if(!response.ok)throw Error(typeof result?.error==='string'?result.error:'客户端操作失败。')
-          if(call?.capability==='conversation.components.create'&&result?.status==='succeeded'){
-            const manifest=parseConversationComponentManifest(result.data?.renderManifest)
-            if(result.requestId!==call.requestId||result.capability!==call.capability||result.effect?.kind!=='conversation-component'||result.effect.state!=='saved'||!manifest||result.effect.componentId!==manifest.componentId||manifest.requestId!==call.requestId||manifest.sessionId!==identity.sessionId||manifest.turnId!==identity.turnId)throw Error('对话组件保存回执无效。')
-            // A committed host effect remains a fact after cancellation; the
-            // caller may stop the next action but cannot erase this receipt.
-            return JSON.stringify(result)
+          return result
+        }
+        const savedReceipt=result=>{
+          if(call?.capability!=='conversation.components.create'||result?.status!=='succeeded')return false
+          const manifest=parseConversationComponentManifest(result.data?.renderManifest)
+          if(result.requestId!==call.requestId||result.capability!==call.capability||result.effect?.kind!=='conversation-component'||result.effect.state!=='saved'||!manifest||result.effect.componentId!==manifest.componentId||manifest.requestId!==call.requestId||manifest.sessionId!==identity.sessionId||manifest.turnId!==identity.turnId)throw Error('对话组件保存回执无效。')
+          return true
+        }
+        const rememberSaved=result=>{if(typeof exec.token==='symbol')savedExecutions.set(exec.token,result);return JSON.stringify(result)}
+        try{
+          let result
+          try{result=await post(method,controller.signal)}catch(error){
+            if(call?.capability!=='conversation.components.create'||disposed)throw error
+            // Keep the original write cancellable. Recovery is a distinct,
+            // bounded read of that exact request, never an execute retry.
+            const recovery=new AbortController(),recoveryTimer=setTimeout(()=>recovery.abort(),5000)
+            controllers.add(recovery)
+            try{
+              const recovered=await post('receipt',recovery.signal)
+              if(savedReceipt(recovered))return rememberSaved(recovered)
+              if(controller.signal.aborted&&recovered?.status==='cancelled')return JSON.stringify(recovered)
+            }catch{/* A failed readback cannot establish an unobserved save. */}
+            finally{clearTimeout(recoveryTimer);controllers.delete(recovery)}
+            throw error
           }
+          if(savedReceipt(result))return rememberSaved(result)
           controller.signal.throwIfAborted()
           return JSON.stringify(result)
         }finally{clearTimeout(timer);controllers.delete(controller);exec.signal?.removeEventListener('abort',abort)}
       }
     })))
   }
-  return()=>{disposed=true;for(const controller of controllers)controller.abort();for(const dispose of disposers.reverse())dispose()}
+  return()=>{disposed=true;savedExecutions.clear();for(const controller of controllers)controller.abort();for(const dispose of disposers.reverse())dispose()}
 }

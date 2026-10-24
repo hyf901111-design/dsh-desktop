@@ -124,3 +124,18 @@ it('preserves an already saved component receipt when cancellation follows the c
  const result=await h.service.request({sessionId:'s',turnId:'1',method:'execute',call:{requestId:'saved',capability:'conversation.components.create',arguments:{artifact:simulatedArtifact}}},controller.signal)
  expect(result).toMatchObject({status:'succeeded',effect:{kind:'conversation-component',state:'saved'}})
 })
+it('reads an existing committed receipt without creating, restoring an old authority, or trusting a caller lease',async()=>{
+ const h=harness(),create=vi.fn(async(_args:any,identity:any,_signal:AbortSignal,id:string)=>savedConversationReceipt(id,identity))
+ h.o.conversationComponents={create};h.bind('conversation')
+ const authority={sourceInstruction:'创建模拟组件',authorityId:'original-human',authoritySeq:1},call={requestId:'persisted',capability:'conversation.components.create',arguments:{artifact:simulatedArtifact}}
+ const read=()=>h.service.request({sessionId:'s',turnId:'1',method:'receipt',call,...authority})
+ expect(await read()).toMatchObject({status:'cancelled'});expect(create).not.toHaveBeenCalled()
+ await h.service.request({sessionId:'s',turnId:'1',method:'catalog',...authority});await h.service.request({sessionId:'s',turnId:'1',method:'execute',call,...authority})
+ const newer={sourceInstruction:'只读取不要创建',authorityId:'newer-human',authoritySeq:2}
+ await h.service.request({sessionId:'s',turnId:'1',method:'catalog',...newer})
+ expect(await read()).toMatchObject({status:'succeeded',effect:{kind:'conversation-component',state:'saved'}});expect(create).toHaveBeenCalledTimes(1)
+ expect(await h.service.request({sessionId:'s',turnId:'1',method:'execute',call:{requestId:'new-zoom',capability:'ui.zoom.in',arguments:{}},...newer})).toMatchObject({status:'succeeded'})
+ await expect(h.service.request({sessionId:'s',turnId:'1',method:'receipt',call:{...call,arguments:{artifact:{...simulatedArtifact,title:'不同内容'}}},...authority})).rejects.toThrow('不一致')
+ await expect(h.service.request({sessionId:'s',turnId:'1',method:'receipt',call,...newer})).rejects.toThrow('不一致')
+ h.bind('notes');expect(await read()).toMatchObject({status:'succeeded'});h.changeOwner();expect(await read()).toMatchObject({status:'cancelled'});expect(create).toHaveBeenCalledTimes(1)
+})

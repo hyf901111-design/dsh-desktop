@@ -75,3 +75,17 @@ it('returns a verified saved conversation receipt when cancellation arrives afte
   }finally{dispose()}
  }
 })
+it('keeps a committed cancellation effect bound to the exact SDK execution token',async()=>{
+ const tools=new Map<string,any>(),controller=new AbortController(),token=Symbol('saved-execution'),other=Symbol('different-execution')
+ const receipt={requestId:'saved',capability:'conversation.components.create',status:'succeeded',effect:{kind:'conversation-component',state:'saved',componentId:'c'},data:{renderManifest:{version:1,kind:'conversation-component',componentId:'c',sessionId:'s',turnId:'1',requestId:'saved',status:'ready'}}}
+ const dispose=registerClientTools({tools:{register:(tool:any)=>{tools.set(tool.name,tool);return()=>tools.delete(tool.name)}}},{env:{SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1234',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'simulated-token'},fetch:async()=>({ok:true,json:async()=>receipt}) as Response})
+ const exec={agent:{session:{id:'s',header:{},events:[{type:'turn/start',data:{turn:1}}]}},signal:controller.signal,token}
+ try{
+  const tool=tools.get('client_action'),args={requestId:'saved',capability:'conversation.components.create',arguments:{artifact:{version:1,type:'markdown',title:'模拟',content:'模拟正文'}}}
+  await tool.execute(args,exec);controller.abort()
+  expect(tool.finalizeContent({...exec,token:other},{isError:true})).toBeUndefined()
+  const content=tool.finalizeContent(exec,{isError:true})
+  expect(JSON.parse(content[0].text)).toMatchObject({cancelledAfterSave:true,message:'组件已保存，后续操作已取消。',effect:{componentId:'c'}})
+  expect(tool.finalizeContent(exec,{isError:true})).toBeUndefined()
+ }finally{dispose()}
+})
