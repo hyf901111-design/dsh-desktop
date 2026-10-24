@@ -78,12 +78,17 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   if(!tracked){win.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:options.runId,target,label,action,fromTarget}}));await wait(650)}
   else await new Promise<void>((resolve,reject)=>{
    const requestId=crypto.randomUUID(),deadline=new AbortController()
-   const clean=()=>{deadline.abort();signal.removeEventListener('abort',stop);win.removeEventListener('sherlock:home-guide-cue-reply',reply)}
+   const targetToken=options.runId+':'+requestId+':target',fromTargetToken=fromTarget?options.runId+':'+requestId+':from':undefined
+   const markers:Array<[HTMLElement,string]>=[[target,targetToken],...(fromTarget&&fromTargetToken?[[fromTarget,fromTargetToken] as [HTMLElement,string]]:[])]
+   const clean=()=>{deadline.abort();signal.removeEventListener('abort',stop);win.removeEventListener('sherlock:home-guide-cue-reply',reply);for(const[node,token]of markers)if(node.getAttribute('data-home-guide-cue-target')===token)node.removeAttribute('data-home-guide-cue-target')}
    const stop=()=>{clean();reject(abortError())}
    const reply=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.runId!==options.runId||value?.requestId!==requestId)return;clean();value.ok===true?resolve():reject(Error(value.message||'演示控件已变化，请重新打开。'))}
    signal.addEventListener('abort',stop,{once:true});win.addEventListener('sherlock:home-guide-cue-reply',reply)
    void wait(10000,deadline.signal).then(()=>{clean();reject(Error('演示指针未能到达控件，请重新播放。'))},()=>{})
-   win.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:options.runId,requestId,target,label,action,fromTarget}}))
+   try{
+    for(const[node,token]of markers)node.setAttribute('data-home-guide-cue-target',token)
+    win.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:options.runId,requestId,label,action,targetToken,...(fromTargetToken?{fromTargetToken}:{})}}))
+   }catch(error){clean();reject(error)}
   })
   await playing();validTarget(target,true);if(fromTarget)validTarget(fromTarget,true)
   if(tracked&&document.documentElement.dataset.homeGuidePointerRun!==options.runId)throw abortError()
@@ -118,7 +123,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   for(let offset=titleStride;offset<HOME_NOTES_GUIDE_TITLE.length+titleStride;offset+=titleStride){
    await playing();editor!.setDocument(HOME_NOTES_GUIDE_TITLE.slice(0,offset),[{...first,content:''}]);expected=fingerprint();await wait(reduced?20:85)
   }
-  const body=await until(()=>query<HTMLElement>('[data-id="'+first.id+'"] .bn-inline-content')||query<HTMLElement>('[data-id="'+first.id+'"]'))
+  const body=await until(()=>query<HTMLElement>('.bn-editor'))
   await click(body,'写入研究笔记')
   const focusText=(blockId:string)=>{
    const block=query<HTMLElement>('[data-id="'+blockId+'"] .bn-inline-content');if(!block)return
