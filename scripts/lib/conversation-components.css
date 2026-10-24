@@ -19,3 +19,5 @@
 .ew-conversation-component-menu{position:absolute;z-index:20;right:8px;top:38px;display:flex;flex-direction:column;gap:3px;min-width:160px;max-width:calc(100% - 16px);padding:6px;background:var(--fw-menu,#f8f8fa);border:1px solid var(--fw-border,#ced2da);border-radius:8px;box-shadow:0 8px 24px #0003;font:400 12px/18px Inter,'Noto Sans SC',system-ui}
 .ew-conversation-component-menu>button{display:block;text-align:left;padding:7px 10px;border:0;border-radius:4px;background:transparent;color:var(--fw-text);font:inherit;cursor:pointer}.ew-conversation-component-menu>button:hover{background:var(--fw-control,#e9ebef)}
 .uV2eYG_chip[data-reference-source=conversation-component]{pointer-events:auto}.uV2eYG_chip[data-reference-source=conversation-component][data-selected=true]{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:-1px}
+
+.ew-conversation-component .ew-financial-retained-error{flex:none;padding:4px 0;color:var(--fw-muted);font-size:11px;line-height:16px}

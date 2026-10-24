@@ -32,3 +32,12 @@ it('uses the native execution turn to reject a mismatched receipt even when its 
  const node=tool('component-a');delete node.data.turn;const nodes=new Map([['tool',node]])
  expect([...conversationComponentReceiptAnchors([{kind:'execution',key:'execution:8',nodeKeys:['tool'],turn:8}],nodes,'session-a')]).toEqual([])
 })
+it('retains only a strictly saved cancellation receipt from an actual aborted client_action tool result',()=>{
+ const saved={cancelledAfterSave:true,message:'组件已保存，后续操作已取消。'},node=tool('component-a',saved)
+ node.data.root.isError=true;node.data.root.error={name:'AbortError',code:'ABORTED'}
+ expect(conversationComponentReceiptManifests([node],'session-a')).toEqual([manifest()])
+ for(const edit of [n=>{n.data.root.error={name:'Error',code:'FAILED'}},n=>{delete n.data.root.error},n=>{n.data.root.content[0].text=JSON.stringify(receipt('component-a',{...saved,cancelledAfterSave:false}))},n=>{n.data.root.content[0].text=JSON.stringify(receipt('component-a',{...saved,message:'没有保存'}))},n=>{n.data.root.content[0].text=JSON.stringify(receipt('component-a',{...saved,extra:'untrusted'}))}]){
+  const changed=structuredClone(node);edit(changed);expect(conversationComponentReceiptManifests([changed],'session-a')).toEqual([])
+ }
+ expect(conversationComponentReceiptManifests([{kind:'assistant-step',data:{blocks:[{kind:'text',text:JSON.stringify(receipt('component-a',saved))}]}}],'session-a')).toEqual([])
+})

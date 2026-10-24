@@ -19,12 +19,18 @@ export function conversationComponentReceiptManifests(nodes,sessionId,readTurn=c
   while(pending.length&&seen.size<128){
    const root=pending.pop();if(!root||typeof root!=='object'||seen.has(root))continue;seen.add(root)
    if(Array.isArray(root.subCalls))pending.push(...root.subCalls)
-   if(root.kind!=='tool-result'||root.isError===true||root.error!=null||root.call?.name!=='client_action')continue
+   if(root.kind!=='tool-result'||root.call?.name!=='client_action')continue
    let call;try{if(typeof root.call.argsRaw!=='string'||root.call.argsRaw.length>1500000)continue;call=JSON.parse(root.call.argsRaw)}catch{continue}
    if(call?.capability!=='conversation.components.create'||typeof call.requestId!=='string')continue
    for(const block of root.content??[]){
     if(block?.type!=='text'||typeof block.text!=='string'||block.text.length>16384)continue
     let result;try{result=JSON.parse(block.text)}catch{continue}
+    if(root.isError===true||root.error!=null){
+     // ToolRuntime preserves its ABORTED outer envelope after cancellation.
+     // Only its Host-recovered, canonical saved fact may still render a card.
+     const keys=['requestId','capability','status','effect','data','message','cancelledAfterSave']
+     if(root.isError!==true||root.error?.name!=='AbortError'||root.error?.code!=='ABORTED'||result?.cancelledAfterSave!==true||result.message!=='组件已保存，后续操作已取消。'||Object.keys(result).length!==keys.length||!keys.every(key=>Object.hasOwn(result,key))||!result.effect||Object.keys(result.effect).length!==3||!result.data||Object.keys(result.data).length!==1)continue
+    }
     const manifest=parseConversationComponentManifest(result?.data?.renderManifest)
     if(!manifest||manifest.sessionId!==sessionId||turn!=null&&manifest.turnId!==String(turn)||result.capability!==call.capability||result.requestId!==call.requestId||manifest.requestId!==call.requestId||result.status!=='succeeded'||result.effect?.kind!=='conversation-component'||result.effect.state!=='saved'||result.effect.componentId!==manifest.componentId)continue
     if(!manifests.has(manifest.componentId))manifests.set(manifest.componentId,manifest)
@@ -114,7 +120,18 @@ export function ConversationComponentCard({sessionId,manifest}){
  react.useEffect(()=>{if(menu)menuRef.current?.querySelector('button')?.focus({preventScroll:true})},[menu])
  const revision=view?.revision
  const dataProvider=react.useMemo(()=>({request:async query=>{
-  const own=scope.current,result=await bridge.queryNative({sessionId,componentId,expectedRevision:revision,query})
+  const own=scope.current,input={sessionId,componentId,expectedRevision:revision,query};let result
+  try{
+   result=await bridge.queryNative(input)
+   const usable=query.action==='quotes'?result?.quotes?.some(row=>Number.isFinite(row.price)):query.action==='history'?result?.bars?.length:query.action==='news'?result?.news?.length:result?.announcements?.length
+   const failure=result?.error||(result?.errors??[]).map(row=>row.error||row.message||'获取失败').join('；')
+   if(failure&&!usable)throw Error(String(failure))
+  }catch(error){
+   if(scope.current!==own||current.current?.revision!==revision||typeof bridge.readNativeSnapshot!=='function')throw error
+   let snapshot;try{snapshot=await bridge.readNativeSnapshot(input)}catch{throw error}
+   if(scope.current!==own||current.current?.revision!==revision||snapshot?.specRevision!==revision||!Number.isFinite(snapshot.receivedAt)||!snapshot.result||typeof snapshot.result!=='object'||Array.isArray(snapshot.result))throw error
+   result={...snapshot.result,stale:true,error:'刷新失败，保留上次数据：'+conversationComponentError(error)}
+  }
   if(scope.current===own)try{const latest=await bridge.read({sessionId,componentId});if(scope.current===own&&current.current?.revision===revision&&latest.revision===revision){current.current=latest;setView(latest)}}catch{/* The verified query result remains usable if a later metadata read fails. */}
   return result
  }}),[bridge,sessionId,componentId,revision])
