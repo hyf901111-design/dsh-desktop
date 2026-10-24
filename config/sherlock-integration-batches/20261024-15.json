@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-15",
+  "branch": "codex/integration/20261024-15",
+  "baseMainCommit": "cbb8f5f563628b55a3cebaae22b172337c2a6113",
+  "expectedMainCommit": "cbb8f5f563628b55a3cebaae22b172337c2a6113",
+  "createdAt": "2026-10-24T08:53:10.082Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "隔离浏览器回执依赖并修复正式客户端沙箱预加载",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "cbb8f5f563628b55a3cebaae22b172337c2a6113",
+        "tipCommit": "04997f63aefcac691ad6e97819e34cecc27ac5f5",
+        "commits": [
+          {
+            "commit": "04997f63aefcac691ad6e97819e34cecc27ac5f5",
+            "parents": [
+              "cbb8f5f563628b55a3cebaae22b172337c2a6113"
+            ],
+            "subject": "隔离回执展示依赖并防止沙盒预加载引入文件系统模块"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-capability-receipts.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-capability-receipts.js"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/client-capability-actions.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/preload-sandbox-imports.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "完整preload源码受限沙箱执行、三桥暴露、frame/notes/capability回归；/tmp/preload-pure-receipts-final-0-20261024.log",
+            "verifiedCommit": "04997f63aefcac691ad6e97819e34cecc27ac5f5",
+            "completedAt": "2026-10-24T08:52:56.927614+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/preload-sandbox-imports.test.js",
+              "test/sandbox-preload.test.js",
+              "test/preload-main-frame.test.ts",
+              "test/preload-custom-elements.test.ts",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/client-capabilities.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capability-transport.test.ts",
+              "test/conversation-component-service.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "完整preload源码受限沙箱执行、三桥暴露、frame/notes/capability回归；/tmp/preload-pure-receipts-final-1-20261024.log",
+            "verifiedCommit": "04997f63aefcac691ad6e97819e34cecc27ac5f5",
+            "completedAt": "2026-10-24T08:53:01.039948+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "完整preload源码受限沙箱执行、三桥暴露、frame/notes/capability回归；/tmp/preload-pure-receipts-final-2-20261024.log",
+            "verifiedCommit": "04997f63aefcac691ad6e97819e34cecc27ac5f5",
+            "completedAt": "2026-10-24T08:53:08.602841+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "完整preload源码受限沙箱执行、三桥暴露、frame/notes/capability回归；/tmp/preload-pure-receipts-final-3-20261024.log",
+            "verifiedCommit": "04997f63aefcac691ad6e97819e34cecc27ac5f5",
+            "completedAt": "2026-10-24T08:53:08.628184+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实正式包主界面缺完整样式已复现，当前已打包preload在受限require测试准确红于node:fs；修后真实preload源码图全量内存bundle受限执行通过并暴露clientCapabilities/conversationComponents/financialWidget。须在本批main重建后检查实际签名包与原生主界面，不能以旧package verified冒充可用。"
+        },
+        "acceptanceCriteria": [
+          "preload展示回执仅从无Node依赖纯模块导入，不携带Host规范化/文件系统/技能模块；原Host接口重导出保持。",
+          "sandbox/contextIsolation/webSecurity/nodeIntegration配置不放宽；现有Host校验/授权与IPC不变。",
+          "实际打包preload应通过受限require执行冒烟，再核验正式原生窗口的完整侧栏/工作区/输入和已发送标签。",
+          "用户原有工作区、账号与真实PPT检查点保留，更新后原会话继续；不把PPT草稿当成品。",
+          "只在干净本地main构建正式身份客户端，不公证/上传/发布/推送/加版本，不跑全功能测试。"
+        ],
+        "risks": [
+          "须重建当前已发现preload启动失败的包，只有实际产物冒烟与nativeUI均通过才交付。",
+          "真实Kimi PPT尚未最终验收/替换用例；系统鼠标间歇冻结仍未确诊。"
+        ],
+        "generatedAt": "2026-10-24T08:53:08.628239+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/preload-sandbox-imports.test.js",
+        "test/sandbox-preload.test.js",
+        "test/preload-main-frame.test.ts",
+        "test/preload-custom-elements.test.ts",
+        "test/notes-client-capability-actions.test.ts",
+        "test/notes-capability-receipt-locale.test.js",
+        "test/client-capabilities.test.js",
+        "test/client-capability-service.test.ts",
+        "test/client-capability-transport.test.ts",
+        "test/conversation-component-service.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
