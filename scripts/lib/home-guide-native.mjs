@@ -278,10 +278,29 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       check(ticket)
       const { workspace, id, provider } = ticket.resource
       const toolbar = () => [...document.querySelectorAll('[data-ework-toolbar-owner]')].find(el => el.dataset.eworkToolbarOwner === id && el.hasAttribute('data-ework-toolbar'))
-      const libraryButton = () => toolbar()?.querySelector('[data-financial-library]')
+      const libraryButton = async () => {
+        let current = null, stable = 0, deadline = Date.now() + 2400
+        while (stable < 2) {
+          const waiting = Date.now(); await playing(ticket); deadline += Date.now() - waiting
+          await frame(ticket); check(ticket)
+          if (!ticket.playing) { current = null; stable = 0; continue }
+          const candidates = [...document.querySelectorAll('[data-ework-toolbar][data-ework-toolbar-owner]')].filter(el => el.dataset.eworkToolbarOwner === id).flatMap(el => [...el.querySelectorAll('[data-financial-library]')]).filter(button => {
+            try { targetReady(ticket, button, true) } catch { return false }
+            for (let node = button; node; node = node.parentElement) {
+              const style = window.getComputedStyle(node)
+              if (node.hidden || node.inert || style.display === 'none' || ['hidden', 'collapse'].includes(style.visibility) || style.opacity === '0') return false
+            }
+            return true
+          })
+          const next = candidates.length === 1 ? candidates[0] : null
+          stable = next ? next === current ? stable + 1 : 1 : 0; current = next
+          if (Date.now() > deadline) throw Error('原生组件库尚未就绪，请重试。')
+        }
+        return current
+      }
       const library = () => [...document.querySelectorAll('[data-home-guide-native-library]')].find(el => el.dataset.homeGuideNativeLibrary === detail.runId)
       if (detail.command === 'board-library') {
-        const button = libraryButton(); if (!button) throw Error('原生组件库尚未就绪。')
+        const button = await libraryButton()
         if (button.getAttribute('aria-expanded') !== 'true') await click(ticket, button, '打开组件库，查看可加入的原生组件')
         await settle(ticket, () => button.getAttribute('aria-expanded') === 'true' && !!library())
         const menu = library(); if (menu) menu.__homeGuideRunId = detail.runId
@@ -291,7 +310,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         const widget = detail.command.slice(6)
         if (!ticket.nodes[widget]) {
           const before = new Set(workspace.getSnapshot().artifacts.map(n => n.id))
-          const button = libraryButton()
+          const button = await libraryButton()
           if (button?.getAttribute('aria-expanded') !== 'true') await click(ticket, button, '打开组件库')
           await settle(ticket, () => !!library()?.querySelector('[data-financial-place="' + widget + '"]'))
           await click(ticket, library().querySelector('[data-financial-place="' + widget + '"]'), { watchlist: '加入自选列表', quote: '加入行情面板', news: '加入资讯列表' }[widget])
