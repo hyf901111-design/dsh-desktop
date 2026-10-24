@@ -7,6 +7,7 @@ Only ordinary content pages are checked; locked cover/TOC/ending whitespace is e
 """
 import argparse
 import json
+import math
 import re
 from pathlib import Path
 
@@ -18,6 +19,26 @@ def audit_layout(data):
     errors = []
     def label(e): return str(e.get('name') or e.get('id') or '')
     def add(code, *items): errors.append({'code': code, 'objects': [label(e) for e in items]})
+    narrative = {label(e): e for e in elements
+                 if label(e) in ('standard-narrative-title', 'standard-narrative-body')}
+    if narrative:
+        boxes = {}
+        for name, e in narrative.items():
+            layout = e.get('textLayout', {})
+            box = layout.get('bbox')
+            if (layout.get('source') != 'rendered' or not isinstance(box, list) or len(box) != 4
+                    or any(type(v) not in (int, float) or not math.isfinite(v) for v in box)
+                    or box[2] <= 0 or box[3] <= 0):
+                add('narrative-rendered-bounds-required', e)
+            else:
+                boxes[name] = box
+        if len(boxes) == 2:
+            title, body = boxes['standard-narrative-title'], boxes['standard-narrative-body']
+            gap = body[1] - title[1] - title[3]
+            # The contract is 12–16px between actual glyph bounds, with 2px
+            # tolerance for renderer rounding. Shape bounds cannot prove it.
+            if not 10 * scale <= gap <= 18 * scale:
+                add('narrative-title-body-gap', *narrative.values())
     for e in elements:
         name = label(e)
         if any(x in name for x in ('footer', 'source-note', 'page-number', 'page-title')): continue

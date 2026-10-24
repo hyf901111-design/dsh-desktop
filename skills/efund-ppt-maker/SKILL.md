@@ -55,7 +55,7 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 
 直接复用和从案例页受控重组时必须映射到 `sourceSlide`；品牌壳原创页映射到干净 `sourceSlide` 或白名单 `sourceLayout`。受控重组和原创模式的每个新增对象都要记录 `action: "add"`、最终 Shape ID、文本角色、允许字号、区域、理由及不得覆盖的继承对象。骨架路线在新增首张页面后立即断言输出画布尺寸与源母版一致，不接受编辑引擎默认的其他 16:9 尺寸。
 
-封面必须按 [cover-contract.md](references/cover-contract.md) 选择标准配置并整页保真复制。标题、主副标题、部门/姓名、日期只能写入指定 Shape ID；布局层右侧山水品牌图片及其媒体、裁切、坐标、尺寸、层级，连同页脚图、Logo、免责声明和保密提示全部锁定。标题过长时精简文案或改选允许该题名结构的配置，禁止移动/缩放文本框、缩小字号、改字体、增减段落、删除右侧品牌图、用色块替代品牌图或新增封面视觉。
+封面必须按 [cover-contract.md](references/cover-contract.md) 选择标准配置并整页保真复制。标题、主副标题、部门/姓名、日期只能写入指定 Shape ID；替换占位 run 后逐段清除段首、段尾空白，模板用于姓名占位的空格 run 应清空文本并保留格式，不得当作品牌留白继承。布局层右侧山水品牌图片及其媒体、裁切、坐标、尺寸、层级，连同页脚图、Logo、免责声明和保密提示全部锁定。标题过长时精简文案或改选允许该题名结构的配置，禁止移动/缩放文本框、缩小字号、改字体、增减段落、删除右侧品牌图、用色块替代品牌图或新增封面视觉。
 
 必须保持源页的字号、字体、字重、行距、段距、内边距、对齐、页眉、Logo、页脚和页码。所有普通正文页顶栏题名对象命名为 `page-title`，设置 `textRole: "page-title"`，固定单行、左对齐，不得包含人工换行，也不得进入 Logo 前 16px 保护带；题名放不下时依次精简文案、换页型或拆分叙事，禁止扩大标题框、缩小字号或做成两行。新增中文逐个文本 run 显式设为 `华文黑体_易方达`，并在 DrawingML run properties 中显式写入东亚字体 `a:ea typeface="华文黑体_易方达"`；英文和数字设为 Arial。不得只依赖主题默认字体或只设置拉丁字体。新文案放不下时依次执行：精简文案 → 换源页 → 拆页。禁止缩小字号或换窄字体硬塞内容。
 
@@ -69,11 +69,11 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 
 数据、证据、调研结论和方案论证页优先使用“左侧解释 + 右侧图表/主视觉”的标准证据双区页，并把它作为长材料的基础版式。该轮廓在符合 delivery-109.md 三项适用条件的正文页中默认采用，并在规划时统计适用页采用率；建议采用不少于适用页的 60%，低于时逐页复核替代结构的具体理由。这是审稿提示，不是整稿硬配额。不得为了满足版式比例虚构图表或数据，也不得把人物、思想演变、作品关系等内容统一塞入同一双栏或三卡模板。左侧约 35%–42%，负责结论、口径和 2–3 条解释；右侧约 58%–65%，放一个主图表、表格、关系图或证据视觉及近邻来源。对象命名为 `standard-narrative-title`、`standard-narrative-body`、`standard-visual-title`：解释标题 15pt 加粗，解释正文 12pt 常规、150% 行距，图表/视觉标题固定 10pt、常规、不加粗，并显式设置 `华文黑体_易方达`。
 
-标准证据双区页必须按“真实排版后的文字高度”分配空间，不得只比较文本框坐标。`standard-narrative-body` 的行数 × 实际字号 × 150% 行距，加上文本内边距，必须完整落在文本框内；其实际文字底边与下方结论、提示或浅色总结块至少保留 16px。右侧图表须为类别标签预留独立标签槽或标签沟槽；负值柱、正值柱、数据标记和数值标签均不得进入类别标签槽。若标签或正文放不下，依次缩短文案、扩大区域或拆页，禁止用覆盖、负边距或减小字号处理。
+标准证据双区页必须按“真实排版后的文字高度”分配空间，不得只比较文本框坐标。`standard-narrative-title` 和 `standard-narrative-body` 均显式使用顶部锚点 `a:bodyPr anchor="t"`，正文实际首行紧接小标题实际文字底边下方 12–16px；即使正文较少，也不得在整栏或高文本框中垂直居中。按标题真实行高收紧标题框，再放正文，不用空段落、超高标题框或统一 `middle` 撑出空白。两者的 `textLayout.bbox` 必须从最终渲染回读实际文字包围盒。`standard-narrative-body` 的行数 × 实际字号 × 150% 行距，加上文本内边距，必须完整落在文本框内；其实际文字底边与下方结论、提示或浅色总结块至少保留 16px。右侧图表须为类别标签预留独立标签槽或标签沟槽；负值柱、正值柱、数据标记和数值标签均不得进入类别标签槽。若标签或正文放不下，依次缩短文案、扩大区域或拆页，禁止用覆盖、负边距或减小字号处理。
 
 浅蓝建议、结论或行动提示框使用左对齐文本，保留 10–14px 左右内边距；不得为了“居中好看”把两行建议排成居中标语。此类对象统一在名称中包含 `takeaway`、`recommendation`、`suggestion` 或 `advice`，便于自动检查。
 
-每个新增可见文本对象都要声明 `textRole`。解释、段落、模块说明、表格正文、来源、注释、建议和结论一律左对齐；数字列右对齐。只有短节点标签、表头、页码、指标数字和源模板明确居中的短标签可以居中。含两行及以上正文的图形必须导出 `textInsets`，左右上下内边距均不少于 10px；不能靠把文字居中来掩盖列宽或内边距不足。
+每个新增可见文本对象都要声明 `textRole`。解释、段落、模块说明、普通数据表的表头与正文、来源、注释、建议和结论一律左对齐。普通数据表同列 header/body 使用相同的显式左右内边距，表头垂直居中；目录保留源模板，数字列右对齐或短标签列居中的精确例外必须按 [table-layout-contract.md](references/table-layout-contract.md) 逐表逐列声明。只有短节点标签、页码、指标数字和源模板明确居中的短标签可以直接居中，不能把所有表头当作水平居中例外。含两行及以上正文的图形必须导出 `textInsets`，左右上下内边距均不少于 10px；不能靠把文字居中来掩盖列宽或内边距不足。
 
 整页流程只用于真实顺序、因果链、阶段演进或反馈回路的解释页；并列条件、角色分工、控制层和证据集合改用矩阵、层级、左文右图、支撑结构、纵深防御或汇聚关系。不得把整份材料的大部分页面都做成全宽流程。
 
@@ -166,6 +166,10 @@ python "$SKILL_DIR/scripts/lint_efund_layouts.py" "$LAYOUT_DIR/final" \
 `body-text-not-left-aligned`、`text-inset-clearance`、`missing-text-insets`、`connector-text-clearance`、`connector-endpoints-missing`、`missing-alignment-groups` 和 `alignment-group-violation` 也是硬错误：正文角色必须左对齐，正文图形内边距不得小于 10px，连接线必须提供端点且避开文字外扩 8px 安全区，同级模块必须按声明的边缘、尺寸、中心线和间距网格对齐。
 
 `standard-narrative-text-overflow`、`narrative-callout-clearance`、`chart-label-mark-overlap`、`advisory-callout-not-left-aligned` 同样是硬错误：标准解释正文的真实排版高度必须装入文本框，下方总结块须留足 16px，图表类别标签不得与柱、点、面积或数值标记相交，建议/结论浅色框必须左对齐；版式应随内容关系变化，不设双区页数量配额。模式 B/C 表格若使用 `grouped-table-*` 命名，`grouped-table-separator-line` 必须为零；不得用“模板有意重叠”或“线条较细”放行。
+
+封面 `cover-text-edge-whitespace`、数据表 `table-header-not-vertically-centered` / `table-column-alignment-mismatch` / `table-column-insets-mismatch` / `table-cell-insets-not-explicit` / `table-header-vertical-insets-mismatch` / `table-layout-exception-invalid`、说明区 `narrative-text-not-top-anchored` / `narrative-text-pair-missing` / `narrative-rendered-bounds-required` / `narrative-title-body-gap` 均为硬错误。检查必须读取最终 PPTX 单元格/文本框属性和真实渲染文字边界，不能只信任规划坐标或映射中的声明。
+
+同列单元格边距相同但段落缩进不同，触发 `table-column-paragraph-indent-mismatch`；段首/段尾空白触发 `table-cell-edge-whitespace`。数字/短标签例外保留真实 `a:br` 换行后再核验，不能把多行内容拼成一行放行。本次 XML 表格布局 guard 仅覆盖原生 `a:tbl`；合法的拼文本框表格继续按表格契约声明 header/body 列关系、回读最终渲染文字边界并逐表视觉复核，证据不足时明确保持待复核，不以外框对齐或原生表格零错误代替其文本验收。
 
 第六道，使用当前环境可用的演示文稿渲染接口检测画布溢出，并把每页渲染为 PNG。逐页按 100% 尺寸检查标题换行、字体家族/字重、文本裁切、多行正文孤行、图标清晰度与风格一致性、图片裁切、对齐、图表标签、页脚、Logo、内容密度、实心结构的主次和全篇视觉节奏；朗读标题与结论，确认语气像业务负责人直接陈述事实，不像宣传口号或模板化演讲金句；逐条核对 `visualTextBinding`。封面另须与对应标准页并排检查题名位置、字号、留白和品牌家具。总览图不能代替逐页检查。
 

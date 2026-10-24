@@ -8,7 +8,7 @@
 - 从指定源页复制幻灯片，并保持对象 ID 或建立稳定的新旧对象映射。
 - 从指定母版的命名布局新建幻灯片，并保留源母版画布尺寸、品牌构件和占位符语义；不得套用编辑引擎的默认页面尺寸。
 - 修改继承文本、图片、图表数据和基本图形，不破坏未修改对象。
-- 支持为新建文本对象写入稳定对象名、`textRole`、四侧 `textInsets`、逐 run 字号/字重/Latin 与 East Asian 字体，以及逐段百分比行距；标准证据双区页必须能保留 `standard-narrative-title`、`standard-narrative-body`、`standard-visual-title` 三个对象名，并在布局数据中导出真实行数、字号、字重和段落对齐，以检查 150% 行距、10pt 常规图表标题、正文左对齐和图形内文字安全距离。
+- 支持为新建文本对象写入稳定对象名、`textRole`、四侧 `textInsets`、逐 run 字号/字重/Latin 与 East Asian 字体，以及逐段百分比行距；标准证据双区页必须能保留 `standard-narrative-title`、`standard-narrative-body`、`standard-visual-title` 三个对象名，并在布局数据中导出真实行数、文字边界、字号、字重和段落对齐，以检查 150% 行距、10pt 常规图表标题、正文顶部/左对齐和图形内文字安全距离。
 - 对封面源页与成品页执行对象级精确比对，包括画布、布局关系、Shape ID、坐标、尺寸、段落数、有效字号、字体、字重、文本框设置，以及布局层右侧品牌图的对象类型、媒体、裁切和其他品牌家具。
 - 能检查可见幻灯片对象的 DrawingML 效果列表；发现 `outerShdw`、`innerShdw` 或 `prstShdw` 时以 `shape-shadow-forbidden` 硬错误终止。
 - 按逻辑页序读取可见文本对象，并执行模板化句式与口号化表达检查；支持按页码和 Shape ID 记录有来源的例外。
@@ -61,6 +61,10 @@
 `bbox` 单位使用归一化 960×540 画布像素，顺序为 `[x, y, width, height]`。若运行环境使用其他坐标系，导出时按比例转换。组合子元素可保留，但最终可见的母版/布局家具也必须展开到对象清单，`scope` 统一写 `slide`，否则无法检查完整页脚。`fillColor`、`lineColor` 和 `lineWidth` 对形状必须输出；无填充可写 `transparent` 或 `none`，无边线时 `lineWidth` 写 0。
 
 正文、解释、模块说明、表格正文、来源、注释、建议和结论使用 `textRole`：`body`、`explanation`、`module-description`、`table-body`、`source`、`note`、`recommendation` 或 `conclusion`；这些角色必须导出实际段落对齐并左对齐。短节点标签、表头、指标数字和页码可分别使用 `node-label`、`table-header`、`metric-value`、`page-number`。含正文的图形导出 `textInsets: {"left": 12, "top": 10, "right": 12, "bottom": 10}`，四侧不得小于 10px。
+
+普通数据表的 `table-header` 与同列 `table-body` 均左对齐并使用相同左右内边距；表头 cell properties 显式 `anchor="ctr"` 且上下内边距相等。只有 table-layout-contract.md 中逐表逐列声明的数字/短标签例外可改变水平对齐，目录沿用源模板。
+
+标准说明区标题/正文必须在最终 PPTX 中显式 `a:bodyPr anchor="t"`。两者另导出 `textLayout: {"source": "rendered", "lineCount": 1, "lines": ["实际文字"], "bbox": [50, 123, 291, 20]}`；其中 bbox 为本次最终渲染的文字包围盒，单位与元素 bbox 相同，不能复制 Shape 框或按字符数估算。正文实际首行距小标题文字底边 12–16px，检查器仅允许 2px 渲染取整容差；缺少真实文字边界时返回待复核错误。
 
 连接线示例：
 
