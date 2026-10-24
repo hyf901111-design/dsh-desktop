@@ -71,3 +71,12 @@ it('rejects an atomic mutation crossing 64 MiB while retaining every existing it
 it('returns a persisted duplicate receipt without rewriting the saved file',async()=>{
  const {file,store}=await fixture(),saved=await store.create(args(),identity(),'r'),{utimes}=await import('node:fs/promises'),when=new Date('2001-01-01T00:00:00Z');await utimes(file,when,when);expect(await store.create(args(),identity(),'r')).toEqual(saved);expect((await stat(file)).mtimeMs).toBe(when.getTime())
 })
+it('recovers only the original committed receipt without creating or rewriting anything after cancellation',async()=>{
+ const {file,store}=await fixture(),original=identity(),pending=store.create(args(),original,'r'),confirmation=store.recover(args(),original,'r'),saved=await pending,{utimes}=await import('node:fs/promises'),when=new Date('2001-01-01T00:00:00Z');await utimes(file,when,when);expect(await confirmation).toEqual(saved);const cancelled={...original,current:()=>false}
+ expect(await store.recover(args(),cancelled,'r')).toEqual(saved);expect((await stat(file)).mtimeMs).toBe(when.getTime());const restart=new ConversationComponentStore(file);await restart.load();expect(await restart.recover(args(),cancelled,'r')).toEqual(saved)
+ for(const changed of [{windowGeneration:'other'},{authorityId:'other'},{authoritySeq:8},{ownerAccountId:'other'},{turnId:'other'}])expect(await store.recover(args(),identity(changed),'r')).toBeUndefined()
+ await expect(store.recover({...args(),title:'不同内容'},cancelled,'r')).rejects.toThrow(/冲突/)
+})
+it('waits for an existing in-flight mutation then reports absence when the original write was cancelled before commit',async()=>{
+ const {file,store}=await fixture();let current=true;const original=identity({current:()=>current}),pending=store.create(args(),original,'r');current=false;const confirmation=store.recover(args(),original,'r');await expect(pending).rejects.toThrow(/取消|失效/);expect(await confirmation).toBeUndefined();await expect(readFile(file,'utf8')).rejects.toThrow()
+})

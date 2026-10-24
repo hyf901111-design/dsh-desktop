@@ -71,6 +71,15 @@ export function createConversationComponentService(options: Options): Conversati
             // No post-save abort check: an atomic write already happened and must be acknowledged honestly.
             return options.store.create(args, identity, requestId, current);
         },
+        async recover(args, identity, requestId) {
+            // The original lease may be cancelled. Only its committed receipt can be read,
+            // using the same identity, owner and payload; no new create is permitted here.
+            const allowed = () => options.owner() === identity.ownerAccountId && options.canReadSession(identity.sessionId);
+            if (!allowed()) throw Error('对话组件回执恢复的账户身份已变化。');
+            const saved = await options.store.recover(args, identity, requestId);
+            if (!allowed()) throw Error('对话组件回执恢复的账户身份已变化。');
+            return saved;
+        },
         async read(input) { target(input); const l = lease(input.sessionId); return options.store.read(l.owner, input); },
         async updateNativeSpec(input) { target(input, ['expectedRevision', 'spec']); revision(input.expectedRevision); const l = lease(input.sessionId); return options.store.updateNativeSpec(l.owner, input, l.current); },
         async queryNative(input) {

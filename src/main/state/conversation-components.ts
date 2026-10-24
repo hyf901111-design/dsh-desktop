@@ -156,6 +156,20 @@ export class ConversationComponentStore {
             return receipt(item);
         }, guard);
     }
+    /** Read only confirmation of an original operation; cancellation must never replay a write. */
+    async recover(args: ConversationComponentCreateArguments, identity: ConversationComponentExecutionIdentity, requestId: string): Promise<ConversationComponentCreateReceipt | undefined> {
+        await this.queue.catch(() => {});
+        this.ready();
+        if (identity.mode !== 'conversation' || !['ownerAccountId', 'sessionId', 'turnId', 'windowGeneration'].every(k => id((identity as any)[k])) || !id(requestId))
+            throw Error('对话组件回执恢复身份无效。');
+        const item = this.items.find(i => i.ownerAccountId === identity.ownerAccountId && i.sessionId === identity.sessionId && i.turnId === identity.turnId && i.requestId === requestId);
+        if (!item || item.windowGeneration !== identity.windowGeneration || item.authorityId !== identity.authorityId || item.authoritySeq !== identity.authoritySeq)
+            return undefined;
+        const fingerprint = createHash('sha256').update(canonicalConversationComponentInput(args)).digest('hex');
+        if (item.fingerprint !== fingerprint)
+            throw Error('同一对话组件请求内容冲突。');
+        return receipt(item);
+    }
     updateNativeSpec(owner: string, input: ConversationNativeSpecUpdate, guard: Guard = noGuard): Promise<ConversationComponentView> {
         return this.mutate(items => { const item = this.find(owner, input, items), old = financialWidgetSpec(item.node.containerSpec), next = financialWidgetSpec(input.spec); if (!old || !next || old.widget !== next.widget || next.linkedSourceId !== undefined || next.linkedWatchlistId !== undefined)
             throw Error('只能更新同类型的独立金融组件配置。'); if (item.revision !== input.expectedRevision)
