@@ -1,3 +1,4 @@
+import { registerHomePresentationRuntime } from './home-presentation-runtime.js'
 import {registerClientTools} from './client-tools.js'
 import {registerResearchReportTool} from './research-report-tool.js'
 import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
@@ -2987,6 +2988,7 @@ export async function apply(ctx) {
     const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText})
     const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
+    const disposeHomePresentation = registerHomePresentationRuntime(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     const disposeClientTools = registerClientTools(ctx)
     const disposeResearchReportTool = registerResearchReportTool(ctx)
@@ -3006,6 +3008,7 @@ export async function apply(ctx) {
       disposeNotesAi()
       disposeNotesChallenge()
       disposeNoteSessions()
+      void disposeHomePresentation()
       throw error
     }
     return async () => {
@@ -3028,6 +3031,7 @@ export async function apply(ctx) {
       disposeNotesAi()
       disposeNotesChallenge()
       disposeNoteSessions()
+      await disposeHomePresentation()
       await runtime.dispose()
     }
   })
