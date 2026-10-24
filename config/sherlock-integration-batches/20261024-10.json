@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-10",
+  "branch": "codex/integration/20261024-10",
+  "baseMainCommit": "b9bccf0a49cb55998c7680ba3f76b645d7e6bdc0",
+  "expectedMainCommit": "b9bccf0a49cb55998c7680ba3f76b645d7e6bdc0",
+  "createdAt": "2026-10-24T03:35:04.791Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "补齐示例真实工作区与公司技能的完整执行链",
+        "branch": "codex/feat/home-guide-runtime-workspace-20261024",
+        "baseCommit": "b9bccf0a49cb55998c7680ba3f76b645d7e6bdc0",
+        "tipCommit": "5ca7f0b76ca83495bf6b297bff733f586e7ce719",
+        "commits": [
+          {
+            "commit": "949c3b6f3c982086807a2a30c0e6cc210fab7dd7",
+            "parents": [
+              "b9bccf0a49cb55998c7680ba3f76b645d7e6bdc0"
+            ],
+            "subject": "修复教程示例的真实工作区注册与旧会话回访绑定"
+          },
+          {
+            "commit": "5ca7f0b76ca83495bf6b297bff733f586e7ce719",
+            "parents": [
+              "949c3b6f3c982086807a2a30c0e6cc210fab7dd7"
+            ],
+            "subject": "修复演示技能指令误计并验证真实运行时全链路"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-presentation-host.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-workspace.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-presentation-host.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip61项相关检查通过（52真实Host/Workspace/技能/文件/会话+9原生Root菜单）；类型、完整补丁管线和diff检查通过。日志/tmp/home-guide-runtime-final-*-20261024.log。",
+            "verifiedCommit": "5ca7f0b76ca83495bf6b297bff733f586e7ce719",
+            "completedAt": "2026-10-24T03:34:29.591469+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-workspace.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/home-presentation-host.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-adapter.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip61项相关检查通过（52真实Host/Workspace/技能/文件/会话+9原生Root菜单）；类型、完整补丁管线和diff检查通过。日志/tmp/home-guide-runtime-final-*-20261024.log。",
+            "verifiedCommit": "5ca7f0b76ca83495bf6b297bff733f586e7ce719",
+            "completedAt": "2026-10-24T03:34:29.591469+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "keeps a registered|ordinary or other-account|prefers an existing|reselects|locked until legacy",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip61项相关检查通过（52真实Host/Workspace/技能/文件/会话+9原生Root菜单）；类型、完整补丁管线和diff检查通过。日志/tmp/home-guide-runtime-final-*-20261024.log。",
+            "verifiedCommit": "5ca7f0b76ca83495bf6b297bff733f586e7ce719",
+            "completedAt": "2026-10-24T03:34:29.591469+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip61项相关检查通过（52真实Host/Workspace/技能/文件/会话+9原生Root菜单）；类型、完整补丁管线和diff检查通过。日志/tmp/home-guide-runtime-final-*-20261024.log。",
+            "verifiedCommit": "5ca7f0b76ca83495bf6b297bff733f586e7ce719",
+            "completedAt": "2026-10-24T03:34:29.591469+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip61项相关检查通过（52真实Host/Workspace/技能/文件/会话+9原生Root菜单）；类型、完整补丁管线和diff检查通过。日志/tmp/home-guide-runtime-final-*-20261024.log。",
+            "verifiedCommit": "5ca7f0b76ca83495bf6b297bff733f586e7ce719",
+            "completedAt": "2026-10-24T03:34:29.591469+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "看板及笔记在正式客户端已生成、退出和回访保留。PPT真实首发暴露的Workspace注册和skill-invocation误计已在实际SDK/IntegrationService/中间件/原生InputBar红绿验证；新包PPT及Office尚待main构建后正式核验。"
+        },
+        "acceptanceCriteria": [
+          "三类示例使用真实WorkspaceRegistry和原sessionId附加绑定，普通回访旧示例也补齐，不替换会话、不丢草稿和磁盘成果。",
+          "注册完成前保持真实InputBar门禁；账号/选择变化的晚结果不接管当前页。",
+          "公司技能内部说明不算第二人类请求；人类精确文本和单次请求边界不变，缺Workspace和第二human仍拒绝。",
+          "实际任务清单、源PDF、16页PPT和JSONL历史保留，完成或取消后恢复普通模型路由。",
+          "仅从干净main构建本地正式身份客户端，不发布、不升级版本、不上传、不推送。"
+        ],
+        "risks": [
+          "最终PPT正式客户端与内置Office仍待本次main构建后核验。"
+        ],
+        "generatedAt": "2026-10-24T03:34:29.591469+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-workspace.test.ts",
+        "test/home-guide-session.test.ts",
+        "test/home-presentation-host.test.js",
+        "test/home-presentation-runtime.test.js",
+        "test/home-guide-presentation-browser.test.js",
+        "test/home-guide-presentation-patch.test.js",
+        "test/home-guide-presentation-binding.test.ts",
+        "test/home-guide-presentation-adapter.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native-browser.test.js",
+        "-t",
+        "keeps a registered|ordinary or other-account|prefers an existing|reselects|locked until legacy",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
