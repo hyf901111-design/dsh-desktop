@@ -1,45 +1,43 @@
 // @vitest-environment happy-dom
 import {afterEach,expect,test,vi} from 'vitest'
 import {mountHomeGuides} from '../src/preload/home-guides'
-import {createHomeGuideTimeline} from '../src/preload/home-guide-timeline'
-let dispose=()=>{}
+let dispose:()=>unknown=()=>{},off=()=>{}
 const hiddenDescriptor=Object.getOwnPropertyDescriptor(document,'hidden')
-afterEach(()=>{dispose();document.body.innerHTML='';hiddenDescriptor?Object.defineProperty(document,'hidden',hiddenDescriptor):delete (document as any).hidden;vi.useRealTimers()})
+afterEach(async()=>{await dispose();off();document.body.innerHTML='';hiddenDescriptor?Object.defineProperty(document,'hidden',hiddenDescriptor):delete (document as any).hidden;vi.useRealTimers()})
 function fixture(){
- document.body.innerHTML='<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="a"><button id="header-action">会话操作</button></header><div class="wSkVaW_scrollBody"><p>原生历史</p></div><div data-center-composer-host><textarea>已有草稿</textarea></div></div></main>'
- const runStep=vi.fn(async()=>{}),release=vi.fn(),mountNotes=vi.fn(async()=>({runStep,dispose:release}))
+ document.body.innerHTML='<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="a"><button id="header-action">会话操作</button></header><div class="wSkVaW_scrollBody"><p>原生历史</p></div><div data-center-composer-host><textarea>已有草稿</textarea></div></div></main><aside data-dsh-sidebar-root><button id="another-session">另一会话</button></aside>'
+ const listener=(event:Event)=>{const d=(event as CustomEvent).detail;if(d.command==='open')document.querySelector<HTMLElement>('header')!.dataset.eworkNotesSession=d.sessionId;window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:d.requestId,ok:true,sessionId:d.command==='open'?d.sessionId:'sample-note',cwd:'/tmp/sample',title:'示例笔记',fresh:true}}))}
+ window.addEventListener('sherlock:home-guide-session-request',listener);off=()=>window.removeEventListener('sherlock:home-guide-session-request',listener)
+ const runStep=vi.fn(async()=>{}),release=vi.fn(),mountNotes=vi.fn(async(_doc:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release}))
  const controller=mountHomeGuides(document,{mountNotes,mountPresentation:mountNotes});dispose=controller.dispose
  return{controller,runStep,release,mountNotes,text:document.querySelector('textarea')!}
 }
-test('does not automatically play a late mount after the page became hidden while preparing',async()=>{
+test('does not autoplay a late mount after the page became hidden while preparing',async()=>{
  const f=fixture();let hidden=false,resolve!:(value:any)=>void
  Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden})
  f.mountNotes.mockImplementationOnce(()=>new Promise(done=>{resolve=done}))
- const pending=f.controller.start('note')
- hidden=true;document.dispatchEvent(new Event('visibilitychange'))
- resolve({runStep:f.runStep,dispose:f.release});await pending;await Promise.resolve()
- expect(f.runStep).not.toHaveBeenCalled()
- expect(document.querySelector('.odyssey-home-guide-footer button')?.textContent).toBe('继续')
+ const pending=f.controller.start('note');await vi.waitFor(()=>expect(resolve).toBeTypeOf('function'))
+ hidden=true;document.dispatchEvent(new Event('visibilitychange'));resolve({runStep:f.runStep,dispose:f.release});await pending
+ expect(f.runStep).not.toHaveBeenCalled();expect(document.querySelector('.odyssey-home-guide-footer button')?.textContent).toBe('继续播放')
 })
-test('makes the actual native history and active composer inert while leaving the session header usable',async()=>{
- const f=fixture();f.text.focus();await f.controller.start('note')
- const blocked=(element:HTMLElement)=>{for(let node:HTMLElement|null=element;node;node=node.parentElement){if(node.inert||node.hidden)return true}return false}
- expect(blocked(f.text)).toBe(true)
- expect(blocked(document.querySelector('.wSkVaW_scrollBody')!)).toBe(true)
- expect(blocked(document.getElementById('header-action')!)).toBe(false)
- f.controller.reset();expect(blocked(f.text)).toBe(false)
+test('keeps the underlying note input inert but the real session header navigable',async()=>{
+ const f=fixture();await f.controller.start('note')
+ expect(f.text.parentElement?.inert).toBe(true);expect(document.querySelector<HTMLElement>('.wSkVaW_scrollBody')?.inert).toBe(true)
+ expect(document.querySelector<HTMLElement>('header')?.inert).not.toBe(true)
+ await f.controller.reset();expect(f.text.parentElement?.inert).toBe(false);expect(f.text.value).toBe('已有草稿')
 })
-test('restores the latest run focus rather than an earlier run marker',async()=>{
- const f=fixture(),header=document.getElementById('header-action')!
- header.focus();await f.controller.start('note');f.controller.reset()
- f.text.focus();await f.controller.start('note');f.controller.reset()
- expect(document.activeElement).toBe(f.text)
- expect(document.querySelectorAll('[data-home-guide-return-focus]')).toHaveLength(0)
+test('shows a scoped visual action cue without moving or focusing the system pointer',async()=>{
+ const f=fixture();await f.controller.start('note');const target=document.getElementById('header-action')!
+ target.getBoundingClientRect=()=>({left:20,top:30,width:90,height:30,right:110,bottom:60,x:20,y:30,toJSON:()=>({})})
+ const id=document.querySelector<HTMLElement>('[data-home-guide]')!.dataset.homeGuide
+ window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:'old-run',target,label:'陈旧提示'}}))
+ expect(document.querySelector<HTMLElement>('.odyssey-home-guide-cue')?.hidden).toBe(true)
+ window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:id,target,label:'点击 AI 挑战'}}))
+ expect(document.querySelector<HTMLElement>('.odyssey-home-guide-cue')?.hidden).toBe(false)
+ expect(document.querySelector('[role=status]')?.textContent).toBe('点击 AI 挑战')
+ await f.controller.reset();expect(document.querySelector<HTMLElement>('.odyssey-home-guide-cue')?.hidden).toBe(true)
 })
-test('pausing before the pending operation microtask prevents it from starting until resume',async()=>{
- vi.useFakeTimers();const run=vi.fn(async()=>{}),timeline=createHomeGuideTimeline({steps:[{id:'one',hold:0}],run})
- timeline.play();timeline.pause();await vi.advanceTimersByTimeAsync(10)
- expect(run).not.toHaveBeenCalled()
- timeline.play();await vi.advanceTimersByTimeAsync(1);expect(run).toHaveBeenCalledTimes(1)
- timeline.dispose()
+test('manual navigation stops playback and reveals the saved native surface',async()=>{
+ const f=fixture();await f.controller.start('note');document.getElementById('another-session')!.click()
+ await Promise.resolve();expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull()
 })

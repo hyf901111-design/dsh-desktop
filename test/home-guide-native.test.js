@@ -22,16 +22,24 @@ async function fixture({sessionId='owner',subagentPanel=false}={}){
  }
  win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  let descriptor,liveCalls=0;win.dshDesktop={financialWidget:{request:()=>{liveCalls++;throw Error('must not use real provider')}},componentLibrary:{request:()=>{liveCalls++;throw Error('must not read real custom library')}}};win.__ModuleLoader__={load:d=>descriptor=d}
- const patched=patchHomeGuideNative(source).replace('exports.NativeHomeGuidePortal = NativeHomeGuidePortal;','exports.NativeHomeGuidePortal = NativeHomeGuidePortal;exports.__guideResident=homeGuideNativeResidentSession;')
+ const patched=patchHomeGuideNative(source).replace('exports.NativeHomeGuidePortal = NativeHomeGuidePortal;','exports.NativeHomeGuidePortal = NativeHomeGuidePortal;exports.__guideResident=homeGuideNativeResidentSession;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};')
  runInNewContext(patched,{window:win,document:doc,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLInputElement:win.HTMLInputElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,crypto,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),native=descriptor.factory(id=>['react','react/jsx-runtime','react-dom'].includes(id)?require(id):fake)
+ const disk=new Map(),registry=new native.ResearchWorkspaceRegistry({getItem:key=>disk.get(key)??null,setItem:(key,value)=>{disk.set(key,value);return true}})
+ native.__setGuidePage(new Proxy({getState:()=>({account:{status:'ready',user:{userId:'test-owner'}},favorites:[],boards:[],notifications:{}}),getHomeGuideSession:id=>id==='owner'?{kind:'board',sessionId:id,cwd:'/examples/board',title:'示例看板'}:undefined,homeGuideSessionsReady:()=>true,version:()=>0,subscribe:()=>()=>{}},{get:(target,key)=>target[key]??(()=>undefined)}))
  const host=doc.createElement('div');doc.body.append(host);const root=createRoot(host)
- await React.act(async()=>root.render(React.createElement(native.NativeHomeGuidePortal,{sessionId,subagentPanel})))
+ await React.act(async()=>root.render(React.createElement(native.NativeHomeGuidePortal,{sessionId,subagentPanel,researchWorkspaces:registry})))
  let sequence=0
  const send=(command,extra={})=>new Promise(resolve=>{const detail={requestId:'request-'+(++sequence),runId:'run-a',sessionId:'owner',command,hostId:'guide-host',...extra};const onReply=e=>{if(e.detail?.requestId!==detail.requestId)return;win.removeEventListener('sherlock:home-guide-native-reply',onReply);resolve(e.detail)};win.addEventListener('sherlock:home-guide-native-reply',onReply);win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-native-request',{detail}))})
- const command=async(name,extra={})=>{let result;await React.act(async()=>{result=await send(name,extra)});return result}
+ const command=async(name,extra={})=>{
+  let result,done=false
+  await React.act(async()=>{void send(name,extra).then(value=>{result=value;done=true})})
+  const deadline=Date.now()+12000
+  while(!done){if(Date.now()>deadline)throw Error('Native command did not reply: '+name);await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,20))})}
+  return result
+ }
  cleanup.push(async()=>{await React.act(async()=>root.unmount());await win.happyDOM.abort();for(const[k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]})
- return{win,doc,native,root,command,send,liveCalls:()=>liveCalls}
+ return{win,doc,native,root,registry,disk,workspace:registry.for(sessionId),command,send,liveCalls:()=>liveCalls}
 }
 it('patches installed native code idempotently and refreshes its own serialized runtime',()=>{
  const patched=patchHomeGuideNative(source);new Script(patched)
@@ -64,7 +72,7 @@ it('rejects unknown commands and a host outside the matching center tutorial wit
 })
 it('uses actual native components and offline links, then unmounts only the owned tutorial',async()=>{
  const f=await fixture(),input=f.doc.querySelector('textarea')
- expect((await f.command('mount-board')).ok).toBe(true)
+ await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
  expect(f.doc.querySelector('[data-home-guide-native] [data-research-canvas]')).not.toBeNull()
  for(const command of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])expect(await f.command(command)).toMatchObject({ok:true})
  expect(f.doc.querySelectorAll('[data-home-guide-native] [data-financial-widget]')).toHaveLength(3)
@@ -75,9 +83,9 @@ it('uses actual native components and offline links, then unmounts only the owne
  expect(f.doc.querySelector('textarea')).toBe(input);expect(input.value).toBe('原草稿')
  expect((await f.command('dispose')).ok).toBe(true)
  expect(f.doc.querySelector('[data-home-guide-native]')).toBeNull()
- expect(f.doc.querySelector('[data-ework-toolbar-owner="odyssey-home-guide:board"]')).toBeNull()
+ expect(f.doc.querySelector('[data-ework-toolbar-owner="owner"]')).toBeNull()
  expect(f.doc.querySelector('textarea')).toBe(input)
-})
+},20000)
 it('cancels a pending mount when its run is disposed and rejects obsolete run commands',async()=>{
  const f=await fixture();let mounted,disposed
  await React.act(async()=>{const pending=f.send('mount-board');const end=f.send('dispose');[mounted,disposed]=await Promise.all([pending,end])})
@@ -103,7 +111,7 @@ it('keeps the ordinary financial bridge and another canvas library independent o
   const ordinaryMenu=f.doc.querySelector('.ew-financial-library:not([data-home-guide-native-library])')
   expect(ordinaryMenu).not.toBeNull()
   expect(ordinaryMenu.querySelector('[data-financial-place=calendar]').disabled).toBe(false)
-  expect((await f.command('mount-board')).ok).toBe(true)
+  await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
   expect((await f.command('board-watchlist')).ok).toBe(true)
   expect((await f.command('board-library')).ok).toBe(true)
   const guideMenu=f.doc.querySelector('[data-home-guide-native-library="run-a"]')
@@ -116,3 +124,39 @@ it('keeps the ordinary financial bridge and another canvas library independent o
   expect(f.doc.body.contains(ordinaryToolbar)).toBe(true)
  }finally{await React.act(async()=>root.unmount())}
 })
+
+it('persists tutorial steps into its real registered workspace and reopens ordinary native components offline',async()=>{
+ const f=await fixture();await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
+ expect((await f.command('board-watchlist')).ok).toBe(true)
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(1)
+ expect(JSON.parse(f.disk.get('sherlock.research.canvas.artifacts.v1:owner'))).toHaveLength(1)
+ const ids=f.workspace.getSnapshot().artifacts.map(node=>node.id)
+ expect((await f.command('dispose')).ok).toBe(true)
+ await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
+ expect(f.workspace.getSnapshot().artifacts.map(node=>node.id)).toEqual(ids)
+ expect((await f.command('dispose')).ok).toBe(true)
+ const reopened=new f.native.ResearchWorkspaceRegistry({getItem:key=>f.disk.get(key)??null,setItem:(key,value)=>{f.disk.set(key,value);return true}}),host=f.doc.createElement('div'),root=createRoot(host);f.doc.body.append(host)
+ try{await React.act(async()=>root.render(React.createElement(f.native.ResearchCanvas,{sessionId:'owner',t:key=>key,researchWorkspaces:reopened})));await new Promise(resolve=>setTimeout(resolve,50));expect(host.querySelector('[data-financial-widget=watchlist]').textContent).toContain('1,456.80');expect(f.liveCalls()).toBe(0)}finally{await React.act(async()=>root.unmount())}
+},15000)
+it('cues real controls before clicking and pauses the pre-action delay without losing its run',async()=>{
+ const f=await fixture(),cues=[];await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
+ f.win.addEventListener('sherlock:home-guide-cue',event=>cues.push(event.detail))
+ f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:'run-a',sessionId:'owner',playing:false}}))
+ let done=false,pending;await React.act(async()=>{pending=f.send('board-library').then(reply=>{done=true;return reply});await new Promise(resolve=>setTimeout(resolve,80))})
+ expect(done).toBe(false);expect(f.doc.querySelector('[data-financial-library]').getAttribute('aria-expanded')).toBe('false')
+ f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:'run-a',sessionId:'owner',playing:true}}))
+ await React.act(async()=>expect((await pending).ok).toBe(true))
+ expect(cues.some(cue=>cue.runId==='run-a'&&cue.target?.matches('[data-financial-library]')&&cue.label)).toBe(true)
+},10000)
+it('adds the example stock through native search controls while retaining the saved component IDs',async()=>{
+ const f=await fixture(),cues=[];f.workspace.setCanvasSize({width:1100,height:720,availableWidth:1100});f.workspace.setWorkbenchWidth(1100)
+ const watch=f.workspace.createFinancialWidget('watchlist'),quote=f.workspace.createFinancialWidget('quote'),news=f.workspace.createFinancialWidget('news')
+ f.workspace.setArtifacts([{...watch,containerSpec:{...watch.containerSpec,symbols:[{market:'SH',code:'600519',name:'贵州茅台'},{market:'SZ',code:'000001',name:'平安银行'}]}},{...quote,containerSpec:{...quote.containerSpec,linkedWatchlistId:watch.id}},{...news,containerSpec:{...news.containerSpec,linkedSourceId:quote.id}}])
+ await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
+ f.win.addEventListener('sherlock:home-guide-cue',event=>cues.push(event.detail))
+ await f.command('board-add').then(reply=>expect(reply.ok,reply.message).toBe(true))
+ expect(cues.some(cue=>cue.target?.getAttribute('aria-label')==='添加自选股')).toBe(true)
+ expect(cues.some(cue=>cue.target?.getAttribute('aria-label')==='搜索个股代码或名字')).toBe(true)
+ expect(f.workspace.getSnapshot().artifacts.map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort())
+ expect(f.workspace.getSnapshot().artifacts.find(node=>node.id===watch.id).containerSpec.symbols).toHaveLength(3)
+},15000)

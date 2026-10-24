@@ -1,3 +1,4 @@
+import { verifyHomePresentationAssets } from './lib/home-presentation-assets.mjs'
 import { verifyProfileRuntimePatches } from './lib/profile-runtime-patches.mjs'
 import { existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
@@ -140,6 +141,7 @@ try {
     await verifyProfileRuntimePatches(runtimeRoot, path.join(resourcesPath, 'sherlock-plugin-profile', 'modules'))
     execFileSync(runtimeNode, [path.resolve('scripts/validate-integration-catalog.mjs'), path.join(resourcesPath, 'integration-catalog')], { stdio: 'inherit' })
     if (existsSync(path.join(resourcesPath, 'integration-catalog', 'test')) || existsSync(path.join(runtimeRoot, 'test', 'fixtures', 'integrations'))) throw new Error('Integration test fixtures must not be packaged')
+    verifyHomePresentationAssets(runtimeRoot)
     verifyRuntime(runtimeNode, runtimeRoot)
     if (skipSignature) {
       console.log('signature: skipped (unsigned CI package)')

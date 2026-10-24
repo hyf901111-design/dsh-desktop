@@ -11,18 +11,20 @@ import {mkdtemp,writeFile,mkdir,readFile,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
-it('adds a private native portal and binds real sidebar/Office services without remounting the native root',()=>{
+it('uses the ordinary native composer and persisted file path without a private fake surface',()=>{
  const patched=patchHomeGuidePresentationNative(source)
  expect(patchHomeGuidePresentationNative(patched)).toBe(patched);expect(()=>new Script(patched)).not.toThrow()
- expect(patched).toContain('function NativePresentationConversationRoot(')
- expect(patched).toContain('new SessionInputShell(')
- expect(patched).toContain('react.createElement(InputBar,')
- expect(patched).toContain('react.createElement(TodoPanel,')
- expect(patched).toContain('researchOfficePreview')
- expect(patched).toContain('service.registerTab(')
- expect(patched).toContain('service.closeTab(ticket.tabId,')
  const injected=patched.slice(patched.indexOf('/* odyssey:home-guide-presentation:start:v1 */'),patched.indexOf('/* odyssey:home-guide-presentation:end:v1 */'))
- expect(injected.includes('sessions.create(')).toBe(false)
+ expect(injected).not.toContain('new SessionInputShell(')
+ expect(injected).not.toContain('react.createElement(InputBar,')
+ expect(injected).not.toContain('react.createElement(TodoPanel,')
+ expect(injected).not.toContain('registerTab(')
+ expect(injected).toContain('inputHub.shell(sessionId)')
+ expect(injected).toContain('button.click()')
+ expect(injected).toContain('service.openFile(')
+ expect(injected).toContain('getHomeGuideSession')
+ expect(injected).toContain('sherlock:home-guide-playback')
+ expect(injected).toContain('sherlock:home-guide-cue')
 })
 it('fails closed on drift and remains composable with the separate board guide wrapper',async()=>{
  expect(()=>patchHomeGuidePresentationNative('function ConversationRoot(){}')).toThrow(/anchor/)

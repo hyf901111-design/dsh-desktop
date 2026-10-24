@@ -72,3 +72,38 @@ test('a zero hold that finishes while paused still advances after resume', async
   expect(seen).toEqual(['a', 'b']); expect(timeline.snapshot().phase).toBe('completed')
   timeline.dispose()
 })
+
+test('next advances one readable scene while paused without starting autoplay', async () => {
+  vi.useFakeTimers()
+  const seen: string[] = []
+  const timeline = createHomeGuideTimeline({ steps: [{ id: 'a', hold: 4000 }, { id: 'b', hold: 4000 }, { id: 'c', hold: 4000 }], run: async id => { seen.push(id) } })
+  timeline.play(); await vi.advanceTimersByTimeAsync(20); timeline.pause()
+  timeline.next(); await vi.advanceTimersByTimeAsync(20)
+  expect(seen).toEqual(['a', 'b']); expect(timeline.snapshot().phase).toBe('paused')
+  await vi.advanceTimersByTimeAsync(8000); expect(seen).toEqual(['a', 'b'])
+  timeline.dispose()
+})
+
+test('action waits spend only playing time and reject when the tutorial is disposed', async () => {
+  vi.useFakeTimers()
+  let done = false
+  const timeline = createHomeGuideTimeline({ steps: [{ id: 'a', hold: 4000 }], run: async () => { await timeline.wait(1000); done = true } })
+  timeline.play(); await vi.advanceTimersByTimeAsync(400); timeline.pause()
+  await vi.advanceTimersByTimeAsync(8000); expect(done).toBe(false)
+  timeline.play(); await vi.advanceTimersByTimeAsync(599); expect(done).toBe(false)
+  await vi.advanceTimersByTimeAsync(1); expect(done).toBe(true)
+  const waiting = timeline.wait(4000).catch(error => error.name)
+  timeline.dispose(); expect(await waiting).toBe('AbortError')
+})
+
+test('next cannot skip an operation still waiting for its real result', async () => {
+  vi.useFakeTimers()
+  let release!: () => void
+  const seen: string[] = []
+  const timeline = createHomeGuideTimeline({ steps: [{ id: 'a', hold: 4000 }, { id: 'b', hold: 4000 }], run: async id => { seen.push(id); if (id === 'a') await new Promise<void>(resolve => { release = resolve }) } })
+  timeline.play(); await vi.advanceTimersByTimeAsync(0); timeline.next(); timeline.next()
+  expect(seen).toEqual(['a'])
+  release(); await vi.advanceTimersByTimeAsync(0); expect(timeline.snapshot().holding).toBe(true)
+  timeline.next(); await vi.advanceTimersByTimeAsync(0); expect(seen).toEqual(['a', 'b'])
+  timeline.dispose()
+})

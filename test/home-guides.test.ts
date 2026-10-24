@@ -1,111 +1,101 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, test, vi } from 'vitest'
 import { mountHomeGuides } from '../src/preload/home-guides'
-
-let dispose = () => {}
-afterEach(() => { dispose(); document.body.innerHTML = ''; delete document.documentElement.dataset.homeGuideTransition; delete document.documentElement.dataset.homeGuideTransitionSession; vi.useRealTimers() })
-function fixture() {
-  document.body.innerHTML = '<div class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="session-a"><button>原标签页</button></header><textarea>原有草稿</textarea></div></div>'
-  const text = document.querySelector('textarea')!
-  text.focus(); text.setSelectionRange(1, 3)
-  const runStep = vi.fn(async () => {})
-  const release = vi.fn()
-  const adapters = { mountNotes: vi.fn(async () => ({ runStep, dispose: release })), mountPresentation: vi.fn(async () => ({ runStep, dispose: release })) }
-  const controller = mountHomeGuides(document, adapters)
-  dispose = controller.dispose
-  return { controller, adapters, runStep, release, text }
+let dispose = () => {}, off = () => {}
+afterEach(async () => { await dispose(); off(); document.body.innerHTML = ''; delete document.documentElement.dataset.homeGuideTransition; delete document.documentElement.dataset.homeGuideTransitionSession; vi.useRealTimers() })
+function fixture(fresh = true) {
+ document.body.innerHTML = '<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="original"><div data-srb-tabs><button data-conversation-view-id="chat" aria-selected="true">对话</button><button data-conversation-view-id="notes" aria-selected="false">笔记</button><button data-conversation-view-id="research" aria-selected="false">研究</button></div></header><div class="wSkVaW_scrollBody">已保存历史</div><div data-center-composer-host><textarea>原有草稿</textarea></div></div></main>'
+ const header=document.querySelector<HTMLElement>('header')!, text=document.querySelector('textarea')!, requests:any[]=[]
+ for(const button of header.querySelectorAll('button'))button.addEventListener('click',()=>{for(const tab of header.querySelectorAll('button'))tab.setAttribute('aria-selected',String(tab===button))})
+ let prepare:((detail:any)=>void)|undefined, open:((detail:any,reply:(value:any)=>void)=>void)|undefined
+ const listener=(event:Event)=>{const detail=(event as CustomEvent).detail;requests.push(detail)
+  const reply=(result:any)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:detail.requestId,ok:true,...result}}))
+  if(detail.command==='prepare'){if(prepare){prepare(detail);return}reply({sessionId:'example-'+detail.kind+(detail.replay?'-new':''),cwd:'/tmp/example',title:'已保存示例',fresh:detail.replay||fresh})}
+  else if(detail.command==='open'){header.dataset.eworkNotesSession=detail.sessionId;if(open){open(detail,reply);return}reply({sessionId:detail.sessionId,cwd:'/tmp/example',title:'已保存示例'});window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed'))}
+ }
+ window.addEventListener('sherlock:home-guide-session-request',listener);off=()=>window.removeEventListener('sherlock:home-guide-session-request',listener)
+ const runStep=vi.fn(async()=>{}),release=vi.fn(),flush=vi.fn(async()=>{})
+ const adapters={mountNotes:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountPresentation:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush}))}
+ const controller=mountHomeGuides(document,adapters);dispose=controller.dispose
+ return{controller,adapters,runStep,release,flush,text,header,requests,setOpen:(fn:(detail:any,reply:(value:any)=>void)=>void)=>{open=fn},setPrepare:(fn:(detail:any)=>void)=>{prepare=fn}}
 }
-
-test('keeps the resident input and restores its draft and selection on exit', async () => {
-  const { controller, text, release } = fixture()
-  await controller.start('note')
-  expect(document.querySelector('[data-home-guide]')).not.toBeNull()
-  expect(document.querySelector('textarea')).toBe(text); expect(text.value).toBe('原有草稿')
-  controller.reset()
-  expect(release).toHaveBeenCalledTimes(1)
-  expect(document.querySelector('[data-home-guide]')).toBeNull()
-  expect(document.activeElement).toBe(text); expect([text.selectionStart, text.selectionEnd]).toEqual([1, 3])
+test('prepares and opens an independent saved session before mounting the tutorial',async()=>{
+ const f=fixture();await f.controller.start('note')
+ expect(f.requests.map(r=>r.command)).toEqual(['prepare','open'])
+ expect(f.adapters.mountNotes.mock.calls[0]?.[2]).toMatchObject({sessionId:'example-note',cwd:'/tmp/example',fresh:true})
+ expect(f.header.dataset.eworkNotesSession).toBe('example-note');expect(f.text.value).toBe('原有草稿')
+ await f.controller.reset();expect(f.release).toHaveBeenCalledOnce();expect(f.header.dataset.eworkNotesSession).toBe('example-note')
+})
+test('gives the introduction reading time and offers next without prematurely executing content',async()=>{
+ vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(1000)
+ expect(f.runStep).not.toHaveBeenCalled();expect(document.querySelector('[role=status]')?.textContent).toContain('研究笔记')
+ const next=document.querySelector<HTMLButtonElement>('[data-home-guide-next]')!;expect(next).not.toBeNull();next.click()
+ await vi.advanceTimersByTimeAsync(0);expect(f.runStep).toHaveBeenCalledWith('write')
+})
+test('PPT keeps the real history and input usable instead of mounting a replacement page',async()=>{
+ const f=fixture();await f.controller.start('ppt')
+ expect(f.text.closest<HTMLElement>('.wSkVaW_root')?.dataset.homeGuideLive).toBe('true')
+ expect(f.text.parentElement?.inert).not.toBe(true);expect(document.querySelector<HTMLElement>('.wSkVaW_scrollBody')?.inert).not.toBe(true)
+ expect(f.adapters.mountPresentation.mock.calls[0]?.[2]).toMatchObject({sessionId:'example-ppt',fresh:true})
+})
+test('flushes the note before releasing its view and never restores an old session',async()=>{
+ const f=fixture();await f.controller.start('note');let finish!:()=>void
+ f.flush.mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve}))
+ const closing=f.controller.reset();expect(f.flush).toHaveBeenCalledOnce();expect(f.release).not.toHaveBeenCalled()
+ expect(document.querySelector('[data-home-guide]')).not.toBeNull();finish();await closing
+ expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull();expect(f.header.dataset.eworkNotesSession).toBe('example-note')
+})
+test('does not open a late prepared example after the user navigates elsewhere',async()=>{
+ const f=fixture();let delayed:any;f.setPrepare(detail=>{delayed=detail})
+ const starting=f.controller.start('note');await Promise.resolve();await Promise.resolve()
+ f.header.dataset.eworkNotesSession='elsewhere';window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed'))
+ window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:delayed.requestId,ok:true,sessionId:'example-note',cwd:'/tmp/example',title:'示例',fresh:true}}))
+ await expect(starting).rejects.toMatchObject({name:'AbortError'});expect(f.requests.filter(r=>r.command==='open')).toHaveLength(0);expect(f.header.dataset.eworkNotesSession).toBe('elsewhere')
+})
+test('revisits the saved example without replaying over it and replay requests a fresh copy',async()=>{
+ const f=fixture(false);await f.controller.start('note');await Promise.resolve()
+ expect(f.runStep).not.toHaveBeenCalled();expect(document.querySelector('[role=status]')?.textContent).toContain('保留')
+ await f.controller.start('note',{replay:true})
+ expect(f.requests.filter(r=>r.command==='prepare').at(-1)?.replay).toBe(true);expect(f.header.dataset.eworkNotesSession).toBe('example-note-new')
 })
 
-test('cancels late adapter mounts without stealing focus across a session change', async () => {
-  const { controller, adapters, text } = fixture()
-  let resolve!: (value: any) => void
-  const lateDispose = vi.fn()
-  adapters.mountNotes.mockImplementationOnce(() => new Promise(done => { resolve = done }))
-  const start = controller.start('note')
-  document.querySelector<HTMLElement>('[data-ework-notes-session]')!.dataset.eworkNotesSession = 'session-b'
-  window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed', { detail: { sessionId: 'session-b' } }))
-  const other = document.createElement('button'); document.body.append(other); other.focus()
-  resolve({ runStep: async () => {}, dispose: lateDispose })
-  await expect(start).rejects.toMatchObject({ name: 'AbortError' })
-  expect(lateDispose).toHaveBeenCalledTimes(1)
-  expect(document.activeElement).toBe(other); expect(text.value).toBe('原有草稿')
+ test('respects a manual tab click while an owned open acknowledgement is pending',async()=>{
+  const f=fixture();let reply:((value:any)=>void)|undefined
+  f.setOpen((_detail,done)=>{reply=done})
+  const starting=f.controller.start('note');const result=starting.catch(error=>error.name)
+  await vi.waitFor(()=>expect(reply).toBeTypeOf('function'))
+  f.header.querySelector<HTMLButtonElement>('[data-conversation-view-id=chat]')!.click()
+  reply!({sessionId:'example-note',cwd:'/tmp/example',title:'示例'})
+  expect(await result).toBe('AbortError');expect(document.querySelector('[data-home-guide]')).toBeNull()
+ })
+
+test('reports a failed save after leaving without trapping navigation or claiming success',async()=>{
+ const f=fixture();await f.controller.start('note');f.flush.mockRejectedValueOnce(Error('版本冲突，请保留草稿后重试'))
+ await f.controller.reset(false)
+ expect(document.querySelector('[data-home-guide]')).toBeNull();expect(document.querySelector('[role=alert]')?.textContent).toContain('版本冲突')
+ expect(f.header.dataset.eworkNotesSession).toBe('example-note');expect(f.release).toHaveBeenCalledOnce()
 })
 
-test('Escape closes the guide and repeat starts dispose the old run', async () => {
-  const { controller, release, adapters } = fixture()
-  await controller.start('note')
-  await controller.start('ppt')
-  expect(release).toHaveBeenCalledTimes(1)
-  expect(adapters.mountPresentation).toHaveBeenCalledTimes(1)
-  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-  expect(release).toHaveBeenCalledTimes(2)
-  expect(document.querySelectorAll('[data-home-guide]')).toHaveLength(0)
+test('a board action can remain paused for more than its active timeout budget',async()=>{
+ vi.useFakeTimers();const f=fixture();let pending:any
+ const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail.command==='mount-board')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}));else if(detail.command!=='dispose')pending=detail}
+ window.addEventListener('sherlock:home-guide-native-request',receive)
+ try{
+  await f.controller.start('board');await vi.advanceTimersByTimeAsync(0);document.querySelector<HTMLButtonElement>('[data-home-guide-next]')!.click();await vi.advanceTimersByTimeAsync(0);expect(pending.command).toBe('board-library')
+  document.querySelector<HTMLButtonElement>('.odyssey-home-guide-footer button')!.click();await vi.advanceTimersByTimeAsync(35000)
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused')
+  document.querySelector<HTMLButtonElement>('.odyssey-home-guide-footer button')!.click()
+  window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:pending.requestId,runId:pending.runId,ok:true}}));await vi.advanceTimersByTimeAsync(10)
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
 })
 
-test('uses the real mode tabs and replays without losing the original view', async () => {
-  const { controller } = fixture()
-  const header = document.querySelector('header')!
-  header.innerHTML = '<div data-srb-tabs><button data-conversation-view-id="chat" aria-selected="true">对话</button><button data-conversation-view-id="notes" aria-selected="false">笔记</button></div>'
-  for (const button of header.querySelectorAll('button')) button.addEventListener('click', () => {
-    for (const tab of header.querySelectorAll('button')) tab.setAttribute('aria-selected', String(tab === button))
-  })
-  await controller.start('note')
-  expect(header.querySelector('[data-conversation-view-id=notes]')?.getAttribute('aria-selected')).toBe('true')
-  await controller.start('note')
-  controller.reset()
-  expect(header.querySelector('[data-conversation-view-id=chat]')?.getAttribute('aria-selected')).toBe('true')
-})
-
-test('keeps an actionable error surface if a native adapter cannot mount', async () => {
-  const { controller, adapters } = fixture()
-  adapters.mountNotes.mockRejectedValueOnce(Error('原生界面尚未就绪'))
-  await controller.start('note').catch(() => {})
-  expect(document.querySelector('[data-home-guide] [role=status]')?.textContent).toBe('原生界面尚未就绪')
-  expect([...document.querySelectorAll<HTMLButtonElement>('[data-home-guide] button')].find(button => button.textContent === '重播')?.disabled).toBe(false)
-  controller.reset()
-})
-
-test('identity cancellation leaves the new account interface focused', async () => {
-  const { controller, text } = fixture()
-  await controller.start('note')
-  const dialog = document.createElement('button'); document.body.append(dialog); dialog.focus()
-  controller.reset(false)
-  expect(document.activeElement).toBe(dialog)
-  expect(document.querySelector('[data-home-guide]')).toBeNull()
-  expect(text.value).toBe('原有草稿')
-})
-
-test('keeps the original session as the owner of asynchronous native view restoration', async () => {
-  const { controller } = fixture()
-  document.querySelector('header')!.innerHTML = '<div data-srb-tabs><button data-conversation-view-id="chat" aria-selected="true">对话</button><button data-conversation-view-id="notes" aria-selected="false">笔记</button></div>'
-  await controller.start('note')
-  controller.reset()
-  expect(document.documentElement.dataset.homeGuideTransition).toBeTruthy()
-  expect(document.documentElement.dataset.homeGuideTransitionSession).toBe('session-a')
-  controller.reset(false)
-  expect(document.documentElement.dataset.homeGuideTransition).toBeUndefined()
-  expect(document.documentElement.dataset.homeGuideTransitionSession).toBeUndefined()
-})
-
-test('does not clear a replacement native view restoration lease owned by another run', async () => {
-  const { controller } = fixture()
-  document.querySelector('header')!.innerHTML = '<div data-srb-tabs><button data-conversation-view-id="chat" aria-selected="true">对话</button></div>'
-  await controller.start('note')
-  controller.reset()
-  document.documentElement.dataset.homeGuideTransition = 'replacement-run'
-  document.documentElement.dataset.homeGuideTransitionSession = 'session-b'
-  controller.dispose()
-  expect(document.documentElement.dataset.homeGuideTransition).toBe('replacement-run')
-  expect(document.documentElement.dataset.homeGuideTransitionSession).toBe('session-b')
+test('reveals the native conversation only after a still-owned handover has finished',async()=>{
+ const f=fixture(),reveal=vi.fn();await f.controller.dispose()
+ const save=vi.fn(async()=>{}),controller=mountHomeGuides(document,{...f.adapters,beforeOpen:save,revealConversation:reveal});dispose=controller.dispose
+ await controller.start('note');expect(save).toHaveBeenCalledOnce();expect(reveal).toHaveBeenCalledOnce()
+ await controller.reset(false);let finish!:()=>void;save.mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve}));reveal.mockClear()
+ const starting=controller.start('note').catch(error=>error.name);await vi.waitFor(()=>expect(finish).toBeTypeOf('function'))
+ const sidebar=document.createElement('aside');sidebar.setAttribute('data-dsh-sidebar-root','');sidebar.innerHTML='<button>打开技能页面</button>';document.body.append(sidebar);sidebar.querySelector('button')!.click();document.body.dataset.workspaceSurface='integrations';finish()
+ expect(await starting).toBe('AbortError');expect(reveal).not.toHaveBeenCalled();delete document.body.dataset.workspaceSurface
 })

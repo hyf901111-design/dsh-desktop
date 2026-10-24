@@ -1,146 +1,110 @@
 const START='/* odyssey:home-guide-presentation:start:v1 */'
 const END='/* odyssey:home-guide-presentation:end:v1 */'
 
-function homePresentationSidebarSnapshot(service,sessionId){
- const snapshot=service.getSnapshot?.(),state=snapshot?.state
- if(snapshot?.sessionId!==sessionId||!state)return null
- const leaves=node=>!node?[]:node.kind==='leaf'?[node]:(node.children??[]).flatMap(leaves)
- const panels=[...leaves(state.splits),...leaves(state.bottomSplits)]
- return{open:state.panelOpen,activeTab:panels.find(leaf=>leaf.id===state.activePane)?.active??null,
-  signature:JSON.stringify([state.panelOpen,state.activePane,panels.map(leaf=>[leaf.id,leaf.active,leaf.tabs.map(tab=>tab.id)])])}
-}
-
-function NativeHomePresentationContent({ticket}){
- const shell=ticket.shell
- const useInput=select=>react.useSyncExternalStore(shell.state.subscribe,()=>select(shell.snapshot),()=>select(shell.snapshot))
- const t=HomePresentationNativeDeps?.t??((key,values)=>key==='todo.progress.total'?`${values.done}/${values.total}`:({'todo.title':'演示文稿制作任务','input.placeholder':'预置需求示例'}[key]??key))
- const labels=['核对品牌与演示目标','安排信息层级与页面结构','完成版式并交付可编辑文件']
- const phase=ticket.stage
- const todos=phase<1?[]:labels.map((content,index)=>({content,status:phase>=3||index<phase-1?'completed':index===phase-1?'in_progress':'pending'}))
- return react.createElement('div',{'data-home-presentation-native':ticket.detail.runId,style:{display:'flex',flexDirection:'column',gap:20,padding:20,minWidth:0,height:'100%',overflow:'auto',boxSizing:'border-box'}},
-  react.createElement('p',{style:{margin:0,fontSize:12,color:'var(--dsw-alias-label-secondary,#777)'}},'离线预置示例 · 不调用模型，也不写入你的对话记录'),
-  react.createElement(InputBar,{useSession:select=>select({running:false,promptError:null,subagent:null,removed:false}),useInput,inputActions:shell.actions,keyboard:shell,renderSlot:()=>null,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:(_key,select)=>select?.(undefined),sessionId:ticket.privateId,t,variant:'hero',disabled:true}),
-  react.createElement(TodoPanel,{todos,objective:'制作一页 EWork Odyssey 产品介绍',running:phase<3,t}),
-  phase>=2&&react.createElement('p',{'data-home-presentation-explanation':'',style:{margin:0,lineHeight:1.7,fontSize:14}},phase===2?'采用公司品牌模板，先建立标题与内容层级，再整理左右分区和信息图表。':'预置演示文稿已准备好，可在右侧原生 Office 标签中查看真实文件。'),
-  phase>=3&&react.createElement('button',{type:'button','data-home-presentation-file':'',onClick:()=>ticket.open().catch(error=>ticket.report(error)),style:{textAlign:'left',padding:14,borderRadius:8,border:'1px solid var(--dsw-alias-border-standard,#ddd)',background:'var(--dsw-alias-bg-base,#fff)',color:'inherit'}},'efund-ework-onepage.pptx · 打开预置文件'))
-}
-
 function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
- const [entry,setEntry]=react.useState(null),owned=react.useRef(null)
  react.useEffect(()=>{
   if(subagentPanel||!sessionId||window.top!==window)return
-  let stopped=false
-  const requests=new Map(),changed=()=>Error('教程页面或对话已变化。')
+  let stopped=false,owned=null
+  const requests=new Map(),changed=()=>new DOMException('教程页面或对话已变化。','AbortError')
   const reply=(detail,ok,message)=>{if(!stopped)window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-presentation-reply',{detail:{requestId:detail.requestId,runId:detail.runId,sessionId,ok,...(message?{message}:{})}}))}
   const hostFor=detail=>{
    const host=document.getElementById(detail.hostId),container=host?.closest('[data-home-guide]'),center=container?.closest('.pI_x6G_centerCol')
    if(!host?.isConnected||!center||container.dataset.homeGuide!==detail.runId||host.closest('[data-odyssey-subagent-panel]'))throw changed()
    const header=[...center.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')].find(el=>!el.closest('[data-odyssey-subagent-panel]'))
-   if(header&&header.dataset.eworkNotesSession!==sessionId)throw changed()
+   if(!header||header.dataset.eworkNotesSession!==sessionId)throw changed()
+   const entry=HomePresentationNativeDeps?.getHomeGuideSession?.(sessionId)
+   if(!entry||entry.kind!=='ppt'||entry.cwd!==detail.cwd)throw Error('请从首页重新创建独立的演示示例会话。')
    return host
   }
-  const check=ticket=>{if(stopped||owned.current!==ticket||ticket.controller.signal.aborted||hostFor(ticket.detail)!==ticket.host)throw changed()}
-  const observeSidebar=ticket=>{
-   if(ticket.sidebar)return
-   const service=ticket.service,before=homePresentationSidebarSnapshot(service,sessionId)
-   if(!before||typeof service.subscribeState!=='function')return
-   const guard={before,last:before.signature,revision:0,ownedRevision:0,writing:0,lost:false}
-   ticket.sidebar=guard
-   ticket.offSidebar=service.subscribeState(()=>{
-    const next=homePresentationSidebarSnapshot(service,sessionId),signature=next?.signature??null
-    if(signature===guard.last)return
-    guard.last=signature;guard.revision++
-    if(guard.writing)guard.ownedRevision=guard.revision;else guard.lost=true
-   })
+  const check=ticket=>{if(stopped||owned!==ticket||ticket.controller.signal.aborted||hostFor(ticket.detail)!==ticket.host)throw changed()}
+  const rpc=async(ticket,action,extra={})=>{
+   const response=await window.fetch('/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action,sessionId,runId:ticket.detail.runId,...extra}),signal:ticket.controller.signal})
+   const result=await response.json();check(ticket);if(!response.ok||!result?.ok)throw Error(result?.message||'离线预置执行器尚未就绪。');return result
   }
-  const sidebarWrite=(ticket,write)=>{
-   const guard=ticket.sidebar;if(guard)guard.writing++
-   try{return write()}finally{if(guard)guard.writing--}
-  }
-  const release=ticket=>{
-   ticket.controller.abort();ticket.shell.dispose?.()
-   const guard=ticket.sidebar,current=homePresentationSidebarSnapshot(ticket.service??{},sessionId)
-   // A changed-away-and-back selection is still a user revision. Never infer
-   // ownership only from the final tab ID or undo a user's later panel choice.
-   const restore=guard&&!guard.lost&&guard.revision===guard.ownedRevision&&current?.signature===guard.last&&current.activeTab===ticket.tabId
-   ticket.offSidebar?.();ticket.offSidebar=null
-   if(ticket.tabOpened){ticket.tabOpened=false;try{ticket.service?.closeTab(ticket.tabId,{sessionId})}catch{}}
-   if(restore){
-    try{if(guard.before.activeTab)ticket.service.activateTab(guard.before.activeTab,{sessionId})}catch{}
-    try{if(typeof guard.before.open==='boolean')ticket.service.setPanelState({open:guard.before.open},{sessionId})}catch{}
-   }
-   ticket.unregister?.();ticket.unregister=null
-   void ticket.assets?.request({action:'release',runId:ticket.detail.runId}).catch(()=>{})
-  }
-  const dispose=(synchronous=true)=>{const ticket=owned.current;if(!ticket)return;owned.current=null;release(ticket);if(synchronous)react_dom.flushSync(()=>setEntry(null));else setEntry(null)}
-  const frame=ticket=>new Promise((resolve,reject)=>{
-   if(ticket.controller.signal.aborted){reject(changed());return}
-   let raf,timer;const finish=error=>{window.cancelAnimationFrame(raf);window.clearTimeout(timer);ticket.controller.signal.removeEventListener('abort',abort);error?reject(error):resolve()},abort=()=>finish(changed())
-   ticket.controller.signal.addEventListener('abort',abort,{once:true});raf=window.requestAnimationFrame(()=>finish());timer=window.setTimeout(()=>finish(),64)
+  const skillRequest=(ticket,action,args={})=>new Promise((resolve,reject)=>{
+   const requestId=window.crypto.randomUUID(),signal=ticket.controller.signal
+   const clean=()=>{window.clearTimeout(timer);window.removeEventListener('sherlock:skill-menu-reply',receive);signal.removeEventListener('abort',abort)}
+   const abort=()=>{clean();window.dispatchEvent(new window.CustomEvent('sherlock:skill-menu-request',{detail:{requestId,action:'cancel'}}));reject(changed())}
+   const receive=event=>{const result=event.detail;if(result?.requestId!==requestId)return;clean();try{check(ticket);if(!result.ok)throw Error(result.error||'公司PPT技能尚未就绪。');resolve(result.result)}catch(error){reject(error)}}
+   const timer=window.setTimeout(()=>{abort()},5000)
+   signal.addEventListener('abort',abort,{once:true});window.addEventListener('sherlock:skill-menu-reply',receive)
+   window.dispatchEvent(new window.CustomEvent('sherlock:skill-menu-request',{detail:{requestId,action,...args}}))
   })
-  const open=async ticket=>{
-   check(ticket);if(ticket.opening)return ticket.opening
-   ticket.opening=(async()=>{
-    const deps=HomePresentationNativeDeps,service=deps?.researchSidebar.service,office=deps?.researchOfficePreview.service
-    if(!service||!office?.supports?.('pptx')||typeof office.Component!=='function'||!ticket.assets?.request)throw Error('原生演示文稿预览尚未就绪，请重试。')
-    ticket.service=service;observeSidebar(ticket)
-    const grant=ticket.grant??await ticket.assets.request({action:'grant',assetId:'company-presentation',runId:ticket.detail.runId})
-    try{
-     check(ticket);if(ticket.sidebar?.lost)throw Error('右栏状态已更改，请重新播放。')
-     if(!grant?.url||grant.readOnly!==true)throw Error('预置文件授权不可用。');ticket.grant=grant
-     if(!ticket.unregister)ticket.unregister=service.registerTab({id:ticket.tabType,title:()=> '演示文稿示例',hidden:true,single:false,component:()=>react.createElement(office.Component,{sourceUrl:grant.url,kind:'pptx',title:grant.name,readOnly:true})})
-     ticket.tabOpened=true
-     await sidebarWrite(ticket,()=>service.openTab({id:ticket.tabId,type:ticket.tabType,title:grant.name,meta:{sherlockPanel:'right',homeGuideRunId:ticket.detail.runId}},{sessionId}))
-     check(ticket);if(ticket.sidebar?.lost)throw Error('右栏状态已更改，请重新播放。')
-     sidebarWrite(ticket,()=>service.setPanelState({open:true},{sessionId}))
-    }catch(error){
-     if(ticket.controller.signal.aborted||owned.current!==ticket){try{service.closeTab(ticket.tabId,{sessionId})}catch{};void ticket.assets.request({action:'release',runId:ticket.detail.runId}).catch(()=>{})}
-     throw error
-    }
-   })().finally(()=>{ticket.opening=null})
-   return ticket.opening
-  }
+  const delay=(ticket,ms)=>new Promise((resolve,reject)=>{
+   const abort=()=>{window.clearTimeout(timer);ticket.controller.signal.removeEventListener('abort',abort);reject(changed())},timer=window.setTimeout(()=>{ticket.controller.signal.removeEventListener('abort',abort);resolve()},ms)
+   ticket.controller.signal.addEventListener('abort',abort,{once:true})
+  })
+  const playing=async ticket=>{for(;;){check(ticket);if(ticket.playing&&!document.hidden)return;await delay(ticket,35)}}
+  const waitFor=async(ticket,predicate)=>{for(let i=0;i<200;i++){check(ticket);if(predicate())return;await delay(ticket,25)}throw Error('原生会话暂未就绪，请重试。')}
+  const dispose=()=>{const ticket=owned;if(!ticket)return;owned=null;ticket.controller.abort();if(ticket.detail.fresh)void window.fetch('/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId}),keepalive:true}).catch(()=>{})}
+  const inputFor=ticket=>[...ticket.host.closest('.pI_x6G_centerCol').querySelectorAll('textarea[data-odyssey-file-reference-session]')].find(input=>input.dataset.odysseyFileReferenceSession===sessionId&&!input.closest('[data-odyssey-subagent-panel]'))
+  const cue=async(ticket,target,label)=>{await playing(ticket);window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail:{runId:ticket.detail.runId,target,label}}));await delay(ticket,650);await playing(ticket);if(!target.isConnected)throw changed()}
   const execute=async detail=>{
-   if(detail.command==='dispose'||detail.command==='cancel'){if(owned.current?.detail.runId===detail.runId)dispose();return}
+   if(detail.command==='dispose'||detail.command==='cancel'){if(owned?.detail.runId===detail.runId)dispose();return}
    if(detail.command==='mount'){
     const host=hostFor(detail)
-    if(owned.current?.detail.runId===detail.runId&&owned.current.host===host)return
+    if(owned?.detail.runId===detail.runId&&owned.host===host)return
     dispose()
-    const shell=new SessionInputShell({actx:{},defaultSink:()=>{throw Error('离线教程不发送消息。')}})
-    const ticket={detail,host,shell,privateId:'home-presentation:'+detail.runId,controller:new window.AbortController(),stage:-1,busy:false,tabId:'home-presentation:'+detail.runId,tabType:'home-presentation-view:'+detail.runId,tabOpened:false,assets:window.dshDesktop?.homeGuideAssets,report:error=>reply(detail,false,error?.message)}
-    ticket.open=()=>open(ticket);owned.current=ticket;react_dom.flushSync(()=>setEntry({...ticket}));await frame(ticket);check(ticket)
-    if(!host.querySelector('textarea'))throw Error('原生输入示例尚未就绪。')
-    return
+    const deps=HomePresentationNativeDeps,shell=deps?.inputHub.shell(sessionId)
+    if(!shell||shell.disposed)throw Error('原生输入框尚未就绪。')
+    const ticket={detail,host,shell,controller:new window.AbortController(),stage:-1,busy:false,playing:false};owned=ticket
+    if(detail.fresh){if(shell.snapshot.draft.trim()||shell.snapshot.attachments?.length)throw Error('示例会话中已有草稿，未替换。');ticket.prepared=await rpc(ticket,'prepare',{fresh:true,cwd:detail.cwd});if(typeof ticket.prepared.brief!=='string'||!ticket.prepared.brief||typeof ticket.prepared.sourcePath!=='string'||typeof ticket.prepared.presentationPath!=='string')throw Error('预制研报示例尚未就绪。')}
+    await waitFor(ticket,()=>!!inputFor(ticket));return
    }
-   const ticket=owned.current
+   const ticket=owned
    if(!ticket||ticket.detail.runId!==detail.runId||ticket.detail.hostId!==detail.hostId)throw changed()
-   check(ticket);const index=['brief','plan','layout','deliver','open'].indexOf(detail.command)
-   if(index<0||index!==ticket.stage+1||ticket.busy)throw Error('演示步骤顺序已变化，请重新播放。')
+   check(ticket);const index=['brief','send','plan','layout','deliver','open'].indexOf(detail.command)
+   if(index<0||index!==ticket.stage+1||ticket.busy||!ticket.detail.fresh)throw Error('示例步骤顺序已变化，请重新播放。')
    ticket.busy=true
    try{
+    await playing(ticket)
     if(index===0){
-     ticket.shell.setDraft('请制作一页 EWork Odyssey 产品介绍，沿用公司品牌模板，突出产品定位、关键能力与使用价值。')
-     ticket.shell.insertReference({source:'ework-managed-skill',ref:JSON.stringify({id:'builtin:efund-ppt-maker',revision:1,invocationName:'ework-skill-0123456789abcdef',label:'efund-ppt-maker'}),label:'/efund-ppt-maker',clipboardText:'/efund-ppt-maker'},{start:0,end:0,draftRev:ticket.shell.snapshot.draftRev})
+     const input=inputFor(ticket);await cue(ticket,input,'添加原始研报 PDF');input.focus({preventScroll:true})
+     ticket.shell.insertFilePaths([ticket.prepared.sourcePath])
+     if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='chat-file'&&JSON.parse(ref.ref).path===ticket.prepared.sourcePath))throw Error('研报附件未能加入原生输入框。')
+     await cue(ticket,input,'选择公司 PPT 制作技能')
+     const rows=await skillRequest(ticket,'list'),skill=Array.isArray(rows)&&rows.find(row=>row.id==='builtin:efund-ppt-maker')
+     if(!skill)throw Error('请先启用“PPT制作助手”，再打开演示教程。')
+     await skillRequest(ticket,'use',{sessionId,skill})
+     if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id==='builtin:efund-ppt-maker'))throw Error('公司PPT技能未能加入原生输入框。')
+     await cue(ticket,input,'填写研报转换要求')
+     const prefix=ticket.shell.snapshot.draft+'\n',brief=ticket.prepared.brief
+     let prior=ticket.shell.snapshot.draft;ticket.shell.setDraft(prefix);prior=prefix
+     for(let i=0;i<brief.length;i+=3){await playing(ticket);if(ticket.shell.snapshot.draft!==prior)throw Error('输入内容已更改，示例已暂停。');prior=prefix+brief.slice(0,Math.min(i+3,brief.length));ticket.shell.setDraft(prior);await delay(ticket,38)}
+    }else if(index===1){
+     const input=inputFor(ticket),button=input?.closest('.uV2eYG_root')?.querySelector('button.uV2eYG_primary')
+     if(!button||button.disabled)throw Error('原生发送按钮暂不可用。')
+     await cue(ticket,button,'发送演示需求');button.click()
+     await waitFor(ticket,()=>ticket.shell.snapshot.draft==='')
+    }else if(index<=4){await rpc(ticket,'checkpoint',{stage:detail.command})}
+    else{
+     const service=HomePresentationNativeDeps?.researchSidebar.service
+     if(typeof service?.openFile!=='function')throw Error('原生文件预览尚未就绪。')
+     const root=ticket.host.closest('.pI_x6G_centerCol'),file=[...root.querySelectorAll('a,button,[role="button"]')].find(node=>node.textContent?.includes('打开可编辑演示文稿')||node.textContent?.includes('人工智能周期与资产配置.pptx'))
+     const target=file??[...root.querySelectorAll('[data-assistant-message-id]')].at(-1)
+     if(!target)throw Error('交付消息尚未显示，请重试。')
+     await cue(ticket,target,'打开可编辑文件')
+     await service.openFile({sessionId,cwd:ticket.detail.cwd},ticket.prepared.presentationPath)
     }
-    if(index===4)await open(ticket)
-    check(ticket);ticket.stage=index;react_dom.flushSync(()=>setEntry({...ticket}));await frame(ticket);check(ticket)
+    check(ticket);ticket.stage=index
    }finally{ticket.busy=false}
   }
   const receive=event=>{
    const detail=event.detail
    if(!detail||detail.sessionId!==sessionId||!['requestId','runId','sessionId','hostId'].every(key=>typeof detail[key]==='string'&&/^[\w:-]{1,128}$/.test(detail[key]))||typeof detail.command!=='string')return
-   const key=JSON.stringify([detail.runId,detail.sessionId,detail.hostId,detail.command]),prior=requests.get(detail.requestId)
+   const key=JSON.stringify([detail.runId,detail.sessionId,detail.hostId,detail.command,detail.cwd,detail.fresh]),prior=requests.get(detail.requestId)
    if(prior){if(prior.key!==key){reply(detail,false,'教程请求标识已使用。');return}prior.promise.then(()=>reply(detail,true),error=>reply(detail,false,error?.message));return}
    const promise=execute(detail);requests.set(detail.requestId,{key,promise});if(requests.size>128)requests.delete(requests.keys().next().value)
-   promise.then(()=>reply(detail,true),error=>{if(owned.current?.detail.runId===detail.runId)dispose();reply(detail,false,error?.message||'演示未完成，请重试。')})
+   promise.then(()=>reply(detail,true),error=>{if(owned?.detail.runId===detail.runId)dispose();reply(detail,false,error?.message||'演示未完成，请重试。')})
   }
-  const reset=()=>dispose(false),observer=new MutationObserver(()=>{if(owned.current&&!owned.current.host.isConnected)dispose()})
-  observer.observe(document.body,{childList:true,subtree:true})
-  window.addEventListener('sherlock:home-guide-presentation-request',receive);window.addEventListener('sherlock:home-action-context-changed',reset);window.addEventListener('sherlock:skill-menu-reset',reset);document.addEventListener('sherlock:notes-reset',reset)
-  return()=>{stopped=true;observer.disconnect();window.removeEventListener('sherlock:home-guide-presentation-request',receive);window.removeEventListener('sherlock:home-action-context-changed',reset);window.removeEventListener('sherlock:skill-menu-reset',reset);document.removeEventListener('sherlock:notes-reset',reset);const ticket=owned.current;owned.current=null;if(ticket)release(ticket)}
+  const playback=event=>{const ticket=owned,detail=event.detail;if(!ticket||detail?.sessionId!==sessionId||detail.runId!==ticket.detail.runId)return;ticket.playing=detail.playing===true;if(ticket.detail.fresh){ticket.playbackTask=(ticket.playbackTask??Promise.resolve()).catch(()=>{}).then(()=>{check(ticket);return rpc(ticket,'playback',{playing:ticket.playing&&!document.hidden})});void ticket.playbackTask.catch(error=>{if(error?.name!=='AbortError'&&owned===ticket){dispose();reply(ticket.detail,false,error?.message)}})}}
+  const visibility=()=>{if(owned)playback({detail:{sessionId,runId:owned.detail.runId,playing:owned.playing}})}
+  const reset=()=>dispose(),observer=new MutationObserver(()=>{if(owned){try{check(owned)}catch{dispose()}}})
+  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ework-notes-session','data-home-guide']})
+  window.addEventListener('sherlock:home-guide-presentation-request',receive);window.addEventListener('sherlock:home-guide-playback',playback);document.addEventListener('visibilitychange',visibility);window.addEventListener('sherlock:home-action-context-changed',reset);window.addEventListener('sherlock:skill-menu-reset',reset);document.addEventListener('sherlock:notes-reset',reset)
+  return()=>{dispose();stopped=true;observer.disconnect();window.removeEventListener('sherlock:home-guide-presentation-request',receive);window.removeEventListener('sherlock:home-guide-playback',playback);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('sherlock:home-action-context-changed',reset);window.removeEventListener('sherlock:skill-menu-reset',reset);document.removeEventListener('sherlock:notes-reset',reset)}
  },[sessionId,subagentPanel])
- if(!entry||entry.controller.signal.aborted||entry.detail.sessionId!==sessionId||subagentPanel)return null
- return react_dom.createPortal(react.createElement(NativeHomePresentationContent,{ticket:entry}),entry.host)
+ return null
 }
 
 function NativePresentationConversationRoot(props){
@@ -148,7 +112,7 @@ function NativePresentationConversationRoot(props){
 }
 function one(source,before,after){if(source.split(before).length!==2)throw Error('Home presentation native anchor drifted: '+before.slice(0,80));return source.replace(before,after)}
 const PRESENTATION_BINDING='/* odyssey:home-presentation-binding:v1 */'
-const PRESENTATION_EFFECT='ctx.effect(()=>{const deps={researchSidebar,researchOfficePreview,t};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
+const PRESENTATION_EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,researchSidebar,getHomeGuideSession:id=>sherlockBoardsPage.getHomeGuideSession(id)};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
 const PRESENTATION_EXPORT='exports.NativeHomePresentationPortal = NativeHomePresentationPortal;'
 
 /** Restore the prior (possibly board-wrapped) Root before exact legacy transforms. */
@@ -162,9 +126,9 @@ export function stripHomeGuidePresentationNative(source){
  if(end<start)drift()
  const block=source.slice(start,end+END.length)
  if(!block.startsWith(START+'\nlet HomePresentationNativeDeps=null;\n')||!block.endsWith('\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END))drift()
- for(const name of ['NativeHomePresentationContent','NativeHomePresentationPortal','NativePresentationConversationRoot'])if(block.split('function '+name+'(').length!==2)drift()
+ for(const name of ['NativeHomePresentationPortal','NativePresentationConversationRoot'])if(block.split('function '+name+'(').length!==2)drift()
  if(block.includes('homePresentationSidebarSnapshot')&&block.split('function homePresentationSidebarSnapshot(').length!==2)drift()
- const effects=[PRESENTATION_EFFECT,PRESENTATION_EFFECT.replace('researchOfficePreview,t','researchOfficePreview')]
+ const effects=[PRESENTATION_EFFECT,...['researchSidebar,researchOfficePreview,t','researchSidebar,researchOfficePreview'].map(fields=>'ctx.effect(()=>{const deps={'+fields+'};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},\"Home presentation native dependencies\");'.replaceAll('\\"','"'))]
  const bindings=effects.map(effect=>'\n'+PRESENTATION_BINDING+'\n'+effect).filter(binding=>source.includes(binding))
  if(bindings.length!==1||source.split('const composerBlocks = new ComposerBlockRegistry();'+bindings[0]).length!==2||!source.includes('\n'+PRESENTATION_EXPORT))drift()
  let restored=source.slice(0,start)+source.slice(end+END.length+(source[end+END.length]==='\n'?1:0))
@@ -174,15 +138,11 @@ export function stripHomeGuidePresentationNative(source){
 }
 
 export function patchHomeGuidePresentationNative(source){
- const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[homePresentationSidebarSnapshot,NativeHomePresentationContent,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
- if(source.includes(START)){
-  const start=source.indexOf(START),end=source.indexOf(END,start)
-  if(end<0||source.indexOf(START,start+START.length)>=0||!source.includes('function NativePresentationConversationRoot('))throw Error('Home presentation native refresh anchor drifted')
-  source=source.slice(0,start)+definitions+source.slice(end+END.length)
- }else source=one(source,'exports.ConversationRoot = ConversationRoot;',definitions+'\nexports.ConversationRoot = ConversationRoot;')
- if(!source.includes(PRESENTATION_BINDING))source=one(source,'const composerBlocks = new ComposerBlockRegistry();','const composerBlocks = new ComposerBlockRegistry();\n'+PRESENTATION_BINDING+'\n'+PRESENTATION_EFFECT)
- if(!source.includes(PRESENTATION_EXPORT))source=one(source,'exports.ConversationRoot = ConversationRoot;','exports.ConversationRoot = ConversationRoot;\n'+PRESENTATION_EXPORT)
- return source
+ source=stripHomeGuidePresentationNative(source)
+ const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ source=one(source,'exports.ConversationRoot = ConversationRoot;',definitions+'\nexports.ConversationRoot = ConversationRoot;')
+ source=one(source,'const composerBlocks = new ComposerBlockRegistry();','const composerBlocks = new ComposerBlockRegistry();\n'+PRESENTATION_BINDING+'\n'+PRESENTATION_EFFECT)
+ return one(source,'exports.ConversationRoot = ConversationRoot;','exports.ConversationRoot = ConversationRoot;\n'+PRESENTATION_EXPORT)
 }
 
 const OFFICE_ORIGINAL='const Component = kind === "docx" ? DocxView : kind === "xlsx" ? XlsxView : PptxView;'

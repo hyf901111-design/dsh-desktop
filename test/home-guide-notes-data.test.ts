@@ -2,6 +2,11 @@ import {describe,expect,it} from 'vitest'
 import {HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_GUIDE_TITLE,createHomeNotesGuideBridge,homeNotesGuideChallengeResult} from '../src/preload/home-guide-notes-data'
 import {challengeDocumentBlocks} from '../src/preload/notes/challenge-scheduler'
 import {challengeReplacementScope,challengeReplacementBody} from '../src/shared/notes-challenge'
+import {mkdtempSync,rmSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import * as Y from 'yjs'
+import {NotesStore} from '../src/main/notes/store'
 
 const sessionId='home-guide-notes-contract'
 const review=()=>({sessionId,requestId:'review-1',action:'review' as const,level:3 as const,title:HOME_NOTES_GUIDE_TITLE,blocks:challengeDocumentBlocks(HOME_NOTES_GUIDE_BLOCKS)})
@@ -46,5 +51,29 @@ describe('homepage note example data and isolated bridge',()=>{
  it('cancels pending review on disposal without returning late results',async()=>{
   const abort=new AbortController(),bridge=createHomeNotesGuideBridge(sessionId,abort.signal),pending=bridge.request('challenge',review())
   bridge.dispose();await expect(pending).rejects.toThrow()
+ })
+ it('persists full document and challenge metadata through the real NotesStore and leaves it after disposal',async()=>{
+  const directory=mkdtempSync(join(tmpdir(),'home-guide-notes-')),store=new NotesStore(directory),calls:string[]=[],owner='test-owner'
+  const persistence={request:async(method:string,input:any)=>{calls.push(method);if(method==='load')return store.load(owner,input.sessionId);if(method==='save')return store.save(owner,input.sessionId,input.revision,input.content,input.clientId);throw Error('unexpected live request: '+method)},draft:async(input:any)=>store.draft(owner,input.sessionId,input.clientId,input.revision,input.content)}
+  try{
+   const abort=new AbortController(),bridge=createHomeNotesGuideBridge(sessionId,abort.signal,undefined,{bridge:persistence,fresh:true})
+   await bridge.request('load',{sessionId})
+   const doc=new Y.Doc();doc.getMap('note-challenge').set('level',3);doc.getMap('threads').set('saved-thread',{issue:'income growth'})
+   const content={title:HOME_NOTES_GUIDE_TITLE,blocks:HOME_NOTES_GUIDE_BLOCKS,yjs:Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64')};doc.destroy()
+   await bridge.draft({sessionId,clientId:'guide',revision:0,content});expect((await bridge.request('save',{sessionId,clientId:'guide',revision:0,content})).status).toBe('saved')
+   bridge.dispose();abort.abort()
+   const restored=store.load(owner,sessionId);expect(restored.saved.title).toBe(HOME_NOTES_GUIDE_TITLE);expect(restored.draft).toBeUndefined()
+   const restoredDoc=new Y.Doc();Y.applyUpdate(restoredDoc,Buffer.from(restored.saved.yjs,'base64'));expect(restoredDoc.getMap('note-challenge').get('level')).toBe(3);expect(restoredDoc.getMap('threads').has('saved-thread')).toBe(true);restoredDoc.destroy()
+   expect(calls).toEqual(['load','save'])
+   const revisit=createHomeNotesGuideBridge(sessionId,new AbortController().signal,undefined,{bridge:persistence,fresh:false});expect((await revisit.request('load',{sessionId})).saved.blocks.length).toBe(HOME_NOTES_GUIDE_BLOCKS.length);revisit.dispose()
+  }finally{rmSync(directory,{recursive:true,force:true})}
+ })
+ it('rejects a fresh tutorial on an existing note instead of replacing it or forwarding model actions',async()=>{
+  const calls:string[]=[],content={title:'用户笔记',blocks:[{id:'user',type:'paragraph',content:'保留'}],yjs:''}
+  const persistence={request:async(method:string)=>{calls.push(method);return{saved:{...content,revision:2,updatedAt:1}}},draft:async()=>{throw Error('不应保存')}}
+  const bridge=createHomeNotesGuideBridge(sessionId,new AbortController().signal,undefined,{bridge:persistence,fresh:true})
+  await expect(bridge.request('load',{sessionId})).rejects.toThrow('已有')
+  await expect(bridge.request('generate',{sessionId})).rejects.toThrow('演示')
+  expect(calls).toEqual(['load']);bridge.dispose()
  })
 })

@@ -231,7 +231,7 @@ function initializeUi(): void {
   ipcRenderer.on('notes:progress',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:value}))})
   ipcRenderer.on('notes:menu-event',(_event,value)=>{if(value?.owner&&value.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:value}))})
   ipcRenderer.on('notes:component-data-action',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId)||value?.cancel)document.dispatchEvent(new CustomEvent('sherlock:notes-component-data-action',{detail:value}))})
-  const notes = mountNotes(document, {
+  const notesBridge: import('../shared/workspace-notes').NotesBridge = {
     filePath:file=>safePathForFile(file,webUtils.getPathForFile),
     request: async (method, input) => {
       try {
@@ -244,13 +244,14 @@ function initializeUi(): void {
       }
     },
     draft: async input => {try{await ipcRenderer.invoke('notes:request', 'draft', { ...input, owner: noteOwners.get(input.sessionId) })}catch(error){if(error instanceof Error){const message=noteUiError(error.message);if(message!==error.message)error.message=message}throw error}}
-  }, workspaceSurfaceHost)
+  }
+  const notes = mountNotes(document, notesBridge, workspaceSurfaceHost)
   const integrationBridge = { request: (command: import('../shared/integration-ui').IntegrationCommand) => ipcRenderer.invoke('integrations:request', command) }
   const skillUse = createSkillUseBridge(document, integrationBridge, () => { integrationView.close(); workspaceSurfaceHost.revealConversation() })
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
-  const homeGuides = mountHomeGuides(document, { mountNotes: mountHomeNotesGuide, mountPresentation: mountHomePresentationGuide })
+  const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuide(session.sessionId), revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide })
   const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { onAction: homeActions.run, onExample: kind => homeGuides.start(kind) }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {

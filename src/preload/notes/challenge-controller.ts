@@ -53,7 +53,7 @@ function replacementResolutionHistory(prior:any,...values:Array<{sourceText:stri
  while(result.length>8||result.reduce((n,v)=>n+v.sourceText.length,0)>64000)result.shift()
  return result
 }
-export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridge;sessionId:string;title:string;scroll:RefObject<HTMLDivElement>;busy:boolean;isBusy?():boolean;recovery:boolean;active?:boolean;activityId?:string;persist():void;persistConfirmed():Promise<void>}){
+export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridge;sessionId:string;title:string;scroll:RefObject<HTMLDivElement>;busy:boolean;isBusy?():boolean;recovery:boolean;active?:boolean;activityId?:string;replacementSettleMs?:number;persist():void;persistConfirmed():Promise<void>}){
  const {editor,doc,bridge,sessionId}=options
  const latest=useRef(options);latest.current=options
  const ai=useMemo(()=>new YjsThreadStore(CHALLENGE_USER,doc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor')),[doc])
@@ -254,7 +254,8 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   metadata(threadId,{replacementResolutionHistory:replacementResolutionHistory((thread.metadata as any).replacementResolutionHistory,{sourceText:suggestion.sourceText,resolved:false},{sourceText,resolved:true})})
   await ai.updateComment({threadId,commentId,comment:{body:comment.body,metadata:{...comment.metadata,challengeReplacement:{...suggestion,status:'applied'}}}})
   await setAutomaticResolution(threadId,true);comments.selectThread(undefined,false);setSelected(undefined)
-  settle.current=Date.now()+10000;window.setTimeout(()=>{if(live.current)sync()},10010);latest.current.persist();refresh()
+  const settleMs=latest.current.replacementSettleMs??10000
+  settle.current=Date.now()+settleMs;window.setTimeout(()=>{if(live.current){sync();if(settleMs===0)scheduler.current?.recheck(true)}},settleMs+10);latest.current.persist();refresh()
  }
  const runAction=async(thread:ChallengeThread,kind:'optimize'|'reply',text='')=>{
   if(action.current||latest.current.busy||!active()||dismissed.current.has(thread.id))return
