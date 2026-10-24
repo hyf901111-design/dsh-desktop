@@ -203,12 +203,17 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         ticket.pointerRun = marker
         await new Promise((resolve, reject) => {
           const requestId = window.crypto.randomUUID(); let done = false
-          const finish = error => { if (done) return; done = true; window.removeEventListener('sherlock:home-guide-cue-reply', receive); ticket.controller.signal.removeEventListener('abort', abort); error ? reject(error) : resolve() }
+          const targetToken = marker + ':' + requestId + ':target', fromTargetToken = fromTarget ? marker + ':' + requestId + ':from' : undefined
+          const targets = [[target, targetToken], ...(fromTarget ? [[fromTarget, fromTargetToken]] : [])]
+          const finish = error => { if (done) return; done = true; window.removeEventListener('sherlock:home-guide-cue-reply', receive); ticket.controller.signal.removeEventListener('abort', abort); for (const [element, token] of targets) if (element.getAttribute('data-home-guide-cue-target') === token) element.removeAttribute('data-home-guide-cue-target'); error ? reject(error) : resolve() }
           const abort = () => finish(changed())
           const receive = event => { const result = event.detail; if (result?.runId !== marker || result.requestId !== requestId) return; finish(result.ok === true ? null : Error(result.message || '教程指针操作未完成。')) }
           window.addEventListener('sherlock:home-guide-cue-reply', receive); ticket.controller.signal.addEventListener('abort', abort, { once: true })
           void (async () => { let elapsed = 0, last = Date.now(); while (!done && elapsed < 10000) { await frame(ticket); if (done) return; check(ticket); const now = Date.now(); if (ticket.playing) elapsed += Math.min(80, now - last); last = now } if (!done) finish(Error('教程指针操作超时，请重试。')) })().catch(finish)
-          window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue', { detail: { runId: marker, requestId, target, label, action, ...(fromTarget ? { fromTarget } : {}) } }))
+          try {
+            for (const [element, token] of targets) element.setAttribute('data-home-guide-cue-target', token)
+            window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue', { detail: { runId: marker, requestId, label, action, targetToken, ...(fromTargetToken ? { fromTargetToken } : {}) } }))
+          } catch (error) { finish(error) }
         })
       } else {
         window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue', { detail: { runId: ticket.detail.runId, target, label } }))
