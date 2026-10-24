@@ -1,0 +1,446 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-18",
+  "branch": "codex/integration/20261024-18",
+  "baseMainCommit": "5559c0c395e47eb8a9114cd84e200e025f47a8bb",
+  "expectedMainCommit": "5559c0c395e47eb8a9114cd84e200e025f47a8bb",
+  "createdAt": "2026-10-24T15:01:55.764Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "完成真实PPT用例与文件交付并统一按需编辑和笔记组件框架",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "5559c0c395e47eb8a9114cd84e200e025f47a8bb",
+        "tipCommit": "974f742daab125b79720e986b64c4791c8ba55bc",
+        "commits": [
+          {
+            "commit": "8db996aab49fbe161706632ac15607469f58a79b",
+            "parents": [
+              "5559c0c395e47eb8a9114cd84e200e025f47a8bb"
+            ],
+            "subject": "为内置PPT技能Python调用统一禁用字节码缓存"
+          },
+          {
+            "commit": "dd6490c6c110d34c98aa996853d10eae4738e11c",
+            "parents": [
+              "8db996aab49fbe161706632ac15607469f58a79b"
+            ],
+            "subject": "补全最终交付路径文件卡并保留组件回复互操作"
+          },
+          {
+            "commit": "66ba15b068a9a08f186a60fc8f21f15a05ea79df",
+            "parents": [
+              "dd6490c6c110d34c98aa996853d10eae4738e11c"
+            ],
+            "subject": "明确PPT物理页码与正文交叉引用编号约定"
+          },
+          {
+            "commit": "1b8b218b3f8c4ad34267c488c31b3f12d450fdc0",
+            "parents": [
+              "66ba15b068a9a08f186a60fc8f21f15a05ea79df"
+            ],
+            "subject": "采用已验收的Kimi二十页成稿更新首页PPT预置"
+          },
+          {
+            "commit": "171f6c4280efbd44b0857bc7c94d8ca96a2dc152",
+            "parents": [
+              "1b8b218b3f8c4ad34267c488c31b3f12d450fdc0"
+            ],
+            "subject": "收紧文件交付待验收识别并保留空行后的列表"
+          },
+          {
+            "commit": "e9a02bf8d561291c256103d54336640ffbbc8202",
+            "parents": [
+              "171f6c4280efbd44b0857bc7c94d8ca96a2dc152"
+            ],
+            "subject": "在右侧PPT文件栏接入编辑模式图标并隔离文件状态"
+          },
+          {
+            "commit": "9c3e664f95fb0641b0f61cf38c8d51a77143bcbf",
+            "parents": [
+              "e9a02bf8d561291c256103d54336640ffbbc8202"
+            ],
+            "subject": "补充右侧PPT图标与真实延迟编辑器的联动验证"
+          },
+          {
+            "commit": "443a15096535a2aa869d01ae3600c6a91b583f99",
+            "parents": [
+              "9c3e664f95fb0641b0f61cf38c8d51a77143bcbf"
+            ],
+            "subject": "PPT默认快速预览并按需启用编辑模式"
+          },
+          {
+            "commit": "091515333a76095ebb7998f67a8ecc34a7af5b8d",
+            "parents": [
+              "443a15096535a2aa869d01ae3600c6a91b583f99"
+            ],
+            "subject": "同步PPT组件更多菜单与底栏的预览编辑模式"
+          },
+          {
+            "commit": "52d39aac1291d5637d59c5c08b2b8536c23f6efb",
+            "parents": [
+              "091515333a76095ebb7998f67a8ecc34a7af5b8d"
+            ],
+            "subject": "兼容已安装PPT模式补丁的真实驻留夹具验证"
+          },
+          {
+            "commit": "44f0218342e37f9f51c8208cb5e5b0e0ce55b542",
+            "parents": [
+              "52d39aac1291d5637d59c5c08b2b8536c23f6efb"
+            ],
+            "subject": "更新PPT视口回归为显式进入编辑模式"
+          },
+          {
+            "commit": "a583ff49acdacd520a513e33501be6a71ec50bf4",
+            "parents": [
+              "44f0218342e37f9f51c8208cb5e5b0e0ce55b542"
+            ],
+            "subject": "为存量笔记PPT恢复完整组件顶栏与文件信息底栏"
+          },
+          {
+            "commit": "974f742daab125b79720e986b64c4791c8ba55bc",
+            "parents": [
+              "a583ff49acdacd520a513e33501be6a71ec50bf4"
+            ],
+            "subject": "从笔记导出快照排除PPT模式提示"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/outputs/2026-10-24-home-presentation-assets.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-presentation/company-research-briefing.pptx"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-presentation/source-metadata.json"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/attachment-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/component-pptx-mode.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/deliverable-cards.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/delivery-file-model.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-files.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/sidebar-pptx-toolbar.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/sidebar-pptx-toolbar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/cover-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/delivery-110.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/delivery-111.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/design-system.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/package-and-render-checks.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/privacy-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/runtime-compatibility.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/typography-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/writing-style-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/component-interaction.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/file-inline.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/component-pptx-mode.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-stream-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/deliverable-cards.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/delivery-file-model.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-inline-files.test.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-editor-mode.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-editor-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-scroll-viewport.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-selection-viewport.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-office-preview-adapter.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-pptx-toolbar.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-ready-batch18-check-0-20261024.log",
+            "verifiedCommit": "974f742daab125b79720e986b64c4791c8ba55bc",
+            "completedAt": "2026-10-24T14:56:37.432351+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-ready-batch18-check-1-20261024.log",
+            "verifiedCommit": "974f742daab125b79720e986b64c4791c8ba55bc",
+            "completedAt": "2026-10-24T14:56:44.190565+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-ready-batch18-check-2-20261024.log",
+            "verifiedCommit": "974f742daab125b79720e986b64c4791c8ba55bc",
+            "completedAt": "2026-10-24T14:56:52.020774+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/delivery-file-model.test.js",
+              "test/deliverable-cards.test.js",
+              "test/conversation-component-stream-browser.test.js",
+              "test/delivery-file-clipboard.test.ts",
+              "test/delivery-file-icons.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/home-presentation-assets-package.test.js",
+              "test/home-presentation-replay.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-presentation-host.test.js",
+              "test/component-pptx-mode.test.ts",
+              "test/conversation-component-interaction.test.js",
+              "test/conversation-component-renderer.test.js",
+              "test/notes-file-views.test.js",
+              "test/research-office-resize.test.js",
+              "test/pptx-editor-mode.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/sidebar-pptx-toolbar.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-stable-refresh.test.ts",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-scroll-viewport.test.js",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-ready-batch18-check-3-20261024.log",
+            "verifiedCommit": "974f742daab125b79720e986b64c4791c8ba55bc",
+            "completedAt": "2026-10-24T14:58:21.817074+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-ready-batch18-check-4-20261024.log",
+            "verifiedCommit": "974f742daab125b79720e986b64c4791c8ba55bc",
+            "completedAt": "2026-10-24T14:58:21.839927+00:00",
+            "timeoutMs": 300000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实SDK浏览器联测覆盖默认preview编辑桥0次、菜单/底栏/右屏按钮、2秒提示、保存/IME/readonly/换源/视口、现存inline Note PPT完整共享Chrome/唯一文件信息footer及引用不发送；所有本次25个直接相关文件集中通过。最终PPT5f0ee1已由Root实际PowerPoint逐页20页+不保存关闭重开13验证，证据actual workspace scratch/qa/native-powerpoint-final；当前正式5559实际尾部PPT/PDF卡点击PPT已开右屏。新模式/笔记Chrome的正式客户端原生验收待本批main构建后执行，未伪称已安装。"
+        },
+        "acceptanceCriteria": [
+          "最终预置PPT是EWork内Kimi K3 High基于同一专业报告实际生成的20页/4章/8原生图表成稿，SourcePDF不变，保持离线预制教程披露。",
+          "任务最终交付文件保持快捷卡片；明确完成的反引号路径可收集，候选/待原生验收/命令不误收，组件回复穿插与历史重开不回归。",
+          "PPT默认轻量预览，不创建编辑会话；点击组件更多/底栏或右屏icon后进入编辑，安全保存后关闭，模式提示自动消失且不导出。",
+          "现有noteDisplay:inline PPT直接恢复完整共享组件顶栏/唯一文件信息底栏，引用与适用菜单保留，只读不可写、无画布接线，payload/资源/尺寸/其他inline类型不迁移。",
+          "仅本地正式身份客户端；clean main按runbook构建，不加版本、不公证、不上传、不对外发布、不推送、不跑全功能测试。"
+        ],
+        "risks": [
+          "正式新客户端入口仍须本批构建后实际原生查看和编辑测试，使用Root专用PPT副本，受保护5f0ee1不改。",
+          "对话组件现allowlist不含files/gallery；对话PPT交付文件卡走右侧预览，不放宽现有能力权限。",
+          "之前间歇性系统鼠标冻结尚无已证实根因，不将本次编辑模式改动当作已解决。"
+        ],
+        "generatedAt": "2026-10-24T14:59:53.677003+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/delivery-file-model.test.js",
+        "test/deliverable-cards.test.js",
+        "test/conversation-component-stream-browser.test.js",
+        "test/delivery-file-clipboard.test.ts",
+        "test/delivery-file-icons.test.js",
+        "test/bundled-ppt-skill.test.ts",
+        "test/home-presentation-assets-package.test.js",
+        "test/home-presentation-replay.test.js",
+        "test/home-presentation-runtime.test.js",
+        "test/home-presentation-host.test.js",
+        "test/component-pptx-mode.test.ts",
+        "test/conversation-component-interaction.test.js",
+        "test/conversation-component-renderer.test.js",
+        "test/notes-file-views.test.js",
+        "test/research-office-resize.test.js",
+        "test/pptx-editor-mode.test.ts",
+        "test/pptx-editor-ui.test.ts",
+        "test/sherlock-office-preview-adapter.test.ts",
+        "test/sidebar-pptx-toolbar.test.ts",
+        "test/pptx-direct-editor.test.ts",
+        "test/pptx-stable-refresh.test.ts",
+        "test/pptx-selection-viewport.test.js",
+        "test/pptx-scroll-viewport.test.js",
+        "test/notes-inline-files.test.tsx",
+        "test/notes-component-interaction.test.tsx",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 300000
+    }
+  ],
+  "mainSynchronizations": []
+}
