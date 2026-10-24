@@ -44,3 +44,17 @@ test('manual navigation stops playback and reveals the saved native surface',asy
  const f=fixture();await f.controller.start('note');document.getElementById('another-session')!.click()
  await Promise.resolve();expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull()
 })
+test('resolves a serializable cue through its run-scoped DOM token and acknowledges the real target',async()=>{
+ vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(0)
+ const target=document.getElementById('header-action')!,id=document.querySelector<HTMLElement>('[data-home-guide]')!.dataset.homeGuide!,requestId='native-world',token=id+':'+requestId+':target',replies:any[]=[]
+ target.getBoundingClientRect=()=>({left:20,top:30,width:90,height:30,right:110,bottom:60,x:20,y:30,toJSON:()=>({})});target.setAttribute('data-home-guide-cue-target',token)
+ const receive=(event:Event)=>replies.push((event as CustomEvent).detail);window.addEventListener('sherlock:home-guide-cue-reply',receive)
+ try{const detail=JSON.parse(JSON.stringify({runId:id,requestId,targetToken:token,action:'click'}));window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail}));await vi.advanceTimersByTimeAsync(900);expect(replies).toEqual([{runId:id,requestId,ok:true}]);expect(document.querySelector<HTMLElement>('.odyssey-home-guide-pointer')?.dataset.state).toBe('idle')}
+ finally{window.removeEventListener('sherlock:home-guide-cue-reply',receive)}
+})
+test('rejects missing, duplicate and other-request tokens without falling back to a supplied DOM reference',async()=>{
+ const f=fixture();await f.controller.start('note');const target=document.getElementById('header-action')!,id=document.querySelector<HTMLElement>('[data-home-guide]')!.dataset.homeGuide!,replies:any[]=[]
+ const receive=(event:Event)=>replies.push((event as CustomEvent).detail);window.addEventListener('sherlock:home-guide-cue-reply',receive)
+ try{for(const requestId of['missing','duplicate','old']){const token=id+':'+requestId+':target';if(requestId==='duplicate'){target.setAttribute('data-home-guide-cue-target',token);const duplicate=document.createElement('div');duplicate.setAttribute('data-home-guide-cue-target',token);document.body.append(duplicate)}window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:id,requestId,targetToken:requestId==='old'?id+':other:target':token,target}}))}expect(replies).toHaveLength(3);expect(replies.every(reply=>reply.ok===false)).toBe(true);expect(document.querySelector<HTMLElement>('.odyssey-home-guide-pointer')?.hidden).toBe(true)}
+ finally{window.removeEventListener('sherlock:home-guide-cue-reply',receive)}
+})

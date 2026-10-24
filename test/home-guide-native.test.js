@@ -171,7 +171,8 @@ function pointerFixture(f,{automatic=false}={}){
  f.doc.documentElement.dataset.homeGuidePointerRun='run-a'
  const cues=[],reply=(cue,extra={})=>f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true,...extra}}))
  f.win.addEventListener('sherlock:home-guide-cue',event=>{cues.push(event.detail);if(automatic)reply(event.detail)})
- return{cues,reply}
+ const target=(cue,from=false)=>[...f.doc.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue[from?'fromTargetToken':'targetToken'])
+ return{cues,reply,target}
 }
 function seedBoard(f){
  f.workspace.setCanvasSize({width:1100,height:720,availableWidth:1100});f.workspace.setWorkbenchWidth(1100)
@@ -179,6 +180,31 @@ function seedBoard(f){
  f.workspace.setArtifacts([{...watch,containerSpec:{...watch.containerSpec,symbols:[{market:'SH',code:'600519',name:'贵州茅台'},{market:'SZ',code:'000001',name:'平安银行'}]}},quote,news])
  return{watch,quote,news}
 }
+it.each(['ack','rejected','dispose','superseded'])('sends serializable pointer tokens and cleans only its own marker after %s',async outcome=>{
+ const f=await fixture();await f.command('mount-board');const p=pointerFixture(f)
+ let reply;await React.act(async()=>{void f.send('board-library').then(value=>{reply=value})});await pump(()=>p.cues.length>0)
+ const cue=p.cues[0],button=f.doc.querySelector('[data-financial-library]')
+ expect(Object.keys(cue).sort()).toEqual(['runId','requestId','label','action','targetToken'].sort())
+ expect(JSON.parse(JSON.stringify(cue))).toEqual(cue)
+ expect(cue.targetToken).toBe('run-a:'+cue.requestId+':target');expect(p.target(cue)).toBe(button)
+ expect(button.getAttribute('aria-expanded')).toBe('false')
+ if(outcome==='superseded')button.setAttribute('data-home-guide-cue-target','later-run:later-request:target')
+ if(outcome==='dispose')await f.command('dispose')
+ p.reply(JSON.parse(JSON.stringify(cue)),outcome==='rejected'||outcome==='superseded'?{ok:false,message:'指针已取消'}:{})
+ await pump(()=>reply);expect(reply.ok).toBe(outcome==='ack')
+ expect(button.getAttribute('data-home-guide-cue-target')).toBe(outcome==='superseded'?'later-run:later-request:target':null)
+ expect(f.doc.querySelectorAll('[data-home-guide-cue-target]')).toHaveLength(outcome==='superseded'?1:0)
+},10000)
+it('cleans pointer tokens and reports a cue dispatch failure without clicking',async()=>{
+ const f=await fixture();await f.command('mount-board');pointerFixture(f)
+ const button=f.doc.querySelector('[data-financial-library]'),dispatch=f.win.dispatchEvent.bind(f.win)
+ let cue,markedDuringDispatch=false
+ f.win.dispatchEvent=event=>{if(event.type==='sherlock:home-guide-cue'){cue=event.detail;markedDuringDispatch=button.getAttribute('data-home-guide-cue-target')===cue.targetToken;throw Error('cue transport failed')}return dispatch(event)}
+ const result=await f.command('board-library')
+ expect(result).toMatchObject({ok:false,message:'cue transport failed'});expect(markedDuringDispatch).toBe(true)
+ expect(JSON.parse(JSON.stringify(cue))).toEqual(cue);expect(button.getAttribute('aria-expanded')).toBe('false')
+ expect(button.getAttribute('data-home-guide-cue-target')).toBeNull();expect(f.doc.querySelectorAll('[data-home-guide-cue-target]')).toHaveLength(0)
+})
 it('waits for matching pointer acknowledgement and resumed playback before the native library click',async()=>{
  const f=await fixture();await f.command('mount-board');const p=pointerFixture(f)
  let reply;await React.act(async()=>{void f.send('board-library').then(value=>{reply=value})})
@@ -186,8 +212,10 @@ it('waits for matching pointer acknowledgement and resumed playback before the n
  expect(cue).toMatchObject({runId:'run-a',action:'click',requestId:expect.any(String)})
  expect(button.getAttribute('aria-expanded')).toBe('false')
  p.reply(cue,{requestId:'another-request'});await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,30))});expect(button.getAttribute('aria-expanded')).toBe('false')
+ expect(button.getAttribute('data-home-guide-cue-target')).toBe(cue.targetToken)
  f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:'run-a',sessionId:'owner',playing:false}}));p.reply(cue)
  await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,80))});expect(button.getAttribute('aria-expanded')).toBe('false');expect(reply).toBeUndefined()
+ expect(button.getAttribute('data-home-guide-cue-target')).toBeNull()
  f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:'run-a',sessionId:'owner',playing:true}}))
  await pump(()=>reply);expect(reply.ok).toBe(true);expect(button.getAttribute('aria-expanded')).toBe('true')
 },10000)
@@ -198,18 +226,26 @@ it.each(['dispose','disabled','pointer-owner','detached','rejected'])('rejects a
  const button=f.doc.querySelector('[data-financial-library]');let clicks=0;button.addEventListener('click',()=>clicks++)
  if(invalid==='dispose')await f.command('dispose');else if(invalid==='disabled')button.disabled=true;else if(invalid==='pointer-owner')f.doc.documentElement.dataset.homeGuidePointerRun='another-run';else if(invalid==='detached')button.remove()
  p.reply(p.cues[0],invalid==='rejected'?{ok:false,message:'指针目标不可用'}:{});await pump(()=>reply);expect(reply.ok).toBe(false);expect(clicks).toBe(0)
+ expect(button.getAttribute('data-home-guide-cue-target')).toBeNull()
 },10000)
 it('shows and commits each port connection separately and cancels the second without a late apply',async()=>{
  const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');const p=pointerFixture(f)
  let reply;await React.act(async()=>{void f.send('board-link').then(value=>{reply=value})});await pump(()=>p.cues.length>0)
  expect(p.cues[0]).toMatchObject({action:'drag',requestId:expect.any(String)})
- expect(p.cues[0].fromTarget.dataset).toMatchObject({financialPort:'output',financialPortNode:watch.id});expect(p.cues[0].target.dataset).toMatchObject({financialPort:'input',financialPortNode:quote.id})
+ expect(Object.keys(p.cues[0]).sort()).toEqual(['runId','requestId','label','action','targetToken','fromTargetToken'].sort())
+ expect(p.cues[0].fromTargetToken).toBe('run-a:'+p.cues[0].requestId+':from')
+ expect(p.target(p.cues[0],true).dataset).toMatchObject({financialPort:'output',financialPortNode:watch.id});expect(p.target(p.cues[0]).dataset).toMatchObject({financialPort:'input',financialPortNode:quote.id})
+ const firstTargets=[p.target(p.cues[0],true),p.target(p.cues[0])]
  const spec=id=>f.workspace.getSnapshot().artifacts.find(node=>node.id===id).containerSpec
  expect(spec(quote.id).linkedWatchlistId).toBeUndefined();expect(spec(news.id).linkedSourceId).toBeUndefined()
  p.reply(p.cues[0]);await pump(()=>p.cues.length===2)
+ expect(firstTargets.map(target=>target.getAttribute('data-home-guide-cue-target'))).toEqual([null,null])
  expect(spec(quote.id).linkedWatchlistId).toBe(watch.id);expect(spec(news.id).linkedSourceId).toBeUndefined()
- expect(p.cues[1].fromTarget.dataset.financialPortNode).toBe(quote.id);expect(p.cues[1].target.dataset.financialPortNode).toBe(news.id)
+ expect(p.target(p.cues[1],true).dataset.financialPortNode).toBe(quote.id);expect(p.target(p.cues[1]).dataset.financialPortNode).toBe(news.id)
+ const secondTargets=[p.target(p.cues[1],true),p.target(p.cues[1])]
  await f.command('dispose');p.reply(p.cues[1]);await pump(()=>reply);expect(reply.ok).toBe(false);expect(spec(news.id).linkedSourceId).toBeUndefined()
+ expect(secondTargets.map(target=>target.getAttribute('data-home-guide-cue-target'))).toEqual([null,null])
+ expect(f.doc.querySelectorAll('[data-home-guide-cue-target]')).toHaveLength(0)
 },10000)
 it('types the stock code character by character through actual search and keeps three linked widgets persisted',async()=>{
  const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');const p=pointerFixture(f,{automatic:true}),typed=[]

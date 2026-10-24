@@ -11,7 +11,7 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountHomeGuides}from'./src/preload/home-guides';import{mountHomeNotesGuide}from'./src/preload/home-guide-notes';import{mountNotes}from'./src/preload/notes/mount';import{WorkspaceSurfaceHost}from'./src/preload/workspace-surface-host';
  window.noteLoads=[];window.originalInput=document.querySelector('#original-draft');window.originalInput.focus();window.originalInput.setSelectionRange(1,3);
- window.guideCueHistory=[];window.addEventListener('sherlock:home-guide-cue',event=>window.guideCueHistory.push({label:event.detail.label,tag:event.detail.target.tagName,className:event.detail.target.className}));
+ window.guideCueHistory=[];window.addEventListener('sherlock:home-guide-cue',event=>{const detail=event.detail,target=detail.target??[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===detail.targetToken);window.guideCueHistory.push({label:detail.label,tag:target?.tagName,className:target?.className});});
  const bridge={request:async(method,input)=>{if(method==='load')window.noteLoads.push(input.sessionId);if(method==='save'&&window.deferNoteSave)await new Promise(resolve=>setTimeout(resolve,200));return window.noteStorageRequest(method,input)},draft:input=>window.noteStorageRequest('draft',input)};
  const workspaceHost=new WorkspaceSurfaceHost(document);window.nativeNotes=mountNotes(document,bridge,workspaceHost);
  window.sessionCount=0;window.latestExample=undefined;

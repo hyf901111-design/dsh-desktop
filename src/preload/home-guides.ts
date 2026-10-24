@@ -41,6 +41,13 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
  ]}
 }
 const aborted=()=>Object.assign(Error('教程已结束。'),{name:'AbortError'})
+/** Return the native composer before a tutorial reuses its existing hero. */
+export async function playHomeGuideFromOperations(controller:Pick<ReturnType<typeof mountHomeGuides>,'start'>,kind:HomeGuideKind,context:{signal:AbortSignal;revealComposer():Promise<void>}){
+ if(context.signal.aborted)throw aborted()
+ await context.revealComposer()
+ if(context.signal.aborted)throw aborted()
+ await controller.start(kind,{replay:true})
+}
 function setControl(button:HTMLButtonElement,icon:'pause'|'play'|'next'|'replay'|'exit',label:string){
  const paths={pause:'M6 4v12M14 4v12',play:'m6 3 10 7-10 7Z',next:'m7 4 7 6-7 6',replay:'M4 7a7 7 0 1 1 0 6M4 2v5h5',exit:'m5 5 10 10M15 5 5 15'}
  button.className=icon==='exit'?'odyssey-home-guide-exit':'odyssey-home-guide-button';button.setAttribute('aria-label',label);button.title=label;button.dataset.control=icon
@@ -176,13 +183,20 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target)return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false)}
  const escape=(event:KeyboardEvent)=>{if(active&&event.key==='Escape'){event.preventDefault();void close()}}
  const visibility=()=>{if(document.hidden)active?.timeline?.pause()}
+ const cueTarget=(value:any,key:'target'|'fromTarget')=>{
+  const token=value?.[key+'Token']
+  if(token===undefined)return value?.[key]
+  if(typeof token!=='string'||typeof value.runId!=='string'||typeof value.requestId!=='string'||token!==value.runId+':'+value.requestId+':'+(key==='target'?'target':'from'))return undefined
+  const matches=[...document.querySelectorAll<HTMLElement>('[data-home-guide-cue-target]')].filter(node=>node.getAttribute('data-home-guide-cue-target')===token)
+  return matches.length===1?matches[0]:undefined
+ }
  const showCue=(event:Event)=>{
-  const value=(event as CustomEvent).detail,run=active,target=value?.target
+  const value=(event as CustomEvent).detail,run=active,target=cueTarget(value,'target'),fromTarget=cueTarget(value,'fromTarget')
   const reply=(ok:boolean,message?:string)=>{if(typeof value?.requestId==='string')win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:value.runId,requestId:value.requestId,ok,message}}))}
   if(!run||value?.runId!==run.id||!(target instanceof win.HTMLElement)||!target.isConnected||selected()!==run.sessionId){reply(false,'操作目标已变化。');return}
   if(typeof value.label==='string')run.status.textContent=value.label
   if(!run.pointer){reply(false,'指针尚未就绪。');return}
-  void run.pointer.perform({target,action:value.action,fromTarget:value.fromTarget} as HomeGuidePointerAction).then(()=>{
+  void run.pointer.perform({target,action:value.action,fromTarget} as HomeGuidePointerAction).then(()=>{
    if(active===run&&!run.abort.signal.aborted&&selected()===run.sessionId&&target.isConnected)reply(true);else reply(false,'操作已取消。')
   },error=>reply(false,error instanceof Error?error.message:'操作未完成。'))
  }

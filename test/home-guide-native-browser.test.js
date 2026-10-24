@@ -149,9 +149,10 @@ it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged re
    window.guideProbe.pointerCues=[];window.guideProbe.typed=[]
    document.addEventListener('input',event=>{if(event.target.getAttribute?.('role')==='combobox')window.guideProbe.typed.push(event.target.value)},true)
    window.addEventListener('sherlock:home-guide-cue',event=>{
-    const d=event.detail;if(!d.requestId)return
+    if(!event.detail.requestId)return
+    const d=JSON.parse(JSON.stringify(event.detail)),find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),target=find(d.targetToken),fromTarget=find(d.fromTargetToken)
     const rect=target=>{const r=target.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}},canvas=document.querySelector('#guide-host [data-research-canvas]')
-    window.guideProbe.pointerCues.push({action:d.action,target:d.target.dataset.financialPortNode,from:d.fromTarget?.dataset.financialPortNode,toSide:d.target.dataset.financialPort,fromSide:d.fromTarget?.dataset.financialPort,targetRect:rect(d.target),fromRect:d.fromTarget?rect(d.fromTarget):null,canvas:rect(canvas)})
+    window.guideProbe.pointerCues.push({payload:d,action:d.action,target:target.dataset.financialPortNode,from:fromTarget?.dataset.financialPortNode,toSide:target.dataset.financialPort,fromSide:fromTarget?.dataset.financialPort,targetRect:rect(target),fromRect:fromTarget?rect(fromTarget):null,canvas:rect(canvas)})
     window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))
    })
   })
@@ -160,11 +161,13 @@ it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged re
   for(const step of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
   const result=await page.evaluate(()=>{const p=window.guideProbe,snapshot=p.registry.for('guide-browser-session').getSnapshot();return{cues:p.pointerCues,typed:p.typed,nodes:snapshot.artifacts.map(n=>({id:n.id,spec:n.containerSpec})),stored:JSON.parse(p.memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session'))}})
   const watch=result.nodes.find(n=>n.spec.widget==='watchlist'),quote=result.nodes.find(n=>n.spec.widget==='quote'),news=result.nodes.find(n=>n.spec.widget==='news'),drags=result.cues.filter(cue=>cue.action==='drag')
+  for(const cue of result.cues)expect(Object.keys(cue.payload).sort()).toEqual(['runId','requestId','label','action','targetToken',...(cue.action==='drag'?['fromTargetToken']:[])].sort())
   expect(drags.map(cue=>[cue.from,cue.fromSide,cue.target,cue.toSide])).toEqual([[watch.id,'output',quote.id,'input'],[quote.id,'output',news.id,'input']])
   for(const cue of drags)for(const box of [cue.fromRect,cue.targetRect]){expect(box.width).toBeGreaterThan(0);expect(box.y).toBeGreaterThanOrEqual(cue.canvas.y-1);expect(box.bottom).toBeLessThanOrEqual(cue.canvas.bottom+1)}
   expect(result.typed).toEqual(['0','00','007','0070','00700']);expect(watch.spec.symbols).toHaveLength(3);expect(quote.spec.symbols[0].code).toBe('00700');expect(quote.spec.linkedWatchlistId).toBe(watch.id);expect(news.spec.linkedSourceId).toBe(quote.id)
   expect(result.stored.map(node=>node.id).sort()).toEqual(result.nodes.map(node=>node.id).sort())
   expect(await page.locator('#guide-host .ew-financial-connection-line').count()).toBe(2)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   await preserved(page);expect(errors).toEqual([]);expect(external).toEqual([])
  }finally{await page.close()}
 },20000)
@@ -176,10 +179,11 @@ it.each(['click','from-port','to-port'])('does not act when the acknowledged %s 
   await page.evaluate(()=>{
    document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
    window.addEventListener('sherlock:home-guide-cue',event=>{
-    const d=event.detail;if(!d.requestId)return
+    if(!event.detail.requestId)return
+    const d=JSON.parse(JSON.stringify(event.detail)),find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),target=find(d.targetToken),fromTarget=find(d.fromTargetToken)
     const mode=window.guideProbe.offscreenTarget
-    if(mode==='click'&&d.action==='click')d.target.style.transform='translateY(-3000px)'
-    if(d.action==='drag'&&(mode==='from-port'||mode==='to-port'))(mode==='from-port'?d.fromTarget:d.target).style.transform='translateY(-3000px)'
+    if(mode==='click'&&d.action==='click')target.style.transform='translateY(-3000px)'
+    if(d.action==='drag'&&(mode==='from-port'||mode==='to-port'))(mode==='from-port'?fromTarget:target).style.transform='translateY(-3000px)'
     window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))
    })
   })
@@ -187,6 +191,7 @@ it.each(['click','from-port','to-port'])('does not act when the acknowledged %s 
   await page.evaluate(value=>{window.guideProbe.offscreenTarget=value},kind)
   const reply=await command(page,kind==='click'?'board-library':'board-link')
   expect(reply.ok).toBe(false)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   const nodes=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
   expect(nodes.some(node=>node.containerSpec.linkedWatchlistId||node.containerSpec.linkedSourceId)).toBe(false)
   if(kind==='click'){expect(nodes).toHaveLength(0);expect(await page.locator('[data-financial-library]').getAttribute('aria-expanded')).toBe('false')}

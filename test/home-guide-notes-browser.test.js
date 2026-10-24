@@ -13,7 +13,8 @@ beforeAll(async()=>{
  import React from'react';import{createRoot}from'react-dom/client';import{NotesApp}from'./src/preload/notes/editor';
  import'@blocknote/mantine/style.css';import'./src/preload/notes/style.css';import'./src/preload/notes/challenge.css';
  window.guideNativeEvents=[];for(const name of ['notes-edited','notes-composer-state','notes-composer-draft','notes-task-state'])document.addEventListener('sherlock:'+name,()=>window.guideNativeEvents.push(name));window.mountAnotherGuide=signal=>mountHomeNotesGuide(document,document.querySelector('#guide'),{signal});window.abortGuide=new AbortController();window.guideStatuses=[];window.guideGate=()=>Promise.resolve();window.readyGuide=mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:window.abortGuide.signal,runId:'standalone-note-run',onStatus:text=>window.guideStatuses.push(text),waitUntilPlaying:()=>window.guideGate()}).then(api=>window.guide=api);
- window.guideCues=[];window.guidePointerPending=[];window.addEventListener('sherlock:home-guide-cue',event=>{window.guideCues.push({label:event.detail.label,connected:event.detail.target.isConnected,runId:event.detail.runId,requestId:event.detail.requestId,action:event.detail.action});if(event.detail.requestId)window.guidePointerPending.push(event.detail)});
+ window.cueTarget=token=>typeof token==='string'?document.querySelector('[data-home-guide-cue-target="'+CSS.escape(token)+'"]'):null;
+ window.guideCues=[];window.guidePointerPending=[];window.addEventListener('sherlock:home-guide-cue',event=>{const wire=event.detail,target=wire.target||window.cueTarget(wire.targetToken),fromTarget=wire.fromTarget||window.cueTarget(wire.fromTargetToken);window.guideCues.push({label:wire.label,connected:target?.isConnected===true,runId:wire.runId,requestId:wire.requestId,action:wire.action});if(wire.requestId)window.guidePointerPending.push({...wire,target,fromTarget,wire})});
  window.persistentBridge={request:(method,input)=>window.noteStorageRequest(method,input),draft:input=>window.noteStorageRequest('draft',input)};
  window.startPersistentGuide=async fresh=>{window.guide.dispose();await new Promise(resolve=>setTimeout(resolve,50));window.guide=await mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:new AbortController().signal,sessionId:'real-guide-session',runId:'notes-natural-run',fresh,persistence:window.persistentBridge});};
  window.openSavedNativeNote=()=>{window.nativeRoot=createRoot(document.querySelector('#guide'));window.nativeRoot.render(React.createElement(NotesApp,{sessionId:'real-guide-session',bridge:window.persistentBridge,dark:false,navigate:()=>{}}));};
@@ -45,6 +46,56 @@ it('waits for the matching pointer acknowledgement before title and body input a
   expect(await page.evaluate(()=>window.pointerWrite)).toBe('AbortError');expect(await page.locator('.bn-editor').count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },12000)
+it('sends JSON-only pointer tokens and removes its exact target markers after acknowledgement and abort',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.tokenWrite=window.guide.runStep('write').catch(error=>error.name)})
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.length)).toBe(1)
+  const observed=await page.evaluate(()=>{const {wire,target}=window.guidePointerPending[0];let json,error;try{json=JSON.parse(JSON.stringify(wire))}catch(value){error=value.message}return{wire:json,error,keys:Object.keys(wire),token:target.getAttribute('data-home-guide-cue-target')}})
+  expect(observed.error).toBeUndefined()
+  expect(observed.keys.sort()).toEqual(['runId','requestId','label','action','targetToken'].sort())
+  expect(observed.wire).toMatchObject({runId:'standalone-note-run',action:'click',targetToken:`standalone-note-run:${observed.wire.requestId}:target`})
+  expect(observed.token).toBe(observed.wire.targetToken)
+  await page.evaluate(()=>{const cue=window.guidePointerPending[0];window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))})
+  expect(await page.evaluate(()=>window.guidePointerPending[0].target.hasAttribute('data-home-guide-cue-target'))).toBe(false)
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.length)).toBe(2)
+  await page.evaluate(()=>window.abortGuide.abort());expect(await page.evaluate(()=>window.tokenWrite)).toBe('AbortError')
+  expect(await page.evaluate(()=>window.guidePointerPending[1].target.hasAttribute('data-home-guide-cue-target'))).toBe(false);expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it('cleans a rejected pointer token without deleting a newer owner marker',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.tokenReject=window.guide.runStep('write').catch(error=>error.message)})
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.length)).toBe(1)
+  await page.evaluate(()=>{const cue=window.guidePointerPending[0];cue.target.setAttribute('data-home-guide-cue-target','newer-owner-token');window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:false,message:'目标已取消'}}))})
+  expect(await page.evaluate(()=>window.tokenReject)).toBe('目标已取消')
+  expect(await page.evaluate(()=>window.guidePointerPending[0].target.getAttribute('data-home-guide-cue-target'))).toBe('newer-owner-token');expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it('sends both JSON-only strict-slider endpoints and cleans both on failure',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(cue.requestId&&cue.action!=='drag')window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))})})
+  await page.evaluate(()=>window.guide.runStep('write'))
+  await page.evaluate(()=>{window.tokenSlider=window.guide.runStep('challenge').catch(error=>error.message)})
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.some(cue=>cue.action==='drag'))).toBe(true)
+  const observed=await page.evaluate(()=>{const cue=window.guidePointerPending.find(cue=>cue.action==='drag');let json,error;try{json=JSON.parse(JSON.stringify(cue.wire))}catch(value){error=value.message}return{wire:json,error,keys:Object.keys(cue.wire),target:cue.target.getAttribute('data-home-guide-cue-target'),from:cue.fromTarget.getAttribute('data-home-guide-cue-target')}})
+  expect(observed.error).toBeUndefined()
+  expect(observed.keys.sort()).toEqual(['runId','requestId','label','action','targetToken','fromTargetToken'].sort())
+  expect(observed.target).toBe(`standalone-note-run:${observed.wire.requestId}:target`);expect(observed.from).toBe(`standalone-note-run:${observed.wire.requestId}:from`)
+  await page.evaluate(()=>{const cue=window.guidePointerPending.find(cue=>cue.action==='drag');window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:false,message:'滑块位置已变化'}}))})
+  expect(await page.evaluate(()=>window.tokenSlider)).toBe('滑块位置已变化')
+  expect(await page.evaluate(()=>{const cue=window.guidePointerPending.find(cue=>cue.action==='drag');return[cue.target.getAttribute('data-home-guide-cue-target'),cue.fromTarget.getAttribute('data-home-guide-cue-target')]})).toEqual([null,null]);expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it('completes the real note actor when every JSON-only target survives delayed acknowledgement',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.addEventListener('sherlock:home-guide-cue',event=>{const cue=JSON.parse(JSON.stringify(event.detail));if(!cue.requestId)return;setTimeout(()=>{const target=window.cueTarget(cue.targetToken),from=cue.fromTargetToken?window.cueTarget(cue.fromTargetToken):null;window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected&&(!cue.fromTargetToken||!!from?.isConnected),message:'操作目标必须在移动期间保持存活'}}))},90)})})
+  for(const step of ['write','challenge','review','select','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
+  expect(await page.locator('.bn-editor').innerText()).toContain('同比增长10%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},30000)
 it('refuses another pointer owner instead of treating it as an isolated legacy fixture',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='another-run';window.ownerResult='';void window.guide.runStep('write').then(()=>window.ownerResult='completed',error=>window.ownerResult=error.name)})
