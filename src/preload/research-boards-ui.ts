@@ -1480,11 +1480,20 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     directoryChoice(id: string) {
       const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
       if (deps.bridge.isSharedSession(id)) return {path:identity(id)?.cwd,label:'新建看板目录'}
-      return f ? { path: f.directoryPath ?? f.cwd, workspaceId: f.workspaceId, label: f.workspaceTitle ?? '新建看板目录' } : null
+      if (f) return { path: f.directoryPath ?? f.cwd, workspaceId: f.workspaceId, label: f.workspaceTitle ?? '新建看板目录' }
+      // A registered example owns a real session directory without becoming a
+      // user Workspace. Keep the native Workspace choice authoritative if present.
+      if (deps.workspaces.list.getSnapshot().items.some((workspace: { sessionIds?: readonly string[] }) => workspace.sessionIds?.includes(id))) return null
+      const example = getHomeGuideSession(id)
+      return example ? { path: example.cwd, label: example.title } : null
     },
     async associateProject(id: string, workspaceId: string) {
-      if (win.localStorage.getItem('sherlock.research.directory-locked.v1:' + id) === 'true' || deps.researchWorkspaces.for(id).getSnapshot().files.length > 0) throw Error('画板已有资料，项目目录已固定')
       const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
+      if (!f && workspaceId === '::board-directory') {
+        if (!getHomeGuideSession(id)) throw Error('该示例目录不属于当前账号，或会话目录已变化。')
+        return id
+      }
+      if (win.localStorage.getItem('sherlock.research.directory-locked.v1:' + id) === 'true' || deps.researchWorkspaces.for(id).getSnapshot().files.length > 0) throw Error('画板已有资料，项目目录已固定')
       if (!f) return null
       const workspace = workspaceId === '::board-directory' ? null : deps.workspaces.list.getSnapshot().items.find((w: { workspaceId: string; path: string; title: string }) => w.workspaceId === workspaceId)
       if (workspaceId !== '::board-directory' && !workspace) throw Error('项目暂不可用')

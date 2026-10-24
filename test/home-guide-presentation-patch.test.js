@@ -75,3 +75,12 @@ it('upgrades an installed Office package and keeps its readonly branch idempoten
   await patchSherlockOfficePreviewPackage(temp);expect((await readFile(join(temp,'lib/client.js'),'utf8'))===first).toBe(true)
  }finally{await rm(temp,{recursive:true,force:true})}
 })
+it('upgrades the installed namespace binding to the live boards adapter and keeps strict stripping idempotent',async()=>{
+ const {stripHomeGuidePresentationNative:strip}=await import('../scripts/lib/home-guide-presentation-native.mjs')
+ const pristine=strip(source),fixed=patchHomeGuidePresentationNative(pristine)
+ const legacy=fixed.replace('sherlockBoardsAdapter?.getHomeGuideSession?.(id)','sherlockBoardsPage.getHomeGuideSession(id)')
+ expect(legacy).not.toBe(fixed)
+ expect(strip(legacy)).toBe(pristine)
+ expect(patchHomeGuidePresentationNative(legacy)).toBe(fixed)
+ expect(patchHomeGuidePresentationNative(fixed)).toBe(fixed)
+})
