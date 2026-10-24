@@ -14,7 +14,7 @@ function fixture(fresh = true) {
   else if(detail.command==='open'){header.dataset.eworkNotesSession=detail.sessionId;if(open){open(detail,reply);return}reply({sessionId:detail.sessionId,cwd:'/tmp/example',title:'已保存示例'});window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed'))}
  }
  window.addEventListener('sherlock:home-guide-session-request',listener);off=()=>window.removeEventListener('sherlock:home-guide-session-request',listener)
- const runStep=vi.fn(async()=>{}),release=vi.fn(),flush=vi.fn(async()=>{})
+ const runStep=vi.fn(async(_step:string)=>{}),release=vi.fn(),flush=vi.fn(async()=>{})
  const adapters={mountNotes:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountPresentation:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush}))}
  const controller=mountHomeGuides(document,adapters);dispose=controller.dispose
  return{controller,adapters,runStep,release,flush,text,header,requests,setOpen:(fn:(detail:any,reply:(value:any)=>void)=>void)=>{open=fn},setPrepare:(fn:(detail:any)=>void)=>{prepare=fn}}
@@ -98,4 +98,20 @@ test('reveals the native conversation only after a still-owned handover has fini
  const starting=controller.start('note').catch(error=>error.name);await vi.waitFor(()=>expect(finish).toBeTypeOf('function'))
  const sidebar=document.createElement('aside');sidebar.setAttribute('data-dsh-sidebar-root','');sidebar.innerHTML='<button>打开技能页面</button>';document.body.append(sidebar);sidebar.querySelector('button')!.click();document.body.dataset.workspaceSurface='integrations';finish()
  expect(await starting).toBe('AbortError');expect(reveal).not.toHaveBeenCalled();delete document.body.dataset.workspaceSurface
+})
+test('PPT gives readable phase holds and consistently describes an offline walkthrough',async()=>{
+ vi.useFakeTimers();const f=fixture();await f.controller.start('ppt');await vi.advanceTimersByTimeAsync(0)
+ expect(document.querySelector('[role=status]')?.textContent).toContain('离线')
+ // Skip the introduction only; the actual brief, source/structure and layout
+ // holds remain on the shared pause clock and cannot blink past the reader.
+ document.querySelector<HTMLButtonElement>('[data-home-guide-next]')!.click();await vi.advanceTimersByTimeAsync(0)
+ expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief'])
+ await vi.advanceTimersByTimeAsync(6499);expect(f.runStep).toHaveBeenCalledTimes(1)
+ await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send'])
+ await vi.advanceTimersByTimeAsync(2500);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send','plan'])
+ await vi.advanceTimersByTimeAsync(8499);expect(f.runStep).toHaveBeenCalledTimes(3)
+ await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send','plan','layout'])
+ expect(document.querySelector('[role=status]')?.textContent).not.toContain('正在完成公司模板排版')
+ await vi.advanceTimersByTimeAsync(7499);expect(f.runStep).toHaveBeenCalledTimes(4)
+ await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send','plan','layout','deliver'])
 })

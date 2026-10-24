@@ -5,19 +5,54 @@ import {lstat,mkdir,readFile,realpath,writeFile} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
-export function createHomePresentationBrief(metadata){return `请根据附件中的 Vanguard《2026年经济与市场展望》，制作${metadata.presentationSlides}页符合公司品牌与模板规范的投资研究汇报PPT，主题为「人工智能周期与资产配置」。\n设置符合公司规范的目录与章节导航，围绕AI资本开支、增长与估值的张力、2026年宏观基准情景及相对配置逻辑，形成有证据支撑的专业研究观点。充分呈现关键数据、可编辑图表与对比分析，逐页标注原报告页码和数据时点；保留历史预测口径，不将其表述为当前投资建议。`}
+export function createHomePresentationBrief(metadata){return `请根据附件中的 Vanguard《2026年经济与市场展望》，制作${metadata.presentationSlides}页符合公司品牌与模板规范的投资研究汇报PPT，主题为「${metadata.presentationTitle??metadata.presentation?.title??'人工智能周期与资产配置'}」。\n设置符合公司规范的目录与章节导航，围绕AI资本开支、增长与估值的张力、2026年宏观基准情景及相对配置逻辑，形成有证据支撑的专业研究观点。充分呈现关键数据、可编辑图表与对比分析，逐页标注原报告页码和数据时点；保留历史预测口径，不将其表述为当前投资建议。`}
 export const HOME_PRESENTATION_FILE='人工智能周期与资产配置.pptx'
 export const HOME_PRESENTATION_SOURCE_FILE='Vanguard-2026经济与市场展望.pdf'
 export const HOME_PRESENTATION_PATH='/sherlock/home-guide/presentation'
 const PROVIDER='sherlock-home-presentation',EVENT='home-guide/presentation',TOOL='home_presentation_publish'
 const SOURCE_HASH='af3b10b6b05f8ee4734b35bfaeb3f272a370133a7949b7203f87cacf4c9de229'
 const SKILL_WIRE='ework-skill-'+createHash('sha256').update('builtin:efund-ppt-maker').digest('hex').slice(0,16)
-const labels=metadata=>['研读原始研报，核对观点与数据时点',`编排${metadata.presentationSlides}页汇报，重绘图表并标注来源`,'套用公司模板，校验并交付可编辑PPT']
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex')
 const aborted=()=>new DOMException('离线示例已停止。','AbortError')
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});promise.catch(()=>{});return{promise,resolve,reject}}
 const checkedString=value=>typeof value==='string'&&value.length>0&&value.length<=256&&!/[\x00-\x1f]/.test(value)
 const message=run=>'/'+SKILL_WIRE+' 📎 文件：`'+run.sourcePath.replaceAll('`','\\`')+'` \n'+run.prepared.brief
+
+/** Public walkthrough summaries only; never replay a source session or reasoning. */
+export function createHomePresentationReplay(metadata){
+ const title=metadata.presentationTitle??metadata.presentation?.title??'人工智能周期与资产配置',slides=metadata.presentationSlides
+ const clean=values=>values.filter(value=>typeof value==='string'&&value.trim()).map(value=>value.trim())
+ const pages=Array.isArray(metadata.pageOutline)?metadata.pageOutline:[]
+ let chapters=clean((Array.isArray(metadata.chapters)?metadata.chapters:[]).map(chapter=>chapter?.title))
+ if(!chapters.length)chapters=clean(pages.filter(page=>page.kind==='toc').map(page=>page.title?.replace(/^目录[：:\s]*/u,'')))
+ const sections=chapters.length?chapters:clean(pages.filter(page=>!['cover','closing','toc'].includes(page.kind)).map(page=>page.title)).slice(0,4)
+ const structure=sections.length?`汇报按${sections.length}个${chapters.length?'章节':'阅读重点'}展开：\n\n`+sections.map((chapter,index)=>`${index+1}. ${chapter}`).join('\n')+'\n\n完整逐页目录保留在演示文稿中。按章节串起证据，再核对图表的来源页码与数据时点。':'完整逐页目录保留在演示文稿中，先看研究观点，再核对图表来源与数据时点。'
+ return {
+  intro:`这是一次离线回放，不调用模型。先看 ${metadata.publisher??'Vanguard'} 的${metadata.sourcePages}页历史研报（${metadata.publicationDate}发布）：区分报告观点、数据时点与研读判断，再查看它如何组织为《${title}》${slides}页汇报。预测口径仍属于原报告，不代表当前投资建议。`,
+  structure,
+  layout:'接着回看公司模板排版与成稿检查：对齐封面和章节导航，核对图表口径、来源标注与正文可读性。这里展示预置成果的制作流程，接下来保存可编辑文件。',
+  delivery:`已保存《${title}》${slides}页预置成稿${chapters.length?`，按${chapters.length}个章节组织`:''}，可继续编辑。\n\n[打开可编辑演示文稿](./${HOME_PRESENTATION_FILE})\n\n[查看原始研究报告](./${HOME_PRESENTATION_SOURCE_FILE})\n\n原研报、PPT和制作记录均已保存，可回到这段会话继续使用。\n\n本教程使用离线预制成稿，不调用模型；内容仅演示历史研报转换流程。`,
+  todos:['回看研读结果，核对来源与数据时点',`按章节组织${slides}页汇报，回看品牌排版与成稿检查`,'保存预置成稿，保留原报告与制作记录']
+ }
+}
+
+/** About 50 Unicode characters per active second, with cooperative stop gates. */
+export async function* streamHomePresentationReplayText(text,{waitUntilPlaying,signal}){
+ const playback=async()=>{
+  signal?.throwIfAborted()
+  let abort
+  const cancellation=new Promise((_,reject)=>{abort=()=>reject(aborted());signal?.addEventListener('abort',abort,{once:true})})
+  try{await Promise.race([waitUntilPlaying(),cancellation]);signal?.throwIfAborted()}finally{signal?.removeEventListener('abort',abort)}
+ }
+ const delay=()=>new Promise((resolve,reject)=>{
+  const clean=()=>signal?.removeEventListener('abort',stop),stop=()=>{clearTimeout(timer);clean();reject(aborted())},timer=setTimeout(()=>{clean();resolve()},60)
+  if(signal?.aborted)stop();else signal?.addEventListener('abort',stop,{once:true})
+ })
+ signal?.throwIfAborted();yield{type:'block-start',index:0,blockType:'text'}
+ const characters=Array.from(text)
+ for(let i=0;i<characters.length;i+=3){await playback();yield{type:'text-delta',index:0,text:characters.slice(i,i+3).join('')};await delay()}
+ await playback();yield{type:'block-end',index:0,block:{type:'text',text}}
+}
 
 /** Only the two packaged, hash-checked research example assets may be copied. */
 export async function loadHomePresentationAssets(directory=fileURLToPath(new URL('./assets/home-presentation/',import.meta.url))){
@@ -41,8 +76,8 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
    await new Promise((resolve,reject)=>{const finish=()=>{run.waiters.delete(finish);signal?.removeEventListener('abort',abort);resolve()},abort=()=>{run.waiters.delete(finish);reject(aborted())};run.waiters.add(finish);signal?.addEventListener('abort',abort,{once:true})})
   }
  }
- const todo=(run,phase)=>labels(run.metadata).map((content,index)=>({content,status:phase>=3||index<phase?'completed':index===phase?'in_progress':'pending'}))
- const emitText=async function*(run,text,signal){yield{type:'block-start',index:0,blockType:'text'};for(let i=0;i<text.length;i+=9){await wait(run,()=>run.playing,signal);yield{type:'text-delta',index:0,text:text.slice(i,i+9)};await new Promise(resolve=>setTimeout(resolve,28))}yield{type:'block-end',index:0,block:{type:'text',text}}}
+ const todo=(run,phase)=>run.replay.todos.map((content,index)=>({content,status:phase>=3||index<phase?'completed':index===phase?'in_progress':'pending'}))
+ const emitText=(run,text,signal)=>streamHomePresentationReplayText(text,{waitUntilPlaying:()=>wait(run,()=>run.playing,signal),signal})
  const emitTool=function*(name,args,id){yield{type:'block-start',index:1,blockType:'tool-call'};yield{type:'block-end',index:1,block:{type:'tool-call',id,name,arguments:JSON.stringify(args)}};yield{type:'finish',reason:{kind:'tool-calls'}}}
  class PresetAdapter extends LlmAdapter{
   async resolveModel(provider,model){return{provider,id:model,name:'离线预置演示',context:{contextWindow:32000},defaultMaxTokens:1024}}
@@ -53,11 +88,11 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
    const user=run.agent.session.events.filter(e=>e.type==='user/message'&&e.data.source?.kind==='user')
    if(user.length!==1||user[0].data.content?.filter(block=>block.type==='text').map(block=>block.text).join('')!==message(run))throw Error('离线预置只接受本次研报附件和制作需求，请退出演示后继续。')
    const n=run.sequence++
-   if(n===0){await wait(run,()=>run.playing&&run.allowed>=1,request.signal);yield*emitText(run,`已收到 Vanguard 的28页原始研报。这是一份发表于2025年12月10日的历史展望，预测面向2026年。我会保留原报告的预测口径，先提炼观点与证据，再按公司规范组织成${run.metadata.presentationSlides}页内部汇报，包含目录、章节导航、专业解读与可编辑数据图表。`,request.signal);yield*emitTool('todo_write',{todos:todo(run,0)},'home-plan')}
-   else if(n===1){run.milestones.get('plan').resolve();await wait(run,()=>run.playing&&run.allowed>=2,request.signal);yield*emitText(run,'汇报按以下结构展开：\n\n'+run.metadata.pageOutline.map(page=>page.slide+'. '+page.title).join('\n')+'\n\n采用公司品牌模板，重绘可编辑图表与表格；预测、情景假设和风险说明分别标注，逐页保留原报告页码。',request.signal);yield*emitTool('todo_write',{todos:todo(run,1)},'home-layout')}
+   if(n===0){await wait(run,()=>run.playing&&run.allowed>=1,request.signal);yield*emitText(run,run.replay.intro+'\n\n'+run.replay.structure,request.signal);yield*emitTool('todo_write',{todos:todo(run,0)},'home-plan')}
+   else if(n===1){run.milestones.get('plan').resolve();await wait(run,()=>run.playing&&run.allowed>=2,request.signal);yield*emitText(run,run.replay.layout,request.signal);yield*emitTool('todo_write',{todos:todo(run,1)},'home-layout')}
    else if(n===2){run.milestones.get('layout').resolve();await wait(run,()=>run.playing&&run.allowed>=3,request.signal);yield*emitTool(TOOL,{},'home-publish')}
    else if(n===3){if(!run.published)throw Error('预置文件未能保存。');yield*emitTool('todo_write',{todos:todo(run,3)},'home-complete')}
-   else if(n===4){yield*emitText(run,'已完成《人工智能周期与资产配置》'+run.metadata.presentationSlides+'页公司风格汇报，含目录、章节导航与可编辑数据图表。\n\n[打开可编辑演示文稿](./'+HOME_PRESENTATION_FILE+')\n\n[查看原始研究报告](./'+HOME_PRESENTATION_SOURCE_FILE+')\n\n已核对原报告页码、预测时点及图表口径。原研报、PPT和制作记录均已保存，可回到这段会话继续使用。\n\n本教程使用离线预制成稿，不调用模型；内容仅演示历史研报转换流程。',request.signal);yield{type:'finish',reason:{kind:'stop'}};run.complete=true;run.milestones.get('deliver').resolve()}
+   else if(n===4){yield*emitText(run,run.replay.delivery,request.signal);yield{type:'finish',reason:{kind:'stop'}};run.complete=true;run.milestones.get('deliver').resolve()}
    else throw Error('预置示例已结束，请在普通新对话中继续。')
   }
  }
@@ -87,7 +122,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
     if(ctx.agents.get(input.sessionId)!==agent||agent.status==='running'||session.events.some(e=>['user/message','assistant/message','turn/start',EVENT].includes(e.type)))throw Error('会话内容已变化，未启动演示。')
     const prepared={ready:true,brief:createHomePresentationBrief(metadata),sourcePath,presentationPath:join(input.cwd,HOME_PRESENTATION_FILE),sourceTitle:metadata.sourceTitle,publicationDate:metadata.publicationDate,outline:metadata.pageOutline.map(page=>({slide:page.slide,title:page.title}))}
     const originalConfig=session.requestHeader()?.config??{provider:agent.options.provider,model:agent.options.model,...agent.options.maxTokens===undefined?{}:{maxTokens:agent.options.maxTokens}}
-    const run={...input,root,agent,bytes,sourceBytes,sourcePath,metadata,prepared,originalConfig,sequence:0,allowed:0,playing:false,cancelled:false,complete:false,waiters:new Set(),milestones:new Map(['plan','layout','deliver'].map(stage=>[stage,deferred()])),off:[]}
+    const run={...input,root,agent,bytes,sourceBytes,sourcePath,metadata,replay:createHomePresentationReplay(metadata),prepared,originalConfig,sequence:0,allowed:0,playing:false,cancelled:false,complete:false,waiters:new Set(),milestones:new Map(['plan','layout','deliver'].map(stage=>[stage,deferred()])),off:[]}
     session.append(EVENT,{version:2,runId:run.runId,purpose:'offline-investment-report-presentation',cwd:run.cwd,sourceFile:HOME_PRESENTATION_SOURCE_FILE,presentationFile:HOME_PRESENTATION_FILE,sourceSha256:metadata.sourceSha256,presentationSha256:metadata.presentationSha256})
     const expectedEventCount=session.events.length
     if(!(await ctx.sessions.flush(session)))throw Error('示例所有权未能保存。')
