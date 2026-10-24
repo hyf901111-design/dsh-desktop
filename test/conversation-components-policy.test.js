@@ -99,3 +99,26 @@ describe('natural component delivery expressions and defensive canvas boundary',
   catalog(s,'conversation');expect(h.guards.map(fn=>fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'hidden-canvas'})).filter(Boolean).join()).toContain('conversation.components.create');h.dispose()
  })
 })
+describe('existing-object delivery stays read-only while natural new delivery creates',()=>{
+ const readers=['给我看看当前工作台','请给我当前工作台的链接','给我已有画布的原始数据','我要这个图表的解释','提供现有表格的来源','需要当前工作台的数据日期','请给我说明如何使用当前工作台','给我工作台的创建方法','我想要已有组件的内容','展示当前图表','用当前图表比较两个时点']
+ for(const text of readers)it(`does not turn ${text} into creation`,async()=>{
+  for(const mode of [null,'conversation','research','notes']){
+   const s=session(text);if(mode)catalog(s,mode);const h=harness(s)
+   expect(policy.componentCreationRequest(s),text).toBeNull();expect(workbenchCreationRequest(s),text).toBeNull()
+   expect((await h.config()).maxTokens).toBe(16000)
+   expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(false)
+   expect(h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'read-only'}))).toBe(true)
+   h.dispose()
+  }
+ })
+ const creators=[['给我一张苹果股票行情卡片','component'],['用图表展示苹果过去一年的价格','component'],['用一个表格比较三只ETF','component'],['给我一个新的工作台','workbench'],['请提供一个独立的行情研究工作台','workbench'],['给我创建一个新工作台替代当前工作台','workbench'],['给我一个显示当前股价的新工作台','workbench'],['请展示一张比较三只ETF的图表','component'],['给我一张包含原始数据的行情卡片','component'],['创建工作台并解释收入变化','workbench']]
+ it.each(creators)('preserves %s as %s',async(text,target)=>{
+  const s=session(text);catalog(s,'conversation');const h=harness(s)
+  expect(policy.componentCreationRequest(s)?.target).toBe(target)
+  expect((await h.config()).maxTokens).toBe(target==='workbench'?4096:16000)
+  expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(target==='workbench');h.dispose()
+ })
+ it('keeps a later explicit addition after an existing-object inspection',()=>{
+  expect(policy.componentCreationRequest(session('给我看看当前工作台，另外给我一个新的工作台'))?.target).toBe('workbench')
+ })
+})

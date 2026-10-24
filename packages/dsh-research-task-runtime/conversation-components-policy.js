@@ -15,6 +15,19 @@ export function planningHumanRequest(session) {
   return null
 }
 
+function readOnlyComponentDelivery(text){
+ const action=text.trim(),object=action.match(/工作台|画布|看板|仪表盘|组件|卡片|表格|图表/u)
+ if(!object)return false
+ const readLead=/^(?:(?:请|麻烦|帮我|给我|为我|替我|我想要|我要|需要|提供|先|只读|只|仅)\s*)*(?:看看|看一下|看一看|查看|检查|查询|解释|说明|介绍|检视|了解|如何|怎么|怎样)/u
+ if(readLead.test(action))return true
+ // Explicit creation at the head may use an existing object as source data.
+ if(/^(?:(?:请|麻烦|帮我|给我|为我|替我|我想|我需要|需要|先|再)\s*)*(?:创建|新建|新增|生成|建立|搭建|制作|构建|建(?:一个|一套|一张|个|套|张))/u.test(action))return false
+ const before=action.slice(0,object.index),after=action.slice(object.index+object[0].length)
+ // Interpret the first named object, so a new chart containing original data
+ // or a new workbench displaying current prices still remains a delivery.
+ return /(?:当前|现有|已有|这个|此|原有|原来|刚才|上一个|上一张|之前)(?:的)?$/u.test(before)||/^(?:(?:中|里)?的(?:链接|地址|原始数据|数据|内容|详情|状态|来源|记录|历史|说明|解释|含义|用法|使用方法|创建方法|生成方法|创建步骤)|链接|地址|原始数据|创建方法|生成方法|如何|怎么|怎样)/u.test(after)
+}
+
 export function componentCreationRequest(session) {
   if (session?.header?.origin === 'subagent' || (session?.header?.delegationDepth ?? 0) > 0) return null
   const human = planningHumanRequest(session)
@@ -35,11 +48,12 @@ export function componentCreationRequest(session) {
     // binding complements follow it (工作台的数据源绑定).
     const object = operand?.match(/工作台|画布|看板|仪表盘|组件|卡片|绑定|映射|关联|连接|关系/gu)?.at(-1)
     const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|画布|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|画布|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
-    const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(action.trim()) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(action.trim()) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(action.trim())
+    const deliveryText=action.trim().replace(/^(?:另外|另行|同时|然后|但是|但|并且|并)\s*/u,'')
+    const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(deliveryText)
     const create = delivery || createBuild || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
     const denied = /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|规划|做(?:一个|一套|一张|个|套|张)|建)/u.test(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
-    return create && !denied && !inspection
+    return create && !denied && !inspection && !readOnlyComponentDelivery(action)
   }).join('；')
   if (!text || /(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|建立|搭建|制作|构建|规划|做一个|建)/u.test(text)) return null
   if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(request) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|建立|搭建|制作|做一个|建)/u.test(text)) return null
@@ -108,6 +122,7 @@ export function registerConversationComponentsPolicy(ctx){
   // A narrow intent classifier can miss natural language; no unrequested
   // canvas may bypass the mode boundary merely because intent was unknown.
   if(request?.target==='workbench')return
+  if(!request&&readOnlyComponentDelivery(planningHumanRequest(session)?.text??''))return '当前请求只读查看已有组件或工作台，不授权新建研究画布。另需创建时先 client_capabilities；对话组件使用 conversation.components.create。'
   const mode=latestClientModeForAuthority(session)
   if(!mode)return CATALOG_FIRST
   if(mode==='conversation')return '当前对话裸组件应直接提交完整 artifact 给 conversation.components.create；不能写入研究画布。'
