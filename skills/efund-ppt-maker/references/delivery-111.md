@@ -22,14 +22,14 @@
 新增必跑门禁（960px 版心单位，其他尺寸按比例）：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_readability.py" "$QA_DIR/layouts" --map "$QA_DIR/template-frame-map.json" --json-output "$QA_DIR/efund-readability.json"
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_readability.py" "$QA_DIR/layouts" --map "$QA_DIR/template-frame-map.json" --json-output "$QA_DIR/efund-readability.json"
 ```
 
 ## 字体与 PowerPoint 打开
 
 更换中文字体不能只改 typeface 同时保留旧字体的 charset/panose/pitchFamily。对改写的品牌中文 run 显式使用 `华文黑体_易方达`，纯中文 run 的 Latin/East Asian/CS 字体保持一致，lang=zh-CN，清除旧字体分类属性。混合中英文需按语言拆分 run，英文/数字保留 Arial。检查所有中文字符可显示，尤其封底“谢谢”；原文件中的正确 Unicode 文本并不能证明渲染字形正确。
 
-`efund_text_properties.py` 提供保序属性规范化；`normalize_efund_text.py SOURCE NEW_OUTPUT`（需 lxml，python-pptx 自带依赖）规范化显式品牌中文字体、已知文本属性顺序、图表轴 ID 和不兼容折线标签位置，拒绝覆盖输入及已有输出。它不改变文字内容、字号、色彩、数据、图表类型或外框几何；标签位置改动必须重新渲染复核。它不替代字体安装或完整 OOXML 验证。优先在生成时使用库的保序 setter，避免事后修补。
+`efund_text_properties.py` 提供保序属性规范化；`PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/normalize_efund_text.py" SOURCE NEW_OUTPUT`（需 lxml，python-pptx 自带依赖）规范化显式品牌中文字体、已知文本属性顺序、图表轴 ID 和不兼容折线标签位置，拒绝覆盖输入及已有输出。它不改变文字内容、字号、色彩、数据、图表类型或外框几何；标签位置改动必须重新渲染复核。它不替代字体安装或完整 OOXML 验证。优先在生成时使用库的保序 setter，避免事后修补。
 
 DrawingML 文本属性顺序为：线条 → 填充 → 效果 → 高亮/下划线 → latin → ea → cs → sym → 超链接。除了填充，**ea 追加在 cs 后同样非法**；重复互斥属性也必须报错。现有 portability 门禁已覆盖这些已知错误。
 
@@ -64,7 +64,7 @@ DrawingML 文本属性顺序为：线条 → 填充 → 效果 → 高亮/下划
 
 成品清理曾把 `docProps/app.xml` 的 AppVersion 写成空字符串。XML 可解析且通过通用 XSD，原生 PowerPoint 仍弹出修复和删除内容两个警告。仅删除这个空属性后，同一文件无修复打开。清理时删除可选 AppVersion 节点，禁止清空节点文本或自行杜撰办公软件版本；结构门禁新增 invalid-app-version。使用技能自带 sanitize_pptx_metadata.py，禁止生成另一个简化脱敏脚本后跳过最终文件复验。
 
-在导出 PDF 前运行 `normalize_efund_text.py "$DRAFT_PPTX" "$FINAL_PPTX"`（新输出路径），随后清理元数据、重跑封面/结构/包/布局等门禁并渲染。此工具处理已知文本属性、空 AppVersion 和轴 ID，不保证所有任意 PPTX 自动修复。
+在导出 PDF 前运行 `PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/normalize_efund_text.py" "$DRAFT_PPTX" "$FINAL_PPTX"`（新输出路径），随后清理元数据、重跑封面/结构/包/布局等门禁并渲染。此工具处理已知文本属性、空 AppVersion 和轴 ID，不保证所有任意 PPTX 自动修复。
 
 折线图标签须使用与图表类型匹配的位置，默认 `t`；共享 `normalize_label_positions(chartSpace)` 覆盖正确 plot 内的系列及单点覆盖，保留条形图 `outEnd`、省略的位置和隐藏标签。`outEnd` 在通用枚举中合法，并不证明其在目标 PowerPoint 的折线 plot 中可用；已复现其导致第 13 页延迟加载修复，而仅改成 `t` 后全 20 页访问及重开通过。两道结构门禁对此增加独立运行兼容性检查，SDK 零错误仍不能代替逐页原生检查。
 

@@ -99,7 +99,7 @@ PowerPoint OOXML 使用 pt。若编辑环境使用 96dpi 像素，换算为：
 运行：
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_typography.py" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_typography.py" \
   --source-pptx "$SOURCE_PPTX" \
   --final-pptx "$FINAL_PPTX" \
   --map "$QA_DIR/template-frame-map.json" \

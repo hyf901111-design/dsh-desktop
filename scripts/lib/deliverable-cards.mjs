@@ -100,7 +100,7 @@ function ProducedFiles({matched:paths,openFile,openSystemFile,isLoopback,useHost
  const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs,en=document.documentElement.dataset.odysseyLocale==='en'
  const hostCanOpen=useHostDescription(description=>description?.canOpenPath===true)
  const [expanded,setExpanded]=react.useState(false)
- const explicit=new Set(deliveryPathsFromMarkdown(text,cwd)),main=[],auxiliary=[]
+ const explicit=new Set(deliveryPathsFromFinalText(text,cwd)),main=[],auxiliary=[]
  for(const path of paths)(explicit.has(path)||/\.(?:pdf|pptx?|odp|key|docx?|odt|pages|rtf|xlsx?|csv|tsv|ods|numbers|html?|md|txt|zip|7z|png|jpe?g|webp|svg|gif|mp[34]|wav|mov)$/i.test(path)?main:auxiliary).push(path)
  const cards=list=>list.map(path=>jsx(DeliveryFileCard,{path,openFile,openSystemFile,canOpenSystem:isLoopback&&hostCanOpen,localFiles:isLoopback===true},path))
  return jsxs('section',{className:'ew-delivery','aria-label':en?'Delivered files':'交付文件',children:[

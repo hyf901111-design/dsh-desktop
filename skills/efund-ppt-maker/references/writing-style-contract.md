@@ -36,7 +36,7 @@ PPT 文案应像业务负责人在会上直接陈述判断：对象明确、动�
 ## 自动门禁
 
 ```bash
-python "$SKILL_DIR/scripts/check_efund_writing_style.py" "$FINAL_PPTX" \
+PYTHONDONTWRITEBYTECODE=1 python -B "$SKILL_DIR/scripts/check_efund_writing_style.py" "$FINAL_PPTX" \
   --map "$QA_DIR/template-frame-map.json" \
   --json-output "$QA_DIR/efund-writing-style.json" \
   --warnings-as-errors

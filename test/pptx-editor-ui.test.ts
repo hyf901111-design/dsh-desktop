@@ -18,7 +18,7 @@ async function mount(bridge:any,props:any={},Preview:any=FakePreview){
  Object.assign(win,{sherlockPptEditor:bridge})
  const Component=createPptxEditorComponent(React,Preview,undefined,createPortal)
  const host=win.document.createElement('div');win.document.body.appendChild(host);const root=createRoot(host as any)
- const render=async()=>{await act(async()=>{root.render(React.createElement(Component,{scope:{sessionId:'s',cwd:''},path:'demo.pptx',...props}));await Promise.resolve()})}
+ const render=async()=>{let controls:any;await act(async()=>{root.render(React.createElement(Component,{scope:{sessionId:'s',cwd:''},path:'demo.pptx',...props,onToolbarControls:(value:any)=>{controls=value;props.onToolbarControls?.(value)}}));await Promise.resolve()});await act(async()=>{await controls.setMode('edit')})}
  await render()
  return{win,host,root,render,async close(){await act(async()=>root.unmount());for(const [k,d]of descriptors){if(d)Object.defineProperty(globalThis,k,d);else delete (globalThis as any)[k]}}}
 }
@@ -29,7 +29,7 @@ async function click(host:any,text:string){
 }
 async function input(win:any,element:any,value:string){await act(async()=>{element.textContent=value;element.dispatchEvent(new win.Event('input',{bubbles:true}));await Promise.resolve()})}
 describe('shared PPTX content editor',()=>{
- it('edits actual slide text by default and supports undo/redo',async()=>{
+ it('edits actual slide text after explicit entry and supports undo/redo',async()=>{
   const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:doc})})
   try{expect(editable(view.host)?.getAttribute('contenteditable')).toBe('true');expect(view.host.querySelector('textarea')).toBeNull();await act(async()=>editable(view.host).focus());await input(view.win,editable(view.host),'新标题');await click(view.host,'撤销');expect(editable(view.host)?.textContent).toBe('原始标题');await click(view.host,'重做');expect(editable(view.host)?.textContent).toBe('新标题')}finally{await view.close()}
  })
@@ -38,10 +38,10 @@ describe('shared PPTX content editor',()=>{
   const view=await mount({open:async()=>({ok:true,document:doc}),save:(value:any)=>{request=value;return new Promise(resolve=>{finish=resolve})}})
   try{await input(view.win,editable(view.host),'保存快照');await click(view.host,'保存');await input(view.win,editable(view.host),'保存期间继续输入');await act(async()=>{finish({ok:true,document:{...doc,version:'v2',slides:[{...doc.slides[0],fields:[{...doc.slides[0]!.fields[0],text:'保存快照'}]},doc.slides[1]]}});await Promise.resolve()});expect(request.edits).toEqual([{id:'title',text:'保存快照'}]);expect(view.host.textContent).toContain('未保存');expect(editable(view.host)?.textContent).toBe('保存期间继续输入');await click(view.host,'保存');await act(async()=>{finish({ok:false,code:'conflict',error:'文件已更改'});await Promise.resolve()});expect(view.host.textContent).toContain('文件已更改');expect(editable(view.host)?.textContent).toBe('保存期间继续输入')}finally{await view.close()}
  })
- it('keeps direct editing enabled without mode or manual save buttons',async()=>{
+ it('publishes the explicit mode controls while keeping manual save controls hidden',async()=>{
   let controls:any,state:any
   const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:doc})},{toolbar:'host',onToolbarState:(v:any)=>{state=v},onToolbarControls:(v:any)=>{controls=v}})
-  try{expect(state.modes).toBe(false);expect(state.editable).toBe(false);expect(controls.setMode).toBeUndefined();expect(editable(view.host)?.textContent).toBe('原始标题')}finally{await view.close()}
+  try{expect(state.modes).toBe(true);expect(state.mode).toBe('edit');expect(state.editable).toBe(true);expect(typeof controls.setMode).toBe('function');expect(editable(view.host)?.textContent).toBe('原始标题')}finally{await view.close()}
  })
 })
 
@@ -310,7 +310,7 @@ it('routes body shortcuts to the editor most recently focused through the keyboa
  const view=await mount(bridge,{path:'a.pptx'}),other=view.win.document.createElement('div');view.win.document.body.appendChild(other)
  const otherRoot=createRoot(other as any),Other=createPptxEditorComponent(React,FakePreview,undefined,createPortal)
  try{
-  await act(async()=>{otherRoot.render(React.createElement(Other,{scope:{sessionId:'s',cwd:''},path:'b.pptx'}));await Promise.resolve()})
+  let otherControls:any;await act(async()=>{otherRoot.render(React.createElement(Other,{scope:{sessionId:'s',cwd:''},path:'b.pptx',onToolbarControls:(v:any)=>{otherControls=v}}));await Promise.resolve()});await act(async()=>{await otherControls.setMode('edit')})
   await act(async()=>editable(view.host).focus());await input(view.win,editable(view.host),'A草稿')
   await act(async()=>editable(other).focus());await input(view.win,editable(other),'B草稿')
   await act(async()=>editable(other).dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',metaKey:true})))

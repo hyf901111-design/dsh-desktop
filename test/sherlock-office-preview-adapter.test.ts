@@ -117,13 +117,13 @@ async function waitForCalls(calls: unknown[], count: number): Promise<void> {
 }
 
 describe('Sherlock bundled Office preview adapter', () => {
-  it.each([1, 2, 3, 4])('upgrades the v%i editor layer independently of the prepared cache version', async (version) => {
+  it.each([1, 2, 3, 4, 5])('upgrades the v%i editor layer independently of the prepared cache version', async (version) => {
     const prepared = await officeClientSource()
     // Re-preparation may already have upgraded the shared build cache. Exercise
     // the legacy version-tag path with an explicit, valid generated layer.
     const legacyPayload = '/* legacy-only generated editor payload */'
     const installedLegacy = patchPptxEditor(prepared).replace(
-      '/* sherlock:pptx-content-editor:v5 */',
+      '/* sherlock:pptx-content-editor:v6 */',
       `/* sherlock:pptx-content-editor:v${version} */\n${legacyPayload}`
     )
     expect(installedLegacy.includes(`/* sherlock:pptx-content-editor:v${version} */`)).toBe(true)
@@ -203,16 +203,22 @@ describe('Sherlock bundled Office preview adapter', () => {
     }
   })
 
-  it('suppresses the built-in PPT download toolbar in the Research adapter', async () => {
+  it('forwards read-only and mode toolbar callbacks while suppressing the built-in PPT toolbar', async () => {
+    const onToolbarState=vi.fn(),onToolbarControls=vi.fn(),refreshSource={sessionId:'owner',path:'/workspace/research.pptx'}
     const client = await loadPatchedOfficeClient()
     const element = client.officePreviewService.Component({
       sourceUrl: 'sherlock-preview://capability_pptx/',
       kind: 'pptx',
-      title: 'research.pptx'
+      title: 'research.pptx',
+      readOnly: true, refreshSource, onToolbarState, onToolbarControls
     })
 
     expect(element.type.name).toBe('PptxView')
     expect(element.props.toolbar).toBe('host')
+    expect(element.props.readOnly).toBe(true)
+    expect(element.props.refreshSource).toBe(refreshSource)
+    expect(element.props.onToolbarState).toBe(onToolbarState)
+    expect(element.props.onToolbarControls).toBe(onToolbarControls)
   })
 
   it('provides the adapter without Better Sidebar and registers the legacy viewers when it appears', async () => {

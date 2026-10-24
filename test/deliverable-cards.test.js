@@ -33,6 +33,17 @@ it('selects only completed turn files and merges explicit final links without lo
  expect(selector(owner)).toEqual(['/work/outputs/研究（完整版）.pdf','/work/outputs/演示.pptx'])
  expect(selector({...owner,turn:{...owner.turn,status:'open'}})).toBeNull()
 })
+it('only promotes clear inline-code deliveries in the actual closed turn tail',()=>{
+ const owner={cwd:'/work',seq:10,text:'已完成，交付文件如下：\n- PPTX：`outputs/final.pptx`',turn:{status:'closed',data:new Map()}}
+ expect(selector(owner)).toEqual(['/work/outputs/final.pptx'])
+ expect(selector({...owner,turn:{...owner.turn,status:'open'}})).toBeNull()
+ expect(selector({...owner,text:'当前候选文件：`outputs/final.pptx`，尚未通过原生验收，不正式交付。'})).toBeNull()
+})
+it('keeps an explicitly delivered custom inline-code format prominent',async()=>{
+ const el=await render({matched:['/work/outputs/final.custom'],text:'交付文件：`outputs/final.custom`',cwd:'/work'})
+ expect(el.querySelectorAll('.ew-delivery-list .ew-delivery-card')).toHaveLength(1)
+ expect(el.querySelector('.ew-delivery-auxiliary')).toBeNull()
+})
 it('renders prominent named cards, custom final formats, and collapsed auxiliary files',async()=>{
  const long='贵州茅台（600519.SH）2026中报公司深度研究与DCF情景估值报告_2026-10-23.pdf'
  const el=await render({matched:['/work/'+long,'/work/演示.pptx','/work/交付.custom','/work/evidence.json'],text:'[指定文件](/work/交付.custom)',cwd:'/work'})

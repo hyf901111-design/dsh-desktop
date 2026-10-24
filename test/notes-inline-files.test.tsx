@@ -5,6 +5,8 @@ import {afterEach,expect,it,vi} from 'vitest'
 import {InlineNoteFileBlock,noteFilePresentation} from '../src/preload/notes/file-inline'
 import * as ReactDOM from 'react-dom'
 import {EWorkNoteFileView} from '../scripts/lib/notes-files.mjs'
+import {createRequire} from 'node:module'
+const {componentPptxModeHost,useComponentPptxMode}=createRequire(import.meta.url)('../scripts/lib/component-pptx-mode.mjs')
 ;(globalThis as any).IS_REACT_ACT_ENVIRONMENT=true
 const dispose:Array<()=>Promise<void>>=[]
 afterEach(async()=>{for(const fn of dispose.splice(0).reverse())await fn();document.body.replaceChildren();vi.useRealTimers();vi.restoreAllMocks()})
@@ -18,6 +20,12 @@ const file=(name:string,extra:any={})=>({id:'note-file-one',name,authorizationId
 it('uses natural media for existing files, inline previews for slash documents and preserves dragged document cards',()=>{
  expect(noteFilePresentation(file('photo.png'))).toBe('media');expect(noteFilePresentation(file('track.mp3'))).toBe('media');expect(noteFilePresentation(file('movie.mp4'))).toBe('media')
  expect(noteFilePresentation(file('report.pdf',{noteDisplay:'inline'}))).toBe('document');expect(noteFilePresentation(file('report.pdf'))).toBe('component');expect(noteFilePresentation(file('archive.zip',{noteDisplay:'inline',previewEligible:false}))).toBe('file')
+})
+it('presents stored slash-inserted PPTX as a full component without rewriting its payload or other inline document types',()=>{
+ const stored=file('original.PPTX',{noteDisplay:'inline',displayName:'重命名后无扩展名',path:'/work/original.PPTX',noteSize:{width:620,height:520}}),before=JSON.stringify(stored)
+ expect(noteFilePresentation(stored)).toBe('component');expect(JSON.stringify(stored)).toBe(before)
+ for(const name of ['report.pdf','report.docx','report.xlsx','report.md'])expect(noteFilePresentation(file(name,{noteDisplay:'inline'}))).toBe('document')
+ expect(noteFilePresentation(file('original.pptx',{noteDisplay:'inline',previewEligible:false}))).toBe('file')
 })
 it('renders an owned image directly in the document and releases its memory-only URL on unmount',async()=>{
  const request=vi.fn(async(method:string,input:any)=>input.action==='release'?{ok:true}:{url:'sherlock-preview://image-one/',releaseId:'image-lease',expiresAt:Date.now()+300000,kind:'image'}),f=await mount(file('photo.png',{noteDisplay:'inline'}),request)
@@ -42,7 +50,7 @@ it('reuses the authorized document reader without workbench chrome and shrinks l
  const header=outer.firstElementChild as HTMLElement,host=outer.lastElementChild as HTMLElement,chrome=vi.fn(()=>React.createElement('header',{className:'workbench-chrome'},'Workbench'))
  let setState:(value:string)=>void=()=>{}
  const Reader=(props:any)=>{const [state,set]=React.useState('loading');setState=set;expect(props).toMatchObject({nodeId:'doc',sessionId:'bound',visible:true,noteDocument:true});return React.createElement('div',{...(state==='loading'?{'data-research-preview-loading':''}:state==='failed'?{'data-research-preview-unavailable':'',role:'alert'}:{'data-research-preview-interactive':''})},state)}
- const View=new Function('react','react_dom','ResearchAttachmentLocalPreview','WorkbenchChrome','WorkbenchIcon','return ('+EWorkNoteFileView.toString()+')')(React,ReactDOM,Reader,chrome,()=>null),root=createRoot(document.createElement('div')),entry={instanceId:'doc-view',inline:true,host,header,sessionId:'notes',node:{id:'doc',name:'report.pdf',authorizationId:'grant',previewSessionId:'bound'}}
+ const View=new Function('react','react_dom','ResearchAttachmentLocalPreview','WorkbenchChrome','WorkbenchIcon',componentPptxModeHost.toString()+'\n'+useComponentPptxMode.toString()+'\nreturn ('+EWorkNoteFileView.toString()+')')(React,ReactDOM,Reader,chrome,()=>null),root=createRoot(document.createElement('div')),entry={instanceId:'doc-view',inline:true,host,header,sessionId:'notes',node:{id:'doc',name:'report.pdf',authorizationId:'grant',previewSessionId:'bound'}}
  dispose.push(async()=>act(async()=>root.unmount()))
  await act(async()=>root.render(React.createElement(View,{entry})))
  expect(chrome).not.toHaveBeenCalled();expect(header.textContent).toContain('report.pdf');expect(host.dataset.noteInlineState).toBe('loading')
