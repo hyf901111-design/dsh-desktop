@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-05",
+  "branch": "codex/integration/20261025-05",
+  "baseMainCommit": "dd2233d756eb4bf5a43fc8f23d9f47d2ecbb9bf3",
+  "expectedMainCommit": "dd2233d756eb4bf5a43fc8f23d9f47d2ecbb9bf3",
+  "createdAt": "2026-10-24T23:23:40.244Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "等待看板原生工具栏稳定可见后启动虚拟鼠标",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "dd2233d756eb4bf5a43fc8f23d9f47d2ecbb9bf3",
+        "tipCommit": "d6d856a2d21b94d1054a73b4d6af2c4005f697c4",
+        "commits": [
+          {
+            "commit": "d6d856a2d21b94d1054a73b4d6af2c4005f697c4",
+            "parents": [
+              "dd2233d756eb4bf5a43fc8f23d9f47d2ecbb9bf3"
+            ],
+            "subject": "等待看板组件库按钮稳定可见后再操作"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-native-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-board-toolbar-readiness-final-20261025.log (67/67)",
+            "verifiedCommit": "d6d856a2d21b94d1054a73b4d6af2c4005f697c4",
+            "completedAt": "2026-10-24T23:23:03.163939+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-readiness-pipeline-1-20261025.log",
+            "verifiedCommit": "d6d856a2d21b94d1054a73b4d6af2c4005f697c4",
+            "completedAt": "2026-10-24T23:23:03.163939+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-readiness-pipeline-2-20261025.log",
+            "verifiedCommit": "d6d856a2d21b94d1054a73b4d6af2c4005f697c4",
+            "completedAt": "2026-10-24T23:23:03.163939+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实renderer+生产共享指针：hidden首挂、隐藏旧同owner、双可见、暂停和取消5场景旧代码RED、新代码GREEN；独审通过。正式dd2233原生PPT已自动点交付卡打开右屏，Notes完整完成；Board重播完成，但正式首挂曾出现generic不可用，故补当前readiness，待clean main正式包首挂复验。"
+        },
+        "acceptanceCriteria": [
+          "只对当前owner唯一可见且同一Node连续稳定两帧的原生组件库按钮发cue。",
+          "等待沿用暂停/取消与时限，保留shared pointer严格可见守卫和确认后的所有权/视口检查。",
+          "不改PPT/PDF资产、版本或发布源；clean main本地构建正式客户端供用户测试。"
+        ],
+        "risks": [
+          "需新正式包从真实首页首次打开看板验证，不以重播通过替代首挂。"
+        ],
+        "generatedAt": "2026-10-24T23:23:03.163939+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native.test.js",
+        "test/home-guide-native-strip.test.js",
+        "test/home-guide-pointer.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native-browser.test.js",
+        "-t",
+        "waits for a stable current native library target",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
