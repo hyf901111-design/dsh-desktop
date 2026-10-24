@@ -8,6 +8,7 @@ import { readFile, writeFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { patchSidebarPdfPreview } from './sidebar-pdf-preview.mjs'
 import { patchSidebarFileReference } from './sidebar-file-reference.mjs'
+import { patchSidebarPptxToolbar } from './sidebar-pptx-toolbar.mjs'
 
 const PATCH_MARKER = '/* sherlock:pinned-sidebar-tabs:v1 */'
 const RECONCILE_PATCH_MARKER = '/* sherlock:pinned-sidebar-reconcile:v1 */'
@@ -1174,6 +1175,7 @@ function patchScheduledGlobalPanel(source) {
 }
 
 export function patchBetterSidebarClient(source) {
+  source = patchSidebarPptxToolbar(source)
   source = patchResearchTabIcons(source)
   source = source.replace("tab.id === componentTabId ? (0, react_jsx_runtime.jsxs)('svg', {width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1,children:[(0, react_jsx_runtime.jsx)('circle',{cx:8,cy:8,r:6}),(0, react_jsx_runtime.jsx)('path',{d:'M8 4v4l3 2'})]}) : getTabIcon?.(tab) ?? null", "getTabIcon?.(tab.id === componentTabId ? {...tab,type:'scheduled'} : tab) ?? null")
   source = patchSidebarFileRefresh(source)
