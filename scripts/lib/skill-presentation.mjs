@@ -25,8 +25,52 @@ export function useSkillPresentation() {
 }
 function helpers(source,anchor){const marker='/* ework:skill-presentation:v1 */';if(source.includes(marker))return source;if(source.split(anchor).length!==2)throw Error('Skill presentation entry drifted');return source.replace(anchor,marker+'\n'+[skillPresentationStore,projectSkillText,skillDisplayName,useSkillPresentation].map(f=>f.toString()).join('\n')+'\n'+anchor)}
 function once(source,anchor,next){if(source.split(anchor).length!==2)throw Error('Skill presentation anchor drifted: '+anchor.slice(0,85));return source.replace(anchor,next)}
+/** Compact only a leading run of standalone references. Stored/copy text stays exact. */
+export function compactSentReferencePrefix(research) {
+ if(research.files.length || research.artifacts?.length || research.occurrences?.length || research.artifactOccurrences?.length)return research
+ const text=research.text,labels=skillPresentationStore().skills
+ const markerLine=line=>{
+  let cursor=0,count=0
+  for(const match of line.matchAll(/📎 文件：`(?:\\`|[^`\r\n])+`|\/[\w-]+/g)){
+   if(!/^[\t ]*$/.test(line.slice(cursor,match.index)))return false
+   if(match[0][0]==='/'&&!/^\/ework-skill-[a-f0-9]{16}$/.test(match[0])&&![...labels.values()].some(row=>'/'+row.label===match[0]))return false
+   cursor=match.index+match[0].length;count++
+  }
+  return count>0&&/^[\t ]*$/.test(line.slice(cursor))
+ }
+ const header=[];let cursor=0
+ while(cursor<text.length){
+  const row=/^([^\r\n]*)(\r?\n|$)/.exec(text.slice(cursor))
+  if(!row)break
+  if(markerLine(row[1]))header.push(row[1].trim())
+  else if(header.length===0||row[1].trim()!=='')break
+  cursor+=row[0].length
+  if(!row[2])break
+ }
+ if(header.length===0||!text.slice(0,cursor).includes('\n'))return research
+ // Only the reference header owns these separators. From the first prose row
+ // onward, every authored newline, empty paragraph and indentation stays exact.
+ const body=text.slice(cursor)
+ return {...research,text:header.join(' ')+(body?' '+body:'')}
+}
+function patchSentReferencePresentation(source){
+ const marker='/* ework:sent-reference-prefix:v1 */',runtime=marker+'\n'+compactSentReferencePrefix.toString()+'\n'
+ const before='const research = parseResearchPrompt(text);',after='const originalResearch = parseResearchPrompt(text);\nconst research = compactSentReferencePrefix(originalResearch);'
+ const rawCopy='actions?.(projectSkillText(originalResearch.text))'
+ const start=source.indexOf('function UserStyleBubble('),end=source.indexOf('function PendingSteeringBubble(',start)
+ if(start<0||end<0)throw Error('Sent reference bubble anchor drifted')
+ const bubble=source.slice(start,end)
+ if(source.includes(marker)){
+  if(source.split(runtime).length!==2||bubble.split(after).length!==2||bubble.split(rawCopy).length!==2)throw Error('Sent reference presentation anchor drifted')
+  return source
+ }
+ const patched=once(once(bubble,before,after),'actions?.(projectSkillText(research.text))',rawCopy)
+ source=source.slice(0,start)+patched+source.slice(end)
+ source=once(source,'function projectUserText(text, openFile) {',runtime+'function projectUserText(text, openFile) {')
+ return source
+}
 export function patchSkillConversationPresentation(source) {
- const marker='/* ework:skill-conversation-presentation:v1 */';if(source.includes(marker))return patchSkillWindowTitle(source)
+ const marker='/* ework:skill-conversation-presentation:v1 */';if(source.includes(marker))return patchSentReferencePresentation(patchSkillWindowTitle(source))
  source=helpers(source,'function projectUserText(text, openFile) {')
  source=once(source,'function UserStyleBubble({ content, imageLoader, actions, openFile, pending = false, t }) {','function UserStyleBubble({ content, imageLoader, actions, openFile, pending = false, t }) {\nuseSkillPresentation();')
  source=once(source,'"data-ref-chip": label.startsWith("@") ? "subagent" : "skill",\n\t\t\t\t\tchildren: label','"data-ref-chip": label.startsWith("@") ? "subagent" : "skill",\n\t\t\t\t\tchildren: projectSkillText(label)')
@@ -40,7 +84,7 @@ export function patchSkillConversationPresentation(source) {
  source=once(source,'if (node?.kind === "command") return "run-change";','if(node?.kind==="context"&&node.data?.source?.kind==="skill-invocation")return "tools-skills";\nif (node?.kind === "command") return "run-change";')
  source=once(source,'node?.kind === "assistant-step" || node?.kind === "context" || typeof node?.key !== "string"','node?.kind === "assistant-step" || node?.kind === "context" && node.data?.source?.kind!=="skill-invocation" || typeof node?.key !== "string"')
  source=once(source,'const routedNode = node;','useSkillPresentation();\nconst managedToolLabel=node?.kind==="tool-call"?skillPresentationStore().tools.get(node.data?.root?.name??node.data?.root?.call?.name):undefined;\nconst routedNode=managedToolLabel?{...node,data:{...node.data,root:{...node.data.root,eworkToolLabel:managedToolLabel}}}:node;')
- return patchSkillWindowTitle(source+'\n'+marker)
+ return patchSentReferencePresentation(patchSkillWindowTitle(source+'\n'+marker))
 }
 export function patchSkillWorkspacePresentation(source){
  const marker='/* ework:skill-workspace-presentation:v1 */';if(source.includes(marker))return source
