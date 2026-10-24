@@ -135,6 +135,50 @@
           "鼠标偶发冻结根因仍未确认。"
         ],
         "generatedAt": "2026-10-24T11:14:28.042686+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b8e985a15d9cd35c4ba087aae6346eb78d80caf4",
+        "verificationCommit": "b8e985a15d9cd35c4ba087aae6346eb78d80caf4",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/efund-ppt-107.test.js",
+              "test/efund-ppt-108.test.js",
+              "test/efund-ppt-109.test.js",
+              "test/efund-ppt-110.test.js",
+              "test/efund-ppt-111.test.js",
+              "test/efund-ppt-chart-label-position.test.js",
+              "test/efund-ppt-layout-lint.test.ts",
+              "test/efund-ppt-native-visit.test.js",
+              "test/efund-ppt-package.test.js",
+              "test/efund-ppt-rendered-fit.test.js",
+              "test/efund-ppt-text-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/efund-ppt-107.test.js test/efund-ppt-108.test.js test/efund-ppt-109.test.js test/efund-ppt-110.test.js test/efund-ppt-111.test.js test/efund-ppt-chart-label-position.test.js test/efund-ppt-layout-lint.test.ts test/efund-ppt-native-visit.test.js test/efund-ppt-package.test.js test/efund-ppt-rendered-fit.test.js test/efund-ppt-text-layout.test.js --maxWorkers=2",
+            "verifiedCommit": "b8e985a15d9cd35c4ba087aae6346eb78d80caf4",
+            "completedAt": "2026-10-24T11:18:33.335Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "b8e985a15d9cd35c4ba087aae6346eb78d80caf4",
+            "completedAt": "2026-10-24T11:18:33.335Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T11:18:33.335Z"
       }
     }
   ],
