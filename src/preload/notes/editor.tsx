@@ -42,6 +42,8 @@ import {createExternalNoteCapabilityLease} from './external-capability-lease'
 import {InlineNoteFileBlock,noteFilePresentation} from './file-inline'
 import {useInlineComponentGeneration} from './use-inline-component-generation'
 import {useNoteChallenge,CHALLENGE_USER} from './challenge-controller'
+import {challengeDocumentBlocks} from './challenge-scheduler'
+import {restoreChallengeReviewState} from './challenge-review-state'
 import {noteEditorVisible} from './editor-visibility'
 import {ChallengeToolbar,ChallengeComments,ManualNoteThreads} from './challenge-ui'
 import {NoteReplacementPopover,NoteReplacementHighlights} from './replacement-review'
@@ -49,13 +51,16 @@ import {noteEditFingerprint,noteEditTimestamp,noteHasSavedContent,noteEditDate} 
 
 /** A local guide receives only document operations for its own isolated NotesApp. */
 export type NotesGuideEditorApi = {
-  snapshot(): {title:string;blocks:any[]}
+  snapshot(): NoteContent
+  flush(): Promise<void>
+  reviewReady(): Promise<boolean>
   setDocument(title:string,blocks:any[]):void
   appendBlock(block:any):void
   updateText(blockId:string,text:string):void
 }
 export type NotesGuideBinding = {ready(api:NotesGuideEditorApi):void;dispose?(api:NotesGuideEditorApi):void}
-type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; active?:boolean; activityId?:string; navigate(view: string): void;guide?:NotesGuideBinding }
+export type NotesSaveBinding = {ready(flush:()=>Promise<void>):void;dispose?(flush:()=>Promise<void>):void}
+type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; active?:boolean; activityId?:string; navigate(view: string): void;guide?:NotesGuideBinding;saveBinding?:NotesSaveBinding }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
 const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: boolean; navigate(view: string): void; editor?: any; importing?:Set<string> } | null>(null)
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
@@ -282,6 +287,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     save();await saveQueue.current
     if(lastWritten.current!==JSON.stringify(snapshot()))throw Error('笔记尚未保存，较新内容已保留为草稿。')
   }
+  useEffect(()=>{
+    if(!props.saveBinding)return
+    const flush=()=>persistConfirmed();props.saveBinding.ready(flush)
+    return()=>props.saveBinding?.dispose?.(flush)
+  },[props.saveBinding])
   const systemMutation=useRef(false)
   const updateSystemComponent=(blockId:string,node:Record<string,any>,value?:any)=>{
     const ticket=value?.method==='apply'?dataRefreshGuard.current.before(snapshot(),blockId,node.id):undefined
@@ -616,7 +626,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     return filterSuggestionItems([...choices,library],query)
   }, [editor,props.bridge,props.sessionId,document.documentElement.dataset.odysseyLocale])
   const [challengeMarginAvailable,setChallengeMarginAvailable]=useState(false)
-  const challenge=useNoteChallenge({editor,doc,bridge:props.bridge,sessionId:props.sessionId,title,scroll,busy:writing||externalBusy,isBusy:()=>!!request.current||!!externalCapabilities.current?.pending(),recovery:!!props.recovery,active:props.active,activityId:props.activityId,persist:changed,persistConfirmed})
+  const challenge=useNoteChallenge({editor,doc,bridge:props.bridge,sessionId:props.sessionId,title,scroll,busy:writing||externalBusy,isBusy:()=>!!request.current||!!externalCapabilities.current?.pending(),recovery:!!props.recovery,active:props.active,activityId:props.activityId,replacementSettleMs:props.guide?0:undefined,persist:changed,persistConfirmed})
   challengeController.current=challenge
   challengeScheduleSync.current=challenge.syncScheduling
   // The guide is an explicit prop, never a global event channel that can control a user's editor.
@@ -625,7 +635,21 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     let live=true
     const assert=()=>{if(!live||disposed.current||!editorActive())throw new DOMException('演示编辑器已关闭。','AbortError')}
     const api:NotesGuideEditorApi={
-      snapshot:()=>{assert();return {title:titleRef.current,blocks:structuredClone(editor.document)}},
+      snapshot:()=>{assert();return structuredClone(snapshot())},
+      reviewReady:async()=>{assert();const blocks=challengeDocumentBlocks(editor.document),level=challenge.getConfiguration().level
+        const restored=await restoreChallengeReviewState(doc.getMap('note-challenge-results').get('state'),titleRef.current,blocks,level)
+        return restored.covered.size===blocks.length&&[...restored.covered.values()].every(value=>value.complete)
+      },
+      // Capture before unmount: queued persistence must not read a destroyed Y.Doc.
+      flush:()=>{if(!live||disposed.current)throw new DOMException('演示编辑器已关闭。','AbortError');clearTimeout(saveTimer.current);const content=structuredClone(snapshot()),fingerprint=JSON.stringify(content)
+        const pending=saveQueue.current.then(async()=>{
+          if(lastWritten.current===fingerprint)return
+          const result=await props.bridge.request('save',{sessionId:props.sessionId,revision:revision.current,content,clientId:client.current})
+          if(result.status!=='saved')throw Error('笔记尚未保存，较新内容已保留为草稿。')
+          revision.current=result.saved.revision;lastWritten.current=fingerprint
+        })
+        saveQueue.current=pending.catch(()=>{});return pending
+      },
       setDocument:(nextTitle,blocks)=>{assert();titleRef.current=nextTitle;setTitle(nextTitle);editor.replaceBlocks(editor.document,blocks);changed()},
       appendBlock:block=>{assert();editor.insertBlocks([block],editor.document.at(-1),'after')},
       updateText:(blockId,text)=>{assert();if(!editor.getBlock(blockId))throw Error('演示段落已变化。');editor.updateBlock(blockId,{content:text})}

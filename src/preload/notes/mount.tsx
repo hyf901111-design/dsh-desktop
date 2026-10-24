@@ -1,7 +1,8 @@
 import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { NotesApp } from './editor'
+import {flushSync} from 'react-dom'
+import { NotesApp,type NotesSaveBinding } from './editor'
 import type { NotesBridge } from '../../shared/workspace-notes'
 import { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import blockStyles from '@blocknote/mantine/style.css?inline'
@@ -14,15 +15,37 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
   const editorHost = document.createElement('div'); editorHost.className = 'en-editor-host'
   surface.append(editorHost)
   let reactRoot: Root | undefined, sessionId = '', frame = 0, lastAnchor: Element | null = null
-  const entries=new Map<string,{instanceId:string;retaining:boolean;capabilityRetaining:boolean}>();let resetting=false
+  type Entry={instanceId:string;retaining:boolean;capabilityRetaining:boolean;saveBinding:NotesSaveBinding;flush?:()=>Promise<void>}
+  const entries=new Map<string,Entry>();let resetting=false
   const nativeTab = (id: string) => document.querySelector<HTMLButtonElement>(`[data-srb-tabs] [data-conversation-view-id="${id}"]`)
   const navigate = (id: string) => { host.close('notes'); if (id === 'new') document.querySelector<HTMLButtonElement>('.hHd-Xa_newSession')?.click(); else nativeTab(id)?.click() }
+  const renderEntries=()=>{
+    if(resetting||!reactRoot&&!entries.size)return
+    reactRoot??=createRoot(editorHost)
+    reactRoot.render(<>{[...entries].map(([id,entry])=><div key={entry.instanceId} data-note-editor-session={id} data-note-editor-active={id===sessionId?'true':'false'} style={{height:'100%',minHeight:0,display:id===sessionId?'contents':'none'}} hidden={id!==sessionId} ref={node=>{if(node)(node as HTMLElement&{inert:boolean}).inert=id!==sessionId}}><NotesApp sessionId={id} active={id===sessionId} activityId={entry.instanceId} bridge={bridge} dark={surface.dataset.dark==='true'} navigate={navigate} saveBinding={entry.saveBinding}/></div>)}</>)
+  }
   const render = () => {
     if(!sessionId||resetting)return
-    if(!entries.has(sessionId))entries.set(sessionId,{instanceId:crypto.randomUUID(),retaining:false,capabilityRetaining:false})
+    if(!entries.has(sessionId)){
+      const entry={instanceId:crypto.randomUUID(),retaining:false,capabilityRetaining:false,saveBinding:{}} as Entry
+      entry.saveBinding={ready:flush=>{entry.flush=flush},dispose:flush=>{if(entry.flush===flush)entry.flush=undefined}}
+      entries.set(sessionId,entry)
+    }
     for(const [id,entry]of entries)if(id!==sessionId&&!entry.retaining&&!entry.capabilityRetaining)entries.delete(id)
-    reactRoot??=createRoot(editorHost)
-    reactRoot.render(<>{[...entries].map(([id,entry])=><div key={entry.instanceId} data-note-editor-session={id} data-note-editor-active={id===sessionId?'true':'false'} style={{height:'100%',minHeight:0,display:id===sessionId?'contents':'none'}} hidden={id!==sessionId} ref={node=>{if(node)(node as HTMLElement&{inert:boolean}).inert=id!==sessionId}}><NotesApp sessionId={id} active={id===sessionId} activityId={entry.instanceId} bridge={bridge} dark={surface.dataset.dark==='true'} navigate={navigate}/></div>)}</>)
+    renderEntries()
+  }
+  const prepareGuide=async(id:string)=>{
+    const entry=entries.get(id);if(!entry)return
+    if(entry.retaining||entry.capabilityRetaining)throw Error('此笔记仍有任务正在完成，请稍后重新打开示例。')
+    if(!entry.flush)throw Error('笔记尚在读取，请稍后重新打开示例。')
+    // A failed/conflicting save leaves the original instance alive. Only a
+    // confirmed snapshot may hand the session to the tutorial's editor.
+    await entry.flush()
+    if(entries.get(id)!==entry)return
+    if(entry.retaining||entry.capabilityRetaining)throw Error('此笔记仍有任务正在完成，请稍后重新打开示例。')
+    entries.delete(id)
+    if(sessionId===id){sessionId='';lastAnchor=null;host.close('notes')}
+    flushSync(renderEntries)
   }
   const activity=(event:Event)=>{
     const value=(event as CustomEvent).detail,entry=entries.get(value?.sessionId)
@@ -55,5 +78,5 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
   const theme = new MutationObserver(render); theme.observe(surface, { attributes: true, attributeFilter: ['data-dark'] })
   const identity = () => { resetting=true;entries.clear();reactRoot?.unmount();reactRoot=undefined;sessionId='';host.close('notes');resetting=false;document.dispatchEvent(new CustomEvent('sherlock:notes-reset')) }
   document.addEventListener('sherlock:notes-capability-activity',capabilityActivity);document.addEventListener('sherlock:notes-challenge-activity',activity);document.addEventListener('sherlock:notes-open', open); document.addEventListener('sherlock:notes-close', close); document.addEventListener('click', onNativeTabClick, true); sync()
-  return { resetIdentity: identity, dispose: () => { identity(); observer.disconnect(); theme.disconnect(); cancelAnimationFrame(frame); style.remove(); surface.remove(); document.removeEventListener('sherlock:notes-capability-activity',capabilityActivity);document.removeEventListener('sherlock:notes-challenge-activity',activity);document.removeEventListener('sherlock:notes-open', open); document.removeEventListener('sherlock:notes-close', close); document.removeEventListener('click', onNativeTabClick, true) } }
+  return { prepareGuide,resetIdentity: identity, dispose: () => { identity(); observer.disconnect(); theme.disconnect(); cancelAnimationFrame(frame); style.remove(); surface.remove(); document.removeEventListener('sherlock:notes-capability-activity',capabilityActivity);document.removeEventListener('sherlock:notes-challenge-activity',activity);document.removeEventListener('sherlock:notes-open', open); document.removeEventListener('sherlock:notes-close', close); document.removeEventListener('click', onNativeTabClick, true) } }
 }

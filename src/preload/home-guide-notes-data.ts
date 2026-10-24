@@ -1,5 +1,5 @@
 import type {ChallengeRequest,ChallengeResult,ChallengeIssue} from '../shared/notes-challenge'
-import type {NotesBridge,NoteContent,SavedNote} from '../shared/workspace-notes'
+import type {NotesBridge,NoteContent,SavedNote,NoteLoad} from '../shared/workspace-notes'
 import {challengeReplacementScope} from '../shared/notes-challenge'
 
 export const HOME_NOTES_GUIDE_TITLE='AI算力产业链：从订单增长到利润兑现'
@@ -32,9 +32,10 @@ export function homeNotesGuideChallengeResult(request:ChallengeRequest):Challeng
 }
 
 export type HomeNotesGuideBridge=NotesBridge&{dispose():void}
-/** No fallback IPC exists: the demonstration cannot read or write a user's saved note. */
-export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,beforeReply?:()=>Promise<void>):HomeNotesGuideBridge{
+/** Only this prepared session reaches storage; challenge responses stay local. */
+export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,beforeReply?:()=>Promise<void>,persistence?:{bridge:NotesBridge;fresh:boolean}):HomeNotesGuideBridge{
  let closed=false,saved:SavedNote={title:'',blocks:[],yjs:'',revision:0,updatedAt:Date.now()}
+ let admitted=!persistence
  const jobs=new Map<string,{cancel:()=>void}>()
  const assert=(input:{sessionId?:string})=>{if(closed||signal.aborted)throw signal.reason||new DOMException('演示已结束。','AbortError');if(input?.sessionId!==sessionId)throw Error('演示笔记会话不匹配。')}
  const dispose=()=>{if(closed)return;closed=true;for(const job of jobs.values())job.cancel();jobs.clear();signal.removeEventListener('abort',dispose)}
@@ -42,13 +43,20 @@ export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,b
  return {
   async request(method,input){
    assert(input)
-   if(method==='load')return {saved:structuredClone(saved)}
+   if(method==='load'){
+    if(!persistence)return {saved:structuredClone(saved)}
+    const loaded:NoteLoad=await persistence.bridge.request('load',{sessionId});assert(input)
+    if(persistence.fresh&&(loaded.saved.revision!==0||loaded.saved.title.trim()||loaded.saved.blocks.length||loaded.saved.yjs||loaded.draft))throw Error('此会话已有笔记，请创建新的教程副本。')
+    admitted=true;return loaded
+   }
+   if(persistence&&!admitted)throw Error('请先读取演示笔记。')
    if(method==='save'){
+    if(persistence)return persistence.bridge.request('save',input)
     if(input.revision!==saved.revision)return {status:'conflict',saved:structuredClone(saved)}
     saved={...structuredClone(input.content as NoteContent),revision:saved.revision+1,updatedAt:Date.now()}
     return {status:'saved',saved:structuredClone(saved)}
    }
-   if(method==='engage')return {ok:true}
+   if(method==='engage')return persistence?persistence.bridge.request('engage',input):{ok:true}
    if(method==='challenge-stop'){jobs.get(input.requestId)?.cancel();return {ok:true}}
    if(method==='challenge'){
     const value=input as ChallengeRequest
@@ -63,7 +71,7 @@ export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,b
    }
    throw Error('演示笔记不支持此操作：'+method)
   },
-  async draft(input){assert(input)},
+  async draft(input){assert(input);if(persistence){if(!admitted)throw Error('请先读取演示笔记。');await persistence.bridge.draft(input)}},
   dispose
  }
 }
