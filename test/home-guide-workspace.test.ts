@@ -53,7 +53,10 @@ async function fixture(legacyKind?: string) {
   const domain = new DomainFacility(ctx, { backend: 'json' }); ctx.provide('storageDomain', domain)
   const sessionStore = new SessionStore(ctx)
   new JsonlSessionPersistence(ctx, { root: join(root, 'history'), compression: 'none' })
-  new AgentRegistry(ctx); new LlmRuntime(ctx); new SystemPrompt(ctx, {}); new ToolRuntime(ctx); new SkillRegistry(ctx)
+  new AgentRegistry(ctx)
+  const handles = new Map<string, { dispose(): Promise<void> }>(), createAgent = ctx.agents.create.bind(ctx.agents)
+  ctx.agents.create = async (input: any) => { const handle = await createAgent(input); handles.set(input.sessionId, handle); return handle }
+  new LlmRuntime(ctx); new SystemPrompt(ctx, {}); new ToolRuntime(ctx); new SkillRegistry(ctx)
   new AgentLoop(ctx, { agents: [], maxParallelToolCalls: 1 }); new UserQuestionService(ctx)
   new SessionTitleService(ctx, { fallbackMaxWords: 10, fallbackMaxBytes: 100, maxTitleBytes: 256 })
   const registry = new WorkspaceRegistry(ctx); await registry[Service.init]()
@@ -107,7 +110,7 @@ async function fixture(legacyKind?: string) {
   const reply = async (id: string) => { await expect.poll(() => replies.find(row => row.requestId === id), { timeout: 1500 }).toBeTruthy(); return replies.find(row => row.requestId === id) }
   await Promise.resolve(); await Promise.resolve()
   cleanup.push(async () => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; await win.happyDOM.abort(); await closeHost(); await rm(root, { recursive: true, force: true }) })
-  return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, headers: () => sessionStore.list().map(session => session.header), gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
+  return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, headers: () => sessionStore.list().map(session => session.header), async coldSession(id: string) { await ctx.sessions.flush(ctx.agents.get(SessionId(id))!.session); await handles.get(id)!.dispose() }, gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
 
 it.each(['board', 'note', 'ppt'])('registers a durable Workspace through the production browser transport and binds the same %s session before success', async kind => {
@@ -256,4 +259,14 @@ it('shares a pending current-example binding with an explicit prepare without in
   expect(f.calls.filter(row => row[0] === 'workspace.attach')).toHaveLength(1)
   expect(f.sessions.list.getSnapshot().current).toBe('original')
   expect(f.opened).toEqual([old.sessionId, 'original'])
+})
+
+it.each(['board', 'note', 'ppt'])('binds the same persisted %s example after its Agent has been unloaded', async kind => {
+  const f = await fixture(kind), old = f.legacy!
+  await f.coldSession(old.sessionId)
+  expect(f.ctx.agents.get(SessionId(old.sessionId))).toBeUndefined()
+  const repaired = await f.reply(f.send(kind))
+  expect(repaired).toMatchObject({ ok: true, fresh: false, sessionId: old.sessionId, cwd: old.cwd })
+  expect((await f.registry.resolveByPath(old.cwd))!.sessionIds).toEqual([old.sessionId])
+  expect(f.calls.filter(row => row[0] === 'session.create')).toHaveLength(1)
 })
