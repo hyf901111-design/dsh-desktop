@@ -1,5 +1,5 @@
 import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
-import {capabilityReceiptText} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import {capabilityReceiptText} from '../../../packages/dsh-research-task-runtime/client-capability-receipts.js'
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
 import { BlockNoteSchema, defaultBlockSpecs, createUserStore } from '@blocknote/core'
