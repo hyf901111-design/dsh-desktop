@@ -1,0 +1,420 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-08",
+  "branch": "codex/integration/20261024-08",
+  "baseMainCommit": "71b2670515cc646e6a5143af44d376da2e8201bd",
+  "expectedMainCommit": "71b2670515cc646e6a5143af44d376da2e8201bd",
+  "createdAt": "2026-10-24T01:26:21.100Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "重做首页三条自然教程与持久成果并内置十六页投研PPT",
+        "branch": "codex/feat/home-guide-natural-flow-20261024",
+        "baseCommit": "71b2670515cc646e6a5143af44d376da2e8201bd",
+        "tipCommit": "db94116407a146bc63a21658ae7476162d5720ee",
+        "commits": [
+          {
+            "commit": "7f69ef7f6ed858c28bf4ecfd890b9301c4e21e66",
+            "parents": [
+              "71b2670515cc646e6a5143af44d376da2e8201bd"
+            ],
+            "subject": "将演示教程改为真实会话离线执行与持久文件交付"
+          },
+          {
+            "commit": "07791d26110e91ec04e5c7dfffea9d890a94f1eb",
+            "parents": [
+              "7f69ef7f6ed858c28bf4ecfd890b9301c4e21e66"
+            ],
+            "subject": "持久保存教程示例会话并改善看板原生演示"
+          },
+          {
+            "commit": "fdb45e2c13c3215d340874aaf2bf227fccdb9dce",
+            "parents": [
+              "07791d26110e91ec04e5c7dfffea9d890a94f1eb"
+            ],
+            "subject": "补充投资研报转公司规范PPT的真实教程成稿"
+          },
+          {
+            "commit": "9ca93a2fa4d6c1d4372a5dce74542569ef99d497",
+            "parents": [
+              "fdb45e2c13c3215d340874aaf2bf227fccdb9dce"
+            ],
+            "subject": "修复演示准备取消后残留离线执行器的问题"
+          },
+          {
+            "commit": "67c0304714180b0bfbc955a9d6d29fb4ddbfa67b",
+            "parents": [
+              "9ca93a2fa4d6c1d4372a5dce74542569ef99d497"
+            ],
+            "subject": "完善笔记教程分镜并持久保存正文与挑战记录"
+          },
+          {
+            "commit": "06fcdd5e3c88a76c360134e6e6ed9b0fbf331b81",
+            "parents": [
+              "67c0304714180b0bfbc955a9d6d29fb4ddbfa67b"
+            ],
+            "subject": "修复PPT教程控制条遮挡真实输入并补充浏览器布局验证"
+          },
+          {
+            "commit": "61e2a49ef2c5b78bd52f73dd5e985e4e44647e6f",
+            "parents": [
+              "06fcdd5e3c88a76c360134e6e6ed9b0fbf331b81"
+            ],
+            "subject": "重做首页教程的可读节奏并接入真实示例保存流程"
+          },
+          {
+            "commit": "49492b1aa5d8d329639c8b9c5796532fdf46b4c6",
+            "parents": [
+              "61e2a49ef2c5b78bd52f73dd5e985e4e44647e6f"
+            ],
+            "subject": "修复教程暂停与保存交接时的异步边界"
+          },
+          {
+            "commit": "3d64e273e21d82cfd25bb9d67a78f3facc868164",
+            "parents": [
+              "49492b1aa5d8d329639c8b9c5796532fdf46b4c6"
+            ],
+            "subject": "重做研报附件转公司规范PPT的真实会话教程"
+          },
+          {
+            "commit": "0ddafbf524e6639a2fadd3f7357e28391d7ea4c8",
+            "parents": [
+              "3d64e273e21d82cfd25bb9d67a78f3facc868164"
+            ],
+            "subject": "丰富投资研报教程成稿并补齐三章目录与九张数据图"
+          },
+          {
+            "commit": "db94116407a146bc63a21658ae7476162d5720ee",
+            "parents": [
+              "0ddafbf524e6639a2fadd3f7357e28391d7ea4c8"
+            ],
+            "subject": "修复退出演示瞬间普通续问被预置路由拦截"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/outputs/2026-10-24-home-presentation-assets.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-24-home-tutorial-natural-flow.md"
+          },
+          {
+            "status": "C072",
+            "path": "packages/dsh-research-task-runtime/assets/home-presentation/company-research-briefing.pptx",
+            "previousPath": "skills/efund-ppt-maker/assets/brand/efund-cover-water.jpeg"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-presentation/source-metadata.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-presentation/source-report.pdf"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-presentation-assets.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-packaged-macos.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-timeline.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/challenge-controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/mount.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-strip.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-data.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-adapter.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-patch.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-presentation-shell-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-session.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-timeline.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides-review.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-presentation-assets-package.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-presentation-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-storage.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/ensure-local-dependencies.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip17个聚焦文件125项通过；完整patch pipeline、依赖检查、类型检查与diff检查通过。日志/tmp/home-guide-natural-final-*-20261024.log。",
+            "verifiedCommit": "db94116407a146bc63a21658ae7476162d5720ee",
+            "completedAt": "2026-10-24T01:25:27.614417+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip17个聚焦文件125项通过；完整patch pipeline、依赖检查、类型检查与diff检查通过。日志/tmp/home-guide-natural-final-*-20261024.log。",
+            "verifiedCommit": "db94116407a146bc63a21658ae7476162d5720ee",
+            "completedAt": "2026-10-24T01:25:27.614417+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-timeline.test.ts",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-browser.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-session.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/home-guide-notes-data.test.ts",
+              "test/home-guide-notes-browser.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-adapter.test.ts",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "test/home-presentation-assets-package.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip17个聚焦文件125项通过；完整patch pipeline、依赖检查、类型检查与diff检查通过。日志/tmp/home-guide-natural-final-*-20261024.log。",
+            "verifiedCommit": "db94116407a146bc63a21658ae7476162d5720ee",
+            "completedAt": "2026-10-24T01:25:27.614417+00:00",
+            "timeoutMs": 360000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip17个聚焦文件125项通过；完整patch pipeline、依赖检查、类型检查与diff检查通过。日志/tmp/home-guide-natural-final-*-20261024.log。",
+            "verifiedCommit": "db94116407a146bc63a21658ae7476162d5720ee",
+            "completedAt": "2026-10-24T01:25:27.614417+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip17个聚焦文件125项通过；完整patch pipeline、依赖检查、类型检查与diff检查通过。日志/tmp/home-guide-natural-final-*-20261024.log。",
+            "verifiedCommit": "db94116407a146bc63a21658ae7476162d5720ee",
+            "completedAt": "2026-10-24T01:25:27.614417+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原生真实组件浏览器覆盖看板library/搜索/联动与普通回访，笔记6幕及confirmed save，PPT真实InputBar附件/发送/任务/文件、窄窗控制条几何；正式客户端与内置Office待main构建后核验。公司16页PPT在PowerPoint16.74逐页检查通过。"
+        },
+        "acceptanceCriteria": [
+          "每幕说明目标、定位控件、真实操作、停留结果，可暂停与下一步。",
+          "独立真实session/看板/笔记与PPT成果退出和切页保留，重播创建新副本。",
+          "PPT使用Vanguard官方28页PDF附件和公司技能，交付带3章目录、9图表、6表格的16页可编辑PPT。",
+          "不调用真实模型，预置内容明确示例；退出释放离线路由可正常续问。",
+          "仅干净main本地正式身份构建，不发布、不递增版本、不推送。"
+        ],
+        "risks": [
+          "正式客户端三条完整演示与保存回访尚待本地构建后实际验收。",
+          "独立LibreOffice QA PDF目录分隔线与PowerPoint原生渲染存在差异，PDF非交付物，交付PPTX原生正确。"
+        ],
+        "generatedAt": "2026-10-24T01:25:27.614417+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/ensure-local-dependencies.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-timeline.test.ts",
+        "test/home-guides.test.ts",
+        "test/home-guides-review.test.ts",
+        "test/home-guide-native.test.js",
+        "test/home-guide-native-browser.test.js",
+        "test/home-guide-native-strip.test.js",
+        "test/home-guide-session.test.ts",
+        "test/research-canvas-storage.test.ts",
+        "test/home-guide-notes-data.test.ts",
+        "test/home-guide-notes-browser.test.js",
+        "test/home-guide-notes-shell-browser.test.js",
+        "test/home-presentation-runtime.test.js",
+        "test/home-guide-presentation-browser.test.js",
+        "test/home-guide-presentation-patch.test.js",
+        "test/home-guide-presentation-adapter.test.ts",
+        "test/home-guide-presentation-shell-browser.test.js",
+        "test/home-presentation-assets-package.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 360000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
