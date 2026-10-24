@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-01",
+  "branch": "codex/integration/20261025-01",
+  "baseMainCommit": "e5d52d195ece32ee155cde98491ffdab2eba3ac8",
+  "expectedMainCommit": "e5d52d195ece32ee155cde98491ffdab2eba3ac8",
+  "createdAt": "2026-10-24T16:21:52.821Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复笔记PPT全选边界及教程自动摘要后的文件交付",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "e5d52d195ece32ee155cde98491ffdab2eba3ac8",
+        "tipCommit": "b7a5ef586a167e51018af2ddc0b29cfe0aa2f736",
+        "commits": [
+          {
+            "commit": "d8ed194e3e11fb49a8af553d95f75c30548e1f38",
+            "parents": [
+              "e5d52d195ece32ee155cde98491ffdab2eba3ac8"
+            ],
+            "subject": "隔离离线PPT教程辅助请求避免压缩跳过保存步骤"
+          },
+          {
+            "commit": "b7a5ef586a167e51018af2ddc0b29cfe0aa2f736",
+            "parents": [
+              "d8ed194e3e11fb49a8af553d95f75c30548e1f38"
+            ],
+            "subject": "修复笔记内PPT文本全选越界并保持编辑隔离"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-direct-editor.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-presentation-host.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-presentation-host.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-direct-editor.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-selection-viewport.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-final19-check-0-20261025.log",
+            "verifiedCommit": "b7a5ef586a167e51018af2ddc0b29cfe0aa2f736",
+            "completedAt": "2026-10-24T16:17:06.343Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-final19-check-1-20261025.log",
+            "verifiedCommit": "b7a5ef586a167e51018af2ddc0b29cfe0aa2f736",
+            "completedAt": "2026-10-24T16:17:13.330Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-final19-check-2-20261025.log",
+            "verifiedCommit": "b7a5ef586a167e51018af2ddc0b29cfe0aa2f736",
+            "completedAt": "2026-10-24T16:17:21.303Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-presentation-host.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-presentation-replay.test.js",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-editor-mode.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-final19-check-3-20261025.log",
+            "verifiedCommit": "b7a5ef586a167e51018af2ddc0b29cfe0aa2f736",
+            "completedAt": "2026-10-24T16:18:19.368Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-note-final19-check-4-20261025.log",
+            "verifiedCommit": "b7a5ef586a167e51018af2ddc0b29cfe0aa2f736",
+            "completedAt": "2026-10-24T16:18:19.385Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实NotesApp+实际PPT renderer复现CmdA焦点逃逸；修复后字段全选/输入/保存仅影响PPT且Note JSON不变，Meta/Ctrl/IME/disabled守卫通过。真实Host自动摘要复现教程6/7交付失败；修复后4工具按顺序plan/layout/publish/complete且文件/历史持久，普通provider自动摘要保留。此前main e5正式包Note共享顶底栏、More/底栏及右侧模式按钮和2秒提示已原生核实；本批两修复的原生复验留到canonical构建之后，不伪称已安装。"
+        },
+        "acceptanceCriteria": [
+          "PPT可编辑字段的非IME Cmd/Ctrl+A仅全选本字段并保留焦点，输入粘贴不修改外层笔记。",
+          "离线PPT教程的自动压缩与标题等维护请求不消耗plan/layout/publish/complete序列，不接外部模型，不虚报交付。",
+          "不改变原始研报、受保护5f0最终PPT、普通会话摘要、组件权限和文件边界。",
+          "仅clean canonical main本地正式身份构建验证，不升版本、不公证、不上传、不推送、不运行全功能测试。"
+        ],
+        "risks": [
+          "两处修复还需要正式客户端原生复验后才能宣布用户路径完成。",
+          "间歇性系统鼠标冻结根因仍未证实，不将本次PPT字段快捷键修复当作已解决。"
+        ],
+        "generatedAt": "2026-10-24T16:21:17.692Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-presentation-host.test.js",
+        "test/home-presentation-runtime.test.js",
+        "test/home-presentation-replay.test.js",
+        "test/pptx-direct-editor.test.ts",
+        "test/pptx-selection-viewport.test.js",
+        "test/pptx-editor-mode.test.ts",
+        "test/pptx-editor-ui.test.ts",
+        "test/notes-inline-files.test.tsx",
+        "test/notes-component-interaction.test.tsx",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 300000
+    }
+  ],
+  "mainSynchronizations": []
+}
