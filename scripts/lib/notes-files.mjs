@@ -13,6 +13,7 @@ export function createNoteFileViewStore(doc){
 }
 /** Reuse the authorized research reader; inline documents omit the workbench chrome. */
 export function EWorkNoteFileView({entry,officePreview}){
+ const pptx=useComponentPptxMode(entry.host)
  const [pdfStatus,setPdfStatus]=react.useState(null),[inlineState,setInlineState]=react.useState('loading'),[editing,setEditing]=react.useState(false),[name,setName]=react.useState(entry.node.displayName||entry.node.name),[refresh,setRefresh]=react.useState(0),[menu,setMenu]=react.useState(null),menuRef=react.useRef(null),input=react.useRef(null)
  const action=(action,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-file-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action,...value}}))
  react.useLayoutEffect(()=>{
@@ -44,8 +45,8 @@ export function EWorkNoteFileView({entry,officePreview}){
  const item=(label,icon,click,disabled=false)=>react.createElement('button',{type:'button',role:'menuitem',disabled,onClick:()=>{setMenu(null);click()}},react.createElement(WorkbenchIcon,{name:icon}),label)
  return react.createElement(react.Fragment,null,
   react_dom.createPortal(header,entry.header),
-  react_dom.createPortal(react.createElement('div',{className:'en-file-native-reader',key:refresh},react.createElement(ResearchAttachmentLocalPreview,{item:entry.node,nodeId:entry.node.id,sessionId:entry.node.previewSessionId,visible:true,officePreview,noteDocument:true,onPageStatus:setPdfStatus})),entry.host,entry.instanceId),
-  menu&&react_dom.createPortal(react.createElement('div',{ref:menuRef,role:'menu','aria-label':'文件组件操作',className:'en-file-menu','data-dark':entry.dark,style:menu},item('修改名称','rename',()=>{setName(entry.node.displayName||entry.node.name);setEditing(true)},entry.readOnly),item('在访达中显示','folder',()=>action('reveal')),item('移除文件','remove',()=>action('remove'),entry.readOnly)),document.body)
+  react_dom.createPortal(react.createElement('div',{className:'en-file-native-reader',key:refresh},react.createElement(ResearchAttachmentLocalPreview,{item:entry.node,nodeId:entry.node.id,sessionId:entry.node.previewSessionId,visible:true,officePreview,noteDocument:true,readOnly:entry.readOnly,onPageStatus:setPdfStatus})),entry.host,entry.instanceId),
+  menu&&react_dom.createPortal(react.createElement('div',{ref:menuRef,role:'menu','aria-label':'文件组件操作',className:'en-file-menu','data-dark':entry.dark,style:menu},!entry.readOnly&&pptx?.editable&&item(pptx.mode==='edit'?'关闭编辑模式':'编辑','edit',()=>pptx.toggleMode(),pptx.modeBusy),item('修改名称','rename',()=>{setName(entry.node.displayName||entry.node.name);setEditing(true)},entry.readOnly),item('在访达中显示','folder',()=>action('reveal')),item('移除文件','remove',()=>action('remove'),entry.readOnly)),document.body)
  )
 }
 export function EWorkNoteFileViews({sessionId,active}){

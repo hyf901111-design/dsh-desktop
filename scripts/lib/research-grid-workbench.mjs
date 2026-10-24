@@ -16,6 +16,7 @@ import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runti
 import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../../packages/dsh-research-task-runtime/workbench-scrollbars.js'
 import {noteAssistantDestinationFunction} from './notes-reply-actions.mjs'
 import {createWorkbenchAutoArrangeState,installWorkbenchAutoArrange} from './workbench-auto-arrange.mjs'
+import {patchComponentPptxMode,stripComponentPptxMode} from './component-pptx-mode.mjs'
 const begin='/* EWORK_GRID_WORKBENCH_BEGIN */',end='/* EWORK_GRID_WORKBENCH_END */',meta='/* EWORK_GRID_RESTORE '
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__GRID_DARK__').replaceAll(':root','__GRID_ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
 const toolbarIcons=['link','voice'].map(name=>`body [data-ework-toolbar] .odyssey-global-${name}{background:currentColor!important;mask:center/20px 20px no-repeat url("data:image/svg+xml;base64,${readFileSync(new URL('../../build/figma-canvas-icons/tool-'+name+'.svg',import.meta.url)).toString('base64')}")}`).join('\n')
@@ -33,6 +34,7 @@ const workbenchIcons=workbenchIconNames.map(name=>{
 const modeIcons=['light','dark','openterminal','enterprise'].map(name=>'.ew-workbench-mode-'+name+'{mask-image:url("data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/mode-'+name+'.svg',import.meta.url)).toString('base64')+'")}').join('\n')
 const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+'body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
 export function restoreResearchGridWorkbench(source){
+  source=stripComponentPptxMode(source)
   const start=source.indexOf(begin);if(start<0)return source
   const finish=source.indexOf(end,start),a=source.indexOf(meta,finish),b=source.lastIndexOf(' */')
   if(finish<0||a<0||b<0)throw Error('Incomplete workbench patch')
@@ -236,5 +238,5 @@ export function patchResearchGridWorkbench(source){
     const localized=name==='ResearchCanvasFrameMenu'?after.replace('workbenchText("从画布移除")','workbenchText(node.noteDocument?"从笔记移除":"从画布移除")'):name==='ResearchAssistantCanvasAction'&&before.includes('/* ework:note-assistant-destination:v1 */')?after.replaceAll('(notes?"添加到笔记":workbenchText("添加到画布"))','workbenchText(notes?"添加到笔记":"添加到画布")'):after
     change(before,localized)
   }
-  return source+'\n'+meta+JSON.stringify(changes).replaceAll('*/','*\\/')+' */'
+  return patchComponentPptxMode(source+'\n'+meta+JSON.stringify(changes).replaceAll('*/','*\\/')+' */')
 }
