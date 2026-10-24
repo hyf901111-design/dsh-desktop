@@ -141,6 +141,82 @@
           "间歇性系统鼠标冻结根因仍未证实，不将本次PPT字段快捷键修复当作已解决。"
         ],
         "generatedAt": "2026-10-24T16:21:17.692Z"
+      },
+      "merged": {
+        "mergeCommit": "f2900607568f860c454154af31d2fb6e1ba9de9c",
+        "verificationCommit": "f2900607568f860c454154af31d2fb6e1ba9de9c",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "f2900607568f860c454154af31d2fb6e1ba9de9c",
+            "completedAt": "2026-10-24T16:27:53.121Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "f2900607568f860c454154af31d2fb6e1ba9de9c",
+            "completedAt": "2026-10-24T16:27:53.121Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "f2900607568f860c454154af31d2fb6e1ba9de9c",
+            "completedAt": "2026-10-24T16:27:53.121Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-presentation-host.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-presentation-replay.test.js",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-editor-mode.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-presentation-host.test.js test/home-presentation-runtime.test.js test/home-presentation-replay.test.js test/pptx-direct-editor.test.ts test/pptx-selection-viewport.test.js test/pptx-editor-mode.test.ts test/pptx-editor-ui.test.ts test/notes-inline-files.test.tsx test/notes-component-interaction.test.tsx --maxWorkers=2",
+            "verifiedCommit": "f2900607568f860c454154af31d2fb6e1ba9de9c",
+            "completedAt": "2026-10-24T16:27:53.121Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "f2900607568f860c454154af31d2fb6e1ba9de9c",
+            "completedAt": "2026-10-24T16:27:53.121Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-10-24T16:27:53.121Z"
       }
     }
   ],
