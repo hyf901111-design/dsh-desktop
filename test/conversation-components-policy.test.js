@@ -207,3 +207,24 @@ describe('file-document deliverables keep authored file execution rather than UI
   h.dispose()
  })
 })
+
+describe('conversation components follow the public explanation flow',()=>{
+ for(const mode of [null,'conversation'])it(`guides natural introduction, immediate creation and following prose in ${mode??'catalog-first'} mode`,()=>{
+  const s=session('请按顺序解释预算差异，展示两张原生表格组件，并在各表后分析原因。');if(mode)catalog(s,mode);const h=harness(s)
+  try{
+   const prompt=h.prompt()
+   expect(prompt).toContain('先用简短自然的公开文字引出组件，再在对应的信息位置立即创建')
+   expect(prompt).toContain('保存成功后继续解释该组件或展开后续正文')
+   expect(prompt).toContain('多个组件按论述顺序逐个交付')
+   expect(prompt).toContain('不要等整篇回答结束后再集中创建')
+   expect(prompt).toContain('面向用户的正文不展示工具名、requestId、manifest或协议标签')
+   expect(prompt).toContain('只依据真实成功回执说明已交付')
+   expect(prompt.match(/多个组件按论述顺序逐个交付/g)).toHaveLength(1)
+   expect(h.startSubagent).not.toHaveBeenCalled()
+  }finally{h.dispose()}
+ })
+ for(const mode of ['research','notes'])it(`keeps ${mode} delivery guidance independent of conversation prose placement`,()=>{
+  const s=session('请生成一张预算表格组件');catalog(s,mode);const h=harness(s)
+  try{expect(h.prompt()).not.toContain('多个组件按论述顺序逐个交付')}finally{h.dispose()}
+ })
+})
