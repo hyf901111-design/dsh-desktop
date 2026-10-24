@@ -19,7 +19,7 @@ export function conversationComponentReceiptManifests(nodes,sessionId,readTurn=c
   const pending=[node.data?.root],seen=new Set(),turn=readTurn(node)
   while(pending.length&&seen.size<128){
    const root=pending.pop();if(!root||typeof root!=='object'||seen.has(root))continue;seen.add(root)
-   if(Array.isArray(root.subCalls))pending.push(...root.subCalls)
+   if(Array.isArray(root.subCalls))pending.push(...root.subCalls.slice().reverse())
    if(root.kind!=='tool-result'||root.call?.name!=='client_action')continue
    let call;try{if(typeof root.call.argsRaw!=='string'||root.call.argsRaw.length>1500000)continue;call=JSON.parse(root.call.argsRaw)}catch{continue}
    if(call?.capability!=='conversation.components.create'||typeof call.requestId!=='string')continue
@@ -42,27 +42,55 @@ export function conversationComponentReceiptManifests(nodes,sessionId,readTurn=c
 }
 
 export function conversationComponentReceiptAnchors(flow,nodeStore,sessionId,readTurn=conversationComponentNodeTurn){
- const anchors=new Map(),owners=new Map(),tails=new Map(),scopes=new Map();let scope=0
+ const anchors=new Map(),owners=new Set()
  for(const entry of flow??[]){
-  const node=entry.kind==='node'?nodeStore?.get?.(entry.key):null
-  if(entry.kind==='pending-steering'||['user','steering'].includes(node?.kind))scope++
-  scopes.set(entry.key,scope)
-  if(entry.kind!=='execution'&&!['assistant-step','turn-tail','turn-error','turn-max-tokens'].includes(node?.kind))continue
-  if(entry.kind==='execution'&&!entry.nodeKeys?.length)continue
-  const turn=entry.kind==='execution'?entry.turn:readTurn(node)
-  if(turn==null)continue
-  const group=tails.get(scope)??new Map();group.set(String(turn),entry.key);tails.set(scope,group)
- }
- for(const entry of flow??[]){
-  const nodes=(entry.kind==='execution'?entry.nodeKeys:entry.kind==='node'?[entry.key]:[]).map(key=>nodeStore?.get?.(key))
-  for(const manifest of conversationComponentReceiptManifests(nodes,sessionId,readTurn)){
-   if(entry.kind==='execution'&&entry.turn!=null&&manifest.turnId!==String(entry.turn))continue
-   if(owners.has(manifest.componentId))continue
-   const anchor=tails.get(scopes.get(entry.key))?.get(manifest.turnId)??entry.key,items=anchors.get(anchor)??[]
-   owners.set(manifest.componentId,anchor);items.push(manifest);anchors.set(anchor,items)
+  for(const key of entry.kind==='execution'?entry.nodeKeys??[]:entry.kind==='node'?[entry.key]:[]){
+   for(const manifest of conversationComponentReceiptManifests([nodeStore?.get?.(key)],sessionId,readTurn)){
+    if(entry.kind==='execution'&&entry.turn!=null&&manifest.turnId!==String(entry.turn)||owners.has(manifest.componentId))continue
+    owners.add(manifest.componentId);const items=anchors.get(key)??[];items.push(manifest);anchors.set(key,items)
+   }
   }
  }
  return anchors
+}
+
+// Native compaction normally hides short intermediate public steps in one
+// execution group. A genuine saved receipt makes that turn a narrative stream:
+// preserve native node order, expose public blocks, and insert each card at its
+// immutable tool-call node. No generated/model-provided anchor is trusted.
+export function conversationComponentRenderFlow(flow,nodeStore,sessionId,readTurn=conversationComponentNodeTurn){
+ const anchors=conversationComponentReceiptAnchors(flow,nodeStore,sessionId,readTurn)
+ if(!anchors.size)return flow
+ const scopes=new Map(),componentScopes=new Set();let scope=0
+ for(const entry of flow??[]){
+  const node=entry.kind==='node'?nodeStore?.get?.(entry.key):null
+  if(entry.kind==='pending-steering'||['user','steering'].includes(node?.kind))scope++
+  scopes.set(entry,scope)
+  for(const key of entry.kind==='execution'?entry.nodeKeys??[]:entry.kind==='node'?[entry.key]:[]){
+   for(const manifest of anchors.get(key)??[])componentScopes.add(scope+':'+manifest.turnId)
+  }
+ }
+ const result=[],rendered=new Set()
+ const publicStep=node=>node?.kind==='assistant-step'&&node.data?.blocks?.some(block=>block?.kind==='image'||block?.kind==='text'&&typeof block.text==='string'&&block.text.trim())
+ const cards=key=>{for(const manifest of anchors.get(key)??[]){if(rendered.has(manifest.componentId))continue;rendered.add(manifest.componentId);result.push({kind:'conversation-component',key:'conversation-component:'+manifest.componentId,manifests:[manifest]})}}
+ for(const entry of flow??[]){
+  const ownScope=scopes.get(entry)
+  if(entry.kind==='execution'&&(componentScopes.has(ownScope+':'+entry.turn)||entry.nodeKeys?.some(key=>anchors.has(key)))){
+   let keys=[]
+   const flush=()=>{if(!keys.length)return;const nodeKeys=keys;keys=[];const running=Boolean(entry.running&&nodeKeys.some(key=>{const node=nodeStore?.get?.(key);return node?.kind==='tool-call'&&!node.data?.root?.kind||node?.kind==='compaction'&&node.data?.running===true||node?.data?.status==='running'}));result.push({...entry,key:entry.key+':component-segment:'+nodeKeys[0],nodeKeys,running})}
+   for(const key of entry.nodeKeys??[]){
+    const node=nodeStore?.get?.(key)
+    if(publicStep(node)){flush();result.push({kind:'node',key,conversationComponentPublic:true})}else keys.push(key)
+    if(anchors.has(key)){flush();cards(key)}
+   }
+   flush()
+  }else{
+   const node=entry.kind==='node'?nodeStore?.get?.(entry.key):null
+   result.push(publicStep(node)&&componentScopes.has(ownScope+':'+readTurn(node))?{...entry,conversationComponentPublic:true}:entry)
+   if(entry.kind==='node')cards(entry.key)
+  }
+ }
+ return result
 }
 
 export function conversationComponentCopyAllowed(root,event){
@@ -165,18 +193,29 @@ export function ConversationComponentCard({sessionId,manifest}){
  ]})
 }
 export function ConversationComponentsReply({sessionId,manifests}){
- return react_jsx_runtime.jsx('div',{className:'ew-conversation-components-reply',children:manifests.map(manifest=>react_jsx_runtime.jsx(ConversationComponentCard,{sessionId,manifest},sessionId+':'+manifest.componentId))})
+ const key='conversation-component:'+manifests.map(manifest=>manifest.componentId).join(':')
+ return react_jsx_runtime.jsx('div',{className:'ew-conversation-components-reply','data-chat-anchor-key':key,'data-chat-flow-key':key,'data-chat-flow-kind':'conversation-component',children:manifests.map(manifest=>react_jsx_runtime.jsx(ConversationComponentCard,{sessionId,manifest},sessionId+':'+manifest.componentId))})
 }
 
 export function stripConversationComponents(source){
- const marker='/* ework:conversation-components:v1 */',owned=['function ConversationComponentCard(','function ConversationComponentsReply(','conversationComponentSessionId:id']
- if(!source.includes(marker)){if(owned.some(anchor=>source.includes(anchor)))throw Error('Conversation component partial installed anchor drifted');return source}
+ const markers=['/* ework:conversation-components:v1 */','/* ework:conversation-components:v2 */'].filter(marker=>source.includes(marker)),owned=['function ConversationComponentCard(','function ConversationComponentsReply(','conversationComponentSessionId:id']
+ if(!markers.length){if(owned.some(anchor=>source.includes(anchor)))throw Error('Conversation component partial installed anchor drifted');return source}
+ if(markers.length!==1)throw Error('Conversation component installed version anchor ambiguous')
+ const marker=markers[0],streaming=marker.includes(':v2 ')
  for(const anchor of [marker,...owned])if(source.split(anchor).length!==2)throw Error('Conversation component installed anchor missing or ambiguous: '+anchor)
  const tail='const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];'
  const installedTail='const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key),componentManifests=conversationComponentAnchors.get(entry.key);return [...(receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry]),...(componentManifests?.length?[react_jsx_runtime.jsx(ConversationComponentsReply,{sessionId,manifests:componentManifests},sessionId+":components:"+entry.key)]:[])];'
- const replacements=[
+ const replacements=[...(streaming?[
+  ['const conversationComponentChat=useSession(snapshot=>snapshot.chat);const conversationComponentFlow=react.useMemo(()=>conversationComponentRenderFlow(renderFlow,nodeStore,sessionId,conversationNodeTurn),[renderFlow,nodeStore,sessionId,conversationComponentChat]);\n',''],
+  ['conversationComponentFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{if(entry.kind==="conversation-component")return react_jsx_runtime.jsx(ConversationComponentsReply,{sessionId,manifests:entry.manifests},entry.key);','renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{'],
+  ['nodeKey: entry.key, conversationComponentPublic:entry.conversationComponentPublic===true,\n','nodeKey: entry.key,\n'],
+  ['function ChatNodeSeat({ nodeKey, conversationComponentPublic=false,','function ChatNodeSeat({ nodeKey,'],
+  ['const conversationComponentNode = useSession((snapshot) => snapshot.chat.nodes.get(nodeKey));\nconst node=react.useMemo(()=>conversationComponentPublic&&conversationComponentNode?.kind==="assistant-step"?{...conversationComponentNode,data:{...conversationComponentNode.data,blocks:conversationComponentNode.data.blocks.filter(block=>block.kind==="text"||block.kind==="image")}}:conversationComponentNode,[conversationComponentNode,conversationComponentPublic]);','const node = useSession((snapshot) => snapshot.chat.nodes.get(nodeKey));'],
+  [tail,tail]
+ ]:[
   ['const conversationComponentAnchors=conversationComponentReceiptAnchors(renderFlow,nodeStore,sessionId,conversationNodeTurn);\n',''],
-  [installedTail,tail],
+  [installedTail,tail]
+ ]),
   ['function projectUserText(text, openFile) {\nconst componentProjection=projectConversationComponentUserText(text,openFile);if(componentProjection!==null)return componentProjection;','function projectUserText(text, openFile) {'],
   ['const inputHub = new InputHub(ctx, t, researchWorkspaces);\nctx.effect(()=>{const binding={inputHub,sessions};conversationComponentInputs=binding;return()=>{if(conversationComponentInputs===binding)conversationComponentInputs=null}},"Conversation component input binding");','const inputHub = new InputHub(ctx, t, researchWorkspaces);'],
   ['\ninputScope.effect(() => inputScope.inputTriggers.registerSource(conversationComponentReferenceSource()), "ui-conversation: Conversation component references");',''],
@@ -190,22 +229,28 @@ export function stripConversationComponents(source){
 }
 
 export function patchConversationComponents(source){
- const marker='/* ework:conversation-components:v1 */'
+ const marker='/* ework:conversation-components:v2 */'
  source=stripConversationComponents(source)
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Conversation component anchor missing or ambiguous: '+before.slice(0,100));source=source.replace(before,after)}
- const helpers=[parseConversationComponentManifest,parseConversationComponentReference,...Object.values(references),conversationComponentNodeTurn,conversationComponentReceiptManifests,conversationComponentReceiptAnchors,conversationComponentCopyAllowed,installConversationComponentCopy,conversationComponentError,ConversationComponentCard,ConversationComponentsReply].map(fn=>fn.toString()).join('\n')
+ const helpers=[parseConversationComponentManifest,parseConversationComponentReference,...Object.values(references),conversationComponentNodeTurn,conversationComponentReceiptManifests,conversationComponentReceiptAnchors,conversationComponentRenderFlow,conversationComponentCopyAllowed,installConversationComponentCopy,conversationComponentError,ConversationComponentCard,ConversationComponentsReply].map(fn=>fn.toString()).join('\n')
  const css=readFileSync(new URL('./conversation-components.css',import.meta.url),'utf8')+'\n'+WORKBENCH_TABLE_COLUMNS_CSS.replaceAll('body ','body .ew-conversation-component ')
  exact('const ExecutionStatusGroup =',marker+'\nlet conversationComponentInputs=null;\n'+helpers+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-conversation-components-style");if(!style){style=document.createElement("style");style.id="ework-conversation-components-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(css)+';}\nconst ExecutionStatusGroup =')
  const start=source.indexOf('function ChatView('),end=source.indexOf('//#region lib/types/client/contract/slots.js',start)
  if(start<0||end<0)throw Error('Conversation component ChatView anchor missing')
  let chat=source.slice(start,end)
+// The SDK node store mutates in place on a live tool result. Subscribe to the
+ // immutable chat snapshot so ready receipts publish before another step arrives.
  const seat='const seatProps = (0, react.useMemo)'
  if(chat.split(seat).length!==2)throw Error('Conversation component ChatView seat anchor missing')
- chat=chat.replace(seat,'const conversationComponentAnchors=conversationComponentReceiptAnchors(renderFlow,nodeStore,sessionId,conversationNodeTurn);\n'+seat)
+ chat=chat.replace(seat,'const conversationComponentChat=useSession(snapshot=>snapshot.chat);const conversationComponentFlow=react.useMemo(()=>conversationComponentRenderFlow(renderFlow,nodeStore,sessionId,conversationNodeTurn),[renderFlow,nodeStore,sessionId,conversationComponentChat]);\n'+seat)
  const tail='const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];'
  if(chat.split(tail).length!==2)throw Error('Conversation component receipt tail anchor missing')
- chat=chat.replace(tail,'const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key),componentManifests=conversationComponentAnchors.get(entry.key);return [...(receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry]),...(componentManifests?.length?[react_jsx_runtime.jsx(ConversationComponentsReply,{sessionId,manifests:componentManifests},sessionId+":components:"+entry.key)]:[])];')
+ const flow='renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{',node='nodeKey: entry.key,\n'
+ if(chat.split(flow).length!==2||chat.split(node).length!==2)throw Error('Conversation component render flow anchor missing or ambiguous')
+ chat=chat.replace(flow,'conversationComponentFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{if(entry.kind==="conversation-component")return react_jsx_runtime.jsx(ConversationComponentsReply,{sessionId,manifests:entry.manifests},entry.key);').replace(node,'nodeKey: entry.key, conversationComponentPublic:entry.conversationComponentPublic===true,\n')
  source=source.slice(0,start)+chat+source.slice(end)
+ exact('function ChatNodeSeat({ nodeKey,','function ChatNodeSeat({ nodeKey, conversationComponentPublic=false,')
+ exact('const node = useSession((snapshot) => snapshot.chat.nodes.get(nodeKey));','const conversationComponentNode = useSession((snapshot) => snapshot.chat.nodes.get(nodeKey));\nconst node=react.useMemo(()=>conversationComponentPublic&&conversationComponentNode?.kind==="assistant-step"?{...conversationComponentNode,data:{...conversationComponentNode.data,blocks:conversationComponentNode.data.blocks.filter(block=>block.kind==="text"||block.kind==="image")}}:conversationComponentNode,[conversationComponentNode,conversationComponentPublic]);')
  exact('function projectUserText(text, openFile) {','function projectUserText(text, openFile) {\nconst componentProjection=projectConversationComponentUserText(text,openFile);if(componentProjection!==null)return componentProjection;')
  exact('const inputHub = new InputHub(ctx, t, researchWorkspaces);','const inputHub = new InputHub(ctx, t, researchWorkspaces);\nctx.effect(()=>{const binding={inputHub,sessions};conversationComponentInputs=binding;return()=>{if(conversationComponentInputs===binding)conversationComponentInputs=null}},"Conversation component input binding");')
  exact('inputScope.effect(() => inputScope.inputTriggers.registerSource(researchArtifactInputSource), "ui-conversation: Research inline assistant references");','inputScope.effect(() => inputScope.inputTriggers.registerSource(researchArtifactInputSource), "ui-conversation: Research inline assistant references");\ninputScope.effect(() => inputScope.inputTriggers.registerSource(conversationComponentReferenceSource()), "ui-conversation: Conversation component references");')
