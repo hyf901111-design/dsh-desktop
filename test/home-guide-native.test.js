@@ -70,6 +70,11 @@ it('rejects unknown commands and a host outside the matching center tutorial wit
  expect(f.doc.querySelector('[data-home-guide-native]')).toBeNull()
  expect(f.liveCalls()).toBe(0)
 })
+it('does not add a separate explanatory label above the real board',async()=>{
+ const f=await fixture();expect((await f.command('mount-board')).ok).toBe(true)
+ expect(f.doc.querySelector('[data-home-guide-native]')).not.toBeNull()
+ expect(f.doc.querySelector('[data-home-guide-sample-label]')).toBeNull()
+})
 it('uses actual native components and offline links, then unmounts only the owned tutorial',async()=>{
  const f=await fixture(),input=f.doc.querySelector('textarea')
  await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))

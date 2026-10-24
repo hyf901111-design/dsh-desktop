@@ -9,6 +9,14 @@ import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../script
 
 const installed=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
 const withoutPresentation=source=>presentation.stripHomeGuidePresentationNative(source)
+it.each([false,true])('preserves the native PPT chat page for hero=%s while retaining board/note guide pages',hero=>{
+ const patched=guide.patchHomeGuideNative(withoutPresentation(installed)),matches=[...patched.matchAll(/"data-odyssey-page": ([^\n]+),/g)]
+ expect(matches).toHaveLength(1)
+ const page=new Function('homeGuideResident','research','hero','activeView','return '+matches[0][1])
+ expect(page(true,false,hero,'chat')).toBe(hero?'home':'conversation')
+ expect(page(true,true,hero,'research')).toBe('guide');expect(page(true,false,hero,'notes')).toBe('guide')
+ expect(page(false,true,hero,'research')).toBe('research');expect(page(false,false,hero,'chat')).toBe(hero?'home':'conversation')
+})
 it('exposes a strict inverse that leaves an unpatched native source unchanged',()=>{
  expect(typeof guide.stripHomeGuideNative).toBe('function')
  expect(guide.stripHomeGuideNative('function ConversationRoot() {}')).toBe('function ConversationRoot() {}')
@@ -24,12 +32,15 @@ it('restores the exact native source before earlier patches refresh and is a no-
  expect(guide.stripHomeGuideNative('const ordinary = 1;')).toBe('const ordinary = 1;')
  new Script(native)
 })
-it('upgrades the previous resident effect and still restores the native activation effect exactly',()=>{
+it.each([1,2,3])('upgrades resident v%s and still restores the native activation effect exactly',version=>{
  const current=guide.patchHomeGuideNative(withoutPresentation(installed))
  const legacyEffect='(0, react.useEffect)(() => {\n\t\t\t\tif (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tif (!homeGuideNativeResidentSession(sessionId,subagentPanel)) setResearchActive(sessionId, false);\n\t\t\t\t};\n\t\t\t}, [research, homeGuideResident, sessionId, setResearchActive]);'
- const legacy=current.replace('/* odyssey:home-guide-resident-isolation:v3 */','/* odyssey:home-guide-resident-isolation:v1 */').replace('useHomeGuideNativeResearchActivation(sessionId,research,homeGuideResident,setResearchActive);',legacyEffect).replace('useHomeGuideNativeResident(sessionId,false,rootRef)','useHomeGuideNativeResident(sessionId)').replace('if (homeGuideNativeResidentSession(sessionId)) return;\n\t\t\t\tconst beforeDraft', 'const beforeDraft')
+ let legacy=current.replace('/* odyssey:home-guide-resident-isolation:v4 */','/* odyssey:home-guide-resident-isolation:v'+version+' */').replace('homeGuideResident && (research || activeView === "notes") ? "guide"','homeGuideResident ? "guide"')
+ if(version===1)legacy=legacy.replace('useHomeGuideNativeResearchActivation(sessionId,research,homeGuideResident,setResearchActive);',legacyEffect)
+ if(version<=2)legacy=legacy.replace('useHomeGuideNativeResident(sessionId,false,rootRef)','useHomeGuideNativeResident(sessionId)').replace('if (homeGuideNativeResidentSession(sessionId)) return;\n\t\t\t\tconst beforeDraft','const beforeDraft')
  new Script(legacy)
  expect(guide.patchHomeGuideNative(legacy)).toBe(current)
+ expect(guide.patchHomeGuideNative(guide.patchHomeGuideNative(legacy))).toBe(current)
  expect(guide.stripHomeGuideNative(legacy)).toBe(guide.stripHomeGuideNative(current))
  expect(guide.stripHomeGuideNative(current)).not.toContain('useHomeGuideNativeResearchActivation')
 })
