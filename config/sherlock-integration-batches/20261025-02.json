@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-02",
+  "branch": "codex/integration/20261025-02",
+  "baseMainCommit": "b3c52e6ec7aa9cfa24c27b6e23cbc4280cf88051",
+  "expectedMainCommit": "b3c52e6ec7aa9cfa24c27b6e23cbc4280cf88051",
+  "createdAt": "2026-10-24T17:34:59.971Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复自动上下文压缩结束导致最终回复和交付卡片停止刷新",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "b3c52e6ec7aa9cfa24c27b6e23cbc4280cf88051",
+        "tipCommit": "141b59c455905bab97b5a2b1db3e4eb794cc39dd",
+        "commits": [
+          {
+            "commit": "3cfde44a4579512b72405c95f046631d3bf1712e",
+            "parents": [
+              "b3c52e6ec7aa9cfa24c27b6e23cbc4280cf88051"
+            ],
+            "subject": "修复失败上下文压缩撤回节点导致对话停止刷新"
+          },
+          {
+            "commit": "141b59c455905bab97b5a2b1db3e4eb794cc39dd",
+            "parents": [
+              "3cfde44a4579512b72405c95f046631d3bf1712e"
+            ],
+            "subject": "接入对话压缩终态修复以恢复最终回复和文件卡片刷新"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-compaction-lifecycle.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-compaction-lifecycle.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-stream-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-compaction-final20-check-0-20261025.log",
+            "verifiedCommit": "141b59c455905bab97b5a2b1db3e4eb794cc39dd",
+            "completedAt": "2026-10-24T17:30:34.336Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-compaction-final20-check-1-20261025.log",
+            "verifiedCommit": "141b59c455905bab97b5a2b1db3e4eb794cc39dd",
+            "completedAt": "2026-10-24T17:30:41.489Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-compaction-final20-check-2-20261025.log",
+            "verifiedCommit": "141b59c455905bab97b5a2b1db3e4eb794cc39dd",
+            "completedAt": "2026-10-24T17:30:49.371Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-presentation-host.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-presentation-replay.test.js",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-editor-mode.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-component-interaction.test.tsx",
+              "test/conversation-compaction-lifecycle.test.js",
+              "test/conversation-component-stream-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-compaction-final20-check-3-20261025.log",
+            "verifiedCommit": "141b59c455905bab97b5a2b1db3e4eb794cc39dd",
+            "completedAt": "2026-10-24T17:32:08.953Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-compaction-final20-check-4-20261025.log",
+            "verifiedCommit": "141b59c455905bab97b5a2b1db3e4eb794cc39dd",
+            "completedAt": "2026-10-24T17:32:08.972Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实正式b3客户端PPT教程已成功保存并打开右屏但消息流停在压缩结束。真实公开事件236条投影精确复现无checkpoint end撤回已发布chat key异常；最小修复后全部到235并出现final232和turn-tail232.1/runningfalse。真实resident SessionRuntime+browser失败/成功压缩终态后续终稿/2文件卡/reload回归通过，源完整pipeline两遍及11文件133项/typecheck通过。最终正式安装native验收待本批clean main构建后，不伪称已安装。"
+        },
+        "acceptanceCriteria": [
+          "压缩start已发布chat key时，无checkpoint end保留原key隐藏终态与runningfalse，未开始不凭空创建节点。",
+          "保留checkpoint与自动摘要和assembler稳定key边界，后续最终回复、真正任务结束状态、文件快捷卡正常更新。",
+          "严格补丁只适配已知单一anchor，拒绝partial/duplicate/tamper，实际resident安装两次仍幂等。",
+          "不变更PPT原件/预置资产/其他组件权限；仅clean canonical main本地构建，不升版本、不公证、不上传、不推送、不全功能测试。"
+        ],
+        "risks": [
+          "仍需新正式包中的实际新教程live生成到终稿/尾卡/native idle，而非仅重开已有历史。",
+          "此前系统鼠标间歇冻结无已证实根因；本次修复仅对话压缩投影，不能宣称一并解决。"
+        ],
+        "generatedAt": "2026-10-24T17:34:19.820Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-presentation-host.test.js",
+        "test/home-presentation-runtime.test.js",
+        "test/home-presentation-replay.test.js",
+        "test/pptx-direct-editor.test.ts",
+        "test/pptx-selection-viewport.test.js",
+        "test/pptx-editor-mode.test.ts",
+        "test/pptx-editor-ui.test.ts",
+        "test/notes-inline-files.test.tsx",
+        "test/notes-component-interaction.test.tsx",
+        "test/conversation-compaction-lifecycle.test.js",
+        "test/conversation-component-stream-browser.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 300000
+    }
+  ],
+  "mainSynchronizations": []
+}
