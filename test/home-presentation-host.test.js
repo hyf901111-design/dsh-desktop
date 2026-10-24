@@ -20,7 +20,7 @@ it('runs the preset through the actual registered Workspace, host API, integrati
  await f.ctx.sessions.flush(f.agent.session)
  const saved=await f.ctx.sessionPersistence.loadStored(f.agent.id)
  expect(saved.events.some(e=>e.type==='todo/write')).toBe(true)
- expect(JSON.stringify(saved.events)).toContain('原研报、PPT和制作记录均已保存')
+ expect(JSON.stringify(saved.events)).toContain('关键图表与来源标注已保留')
  const history=await f.request(f.api.sessions.history,{sessionId:f.agent.id,maxMessages:100})
  expect(JSON.stringify(history.events)).toContain('人工智能周期与资产配置.pptx')
  await f.prompt('演示结束后继续普通会话');await f.agent.whenIdle();expect(f.outside).toHaveLength(1)

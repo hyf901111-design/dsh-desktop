@@ -32,12 +32,13 @@ it('uses the real agent loop, native todo/tool events and durable editable file 
  const assistantText=events.filter(e=>e.type==='assistant/message').flatMap(e=>e.data.message.content??[]).filter(block=>block.type==='text').map(block=>block.text).join('\n')
  expect(assistantText.split('\n').filter(line=>/^\d+\./u.test(line))).toHaveLength(f.metadata.chapters.length)
  expect(assistantText).not.toContain(f.metadata.pageOutline.map(page=>page.slide+'. '+page.title).join('\n'))
- expect(JSON.stringify(events)).toContain('离线预制')
+ expect(assistantText).not.toMatch(/离线|预置|回放|不调用模型/u)
+ expect(events.some(e=>e.type==='home-guide/presentation'&&e.data.purpose==='offline-investment-report-presentation')).toBe(true)
  expect(JSON.stringify(events)).toContain('人工智能周期与资产配置.pptx')
  expect(await readFile(join(f.cwd,'人工智能周期与资产配置.pptx'))).toEqual(f.bytes)
  const persisted=await f.ctx.sessionPersistence.inspect('demo')
  expect(persisted.events.filter(e=>e.type==='assistant/message').length).toBeGreaterThan(0)
- expect(JSON.stringify(persisted.events)).toContain('原研报、PPT和制作记录均已保存')
+ expect(JSON.stringify(persisted.events)).toContain('关键图表与来源标注已保留')
  const outsider=await f.create('outside-session');outsider.followup(createUserMessage({content:[{type:'text',text:'正常会话'}],source:{kind:'user'}}));await outsider.whenIdle()
  expect(f.outside).toHaveLength(1)
 })
@@ -129,11 +130,11 @@ it('preserves a changed source attachment and refuses to publish a mismatched re
  await expect(readFile(join(f.cwd,'人工智能周期与资产配置.pptx'))).rejects.toThrow()
  expect(f.outside).toEqual([])
 })
-it('derives the report-to-PPT brief from the delivered page count and asks for substantive evidence and a company-standard contents page',()=>{
+it('uses one natural sentence with the actual delivered page count and key charts',()=>{
  expect(mod.createHomePresentationBrief).toBeTypeOf('function')
  const brief=mod.createHomePresentationBrief({presentationSlides:16})
  expect(brief).toContain('16页');expect(brief).not.toContain('8页')
- expect(brief).toContain('目录');expect(brief).toContain('图表');expect(brief).toContain('数据');expect(brief).toContain('研究观点')
+ expect(brief).toContain('关键图表');expect(brief).toContain('主要观点');expect(brief).not.toContain('\n');expect(brief.length).toBeLessThan(80)
 })
 
 it('keeps the preset offline even when the ordinary host model-selection waterfall is installed first',async()=>{
