@@ -1,4 +1,4 @@
-import {describe,expect,it} from 'vitest'
+import {describe,expect,it,vi} from 'vitest'
 import {HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_GUIDE_TITLE,createHomeNotesGuideBridge,homeNotesGuideChallengeResult} from '../src/preload/home-guide-notes-data'
 import {challengeDocumentBlocks} from '../src/preload/notes/challenge-scheduler'
 import {challengeReplacementScope,challengeReplacementBody} from '../src/shared/notes-challenge'
@@ -51,6 +51,21 @@ describe('homepage note example data and isolated bridge',()=>{
  it('cancels pending review on disposal without returning late results',async()=>{
   const abort=new AbortController(),bridge=createHomeNotesGuideBridge(sessionId,abort.signal),pending=bridge.request('challenge',review())
   bridge.dispose();await expect(pending).rejects.toThrow()
+ })
+ it('keeps review and optimization busy for the private playback clock and cancels its pending wait',async()=>{
+  const pauses:number[]=[],releases:Array<()=>void>=[]
+  const wait=(ms:number)=>{pauses.push(ms);return new Promise<void>(resolve=>releases.push(resolve))}
+  const bridge=createHomeNotesGuideBridge(sessionId,new AbortController().signal,undefined,undefined,wait)
+  let settled=false
+  const first=bridge.request('challenge',review()).then(value=>{settled=true;return value})
+  await vi.waitFor(()=>expect(pauses).toEqual([2000]))
+  expect(settled).toBe(false);releases.shift()!();expect((await first).issues).toHaveLength(3)
+  const request=review(),issue=homeNotesGuideChallengeResult(request).issues[0]!
+  const next=bridge.request('challenge',{...request,requestId:'optimize-clock',action:'optimize',thread:{...issue,messages:[]}})
+  await vi.waitFor(()=>expect(pauses).toEqual([2000,1700]))
+  const rejected=expect(next).rejects.toThrow()
+  bridge.dispose();await rejected
+  releases.shift()!();await Promise.resolve()
  })
  it('persists full document and challenge metadata through the real NotesStore and leaves it after disposal',async()=>{
   const directory=mkdtempSync(join(tmpdir(),'home-guide-notes-')),store=new NotesStore(directory),calls:string[]=[],owner='test-owner'

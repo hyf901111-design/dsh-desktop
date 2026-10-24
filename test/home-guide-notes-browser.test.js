@@ -12,8 +12,8 @@ beforeAll(async()=>{
  import{mountHomeNotesGuide}from'./src/preload/home-guide-notes';
  import React from'react';import{createRoot}from'react-dom/client';import{NotesApp}from'./src/preload/notes/editor';
  import'@blocknote/mantine/style.css';import'./src/preload/notes/style.css';import'./src/preload/notes/challenge.css';
- window.guideNativeEvents=[];for(const name of ['notes-edited','notes-composer-state','notes-composer-draft','notes-task-state'])document.addEventListener('sherlock:'+name,()=>window.guideNativeEvents.push(name));window.mountAnotherGuide=signal=>mountHomeNotesGuide(document,document.querySelector('#guide'),{signal});window.abortGuide=new AbortController();window.guideStatuses=[];window.guideGate=()=>Promise.resolve();window.readyGuide=mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:window.abortGuide.signal,onStatus:text=>window.guideStatuses.push(text),waitUntilPlaying:()=>window.guideGate()}).then(api=>window.guide=api);
- window.guideCues=[];window.addEventListener('sherlock:home-guide-cue',event=>window.guideCues.push({label:event.detail.label,connected:event.detail.target.isConnected,runId:event.detail.runId}));
+ window.guideNativeEvents=[];for(const name of ['notes-edited','notes-composer-state','notes-composer-draft','notes-task-state'])document.addEventListener('sherlock:'+name,()=>window.guideNativeEvents.push(name));window.mountAnotherGuide=signal=>mountHomeNotesGuide(document,document.querySelector('#guide'),{signal});window.abortGuide=new AbortController();window.guideStatuses=[];window.guideGate=()=>Promise.resolve();window.readyGuide=mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:window.abortGuide.signal,runId:'standalone-note-run',onStatus:text=>window.guideStatuses.push(text),waitUntilPlaying:()=>window.guideGate()}).then(api=>window.guide=api);
+ window.guideCues=[];window.guidePointerPending=[];window.addEventListener('sherlock:home-guide-cue',event=>{window.guideCues.push({label:event.detail.label,connected:event.detail.target.isConnected,runId:event.detail.runId,requestId:event.detail.requestId,action:event.detail.action});if(event.detail.requestId)window.guidePointerPending.push(event.detail)});
  window.persistentBridge={request:(method,input)=>window.noteStorageRequest(method,input),draft:input=>window.noteStorageRequest('draft',input)};
  window.startPersistentGuide=async fresh=>{window.guide.dispose();await new Promise(resolve=>setTimeout(resolve,50));window.guide=await mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:new AbortController().signal,sessionId:'real-guide-session',runId:'notes-natural-run',fresh,persistence:window.persistentBridge});};
  window.openSavedNativeNote=()=>{window.nativeRoot=createRoot(document.querySelector('#guide'));window.nativeRoot.render(React.createElement(NotesApp,{sessionId:'real-guide-session',bridge:window.persistentBridge,dark:false,navigate:()=>{}}));};
@@ -28,16 +28,49 @@ async function fixture(storage){
  await page.route('http://127.0.0.1/notes-guide',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content"><title>笔记用例教程</title><body data-workspace-surface="notes"><div id="guide" class="en-root" data-home-guide-notes="" style="left:0;top:0;right:0;bottom:0"></div>'}))
  await page.goto('http://127.0.0.1/notes-guide');if(storage)await page.exposeFunction('noteStorageRequest',storage);await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.evaluate(()=>window.readyGuide);return{context,page,errors,network,logs}
 }
+it('waits for the matching pointer acknowledgement before title and body input and cancels a pending click',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.pointerWrite=window.guide.runStep('write').catch(error=>error.name)})
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.length)).toBe(1)
+  expect(await page.locator('.en-title').inputValue()).toBe('')
+  expect((await page.locator('.bn-editor').innerText()).trim()).toBe('')
+  expect(await page.evaluate(()=>window.guidePointerPending[0].target.classList.contains('en-title'))).toBe(true)
+  await page.evaluate(()=>{const cue=window.guidePointerPending[0];window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'stale',requestId:cue.requestId,ok:true}}))})
+  await page.waitForTimeout(100);expect(await page.locator('.en-title').inputValue()).toBe('')
+  await page.evaluate(()=>{const cue=window.guidePointerPending[0];window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))})
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.length)).toBe(2)
+  expect(await page.locator('.en-title').inputValue()).toBe(HOME_NOTES_GUIDE_TITLE)
+  expect((await page.locator('.bn-editor').innerText()).trim()).toBe('')
+  await page.evaluate(()=>{window.abortGuide.abort();const cue=window.guidePointerPending[1];window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))})
+  expect(await page.evaluate(()=>window.pointerWrite)).toBe('AbortError');expect(await page.locator('.bn-editor').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it('refuses another pointer owner instead of treating it as an isolated legacy fixture',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='another-run';window.ownerResult='';void window.guide.runStep('write').then(()=>window.ownerResult='completed',error=>window.ownerResult=error.name)})
+  await expect.poll(()=>page.evaluate(()=>window.ownerResult)).toBe('AbortError')
+  expect(await page.locator('.bn-editor').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
 it('streams into the actual NotesApp, reviews in the real strict picker and applies the native optimization',async()=>{
  const{context,page,errors,network,logs}=await fixture();try{
   expect(await page.title()).toBe('笔记用例教程');await page.evaluate(()=>window.guide.runStep('write'))
   expect(await page.locator('.en-title').inputValue()).toContain('AI算力产业链');expect(await page.locator('.bn-editor').innerText()).toContain('同比增长20%')
   await page.evaluate(()=>window.guide.runStep('challenge'))
   expect(await page.locator('.en-challenge-trigger').innerText()).toContain('严格');expect(await page.locator('.en-challenge-popover').count()).toBe(1)
-  await page.evaluate(()=>window.guide.runStep('review'));expect(await page.locator('.bn-editor [data-bn-thread-id]').count()).toBeGreaterThanOrEqual(3)
+  await page.evaluate(()=>{window.reviewStep=window.guide.runStep('review')})
+  await expect.poll(()=>page.locator('.en-challenge-trigger').getAttribute('aria-busy'),{timeout:6000}).toBe('true')
+  await page.evaluate(()=>{window.noteResumes=[];window.guideGate=()=>new Promise(resolve=>window.noteResumes.push(resolve))})
+  await page.waitForTimeout(2200)
+  expect(await page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('true');expect(await page.locator('.bn-editor [data-bn-thread-id]').count()).toBe(0)
+  await page.evaluate(()=>{window.guideGate=()=>Promise.resolve();for(const resume of window.noteResumes)resume()})
+  await page.evaluate(()=>window.reviewStep);expect(await page.locator('.bn-editor [data-bn-thread-id]').count()).toBeGreaterThanOrEqual(3)
   await page.evaluate(()=>window.guide.runStep('select'));expect(await page.locator('.en-challenge-card').innerText()).toContain('增幅应为10%')
   await page.screenshot({path:'/tmp/home-guide-notes-strict-challenge-20261024.png'})
-  await page.evaluate(()=>window.guide.runStep('optimize'));expect(await page.locator('.bn-editor').innerText()).toContain('同比增长20%');expect(await page.locator('.en-challenge-replace').count()).toBe(1)
+  await page.evaluate(()=>{window.optimizeStep=window.guide.runStep('optimize')})
+  await expect.poll(()=>page.getByRole('progressbar',{name:'正在优化'}).count(),{timeout:4000}).toBe(1)
+  expect(await page.locator('.en-challenge-replace').count()).toBe(0)
+  await page.evaluate(()=>window.optimizeStep);expect(await page.locator('.bn-editor').innerText()).toContain('同比增长20%');expect(await page.locator('.en-challenge-replace').count()).toBe(1)
   await page.evaluate(()=>window.guide.runStep('replace'));expect(await page.locator('.bn-editor').innerText()).toContain('同比增长10%');expect(await page.locator('.bn-editor').innerText()).not.toContain('同比增长20%')
   expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0);expect(await page.locator('.en-error').count()).toBe(0)
   await page.screenshot({path:'/tmp/home-guide-notes-native-replacement-20261024.png'})
@@ -69,7 +102,7 @@ it('confirms a partial note even when navigation has already hidden the guide su
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.evaluate(()=>window.startPersistentGuide(true));await page.evaluate(()=>{window.partialWrite=window.guide.runStep('write').catch(error=>error.name)})
-  await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('研究摘要')
+  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('研究摘要')
   await page.evaluate(()=>{window.guideGate=()=>new Promise(resolve=>window.resumeNoteGuide=resolve)});await page.waitForTimeout(130)
   await page.evaluate(async()=>{document.querySelector('#guide').style.display='none';await window.guide.flush();window.guide.dispose();window.resumeNoteGuide?.()})
   expect(await page.evaluate(()=>window.partialWrite)).toBe('AbortError');expect(store.load('owner','real-guide-session').saved.title).toBe(HOME_NOTES_GUIDE_TITLE);expect(store.load('owner','real-guide-session').draft).toBeUndefined();expect(errors).toEqual([])
@@ -85,7 +118,7 @@ it('aborts a partial stream without editor or challenge mutations after disposal
 it('pauses a streaming batch and cancels a paused gate without late content',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>{window.streamPending=window.guide.runStep('write').catch(error=>error.name)})
-  await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('研究摘要')
+  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('研究摘要')
   await page.evaluate(()=>{window.guideGate=()=>new Promise(resolve=>window.resumeNoteGuide=resolve)})
   await page.waitForTimeout(120);const paused=await page.locator('.bn-editor').innerText();await page.waitForTimeout(300)
   expect(await page.locator('.bn-editor').innerText()).toBe(paused)

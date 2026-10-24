@@ -33,7 +33,7 @@ export function homeNotesGuideChallengeResult(request:ChallengeRequest):Challeng
 
 export type HomeNotesGuideBridge=NotesBridge&{dispose():void}
 /** Only this prepared session reaches storage; challenge responses stay local. */
-export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,beforeReply?:()=>Promise<void>,persistence?:{bridge:NotesBridge;fresh:boolean}):HomeNotesGuideBridge{
+export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,beforeReply?:()=>Promise<void>,persistence?:{bridge:NotesBridge;fresh:boolean},replyWait?:(ms:number)=>Promise<void>):HomeNotesGuideBridge{
  let closed=false,saved:SavedNote={title:'',blocks:[],yjs:'',revision:0,updatedAt:Date.now()}
  let admitted=!persistence
  const jobs=new Map<string,{cancel:()=>void}>()
@@ -63,9 +63,14 @@ export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,b
     if(!value.requestId||!['review','optimize','reply'].includes(value.action)||!Array.isArray(value.blocks))throw Error('演示挑战请求无效。')
     if(jobs.has(value.requestId))throw Error('演示挑战正在处理中。')
     await new Promise<void>((resolve,reject)=>{
-     const finish=()=>{jobs.delete(value.requestId);resolve()}
-     const timer=setTimeout(finish,value.action==='review'?550:420)
-     jobs.set(value.requestId,{cancel:()=>{clearTimeout(timer);jobs.delete(value.requestId);reject(new DOMException('演示检查已取消。','AbortError'))}})
+     let settled=false,timer:ReturnType<typeof setTimeout>|undefined
+     const clean=()=>{if(timer!==undefined)clearTimeout(timer);jobs.delete(value.requestId)}
+     const finish=()=>{if(settled)return;settled=true;clean();resolve()}
+     const fail=(error:unknown)=>{if(settled)return;settled=true;clean();reject(error)}
+     jobs.set(value.requestId,{cancel:()=>fail(new DOMException('演示检查已取消。','AbortError'))})
+     const duration=value.action==='review'?2000:1700
+     if(replyWait)void replyWait(duration).then(finish,fail)
+     else timer=setTimeout(finish,duration)
     })
     await beforeReply?.();assert(input);return homeNotesGuideChallengeResult(value)
    }
