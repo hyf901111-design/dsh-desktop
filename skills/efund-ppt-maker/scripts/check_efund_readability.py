@@ -36,6 +36,16 @@ def audit_layout(data):
     if narrative:
         boxes = {}
         for name, e in narrative.items():
+            layout = e.get('textLayout')
+            if isinstance(layout, dict) and layout.get('source') == 'rendered':
+                lines = layout.get('lines')
+                if not isinstance(lines, list) or not lines or not all(isinstance(line, str) for line in lines):
+                    add('rendered-lines-required', e)
+                elif re.sub(r'\s+', '', str(e.get('text', ''))) != re.sub(r'\s+', '', ''.join(lines)):
+                    # A nearby-line match or a 90% prefix is not the complete
+                    # text. Only whitespace introduced by wrapping may differ.
+                    add('narrative-rendered-text-review-required' if layout.get('generatedListMarkers') is True
+                        else 'narrative-rendered-text-mismatch', e)
             box = rendered_bounds(e)
             if box is None:
                 add('narrative-rendered-bounds-required', e)

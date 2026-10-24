@@ -42,6 +42,10 @@ python "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
 
 渲染器只能返回可见字形、不能暴露被裁切的文本时，须另把 PPTX 完整文字与渲染逐行文本核对，逐页检查隐藏在底板后的内容。不得把缺失内容生成一个较短的 bbox 后登记为通过。
 
+标准说明区的 `text` 必须从成品 PPTX 对应逻辑页、Shape ID 的完整正文提取，不能沿用规划稿。其 `textLayout.lines` 拼接后只允许空白差异，必须与全文一致；`narrative-rendered-text-mismatch` 会拦截仅匹配首行、按长度达到 90% 就停止、混入右栏标签或遗漏尾段等错误。数字、破折号、项目符号和其他语义标点均不自动删除或替换。此检查仅适用于 `standard-narrative-title` / `standard-narrative-body`，不扩展到普通列表或其他段落。
+
+若成品 XML 的 `buChar` / `buAutoNum` 设置使渲染器生成正文文本中没有的列表标记，提取器须核对该设置并显式声明 `textLayout.generatedListMarkers: true`。发生文字差异时返回 `narrative-rendered-text-review-required`，按实际段落和列表标记逐项复核；不能用该声明自动通过，也不能泛化去掉所有行首数字或符号。正文自身已含的符号仍精确核对。`source: "rendered"` 和一个 bbox 都不能单独证明取行正确；不能把预期全文直接回填成“渲染行”来消除错误。
+
 ## 正负数据标签的独立槽位
 
 类别文字、正负数值文字与数据柱分别分配区域。负值柱不能从零轴向左侵入类别槽，负值标签也不能盖住类别文字。为类别使用 `chart-label-*` 或 `textRole: "chart-category-label"`，数值使用 `chart-value-*` 或 `textRole: "chart-value-label"`，并为两者导出实际渲染的 `textLayout.bbox`。

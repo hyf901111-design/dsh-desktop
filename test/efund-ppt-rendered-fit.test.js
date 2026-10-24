@@ -81,3 +81,41 @@ with tempfile.TemporaryDirectory() as d:
  data['elements'][0]['textLayout']['bbox'][3]=300;p.write_text(json.dumps(data))
  assert 'narrative-callout-clearance' in codes()
 `))
+
+it('matches complete narrative text to rendered lines without accepting partial or other-column text', () => python(String.raw`
+import sys,copy
+sys.path.insert(0,'skills/efund-ppt-maker/scripts')
+from check_efund_readability import audit_layout
+full='报告测算 2025—2027 年 AI 相关投资 3.1 万亿美元的净现值：基准情形为 –0.9 万亿美元。\n强护城河（捕获 70% 价值）加低折现率（10%）：NPV +4.1 万亿美元；弱护城河（20%）加高折现率（25%）：–2.7 万亿美元。\n口径：EBITDA 利润率 37%（标普 500 第 75 分位）、25 年 EBIT 折现、股东捕获 40%。'
+def data(lines):
+ return {'elements':[{'id':'body','name':'standard-narrative-body','scope':'slide','bbox':[38,128,320,236],'text':full,'textLayout':{'source':'rendered','lineCount':len(lines),'lines':lines,'bbox':[38,140,300,180]}}]}
+def codes(d):return {i['code'] for i in audit_layout(d)}
+# Current real P13 export matched only the first line and called its bbox complete.
+assert 'narrative-rendered-text-mismatch' in codes(data(['报告测算 2025—2027 年 AI 相关投资 3.1']))
+# Earlier real P13 export mixed in labels from the right-hand chart.
+assert 'narrative-rendered-text-mismatch' in codes(data([full,'低风险·强护城河']))
+assert 'narrative-rendered-text-mismatch' in codes(data([full[:int(len(full)*.9)]]))
+# Reflow, paragraph boundaries, spaces between runs and CJK line breaks are valid.
+wrapped=full.replace('AI','A I').replace('（捕获','\n（捕获').replace('股东捕获','股东\t捕获').replace('万亿美元','万亿\u3000美元')
+assert not audit_layout(data(wrapped.split('\n')))
+assert 'narrative-rendered-text-mismatch' in codes(data([full.replace('–0.9','-0.9')]))
+assert 'narrative-rendered-text-mismatch' in codes(data([full.replace('（10%）','(10%)')]))
+# This completeness contract is limited to the two standard narrative objects.
+ordinary=data(['部分文字']);ordinary['elements'][0]['name']='module-description'
+assert 'narrative-rendered-text-mismatch' not in codes(ordinary)
+title=data(['错误标题']);title['elements'][0].update(name='standard-narrative-title',text='完整标题')
+assert 'narrative-rendered-text-mismatch' in codes(title)
+# Literal symbols in XML text remain content; no punctuation is stripped.
+literal=data(['• 2026 年增长 2.25%。']);literal['elements'][0]['text']='•2026年增长2.25%。'
+assert not audit_layout(literal)
+generated=data(['•'+full])
+assert 'narrative-rendered-text-mismatch' in codes(generated)
+# Explicit renderer-generated list glyphs need a separate list-aware review,
+# never blanket removal of prefixes that might be semantic numbers/symbols.
+generated['elements'][0]['textLayout']['generatedListMarkers']=True
+assert 'narrative-rendered-text-review-required' in codes(generated)
+assert 'narrative-rendered-text-mismatch' not in codes(generated)
+ordinary['elements'][0]['text']='第1条\n第2条'
+ordinary['elements'][0]['textLayout'].update(lines=['1. 第1条','2. 第2条'],lineCount=2)
+assert 'narrative-rendered-text-mismatch' not in codes(ordinary)
+`))
