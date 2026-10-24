@@ -17,15 +17,59 @@ export function planningHumanRequest(session) {
 
 const componentObject=/工作台|画布|看板|仪表盘|组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|\b(?:workbench|dashboard|canvas|component|card|table|chart)\b/iu
 const boardObject=/^(?:工作台|画布|看板|仪表盘|workbench|dashboard|canvas)$/iu
-function normalizeComponentClause(text){return text.trim().replace(/^(?:(?:另外|另行|同时|然后|但是|但|并且|并)\s*)+/u,'')}
+const conversationScope=/(?:在|于)(?:(?:当前|本次|这段)(?:的)?)?(?:对话|会话|聊天)(?:中|里|内)?/u
+const documentObject=/\b(?:PPTX?|PowerPoint|DOCX?|Word|XLSX?|Excel|PDF)\b|演示文稿|幻灯片|报告文件|文档文件|电子表格文件/iu
+function normalizeComponentClause(text){
+ return text.trim().replace(/^(?:(?:另外|另行|同时|然后|但是|但|并且|并)\s*)+/u,'')
+  .replace(/^(?:(?:请|麻烦|帮我|现在|先|本轮|这次)\s*)*(?:在|于)(?:(?:当前|本次|这段)(?:的)?)?(?:对话|会话|聊天)(?:中|里|内)?\s*/u,'')
+}
+function deliveryClauses(text){return text.split(/[，,。；;！？!?\n]+|(?=另外|另行|同时|然后|但是|但|并且|并(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|建(?:一个|一套|一张|个|套|张)))/u)}
+function authoredDeliveryText(text){
+ // Quoted commands describe material to read; they do not authorize another
+ // deliverable. Keep quoted titles and filenames that are not instructions.
+ return text.replace(/```[\s\S]*?```/g,'').replace(/^>.*$/gm,'')
+  .replace(/“[^”]*”|「[^」]*」|『[^』]*』|‘[^’]*’|"[^"\n]*"|'[^'\n]*'/gu,quote=>/^(?:(?:请|先|再|继续|如何|怎么|怎样|必须|需要)\s*)*(?:制作|创建|新建|新增|生成|建立|搭建|构建|修复|修改|编辑|调整|优化|完成|导出|保存|交付|\b(?:create|build|generate)\b)/iu.test(quote.slice(1,-1))?'':quote)
+}
+function deliveryObjectText(tail){
+ const phrase=tail.trim().replace(/^(?:成|为)?(?:至少|约)?(?:[一二三四五六七八九十\d]+\s*(?:个|张|套|份)?|an?\s+)\s*/iu,'')
+ return /^(?:展示|显示|使用|利用|根据|基于|以|包含|带有|附有|含|比较|呈现|反映|分析|用于|用来).{0,160}的(.+)$/u.exec(phrase)?.[1]??phrase
+}
+function creationDenied(clause){
+ return /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|规划|展示|显示|呈现|绘制|提供|编写|撰写|修改|编辑|完成|导出|保存|交付|做(?:一个|一套|一张|个|套|张)|建)/u.test(clause.replace(conversationScope,''))
+}
+function documentDeliveryClause(clause){
+ const action=normalizeComponentClause(clause)
+ if(!documentObject.test(action)||creationDenied(action)||/^(?:(?:请|麻烦|帮我|只|仅|先)\s*)*(?:查看|看看|检查|解释|说明|介绍|如何|怎么|怎样|阅读|研读|引用)/u.test(action))return false
+ if(/^(?:(?:请|麻烦|帮我|先|再)\s*)*(?:继续|完成|修复|修正|修改|更新|编辑|调整|优化|完善)/u.test(action))return true
+ const predicate=action.match(/制作|创建|生成|撰写|编写|做(?:一份|份)|写(?:一份|份)|整理成|转换(?:成|为)|转成|导出(?:为|成)?|保存(?:为|成)?|交付|输出|给我|提供|我想要|我要|需要/iu)
+ if(!predicate)return false
+ const target=deliveryObjectText(action.slice(predicate.index+predicate[0].length)),doc=target.match(documentObject),object=target.match(componentObject)
+ return !!doc&&(!object||doc.index<object.index)
+}
+function explicitUiClause(clause){
+ const action=normalizeComponentClause(clause)
+ if(!componentObject.test(action)||creationDenied(action)||readOnlyComponentDelivery(action)||/^(?:内容|正文|示例|例如|原文|引用|说明)(?:包括|包含|是|中|里|：|:)/u.test(action))return false
+ const creation=explicitComponentCreation(action)
+ if(creation?.target==='workbench'){
+  const tail=action.slice(creation.index),doc=tail.match(documentObject),object=tail.match(componentObject)
+  if(!doc||object&&object.index<doc.index)return true
+ }
+ return (conversationScope.test(clause)||/(?:对话|会话|聊天)(?:中|里|内)?(?:的)?(?:原生)?组件/u.test(action))&&/(?:创建|新建|新增|生成|制作|添加|展示|显示|呈现|画出|绘制|给我|提供)/u.test(action)
+}
+function deliveryScope(session){
+ const human=planningHumanRequest(session),request=authoredDeliveryText(human?.text??''),clauses=deliveryClauses(request)
+ const document=clauses.some(documentDeliveryClause)
+ // Internal document charts are not independent UI deliverables. Only a
+ // separate explicit UI request can escape the authored document scope.
+ const ui=document?clauses.filter(explicitUiClause):[]
+ return {human,request:document?ui.join('；'):request,documentOnly:document&&!ui.length}
+}
 function explicitComponentCreation(action){
  const predicate=action.match(/创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|建立|搭建|制作|构建|做(?:一个|一套|一张|个|套|张)|建(?:一个|一套|一张|个|套|张)|\b(?:create|build|generate)\b/iu)
  if(!predicate)return null
  const tail=action.slice(predicate.index+predicate[0].length).trim()
  if(/^(?:的)?(?:方法|方式|步骤|逻辑|规则|功能)/u.test(tail))return null
- const phrase=tail.replace(/^(?:[一二三四五六七八九十\d]+\s*(?:个|张|套)?|an?\s+)\s*/iu,'')
- const modifier=/^(?:展示|显示|使用|包含|比较|基于|呈现|反映|分析|用于|用来).{0,100}的(.+)$/u.exec(phrase)
- const object=(modifier?modifier[1]:tail).match(componentObject)
+ const object=deliveryObjectText(tail).match(componentObject)
  return object?{index:predicate.index,target:boardObject.test(object[0])?'workbench':'component'}:null
 }
 function readOnlyComponentDelivery(text){
@@ -43,14 +87,13 @@ function readOnlyComponentDelivery(text){
 
 export function componentCreationRequest(session) {
   if (session?.header?.origin === 'subagent' || (session?.header?.delegationDepth ?? 0) > 0) return null
-  const human = planningHumanRequest(session)
-  const request = human?.text?.replace(/```[\s\S]*?```/g, '').replace(/^>.*$/gm, '')
+  const {human,request}=deliveryScope(session)
   if (!request) return null
   // Inspect only affirmative action clauses. Generation status is a noun,
   // and temporary negation must not suppress a separate requested addition.
   // Keep this boundary aligned with the renderer's serializable classifier.
   const targets=[]
-  const text = request.split(/[，,。；;！？!?\n]+|(?=另外|另行|同时|然后|但是|但|并且|并(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|建(?:一个|一套|一张|个|套|张)))/u).filter(clause => {
+  const text = deliveryClauses(request).filter(clause => {
     // Past creation describes an existing object; it is not a new action.
     const action = normalizeComponentClause(clause).replace(/已(?:经)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加)/gu, '')
       .replace(/建立(?:数据|来源|刷新|现有|已有|当前|组件|卡片|的)*(?:绑定|映射|关联|连接|关系)/gu, '')
@@ -65,7 +108,7 @@ export function componentCreationRequest(session) {
     const deliveryText=action
     const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(deliveryText)
     const create = delivery || createBuild || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
-    const denied = /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|规划|做(?:一个|一套|一张|个|套|张)|建)/u.test(clause)
+    const denied = creationDenied(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
     const accepted=create&&!denied&&!inspection&&!readOnlyComponentDelivery(action)
     if(accepted){const object=action.match(componentObject);targets.push(explicitComponentCreation(action)?.target??(object&&boardObject.test(object[0])?'workbench':'component'))}
@@ -122,6 +165,7 @@ export function registerConversationComponentsPolicy(ctx){
  const disposePrompt=ctx.systemPrompt.context({name:'sherlock:conversation-components',order:151,text:({agent})=>{
   const session=agent?.session
   if(!session||session.header?.origin==='subagent'||(session.header?.delegationDepth??0)>0)return ''
+  if(deliveryScope(session).documentOnly)return '【文件交付】本轮制作或修订的是文件，文件中的图表、表格和版式属于该交付件。沿用户指定技能和原有文件读取、代码执行、渲染检查、保存与文件交付流程完成；保留原任务预算，不将内部图表替换为独立界面组件或新研究画布。'
   const request=componentCreationRequest(session),mode=latestClientModeForAuthority(session)
   if(request?.target==='workbench')return ''
   if(request?.target==='component'){
@@ -133,6 +177,7 @@ export function registerConversationComponentsPolicy(ctx){
   return (mode==='conversation'||/股票|ETF|基金|行情|股价|证券|表格|图表/iu.test(human?.text??''))?CONVERSATION_COMPONENT_GUIDANCE:''
  }})
  const denial=session=>{
+  if(deliveryScope(session).documentOnly)return '当前请求交付文件，文件内的图表或表格不授权新建研究画布；请沿原文件制作或修订流程完成。'
   const request=componentCreationRequest(session)
   // A narrow intent classifier can miss natural language; no unrequested
   // canvas may bypass the mode boundary merely because intent was unknown.

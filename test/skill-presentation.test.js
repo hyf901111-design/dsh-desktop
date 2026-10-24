@@ -2,6 +2,7 @@ import {Window} from 'happy-dom'
 import {afterEach,expect,it} from 'vitest'
 import {runInNewContext,Script} from 'node:vm'
 import {readFileSync} from 'node:fs'
+import {execFileSync} from 'node:child_process'
 import {skillPresentationStore,projectSkillText,skillDisplayName,patchSkillConversationPresentation,patchSkillWorkspacePresentation,patchSkillToolPresentation} from '../scripts/lib/skill-presentation.mjs'
 const windows=[];afterEach(()=>windows.splice(0).forEach(w=>w.happyDOM.abort()))
 function fixture(){const window=new Window();windows.push(window);const context={window};return {window,store:runInNewContext(`(${skillPresentationStore.toString()})()`,context),project:text=>runInNewContext(`(()=>{const skillPresentationStore=${skillPresentationStore.toString()};return (${projectSkillText.toString()})(${JSON.stringify(text)})})()`,context)}}
@@ -10,3 +11,26 @@ it('clears presentation metadata on account changes while retaining deleted labe
 it('patches real native bubble, header, sidebar and skill execution detail paths idempotently',()=>{const c=patchSkillConversationPresentation(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),w=patchSkillWorkspacePresentation(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'));expect(()=>new Script(c)).not.toThrow();expect(()=>new Script(w)).not.toThrow();expect(patchSkillConversationPresentation(c)).toBe(c);expect(patchSkillWorkspacePresentation(w)).toBe(w);expect(c).toContain('data-ework-loaded-skill');expect(c).toContain('projectSkillText(label)');expect(c).toContain('skill-invocation');expect(w).toContain('displayTitle:projectSkillText(s.displayTitle)')})
 
 it('uses the original tool row renderer for managed source labels in both running and settled results',()=>{const s=patchSkillToolPresentation(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-tool/lib/client.js','utf8'));expect(()=>new Script(s)).not.toThrow();expect(patchSkillToolPresentation(s)).toBe(s);expect(s).toContain('title: block.eworkToolLabel ?? model.title,')})
+
+it('upgrades the real sent bubble once and rejects a damaged display-only reference hook',()=>{
+ const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchSkillConversationPresentation(source)
+ expect(patchSkillConversationPresentation(patched)).toBe(patched)
+ expect(patched.split('/* ework:sent-reference-prefix:v1 */')).toHaveLength(2)
+ expect(patched.includes('projectResearchUserText(research, openFile), rest.map'),'the native shell reinstallation anchor remains intact').toBe(true)
+ expect(patched.includes('actions?.(projectSkillText(originalResearch.text))')).toBe(true)
+ expect(()=>patchSkillConversationPresentation(patched.replace('const research = compactSentReferencePrefix(originalResearch);','const research = originalResearch;'))).toThrow(/anchor drifted/)
+ expect(()=>patchSkillConversationPresentation(patched.replace('header.join(\' \')','header.join(\'\\n\')'))).toThrow(/anchor drifted/)
+})
+
+it('preserves the real Node-installed helper when a transformed importer reapplies the resident bundle',()=>{
+ const runtime=execFileSync(process.execPath,['--input-type=module','-e',`
+ import{readFileSync}from'node:fs';import{patchSkillConversationPresentation}from'./scripts/lib/skill-presentation.mjs';
+ const source=patchSkillConversationPresentation(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+ const start=source.indexOf('/* ework:sent-reference-prefix:v1 */'),end=source.indexOf('function projectUserText(',start);
+ process.stdout.write(source.slice(start,end));
+ `],{encoding:'utf8'})
+ const source=patchSkillConversationPresentation(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),start=source.indexOf('/* ework:sent-reference-prefix:v1 */'),end=source.indexOf('function projectUserText(',start)
+ const resident=source.slice(0,start)+runtime+source.slice(end)
+ expect(patchSkillConversationPresentation(resident)===resident,'valid Node-installed bytes remain unchanged').toBe(true)
+ for(const changed of [resident.replace("header.join(' ')","header.join('\\n')"),resident.replace('research.artifactOccurrences?.length','research.unverifiedOccurrences?.length'),resident.replace('actions?.(projectSkillText(originalResearch.text))','actions?.(projectSkillText(research.text))'),resident.replace('/* ework:sent-reference-prefix:v1 */','/* ework:sent-reference-prefix:v1 */\n/* ework:sent-reference-prefix:v1 */')])expect(()=>patchSkillConversationPresentation(changed)).toThrow(/anchor drifted/)
+})
