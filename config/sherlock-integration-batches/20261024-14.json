@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-14",
+  "branch": "codex/integration/20261024-14",
+  "baseMainCommit": "8d4034f0e73386b59e4935e633449f127598c5fc",
+  "expectedMainCommit": "8d4034f0e73386b59e4935e633449f127598c5fc",
+  "createdAt": "2026-10-24T08:26:19.946Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复已发送标签自然内联布局与文件图表交付边界",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "8d4034f0e73386b59e4935e633449f127598c5fc",
+        "tipCommit": "f198591e9b8ab6c8a0a630fc4f09b42d3b951e6f",
+        "commits": [
+          {
+            "commit": "aaf40322aee722a7d62cacac315ef5819a9df61c",
+            "parents": [
+              "8d4034f0e73386b59e4935e633449f127598c5fc"
+            ],
+            "subject": "补充原生图表比例与标签渲染核验规范"
+          },
+          {
+            "commit": "15964b36e42520b29db648eeea90ac3fa245af44",
+            "parents": [
+              "aaf40322aee722a7d62cacac315ef5819a9df61c"
+            ],
+            "subject": "修复已发送消息标签宽度与引用前缀换行"
+          },
+          {
+            "commit": "aee92a00bbf411446841e19587616a9386f103e2",
+            "parents": [
+              "15964b36e42520b29db648eeea90ac3fa245af44"
+            ],
+            "subject": "区分文件内图表与独立界面组件交付目标"
+          },
+          {
+            "commit": "f198591e9b8ab6c8a0a630fc4f09b42d3b951e6f",
+            "parents": [
+              "aee92a00bbf411446841e19587616a9386f103e2"
+            ],
+            "subject": "兼容原生安装与转换导入后的标签补丁重装校验"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-presentation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/package-and-render-checks.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-components-policy.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/sent-reference-bubble-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/skill-presentation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "真实发送气泡布局/原文与复制保留及PPT文件图表任务隔离；/tmp/sent-bubble-doc-scope-final-0-20261024.log",
+            "verifiedCommit": "f198591e9b8ab6c8a0a630fc4f09b42d3b951e6f",
+            "completedAt": "2026-10-24T08:24:47.418163+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js"
+            ],
+            "outcome": "passed",
+            "summary": "真实发送气泡布局/原文与复制保留及PPT文件图表任务隔离；/tmp/sent-bubble-doc-scope-final-2-20261024.log",
+            "verifiedCommit": "f198591e9b8ab6c8a0a630fc4f09b42d3b951e6f",
+            "completedAt": "2026-10-24T08:24:53.332476+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/conversation-components-policy.test.js",
+              "test/workbench-model-queue.test.js",
+              "test/research-component-source-tools.test.js",
+              "test/sent-reference-bubble-browser.test.js",
+              "test/skill-presentation.test.js",
+              "test/figma-inline-references-patch.test.js",
+              "test/figma-inline-references-projection.test.js",
+              "test/figma-inline-references-input.test.js",
+              "test/home-skill-chip-layout-browser.test.js",
+              "test/composer-inline-tags-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "真实发送气泡布局/原文与复制保留及PPT文件图表任务隔离；/tmp/sent-bubble-doc-scope-final-3-20261024.log",
+            "verifiedCommit": "f198591e9b8ab6c8a0a630fc4f09b42d3b951e6f",
+            "completedAt": "2026-10-24T08:25:14.134960+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "真实发送气泡布局/原文与复制保留及PPT文件图表任务隔离；/tmp/sent-bubble-doc-scope-final-4-20261024.log",
+            "verifiedCommit": "f198591e9b8ab6c8a0a630fc4f09b42d3b951e6f",
+            "completedAt": "2026-10-24T08:25:22.197296+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "真实发送气泡布局/原文与复制保留及PPT文件图表任务隔离；/tmp/sent-bubble-doc-scope-final-5-20261024.log",
+            "verifiedCommit": "f198591e9b8ab6c8a0a630fc4f09b42d3b951e6f",
+            "completedAt": "2026-10-24T08:25:22.218098+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实UserStyleBubble和native shell CSS以截图落盘原文、双技能/文件/正文，在light/dark×360/900校核内容宽度/左右6px/换行/正文段落/原始复制。两遍完整原生补丁管线及Node安装→Vite重装链路通过。正式包待main构建后原生回访，未声称旧包已生效。"
+        },
+        "acceptanceCriteria": [
+          "发送标签按内容宽度、左右6px，不预留164px；多个标签及后续正文自然同行。",
+          "只压缩开头识别的引用header；正文后续换行与段落、持久原文/复制和research偏移保持。",
+          "文件内部图表不误送对话组件或工作台，不降原预算/删除文件工具；独立界面创建与混合需求边界保持。",
+          "原生图表规则补齐显式坐标基线、正负渲染、完整标签配置与合法XML序，不以缓存替代实际图像。",
+          "正式身份客户端只从干净本地main构建，保留实际Kimi任务草稿和原会话，更新后继续；不发布/推送/加版本/公证。"
+        ],
+        "risks": [
+          "真实Kimi PPT尚在修订，旧预置资产未替换，不冒充已完成。",
+          "鼠标间歇冻结仍未证实原因，不以标签UI检查声称修复。",
+          "旧planner/fixture问题已有HEAD基线重现，未扩修；当前直接相关检查单独确认。"
+        ],
+        "generatedAt": "2026-10-24T08:25:22.218132+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/conversation-components-policy.test.js",
+        "test/workbench-model-queue.test.js",
+        "test/research-component-source-tools.test.js",
+        "test/sent-reference-bubble-browser.test.js",
+        "test/skill-presentation.test.js",
+        "test/figma-inline-references-patch.test.js",
+        "test/figma-inline-references-projection.test.js",
+        "test/figma-inline-references-input.test.js",
+        "test/home-skill-chip-layout-browser.test.js",
+        "test/composer-inline-tags-browser.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
