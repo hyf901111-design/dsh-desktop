@@ -34,7 +34,7 @@ beforeAll(async()=>{
  const renderSlot=(name,props={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<article data-native-history>{Array.from({length:18},(_,i)=><p key={i} data-history-row={i}>研报观点 {i+1}：核对数据时点、情景假设与配置逻辑，逐页保留来源。</p>)}</article>:null;
  const sidebarState={composerHost:null,conversationHost:null},sidebar={storeFor:()=>({subscribe:()=>()=>{},getSnapshot:()=>sidebarState}),publish(){},enter(){},leave(){}},registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true});
  const root=createRoot(document.querySelector('#native-root'));root.render(<native.ConversationRoot {...shared} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例工作区',sessionIds:['shell-demo']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/>);
- let guideStatus=()=>{};const adapter=async(_document,_host,options)=>{guideStatus=options.onStatus;return{runStep:async()=>{},dispose(){}}},controller=mountHomeGuides(document,{mountNotes:adapter,mountPresentation:adapter});
+ let guideStatus=()=>{};const adapter=async(_document,_host,options)=>{guideStatus=options.onStatus;return{runStep:async()=>{if(window.shellCase.failure)throw Error("输入区已变化，请重新打开示例。")},dispose(){}}},controller=mountHomeGuides(document,{mountNotes:adapter,mountPresentation:adapter});
  const disposeOperations=window.shellCase.operations?mountHomeOperations(document,{onExample:(kind,context)=>playHomeGuideFromOperations(controller,kind,context)}):()=>{};
  const receive=event=>{const request=event.detail;window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:request.requestId,ok:true,sessionId:'shell-demo',cwd:'/tmp/shell-demo',title:'公司风格演示示例',fresh:true}}))};window.addEventListener('sherlock:home-guide-session-request',receive);
  window.shellProbe={sent:0,shell,controller,status:text=>guideStatus(text),async start(){await controller.start('ppt');document.querySelector('.odyssey-home-guide-footer button').click()},async close(){await controller.reset(false)},async dispose(){disposeOperations();await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
@@ -46,11 +46,11 @@ beforeAll(async()=>{
 },30000)
 afterAll(()=>browser?.close())
 
-async function fixture({width,height,hero,operations=false}){
+async function fixture({width,height,hero,operations=false,failure=false}){
  const page=await browser.newPage({viewport:{width:1380,height},reducedMotion:'reduce'}),errors=[]
  page.on('pageerror',error=>errors.push(error.message))
  await page.route('**/*',route=>route.fulfill({contentType:route.request().url().endsWith('/')?'text/html':'application/json',body:route.request().url().endsWith('/')?'<meta charset="utf-8"><title>PPT tutorial shell geometry</title><main class="pI_x6G_centerCol"><div id="native-root"></div></main><script>window.__ModuleLoader__={load:d=>window.descriptor=d}</script>':'{"plans":[]}'}))
- await page.goto('https://presentation-shell.local/');await page.evaluate(value=>window.shellCase=value,{width,height,hero,operations})
+ await page.goto('https://presentation-shell.local/');await page.evaluate(value=>window.shellCase=value,{width,height,hero,operations,failure})
  await page.addScriptTag({content:runtimeSource});await page.evaluate(()=>window.runtimeDescriptor=window.descriptor)
  await page.addScriptTag({content:conversationSource});await page.evaluate(()=>window.conversationDescriptor=window.descriptor)
  await page.addStyleTag({content:styles+`\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;width:${width}px;height:100vh}#native-root{height:100%;min-height:0}[data-native-history]{padding:12px 24px;font-size:14px;line-height:24px}`})
@@ -125,4 +125,9 @@ it('keeps a long accessible status out of the composer layout when the pane narr
   expect(layout.input.width).toBeGreaterThan(200);expect(layout.scroll.height).toBeGreaterThan(90)
   await page.screenshot({path:evidence+'/active-dynamic-footer.png'});expect(f.errors).toEqual([])
  }finally{await f.close()}
+},15000)
+
+it('shows an action failure next to the playback controls and keeps exit reachable',async()=>{
+ const f=await fixture({width:620,height:700,hero:false,failure:true}),{page}=f
+ try{await page.evaluate(async()=>{await window.shellProbe.start();document.querySelector('[data-control="play"]')?.click()});await expect.poll(()=>page.locator('[data-home-guide]').getAttribute('data-phase')).toBe('error');expect(await page.locator('.odyssey-home-guide-count').isVisible()).toBe(false);const status=page.locator('.odyssey-home-guide-status');expect(await status.innerText()).toContain('输入区已变化');expect(await status.evaluate(node=>{const r=node.getBoundingClientRect(),footer=node.closest('footer').getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return r.top>=footer.bottom&&r.width>180&&(node===hit||node.contains(hit))})).toBe(true);await page.getByRole('button',{name:'结束示例教程'}).click();expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(f.errors).toEqual([])}finally{await f.close()}
 },15000)
