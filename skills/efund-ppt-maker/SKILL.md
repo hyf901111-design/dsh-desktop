@@ -129,7 +129,11 @@ python "$SKILL_DIR/scripts/qa_efund_pptx.py" "$FINAL_PPTX" \
 
 `shape-shadow-forbidden` 是硬错误；任何可见幻灯片对象不得含外阴影、内阴影或预设阴影效果。
 
-从模板新建稿另运行 `check_efund_package.py "$FINAL_PPTX" --require-clean-slide-tree --json-output "$QA_DIR/efund-package.json"`。仅在需求明确要求原生图表数量时附加 `--min-native-charts N`，不能数 ZIP 中孤立的 chart 文件，也不能对合法形状信息图无条件要求原生图表。具体计数口径和保留现有附页的处理见 [成品包检查](references/package-and-render-checks.md)。
+所有最终候选都另运行 `check_efund_package.py "$FINAL_PPTX" --json-output "$QA_DIR/efund-package.json"`；从模板新建稿增加 `--require-clean-slide-tree`。仅在需求明确要求原生图表数量时附加 `--min-native-charts N`，不能数 ZIP 中孤立的 chart 文件，也不能对合法形状信息图无条件要求原生图表。具体计数口径和保留现有附页的处理见 [成品包检查](references/package-and-render-checks.md)。
+
+结构与包检查均默认校验包内全部原生图表的轴 ID，包括隐藏页和孤立图表。`chart-axis-id-out-of-range` / `chart-axis-graph-invalid` 是硬错误：`c:axId`、`c:crossAx` 必须满足 `0..2147483647` 且引用一致，不能把负值取绝对值或加 `2^32` 后交付。生成器须在保存前使用 `efund_chart_properties.py` 的 `normalize_axis_ids(chartSpace)`，或在导出 PDF 前通过 `normalize_efund_text.py DRAFT NEW_OUTPUT` 生成新文件，再重跑两道门禁。该工具按轴声明顺序同时重编号所有引用；不改数据、零交叉值、图表类型、文字或几何。重复声明、悬空引用和未知数值必须修正生成过程，不自动猜测。
+
+包报告的 `sha256` 必须与最后一次清理、规范化或重新保存后的交付文件一致；改了 PPTX 后须重新校验、渲染和原生打开。轴检查是已知故障门禁，不等于完整 OOXML 校验，更不能代替目标 PowerPoint 无修复打开的真实证据。
 
 第三道，检查文案自然度和业务具体性：
 

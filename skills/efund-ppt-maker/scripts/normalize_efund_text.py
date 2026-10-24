@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Normalize brand text runs into a NEW PPTX. Requires lxml (python-pptx dependency).
+"""Normalize brand text and known chart axis IDs into a NEW PPTX.
+
+Requires lxml (python-pptx dependency). Chart references are reassigned together
+to Office-safe IDs; data values and chart geometry are not changed.
 
 Preserves XML namespaces, ZIP metadata and untouched members. Does not certify
 PowerPoint compatibility. Re-render and run all affected gates on the new file.
@@ -9,6 +12,7 @@ from pathlib import Path
 from zipfile import ZipFile
 from lxml import etree as ET
 from efund_text_properties import normalize_run, canonicalize
+from efund_chart_properties import normalize_axis_ids
 from check_efund_cover import NS
 from sanitize_pptx_metadata import clean_app, SanitizePolicy
 
@@ -26,6 +30,7 @@ def normalize(source, output):
             if info.filename.startswith('ppt/') and info.filename.endswith('.xml'):
                 root = ET.fromstring(data)
                 before = ET.tostring(root)
+                normalize_axis_ids(root)
                 for run in root.findall('.//a:r', NS):
                     normalize_run(run, NS)
                 for tag in ('rPr','defRPr','endParaRPr'):

@@ -17,6 +17,8 @@ python "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
 
 此检查从内容类型识别 slide 部件，并核验实际关系的类型、包内目标、XML 根节点及重复引用。它不会证明一张结构正常的页面已正确渲染。
 
+无论新建还是修改已有稿，最终候选都必须运行包检查；只有 `--require-clean-slide-tree` 随新建/保留附页的任务范围选择。报告的 `sha256` 绑定本次读取的文件字节。规范化、元数据清理或任何重新保存后，旧报告、旧 PDF 与旧原生打开记录均不能用于新文件，必须对新候选重新生成并核对哈希。
+
 ## 原生数据图表的数量
 
 先按任务约定区分原生数据图表、可编辑形状信息图和图片。原生图表支持图表数据编辑；形状柱图可以逐对象编辑，但不能据此声称有图表数据表。一般关系图、流程和形状信息图不要求存在原生图表。
@@ -46,6 +48,12 @@ python "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
 5. **轴格式遵守 schema 顺序。** 优先使用 `category_axis.format.line` 等公开 API。手工修改 `CT_CatAx` 时，`spPr` 位于刻度标签配置之后、`txPr` 和 `crossAx` 之前，不能按固定子元素下标插到 `delete` 或 `axPos` 前面；交叉点也须保留规定顺序。格式字段存在不代表 XML 合法，见 [官方轴 schema](https://python-pptx.readthedocs.io/en/latest/dev/analysis/cht-axes.html#related-schema-definitions)。
 
 6. **浮动区间标端点，不标跨度。** 用隐藏基座 `L` 加可见段 `U-L` 表示区间时，可见段长度不是指标本身。给该数据点设置明确的 `L—U` 自定义标签并保留单位，例如 `4%—5%`；不能把跨度 `1%` 当作回报率，也不能仅删除跨度标签后留下无数值的浮动条。自定义文字可使用数据点的 `data_label.text_frame`，见 [官方 DataLabel API](https://python-pptx.readthedocs.io/en/stable/api/chart.html#pptx.chart.datalabel.DataLabel)。
+
+7. **轴标识采用 Office 可接受的非负 ID。** `c:axId` 与 `c:crossAx` 的 schema 类型均为 UInt32（[AxisId](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.charts.axisid)、[CrossingAxis](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.charts.crossingaxis)），Office 另限制最大值为 `2147483647`。生成库可能输出负整数；直接加 `2^32` 仍可能超过 Office 上限，不能作为修复。`efund_chart_properties.normalize_axis_ids(chartSpace)` 在发现这种已知 32 位 ID 时，按该图表的轴声明顺序分配 `1..N`，同时改写 plot 引用、轴声明及交叉轴引用；合法图表保持原样。数据点、轴范围、零交叉、标签、类型和几何都不参与这次变换。未知数值、重复声明、缺少声明或悬空引用一律停止，要求修正生成器。
+
+`qa_efund_pptx.py` 与 `check_efund_package.py` 默认执行同一轴范围及引用门禁，逐项输出 part、位置和值；检查全部 `chartSpace`，包括隐藏和孤立图表，但不把它们计入可见图表配额。`normalize_efund_text.py DRAFT NEW_OUTPUT` 已调用同一生成 helper，仍只写新文件。生成、规范化及清理完成后再跑门禁，不能在检查后写回未规范化的旧稿。
+
+这项检查覆盖已复现的轴问题，不是全量 OOXML schema 证明。2026-10-24 的隔离回归中，官方 Open XML SDK 3.5.1 / Office2019 对原稿报告 42 个负轴 ID 错误；对仅改写这 42 个属性的新副本报告零错误。schema 零错误、ZIP 可读、LibreOffice 可渲染和 PDF 正常均不能替代目标 PowerPoint 对最终哈希文件无修复打开；出现修复提示或删除内容即保持失败，不得填写 `nativeOpen: pass`。
 
 ## 标题换行与正文、结论框
 

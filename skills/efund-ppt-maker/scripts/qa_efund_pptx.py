@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Iterable
 from zipfile import BadZipFile, ZipFile
+from efund_chart_properties import audit_chart_axis_ids
 
 P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
 A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -304,6 +305,7 @@ def analyze(path: Path) -> dict[str, Any]:
     result: dict[str, Any] = {"file": str(path), "issues": issues}
     try:
         with ZipFile(path) as zf:
+            issues.extend(audit_chart_axis_ids(zf))
             presentation = ET.fromstring(zf.read("ppt/presentation.xml"))
             if "docProps/app.xml" in zf.namelist():
                 app_props = ET.fromstring(zf.read("docProps/app.xml"))

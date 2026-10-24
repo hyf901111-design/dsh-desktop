@@ -29,7 +29,7 @@ python "$SKILL_DIR/scripts/check_efund_readability.py" "$QA_DIR/layouts" --map "
 
 更换中文字体不能只改 typeface 同时保留旧字体的 charset/panose/pitchFamily。对改写的品牌中文 run 显式使用 `华文黑体_易方达`，纯中文 run 的 Latin/East Asian/CS 字体保持一致，lang=zh-CN，清除旧字体分类属性。混合中英文需按语言拆分 run，英文/数字保留 Arial。检查所有中文字符可显示，尤其封底“谢谢”；原文件中的正确 Unicode 文本并不能证明渲染字形正确。
 
-`efund_text_properties.py` 提供保序属性规范化；`normalize_efund_text.py SOURCE NEW_OUTPUT`（需 lxml，python-pptx 自带依赖）仅对显式品牌中文字体规范化，拒绝覆盖输入及已有输出。它不改变字号/色彩/几何，也不替代字体安装或完整 OOXML 验证。优先在生成时使用库的保序 setter，避免事后修补。
+`efund_text_properties.py` 提供保序属性规范化；`normalize_efund_text.py SOURCE NEW_OUTPUT`（需 lxml，python-pptx 自带依赖）规范化显式品牌中文字体、已知文本属性顺序与图表轴 ID，拒绝覆盖输入及已有输出。它不改变字号/色彩/几何，也不替代字体安装或完整 OOXML 验证。优先在生成时使用库的保序 setter，避免事后修补。
 
 DrawingML 文本属性顺序为：线条 → 填充 → 效果 → 高亮/下划线 → latin → ea → cs → sym → 超链接。除了填充，**ea 追加在 cs 后同样非法**；重复互斥属性也必须报错。现有 portability 门禁已覆盖这些已知错误。
 
@@ -41,7 +41,9 @@ DrawingML 文本属性顺序为：线条 → 填充 → 效果 → 高亮/下划
 
 成品清理曾把 `docProps/app.xml` 的 AppVersion 写成空字符串。XML 可解析且通过通用 XSD，原生 PowerPoint 仍弹出修复和删除内容两个警告。仅删除这个空属性后，同一文件无修复打开。清理时删除可选 AppVersion 节点，禁止清空节点文本或自行杜撰办公软件版本；结构门禁新增 invalid-app-version。使用技能自带 sanitize_pptx_metadata.py，禁止生成另一个简化脱敏脚本后跳过最终文件复验。
 
-在导出 PDF 前运行 `normalize_efund_text.py "$DRAFT_PPTX" "$FINAL_PPTX"`（新输出路径），随后清理元数据、重跑封面/结构/布局等门禁并渲染。此工具处理已知文本属性与空 AppVersion，不保证所有任意 PPTX 自动修复。
+在导出 PDF 前运行 `normalize_efund_text.py "$DRAFT_PPTX" "$FINAL_PPTX"`（新输出路径），随后清理元数据、重跑封面/结构/包/布局等门禁并渲染。此工具处理已知文本属性、空 AppVersion 和轴 ID，不保证所有任意 PPTX 自动修复。
+
+图表的 `c:axId` / `c:crossAx` 必须同时满足 UInt32 与 Office 最大值 `2147483647` 的约束。负值和加 `2^32` 后超上限的值都由结构与包门禁默认拒绝。共享的 `efund_chart_properties.normalize_axis_ids(chartSpace)` 仅对已知 32 位 ID 图谱按声明顺序重新编号并同步全部引用，不取绝对值、不改负数数据；重复轴声明、悬空引用及未知值停止规范化。详见 [包与图表检查](package-and-render-checks.md)。每次写文件后核对包报告 `sha256` 并重跑验证，原生无修复打开仍为独立必需证据。
 
 ### 1.1.1 原生故障回归记录
 
