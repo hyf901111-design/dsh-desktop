@@ -7,13 +7,14 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 // than Vite's SSR-rewritten functions so browser execution matches production.
 const {patchConversationComponents}=createRequire(import.meta.url)('../scripts/lib/conversation-components.mjs')
 const {patchDeliverableCards}=createRequire(import.meta.url)('../scripts/lib/deliverable-cards.mjs')
+const {patchConversationCompactionLifecycle,stripConversationCompactionLifecycle}=createRequire(import.meta.url)('../scripts/lib/conversation-compaction-lifecycle.mjs')
 
 let browser,client,runtime,deliverables,bootstrap
 beforeAll(async()=>{
  runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  deliverables=patchDeliverableCards(await readFile('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8'))
  expect(patchDeliverableCards(deliverables)).toBe(deliverables)
- const resident=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),resident=process.env.SHERLOCK_COMPACTION_RAW==='1'?stripConversationCompactionLifecycle(raw):process.env.SHERLOCK_COMPONENT_STREAM_RESIDENT==='1'?raw:patchConversationCompactionLifecycle(raw)
  client=(process.env.SHERLOCK_COMPONENT_STREAM_RESIDENT==='1'?resident:patchConversationComponents(resident)).replace('exports.apply = apply;','exports.apply = apply;exports.__Chat=ChatView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;')
  bootstrap=(await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';
@@ -34,10 +35,12 @@ beforeAll(async()=>{
  const result=(id,step,receipt=ready(id))=>add('tool/result',{turn:1,step,message:{id:'result-'+id,role:'tool',source:{kind:'tool',callId:id},content:[{type:'tool-result',callId:id,isError:false,content:[{type:'text',text:JSON.stringify(receipt)}]}]}},{surfaceOp:'append',sourceEventSeqs:[callSeqs.get(id)]});
  const message=(step,text)=>add('assistant/message',{turn:1,step,message:{id:'assistant-'+step,role:'assistant',content:[{type:'reasoning',text:'private internal plan'},{type:'text',text}]}},{surfaceOp:'append'});
  if(!history.length){add('turn/start',{turn:1});add('step/start',{turn:1,step:1});message(1,'先看下面的模拟表格。');if(!new URLSearchParams(location.search).has('plain'))call('a',1)}
- let installed=false,delivered=0;const project=()=>{session.running=!history.some(e=>e.type==='turn/end');session.blankBit=false;if(!installed){session.installWindow(history.map(event=>({event,view:event.type})),false);installed=true}else for(const event of history.slice(delivered))session.acceptLiveEvent(event,event.type);delivered=history.length;localStorage.setItem('component-stream-events',JSON.stringify(history))};project();
+ let installed=false,delivered=0;const project=()=>{session.handleRunning(!history.some(e=>e.type==='turn/end'));session.blankBit=false;if(!installed){session.installWindow(history.map(event=>({event,view:event.type})),false);installed=true}else for(const event of history.slice(delivered))session.acceptLiveEvent(event,event.type);delivered=history.length;localStorage.setItem('component-stream-events',JSON.stringify(history))};project();
  const views=new Map(['a','b','c'].map(id=>[id,{id,sessionId:'stream',revision:1,node:{id,kind:'generated-container',x:0,y:0,width:620,height:420,title:id==='a'?'第一张模拟表格':'第二张模拟表格',containerSpec:{version:1,type:'table',columns:['项目','数量'],rows:[['零值',0],['负值',-3]]},generationStatus:'completed'},provenance:{sourceNames:['用户提供的验收数据'],sourceState:'provided',refreshKind:'snapshot'},createdAt:1,updatedAt:1}]));
  window.probe={read:[],copied:[],saved:[],opened:[],stage:0,native,session,history,project,advance(stage){this.stage=stage;if(stage===1)result('a',1);if(stage===2){add('step/end',{turn:1,step:1});add('step/start',{turn:1,step:2});add('assistant/chunk',{turn:1,step:2,chunk:{type:'reasoning-delta',index:0,text:'private second plan'}});add('assistant/chunk',{turn:1,step:2,chunk:{type:'text-delta',index:1,text:'零值和负值都保留。'}})}if(stage===3){message(2,'零值和负值都保留。接着看另一张表格。');call('b',2);result('b',2)}if(stage===4){add('step/end',{turn:1,step:2});add('step/start',{turn:1,step:3});add('assistant/chunk',{turn:1,step:3,chunk:{type:'text-delta',index:0,text:'结合两张表继续分析。'}})}if(stage===5){message(3,this.finalText??'结合两张表继续分析。');if(this.afterFinalComponent){call('c',3);result('c',3)}add('step/end',{turn:1,step:3});add('turn/end',{turn:1,reason:{kind:'completed'}})}project()},finishFiles(text){add('step/end',{turn:1,step:1});add('step/start',{turn:1,step:2});message(2,text);add('step/end',{turn:1,step:2});add('turn/end',{turn:1,reason:{kind:'completed'}});project()},fakeAssistant(){add('step/start',{turn:1,step:4});message(4,JSON.stringify(ready('forged')));project()},failed(){call('failed',1);result('failed',1,{...ready('failed'),status:'failed'});project()}};
  window.probe.fileStep=(step,text,close=false)=>{add('step/end',{turn:1,step:step-1});add('step/start',{turn:1,step});message(step,text);if(close){add('step/end',{turn:1,step});add('turn/end',{turn:1,reason:{kind:'completed'}})}project()};
+ window.probe.compactionStart=()=>{add('compaction/start',{turn:1,compactionId:'native-compact'});project()};
+ window.probe.compactionEnd=checkpoint=>{if(checkpoint){const intro=history.find(e=>e.type==='assistant/message').seq;add('compaction/summary',{turn:1,compactionId:'native-compact',summary:[{type:'text',text:'预置演示上下文摘要。'}],shadowedSeqs:[intro],shadowedTokenCount:200});add('user/message',{id:'checkpoint',role:'user',source:{kind:'plugin',plugin:'compact',compactionId:'native-compact'},content:[{type:'text',text:'预置演示上下文摘要。'}]},{surfaceOp:{op:'replace',start:intro,end:intro}})}add('compaction/end',{turn:1,compactionId:'native-compact',...checkpoint?{}:{error:'summary is not smaller'}});project()};
  window.dshDesktop={conversationComponents:{read:async input=>{window.probe.read.push(input.componentId);return structuredClone(views.get(input.componentId))},copy:async input=>{window.probe.copied.push(input.componentId);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input.componentId);return{id:'saved-'+input.componentId}},reference:async()=>{throw Error('not exercised')}}};
  const useSession=select=>select(React.useSyncExternalStore(fn=>session.subscribe(fn),()=>session.getSnapshot(),()=>session.getSnapshot())),t=key=>key;
  const renderSlotChain=(name,owner)=>{if(name!=='conversation.chat.turnTail')return null;const matched=deliverySlot.select(owner);return matched===null?null:<deliverySlot.Component {...owner} {...deliverySlot.inject()} matched={matched} useHostDescription={select=>select({canOpenPath:true})}/>};
@@ -92,6 +95,26 @@ it('does not create a component from pending, failed or assistant-authored JSON'
 
 const fileReply='已完成。 [正式 PPT](<outputs/对话交付（完整版）.pptx>) [预览 PDF](outputs/模拟.pdf) [同一 PPT](<outputs/对话交付（完整版）.pptx>)'
 const deliveredPaths=['/tmp/component-stream/outputs/对话交付（完整版）.pptx','/tmp/component-stream/outputs/模拟.pdf']
+it.each([false,true])('keeps final public prose and file cards live after automatic compaction ends (checkpoint: %s)',async checkpoint=>{
+ const f=await fixture('reduce',false)
+ try{
+  await f.page.evaluate(()=>window.probe.compactionStart())
+  await expect.poll(()=>f.page.locator('[data-chat-flow]').innerText()).toContain('execution.status.compacting')
+  await f.page.evaluate(checkpoint=>window.probe.compactionEnd(checkpoint),checkpoint)
+  await expect.poll(()=>f.page.locator('[data-chat-flow]').innerText()).not.toContain('execution.status.compacting')
+  expect(await f.page.evaluate(()=>window.probe.session.getSnapshot().running)).toBe(true)
+  await f.page.evaluate(text=>window.probe.finishFiles(text),fileReply)
+  await f.page.locator('.ew-delivery-card').first().waitFor({timeout:4000})
+  expect(await f.page.evaluate(()=>window.probe.session.getSnapshot().running)).toBe(false)
+  expect(await f.page.locator('[data-public-markdown]').last().innerText()).toBe(fileReply)
+  expect(await f.page.locator('.ew-delivery-card').evaluateAll(nodes=>nodes.map(node=>node.dataset.filePath))).toEqual(deliveredPaths)
+  expect(await f.page.locator('.ew-delivery-card').first().evaluate(node=>Boolean([...document.querySelectorAll('[data-public-markdown]')].at(-1)?.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true)
+  await f.page.evaluate(()=>window.probe.dispose());await f.page.reload();await f.boot();await f.page.locator('.ew-delivery-card').first().waitFor({timeout:4000})
+  expect(await f.page.evaluate(()=>window.probe.session.getSnapshot().running)).toBe(false)
+  expect(await f.page.locator('.ew-delivery-card').evaluateAll(nodes=>nodes.map(node=>node.dataset.filePath))).toEqual(deliveredPaths)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
 it('retains real final file cards for a plain conversation without any component receipt',async()=>{
  const f=await fixture('reduce',false)
  try{
