@@ -48,7 +48,9 @@ export function useExpandedCommandMenu(ref,state,enabled=true){
   const observer=new win.ResizeObserver(schedule);observer.observe(element)
   win.addEventListener('resize',schedule);win.addEventListener('scroll',schedule,true)
   return()=>{observer.disconnect();win.cancelAnimationFrame(frame);win.removeEventListener('resize',schedule);win.removeEventListener('scroll',schedule,true);element.hidePopover?.();element.removeAttribute('popover');clear();delete element.dataset.eworkExpandedCommand}
- },[ref,state,enabled])
+ // Highlight and submitting updates do not change the roster geometry. Keeping
+ // the effect mounted avoids closing/reopening its top-layer popover on a pick.
+ },[ref,state.open,state.command,state.options,state.search,state.status,state.confirming,state.error,state.groups,state.hit,enabled])
 }
 
 export function patchExpandedCommandMenu(source,kind){

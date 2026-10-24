@@ -229,6 +229,66 @@ function replaceOne(source, before, after) {
   if (source.split(before).length !== 2) throw Error('Figma inline reference anchor drifted: ' + before.slice(0, 100));
   return source.replace(before, after);
 }
+export function selectedInlineReferenceOccurrenceId(draft, occurrences, selection) {
+  if (selection.end !== selection.start + 1 || draft[selection.start] !== '\uFFFC') return null
+  return occurrences.find(item => item.offset === selection.start)?.occurrenceId ?? null
+}
+
+export function inlineReferenceArrowSelection(draft, occurrences, selection, key) {
+  if (key !== 'ArrowLeft' && key !== 'ArrowRight') return null
+  const selected = selectedInlineReferenceOccurrenceId(draft, occurrences, selection)
+  if (selected !== null) {
+    const at = key === 'ArrowLeft' ? selection.start : selection.end
+    return {start: at, end: at, direction: 'none'}
+  }
+  if (selection.start !== selection.end) return null
+  const at = selection.start - (key === 'ArrowLeft' ? 1 : 0)
+  if (draft[at] !== '\uFFFC' || !occurrences.some(item => item.offset === at)) return null
+  return {start: at, end: at + 1, direction: key === 'ArrowLeft' ? 'backward' : 'forward'}
+}
+
+export function deleteInlineReferenceOccurrence(keyboard, occurrenceId) {
+  const snapshot = keyboard.snapshot
+  const occurrence = snapshot.occurrences.find(item => item.occurrenceId === occurrenceId && snapshot.draft[item.offset] === '\uFFFC')
+  if (!occurrence) return null
+  const start = occurrence.offset
+  keyboard.setDraft(snapshot.draft.slice(0, start) + snapshot.draft.slice(start + 1), {start, end: start + 1, insertedLength: 0})
+  return start
+}
+
+function patchInlineReferenceInteractions(source) {
+  const marker = '/* sherlock-inline-reference-interactions:v1 */'
+  if (source.includes(marker)) return source
+  const start = source.search(/^[\t ]*function InputBar\(\{/m), end = source.indexOf('\n\t\t//#endregion', start)
+  if (start < 0 || end < 0) throw Error('Inline reference interaction boundary drifted')
+  let input = source.slice(start, end)
+  const replace = (before, after) => { input = replaceOne(input, before, after) }
+  replace('occurrence.occurrenceId === selectedResearchOccurrenceId && (occurrence.source === CHAT_FILE_REFERENCE_SOURCE || occurrence.source === RESEARCH_FILE_REFERENCE_SOURCE || occurrence.source === RESEARCH_ARTIFACT_REFERENCE_SOURCE)', 'occurrence.occurrenceId === selectedResearchOccurrenceId && draft[occurrence.offset] === "\\uFFFC"')
+  replace('deleteResearchReferenceOccurrence(keyboard, occurrenceId)', 'deleteInlineReferenceOccurrence(keyboard, occurrenceId)')
+  replace('const selectedOccurrenceId = selectedResearchReferenceOccurrenceId(input?.occurrences ?? [], selection);', 'const selectedOccurrenceId = selectedInlineReferenceOccurrenceId(draft, input?.occurrences ?? [], selection);')
+  replace('onClick: researchReference === null ? void 0 : () => {', 'onClick: () => {')
+  replace('if (el === null || locked || machineBusy) return;\n\t\t\t\t\t\t\t\tel.focus', 'if (el === null || locked || machineBusy || composingRef.current) return;\n\t\t\t\t\t\t\t\tel.focus')
+  replace('if ((e.key === "Backspace" || e.key === "Delete") && selectedResearchOccurrenceId !== null) {', `// A painted chip selection may lag native select-all or pointer selection.
+                // Read the actual one-code-unit textarea range before atomic deletion.
+                const exactReferenceId = selectedInlineReferenceOccurrenceId(keyboard.snapshot.draft, keyboard.snapshot.occurrences, selectionOf(e.currentTarget));
+                const plainReferenceKey = !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey;
+                if (!composing && !locked && !machineBusy && plainReferenceKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+                    const selection = inlineReferenceArrowSelection(keyboard.snapshot.draft, keyboard.snapshot.occurrences, selectionOf(e.currentTarget), e.key);
+                    if (selection !== null) {
+                        e.preventDefault();
+                        e.currentTarget.setSelectionRange(selection.start, selection.end, selection.direction);
+                        setSelectedResearchOccurrenceId(selectedInlineReferenceOccurrenceId(keyboard.snapshot.draft, keyboard.snapshot.occurrences, selection));
+                        setInputCaretOffset(selection.start);
+                        keyboard.track(keyboard.snapshot.draft, selection.start);
+                        revealSelectionFocus(e.currentTarget);
+                        return;
+                    }
+                }
+                if ((e.key === "Backspace" || e.key === "Delete") && plainReferenceKey && exactReferenceId !== null) {`)
+  replace('removeFigmaReference(selectedResearchOccurrenceId, e.currentTarget);', 'removeFigmaReference(exactReferenceId, e.currentTarget);')
+  const helpers = [selectedInlineReferenceOccurrenceId, inlineReferenceArrowSelection, deleteInlineReferenceOccurrence].map(fn => fn.toString()).join('\n')
+  return source.slice(0, start) + marker + '\n' + helpers + '\n' + input + source.slice(end)
+}
 export function patchFigmaInlineReferences(source) {
   // The projected textarea already owns the native insertion point, including
   // references and IME. The old backdrop caret would draw a second cursor.
@@ -247,9 +307,9 @@ export function patchFigmaInlineReferences(source) {
       if (start < 0 || end < start) throw Error('Skill reference projection upgrade anchor drifted: ' + fn.name);
       source = source.slice(0, start + 1) + fn.toString() + source.slice(end + 2);
     }
-    if (source.includes(skillWidthMarker)) return source;
+    if (source.includes(skillWidthMarker)) return patchInlineReferenceInteractions(source);
     source = replaceOne(source, '\nfunction referenceMarkerForDraft(', '\n' + skillWidthMarker + '\n' + [retainedReferenceCells, skillReferenceCellFont].map(fn => fn.toString()).join('\n') + '\nfunction referenceMarkerForDraft(');
-    return replaceOne(source, 'JSON.stringify(figmaReferences.family)', familyValue);
+    return patchInlineReferenceInteractions(replaceOne(source, 'JSON.stringify(figmaReferences.family)', familyValue));
   }
   const start = source.search(/^[\t ]*function InputBar\(\{/m), end = source.indexOf('\n\t\t//#endregion', start);
   if (start < 0 || end < 0) throw Error('Figma InputBar boundary drifted');
@@ -272,5 +332,5 @@ export function patchFigmaInlineReferences(source) {
   replace('const onKeyDown = (e) => {', helper + 'const onKeyDown = (e) => {');
   replace('children: chip.label\n\t\t\t\t\t\t\t})]', 'children: chip.label\n\t\t\t\t\t\t\t}), researchReference !== null && selectedResearchOccurrenceId === chip.occurrenceId && (0, react_jsx_runtime.jsx)("button", {\n                                type: "button", className: "sherlock-inline-reference-remove", tabIndex: -1, title: "移除引用", "aria-label": "移除引用", disabled: locked || machineBusy,\n                                onPointerDown: (event) => { event.preventDefault(); event.stopPropagation(); },\n                                onClick: (event) => { event.preventDefault(); event.stopPropagation(); const el = inputRef.current; if (el !== null && !locked && !machineBusy && !composingRef.current) removeFigmaReference(chip.occurrenceId, el); },\n                                children: (0, react_jsx_runtime.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 14 14", fill: "none", "aria-hidden": true, children: (0, react_jsx_runtime.jsx)("path", { d: "M4 4L10 10M10 4L4 10", stroke: "currentColor", strokeWidth: 1.1, strokeLinecap: "round" }) })\n                            })]');
   const runtime = '/* sherlock-figma-inline-reference-v1 */\n' + skillWidthMarker + '\nconst referenceCellFont = ' + JSON.stringify(referenceCellFont) + ';\n' + functions.map(fn => fn.toString()).join('\n');
-  return source.slice(0, start) + runtime + '\n' + input + source.slice(end);
+  return patchInlineReferenceInteractions(source.slice(0, start) + runtime + '\n' + input + source.slice(end));
 }
