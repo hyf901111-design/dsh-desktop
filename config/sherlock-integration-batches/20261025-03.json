@@ -274,6 +274,82 @@
           "正式新包三场景完整播放和最终页面仍需构建后原生验收。"
         ],
         "generatedAt": "2026-10-24T21:14:08.501Z"
+      },
+      "merged": {
+        "mergeCommit": "ec4a05d5c367b680c3f092e343b48d34f18e0a27",
+        "verificationCommit": "ec4a05d5c367b680c3f092e343b48d34f18e0a27",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ec4a05d5c367b680c3f092e343b48d34f18e0a27",
+            "completedAt": "2026-10-24T21:18:54.577Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ec4a05d5c367b680c3f092e343b48d34f18e0a27",
+            "completedAt": "2026-10-24T21:18:54.577Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ec4a05d5c367b680c3f092e343b48d34f18e0a27",
+            "completedAt": "2026-10-24T21:18:54.577Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "test/conversation-compaction-lifecycle.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-pointer.test.ts test/home-guide-timeline.test.ts test/home-guides.test.ts test/home-guides-review.test.ts test/home-guide-native-strip.test.js test/home-guide-presentation-patch.test.js test/home-guide-presentation-shell-browser.test.js test/home-guide-notes-shell-browser.test.js test/conversation-compaction-lifecycle.test.js --maxWorkers=2",
+            "verifiedCommit": "ec4a05d5c367b680c3f092e343b48d34f18e0a27",
+            "completedAt": "2026-10-24T21:18:54.577Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ec4a05d5c367b680c3f092e343b48d34f18e0a27",
+            "completedAt": "2026-10-24T21:18:54.577Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-24T21:18:54.577Z"
       }
     }
   ],
