@@ -21,3 +21,22 @@
 .uV2eYG_chip[data-reference-source=conversation-component]{pointer-events:auto}.uV2eYG_chip[data-reference-source=conversation-component][data-selected=true]{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:-1px}
 
 .ew-conversation-component .ew-financial-retained-error{flex:none;padding:4px 0;color:var(--fw-muted);font-size:11px;line-height:16px}
+
+/* Use the same theme and width-aware native body outside the research canvas. */
+body .ew-conversation-component .ew-conversation-component-body{display:block;min-width:0;font-size:14px;line-height:1.65}
+.ew-conversation-component-body>.odyssey-component-content{display:flex;flex-direction:column;min-width:0;min-height:0;height:100%}
+.ew-conversation-component-body .odyssey-component-primary{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+.ew-conversation-component-body .odyssey-native-table-grid{max-width:100%;overflow-x:auto}
+body .ew-conversation-component .odyssey-native-chart{flex:1;height:100%;min-height:280px;justify-content:flex-start;padding:10px 6px 8px}
+body .ew-conversation-component .odyssey-native-chart>svg{flex:1;width:100%;min-height:180px;max-height:none}
+body .ew-conversation-component .rScV5Q_chartLegend{flex:none;padding:8px 0;justify-content:flex-start;gap:6px 14px}
+body .ew-conversation-component .rScV5Q_chartLegend button{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:var(--sherlock-muted);font:inherit;cursor:pointer}
+body .ew-conversation-component .rScV5Q_chartLegend button[aria-pressed=false]{opacity:.45}
+body .ew-conversation-component .odyssey-native-chart-readout,body .ew-conversation-component .odyssey-native-chart-data{flex:none;font-size:12px;line-height:18px}
+/* The canvas hides fetch time below 340px. Conversation cards keep both facts. */
+body .ew-conversation-component .ew-financial-footer{height:auto!important;min-height:24px;flex:none;flex-wrap:wrap;gap:2px 10px;overflow:visible;white-space:normal}
+body .ew-conversation-component .ew-financial-footer>.ew-financial-provenance{height:auto!important;min-height:20px;max-width:100%;white-space:normal;align-items:flex-start}
+body .ew-conversation-component .ew-financial-source-time{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere}
+body .ew-conversation-component .ew-financial-footer>span:last-child{display:inline-block!important;flex:none;white-space:nowrap}
+@layer ework-workbench{body .ew-conversation-component .ew-quote-price-line>strong{font-size:24px!important;line-height:28px!important}}
+.ew-conversation-component-title .ew-grid-title[data-overflow=true]{mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent)}

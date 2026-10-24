@@ -1,4 +1,5 @@
 import {readFileSync} from 'node:fs'
+import {WORKBENCH_TABLE_COLUMNS_CSS} from '../../packages/dsh-research-task-runtime/workbench-table-columns.js'
 import {parseConversationComponentManifest,parseConversationComponentReference} from '../../packages/dsh-research-task-runtime/conversation-component-contract.js'
 import * as references from './conversation-component-reference.mjs'
 export {conversationComponentReferenceSource,insertConversationComponentReference,serializeConversationComponentReference} from './conversation-component-reference.mjs'
@@ -81,7 +82,7 @@ export function installConversationComponentCopy(root,copy){
 export function conversationComponentError(error){return String(error?.message??error??'组件操作失败，请重试。').replace(/^Error invoking remote method ['"][^'"]+['"]:\s*/,'').replace(/^Error:\s*/,'')}
 
 export function ConversationComponentCard({sessionId,manifest}){
- const {jsx,jsxs}=react_jsx_runtime,root=react.useRef(null),menuRef=react.useRef(null),current=react.useRef(null),scope=react.useRef(0),mutating=react.useRef(false),[view,setView]=react.useState(null),[selected,setSelected]=react.useState(false),[menu,setMenu]=react.useState(false),[indices,setIndices]=react.useState(false),[notice,setNotice]=react.useState(null),[busy,setBusy]=react.useState(false),[height,setHeight]=react.useState(null),[visible,setVisible]=react.useState(true),[theme,setTheme]=react.useState(()=>document.body.hasAttribute('data-ds-dark-theme')?'dark':'light')
+ const {jsx,jsxs}=react_jsx_runtime,root=react.useRef(null),menuRef=react.useRef(null),current=react.useRef(null),scope=react.useRef(0),mutating=react.useRef(false),tableColumns=react.useRef(new Map()),[view,setView]=react.useState(null),[selected,setSelected]=react.useState(false),[menu,setMenu]=react.useState(false),[indices,setIndices]=react.useState(false),[notice,setNotice]=react.useState(null),[busy,setBusy]=react.useState(false),[height,setHeight]=react.useState(null),[visible,setVisible]=react.useState(true),[theme,setTheme]=react.useState(()=>document.body.hasAttribute('data-ds-dark-theme')?'dark':'light')
  const bridge=window.dshDesktop?.conversationComponents,componentId=manifest.componentId
  // Account state only invalidates displayed content; Host still owns authorization.
  const ownerKey=react.useSyncExternalStore(listener=>sherlockBoardsAdapter?.subscribe?.(listener)??(()=>{}),()=>{const account=sherlockBoardsAdapter?.getState?.()?.account;return JSON.stringify([account?.generation,account?.user?.userId])})
@@ -89,7 +90,7 @@ export function ConversationComponentCard({sessionId,manifest}){
  react.useEffect(()=>{const observer=new MutationObserver(()=>setTheme(document.body.hasAttribute('data-ds-dark-theme')?'dark':'light'));observer.observe(document.body,{attributes:true,attributeFilter:['data-ds-dark-theme']});return()=>observer.disconnect()},[])
  current.current=view
  react.useEffect(()=>{
-  const own=++scope.current;current.current=null;setView(null);setSelected(false);setMenu(false);setIndices(false);setNotice(null);setHeight(null);mutating.current=false
+  const own=++scope.current;current.current=null;setView(null);setSelected(false);setMenu(false);setIndices(false);setNotice(null);setHeight(null);mutating.current=false;tableColumns.current.clear()
   if(manifest.sessionId!==sessionId)return
   Promise.resolve().then(()=>{if(typeof bridge?.read!=='function')throw Error('组件服务暂不可用');return bridge.read({sessionId,componentId})}).then(next=>{if(scope.current===own){if(next?.id!==componentId||next.sessionId!==sessionId)throw Error('组件身份不一致');current.current=next;setView(next)}}).catch(error=>{if(scope.current===own)setNotice({error:true,text:conversationComponentError(error)})})
   return()=>{scope.current++}
@@ -111,6 +112,7 @@ export function ConversationComponentCard({sessionId,manifest}){
  }
  const copyRef=react.useRef(null);copyRef.current=()=>action('copy')
  react.useEffect(()=>root.current?installConversationComponentCopy(root.current,()=>copyRef.current?.()):undefined,[sessionId,componentId,Boolean(view)])
+ react.useLayoutEffect(()=>root.current?installWorkbenchTableColumns(root.current,{load:(_owner,index,labels)=>tableColumns.current.get(JSON.stringify([index,labels])),save:(_owner,index,labels,state)=>tableColumns.current.set(JSON.stringify([index,labels]),state)}):undefined,[sessionId,componentId,Boolean(view)])
  react.useEffect(()=>{const Observer=window.IntersectionObserver;if(!root.current||typeof Observer!=='function')return;const observer=new Observer(entries=>setVisible(entries[0]?.isIntersecting!==false));observer.observe(root.current);return()=>observer.disconnect()},[sessionId,componentId,Boolean(view)])
  react.useEffect(()=>{
   const outside=e=>{if(!root.current?.contains(e.target)){setSelected(false);setMenu(false)}},other=e=>{if(e.detail!==root.current)setSelected(false)},key=e=>{if(e.key==='Escape'){setMenu(false);setIndices(false);if(root.current?.contains(e.target))root.current.focus({preventScroll:true})}}
@@ -156,7 +158,7 @@ export function ConversationComponentCard({sessionId,manifest}){
  return jsxs('section',{ref:root,tabIndex:0,'aria-label':node.title||'对话组件','data-conversation-component-id':componentId,'data-research-node-id':componentId,'data-selected':selected?'true':undefined,'data-financial-theme':theme,className:'ew-conversation-component',onPointerDown:select,onFocus:e=>{if(e.target===e.currentTarget){document.dispatchEvent(new CustomEvent('sherlock:conversation-component-select',{detail:root.current}));setSelected(true)}},children:[
   jsxs('header',{className:'ew-grid-header ew-conversation-component-header',children:[native&&button('refresh','刷新组件',refresh,'refresh'),jsxs('span',{className:'ew-conversation-component-title',children:[jsx(WorkbenchTitle,{title:node.title||'组件'}),native&&['quote','announcements'].includes(spec.widget)&&jsx(FinancialQuoteSelector,{node,sessionId,readOnly:false,onSpecChange:save}),native&&spec.widget==='news'&&jsx(FinancialNewsSearch,{node,sessionId,readOnly:false,onSpecChange:save})]}),button('reference','引用到对话',()=>action('reference'),'ask'),button('more','组件更多操作',()=>setMenu(value=>!value),'more')]}),
   menu&&jsxs('div',{ref:menuRef,role:'menu','aria-label':'组件更多操作','data-conversation-component-menu':'',className:'ew-conversation-component-menu',onKeyDown:e=>{const items=[...menuRef.current.querySelectorAll('button')],at=items.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();items[e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus()}},children:[jsx('button',{type:'button',role:'menuitem','data-conversation-action':'copy',disabled:busy,onClick:()=>action('copy'),children:'复制'}),jsx('button',{type:'button',role:'menuitem','data-conversation-action':'save',disabled:busy,onClick:()=>action('save'),children:'保存到组件库'}),native&&jsx('button',{type:'button',role:'menuitem',onClick:()=>{root.current.querySelector('.ew-financial-provenance')?.click();setMenu(false)},children:'数据源与更新'}),native&&spec.widget==='indices'&&jsx('button',{type:'button',role:'menuitem',onClick:()=>{setIndices(true);setMenu(false)},children:'配置指数'})]}),
-  jsx('div',{className:'rScV5Q_containerBody ew-conversation-component-body',style:{height:fixedHeight},children:native?jsx(FinancialWidget,{node,sessionId,visible,surface:'conversation',dataProvider,onSpecChange:save}):jsx(ResearchContainerBody,{node:bodyNode,sessionId,visible:true,preserveHeading:true,onHtmlSize:(_id,size)=>{if(Number.isFinite(size?.height))setHeight(size.height)}})}),
+  jsx('div',{className:'rScV5Q_containerBody rScV5Q_containerContent ew-conversation-component-body',style:{height:fixedHeight},children:native?jsx(FinancialWidget,{node,sessionId,visible,surface:'conversation',dataProvider,onSpecChange:save}):jsx(ResearchContainerContent,{node:bodyNode,sessionId,visible:true,preserveHeading:true,onHtmlSize:(_id,size)=>{if(Number.isFinite(size?.height))setHeight(size.height)}})}),
   derived&&jsxs('details',{className:'ew-conversation-component-source',children:[jsx('summary',{children:spec.source.title||'来源原文'}),jsx('pre',{children:spec.source.text})]}),
   !native&&jsxs('footer',{className:'ew-conversation-component-footer',children:[jsx('span',{children:source}),provenance.dataAsOf&&jsx('span',{children:'数据时点：'+provenance.dataAsOf}),provenance.fetchedAt&&jsx('time',{dateTime:new Date(provenance.fetchedAt).toISOString(),children:'获取：'+new Date(provenance.fetchedAt).toLocaleString('zh-CN',{hour12:false})})]}),
   notice&&jsx('div',{role:notice.error?'alert':'status','aria-live':'polite',className:'ew-conversation-component-notice',children:notice.text}),indices&&jsx(FinancialIndicesSettings,{node,sessionId,rootRef:root,readOnly:false,onClose:()=>setIndices(false),onChange:save})
@@ -166,15 +168,33 @@ export function ConversationComponentsReply({sessionId,manifests}){
  return react_jsx_runtime.jsx('div',{className:'ew-conversation-components-reply',children:manifests.map(manifest=>react_jsx_runtime.jsx(ConversationComponentCard,{sessionId,manifest},sessionId+':'+manifest.componentId))})
 }
 
+export function stripConversationComponents(source){
+ const marker='/* ework:conversation-components:v1 */',owned=['function ConversationComponentCard(','function ConversationComponentsReply(','conversationComponentSessionId:id']
+ if(!source.includes(marker)){if(owned.some(anchor=>source.includes(anchor)))throw Error('Conversation component partial installed anchor drifted');return source}
+ for(const anchor of [marker,...owned])if(source.split(anchor).length!==2)throw Error('Conversation component installed anchor missing or ambiguous: '+anchor)
+ const tail='const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];'
+ const installedTail='const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key),componentManifests=conversationComponentAnchors.get(entry.key);return [...(receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry]),...(componentManifests?.length?[react_jsx_runtime.jsx(ConversationComponentsReply,{sessionId,manifests:componentManifests},sessionId+":components:"+entry.key)]:[])];'
+ const replacements=[
+  ['const conversationComponentAnchors=conversationComponentReceiptAnchors(renderFlow,nodeStore,sessionId,conversationNodeTurn);\n',''],
+  [installedTail,tail],
+  ['function projectUserText(text, openFile) {\nconst componentProjection=projectConversationComponentUserText(text,openFile);if(componentProjection!==null)return componentProjection;','function projectUserText(text, openFile) {'],
+  ['const inputHub = new InputHub(ctx, t, researchWorkspaces);\nctx.effect(()=>{const binding={inputHub,sessions};conversationComponentInputs=binding;return()=>{if(conversationComponentInputs===binding)conversationComponentInputs=null}},"Conversation component input binding");','const inputHub = new InputHub(ctx, t, researchWorkspaces);'],
+  ['\ninputScope.effect(() => inputScope.inputTriggers.registerSource(conversationComponentReferenceSource()), "ui-conversation: Conversation component references");',''],
+  ['const shell = new SessionInputShell({\n\t\t\t\t\tactx, conversationComponentSessionId:id,','const shell = new SessionInputShell({\n\t\t\t\t\tactx,'],
+  ['text: await (o.source==="conversation-component"?serializeConversationComponentReference(o.ref,controller.signal,this.deps.conversationComponentSessionId):inputTriggers.serializeReference(o.source, o.ref, controller.signal))','text: await inputTriggers.serializeReference(o.source, o.ref, controller.signal)']
+ ]
+ for(const [installed,native] of replacements){if(source.split(installed).length!==2)throw Error('Conversation component installed anchor missing or ambiguous: '+installed.slice(0,90));source=source.replace(installed,native)}
+ const start=source.indexOf(marker),end=source.indexOf('const ExecutionStatusGroup =',start)
+ if(end<0)throw Error('Conversation component helper boundary anchor missing')
+ return source.slice(0,start)+source.slice(end)
+}
+
 export function patchConversationComponents(source){
  const marker='/* ework:conversation-components:v1 */'
- if(source.includes(marker)){
-  for(const anchor of [marker,'function ConversationComponentCard(','function ConversationComponentsReply(','inputScope.inputTriggers.registerSource(conversationComponentReferenceSource())','conversationComponentSessionId:id','componentManifests=conversationComponentAnchors.get(entry.key)'])if(source.split(anchor).length!==2)throw Error('Conversation component installed anchor missing or ambiguous: '+anchor)
-  return source
- }
+ source=stripConversationComponents(source)
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Conversation component anchor missing or ambiguous: '+before.slice(0,100));source=source.replace(before,after)}
  const helpers=[parseConversationComponentManifest,parseConversationComponentReference,...Object.values(references),conversationComponentNodeTurn,conversationComponentReceiptManifests,conversationComponentReceiptAnchors,conversationComponentCopyAllowed,installConversationComponentCopy,conversationComponentError,ConversationComponentCard,ConversationComponentsReply].map(fn=>fn.toString()).join('\n')
- const css=readFileSync(new URL('./conversation-components.css',import.meta.url),'utf8')
+ const css=readFileSync(new URL('./conversation-components.css',import.meta.url),'utf8')+'\n'+WORKBENCH_TABLE_COLUMNS_CSS.replaceAll('body ','body .ew-conversation-component ')
  exact('const ExecutionStatusGroup =',marker+'\nlet conversationComponentInputs=null;\n'+helpers+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-conversation-components-style");if(!style){style=document.createElement("style");style.id="ework-conversation-components-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(css)+';}\nconst ExecutionStatusGroup =')
  const start=source.indexOf('function ChatView('),end=source.indexOf('//#region lib/types/client/contract/slots.js',start)
  if(start<0||end<0)throw Error('Conversation component ChatView anchor missing')

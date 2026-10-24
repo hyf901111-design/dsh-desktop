@@ -104,7 +104,7 @@ it('右键重命名和删除仅影响库条目；点击外部和Escape关闭', a
     await vi.waitFor(() => expect(f.document.querySelector('[data-custom-component]')).toBeNull());
     expect(f.workspace.getSnapshot().artifacts).toHaveLength(1);
 });
-it('内置组件无保存菜单，未完成组件不可保存；保存失败保留菜单可重试', async () => {
+it('保存失败保留菜单可重试，完成的原生金融组件可保存到库', async () => {
     const f = await fixture();
     f.request.mockImplementationOnce(async () => { throw Error('磁盘不可用'); });
     await f.event('click', f.host.querySelector('[data-workbench-more]'));
@@ -113,7 +113,9 @@ it('内置组件无保存菜单，未完成组件不可保存；保存失败保�
     await f.event('keydown', f.document.body, { key: 'Escape' });
     await f.act(async () => f.workspace.createFinancialWidget('quote'));
     await f.event('click', f.host.querySelector('[data-financial-widget=quote]').closest('[data-research-node-id]').querySelector('[data-workbench-more]'));
-    expect(f.document.querySelector('[data-workbench-save-library]')).toBeNull();
+    const native=f.workspace.getSnapshot().artifacts.find(node=>node.containerSpec?.type==='financial-widget');
+    const save=f.document.querySelector('[data-workbench-save-library]');expect(save).not.toBeNull();await f.event('click',save);
+    expect(f.request).toHaveBeenCalledWith({action:'save',sessionId:'financial-test',nodeId:native.id});expect(f.workspace.getSnapshot().artifacts).toHaveLength(2);
 });
 it('复用刷新配置重新绑定新节点，数据源暂不可用仍保留组件内容且关闭菜单', async () => {
     const f = await fixture();

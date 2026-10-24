@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {conversationComponentReceiptManifests,conversationComponentReceiptAnchors,patchConversationComponents} from '../scripts/lib/conversation-components.mjs'
+import {conversationComponentReceiptManifests,conversationComponentReceiptAnchors,patchConversationComponents,stripConversationComponents} from '../scripts/lib/conversation-components.mjs'
 const manifest=(id='component-a',turnId='7')=>({version:1,kind:'conversation-component',componentId:id,sessionId:'session-a',turnId,requestId:'request-'+id,status:'ready'})
 const receipt=(id='component-a',patch={})=>({requestId:'request-'+id,capability:'conversation.components.create',status:'succeeded',effect:{kind:'conversation-component',state:'saved',componentId:id},data:{renderManifest:manifest(id)},...patch})
 const tool=(id,patch={},turn=7)=>({kind:'tool-call',data:{turn,root:{kind:'tool-result',call:{name:'client_action',argsRaw:JSON.stringify({requestId:'request-'+id,capability:'conversation.components.create',arguments:{artifact:{}}})},content:[{type:'text',text:JSON.stringify(receipt(id,patch))}]}}})
@@ -19,11 +19,15 @@ it('keeps two cards at their original turn tail across duplicate receipts, steer
  expect([...conversationComponentReceiptAnchors(flow,nodes,'other',readTurn)]).toEqual([])
 })
 it('installs one real ChatView tail and fails closed if its native anchors disappear',()=>{
- const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchConversationComponents(source)
+ const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),source=stripConversationComponents(resident),patched=patchConversationComponents(source)
  expect(patchConversationComponents(patched)).toBe(patched)
+ expect(stripConversationComponents(patched)).toBe(source)
+ expect(()=>new Function(patched)).not.toThrow()
  expect(patched.split('/* ework:conversation-components:v1 */')).toHaveLength(2)
  expect(patched).toContain('conversationComponentReceiptAnchors(renderFlow,nodeStore,sessionId,conversationNodeTurn)')
- expect(()=>patchConversationComponents(source.replace('const renderedWorkbenchEntry=renderWorkbenchEntry()','const changed=renderWorkbenchEntry()'))).toThrow(/anchor/i)
+ for(const candidate of [source,patched])expect(()=>patchConversationComponents(candidate.replace('const renderedWorkbenchEntry=renderWorkbenchEntry()','const changed=renderWorkbenchEntry()'))).toThrow(/anchor/i)
+ expect(()=>patchConversationComponents(patched.replace('conversationComponentSessionId:id','conversationComponentSessionId:wrong'))).toThrow(/anchor/i)
+ expect(()=>patchConversationComponents(patched.replace('inputScope.inputTriggers.registerSource(conversationComponentReferenceSource())','inputScope.inputTriggers.registerSource(wrongSource())'))).toThrow(/anchor/i)
 })
 it('rejects a partial installed marker rather than silently accepting missing native hooks',()=>{
  expect(()=>patchConversationComponents('/* ework:conversation-components:v1 */')).toThrow(/anchor/i)
