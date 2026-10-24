@@ -31,6 +31,22 @@ python "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
 
 数量按未隐藏逻辑页内真实 `c:chart/@r:id` 所指向的有效 `chartSpace` 部件去重统计。孤立 chart 文件、未使用关系、隐藏页图表、同一图表部件的重复实例不满足额外配额；报告另列对象数便于核对。不能用压缩包中 `ppt/charts/` 的文件个数证明任务完成。图表质量、可读性、数据来源和分析价值仍须逐图核对；结构计数不是这些要求的替代证据。
 
+## 原生图表的数值、标签与 XML
+
+按以下原则核对图表缓存、内嵌数据表和最终渲染，三者不能互相替代：
+
+1. **比例条形显式从零开始。** 用柱或条的长度比较非负金额、数量或占比时，显式设置数值轴 `minimum_scale=0`，按真实范围设置上限并给标签留空间。隐藏轴线或刻度不能掩盖自动缩放产生的正数截断基线；最终柱长比例须与数值比例一致。轴范围和交叉点接口见 [python-pptx 轴 API](https://python-pptx.readthedocs.io/en/stable/api/chart.html#value-axes)。
+
+2. **正负值保留共同零轴。** 数值轴上下限须覆盖真实数据和零点，并显式设置零交叉点，例如 `value_axis.crosses_at=0`；不要统一删除数值轴后依赖渲染器推断范围。实际渲染后逐项核对正负值位于零点两侧并符合坐标方向，以及负号、单位和标签位置；常规方向下负值向左或向下、正值向右或向上。若缓存和内嵌表保留负数，渲染却丢失负号或方向，只能先确认表现不符合数据；没有对照证据，不能断言代码取了绝对值，也不能把原因唯一归到某个参数或渲染器。
+
+3. **系列标签完整继承后再覆盖。** series 级 `c:dLbls` 会整体覆盖 plot 级配置。逐点隐藏、改色或设置自定义文字前，如需新建 series 级 `dLbls`，先复制完整的基础标签配置，再添加点级覆盖；保留 `numFmt`、`sourceLinked`、字体和位置，并显式设置所需的 `showVal`，关闭不需要的 `showCatName`、`showSerName`、`showLegendKey`、`showPercent` 和 `showBubbleSize`。不要只创建一组点级覆盖就假定其他系列标签仍继承 plot 设置。依据见 [官方标签 XML 语义](https://python-pptx.readthedocs.io/en/latest/dev/analysis/cht-data-labels.html#xml-semantics)。
+
+4. **删除标签与格式配置互斥。** `CT_DLbl` 在 `idx` 后选择 `delete` 或格式/文字组，不能同时写入。隐藏点可使用 `idx` 加 `delete=1`；保留并改色、改文字的点不应添加 `delete=0` 后再接 `txPr` 或 `tx`。手工修改 XML 时检查这一选择分支，见 [官方标签 schema](https://python-pptx.readthedocs.io/en/latest/dev/analysis/cht-data-labels.html#related-schema-definitions)。
+
+5. **轴格式遵守 schema 顺序。** 优先使用 `category_axis.format.line` 等公开 API。手工修改 `CT_CatAx` 时，`spPr` 位于刻度标签配置之后、`txPr` 和 `crossAx` 之前，不能按固定子元素下标插到 `delete` 或 `axPos` 前面；交叉点也须保留规定顺序。格式字段存在不代表 XML 合法，见 [官方轴 schema](https://python-pptx.readthedocs.io/en/latest/dev/analysis/cht-axes.html#related-schema-definitions)。
+
+6. **浮动区间标端点，不标跨度。** 用隐藏基座 `L` 加可见段 `U-L` 表示区间时，可见段长度不是指标本身。给该数据点设置明确的 `L—U` 自定义标签并保留单位，例如 `4%—5%`；不能把跨度 `1%` 当作回报率，也不能仅删除跨度标签后留下无数值的浮动条。自定义文字可使用数据点的 `data_label.text_frame`，见 [官方 DataLabel API](https://python-pptx.readthedocs.io/en/stable/api/chart.html#pptx.chart.datalabel.DataLabel)。
+
 ## 标题换行与正文、结论框
 
 正文小标题换行后，先按最终渲染字形高度扩展标题框，再将正文首行放到标题实际文字底边下方 12–16px。不要保留固定正文 y 坐标。正文实际文字须完整装入自己的文本框，且与同栏下方结论框保留至少 16px；不能以文本框之间有空隙证明文字没有被遮盖。
