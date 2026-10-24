@@ -53,13 +53,15 @@ beforeAll(async () => {
       const events=new runtime.ConversationEventRegistry(ctx),viewsRegistry=new runtime.ConversationViewRegistry(ctx),sessionsRuntime=new runtime.SessionRuntime(ctx,{sessions:{}},{},{events,views:viewsRegistry}),session=sessionsRuntime.manager.get('${sessionId}');
       session.openState='open';session.installWindow([],false);
       const store=initial=>{let value=initial;const listeners=new Set();return{getSnapshot:()=>value,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},update:patch=>{value={...value,...patch};for(const fn of listeners)fn()}}};
-      const workspaceList=store({phase:'ready',items:window.guideProbe.workspaceItems??[{workspaceId:'w',title:'教程浏览器验收',sessionIds:['${sessionId}']}]}),view=store({view:'chat',selection:null,draft:''}),summary=store({current:'${sessionId}',byId:{'${sessionId}':{id:'${sessionId}',displayTitle:'教程浏览器验收',blank:true,cwd:'/tmp/guide-browser'}}}),memory=new Map(window.guideProbe.diskEntries||[]),storage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>{memory.set(key,value);return true}},registry=new native.ResearchWorkspaceRegistry(storage);
+      const workspaceList=store({phase:'ready',items:window.guideProbe.workspaceItems??[{workspaceId:'w',title:'教程浏览器验收',path:'/tmp/guide-browser',sessionIds:['${sessionId}']}]}),view=store({view:'chat',selection:null,draft:''}),summary=store({current:'${sessionId}',byId:{'${sessionId}':{id:'${sessionId}',displayTitle:'教程浏览器验收',blank:true,cwd:'/tmp/guide-browser'}}}),memory=new Map(window.guideProbe.diskEntries||[]),storage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>{memory.set(key,value);return true}},registry=new native.ResearchWorkspaceRegistry(storage);
 
       const shell=new native.SessionInputShell({actx:{},defaultSink:()=>{window.guideProbe.providerCalls++;throw Error('Tutorial must not send a prompt')}});shell.setDraft(window.guideProbe.initialDraft??${JSON.stringify(draft)});
       const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),sessionStore={subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()},useSession=use(sessionStore),useInput=use(shell.state),useStore=use(view),useSessions=use(summary);
       window.dshDesktop.researchCanvasStorage=storage;
       if(window.guideProbe.seedGuideRegistration!==false&&window.guideProbe.guideKind!==false)memory.set('sherlock.home-guide.sessions.v1:account%3Aowner',JSON.stringify({version:1,scope:'account:owner',entries:[{kind:window.guideProbe.guideKind??'board',sessionId:'${sessionId}',cwd:'/tmp/guide-browser',title:window.guideProbe.guideKind==='note'?'AI 护航研究笔记示例':window.guideProbe.guideKind==='ppt'?'公司风格演示示例':'自选行情示例看板',createdAt:1}]}));
-      const guidePage=guidePageModule.createResearchBoardsPage({document,sessions:{list:summary,binding:()=>({session}),open:id=>summary.update({current:id})},workspaces:{list:workspaceList,api:{host:{describe:async()=>({result:{ok:true,value:{cwd:'/tmp'}}})}}},researchWorkspaces:registry,inputHub:{shells:new Map([['${sessionId}',shell]])},bridge:{isSharedSession:()=>false,subscribe:()=>()=>{},getSnapshot:async()=>({version:1,eventSeq:1,account:{status:'ready',generation:1,user:{userId:window.guideProbe.accountOwner??'owner'}},favorites:[],boards:[],current:null,recoveries:[],notifications:{cursor:0,pendingCount:0,unreadCount:0,notifications:[]}}),invoke:async()=>({ok:true,value:null})}});
+      const exampleWorkspace={workspaceId:'guide-example-workspace',path:'/tmp/guide-browser',title:window.guideProbe.guideKind==='note'?'AI 护航研究笔记示例':'公司风格演示示例',sessionIds:[]};window.guideProbe.registrationCalls=0;window.guideProbe.bindingCalls=0;
+      const guideWorkspaces={list:workspaceList,async create({path}){window.guideProbe.registrationCalls++;if(window.guideProbe.deferRegistration)await new Promise(resolve=>window.guideProbe.releaseWorkspace=resolve);if(path!==exampleWorkspace.path)throw Error('Unexpected example path');return exampleWorkspace},api:{host:{describe:async()=>({result:{ok:true,value:{cwd:'/tmp'}}})},sessions:{async create({workspaceId,sessionId}){window.guideProbe.bindingCalls++;if(workspaceId!==exampleWorkspace.workspaceId||sessionId!=='${sessionId}')throw Error('Unexpected example binding');exampleWorkspace.sessionIds=[sessionId];workspaceList.update({items:[exampleWorkspace]});return{result:{ok:true,value:{sessionId}}}}}}};
+      const guidePage=guidePageModule.createResearchBoardsPage({document,sessions:{list:summary,binding:()=>({session}),open:id=>summary.update({current:id})},workspaces:guideWorkspaces,researchWorkspaces:registry,inputHub:{shells:new Map([['${sessionId}',shell]])},bridge:{isSharedSession:()=>false,subscribe:()=>()=>{},getSnapshot:async()=>({version:1,eventSeq:1,account:{status:'ready',generation:1,user:{userId:window.guideProbe.accountOwner??'owner'}},favorites:[],boards:[],current:null,recoveries:[],notifications:{cursor:0,pendingCount:0,unreadCount:0,notifications:[]}}),invoke:async()=>({ok:true,value:null})}});
       native.__setGuidePage(guidePage);disposers.push(()=>guidePage.dispose());
 
       const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'},{id:'research',label:'研究'},{id:'notes',label:'笔记'}]},actions={setView:value=>view.update({view:value}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
@@ -96,7 +98,7 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true}={}) {
+async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true,deferRegistration=false}={}) {
   const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion }), errors = [], external = []
   page.on('pageerror', error => errors.push(error.stack||error.message))
   await page.route('**/*', route => {
@@ -106,7 +108,7 @@ async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,gui
   })
   await page.setViewportSize({width,height})
   await page.goto('https://guide.local/')
-  await page.evaluate(value=>{Object.assign(window.guideProbe,value)},{nativeLayout,workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration})
+  await page.evaluate(value=>{Object.assign(window.guideProbe,value)},{nativeLayout,workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,deferRegistration})
   await page.addScriptTag({ content: runtimeSource }); await page.evaluate(() => window.runtimeDescriptor = window.descriptor)
   await page.addScriptTag({ content: conversationSource }); await page.evaluate(() => window.conversationDescriptor = window.descriptor)
   await page.addScriptTag({ content: entry })
@@ -418,16 +420,16 @@ it.each(['note','ppt'])('keeps a registered %s example editable on the real blan
   const page=first.page,root=page.locator('.wSkVaW_root'),input=page.locator('textarea.uV2eYG_input')
   expect(await root.getAttribute('data-odyssey-page')).toBe('home')
   expect(await page.locator('.wSkVaW_composerHero').textContent()).toContain(kind==='note'?'AI 护航研究笔记示例':'公司风格演示示例')
-  expect(await input.isEditable()).toBe(true)
+  await expect.poll(()=>input.isEditable()).toBe(true)
   await page.locator('[data-conversation-view-id="notes"]').click();await page.locator('[data-conversation-view-id="chat"]').click()
   expect(await page.evaluate(()=>document.querySelector('textarea.uV2eYG_input')===window.guideProbe.originalInput)).toBe(true)
   expect(await input.isEditable()).toBe(true)
   await input.fill('继续编辑已经保存的示例');expect(await page.locator('button.uV2eYG_primary').isDisabled()).toBe(false)
-  expect(await page.evaluate(()=>({calls:window.guideProbe.workspaceCalls,items:window.guideProbe.workspaceList.getSnapshot().items}))).toEqual({calls:0,items:[]})
+  expect(await page.evaluate(()=>({calls:window.guideProbe.workspaceCalls,registration:window.guideProbe.registrationCalls,binding:window.guideProbe.bindingCalls,items:window.guideProbe.workspaceList.getSnapshot().items}))).toEqual({calls:0,registration:1,binding:1,items:[{workspaceId:'guide-example-workspace',path:'/tmp/guide-browser',title:kind==='note'?'AI 护航研究笔记示例':'公司风格演示示例',sessionIds:['guide-browser-session']}]})
   diskEntries=await page.evaluate(()=>[...window.guideProbe.memory]);expect(first.errors).toEqual([])
  }finally{await first.page.close()}
  const second=await fixture({...options,diskEntries,seedGuideRegistration:false})
- try{expect(await second.page.locator('textarea.uV2eYG_input').isEditable()).toBe(true);expect(second.errors).toEqual([])}finally{await second.page.close()}
+ try{await expect.poll(()=>second.page.locator('textarea.uV2eYG_input').isEditable()).toBe(true);expect(second.errors).toEqual([])}finally{await second.page.close()}
 },10000)
 it.each([{guideKind:false,accountOwner:'owner'},{guideKind:'ppt',accountOwner:'other'}])('keeps an ordinary or other-account projectless hero disabled ($guideKind/$accountOwner)',async options=>{
  const {page,errors}=await fixture({...options,workspaceItems:[],initialDraft:''})
@@ -449,16 +451,33 @@ it('prefers an existing real Workspace over the registered example directory',as
  }finally{await page.close()}
 })
 
-it.each(['note','ppt'])('reselects a %s example directory through the native Workspace menu without switching, creating or archiving',async kind=>{
+it.each(['note','ppt'])('reselects a %s example real Workspace through the native menu without switching, creating or archiving',async kind=>{
  const {page,errors}=await fixture({workspaceItems:[],guideKind:kind,initialDraft:'保留当前示例草稿',guideSurface:false})
  try{
-  await page.locator('[data-odyssey-board-directory="/tmp/guide-browser"]').click()
-  const choice=page.getByRole('menuitem',{name:'新建看板目录',exact:true});await choice.waitFor()
+  await expect.poll(()=>page.locator('textarea.uV2eYG_input').isEditable()).toBe(true)
+  await page.getByRole('button',{name:'选择工作区',exact:true}).click()
+  const choice=page.getByRole('menuitem',{name:kind==='note'?'AI 护航研究笔记示例':'公司风格演示示例',exact:true});await choice.waitFor()
   await choice.click();await page.waitForTimeout(70)
   expect(await page.evaluate(()=>({connections:window.guideProbe.workspaceConnections,archives:window.guideProbe.workspaceArchives,opens:window.guideProbe.workspaceOpens}))).toEqual({connections:[],archives:[],opens:['guide-browser-session']})
   expect(await page.evaluate(()=>window.guideProbe.shell.snapshot.draft)).toBe('保留当前示例草稿')
   expect(await page.locator('textarea.uV2eYG_input').isEditable()).toBe(true)
   expect(await page.evaluate(()=>document.querySelector('textarea.uV2eYG_input')===window.guideProbe.originalInput)).toBe(true)
-  expect(await page.evaluate(()=>window.guideProbe.workspaceList.getSnapshot().items)).toEqual([]);expect(errors).toEqual([])
+  expect(await page.evaluate(()=>window.guideProbe.workspaceList.getSnapshot().items[0].sessionIds)).toEqual(['guide-browser-session']);expect(errors).toEqual([])
+ }finally{await page.close()}
+},10000)
+
+it.each(['note','ppt'])('keeps the real %s InputBar locked until legacy Workspace registration completes without remounting or losing its draft',async kind=>{
+ const {page,errors}=await fixture({workspaceItems:[],guideKind:kind,initialDraft:'保留绑定前草稿',guideSurface:false,deferRegistration:true})
+ try{
+  const input=page.locator('textarea.uV2eYG_input')
+  expect(await input.isEditable()).toBe(false)
+  expect(await page.evaluate(()=>window.guideProbe.guidePage.directoryChoice('guide-browser-session'))).toBe(null)
+  expect(await page.locator('button.uV2eYG_primary').isDisabled()).toBe(true)
+  await page.evaluate(()=>window.guideProbe.releaseWorkspace())
+  await expect.poll(()=>input.isEditable()).toBe(true)
+  expect(await page.evaluate(()=>document.querySelector('textarea.uV2eYG_input')===window.guideProbe.originalInput)).toBe(true)
+  expect(await input.inputValue()).toBe('保留绑定前草稿')
+  expect(await page.evaluate(()=>({registration:window.guideProbe.registrationCalls,binding:window.guideProbe.bindingCalls,connections:window.guideProbe.workspaceConnections,archives:window.guideProbe.workspaceArchives,opens:window.guideProbe.workspaceOpens}))).toEqual({registration:1,binding:1,connections:[],archives:[],opens:[]})
+  expect(errors).toEqual([])
  }finally{await page.close()}
 },10000)

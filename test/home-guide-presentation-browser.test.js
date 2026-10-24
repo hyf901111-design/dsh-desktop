@@ -3,8 +3,7 @@ import {pathToFileURL} from 'node:url'
 import {join} from 'node:path'
 import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
-import {createUserMessage} from '@deepseek-ai/dsh-llm'
-import {presentationRuntimeFixture} from './fixtures/home-presentation-runtime.js'
+import {presentationHostFixture} from './fixtures/home-presentation-host.js'
 import {patchHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 const evidence='/tmp/home-presentation-natural-20261024'
 let browser,entry,conversationSource,runtimeSource
@@ -50,14 +49,13 @@ beforeAll(async()=>{
 },30000)
 afterAll(()=>browser?.close())
 async function fixture(){
- const f=await presentationRuntimeFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion:'reduce'}),errors=[]
+ const f=await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion:'reduce'}),errors=[]
  page.on('pageerror',e=>errors.push(e.stack??e.message))
  const backend=async input=>{
   if(input.action==='history')return{events:f.agent.session.events}
-  if(input.action==='send'){f.agent.followup(createUserMessage({content:[{type:'text',text:input.text}],source:{kind:'user'}}));return{ok:true}}
+  if(input.action==='send'){await f.prompt(input.text);return{ok:true}}
   if(input.action==='verify-file'){expect(await readFile(input.path)).toEqual(f.bytes);return{ok:true}}
-  const method={prepare:'prepare',playback:'playback',checkpoint:'checkpoint',dispose:'disposeRun'}[input.action]
-  if(!method)throw Error('unknown command');return{ok:true,...await f.runtime[method](input)}
+  return f.command(input.action,input)
  }
  await page.exposeFunction('nativeBackend',backend)
  await page.route('**/*',async route=>{

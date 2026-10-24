@@ -48,7 +48,9 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
   async resolveModel(provider,model){return{provider,id:model,name:'离线预置演示',context:{contextWindow:32000},defaultMaxTokens:1024}}
   async *stream(request){
    const run=current({sessionId:request.sessionId,runId:runs.get(request.sessionId)?.runId});await wait(run,()=>run.playing,request.signal)
-   const user=run.agent.session.events.filter(e=>e.type==='user/message')
+   // The ordinary skill middleware durably appends trusted instructions as
+   // user/message too. Only human prompts define this run's exact admission.
+   const user=run.agent.session.events.filter(e=>e.type==='user/message'&&e.data.source?.kind==='user')
    if(user.length!==1||user[0].data.content?.filter(block=>block.type==='text').map(block=>block.text).join('')!==message(run))throw Error('离线预置只接受本次研报附件和制作需求，请退出演示后继续。')
    const n=run.sequence++
    if(n===0){await wait(run,()=>run.playing&&run.allowed>=1,request.signal);yield*emitText(run,`已收到 Vanguard 的28页原始研报。这是一份发表于2025年12月10日的历史展望，预测面向2026年。我会保留原报告的预测口径，先提炼观点与证据，再按公司规范组织成${run.metadata.presentationSlides}页内部汇报，包含目录、章节导航、专业解读与可编辑数据图表。`,request.signal);yield*emitTool('todo_write',{todos:todo(run,0)},'home-plan')}
