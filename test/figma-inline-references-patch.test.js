@@ -1,8 +1,27 @@
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import { it } from 'vitest'
-import {deleteInlineReferenceOccurrence,patchFigmaInlineReferences,useReferenceProjection} from '../scripts/lib/figma-inline-references-client.mjs'
+import {deleteInlineReferenceOccurrence,inlineReferenceArrowSelection,patchFigmaInlineReferences,selectedInlineReferenceOccurrenceId,useReferenceProjection} from '../scripts/lib/figma-inline-references-client.mjs'
+import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+it('recovers the real resident orphan and keeps selection helpers inside InputBar through repeated creation passes',()=>{
+ const marker='/* sherlock-inline-reference-interactions:v1 */'
+ const runtime=marker+'\n'+[selectedInlineReferenceOccurrenceId,inlineReferenceArrowSelection,deleteInlineReferenceOccurrence].map(fn=>fn.toString()).join('\n')+'\n'
+ const current=patchFigmaInlineReferences(source)
+ for(const ending of ['return null\n','return null;\n'])assert.equal(patchFigmaInlineReferences(current.replace(runtime,runtime.replace(/return null;?\n/,ending))),current,'Node and Vite terminal ASI formatting represent the same installed helpers')
+ assert.throws(()=>patchFigmaInlineReferences(current.replace(runtime,runtime.replace('const snapshot = keyboard.snapshot','const snapshot = keyboard.unverifiedSnapshot'))),/runtime anchor drifted/,'helper statement changes must not be hidden by formatting normalization')
+ const native=current.replace(runtime,'')
+ const legacy=native.replace(/^[\t ]*function InputBar\(\{/m,match=>runtime+match)
+ const orphan=patchResearchCreationProgress(legacy)
+ assert.equal(orphan.includes(marker),false,'the legacy creation pass removes a pre-InputBar runtime')
+ const repaired=patchFigmaInlineReferences(orphan)
+ const start=repaired.search(/^[\t ]*function InputBar\(/m),end=repaired.indexOf('\n\t\t//#endregion',start)
+ assert(repaired.indexOf(runtime)>start&&repaired.indexOf(runtime)<end,'runtime ownership must share InputBar’s stable function body')
+ for(const fn of [selectedInlineReferenceOccurrenceId,inlineReferenceArrowSelection,deleteInlineReferenceOccurrence])assert.equal(repaired.split('function '+fn.name+'(').length,2)
+ assert.equal(patchFigmaInlineReferences(repaired),repaired)
+ assert.equal(patchFigmaInlineReferences(patchResearchCreationProgress(repaired)),repaired)
+ assert.throws(()=>patchFigmaInlineReferences(orphan.replace('const plainReferenceKey = !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey;','const plainReferenceKey = unknownPolicy;')),/anchor drifted/,'a partial or modified orphan must fail instead of silently blessing it')
+})
 it('upgrades the previous inline projection without rendering an additional backdrop caret', () => {
  const current=patchFigmaInlineReferences(source)
  const native='const visibleCaretOffset = null; /* Figma: the native textarea owns the only caret. */'

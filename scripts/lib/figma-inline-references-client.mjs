@@ -258,15 +258,42 @@ export function deleteInlineReferenceOccurrence(keyboard, occurrenceId) {
 
 function patchInlineReferenceInteractions(source) {
   const marker = '/* sherlock-inline-reference-interactions:v1 */'
-  if (source.includes(marker)) return source
+  const helpers = [selectedInlineReferenceOccurrenceId, inlineReferenceArrowSelection, deleteInlineReferenceOccurrence].map(fn => fn.toString()).join('\n')
+  const runtime = marker + '\n' + helpers + '\n'
+  if (source.includes(marker)) {
+    if (source.split(marker).length !== 2) throw Error('Inline reference interaction runtime anchor drifted')
+    const installed = source.indexOf(marker)
+    let cursor = installed + marker.length
+    for (const fn of [selectedInlineReferenceOccurrenceId, inlineReferenceArrowSelection, deleteInlineReferenceOccurrence]) {
+      if (!source.startsWith('\nfunction ' + fn.name + '(', cursor)) throw Error('Inline reference interaction runtime anchor drifted')
+      const end = source.indexOf('\n}\n', cursor + 1)
+      if (end < cursor) throw Error('Inline reference interaction runtime anchor drifted')
+      cursor = end + 2
+    }
+    const previous = source.slice(installed, cursor + 1)
+    // Vite inserts terminal ASI semicolons when serializing the same functions.
+    // Ignore only those; changed helper statements or intervening code still fail.
+    const withoutTerminalSemicolons = text => text.replace(/;(?=\n|$)/g, '')
+    if (withoutTerminalSemicolons(previous) !== withoutTerminalSemicolons(runtime)) throw Error('Inline reference interaction runtime anchor drifted')
+    const start = source.search(/^[\t ]*function InputBar\(\{/m), end = source.indexOf('\n\t\t//#endregion', start)
+    if (installed > start && installed < end) return replaceOne(source, previous, runtime)
+    // Older installs placed this block before InputBar. The creation-progress
+    // pass replaces that entire region while retaining InputBar's handlers.
+    source = replaceOne(source, previous, '')
+  }
   const start = source.search(/^[\t ]*function InputBar\(\{/m), end = source.indexOf('\n\t\t//#endregion', start)
   if (start < 0 || end < 0) throw Error('Inline reference interaction boundary drifted')
   let input = source.slice(start, end)
-  const replace = (before, after) => { input = replaceOne(input, before, after) }
+  const replace = (before, after) => {
+    // Admit only the exact old handler or its complete installed equivalent.
+    // This repairs a legacy orphan without accepting a partially changed body.
+    if (!input.includes(before) && input.split(after).length === 2) return
+    input = replaceOne(input, before, after)
+  }
   replace('occurrence.occurrenceId === selectedResearchOccurrenceId && (occurrence.source === CHAT_FILE_REFERENCE_SOURCE || occurrence.source === RESEARCH_FILE_REFERENCE_SOURCE || occurrence.source === RESEARCH_ARTIFACT_REFERENCE_SOURCE)', 'occurrence.occurrenceId === selectedResearchOccurrenceId && draft[occurrence.offset] === "\\uFFFC"')
   replace('deleteResearchReferenceOccurrence(keyboard, occurrenceId)', 'deleteInlineReferenceOccurrence(keyboard, occurrenceId)')
   replace('const selectedOccurrenceId = selectedResearchReferenceOccurrenceId(input?.occurrences ?? [], selection);', 'const selectedOccurrenceId = selectedInlineReferenceOccurrenceId(draft, input?.occurrences ?? [], selection);')
-  replace('onClick: researchReference === null ? void 0 : () => {', 'onClick: () => {')
+  replace('onClick: researchReference === null ? void 0 : () => {\n\t\t\t\t\t\t\t\tconst el = inputRef.current;', 'onClick: () => {\n\t\t\t\t\t\t\t\tconst el = inputRef.current;')
   replace('if (el === null || locked || machineBusy) return;\n\t\t\t\t\t\t\t\tel.focus', 'if (el === null || locked || machineBusy || composingRef.current) return;\n\t\t\t\t\t\t\t\tel.focus')
   replace('if ((e.key === "Backspace" || e.key === "Delete") && selectedResearchOccurrenceId !== null) {', `// A painted chip selection may lag native select-all or pointer selection.
                 // Read the actual one-code-unit textarea range before atomic deletion.
@@ -286,8 +313,10 @@ function patchInlineReferenceInteractions(source) {
                 }
                 if ((e.key === "Backspace" || e.key === "Delete") && plainReferenceKey && exactReferenceId !== null) {`)
   replace('removeFigmaReference(selectedResearchOccurrenceId, e.currentTarget);', 'removeFigmaReference(exactReferenceId, e.currentTarget);')
-  const helpers = [selectedInlineReferenceOccurrenceId, inlineReferenceArrowSelection, deleteInlineReferenceOccurrence].map(fn => fn.toString()).join('\n')
-  return source.slice(0, start) + marker + '\n' + helpers + '\n' + input + source.slice(end)
+  // Own the helpers inside the same stable function body as their consumers.
+  // Other build passes may refresh everything immediately before InputBar.
+  input = replaceOne(input, 'const input = useInput((s) => s);', runtime + 'const input = useInput((s) => s);')
+  return source.slice(0, start) + input + source.slice(end)
 }
 export function patchFigmaInlineReferences(source) {
   // The projected textarea already owns the native insertion point, including
