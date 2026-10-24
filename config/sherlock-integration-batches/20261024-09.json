@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-09",
+  "branch": "codex/integration/20261024-09",
+  "baseMainCommit": "fec262a6cf883cc9a70ca3bad39faa9d0cd062c4",
+  "expectedMainCommit": "fec262a6cf883cc9a70ca3bad39faa9d0cd062c4",
+  "createdAt": "2026-10-24T02:28:34.029Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复真实示例目录输入门禁与PPT原生依赖绑定",
+        "branch": "codex/feat/home-guide-workspace-binding-20261024",
+        "baseCommit": "fec262a6cf883cc9a70ca3bad39faa9d0cd062c4",
+        "tipCommit": "d8938f91ea6e192e87cc16500be0526c9e2189c1",
+        "commits": [
+          {
+            "commit": "5d823cdb8250489ff55adaebed3059435d628c1c",
+            "parents": [
+              "fec262a6cf883cc9a70ca3bad39faa9d0cd062c4"
+            ],
+            "subject": "修复示例会话空对话输入被工作区门禁锁定"
+          },
+          {
+            "commit": "7e3f014a3f9c9ba9d0d17cd8833626d03700fc21",
+            "parents": [
+              "5d823cdb8250489ff55adaebed3059435d628c1c"
+            ],
+            "subject": "修复示例目录重复选择误连工作区"
+          },
+          {
+            "commit": "d8938f91ea6e192e87cc16500be0526c9e2189c1",
+            "parents": [
+              "7e3f014a3f9c9ba9d0d17cd8833626d03700fc21"
+            ],
+            "subject": "修复PPT教程读取真实示例会话的实例绑定"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-presentation-binding.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip新增相关24项通过（17逻辑/发送/绑定+7真实Root菜单）；完整patch pipeline、类型与diff检查通过，日志/tmp/home-guide-binding-final-*-20261024.log。",
+            "verifiedCommit": "d8938f91ea6e192e87cc16500be0526c9e2189c1",
+            "completedAt": "2026-10-24T02:28:02.999808+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-session.test.ts",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "test/home-guide-presentation-adapter.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip新增相关24项通过（17逻辑/发送/绑定+7真实Root菜单）；完整patch pipeline、类型与diff检查通过，日志/tmp/home-guide-binding-final-*-20261024.log。",
+            "verifiedCommit": "d8938f91ea6e192e87cc16500be0526c9e2189c1",
+            "completedAt": "2026-10-24T02:28:02.999808+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "keeps a registered|ordinary or other-account|prefers an existing|reselects",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip新增相关24项通过（17逻辑/发送/绑定+7真实Root菜单）；完整patch pipeline、类型与diff检查通过，日志/tmp/home-guide-binding-final-*-20261024.log。",
+            "verifiedCommit": "d8938f91ea6e192e87cc16500be0526c9e2189c1",
+            "completedAt": "2026-10-24T02:28:02.999808+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip新增相关24项通过（17逻辑/发送/绑定+7真实Root菜单）；完整patch pipeline、类型与diff检查通过，日志/tmp/home-guide-binding-final-*-20261024.log。",
+            "verifiedCommit": "d8938f91ea6e192e87cc16500be0526c9e2189c1",
+            "completedAt": "2026-10-24T02:28:02.999808+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip新增相关24项通过（17逻辑/发送/绑定+7真实Root菜单）；完整patch pipeline、类型与diff检查通过，日志/tmp/home-guide-binding-final-*-20261024.log。",
+            "verifiedCommit": "d8938f91ea6e192e87cc16500be0526c9e2189c1",
+            "completedAt": "2026-10-24T02:28:02.999808+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "正式客户端fec262a6已证实看板退出回访及笔记修订标记保留；PPT首进暴露native binding TypeError与hero目录门禁，此修复已以真实page实例/ctx.effect和真实Root/InputBar/Workspace菜单红绿验证，仍待main重建后正式PPT复验。"
+        },
+        "acceptanceCriteria": [
+          "严格登记的Notes/PPT示例使用自身真实目录解除原生空对话门禁；真实Workspace优先，普通无项目/其它账号维持限制。",
+          "点击示例自己的目录只返回原会话，不创建、不归档、不误连工作区，不丢草稿。",
+          "PPT从live boards adapter读取会话，而非模块namespace；旧patch可严格升级及幂等刷新。",
+          "仅干净main构建正式本地客户端；不发布、不升版本、不上传、不推送。"
+        ],
+        "risks": [
+          "修复后的PPT完整正式客户端过程仍待重建后核验。",
+          "额外运行的research-boards-ui通知聚合case在fec262a6基线同红，与本次目录修改无关，未修改通知模块。"
+        ],
+        "generatedAt": "2026-10-24T02:28:02.999808+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-session.test.ts",
+        "test/home-guide-presentation-binding.test.ts",
+        "test/home-guide-presentation-patch.test.js",
+        "test/home-guide-presentation-browser.test.js",
+        "test/home-guide-presentation-adapter.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native-browser.test.js",
+        "-t",
+        "keeps a registered|ordinary or other-account|prefers an existing|reselects",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
