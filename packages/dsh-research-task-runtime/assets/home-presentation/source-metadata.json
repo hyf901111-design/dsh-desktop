@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "sourceURL": "https://corporate.vanguard.com/content/dam/corp/research/pdf/isg_vemo_2026.pdf",
+  "sourceTitle": "Vanguard economic and market outlook for 2026: AI exuberance: Economic upside, stock market downside",
+  "publisher": "Vanguard",
+  "publicationDate": "2025-12-10",
+  "forecastAsOf": "2025-12-10",
+  "scenarioAsOf": "2025-09-30",
+  "modelSimulationAsOf": "2025-10-31",
+  "sourcePages": 28,
+  "sourceSha256": "af3b10b6b05f8ee4734b35bfaeb3f272a370133a7949b7203f87cacf4c9de229",
+  "presentationTitle": "人工智能周期与资产配置",
+  "presentationSubtitle": "领航集团二〇二六年展望研读",
+  "presentationSlides": 8,
+  "presentationFile": "company-research-briefing.pptx",
+  "presentationSha256": "643ea5e679bd37f992f889fbf753a9b22d5f4f4c92ec024a3321493ccf2da356",
+  "sourceFile": "source-report.pdf",
+  "template": "efund-template-v6.pptx",
+  "templateSha256": "47ee51d95ddc14330c60bd5c8ccc4391654888c4d4ef998a6e1d9a8b136530fc",
+  "historicalResearchExample": true,
+  "localPresetOnly": true,
+  "rights": "The original report remains copyright The Vanguard Group, Inc. Attached for the requested local tutorial reading example. No external publication authorization is implied.",
+  "pageOutline": [
+    {
+      "slide": 1,
+      "title": "人工智能周期与资产配置",
+      "sourcePages": [
+        1
+      ],
+      "asOf": "2025-12",
+      "layout": "standard-cover"
+    },
+    {
+      "slide": 2,
+      "title": "增长前景与估值压力",
+      "sourcePages": [
+        1,
+        4,
+        17
+      ],
+      "asOf": "2025-12",
+      "layout": "comparison"
+    },
+    {
+      "slide": 3,
+      "title": "AI资本开支仍在扩张",
+      "sourcePages": [
+        5,
+        9
+      ],
+      "asOf": "2025-11-05",
+      "layout": "left-text-right-visual"
+    },
+    {
+      "slide": 4,
+      "title": "2026年基准宏观预测",
+      "sourcePages": [
+        2
+      ],
+      "asOf": "2025-12-10",
+      "layout": "full-width-table"
+    },
+    {
+      "slide": 5,
+      "title": "AI情景与美股长期回报",
+      "sourcePages": [
+        17
+      ],
+      "asOf": "2025-09-30",
+      "layout": "left-text-right-visual"
+    },
+    {
+      "slide": 6,
+      "title": "相对配置逻辑",
+      "sourcePages": [
+        15,
+        18
+      ],
+      "asOf": "2025-12",
+      "layout": "left-text-right-visual"
+    },
+    {
+      "slide": 7,
+      "title": "结论与后续观察",
+      "sourcePages": [
+        17,
+        18,
+        26
+      ],
+      "asOf": "2025-12",
+      "layout": "synthesis-matrix"
+    },
+    {
+      "slide": 8,
+      "title": "谢谢",
+      "sourcePages": [],
+      "layout": "standard-closing"
+    }
+  ],
+  "editableObjects": {
+    "nativeCharts": 1,
+    "nativeTables": 3,
+    "nativeText": true
+  },
+  "validation": {
+    "powerPointVersion": "16.74",
+    "nativeOpenedWithoutRepair": true,
+    "nativePagesInspected": 8,
+    "pdfPagesInspected": 8,
+    "templateCoverExactMatch": true,
+    "sourceNumbersVerified": true
+  }
+}
