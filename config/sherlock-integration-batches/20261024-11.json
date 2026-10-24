@@ -184,6 +184,68 @@
           "新包原生PPT回访、真实Kimi成稿和教程素材替换尚未完成。"
         ],
         "generatedAt": "2026-10-24T04:44:32.685418+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4db097d96f4829222e5c3ed2878547f1923f77b1",
+        "verificationCommit": "4db097d96f4829222e5c3ed2878547f1923f77b1",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "4db097d96f4829222e5c3ed2878547f1923f77b1",
+            "completedAt": "2026-10-24T04:49:17.958Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-session-catalog.test.js",
+              "test/home-guide-workspace.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/home-presentation-host.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/efund-ppt-text-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-session-catalog.test.js test/home-guide-workspace.test.ts test/home-guide-session.test.ts test/home-presentation-host.test.js test/home-presentation-runtime.test.js test/efund-ppt-text-layout.test.js --maxWorkers=2",
+            "verifiedCommit": "4db097d96f4829222e5c3ed2878547f1923f77b1",
+            "completedAt": "2026-10-24T04:49:17.958Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4db097d96f4829222e5c3ed2878547f1923f77b1",
+            "completedAt": "2026-10-24T04:49:17.958Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "4db097d96f4829222e5c3ed2878547f1923f77b1",
+            "completedAt": "2026-10-24T04:49:17.958Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T04:49:17.958Z"
       }
     }
   ],
