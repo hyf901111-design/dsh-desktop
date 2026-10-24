@@ -125,6 +125,72 @@
           "真实Kimi PPT尚未最终验收/替换用例；系统鼠标间歇冻结仍未确诊。"
         ],
         "generatedAt": "2026-10-24T08:53:08.628239+00:00"
+      },
+      "merged": {
+        "mergeCommit": "07555aa19e7ebb2d96d4dc13d757723d2a06c839",
+        "verificationCommit": "07555aa19e7ebb2d96d4dc13d757723d2a06c839",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "07555aa19e7ebb2d96d4dc13d757723d2a06c839",
+            "completedAt": "2026-10-24T08:55:12.811Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/preload-sandbox-imports.test.js",
+              "test/sandbox-preload.test.js",
+              "test/preload-main-frame.test.ts",
+              "test/preload-custom-elements.test.ts",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/client-capabilities.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capability-transport.test.ts",
+              "test/conversation-component-service.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/preload-sandbox-imports.test.js test/sandbox-preload.test.js test/preload-main-frame.test.ts test/preload-custom-elements.test.ts test/notes-client-capability-actions.test.ts test/notes-capability-receipt-locale.test.js test/client-capabilities.test.js test/client-capability-service.test.ts test/client-capability-transport.test.ts test/conversation-component-service.test.ts --maxWorkers=2",
+            "verifiedCommit": "07555aa19e7ebb2d96d4dc13d757723d2a06c839",
+            "completedAt": "2026-10-24T08:55:12.811Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "07555aa19e7ebb2d96d4dc13d757723d2a06c839",
+            "completedAt": "2026-10-24T08:55:12.811Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "07555aa19e7ebb2d96d4dc13d757723d2a06c839",
+            "completedAt": "2026-10-24T08:55:12.811Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T08:55:12.811Z"
       }
     }
   ],
