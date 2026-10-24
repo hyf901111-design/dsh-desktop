@@ -1,0 +1,636 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-12",
+  "branch": "codex/integration/20261024-12",
+  "baseMainCommit": "caaf0eace09499af74665860b6104174ef26c224",
+  "expectedMainCommit": "caaf0eace09499af74665860b6104174ef26c224",
+  "createdAt": "2026-10-24T06:44:44.957Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "贯通对话原生组件、优化输入标签并加固真实PPT交付技能",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "caaf0eace09499af74665860b6104174ef26c224",
+        "tipCommit": "b44e4f482fc56d07879ddecaa0e14cd79e6d8b65",
+        "commits": [
+          {
+            "commit": "abf20c237ba4b5569d3aae7d0739f5e8910893f0",
+            "parents": [
+              "caaf0eace09499af74665860b6104174ef26c224"
+            ],
+            "subject": "设计对话回复内组件的复用、持久化和跨模式操作方案"
+          },
+          {
+            "commit": "204dfa232c5574b33d355c0cda325daf692a9b41",
+            "parents": [
+              "abf20c237ba4b5569d3aae7d0739f5e8910893f0"
+            ],
+            "subject": "定义对话组件共享数据契约"
+          },
+          {
+            "commit": "ec9c2656473497711caba81fa1454c063258f348",
+            "parents": [
+              "204dfa232c5574b33d355c0cda325daf692a9b41"
+            ],
+            "subject": "支持主智能体在对话中直接提交原生组件"
+          },
+          {
+            "commit": "0fadb6a4aa4d70151f6348b60dde7494be2dcf3c",
+            "parents": [
+              "ec9c2656473497711caba81fa1454c063258f348"
+            ],
+            "subject": "持久化对话组件并打通安全引用复制与组件库"
+          },
+          {
+            "commit": "4bdeb76381393e488c3f1aeed79bf13c0c953194",
+            "parents": [
+              "0fadb6a4aa4d70151f6348b60dde7494be2dcf3c"
+            ],
+            "subject": "修复技能菜单提交闪动并统一输入标签选择删除"
+          },
+          {
+            "commit": "d43b4fa2350d0b7afd86d9ee6c410c670e7f2475",
+            "parents": [
+              "4bdeb76381393e488c3f1aeed79bf13c0c953194"
+            ],
+            "subject": "在对话回复中展示原生组件并支持引用复制复用"
+          },
+          {
+            "commit": "9a1ece77c6c4a1c96b7a7e4109aa5085fcc4efe6",
+            "parents": [
+              "d43b4fa2350d0b7afd86d9ee6c410c670e7f2475"
+            ],
+            "subject": "保留联动新闻的独立查询并定义已保存回执恢复接口"
+          },
+          {
+            "commit": "8681236f9760672c859cd90496b21d2d08ae76f9",
+            "parents": [
+              "9a1ece77c6c4a1c96b7a7e4109aa5085fcc4efe6"
+            ],
+            "subject": "保留联动新闻复制存库后的证券查询并兼容研究粘贴"
+          },
+          {
+            "commit": "e46d56df5e6fcf4aed215f57630d2f45f8bde447",
+            "parents": [
+              "8681236f9760672c859cd90496b21d2d08ae76f9"
+            ],
+            "subject": "支持取消后只读确认已持久化的对话组件回执"
+          },
+          {
+            "commit": "115435b77e75325445cf07774f4e905c45897fbb",
+            "parents": [
+              "e46d56df5e6fcf4aed215f57630d2f45f8bde447"
+            ],
+            "subject": "识别自然组件请求并阻止未知模式误建研究画布"
+          },
+          {
+            "commit": "3544b4d156b7a4e46d7800fb96663dc60ea95453",
+            "parents": [
+              "115435b77e75325445cf07774f4e905c45897fbb"
+            ],
+            "subject": "支持断网重开时只读恢复原生组件快照"
+          },
+          {
+            "commit": "c662ce7a3169d258bce006a6c34904396c6387bc",
+            "parents": [
+              "3544b4d156b7a4e46d7800fb96663dc60ea95453"
+            ],
+            "subject": "在真实取消链路恢复已保存组件并保留原轮次回执"
+          },
+          {
+            "commit": "6df617552fa0351ab8cdf5706db36c529ca7440e",
+            "parents": [
+              "c662ce7a3169d258bce006a6c34904396c6387bc"
+            ],
+            "subject": "保留取消后已保存组件并支持断网恢复旧行情"
+          },
+          {
+            "commit": "4cf76a508b3747e2c5430638aaa9ede8de9b04e9",
+            "parents": [
+              "6df617552fa0351ab8cdf5706db36c529ca7440e"
+            ],
+            "subject": "修复输入标签补丁在完整流水线重复执行时的幂等升级"
+          },
+          {
+            "commit": "f2f62c90f15d37c5af316ad70a772479865119e2",
+            "parents": [
+              "4cf76a508b3747e2c5430638aaa9ede8de9b04e9"
+            ],
+            "subject": "区分已有组件只读查看与自然新增交付请求"
+          },
+          {
+            "commit": "1d305ef04cd47a3e715ab6c97a4a07ee9e8c38ad",
+            "parents": [
+              "f2f62c90f15d37c5af316ad70a772479865119e2"
+            ],
+            "subject": "统一混合语句解析并区分既有来源与新增目标"
+          },
+          {
+            "commit": "3f2c38dae38e4c9df470ce2eacc56c9c72aa4f59",
+            "parents": [
+              "1d305ef04cd47a3e715ab6c97a4a07ee9e8c38ad"
+            ],
+            "subject": "接入对话组件宿主持久化与原生渲染桥接"
+          },
+          {
+            "commit": "fc0e672f9e237d6e62ccfc8cd0fa322dcca78a71",
+            "parents": [
+              "3f2c38dae38e4c9df470ce2eacc56c9c72aa4f59"
+            ],
+            "subject": "修复对话组件窄屏呈现并加固补丁重装校验"
+          },
+          {
+            "commit": "56e8bb901c64f29b225b09d8db2bf0f214d3a985",
+            "parents": [
+              "fc0e672f9e237d6e62ccfc8cd0fa322dcca78a71"
+            ],
+            "subject": "补齐研究剪贴板界面测试的真实浏览器原语"
+          },
+          {
+            "commit": "b44e4f482fc56d07879ddecaa0e14cd79e6d8b65",
+            "parents": [
+              "56e8bb901c64f29b225b09d8db2bf0f214d3a985"
+            ],
+            "subject": "修复：加固演示文稿包结构与实际文字布局门禁"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-24-conversation-components-plan.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-24-conversation-components-spec.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-tools.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-component-reference.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-components.css"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/custom-component-library.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/expanded-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-inline-references-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/references/package-and-render-checks.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/runtime-compatibility.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_package.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_readability.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/lint_efund_layouts.py"
+          },
+          {
+            "status": "A",
+            "path": "src/main/conversation-components/ipc.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/conversation-components/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/client-capability-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/component-library.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/conversation-components.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-clipboard.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/conversation-components.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capabilities.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capability-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capability-transport.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-library-store.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/composer-inline-tags-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-contract.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-interaction.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-ipc.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-offline.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-receipt-recovery.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-reference.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-renderer.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-store.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-components-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/custom-component-library-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-package.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-rendered-fit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-inline-references-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/helpers/conversation-component-fixture.js"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-component-library.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-clipboard-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-clipboard.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-planning-phase.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip直接相关验证通过；日志/tmp/operations-components-final-0-20261024.log",
+            "verifiedCommit": "b44e4f482fc56d07879ddecaa0e14cd79e6d8b65",
+            "completedAt": "2026-10-24T06:40:54.782589+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip直接相关验证通过；日志/tmp/operations-components-final-2-20261024.log",
+            "verifiedCommit": "b44e4f482fc56d07879ddecaa0e14cd79e6d8b65",
+            "completedAt": "2026-10-24T06:41:00.679026+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/client-capabilities.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capability-transport.test.ts",
+              "test/component-library-store.test.ts",
+              "test/composer-inline-tags-browser.test.js",
+              "test/conversation-component-contract.test.js",
+              "test/conversation-component-interaction.test.js",
+              "test/conversation-component-ipc.test.ts",
+              "test/conversation-component-offline.test.js",
+              "test/conversation-component-receipt-recovery.test.js",
+              "test/conversation-component-reference.test.js",
+              "test/conversation-component-renderer.test.js",
+              "test/conversation-component-service.test.ts",
+              "test/conversation-component-store.test.ts",
+              "test/conversation-components-policy.test.js",
+              "test/custom-component-library-client.test.js",
+              "test/efund-ppt-package.test.js",
+              "test/efund-ppt-rendered-fit.test.js",
+              "test/figma-inline-references-patch.test.js",
+              "test/financial-widget-client.test.js",
+              "test/notes-component-library.test.ts",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-workbench-feedback.test.js",
+              "test/figma-inline-references-input.test.js",
+              "test/figma-inline-references-projection.test.js",
+              "test/skill-command-patch.test.js",
+              "test/skill-command-menu.test.ts",
+              "test/integration-skill-composer.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/home-skill-chip-layout-browser.test.js",
+              "test/efund-ppt-107.test.js",
+              "test/efund-ppt-108.test.js",
+              "test/efund-ppt-109.test.js",
+              "test/efund-ppt-110.test.js",
+              "test/efund-ppt-111.test.js",
+              "test/efund-ppt-layout-lint.test.ts",
+              "test/efund-ppt-text-layout.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip直接相关验证通过；日志/tmp/operations-components-final-3-20261024.log",
+            "verifiedCommit": "b44e4f482fc56d07879ddecaa0e14cd79e6d8b65",
+            "completedAt": "2026-10-24T06:41:28.160193+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "-t",
+              "persists an independent copied linked-news instance",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip直接相关验证通过；日志/tmp/operations-components-final-4-20261024.log",
+            "verifiedCommit": "b44e4f482fc56d07879ddecaa0e14cd79e6d8b65",
+            "completedAt": "2026-10-24T06:41:30.172789+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip直接相关验证通过；日志/tmp/operations-components-final-5-20261024.log",
+            "verifiedCommit": "b44e4f482fc56d07879ddecaa0e14cd79e6d8b65",
+            "completedAt": "2026-10-24T06:41:38.286594+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确tip直接相关验证通过；日志/tmp/operations-components-final-6-20261024.log",
+            "verifiedCommit": "b44e4f482fc56d07879ddecaa0e14cd79e6d8b65",
+            "completedAt": "2026-10-24T06:41:38.310559+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实React/原生正文隔离browser 30张light/dark×320/620/900矩阵已实看，修复获取时间/图表主题/窄表换行。此为内部源码视觉验收；正式客户端native验收因ScreenCaptureKit -3811未完成。真实EWork Kimi任务仍在修订，PPT教程素材尚未替换，鼠标间歇冻结未确诊，不冒充最终用户验收。"
+        },
+        "acceptanceCriteria": [
+          "对话使用主智能体完整组件spec和真实宿主回执生成，不建立隐藏画布或默认子任务；持久化、取消后保存、断网重开和来源时间可信。",
+          "复制到研究/笔记或保存组件库保留独立身份与查询；引用和刷新沿既有原生路径。",
+          "输入多技能标签有可见选择并可键盘删除，菜单选择关闭不闪两列，生产补丁两轮幂等。",
+          "公司PPT技能以最终包实际引用和实际文字边界验收，形状信息图不被无条件禁止；真实成稿必须由实际EWork Kimi任务修订。",
+          "只从干净本地主线构建正式身份客户端，待真实PPT任务结束后才重启；不发布、不推送、不加版本、不公证。"
+        ],
+        "risks": [
+          "正式客户端新组件/输入交互验收待本地主线构建，当前native捕获服务-3811。",
+          "间歇性系统鼠标冻结无已证实根因，不以输入DOM测试声称修复。",
+          "剪贴板旧UI文件12项断言与canonical caaf源逐项逐字复现一致；此次新增linked-news真实workspace事务检查单独通过。",
+          "当前PPT为真实任务草稿且尚有待修订项目，未将旧Codex文件冒充EWork新成品。"
+        ],
+        "generatedAt": "2026-10-24T06:41:38.310644+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/client-capabilities.test.js",
+        "test/client-capability-service.test.ts",
+        "test/client-capability-transport.test.ts",
+        "test/component-library-store.test.ts",
+        "test/composer-inline-tags-browser.test.js",
+        "test/conversation-component-contract.test.js",
+        "test/conversation-component-interaction.test.js",
+        "test/conversation-component-ipc.test.ts",
+        "test/conversation-component-offline.test.js",
+        "test/conversation-component-receipt-recovery.test.js",
+        "test/conversation-component-reference.test.js",
+        "test/conversation-component-renderer.test.js",
+        "test/conversation-component-service.test.ts",
+        "test/conversation-component-store.test.ts",
+        "test/conversation-components-policy.test.js",
+        "test/custom-component-library-client.test.js",
+        "test/efund-ppt-package.test.js",
+        "test/efund-ppt-rendered-fit.test.js",
+        "test/figma-inline-references-patch.test.js",
+        "test/financial-widget-client.test.js",
+        "test/notes-component-library.test.ts",
+        "test/research-canvas-clipboard.test.ts",
+        "test/research-workbench-feedback.test.js",
+        "test/figma-inline-references-input.test.js",
+        "test/figma-inline-references-projection.test.js",
+        "test/skill-command-patch.test.js",
+        "test/skill-command-menu.test.ts",
+        "test/integration-skill-composer.test.ts",
+        "test/slash-menu-expanded.test.js",
+        "test/home-skill-chip-layout-browser.test.js",
+        "test/efund-ppt-107.test.js",
+        "test/efund-ppt-108.test.js",
+        "test/efund-ppt-109.test.js",
+        "test/efund-ppt-110.test.js",
+        "test/efund-ppt-111.test.js",
+        "test/efund-ppt-layout-lint.test.ts",
+        "test/efund-ppt-text-layout.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/research-canvas-clipboard-ui.test.ts",
+        "-t",
+        "persists an independent copied linked-news instance",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
