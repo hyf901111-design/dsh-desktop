@@ -124,7 +124,7 @@ it.each([false,true])('keeps one file-card tail after final prose with real inli
 it('recognizes explicitly delivered absolute and workspace-relative inline-code paths in a completed public reply',async()=>{
  const f=await fixture('reduce',false)
  try{
-  const text='已完成，交付文件如下：\n- PPTX：`/tmp/component-stream/outputs/对话交付（完整版）.pptx`\n- PDF预览：`outputs/模拟.pdf`'
+  const text='已完成，交付文件如下：\n\n- `/tmp/component-stream/outputs/对话交付（完整版）.pptx`\n\n- PDF预览：`outputs/模拟.pdf`'
   await f.page.evaluate(text=>window.probe.finishFiles(text),text)
   await f.page.locator('.ew-delivery-card').first().waitFor({timeout:4000})
   expect(await f.page.locator('.ew-delivery-card').evaluateAll(nodes=>nodes.map(node=>node.dataset.filePath))).toEqual(deliveredPaths)
@@ -136,6 +136,10 @@ it('recognizes explicitly delivered absolute and workspace-relative inline-code 
 it.each([
  '当前候选文件：`outputs/模拟.pptx`，尚未通过原生验收，本轮不正式交付。',
  '已完成结构校验，尚未正式交付。\n交付文件：`outputs/模拟.pptx`',
+ '交付文件：`outputs/模拟.pptx`（待 PowerPoint 原生逐页验收）',
+ '交付文件：`outputs/模拟.pptx`，尚未做原生验收。',
+ '交付文件：`outputs/模拟.pptx`，仍需在 PowerPoint 中打开检查。',
+ '交付文件：\n- 下载前请执行 `/usr/bin/cat outputs/模拟.pptx`',
  '已完成文件生成。\n\n交付文件：`outputs/模拟.pptx`\n\n当前仍待原生验收，暂不能正式交付。'
 ])('does not turn a completed checkpoint or pending-native candidate into a delivered file card (%s)',async text=>{
  const f=await fixture('reduce',false)

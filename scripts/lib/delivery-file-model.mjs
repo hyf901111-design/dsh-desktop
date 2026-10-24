@@ -206,7 +206,7 @@ export function deliveryPathsFromFinalInlineCode(text, cwd) {
   })
   const declined = value =>
     /候选|草稿|非(?:正式)?交付|不(?:作为|列为|算作|用于)?(?:本次|此次)?(?:正式)?交付|不能(?:正式)?交付|(?:尚未|还未|暂未|仍未|未|还没)(?:正式交付|交付|完成|通过|验收|验证|复核)|将(?:在|会|要|生成|交付)|准备(?:生成|交付)|计划(?:生成|交付)|正在(?:生成|制作|处理)/u.test(value) ||
-    /(?:待|等待|等候|尚需|仍需|还需)\s*(?:(?:Microsoft\s+)?PowerPoint\s*)?(?:原生)?\s*(?:验收|验证|复核|检查)|原生.{0,16}(?:待完成|未完成|未通过)/iu.test(value) ||
+    /(?:待|等待|等候|尚需|仍需|还需|需要|需|尚未|还未|暂未|仍未|未|还没)\s*(?:(?:再|在|用|使用|做|进行|完成)\s*){0,3}(?:(?:Microsoft\s+)?PowerPoint\s*(?:中|内|里)?\s*)?(?:(?:打开|文件|并|后|进行|完成|原生|逐页|全页|完整|人工|最终)\s*){0,6}(?:验收|验证|复核|检查)|原生.{0,16}(?:待完成|未完成|未通过)/iu.test(value) ||
     /\b(?:candidate|draft|checkpoint|in progress|not (?:yet )?(?:ready|complete|delivered|validated))\b|\b(?:awaiting|pending)\b.{0,30}\b(?:native|QA|verification|validation|acceptance)\b/iu.test(value)
   const first = rows.findIndex(row => !row.blank)
   const paragraph = []
@@ -219,13 +219,16 @@ export function deliveryPathsFromFinalInlineCode(text, cwd) {
   const paths = [], seen = new Set()
   let section = false
   for (const row of rows) {
-    if (row.blank || /^\s*>/.test(row.context) || declined(row.context)) { section = false; continue }
+    // Markdown commonly separates a heading and its list with blank lines.
+    if (row.blank) continue
+    if (/^\s*>/.test(row.context) || declined(row.context)) { section = false; continue }
     if (/(?:参考|原始|源|输入|示例|日志|临时)\s*(?:文件|路径|资料|报告|PPTX?|PDF)|\b(?:reference|source|input|example|temporary|log)\s+(?:file|path|report|PPTX?|PDF)/iu.test(row.context)) { section = false; continue }
     const heading = /交付(?:文件|成果|成品|材料|结果)(?:如下)?\s*[:：]|\b(?:final\s+)?deliverables?\s*:|\bdelivered files\s*:/iu.test(row.context)
     const field = /(?:^|[\s。.！!；;：:])(?:正式|最终|交付)?(?:文件|成品|PPTX?|PDF(?:\s*预览)?|演示文稿|报告|预览|下载|file|presentation|report|preview|download)\s*[:：]\s*$/iu.test(row.context)
     if (heading) section = true
     else if (section && row.context.trim() && !/^\s*(?:[-*+]\s|\d+[.)]\s)/.test(row.context) && !field) section = false
     if (!section && !(completed && field)) continue
+    if (/(?:请|先|须|需要|再|然后)\s*(?:运行|执行|输入)|(?:运行|执行|输入)(?:以下|如下)?(?:命令|脚本)|(?:命令|command|shell|terminal)\s*[:：]|\b(?:run|execute)\b/iu.test(row.context)) continue
     for (const token of row.tokens) {
       // Inline code is a literal filesystem spelling, not a URI. Bare names
       // and commands are ambiguous; only absolute or path-qualified files.

@@ -95,6 +95,8 @@ describe('delivery path merging', () => {
   })
   it.each([
     ['交付文件：`out/模型.custom-format`', '/work/out/模型.custom-format'],
+    ['已完成，交付文件如下：\n\n- `out/final.pptx`', '/work/out/final.pptx'],
+    ['交付文件：\n\n- 执行摘要：`out/年度 报告.pdf`', '/work/out/年度 报告.pdf'],
     ['Final deliverables:\n- PPTX: `out/final.pptx`', '/work/out/final.pptx'],
     ['已完成。PPTX：`out/final.pptx`', '/work/out/final.pptx'],
     ['已完成。**PPTX**：`out/final.pptx`', '/work/out/final.pptx'],
@@ -118,6 +120,10 @@ describe('delivery path merging', () => {
     '非交付文件：`out/review.pptx`',
     '已完成文件生成，暂不作为正式交付文件：`out/review.pptx`',
     '交付文件：`out/review.pptx`，等待 PowerPoint 原生验收。',
+    '交付文件：`out/review.pptx`（待 PowerPoint 原生逐页验收）',
+    '交付文件：`out/review.pptx`，尚未做原生验收。',
+    '交付文件：`out/review.pptx`，仍需在 PowerPoint 中打开检查。',
+    '交付文件：`out/review.pptx`，还需在 Microsoft PowerPoint 里打开并逐页检查。',
     '交付文件：`out/review.pptx`，原生验收仍待完成。',
     'Deliverables: `out/review.pptx`, awaiting native QA.',
     'Candidate deliverables: `out/draft.pptx`, not yet ready.',
@@ -130,6 +136,8 @@ describe('delivery path merging', () => {
     '交付文件：`python out/generate.py`',
     '交付文件：`/usr/bin/python /work/out/final.pptx`',
     '交付文件：`./generate.py out/final.pptx`',
+    '交付文件：\n- 下载前请执行 `/usr/bin/cat outputs/final.pptx`',
+    '交付文件：\n- 执行以下命令查看文件：`/usr/bin/cat outputs/final.pptx`',
     '交付文件：`https://example.com/report.pdf`',
     '交付文件：`file:///work/report.pdf`',
     '交付文件：`out/folder/`',
@@ -139,6 +147,10 @@ describe('delivery path merging', () => {
     '交付文件：\n- PPTX: `out/one\ntwo.pptx`'
   ])('does not infer delivery from candidate, reference, command or invalid code paths: %s', text => {
     expect(mergeDeliveryPaths([], text, '/work')).toEqual([])
+  })
+  it('keeps a delivery list across blank lines without leaking into following prose', () => {
+    const text = '交付文件：\n\n- `out/报告.pdf`\n\n- `out/方案.pptx`\n\n后续参考：\n- `out/源资料.pdf`'
+    expect(mergeDeliveryPaths([], text, '/work')).toEqual(['/work/out/报告.pdf', '/work/out/方案.pptx'])
   })
   it('deduplicates inline paths with produced files and explicit links and respects the link destination', () => {
     const text = '已完成，交付文件如下：\n- PPTX：`out/final.pptx` [下载](out/final.pptx)\n- PDF：[`out/label.pdf`](out/actual.pdf)'
