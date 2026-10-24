@@ -122,3 +122,25 @@ describe('existing-object delivery stays read-only while natural new delivery cr
   expect(policy.componentCreationRequest(session('给我看看当前工作台，另外给我一个新的工作台'))?.target).toBe('workbench')
  })
 })
+describe('normalized mixed clauses separate existing sources from creation targets',()=>{
+ it.each([
+  ['给我一张苹果行情卡片，然后给我看看工作台','component'],
+  ['用当前表格的数据创建一个新的工作台','workbench'],
+  ['使用已有组件的数据生成一个新工作台','workbench'],
+  ['用当前工作台的数据创建一个新的图表','component'],
+  ['创建一张展示当前工作台数据的图表','component'],
+  ['用图表展示当前工作台中的原始数据','component'],
+  ['给我看看当前工作台，然后给我一个新的工作台','workbench'],
+ ])('%s creates only the intended %s target',async(text,target)=>{
+  const s=session(text);catalog(s,'conversation');const h=harness(s)
+  expect(policy.componentCreationRequest(s)?.target).toBe(target)
+  expect((await h.config()).maxTokens).toBe(target==='workbench'?4096:16000)
+  expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(target==='workbench')
+  expect(h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'mixed'}))).toBe(target!=='workbench');h.dispose()
+ })
+ it.each(['然后给我看看工作台','另外请给我当前工作台的链接','使用当前表格的数据如何创建一个新的工作台','说明如何使用已有组件的数据生成一个新工作台'])('keeps %s read-only',async text=>{
+  const s=session(text);catalog(s,'conversation');const h=harness(s)
+  expect(policy.componentCreationRequest(s)).toBeNull();expect((await h.config()).maxTokens).toBe(16000)
+  expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(false);h.dispose()
+ })
+})
