@@ -24,6 +24,9 @@ beforeAll(async () => {
   const native = stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
   conversationSource = patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native)))
     .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};exports.__page=sherlockBoardsPage;')
+  const workspaceSource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'),pickerStart=workspaceSource.indexOf('function WorkspacePickFlow('),pickerEnd=workspaceSource.indexOf('\n\t\t/**',pickerStart),workspacePicker=workspaceSource.slice(pickerStart,pickerEnd)
+  const selectStart=conversationSource.indexOf('selectWorkspace: async (workspaceId) => {'),workspaceSelect=conversationSource.slice(selectStart,conversationSource.indexOf('\n\t\t\t\t})',selectStart))
+  if(pickerStart<0||selectStart<0)throw Error('Native Workspace picker fixture anchors drifted')
   const assets = 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
   const frontend = await Promise.all((await readdir(assets)).filter(name => /^index-.*\.css$/.test(name)).map(name => readFile(`${assets}/${name}`, 'utf8')))
   const bundles = await Promise.all(['layout', 'conversation', 'agent-preset'].map(name => readFile(`node_modules/@deepseek-ai/dsh-client-ui-${name}/lib/client.js`, 'utf8')))
@@ -35,13 +38,14 @@ beforeAll(async () => {
   const pageBundle = await build({stdin:{contents:"export * from './src/preload/research-boards-ui.ts'",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'browser',format:'cjs',write:false,external:['react','@deepseek-ai/dsh-client-ui-primitives'],target:'chrome120',logLevel:'silent'})
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
-      import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';
+      import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{Menu as NativeMenu}from'@deepseek-ai/dsh-client-ui-primitives';
       const react=React,react_jsx_runtime=jsx,react_dom=dom,COLLAPSED_SIDEBAR_WIDTH=80,SIDEBAR_AUTO_COLLAPSE=1024,_deepseek_ai_dsh_client_runtime_client={defineStore:spec=>spec};
       const AppFrame_module_css_default={frame:'pI_x6G_frame',sidebarCol:'pI_x6G_sidebarCol',centerCol:'pI_x6G_centerCol',detailsCol:'pI_x6G_detailsCol',handle:'pI_x6G_handle',overlayLayer:'pI_x6G_overlayLayer'};
       ${frame}
       let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
       const cordis=new Proxy({Service:class{constructor(ctx){this.ctx=ctx}}},{get:(target,key)=>target[key]??fake});
       const primitives=new Proxy({Tooltip:({children})=>children,MarkdownText:({text})=><p>{text}</p>},{get:(target,key)=>target[key]??(()=>null)});
+      const WorkspacePickFlow=new Function('react','react_jsx_runtime','_deepseek_ai_dsh_client_ui_primitives','WorkspacePicker_module_css_default','ADD_WORKSPACE',${JSON.stringify(workspacePicker)}+'\\nreturn WorkspacePickFlow;')(React,jsx,new Proxy({Menu:NativeMenu},{get:(target,key)=>target[key]??(()=>null)}),{},'::add-workspace');
       const guidePageModule=(()=>{const module={exports:{}},exports=module.exports,require=id=>id==='react'?React:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:fake;${pageBundle.outputFiles[0].text};return module.exports})();
       const runtime=window.runtimeDescriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='@deepseek-ai/cordis'?cordis:fake);
       const native=window.conversationDescriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/dsh-client-runtime/client'?runtime:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:()=>null,AttachmentRail:()=>null}:fake);
@@ -77,12 +81,13 @@ beforeAll(async () => {
       const t=key=>({'hero.headline':'探索更远，洞见更深。','hero.chooseWorkspace':'选择工作区'})[key]||key;
       const shared={sessionId:'${sessionId}',useSession,useSessions,useStore,actions,views,t};
       const inputProps={useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:(_name,select)=>select?.(undefined),sessionId:'${sessionId}',t};
-      const renderSlot=(name,props={},scope={})=>name==='conversation.view'&&scope.only==='research'?<native.ResearchCanvas sessionId='${sessionId}' t={t} researchWorkspaces={registry} {...props}/>:name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<main data-native-history="">已有会话内容</main>:null;
+      const workspaceService={connectWorkspace:async id=>{window.guideProbe.workspaceConnections.push(id);throw Error('Unknown real Workspace: '+id)},archiveSession:async id=>{window.guideProbe.workspaceArchives.push(id)}},nativeWorkspaceSelect=new Function('workspaces','sessions','inputHub','sherlockBoardsAdapter','sessionId',${JSON.stringify('return ({'+workspaceSelect+'}).selectWorkspace;')} )(workspaceService,{open:id=>window.guideProbe.workspaceOpens.push(id)},{shell:()=>shell},guidePage,'${sessionId}');
+      const renderSlot=(name,props={},scope={})=>name==='conversation.view'&&scope.only==='research'?<native.ResearchCanvas sessionId='${sessionId}' t={t} researchWorkspaces={registry} {...props}/>:name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.hero.workspace'?<WorkspacePickFlow {...props} t={key=>key==='menu.addWorkspace'?'添加工作区…':key} useWorkspaces={use(workspaceList)} createWorkspace={async()=>{window.guideProbe.workspaceCalls++;throw Error('Must not create a Workspace')}} useDirectoryFlow={()=>true} renderDirectoryFlow={()=>null}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<main data-native-history="">已有会话内容</main>:null;
       const root=createRoot(document.querySelector('#native-root'));window.guideProbe.researchActivations=[];window.guideProbe.researchActiveSessions=new Set();const setResearchActive=(id,active)=>{window.guideProbe.researchActivations.push({id,active});if(active)window.guideProbe.researchActiveSessions.add(id);else window.guideProbe.researchActiveSessions.delete(id)};
-      function App(){const [current,setCurrent]=React.useState({sessionId:'${sessionId}',subagentPanel:false});window.guideProbe.setContext=setCurrent;return <native.ConversationRoot {...shared} {...current} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{window.guideProbe.workspaceCalls++;throw Error('Tutorial must not open a workspace')}} useWorkspaces={use(workspaceList)} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={setResearchActive}/>}
+      function App(){const [current,setCurrent]=React.useState({sessionId:'${sessionId}',subagentPanel:false});window.guideProbe.setContext=setCurrent;return <native.ConversationRoot {...shared} {...current} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async id=>{window.guideProbe.workspaceCalls++;return nativeWorkspaceSelect(id)}} useWorkspaces={use(workspaceList)} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={setResearchActive}/>}
       Object.assign(window.guideProbe,{native,shell,registry,memory,view,session,sidebar,guidePage,workspaceList,dispose(){root.unmount();frameRoot?.unmount();disposers.reverse().forEach(stop=>stop())}});root.render(<App/>);
     ` },
-    bundle: true, platform: 'browser', format: 'iife', write: false, define: { 'process.env.NODE_ENV': '"production"' }
+    bundle: true, platform: 'browser', format: 'iife', write: false, define: { 'process.env.NODE_ENV': '"production"' },loader:{'.css':'empty'}
   })
   entry = output.outputFiles[0].text
   const pw = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -91,13 +96,13 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration}={}) {
+async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true}={}) {
   const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion }), errors = [], external = []
   page.on('pageerror', error => errors.push(error.stack||error.message))
   await page.route('**/*', route => {
     const url = new URL(route.request().url())
     if (url.origin !== 'https://guide.local') { external.push(route.request().url()); return route.abort() }
-    return route.fulfill({ contentType: url.pathname === '/' ? 'text/html' : 'application/json', body: url.pathname === '/' ? `<!doctype html><meta charset="utf-8"><title>Native homepage guide fixture</title><style>${styles}\nhtml,body{height:100%;margin:0}#native-root{height:100%;min-height:0}.pI_x6G_frame{display:grid;grid-template-columns:88px minmax(0,1fr);height:100vh}.pI_x6G_centerCol{position:relative;min-width:0;min-height:0}#guide-host{position:absolute;inset:${guideTop}px 18px ${guideBottom}px;z-index:10}[data-home-guide="${runId}"]{position:absolute;inset:0;pointer-events:none}[data-home-guide="${runId}"]>#guide-host{pointer-events:auto}#outside-host{position:fixed;left:0;top:0}</style><div class="pI_x6G_frame"><aside></aside><main class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="${runId}"><div id="guide-host"></div></section></main></div><div id="outside-host"></div><div id="side-composer"></div><div id="side-history"></div><script>window.__ModuleLoader__={load:value=>window.descriptor=value};window.guideProbe={providerCalls:0,workspaceCalls:0,financialCalls:0,libraryCalls:0,diskEntries:${JSON.stringify(diskEntries)}};window.dshDesktop={financialWidget:{request:async()=>{window.guideProbe.financialCalls++;throw Error('Global financial bridge must not be called')}},componentLibrary:{request:async()=>{window.guideProbe.libraryCalls++;throw Error('Global library bridge must not be called')}}};</script>` : '{"tasks":[],"plans":[]}' })
+    return route.fulfill({ contentType: url.pathname === '/' ? 'text/html' : 'application/json', body: url.pathname === '/' ? `<!doctype html><meta charset="utf-8"><title>Native homepage guide fixture</title><style>${styles}\nhtml,body{height:100%;margin:0}#native-root{height:100%;min-height:0}.pI_x6G_frame{display:grid;grid-template-columns:88px minmax(0,1fr);height:100vh}.pI_x6G_centerCol{position:relative;min-width:0;min-height:0}#guide-host{position:absolute;inset:${guideTop}px 18px ${guideBottom}px;z-index:10}[data-home-guide="${runId}"]{position:absolute;inset:0;pointer-events:none}[data-home-guide="${runId}"]>#guide-host{pointer-events:auto}#outside-host{position:fixed;left:0;top:0}</style><div class="pI_x6G_frame"><aside></aside><main class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="${runId}"><div id="guide-host"></div></section></main></div><div id="outside-host"></div><div id="side-composer"></div><div id="side-history"></div><script>window.__ModuleLoader__={load:value=>window.descriptor=value};window.guideProbe={providerCalls:0,workspaceCalls:0,financialCalls:0,libraryCalls:0,workspaceConnections:[],workspaceArchives:[],workspaceOpens:[],diskEntries:${JSON.stringify(diskEntries)}};window.dshDesktop={financialWidget:{request:async()=>{window.guideProbe.financialCalls++;throw Error('Global financial bridge must not be called')}},componentLibrary:{request:async()=>{window.guideProbe.libraryCalls++;throw Error('Global library bridge must not be called')}}};</script>` : '{"tasks":[],"plans":[]}' })
   })
   await page.setViewportSize({width,height})
   await page.goto('https://guide.local/')
@@ -105,6 +110,7 @@ async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,gui
   await page.addScriptTag({ content: runtimeSource }); await page.evaluate(() => window.runtimeDescriptor = window.descriptor)
   await page.addScriptTag({ content: conversationSource }); await page.evaluate(() => window.conversationDescriptor = window.descriptor)
   await page.addScriptTag({ content: entry })
+  if(!guideSurface)await page.locator('[data-home-guide]').evaluate(node=>node.remove())
   await page.waitForSelector('textarea', { timeout: 3000 }).catch(error=>{throw Error(JSON.stringify(errors)+' '+error.message)})
   await page.evaluate(() => { window.guideProbe.originalInput = document.querySelector('textarea'); window.guideProbe.originalRoot = document.querySelector('.wSkVaW_root'); document.querySelector('[data-srb-session-header]')?.setAttribute('data-ework-notes-session', 'guide-browser-session') })
   expect(errors).toEqual([])
@@ -442,3 +448,17 @@ it('prefers an existing real Workspace over the registered example directory',as
   expect(await page.evaluate(()=>window.guideProbe.workspaceCalls)).toBe(0);expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+it.each(['note','ppt'])('reselects a %s example directory through the native Workspace menu without switching, creating or archiving',async kind=>{
+ const {page,errors}=await fixture({workspaceItems:[],guideKind:kind,initialDraft:'保留当前示例草稿',guideSurface:false})
+ try{
+  await page.locator('[data-odyssey-board-directory="/tmp/guide-browser"]').click()
+  const choice=page.getByRole('menuitem',{name:'新建看板目录',exact:true});await choice.waitFor()
+  await choice.click();await page.waitForTimeout(70)
+  expect(await page.evaluate(()=>({connections:window.guideProbe.workspaceConnections,archives:window.guideProbe.workspaceArchives,opens:window.guideProbe.workspaceOpens}))).toEqual({connections:[],archives:[],opens:['guide-browser-session']})
+  expect(await page.evaluate(()=>window.guideProbe.shell.snapshot.draft)).toBe('保留当前示例草稿')
+  expect(await page.locator('textarea.uV2eYG_input').isEditable()).toBe(true)
+  expect(await page.evaluate(()=>document.querySelector('textarea.uV2eYG_input')===window.guideProbe.originalInput)).toBe(true)
+  expect(await page.evaluate(()=>window.guideProbe.workspaceList.getSnapshot().items)).toEqual([]);expect(errors).toEqual([])
+ }finally{await page.close()}
+},10000)

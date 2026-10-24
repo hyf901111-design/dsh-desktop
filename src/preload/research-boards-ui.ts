@@ -1488,8 +1488,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       return example ? { path: example.cwd, label: example.title } : null
     },
     async associateProject(id: string, workspaceId: string) {
-      if (win.localStorage.getItem('sherlock.research.directory-locked.v1:' + id) === 'true' || deps.researchWorkspaces.for(id).getSnapshot().files.length > 0) throw Error('画板已有资料，项目目录已固定')
       const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
+      if (!f && workspaceId === '::board-directory') {
+        if (!getHomeGuideSession(id)) throw Error('该示例目录不属于当前账号，或会话目录已变化。')
+        return id
+      }
+      if (win.localStorage.getItem('sherlock.research.directory-locked.v1:' + id) === 'true' || deps.researchWorkspaces.for(id).getSnapshot().files.length > 0) throw Error('画板已有资料，项目目录已固定')
       if (!f) return null
       const workspace = workspaceId === '::board-directory' ? null : deps.workspaces.list.getSnapshot().items.find((w: { workspaceId: string; path: string; title: string }) => w.workspaceId === workspaceId)
       if (workspaceId !== '::board-directory' && !workspace) throw Error('项目暂不可用')

@@ -83,3 +83,13 @@ it('offers only a registered owned example directory and yields to a real Worksp
  f.setOwner('other');expect(f.page.directoryChoice(ppt.sessionId)).toBe(null)
  expect(f.opened).toEqual([]);expect(f.requests.filter(item=>item[0]==='create')).toHaveLength(2)
 })
+
+it('keeps a registered same-owner example when its current directory is selected and rejects foreign or stale directory placeholders',async()=>{
+ const f=await fixture(),note=await f.reply(f.send('note')),ppt=await f.reply(f.send('ppt'))
+ for(const entry of [note,ppt])expect(await f.page.associateProject(entry.sessionId,'::board-directory')).toBe(entry.sessionId)
+ expect(f.opened).toEqual([]);expect(f.archived).toEqual([]);expect(f.requests.filter(row=>row[0]==='create')).toHaveLength(2)
+ await expect(f.page.associateProject('original','::board-directory')).rejects.toThrow()
+ const before=f.sessions.list.getSnapshot();f.sessions.list.set({...before,byId:{...before.byId,[note.sessionId]:{...before.byId[note.sessionId],cwd:'/another'}}})
+ await expect(f.page.associateProject(note.sessionId,'::board-directory')).rejects.toThrow()
+ f.setOwner('other');await expect(f.page.associateProject(ppt.sessionId,'::board-directory')).rejects.toThrow()
+})
