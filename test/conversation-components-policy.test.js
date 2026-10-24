@@ -3,7 +3,7 @@ import {registerWorkbenchExecutionPolicy,workbenchCreationRequest} from '../pack
 const policy=await import('../packages/dsh-research-task-runtime/conversation-components-policy.js').catch(()=>null)
 const session=text=>({id:'s',header:{},events:[{type:'turn/start',data:{turn:'1'}},{type:'user/message',seq:2,data:{id:'human',source:{kind:'user'},content:[{type:'text',text}]}}]})
 const catalog=(s,mode,{callId='catalog-1',error=false,resultCallId=callId}={})=>s.events.push({type:'tool/call',data:{name:'client_capabilities',callId,arguments:'{}'}},{type:'tool/result',data:{message:{source:{kind:'tool',callId:resultCallId},content:[{type:'tool-result',isError:error,content:[{type:'text',text:JSON.stringify({mode,capabilities:[]})}]}]}}})
-const schemas=[{name:'research_workbench_create',parameters:{type:'object',properties:{panels:{type:'array'}},required:['panels']}},{name:'client_capabilities'},{name:'client_action'},{name:'public_data_query',parameters:{properties:{operation:{enum:['catalog','query']}}}},{name:'financial_query',parameters:{properties:{intent:{enum:['resolve','catalog','research']}}}},{name:'run_code'}]
+const schemas=[{name:'research_workbench_create',parameters:{type:'object',properties:{panels:{type:'array'}},required:['panels']}},{name:'client_capabilities'},{name:'client_action'},{name:'public_data_query',parameters:{properties:{operation:{enum:['catalog','query']}}}},{name:'financial_query',parameters:{properties:{intent:{enum:['resolve','catalog','research']}}}},{name:'run_code'},{name:'read_file'},{name:'Bash'}]
 function harness(s){
  expect(policy,'conversation policy 尚未实现').not.toBeNull()
  const prompts=[],hooks=new Map(),guards=[],startSubagent=vi.fn(),agent={session:s}
@@ -142,5 +142,68 @@ describe('normalized mixed clauses separate existing sources from creation targe
   const s=session(text);catalog(s,'conversation');const h=harness(s)
   expect(policy.componentCreationRequest(s)).toBeNull();expect((await h.config()).maxTokens).toBe(16000)
   expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(false);h.dispose()
+ })
+})
+
+
+// Authored PPT task, with the local attachment path and invocation ID redacted.
+const originalPresentationRequest="/ework-skill-example\n📎 文件：`/workspace/Vanguard-2026经济与市场展望.pdf`\n\n请使用内置「PPT制作助手 / efund-ppt-maker」技能，独立阅读工作区中的《Vanguard-2026经济与市场展望.pdf》，制作一份有代表性的、可供专业投研人员内部交流的公司风格PPT。题目可用《人工智能周期与资产配置：2026年展望研读》。这份材料将用于EWork首页生成演示用例，因此请完整完成资料研读、观点与目录规划、原生可编辑PPT制作、逐页渲染和版式修订，再交付成品，不要停在大纲。\n\n内容：约16—20页，具备规范目录与分章目录；明确区分原报告预测、报告历史数据与本稿研读判断。优先讨论AI投资和宏观增长、企业融资与资本回报、估值与情景、不同资产组合角色、观察指标与风险反证。选择PDF里确有依据的数据制作至少6张有分析价值且可编辑的专业图表，配口径、单位、资料页码及截至日期；如自行计算，列出计算口径，不能将测算冒充原报告预测。不要空洞口号、通用模拟数据或编造的最新行情。该PDF是2025年末发布的历史展望，必须如实标注资料时点，不宣称是当前预测。结尾前必须有实质性结论。\n\n品牌和版式：严格执行内置技能，使用其唯一V6公司品牌来源并保留封面、页头Logo、页脚、字体与标准目录；正文采用与信息关系合适的专业排版。尤其：封面可编辑槽位不保留模板占位空格；描述性表格的表头和正文同列左对齐、文字起点一致，蓝色表头内文字垂直居中；左观点右图表页面的小标题下面紧接顶部排列的正文，不能把正文悬在整栏空白的中间。数据图表应清晰、大方，有专业观点但不过度堆满。不要读取、复制或改写其他已经生成的示例PPT，本次从PDF和技能模板独立生成。\n\n质量：运行技能提供的封面、字号/品牌家具、可读性、交付检查及新增文本布局检查；必须逐页实际渲染查看并修正重叠、缺字、截断、超界、错位和不合理空白。所有检查真实执行；有能力缺口如实报告，不能声称未执行的检查通过。最终保存到当前工作区 outputs/，交付《人工智能周期与资产配置.pptx》及便于复核的逐页预览；回复实际本地绝对路径和简要检查结果。\n"
+describe('file-document deliverables keep authored file execution rather than UI component routing',()=>{
+ const files=[
+  ['original attachment task',originalPresentationRequest],
+  ['comma-separated chart requirement','根据附件研报制作一份PPT，包含6张可编辑数据图表'],
+  ['chart requirement inside deliverable','根据附件研报制作一份包含6张可编辑数据图表的PPT'],
+  ['charts preceding the deliverable','根据附件中的图表生成一份PPT'],
+  ['natural file delivery','给我一份含原生图表的PPT文件'],
+  ['document continuation','继续完成当前PPT，修正其中原生图表的正负轴'],
+  ['compact continuation','继续当前PPT修图表'],
+  ['exported document','把当前工作台的数据整理成一份PPT，包含可编辑图表'],
+  ['document table','制作一份Word报告，包含一个数据表格'],
+  ['quoted flow inside deck','制作PPT，内容包括“创建一个工作台”的流程示意图'],
+  ['explicitly no new canvas','制作PPT，不要创建工作台'],
+  ['explicitly no inline component','制作PPT，不要在对话里创建图表组件'],
+ ]
+ for(const [label,text] of files)for(const mode of [null,'conversation','research','notes'])it(`${label} keeps file tools and budget in ${mode??'unknown'} mode`,async()=>{
+  const s=session(text);if(mode)catalog(s,mode);const h=harness(s)
+  expect(policy.componentCreationRequest(s)).toBeNull();expect(workbenchCreationRequest(s)).toBeNull()
+  expect(await h.config()).toMatchObject({reasoningEffort:'high',maxTokens:16000})
+  const names=(await h.wire()).tools.map(tool=>tool.name)
+  expect(names).toEqual(['client_capabilities','client_action','public_data_query','financial_query','run_code','read_file','Bash'])
+  for(const name of ['run_code','read_file','Bash'])expect(h.guards.map(fn=>fn({agent:h.agent,name,arguments:{},callId:name})).filter(Boolean)).toEqual([])
+  const denied=h.guards.map(fn=>fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'file-canvas'})).filter(Boolean).join()
+  expect(denied).toContain('文件');expect(denied).not.toContain('conversation.components.create')
+  expect(h.prompt()).not.toContain('conversation.components.create');expect(h.prompt()).not.toContain('notes.components.create');expect(h.prompt()).not.toContain('【工作台首次规划】')
+  h.dispose()
+ })
+ const components=[
+  '在对话里展示一张行情图表组件',
+  '请在对话中生成一个行情图表组件',
+  '制作PPT，并在对话中展示一张行情图表组件',
+  '制作一份PPT，另外生成一个对话组件展示行情',
+  '阅读当前PPT后，在对话里展示一张行情卡片',
+  '根据附件PDF创建一张行情图表组件',
+  '创建一张基于附件PDF数据的行情图表组件',
+  '生成一个使用PDF数据的图表组件',
+  '给我一张根据PDF数据绘制的行情图表组件',
+  '原说明写着“制作一份含图表的PPT”，现在在对话里展示一张行情图表组件',
+  '> 制作一份含图表的PPT\n在对话里展示一张行情图表组件',
+  '```text\n制作一份含图表的PPT\n```\n在对话里展示一张行情图表组件',
+  '不要制作PPT，在对话里展示一张行情图表组件',
+ ]
+ for(const text of components)for(const mode of [null,'conversation','research','notes'])it(`preserves separate component delivery in ${mode??'unknown'} mode: ${text}`,async()=>{
+  const s=session(text);if(mode)catalog(s,mode);const h=harness(s)
+  expect(policy.componentCreationRequest(s)?.target).toBe('component')
+  expect((await h.config()).maxTokens).toBe(mode==='research'?4096:16000)
+  expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(mode==='research')
+  expect(h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'mixed-component'}))).toBe(mode!=='research')
+  if(mode!=='research'&&mode!=='notes')expect(h.prompt()).toContain('conversation.components.create')
+  h.dispose()
+ })
+ for(const text of ['制作PPT，并创建一个股票研究工作台','创建一个工作台，并把它的数据整理成一份PPT'])for(const mode of [null,'conversation','research','notes'])it(`preserves explicitly requested canvas in ${mode??'unknown'} mode: ${text}`,async()=>{
+  const s=session(text);if(mode)catalog(s,mode);const h=harness(s)
+  expect(policy.componentCreationRequest(s)?.target).toBe('workbench');expect((await h.config()).maxTokens).toBe(4096)
+  expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(true)
+  expect(h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'mixed-board'}))).toBe(false)
+  h.dispose()
  })
 })
