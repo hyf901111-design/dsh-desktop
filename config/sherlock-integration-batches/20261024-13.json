@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-13",
+  "branch": "codex/integration/20261024-13",
+  "baseMainCommit": "d06d944473e960e60afb2e1e96358265848d638d",
+  "expectedMainCommit": "d06d944473e960e60afb2e1e96358265848d638d",
+  "createdAt": "2026-10-24T07:27:57.086Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "优化PPT教程回放节奏并核对真实渲染全文",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "d06d944473e960e60afb2e1e96358265848d638d",
+        "tipCommit": "98e41ba8bcfacae877b6b1da3b04b290f6cde2e4",
+        "commits": [
+          {
+            "commit": "382c987b49d6b8fe4e01cd34980b8f67d9d5f636",
+            "parents": [
+              "d06d944473e960e60afb2e1e96358265848d638d"
+            ],
+            "subject": "放慢PPT教程回放并以章节概览呈现制作流程"
+          },
+          {
+            "commit": "98e41ba8bcfacae877b6b1da3b04b290f6cde2e4",
+            "parents": [
+              "382c987b49d6b8fe4e01cd34980b8f67d9d5f636"
+            ],
+            "subject": "修复：核对演示说明区渲染行与完整正文"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/package-and-render-checks.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_readability.py"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/efund-ppt-rendered-fit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-presentation-replay.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-presentation-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "PPT回放节奏/真实AgentLoop持久化和渲染全文门禁聚焦验证；/tmp/ppt-cadence-glyph-final-0-20261024.log",
+            "verifiedCommit": "98e41ba8bcfacae877b6b1da3b04b290f6cde2e4",
+            "completedAt": "2026-10-24T07:25:53.048677+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PYTHONDONTWRITEBYTECODE=1",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-timeline.test.ts",
+              "test/home-guides.test.ts",
+              "test/home-presentation-runtime.test.js",
+              "test/home-presentation-host.test.js",
+              "test/home-guide-presentation-adapter.test.ts",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "test/efund-ppt-rendered-fit.test.js",
+              "test/efund-ppt-text-layout.test.js",
+              "test/efund-ppt-layout-lint.test.ts",
+              "test/efund-ppt-package.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "PPT回放节奏/真实AgentLoop持久化和渲染全文门禁聚焦验证；/tmp/ppt-cadence-glyph-final-1-20261024.log",
+            "verifiedCommit": "98e41ba8bcfacae877b6b1da3b04b290f6cde2e4",
+            "completedAt": "2026-10-24T07:26:54.982851+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "PPT回放节奏/真实AgentLoop持久化和渲染全文门禁聚焦验证；/tmp/ppt-cadence-glyph-final-2-20261024.log",
+            "verifiedCommit": "98e41ba8bcfacae877b6b1da3b04b290f6cde2e4",
+            "completedAt": "2026-10-24T07:27:03.144671+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "PPT回放节奏/真实AgentLoop持久化和渲染全文门禁聚焦验证；/tmp/ppt-cadence-glyph-final-3-20261024.log",
+            "verifiedCommit": "98e41ba8bcfacae877b6b1da3b04b290f6cde2e4",
+            "completedAt": "2026-10-24T07:27:03.166057+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "本增量为PPT回放节奏、动态章节文案和技能检查证据；真实AgentLoop/Host/暂停取消/历史持久化及browser fixture直接覆盖。正式客户端UI仍待实际Kimi任务完成后主线构建，未冒充native接受。"
+        },
+        "acceptanceCriteria": [
+          "预制PPT回放约50字/秒，使用章节概览和可阅读的阶段停留，保留暂停继续取消与原会话成果。",
+          "说明离线预制流程，旧资产不冒充Kimi生成，最终页数/章节/标题来自metadata。",
+          "标准说明区的渲染行须覆盖完整PPT正文，不能用90%截取或右栏混入通过；合法换行空白及普通列表边界保留。",
+          "真实任务自己修订成品，尚未通过的草稿不替换教程文件；待任务结束才重启正式客户端。"
+        ],
+        "risks": [
+          "正式客户端视觉受ScreenCaptureKit -3811阻挡；真实Kimi任务仍运行且成稿未验收，PPT资产尚未替换。",
+          "源检查只是验收之一，不能代替逐页实际视觉复核。"
+        ],
+        "generatedAt": "2026-10-24T07:27:03.166089+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "env",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-timeline.test.ts",
+        "test/home-guides.test.ts",
+        "test/home-presentation-runtime.test.js",
+        "test/home-presentation-host.test.js",
+        "test/home-guide-presentation-adapter.test.ts",
+        "test/home-guide-presentation-binding.test.ts",
+        "test/home-guide-presentation-patch.test.js",
+        "test/home-guide-presentation-browser.test.js",
+        "test/home-guide-presentation-shell-browser.test.js",
+        "test/efund-ppt-rendered-fit.test.js",
+        "test/efund-ppt-text-layout.test.js",
+        "test/efund-ppt-layout-lint.test.ts",
+        "test/efund-ppt-package.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
