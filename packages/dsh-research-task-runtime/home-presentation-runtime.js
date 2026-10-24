@@ -61,7 +61,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
  }
  const offAdapter=ctx.llm.registerAdapter([PROVIDER],new PresetAdapter())
  const releaseRoute=async run=>{for(const off of run.off.splice(0))off();await Promise.resolve();const header=run.agent.session.requestHeader();if(ctx.agents.get(run.agent.id)===run.agent&&header?.config.provider===PROVIDER&&run.originalConfig.provider&&run.originalConfig.model)run.agent.session.append('request/header',{header:{...header,config:run.originalConfig},reason:'change'})}
- const cancel=async run=>{if(run.cancelled)return;run.cancelled=true;notify(run);for(const gate of run.milestones.values())gate.reject(aborted());if(!run.complete){await run.agent.cancel({kind:'user'});await run.agent.whenIdle()}await releaseRoute(run)}
+ const cancel=async run=>{if(run.cancelled)return;run.cancelled=true;const released=releaseRoute(run);notify(run);for(const gate of run.milestones.values())gate.reject(aborted());if(!run.complete){await run.agent.cancel({kind:'user'});await run.agent.whenIdle()}await released}
  return{
   async prepare(input){
    if(stopped||cancelledRuns.has(key(input)))throw aborted()
