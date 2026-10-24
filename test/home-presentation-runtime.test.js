@@ -1,4 +1,4 @@
-import {afterEach,expect,it} from 'vitest'
+import {afterEach,expect,it,vi} from 'vitest'
 import {readFile,writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -6,6 +6,8 @@ import {createUserMessage} from '@deepseek-ai/dsh-llm'
 import {installModelSelection} from '@deepseek-ai/dsh-agent'
 import {presentationRuntimeFixture} from './fixtures/home-presentation-runtime.js'
 const mod=await import('../packages/dsh-research-task-runtime/home-presentation-runtime.js').catch(()=>({}))
+// Human-readable streaming intentionally takes longer than an immediate fixture.
+vi.setConfig({testTimeout:25000})
 const clean=[]
 afterEach(async()=>{for(const dispose of clean.splice(0).reverse())await dispose()})
 const until=async(fn)=>{for(let i=0;i<300;i++){if(fn())return;await new Promise(r=>setTimeout(r,10))}throw Error('native event timeout')}
@@ -26,6 +28,10 @@ it('uses the real agent loop, native todo/tool events and durable editable file 
  expect(events.filter(e=>e.type==='user/message')).toHaveLength(1)
  expect(events.filter(e=>e.type==='todo/write').length).toBeGreaterThanOrEqual(3)
  expect(events.findLast(e=>e.type==='todo/write').data.todos.every(t=>t.status==='completed')).toBe(true)
+ expect(events.filter(e=>e.type==='tool/call').map(e=>e.data.name)).toEqual(['todo_write','todo_write','home_presentation_publish','todo_write'])
+ const assistantText=events.filter(e=>e.type==='assistant/message').flatMap(e=>e.data.message.content??[]).filter(block=>block.type==='text').map(block=>block.text).join('\n')
+ expect(assistantText.split('\n').filter(line=>/^\d+\./u.test(line))).toHaveLength(f.metadata.chapters.length)
+ expect(assistantText).not.toContain(f.metadata.pageOutline.map(page=>page.slide+'. '+page.title).join('\n'))
  expect(JSON.stringify(events)).toContain('离线预制')
  expect(JSON.stringify(events)).toContain('人工智能周期与资产配置.pptx')
  expect(await readFile(join(f.cwd,'人工智能周期与资产配置.pptx'))).toEqual(f.bytes)

@@ -12,7 +12,7 @@ import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
 import {apply as todo} from '@deepseek-ai/dsh-tool-todo'
 import * as mod from '../../packages/dsh-research-task-runtime/home-presentation-runtime.js'
-const until=async(fn)=>{for(let i=0;i<300;i++){if(fn())return;await new Promise(r=>setTimeout(r,10))}throw Error('native event timeout')}
+const until=async(fn)=>{for(let i=0;i<1500;i++){if(fn())return;await new Promise(r=>setTimeout(r,10))}throw Error('native event timeout')}
 export async function presentationRuntimeFixture(){
  const root=await mkdtemp(join(tmpdir(),'home-presentation-runtime-')),cwd=join(root,'研究看板','公司风格演示示例-fixture'),home=join(root,'profile')
  await mkdir(cwd,{recursive:true});await mkdir(home)
