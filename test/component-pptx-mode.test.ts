@@ -127,9 +127,12 @@ it('refreshes another opaque preview of the same known path without opening its 
  expect(other.querySelector('[data-component-pptx-edit]')?.getAttribute('aria-label')).toBe('编辑')
 })
 it('installs and strips the actual resident representation without changing grid restore metadata',()=>{
- const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchComponentPptxMode(source)
+ const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),source=stripComponentPptxMode(resident),patched=patchComponentPptxMode(source)
+ expect(stripComponentPptxMode(source)).toBe(source)
+ expect(patchComponentPptxMode(resident)).toBe(patched)
  expect(stripComponentPptxMode(patched)).toBe(source);expect(patchComponentPptxMode(patched)).toBe(patched)
  const metadata=(text:string)=>text.slice(text.indexOf('/* EWORK_GRID_RESTORE '))
+ expect(metadata(source)).toBe(metadata(resident))
  expect(metadata(patched)).toBe(metadata(source))
  const base=restoreResearchGridWorkbench(stripHomeGuideNative(source)),installed=patchResearchGridWorkbench(base)
  expect(restoreResearchGridWorkbench(installed).trim()).toBe(base.trim())
