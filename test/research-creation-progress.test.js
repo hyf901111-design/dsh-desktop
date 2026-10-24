@@ -3,10 +3,13 @@ import { readFileSync } from 'node:fs'
 import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition, patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
 import { AFFIRMATIVE_WORKBENCH_REQUESTS, NON_CREATION_WORKBENCH_REQUESTS } from './fixtures/workbench-creation-requests.js'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 import {Window} from 'happy-dom'
+const currentClient=()=>restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
 
 function paintAckFixture(painted = false) {
-  const installed = restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const installed = currentClient()
   const source = patchResearchCreationProgress(installed)
   const start = source.indexOf('const odysseyPlannedCardsPainted = plan => new Promise(resolve => {')
   const helper = source.slice(start, source.indexOf('const acknowledged = [], mounted = [];', start))
@@ -52,7 +55,7 @@ it('acknowledges a normal painted frame once and stops after effect cleanup', as
 })
 
 it('主会话结束推断仅显示结果待同步，明确错误和停止文案保持原样',()=>{
-  const source=patchResearchCreationProgress(restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+  const source=patchResearchCreationProgress(currentClient())
   expect(source).toContain("intent.state === 'stopping' ? 'stopped' : 'ended'); }, 3000);")
   const extract=name=>{const at=source.indexOf('function '+name+'(');return source.slice(at,source.indexOf('\n}',at)+2)}
   const intents=new Map([['s',{id:'intent',kind:'component',types:[],state:'planning',startedAt:1,sawRunning:true}]])
@@ -68,7 +71,7 @@ it('主会话结束推断仅显示结果待同步，明确错误和停止文案�
 })
 
 it('规划卡片缩放时沿用网格坐标，仅移动时采用浮动坐标',async()=>{
-  const source=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+  const source=currentClient()
   const patched=patchResearchCreationProgress(source),styleScript=patched.match(/\/\* ODYSSEY_CREATION_PROGRESS_CSS \*\/\n([^\n]+)/)[1]
   const win=new Window(),doc=win.document
   try{
@@ -162,7 +165,7 @@ it('centers the first planning card in the visible research canvas', () => {
 })
 
 it('keeps the submit, canvas and workbench handoff patch stable on reinstall', () => {
-  const source = restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const source = currentClient()
   const patched = patchResearchCreationProgress(source)
   expect(patched.includes('ODYSSEY_CREATION_PROGRESS_V3')).toBe(true)
   expect(patched.includes('ODYSSEY_CREATION_PROGRESS_V2')).toBe(false)

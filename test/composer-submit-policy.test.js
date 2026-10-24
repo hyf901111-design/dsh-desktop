@@ -11,7 +11,7 @@ function primary(source, overrides={}) {
   const visit=node=>{if(!declaration&&isVariableDeclaration(node)&&node.name.getText(tree)==='onPrimary')declaration=node;forEachChild(node,visit)}
   visit(tree)
   const deps={primaryStops:false,stop:vi.fn(),inputActions:{submit:vi.fn()},empty:false,disabled:false,machineBusy:false,eworkNotes:false,
-    odysseyCreationAnnounce:vi.fn(),sessionId:'session',draft:'继续核对数据',subagentPanel:false,running:true,canvasRunning:false,
+    odysseyCreationAnnounce:vi.fn(),sessionId:'session',draft:'继续核对数据',subagentPanel:false,running:true,canvasRunning:false,researchCanvasWorkspace:undefined,
     keyboard:{submit:vi.fn()},resolveSubmitMode:vi.fn((running,_gesture,available)=>running&&available?'steer':'queue'),subagent:null,...overrides}
   new Function(...Object.keys(deps),`return (${declaration.initializer.getText(tree)})();`)(...Object.values(deps))
   return deps

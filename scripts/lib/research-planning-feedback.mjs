@@ -46,7 +46,7 @@ export function planningFeedbackState(meta,heartbeat,startedAt,now,running,engli
  const warning=running&&!meta.accepted&&elapsed>=120000?say('规划已超过 2 分钟。'+(since!==null&&since<30?'模型仍在响应。':'暂未收到新的进展。')+'可以继续等待或停止后重试。','Planning has exceeded 2 minutes. '+(since!==null&&since<30?'The model is still responding. ':'No recent progress received. ')+'You can keep waiting or stop and retry.'):''
  return {title,activity,detail,warning,phase:!running?'ended':meta.prepared?'prepared':meta.accepted?'accepted':meta.toolCount?'tools':meta.responding?'responding':'waiting'}
 }
-export function researchPlanningRequest(order,nodeStore,turn,classify,readText) {
+export function researchPlanningRequest(order,nodeStore,turn,classify,readText,research=false) {
  if(turn===null||turn===undefined)return null
  for(let i=order.length-1;i>=0;i--){
   const node=nodeStore.get(order[i]);if(node?.kind!=='user')continue
@@ -56,7 +56,7 @@ export function researchPlanningRequest(order,nodeStore,turn,classify,readText) 
   // Match the runtime's coding boundary even when an older classifier is installed.
   if(!/工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text)&&/\b(?:React|Vue|Svelte|SwiftUI|Angular|TSX|JSX)\b|\.[cm]?[jt]sx?\b|(?:组件|卡片).{0,12}(?:源码|源代码)/iu.test(text))return null
   const request=classify(text)
-  return request?.kind==='workbench'||request?.kind==='component'?request:null
+  return request?.kind==='workbench'||research&&request?.kind==='component'?request:null
  }
  return null
 }
@@ -73,6 +73,13 @@ function ResearchPlanningFeedback({meta,startedAt,now,running}) {
 }
 export function patchResearchPlanningFeedback(source,classify) {
  const marker='/* ework:planning-feedback:v1 */'
+ const view='const selectedCallId = useStore((s) => s.selection?.callId);'
+ const surface='const researchPlanningSurface = useStore((s) => s.view === "research");'
+ if(!source.includes(surface)){
+  if(source.split(view).length!==2||source.includes('const researchPlanningSurface'))throw Error('Planning feedback surface anchor drifted')
+  source=source.replace(view,view+'\n'+surface)
+ }
+ const suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text,researchPlanningSurface) : null;'
  if(source.includes(marker)){
   const metaStart=source.indexOf('function planningResponseMetadata('),metaEnd=source.indexOf('\nfunction advancePlanningHeartbeat(',metaStart)
   if(metaStart<0||metaEnd<0)throw Error('Planning receipt metadata helper missing on reinstall')
@@ -83,10 +90,9 @@ export function patchResearchPlanningFeedback(source,classify) {
   // The classifier is an inlined argument in older installed bundles. Refresh
   // that argument as well, so reinstalls adopt the current creation boundary.
   const prefix='const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,'
-  const suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text) : null;'
-  const callStart=source.indexOf(prefix),callEnd=source.indexOf(suffix,callStart)
+  const callStart=source.indexOf(prefix),ending=[suffix,',parts=>parseResearchPrompt(contentParts(parts).text).text) : null;'].find(value=>source.indexOf(value,callStart)>=0),callEnd=ending?source.indexOf(ending,callStart):-1
   if(callStart<0||callEnd<0)throw Error('Planning feedback classifier missing on reinstall')
-  return patchResearchWorkbenchFeedback(source.slice(0,callStart+prefix.length)+classify.toString()+source.slice(callEnd))
+  return patchResearchWorkbenchFeedback(source.slice(0,callStart+prefix.length)+classify.toString()+suffix+source.slice(callEnd+ending.length))
  }
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Planning feedback anchor missing or ambiguous: '+before.slice(0,75));source=source.replace(before,after)}
  const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {'
@@ -106,7 +112,7 @@ export function patchResearchPlanningFeedback(source,classify) {
  component=component.replace('children: status', "children: planningMeta && entry.running ? planningFeedbackState(planningMeta,null,anchor,now,true,document.documentElement.dataset.odysseyLocale==='en').title : status")
  source=source.slice(0,start)+component+source.slice(end)
  const call='const activityNodes = entry.nodeKeys.map((key) => nodeStore.get(key)).filter((node) => node !== void 0);'
- exact(call,call+`\n                                const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,${classify.toString()},parts=>parseResearchPrompt(contentParts(parts).text).text) : null;`)
+ exact(call,call+`\n                                const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,${classify.toString()}${suffix}`)
  const props='\t\t\t\t\t\t\t\t\tstartTime: turn?.start?.time ?? (entry.running ? runningTurn?.startTime ?? null : null),'
  exact(props,'\t\t\t\t\t\t\t\t\tplanningRequest,\n'+props)
  return patchResearchWorkbenchFeedback(source)
