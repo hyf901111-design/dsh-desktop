@@ -16,7 +16,7 @@ async function fixture(){
  const service=createConversationComponentService({store,owner:()=>owner,canReadSession:s=>s==='s',currentVisibleContext:()=>visible,nativeQuery,clipboard:()=>({copy} as any),library:()=>({add} as any)})
  const identity={ownerAccountId:'owner',sessionId:'s',turnId:'t',mode:'conversation' as const,windowGeneration:'g',current:()=>current}
  const create=async(args=table)=>{const r=await service.create(args,identity,new AbortController().signal,'r');return {sessionId:'s',componentId:r.effect.componentId}}
- return {store,service,nativeQuery,copy,add,identity,create,setOwner:(v:string)=>owner=v,setVisible:(v:any)=>visible=v,setCurrent:(v:boolean)=>current=v}
+ return {directory:dir,store,service,nativeQuery,copy,add,identity,create,setOwner:(v:string)=>owner=v,setVisible:(v:any)=>visible=v,setCurrent:(v:boolean)=>current=v}
 }
 it('uses the real host identity, refuses cancellation, and returns a saved receipt if cancellation comes after rename',async()=>{
  const f=await fixture(),abort=new AbortController();abort.abort();await expect(f.service.create(table,f.identity,abort.signal,'r')).rejects.toThrow(/取消|失效/)
@@ -75,4 +75,18 @@ it('runs the real trusted bridge through native copy, opaque clipboard read, sav
 })
 it('allows read-only committed receipt recovery after cancellation while retaining real owner isolation',async()=>{
  const f=await fixture(),receipt=await f.service.create(table,f.identity,new AbortController().signal,'recover');f.setCurrent(false);expect(await f.service.recover!(table,f.identity,'recover')).toEqual(receipt);f.setOwner('different');await expect(f.service.recover!(table,f.identity,'recover')).rejects.toThrow(/身份|账户/)
+})
+it('reads the persisted same-query native snapshot after reopening offline without hiding the refresh error or advancing fetchedAt',async()=>{
+ const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:'default',refresh:false};await f.service.queryNative({...t,expectedRevision:1,query});const saved=await f.service.read(t),{readFile}=await import('node:fs/promises'),file=join(f.directory,'components.json'),before=await readFile(file,'utf8'),restart=new ConversationComponentStore(file);await restart.load()
+ const offline=vi.fn(async(_q:any):Promise<any>=>{throw Error('模拟断网')}),service=createConversationComponentService({store:restart,owner:()=> 'owner',canReadSession:s=>s==='s',currentVisibleContext:()=>({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g'}),nativeQuery:offline,clipboard:()=>undefined,library:()=>undefined})
+ await expect(service.queryNative({...t,expectedRevision:1,query:{...query,refresh:true}})).rejects.toThrow('模拟断网');const snapshot=await service.readNativeSnapshot!({...t,expectedRevision:1,query:{source:'default',refresh:true,symbols:spec.symbols,action:'quotes'}});expect(snapshot).toMatchObject({specRevision:1,receivedAt:Date.parse('2026-10-24T01:00:00Z'),result:{source:'模拟报价来源',receivedAt:'2026-10-24T01:00:00Z',quotes:[{price:17}]}});expect(offline).toHaveBeenCalledTimes(1);expect((await service.read(t)).provenance).toEqual(saved.provenance);expect(await readFile(file,'utf8')).toBe(before)
+ ;(snapshot!.result.quotes as any[])[0].price=999;expect((await service.readNativeSnapshot!({...t,expectedRevision:1,query}))!.result).toMatchObject({quotes:[{price:17}]})
+})
+it('never returns native snapshots for a different revision, source, symbol, query or host session',async()=>{
+ const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:'default'};await f.service.queryNative({...t,expectedRevision:1,query})
+ await expect(f.service.readNativeSnapshot!({...t,expectedRevision:2,query})).rejects.toThrow(/版本/)
+ for(const invalid of [{...query,source:'backup'},{...query,symbols:[{code:'MSFT',market:'US',name:'其他证券'}]},{...query,action:'news',query:'other'}])await expect(f.service.readNativeSnapshot!({...t,expectedRevision:1,query:invalid as any})).rejects.toThrow()
+ expect(await f.service.readNativeSnapshot!({...t,expectedRevision:1,query:{action:'history',symbols:spec.symbols,source:'default',period:'1d',adjustment:'none'}})).toBeNull()
+ await f.service.updateNativeSpec({...t,expectedRevision:1,spec:{...spec,symbols:[{code:'MSFT',market:'US',name:'新证券'}]}});expect(await f.service.readNativeSnapshot!({...t,expectedRevision:2,query:{...query,symbols:[{code:'MSFT',market:'US',name:'新证券'}]}})).toBeNull()
+ f.setOwner('other');await expect(f.service.readNativeSnapshot!({...t,expectedRevision:2,query})).rejects.toThrow()
 })

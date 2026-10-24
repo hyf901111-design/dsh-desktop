@@ -44,6 +44,8 @@ export type ConversationComponentView = {
 };
 
 export type ConversationComponentCreateReceipt = {
+  /** Tool-owned final content when the host save committed before caller cancellation. */
+  cancelledAfterSave?:true;
   status: 'succeeded';
   effect: {kind:'conversation-component'; state:'saved'; componentId:string};
   data: {renderManifest: ConversationComponentManifest};
@@ -54,6 +56,10 @@ export type ConversationComponentCreateReceipt = {
 export type ConversationComponentTarget = {sessionId:string; componentId:string};
 export type ConversationNativeSpecUpdate = ConversationComponentTarget & {
   expectedRevision:number; spec:JsonObject;
+};
+/** A previously persisted native observation, never evidence that a new refresh succeeded. */
+export type ConversationNativeSnapshot = {
+  specRevision:number; receivedAt:number; querySignature:string; result:JsonObject;
 };
 export type ConversationComponentReference = {
   version:1; kind:'conversation-component'; sessionId:string;
@@ -88,6 +94,7 @@ export interface ConversationComponentsBridge {
   read(target:ConversationComponentTarget): Promise<ConversationComponentView>;
   updateNativeSpec(input:ConversationNativeSpecUpdate): Promise<ConversationComponentView>;
   queryNative(input:ConversationComponentTarget & {expectedRevision:number; query:JsonObject}): Promise<JsonObject>;
+  readNativeSnapshot?(input:ConversationComponentTarget & {expectedRevision:number; query:JsonObject}): Promise<ConversationNativeSnapshot|null>;
   copy(target:ConversationComponentTarget): Promise<{ok:boolean; error?:string}>;
   saveLibrary(target:ConversationComponentTarget): Promise<{id:string; name:string}>;
   reference(target:ConversationComponentTarget): Promise<ConversationComponentReference>;

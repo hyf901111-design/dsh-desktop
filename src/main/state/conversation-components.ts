@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { canonicalConversationComponentInput, normalizeConversationComponentArtifact } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
-import type { ConversationComponentCreateArguments, ConversationComponentCreateReceipt, ConversationComponentExecutionIdentity, ConversationComponentProvenance, ConversationComponentTarget, ConversationComponentView, ConversationNativeSpecUpdate, JsonObject } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
+import type { ConversationComponentCreateArguments, ConversationComponentCreateReceipt, ConversationComponentExecutionIdentity, ConversationComponentProvenance, ConversationComponentTarget, ConversationComponentView, ConversationNativeSpecUpdate, ConversationNativeSnapshot, JsonObject } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
 import { financialWidgetSpec } from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js';
 import { parseResearchContainerSpec } from '../../../packages/dsh-research-task-runtime/artifact-validator.js';
 const MAX_STORE = 64 * 1024 * 1024, MAX_OBSERVATION = 1024 * 1024;
@@ -40,6 +40,11 @@ type Guard = () => boolean;
 const noGuard = () => true;
 const assertCurrent = (guard: Guard) => { if (!guard())
     throw Error('对话组件宿主身份已失效或操作已取消。'); };
+function nativeQuerySignature(query: JsonObject): string {
+    // Force-refresh changes cache policy, not the identity of the requested data.
+    const { refresh: _refresh, ...selection } = query;
+    return JSON.stringify(JSON.parse(canonicalConversationComponentInput({ artifact: selection })).artifact);
+}
 function validProvenance(p: unknown): p is ConversationComponentProvenance { return object(p) && Array.isArray(p.sourceNames) && p.sourceNames.length <= 200 && p.sourceNames.every((s: unknown) => typeof s === 'string' && s.length <= 1000) && ['native-observed', 'provided', 'unspecified'].includes(p.sourceState) && ['native', 'snapshot'].includes(p.refreshKind) && (p.fetchedAt === undefined || timestamp(p.fetchedAt)) && (p.dataAsOf === undefined || typeof p.dataAsOf === 'string' && p.dataAsOf.length <= 2048) && Object.keys(p).every(k => ['sourceNames', 'sourceState', 'refreshKind', 'fetchedAt', 'dataAsOf'].includes(k)); }
 function publicView(item: Item): ConversationComponentView { return clone({ id: item.id, sessionId: item.sessionId, revision: item.revision, node: item.node, provenance: item.provenance, createdAt: item.createdAt, updatedAt: item.updatedAt }); }
 function receipt(item: Item): ConversationComponentCreateReceipt { return { status: 'succeeded', effect: { kind: 'conversation-component', state: 'saved', componentId: item.id }, data: { renderManifest: { version: 1, kind: 'conversation-component', componentId: item.id, sessionId: item.sessionId, turnId: item.turnId, requestId: item.requestId, status: 'ready' } }, message: '对话组件已保存。' }; }
@@ -121,6 +126,17 @@ export class ConversationComponentStore {
         throw Error('对话组件不存在或无权访问。'); return item; }
     read(owner: string, target: ConversationComponentTarget): ConversationComponentView { return publicView(this.find(owner, target)); }
     details(owner: string, target: ConversationComponentTarget): Readonly<Item> { return clone(this.find(owner, target)); }
+    readNativeSnapshot(owner: string, target: ConversationComponentTarget, revision: number, query: JsonObject): ConversationNativeSnapshot | null {
+        const item = this.find(owner, target);
+        if (item.revision !== revision) throw Error('对话组件版本已变化，请重新读取。');
+        const entry = typeof query.action === 'string' ? item.observations[query.action] : undefined;
+        if (!entry || entry.specRevision !== revision) return null;
+        const querySignature = nativeQuerySignature(query);
+        // Accept the original unsorted persisted signature while reading old snapshots.
+        try { if (nativeQuerySignature(JSON.parse(entry.querySignature)) !== querySignature) return null; }
+        catch { return null; }
+        return clone({ specRevision: entry.specRevision, receivedAt: entry.receivedAt, querySignature, result: entry.result });
+    }
     private mutate<T>(operation: (items: Item[]) => T, guard: Guard = noGuard): Promise<T> {
         const run = this.queue.catch(() => { }).then(async () => { this.ready(); assertCurrent(guard); const items = clone(this.items), result = operation(items), text = JSON.stringify({ version: 1, items }) + '\n'; if (Buffer.byteLength(text) > MAX_STORE)
             throw Error('对话组件存储超过 64 MiB，原有组件已保留。'); assertCurrent(guard); if (text === JSON.stringify({ version: 1, items: this.items }) + '\n')
@@ -179,7 +195,7 @@ export class ConversationComponentStore {
     observe(owner: string, target: ConversationComponentTarget, revision: number, query: JsonObject, result: JsonObject, guard: Guard = noGuard): Promise<boolean> {
         return this.mutate(items => { const item = this.find(owner, target, items); if (item.revision !== revision)
             return false; const action = query.action; if (typeof action !== 'string' || !['quotes', 'history', 'news', 'announcements'].includes(action))
-            throw Error('金融观察类型无效。'); const entry = observation(result, revision, JSON.stringify(query)); if (!entry)
+            throw Error('金融观察类型无效。'); const entry = observation(result, revision, nativeQuerySignature(query)); if (!entry)
             return false; const old = item.observations[action]; if (old && old.receivedAt > entry.receivedAt)
             return false; item.observations[action] = entry; const all = Object.values(item.observations).filter(o => o.specRevision === revision), latest = all.reduce((a, b) => a.receivedAt >= b.receivedAt ? a : b); item.provenance = { sourceNames: [...new Set(all.flatMap(o => o.sourceNames))], sourceState: 'native-observed', refreshKind: 'native', fetchedAt: latest.receivedAt, ...(latest.dataAsOf ? { dataAsOf: latest.dataAsOf } : {}) }; return true; }, guard);
     }

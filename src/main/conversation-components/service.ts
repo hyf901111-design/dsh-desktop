@@ -104,6 +104,17 @@ export function createConversationComponentService(options: Options): Conversati
                 throw Error('对话组件版本已变化，旧数据已丢弃。');
             return structuredClone(result);
         },
+        async readNativeSnapshot(input) {
+            target(input, ['expectedRevision', 'query']);
+            revision(input.expectedRevision);
+            const l = lease(input.sessionId), view = options.store.read(l.owner, input);
+            if (view.revision !== input.expectedRevision) throw Error('对话组件版本已变化，请重新读取。');
+            const spec = financialWidgetSpec(view.node.containerSpec);
+            if (!spec) throw Error('此组件没有原生金融快照。');
+            const query = checkedQuery(spec, input.query);
+            l.check();
+            return options.store.readNativeSnapshot(l.owner, input, input.expectedRevision, query);
+        },
         async copy(input) { target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input), clipboard = options.clipboard(); if (!clipboard)
             throw Error('组件剪贴板暂不可用。'); l.check(); return clipboard.copy({ sessionId: input.sessionId, nodes: [detachConversationComponentNode(view.node)] }); },
         async saveLibrary(input) { target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input), library = options.library(); if (!library)

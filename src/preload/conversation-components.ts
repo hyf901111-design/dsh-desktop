@@ -4,6 +4,7 @@ export function createConversationComponentsBridge(invoke: (channel: string, ...
         read: input => invoke('conversation-components:read', input) as ReturnType<ConversationComponentsBridge['read']>,
         updateNativeSpec: input => invoke('conversation-components:updateNativeSpec', input) as ReturnType<ConversationComponentsBridge['updateNativeSpec']>,
         queryNative: input => invoke('conversation-components:queryNative', input) as ReturnType<ConversationComponentsBridge['queryNative']>,
+        readNativeSnapshot: input => invoke('conversation-components:readNativeSnapshot', input) as ReturnType<NonNullable<ConversationComponentsBridge['readNativeSnapshot']>>,
         copy: input => invoke('conversation-components:copy', input) as ReturnType<ConversationComponentsBridge['copy']>,
         saveLibrary: input => invoke('conversation-components:saveLibrary', input) as ReturnType<ConversationComponentsBridge['saveLibrary']>,
         reference: input => invoke('conversation-components:reference', input) as ReturnType<ConversationComponentsBridge['reference']>,
