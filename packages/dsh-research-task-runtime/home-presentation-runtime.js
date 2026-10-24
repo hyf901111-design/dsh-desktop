@@ -17,7 +17,9 @@ const checkedString=value=>typeof value==='string'&&value.length>0&&value.length
 
 /** A distinct provider, scoped to one new native session. It never forwards to a model. */
 export function createHomePresentationRuntime(ctx,{env=process.env}={}){
- const runs=new Map(),preparing=new Set();let stopped=false
+ const runs=new Map(),preparing=new Map(),cancelledRuns=new Set();let stopped=false
+ const key=input=>JSON.stringify([input?.sessionId,input?.runId])
+ const rememberCancellation=input=>{cancelledRuns.add(key(input));if(cancelledRuns.size>256)cancelledRuns.delete(cancelledRuns.values().next().value)}
  const current=(input)=>{const run=runs.get(input.sessionId);if(stopped||!run||run.runId!==input.runId||run.cancelled||ctx.agents.get(run.agent.id)!==run.agent||run.agent.session.header.cwd!==run.cwd)throw aborted();return run}
  const notify=run=>{for(const wake of run.waiters)wake();run.waiters.clear()}
  const wait=async(run,condition,signal)=>{
@@ -47,9 +49,11 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
  const cancel=async run=>{if(run.cancelled)return;run.cancelled=true;notify(run);for(const gate of run.milestones.values())gate.reject(aborted());if(!run.complete){await run.agent.cancel({kind:'user'});await run.agent.whenIdle()}for(const off of run.off.splice(0))off()}
  return{
   async prepare(input){
-   if(stopped||!checkedString(input?.sessionId)||!checkedString(input.runId)||input.fresh!==true||typeof input.cwd!=='string'||!isAbsolute(input.cwd)||preparing.has(input.sessionId))throw Error('示例会话准备参数无效。')
+   if(stopped||cancelledRuns.has(key(input)))throw aborted()
+   if(!checkedString(input?.sessionId)||!checkedString(input.runId)||input.fresh!==true||typeof input.cwd!=='string'||!isAbsolute(input.cwd)||preparing.has(input.sessionId))throw Error('示例会话准备参数无效。')
    if(runs.has(input.sessionId)){const run=current(input);if(run.cwd!==input.cwd)throw Error('示例目录已变化。');return{ready:true}}
-   preparing.add(input.sessionId)
+   const ticket={...input,cancelled:false};preparing.set(input.sessionId,ticket)
+   const checkPreparing=()=>{if(stopped||ticket.cancelled||preparing.get(input.sessionId)!==ticket||cancelledRuns.has(key(input)))throw aborted()}
    try{
     const agent=ctx.agents.get(input.sessionId),session=agent?.session
     if(!agent||session.header.cwd!==input.cwd||session.header.parentSession||session.header.origin==='subagent'||agent.status==='running'||session.events.some(e=>['user/message','assistant/message','tool/call','turn/start',EVENT].includes(e.type)))throw Error('演示只能在新建的独立空白会话中启动。')
@@ -60,11 +64,13 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
     const source=join(env.DSH_BUNDLED_SKILL_DIR,'efund-ppt-maker','assets','efund-ework-onepage.pptx'),info=await lstat(source)
     if(!info.isFile()||info.isSymbolicLink())throw Error('固定演示资源不可用。')
     const bytes=await readFile(source);if(hash(bytes)!==SOURCE_HASH)throw Error('内置演示文件校验失败。')
-    if(stopped||ctx.agents.get(input.sessionId)!==agent||session.events.some(e=>['user/message','assistant/message','turn/start',EVENT].includes(e.type)))throw Error('会话已有内容或执行器已停止，未启动演示。')
+    checkPreparing()
+    if(ctx.agents.get(input.sessionId)!==agent||session.events.some(e=>['user/message','assistant/message','turn/start',EVENT].includes(e.type)))throw Error('会话已有内容或执行器已停止，未启动演示。')
     const run={...input,root,agent,bytes,sequence:0,allowed:0,playing:false,cancelled:false,complete:false,waiters:new Set(),milestones:new Map(['plan','layout','deliver'].map(stage=>[stage,deferred()])),off:[]}
     session.append(EVENT,{version:1,runId:run.runId,purpose:'offline-company-presentation',cwd:run.cwd})
     if(!(await ctx.sessions.flush(session)))throw Error('示例所有权未能保存。')
-    if(stopped||ctx.agents.get(input.sessionId)!==agent)throw aborted()
+    checkPreparing()
+    if(ctx.agents.get(input.sessionId)!==agent)throw aborted()
     runs.set(session.id,run)
     run.off.push(ctx.on('session/event',(session,event)=>{if(session===agent.session&&event.type==='turn/end'&&event.data.reason?.kind!=='completed'&&!run.complete){for(const gate of run.milestones.values())gate.reject(Error(event.data.reason?.error?.message||'示例执行已停止。'))}}))
     run.off.push(agent.ctx.on('agent/request',()=>{current(run);return{provider:PROVIDER,model:'v1',maxTokens:1024}}))
@@ -75,12 +81,12 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
      run.published=true;return'已保存 '+HOME_PRESENTATION_FILE+'（离线预置，可编辑 PPTX）。'
     }})))
     return{ready:true}
-   }finally{preparing.delete(input.sessionId)}
+   }finally{if(preparing.get(input.sessionId)===ticket)preparing.delete(input.sessionId)}
   },
   async playback(input){const run=current(input);run.playing=input.playing===true;notify(run);return{playing:run.playing}},
   async checkpoint(input){const run=current(input),index=['plan','layout','deliver'].indexOf(input.stage);if(index<0||index+1<run.allowed||index>run.allowed)throw Error('示例步骤顺序已变化。');run.allowed=index+1;notify(run);await run.milestones.get(input.stage).promise;return{stage:input.stage}},
-  async disposeRun(input){const run=runs.get(input.sessionId);if(run?.runId===input.runId){await cancel(run);if(runs.get(input.sessionId)===run)runs.delete(input.sessionId)}return{}},
-  async dispose(){if(stopped)return;stopped=true;for(const run of runs.values())await cancel(run);offAdapter();runs.clear()}
+  async disposeRun(input){rememberCancellation(input);const ticket=preparing.get(input.sessionId);if(ticket?.runId===input.runId)ticket.cancelled=true;const run=runs.get(input.sessionId);if(run?.runId===input.runId){await cancel(run);if(runs.get(input.sessionId)===run)runs.delete(input.sessionId)}return{}},
+  async dispose(){if(stopped)return;stopped=true;for(const ticket of preparing.values())ticket.cancelled=true;for(const run of runs.values())await cancel(run);offAdapter();runs.clear()}
  }
 }
 

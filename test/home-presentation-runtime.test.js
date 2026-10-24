@@ -65,3 +65,23 @@ it('rejects changed user input on the isolated route without falling through to 
  await expect(f.runtime.checkpoint({...f.input,stage:'plan'})).rejects.toThrow(/离线预置只接受/)
  await f.agent.whenIdle();expect(f.outside).toEqual([]);await expect(readFile(join(f.cwd,'公司风格演示示例.pptx'))).rejects.toThrow()
 })
+it('cancels preparation while durable ownership flush is pending without hijacking later ordinary messages',async()=>{
+ const f=await fixture(),flush=f.ctx.sessions.flush.bind(f.ctx.sessions)
+ let reached,release
+ const entering=new Promise(resolve=>{reached=resolve}),gate=new Promise(resolve=>{release=resolve})
+ f.ctx.sessions.flush=async session=>{if(session===f.agent.session){reached();await gate}return flush(session)}
+ const preparing=f.runtime.prepare(f.input)
+ await entering
+ await f.runtime.disposeRun(f.input)
+ release()
+ await expect(preparing).rejects.toThrow(/停止|变化/)
+ f.agent.followup(createUserMessage({content:[{type:'text',text:'退出演示后正常提问'}],source:{kind:'user'}}));await f.agent.whenIdle()
+ expect(f.outside).toHaveLength(1)
+ expect(f.errors).toEqual([])
+})
+it('keeps a disposed run tombstone when its late prepare request arrives',async()=>{
+ const f=await fixture();await f.runtime.disposeRun(f.input)
+ await expect(f.runtime.prepare(f.input)).rejects.toThrow(/停止|变化/)
+ f.agent.followup(createUserMessage({content:[{type:'text',text:'正常提问'}],source:{kind:'user'}}));await f.agent.whenIdle()
+ expect(f.outside).toHaveLength(1)
+})
