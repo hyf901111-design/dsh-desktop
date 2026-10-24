@@ -253,7 +253,7 @@ function initializeUi(): void {
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
   const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuide(session.sessionId), revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide })
-  const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { onAction: homeActions.run, onExample: kind => homeGuides.start(kind) }) : () => {}
+  const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { onAction: homeActions.run, onExample: kind => homeGuides.start(kind,{replay:true}) }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),

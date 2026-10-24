@@ -5,7 +5,7 @@ import {lstat,mkdir,readFile,realpath,writeFile} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
-export function createHomePresentationBrief(metadata){return `请根据附件中的 Vanguard《2026年经济与市场展望》，制作${metadata.presentationSlides}页符合公司品牌与模板规范的投资研究汇报PPT，主题为「${metadata.presentationTitle??metadata.presentation?.title??'人工智能周期与资产配置'}」。\n设置符合公司规范的目录与章节导航，围绕AI资本开支、增长与估值的张力、2026年宏观基准情景及相对配置逻辑，形成有证据支撑的专业研究观点。充分呈现关键数据、可编辑图表与对比分析，逐页标注原报告页码和数据时点；保留历史预测口径，不将其表述为当前投资建议。`}
+export function createHomePresentationBrief(metadata){return `帮我把这份研报整理成一份公司风格的汇报PPT，${metadata.presentationSlides}页左右，讲清主要观点并配上关键图表。`}
 export const HOME_PRESENTATION_FILE='人工智能周期与资产配置.pptx'
 export const HOME_PRESENTATION_SOURCE_FILE='Vanguard-2026经济与市场展望.pdf'
 export const HOME_PRESENTATION_PATH='/sherlock/home-guide/presentation'
@@ -26,29 +26,30 @@ export function createHomePresentationReplay(metadata){
  let chapters=clean((Array.isArray(metadata.chapters)?metadata.chapters:[]).map(chapter=>chapter?.title))
  if(!chapters.length)chapters=clean(pages.filter(page=>page.kind==='toc').map(page=>page.title?.replace(/^目录[：:\s]*/u,'')))
  const sections=chapters.length?chapters:clean(pages.filter(page=>!['cover','closing','toc'].includes(page.kind)).map(page=>page.title)).slice(0,4)
- const structure=sections.length?`汇报按${sections.length}个${chapters.length?'章节':'阅读重点'}展开：\n\n`+sections.map((chapter,index)=>`${index+1}. ${chapter}`).join('\n')+'\n\n完整逐页目录保留在演示文稿中。按章节串起证据，再核对图表的来源页码与数据时点。':'完整逐页目录保留在演示文稿中，先看研究观点，再核对图表来源与数据时点。'
+ const structure=sections.length?`我会按${sections.length}个${chapters.length?'章节':'阅读重点'}组织汇报：\n\n`+sections.map((chapter,index)=>`${index+1}. ${chapter}`).join('\n')+'\n\n用关键图表支撑观点，保留目录、原报告页码和数据时点。':'我会先提炼研究观点，再用关键图表组织证据，保留目录、来源页码和数据时点。'
  return {
-  intro:`这是一次离线回放，不调用模型。先看 ${metadata.publisher??'Vanguard'} 的${metadata.sourcePages}页历史研报（${metadata.publicationDate}发布）：区分报告观点、数据时点与研读判断，再查看它如何组织为《${title}》${slides}页汇报。预测口径仍属于原报告，不代表当前投资建议。`,
+  intro:`好的，我会将这份${metadata.sourcePages}页研报整理成《${title}》${slides}页汇报。分析沿用 ${metadata.publisher??'Vanguard'} 于${metadata.publicationDate}发布的报告及其历史预测口径，不将其作为当前投资建议。`,
   structure,
-  layout:'接着回看公司模板排版与成稿检查：对齐封面和章节导航，核对图表口径、来源标注与正文可读性。这里展示预置成果的制作流程，接下来保存可编辑文件。',
-  delivery:`已保存《${title}》${slides}页预置成稿${chapters.length?`，按${chapters.length}个章节组织`:''}，可继续编辑。\n\n[打开可编辑演示文稿](./${HOME_PRESENTATION_FILE})\n\n[查看原始研究报告](./${HOME_PRESENTATION_SOURCE_FILE})\n\n原研报、PPT和制作记录均已保存，可回到这段会话继续使用。\n\n本教程使用离线预制成稿，不调用模型；内容仅演示历史研报转换流程。`,
-  todos:['回看研读结果，核对来源与数据时点',`按章节组织${slides}页汇报，回看品牌排版与成稿检查`,'保存预置成稿，保留原报告与制作记录']
+  layout:'研究框架和图表安排已整理好。接下来统一公司模板排版，核对封面、章节导航、图表口径与来源标注，确保正文清晰可读。',
+  delivery:`已完成并保存《${title}》${slides}页汇报${chapters.length?`，共${chapters.length}个章节`:''}。关键图表与来源标注已保留，可继续编辑。\n\n[打开可编辑演示文稿](./${HOME_PRESENTATION_FILE})\n\n[查看原始研究报告](./${HOME_PRESENTATION_SOURCE_FILE})`,
+  todos:['研读报告，核对来源与数据时点',`按章节组织${slides}页汇报，统一品牌排版并检查图表`,'保存可编辑汇报与原始报告']
  }
 }
 
 /** About 50 Unicode characters per active second, with cooperative stop gates. */
-export async function* streamHomePresentationReplayText(text,{waitUntilPlaying,signal}){
+export async function* streamHomePresentationReplayText(text,{waitUntilPlaying,signal,thinkingMs=0}){
  const playback=async()=>{
   signal?.throwIfAborted()
   let abort
   const cancellation=new Promise((_,reject)=>{abort=()=>reject(aborted());signal?.addEventListener('abort',abort,{once:true})})
   try{await Promise.race([waitUntilPlaying(),cancellation]);signal?.throwIfAborted()}finally{signal?.removeEventListener('abort',abort)}
  }
- const delay=()=>new Promise((resolve,reject)=>{
-  const clean=()=>signal?.removeEventListener('abort',stop),stop=()=>{clearTimeout(timer);clean();reject(aborted())},timer=setTimeout(()=>{clean();resolve()},60)
+ const delay=(ms=60)=>new Promise((resolve,reject)=>{
+  const clean=()=>signal?.removeEventListener('abort',stop),stop=()=>{clearTimeout(timer);clean();reject(aborted())},timer=setTimeout(()=>{clean();resolve()},ms)
   if(signal?.aborted)stop();else signal?.addEventListener('abort',stop,{once:true})
  })
  signal?.throwIfAborted();yield{type:'block-start',index:0,blockType:'text'}
+ for(let remaining=thinkingMs;remaining>0;){await playback();const slice=Math.min(60,remaining);await delay(slice);remaining-=slice}
  const characters=Array.from(text)
  for(let i=0;i<characters.length;i+=3){await playback();yield{type:'text-delta',index:0,text:characters.slice(i,i+3).join('')};await delay()}
  await playback();yield{type:'block-end',index:0,block:{type:'text',text}}
@@ -77,7 +78,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
   }
  }
  const todo=(run,phase)=>run.replay.todos.map((content,index)=>({content,status:phase>=3||index<phase?'completed':index===phase?'in_progress':'pending'}))
- const emitText=(run,text,signal)=>streamHomePresentationReplayText(text,{waitUntilPlaying:()=>wait(run,()=>run.playing,signal),signal})
+ const emitText=(run,text,signal,thinkingMs)=>streamHomePresentationReplayText(text,{waitUntilPlaying:()=>wait(run,()=>run.playing,signal),signal,thinkingMs})
  const emitTool=function*(name,args,id){yield{type:'block-start',index:1,blockType:'tool-call'};yield{type:'block-end',index:1,block:{type:'tool-call',id,name,arguments:JSON.stringify(args)}};yield{type:'finish',reason:{kind:'tool-calls'}}}
  class PresetAdapter extends LlmAdapter{
   async resolveModel(provider,model){return{provider,id:model,name:'离线预置演示',context:{contextWindow:32000},defaultMaxTokens:1024}}
@@ -97,11 +98,11 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
    const user=run.agent.session.events.filter(e=>e.type==='user/message'&&e.data.source?.kind==='user')
    if(user.length!==1||user[0].data.content?.filter(block=>block.type==='text').map(block=>block.text).join('')!==message(run))throw Error('离线预置只接受本次研报附件和制作需求，请退出演示后继续。')
    const n=run.sequence++
-   if(n===0){await wait(run,()=>run.playing&&run.allowed>=1,request.signal);yield*emitText(run,run.replay.intro+'\n\n'+run.replay.structure,request.signal);yield*emitTool('todo_write',{todos:todo(run,0)},'home-plan')}
-   else if(n===1){run.milestones.get('plan').resolve();await wait(run,()=>run.playing&&run.allowed>=2,request.signal);yield*emitText(run,run.replay.layout,request.signal);yield*emitTool('todo_write',{todos:todo(run,1)},'home-layout')}
+   if(n===0){await wait(run,()=>run.playing&&run.allowed>=1,request.signal);yield*emitText(run,run.replay.intro+'\n\n'+run.replay.structure,request.signal,2200);yield*emitTool('todo_write',{todos:todo(run,0)},'home-plan')}
+   else if(n===1){run.milestones.get('plan').resolve();await wait(run,()=>run.playing&&run.allowed>=2,request.signal);yield*emitText(run,run.replay.layout,request.signal,1500);yield*emitTool('todo_write',{todos:todo(run,1)},'home-layout')}
    else if(n===2){run.milestones.get('layout').resolve();await wait(run,()=>run.playing&&run.allowed>=3,request.signal);yield*emitTool(TOOL,{},'home-publish')}
    else if(n===3){if(!run.published)throw Error('预置文件未能保存。');yield*emitTool('todo_write',{todos:todo(run,3)},'home-complete')}
-   else if(n===4){yield*emitText(run,run.replay.delivery,request.signal);yield{type:'finish',reason:{kind:'stop'}};run.complete=true;run.milestones.get('deliver').resolve()}
+   else if(n===4){yield*emitText(run,run.replay.delivery,request.signal,1500);yield{type:'finish',reason:{kind:'stop'}};run.complete=true;run.milestones.get('deliver').resolve()}
    else throw Error('预置示例已结束，请在普通新对话中继续。')
   }
  }

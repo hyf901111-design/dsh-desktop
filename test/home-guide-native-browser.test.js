@@ -129,7 +129,7 @@ async function command(page, name, overrides = {}, replyTimeout = 8000) {
     window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-request', { detail: { requestId, runId, sessionId, command: name, hostId: 'guide-host', ...overrides } }))
   }), { name, overrides, runId, sessionId, replyTimeout })
 }
-async function succeeds(page, name, overrides) { expect(await command(page, name, overrides), name).toMatchObject({ runId, ok: true }) }
+async function succeeds(page, name, overrides) { const reply=await command(page,name,overrides);expect(reply,name+(reply.message?': '+reply.message:'')).toMatchObject({runId,ok:true}) }
 async function preserved(page) {
   expect(await page.evaluate(() => document.querySelector('textarea') === window.guideProbe.originalInput)).toBe(true)
   expect(await page.evaluate(() => document.querySelector('.wSkVaW_root') === window.guideProbe.originalRoot)).toBe(true)
@@ -139,6 +139,60 @@ async function preserved(page) {
 }
 const canvas = page => page.locator('#guide-host [data-research-canvas]')
 const widget = (page, name) => page.locator(`#guide-host [data-financial-widget="${name}"]`)
+
+it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged real controls, visible port paths and typed search at $width × $height',async size=>{
+ const {page,errors,external}=await fixture({nativeLayout:true,...size,guideTop:116,guideBottom:69})
+ try{
+  await succeeds(page,'mount-board')
+  await page.evaluate(()=>{
+   document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
+   window.guideProbe.pointerCues=[];window.guideProbe.typed=[]
+   document.addEventListener('input',event=>{if(event.target.getAttribute?.('role')==='combobox')window.guideProbe.typed.push(event.target.value)},true)
+   window.addEventListener('sherlock:home-guide-cue',event=>{
+    const d=event.detail;if(!d.requestId)return
+    const rect=target=>{const r=target.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}},canvas=document.querySelector('#guide-host [data-research-canvas]')
+    window.guideProbe.pointerCues.push({action:d.action,target:d.target.dataset.financialPortNode,from:d.fromTarget?.dataset.financialPortNode,toSide:d.target.dataset.financialPort,fromSide:d.fromTarget?.dataset.financialPort,targetRect:rect(d.target),fromRect:d.fromTarget?rect(d.fromTarget):null,canvas:rect(canvas)})
+    window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))
+   })
+  })
+  // The central pointer is represented only by its acknowledged contract here;
+  // native components, search, layout and persistence remain the real renderer.
+  for(const step of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
+  const result=await page.evaluate(()=>{const p=window.guideProbe,snapshot=p.registry.for('guide-browser-session').getSnapshot();return{cues:p.pointerCues,typed:p.typed,nodes:snapshot.artifacts.map(n=>({id:n.id,spec:n.containerSpec})),stored:JSON.parse(p.memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session'))}})
+  const watch=result.nodes.find(n=>n.spec.widget==='watchlist'),quote=result.nodes.find(n=>n.spec.widget==='quote'),news=result.nodes.find(n=>n.spec.widget==='news'),drags=result.cues.filter(cue=>cue.action==='drag')
+  expect(drags.map(cue=>[cue.from,cue.fromSide,cue.target,cue.toSide])).toEqual([[watch.id,'output',quote.id,'input'],[quote.id,'output',news.id,'input']])
+  for(const cue of drags)for(const box of [cue.fromRect,cue.targetRect]){expect(box.width).toBeGreaterThan(0);expect(box.y).toBeGreaterThanOrEqual(cue.canvas.y-1);expect(box.bottom).toBeLessThanOrEqual(cue.canvas.bottom+1)}
+  expect(result.typed).toEqual(['0','00','007','0070','00700']);expect(watch.spec.symbols).toHaveLength(3);expect(quote.spec.symbols[0].code).toBe('00700');expect(quote.spec.linkedWatchlistId).toBe(watch.id);expect(news.spec.linkedSourceId).toBe(quote.id)
+  expect(result.stored.map(node=>node.id).sort()).toEqual(result.nodes.map(node=>node.id).sort())
+  expect(await page.locator('#guide-host .ew-financial-connection-line').count()).toBe(2)
+  await preserved(page);expect(errors).toEqual([]);expect(external).toEqual([])
+ }finally{await page.close()}
+},20000)
+
+it.each(['click','from-port','to-port'])('does not act when the acknowledged %s target moves offscreen',async kind=>{
+ const {page,errors}=await fixture({nativeLayout:true,width:1380,height:900,guideTop:116,guideBottom:69})
+ try{
+  await succeeds(page,'mount-board')
+  await page.evaluate(()=>{
+   document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
+   window.addEventListener('sherlock:home-guide-cue',event=>{
+    const d=event.detail;if(!d.requestId)return
+    const mode=window.guideProbe.offscreenTarget
+    if(mode==='click'&&d.action==='click')d.target.style.transform='translateY(-3000px)'
+    if(d.action==='drag'&&(mode==='from-port'||mode==='to-port'))(mode==='from-port'?d.fromTarget:d.target).style.transform='translateY(-3000px)'
+    window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))
+   })
+  })
+  if(kind!=='click')for(const step of ['board-watchlist','board-quote','board-news'])await succeeds(page,step)
+  await page.evaluate(value=>{window.guideProbe.offscreenTarget=value},kind)
+  const reply=await command(page,kind==='click'?'board-library':'board-link')
+  expect(reply.ok).toBe(false)
+  const nodes=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
+  expect(nodes.some(node=>node.containerSpec.linkedWatchlistId||node.containerSpec.linkedSourceId)).toBe(false)
+  if(kind==='click'){expect(nodes).toHaveLength(0);expect(await page.locator('[data-financial-library]').getAttribute('aria-expanded')).toBe('false')}
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
 
 it('runs the offline board tutorial on the real native canvas and retains the original ConversationRoot and InputBar', async () => {
   const { page, errors, external } = await fixture()
@@ -154,10 +208,12 @@ it('runs the offline board tutorial on the real native canvas and retains the or
     await expect.poll(() => page.locator('[role="menu"][aria-label="组件库"] [data-financial-place="watchlist"]').count()).toBe(1)
     for (const name of ['watchlist', 'quote', 'news']) { await succeeds(page, `board-${name}`); await expect.poll(() => widget(page, name).count()).toBe(1) }
     expect(await page.locator('#guide-host [data-financial-widget]').count()).toBe(3)
+    expect(await page.locator('#guide-host [data-home-guide-sample-label]').count()).toBe(0)
     await succeeds(page, 'board-link')
     await expect.poll(() => page.locator('#guide-host .ew-financial-connection-line').count()).toBeGreaterThanOrEqual(2)
     await expect.poll(() => widget(page, 'quote').locator('[data-financial-chart]').count()).toBe(1)
     await expect.poll(() => widget(page, 'news').locator('.ew-news-list').textContent()).toMatch(/示例|演示/)
+    expect(await widget(page,'news').locator('.ew-financial-footer').innerText()).toContain('离线教程示例 · 2026-10-20')
     await expect.poll(() => widget(page, 'watchlist').locator('[data-stock-code]').count()).toBe(2)
     const firstPrice = await widget(page, 'quote').locator('.ew-quote-price-line').textContent()
     await widget(page, 'watchlist').locator('[data-stock-code]').nth(1).click()
@@ -257,7 +313,7 @@ it.each([['board','research'],['note','notes'],['ppt','chat']])('preserves nativ
   expect(active.rightWrites).toEqual([])
   expect(active.sidebar,'the real AppFrame must not automatically collapse the left sidebar').toBe(initial.sidebar)
   expect(active.left).toBe(initial.left)
-  expect(active.page).toBe('guide')
+  expect(active.page).toBe(kind==='ppt'?'home':'guide')
   expect(await page.locator('[data-srb-tabs] [data-conversation-view-id="'+view+'"]').getAttribute('aria-selected')).toBe('true')
   expect(await page.evaluate(()=>window.guideProbe.researchActivations.filter(item=>item.active))).toEqual([])
   if(kind==='board'){
@@ -281,7 +337,7 @@ it.each([['board','research'],['note','notes'],['ppt','chat']])('preserves nativ
   await preserved(page)
   await page.evaluate(()=>{document.documentElement.dataset.homeGuideTransition='exit-lease';document.documentElement.dataset.homeGuideTransitionSession='guide-browser-session';delete document.querySelector('.pI_x6G_centerCol').dataset.homeGuideActive;delete document.querySelector('.wSkVaW_root').dataset.homeGuideResident})
   await page.waitForTimeout(100)
-  expect(await page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe('guide')
+  expect(await page.locator('.wSkVaW_root').getAttribute('data-odyssey-page')).toBe(kind==='ppt'?'home':'guide')
   expect(await page.evaluate(()=>window.guideProbe.rightChanges)).toEqual([])
   expect(await page.evaluate(()=>window.guideProbe.layout.getSnapshot().sidebar)).toBe(initial.sidebar)
   await page.locator('[data-srb-tabs] [data-conversation-view-id="chat"]').click()

@@ -3,6 +3,7 @@ import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
 import {build} from 'esbuild'
 import {beforeAll,afterAll,expect,it} from 'vitest'
+import {patchHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
 
 // Browser plugin not available. This headless fixture keeps the production
 // ConversationRoot, InputBar, session store and Figma styles; only external I/O
@@ -11,7 +12,7 @@ const evidence='/tmp/home-presentation-shell-20261024'
 let browser,runtimeSource,conversationSource,entry,styles
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- conversationSource=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;')
+ conversationSource=patchHomeGuideNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;')
  styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomeGuides}from'./src/preload/home-guides';
@@ -53,7 +54,7 @@ async function fixture({width,height,hero}){
  await page.addScriptTag({content:conversationSource});await page.evaluate(()=>window.conversationDescriptor=window.descriptor)
  await page.addStyleTag({content:styles+`\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;width:${width}px;height:100vh}#native-root{height:100%;min-height:0}[data-native-history]{padding:12px 24px;font-size:14px;line-height:24px}`})
  await page.addScriptTag({content:entry});await page.waitForSelector('textarea',{timeout:4000})
- await page.evaluate(()=>window.originalShellInput=document.querySelector('textarea'))
+ await page.evaluate(async()=>{window.originalShellInput=document.querySelector('textarea');await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))})
  return{page,errors,close:async()=>{await page.evaluate(()=>window.shellProbe.dispose()).catch(()=>{});await page.close()}}
 }
 async function geometry(page){return page.evaluate(()=>{
@@ -61,17 +62,18 @@ async function geometry(page){return page.evaluate(()=>{
  return{phase:resident.dataset.phase,input:rect(input),send:rect(send),footer:footer?rect(footer):null,sendHit:hit(send),inputHit:hit(input),sameInput:input===window.originalShellInput,heroVisible:!resident.querySelector('.wSkVaW_composerHero')||getComputedStyle(resident.querySelector('.wSkVaW_composerHero')).visibility==='visible',scroll:rect(scroll),scrollable:scroll.scrollHeight>scroll.clientHeight,resident:rect(resident)}
 })}
 
-// Removing the tutorial's reserved surface must make these fail: the real
-// send button then sits below the controls in every active conversation.
+// Playback controls stay small and above the real conversation. They must not
+// reserve a second surface below the composer or intercept its native input.
 for(const value of [{width:1000,height:900,hero:false},{width:620,height:700,hero:false},{width:420,height:480,hero:false},{width:1000,height:900,hero:true},{width:620,height:480,hero:true}]){
- it(`keeps the native ${value.hero?'hero':'active'} input above tutorial controls in a ${value.width}×${value.height} pane`,async()=>{
+ it(`keeps native ${value.hero?'hero':'active'} input geometry with floating controls in a ${value.width}×${value.height} pane`,async()=>{
   const f=await fixture(value),{page}=f
   try{
    const ordinary=await geometry(page);await page.evaluate(()=>window.shellProbe.start());await page.waitForSelector('[data-home-guide-kind="ppt"]')
    await expect.poll(async()=>!!(await geometry(page)).footer).toBe(true)
    const layout=await geometry(page)
    expect(layout.phase).toBe(value.hero?'hero':'active');expect(layout.sameInput).toBe(true);expect(layout.heroVisible).toBe(true)
-   expect(layout.send.bottom).toBeLessThanOrEqual(layout.footer.top);expect(layout.input.bottom).toBeLessThanOrEqual(layout.footer.top)
+   expect(layout.footer.bottom).toBeLessThanOrEqual(layout.input.top);expect(layout.footer.height).toBeLessThanOrEqual(40);expect(layout.footer.width).toBeLessThan(145)
+   expect(layout.resident.height).toBeCloseTo(ordinary.resident.height,0);expect(layout.send.bottom,JSON.stringify({ordinary,layout})).toBeCloseTo(ordinary.send.bottom,0)
    expect(layout.sendHit).toBe(true);expect(layout.inputHit).toBe(true);expect(layout.input.width).toBeGreaterThan(200)
    if(!value.hero){expect(layout.scroll.height).toBeGreaterThan(90);expect(layout.scrollable).toBe(true);await page.locator('.wSkVaW_scrollBody').evaluate(node=>{node.scrollTop=node.scrollHeight});expect(await page.locator('[data-history-row="17"]').evaluate(node=>{const rect=node.getBoundingClientRect(),area=node.closest('.wSkVaW_scrollBody').getBoundingClientRect();return rect.top>=area.top&&rect.bottom<=area.bottom})).toBe(true)}
    await page.screenshot({path:evidence+'/'+(value.hero?'hero':'active')+'-'+value.width+'x'+value.height+'.png'})
@@ -83,14 +85,14 @@ for(const value of [{width:1000,height:900,hero:false},{width:620,height:700,her
  },15000)
 }
 
-it('reserves the actual controls height when a narrow pane and a longer status wrap the footer',async()=>{
+it('keeps a long accessible status out of the composer layout when the pane narrows',async()=>{
  const f=await fixture({width:1000,height:560,hero:false}),{page}=f
  try{
   await page.evaluate(()=>window.shellProbe.start())
   const wide=await geometry(page)
   await page.evaluate(()=>{document.querySelector('.pI_x6G_centerCol').style.width='420px';window.shellProbe.status('正在核对原始研报中的数据时点、研究假设与图表来源。每页保留原报告页码，并把历史预测与当前信息区分，确认后再交付八页可编辑公司风格汇报。')})
-  await expect.poll(()=>page.evaluate(()=>parseFloat(document.querySelector('.pI_x6G_centerCol').style.getPropertyValue('--odyssey-home-guide-controls-height'))===Math.ceil(document.querySelector('.odyssey-home-guide-footer').getBoundingClientRect().height+20))).toBe(true)
-  await expect.poll(async()=>{const layout=await geometry(page);return layout.footer.height>wide.footer.height&&layout.send.bottom<=layout.footer.top&&layout.sendHit&&layout.inputHit}).toBe(true)
+  await expect.poll(()=>page.evaluate(()=>document.querySelector('.pI_x6G_centerCol').style.getPropertyValue('--odyssey-home-guide-controls-height'))).toBe('')
+  await expect.poll(async()=>{const layout=await geometry(page);return layout.footer.height===wide.footer.height&&layout.footer.bottom<=layout.input.top&&layout.sendHit&&layout.inputHit}).toBe(true)
   const layout=await geometry(page)
   expect(layout.input.width).toBeGreaterThan(200);expect(layout.scroll.height).toBeGreaterThan(90)
   await page.screenshot({path:evidence+'/active-dynamic-footer.png'});expect(f.errors).toEqual([])

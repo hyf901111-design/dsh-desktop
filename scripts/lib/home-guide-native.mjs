@@ -2,7 +2,8 @@ const START = '/* odyssey:home-guide-native:start:v1 */'
 const END = '/* odyssey:home-guide-native:end:v1 */'
 const RESIDENT_V1 = '/* odyssey:home-guide-resident-isolation:v1 */'
 const RESIDENT_V2 = '/* odyssey:home-guide-resident-isolation:v2 */'
-const RESIDENT = '/* odyssey:home-guide-resident-isolation:v3 */'
+const RESIDENT_V3 = '/* odyssey:home-guide-resident-isolation:v3 */'
+const RESIDENT = '/* odyssey:home-guide-resident-isolation:v4 */'
 const PERSISTENT = '/* odyssey:home-guide-persistent-board:v1 */'
 const CANVAS = '/* odyssey:home-guide-shared-workspace-canvas:v1 */'
 
@@ -152,7 +153,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       return host
     }
     const check = ticket => {
-      if (stopped || ticket.controller.signal.aborted || owned.current !== ticket || !ticket.host.isConnected || mainHost(ticket.detail) !== ticket.host) throw changed()
+      if (stopped || ticket.controller.signal.aborted || owned.current !== ticket || ticket.resource.owner !== ticket || !ticket.host.isConnected || mainHost(ticket.detail) !== ticket.host || ticket.pointerRun && document.documentElement.dataset.homeGuidePointerRun !== ticket.pointerRun) throw changed()
     }
     const frame = ticket => new Promise((resolve, reject) => {
       if (ticket.controller.signal.aborted) { reject(changed()); return }
@@ -181,20 +182,48 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         last = now
       }
     }
-    const cue = async (ticket, target, label) => {
+    const playing = async ticket => {
       check(ticket)
-      if (!target?.isConnected) throw Error('原生操作控件尚未就绪。')
-      window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue', { detail: { runId: ticket.detail.runId, target, label } }))
-      await delay(ticket, 450)
+      while (!ticket.playing) { await frame(ticket); check(ticket) }
+    }
+    const targetReady = (ticket, target, visible = false) => {
+      check(ticket)
+      if (!target?.isConnected || target.disabled === true || target.getAttribute('aria-disabled') === 'true' || target.closest('[inert],[data-odyssey-subagent-panel]')) throw Error('原生操作控件尚未就绪。')
+      const owner = target.closest('[data-ework-toolbar-owner]'), library = target.closest('[data-home-guide-native-library]'), list = target.closest('[role="listbox"]')
+      const ownList = list?.id && [...ticket.host.querySelectorAll('input[aria-controls]')].some(input => input.getAttribute('aria-controls') === list.id)
+      if (!ticket.host.contains(target) && owner?.dataset.eworkToolbarOwner !== ticket.resource.id && library?.dataset.homeGuideNativeLibrary !== ticket.detail.runId && !ownList) throw changed()
+      if (visible) { const rect = target.getBoundingClientRect(); if (rect.width <= 0 || rect.height <= 0 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= window.innerWidth || rect.top >= window.innerHeight) throw Error('原生操作控件已离开可见区域。') }
+    }
+    const cue = async (ticket, target, label, action = 'move', fromTarget) => {
+      await playing(ticket); targetReady(ticket, target); if (fromTarget) targetReady(ticket, fromTarget)
+      target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }); fromTarget?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+      const marker = document.documentElement.dataset.homeGuidePointerRun
+      if (marker && marker !== ticket.detail.runId) throw changed()
+      if (marker) {
+        ticket.pointerRun = marker
+        await new Promise((resolve, reject) => {
+          const requestId = window.crypto.randomUUID(); let done = false
+          const finish = error => { if (done) return; done = true; window.removeEventListener('sherlock:home-guide-cue-reply', receive); ticket.controller.signal.removeEventListener('abort', abort); error ? reject(error) : resolve() }
+          const abort = () => finish(changed())
+          const receive = event => { const result = event.detail; if (result?.runId !== marker || result.requestId !== requestId) return; finish(result.ok === true ? null : Error(result.message || '教程指针操作未完成。')) }
+          window.addEventListener('sherlock:home-guide-cue-reply', receive); ticket.controller.signal.addEventListener('abort', abort, { once: true })
+          void (async () => { let elapsed = 0, last = Date.now(); while (!done && elapsed < 10000) { await frame(ticket); if (done) return; check(ticket); const now = Date.now(); if (ticket.playing) elapsed += Math.min(80, now - last); last = now } if (!done) finish(Error('教程指针操作超时，请重试。')) })().catch(finish)
+          window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue', { detail: { runId: marker, requestId, target, label, action, ...(fromTarget ? { fromTarget } : {}) } }))
+        })
+      } else {
+        window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue', { detail: { runId: ticket.detail.runId, target, label } }))
+        await delay(ticket, 450)
+      }
+      await playing(ticket); targetReady(ticket, target, true); if (fromTarget) targetReady(ticket, fromTarget, true)
     }
     const click = async (ticket, target, label) => {
-      await cue(ticket, target, label)
-      check(ticket); react_dom.flushSync(() => target.click())
+      await cue(ticket, target, label, 'click')
+      await playing(ticket); targetReady(ticket, target, true); react_dom.flushSync(() => target.click())
       ticket.ownedSelection = JSON.stringify(ticket.resource.workspace.getSnapshot().selection)
-      await delay(ticket, 150)
+      if (!ticket.pointerRun) await delay(ticket, 150)
     }
-    const save = ticket => {
-      check(ticket)
+    const save = async ticket => {
+      await playing(ticket)
       if (ticket.resource.workspace.persist() !== true) throw Error('示例看板保存失败，当前内容仍保留，请重试。')
       ticket.ownedSelection = JSON.stringify(ticket.resource.workspace.getSnapshot().selection)
     }
@@ -251,7 +280,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         if (button.getAttribute('aria-expanded') !== 'true') await click(ticket, button, '打开组件库，查看可加入的原生组件')
         await settle(ticket, () => button.getAttribute('aria-expanded') === 'true' && !!library())
         const menu = library(); if (menu) menu.__homeGuideRunId = detail.runId
-        save(ticket); return
+        await save(ticket); return
       }
       if (['board-watchlist', 'board-quote', 'board-news'].includes(detail.command)) {
         const widget = detail.command.slice(6)
@@ -266,22 +295,30 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           ticket.nodes[widget] = node.id
           if (widget === 'watchlist') {
             const state = await workspace.canvasAction('inspect', { ids: [node.id] }); check(ticket)
+            await playing(ticket)
             await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 2), selectedSymbol: 'SH:600519', refreshEnabled: false } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
           }
         }
         await settle(ticket, () => !!ticket.host.querySelector('[data-financial-widget="' + widget + '"]'))
-        save(ticket); return
+        await save(ticket); return
       }
       const { watchlist, quote, news } = ticket.nodes
       if (!watchlist || !quote || !news) throw Error('请先创建自选、行情和新闻组件。')
       if (detail.command === 'board-link') {
-        await cue(ticket, ticket.host.querySelector('[data-research-node-id="' + CSS.escape(quote) + '"]'), '连接自选、行情与资讯，让下游跟随当前标的')
-        const state = await workspace.canvasAction('inspect', { ids: [watchlist, quote, news] }); check(ticket)
-        const nodes = new Map(workspace.getSnapshot().artifacts.map(n => [n.id, n]))
-        const changes = [{ op: 'update', id: quote, fields: { containerSpec: { ...nodes.get(quote).containerSpec, linkedWatchlistId: watchlist, refreshEnabled: false } } }, { op: 'update', id: news, fields: { containerSpec: { ...nodes.get(news).containerSpec, linkedSourceId: quote, refreshEnabled: false } } }]
-        await workspace.canvasAction('apply', { requestId: detail.requestId + ':apply', revision: state.revision, changes }, { isCancelled: () => ticket.controller.signal.aborted })
-        check(ticket); react_dom.flushSync(() => workspace.updateSelection([watchlist, quote, news], 'replace'))
-        await settle(ticket, () => !!ticket.host.querySelector('[data-financial-link]'))
+        for (const [sourceId, targetId, field, label] of [[watchlist, quote, 'linkedWatchlistId', '连接自选股与行情'], [quote, news, 'linkedSourceId', '连接行情与资讯']]) {
+          if (workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId) continue
+          const port = (nodeId, side) => ticket.host.querySelector('[data-financial-port-node="' + CSS.escape(nodeId) + '"][data-financial-port="' + side + '"]')
+          await settle(ticket, () => !!port(sourceId, 'output') && !!port(targetId, 'input'))
+          const from = port(sourceId, 'output'), target = port(targetId, 'input')
+          await cue(ticket, target, label, 'drag', from)
+          const state = await workspace.canvasAction('inspect', { ids: [sourceId, targetId] })
+          await playing(ticket); targetReady(ticket, from, true); targetReady(ticket, target, true)
+          const node = workspace.getSnapshot().artifacts.find(node => node.id === targetId)
+          await workspace.canvasAction('apply', { requestId: detail.requestId + ':link:' + targetId, revision: state.revision, changes: [{ op: 'update', id: targetId, fields: { containerSpec: { ...node.containerSpec, [field]: sourceId, refreshEnabled: false } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
+          await playing(ticket); react_dom.flushSync(() => workspace.updateSelection([watchlist, quote, news], 'replace'))
+          ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
+          await settle(ticket, () => workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId && !!ticket.host.querySelector('[data-financial-link]'))
+        }
       } else if (detail.command === 'board-add') {
         const symbol = provider.symbols[2], card = () => ticket.host.querySelector('[data-research-node-id="' + CSS.escape(watchlist) + '"]')
         const hasStock = () => workspace.getSnapshot().artifacts.find(node => node.id === watchlist)?.containerSpec.symbols.some(item => item.market === symbol.market && item.code === symbol.code)
@@ -289,8 +326,13 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           await click(ticket, card()?.querySelector('[aria-label="添加自选股"]'), '点击加号，搜索要关注的新标的')
           await settle(ticket, () => !!card()?.querySelector('input[role="combobox"]'))
           const input = card().querySelector('input[role="combobox"]')
-          await cue(ticket, input, '输入腾讯控股的代码 00700')
-          react_dom.flushSync(() => { input.value = symbol.code; input.dispatchEvent(new window.Event('input', { bubbles: true })) })
+          await click(ticket, input, '输入腾讯控股的代码 00700')
+          input.focus({ preventScroll: true })
+          for (let index = 1; index <= symbol.code.length; index++) {
+            await playing(ticket); targetReady(ticket, input, true)
+            react_dom.flushSync(() => { input.value = symbol.code.slice(0, index); input.dispatchEvent(new window.Event('input', { bubbles: true })) })
+            await delay(ticket, 100)
+          }
           const result = () => [...(document.getElementById(input.getAttribute('aria-controls'))?.querySelectorAll('button[role="option"]') ?? [])].find(button => button.textContent.includes(symbol.code))
           await settle(ticket, () => !!result())
           await click(ticket, result(), '加入腾讯控股到自选列表')
@@ -311,11 +353,12 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           await settle(ticket, () => !!menu()?.querySelector('[data-arrange-mode="three"]'))
           await click(ticket, menu().querySelector('[data-arrange-mode="three"]'), '将三个组件整理成清晰的分栏')
         } else if (button && !button.disabled) await click(ticket, button, '整理组件，保留清晰可读的内容')
-        else if (!workspace.organizeCanvas(new Map(), overview ? 'three' : 'standard')) throw Error('画布暂时无法整理。')
+        else if (ticket.pointerRun || !workspace.organizeCanvas(new Map(), overview ? 'three' : 'standard')) throw Error('画布暂时无法整理。')
         const canvas = ticket.host.querySelector('[data-research-canvas]')
         // Arrange performs a delayed native content measurement. Let it finish
         // before the expert sizes this private board to its actual viewport.
         await settle(ticket, () => !canvas?.__eworkContentFit)
+        await playing(ticket)
         if (canvas) {
           canvas.scrollTop = 0
           const bounds = canvas.getBoundingClientRect(), tools = toolbar()?.getBoundingClientRect()
@@ -348,9 +391,11 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         }
         // Dismiss only this demo's native edit receipt for the final overview.
         const receipt = [...document.querySelectorAll('[data-canvas-action-receipt]')].find(node => node.dataset.eworkToolbarOwner === id)
-        react_dom.flushSync(() => receipt?.querySelector('[data-canvas-action-dismiss]')?.click())
+        const dismiss = receipt?.querySelector('[data-canvas-action-dismiss]')
+        if (dismiss) await click(ticket, dismiss, '关闭整理结果提示')
         // Finish at the document start so native component headers stay visible.
         react_dom.flushSync(() => { workspace.setViewport({ x: 0, y: 0, scale: 1 }); workspace.updateSelection([watchlist, quote, news], 'replace') })
+        ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
         await settle(ticket, () => {
           if (!canvas) return false
           const origin = canvas.getBoundingClientRect()
@@ -360,7 +405,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           })
         })
       }
-      save(ticket)
+      await save(ticket)
     }
     const receive = event => {
       const detail = event.detail
@@ -402,7 +447,6 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
   if (!entry || entry.controller.signal.aborted || entry.detail.sessionId !== sessionId || subagentPanel) return null
   return react_dom.createPortal(react.createElement(HomeGuideNativeFinancialContext.Provider, { value: entry.provider },
     react.createElement('div', { 'data-home-guide-native': entry.detail.runId, 'aria-label': '研究看板离线示例', style: { position: 'absolute', inset: 0, minWidth: 0, minHeight: 0, overflow: 'hidden' } },
-      react.createElement('span', { 'data-home-guide-sample-label': '', style: { position: 'absolute', top: 8, left: 12, zIndex: 8, padding: '3px 7px', borderRadius: 5, background: 'var(--dsw-alias-bg-base,#fff)', color: 'var(--dsw-alias-label-secondary,#666)', fontSize: 11, pointerEvents: 'none' } }, '示例数据 · 离线教程'),
       react.createElement(ResearchCanvas, { sessionId: entry.resource.id, t: key => key, researchWorkspaces: entry.resource.registry })
     )), entry.host)
 }
@@ -419,15 +463,15 @@ function replaceOne(source, anchor, next) {
   return source.replace(anchor, next)
 }
 
-function residentChanges(legacy = false, priorV2 = false) {
+function residentChanges(legacy = false, priorV2 = false, priorV3 = false) {
   const activation = '(0, react.useEffect)(() => {\n\t\t\t\tif (sessionId === void 0) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tsetResearchActive(sessionId, false);\n\t\t\t\t};\n\t\t\t}, [research, sessionId, setResearchActive]);'
   const changes = [
-    ["const sidebarMode=research || activeView==='notes';", (legacy ? RESIDENT_V1 : priorV2 ? RESIDENT_V2 : RESIDENT) + "\nconst homeGuideResident=useHomeGuideNativeResident(sessionId,subagentPanel);\nconst sidebarMode=(research || activeView==='notes')&&!homeGuideResident;"],
+    ["const sidebarMode=research || activeView==='notes';", (legacy ? RESIDENT_V1 : priorV2 ? RESIDENT_V2 : priorV3 ? RESIDENT_V3 : RESIDENT) + "\nconst homeGuideResident=useHomeGuideNativeResident(sessionId,subagentPanel);\nconst sidebarMode=(research || activeView==='notes')&&!homeGuideResident;"],
     ['if (sessionId === void 0) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tsetResearchActive(sessionId, false);\n\t\t\t\t};', 'if (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tif (!homeGuideNativeResidentSession(sessionId,subagentPanel)) setResearchActive(sessionId, false);\n\t\t\t\t};'],
     ['}, [research, sessionId, setResearchActive]);', '}, [research, homeGuideResident, sessionId, setResearchActive]);'],
     ['if (sessionId === void 0) return;\n\t\t\t\tconst previous = researchStateRef.current;', 'if (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tconst previous = researchStateRef.current;'],
     ['}, [resolvedActions, detailsSelection, sidebarMode, researchSidebar, sessionId]);', '}, [resolvedActions, detailsSelection, sidebarMode, homeGuideResident, researchSidebar, sessionId]);'],
-    ['"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",', '"data-odyssey-page": homeGuideResident ? "guide" : research ? "research" : hero ? "home" : "conversation",'],
+    ['"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",', '"data-odyssey-page": '+(legacy||priorV2||priorV3?'homeGuideResident':'homeGuideResident && (research || activeView === "notes")')+' ? "guide" : research ? "research" : hero ? "home" : "conversation",'],
     ['function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {', 'function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {\n  const homeGuideResident=useHomeGuideNativeResident(sessionId'+(legacy||priorV2?'':',false,rootRef')+')'],
     ["return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?", "return homeGuideResident ? null : react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?"]
   ]
@@ -438,7 +482,7 @@ function residentChanges(legacy = false, priorV2 = false) {
 
 /** Restore the native anchors before older source patches run again. */
 export function stripHomeGuideNative(source) {
-  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident']
+  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident']
   if (!source.includes(START)) {
     if (owned.some(token => source.includes(token))) throw Error('Home guide native partial patch drifted')
     return source
@@ -454,7 +498,7 @@ export function stripHomeGuideNative(source) {
     'function NativeHomeGuidePortal(', 'function ConversationRoot(props)'
   ]) if (runtime.split(anchor).length !== 2) throw Error('Home guide native runtime anchor drifted: ' + anchor)
   source = source.slice(0, start) + source.slice(end + END.length + 1)
-  if (source.includes(RESIDENT) || source.includes(RESIDENT_V1) || source.includes(RESIDENT_V2)) for (const [native, patched] of residentChanges(source.includes(RESIDENT_V1), source.includes(RESIDENT_V2))) source = replaceOne(source, patched, native)
+  if (source.includes(RESIDENT) || source.includes(RESIDENT_V1) || source.includes(RESIDENT_V2) || source.includes(RESIDENT_V3)) for (const [native, patched] of residentChanges(source.includes(RESIDENT_V1), source.includes(RESIDENT_V2), source.includes(RESIDENT_V3))) source = replaceOne(source, patched, native)
   source = replaceOne(source, 'function HomeGuideNativeOriginalConversationRoot({ subagentPanel=false,', 'function ConversationRoot({ subagentPanel=false,')
   if (source.includes(CANVAS)) source = replaceOne(source, CANVAS + '\nfunction HomeGuideNativeOriginalResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {', 'function ResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {')
   if (source.includes(PERSISTENT)) {

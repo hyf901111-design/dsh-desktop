@@ -1,46 +1,33 @@
-.odyssey-home-guide {
-  position:fixed;display:grid;grid-template-rows:auto minmax(0,1fr) auto;
-  z-index:24;min-width:0;min-height:0;overflow:hidden;
-  color:var(--dsw-alias-text-primary,#26313a);background:var(--dsw-alias-bg-base,#f7f8fa);
-  font:14px/1.5 "Noto Sans SC","PingFang SC",sans-serif;
-  border-radius:0 0 12px 12px;-webkit-app-region:no-drag;
-}
-[data-ds-dark-theme] .odyssey-home-guide { color:#eceef2;background:#111214; }
-.odyssey-home-guide-header,.odyssey-home-guide-footer { display:flex;align-items:center;gap:12px;padding:12px 20px;min-width:0;background:rgb(130 136 145 / .055); }
-.odyssey-home-guide-header strong { font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-.odyssey-home-guide-header>button { margin-left:auto; }
-.odyssey-home-guide-badge { font-size:11px;opacity:.6;flex:none; }
-.odyssey-home-guide button { -webkit-app-region:no-drag; }
-.odyssey-home-guide-header button,.odyssey-home-guide-footer button { border:0;border-radius:7px;padding:6px 12px;color:inherit;background:rgb(130 136 145 / .12);font:inherit;cursor:pointer;flex:none; }
-.odyssey-home-guide-header button:hover,.odyssey-home-guide-footer button:hover { background:rgb(130 136 145 / .2); }
-.odyssey-home-guide-header button:focus-visible,.odyssey-home-guide-footer button:focus-visible { outline:2px solid #7da5e8;outline-offset:2px; }
-.odyssey-home-guide button:disabled { opacity:.4;cursor:default; }
-.odyssey-home-guide-content { position:relative;min-width:0;min-height:0;overflow:hidden;width:100%;height:100%; }
-.odyssey-home-guide-content.en-root { position:relative!important;inset:auto!important;border:0;border-radius:0;display:block!important; }
-.odyssey-home-guide-footer { padding-top:10px;padding-bottom:14px; }
-.odyssey-home-guide-footer>div { flex:1;min-width:0; }
-.odyssey-home-guide-footer p { margin:0;font-size:13px;line-height:20px; }
-.odyssey-home-guide-count { display:block;font-size:11px;opacity:.55;margin-bottom:2px; }
-[data-home-guide-active] .odyssey-home-operations,[data-home-guide-active] .odyssey-operations-toggle,[data-home-guide-active] [data-odyssey-theme-dock],[data-home-guide-resident] .wSkVaW_composerHero { visibility:hidden!important;pointer-events:none!important; }
-@media (max-width:700px) { .odyssey-home-guide-header,.odyssey-home-guide-footer { padding-left:12px;padding-right:12px;gap:8px; }.odyssey-home-guide-badge { display:none; }.odyssey-home-guide-footer p { font-size:12px; }.odyssey-home-guide-footer button { padding:6px 9px; } }
-/* Reserve a separate controls slot below the whole resident conversation. Its
-   native active composer is absolute, so root padding cannot move it upward. */
-[data-home-guide-kind="ppt"] .wSkVaW_root[data-home-guide-resident] { box-sizing:border-box;flex:none;height:calc(100% - var(--dsh-sidebar-height,0px) - var(--odyssey-home-guide-controls-height,92px));padding-bottom:0; }
-.odyssey-home-guide[data-kind="ppt"] { background:transparent;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end; }
-.odyssey-home-guide[data-kind="ppt"]>.odyssey-home-guide-header { display:none; }
-.odyssey-home-guide[data-kind="ppt"]>.odyssey-home-guide-content { position:absolute;inset:0;pointer-events:none; }
-.odyssey-home-guide[data-kind="ppt"]>.odyssey-home-guide-footer { position:relative;pointer-events:auto;flex-shrink:0;flex-wrap:wrap;background:rgb(248 249 251 / .94);backdrop-filter:blur(12px);margin:0 12px 10px;border-radius:12px;box-shadow:0 4px 20px rgb(0 0 0 / .08); }
-.odyssey-home-guide[data-kind="ppt"]>.odyssey-home-guide-footer>div { flex:1 1 240px; }
-[data-ds-dark-theme] .odyssey-home-guide[data-kind="ppt"]>.odyssey-home-guide-footer { background:rgb(30 31 34 / .94); }
-[data-home-guide-resident]:not([data-home-guide-live]) .wSkVaW_composerHero { visibility:hidden!important;pointer-events:none!important; }
-[data-home-guide-live] .wSkVaW_composerHero { visibility:visible!important;pointer-events:auto!important; }
-.odyssey-home-guide-cue { position:fixed;z-index:2147483000;pointer-events:none;border:2px solid rgb(104 150 225 / .8);border-radius:7px;box-shadow:0 0 0 4px rgb(104 150 225 / .1);box-sizing:border-box;transition:left .32s cubic-bezier(.22,.65,.3,1),top .32s cubic-bezier(.22,.65,.3,1),width .32s cubic-bezier(.22,.65,.3,1),height .32s cubic-bezier(.22,.65,.3,1); }
-.odyssey-home-guide-cue[hidden] { display:none; }
-.odyssey-home-guide-cue:after { content:'';position:absolute;right:-7px;bottom:-7px;width:12px;height:12px;border-radius:50%;background:#7ca8ed;box-shadow:0 0 0 3px rgb(124 168 237 / .16); }
-.odyssey-home-guide-footer [data-home-guide-next] { background:rgb(104 150 225 / .18); }
-@media(max-width:700px) { .odyssey-home-guide-footer { flex-wrap:wrap; }.odyssey-home-guide-footer>div { flex-basis:100%; } }
-@media(prefers-reduced-motion:reduce) { .odyssey-home-guide-cue { transition:none; } }
+.odyssey-home-guide{position:fixed;z-index:24;display:block;overflow:hidden;box-sizing:border-box;border-radius:0 0 12px 12px;background:var(--dsw-alias-bg-base,#f7f8fa);color:var(--dsw-alias-text-primary,#26313a);font:14px/1.5 "Noto Sans SC","PingFang SC",sans-serif;pointer-events:auto;-webkit-app-region:no-drag}
+[data-ds-dark-theme] .odyssey-home-guide{background:#111214;color:#eceef2}
+.odyssey-home-guide[data-kind="ppt"]{background:transparent;pointer-events:none}
+.odyssey-home-guide-header{display:none}
+.odyssey-home-guide-content{position:absolute;inset:0;min-width:0;min-height:0;overflow:hidden;isolation:isolate}
+.odyssey-home-guide-content.en-root{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;min-height:0!important;overflow:hidden!important;background:transparent!important;box-sizing:border-box!important}
+.odyssey-home-guide[data-kind="ppt"] .odyssey-home-guide-content{pointer-events:none}
+.odyssey-home-guide[data-kind="ppt"] .odyssey-home-guide-content>*{pointer-events:auto}
+.odyssey-home-guide-footer{position:absolute;right:14px;top:10px;z-index:60;display:flex;align-items:center;gap:2px;padding:3px;border:0;border-radius:9px;background:color-mix(in srgb,var(--dsw-alias-bg-raised,#dfe2e8) 82%,transparent);box-shadow:0 2px 10px #00000014;pointer-events:auto;opacity:.55;transition:opacity .18s ease}
+[data-ds-dark-theme] .odyssey-home-guide-footer{background:rgb(32 35 42 / .82)}
+.odyssey-home-guide-footer:hover,.odyssey-home-guide-footer:focus-within,.odyssey-home-guide[data-paused="true"] .odyssey-home-guide-footer,.odyssey-home-guide[data-phase="completed"] .odyssey-home-guide-footer,.odyssey-home-guide[data-phase="error"] .odyssey-home-guide-footer{opacity:1}
+.odyssey-home-guide-button,.odyssey-home-guide-exit{display:grid;place-items:center;box-sizing:border-box;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.odyssey-home-guide-button:hover,.odyssey-home-guide-exit:hover{background:color-mix(in srgb,currentColor 9%,transparent)}
+.odyssey-home-guide-button:focus-visible,.odyssey-home-guide-exit:focus-visible{outline:2px solid var(--primary-color,#628ee8);outline-offset:2px}
+.odyssey-home-guide-button:disabled{opacity:.3;cursor:default}
+.odyssey-home-guide-control-label,.odyssey-home-guide-information{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.odyssey-home-guide[data-phase="error"] .odyssey-home-guide-status{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);max-width:min(520px,80vw);padding:10px 14px;border-radius:8px;background:var(--background-raised,#282b31);color:var(--text-error,#f98e8e);box-shadow:0 4px 20px #0004;white-space:normal}
+.odyssey-home-guide[data-phase="error"] .odyssey-home-guide-information{position:static;clip:auto;width:0;height:0;overflow:visible}
+.odyssey-home-guide-content .dw-container,.odyssey-home-guide-content .en-blocks{scroll-behavior:auto}
+.odyssey-home-guide-save-error{position:fixed;z-index:2147483000;left:50%;bottom:24px;transform:translateX(-50%);max-width:520px;padding:12px 18px;border-radius:9px;background:var(--background-raised,#30323a);color:var(--text-error,#ffb2ae);box-shadow:0 6px 26px #0005;font:13px/1.5 system-ui}
+.odyssey-home-guide-pointer{position:fixed;z-index:2147483000;left:0;top:0;width:25px;height:32px;pointer-events:none;transform:translate3d(var(--pointer-x,0px),var(--pointer-y,0px),0);filter:drop-shadow(0 2px 3px #0007);contain:layout style;will-change:transform}
+.odyssey-home-guide-pointer[hidden]{display:none}
+.odyssey-home-guide-pointer svg{position:relative;display:block;transform-origin:3px 2px;transition:transform 80ms ease}
+.odyssey-home-guide-pointer-pulse{position:absolute;left:-13px;top:-13px;width:28px;height:28px;border-radius:50%;background:#c8deff40;opacity:0;transform:scale(.5)}
+.odyssey-home-guide-pointer[data-state="pressed"] svg,.odyssey-home-guide-pointer[data-state="dragging"] svg{transform:scale(.88)}
+.odyssey-home-guide-pointer[data-state="pressed"] .odyssey-home-guide-pointer-pulse,.odyssey-home-guide-pointer[data-state="dragging"] .odyssey-home-guide-pointer-pulse{opacity:.7;transform:scale(.8)}
+.odyssey-home-guide-pointer[data-state="released"] .odyssey-home-guide-pointer-pulse{animation:odyssey-home-guide-click .16s ease-out both}
+@keyframes odyssey-home-guide-click{from{opacity:.7;transform:scale(.8)}to{opacity:0;transform:scale(1.3)}}
+@media(max-width:720px){.odyssey-home-guide-footer{right:10px;top:8px}.odyssey-home-guide-button,.odyssey-home-guide-exit{width:26px;height:26px}}
+@media(prefers-reduced-motion:reduce){.odyssey-home-guide-footer,.odyssey-home-guide-pointer svg{transition:none}.odyssey-home-guide-pointer[data-state="released"] .odyssey-home-guide-pointer-pulse{animation:none}}
 
-.odyssey-home-guide-save-error { position:fixed;z-index:2147483001;bottom:20px;left:50%;transform:translateX(-50%);max-width:min(640px,calc(100vw - 40px));display:flex;align-items:center;gap:16px;padding:12px 16px;border-radius:10px;color:#703923;background:#fff2e9;box-shadow:0 4px 20px rgb(0 0 0 / .12);font:13px/1.5 sans-serif;-webkit-app-region:no-drag; }
-.odyssey-home-guide-save-error button { border:0;border-radius:5px;background:rgb(100 65 40 / .1);padding:5px 10px;color:inherit;cursor:pointer;flex:none; }
-[data-ds-dark-theme] .odyssey-home-guide-save-error { color:#f3c2a1;background:#342922; }
+[data-home-guide-active] .odyssey-home-operations,[data-home-guide-active] .odyssey-operations-toggle,[data-home-guide-active] [data-odyssey-theme-dock],[data-home-guide-resident]:not([data-home-guide-live]) .wSkVaW_composerHero{visibility:hidden!important;pointer-events:none!important}
+.odyssey-home-guide button{-webkit-app-region:no-drag}

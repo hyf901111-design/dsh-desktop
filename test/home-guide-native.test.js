@@ -70,6 +70,11 @@ it('rejects unknown commands and a host outside the matching center tutorial wit
  expect(f.doc.querySelector('[data-home-guide-native]')).toBeNull()
  expect(f.liveCalls()).toBe(0)
 })
+it('does not add a separate explanatory label above the real board',async()=>{
+ const f=await fixture();expect((await f.command('mount-board')).ok).toBe(true)
+ expect(f.doc.querySelector('[data-home-guide-native]')).not.toBeNull()
+ expect(f.doc.querySelector('[data-home-guide-sample-label]')).toBeNull()
+})
 it('uses actual native components and offline links, then unmounts only the owned tutorial',async()=>{
  const f=await fixture(),input=f.doc.querySelector('textarea')
  await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
@@ -159,4 +164,61 @@ it('adds the example stock through native search controls while retaining the sa
  expect(cues.some(cue=>cue.target?.getAttribute('aria-label')==='搜索个股代码或名字')).toBe(true)
  expect(f.workspace.getSnapshot().artifacts.map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort())
  expect(f.workspace.getSnapshot().artifacts.find(node=>node.id===watch.id).containerSpec.symbols).toHaveLength(3)
+},15000)
+
+const pump=async predicate=>{for(let i=0;i<150;i++){if(predicate())return;await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,20))})}throw Error('Pointer fixture timed out')}
+function pointerFixture(f,{automatic=false}={}){
+ f.doc.documentElement.dataset.homeGuidePointerRun='run-a'
+ const cues=[],reply=(cue,extra={})=>f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true,...extra}}))
+ f.win.addEventListener('sherlock:home-guide-cue',event=>{cues.push(event.detail);if(automatic)reply(event.detail)})
+ return{cues,reply}
+}
+function seedBoard(f){
+ f.workspace.setCanvasSize({width:1100,height:720,availableWidth:1100});f.workspace.setWorkbenchWidth(1100)
+ const watch=f.workspace.createFinancialWidget('watchlist'),quote=f.workspace.createFinancialWidget('quote'),news=f.workspace.createFinancialWidget('news')
+ f.workspace.setArtifacts([{...watch,containerSpec:{...watch.containerSpec,symbols:[{market:'SH',code:'600519',name:'贵州茅台'},{market:'SZ',code:'000001',name:'平安银行'}]}},quote,news])
+ return{watch,quote,news}
+}
+it('waits for matching pointer acknowledgement and resumed playback before the native library click',async()=>{
+ const f=await fixture();await f.command('mount-board');const p=pointerFixture(f)
+ let reply;await React.act(async()=>{void f.send('board-library').then(value=>{reply=value})})
+ await pump(()=>p.cues.length>0);const cue=p.cues[0],button=f.doc.querySelector('[data-financial-library]')
+ expect(cue).toMatchObject({runId:'run-a',action:'click',requestId:expect.any(String)})
+ expect(button.getAttribute('aria-expanded')).toBe('false')
+ p.reply(cue,{requestId:'another-request'});await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,30))});expect(button.getAttribute('aria-expanded')).toBe('false')
+ f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:'run-a',sessionId:'owner',playing:false}}));p.reply(cue)
+ await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,80))});expect(button.getAttribute('aria-expanded')).toBe('false');expect(reply).toBeUndefined()
+ f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:'run-a',sessionId:'owner',playing:true}}))
+ await pump(()=>reply);expect(reply.ok).toBe(true);expect(button.getAttribute('aria-expanded')).toBe('true')
+},10000)
+it.each(['dispose','disabled','pointer-owner','detached','rejected'])('rejects a late pointer acknowledgement after %s without clicking',async invalid=>{
+ const f=await fixture();await f.command('mount-board');const p=pointerFixture(f)
+ let reply;await React.act(async()=>{void f.send('board-library').then(value=>{reply=value})});await pump(()=>p.cues.length>0)
+ expect(p.cues[0].requestId).toEqual(expect.any(String))
+ const button=f.doc.querySelector('[data-financial-library]');let clicks=0;button.addEventListener('click',()=>clicks++)
+ if(invalid==='dispose')await f.command('dispose');else if(invalid==='disabled')button.disabled=true;else if(invalid==='pointer-owner')f.doc.documentElement.dataset.homeGuidePointerRun='another-run';else if(invalid==='detached')button.remove()
+ p.reply(p.cues[0],invalid==='rejected'?{ok:false,message:'指针目标不可用'}:{});await pump(()=>reply);expect(reply.ok).toBe(false);expect(clicks).toBe(0)
+},10000)
+it('shows and commits each port connection separately and cancels the second without a late apply',async()=>{
+ const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');const p=pointerFixture(f)
+ let reply;await React.act(async()=>{void f.send('board-link').then(value=>{reply=value})});await pump(()=>p.cues.length>0)
+ expect(p.cues[0]).toMatchObject({action:'drag',requestId:expect.any(String)})
+ expect(p.cues[0].fromTarget.dataset).toMatchObject({financialPort:'output',financialPortNode:watch.id});expect(p.cues[0].target.dataset).toMatchObject({financialPort:'input',financialPortNode:quote.id})
+ const spec=id=>f.workspace.getSnapshot().artifacts.find(node=>node.id===id).containerSpec
+ expect(spec(quote.id).linkedWatchlistId).toBeUndefined();expect(spec(news.id).linkedSourceId).toBeUndefined()
+ p.reply(p.cues[0]);await pump(()=>p.cues.length===2)
+ expect(spec(quote.id).linkedWatchlistId).toBe(watch.id);expect(spec(news.id).linkedSourceId).toBeUndefined()
+ expect(p.cues[1].fromTarget.dataset.financialPortNode).toBe(quote.id);expect(p.cues[1].target.dataset.financialPortNode).toBe(news.id)
+ await f.command('dispose');p.reply(p.cues[1]);await pump(()=>reply);expect(reply.ok).toBe(false);expect(spec(news.id).linkedSourceId).toBeUndefined()
+},10000)
+it('types the stock code character by character through actual search and keeps three linked widgets persisted',async()=>{
+ const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');const p=pointerFixture(f,{automatic:true}),typed=[]
+ f.doc.addEventListener('input',event=>{if(event.target.getAttribute?.('role')==='combobox')typed.push(event.target.value)},true)
+ expect((await f.command('board-link')).ok).toBe(true);expect(p.cues.filter(cue=>cue.action==='drag')).toHaveLength(2)
+ expect((await f.command('board-add')).ok).toBe(true)
+ expect(typed).toEqual(['0','00','007','0070','00700'])
+ const nodes=f.workspace.getSnapshot().artifacts
+ expect(nodes.map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort());expect(nodes.find(node=>node.id===watch.id).containerSpec.symbols).toHaveLength(3)
+ expect(nodes.find(node=>node.id===quote.id).containerSpec.symbols[0].code).toBe('00700')
+ expect(JSON.parse(f.disk.get('sherlock.research.canvas.artifacts.v1:owner')).map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort());expect(f.liveCalls()).toBe(0)
 },15000)

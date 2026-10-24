@@ -5,13 +5,14 @@ afterEach(()=>vi.useRealTimers())
 it('uses the delivered title/count and compact metadata chapters while retaining the full outline',()=>{
  expect(runtime.createHomePresentationReplay).toBeTypeOf('function')
  const before=structuredClone(metadata),replay=runtime.createHomePresentationReplay(metadata)
- expect(runtime.createHomePresentationBrief(metadata)).toContain('主题为「模拟研究汇报」')
+ expect(runtime.createHomePresentationBrief(metadata)).toBe('帮我把这份研报整理成一份公司风格的汇报PPT，20页左右，讲清主要观点并配上关键图表。')
  expect(replay.structure.split('\n').filter(line=>/^\d+\./u.test(line))).toHaveLength(4)
  for(const chapter of metadata.chapters)expect(replay.structure).toContain(chapter.title)
  expect(replay.structure).not.toContain('完整逐页提纲');expect(metadata).toEqual(before)
  expect(replay.delivery).toContain('《模拟研究汇报》20页');expect(replay.delivery).toContain('4个章节')
- expect(replay.intro).toContain('2025-12-10');expect(replay.intro).toContain('28页');expect(replay.intro).toContain('离线回放')
- expect(replay.delivery).toContain('离线预制');expect(replay.delivery).toContain('不调用模型')
+ expect(replay.intro).toContain('2025-12-10');expect(replay.intro).toContain('28页');expect(replay.intro).toContain('历史预测')
+ expect(JSON.stringify(replay)).not.toMatch(/离线|预置|回放|不调用模型|这是.*示例/u)
+ expect(replay.delivery).toContain('[打开可编辑演示文稿]');expect(replay.delivery).toContain('[查看原始研究报告]')
  expect(JSON.stringify(replay)).not.toMatch(/Kimi|实时生成|正在调用|\/Users\//u)
  expect(replay.todos).toHaveLength(3);expect(replay.todos[0]).toContain('来源');expect(replay.todos[1]).toContain('章节');expect(replay.todos[1]).toContain('排版');expect(replay.todos[2]).toContain('保存')
 })
@@ -33,6 +34,16 @@ it('streams about fifty characters per second and keeps Unicode characters intac
  for(let i=0;i<2;i++){next=stream.next();await vi.advanceTimersByTimeAsync(60);rest.push((await next).value.text)}
  expect(rest.join('')).toBe('七八九十🙂终')
  next=stream.next();await vi.advanceTimersByTimeAsync(60);expect((await next).value.type).toBe('block-end')
+})
+it('waits before public text and preserves the remaining thinking time across pause and cancellation',async()=>{
+ vi.useFakeTimers();const controller=new AbortController();let playing=true,release
+ const stream=runtime.streamHomePresentationReplayText('研究计划',{thinkingMs:2200,waitUntilPlaying:()=>playing?Promise.resolve():new Promise(resolve=>{release=resolve}),signal:controller.signal})
+ await stream.next();let settled=false;const next=stream.next();void next.then(()=>settled=true)
+ await vi.advanceTimersByTimeAsync(200);expect(settled).toBe(false)
+ playing=false;await vi.advanceTimersByTimeAsync(10000);expect(settled).toBe(false)
+ playing=true;release();await vi.advanceTimersByTimeAsync(1900);expect(settled).toBe(false)
+ await vi.advanceTimersByTimeAsync(300);expect((await next).value.text).toBe('研究计')
+ const cancelled=stream.next().catch(error=>error.name);controller.abort();expect(await cancelled).toBe('AbortError')
 })
 it('blocks further text while paused and immediately rejects a cancelled stream',async()=>{
  vi.useFakeTimers();const controller=new AbortController();let playing=true,release
