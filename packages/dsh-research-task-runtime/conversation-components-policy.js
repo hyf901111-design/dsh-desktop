@@ -35,7 +35,8 @@ export function componentCreationRequest(session) {
     // binding complements follow it (工作台的数据源绑定).
     const object = operand?.match(/工作台|画布|看板|仪表盘|组件|卡片|绑定|映射|关联|连接|关系/gu)?.at(-1)
     const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|画布|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|画布|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
-    const create = createBuild || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
+    const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(action.trim()) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(action.trim()) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(action.trim())
+    const create = delivery || createBuild || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
     const denied = /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|规划|做(?:一个|一套|一张|个|套|张)|建)/u.test(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
     return create && !denied && !inspection
@@ -104,7 +105,9 @@ export function registerConversationComponentsPolicy(ctx){
  }})
  const denial=session=>{
   const request=componentCreationRequest(session)
-  if(request?.target!=='component')return
+  // A narrow intent classifier can miss natural language; no unrequested
+  // canvas may bypass the mode boundary merely because intent was unknown.
+  if(request?.target==='workbench')return
   const mode=latestClientModeForAuthority(session)
   if(!mode)return CATALOG_FIRST
   if(mode==='conversation')return '当前对话裸组件应直接提交完整 artifact 给 conversation.components.create；不能写入研究画布。'

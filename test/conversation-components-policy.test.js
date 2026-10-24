@@ -81,3 +81,21 @@ it('keeps an explicitly rejected canvas noun from converting a bare card to a wo
  }
  expect(policy.componentCreationRequest(session('建一个画布展示模拟数据'))?.target).toBe('workbench')
 })
+describe('natural component delivery expressions and defensive canvas boundary',()=>{
+ const phrases=['给我一张苹果股票行情卡片','用图表展示苹果过去一年的价格','用一个表格比较三只ETF']
+ for(const text of phrases)for(const mode of [null,'conversation','notes','research'])it(`${text} uses ${mode??'unknown'} mode consistently`,async()=>{
+  const s=session(text);if(mode)catalog(s,mode);const h=harness(s)
+  expect(policy.componentCreationRequest(s)?.target).toBe('component')
+  expect((await h.config()).maxTokens).toBe(mode==='research'?4096:16000)
+  const allowed=(await h.wire()).tools.some(v=>v.name==='research_workbench_create')
+  const denied=h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'accidental-canvas'}))
+  expect(allowed).toBe(mode==='research');expect(denied).toBe(mode!=='research');h.dispose()
+ })
+ it.each(['查看苹果公司的当前价格','解释这个图表的含义','请编写React价格图表组件 Quote.tsx'])('also prevents an unrequested canvas if the classifier intentionally returns null: %s',async text=>{
+  const s=session(text),h=harness(s)
+  expect(policy.componentCreationRequest(s)).toBeNull();expect((await h.config()).maxTokens).toBe(16000)
+  expect((await h.wire()).tools.some(v=>v.name==='research_workbench_create')).toBe(false)
+  expect(h.guards.map(fn=>fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'skip-catalog'})).filter(Boolean).join()).toContain('client_capabilities')
+  catalog(s,'conversation');expect(h.guards.map(fn=>fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'hidden-canvas'})).filter(Boolean).join()).toContain('conversation.components.create');h.dispose()
+ })
+})
