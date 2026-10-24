@@ -129,7 +129,7 @@ async function command(page, name, overrides = {}, replyTimeout = 8000) {
     window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-request', { detail: { requestId, runId, sessionId, command: name, hostId: 'guide-host', ...overrides } }))
   }), { name, overrides, runId, sessionId, replyTimeout })
 }
-async function succeeds(page, name, overrides) { expect(await command(page, name, overrides), name).toMatchObject({ runId, ok: true }) }
+async function succeeds(page, name, overrides) { const reply=await command(page,name,overrides);expect(reply,name+(reply.message?': '+reply.message:'')).toMatchObject({runId,ok:true}) }
 async function preserved(page) {
   expect(await page.evaluate(() => document.querySelector('textarea') === window.guideProbe.originalInput)).toBe(true)
   expect(await page.evaluate(() => document.querySelector('.wSkVaW_root') === window.guideProbe.originalRoot)).toBe(true)
@@ -168,6 +168,31 @@ it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged re
   await preserved(page);expect(errors).toEqual([]);expect(external).toEqual([])
  }finally{await page.close()}
 },20000)
+
+it.each(['click','from-port','to-port'])('does not act when the acknowledged %s target moves offscreen',async kind=>{
+ const {page,errors}=await fixture({nativeLayout:true,width:1380,height:900,guideTop:116,guideBottom:69})
+ try{
+  await succeeds(page,'mount-board')
+  await page.evaluate(()=>{
+   document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
+   window.addEventListener('sherlock:home-guide-cue',event=>{
+    const d=event.detail;if(!d.requestId)return
+    const mode=window.guideProbe.offscreenTarget
+    if(mode==='click'&&d.action==='click')d.target.style.transform='translateY(-3000px)'
+    if(d.action==='drag'&&(mode==='from-port'||mode==='to-port'))(mode==='from-port'?d.fromTarget:d.target).style.transform='translateY(-3000px)'
+    window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))
+   })
+  })
+  if(kind!=='click')for(const step of ['board-watchlist','board-quote','board-news'])await succeeds(page,step)
+  await page.evaluate(value=>{window.guideProbe.offscreenTarget=value},kind)
+  const reply=await command(page,kind==='click'?'board-library':'board-link')
+  expect(reply.ok).toBe(false)
+  const nodes=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
+  expect(nodes.some(node=>node.containerSpec.linkedWatchlistId||node.containerSpec.linkedSourceId)).toBe(false)
+  if(kind==='click'){expect(nodes).toHaveLength(0);expect(await page.locator('[data-financial-library]').getAttribute('aria-expanded')).toBe('false')}
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
 
 it('runs the offline board tutorial on the real native canvas and retains the original ConversationRoot and InputBar', async () => {
   const { page, errors, external } = await fixture()

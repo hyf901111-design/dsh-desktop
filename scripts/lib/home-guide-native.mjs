@@ -185,12 +185,13 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       check(ticket)
       while (!ticket.playing) { await frame(ticket); check(ticket) }
     }
-    const targetReady = (ticket, target) => {
+    const targetReady = (ticket, target, visible = false) => {
       check(ticket)
       if (!target?.isConnected || target.disabled === true || target.getAttribute('aria-disabled') === 'true' || target.closest('[inert],[data-odyssey-subagent-panel]')) throw Error('原生操作控件尚未就绪。')
       const owner = target.closest('[data-ework-toolbar-owner]'), library = target.closest('[data-home-guide-native-library]'), list = target.closest('[role="listbox"]')
       const ownList = list?.id && [...ticket.host.querySelectorAll('input[aria-controls]')].some(input => input.getAttribute('aria-controls') === list.id)
       if (!ticket.host.contains(target) && owner?.dataset.eworkToolbarOwner !== ticket.resource.id && library?.dataset.homeGuideNativeLibrary !== ticket.detail.runId && !ownList) throw changed()
+      if (visible) { const rect = target.getBoundingClientRect(); if (rect.width <= 0 || rect.height <= 0 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= window.innerWidth || rect.top >= window.innerHeight) throw Error('原生操作控件已离开可见区域。') }
     }
     const cue = async (ticket, target, label, action = 'move', fromTarget) => {
       await playing(ticket); targetReady(ticket, target); if (fromTarget) targetReady(ticket, fromTarget)
@@ -212,11 +213,11 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue', { detail: { runId: ticket.detail.runId, target, label } }))
         await delay(ticket, 450)
       }
-      await playing(ticket); targetReady(ticket, target); if (fromTarget) targetReady(ticket, fromTarget)
+      await playing(ticket); targetReady(ticket, target, true); if (fromTarget) targetReady(ticket, fromTarget, true)
     }
     const click = async (ticket, target, label) => {
       await cue(ticket, target, label, 'click')
-      await playing(ticket); targetReady(ticket, target); react_dom.flushSync(() => target.click())
+      await playing(ticket); targetReady(ticket, target, true); react_dom.flushSync(() => target.click())
       ticket.ownedSelection = JSON.stringify(ticket.resource.workspace.getSnapshot().selection)
       if (!ticket.pointerRun) await delay(ticket, 150)
     }
@@ -310,7 +311,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           const from = port(sourceId, 'output'), target = port(targetId, 'input')
           await cue(ticket, target, label, 'drag', from)
           const state = await workspace.canvasAction('inspect', { ids: [sourceId, targetId] })
-          await playing(ticket); targetReady(ticket, from); targetReady(ticket, target)
+          await playing(ticket); targetReady(ticket, from, true); targetReady(ticket, target, true)
           const node = workspace.getSnapshot().artifacts.find(node => node.id === targetId)
           await workspace.canvasAction('apply', { requestId: detail.requestId + ':link:' + targetId, revision: state.revision, changes: [{ op: 'update', id: targetId, fields: { containerSpec: { ...node.containerSpec, [field]: sourceId, refreshEnabled: false } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
           await playing(ticket); react_dom.flushSync(() => workspace.updateSelection([watchlist, quote, news], 'replace'))
@@ -327,7 +328,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           await click(ticket, input, '输入腾讯控股的代码 00700')
           input.focus({ preventScroll: true })
           for (let index = 1; index <= symbol.code.length; index++) {
-            await playing(ticket); targetReady(ticket, input)
+            await playing(ticket); targetReady(ticket, input, true)
             react_dom.flushSync(() => { input.value = symbol.code.slice(0, index); input.dispatchEvent(new window.Event('input', { bubbles: true })) })
             await delay(ticket, 100)
           }
