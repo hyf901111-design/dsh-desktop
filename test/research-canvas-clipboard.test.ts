@@ -321,3 +321,14 @@ describe('durable research clipboard', () => {
     expect(await handlers.get('research:clipboard:read')!({ sender: window.webContents, senderFrame: window.webContents.mainFrame })).toEqual({ kind: 'empty' })
   })
 })
+
+it('copies and restores strict native financial configuration through the opaque envelope, detached from the source',async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),f=await fixture(),spec={...financialWidgetDefaults('quote')!,symbols:[{code:'AAPL',market:'US',name:'模拟标的'}],period:'1w',adjustment:'forward',indicators:['MA','VOL'],dataSource:'backup',refreshMinutes:5,refreshEnabled:true,linkedWatchlistId:'old-board'}
+ const node={id:'source-id',kind:'generated-container',x:11,y:22,width:716,height:600,title:'模拟行情',generationStatus:'completed',containerSpec:spec,messageId:'private-message',sourceNodeIds:['old'],generationSources:[{id:'old',type:'text',title:'old'}],generationTaskId:'old-task',ownerAccountId:'private-account'}
+ expect(await f.service.copy({sessionId:'s',nodes:[node]})).toEqual({ok:true});expect(f.clipboard.html).toContain('sherlock-research-clipboard');expect(f.clipboard.html).not.toContain('private-account');expect(f.clipboard.html).not.toContain('AAPL')
+ const reopened=new ResearchCanvasClipboard(f.options),read=await reopened.read();expect(read.kind).toBe('components');if(read.kind!=='components')throw Error('expected components')
+ const restored=read.nodes[0]!;expect(restored).toMatchObject({id:'source-id',kind:'generated-container',x:11,y:22,containerSpec:{symbols:spec.symbols,period:'1w',adjustment:'forward',indicators:['MA','VOL'],dataSource:'backup',refreshMinutes:5,refreshEnabled:true}})
+ for(const key of ['messageId','sourceNodeIds','generationSources','generationTaskId','ownerAccountId'])expect(restored).not.toHaveProperty(key)
+ expect(restored.containerSpec).not.toHaveProperty('linkedWatchlistId');expect(node.containerSpec.linkedWatchlistId).toBe('old-board')
+ for(const key of ['price','script','unknown'])expect((await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...spec,[key]:17}}]})).ok).toBe(false)
+})

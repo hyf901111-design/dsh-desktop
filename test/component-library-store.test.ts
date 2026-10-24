@@ -81,3 +81,10 @@ it('IPC仅信任主窗口，保存从真实画布读取当前节点而非调用�
     expect(() => handler({ ...event, senderFrame: { processId: 1, routingId: 3 } }, { action: 'list' })).toThrow('main EWork Odyssey window');
     await expect(handler(event, { action: 'save', sessionId: 'session', nodeId: 'missing' })).rejects.toThrow();
 });
+it('saves a strict native financial snapshot with independent configuration and no external links',async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),{file,store}=await fixture(),spec={...financialWidgetDefaults('quote')!,symbols:[{code:'AAPL',market:'US',name:'模拟标的'}],period:'1w',dataSource:'backup',linkedWatchlistId:'external-board'},original={...node(),title:'模拟行情',displayName:'模拟行情',containerSpec:spec}
+ const saved=await store.add(original,undefined,'owner'),reopened=new ComponentLibraryStore(file);await reopened.load();expect(reopened.list()).toContainEqual(saved)
+ const restored=reopened.read(saved.id,'owner').node;expect(restored).toMatchObject({id:'custom-template',x:0,y:0,containerSpec:{symbols:spec.symbols,period:'1w',dataSource:'backup'}});expect(restored.containerSpec).not.toHaveProperty('linkedWatchlistId');expect(restored).not.toHaveProperty('messageId')
+ ;(restored.containerSpec as any).period='1y';expect((reopened.read(saved.id).node.containerSpec as any).period).toBe('1w');expect(spec.period).toBe('1w')
+ for(const key of ['price','script'])await expect(store.add({...original,containerSpec:{...spec,[key]:17}})).rejects.toThrow();expect(store.list()).toHaveLength(1)
+})
