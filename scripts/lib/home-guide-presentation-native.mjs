@@ -112,7 +112,8 @@ function NativePresentationConversationRoot(props){
 }
 function one(source,before,after){if(source.split(before).length!==2)throw Error('Home presentation native anchor drifted: '+before.slice(0,80));return source.replace(before,after)}
 const PRESENTATION_BINDING='/* odyssey:home-presentation-binding:v1 */'
-const PRESENTATION_EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,researchSidebar,getHomeGuideSession:id=>sherlockBoardsPage.getHomeGuideSession(id)};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
+const PRESENTATION_EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,researchSidebar,getHomeGuideSession:id=>sherlockBoardsAdapter?.getHomeGuideSession?.(id)};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
+const LEGACY_PAGE_EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,researchSidebar,getHomeGuideSession:id=>sherlockBoardsPage.getHomeGuideSession(id)};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
 const PRESENTATION_EXPORT='exports.NativeHomePresentationPortal = NativeHomePresentationPortal;'
 
 /** Restore the prior (possibly board-wrapped) Root before exact legacy transforms. */
@@ -128,7 +129,7 @@ export function stripHomeGuidePresentationNative(source){
  if(!block.startsWith(START+'\nlet HomePresentationNativeDeps=null;\n')||!block.endsWith('\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END))drift()
  for(const name of ['NativeHomePresentationPortal','NativePresentationConversationRoot'])if(block.split('function '+name+'(').length!==2)drift()
  if(block.includes('homePresentationSidebarSnapshot')&&block.split('function homePresentationSidebarSnapshot(').length!==2)drift()
- const effects=[PRESENTATION_EFFECT,...['researchSidebar,researchOfficePreview,t','researchSidebar,researchOfficePreview'].map(fields=>'ctx.effect(()=>{const deps={'+fields+'};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},\"Home presentation native dependencies\");'.replaceAll('\\"','"'))]
+ const effects=[PRESENTATION_EFFECT,LEGACY_PAGE_EFFECT,...['researchSidebar,researchOfficePreview,t','researchSidebar,researchOfficePreview'].map(fields=>'ctx.effect(()=>{const deps={'+fields+'};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},\"Home presentation native dependencies\");'.replaceAll('\\"','"'))]
  const bindings=effects.map(effect=>'\n'+PRESENTATION_BINDING+'\n'+effect).filter(binding=>source.includes(binding))
  if(bindings.length!==1||source.split('const composerBlocks = new ComposerBlockRegistry();'+bindings[0]).length!==2||!source.includes('\n'+PRESENTATION_EXPORT))drift()
  let restored=source.slice(0,start)+source.slice(end+END.length+(source[end+END.length]==='\n'?1:0))
