@@ -51,7 +51,13 @@ python "$SKILL_DIR/scripts/check_efund_package.py" "$FINAL_PPTX" \
 
 7. **轴标识采用 Office 可接受的非负 ID。** `c:axId` 与 `c:crossAx` 的 schema 类型均为 UInt32（[AxisId](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.charts.axisid)、[CrossingAxis](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.charts.crossingaxis)），Office 另限制最大值为 `2147483647`。生成库可能输出负整数；直接加 `2^32` 仍可能超过 Office 上限，不能作为修复。`efund_chart_properties.normalize_axis_ids(chartSpace)` 在发现这种已知 32 位 ID 时，按该图表的轴声明顺序分配 `1..N`，同时改写 plot 引用、轴声明及交叉轴引用；合法图表保持原样。数据点、轴范围、零交叉、标签、类型和几何都不参与这次变换。未知数值、重复声明、缺少声明或悬空引用一律停止，要求修正生成器。
 
-`qa_efund_pptx.py` 与 `check_efund_package.py` 默认执行同一轴范围及引用门禁，逐项输出 part、位置和值；检查全部 `chartSpace`，包括隐藏和孤立图表，但不把它们计入可见图表配额。`normalize_efund_text.py DRAFT NEW_OUTPUT` 已调用同一生成 helper，仍只写新文件。生成、规范化及清理完成后再跑门禁，不能在检查后写回未规范化的旧稿。
+8. **标签位置按图表类型选择。** `default_label_position('lineChart')` 返回 `t`，`barChart` 返回 `outEnd`；不要把同一个柱/条标签位置套给折线图。本技能对 2D `lineChart` 的 plot、series 和单点 `dLblPos` 统一使用 `l/r/b/t/ctr` 安全集合，缺省位置和隐藏标签保持原样；同一组合图中的条形图不会被误改。`normalize_label_positions(chartSpace)` 把已知但不适合折线图的位置改为 `t`，非法未知枚举拒绝自动修补。数字、负号、标签文字、图表类型和外框不变；位置改变后须重新检查文字遮挡。
+
+Microsoft 的 [dLblPos 实现说明](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/7dd610ae-d805-40a4-ae3b-c171b6bf08e3) 列出了系列级位置子集，但其旧版备注对 plot 级值较宽松。这里的 plot 级折线约束是**实际 PowerPoint 运行兼容性回归**，不虚称通用 schema 错误：2026-10-24 对同一 20 页文件，仅修轴后 SDK 零错误，封面可开但访问第 13 页时触发修复；只把该折线图 plot 的 `outEnd` 改为 `t` 后，全部 20 页原生访问及重新打开该页均无修复。正常条形图的 `outEnd` 保留。未获原生证据的其他图表类型不在本次自动规则中，仍须真实逐页验收。
+
+**仅标记的情景点与连线图分开制作。** 若 LINE 用于呈现互相独立的情景点，逐点颜色写到 `point.marker.format`，保持系列 `ln/noFill`；不要通过通用 `point.format` 在 `c:dPt` 下写外层 `spPr` 来上色。已实测外层点样式在 LibreOffice 中不连线、原生 PowerPoint 中却出现蓝色连接线；仅去除该情景点图的两处外层点样式后，原生连线消失，彩色 marker、零轴和带符号标签保持。不能据此在通用 normalizer 中删除所有 `dPt/spPr`，因为真正连线图可能有意按点定制线条。按数据语义选择点/线后，分别核对原生与备用渲染的实际效果。
+
+`qa_efund_pptx.py` 与 `check_efund_package.py` 默认执行同一轴范围、引用及折线标签位置门禁，逐项输出 part、位置和值；检查全部 `chartSpace`，包括隐藏和孤立图表，但不把它们计入可见图表配额。`normalize_efund_text.py DRAFT NEW_OUTPUT` 已调用同一生成 helper，仍只写新文件。生成、规范化及清理完成后再跑门禁，不能在检查后写回未规范化的旧稿。
 
 这项检查覆盖已复现的轴问题，不是全量 OOXML schema 证明。2026-10-24 的隔离回归中，官方 Open XML SDK 3.5.1 / Office2019 对原稿报告 42 个负轴 ID 错误；对仅改写这 42 个属性的新副本报告零错误。schema 零错误、ZIP 可读、LibreOffice 可渲染和 PDF 正常均不能替代目标 PowerPoint 对最终哈希文件无修复打开；出现修复提示或删除内容即保持失败，不得填写 `nativeOpen: pass`。
 

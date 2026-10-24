@@ -53,6 +53,7 @@ with tempfile.TemporaryDirectory() as d:
     assert audit(deck,pdf,rev,1)
     record={'image':'page.png','imageSha256':digest(im),'renderer':'test','notes':'fixture only','checks':{k:'pass' for k in CHECKS}}
     data={'pptxSha256':digest(deck),'pdfSha256':digest(pdf),'method':'human','reviewer':'test fixture','pages':[{'page':1,'pptx':record,'pdf':record}]}
+    data['pptxNativeVisit']={'application':'Microsoft PowerPoint','pptxSha256':digest(deck),'visitedPages':[1],'repairObserved':False,'contentLossObserved':False,'notes':'Metadata fixture only; not an actual native inspection'}
     rev.write_text(json.dumps(data));assert not audit(deck,pdf,rev,1)
     deck.write_bytes(b'changed');assert 'visual-review-artifact-stale' in audit(deck,pdf,rev,1)
 p.archive.close()

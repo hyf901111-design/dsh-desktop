@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from zipfile import ZipFile
 import xml.etree.ElementTree as ET
-from efund_chart_properties import audit_chart_axis_ids
+from efund_chart_properties import audit_chart_properties
 
 P = 'http://schemas.openxmlformats.org/presentationml/2006/main'
 C = 'http://schemas.openxmlformats.org/drawingml/2006/chart'
@@ -62,7 +62,7 @@ def audit(pptx, require_clean_slide_tree=False, min_native_charts=None):
         snapshot = Path(pptx).read_bytes()
         result['sha256'] = hashlib.sha256(snapshot).hexdigest()
         with ZipFile(BytesIO(snapshot)) as archive:
-            issues.extend(audit_chart_axis_ids(archive))
+            issues.extend(audit_chart_properties(archive))
             members = set(archive.namelist())
             roots = {}
 

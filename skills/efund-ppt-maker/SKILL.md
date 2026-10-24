@@ -135,6 +135,10 @@ python "$SKILL_DIR/scripts/qa_efund_pptx.py" "$FINAL_PPTX" \
 
 包报告的 `sha256` 必须与最后一次清理、规范化或重新保存后的交付文件一致；改了 PPTX 后须重新校验、渲染和原生打开。轴检查是已知故障门禁，不等于完整 OOXML 校验，更不能代替目标 PowerPoint 无修复打开的真实证据。
 
+`chart-label-position-incompatible` / `chart-label-position-invalid` 同样是硬错误。折线图 `lineChart` 的标签位置采用 `l/r/b/t/ctr` 安全集合，默认用 `t`，不能无条件复用条形图的 `outEnd`。规则覆盖对应 plot 及其 series、单点覆盖，不改同一组合图中正常条形图的 `outEnd`，也不补写已省略的位置或删除标签。`normalize_efund_text.py` 调用共享的 `normalize_label_positions(chartSpace)`，仅将已知不兼容折线位置改为 `t`；未知值停止并要求修正生成器。标签位置变化后重新渲染检查遮挡。此项来自实际 PowerPoint 延迟加载修复的单变量回归；通用 SDK 对该枚举通过，不能当作原生兼容性证明。
+
+若用 LINE 呈现互相独立的情景点，只用 `point.marker.format` 设置各点颜色，保留系列连线的 `ln/noFill`；不要用通用 `point.format` 给这些点写外层 `c:dPt/c:spPr`，以免原生 PowerPoint 重新连线。此为该点图语义的制作规则，合法的彩色连线点样式不应被通用脚本剥除；须对照原生与 LibreOffice 渲染，确认彩色点、零轴及带负号标签完整。
+
 第三道，检查文案自然度和业务具体性：
 
 ```bash
@@ -182,6 +186,8 @@ python "$SKILL_DIR/scripts/lint_efund_layouts.py" "$LAYOUT_DIR/final" \
 同列单元格边距相同但段落缩进不同，触发 `table-column-paragraph-indent-mismatch`；段首/段尾空白触发 `table-cell-edge-whitespace`。数字/短标签例外保留真实 `a:br` 换行后再核验，不能把多行内容拼成一行放行。本次 XML 表格布局 guard 仅覆盖原生 `a:tbl`；合法的拼文本框表格继续按表格契约声明 header/body 列关系、回读最终渲染文字边界并逐表视觉复核，证据不足时明确保持待复核，不以外框对齐或原生表格零错误代替其文本验收。
 
 第六道，使用当前环境可用的演示文稿渲染接口检测画布溢出，并把每页渲染为 PNG。逐页按 100% 尺寸检查标题换行、字体家族/字重、文本裁切、多行正文孤行、图标清晰度与风格一致性、图片裁切、对齐、图表标签、页脚、Logo、内容密度、实心结构的主次和全篇视觉节奏；朗读标题与结论，确认语气像业务负责人直接陈述事实，不像宣传口号或模板化演讲金句；逐条核对 `visualTextBinding`。封面另须与对应标准页并排检查题名位置、字号、留白和品牌家具。总览图不能代替逐页检查。
+
+PowerPoint 可能延迟到访问某张图表页才触发修复。原生验收必须在 Microsoft PowerPoint 中打开同一最终哈希文件，按逻辑页顺序实际进入每一页，等待图表与媒体加载完成，核对内容完整，并走到末页；不能只看封面、只开文件或用 LibreOffice/PNG/PDF 代替。任意后页出现修复、删除内容或空页，整稿原生验收失败，之前的页记录不能证明整稿通过。`visual-review.json` 须另有 `pptxNativeVisit`，字段及未完成状态见 [delivery-111.md](references/delivery-111.md)；缺少覆盖全部实际页码的访问记录时，视觉门禁保持 `review-required`。不得补填未观察到的 pass/false。原生访问后再次核对最终哈希；任何保存都使旧记录失效。
 
 最后将 `template-frame-map.json` 与成品对象清单逐项比对，确认所有品牌家具和未授权修改对象保持不变。只有封面、结构、文案自然度、字号保真、布局、溢出、模板忠实度和逐页视觉检查全部通过后才可交付。
 

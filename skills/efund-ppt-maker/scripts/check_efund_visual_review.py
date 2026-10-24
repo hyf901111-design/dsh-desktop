@@ -2,7 +2,8 @@
 """Fail closed on absent/stale per-page visual review of the final PPTX and PDF.
 
 This validates review evidence completeness, not truthfulness of an inspection.
-The reviewer must actually inspect images; this script cannot replace vision.
+The reviewer must inspect rendered images and visit every slide in PowerPoint;
+this script cannot replace vision or prove that a claimed native visit occurred.
 """
 import argparse
 import hashlib
@@ -19,13 +20,31 @@ def audit(pptx, pdf, review_path, page_count):
     errors = []
     try:
         review = json.loads(Path(review_path).read_text())
-        if review.get('pptxSha256') != digest(pptx) or review.get('pdfSha256') != digest(pdf):
+        pptx_hash, pdf_hash = digest(pptx), digest(pdf)
+        if review.get('pptxSha256') != pptx_hash or review.get('pdfSha256') != pdf_hash:
             errors.append('visual-review-artifact-stale')
         if review.get('method') not in ('image-capable-model', 'human') or not review.get('reviewer'):
             errors.append('visual-review-not-performed')
         pages = review.get('pages', [])
         if [p.get('page') for p in pages] != list(range(1, page_count + 1)):
             errors.append('visual-review-pages-incomplete')
+        visit = review.get('pptxNativeVisit')
+        if not isinstance(visit, dict):
+            errors.append('pptx-native-visit-missing')
+        else:
+            visited = visit.get('visitedPages')
+            if (page_count < 1 or not isinstance(visited, list) or
+                    any(type(number) is not int for number in visited) or
+                    visited != list(range(1, page_count + 1))):
+                errors.append('pptx-native-visit-incomplete')
+            if visit.get('pptxSha256') != pptx_hash:
+                errors.append('pptx-native-visit-stale')
+            if (visit.get('application') != 'Microsoft PowerPoint' or
+                    not isinstance(visit.get('notes'), str) or not visit['notes'].strip()):
+                errors.append('pptx-native-visit-not-performed')
+            if (visit.get('repairObserved') is not False or
+                    visit.get('contentLossObserved') is not False):
+                errors.append('pptx-native-visit-not-passed')
         for page in pages:
             for format in ('pptx', 'pdf'):
                 record = page.get(format, {})
