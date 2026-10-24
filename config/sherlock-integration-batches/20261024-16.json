@@ -163,6 +163,73 @@
           "真实KimiPPT正在最终生成与原生兼容性验收，尚未替换教程资产；鼠标偶发冻结仍未确认根因。"
         ],
         "generatedAt": "2026-10-24T10:10:29.391862+00:00"
+      },
+      "merged": {
+        "mergeCommit": "fcde261d3d4a68d70d4c48a1a3c2aeb2bab1ee69",
+        "verificationCommit": "fcde261d3d4a68d70d4c48a1a3c2aeb2bab1ee69",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "fcde261d3d4a68d70d4c48a1a3c2aeb2bab1ee69",
+            "completedAt": "2026-10-24T10:15:49.591Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/conversation-component-stream-browser.test.js",
+              "test/conversation-component-submit-routing-browser.test.js",
+              "test/conversation-component-renderer.test.js",
+              "test/conversation-component-receipt-recovery.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/composer-submit-policy.test.js",
+              "test/research-creation-progress.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/preload-sandbox-imports.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/conversation-component-service.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/conversation-component-stream-browser.test.js test/conversation-component-submit-routing-browser.test.js test/conversation-component-renderer.test.js test/conversation-component-receipt-recovery.test.js test/conversation-components-policy.test.js test/composer-submit-policy.test.js test/research-creation-progress.test.js test/research-planning-feedback.test.js test/preload-sandbox-imports.test.js test/workbench-execution-policy.test.js test/conversation-component-service.test.ts --maxWorkers=2",
+            "verifiedCommit": "fcde261d3d4a68d70d4c48a1a3c2aeb2bab1ee69",
+            "completedAt": "2026-10-24T10:15:49.591Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fcde261d3d4a68d70d4c48a1a3c2aeb2bab1ee69",
+            "completedAt": "2026-10-24T10:15:49.591Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "fcde261d3d4a68d70d4c48a1a3c2aeb2bab1ee69",
+            "completedAt": "2026-10-24T10:15:49.591Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T10:15:49.591Z"
       }
     }
   ],
