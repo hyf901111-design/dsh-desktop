@@ -1,5 +1,6 @@
 import {patchAssistantReveal} from './lib/assistant-reveal.mjs'
 import {patchConversationComponents} from './lib/conversation-components.mjs'
+import {patchConversationCompactionLifecycle} from './lib/conversation-compaction-lifecycle.mjs'
 import {patchConversationThinkingStatus} from './lib/conversation-thinking-status.mjs'
 import {patchMemorySourceAnchors} from './lib/memory-source-anchors.mjs'
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
@@ -297,3 +298,5 @@ writeFileSync(conversationPath, patchComposerDeliverablePreview(readFileSync(con
 writeFileSync(conversationPath, patchHomeGuidePresentationNative(patchHomeGuideNative(readFileSync(conversationPath, 'utf8'))))
 // Reply components consume the final native renderers and input/reference helpers.
 writeFileSync(conversationPath,patchConversationComponents(readFileSync(conversationPath,'utf8')))
+// A completed compaction keeps its published key, even when no checkpoint was produced.
+writeFileSync(conversationPath,patchConversationCompactionLifecycle(readFileSync(conversationPath,'utf8')))
