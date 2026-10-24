@@ -154,6 +154,87 @@
           "最终PPT正式客户端与内置Office仍待本次main构建后核验。"
         ],
         "generatedAt": "2026-10-24T03:34:29.591469+00:00"
+      },
+      "merged": {
+        "mergeCommit": "1a362a042565514c29a6c165ce6d975eb005b23b",
+        "verificationCommit": "1a362a042565514c29a6c165ce6d975eb005b23b",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "1a362a042565514c29a6c165ce6d975eb005b23b",
+            "completedAt": "2026-10-24T03:36:18.281Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-workspace.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/home-presentation-host.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-adapter.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-workspace.test.ts test/home-guide-session.test.ts test/home-presentation-host.test.js test/home-presentation-runtime.test.js test/home-guide-presentation-browser.test.js test/home-guide-presentation-patch.test.js test/home-guide-presentation-binding.test.ts test/home-guide-presentation-adapter.test.ts --maxWorkers=2",
+            "verifiedCommit": "1a362a042565514c29a6c165ce6d975eb005b23b",
+            "completedAt": "2026-10-24T03:36:18.281Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "keeps a registered|ordinary or other-account|prefers an existing|reselects|locked until legacy",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native-browser.test.js -t keeps a registered|ordinary or other-account|prefers an existing|reselects|locked until legacy --maxWorkers=1",
+            "verifiedCommit": "1a362a042565514c29a6c165ce6d975eb005b23b",
+            "completedAt": "2026-10-24T03:36:18.281Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "1a362a042565514c29a6c165ce6d975eb005b23b",
+            "completedAt": "2026-10-24T03:36:18.281Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "1a362a042565514c29a6c165ce6d975eb005b23b",
+            "completedAt": "2026-10-24T03:36:18.281Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T03:36:18.281Z"
       }
     }
   ],
