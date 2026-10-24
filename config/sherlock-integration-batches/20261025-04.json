@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-04",
+  "branch": "codex/integration/20261025-04",
+  "baseMainCommit": "b6139fa225ed00546b2b01de92ff931dc73580ee",
+  "expectedMainCommit": "b6139fa225ed00546b2b01de92ff931dc73580ee",
+  "createdAt": "2026-10-24T22:24:55.599Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复真实首页播放交接和Electron隔离环境下的虚拟指针确认",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "b6139fa225ed00546b2b01de92ff931dc73580ee",
+        "tipCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+        "commits": [
+          {
+            "commit": "4ec899150f397dcbfbdeeea649cbad557ceb4077",
+            "parents": [
+              "b6139fa225ed00546b2b01de92ff931dc73580ee"
+            ],
+            "subject": "播放首页示例前恢复原生输入区并阻止取消后启动"
+          },
+          {
+            "commit": "274a204671fc1301c12505d396d75a56934e0a58",
+            "parents": [
+              "4ec899150f397dcbfbdeeea649cbad557ceb4077"
+            ],
+            "subject": "将PPT教程指针提示改为可跨隔离上下文的数据令牌"
+          },
+          {
+            "commit": "22ed44da2493bc9664d58e006f9be11ac991f9ae",
+            "parents": [
+              "274a204671fc1301c12505d396d75a56934e0a58"
+            ],
+            "subject": "修复看板教程指针跨隔离世界的目标传递"
+          },
+          {
+            "commit": "838b2c4766e27b8931c7316b86fc6110a81bfe1c",
+            "parents": [
+              "22ed44da2493bc9664d58e006f9be11ac991f9ae"
+            ],
+            "subject": "修复笔记演示指针消息的跨隔离上下文传输"
+          },
+          {
+            "commit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "parents": [
+              "838b2c4766e27b8931c7316b86fc6110a81bfe1c"
+            ],
+            "subject": "接收跨隔离环境的指针目标令牌并明确显示演示故障"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-10-25-natural-home-guides.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/superpowers/specs/2026-10-25-natural-home-guides-design.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-shell-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-operations-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides-review.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-token-pipeline-1-20261025.log",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-token-pipeline-2-20261025.log",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-token-typecheck-final-20261025.log",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-guide-operations-entry.test.ts",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-token-combined-final-20261025.log (48)",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-native-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-board-cue-token-final-20261025.log (62)",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-presentation-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-ppt-cue-token-green-20261025.log (12)",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-adapter.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-ppt-cue-token-related-20261025.log (8)",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-notes-data.test.ts",
+              "test/home-guide-notes-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/note-cue-json-token-focused-final-20261025.log (27)",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "EXIT0",
+            "verifiedCommit": "7d0c90aeb69a63db54e3944e1355d7d0234fe574",
+            "completedAt": "2026-10-24T22:24:53.951Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "正式b613真实客户端首步超时红例已确认；DevTools双世界对照证明含DOM的main→preload事件无回复、纯数据事件可达（/tmp/home-guide-native-cross-world-red-20261025.json）。源码改为严格DOM-token定位与归属清理，真实看板62、PPT20、Notes27、Root组合48相关例通过；实际首页两个尺寸入口与键盘输入通过，错误浮层可见且可退出。最后新正式包跨世界全程验证仍待clean main重建，不冒称已经native通过。"
+        },
+        "acceptanceCriteria": [
+          "首页真实播放入口等待原生输入区恢复；取消或交接失败时不启动教程。",
+          "三个演员通过纯字符串token传目标与拖动起点，接收端严格匹配run/request及唯一元素，消息不含DOM；取消/确认仅清自身标记。",
+          "保留真实原生操作、所有权/可见性/草稿校验与保存；Notes使用稳定编辑根定位正文，PPT最终实际点文件卡。",
+          "演示错误在控件旁可读且不泄露计数/遮挡输入；仅clean main本地构建1.3.5，不公证、不上传、不推送，20页PPT及PDF不修改。"
+        ],
+        "risks": [
+          "仍需新正式包完整播放三场，确认main与preload之间的令牌实际可达并自然呈现。"
+        ],
+        "generatedAt": "2026-10-24T22:24:53.951Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-pointer.test.ts",
+        "test/home-guides.test.ts",
+        "test/home-guides-review.test.ts",
+        "test/home-guide-operations-entry.test.ts",
+        "test/home-guide-presentation-shell-browser.test.js",
+        "test/home-guide-notes-shell-browser.test.js",
+        "test/home-guide-native-strip.test.js",
+        "test/home-guide-presentation-patch.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
