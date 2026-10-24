@@ -12,6 +12,35 @@ function setup(extra:any={}){
  return{win,host,entry,controller,get selected(){return selected},get chartOpened(){return chartOpened}}
 }
 describe('direct slide interaction',()=>{
+ it.each(['metaKey','ctrlKey'])('selects only the current table text field with %s+A',modifier=>{
+  const v=setup()
+  try{
+   const cell=v.host.querySelector('[data-pptx-field-id="cell"]')! as any
+   cell.focus()
+   const event=new v.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'a',[modifier]:true})
+   cell.dispatchEvent(event)
+   expect(event.defaultPrevented).toBe(true)
+   expect(v.win.document.activeElement).toBe(cell)
+   expect(v.win.getSelection()!.toString()).toBe('100')
+   expect(cell.contains(v.win.getSelection()!.anchorNode)).toBe(true)
+   expect(cell.contains(v.win.getSelection()!.focusNode)).toBe(true)
+   expect(v.entry.values).toEqual({text:'原文',cell:'100'})
+  }finally{v.controller.destroy()}
+ })
+ it.each(['plain-key','composing-event','composition-session','disabled'])('leaves selection alone for %s instead of intercepting field select-all',kind=>{
+  const v=setup()
+  try{
+   const cell=v.host.querySelector('[data-pptx-field-id="cell"]')! as any,range=v.win.document.createRange(),selection=v.win.getSelection()!
+   cell.focus();range.selectNodeContents(cell);range.collapse(true);selection.removeAllRanges();selection.addRange(range)
+   if(kind==='disabled')v.controller.setEnabled(false)
+   if(kind==='composition-session')cell.dispatchEvent(new v.win.CompositionEvent('compositionstart',{bubbles:true}))
+   const event=new v.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'a',metaKey:kind!=='plain-key',isComposing:kind==='composing-event'})
+   cell.dispatchEvent(event)
+   expect(event.defaultPrevented).toBe(false)
+   expect(selection.toString()).toBe('')
+   expect(v.entry.values).toEqual({text:'原文',cell:'100'})
+  }finally{v.controller.destroy()}
+ })
  it('does not invalidate unchanged text annotations during repeated slide refreshes',()=>{
   const v=setup(),observer=new v.win.MutationObserver(()=>{})
   observer.observe(v.host,{attributes:true,subtree:true,attributeFilter:['contenteditable','role','aria-label','spellcheck','data-pptx-field-id']})
