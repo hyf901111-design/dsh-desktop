@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261024-16",
+  "branch": "codex/integration/20261024-16",
+  "baseMainCommit": "e95099d2856d88b5f6af54daeb1495ee61dac0d3",
+  "expectedMainCommit": "e95099d2856d88b5f6af54daeb1495ee61dac0d3",
+  "createdAt": "2026-10-24T10:11:58.704Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话组件在回复过程中按信息位置即时呈现",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "e95099d2856d88b5f6af54daeb1495ee61dac0d3",
+        "tipCommit": "db6c3d99ff538a5f14669857177d5d12b7701923",
+        "commits": [
+          {
+            "commit": "97c6da8cd2e271c7daf3bfd0c75b518255f3a6a3",
+            "parents": [
+              "e95099d2856d88b5f6af54daeb1495ee61dac0d3"
+            ],
+            "subject": "阻止对话组件请求被前端规划提示切换到研究"
+          },
+          {
+            "commit": "37d699687079b04d1c2de0ebac23f5c33a6d7f1f",
+            "parents": [
+              "97c6da8cd2e271c7daf3bfd0c75b518255f3a6a3"
+            ],
+            "subject": "引导对话组件在解释过程对应位置即时交付"
+          },
+          {
+            "commit": "db6c3d99ff538a5f14669857177d5d12b7701923",
+            "parents": [
+              "37d699687079b04d1c2de0ebac23f5c33a6d7f1f"
+            ],
+            "subject": "让对话组件随真实回执在回复正文中即时呈现"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-planning-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/composer-submit-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-receipt-recovery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-renderer.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-stream-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-submit-routing-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-components-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-creation-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "真实流式保存节点/原生发送路由/权限/沙箱相关验证；/tmp/conversation-inline-final-0-20261024.log",
+            "verifiedCommit": "db6c3d99ff538a5f14669857177d5d12b7701923",
+            "completedAt": "2026-10-24T10:09:53.849418+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/conversation-component-stream-browser.test.js",
+              "test/conversation-component-submit-routing-browser.test.js",
+              "test/conversation-component-renderer.test.js",
+              "test/conversation-component-receipt-recovery.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/composer-submit-policy.test.js",
+              "test/research-creation-progress.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/preload-sandbox-imports.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/conversation-component-service.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "真实流式保存节点/原生发送路由/权限/沙箱相关验证；/tmp/conversation-inline-final-1-20261024.log",
+            "verifiedCommit": "db6c3d99ff538a5f14669857177d5d12b7701923",
+            "completedAt": "2026-10-24T10:10:20.775263+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "真实流式保存节点/原生发送路由/权限/沙箱相关验证；/tmp/conversation-inline-final-2-20261024.log",
+            "verifiedCommit": "db6c3d99ff538a5f14669857177d5d12b7701923",
+            "completedAt": "2026-10-24T10:10:29.370590+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "真实流式保存节点/原生发送路由/权限/沙箱相关验证；/tmp/conversation-inline-final-3-20261024.log",
+            "verifiedCommit": "db6c3d99ff538a5f14669857177d5d12b7701923",
+            "completedAt": "2026-10-24T10:10:29.391820+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "原生正式客户端已验证主智能体保存、来源页脚、复制、保存到组件库、研究与笔记原生粘贴；本次流式顺序与入口修复在真实SDK完整resident产物、实时acceptLiveEvent、普通/减少动画及历史重开中验证。正式main重建后继续实际流式验收。"
+        },
+        "acceptanceCriteria": [
+          "对话组件请求保持对话模式，不创建隐藏研究规划；真实研究与工作台保留既有入口。",
+          "真实saved+ready回执立即在对应回复位置显示组件，后文留在组件之后，多组件、历史与重开顺序稳定。",
+          "不从普通文本/JSON或失败回执造卡，不放宽Host/租约/模式授权；不改变已有复制与库复用。",
+          "正式身份客户端只从干净本地main构建，保留原有会话与正在完成的真实KimiPPT任务；不发布或加版本。"
+        ],
+        "risks": [
+          "本批正式原生流式验收尚需重建完成，不能以旧客户端证明新顺序。",
+          "真实KimiPPT正在最终生成与原生兼容性验收，尚未替换教程资产；鼠标偶发冻结仍未确认根因。"
+        ],
+        "generatedAt": "2026-10-24T10:10:29.391862+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/conversation-component-stream-browser.test.js",
+        "test/conversation-component-submit-routing-browser.test.js",
+        "test/conversation-component-renderer.test.js",
+        "test/conversation-component-receipt-recovery.test.js",
+        "test/conversation-components-policy.test.js",
+        "test/composer-submit-policy.test.js",
+        "test/research-creation-progress.test.js",
+        "test/research-planning-feedback.test.js",
+        "test/preload-sandbox-imports.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/conversation-component-service.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
