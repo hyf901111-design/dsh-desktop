@@ -53,7 +53,23 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  const text=()=>editor!.snapshot().blocks.map(block=>noteText(block.content)).join('\n')
  const query=<T extends HTMLElement=HTMLElement,>(selector:string)=>host.querySelector<T>(selector)
  const toolQuery=<T extends HTMLElement=HTMLElement,>(selector:string)=>query<T>(selector)||document.querySelector<HTMLElement>('[data-en-challenge-tools="'+CSS.escape(sessionId)+'"]')?.querySelector<T>(selector)
- const validTarget=(target:HTMLElement)=>{assert();if(target.ownerDocument!==document||!target.isConnected||(target as HTMLButtonElement).disabled)throw Error('演示控件已变化，请重新打开。')}
+ const validTarget=(target:HTMLElement,visible=false)=>{
+  assert();if(target.ownerDocument!==document||!target.isConnected||(target as HTMLButtonElement).disabled)throw Error('演示控件已变化，请重新打开。')
+  if(!visible)return
+  const win=document.defaultView!,box=target.getBoundingClientRect()
+  let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(win.innerWidth,box.right),bottom=Math.min(win.innerHeight,box.bottom)
+  if(target.closest('[hidden],[inert]'))throw Error('演示控件已不可见，请重新打开。')
+  for(let element:HTMLElement|null=target;element;element=element.parentElement){
+   const style=win.getComputedStyle(element)
+   if(style.visibility==='hidden'||style.visibility==='collapse'||style.display==='none'||style.opacity==='0')throw Error('演示控件已不可见，请重新打开。')
+   if(element!==target&&element!==document.body&&element!==document.documentElement){
+    const bounds=element.getBoundingClientRect()
+    if(/^(hidden|clip|scroll|auto)$/.test(style.overflowX)){left=Math.max(left,bounds.left);right=Math.min(right,bounds.right)}
+    if(/^(hidden|clip|scroll|auto)$/.test(style.overflowY)){top=Math.max(top,bounds.top);bottom=Math.min(bottom,bounds.bottom)}
+   }
+  }
+  if(right<=left||bottom<=top)throw Error('演示控件已移出视口，请重新打开。')
+ }
  const point=async(target:HTMLElement,label:string,action:'move'|'click'|'drag'='click',fromTarget?:HTMLElement)=>{
   await playing();validTarget(target);if(fromTarget)validTarget(fromTarget)
   const win=document.defaultView!,pointerRun=document.documentElement.dataset.homeGuidePointerRun
@@ -69,7 +85,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    void wait(10000,deadline.signal).then(()=>{clean();reject(Error('演示指针未能到达控件，请重新播放。'))},()=>{})
    win.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:options.runId,requestId,target,label,action,fromTarget}}))
   })
-  await playing();validTarget(target);if(fromTarget)validTarget(fromTarget)
+  await playing();validTarget(target,true);if(fromTarget)validTarget(fromTarget,true)
   if(tracked&&document.documentElement.dataset.homeGuidePointerRun!==options.runId)throw abortError()
  }
  const click=async(target:HTMLElement,label:string)=>{await point(target,label);target.click();target.focus({preventScroll:true});await frame()}

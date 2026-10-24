@@ -52,6 +52,27 @@ it('refuses another pointer owner instead of treating it as an isolated legacy f
   expect(await page.locator('.bn-editor').count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },12000)
+it.each(['offscreen','hidden','inert'])('does not write after an acknowledged title becomes %s',async invalid=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.invalidResult='';void window.guide.runStep('write').then(()=>window.invalidResult='completed',error=>window.invalidResult=error.name)})
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.length)).toBe(1)
+  await page.evaluate(invalid=>{const cue=window.guidePointerPending[0];if(invalid==='offscreen')cue.target.style.transform='translateX(-4000px)';else if(invalid==='hidden')cue.target.style.visibility='hidden';else cue.target.parentElement.inert=true;window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))},invalid)
+  await expect.poll(()=>page.evaluate(()=>window.invalidResult)).toBe('Error')
+  expect(await page.evaluate(()=>window.guidePointerPending[0].target.value)).toBe('');expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it.each(['source','destination'])('checks the strict-slider drag %s again after acknowledgement',async endpoint=>{
+ const{context,page,errors}=await fixture();try{
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(cue.requestId&&cue.action!=='drag')window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))})})
+  await page.evaluate(()=>window.guide.runStep('write'))
+  await page.evaluate(()=>{window.invalidSliderResult='';void window.guide.runStep('challenge').then(()=>window.invalidSliderResult='completed',error=>window.invalidSliderResult=error.name)})
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.some(cue=>cue.action==='drag'))).toBe(true)
+  await page.evaluate(endpoint=>{const cue=window.guidePointerPending.find(cue=>cue.action==='drag');window.invalidSlider=document.querySelector('.en-challenge-slider');(endpoint==='source'?cue.fromTarget:cue.target).style.transform='translateX(-4000px)';window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))},endpoint)
+  await expect.poll(()=>page.evaluate(()=>window.invalidSliderResult)).toBe('Error')
+  expect(await page.evaluate(()=>window.invalidSlider.getAttribute('aria-valuenow'))).toBe('0');expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
 it('streams into the actual NotesApp, reviews in the real strict picker and applies the native optimization',async()=>{
  const{context,page,errors,network,logs}=await fixture();try{
   expect(await page.title()).toBe('笔记用例教程');await page.evaluate(()=>window.guide.runStep('write'))
