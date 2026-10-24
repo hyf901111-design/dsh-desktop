@@ -163,6 +163,84 @@
           "旧planner/fixture问题已有HEAD基线重现，未扩修；当前直接相关检查单独确认。"
         ],
         "generatedAt": "2026-10-24T08:25:22.218132+00:00"
+      },
+      "merged": {
+        "mergeCommit": "1c518168f9c057a39ab2b749b02aa79e3ec74604",
+        "verificationCommit": "1c518168f9c057a39ab2b749b02aa79e3ec74604",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "1c518168f9c057a39ab2b749b02aa79e3ec74604",
+            "completedAt": "2026-10-24T08:28:10.100Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node --check node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js",
+            "verifiedCommit": "1c518168f9c057a39ab2b749b02aa79e3ec74604",
+            "completedAt": "2026-10-24T08:28:10.100Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/conversation-components-policy.test.js",
+              "test/workbench-model-queue.test.js",
+              "test/research-component-source-tools.test.js",
+              "test/sent-reference-bubble-browser.test.js",
+              "test/skill-presentation.test.js",
+              "test/figma-inline-references-patch.test.js",
+              "test/figma-inline-references-projection.test.js",
+              "test/figma-inline-references-input.test.js",
+              "test/home-skill-chip-layout-browser.test.js",
+              "test/composer-inline-tags-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/conversation-components-policy.test.js test/workbench-model-queue.test.js test/research-component-source-tools.test.js test/sent-reference-bubble-browser.test.js test/skill-presentation.test.js test/figma-inline-references-patch.test.js test/figma-inline-references-projection.test.js test/figma-inline-references-input.test.js test/home-skill-chip-layout-browser.test.js test/composer-inline-tags-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "1c518168f9c057a39ab2b749b02aa79e3ec74604",
+            "completedAt": "2026-10-24T08:28:10.100Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "1c518168f9c057a39ab2b749b02aa79e3ec74604",
+            "completedAt": "2026-10-24T08:28:10.100Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "1c518168f9c057a39ab2b749b02aa79e3ec74604",
+            "completedAt": "2026-10-24T08:28:10.100Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-24T08:28:10.100Z"
       }
     }
   ],
