@@ -20,7 +20,7 @@ export async function financialClientFixture(desktop={},options={}){
  if(options.refreshState||options.notes){
   // Exercise the production serializers without Vite's SSR import rewrites in toString().
   const [financial,data,grid]=['financial-widget-client.mjs','component-data-refresh.mjs','research-grid-workbench.mjs'].map(name=>require('../../scripts/lib/'+name))
-  source=grid.patchResearchGridWorkbench(financial.patchFinancialWidgetClient(data.patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))
+  source=grid.patchResearchGridWorkbench(financial.patchFinancialWidgetClient(data.patchComponentDataRefresh(grid.restoreResearchGridWorkbench(require('../../scripts/lib/home-guide-native.mjs').stripHomeGuideNative(source)))))
  }
  if(options.creation)source=require('../../scripts/lib/canvas-creation-tools.mjs').patchCanvasCreationTools(source)
  if(options.notes){const start=source.indexOf('function EWorkNoteComponentView('),end=source.indexOf('function EWorkNoteComponentViews(',start);source=source.slice(0,start)+EWorkNoteComponentView.toString()+'\n'+source.slice(end);const viewsStart=source.indexOf('function EWorkNoteComponentViews('),viewsEnd=source.indexOf('const eworkNoteComponentViews=',viewsStart);source=source.slice(0,viewsStart)+EWorkNoteComponentViews.toString()+'\n'+source.slice(viewsEnd);source=patchResearchNativeWeb(source)};if(options.notes)source=source.replace('exports.ResearchCanvas = ResearchCanvas;','exports.EWorkNoteComponentViews=EWorkNoteComponentViews;exports.ResearchCanvas = ResearchCanvas;')

@@ -1,3 +1,4 @@
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
 import {expect,it,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
@@ -138,7 +139,7 @@ it('keeps native pending and admitted steering from moving earlier plans to same
 })
 
 it('installs a live status for settled creation turns while preserving the existing planning-only feedback',()=>{
- const installed=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const installed=restoreResearchGridWorkbench(stripHomeGuideNative(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  // The shared resident bundle may be from a newer integration branch. This
  // branch tests the v8 -> v9 upgrade, keeping the resident shell and
  // replacing only the in-memory feedback helper block with a v8 installation.
