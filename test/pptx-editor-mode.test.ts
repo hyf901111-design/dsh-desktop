@@ -4,6 +4,7 @@ import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {createPortal} from 'react-dom'
 import {createPptxEditorComponent} from '../scripts/lib/pptx-editor-ui.mjs'
+import {freezeNoteSnapshotElement} from '../src/shared/note-component-snapshot'
 
 const id='ppt/slides/slide1.xml#node:2'
 const documentFixture={id:'mode-fixture',version:'v1',slides:[{index:0,part:'ppt/slides/slide1.xml',nodes:[{id,nodeId:'2',part:'ppt/slides/slide1.xml',type:'shape',name:'标题',geometry:{x:0,y:0,width:200,height:100,rotation:0}}],fields:[{id:'title',nodeId:'2',paragraphIndex:0,label:'标题',text:'原始标题'}]}]}
@@ -43,6 +44,12 @@ describe('lazy PPTX preview and explicit editing',()=>{
   expect(await v.mode('preview')).toBe(true);expect(v.state.mode).toBe('preview')
   expect(v.win.document.querySelector('[aria-label=对象格式]')).toBeNull();expect(v.win.document.querySelector('.sherlock-ppt-selection')).toBeNull();expect(paragraph(v).hasAttribute('contenteditable')).toBe(false)
   expect(await v.mode('edit')).toBe(true);expect(b.open).toHaveBeenCalledTimes(1)
+ })
+ it('omits a live mode notice from the real note snapshot while retaining slide text',async()=>{
+  const v=await mount(bridge());await v.mode('edit')
+  expect(v.host.querySelector('[role=status]')?.textContent).toBe('已进入编辑模式')
+  const frozen=await freezeNoteSnapshotElement(v.host.querySelector('[data-ppt-editor]') as any,'mode-notice-export')
+  expect(frozen.html).toContain('原始标题');expect(frozen.html).not.toContain('已进入编辑模式')
  })
  it('does not announce or attach editing after an open failure or a source change',async()=>{
   const b=bridge();b.open.mockResolvedValueOnce({ok:false,error:'读取失败'} as any);const v=await mount(b)
