@@ -35,28 +35,37 @@ async function fixture(paneWidth=600){
 // Real public "next" actions skip reading holds in this focused test; adapters
 // retain their actual stream, native scheduler and UI-stability waits.
 async function complete(page){
- const deadline=Date.now()+65000
+ const deadline=Date.now()+65000;let capturedPopover=false
  while(Date.now()<deadline){
-  const phase=await page.locator('[data-home-guide]').getAttribute('data-phase');if(phase==='completed')return
+  if(await page.locator('[data-home-guide]').count()===0)return
+  const phase=await page.locator('[data-home-guide]').getAttribute('data-phase');if(phase==='completed'){await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);return}
   if(phase==='error')throw Error(await page.locator('[data-home-guide] [role=status]').innerText()+' '+JSON.stringify(await page.evaluate(()=>window.guideCueHistory)))
+  if(!capturedPopover&&await page.locator('.en-challenge-popover').count()){
+   expect(await page.locator('.en-challenge-popover').evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return node===hit||node.contains(hit)})).toBe(true)
+   await page.screenshot({path:'/tmp/home-guide-note-native-popover-20261025.png'});capturedPopover=true
+  }
   const next=page.locator('[data-home-guide-next]');if(await next.isEnabled())await next.click()
   await page.waitForTimeout(90)
  }
  throw Error('笔记教程未完成：'+await page.locator('[data-home-guide] [role=status]').innerText())
 }
-async function startWriting(page){await page.evaluate(()=>window.guides.start('note'));await page.locator('[data-home-guide-next]').click();await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText()).toContain('研究摘要')}
+async function startWriting(page){await page.evaluate(()=>window.guides.start('note'));await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('研究摘要')}
 for(const width of [600,700])it(`saves and reopens the native note without clipping a ${width}px pane walkthrough`,async()=>{
  const f=await fixture(width),{page,errors,logs,store,requests}=f;try{
-  await page.evaluate(()=>window.guides.start('note'));await complete(page)
-  expect(await page.getByRole('tab',{name:'笔记'}).getAttribute('aria-selected')).toBe('true');expect(await page.locator('[data-home-guide] .bn-editor').innerText()).toContain('同比增长10%')
+  await page.evaluate(()=>window.guides.start('note'))
+  await expect.poll(()=>page.locator('.odyssey-home-guide-pointer').evaluate(node=>node.hidden),{timeout:5000}).toBe(false)
+  expect(await page.locator('.odyssey-home-guide-footer').evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+20,r.top+r.height/2);return node===hit||node.contains(hit)})).toBe(true)
+  await page.screenshot({path:'/tmp/home-guide-note-virtual-pointer-'+width+'-20261025.png'})
+  expect(await page.locator('[data-home-guide]').evaluate(root=>{const box=root.getBoundingClientRect(),pane=document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(),footer=root.querySelector('.odyssey-home-guide-footer').getBoundingClientRect(),content=root.querySelector('[data-home-guide-content]').getBoundingClientRect();return box.left>=pane.left&&box.right<=pane.right+1&&box.bottom<=pane.bottom+1&&Math.abs(content.bottom-box.bottom)<1&&footer.height<=40&&footer.width<145&&root.scrollWidth<=root.clientWidth})).toBe(true)
+  await complete(page)
+  expect(await page.getByRole('tab',{name:'笔记'}).getAttribute('aria-selected')).toBe('true');expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
   expect(await page.evaluate(()=>document.querySelector('#original-draft')===window.originalInput&&window.originalInput.value==='用户原有提示词与技能标签')).toBe(true)
-  expect(await page.locator('[data-home-guide]').evaluate(root=>{const box=root.getBoundingClientRect(),pane=document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(),footer=root.querySelector('.odyssey-home-guide-footer').getBoundingClientRect(),content=root.querySelector('[data-home-guide-content]').getBoundingClientRect();return box.left>=pane.left&&box.right<=pane.right+1&&box.bottom<=pane.bottom+1&&content.bottom<=footer.top+1&&root.scrollWidth<=root.clientWidth})).toBe(true)
   await page.screenshot({path:'/tmp/home-guide-notes-natural-shell-'+width+'-20261024.png'})
-  await page.getByRole('button',{name:'结束示例教程'}).click();await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
+  expect(await page.locator('[data-home-guide]').count()).toBe(0)
   await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
   expect(store.load('owner','example-note-1').saved.yjs.length).toBeGreaterThan(1000);expect(requests.some(item=>item.sessionId==='original-session')).toBe(false);expect(requests.some(item=>item.method==='challenge')).toBe(false)
-  await page.evaluate(()=>window.guides.start('note'));expect(await page.locator('[data-home-guide] .odyssey-home-guide-count').innerText()).toBe('已保存的示例');expect(await page.locator('[data-home-guide] .bn-editor').innerText()).toContain('同比增长10%')
-  await page.getByRole('button',{name:'结束示例教程'}).click();await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([]);expect(logs).toEqual([])
+  await page.evaluate(()=>window.guides.start('note'));expect(await page.locator('[data-home-guide]').count()).toBe(0);await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
+  expect(errors).toEqual([]);expect(logs).toEqual([])
  }finally{await f.dispose()}
 },75000)
 it('pauses readable writing and replays into a new session while preserving the first partial result',async()=>{
@@ -108,7 +117,7 @@ it('keeps strict review alive during a long pause and then preserves the finishe
   while(Date.now()<deadline){if(await page.locator('.en-challenge-popover').count()===0&&await page.locator('.en-challenge-grade').count()>0&&await page.locator('.en-challenge-grade').innerText()==='严格'&&await page.locator('[data-home-guide] .bn-editor [data-bn-thread-id]').count()<3)break;const next=page.locator('[data-home-guide-next]');if(await next.isEnabled())await next.click();await page.waitForTimeout(50)}
   await page.getByRole('button',{name:'暂停',exact:true}).click();await page.waitForTimeout(11200)
   expect(await page.locator('[data-home-guide] .bn-editor').count()).toBe(1);expect(await page.locator('[data-home-guide] [role=status]').innerText()).not.toContain('未就绪')
-  await page.getByRole('button',{name:'继续播放',exact:true}).click();await complete(page);expect(await page.locator('[data-home-guide] .bn-editor').innerText()).toContain('同比增长10%')
-  await page.getByRole('button',{name:'结束示例教程'}).click();await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([]);expect(logs).toEqual([])
+  await page.getByRole('button',{name:'继续播放',exact:true}).click();await complete(page);expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
+  expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([]);expect(logs).toEqual([])
  }finally{await f.dispose()}
 },65000)

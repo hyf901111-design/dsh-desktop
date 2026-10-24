@@ -26,11 +26,13 @@ test('prepares and opens an independent saved session before mounting the tutori
  expect(f.header.dataset.eworkNotesSession).toBe('example-note');expect(f.text.value).toBe('原有草稿')
  await f.controller.reset();expect(f.release).toHaveBeenCalledOnce();expect(f.header.dataset.eworkNotesSession).toBe('example-note')
 })
-test('gives the introduction reading time and offers next without prematurely executing content',async()=>{
- vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(1000)
- expect(f.runStep).not.toHaveBeenCalled();expect(document.querySelector('[role=status]')?.textContent).toContain('研究笔记')
- const next=document.querySelector<HTMLButtonElement>('[data-home-guide-next]')!;expect(next).not.toBeNull();next.click()
- await vi.advanceTimersByTimeAsync(0);expect(f.runStep).toHaveBeenCalledWith('write')
+test('starts the first real scene immediately and keeps reading time after its action',async()=>{
+ vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(0)
+ expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write'])
+ expect(document.querySelector('.odyssey-home-guide-header')?.textContent).not.toContain('离线')
+ expect(document.querySelector('[role=toolbar]')?.getAttribute('aria-label')).toBe('播放控制')
+ await vi.advanceTimersByTimeAsync(1299);expect(f.runStep).toHaveBeenCalledTimes(1)
+ await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge'])
 })
 test('PPT keeps the real history and input usable instead of mounting a replacement page',async()=>{
  const f=fixture();await f.controller.start('ppt')
@@ -54,7 +56,7 @@ test('does not open a late prepared example after the user navigates elsewhere',
 })
 test('revisits the saved example without replaying over it and replay requests a fresh copy',async()=>{
  const f=fixture(false);await f.controller.start('note');await Promise.resolve()
- expect(f.runStep).not.toHaveBeenCalled();expect(document.querySelector('[role=status]')?.textContent).toContain('保留')
+ expect(f.runStep).not.toHaveBeenCalled();expect(document.querySelector('[data-home-guide]')).toBeNull();expect(f.release).toHaveBeenCalledOnce();expect(f.text.parentElement?.inert).toBe(false)
  await f.controller.start('note',{replay:true})
  expect(f.requests.filter(r=>r.command==='prepare').at(-1)?.replay).toBe(true);expect(f.header.dataset.eworkNotesSession).toBe('example-note-new')
 })
@@ -81,7 +83,7 @@ test('a board action can remain paused for more than its active timeout budget',
  const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail.command==='mount-board')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}));else if(detail.command!=='dispose')pending=detail}
  window.addEventListener('sherlock:home-guide-native-request',receive)
  try{
-  await f.controller.start('board');await vi.advanceTimersByTimeAsync(0);document.querySelector<HTMLButtonElement>('[data-home-guide-next]')!.click();await vi.advanceTimersByTimeAsync(0);expect(pending.command).toBe('board-library')
+  await f.controller.start('board');await vi.advanceTimersByTimeAsync(0);expect(pending.command).toBe('board-library')
   document.querySelector<HTMLButtonElement>('.odyssey-home-guide-footer button')!.click();await vi.advanceTimersByTimeAsync(35000)
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused')
   document.querySelector<HTMLButtonElement>('.odyssey-home-guide-footer button')!.click()
@@ -99,19 +101,28 @@ test('reveals the native conversation only after a still-owned handover has fini
  const sidebar=document.createElement('aside');sidebar.setAttribute('data-dsh-sidebar-root','');sidebar.innerHTML='<button>打开技能页面</button>';document.body.append(sidebar);sidebar.querySelector('button')!.click();document.body.dataset.workspaceSurface='integrations';finish()
  expect(await starting).toBe('AbortError');expect(reveal).not.toHaveBeenCalled();delete document.body.dataset.workspaceSurface
 })
-test('PPT gives readable phase holds and consistently describes an offline walkthrough',async()=>{
+test('PPT assigns reading holds to the visible work without an introduction or bottom instruction slot',async()=>{
  vi.useFakeTimers();const f=fixture();await f.controller.start('ppt');await vi.advanceTimersByTimeAsync(0)
- expect(document.querySelector('[role=status]')?.textContent).toContain('离线')
- // Skip the introduction only; the actual brief, source/structure and layout
- // holds remain on the shared pause clock and cannot blink past the reader.
- document.querySelector<HTMLButtonElement>('[data-home-guide-next]')!.click();await vi.advanceTimersByTimeAsync(0)
  expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief'])
- await vi.advanceTimersByTimeAsync(6499);expect(f.runStep).toHaveBeenCalledTimes(1)
+ expect(document.querySelector('[role=status]')?.textContent).not.toContain('离线')
+ expect(document.querySelector('.pI_x6G_centerCol')?.getAttribute('style')||'').not.toContain('controls-height')
+ await vi.advanceTimersByTimeAsync(1599);expect(f.runStep).toHaveBeenCalledTimes(1)
  await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send'])
- await vi.advanceTimersByTimeAsync(2500);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send','plan'])
- await vi.advanceTimersByTimeAsync(8499);expect(f.runStep).toHaveBeenCalledTimes(3)
+ await vi.advanceTimersByTimeAsync(700);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send','plan'])
+ await vi.advanceTimersByTimeAsync(2599);expect(f.runStep).toHaveBeenCalledTimes(3)
  await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send','plan','layout'])
- expect(document.querySelector('[role=status]')?.textContent).not.toContain('正在完成公司模板排版')
- await vi.advanceTimersByTimeAsync(7499);expect(f.runStep).toHaveBeenCalledTimes(4)
+ await vi.advanceTimersByTimeAsync(2599);expect(f.runStep).toHaveBeenCalledTimes(4)
  await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send','plan','layout','deliver'])
+})
+
+test('hands the saved scene back to the real client after completion',async()=>{
+ vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(20000)
+ expect(f.runStep).toHaveBeenCalledTimes(6);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
+ expect(document.querySelector('[data-home-guide]')).toBeNull();expect(document.querySelector('.odyssey-home-guide-pointer')).toBeNull();expect(f.text.parentElement?.inert).toBe(false)
+})
+test('keeps mount and completion save errors visible instead of hiding them with the controls information',async()=>{
+ vi.useFakeTimers();const f=fixture();f.adapters.mountNotes.mockRejectedValueOnce(Error('笔记打开失败'));await f.controller.start('note')
+ expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('笔记打开失败')
+ await f.controller.reset();f.flush.mockRejectedValueOnce(Error('保存冲突'));await f.controller.start('note');await vi.advanceTimersByTimeAsync(20000)
+ expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('保存冲突')
 })

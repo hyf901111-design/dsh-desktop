@@ -26,31 +26,31 @@
 
 ## Task 1 — Shared pointer and playback chrome (Root)
 
-- [ ] 在 `src/preload/home-guide-pointer.ts` 和直接测试中先验证 move/click/drag 的先后、暂停、取消、目标失效和缩减动画。
-- [ ] `home-guides.ts` 接入带请求确认的 cue 协议；`home-guides.css` 改成小型悬浮控制，去除底部保留槽/可见步骤旁白，保留可见故障及无障碍状态。
-- [ ] 调整统一阅读停留，去除空白 overview；更新 shell/guide/browser 聚焦测试并中文提交。
+- [x] 在 `src/preload/home-guide-pointer.ts` 和直接测试中先验证 move/click/drag 的先后、暂停、取消、目标失效和缩减动画。
+- [x] `home-guides.ts` 接入带请求确认的 cue 协议；`home-guides.css` 改成小型悬浮控制，去除底部保留槽/可见步骤旁白，保留可见故障及无障碍状态。
+- [x] 调整统一阅读停留，去除空白 overview；更新 shell/guide/browser 聚焦测试并中文提交。
 
 ## Task 2 — Board actor (renderer agent)
 
-- [ ] 在 `scripts/lib/home-guide-native.mjs` 和相关原生看板测试中验证确认前无 mutation、逐条连线、逐字搜索及中途取消无迟到 apply。
-- [ ] 真实组件库添加、真实端口轨迹后逐条提交、观察选中标的联动；整理后保存，保留三组件三标的两连接。
-- [ ] 仅提交本任务文件；复核其他演员和共享协议。
+- [x] 在 `scripts/lib/home-guide-native.mjs` 和相关原生看板测试中验证确认前无 mutation、逐条连线、逐字搜索及中途取消无迟到 apply。
+- [x] 真实组件库添加、真实端口轨迹后逐条提交、观察选中标的联动；整理后保存，保留三组件三标的两连接。
+- [x] 仅提交本任务文件；复核其他演员和共享协议。
 
 ## Task 3 — Notes actor (notes agent)
 
-- [ ] 在 `home-guide-notes.tsx` / `home-guide-notes-data.ts` 与 note guide 测试中验证聚焦、指针确认、检查/优化忙态及暂停时钟。
-- [ ] 标题/正文分批输入，严格滑块操作可见；结果真正出现后再读标记、生成建议和替换，不添加旁白；保留原文/修订与持久化。
-- [ ] 聚焦测试及中文提交，不修改生产笔记挑战默认延迟。
+- [x] 在 `home-guide-notes.tsx` / `home-guide-notes-data.ts` 与 note guide 测试中验证聚焦、指针确认、检查/优化忙态及暂停时钟。
+- [x] 标题/正文分批输入，严格滑块操作可见；结果真正出现后再读标记、生成建议和替换，不添加旁白；保留原文/修订与持久化。
+- [x] 聚焦测试及中文提交，不修改生产笔记挑战默认延迟。
 
 ## Task 4 — PPT actor and replies (host agent)
 
-- [ ] 直接测试锁定简洁自然需求，移除回复中的重复演示说明，保留来源和历史预测口径。
-- [ ] 原生附件/技能/发送/交付卡 cue 均指向对应实际目标；只有演员执行一次操作，最终必须点击交付文件卡，不用整条消息兜底。
-- [ ] 正常思考等待与阶段流式回复使用暂停/取消门禁；保留真正落盘与模型路由恢复、自动压缩和最终尾卡回归。
-- [ ] 聚焦检查及中文提交，PPT/PDF资产不得改动。
+- [x] 直接测试锁定简洁自然需求，移除回复中的重复演示说明，保留来源和历史预测口径。
+- [x] 原生附件/技能/发送/交付卡 cue 均指向对应实际目标；只有演员执行一次操作，最终必须点击交付文件卡，不用整条消息兜底。
+- [x] 正常思考等待与阶段流式回复使用暂停/取消门禁；保留真正落盘与模型路由恢复、自动压缩和最终尾卡回归。
+- [x] 聚焦检查及中文提交，PPT/PDF资产不得改动。
 
 ## Task 5 — Integration and real client (Root + independent reviewer)
 
-- [ ] 实际补丁安装两次、类型检查和直接相关测试；独立审查目标与先后、暂停/取消、文案和数据真实性。
+- [x] 实际补丁安装两次、类型检查和直接相关测试；独立审查目标与先后、暂停/取消、文案和数据真实性。
 - [ ] 按 Plan A 新批次合入 main，干净 main `./script/build_and_run.sh --verify`；实际包与 preload 校验。
 - [ ] 原生播放三场，检查箭头、点击/连线、AI等待/回复、PPT卡点击右屏、窄屏与回访；保持正式客户端打开并记录真实证据。
