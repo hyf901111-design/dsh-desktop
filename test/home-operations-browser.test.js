@@ -1940,7 +1940,7 @@ it('opens all fifteen native wallpaper previews only in the visible gallery and 
     for(const card of geometry){expect(card.width).toBeCloseTo(146.4,0);expect(card.height).toBeCloseTo(78,0);expect(card.font).toBe(12);expect(card.line).toBe(18)}
     expect(await wallpaperCards(page).locator('svg').count()).toBe(0)
     expect(await wallpaperCards(page).filter({has:page.locator('.odyssey-wallpaper-preview')}).count()).toBe(15)
-    expect(await wallpaperCards(page).first().locator('.odyssey-wallpaper-preview').evaluate(element=>getComputedStyle(element).boxShadow)).toMatch(/0px 0px 0px 1\.5px$/)
+    expect(await wallpaperCards(page).first().locator('.odyssey-wallpaper-preview').evaluate(element=>getComputedStyle(element).boxShadow)).toMatch(/0px 0px 0px 1px$/)
     const count=await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)
     await quickTab(page).click()
     await page.evaluate(()=>document.body.setAttribute('data-ds-dark-theme',''))
@@ -2073,5 +2073,187 @@ it.each([{width:722,height:500,en:true,name:'400-en'},{width:1380,height:900,en:
     const metrics={enhanced:energy(enhanced),control:energy(control),ratio:energy(enhanced)/energy(control),appearances}
     await writeFile(`${galleryEvidence}/readability-${options.name}.json`,JSON.stringify(metrics,null,2))
     expect(metrics.ratio,'the real gray-background tab gains visible ink contrast without a backing').toBeGreaterThan(1.25)
+  }finally{await page.close()}
+},20000)
+
+async function operationTabRects(page) {
+  return page.evaluate(()=>Object.fromEntries(['.odyssey-operations-heading','[data-odyssey-operations-tab="quick"]','[data-odyssey-operations-tab="wallpapers"]','[data-odyssey-operations-appearance]','[data-odyssey-operations-appearance] img','[data-odyssey-home-operations-toggle]'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return [selector,{x:r.x,y:r.y,width:r.width,height:r.height}]})))
+}
+async function tabPanels(page) {
+  return page.evaluate(()=>['.odyssey-operations-grid','[data-odyssey-theme-gallery]'].map(selector=>{const element=document.querySelector(selector),style=getComputedStyle(element);return {hidden:element.hidden,inert:element.inert,opacity:Number(style.opacity),x:parseFloat(style.translate)||0,pointable:style.pointerEvents!=='none'}}))
+}
+
+it.each([{width:1380,height:900},{width:888,height:660},{width:722,height:660},{width:1118,height:500},{width:888,height:500},{width:722,height:500},{width:888,height:900}])('holds a single unscaled tab/header anchor across both views without clipping Quick Start %j',async options=>{
+  const page=await fixture({...options,themes:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations');await nextPaint(page)
+    const before=await operationTabRects(page)
+    await page.locator('.pI_x6G_centerCol').screenshot({path:`${galleryEvidence}/09-anchor-${options.width}x${options.height}-quick.png`})
+    if(options.width<1000&&options.height>800)expect((await page.locator('.odyssey-operations-grid').boundingBox()).height,'the gallery must not stretch the narrow tall Quick Start composition').toBeLessThanOrEqual(346)
+    expect(before['[data-odyssey-operations-appearance]'].width).toBe(32)
+    for(const card of await page.locator('.odyssey-operations-quick-card').all())expect(await card.evaluate(card=>{const r=card.getBoundingClientRect(),pane=card.closest('.pI_x6G_centerCol').getBoundingClientRect(),label=card.querySelector('.odyssey-operations-quick-label');return r.left>=pane.left&&r.right<=pane.right&&r.bottom<=pane.bottom&&label.scrollWidth<=label.clientWidth+1&&label.scrollHeight<=label.clientHeight+1})).toBe(true)
+    await wallpaperTab(page).click();await nextPaint(page)
+    const after=await operationTabRects(page)
+    await page.locator('.pI_x6G_centerCol').screenshot({path:`${galleryEvidence}/09-anchor-${options.width}x${options.height}-wallpapers.png`})
+    for(const [selector,rect] of Object.entries(before))for(const axis of ['x','y','width','height'])expect(after[selector][axis],`${selector} ${axis}`).toBeCloseTo(rect[axis],0)
+    await quickTab(page).click();await nextPaint(page)
+    expect(await operationTabRects(page)).toEqual(before)
+  }finally{await page.close()}
+},20000)
+
+it.each([{dark:false,reduced:false},{dark:true,reduced:false},{dark:false,reduced:true}])('adds a bounded wallpaper hover within a static button and leaves its label steady %j',async options=>{
+  const page=await fixture({...options,themes:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations');await wallpaperTab(page).click()
+    await expect.poll(()=>page.locator('[data-odyssey-theme-gallery]').evaluate(element=>element.inert)).toBe(false)
+    const card=wallpaperCards(page).nth(1),preview=card.locator('.odyssey-wallpaper-preview'),label=card.locator('.odyssey-wallpaper-name')
+    await page.mouse.move(1,1)
+    const before={card:await card.boundingBox(),label:await label.boundingBox(),preview:await preview.boundingBox()}
+    await card.hover({position:{x:20,y:20}})
+    await expect.poll(()=>preview.evaluate(element=>parseFloat(getComputedStyle(element).translate.split(/\s+/).at(-1))||0)).toBe(options.reduced?0:-2)
+    const after={card:await card.boundingBox(),label:await label.boundingBox(),preview:await preview.boundingBox(),style:await preview.evaluate(element=>{const style=getComputedStyle(element),matrix=new DOMMatrixReadOnly(getComputedStyle(element.querySelector('img')).transform);return {overflow:style.overflow,radius:parseFloat(style.borderRadius),scale:matrix.m11}})}
+    expect(after.card).toEqual(before.card);expect(after.label).toEqual(before.label)
+    expect(before.preview.y-after.preview.y).toBeCloseTo(options.reduced?0:2,1)
+    if(!options.reduced){await expect.poll(()=>preview.locator('img').evaluate(image=>new DOMMatrixReadOnly(getComputedStyle(image).transform).m11)).toBeGreaterThanOrEqual(1.025);expect(await preview.locator('img').evaluate(image=>new DOMMatrixReadOnly(getComputedStyle(image).transform).m11)).toBeLessThanOrEqual(1.035)}
+    expect(after.style.overflow).toBe('hidden');expect(after.style.radius).toBe(7)
+    if(options.reduced)expect(after.style.scale).toBe(1)
+    await region(page).screenshot({path:`${galleryEvidence}/09-hover-${options.dark?'dark':'light'}-${options.reduced?'reduced':'motion'}.png`})
+  }finally{await page.close()}
+},20000)
+
+it.each([false,true])('uses a softer light selected stroke and preserves the dark selected stroke (dark=%s)',async dark=>{
+  const page=await fixture({dark,themes:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations');await wallpaperTab(page).click()
+    const stroke=await wallpaperCards(page).first().locator('.odyssey-wallpaper-preview').evaluate(element=>getComputedStyle(element).boxShadow)
+    if(dark)expect(stroke).toMatch(/0px 0px 0px 1\.5px$/)
+    else{expect(stroke).toMatch(/0px 0px 0px 1px$/);const alpha=Number(stroke.match(/^rgba\([^,]+,[^,]+,[^,]+, ([^)]+)\)/)?.[1]||1);expect(alpha).toBeGreaterThanOrEqual(.3);expect(alpha).toBeLessThanOrEqual(.65)}
+    expect(await wallpaperCards(page).locator('svg').count()).toBe(0)
+    await region(page).screenshot({path:`${galleryEvidence}/09-selected-${dark?'dark':'light'}.png`})
+  }finally{await page.close()}
+},20000)
+
+it('reverses tab slides from the visible mixture while the header, instances and native wallpaper remain stable',async()=>{
+  const page=await fixture({themes:true,reduced:false,clock:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations');await page.mouse.move(1,1)
+    await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+100))
+    await page.evaluate(()=>{window.homeOperations.retainedPanels=[document.querySelector('.odyssey-operations-grid'),document.querySelector('[data-odyssey-theme-gallery]')];window.homeOperations.controller.select('koi-pond')})
+    const header=await operationTabRects(page)
+    await wallpaperTab(page).evaluate(element=>element.click());await page.clock.runFor(90)
+    const first=await tabPanels(page)
+    await region(page).screenshot({path:`${galleryEvidence}/09-tab-flight.png`})
+    expect(first.every(panel=>!panel.hidden&&panel.inert)).toBe(true)
+    expect(first[0].opacity).toBeGreaterThan(0);expect(first[0].opacity).toBeLessThan(1)
+    expect(first[1].opacity).toBeGreaterThan(0);expect(first[1].opacity).toBeLessThan(1)
+    expect(first[0].opacity+first[1].opacity).toBeCloseTo(1,2)
+    expect(first[0].x).toBeLessThan(0);expect(first[1].x).toBeGreaterThan(0)
+    expect(await operationTabRects(page)).toEqual(header)
+    const oldCard=await page.locator('.odyssey-operations-quick-card').first().boundingBox()
+    await page.mouse.click(oldCard.x+oldCard.width/2,oldCard.y+oldCard.height/2)
+    expect(await page.evaluate(()=>window.homeOperations.controller.getSelected())).toBe('koi-pond')
+    await quickTab(page).evaluate(element=>element.click())
+    const immediate=await tabPanels(page)
+    for(let index=0;index<2;index++)expect(immediate[index].opacity).toBeCloseTo(first[index].opacity,2)
+    await page.clock.runFor(100)
+    const reversed=await tabPanels(page)
+    await region(page).screenshot({path:`${galleryEvidence}/09-tab-reverse.png`})
+    expect(reversed[0].opacity).toBeGreaterThan(first[0].opacity)
+    expect(reversed[0].opacity+reversed[1].opacity).toBeCloseTo(1,2)
+    await wallpaperTab(page).evaluate(element=>element.click());await page.clock.runFor(40)
+    await quickTab(page).evaluate(element=>element.click());await page.clock.runFor(40)
+    await wallpaperTab(page).evaluate(element=>element.click());await page.clock.runFor(1200)
+    const settled=await tabPanels(page)
+    expect(settled[0].hidden).toBe(true);expect(settled[1].hidden).toBe(false);expect(settled[1].inert).toBe(false);expect(settled[1].opacity).toBe(1);expect(settled[1].x).toBe(0)
+    expect(await operationTabRects(page)).toEqual(header)
+    expect(await page.evaluate(()=>window.homeOperations.retainedPanels.every(element=>element.isConnected))).toBe(true)
+    expect(await page.evaluate(()=>window.homeOperations.controller.getSelected())).toBe('koi-pond')
+    await page.evaluate(()=>window.homeOperations.dispose());await page.clock.runFor(1500)
+    expect(await region(page).count()).toBe(0)
+  }finally{await page.close()}
+},30000)
+
+it('retains carousel elapsed reading time while tab slides and the wallpaper view are paused',async()=>{
+  const page=await fixture({themes:true,reduced:false,clock:true})
+  const elapsed=()=>page.locator('.odyssey-operations-usecase').evaluate(card=>parseFloat(card.style.getPropertyValue('--odyssey-operations-case-progress')))
+  try{
+    await toggle(page).click();await waitState(page,'operations');await page.mouse.move(1,1)
+    await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+100));await page.clock.runFor(1900)
+    const before=await elapsed(),index=await page.locator('.odyssey-operations-usecase').getAttribute('data-case')
+    await wallpaperTab(page).evaluate(element=>element.click());await page.clock.runFor(1200);await page.clock.runFor(4500)
+    expect(await elapsed()).toBeCloseTo(before,2)
+    expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(index)
+    await quickTab(page).evaluate(element=>element.click());await page.clock.runFor(500)
+    const after=await elapsed();expect(after).toBeGreaterThan(before+.005);expect(after).toBeLessThan(before+.09)
+  }finally{await page.close()}
+},30000)
+
+it('settles tab motion immediately for reduced motion and releases pending animation/subscription work on hide and disposal',async()=>{
+  const page=await fixture({themes:true,reduced:false,clock:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+100))
+    await wallpaperTab(page).evaluate(element=>element.click());await page.clock.runFor(80)
+    expect((await tabPanels(page)).every(panel=>!panel.hidden)).toBe(true)
+    await page.emulateMedia({reducedMotion:'reduce'});await page.clock.runFor(40)
+    const reduced=await tabPanels(page);expect(reduced[0].hidden).toBe(true);expect(reduced[1].opacity).toBe(1);expect(reduced[1].x).toBe(0);expect(reduced[1].inert).toBe(false)
+    await quickTab(page).evaluate(element=>element.click())
+    const quick=await tabPanels(page);expect(quick[0].opacity).toBe(1);expect(quick[0].x).toBe(0);expect(quick[1].hidden).toBe(true)
+    const thumbnails=await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));window.homeOperations.dispose();document.body.setAttribute('data-ds-dark-theme','');window.homeOperations.controller.select('jarrick')})
+    await page.clock.runFor(1500)
+    expect(await region(page).count()).toBe(0);expect(await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)).toBe(thumbnails)
+    expect(await page.locator('[data-odyssey-home-theme-background]').count()).toBe(1)
+  }finally{await page.close()}
+},30000)
+
+
+it('reuses the hidden gallery measurement across tab frames and mode changes without requesting hidden thumbnails',async()=>{
+  const page=await fixture({themes:true,reduced:false,clock:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+100))
+    await page.evaluate(()=>{
+      window.homeOperations.galleryLabelReads=0
+      const descriptor=Object.getOwnPropertyDescriptor(HTMLElement.prototype,'offsetHeight')
+      Object.defineProperty(HTMLElement.prototype,'offsetHeight',{...descriptor,get(){if(this.matches('.odyssey-wallpaper-name'))window.homeOperations.galleryLabelReads++;return descriptor.get.call(this)}})
+    })
+    expect(await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)).toBe(0)
+    await wallpaperTab(page).evaluate(element=>element.click());await page.clock.runFor(1000)
+    expect(await page.evaluate(()=>window.homeOperations.galleryLabelReads)).toBe(0)
+    expect(await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)).toBeGreaterThanOrEqual(15)
+    await quickTab(page).evaluate(element=>element.click());await page.clock.runFor(1000)
+    const requests=await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)
+    await page.evaluate(()=>document.body.toggleAttribute('data-ds-dark-theme'));await page.clock.runFor(300)
+    expect(await page.evaluate(()=>window.homeOperations.galleryLabelReads)).toBe(0)
+    expect(await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)).toBe(requests)
+    expect((await tabPanels(page))[1].hidden).toBe(true)
+    await page.evaluate(async()=>{
+      const font=new FontFace('GalleryLate','url(http://home-operations.test/fonts/NotoSansSC.woff2)')
+      document.fonts.add(font)
+      const style=document.createElement('style');style.textContent='.odyssey-wallpaper-name{font-family:GalleryLate,sans-serif}';document.head.append(style)
+      await document.fonts.load('12px GalleryLate');await document.fonts.ready
+    })
+    await page.clock.runFor(200)
+    expect(await page.evaluate(()=>window.homeOperations.galleryLabelReads),'a real late font must invalidate the cached metrics').toBeGreaterThan(0)
+    expect(await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)).toBe(requests)
+  }finally{await page.close()}
+},20000)
+
+it('keeps the painted tab mixture continuous when returning to input during a slide and reopening the collection',async()=>{
+  const page=await fixture({themes:true,reduced:false,clock:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+100))
+    await page.evaluate(()=>window.homeOperations.controller.select('berber'))
+    await wallpaperTab(page).evaluate(element=>element.click());await page.clock.runFor(80)
+    const before=await tabPanels(page)
+    expect(before.every(panel=>!panel.hidden&&panel.opacity>0&&panel.opacity<1)).toBe(true)
+    await toggle(page).evaluate(element=>element.click())
+    const leaving=await tabPanels(page)
+    for(let index=0;index<2;index++)expect(leaving[index].opacity,'returning must not force the target tab into the fully visible departing region').toBeCloseTo(before[index].opacity,2)
+    expect(leaving.every(panel=>panel.inert)).toBe(true)
+    await page.clock.runFor(1200);expect(await state(page)).toBe('input')
+    await toggle(page).evaluate(element=>element.click());await page.clock.runFor(1200)
+    expect(await state(page)).toBe('operations')
+    const reopened=await tabPanels(page);expect(reopened[0].hidden).toBe(true);expect(reopened[1].opacity).toBe(1);expect(reopened[1].inert).toBe(false)
+    expect(await page.evaluate(()=>window.homeOperations.controller.getSelected())).toBe('berber')
   }finally{await page.close()}
 },20000)

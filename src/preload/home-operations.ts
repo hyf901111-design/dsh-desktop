@@ -60,7 +60,9 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   let heading: HTMLElement | null = null
   let quickTab: HTMLButtonElement | null = null, wallpaperTab: HTMLButtonElement | null = null, appearance: HTMLButtonElement | null = null
   let quickPanel: HTMLElement | null = null, gallery: HomeThemeGallery | null = null
+  let galleryFontRevision = 0
   let activeTab: 'quick' | 'wallpapers' = 'quick', appearanceBusy = false
+  let tabFrame = 0, tabTime = 0, tabProgress = 0, tabVelocity = 0, tabTarget = 0, tabRunning = false
   let usecase: HTMLElement | null = null, exampleButton: HTMLButtonElement | null = null
   let carousel: HomeOperationsCarousel | null = null
   let caseTransition: HomeOperationsCaseTransition | null = null
@@ -181,6 +183,51 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if (motionFrame) win.cancelAnimationFrame(motionFrame)
     motionFrame = 0; lastMotionTime = 0
   }
+  const cancelTabFrame = () => { if (tabFrame) win.cancelAnimationFrame(tabFrame); tabFrame = 0 }
+  const finishTabMotion = () => {
+    cancelTabFrame(); tabProgress = tabTarget; tabVelocity = 0; tabTime = 0; tabRunning = false
+    if (activeTab === 'wallpapers') { clearPointers(); clearIllustrationBlends() }
+  }
+  const advanceTab = (time: number) => {
+    const elapsed = Math.max(0, Math.min(.05, (time - tabTime) / 1000))
+    tabTime = time
+    const displacement = tabProgress - tabTarget, response = tabVelocity + 24 * displacement, decay = Math.exp(-24 * elapsed)
+    tabProgress = Math.max(0, Math.min(1, tabTarget + (displacement + response * elapsed) * decay))
+    tabVelocity = (tabVelocity - 24 * response * elapsed) * decay
+    if (Math.abs(tabProgress - tabTarget) < .002 && Math.abs(tabVelocity) < .08) finishTabMotion()
+  }
+  const paintTabs = () => {
+    if (!section || !quickPanel) return
+    section.dataset.odysseyOperationsTabMotion = tabRunning ? 'settling' : 'idle'
+    const ready = visible && !doc.hidden && state === 'operations' && motion === 'idle' && progress >= .9999 && !tabRunning
+    quickPanel.hidden = !tabRunning && activeTab !== 'quick'
+    quickPanel.inert = !ready || activeTab !== 'quick'
+    quickPanel.style.pointerEvents = quickPanel.inert ? 'none' : ''
+    quickPanel.style.opacity = String(1 - tabProgress)
+    quickPanel.style.translate = `${-14 * tabProgress}px 0px`
+    quickPanel.setAttribute('aria-hidden', String(activeTab !== 'quick'))
+    for (const button of [...quickCards, ...pages, ...(exampleButton ? [exampleButton] : [])]) button.tabIndex = ready && activeTab === 'quick' ? 0 : -1
+    if (gallery) {
+      gallery.element.hidden = !tabRunning && activeTab !== 'wallpapers'
+      gallery.element.inert = !ready || activeTab !== 'wallpapers'
+      gallery.element.style.pointerEvents = gallery.element.inert ? 'none' : ''
+      gallery.element.style.opacity = String(tabProgress)
+      gallery.element.style.translate = `${14 * (1 - tabProgress)}px 0px`
+      gallery.element.setAttribute('aria-hidden', String(activeTab !== 'wallpapers'))
+      gallery.setVisible(visible && !doc.hidden && activeTab === 'wallpapers' && progress >= .9999 && motion === 'idle')
+    }
+    // A departing case keeps its current visual mixture; only its timer pauses.
+    caseTransition?.setVisible(visible && !quickPanel.hidden && tabProgress < 1 && !section.hidden && progress > .14)
+    carousel?.setVisible(ready && activeTab === 'quick' && !section.hidden)
+  }
+  const tickTab = (time: number) => {
+    tabFrame = 0
+    if (disposed) return
+    if (!visible || doc.hidden || reduced.matches) finishTabMotion()
+    else advanceTab(time)
+    paintTabs()
+    if (tabRunning) tabFrame = win.requestAnimationFrame(tickTab)
+  }
   const paint = () => {
     if (!visible || !host || !hero || !section || !toggle) return
     progress = Math.max(0, Math.min(1, progress))
@@ -210,10 +257,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     for (const button of [...quickCards, ...pages, ...(exampleButton ? [exampleButton] : [])]) button.tabIndex = expanded ? 0 : -1
     for (const button of [quickTab, wallpaperTab, appearance]) if (button) button.tabIndex = expanded ? 0 : -1
     if (activeTab !== 'quick') for (const button of [...quickCards, ...pages, ...(exampleButton ? [exampleButton] : [])]) button.tabIndex = -1
-    const quickVisible = activeTab === 'quick'
-    caseTransition?.setVisible(visible && quickVisible && !section.hidden && cardsProgress > .0001)
-    carousel?.setVisible(visible && quickVisible && expanded && motion === 'idle' && !section.hidden && shown(section))
-    gallery?.setVisible(visible && !doc.hidden && activeTab === 'wallpapers' && expanded && !section.hidden && shown(section))
+    paintTabs()
   }
   const startMotion = () => {
     if (reduced.matches) { progress = targetProgress; velocity = 0; paint(); return }
@@ -257,20 +301,26 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     // The collection belongs to the pane, independently of the native input's
     // narrower max-width when the file panel is open.
     const paneWidth = Math.max(1, bounds.width - 48)
-    const stacked = bounds.width < 550, fluid = !stacked && paneWidth < DESIGN_WIDTH
-    host.dataset.odysseyHomeOperationsLayout = stacked ? 'stacked' : fluid ? 'fluid' : 'wide'
-    const isGallery = activeTab === 'wallpapers' && !!gallery
-    const minimumTop = isGallery ? Math.max(48, headerBottom + 16) : Math.max(stacked ? 56 : 64, headerBottom + (stacked ? 16 : 24))
-    const bottomLimit = toggleTop - (isGallery ? 12 : stacked ? 16 : 24)
+    const stacked = bounds.width < 550
+    const minimumTop = Math.max(stacked ? 56 : 64, headerBottom + (stacked ? 16 : 24))
+    const bottomLimit = toggleTop - 16
     const availableHeight = Math.max(96, bottomLimit - minimumTop)
-    const heightScale = Math.max(.22, (bottomLimit - minimumTop) / DESIGN_HEIGHT)
-    const scale = isGallery || stacked || fluid ? 1 : Math.max(.2, Math.min(1, heightScale))
-    const physicalWidth = isGallery ? Math.min(DESIGN_WIDTH, Math.max(1, bounds.width - (stacked ? 32 : 48))) : stacked ? Math.max(1, bounds.width - 32) : fluid ? paneWidth : DESIGN_WIDTH * scale
-    const viewportHeight = isGallery ? 44 + gallery!.layout(physicalWidth, availableHeight - 44) : stacked ? Math.min(620, availableHeight)
-      : fluid ? Math.min(availableHeight, (locale() === 'en' ? 346 : Math.max(260, Math.min(346, Math.round(physicalWidth * .5)))) + 44)
-      : DESIGN_HEIGHT * scale
+    const fluid = !stacked && (paneWidth < DESIGN_WIDTH || availableHeight < DESIGN_HEIGHT)
+    host.dataset.odysseyHomeOperationsLayout = stacked ? 'stacked' : fluid ? 'fluid' : 'wide'
+    const scale = 1
+    const physicalWidth = Math.min(DESIGN_WIDTH, Math.max(1, bounds.width - (stacked ? 32 : 48)))
+    const quickHeight = stacked ? Math.min(620, availableHeight) : fluid ? Math.min(availableHeight, (locale() === 'en' ? 346 : Math.max(260, Math.min(346, Math.round(physicalWidth * .5)))) + 44) : DESIGN_HEIGHT
+    const wasHidden = section.hidden, visibility = section.style.visibility
+    if (wasHidden) { section.style.visibility = 'hidden'; section.hidden = false }
+    let galleryHeight = 0
+    // Keep a tall narrow gallery from stretching the already balanced Quick
+    // composition merely because more vertical space happens to be available.
+    const galleryBudget = Math.min(availableHeight, Math.max(DESIGN_HEIGHT, quickHeight))
+    try { galleryHeight = gallery ? 44 + gallery.layout(physicalWidth, galleryBudget - 44, galleryFontRevision) : 0 }
+    finally { if (wasHidden) { section.hidden = true; section.style.visibility = visibility } }
+    const viewportHeight = Math.max(quickHeight, galleryHeight)
     const centeredLeft = snap(bounds.left + (bounds.width - physicalWidth) / 2) - bounds.left
-    const centeredTop = isGallery ? (bounds.height - (viewportHeight - 44)) / 2 - 44 : stacked || fluid ? (bounds.height - viewportHeight) / 2 - 22 : (bounds.height - 346 * scale) / 2 - 44 * scale
+    const centeredTop = (bounds.height - (viewportHeight - 44)) / 2 - 44
     const targetTop = snap(bounds.top + Math.max(minimumTop, Math.min(centeredTop, bottomLimit - viewportHeight))) - bounds.top
     // Space from the visible input surface, excluding the hero's transparent
     // bottom padding. Re-query because the resident composer can replace slots.
@@ -284,7 +334,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     css('--odyssey-operations-center-x', `${centeredLeft + physicalWidth / 2}px`)
     css('--odyssey-operations-shift', `${geometry.shift}px`)
     css('--odyssey-operations-scale', String(scale))
-    if (section) { section.style.width = isGallery ? `${physicalWidth}px` : ''; section.style.height = isGallery ? `${viewportHeight}px` : '' }
+    section.style.width = `${physicalWidth}px`; section.style.height = `${viewportHeight}px`
     css('--odyssey-operations-viewport-height', `${viewportHeight}px`)
     css('--odyssey-operations-toggle-top', `${snap(bounds.top + toggleTop) - bounds.top}px`)
     css('--odyssey-operations-available-height', `${Math.max(0, bounds.height - headerBottom)}px`)
@@ -294,6 +344,8 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   const setSection = (next: Section, force = false) => {
     if (!visible || !host || !hero || !section || !toggle) return false
     intent = next
+    // Let an in-flight tab mixture leave with the region instead of snapping
+    // to its destination while the collection is still fully visible.
     if (next === 'input') gallery?.setVisible(false)
     clearPointers()
     targetProgress = next === 'operations' ? 1 : 0
@@ -307,14 +359,18 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   }
   const toggleSection = () => setSection((motion === 'idle' ? state : intent) === 'input' ? 'operations' : 'input')
   const selectTab = (next: 'quick' | 'wallpapers') => {
-    if (next === 'wallpapers' && !gallery || next === activeTab) return
+    if (next === 'wallpapers' && !gallery || next === activeTab || state !== 'operations' || motion !== 'idle') return
+    // Retarget the last painted mixture; sampling a newer unpainted time here
+    // would introduce an opacity jump on a click between animation frames.
+    cancelTabFrame()
     activeTab = next
-    clearPointers(); clearIllustrationBlends()
+    tabTarget = next === 'wallpapers' ? 1 : 0
+    tabRunning = !reduced.matches && visible && !doc.hidden
+    if (!tabRunning) finishTabMotion()
     if (section) section.dataset.odysseyOperationsActiveTab = activeTab
-    if (quickPanel) { quickPanel.hidden = next !== 'quick'; quickPanel.inert = next !== 'quick' }
-    if (gallery) { gallery.element.hidden = next !== 'wallpapers'; gallery.element.inert = next !== 'wallpapers' }
     if (next !== 'wallpapers') gallery?.setVisible(false)
     updateLabels(); measure()
+    if (tabRunning) { tabTime = win.performance.now(); tabFrame = win.requestAnimationFrame(tickTab) }
   }
   const clearFeedback = () => {
     if (feedbackTimer) win.clearTimeout(feedbackTimer)
@@ -349,7 +405,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     check()
   })
   const runAction = async (card: Card, example = false) => {
-    if ((example ? !options.onExample : !options.onAction) || actionController || !visible || motion !== 'idle' || state !== 'operations') return
+    if ((example ? !options.onExample : !options.onAction) || actionController || !visible || motion !== 'idle' || state !== 'operations' || activeTab !== 'quick' || tabRunning) return
     clearFeedback()
     const controller = new win.AbortController()
     actionController = controller; setActionBusy(true)
@@ -591,6 +647,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     cancelSettlement()
     carousel?.dispose(); carousel = null
     caseTransition?.dispose(); caseTransition = null
+    finishTabMotion()
     gallery?.dispose(); gallery = null
     clearPointers(); clearIllustrationBlends(); resize.disconnect(); restoreHero()
     host?.removeEventListener('wheel', onWheel)
@@ -644,16 +701,19 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   changes.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-page', 'data-ds-dark-theme', 'data-workspace-surface', 'class', 'style', 'hidden', 'aria-hidden'] })
   const localeChanges = new win.MutationObserver(scheduleSync)
   localeChanges.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
+  const onFontsReady = () => { if (!disposed) { galleryFontRevision++; scheduleSync() } }
+  doc.fonts?.addEventListener('loadingdone', onFontsReady)
   const onVisibility = () => {
     if (!doc.hidden) { sync(); return }
     actionController?.abort()
     cancelSettlement()
+    finishTabMotion()
     resetWheel()
     clearPointers(); clearIllustrationBlends(); intent = state; motion = 'idle'; velocity = 0
     progress = targetProgress = state === 'operations' ? 1 : 0
     paint()
   }
-  const onReduced = () => { clearPointers(); clearIllustrationBlends(); if (reduced.matches && motion !== 'idle') setSection(intent, true); else measure() }
+  const onReduced = () => { clearPointers(); clearIllustrationBlends(); if (reduced.matches) finishTabMotion(); if (reduced.matches && motion !== 'idle') setSection(intent, true); else measure() }
   doc.addEventListener('visibilitychange', onVisibility)
   doc.addEventListener('sherlock:workspace-surface-change', scheduleSync)
   reduced.addEventListener('change', onReduced)
@@ -662,6 +722,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if (disposed) return
     disposed = true
     changes.disconnect(); localeChanges.disconnect()
+    doc.fonts?.removeEventListener('loadingdone', onFontsReady)
     if (frame) win.cancelAnimationFrame(frame)
     doc.removeEventListener('visibilitychange', onVisibility)
     doc.removeEventListener('sherlock:workspace-surface-change', scheduleSync)

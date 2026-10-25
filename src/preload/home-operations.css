@@ -103,11 +103,14 @@
 .odyssey-theme-gallery { position:absolute; left:0; top:44px; display:grid; grid-template-columns:repeat(var(--odyssey-wallpaper-columns,5),minmax(0,1fr)); grid-auto-rows:var(--odyssey-wallpaper-row-height,106px); gap:var(--odyssey-wallpaper-gap,12px); color:#26313a; }
 [data-ds-dark-theme] .odyssey-theme-gallery { color:#ededed; }
 .odyssey-wallpaper-card { display:flex; flex-direction:column; gap:var(--odyssey-wallpaper-name-gap,8px); width:100%; height:100%; min-width:0; padding:0; margin:0; border:0; border-radius:0; background:transparent; color:inherit; text-align:left; font:inherit; cursor:pointer; appearance:none; }
-.odyssey-wallpaper-preview { display:block; flex:none; position:relative; width:100%; height:var(--odyssey-wallpaper-preview-height,78px); border-radius:7px; outline:none; background:rgb(127 127 127 / .08); }
-.odyssey-wallpaper-preview img { display:block; width:100%; height:100%; border-radius:7px; object-fit:cover; pointer-events:none; }
+.odyssey-wallpaper-preview { display:block; flex:none; position:relative; width:100%; height:var(--odyssey-wallpaper-preview-height,78px); border-radius:7px; overflow:hidden; outline:none; background:rgb(127 127 127 / .08); transition:translate 180ms cubic-bezier(.22,.61,.36,1); }
+.odyssey-wallpaper-preview img { display:block; width:100%; height:100%; border-radius:7px; object-fit:cover; pointer-events:none; transition:transform 220ms cubic-bezier(.22,.61,.36,1); }
+.odyssey-wallpaper-card:is(:hover,:focus-visible) .odyssey-wallpaper-preview { translate:0 -2px; }
+.odyssey-wallpaper-card:is(:hover,:focus-visible) .odyssey-wallpaper-preview img { transform:scale(1.03); }
 .odyssey-wallpaper-preview img[hidden] { display:none; }
 /* A zero-blur stroke retains half pixels; Chromium rounds fractional outlines. */
-.odyssey-wallpaper-card[aria-pressed="true"] .odyssey-wallpaper-preview { box-shadow:0 0 0 1.5px currentColor; }
+.odyssey-wallpaper-card[aria-pressed="true"] .odyssey-wallpaper-preview { box-shadow:0 0 0 1px rgb(38 49 58 / .45); }
+[data-ds-dark-theme] .odyssey-wallpaper-card[aria-pressed="true"] .odyssey-wallpaper-preview { box-shadow:0 0 0 1.5px currentColor; }
 .odyssey-wallpaper-name { display:block; width:100%; min-height:20px; font:400 12px/18px "Noto Sans SC","PingFang SC",sans-serif; white-space:normal; overflow-wrap:anywhere; }
 [data-odyssey-operations-active-tab="wallpapers"] .odyssey-operations-grid * { animation-play-state:paused !important; }
 .odyssey-operations-grid {
@@ -614,6 +617,7 @@ html[data-odyssey-locale="en"] [data-odyssey-home-operations-layout="fluid"] .od
   50% { scale:var(--odyssey-operations-breathe-scale,1.06 1.04); }
 }
 @media (prefers-reduced-motion:reduce) {
+  .odyssey-wallpaper-preview, .odyssey-wallpaper-preview img { transition:none; translate:none !important; transform:none !important; }
   [data-odyssey-operations-composer], .odyssey-home-operations,
   .odyssey-operations-toggle, .odyssey-operations-toggle svg,
   .odyssey-operations-usecase, .odyssey-operations-quick-card, .odyssey-operations-illustration img { transition:none; }
