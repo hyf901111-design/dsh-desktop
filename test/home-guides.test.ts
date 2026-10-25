@@ -134,6 +134,21 @@ test('stops the board on a failed calendar action before linking, selecting stoc
  }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
 })
 
+test('allows the six real stock searches ninety active seconds while excluding paused time',async()=>{
+ vi.useFakeTimers();const f=fixture();let adding=false
+ const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail.command==='board-add'){adding=true;return}if(detail.command!=='dispose')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))}
+ window.addEventListener('sherlock:home-guide-native-request',receive)
+ try{
+  await f.controller.start('board');await vi.advanceTimersByTimeAsync(10000);expect(adding).toBe(true)
+  await vi.advanceTimersByTimeAsync(35000);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
+  document.querySelector<HTMLButtonElement>('[data-control=pause]')!.click();await vi.advanceTimersByTimeAsync(120000)
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused')
+  document.querySelector<HTMLButtonElement>('[data-control=play]')!.click();await vi.advanceTimersByTimeAsync(54999)
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
+  await vi.advanceTimersByTimeAsync(1);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error')
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
+})
+
 test('reveals the native conversation only after a still-owned handover has finished',async()=>{
  const f=fixture(),reveal=vi.fn();await f.controller.dispose()
  const save=vi.fn(async()=>{}),controller=mountHomeGuides(document,{...f.adapters,beforeOpen:save,revealConversation:reveal});dispose=controller.dispose

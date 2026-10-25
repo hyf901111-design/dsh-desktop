@@ -79,7 +79,7 @@ function mountBoard(document:Document,host:HTMLElement,options:HomeGuideMountOpt
   const clean=()=>{deadline.abort();win.removeEventListener('sherlock:home-guide-native-reply',receive);pending.delete(cancel)}
   const cancel=()=>{clean();reject(aborted())}
   const receive=(event:Event)=>{const reply=(event as CustomEvent).detail;if(reply?.requestId!==requestId||reply.runId!==options.runId)return;clean();reply.ok?resolve():reject(Error(reply.message||'研究教程尚未就绪。'))}
-  void options.wait(30000,deadline.signal).then(()=>{clean();reject(Error('研究教程尚未就绪，请重试。'))},()=>{})
+   void options.wait(command==='board-add'?90000:30000,deadline.signal).then(()=>{clean();reject(Error('研究教程尚未就绪，请重试。'))},()=>{})
   pending.add(cancel);win.addEventListener('sherlock:home-guide-native-reply',receive)
   win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-native-request',{detail:{requestId,runId:options.runId,sessionId:options.sessionId,hostId:host.id,command}}))
  })
