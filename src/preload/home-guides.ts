@@ -14,7 +14,7 @@ type Adapters = {
 type Session = {sessionId: string; cwd: string; title: string; fresh?: boolean}
 type Scene = readonly [id: string, title: string, result: string, hold: number]
 const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;steps:readonly Scene[]}> = {
- board:{title:'自选行情看板',view:'研究',intro:'搭建六组件研究看板，从市场指数、自选股和行情，逐步补齐资讯、公告与日历。',steps:[
+ board:{title:'自选行情看板',view:'研究',intro:'搭建六组件研究看板，再用智能容器补充一份自选股研究观察清单。',steps:[
   ['board-library','打开组件库','组件库已打开，先加入市场概览，再展开个股跟踪。',900],
   ['board-indices','加入市场指数','指数概览已加入，先看主要市场的表现。',1400],
   ['board-watchlist','创建自选股列表','自选列表用于统一管理标的，后面的组件会跟随它更新。',1100],
@@ -24,7 +24,9 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
   ['board-calendar','加入日历工具','日历已加入，可以安排后续研究。',1000],
   ['board-link','连接行情、资讯与公告','自选股切换行情标的，行情再带动相关资讯和公告。',2200],
   ['board-add','补齐自选股，查看五粮液','5只自选股已齐，当前选中五粮液（000858），可以对照行情、资讯和公告。',2200],
-  ['board-arrange','整理并保存六组件看板','六个组件已按行情概览、个股跟踪、资讯公告和日历分层排列，并保存到个人看板。',3000]
+  ['board-arrange','整理并保存六组件看板','六个组件已分层排列并保存，接着在日历旁补充研究清单。',3000],
+  ['board-smart-container','在日历右侧加入智能容器','智能容器已加入，接下来输入研究观察清单的要求。',1000],
+  ['board-smart-generate','生成自选股研究观察清单','5只自选股的观察清单已生成并保存，可与行情、资讯和公告对照使用。',3000]
  ]},
  note:{title:'AI 护航研究笔记',view:'笔记',intro:'整理研究笔记，用严格挑战核对数据，再从右侧发送优化任务，并改写选中段落。',steps:[
   ['write','整理研究笔记','笔记已写入。接下来用 AI 挑战检查其中的文字、数据和观点。',1300],

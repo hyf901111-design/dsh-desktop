@@ -107,7 +107,7 @@ test('a board action can remain paused for more than its active timeout budget',
 
 test('builds all six board components after native readiness, with reading time after each completed action',async()=>{
  vi.useFakeTimers();const f=fixture(),commands:string[]=[];let mount:any,library:any
- const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-link',2200],['board-add',2200],['board-arrange',3000]]
+ const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-link',2200],['board-add',2200],['board-arrange',3000],['board-smart-container',1000],['board-smart-generate',3000]]
  const reply=(detail:any)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))
  const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;commands.push(detail.command);if(detail.command==='mount-board')mount=detail;else if(detail.command==='board-library')library=detail;else if(detail.command!=='dispose')reply(detail)}
  window.addEventListener('sherlock:home-guide-native-request',receive)
