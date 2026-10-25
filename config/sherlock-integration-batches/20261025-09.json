@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-09",
+  "branch": "codex/integration/20261025-09",
+  "baseMainCommit": "f940b5b80e6d7ff572e4398dc90f175f5ebbc7ef",
+  "expectedMainCommit": "f940b5b80e6d7ff572e4398dc90f175f5ebbc7ef",
+  "createdAt": "2026-10-25T06:22:20.489Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首页双页签固定位置与自然切换交互",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "f940b5b80e6d7ff572e4398dc90f175f5ebbc7ef",
+        "tipCommit": "f5979dbdf3d13a1f437f353c8fab58aa84042e35",
+        "commits": [
+          {
+            "commit": "efa7c652b80ec9d7ef42ecf7841646950f847ca2",
+            "parents": [
+              "832042b3f787e9030bbe7baf42179f684b32457a",
+              "f940b5b80e6d7ff572e4398dc90f175f5ebbc7ef"
+            ],
+            "subject": "合并已验收主题图库批次的本地主干记录"
+          },
+          {
+            "commit": "adfa673e872cce1896e9975195d4c5549312790e",
+            "parents": [
+              "efa7c652b80ec9d7ef42ecf7841646950f847ca2"
+            ],
+            "subject": "记录正式客户端页签动效与主题选中样式反馈"
+          },
+          {
+            "commit": "a7e71052567f3acba323af74ad02fda7b6a3b3bc",
+            "parents": [
+              "adfa673e872cce1896e9975195d4c5549312790e"
+            ],
+            "subject": "验收时保留用户最新选择的主题设置"
+          },
+          {
+            "commit": "224e4a460fe034ab3bce36d006787088c5d52995",
+            "parents": [
+              "a7e71052567f3acba323af74ad02fda7b6a3b3bc"
+            ],
+            "subject": "固定首页双页签顶栏并加入可逆壁纸切换动效"
+          },
+          {
+            "commit": "f5979dbdf3d13a1f437f353c8fab58aa84042e35",
+            "parents": [
+              "224e4a460fe034ab3bce36d006787088c5d52995"
+            ],
+            "subject": "记录双页签固定位置与可逆动效验证"
+          }
+        ],
+        "boundaryParents": [
+          "832042b3f787e9030bbe7baf42179f684b32457a"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-10-25-home-theme-gallery.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/superpowers/specs/2026-10-25-home-theme-gallery.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-gallery.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-09-pipeline-1-20261025.log",
+            "verifiedCommit": "f5979dbdf3d13a1f437f353c8fab58aa84042e35",
+            "completedAt": "2026-10-25T06:22:18.621Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-09-pipeline-2-20261025.log",
+            "verifiedCommit": "f5979dbdf3d13a1f437f353c8fab58aa84042e35",
+            "completedAt": "2026-10-25T06:22:18.621Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "single unscaled tab/header|bounded wallpaper hover|softer light selected|reverses tab slides|retains carousel elapsed|settles tab motion|reuses the hidden gallery measurement|painted tab mixture continuous",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-09-root-critical-20261025.log",
+            "verifiedCommit": "f5979dbdf3d13a1f437f353c8fab58aa84042e35",
+            "completedAt": "2026-10-25T06:22:18.621Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-09-root-typecheck-20261025.log",
+            "verifiedCommit": "f5979dbdf3d13a1f437f353c8fab58aa84042e35",
+            "completedAt": "2026-10-25T06:22:18.621Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "git diff --check",
+            "verifiedCommit": "f5979dbdf3d13a1f437f353c8fab58aa84042e35",
+            "completedAt": "2026-10-25T06:22:18.621Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Root最终17/17新场景、C新17及直接旧17共34唯一真实renderer检查、tsc及双遍pipeline通过。固定header/section位置scale1，方向性14px互补淡化、快速反向和返回输入保持连续；静态hover anchor/圆角/轻2px及1.03缩放、Light淡1px框、减少动态、懒测量及字体ready释放均验证。D两轮独审与最终scope9项无阻塞，Root查看窄高和淡框实际图。正式Electron09交互仍待main构建后验收。"
+        },
+        "acceptanceCriteria": [
+          "快速开始与主题壁纸两个页签在宽/窄/矮尺寸保持固定顶栏和稳定内容区。",
+          "两个内容panel自然左右滑动及交叉淡化，快速反向/返回输入/减少动态/隐藏销毁正常，实例与轮播时钟不重建。",
+          "主题预览hover克制轻抬与内部缩放，无文字或命中区移动、圆角无露边，Light选中框减淡。",
+          "保留当前原生15壁纸/key/动态/全局原生模式和用户最新设置；新PlanA批次从clean main正式身份本地构建，实际验收后保持打开。"
+        ],
+        "risks": [
+          "正式09实际界面仍待clean main构建，源图不替代正式包。",
+          "用户正在试用Dark/Jarrick，最终保留用户最新选择，不能覆盖回更早的default。"
+        ],
+        "generatedAt": "2026-10-25T06:22:18.621Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "-t",
+        "single unscaled tab/header|bounded wallpaper hover|softer light selected|reverses tab slides|retains carousel elapsed|settles tab motion|reuses the hidden gallery measurement|painted tab mixture continuous",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
