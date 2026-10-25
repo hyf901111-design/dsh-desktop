@@ -10,18 +10,18 @@ async function fixture(options:any={}){
  const win=new Window({url:'http://localhost/'}),keys=['window','document','navigator','CustomEvent','IS_REACT_ACT_ENVIRONMENT'],previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
  for(const [key,value]of Object.entries({window:win,document:win.document,navigator:win.navigator,CustomEvent:win.CustomEvent,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,key,{configurable:true,value})
  const snapshot={scene:{slideSize:{width:800,height:450},slides:[{index:0,part:'ppt/slides/slide1.xml',nodes:[],fields:[]}]},basis:{sessionId:'actual',documentId:'document',fileVersion:'v1',name:'review.pptx'},marks:[],selectedId:null,revealSeq:0,revision:0,stale:false,busy:false,error:null}
- const listeners=new Set<()=>void>(),handle={getSnapshot:()=>snapshot,subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>listeners.delete(fn)},add:vi.fn(),select:vi.fn(),updateComment:vi.fn(),remove:vi.fn(),readd:vi.fn(),undo:vi.fn(),reanchor:vi.fn(),dispose:vi.fn()},coordinator={open:vi.fn(async(_source:any,_options:any)=>options.pending?await options.pending:handle)}
+ const listeners=new Set<()=>void>(),handle={getSnapshot:()=>snapshot,subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>listeners.delete(fn)},add:vi.fn(),select:vi.fn(),updateComment:vi.fn(),remove:vi.fn(),readd:vi.fn(),undo:vi.fn(),reanchor:vi.fn(),dispose:vi.fn()},coordinator={registerViewer:vi.fn(()=>vi.fn()),open:vi.fn(async(_source:any,_options:any)=>options.pending?await options.pending:handle)}
  ;(win as any)[Symbol.for('sherlock:pptx-annotation-input')]=coordinator
  const bridge={open:vi.fn(),save:vi.fn()};Object.assign(win,{sherlockPptEditor:bridge})
  win.HTMLElement.prototype.getBoundingClientRect=function(){return new win.DOMRect(0,0,800,450)}
  const Preview=(props:any)=>{const viewer=React.useMemo(()=>({getFileVersion:async()=>snapshot.basis.fileVersion}),[]);React.useEffect(()=>{props.onPptxViewer(viewer);return()=>props.onPptxViewer(null)},[props.onPptxViewer]);return React.createElement('div',{'data-slide-index':0},React.createElement('div',{'data-mounted':'1'},React.createElement('div',{style:{width:800,height:450},'data-native-slide':''},React.createElement('div',{'data-pptx-node-id':'2','data-pptx-part':'ppt/slides/slide1.xml','data-pptx-width':200,'data-pptx-height':100},React.createElement('div',{'data-pptx-paragraph':0},'原始标题')))))}
- const Component=createPptxEditorComponent(React,Preview,undefined,createPortal),host=win.document.createElement('main');win.document.body.append(host);const root=createRoot(host as any)
+ const Component=createPptxEditorComponent(React,Preview,undefined,createPortal),host=win.document.createElement('main');host.id='odyssey-right-workspace-panel';win.document.body.append(host);const root=createRoot(host as any)
  let controls:any,state:any
  const source={sessionId:'source-owner',source:{kind:'workspace',relativePath:'review.pptx'}}
  const props:any={scope:{sessionId:'Office-untrusted-sending',cwd:'/work'},path:'review.pptx',annotationSource:source,toolbar:'host',onToolbarState:(s:any)=>{state=s},onToolbarControls:(c:any)=>{controls=c}}
  const render=async()=>{await act(async()=>root.render(React.createElement(Component,props)))};await render()
  clean.push(async()=>{await act(async()=>root.unmount());await win.happyDOM.close();for(const[key,value]of previous){if(value)Object.defineProperty(globalThis,key,value);else delete(globalThis as any)[key]}})
- return{win,host,source,bridge,coordinator,handle,props,render,get controls(){return controls},get state(){return state}}
+ return{win,host,source,bridge,coordinator,handle,snapshot,props,render,get controls(){return controls},get state(){return state}}
 }
 it('keeps the existing native preview cold and only opens read-only annotations after an explicit host toggle',async()=>{
  const f=await fixture()
@@ -69,4 +69,17 @@ it('closes the old annotation generation before a same-file native save refresh 
  f.props.annotationSource={sessionId:'different-owner',source:f.source.source};await f.render()
  expect(f.state.annotationActive).toBe(false);expect(f.host.querySelector('[data-pptx-annotation-toolbar]')).toBeNull();expect(f.handle.dispose).toHaveBeenCalledTimes(2)
  expect(f.bridge.open).not.toHaveBeenCalled();expect(f.bridge.save).not.toHaveBeenCalled()
+})
+
+it('registers a cold right preview without reading, then explicitly activates a matching saved mark',async()=>{
+ const f=await fixture()
+ expect(f.coordinator.registerViewer).toHaveBeenCalledTimes(1);expect(f.coordinator.open).not.toHaveBeenCalled();expect(f.bridge.open).not.toHaveBeenCalled()
+ const registered=(f.coordinator.registerViewer.mock.calls as any)[0][0]
+ expect(registered.source).toEqual(f.source);expect(registered.path).toBe('review.pptx');expect(registered.isAvailable()).toBe(true)
+ ;(f.snapshot.marks as any[]).push({id:'saved',ordinal:2,fileVersion:'v1',slideIndex:0,slidePart:'ppt/slides/slide1.xml',kind:'point',region:{x:.2,y:.3},nodeIds:[],comment:'原备注',stale:false,referenced:false})
+ let activation:any
+ await act(async()=>{activation=await registered.activate({documentId:'document',fileVersion:'v1',markId:'saved'},{signal:new AbortController().signal})})
+ expect(f.handle.select).not.toHaveBeenCalled();activation.select();expect(f.handle.select).toHaveBeenCalledWith('saved')
+ expect(f.bridge.open).not.toHaveBeenCalled();expect(f.bridge.save).not.toHaveBeenCalled()
+ await expect(registered.activate({documentId:'other',fileVersion:'v1',markId:'saved'},{signal:new AbortController().signal})).rejects.toThrow(/版本|身份/)
 })

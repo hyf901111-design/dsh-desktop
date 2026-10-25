@@ -29,7 +29,7 @@ beforeAll(async()=>{
  const manager=new rt.SessionRuntime(ctx,{sessions:{}},{},{events,views}),payload=window.fixturePayload;
  window.probe={calls:[],copied:[],selected:[],pending:[],failures:[],defer:payload.defer===true,proof:payload.proof,reject:payload.apiError,apiFailure:payload.apiFailure,history:[],native,manager};
  window.sherlockPptAnnotations={messagePresentation:async input=>{window.probe.calls.push(structuredClone(input));if(window.probe.reject)throw Error('unavailable');if(window.probe.apiFailure)return{ok:false,code:'forbidden',error:'not available'};if(window.probe.defer)return new Promise((resolve,reject)=>{window.probe.pending.push(resolve);window.probe.failures.push(reject)});return{ok:true,value:input.sendingSessionId===payload.sessionId?structuredClone(window.probe.proof):null}}};
- window[Symbol.for('sherlock:pptx-annotation-input')]={selectReference:value=>window.probe.selected.push(value)};
+ window[Symbol.for('sherlock:pptx-annotation-input')]={selectReference:value=>window.probe.selected.push(value),revealReference:async value=>{if(payload.revealError)throw Error(payload.revealError);window.probe.selected.push(value);return true}};
  const record=(sessionId,text=payload.text,source={kind:'user',rpcId:payload.rpcId},parts)=>{
   const session=manager.manager.get(sessionId);session.openState='open';session.blankBit=false;session.handleRunning(false);
   const history=[{seq:9,time:1009,type:'user/message',data:{id:'actual-user',role:'user',source,content:parts??[{type:'text',text}]},surfaceOp:'append'}];
@@ -225,5 +225,16 @@ it.each(['null','forbidden'])('keeps verified pins only while a catalog retry is
   await f.page.evaluate(kind=>window.probe.pending.shift()(kind==='null'?{ok:true,value:null}:{ok:false,code:'forbidden',error:'no longer proven'}),kind)
   await expect.poll(()=>f.page.locator('.gdEzaW_bubble').innerText()).toBe(value.text)
   expect(await f.page.locator('[data-pptx-sent-reference]').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},10000)
+
+it('keeps a failed cold saved-reference reveal visible and actionable without exposing machine paths',async()=>{
+ const value={...annotationMessageFixture(),revealError:'原文件版本已变化，请重新定位。'},f=await fixture(value)
+ try{
+  await f.page.locator('[data-pptx-sent-reference]').first().click()
+  await expect.poll(()=>f.page.getByRole('alert').innerText()).toBe(value.revealError)
+  expect(await f.page.locator('[data-pptx-sent-reference]').count()).toBe(2)
+  expect(await f.page.locator('.gdEzaW_bubble').innerText()).not.toContain('manifest.json')
+  expect(await f.page.evaluate(()=>window.probe.selected)).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },10000)

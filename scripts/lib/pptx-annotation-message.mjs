@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto'
 import {parsePptxAnnotationLocator} from './pptx-annotation-input.mjs'
 import {pptxAnnotationAssets} from './pptx-annotation-assets.mjs'
 
@@ -92,6 +93,24 @@ export function usePptxAnnotationMessage(text,identity,userSeq){
  return available&&loadingCandidate?messagePending:null
 }
 
+export function PptxAnnotationSentReference({part}){
+ const [error,setError]=react.useState(null),[busy,setBusy]=react.useState(false),owner=react.useRef(null)
+ const key=JSON.stringify(part.reference);owner.current=key
+ react.useEffect(()=>{owner.current=key;setError(null);setBusy(false);return()=>{owner.current=null}},[key])
+ const label='标注 '+part.ordinal+' · '+part.label
+ const reveal=async()=>{
+  const expected=key;setError(null);setBusy(true)
+  try{
+   const api=window[Symbol.for('sherlock:pptx-annotation-input')]
+   if(typeof api?.revealReference!=='function')throw Error('PPT 标注尚未就绪，请稍后重新打开。')
+   if(await api.revealReference(key)!==true)throw Error('未能打开原文件标注，请重试。')
+  }catch(reason){if(owner.current===expected)setError(reason?.message||'原文件暂不可用，请重新打开。')}
+  finally{if(owner.current===expected)setBusy(false)}
+ }
+ return react.createElement(react.Fragment,null,
+  react.createElement('button',{type:'button',className:MessageItem_module_css_default.refChip+' pptxa-sent-reference','data-ref-chip':'pptx-annotation','data-pptx-sent-reference':part.reference.markId,'aria-label':label,title:label,'aria-busy':busy||undefined,disabled:busy,onClick:reveal},react.createElement('span',{className:'pptxa-reference-pin','aria-hidden':true},react.createElement('img',{src:messagePinAsset,width:18,height:18,alt:'',draggable:false}),react.createElement('span',{className:'pptxa-reference-number'},String(part.ordinal))),react.createElement('span',{className:'pptxa-sent-label'},part.label)),
+  error&&react.createElement('small',{role:'alert','data-pptx-sent-reveal-error':'',style:{display:'block',fontSize:12,marginTop:6}},error))
+}
 export function renderPptxAnnotationMessage(parts,raw,original,research,openFile){
  // Existing structured Research headers have their own hidden-context/offset protocol.
  if(!parts||original.text!==raw||original.files.length||(original.artifacts?.length??0)||(original.occurrences?.length??0)||(original.artifactOccurrences?.length??0))return projectResearchUserText(research,openFile)
@@ -99,10 +118,7 @@ export function renderPptxAnnotationMessage(parts,raw,original,research,openFile
  return react.createElement(react.Fragment,null,...parts.map((part,index)=>{
   if(part.kind==='text')return react.createElement(react.Fragment,{key:index},projectUserText(part.text,openFile))
   if(part.kind==='skill')return react.createElement('span',{key:index,className:MessageItem_module_css_default.refChip,'data-ref-chip':'skill','data-pptx-sent-skill':'',title:part.label},part.label)
-  const label='标注 '+part.ordinal+' · '+part.label
-  return react.createElement('button',{key:index,type:'button',className:MessageItem_module_css_default.refChip+' pptxa-sent-reference','data-ref-chip':'pptx-annotation','data-pptx-sent-reference':part.reference.markId,'aria-label':label,title:label,onClick:()=>{
-   try{const pending=window[Symbol.for('sherlock:pptx-annotation-input')]?.selectReference?.(JSON.stringify(part.reference));pending?.catch?.(()=>{})}catch{}
-  }},react.createElement('span',{className:'pptxa-reference-pin','aria-hidden':true},react.createElement('img',{src:messagePinAsset,width:18,height:18,alt:'',draggable:false}),react.createElement('span',{className:'pptxa-reference-number'},String(part.ordinal))),react.createElement('span',{className:'pptxa-sent-label'},part.label))
+  return react.createElement(PptxAnnotationSentReference,{key:index,part})
  }))
 }
 
@@ -116,7 +132,12 @@ const hooks=[
  ['const { text, images, rest } = contentParts(content);\n\t\t\tconst originalResearch','const { text, images, rest } = contentParts(content);\nconst annotationPresentation=pptxAnnotationMessageRuntime.usePresentation(text,arguments[0].annotationIdentity,eventSeq);\n\t\t\tconst originalResearch'],
  ['projectResearchUserText(research, openFile), rest.map','pptxAnnotationMessageRuntime.render(annotationPresentation,text,originalResearch,research,openFile), rest.map'],
 ]
-const runtime=()=>begin+'\nconst pptxAnnotationMessageRuntime=(()=>{\n'+[parsePptxAnnotationLocator,pptxAnnotationMessageRequest,pptxAnnotationMessageLoadingCandidate,pptxAnnotationMessageSegments,createPptxAnnotationMessageScope,usePptxAnnotationMessage,renderPptxAnnotationMessage].map(fn=>fn.toString()).join('\n')+'\nconst messageScope=createPptxAnnotationMessageScope(window),messageNoopSubscribe=()=>()=>{},messageZero=()=>0,messagePending=Object.freeze({pending:true}),messagePinAsset='+JSON.stringify(pptxAnnotationAssets['pin18-normal'])+';\nreturn{usePresentation:usePptxAnnotationMessage,render:renderPptxAnnotationMessage};\n})();\n'+end+'\n'
+const runtime=()=>begin+'\nconst pptxAnnotationMessageRuntime=(()=>{\n'+[parsePptxAnnotationLocator,pptxAnnotationMessageRequest,pptxAnnotationMessageLoadingCandidate,pptxAnnotationMessageSegments,createPptxAnnotationMessageScope,usePptxAnnotationMessage,PptxAnnotationSentReference,renderPptxAnnotationMessage].map(fn=>fn.toString()).join('\n')+'\nconst messageScope=createPptxAnnotationMessageScope(window),messageNoopSubscribe=()=>()=>{},messageZero=()=>0,messagePending=Object.freeze({pending:true}),messagePinAsset='+JSON.stringify(pptxAnnotationAssets['pin18-normal'])+';\nreturn{usePresentation:usePptxAnnotationMessage,render:renderPptxAnnotationMessage};\n})();\n'+end+'\n'
+function priorMessageRuntime(source){
+ const start=source.indexOf(begin),finish=source.indexOf(end,start);if(start<0||finish<0)return null
+ const value=source.slice(start,finish+end.length+1)
+ return createHash('sha256').update(value).digest('hex')==='0e37ceacc17787da54a64c0143820bafa75ae5ca13e72f7d8a3c8d293ad82f67'?value:null
+}
 function once(source,before,after){if(source.split(before).length!==2)throw Error('PPT annotation message anchor drifted');return source.replace(before,after)}
 export function stripPptxAnnotationMessages(source){
  if(!source.includes(begin)&&!source.includes(restore)){
@@ -128,7 +149,7 @@ export function stripPptxAnnotationMessages(source){
  const metadata=JSON.parse(marker[0].slice(restore.length,-3))
  if(JSON.stringify(metadata)!==JSON.stringify(hooks))throw Error('PPT annotation message restore drifted')
  let next=source.replace('\n'+marker[0]+'\n','')
- next=once(next,runtime(),'')
+ next=once(next,priorMessageRuntime(next)??runtime(),'')
  for(const [before,after]of [...hooks].reverse())next=once(next,after,before)
  return next
 }
@@ -139,6 +160,6 @@ export function patchPptxAnnotationMessages(source){
  const anchor='function UserStyleBubble('
  next=once(next,anchor,runtime()+anchor)
  next+='\n'+restore+JSON.stringify(hooks)+' */\n'
- if(base!==source&&next!==source)throw Error('PPT annotation message installed state drifted')
+ if(base!==source&&next!==source&&!priorMessageRuntime(source))throw Error('PPT annotation message installed state drifted')
  return next
 }
