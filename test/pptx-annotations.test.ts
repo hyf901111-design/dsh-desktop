@@ -186,6 +186,23 @@ describe('immutable annotation submissions and verified new versions', () => {
     await writeFile(path.join(f.workspace, output), 'corrupt replacement')
     expect(await f.service.lookupOutput({ sendingSessionId: 'session', path: output })).toMatchObject({ ok: true, value: { status: 'failed', code: 'invalid-output' } })
   })
+  it('locks the first accepted bytes across valid replacement and restart without rewriting its version history', async () => {
+    const f = await preparedFixture(), acceptedBytes = changedBytes(f.bytes), output = await outputFile(f, acceptedBytes)
+    f.events.push(...ledger(f.prepared, output))
+    const request = { sendingSessionId: 'session', preparedId: f.prepared.preparedId, submissionId: 'rpc-actual' }
+    const accepted = (await f.service.complete(request)).value.documents[0].versionRecord
+    const replacement = new PptxArchive(acceptedBytes)
+    await writeFile(path.join(f.workspace, output), replacement.replace(new Map([['ppt/slides/slide2.xml', Buffer.from(replacement.read('ppt/slides/slide2.xml').toString().replace('修订年度', '后来替换的内容'))]])))
+    const api = await import(modulePath), restart = new api.PptxAnnotationService(f.options)
+    expect(await restart.lookupOutput({ sendingSessionId: 'session', path: output })).toMatchObject({ ok: true, value: { status: 'failed', code: 'invalid-output' } })
+    expect(await restart.complete(request)).toMatchObject({ ok: true, value: { status: 'failed', documents: [{ status: 'failed', code: 'invalid-output', versionRecord: accepted }] } })
+    expect(await restart.lookupOutput({ sendingSessionId: 'session', path: output })).toMatchObject({ ok: true, value: { status: 'failed', versionRecord: accepted } })
+    const secondRestart = new api.PptxAnnotationService(f.options)
+    expect(await secondRestart.complete(request)).toMatchObject({ ok: true, value: { status: 'failed', documents: [{ status: 'failed', code: 'invalid-output', versionRecord: accepted }] } })
+    await writeFile(path.join(f.workspace, output), acceptedBytes)
+    expect(await secondRestart.complete(request)).toMatchObject({ ok: true, value: { status: 'success', documents: [{ status: 'success', versionRecord: accepted }] } })
+    expect(await readFile(path.join(f.workspace, 'deck.pptx'))).toEqual(f.bytes)
+  })
   it('uses a preparation history watermark instead of scanning unrelated ancient turns', async () => {
     const f = await setup(), { reference } = await marked(f)
     f.events.push(...Array.from({ length: 1001 }, (_, seq) => ({ seq, type: 'tool/result', data: {} })))

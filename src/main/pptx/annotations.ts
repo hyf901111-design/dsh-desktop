@@ -356,6 +356,7 @@ export class PptxAnnotationService {
       if (delivery.status === 'pending') { await this.savePrepared(prepared); return { status: 'pending', documents: prepared.documents.map(doc => ({ documentId: doc.documentId, status: 'pending' as const })) } }
       const documents: PptxAnnotationCompleteValue['documents'] = []
       for (const doc of prepared.documents) {
+        const previous = prepared.completed?.documents.find(item => item.documentId === doc.documentId)?.versionRecord
         try {
           if (delivery.status !== 'completed') fail('submission-unconfirmed', '对应实际任务未完成，或后续独立请求已开始；未采用此候选文件。')
           // A bare mention is not a public delivered link. Only this preallocated output is admissible.
@@ -368,14 +369,14 @@ export class PptxAnnotationService {
           if (before.version !== doc.inputVersion) fail('conflict', '本次修改的输入快照已变化。')
           let output: Awaited<ReturnType<typeof readAnnotationPptx>>
           try { output = await this.stagedFile(prepared, doc.outputRelativePath) } catch { fail('invalid-output', '实际输出不是可安全打开的独立 PPTX 文件。') }
+          if (previous && previous.version !== output!.version) fail('invalid-output', '首次验收的 PPT 输出已被替换，原版本记录已保留；请核对候选文件。')
           if (output!.inode === source.inode || !annotationContentChanged(before, output!)) fail('unchanged', '输出 PPT 没有实际内容变化，未登记为修改成功。')
           await this.assertActive(owner, prepared)
           if ((await readAnnotationPptx(doc.target)).version !== doc.fileVersion) fail('source-changed', '校验期间原 PPT 已变化，候选文件已保留。')
-          const previous = prepared.completed?.documents.find(item => item.documentId === doc.documentId)?.versionRecord
-          const versionRecord: PptxAnnotationVersionRecord = previous?.version === output!.version ? previous : { id: randomUUID(), sourceDocumentId: doc.documentId, sourceVersion: doc.fileVersion, documentId: annotationHash(expected), version: output!.version, relativePath: doc.outputRelativePath, preparedId: prepared.preparedId, submissionId, createdAt: (this.options.now?.() ?? new Date()).toISOString(), reanchorRequired: true }
+          const versionRecord: PptxAnnotationVersionRecord = previous ?? { id: randomUUID(), sourceDocumentId: doc.documentId, sourceVersion: doc.fileVersion, documentId: annotationHash(expected), version: output!.version, relativePath: doc.outputRelativePath, preparedId: prepared.preparedId, submissionId, createdAt: (this.options.now?.() ?? new Date()).toISOString(), reanchorRequired: true }
           await this.store.write(owner, sessionId, `version:${versionRecord.id}`, versionRecord)
           documents.push({ documentId: doc.documentId, status: 'success', newFileRelativePath: doc.outputRelativePath, versionRecord })
-        } catch (error) { documents.push({ documentId: doc.documentId, status: 'failed', code: error instanceof AnnotationError ? error.code : 'invalid-output', error: error instanceof Error ? error.message : 'PPT 输出校验失败。' }) }
+        } catch (error) { documents.push({ documentId: doc.documentId, status: 'failed', code: error instanceof AnnotationError ? error.code : 'invalid-output', error: error instanceof Error ? error.message : 'PPT 输出校验失败。', ...(previous ? { versionRecord: previous } : {}) }) }
       }
       const successes = documents.filter(doc => doc.status === 'success').length
       const completed: PptxAnnotationCompleteValue = { status: successes === documents.length ? 'success' : successes ? 'partial' : 'failed', documents }
