@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="&#229;&#174;&#154;&#228;&#189;&#141;&#229;&#155;&#190;&#233;&#146;&#137;&#232;&#189;&#174;&#229;&#187;&#147;">
+<g id="Vector">
+<path d="M9 0.75C5.35 0.75 2.4 3.7 2.4 7.35C2.4 11.75 9 17.75 9 17.75C9 17.75 15.6 11.75 15.6 7.35C15.6 3.7 12.65 0.75 9 0.75Z" fill="#292C31"/>
+<mask id="stroke0_0_4" fill="white">
+<path d="M9 0.75C5.35 0.75 2.4 3.7 2.4 7.35C2.4 11.75 9 17.75 9 17.75C9 17.75 15.6 11.75 15.6 7.35C15.6 3.7 12.65 0.75 9 0.75Z"/>
+</mask>
+<path d="M9 0.75C5.35 0.75 2.4 3.7 2.4 7.35C2.4 11.75 9 17.75 9 17.75C9 17.75 15.6 11.75 15.6 7.35C15.6 3.7 12.65 0.75 9 0.75Z" stroke-width="2.2" stroke-linejoin="round" stroke="#BFD3F1" mask="url(#stroke0_0_4)"/>
+</g>
+</g>
+</svg>

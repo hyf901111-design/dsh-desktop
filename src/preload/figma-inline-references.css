@@ -115,3 +115,10 @@ body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-c
   body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] { --odyssey-deliverable-slot:0px; --odyssey-deliverable-gap:0px; min-height:126px; }
   body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] .uV2eYG_scroll,body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_mirror { min-height:78px; }
 }
+
+/* 3017:370025: native single-cell HUG tag, original numbered pin assets. */
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chip[data-reference-source="pptx-annotation"] .uV2eYG_chipLabelText{flex:0 1 auto!important}
+.pptxa-reference-pin{position:relative;display:inline-block;width:18px;height:18px;flex:0 0 18px!important;line-height:0;pointer-events:none}
+.pptxa-reference-pin img{display:block;width:18px;height:18px;max-width:none}
+.pptxa-reference-number{position:absolute;left:9px;top:7.25px;width:18px;height:12px;transform:translate(-50%,-50%);font:500 10px/12px "Noto Sans SC",sans-serif;text-align:center;color:#e6eaf0}
+[data-selected] .pptxa-reference-number{color:#f4f6fa}

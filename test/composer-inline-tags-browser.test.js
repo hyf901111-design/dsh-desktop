@@ -17,7 +17,7 @@ beforeAll(async()=>{
  const store=value=>{const listeners=new Set();return {getSnapshot:()=>value,set:next=>{value=next;for(const listener of listeners)listener()},subscribe:listener=>{listeners.add(listener);return()=>listeners.delete(listener)}}};
  const primitives=new Proxy({Tooltip:({children})=>children,useAnchoredMaxHeight:()=>1000},{get:(target,key)=>target[key]??fake});
  const require=id=>id==='react'?React:id==='react/jsx-runtime'?JSX:id==='react-dom'?ReactDOM:id==='react-dom/client'?{createRoot}:id==='@deepseek-ai/dsh-client-runtime/client'?{createSnapshotStore:store}:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:fake;
- window.mountComposer=()=>{
+ window.mountComposer=(annotations=false)=>{
   const client=descriptors[0].factory(require),shell=new client.SessionInputShell({actx:{},defaultSink:()=>{}});
   const seed=()=>{
    shell.setDraft('前');
@@ -27,6 +27,10 @@ beforeAll(async()=>{
    shell.insertFilePaths(['/work/材料.md']);
    insert({source:'research-artifact',ref:JSON.stringify({id:'component-one',messageId:'message-one',title:'研究组件',excerpt:'组件内容'}),label:'研究组件',clipboardText:'研究组件'});
    insert({source:'conversation-component',ref:JSON.stringify({version:1,kind:'conversation-component',sessionId:'current',componentId:'component-two',revision:1,title:'对话组件'}),label:'对话组件',clipboardText:'对话组件'});
+   if(annotations){
+    window.pinSelections=[];window[Symbol.for('sherlock:pptx-annotation-input')]={referenceInfo:value=>({ordinal:JSON.parse(value).markId==='mark1'?1:12}),selectReference:value=>window.pinSelections.push(JSON.parse(value)),subscribe:()=>()=>{},getRevision:()=>0};
+    for(const [markId,label]of[['mark1','第1页 · 标题区域'],['mark12','第10页 · 核心观点']])insert({source:'pptx-annotation',ref:JSON.stringify({version:1,sessionId:'current',documentId:'doc',fileVersion:'v1',markId}),label,clipboardText:label});
+   }
    shell.insertText('尾',{start:shell.snapshot.draft.length,end:shell.snapshot.draft.length,draftRev:shell.snapshot.draftRev});
   };seed();
   const useInput=selector=>selector(React.useSyncExternalStore(shell.state.subscribe,shell.state.getSnapshot));
@@ -50,8 +54,8 @@ async function fixture(kind='composer'){
  const errors=[];page.on('pageerror',error=>errors.push(error.message))
  await page.setContent(`<style>${native}\n${readFileSync('src/preload/figma-inline-references.css','utf8')}body{margin:24px;--dsw-font-family:system-ui;--dsh-composer-side-clearance:0;--dsh-composer-card-max-width:700px}.uV2eYG_card{font:16px/24px system-ui;padding:12px}.uV2eYG_grow{width:100%}</style><main id="fixture"></main>`)
  await page.addScriptTag({content:bootstrap});await page.addScriptTag({content:conversation});await page.addScriptTag({content:commands})
- await page.evaluate(kind=>kind==='composer'?window.mountComposer():window.mountPopup(),kind)
- await page.waitForSelector(kind==='composer'?'[data-figma-inline-ready]':'[role=option]')
+ await page.evaluate(kind=>kind==='composer'||kind==='annotations'?window.mountComposer(kind==='annotations'):window.mountPopup(),kind)
+ await page.waitForSelector(kind==='composer'||kind==='annotations'?'[data-figma-inline-ready]':'[role=option]')
  expect(errors).toEqual([])
  return {page,errors}
 }
@@ -147,3 +151,21 @@ it('settles repeated native full-draft deletion without residual references, poi
   expect(errors).toEqual([])
  }finally{await page.close()}
 },20000)
+
+it('fits PPT annotation labels to native 24px HUG cells with original 18px numbered pins and delegates selection/removal',async()=>{
+ const{page,errors}=await fixture('annotations');try{
+  const chip=page.locator('[data-reference-source="pptx-annotation"]').first()
+  await expect.poll(()=>chip.locator('[data-pptx-annotation-tag]').count()).toBe(1)
+  const before=await page.evaluate(()=>window.fixture.shell.snapshot)
+  const measure=()=>chip.evaluate(el=>{const label=el.querySelector('.uV2eYG_chipLabel'),text=el.querySelector('.uV2eYG_chipLabelText'),pin=el.querySelector('[data-pptx-annotation-tag]'),r=label.getBoundingClientRect();return{width:r.width,text:text.getBoundingClientRect().width,height:r.height,pin:pin.getBoundingClientRect().width,padding:[getComputedStyle(label).paddingLeft,getComputedStyle(label).paddingRight],gap:getComputedStyle(label).gap}})
+  let r=await measure();expect(r.height).toBe(24);expect(r.pin).toBe(18);expect(r.padding).toEqual(['6px','6px']);expect(r.gap).toBe('5px');expect(Math.abs(r.width-r.text-35)).toBeLessThanOrEqual(2)
+  expect(await chip.locator('.pptxa-reference-number').textContent()).toBe('1')
+  const originalWidth=r.width;await chip.click({timeout:3000});await expect.poll(()=>chip.getAttribute('data-selected')).toBe('true')
+  await expect.poll(async()=>Math.round((await measure()).width-originalWidth)).toBe(19)
+  expect(await page.evaluate(()=>window.pinSelections)).toEqual([{version:1,sessionId:'current',documentId:'doc',fileVersion:'v1',markId:'mark1'}])
+  for(const dark of[false,true]){await page.evaluate(dark=>document.body.toggleAttribute('data-ds-dark-theme',dark),dark);await page.screenshot({path:'output/ppt-markup-design-20261025/ui-validation/tags-'+(dark?'dark':'light')+'.png'})}
+  await chip.locator('.sherlock-inline-reference-remove').click({timeout:3000})
+  expect(await page.evaluate(()=>window.fixture.shell.snapshot.occurrences.filter(o=>o.source==='pptx-annotation').map(o=>JSON.parse(o.ref).markId))).toEqual(['mark12'])
+  expect(await page.evaluate(()=>window.fixture.shell.snapshot.draft)).toBe(before.draft.slice(0,before.occurrences[5].offset)+before.draft.slice(before.occurrences[5].offset+1));expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
