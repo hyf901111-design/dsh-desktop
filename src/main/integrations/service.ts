@@ -690,6 +690,12 @@ export class IntegrationService {
             throw error;
         }
     }
+    /** Display metadata only: no request dispatch, synchronization, resource reads or heartbeat. */
+    getPresentationSkill(id: string): { id: string; invocationName: string; label: string } | null {
+        if (id !== 'builtin:efund-ppt-maker' || !this.options.getOwnerId() || !this.bundledSkills.has(id)) return null;
+        const row = this.snapshot().rows.find(row => row.kind === 'skill' && row.id === id && row.enabled);
+        return row?.invocationName && row.invocationLabel ? { id: row.id, invocationName: row.invocationName, label: '/' + row.invocationLabel } : null;
+    }
     private snapshot() {
         const state = this.store.snapshot(), owner = this.options.getOwnerId(), rows: IntegrationRow[] = [];
         if (owner) {

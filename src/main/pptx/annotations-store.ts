@@ -42,6 +42,17 @@ export class PptxAnnotationStore {
       return JSON.parse(await readFile(target, 'utf8')) as T
     } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error }
   }
+  /** Presentation lookups must not create metadata even for unknown session hints. */
+  async readExisting<T>(owner: string, sessionId: string, key: string): Promise<T | null> {
+    try {
+      const root = await realpath(this.root), directory = path.join(root, annotationHash(JSON.stringify([owner, sessionId])))
+      const parent = await lstat(directory)
+      if (!parent.isDirectory() || parent.isSymbolicLink() || await realpath(directory) !== directory) throw Error('标注记录目录不可用')
+      const target = path.join(directory, annotationHash(key) + '.json'), info = await lstat(target)
+      if (!info.isFile() || info.isSymbolicLink() || info.size > 8 * 1024 * 1024) throw Error('标注记录不可用')
+      return JSON.parse(await readFile(target, 'utf8')) as T
+    } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error }
+  }
   async write(owner: string, sessionId: string, key: string, value: unknown) {
     const directory = await this.directory(owner, sessionId), target = path.join(directory, annotationHash(key) + '.json')
     const temporary = target + '.' + randomUUID() + '.tmp'

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fixture } from './fixtures/pptx'
@@ -297,10 +297,142 @@ it('rejects every privileged annotation action from subframes and unrelated wind
   const f = await setup(), api = await import(modulePath), handlers = new Map<string, any>()
   const webContents = { mainFrame: { processId: 11, routingId: 12 } }, window = { isDestroyed: () => false, webContents }
   api.registerPptxAnnotationHandlers({ service: f.service, getMainWindow: () => window, ipcMain: { removeHandler: (channel: string) => handlers.delete(channel), handle: (channel: string, handler: any) => handlers.set(channel, handler) } })
-  expect(handlers.size).toBe(7)
+  expect(handlers.size).toBe(8)
   for (const handler of handlers.values()) {
     expect(() => handler({ sender: webContents, senderFrame: { processId: 11, routingId: 13 } }, source)).toThrow(/main EWork/)
     expect(() => handler({ sender: {}, senderFrame: webContents.mainFrame }, source)).toThrow(/main EWork/)
   }
   expect(await handlers.get('pptx:annotation:open')({ sender: webContents, senderFrame: webContents.mainFrame }, source)).toMatchObject({ ok: true })
+})
+
+async function presentationFixture(textSuffix = '') {
+  const f = await preparedFixture()
+  const text = '整体要求📈保留\n' + f.prepared.serializedReferences[0].text + '\n个人补充原文' + textSuffix
+  const history = ledger(f.prepared, f.prepared.documents[0].outputRelativePath)
+  history[2]!.data.content = [{ type: 'text', text }]
+  f.events.push(...history)
+  expect(await f.service.bindSubmission({ sendingSessionId: 'session', preparedId: f.prepared.preparedId })).toMatchObject({ ok: true, value: { status: 'bound', userSeq: 3, submissionId: 'rpc-actual' } })
+  const input = { sendingSessionId: 'session', preparedId: f.prepared.preparedId, userSeq: 3, submissionId: 'rpc-actual', text }
+  return { ...f, text, input }
+}
+async function treeBytes(root: string, prefix = ''): Promise<Record<string, string>> {
+  const result: Record<string, string> = {}
+  for (const entry of await readdir(path.join(root, prefix), { withFileTypes: true })) {
+    const relative = path.join(prefix, entry.name)
+    if (entry.isDirectory()) Object.assign(result, await treeBytes(root, relative))
+    else result[relative] = (await readFile(path.join(root, relative))).toString('base64')
+  }
+  return result
+}
+
+describe('read-only authoritative sent annotation presentation', () => {
+  it('labels a frozen rectangle as a region even when it includes a named title node', async () => {
+    const f = await setup(), { doc, reference } = await marked(f)
+    await f.service.mutate({ sessionId: 'session', documentId: doc.documentId, version: doc.version, expectedStateRevision: 1, operations: [{ op: 'put', mark: { ...point, id: reference.markId, kind: 'rect', region: { x: 0.25, y: 0.5, width: 0.2, height: 0.2 } } }] })
+    const prepared = (await f.service.prepare({ sendingSessionId: 'session', sendId: 'rectangle-label', expectedDraftRev: 5, references: [{ ...reference, expectedStateRevision: 2 }] })).value
+    const manifest = JSON.parse(await readFile(path.join(f.workspace, prepared.manifestRelativePath), 'utf8'))
+    expect(manifest.documents[0].marks[0].sourceNodes[0].name).toBe('标题')
+    const text = prepared.serializedReferences[0].text; f.events.push(...ledger(prepared, prepared.documents[0].outputRelativePath))
+    expect(await f.service.messagePresentation({ sendingSessionId: 'session', preparedId: prepared.preparedId, submissionId: 'rpc-actual', userSeq: 3, text })).toMatchObject({ ok: true, value: { spans: [{ label: '第1页 · 框选区域' }] } })
+  })
+
+  it('projects exact UTF16 spans from the persisted human submission with frozen marks after a cold restart', async () => {
+    const f = await presentationFixture(), api = await import(modulePath)
+    expect(f.service.messagePresentation).toBeTypeOf('function')
+    await f.service.mutate({ sessionId: 'session', documentId: f.doc.documentId, version: f.doc.version, expectedStateRevision: 1, operations: [{ op: 'put', mark: { ...point, id: f.reference.markId, comment: '发送后另改的备注' } }] })
+    const before = await treeBytes(f.root), restart = new api.PptxAnnotationService(f.options)
+    const result = await restart.messagePresentation(f.input)
+    expect(result).toMatchObject({ ok: true, value: { preparedId: f.prepared.preparedId, submissionId: 'rpc-actual', userSeq: 3, text: f.text, spans: [{ kind: 'pptx-annotation', start: '整体要求📈保留\n'.length, end: '整体要求📈保留\n'.length + f.prepared.serializedReferences[0].text.length, text: f.prepared.serializedReferences[0].text, ordinal: 1, comment: point.comment, reference: f.prepared.serializedReferences[0].reference }] } })
+    expect(result.value?.skill).toBeUndefined()
+    expect(result.value!.spans.every((span: { start: number; end: number; text: string }) => f.text.slice(span.start, span.end) === span.text)).toBe(true)
+    expect(await treeBytes(f.root)).toEqual(before)
+  })
+
+  it('returns ordinary text unchanged for unknown, modified, wrong-sequence and wrong-RPC hints without creating metadata', async () => {
+    const empty = await setup()
+    expect(empty.service.messagePresentation).toBeTypeOf('function')
+    expect(await empty.service.messagePresentation({ sendingSessionId: 'session', preparedId: '089686f5-1f15-446e-83c6-99955a1789e1', userSeq: 0, submissionId: 'ordinary-rpc', text: '普通用户的 /ework-skill-180a6a3f86f8942e 文本' })).toEqual({ ok: true, value: null })
+    await expect(readdir(path.join(empty.root, 'state'))).rejects.toMatchObject({ code: 'ENOENT' })
+    const f = await presentationFixture()
+    for (const input of [{ ...f.input, text: f.text + '改过正文' }, { ...f.input, userSeq: 4 }, { ...f.input, submissionId: 'wrong-rpc' }, { ...f.input, sendingSessionId: 'other' }]) expect(await f.service.messagePresentation(input)).toEqual({ ok: true, value: null })
+    f.owner('bob'); const before = await treeBytes(f.root)
+    expect(await f.service.messagePresentation(f.input)).toEqual({ ok: true, value: null }); expect(await treeBytes(f.root)).toEqual(before)
+  })
+
+  it('recovers a consumed human submission read-only before its binding observer writes, including split native text parts', async () => {
+    const f = await preparedFixture(), text = '中文📌' + f.prepared.serializedReferences[0].text, history = ledger(f.prepared, f.prepared.documents[0].outputRelativePath)
+    const split = text.indexOf(f.prepared.preparedId) + 4
+    history[2]!.data.content = [{ type: 'text', text: text.slice(0, split) }, { type: 'text', text: text.slice(split) }]
+    f.events.push(...history); const before = await treeBytes(f.root), api = await import(modulePath), restart = new api.PptxAnnotationService(f.options)
+    expect(await restart.messagePresentation({ sendingSessionId: 'session', preparedId: f.prepared.preparedId, submissionId: 'rpc-actual', userSeq: 3, text })).toMatchObject({ ok: true, value: { userSeq: 3, text, spans: [{ start: '中文📌'.length, ordinal: 1 }] } })
+    expect(await treeBytes(f.root)).toEqual(before)
+  })
+
+  it('does not treat queued or ordinary manifest mentions as materialized annotation blocks', async () => {
+    const queued = await preparedFixture(), text = queued.prepared.serializedReferences[0].text
+    queued.events.push({ seq: 1, type: 'agent/inbox/spliced', data: { inserted: [{ id: 'queued', role: 'user', source: { kind: 'user', rpcId: 'rpc-actual' }, content: [{ type: 'text', text }] }] } })
+    expect(await queued.service.messagePresentation({ sendingSessionId: 'session', preparedId: queued.prepared.preparedId, submissionId: 'rpc-actual', userSeq: 3, text })).toEqual({ ok: true, value: null })
+    const ordinary = await preparedFixture(), literal = '仅讨论普通技能 /ework-skill-180a6a3f86f8942e 与清单 `' + ordinary.prepared.manifestRelativePath + '`', history = ledger(ordinary.prepared, ordinary.prepared.documents[0].outputRelativePath)
+    history[2]!.data.content = [{ type: 'text', text: literal }]; ordinary.events.push(...history)
+    expect(await ordinary.service.messagePresentation({ sendingSessionId: 'session', preparedId: ordinary.prepared.preparedId, submissionId: 'rpc-actual', userSeq: 3, text: literal })).toEqual({ ok: true, value: null })
+  })
+
+  it('orders two frozen marks by their actual UTF16 text positions without renumbering them', async () => {
+    const f = await setup(), { doc, reference } = await marked(f)
+    const added = await f.service.mutate({ sessionId: 'session', documentId: doc.documentId, version: doc.version, expectedStateRevision: 1, operations: [{ op: 'put', mark: { ...point, slideIndex: 1, slidePart: 'ppt/slides/slide1.xml', nodeIds: [], comment: '第二处冻结备注' } }] })
+    const prepared = (await f.service.prepare({ sendingSessionId: 'session', sendId: 'two-marks', expectedDraftRev: 9, references: [{ ...reference, expectedStateRevision: 2 }, { ...reference, expectedStateRevision: 2, markId: added.value.marks[1].id }] })).value
+    const prefix = '开场📈\n', middle = '\n中间全局要求📌\n', text = prefix + prepared.serializedReferences[1].text + middle + prepared.serializedReferences[0].text, history = ledger(prepared, prepared.documents[0].outputRelativePath)
+    history[2]!.data.content = [{ type: 'text', text }]; f.events.push(...history)
+    const result = await f.service.messagePresentation({ sendingSessionId: 'session', preparedId: prepared.preparedId, userSeq: 3, submissionId: 'rpc-actual', text })
+    expect(result.ok).toBe(true); expect(result.value.spans.map((span: { ordinal: number }) => span.ordinal)).toEqual([2, 1]); expect(result.value.spans.map((span: { start: number }) => span.start)).toEqual([prefix.length, prefix.length + prepared.serializedReferences[1].text.length + middle.length])
+  })
+
+  it('refuses a changed immutable manifest instead of trusting a matching visible message', async () => {
+    const f = await presentationFixture(), file = path.join(f.workspace, f.prepared.manifestRelativePath)
+    await chmod(file, 0o600); await writeFile(file, '{"version":1,"changed":true}')
+    expect(await f.service.messagePresentation(f.input)).toMatchObject({ ok: false, code: 'conflict' })
+  })
+
+  it('returns a skill span only for the actual builtin catalog and the unique terminal invocation in that human request', async () => {
+    const wire = '/ework-skill-180a6a3f86f8942e', f = await presentationFixture('。' + wire), api = await import(modulePath)
+    const bundle = path.join(f.root, 'bundled'), skill = path.join(bundle, 'efund-ppt-maker'); await mkdir(skill, { recursive: true })
+    await writeFile(path.join(skill, 'SKILL.md'), '---\nname: efund-ppt-maker\ndescription: 制作正式演示文稿\n---\n\n# 正文\n')
+    await writeFile(path.join(skill, '_meta.json'), JSON.stringify({ slug: 'efund-ppt-maker', source: 'eSkill', cnName: 'PPT制作助手', version: '1.0.0' }))
+    const { IntegrationService } = await import('../src/main/integrations/service'), integrations = await IntegrationService.open({ root: path.join(f.root, 'integrations'), encryption: { isEncryptionAvailable: () => true, encryptString: value => Buffer.from(value), decryptString: value => value.toString() }, getOwnerId: () => 'alice', bundledSkillDirectory: bundle })
+    try {
+      const service = new api.PptxAnnotationService({ ...f.options, presentationSkill: async (id: 'builtin:efund-ppt-maker') => integrations.getPresentationSkill(id) }), before = await treeBytes(f.root)
+      expect(await service.messagePresentation(f.input)).toMatchObject({ ok: true, value: { skill: { id: 'builtin:efund-ppt-maker', label: '/efund-ppt-maker', text: wire, start: f.text.length - wire.length, end: f.text.length } } })
+      expect(await treeBytes(f.root)).toEqual(before)
+      const human = f.events.find(event => event.type === 'user/message')!
+      for (const text of [wire + '作为普通文本\n' + f.text, f.text + '仍为普通正文']) {
+        human.data.content = [{ type: 'text', text }]
+        const result = await service.messagePresentation({ ...f.input, text }); expect(result.ok).toBe(true); expect(result.ok && result.value?.skill).toBeUndefined()
+      }
+      human.data.content = [{ type: 'text', text: f.text }]
+      await integrations.store.change(state => { state.bundledSkillPreferences ??= {}; state.bundledSkillPreferences.alice = { 'builtin:efund-ppt-maker': { enabled: false, revision: 1 } } })
+      const disabled = await service.messagePresentation(f.input); expect(disabled.ok).toBe(true); expect(disabled.ok && disabled.value?.skill).toBeUndefined()
+    } finally { await integrations.dispose() }
+  })
+
+  it('does not project a cancelled, nonhuman or ambiguous transport record', async () => {
+    const cancelled = await presentationFixture(); await cancelled.service.cancel({ sessionId: 'session', sendId: cancelled.request.sendId })
+    expect(await cancelled.service.messagePresentation(cancelled.input)).toMatchObject({ ok: false, code: 'cancelled' })
+    const nonhuman = await presentationFixture(); nonhuman.events.find(event => event.type === 'user/message')!.data.source.kind = 'system'
+    expect(await nonhuman.service.messagePresentation(nonhuman.input)).toEqual({ ok: true, value: null })
+    const duplicate = await presentationFixture(); const human = duplicate.events.find(event => event.type === 'user/message')!
+    const repeated = duplicate.text + '\n' + duplicate.prepared.serializedReferences[0].text; human.data.content = [{ type: 'text', text: repeated }]
+    expect(await duplicate.service.messagePresentation({ ...duplicate.input, text: repeated })).toEqual({ ok: true, value: null })
+    duplicate.events.push({ ...structuredClone(human), seq: 20, data: { ...human.data, source: { kind: 'user', rpcId: 'other-rpc' } } })
+    expect(await duplicate.service.messagePresentation({ ...duplicate.input, text: repeated })).toMatchObject({ ok: false, code: 'ambiguous' })
+  })
+
+  it('requires the current source grant and discards a response after the account changes while reading history', async () => {
+    const revoked = await presentationFixture(); revoked.allow(false)
+    expect(await revoked.service.messagePresentation(revoked.input)).toMatchObject({ ok: false, code: 'forbidden' })
+    const f = await presentationFixture(), api = await import(modulePath); let release!: () => void, reading = false
+    const pending = new Promise<void>(resolve => { release = resolve })
+    const restart = new api.PptxAnnotationService({ ...f.options, readHistory: async () => { reading = true; await pending; return { events: [...f.events], hasMore: false } } })
+    const result = restart.messagePresentation(f.input); await expect.poll(() => reading).toBe(true); f.owner('bob'); release()
+    expect(await result).toMatchObject({ ok: false, code: 'forbidden' })
+  })
 })

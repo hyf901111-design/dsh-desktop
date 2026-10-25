@@ -72,6 +72,17 @@ export type PptxAnnotationOutputValue = null | {
   status: 'pending' | 'success' | 'failed'; code?: PptxAnnotationErrorCode; error?: string
   versionRecord?: PptxAnnotationVersionRecord; newFileRelativePath?: string
 }
+export type PptxAnnotationMessagePresentationInput = {
+  sendingSessionId: string; preparedId: string; userSeq: number; submissionId: string; text: string
+}
+export type PptxAnnotationMessagePresentationValue = null | {
+  preparedId: string; submissionId: string; userSeq: number; text: string
+  spans: Array<{
+    kind: 'pptx-annotation'; start: number; end: number; text: string
+    reference: PptxAnnotationReference; ordinal: number; label: string; comment: string
+  }>
+  skill?: { start: number; end: number; text: string; id: 'builtin:efund-ppt-maker'; label: string }
+}
 export type PptxAnnotationErrorCode =
   | 'invalid' | 'forbidden' | 'unavailable' | 'conflict' | 'stale' | 'reanchor-required'
   | 'cancelled' | 'not-ready' | 'ambiguous' | 'source-changed' | 'unchanged' | 'invalid-output'
@@ -84,6 +95,7 @@ export type PptxAnnotationBridge = {
   bindSubmission(input: PptxAnnotationBindInput): Promise<PptxAnnotationResult<PptxAnnotationBindValue>>
   complete(input: PptxAnnotationCompleteInput): Promise<PptxAnnotationResult<PptxAnnotationCompleteValue>>
   lookupOutput(input: { sendingSessionId: string; path: string }): Promise<PptxAnnotationResult<PptxAnnotationOutputValue>>
+  messagePresentation(input: PptxAnnotationMessagePresentationInput): Promise<PptxAnnotationResult<PptxAnnotationMessagePresentationValue>>
   cancel(input: { sessionId: string; sendId: string }): Promise<PptxAnnotationResult<{ cancelled: boolean }>>
 }
 
@@ -94,6 +106,12 @@ function object(value: unknown, keys: string[]) {
 function text(value: unknown, limit = 1024): string {
   if (typeof value !== 'string' || !value || value.length > limit || /[\u0000-\u001f]/.test(value)) throw new Error('无效的标注标识')
   return value
+}
+export function parsePptxAnnotationMessagePresentationInput(value: unknown): PptxAnnotationMessagePresentationInput {
+  const item = object(value, ['sendingSessionId', 'preparedId', 'userSeq', 'submissionId', 'text'])
+  const sendingSessionId = text(item.sendingSessionId), preparedId = text(item.preparedId), submissionId = text(item.submissionId)
+  if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(preparedId) || !Number.isSafeInteger(item.userSeq) || Number(item.userSeq) < 0 || typeof item.text !== 'string' || !item.text || item.text.length > 1024 * 1024 || item.text.includes('\0')) throw new Error('消息呈现凭据无效')
+  return { sendingSessionId, preparedId, userSeq: Number(item.userSeq), submissionId, text: item.text }
 }
 export function parsePptxAnnotationSource(value: unknown): PptxAnnotationSource {
   const item = object(value, ['kind', 'relativePath', 'authorizationId', 'nodeId'])

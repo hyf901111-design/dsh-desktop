@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto'
 import { chmod, lstat, readFile, realpath } from 'node:fs/promises'
 import path from 'node:path'
 import {
-  parsePptxAnnotationMarkDraft, parsePptxAnnotationReference, parsePptxAnnotationSource,
+  parsePptxAnnotationMarkDraft, parsePptxAnnotationReference, parsePptxAnnotationSource, parsePptxAnnotationMessagePresentationInput,
   type PptxAnnotationSource, type PptxAnnotationMark, type PptxAnnotationState, type PptxAnnotationOpenValue,
   type PptxAnnotationResult, type PptxAnnotationErrorCode, type PptxAnnotationPrepareInput,
   type PptxAnnotationPrepareValue, type PptxAnnotationPreparedReference, type PptxAnnotationBindValue,
   type PptxAnnotationCompleteValue, type PptxAnnotationVersionRecord,
-  type PptxAnnotationOutputValue,
+  type PptxAnnotationOutputValue, type PptxAnnotationMessagePresentationValue,
 } from '../../shared/pptx-annotations'
 import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-trust'
 import { PptxAnnotationStore, annotationContains, annotationDirectory, annotationHash, annotationWriteExclusive } from './annotations-store'
@@ -22,6 +22,7 @@ export type PptxAnnotationOptions = {
   /** Research/NoteFile adapters derive their identity from actual sessionId in Main. */
   resolveAuthorizedSource(sessionId: string, source: Exclude<PptxAnnotationSource, { kind: 'workspace' }>): Promise<{ path: string; root: string } | null>
   readHistory(input: { sessionId: string; beforeSeq?: number; maxMessages: 100 }): Promise<PptxAnnotationHistoryPage>
+  presentationSkill?(id: 'builtin:efund-ppt-maker'): Promise<{ id: string; invocationName: string; label: string } | null>
   now?(): Date
 }
 type StoredDocument = {
@@ -156,9 +157,9 @@ export class PptxAnnotationService {
       return this.state(next, file.version)
     })
   }
-  private async assertActive(owner: string, prepared: Prepared) {
+  private async assertActive(owner: string, prepared: Prepared, readOnly = false) {
     this.current(owner)
-    if (prepared.cancelled || this.cancellations.has(this.key(owner, prepared.sessionId, prepared.sendId)) || await this.store.read(owner, prepared.sessionId, `cancel:${prepared.sendId}`)) fail('cancelled', '本次 PPT 修改已取消，输入草稿已保留。')
+    if (prepared.cancelled || this.cancellations.has(this.key(owner, prepared.sessionId, prepared.sendId)) || await (readOnly ? this.store.readExisting(owner, prepared.sessionId, `cancel:${prepared.sendId}`) : this.store.read(owner, prepared.sessionId, `cancel:${prepared.sendId}`))) fail('cancelled', '本次 PPT 修改已取消，输入草稿已保留。')
     for (const doc of prepared.documents) {
       const auth = await this.authorize(owner, prepared.sessionId, doc.source)
       if (auth.target !== doc.target || auth.workspace !== prepared.workspace) fail('forbidden', 'PPT 来源授权已变化。')
@@ -287,14 +288,14 @@ export class PptxAnnotationService {
     const target = path.resolve(prepared.workspace, prepared.value.manifestRelativePath), canonical = await realpath(target), info = await lstat(target)
     if (target !== canonical || !annotationContains(prepared.workspace, target) || !info.isFile() || info.isSymbolicLink() || info.size > 8 * 1024 * 1024 || annotationHash(await readFile(target)) !== prepared.manifestHash) fail('conflict', '本次修改的不可变清单已变化，未采用候选文件。')
   }
-  private async history(owner: string, prepared: Prepared): Promise<PptxAnnotationHistoryEvent[]> {
+  private async history(owner: string, prepared: Prepared, readOnly = false): Promise<PptxAnnotationHistoryEvent[]> {
     await this.verifyManifest(prepared)
     const events = new Map<number, PptxAnnotationHistoryEvent>()
     let beforeSeq: number | undefined
     for (let page = 0; page < 100; page++) {
-      await this.assertActive(owner, prepared)
+      await this.assertActive(owner, prepared, readOnly)
       const history = await this.options.readHistory({ sessionId: prepared.sessionId, maxMessages: 100, ...(beforeSeq === undefined ? {} : { beforeSeq }) })
-      await this.assertActive(owner, prepared)
+      await this.assertActive(owner, prepared, readOnly)
       if (!Array.isArray(history.events)) fail('unavailable', '实际提交记录暂不可读取。')
       const part = history.events.filter(event => Number.isFinite(event.seq) && typeof event.type === 'string').sort((a, b) => a.seq - b.seq)
       for (const event of part) if (event.seq > prepared.historyFloor) events.set(event.seq, event)
@@ -414,6 +415,43 @@ export class PptxAnnotationService {
       return result ? { ...base, ...result } : { ...base, status: 'pending' }
     })
   }
+  async messagePresentation(value: unknown): Promise<PptxAnnotationResult<PptxAnnotationMessagePresentationValue>> {
+    return this.transaction(async owner => {
+      let input: ReturnType<typeof parsePptxAnnotationMessagePresentationInput>
+      try { input = parsePptxAnnotationMessagePresentationInput(value) } catch { return fail('invalid', '消息呈现凭据无效。') }
+      const sessionId = input.sendingSessionId, prepared = await this.store.readExisting<Prepared>(owner, sessionId, `prepared:${input.preparedId}`)
+      if (!prepared || prepared.owner !== owner || prepared.sessionId !== sessionId || prepared.preparedId !== input.preparedId) return null
+      await this.assertActive(owner, prepared, true)
+      const events = await this.history(owner, prepared, true)
+      // Native Bubble joins text parts without separators. Normalize only this read-only proof view.
+      const nativeMessage = (message: any) => ({ ...message, content: [{ type: 'text', text: Array.isArray(message?.content) ? message.content.filter((part: any) => part?.type === 'text' && typeof part.text === 'string').map((part: any) => part.text).join('') : '' }] })
+      const proofEvents = events.map(event => event.type === 'user/message' ? { ...event, data: nativeMessage(userMessage(event)) } : event.type === 'agent/inbox/spliced' && Array.isArray(event.data?.inserted) ? { ...event, data: { ...event.data, inserted: event.data.inserted.map(nativeMessage) } } : event)
+      const proof = this.proof(proofEvents, prepared, input.submissionId)
+      if (proof.status !== 'bound' || proof.submissionId !== input.submissionId || proof.userSeq !== input.userSeq) return null
+      if (prepared.binding?.submissionId && prepared.binding.submissionId !== proof.submissionId || prepared.binding?.status === 'bound' && prepared.binding.userSeq !== proof.userSeq) return null
+      const event = proofEvents.find(event => event.type === 'user/message' && event.seq === proof.userSeq), message = event && userMessage(event)
+      if (!isHuman(message) || textContent(message) !== input.text) return null
+      const spans: NonNullable<PptxAnnotationMessagePresentationValue>['spans'] = []
+      for (const item of prepared.value.serializedReferences) {
+        const raw = item.text, start = input.text.indexOf(raw)
+        if (!raw || start < 0 || input.text.indexOf(raw, start + 1) !== -1) return null
+        const reference = parsePptxAnnotationReference(item.reference, sessionId), doc = prepared.documents.find(doc => doc.documentId === reference.documentId && doc.fileVersion === reference.fileVersion), mark = doc?.marks.find(mark => mark.id === reference.markId && mark.fileVersion === reference.fileVersion)
+        if (!mark || !Number.isSafeInteger(mark.ordinal) || mark.ordinal <= 0) return null
+        const name = mark.kind === 'rect' ? '框选区域' : mark.sourceNodes[0]?.name?.trim().slice(0, 60) || '位置'
+        spans.push({ kind: 'pptx-annotation', start, end: start + raw.length, text: raw, reference, ordinal: mark.ordinal, label: `第${mark.slideIndex + 1}页 · ${name}`, comment: mark.comment })
+      }
+      spans.sort((a, b) => a.start - b.start)
+      if (!spans.length || spans.some((span, index) => span.start < (spans[index - 1]?.end ?? 0) || span.end > input.text.length || input.text.slice(span.start, span.end) !== span.text)) return null
+      const result: NonNullable<PptxAnnotationMessagePresentationValue> = { preparedId: prepared.preparedId, submissionId: proof.submissionId!, userSeq: proof.userSeq!, text: input.text, spans }
+      const skill = await this.options.presentationSkill?.('builtin:efund-ppt-maker').catch(() => null)
+      if (skill?.id === 'builtin:efund-ppt-maker' && /^ework-skill-[a-f0-9]{16}$/.test(skill.invocationName) && typeof skill.label === 'string' && skill.label.trim() && skill.label.length <= 200 && !/[\u0000-\u001f]/.test(skill.label)) {
+        const raw = '/' + skill.invocationName, start = input.text.length - raw.length
+        if (input.text.endsWith(raw) && input.text.indexOf(raw) === start && spans.every(span => span.end <= start)) result.skill = { start, end: input.text.length, text: raw, id: 'builtin:efund-ppt-maker', label: skill.label }
+      }
+      await this.assertActive(owner, prepared, true)
+      return result
+    })
+  }
   async cancel(value: unknown): Promise<PptxAnnotationResult<{ cancelled: boolean }>> {
     const input = record(value), sessionId = identifier(input.sessionId), sendId = identifier(input.sendId), owner = this.owner()
     this.cancellations.add(this.key(owner, sessionId, sendId))
@@ -428,7 +466,7 @@ export class PptxAnnotationService {
 }
 
 export function registerPptxAnnotationHandlers(options: { ipcMain: { removeHandler(channel: string): void; handle(channel: string, handler: (event: any, value: unknown) => unknown): unknown }; getMainWindow(): TrustedWindow | undefined; service: PptxAnnotationService }) {
-  for (const action of ['open', 'mutate', 'prepare', 'bindSubmission', 'complete', 'lookupOutput', 'cancel'] as const) {
+  for (const action of ['open', 'mutate', 'prepare', 'bindSubmission', 'complete', 'lookupOutput', 'messagePresentation', 'cancel'] as const) {
     const channel = `pptx:annotation:${action}`
     options.ipcMain.removeHandler(channel)
     registerTrustedMainWindowHandler(options.ipcMain, channel, options.getMainWindow, (_event, value: unknown) => options.service[action](value))
