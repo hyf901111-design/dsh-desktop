@@ -32,9 +32,10 @@
 - `mutate({sessionId,documentId,version,expectedStateRevision,operations})` → 新 state。put/remove/reanchor 的 CAS、稳定编号和撤销；标注不写 PPT。
 - `prepare({sendingSessionId,sendId,expectedDraftRev,references,retryOfPreparedId?})` → `{preparedId,manifestRelativePath,documents:[{documentId,fileVersion,inputRelativePath,outputRelativePath,markIds}],serializedReferences}`。整批验证会话、授权、mark revision、文件 SHA，创建不可变真实输入和 manifest；输出唯一且不覆盖原件。同sendId与相同fingerprint返回同一快照，不重新读取后来备注；同sendId不同fingerprint冲突。真正AI重试用新的sendId+retryOfPreparedId，复用原源/意见快照而分配新attempt输出，保留已交付结果和用户后写草稿。
 - `complete({sendingSessionId,preparedId,submissionId})` → `{documents:[{status,versionRecord?,newFileRelativePath?,error?}],status:'success'|'partial'|'failed'}`。preparedId由实际原生提交成功回执绑定submissionId；只由对应assistant turn的真实文件交付路径触发检查，不由任意回复触发。检查分配的输出确实存在、PPT ZIP/scene有效、原文件hash没改、slide/chart/media/theme等实际内容part有修改（仅ZIP metadata/docProps变化不算），登记通过的版本；不接收模型自报任意路径。原件并发变化保留候选但source-changed，不自动采用。交付组件对该prepared输出在核验前显示正在核验，失败显示候选/失败而非全成功；普通不属于标注任务的交付卡不受影响。
+- `lookupOutput({sendingSessionId,path})` 只读查询真实 prepared 输出的待核验、失败或版本记录；普通交付文件返回空值。交付卡必须在打开前复核首次接受的实际 SHA，不能将后来替换的文件重新认作原成功结果。
 - `cancel({sessionId,sendId})` 取消准备/迟到结果，不改用户草稿。
 
-真实提交关联增加 `bindSubmission({sendingSessionId,preparedId,submissionId:rpcId})`：协调器只用既有connection.api.subscribeEnvelopes，按实际session+该prepared独有manifest/序列化引用匹配真实session.prompt请求，等待同rpcId的accepted回执，不能猜下一条assistant。Main从真实Host durable inbox/source.rpcId或user/message.source.rpcId复核后持久绑定；queued未消费保持pending，可按rpcId只读恢复，不重复发送。记录userMessageId/userSeq/所属turn与step；complete仅接受对应公开assistant交付且在后续独立human输入之前的窗口，不信renderer自报turn或path。Notes特殊输入不接此ordinary PPT发送路径。
+真实提交关联增加 `bindSubmission({sendingSessionId,preparedId,submissionId:rpcId})`：协调器只用既有connection.api.subscribeEnvelopes，按实际session+该prepared独有manifest/序列化引用匹配真实session.prompt请求，等待同rpcId的accepted回执，不能猜下一条assistant。Main从真实Host durable inbox/source.rpcId或user/message.source.rpcId复核后持久绑定；queued未消费保持pending，可按rpcId只读恢复，不重复发送。记录userMessageId/userSeq/所属turn与step；真实 session.history 是 envelope 内 event，turn/step 为数字。complete仅接受对应公开assistant交付且在后续独立human输入之前的窗口，不信renderer自报turn或path；首次通过后的文件 SHA 固定，重开与重试不能洗掉替换事实。当前在笔记或研究视图时，协调器通过既有导航动作回到同一会话的普通对话输入，不新建会话、不替换笔记或该会话较新草稿；标注任务仍只经 ordinary PPT 发送路径。
 
 source 与 prepare 还需支持多份真实 PPT，按文件分别提供输入与输出映射，不能把不同文件的标注混到一个输出。共享 DTO 放 `src/shared/pptx-annotations.ts`，显式结果/错误类型。source 的 resolver 复用现有可信授权；NoteFiles 必须用实际会话 reference，不把 note-files: hash 当中央会话。缺少/过期版本提供 stale/reanchor-required，原稿保留。
 
@@ -47,3 +48,10 @@ viewer经main-world coordinator获取实际active输入身份：`open(source,{si
 直接浏览器与服务测试覆盖：点框/跨页/滚动缩放/重挂、两侧备注同步且整体要求保留、选中键删/撤销/IME、换会话/文件/晚回调、真实sending身份和CAS、无编辑token的默认preview、授权撤销/路径变化/文件版本冲突、幂等快照/独立新草稿、真实可打开的新文件和原件hash保留。只做直接相关检查，不跑全功能测试。
 
 最终必须从干净本地main经Plan A集成，用正式身份 build_and_run.sh --verify（跳过公证/上传/版本递增/push）。实际客户端验收：两个跨页标记、两侧备注、关闭重开、标签删/恢复、原生发送给真实模型、最终交付卡打开新PPT、原件保留、新版本不沿用旧定位；客户端保持打开。PPT演示也需实际验证完整开场与虚拟鼠标最终点击交付卡。
+
+## 实施边界补充（2026-10-25）
+
+- 同一原生根生命周期内的失败重试复用冻结的全部输入/意见，分配新输出；跨客户端重启保留标记、版本和真实交付状态，但不承诺一次点击恢复未持久化的全部原生输入材料。恢复仍使用原生编辑/发送机制。
+- 手势在滚动、缩放、resize、失焦、pointercancel、丢失捕获和 owner 改变时取消，仅操作本地 DOM，不接管系统指针。默认预览不增加标注 hash/scene 或编辑请求；显式标注后才懒加载，并校验实际已显示的 viewer 字节。
+- 冷恢复时，即使原生输入没有旧标签、没有当前选中项，仍显示失效标记列表，可明确选中并重新定位。旧坐标不画到新版本。重新定位保留较新已写备注及原生撤销记录。
+- 原生 Research/NoteFile 透传真实 session、nodeId 与 Main authorizationId，不能用 Office 或 note-file 预览别名充当所有者。
