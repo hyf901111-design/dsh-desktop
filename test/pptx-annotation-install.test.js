@@ -15,6 +15,12 @@ it('strictly installs once, strips exactly and rejects native hook, definition, 
  expect(()=>patch(result.replace('/* sherlock:pptx-annotation-input:start:v1 */','/* sherlock:pptx-annotation-input:start:v1 *//* sherlock:pptx-annotation-input:start:v1 */'))).toThrow(/drifted/)
  expect(()=>patch(result.replaceAll('sherlock:pptx-annotation-input:start:v1','sherlock:pptx-annotation-input:start:v999'))).toThrow(/drifted/)
 })
+it('upgrades only the exact previous notice implementation and keeps legacy drift rejected',()=>{
+ const current=patch(source),legacy=current.replace(',submissionNotices=new WeakMap()','').replace(/  interceptSend\(shell,draft,mode\)\{[\s\S]*?\n  getSubmissions:/,"  interceptSend(shell,draft,mode){if(!shell.snapshot.occurrences.some(value=>value.source==='pptx-annotation'))return false;watch(submit(shell,mode).catch(reason=>shell.notify('error',error(reason).message)));return true},\n  getSubmissions:")
+ expect(legacy).not.toBe(current);expect(legacy).not.toContain('submissionNotices');expect(patch(legacy,true)).toBe(source);expect(patch(legacy)).toBe(current);expect(patch(patch(legacy))).toBe(current)
+ expect(()=>patch(legacy.replace("shell.notify('error',error(reason).message)","shell.notify('error','drifted')"))).toThrow(/drifted/)
+ expect(()=>patch(legacy.replace('/* sherlock:pptx-annotation-input:start:v1 */','/* sherlock:pptx-annotation-input:start:v1 *//* sherlock:pptx-annotation-input:start:v1 */'))).toThrow(/drifted/)
+})
 async function fixture(){
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});const win=new Window({url:'https://native.local'}),descriptors=[];win.__ModuleLoader__={load:descriptor=>descriptors.push(descriptor)}
  const load=(name,text=readFileSync('node_modules/@deepseek-ai/'+name+'/lib/client.js','utf8'),deps={})=>{runInNewContext(text,{window:win,AbortController,AbortSignal,DOMException,queueMicrotask,setTimeout,clearTimeout,console,crypto,Response,URL});return descriptors.at(-1).factory(id=>deps[id]??fake)}

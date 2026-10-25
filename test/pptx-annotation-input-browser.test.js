@@ -20,6 +20,31 @@ async function fixture(){
  for(const name of['runtime','connection','conversation']){await page.addScriptTag({content:sources[name]});await page.evaluate(name=>window[name+'Descriptor']=window.lastDescriptor,name)}
  await page.addScriptTag({content:script});try{await page.locator('.uV2eYG_root textarea').waitFor({state:'visible',timeout:4000});await page.evaluate(()=>window.probe.seed())}catch(reason){const info=await page.evaluate(()=>({views:probe.views,input:document.querySelector('.uV2eYG_root textarea')&&{disabled:document.querySelector('textarea').disabled,readOnly:document.querySelector('textarea').readOnly}}));throw Error(JSON.stringify({errors,info})+' '+reason.message)}return{page,errors,async close(){await page.evaluate(()=>window.probe.unmount());await page.close()}}
 }
+async function rejectSkillForChangedDraft(page){
+ await page.evaluate(async()=>{await probe.add('保持图表');probe.deferSkillCatalog=true})
+ await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.skillCatalogWaiting)).toBe(true)
+ await page.locator('.uV2eYG_root textarea').evaluate(el=>{el.focus();el.setSelectionRange(el.value.length,el.value.length)});await page.keyboard.insertText('用户后写的全局要求')
+ await page.evaluate(()=>{probe.deferSkillCatalog=false;probe.releaseSkillCatalog()});await expect.poll(()=>page.evaluate(()=>probe.notice()?.text)).toBe('草稿已变化，未自动加入技能。')
+ expect(await page.getByText('草稿已变化，未自动加入技能。',{exact:true}).isVisible()).toBe(true)
+ expect(await page.evaluate(()=>({prepares:probe.prepares.length,requests:probe.requests.length}))).toEqual({prepares:0,requests:0})
+}
+it('clears its old skill CAS notice only after a later explicit native send prepares successfully',async()=>{
+ const f=await fixture();try{const{page}=f;await rejectSkillForChangedDraft(page);await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1)
+ await expect.poll(()=>page.evaluate(()=>probe.notice())).toBeNull();expect(await page.getByText('草稿已变化，未自动加入技能。',{exact:true}).count()).toBe(0)
+ const sent=await page.evaluate(()=>({requests:probe.requests,compose:probe.compose,state:probe.getState()}));expect(sent.requests).toHaveLength(1);expect(sent.requests[0].method).toBe('session.prompt');const text=sent.requests[0].payload.content.find(value=>value.type==='text').text;expect(text).toContain('用户后写的全局要求');expect(text).toContain('/ework-skill-180a6a3f86f8942e');expect(text).toContain('原附件：file.pdf');expect(sent.state.marks[0].comment).toBe('保持图表');expect(sent.state.draft).toBe('');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+it('keeps a new prepare failure visible and clears it after an explicit send with the existing PPT skill succeeds',async()=>{
+ const f=await fixture();try{const{page}=f;await rejectSkillForChangedDraft(page);await page.evaluate(()=>probe.prepareError='本轮标注快照准备失败。');await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.notice()?.text)).toBe('本轮标注快照准备失败。')
+ expect(await page.getByText('本轮标注快照准备失败。',{exact:true}).isVisible()).toBe(true);const rejected=await page.evaluate(()=>({state:probe.getState(),requests:probe.requests}));expect(rejected.requests).toEqual([]);expect(rejected.state.draft).toContain('用户后写的全局要求');expect(rejected.state.occurrences.filter(value=>value.source==='ework-managed-skill'&&JSON.parse(value.ref).id==='builtin:efund-ppt-maker')).toHaveLength(1)
+ await page.evaluate(()=>probe.prepareError=null);await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1);await expect.poll(()=>page.evaluate(()=>probe.notice())).toBeNull();expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+it('does not clear a newer unrelated native error when the pending annotation preparation succeeds',async()=>{
+ const f=await fixture();try{const{page}=f;await rejectSkillForChangedDraft(page);await page.evaluate(()=>probe.deferPrepare=true);await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.prepareWaiting)).toBe(true)
+ await page.evaluate(()=>{probe.notify('error','当前附件已失效。');probe.releasePrepare()});await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1);expect(await page.evaluate(()=>probe.notice()?.text)).toBe('当前附件已失效。');expect(await page.getByText('当前附件已失效。',{exact:true}).isVisible()).toBe(true);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
 it('uses the real ordinary InputBar for two-page remarks, native tag deletion and one undo while keeping other references',async()=>{
  const f=await fixture();try{const{page}=f;await page.evaluate(async()=>{await probe.add('第一页意见');await probe.add('第二页意见',1)});const state=await page.evaluate(()=>probe.getState());expect(state.occurrences.map(value=>value.source)).toEqual(['ework-managed-skill','chat-file','pptx-annotation','pptx-annotation']);expect(state.draft).toContain('整体要求📌保留')
  const target=await page.evaluate(()=>{const range=probe.ranges()[0],el=document.querySelector('.uV2eYG_root textarea');el.focus();el.setSelectionRange(range.tagOffset,range.tagOffset+1);el.dispatchEvent(new Event('select',{bubbles:true}));return range});await page.keyboard.press('Backspace');await expect.poll(()=>page.evaluate(()=>probe.getState().occurrences.length)).toBe(3);expect((await page.evaluate(()=>probe.getState())).draft).not.toContain('第一页意见');await page.keyboard.press('Control+z');await expect.poll(()=>page.evaluate(()=>probe.getState().occurrences.length)).toBe(4);expect((await page.evaluate(()=>probe.ranges()[0])).blockStart).toBe(target.blockStart);expect(f.errors).toEqual([])

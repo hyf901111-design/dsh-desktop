@@ -88,6 +88,19 @@ function pptxAnnotationReferenceSource(){return{trigger:'@',name:'pptx-annotatio
 const START='/* sherlock:pptx-annotation-input:start:v1 */',END='/* sherlock:pptx-annotation-input:end:v1 */'
 const DEFINITIONS=[...PPTX_ANNOTATION_INPUT_DEFINITIONS,createPptxAnnotationCoordinator,annotationTargetVisible,annotationSkillRequest,createPptxAnnotationNativeRuntime,PptxAnnotationNativePortal,pptxAnnotationReferenceSource]
 const BLOCK='\n'+START+'\n'+DEFINITIONS.map(value=>value.toString()).join('\n')+'\nlet PptxAnnotationNativeRuntime=null;\nconst PptxAnnotationOriginalRoot=ConversationRoot;\nConversationRoot=function(props){return react.createElement(react.Fragment,null,react.createElement(PptxAnnotationOriginalRoot,props),react.createElement(PptxAnnotationNativePortal,props))};\n'+END+'\n'
+// Accept only the complete previous serialized block, never a partial installed definition.
+const NOTICE_INTERCEPT=`  interceptSend(shell,draft,mode){
+   if(!shell.snapshot.occurrences.some(value=>value.source==='pptx-annotation'))return false
+   const previous=submissionNotices.get(shell)
+   watch(submit(shell,mode).then(()=>{
+    if(previous&&shell.notices?.getSnapshot()===previous)shell.notices.set(null)
+    if(submissionNotices.get(shell)===previous)submissionNotices.delete(shell)
+   },reason=>{
+    shell.notify('error',error(reason).message)
+    const notice=shell.notices?.getSnapshot();if(notice)submissionNotices.set(shell,notice)
+   }));return true
+  },`
+const LEGACY_BLOCK=BLOCK.replace(',submissionNotices=new WeakMap()','').replace(NOTICE_INTERCEPT,"  interceptSend(shell,draft,mode){if(!shell.snapshot.occurrences.some(value=>value.source==='pptx-annotation'))return false;watch(submit(shell,mode).catch(reason=>shell.notify('error',error(reason).message)));return true},")
 const ROOT_HOOK='const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
 const INSTALL='\n/* sherlock:pptx-annotation-input:install:v1 */\nctx.effect(()=>{if(window.top!==window||!window.sherlockPptAnnotations)return;const runtime=createPptxAnnotationNativeRuntime({window,document,sessions,inputHub,activeInput:eworkActiveInput,api:ctx.get("connection").api,serializeComponent:(ref,sessionId)=>serializeConversationComponentReference(ref,new AbortController().signal,sessionId)});PptxAnnotationNativeRuntime=runtime;return()=>{if(PptxAnnotationNativeRuntime===runtime)PptxAnnotationNativeRuntime=null;runtime.dispose()}},"PPT annotation native input");\nctx.inject(["inputTriggers"],scope=>scope.effect(()=>scope.get("inputTriggers").registerSource(pptxAnnotationReferenceSource()),"PPT annotation reference codec"));\n'
 const SINK='sinkSerialized(draft, mode) {'
@@ -98,8 +111,10 @@ const TRANSACTIONS=[[SINK,SINK+SEND],[ROOT_HOOK,ROOT_HOOK+INSTALL],[DEFAULT,ADMI
 const exactly=(source,from,to)=>{if(source.split(from).length!==2)throw Error('PPT annotation native source drifted: '+from.slice(0,80));return source.replace(from,to)}
 export function stripPptxAnnotationInput(source){
  if(!source.includes('sherlock:pptx-annotation-input:'))return source
- if(source.split(START).length!==2||source.split(END).length!==2||!source.includes(BLOCK))throw Error('PPT annotation installed source drifted')
- let result=source.replace(BLOCK,'');for(const[from,to]of TRANSACTIONS)result=exactly(result,to,from)
+ if(LEGACY_BLOCK===BLOCK||LEGACY_BLOCK.includes('submissionNotices'))throw Error('PPT annotation legacy notice adapter drifted')
+ const block=source.includes(BLOCK)?BLOCK:source.includes(LEGACY_BLOCK)?LEGACY_BLOCK:null
+ if(source.split(START).length!==2||source.split(END).length!==2||!block)throw Error('PPT annotation installed source drifted')
+ let result=source.replace(block,'');for(const[from,to]of TRANSACTIONS)result=exactly(result,to,from)
  if(result.includes('sherlock:pptx-annotation-input:'))throw Error('PPT annotation unknown or duplicate installed block')
  return result
 }
