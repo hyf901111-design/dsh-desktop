@@ -3,11 +3,13 @@ import {spawnSync} from 'node:child_process'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
 import {expect,it} from 'vitest'
-const file='node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',source=readFileSync(file,'utf8')
+const file='node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',resident=readFileSync(file,'utf8')
 // Use the production Node loader: Vite reformats Function.toString source bytes.
 const patch=(value,strip=false)=>{const child=spawnSync(process.execPath,['--input-type=module','-e',`import{${strip?'strip':'patch'}PptxAnnotationInput as apply}from'./scripts/lib/pptx-annotation-native.mjs';process.stdin.setEncoding('utf8');let text='';for await(const chunk of process.stdin)text+=chunk;process.stdout.write(apply(text));`],{input:value,encoding:'utf8',maxBuffer:32*1024*1024});if(child.status!==0)throw Error(child.stderr);return child.stdout}
+// A full pipeline may already have installed the coordinator in the resident module.
+const source=patch(resident,true)
 it('strictly installs once, strips exactly and rejects native hook, definition, duplicate and unknown marker drift',()=>{
- const result=patch(source);expect(patch(result)).toBe(result);expect(patch(result,true)).toBe(source)
+ const result=patch(source);expect(patch(resident)).toBe(result);expect(patch(result)).toBe(result);expect(patch(result,true)).toBe(source)
  expect(()=>patch(source.replace('sinkSerialized(draft, mode) {','sinkSerialized(draftV2, mode) {'))).toThrow(/drifted/)
  expect(()=>patch(result.replace('if(flights.has(shell))','if(flights.has(other))'))).toThrow(/drifted/)
  expect(()=>patch(result.replace('/* sherlock:pptx-annotation-input:start:v1 */','/* sherlock:pptx-annotation-input:start:v1 *//* sherlock:pptx-annotation-input:start:v1 */'))).toThrow(/drifted/)
