@@ -249,6 +249,95 @@
           "用例通过后再读取并实施用户新增的示意卡片Figma任务；当前交接不包含新卡片改造。"
         ],
         "generatedAt": "2026-10-25T03:20:40.799Z"
+      },
+      "merged": {
+        "mergeCommit": "a935824880d385b5a3368471336c6bb3f2412b2e",
+        "verificationCommit": "a935824880d385b5a3368471336c6bb3f2412b2e",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "a935824880d385b5a3368471336c6bb3f2412b2e",
+            "completedAt": "2026-10-25T03:21:52.296Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "a935824880d385b5a3368471336c6bb3f2412b2e",
+            "completedAt": "2026-10-25T03:21:52.296Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-pointer.test.ts",
+              "test/home-board-smart-runtime.test.js",
+              "test/home-board-smart-host.test.js",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-pointer.test.ts test/home-board-smart-runtime.test.js test/home-board-smart-host.test.js test/home-guides.test.ts test/home-guides-review.test.ts --maxWorkers=2",
+            "verifiedCommit": "a935824880d385b5a3368471336c6bb3f2412b2e",
+            "completedAt": "2026-10-25T03:21:52.296Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "research table.*1080|smart response when paused|optional hidden action receipt",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native-browser.test.js -t research table.*1080|smart response when paused|optional hidden action receipt --maxWorkers=2",
+            "verifiedCommit": "a935824880d385b5a3368471336c6bb3f2412b2e",
+            "completedAt": "2026-10-25T03:21:52.296Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a935824880d385b5a3368471336c6bb3f2412b2e",
+            "completedAt": "2026-10-25T03:21:52.296Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "a935824880d385b5a3368471336c6bb3f2412b2e",
+            "completedAt": "2026-10-25T03:21:52.296Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T03:21:52.296Z"
       }
     }
   ],
