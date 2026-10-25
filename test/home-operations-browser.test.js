@@ -1940,7 +1940,7 @@ it('opens all fifteen native wallpaper previews only in the visible gallery and 
     for(const card of geometry){expect(card.width).toBeCloseTo(146.4,0);expect(card.height).toBeCloseTo(78,0);expect(card.font).toBe(12);expect(card.line).toBe(18)}
     expect(await wallpaperCards(page).locator('svg').count()).toBe(0)
     expect(await wallpaperCards(page).filter({has:page.locator('.odyssey-wallpaper-preview')}).count()).toBe(15)
-    expect(await wallpaperCards(page).first().locator('.odyssey-wallpaper-preview').evaluate(element=>getComputedStyle(element).boxShadow)).toMatch(/0px 0px 0px 1\.25px$/)
+    expect(await wallpaperCards(page).first().locator('.odyssey-wallpaper-preview').evaluate(element=>getComputedStyle(element).boxShadow)).toMatch(/0px 0px 0px 3px$/)
     const count=await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)
     await quickTab(page).click()
     await page.evaluate(()=>document.body.setAttribute('data-ds-dark-theme',''))
@@ -2121,15 +2121,15 @@ it.each([{dark:false,reduced:false},{dark:true,reduced:false},{dark:false,reduce
   }finally{await page.close()}
 },20000)
 
-it.each([false,true])('uses a softer light selected stroke and preserves the dark selected stroke (dark=%s)',async dark=>{
+it.each([false,true])('uses a translucent broad Light selected stroke and preserves the dark selected stroke (dark=%s)',async dark=>{
   const page=await fixture({dark,themes:true})
   try{
     await toggle(page).click();await waitState(page,'operations');await wallpaperTab(page).click()
     const stroke=await wallpaperCards(page).first().locator('.odyssey-wallpaper-preview').evaluate(element=>getComputedStyle(element).boxShadow)
     if(dark)expect(stroke).toMatch(/0px 0px 0px 1\.5px$/)
-    else{expect(stroke).toBe('rgba(78, 129, 234, 0.6) 0px 0px 0px 1.25px')}
+    else{expect(stroke).toBe('rgba(145, 145, 145, 0.32) 0px 0px 0px 3px')}
     expect(await wallpaperCards(page).locator('svg').count()).toBe(0)
-    await region(page).screenshot({path:`${galleryEvidence}/09-selected-${dark?'dark':'light'}.png`})
+    await region(page).screenshot({path:`${galleryEvidence}/11-selected-${dark?'dark':'light'}.png`})
   }finally{await page.close()}
 },20000)
 
@@ -2259,7 +2259,7 @@ it('keeps the painted tab mixture continuous when returning to input during a sl
 },20000)
 
 
-it.each([{id:'haseeb',tone:'current-aurora'},{id:'default',tone:'white'},{id:'vghodki',tone:'blue'},{id:'antiquue',tone:'warm'}])('uses a clear pale-blue Light outline on the actual native wallpaper and selected preview %j',async options=>{
+it.each([{id:'haseeb',tone:'current-aurora'},{id:'default',tone:'white'},{id:'vghodki',tone:'blue'},{id:'antiquue',tone:'warm'}])('uses a broad neutral-gray Light outline on the actual native wallpaper and selected preview %j',async options=>{
   const page=await fixture({themes:true,deviceScaleFactor:2})
   try{
     await toggle(page).click();await waitState(page,'operations');await wallpaperTab(page).click()
@@ -2272,30 +2272,41 @@ it.each([{id:'haseeb',tone:'current-aurora'},{id:'default',tone:'white'},{id:'vg
     expect(await page.locator('body').getAttribute('data-ds-dark-theme')).toBeNull()
     const properties=await preview.evaluate(element=>{const s=getComputedStyle(element);return {shadow:s.boxShadow,filter:s.filter,border:s.borderWidth}})
     const pane=page.locator('.pI_x6G_centerCol'),bounds=await pane.boundingBox(),rect=await preview.boundingBox()
-    const candidate=PNG.sync.read(await pane.screenshot({path:`${galleryEvidence}/10-${options.id}-candidate-pane.png`}))
-    const controlStyle=await page.addStyleTag({content:'.odyssey-wallpaper-card[aria-pressed="true"] .odyssey-wallpaper-preview{box-shadow:0 0 0 1px rgba(38,49,58,.45)!important}'})
-    const control=PNG.sync.read(await pane.screenshot({path:`${galleryEvidence}/10-${options.id}-gray-control-pane.png`}))
+    const stableRects=await operationTabRects(page)
+    const candidate=PNG.sync.read(await pane.screenshot({path:`${galleryEvidence}/11-${options.id}-candidate-pane.png`}))
+    const controlStyle=await page.addStyleTag({content:'.odyssey-wallpaper-card[aria-pressed="true"] .odyssey-wallpaper-preview{box-shadow:0 0 0 1.25px rgba(78,129,234,.6)!important}'})
+    const control=PNG.sync.read(await pane.screenshot({path:`${galleryEvidence}/11-${options.id}-blue-control-pane.png`}))
     await controlStyle.evaluate(element=>element.textContent='.odyssey-wallpaper-card[aria-pressed="true"] .odyssey-wallpaper-preview{box-shadow:none!important}')
+    expect(await preview.boundingBox()).toEqual(rect);expect(await operationTabRects(page)).toEqual(stableRects)
     const bare=PNG.sync.read(await pane.screenshot())
     await controlStyle.evaluate(element=>element.remove())
     const scale=candidate.width/bounds.width,points=[]
     for(const fraction of [.25,.375,.5,.625,.75]){
-      points.push([Math.floor((rect.x-bounds.x-.5)*scale),Math.floor((rect.y-bounds.y+rect.height*fraction)*scale)])
-      points.push([Math.floor((rect.x-bounds.x+rect.width*fraction)*scale),Math.floor((rect.y-bounds.y-.5)*scale)])
+      points.push([Math.floor((rect.x-bounds.x-2)*scale),Math.floor((rect.y-bounds.y+rect.height*fraction)*scale)])
+      points.push([Math.floor((rect.x-bounds.x+rect.width*fraction)*scale),Math.floor((rect.y-bounds.y-2)*scale)])
     }
-    const blueGain=image=>points.reduce((sum,[x,y])=>{const offset=(y*image.width+x)*4;return sum+(image.data[offset+2]-image.data[offset])-(bare.data[offset+2]-bare.data[offset])},0)/points.length
+    const fitGrayBand=image=>{
+      let numerator=0,denominator=0,error=0,difference=0
+      for(const [x,y] of points)for(let channel=0;channel<3;channel++){const offset=(y*image.width+x)*4+channel,base=bare.data[offset],delta=image.data[offset]-base,target=145-base;numerator+=delta*target;denominator+=target*target;difference+=Math.abs(delta)}
+      const alpha=numerator/denominator
+      for(const [x,y] of points)for(let channel=0;channel<3;channel++){const offset=(y*image.width+x)*4+channel,expected=bare.data[offset]+alpha*(145-bare.data[offset]);error+=(image.data[offset]-expected)**2}
+      return {alpha,rms:Math.sqrt(error/(points.length*3)),difference:difference/(points.length*3)}
+    }
     const crop=image=>{
       const x=Math.floor((rect.x-bounds.x-6)*scale),y=Math.floor((rect.y-bounds.y-6)*scale),width=Math.ceil((rect.width+12)*scale),height=Math.ceil((rect.height+36)*scale),result=new PNG({width,height})
       for(let row=0;row<height;row++)image.data.copy(result.data,row*width*4,((y+row)*image.width+x)*4,((y+row)*image.width+x+width)*4)
       return PNG.sync.write(result)
     }
-    await writeFile(`${galleryEvidence}/10-${options.id}-candidate-detail.png`,crop(candidate))
-    await writeFile(`${galleryEvidence}/10-${options.id}-gray-control-detail.png`,crop(control))
-    const metrics={...options,properties,scale,points,candidateBlueGain:blueGain(candidate),grayControlBlueGain:blueGain(control),nativeWallpaper:options.id}
-    await writeFile(`${galleryEvidence}/10-${options.id}-outline.json`,JSON.stringify(metrics,null,2))
-    expect(properties.shadow).toBe('rgba(78, 129, 234, 0.6) 0px 0px 0px 1.25px')
+    await writeFile(`${galleryEvidence}/11-${options.id}-candidate-detail.png`,crop(candidate))
+    await writeFile(`${galleryEvidence}/11-${options.id}-blue-control-detail.png`,crop(control))
+    const metrics={...options,properties,scale,points,candidateOuterBand:fitGrayBand(candidate),blueControlOuterBand:fitGrayBand(control),stableRects,nativeWallpaper:options.id}
+    await writeFile(`${galleryEvidence}/11-${options.id}-outline.json`,JSON.stringify(metrics,null,2))
+    expect(properties.shadow).toBe('rgba(145, 145, 145, 0.32) 0px 0px 0px 3px')
     expect(properties.filter).toBe('none');expect(properties.border).toBe('0px')
-    expect(metrics.candidateBlueGain-metrics.grayControlBlueGain,'the real edge pixels gain a clean blue hue instead of the old gray band').toBeGreaterThan(15)
+    expect(metrics.candidateOuterBand.alpha,'the actual 2px outer band is visibly broad and translucent').toBeGreaterThanOrEqual(.25)
+    expect(metrics.candidateOuterBand.alpha).toBeLessThanOrEqual(.38)
+    expect(metrics.candidateOuterBand.rms,'the ring blends a neutral light gray rather than blue').toBeLessThan(2)
+    expect(metrics.blueControlOuterBand.difference,'the previous narrow blue outline does not occupy this outer band').toBeLessThan(2)
     expect(await card.locator('svg').count()).toBe(0)
   }finally{await page.close()}
 },30000)
