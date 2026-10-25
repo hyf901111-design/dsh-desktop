@@ -183,7 +183,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   }catch(error){if(active!==run||controller.signal.aborted)throw error;playback(run,false);root.dataset.phase='error';status.textContent=error instanceof Error?error.message:'示例尚未就绪，请重试。';pause.disabled=true;next.disabled=true;replay.disabled=false}
  }
  const changed=()=>{if(preparing){const current=selected();if(current===preparing.source||current===preparing.target)return;preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&selected()!==active.sessionId)void close(false)}
- const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target)return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false)}
+ const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target||target.matches('[data-dsh-sidebar-root] button.hHd-Xa_toggle'))return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false)}
  const escape=(event:KeyboardEvent)=>{if(active&&event.key==='Escape'){event.preventDefault();void close()}}
  const visibility=()=>{if(document.hidden)active?.timeline?.pause()}
  const cueTarget=(value:any,key:'target'|'fromTarget')=>{
