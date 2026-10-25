@@ -1,4 +1,5 @@
 import {readFileSync} from 'node:fs'
+import {createHash} from 'node:crypto'
 import {spawnSync} from 'node:child_process'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
@@ -14,6 +15,24 @@ it('strictly installs once, strips exactly and rejects native hook, definition, 
  expect(()=>patch(result.replace('if(flights.has(shell))','if(flights.has(other))'))).toThrow(/drifted/)
  expect(()=>patch(result.replace('/* sherlock:pptx-annotation-input:start:v1 */','/* sherlock:pptx-annotation-input:start:v1 *//* sherlock:pptx-annotation-input:start:v1 */'))).toThrow(/drifted/)
  expect(()=>patch(result.replaceAll('sherlock:pptx-annotation-input:start:v1','sherlock:pptx-annotation-input:start:v999'))).toThrow(/drifted/)
+})
+it('upgrades the complete installed multiline-remark runtime to inline spacing without accepting altered legacy source',()=>{
+ const current=patch(source),legacy=current.replace(/function annotationBlock\(before,comment\)\{[\s\S]*?\n\}/,String.raw`function annotationBlock(before,comment){
+ if(typeof before!=='string'||typeof comment!=='string')throw Error('标注文本无效。')
+ const prefix=before?(before.endsWith('\n')?'\n':'\n\n'):'',token='@pptx',tagOffset=prefix.length,start=tagOffset+2
+ return {text:prefix+token+'\n'+comment+'\n\n',inserted:prefix+'\uFFFC\n'+comment+'\n\n',componentStart:tagOffset,componentEnd:tagOffset+token.length,tagOffset,start,end:start+comment.length}
+}`).replace(/function augmentAnnotationDeletion\(before,next,ranges,selection\)\{[\s\S]*?\n\}/,String.raw`function augmentAnnotationDeletion(before,next,ranges,selection){
+ const edit=annotationEdit(before,next,selection),removed=ranges.filter(range=>annotationRangeValid(before,range)&&edit.start<=range.tagOffset&&edit.end>range.tagOffset)
+ if(!removed.length)return {draft:next,removed:[],editRange:{start:edit.start,end:edit.end,insertedLength:edit.text.length}}
+ const start=Math.min(edit.start,...removed.map(range=>range.blockStart)),end=Math.max(edit.end,...removed.map(range=>range.blockEnd))
+ return {draft:before.slice(0,start)+edit.text+before.slice(end),removed:removed.map(range=>range.key),editRange:{start,end,insertedLength:edit.text.length}}
+}`).replace('trackAnnotationRanges(before.draft,expanded.draft,ranges,expanded.removed?.length?expanded.editRange:captured)','trackAnnotationRanges(before.draft,expanded.draft,ranges,captured)').replace('  if(expanded.retainedSeparator){const next=tracked.ranges.find(range=>range.key===expanded.retainedSeparator.key);if(next)next.blockStart=expanded.retainedSeparator.start}\n','')
+ const begin=legacy.indexOf('\n/* sherlock:pptx-annotation-input:start:v1 */'),end=legacy.indexOf('/* sherlock:pptx-annotation-input:end:v1 */',begin)+'/* sherlock:pptx-annotation-input:end:v1 */'.length+1
+ expect(createHash('sha256').update(legacy.slice(begin,end)).digest('hex')).toBe('4aeef32cf0bb0c909e8a9d8a85c877211d5d1873b290c36781d2b9ae0b981a2b')
+ expect(legacy.includes("inserted:prefix+'\\uFFFC\\n'+comment+'\\n\\n'")).toBe(true)
+ expect(current.includes("inserted:prefix+'\\uFFFC '+comment+'\\n'")).toBe(true)
+ expect(patch(legacy)).toBe(current);expect(patch(legacy,true)).toBe(source);expect(patch(current)).toBe(current);expect(patch(current,true)).toBe(source)
+ expect(()=>patch(legacy.replace("inserted:prefix+'\\uFFFC\\n'+comment+'\\n\\n'","inserted:prefix+'\\uFFFC\\n'+comment+'\\n'"))).toThrow(/drifted/)
 })
 it('upgrades only the exact previous notice implementation and keeps legacy drift rejected',()=>{
  const current=patch(source),legacy=current.replace(',submissionNotices=new WeakMap()','').replace(/  interceptSend\(shell,draft,mode\)\{[\s\S]*?\n  getSubmissions:/,"  interceptSend(shell,draft,mode){if(!shell.snapshot.occurrences.some(value=>value.source==='pptx-annotation'))return false;watch(submit(shell,mode).catch(reason=>shell.notify('error',error(reason).message)));return true},\n  getSubmissions:")
