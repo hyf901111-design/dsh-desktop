@@ -14,14 +14,17 @@ type Adapters = {
 type Session = {sessionId: string; cwd: string; title: string; fresh?: boolean}
 type Scene = readonly [id: string, title: string, result: string, hold: number]
 const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;steps:readonly Scene[]}> = {
- board:{title:'自选行情看板',view:'研究',intro:'搭建一个研究看板：自选股控制行情与资讯，最后加入新标的并整理画布。',steps:[
-  ['board-library','打开组件库','组件库已打开，先从自选列表开始。',900],
+ board:{title:'自选行情看板',view:'研究',intro:'搭建六组件研究看板，从市场指数、自选股和行情，逐步补齐资讯、公告与日历。',steps:[
+  ['board-library','打开组件库','组件库已打开，先加入市场概览，再展开个股跟踪。',900],
+  ['board-indices','加入市场指数','指数概览已加入，先看主要市场的表现。',1400],
   ['board-watchlist','创建自选股列表','自选列表用于统一管理标的，后面的组件会跟随它更新。',1100],
-  ['board-quote','放入行情图表','行情图表已经加入，接着补齐相关资讯。',1000],
-  ['board-news','添加相关资讯','三个组件已就位，现在让它们联动。',1100],
-  ['board-link','连接组件，观察联动','切换自选股后，行情与资讯会同步到同一只股票。',2000],
-  ['board-add','添加一只自选股','新标的已加入，选中后可以核对两个组件的联动结果。',1800],
-  ['board-arrange','整理并保存看板','看板已保存到个人看板。结束演示后，你可以继续操作这些组件。',2500]
+  ['board-quote','放入行情图表','行情图表已加入，接着补齐个股资讯和公司公告。',1100],
+  ['board-news','添加相关资讯','资讯面板用于跟踪所选股票的相关消息。',1100],
+  ['board-announcements','添加公司公告','公司公告单独保留，便于与行情和资讯对照阅读。',1200],
+  ['board-calendar','加入日历工具','日历已加入，可以安排后续研究。',1000],
+  ['board-link','连接行情、资讯与公告','自选股切换行情标的，行情再带动相关资讯和公告。',2200],
+  ['board-add','补齐自选股，查看五粮液','9只自选股已齐，当前选中五粮液（000858），可以对照行情、资讯和公告。',2200],
+  ['board-arrange','整理并保存六组件看板','六个组件已按行情概览、个股跟踪、资讯公告和日历分层排列，并保存到个人看板。',3000]
  ]},
  note:{title:'AI 护航研究笔记',view:'笔记',intro:'整理一篇研究笔记，再用严格挑战核对错字、数据和推理，最后修订原文。',steps:[
   ['write','整理研究笔记','笔记已写入。接下来用 AI 挑战检查其中的文字、数据和观点。',1300],

@@ -92,6 +92,48 @@ test('a board action can remain paused for more than its active timeout budget',
  }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
 })
 
+test('builds all six board components after native readiness, with reading time after each completed action',async()=>{
+ vi.useFakeTimers();const f=fixture(),commands:string[]=[];let mount:any,library:any
+ const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-link',2200],['board-add',2200],['board-arrange',3000]]
+ const reply=(detail:any)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))
+ const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;commands.push(detail.command);if(detail.command==='mount-board')mount=detail;else if(detail.command==='board-library')library=detail;else if(detail.command!=='dispose')reply(detail)}
+ window.addEventListener('sherlock:home-guide-native-request',receive)
+ try{
+  const starting=f.controller.start('board');await vi.waitFor(()=>expect(mount).toBeDefined())
+  await vi.advanceTimersByTimeAsync(5000);expect(commands).toEqual(['mount-board'])
+  reply(mount);await starting;await vi.advanceTimersByTimeAsync(0)
+  expect(commands).toEqual(['mount-board','board-library'])
+  await vi.advanceTimersByTimeAsync(3000);expect(commands).toHaveLength(2)
+  reply(library);await vi.advanceTimersByTimeAsync(0)
+  expect(document.querySelector('.odyssey-home-guide-count')?.textContent).toContain('1 / 10')
+  for(let index=0;index<scenes.length;index++){
+   expect(commands).toEqual(['mount-board',...scenes.slice(0,index+1).map(scene=>scene[0])])
+   const hold=scenes[index]![1]
+   if(index===6){
+    await vi.advanceTimersByTimeAsync(300);document.querySelector<HTMLButtonElement>('[data-control=pause]')!.click()
+    await vi.advanceTimersByTimeAsync(5000);expect(commands.at(-1)).toBe('board-calendar')
+    document.querySelector<HTMLButtonElement>('[data-control=play]')!.click();await vi.advanceTimersByTimeAsync(hold-301)
+   }else await vi.advanceTimersByTimeAsync(hold-1)
+   expect(commands.at(-1)).toBe(scenes[index]![0]);await vi.advanceTimersByTimeAsync(1)
+  }
+  expect(commands).toEqual(['mount-board',...scenes.map(scene=>scene[0]),'dispose'])
+  expect(document.querySelector('[data-home-guide]')).toBeNull();expect(f.header.dataset.eworkNotesSession).toBe('example-board');expect(f.text.value).toBe('原有草稿')
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
+})
+
+test('stops the board on a failed calendar action before linking, selecting stocks or claiming a saved result',async()=>{
+ vi.useFakeTimers();const f=fixture(),commands:string[]=[]
+ const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;commands.push(detail.command);if(detail.command==='dispose')return;window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:detail.command!=='board-calendar',message:detail.command==='board-calendar'?'日历工具未能打开':undefined}}))}
+ window.addEventListener('sherlock:home-guide-native-request',receive)
+ try{
+  await f.controller.start('board');await vi.advanceTimersByTimeAsync(50000)
+  expect(commands).toEqual(['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar'])
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error')
+  expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('日历工具未能打开')
+  expect(document.querySelector<HTMLButtonElement>('[data-home-guide-next]')?.disabled).toBe(true)
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
+})
+
 test('reveals the native conversation only after a still-owned handover has finished',async()=>{
  const f=fixture(),reveal=vi.fn();await f.controller.dispose()
  const save=vi.fn(async()=>{}),controller=mountHomeGuides(document,{...f.adapters,beforeOpen:save,revealConversation:reveal});dispose=controller.dispose
