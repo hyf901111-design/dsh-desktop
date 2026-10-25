@@ -1,4 +1,6 @@
-import {readFileSync} from 'node:fs'
+import {readFileSync,existsSync} from 'node:fs'
+import {homedir} from 'node:os'
+import {join} from 'node:path'
 import {createRequire} from 'node:module'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
@@ -13,7 +15,7 @@ function fixture(){
  doc.body.innerHTML='<main class="pI_x6G_centerCol"><header data-srb-session-header data-ework-notes-session="note-session"></header><section data-home-guide="note-run" data-kind="note"><div id="guide-host"></div></section><div data-ework-notes-composer-host="note-session"><div class="uV2eYG_root"><textarea></textarea><button class="uV2eYG_primary">发送</button></div></div></main>'
  doc.documentElement.dataset.homeGuidePointerRun='note-run'
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),modules=id=>['react','react/jsx-runtime','react-dom'].includes(id)?require(id):id==='@deepseek-ai/cordis'?{Service:class{}}:fake
- const scope={window:win,document:doc,navigator:win.navigator,localStorage:win.localStorage,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLInputElement:win.HTMLInputElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,DOMException:win.DOMException,AbortController:win.AbortController,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),setTimeout:win.setTimeout.bind(win),clearTimeout:win.clearTimeout.bind(win),setInterval:win.setInterval.bind(win),clearInterval:win.clearInterval.bind(win),performance:win.performance,crypto:win.crypto,innerWidth:1024,innerHeight:768,TextDecoder,TextEncoder,structuredClone,console}
+ const scope={window:win,document:doc,navigator:win.navigator,localStorage:win.localStorage,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLInputElement:win.HTMLInputElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,DOMException:win.DOMException,AbortController:win.AbortController,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),setTimeout:win.setTimeout.bind(win),clearTimeout:win.clearTimeout.bind(win),setInterval:win.setInterval.bind(win),clearInterval:win.clearInterval.bind(win),performance:win.performance,crypto:win.crypto,innerWidth:1024,innerHeight:768,TextDecoder,TextEncoder,structuredClone,queueMicrotask,console}
  const load=path=>{let descriptor;win.__ModuleLoader__={load:value=>{descriptor=value}};runInNewContext(readFileSync(path,'utf8'),scope);return descriptor}
  const runtime=load('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js').factory(modules),native=load('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js').factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?runtime:modules(id))
  const ordinary=new native.SessionInputShell({actx:{effect:fn=>{const off=fn();if(off)cleanups.push(off)}},defaultSink:async()=>{throw Error('Must not submit through ordinary chat')}})
@@ -36,7 +38,17 @@ function fixture(){
  const command=(command,extra={})=>new Promise(resolve=>{const requestId=win.crypto.randomUUID(),receive=event=>{if(event.detail?.requestId!==requestId)return;win.removeEventListener('sherlock:home-guide-notes-native-reply',receive);resolve(event.detail)};win.addEventListener('sherlock:home-guide-notes-native-reply',receive);win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-notes-native-request',{detail:{requestId,runId:'note-run',sessionId:'note-session',hostId:'guide-host',command,...extra}}))})
  const mount=async()=>{expect(await command('mount',{cwd:'/tmp/note-example',fresh:true})).toMatchObject({ok:true});win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'note-session',runId:'note-run',playing:true}}))}
  releases.push(async()=>{for(const off of cleanups.reverse())off();ordinary.dispose();await win.happyDOM.close()})
- return{win,doc,record,fetches,cues,submissions,command,mount,ack,setAutoAck:value=>{autoAck=value}}
+ const builtSidebar='build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js',sidebarSource=readFileSync(process.env.SHERLOCK_TEST_SIDEBAR_SOURCE||(existsSync(builtSidebar)?builtSidebar:join(homedir(),'Library/Application Support/sherlock-desktop/harness/profiles/web/node_modules/dsh-better-sidebar/lib/client.js')),'utf8'),sidebarStart=sidebarSource.indexOf('const SIDEBAR_PREFS_DEFAULTS ='),sidebarEnd=sidebarSource.indexOf('//#region src/client/chunk-loader.ts',sidebarStart)
+ if(sidebarStart<0||sidebarEnd<0)throw Error('Native sidebar store fixture source drifted')
+ const {SidebarStore,createBetterSidebarService}=runInNewContext(sidebarSource.slice(sidebarStart,sidebarEnd)+';({SidebarStore,createBetterSidebarService})',scope)
+ const sidebarStore=new SidebarStore();sidebarStore.setSession('note-session')
+ const sidebar=createBetterSidebarService(sidebarStore),coordinator=new native.ResearchSidebarCoordinator(),sessions={list:{getSnapshot:()=>({current:'note-session',byId:{'note-session':{id:'note-session'}}}),subscribe:()=>()=>{}}};cleanups.push(coordinator.attach(sidebar,key=>key,sessions));scope.defaultResearchSidebar=coordinator
+ coordinator.enter('note-session');sidebar.setPanelState({width:390},{sessionId:'note-session'})
+ const leaves=node=>node.kind==='leaf'?[node]:node.children.flatMap(leaves)
+ const paintNativeHost=()=>{const {sessionId:current,state}=sidebar.getSnapshot(),leaf=leaves(state.splits).find(node=>node.id===state.activePane)||leaves(state.splits)[0];input.closest('[data-ework-notes-composer-host]').style.display=current==='note-session'&&state.panelOpen&&leaf?.active==='sherlock-research-conversation'?'':'none'}
+ releases.push(sidebar.subscribeState(paintNativeHost));paintNativeHost()
+ const openEvidence=()=>sidebar.openTab({id:'notes-challenge:note-session',type:'sherlock-notes-challenge',title:'AI随航'},{sessionId:'note-session'})
+ return{win,doc,record,fetches,cues,submissions,command,mount,ack,sidebar,sidebarStore,openEvidence,setAutoAck:value=>{autoAck=value}}
 }
 it('types into the real Notes SessionInputShell and submits through its ordinary note admission',async()=>{
  const f=fixture();await f.mount();expect(await f.command('type',{stage:'note'})).toMatchObject({ok:true})
@@ -68,3 +80,18 @@ it('does not type into a native input hidden while its acknowledgement was pause
  f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'note-session',runId:'note-run',playing:true}}))
  expect(await pending).toMatchObject({ok:false});expect(f.record.shell.snapshot.draft).toBe('');expect(f.submissions).toEqual([])
 },15000)
+
+it('returns from the actual native evidence tab to the same note composer before typing, preserving its pane width and saved evidence tab',async()=>{
+ const f=fixture();await f.mount();expect(f.win.getComputedStyle(f.doc.querySelector('[data-ework-notes-composer-host]')).display).not.toBe('none');f.openEvidence()
+ expect(f.win.getComputedStyle(f.doc.querySelector('[data-ework-notes-composer-host]')).display).toBe('none')
+ const result=await f.command('type',{stage:'note'});expect(result.message).toBeUndefined();expect(result).toMatchObject({ok:true})
+ expect(f.submissions).toEqual([HOME_NOTES_TASK_PROMPT]);expect(f.sidebar.getSnapshot()).toMatchObject({sessionId:'note-session',state:{panelOpen:true,width:390}})
+ const leaves=node=>node.kind==='leaf'?[node]:node.children.flatMap(leaves),tabs=leaves(f.sidebar.getSnapshot().state.splits).flatMap(node=>node.tabs)
+ expect(tabs.some(tab=>tab.id==='notes-challenge:note-session')).toBe(true)
+ expect(f.win.getComputedStyle(f.doc.querySelector('[data-ework-notes-composer-host]')).display).not.toBe('none')
+},15000)
+it('never activates a different native sidebar session while restoring the note composer',async()=>{
+ const f=fixture();await f.mount();f.openEvidence();f.sidebarStore.setSession('different-session');const before=JSON.stringify(f.sidebar.getSnapshot())
+ expect(await f.command('type',{stage:'note'})).toMatchObject({ok:false})
+ expect(f.submissions).toEqual([]);expect(f.record.shell.snapshot.draft).toBe('');expect(JSON.stringify(f.sidebar.getSnapshot())).toBe(before)
+})
