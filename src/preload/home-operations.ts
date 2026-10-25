@@ -2,17 +2,19 @@ import styles from './home-operations.css?raw'
 import { OPERATIONS_CASE_GLOWS, OPERATIONS_ILLUSTRATIONS, OPERATIONS_TREND_UP } from './home-operations-assets'
 import { createHomeOperationsCarousel, type HomeOperationsCarousel } from './home-operations-carousel'
 import { createHomeOperationsCaseTransition, type HomeOperationsCaseTransition } from './home-operations-case-transition'
+import type { HomeThemeController } from './home-theme-controls'
+import { createHomeThemeGallery, homeAppearanceIcon, type HomeThemeGallery } from './home-theme-gallery'
 
 type Section = 'input' | 'operations'
 type Motion = 'idle' | 'settling'
 export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
 export type HomeOperationActionContext = { signal: AbortSignal; revealComposer(): Promise<void> }
 type Card = HomeOperationCard
-type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: Exclude<Card, 'report'>, context: HomeOperationActionContext): Promise<void> }
+type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: Exclude<Card, 'report'>, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void> }
 const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
 const DESIGN_WIDTH = 780
-const DESIGN_HEIGHT = 382
+const DESIGN_HEIGHT = 390
 const MOTION_FREQUENCY = 14
 const smootherStep = (value: number) => {
   const t = Math.max(0, Math.min(1, value))
@@ -21,7 +23,7 @@ const smootherStep = (value: number) => {
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
 const COPY = {
   zh: {
-    heading: '快速开始', down: '切换到快速开始', up: '返回输入区', pagination: '用例切换',
+    heading: '快速开始', wallpapers: '主题壁纸', light: '切换为浅色', dark: '切换为深色', down: '切换到快速开始', up: '返回输入区', pagination: '用例切换',
     cards: ['创建研究看板', '撰写研究笔记', '制作演示文稿', '制作研究报告'],
     cases: [
       ['快速创建', '自选行情看板', '通过研究模式，快速创建自选行情看板，以了解研究看板基础功能。'],
@@ -30,7 +32,7 @@ const COPY = {
     ]
   },
   en: {
-    heading: 'Quick start', down: 'Show quick start', up: 'Return to the composer', pagination: 'Examples',
+    heading: 'Quick start', wallpapers: 'Wallpapers', light: 'Switch to light mode', dark: 'Switch to dark mode', down: 'Show quick start', up: 'Return to the composer', pagination: 'Examples',
     cards: ['Create a research board', 'Write research notes', 'Create a presentation', 'Create a research report'],
     cases: [
       ['Quick create', 'Watchlist dashboard', 'Create a watchlist dashboard in Research to explore the basics of research boards.'],
@@ -56,6 +58,9 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   let heroWasInert = false
   let section: HTMLElement | null = null, toggle: HTMLButtonElement | null = null
   let heading: HTMLElement | null = null
+  let quickTab: HTMLButtonElement | null = null, wallpaperTab: HTMLButtonElement | null = null, appearance: HTMLButtonElement | null = null
+  let quickPanel: HTMLElement | null = null, gallery: HomeThemeGallery | null = null
+  let activeTab: 'quick' | 'wallpapers' = 'quick', appearanceBusy = false
   let usecase: HTMLElement | null = null, exampleButton: HTMLButtonElement | null = null
   let carousel: HomeOperationsCarousel | null = null
   let caseTransition: HomeOperationsCaseTransition | null = null
@@ -143,8 +148,15 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     const localeChanged = renderedLocale !== locale()
     renderedLocale = locale()
     const text = copy()
-    section?.setAttribute('aria-label', text.heading)
-    if (heading) heading.textContent = text.heading
+    section?.setAttribute('aria-label', activeTab === 'quick' ? text.heading : text.wallpapers)
+    if (quickTab) { quickTab.textContent = text.heading; quickTab.setAttribute('aria-selected', String(activeTab === 'quick')) }
+    if (wallpaperTab) { wallpaperTab.textContent = text.wallpapers; wallpaperTab.setAttribute('aria-selected', String(activeTab === 'wallpapers')) }
+    if (appearance) {
+      const dark = doc.body.hasAttribute('data-ds-dark-theme'), label = dark ? text.light : text.dark
+      appearance.setAttribute('aria-label', label); appearance.title = label
+      appearance.querySelector('img')!.src = homeAppearanceIcon(dark)
+    }
+    gallery?.refresh()
     section?.querySelector('.odyssey-operations-pagination')?.setAttribute('aria-label', text.pagination)
     for (const [index, button] of quickCards.entries()) {
       button.querySelector('.odyssey-operations-quick-label')!.textContent = text.cards[index]!
@@ -163,6 +175,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       for (const image of button.querySelectorAll<HTMLImageElement>('img.colored')) image.src = OPERATIONS_ILLUSTRATIONS[theme].hover[card]
     }
     updateGlow()
+    updateLabels()
   }
   const cancelSettlement = () => {
     if (motionFrame) win.cancelAnimationFrame(motionFrame)
@@ -195,8 +208,12 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     hero.inert = !collapsed || heroWasInert
     toggle.setAttribute('aria-expanded', String(intent === 'operations'))
     for (const button of [...quickCards, ...pages, ...(exampleButton ? [exampleButton] : [])]) button.tabIndex = expanded ? 0 : -1
-    caseTransition?.setVisible(visible && !section.hidden && cardsProgress > .0001)
-    carousel?.setVisible(visible && expanded && motion === 'idle' && !section.hidden && shown(section))
+    for (const button of [quickTab, wallpaperTab, appearance]) if (button) button.tabIndex = expanded ? 0 : -1
+    if (activeTab !== 'quick') for (const button of [...quickCards, ...pages, ...(exampleButton ? [exampleButton] : [])]) button.tabIndex = -1
+    const quickVisible = activeTab === 'quick'
+    caseTransition?.setVisible(visible && quickVisible && !section.hidden && cardsProgress > .0001)
+    carousel?.setVisible(visible && quickVisible && expanded && motion === 'idle' && !section.hidden && shown(section))
+    gallery?.setVisible(visible && !doc.hidden && activeTab === 'wallpapers' && expanded && !section.hidden && shown(section))
   }
   const startMotion = () => {
     if (reduced.matches) { progress = targetProgress; velocity = 0; paint(); return }
@@ -234,33 +251,26 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     const snap = (coordinate: number) => Math.round(coordinate * pixelRatio) / pixelRatio
     const header = root?.querySelector<HTMLElement>('.wSkVaW_header,[data-srb-session-header]')
     const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom - bounds.top) : 44
-    const dock = host.querySelector<HTMLElement>('[data-odyssey-theme-dock]')
-    const toggleHeight = toggle ? Number.parseFloat(win.getComputedStyle(toggle).height) || 32 : 32
-    let toggleTop = bounds.height - 104
-    if (dock) {
-      const dockStyle = win.getComputedStyle(dock)
-      // Use the expanded envelope even while the dock is collapsed or moving.
-      const expandedBottom = Number.parseFloat(dockStyle.getPropertyValue('--theme-dock-bottom'))
-      const dockScale = Number.parseFloat(dockStyle.getPropertyValue('--theme-dock-scale'))
-      const dockHeight = Number.parseFloat(dockStyle.height) || dock.offsetHeight || 64
-      toggleTop = bounds.height - (Number.isFinite(expandedBottom) ? expandedBottom : 24) - dockHeight * (Number.isFinite(dockScale) ? dockScale : 1) - 44 - toggleHeight
-    }
+    // Retain the approved raised control; relax clearance only in short panes.
+    const toggleClearance = Math.max(48, Math.min(104, 48 + (bounds.height - 480) * 56 / 120))
+    const toggleTop = bounds.height - toggleClearance
     // The collection belongs to the pane, independently of the native input's
     // narrower max-width when the file panel is open.
     const paneWidth = Math.max(1, bounds.width - 48)
     const stacked = bounds.width < 550, fluid = !stacked && paneWidth < DESIGN_WIDTH
     host.dataset.odysseyHomeOperationsLayout = stacked ? 'stacked' : fluid ? 'fluid' : 'wide'
-    const minimumTop = Math.max(stacked ? 56 : 64, headerBottom + (stacked ? 16 : 24))
-    const bottomLimit = toggleTop - (stacked ? 16 : 24)
+    const isGallery = activeTab === 'wallpapers' && !!gallery
+    const minimumTop = isGallery ? Math.max(48, headerBottom + 16) : Math.max(stacked ? 56 : 64, headerBottom + (stacked ? 16 : 24))
+    const bottomLimit = toggleTop - (isGallery ? 12 : stacked ? 16 : 24)
     const availableHeight = Math.max(96, bottomLimit - minimumTop)
     const heightScale = Math.max(.22, (bottomLimit - minimumTop) / DESIGN_HEIGHT)
-    const scale = stacked || fluid ? 1 : Math.max(.2, Math.min(1, heightScale))
-    const physicalWidth = stacked ? Math.max(1, bounds.width - 32) : fluid ? paneWidth : DESIGN_WIDTH * scale
-    const viewportHeight = stacked ? Math.min(620, availableHeight)
-      : fluid ? Math.min(availableHeight, (locale() === 'en' ? 346 : Math.max(260, Math.min(346, Math.round(physicalWidth * .5)))) + 36)
+    const scale = isGallery || stacked || fluid ? 1 : Math.max(.2, Math.min(1, heightScale))
+    const physicalWidth = isGallery ? Math.min(DESIGN_WIDTH, Math.max(1, bounds.width - (stacked ? 32 : 48))) : stacked ? Math.max(1, bounds.width - 32) : fluid ? paneWidth : DESIGN_WIDTH * scale
+    const viewportHeight = isGallery ? 44 + gallery!.layout(physicalWidth, availableHeight - 44) : stacked ? Math.min(620, availableHeight)
+      : fluid ? Math.min(availableHeight, (locale() === 'en' ? 346 : Math.max(260, Math.min(346, Math.round(physicalWidth * .5)))) + 44)
       : DESIGN_HEIGHT * scale
     const centeredLeft = snap(bounds.left + (bounds.width - physicalWidth) / 2) - bounds.left
-    const centeredTop = stacked || fluid ? (bounds.height - viewportHeight) / 2 - 18 : (bounds.height - 346 * scale) / 2 - 36 * scale
+    const centeredTop = isGallery ? (bounds.height - (viewportHeight - 44)) / 2 - 44 : stacked || fluid ? (bounds.height - viewportHeight) / 2 - 22 : (bounds.height - 346 * scale) / 2 - 44 * scale
     const targetTop = snap(bounds.top + Math.max(minimumTop, Math.min(centeredTop, bottomLimit - viewportHeight))) - bounds.top
     // Space from the visible input surface, excluding the hero's transparent
     // bottom padding. Re-query because the resident composer can replace slots.
@@ -274,6 +284,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     css('--odyssey-operations-center-x', `${centeredLeft + physicalWidth / 2}px`)
     css('--odyssey-operations-shift', `${geometry.shift}px`)
     css('--odyssey-operations-scale', String(scale))
+    if (section) { section.style.width = isGallery ? `${physicalWidth}px` : ''; section.style.height = isGallery ? `${viewportHeight}px` : '' }
     css('--odyssey-operations-viewport-height', `${viewportHeight}px`)
     css('--odyssey-operations-toggle-top', `${snap(bounds.top + toggleTop) - bounds.top}px`)
     css('--odyssey-operations-available-height', `${Math.max(0, bounds.height - headerBottom)}px`)
@@ -283,6 +294,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   const setSection = (next: Section, force = false) => {
     if (!visible || !host || !hero || !section || !toggle) return false
     intent = next
+    if (next === 'input') gallery?.setVisible(false)
     clearPointers()
     targetProgress = next === 'operations' ? 1 : 0
     if (force || reduced.matches) {
@@ -294,9 +306,27 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     return true
   }
   const toggleSection = () => setSection((motion === 'idle' ? state : intent) === 'input' ? 'operations' : 'input')
+  const selectTab = (next: 'quick' | 'wallpapers') => {
+    if (next === 'wallpapers' && !gallery || next === activeTab) return
+    activeTab = next
+    clearPointers(); clearIllustrationBlends()
+    if (section) section.dataset.odysseyOperationsActiveTab = activeTab
+    if (quickPanel) { quickPanel.hidden = next !== 'quick'; quickPanel.inert = next !== 'quick' }
+    if (gallery) { gallery.element.hidden = next !== 'wallpapers'; gallery.element.inert = next !== 'wallpapers' }
+    if (next !== 'wallpapers') gallery?.setVisible(false)
+    updateLabels(); measure()
+  }
   const clearFeedback = () => {
     if (feedbackTimer) win.clearTimeout(feedbackTimer)
     feedbackTimer = 0; feedback?.remove(); feedback = null
+  }
+  const showFeedback = (error: unknown) => {
+    clearFeedback()
+    feedback = doc.createElement('div'); feedback.dataset.odysseyOperationsFeedback = ''; feedback.setAttribute('role', 'alert')
+    feedback.textContent = error instanceof Error ? error.message : '操作暂时无法完成，请稍后重试。'
+    feedback.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147483647;max-width:min(440px,calc(100vw - 40px));padding:10px 16px;border-radius:10px;background:#262729;color:#fff;box-shadow:0 8px 28px #0003;font:14px/22px system-ui;pointer-events:none'
+    doc.body.append(feedback)
+    feedbackTimer = win.setTimeout(clearFeedback, 8000)
   }
   const setActionBusy = (busy: boolean) => {
     section?.setAttribute('aria-busy', String(busy))
@@ -330,22 +360,18 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     }
     catch (error) {
       if (controller.signal.aborted || disposed) return
-      feedback = doc.createElement('div'); feedback.dataset.odysseyOperationsFeedback = ''; feedback.setAttribute('role', 'alert')
-      feedback.textContent = error instanceof Error ? error.message : '操作暂时无法完成，请稍后重试。'
-      feedback.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147483647;max-width:min(440px,calc(100vw - 40px));padding:10px 16px;border-radius:10px;background:#262729;color:#fff;box-shadow:0 8px 28px #0003;font:14px/22px system-ui;pointer-events:none'
-      doc.body.append(feedback)
-      feedbackTimer = win.setTimeout(clearFeedback, 8000)
+      showFeedback(error)
     } finally {
       if (actionController === controller) { actionController = null; setActionBusy(false) }
     }
   }
   const preserveNativeWheel = (target: EventTarget | null) => {
     if (!(target instanceof win.Element) || !host?.contains(target)) return true
-    if (target.closest('textarea,input,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"],[role="listbox"],[role="dialog"],[data-odyssey-theme-dock]')) return true
+    if (target.closest('textarea,input,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"],[role="listbox"],[role="dialog"]')) return true
     const control = target.closest('button,a,[role="button"],[role="slider"],[role="combobox"]')
     if (control && !own(control)) return true
     // The stacked collection owns its complete scroll gesture, including edges.
-    if (host.dataset.odysseyHomeOperationsLayout === 'stacked' && section?.contains(target)) return true
+    if (activeTab === 'quick' && host.dataset.odysseyHomeOperationsLayout === 'stacked' && section?.contains(target)) return true
     for (let node: Element | null = target; node && node !== host; node = node.parentElement) {
       const element = node as HTMLElement
       if (element.scrollHeight > element.clientHeight + 1 && /auto|scroll/.test(win.getComputedStyle(element).overflowY)) return true
@@ -471,8 +497,35 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     section = doc.createElement('section'); section.className = 'odyssey-home-operations'; section.dataset.odysseyHomeOperations = ''
     section.hidden = true; section.inert = true
     section.setAttribute('aria-hidden', 'true')
-    heading = doc.createElement('h2'); heading.className = 'odyssey-operations-heading'
+    heading = doc.createElement('div'); heading.className = 'odyssey-operations-heading'
+    const tabs = doc.createElement('div'); tabs.className = 'odyssey-operations-tabs'; tabs.setAttribute('role', 'tablist')
+    quickTab = doc.createElement('button'); wallpaperTab = doc.createElement('button')
+    for (const [tab, key] of [[quickTab, 'quick'], [wallpaperTab, 'wallpapers']] as const) {
+      tab.type = 'button'; tab.dataset.odysseyOperationsTab = key; tab.setAttribute('role', 'tab'); tab.id = `odyssey-home-${key}-tab`
+      tab.setAttribute('aria-controls', `odyssey-home-${key}-panel`)
+      tab.addEventListener('click', () => selectTab(key))
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) return
+        event.preventDefault()
+        const next = event.key === 'Home' || event.key === 'ArrowLeft' ? quickTab : wallpaperTab
+        if (next && !next.disabled) { next.click(); next.focus() }
+      })
+      tabs.append(tab)
+    }
+    wallpaperTab.disabled = !options.themeController
+    appearance = doc.createElement('button'); appearance.type = 'button'; appearance.dataset.odysseyOperationsAppearance = ''; appearance.disabled = !options.onToggleAppearance
+    const icon = doc.createElement('img'); icon.alt = ''; icon.width = icon.height = 18; appearance.append(icon)
+    appearance.addEventListener('click', async () => {
+      if (appearanceBusy || !options.onToggleAppearance) return
+      const button = appearance!
+      appearanceBusy = true; button.disabled = true; button.setAttribute('aria-busy', 'true')
+      try { await options.onToggleAppearance() }
+      catch (error) { if (!disposed && button.isConnected) showFeedback(error) }
+      finally { appearanceBusy = false; if (appearance) { appearance.disabled = !options.onToggleAppearance; appearance.removeAttribute('aria-busy') } }
+    })
+    heading.append(tabs, appearance)
     const grid = doc.createElement('div'); grid.className = 'odyssey-operations-grid'
+    quickPanel = grid; grid.id = 'odyssey-home-quick-panel'; grid.setAttribute('role', 'tabpanel'); grid.setAttribute('aria-labelledby', quickTab.id)
     usecase = doc.createElement('article'); usecase.className = 'odyssey-operations-usecase'
     exampleButton = doc.createElement('button'); exampleButton.type = 'button'; exampleButton.className = 'odyssey-operations-example-open'; exampleButton.dataset.odysseyOperationsOpenExample = ''; exampleButton.tabIndex = -1
     exampleButton.addEventListener('click', () => { void runAction((['board', 'note', 'ppt'] as const)[caseIndex]!, true) })
@@ -520,6 +573,12 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       quickCards.push(card); quickGrid.append(anchor)
     }
     grid.append(usecaseAnchor, quickGrid); section.append(heading, grid)
+    if (options.themeController) {
+      gallery = createHomeThemeGallery(doc, options.themeController)
+      gallery.element.id = 'odyssey-home-wallpapers-panel'; gallery.element.setAttribute('role', 'tabpanel'); gallery.element.setAttribute('aria-labelledby', wallpaperTab.id)
+      gallery.element.hidden = activeTab !== 'wallpapers'; gallery.element.inert = activeTab !== 'wallpapers'; section.append(gallery.element)
+    } else activeTab = 'quick'
+    grid.hidden = activeTab !== 'quick'; grid.inert = activeTab !== 'quick'; section.dataset.odysseyOperationsActiveTab = activeTab
     toggle = doc.createElement('button'); toggle.type = 'button'; toggle.className = 'odyssey-operations-toggle'; toggle.dataset.odysseyHomeOperationsToggle = ''; toggle.setAttribute('aria-expanded', 'false')
     toggle.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     toggle.addEventListener('click', toggleSection)
@@ -532,6 +591,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     cancelSettlement()
     carousel?.dispose(); carousel = null
     caseTransition?.dispose(); caseTransition = null
+    gallery?.dispose(); gallery = null
     clearPointers(); clearIllustrationBlends(); resize.disconnect(); restoreHero()
     host?.removeEventListener('wheel', onWheel)
     resetWheel()
@@ -539,6 +599,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     section?.remove(); toggle?.remove()
     section = toggle = null; root = hero = host = null
     heading = usecase = null; exampleButton = null
+    quickTab = wallpaperTab = appearance = null; quickPanel = null
     quickCards.length = pages.length = 0
     renderedTheme = renderedLocale = ''; visible = false; state = intent = 'input'; motion = 'idle'
     progress = targetProgress = renderedHeroOffset = velocity = 0

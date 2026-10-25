@@ -1,4 +1,4 @@
-/* Home atmosphere is rendered locally; the theme dock uses the approved Figma dimensions. */
+/* Home atmosphere is rendered locally; wallpaper controls live in the operations gallery. */
 body:has([data-odyssey-page="home"]) {
   --odyssey-shell: rgb(228 229 229 / .70);
   --odyssey-home-input: rgb(255 255 255 / .49);
@@ -46,82 +46,7 @@ body:has([data-odyssey-panel-right="open"]) #root [data-dsh-frame] > [data-pane=
 [data-odyssey-home-theme-background][data-home-theme-family="react-bits"] { background:#f7f8fc; }
 [data-ds-dark-theme] [data-odyssey-home-theme-background][data-home-theme-family="react-bits"] { background:#120f17; }
 [data-odyssey-home-theme-background] canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-[data-odyssey-home-theme-background][hidden], [data-odyssey-theme-dock][hidden] { display:none !important; }
-[data-odyssey-theme-dock] {
-  --theme-dock-bottom:24px;
-  --theme-dock-scale:1;
-  --theme-strip-scale:clamp(.25, calc((100cqw - 24px) / 292px), 1);
-  position:absolute;
-  left:50%;
-  bottom:var(--theme-dock-bottom);
-  transform:translateX(-50%) scale(var(--theme-dock-scale));
-  transform-origin:center bottom;
-  transition:bottom 520ms cubic-bezier(.16,1.15,.3,1);
-  width:min(368px, calc(100% - 24px));
-  height:64px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:9;
-  -webkit-app-region:no-drag;
-  user-select:none;
-}
-[data-odyssey-theme-dock][data-dock-state="collapsed"] {
-  /* Place the current card's upper third above the pane edge at every scale. */
-  bottom:calc(var(--theme-dock-scale) * (-32px - (28px - 56px / 3) * var(--theme-strip-scale)));
-  transition-timing-function:cubic-bezier(.22,.8,.25,1);
-}
-[data-odyssey-theme-dock]::after {
-  /* Keep the revealed edge hovered as the cards lift away from the pointer. */
-  content:"";
-  position:absolute;
-  left:0; right:0; top:100%;
-  height:calc(var(--theme-dock-bottom) / var(--theme-dock-scale));
-}
-.odyssey-theme-strip {
-  position:relative;
-  width:284px; height:56px;
-  /* Include the glass overhang when both sidebars leave a narrow home pane. */
-  transform:scale(var(--theme-strip-scale));
-}
-[data-odyssey-theme-dock] button {
-  position:absolute;
-  left:50%; top:50%;
-  width:84px; height:48px;
-  padding:0; margin:0;
-  border:0; border-radius:6px;
-  background:transparent;
-  color:inherit;
-  cursor:pointer;
-  transform:translate(calc(-50% + var(--theme-offset) * 100px), -50%);
-  transition:transform 420ms cubic-bezier(.22,.8,.25,1), width 420ms cubic-bezier(.22,.8,.25,1), height 420ms cubic-bezier(.22,.8,.25,1), opacity 220ms ease;
-  -webkit-app-region:no-drag;
-  appearance:none;
-  display:block;
-  box-sizing:border-box;
-  line-height:0;
-}
-[data-odyssey-theme-dock] button[data-home-theme-position="current"] { width:96px; height:56px; cursor:default; z-index:2; }
-[data-odyssey-theme-dock] button[data-home-theme-position="outside"] { opacity:0; pointer-events:none; }
-.odyssey-theme-card-body { display:block; width:100%; height:100%; position:relative; margin:0; padding:0; box-sizing:border-box; isolation:isolate; transition:transform 180ms ease; }
-[data-odyssey-theme-dock] button:not([aria-pressed="true"]):hover .odyssey-theme-card-body { transform:translateY(-3px); }
-.odyssey-theme-glass { display:block; position:absolute; left:50%; top:50%; width:calc(100% + 8px); height:calc(100% + 8px); transform:translate(-50%,-50%); margin:0; padding:0; box-sizing:border-box; border-radius:10px; background:rgb(0 0 0 / .10); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); pointer-events:none; }
-.odyssey-theme-preview { display:block; position:absolute; inset:0; border-radius:6px; overflow:hidden; background-color:#e8e8e8; background-image:var(--theme-thumbnail); background-size:100% 100%; background-position:center; }
-[data-ds-dark-theme] .odyssey-theme-preview { background-color:#202020; }
-.odyssey-theme-edge-blur { display:block; position:absolute; inset:-5px; background-image:var(--theme-thumbnail); background-size:calc(100% - 10px) calc(100% - 10px); background-repeat:no-repeat; background-position:center; filter:blur(6px); pointer-events:none; opacity:0; transition:opacity 280ms ease; }
-[data-home-theme-position="previous"] .odyssey-theme-edge-blur { opacity:1; mask-image:linear-gradient(to right,#000 8%,transparent 92%); -webkit-mask-image:linear-gradient(to right,#000 8%,transparent 92%); }
-[data-home-theme-position="next"] .odyssey-theme-edge-blur { opacity:1; mask-image:linear-gradient(to left,#000 8%,transparent 92%); -webkit-mask-image:linear-gradient(to left,#000 8%,transparent 92%); }
-[data-odyssey-theme-dock] button:focus-visible { outline:2px solid var(--ds-focus-ring,#578cf5); outline-offset:7px; }
-@container (height < 520px) {
-  [data-odyssey-theme-dock] { --theme-dock-bottom:12px; --theme-dock-scale:.88; }
-}
-@container (height < 420px) {
-  [data-odyssey-theme-dock] { --theme-dock-bottom:8px; --theme-dock-scale:.78; }
-  .wSkVaW_root[data-odyssey-page="home"] > [data-center-composer-host] { padding-bottom:72px; }
-}
-@media (prefers-reduced-motion:reduce) {
-  [data-odyssey-theme-dock], [data-odyssey-theme-dock] button, .odyssey-theme-card-body, .odyssey-theme-edge-blur { transition:none; }
-}
+[data-odyssey-home-theme-background][hidden] { display:none !important; }
 /* A stable tab-like backing keeps the panel entry legible over every shader. */
 body:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odyssey-subagent-panel] *)) [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleButton {
   background:rgb(255 255 255 / .8);
