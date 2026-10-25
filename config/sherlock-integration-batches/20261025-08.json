@@ -1,0 +1,398 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-08",
+  "branch": "codex/integration/20261025-08",
+  "baseMainCommit": "1615ffa1f0366b59b2893671c0938f650446c77a",
+  "expectedMainCommit": "1615ffa1f0366b59b2893671c0938f650446c77a",
+  "createdAt": "2026-10-25T05:20:45.068Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首页原生主题图库及运营卡片交互增强",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "1615ffa1f0366b59b2893671c0938f650446c77a",
+        "tipCommit": "832042b3f787e9030bbe7baf42179f684b32457a",
+        "commits": [
+          {
+            "commit": "9dbc3eb6a6f283db5f6e1982798d8eb4996b7770",
+            "parents": [
+              "66dcc3932ddeacc235df0b62fb97fed59c81977a"
+            ],
+            "subject": "增强运营卡片的指针透视与动态渐变"
+          },
+          {
+            "commit": "baf38ed14024f46a73b03446c2f8bf8c1cfa1a1c",
+            "parents": [
+              "9dbc3eb6a6f283db5f6e1982798d8eb4996b7770"
+            ],
+            "subject": "记录主题壁纸改造边界与新版用例验收证据"
+          },
+          {
+            "commit": "88767f52cf52217a3147503bd2f8e797101290a5",
+            "parents": [
+              "baf38ed14024f46a73b03446c2f8bf8c1cfa1a1c"
+            ],
+            "subject": "统一首页壁纸控制器并接入原生全局明暗切换"
+          },
+          {
+            "commit": "b0e55e85e70d408de5612e2906e07c8f09185412",
+            "parents": [
+              "88767f52cf52217a3147503bd2f8e797101290a5"
+            ],
+            "subject": "按设计整合首页主题壁纸页签与响应式图库"
+          },
+          {
+            "commit": "48fc80a33702777990662ceeb4e3c695fa781197",
+            "parents": [
+              "b0e55e85e70d408de5612e2906e07c8f09185412"
+            ],
+            "subject": "记录主题图库与卡片动效的聚焦验证结果"
+          },
+          {
+            "commit": "90d13c7777a364c37c2f6d028ea43541fb401c91",
+            "parents": [
+              "48fc80a33702777990662ceeb4e3c695fa781197"
+            ],
+            "subject": "校准原生明暗桥测试的生产加载环境"
+          },
+          {
+            "commit": "832042b3f787e9030bbe7baf42179f684b32457a",
+            "parents": [
+              "90d13c7777a364c37c2f6d028ea43541fb401c91",
+              "1615ffa1f0366b59b2893671c0938f650446c77a"
+            ],
+            "subject": "同步已验收用例批次的本地主干记录"
+          }
+        ],
+        "boundaryParents": [
+          "66dcc3932ddeacc235df0b62fb97fed59c81977a"
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-25-home-theme-gallery.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-10-25-natural-home-guides.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-25-home-theme-gallery.md"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-theme-appearance.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-home.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-icons/moon.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-icons/sun.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-theme-controls.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-theme-gallery.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-themes.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-theme-appearance.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-controller.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-theme-controls.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-motion-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-pipeline-1-20261025.log",
+            "verifiedCommit": "832042b3f787e9030bbe7baf42179f684b32457a",
+            "completedAt": "2026-10-25T05:20:05.156Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-pipeline-2-20261025.log",
+            "verifiedCommit": "832042b3f787e9030bbe7baf42179f684b32457a",
+            "completedAt": "2026-10-25T05:20:05.156Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-controls.test.ts",
+              "test/home-theme-appearance.test.js",
+              "test/home-theme-preferences.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-root-final-unit-20261025.log",
+            "verifiedCommit": "832042b3f787e9030bbe7baf42179f684b32457a",
+            "completedAt": "2026-10-25T05:20:05.156Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "all fifteen native wallpaper|gallery tab, native wallpaper|navigates wallpaper tabs",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-root-final-critical-20261025.log",
+            "verifiedCommit": "832042b3f787e9030bbe7baf42179f684b32457a",
+            "completedAt": "2026-10-25T05:20:05.156Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-gallery-root-final-typecheck-20261025.log",
+            "verifiedCommit": "832042b3f787e9030bbe7baf42179f684b32457a",
+            "completedAt": "2026-10-25T05:20:05.156Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "git diff --check",
+            "verifiedCommit": "832042b3f787e9030bbe7baf42179f684b32457a",
+            "completedAt": "2026-10-25T05:20:05.156Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium：最终25项图库/窄尺寸/动效关键检查通过；最终tip重核44单元、3图库核心交互、双遍生产pipeline、tsc和diff。原生ThemeRuntime apply/settings文件持久化/恢复/cleanup直接执行通过；15原生keys/assets/renderers与PPT/PDF字节不变。Root已查看标准/窄英文及header可读性对照；B/C/D独审无阻塞。正式包主题切换和真实重启留待main构建后验收。"
+        },
+        "acceptanceCriteria": [
+          "运营区快速开始/主题壁纸页签，15当前客户端壁纸预览及全局明暗原生设置，保留规范key/动态背景/持久化。",
+          "标准5x3、窄尺寸比例预览及12px完整名称，无旧dock/内滚动/截断，正常高度切换按钮位置不下移。",
+          "四小卡微透视±9°/720px及各自不同动态渐变增强，72ms阻尼/清晰文字/无描边光斑/无露边；大卡幅度不变。",
+          "仅干净本地main正式身份构建并实际验证主题切换/重启/卡片效果，版本1.3.5不变，不公证上传push。"
+        ],
+        "risks": [
+          "正式Electron主题/明暗切换及重启验收仍待构建；源测试不替代正式包。",
+          "无关旧preset测试fixture失败保持单独记录；本次appearance测试Node/Vitest字节差异已用test-only修复，未放宽生产drift校验。"
+        ],
+        "generatedAt": "2026-10-25T05:20:05.156Z"
+      },
+      "merged": {
+        "mergeCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+        "verificationCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-controls.test.ts",
+              "test/home-theme-appearance.test.js",
+              "test/home-theme-preferences.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-theme-controller.test.ts test/home-theme-controls.test.ts test/home-theme-appearance.test.js test/home-theme-preferences.test.ts --maxWorkers=2",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "all fifteen native wallpaper|gallery tab, native wallpaper|navigates wallpaper tabs",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js -t all fifteen native wallpaper|gallery tab, native wallpaper|navigates wallpaper tabs --maxWorkers=2",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T05:23:11.544Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-theme-controller.test.ts",
+        "test/home-theme-controls.test.ts",
+        "test/home-theme-appearance.test.js",
+        "test/home-theme-preferences.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "-t",
+        "all fifteen native wallpaper|gallery tab, native wallpaper|navigates wallpaper tabs",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
