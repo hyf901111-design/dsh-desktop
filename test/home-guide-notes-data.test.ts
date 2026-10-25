@@ -11,17 +11,32 @@ import {NotesStore} from '../src/main/notes/store'
 const sessionId='home-guide-notes-contract'
 const review=()=>({sessionId,requestId:'review-1',action:'review' as const,level:3 as const,title:HOME_NOTES_GUIDE_TITLE,blocks:challengeDocumentBlocks(HOME_NOTES_GUIDE_BLOCKS)})
 describe('homepage note example data and isolated bridge',()=>{
- it('provides a substantial research note with explicit example data and exactly three anchored issue types',()=>{
+ it('shows broker forecast sources and corrects mixed years, units and sample coverage',()=>{
+  const request=review(),issue=homeNotesGuideChallengeResult(request).issues.find(item=>item.blockId==='guide-note-consensus')
+  expect(issue).toBeDefined()
+  const evidence=issue!.evidence.filter(item=>item.kind==='consensus')
+  expect(evidence).toHaveLength(3)
+  expect(JSON.stringify(evidence)).toContain('2027E')
+  expect(JSON.stringify(evidence)).toContain('1.72')
+  expect(JSON.stringify(evidence)).toContain('演示样本')
+  const result=homeNotesGuideChallengeResult({...request,action:'optimize',thread:{...issue!,messages:[]}})
+  expect(result.reply?.replacement).toContain('17.0亿元')
+  expect(result.reply?.replacement).toContain('两家')
+  expect(result.reply?.replacement).toContain('不能代表市场整体一致预期')
+  expect(result.reply?.replacement).not.toContain('18.3亿元')
+  expect((16.8+1.72*10)/2).toBe(17)
+ })
+ it('provides a substantial research note with explicit example data and four anchored issue types including broker consensus',()=>{
   const request=review(),text=request.blocks.map(block=>block.text).join(''),result=homeNotesGuideChallengeResult(request)
   expect(text.length).toBeGreaterThanOrEqual(650);expect(text.length).toBeLessThan(1050);expect(text).toContain('演示数据')
-  expect(new Set(result.issues.map(issue=>issue.category))).toEqual(new Set(['typo','contradiction','logic']))
+  expect(new Set(result.issues.map(issue=>issue.category))).toEqual(new Set(['typo','contradiction','logic','research']))
   for(const issue of result.issues)expect(request.blocks.find(block=>block.id===issue.blockId)?.text).toContain(issue.quote)
   expect(result.completeBlockIds).toEqual(request.blocks.map(block=>block.id))
  })
  it('does not invent anchors when a paragraph was edited or omitted',()=>{
   const request=review();request.blocks=request.blocks.filter(block=>block.id!=='guide-note-logic').map(block=>block.id==='guide-note-growth'?{...block,text:'已修订的收入增速。'}:block)
   const result=homeNotesGuideChallengeResult(request)
-  expect(result.issues.map(issue=>issue.category)).toEqual(['typo'])
+  expect(result.issues.map(issue=>issue.category)).toEqual(['typo','research'])
   expect(result.coveredBlockIds).toEqual(request.blocks.map(block=>block.id))
  })
  it('optimizes the entire anchored sentence through the native replacement contract',()=>{
@@ -78,7 +93,7 @@ describe('homepage note example data and isolated bridge',()=>{
   let settled=false
   const first=bridge.request('challenge',review()).then(value=>{settled=true;return value})
   await vi.waitFor(()=>expect(pauses).toEqual([2000]))
-  expect(settled).toBe(false);releases.shift()!();expect((await first).issues).toHaveLength(3)
+  expect(settled).toBe(false);releases.shift()!();expect((await first).issues).toHaveLength(4)
   const request=review(),issue=homeNotesGuideChallengeResult(request).issues[0]!
   const next=bridge.request('challenge',{...request,requestId:'optimize-clock',action:'optimize',thread:{...issue,messages:[]}})
   await vi.waitFor(()=>expect(pauses).toEqual([2000,1700]))
