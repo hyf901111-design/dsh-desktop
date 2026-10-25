@@ -4,9 +4,9 @@ import { patchFigmaRefinementSubagent } from '../scripts/lib/figma-refinements-c
 
 const original = await readFile('node_modules/@deepseek-ai/dsh-client-ui-subagent/lib/client.js', 'utf8')
 function rows(source, entries, callbacks) {
-  const start = source.indexOf('function CatalogRows(')
+  const start = source.indexOf('/* sherlock:subagent-avatars:definition:v1 */')
   const end = source.indexOf('\n\t\tfunction SubagentCatalogAction(', start)
-  const jsx = (type, props) => ({ type, props })
+  const jsx = (type, props) => typeof type === 'function' && type.name === 'OdysseySubagentAvatar' ? type(props) : ({ type, props })
   const render = new Function('react_jsx_runtime', 'SubagentCatalogAction_module_css_default', '_deepseek_ai_dsh_client_ui_primitives', 'diagnosticReason', 'tokenTotal', 'activityDuration', source.slice(start, end) + ';return CatalogRows')(
     { jsx, jsxs: jsx, Fragment: 'fragment' }, new Proxy({}, { get: (_, k) => String(k) }), { StateDot: 'state-dot' }, () => '会话记录损坏', () => undefined, () => undefined)
   const result = render({ parentSessionId: 'parent', catalog: { state: 'ready', entries }, catalogs: {}, summaries: {}, expanded: new Set(), level: 1, now: 0, t: x => x, ...callbacks })
@@ -21,7 +21,7 @@ it('shows running and idle independently of success and keeps catalog-addressed 
   const openChild = vi.fn(), closeCatalog = vi.fn()
   const entries = ['running', 'inactive'].map((activity, i) => ({ kind: 'child', id: 'child-' + i, mode: 'one-shot', activity, hasChildren: false }))
   const all = rows(source, entries, { openChild, closeCatalog })
-  expect(all.filter(n => n.props['data-odyssey-subagent-activity']).map(n => n.props['data-odyssey-subagent-activity'])).toEqual(['running', 'idle'])
+  expect(all.filter(n => n.props['data-avatar-state']).map(n => n.props['data-avatar-state'])).toEqual(['running', 'idle'])
   all.filter(n => n.props.role === 'treeitem')[1].props.onClick()
   expect(openChild).toHaveBeenCalledWith({ parentSessionId: 'parent', childSessionId: 'child-1', mode: 'one-shot' })
   expect(closeCatalog).toHaveBeenCalledOnce()

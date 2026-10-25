@@ -229,6 +229,31 @@ body .h8S2Va_children::before,body .h8S2Va_children>.h8S2Va_node::before,body .h
 body [data-odyssey-subagent-activity] { width:10px; height:10px; flex:none; box-sizing:border-box; margin-top:6px; border-radius:50%; background:#8f8f8f; }
 body [data-odyssey-subagent-activity=running] { background:transparent; border:2px solid #5c8fed; border-top-color:transparent; animation:odyssey-subagent-loading 900ms linear infinite; }
 @keyframes odyssey-subagent-loading { to { transform:rotate(360deg); } }
+/* Figma 54: identity is static; only the independent running arc breathes. */
+.odyssey-subagent-avatar-slot{--odyssey-avatar-running:#416acc;display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:20px;position:relative;vertical-align:top}
+body[data-ds-dark-theme] .odyssey-subagent-avatar-slot{--odyssey-avatar-running:#8dacff}
+.odyssey-subagent-avatar-art{display:block;position:relative;flex:none;width:32px;height:32px;pointer-events:none}
+.odyssey-subagent-avatar-image{display:block;position:absolute;left:5px;top:5px;width:22px;height:22px;max-width:none;user-select:none;pointer-events:none}
+.odyssey-subagent-avatar-ring{display:block;position:absolute;left:4px;top:4px;width:24px;height:24px;pointer-events:none}
+.odyssey-subagent-avatar-ring>span{display:block;position:absolute;inset:0;background:var(--odyssey-avatar-running);mask-position:0 0;mask-repeat:no-repeat;mask-size:auto}
+.odyssey-subagent-avatar-track{mask-image:url(/subagent-avatars/track-24.svg)}
+.odyssey-subagent-avatar-arc{mask-image:url(/subagent-avatars/arc-24.svg);animation:odyssey-subagent-breath 900ms ease-in-out infinite alternate}
+.odyssey-subagent-avatar-slot[data-avatar-size="24"]{width:24px}
+.odyssey-subagent-avatar-slot[data-avatar-size="24"] .odyssey-subagent-avatar-art{width:24px;height:24px}
+.odyssey-subagent-avatar-slot[data-avatar-size="24"] .odyssey-subagent-avatar-image{left:3px;top:3px;width:18px;height:18px}
+.odyssey-subagent-avatar-slot[data-avatar-size="24"] .odyssey-subagent-avatar-ring{left:2px;top:2px;width:20px;height:20px}
+.odyssey-subagent-avatar-slot[data-avatar-size="24"] .odyssey-subagent-avatar-track{mask-image:url(/subagent-avatars/track-20.svg)}
+.odyssey-subagent-avatar-slot[data-avatar-size="24"] .odyssey-subagent-avatar-arc{mask-image:url(/subagent-avatars/arc-20.svg)}
+@keyframes odyssey-subagent-breath{from{opacity:.45}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.odyssey-subagent-avatar-arc{animation:none;opacity:1}}
+[hidden] .odyssey-subagent-avatar-arc,[aria-hidden="true"] .odyssey-subagent-avatar-slot .odyssey-subagent-avatar-arc,[inert] .odyssey-subagent-avatar-arc{animation-play-state:paused}
+body .h8S2Va_row:has(.odyssey-subagent-avatar-slot){padding:7px 12px 8px 8px;gap:6px}
+body .h8S2Va_clickarea:has(.odyssey-subagent-avatar-slot){gap:6px;align-items:flex-start}
+body .h8S2Va_row:has(.odyssey-subagent-avatar-slot) :is(.h8S2Va_disclosure,.h8S2Va_disclosureSpace){height:20px;margin-top:0}
+body .h8S2Va_row:has(.odyssey-subagent-avatar-slot) .h8S2Va_summary,body .h8S2Va_row:has(.odyssey-subagent-avatar-slot) .odyssey-subagent-state{margin-top:0}
+.odyssey-subagent-panel-header:has(.odyssey-subagent-avatar-slot){position:relative;padding-left:32px}
+.odyssey-subagent-panel-header:has(.odyssey-subagent-avatar-slot) .odyssey-subagent-panel-state{position:static;padding-left:0}
+.odyssey-subagent-panel-header .odyssey-subagent-avatar-slot{position:absolute;left:0;top:1px}
 body .h8S2Va_label { font-size:14px; font-weight:500; line-height:20px; }
 body .h8S2Va_summary,body .h8S2Va_metrics { color:#737373; font-size:12px; line-height:18px; }
 body .h8S2Va_summary { margin-top:3px; }

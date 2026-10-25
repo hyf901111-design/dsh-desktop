@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { expect, it, vi } from 'vitest'
 import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPanelConversation, patchSubagentPanelEntry } from '../scripts/lib/figma-subagent-panel.mjs'
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
+import {existsSync} from 'node:fs'
+import {homedir} from 'node:os'
+import {join} from 'node:path'
+const conversationFixture=async()=>stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
 const raw=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
 const source=process.env.EWORK_TEST_ORIGINAL?raw:patchSubagentPanelRuntime(raw)
 function method(name,next) {
@@ -62,11 +68,13 @@ it('scopes outlet content and descendant bindings to the requested eligible sess
 })
 it('uses the real conversation registration, provides a closable sidebar tab and preserves fallback entry points',async()=>{
   for(const [pkg,file,patch] of [['dsh-client-runtime','client.js',patchSubagentPanelRuntime],['dsh-client-ui-conversation','client.js',patchSubagentPanelConversation],['dsh-client-ui-subagent','client.js',patchSubagentPanelEntry]]){
-    const input=await readFile(`node_modules/@deepseek-ai/${pkg}/lib/${file}`,'utf8'),output=patch(input)
+    const input=pkg==='dsh-client-ui-conversation'?await conversationFixture():await readFile(`node_modules/@deepseek-ai/${pkg}/lib/${file}`,'utf8'),output=patch(input)
     expect(patch(output)).toBe(output)
     expect(()=>new Function(output)).not.toThrow()
   }
-  const input=await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8'),output=patchSubagentPanelEntry(input,true)
+  const built='build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js'
+  const actual=process.env.SHERLOCK_TEST_SIDEBAR||(existsSync(built)?built:join(homedir(),'Library/Application Support/sherlock-desktop/harness/profiles/web/node_modules/dsh-better-sidebar/lib/client.js'))
+  const input=await readFile(actual,'utf8'),output=patchSubagentPanelEntry(input,true)
   expect(()=>new Function(output)).not.toThrow()
   expect(patchSubagentPanelEntry(output,true)).toBe(output)
 })
@@ -74,15 +82,15 @@ it('registers a child panel without redeclaring the parent conversation slots',a
   const {SlotCore}=await import('@deepseek-ai/dsh-client-ui-slots')
   const core=new SlotCore()
   core.register({name:'root',children:{conversation:{kind:'single',scope:'session-maybe'}}},()=>null)
-  const source=patchSubagentPanelConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+  const source=patchSubagentPanelConversation(await conversationFixture())
   const start=source.indexOf('const odysseyConversationOptions='),end=source.indexOf('\n\t\t\tslots.register({\n\t\t\t\tname: "conversation.session",',start)
   expect(start).toBeGreaterThan(-1);expect(end).toBeGreaterThan(start)
   expect(()=>new Function('slots','ConversationRoot','NS',source.slice(start,end))(core,()=>null,'conversation')).not.toThrow()
   expect(core.specDynamic('conversation.subagent.panel').scope).toBe('session')
 })
 it('shows only real optional usage and timing in the child header',async()=>{
-  const source=patchSubagentPanelConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
-  const start=source.indexOf('function OdysseySubagentPanelHeader('),end=source.indexOf('\nclass ResearchSidebarCoordinator',start)
+  const source=patchSubagentPanelConversation(await conversationFixture())
+  const start=source.indexOf('/* sherlock:subagent-avatars:definition:v1 */'),end=source.indexOf('\nclass ResearchSidebarCoordinator',start)
   const jsx=(type,props)=>({type,props})
   const Header=new Function('react','react_jsx_runtime','formatTokens',source.slice(start,end)+';return OdysseySubagentPanelHeader')({useState:()=>[5000,()=>{}],useEffect:()=>{}},{jsx,jsxs:jsx},String)
   const props={sessionId:'child',useSession:fn=>fn({running:false,subagent:{address:{mode:'one-shot'}}}),useSessions:fn=>fn({byId:{child:{displayTitle:'真实子任务'}}})}

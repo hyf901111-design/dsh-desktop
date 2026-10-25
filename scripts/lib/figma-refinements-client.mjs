@@ -1,3 +1,4 @@
+import {patchSubagentAvatars,stripSubagentAvatars} from './subagent-avatars.mjs'
 /** Figma's accepted A header, mode descriptions, task dock and subagent tree. */
 function exact(source, before, after) {
   if (source.includes(after)) return source
@@ -50,6 +51,7 @@ export function patchFigmaRefinementConversation(source) {
   return source
 }
 export function patchFigmaRefinementSubagent(source) {
+  source=stripSubagentAvatars(source,'catalog')
   for(const [before,after] of [
     ['"count.running.one": "{count} 个子代理，正在运行",','"count.running.one": "{count} 个运行中",'],
     ['"count.running.other": "{count} 个子代理，正在运行",','"count.running.other": "{count} 个运行中",'],
@@ -66,7 +68,7 @@ export function patchFigmaRefinementSubagent(source) {
     'const reserveDisclosure = catalog.entries.some((entry) => entry.kind === "child" && entry.hasChildren);',
     'const reserveDisclosure = true; // Keep labels aligned with the tree disclosure column.');
   const marker='/* odyssey:subagent-tree:20260912 */'
-  if(source.includes(marker))return source
+  if(source.includes(marker))return patchSubagentAvatars(source,'catalog')
   source=exact(source,'let react = require("react");','let react = require("react");\n\t\tlet odysseyReactDOM = require("react-dom");\n'+marker)
   source=exact(source,'const secondary = [\n\t\t\t\t\t\tsummary?.title,\n\t\t\t\t\t\tmode,\n\t\t\t\t\t\tactivity\n\t\t\t\t\t].filter((value) => value !== void 0).join(" · ");','const secondary = summary?.title ?? "";')
   source=exact(source,'children: secondary','children: [(0, react_jsx_runtime.jsx)("span", { children: secondary }), (0, react_jsx_runtime.jsx)("span", { className: "odyssey-subagent-state", children: mode + " · " + activity })]')
@@ -91,7 +93,7 @@ export function patchFigmaRefinementSubagent(source) {
   part=exact(part,'className: SubagentCatalogAction_module_css_default.menu,','className: SubagentCatalogAction_module_css_default.menu, ref: menuRef, style: menuPosition,')
   part=exact(part,'children: (0, react_jsx_runtime.jsx)(CatalogRows, {','children: [(0, react_jsx_runtime.jsx)("div", { className: "odyssey-subagent-menu-title", children: t(totalCountKey, { count: descendantCount }) }), (0, react_jsx_runtime.jsx)(CatalogRows, {')
   part=exact(part,'\t\t\t\t\t})\n\t\t\t\t})]\n\t\t\t});','\t\t\t\t\t})]\n\t\t\t\t}), document.body)]\n\t\t\t});')
-  return source.slice(0,start)+part+source.slice(end)
+  return patchSubagentAvatars(source.slice(0,start)+part+source.slice(end),'catalog')
 }
 
 export function patchFigmaRefinementInputTrigger(source) {
