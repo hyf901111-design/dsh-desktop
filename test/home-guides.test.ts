@@ -2,7 +2,9 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { mountHomeGuides } from '../src/preload/home-guides'
 let dispose = () => {}, off = () => {}
-afterEach(async () => { await dispose(); off(); document.body.innerHTML = ''; delete document.documentElement.dataset.homeGuideTransition; delete document.documentElement.dataset.homeGuideTransitionSession; vi.useRealTimers() })
+const hiddenDescriptor=Object.getOwnPropertyDescriptor(document,'hidden')
+function visibility(hidden:boolean){Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});document.dispatchEvent(new Event('visibilitychange'))}
+afterEach(async () => { await dispose(); off(); document.body.innerHTML = ''; delete document.documentElement.dataset.homeGuideTransition; delete document.documentElement.dataset.homeGuideTransitionSession;hiddenDescriptor?Object.defineProperty(document,'hidden',hiddenDescriptor):delete(document as any).hidden; vi.useRealTimers() })
 function fixture(fresh = true) {
  document.body.innerHTML = '<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="original"><div data-srb-tabs><button data-conversation-view-id="chat" aria-selected="true">对话</button><button data-conversation-view-id="notes" aria-selected="false">笔记</button><button data-conversation-view-id="research" aria-selected="false">研究</button></div></header><div class="wSkVaW_scrollBody">已保存历史</div><div data-center-composer-host><textarea>原有草稿</textarea></div></div></main>'
  const header=document.querySelector<HTMLElement>('header')!, text=document.querySelector('textarea')!, requests:any[]=[]
@@ -26,11 +28,22 @@ test('prepares and opens an independent saved session before mounting the tutori
  expect(f.header.dataset.eworkNotesSession).toBe('example-note');expect(f.text.value).toBe('原有草稿')
  await f.controller.reset();expect(f.release).toHaveBeenCalledOnce();expect(f.header.dataset.eworkNotesSession).toBe('example-note')
 })
+test.each(['board','note','ppt'] as const)('autoplays %s without playback controls and still exits through Escape',async kind=>{
+ const f=fixture(),receive=(event:Event)=>{const d=(event as CustomEvent).detail;if(d.command!=='dispose')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:d.requestId,runId:d.runId,ok:true}}))}
+ window.addEventListener('sherlock:home-guide-native-request',receive)
+ try{
+  await f.controller.start(kind);await Promise.resolve()
+  expect(document.querySelector('[data-home-guide] [role=toolbar],.odyssey-home-guide-footer,[data-home-guide] [data-control]')).toBeNull()
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await Promise.resolve();await Promise.resolve()
+  expect(document.querySelector('[data-home-guide]')).toBeNull();expect(f.text.value).toBe('原有草稿')
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
+})
 test('starts the first real scene immediately and keeps reading time after its action',async()=>{
  vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(0)
  expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write'])
- expect(document.querySelector('.odyssey-home-guide-header')?.textContent).not.toContain('离线')
- expect(document.querySelector('[role=toolbar]')?.getAttribute('aria-label')).toBe('播放控制')
+ expect(document.querySelector('[data-home-guide]')?.getAttribute('aria-label')).not.toContain('离线')
+ expect(document.querySelector('[role=toolbar]')).toBeNull()
  await vi.advanceTimersByTimeAsync(1299);expect(f.runStep).toHaveBeenCalledTimes(1)
  await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge'])
 })
@@ -84,9 +97,9 @@ test('a board action can remain paused for more than its active timeout budget',
  window.addEventListener('sherlock:home-guide-native-request',receive)
  try{
   await f.controller.start('board');await vi.advanceTimersByTimeAsync(0);expect(pending.command).toBe('board-library')
-  document.querySelector<HTMLButtonElement>('.odyssey-home-guide-footer button')!.click();await vi.advanceTimersByTimeAsync(35000)
+  visibility(true);await vi.advanceTimersByTimeAsync(35000)
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused')
-  document.querySelector<HTMLButtonElement>('.odyssey-home-guide-footer button')!.click()
+  visibility(false)
   window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:pending.requestId,runId:pending.runId,ok:true}}));await vi.advanceTimersByTimeAsync(10)
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
  }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
@@ -94,7 +107,7 @@ test('a board action can remain paused for more than its active timeout budget',
 
 test('builds all six board components after native readiness, with reading time after each completed action',async()=>{
  vi.useFakeTimers();const f=fixture(),commands:string[]=[];let mount:any,library:any
- const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-link',2200],['board-add',2200],['board-arrange',3000]]
+ const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-link',2200],['board-add',2200],['board-arrange',3000],['board-smart-container',1000],['board-smart-generate',3000]]
  const reply=(detail:any)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))
  const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;commands.push(detail.command);if(detail.command==='mount-board')mount=detail;else if(detail.command==='board-library')library=detail;else if(detail.command!=='dispose')reply(detail)}
  window.addEventListener('sherlock:home-guide-native-request',receive)
@@ -105,14 +118,14 @@ test('builds all six board components after native readiness, with reading time 
   expect(commands).toEqual(['mount-board','board-library'])
   await vi.advanceTimersByTimeAsync(3000);expect(commands).toHaveLength(2)
   reply(library);await vi.advanceTimersByTimeAsync(0)
-  expect(document.querySelector('.odyssey-home-guide-count')?.textContent).toContain('1 / 10')
+  expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(true)
   for(let index=0;index<scenes.length;index++){
    expect(commands).toEqual(['mount-board',...scenes.slice(0,index+1).map(scene=>scene[0])])
    const hold=scenes[index]![1]
    if(index===6){
-    await vi.advanceTimersByTimeAsync(300);document.querySelector<HTMLButtonElement>('[data-control=pause]')!.click()
+    await vi.advanceTimersByTimeAsync(300);visibility(true)
     await vi.advanceTimersByTimeAsync(5000);expect(commands.at(-1)).toBe('board-calendar')
-    document.querySelector<HTMLButtonElement>('[data-control=play]')!.click();await vi.advanceTimersByTimeAsync(hold-301)
+    visibility(false);await vi.advanceTimersByTimeAsync(hold-301)
    }else await vi.advanceTimersByTimeAsync(hold-1)
    expect(commands.at(-1)).toBe(scenes[index]![0]);await vi.advanceTimersByTimeAsync(1)
   }
@@ -130,20 +143,20 @@ test('stops the board on a failed calendar action before linking, selecting stoc
   expect(commands).toEqual(['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar'])
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error')
   expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('日历工具未能打开')
-  expect(document.querySelector<HTMLButtonElement>('[data-home-guide-next]')?.disabled).toBe(true)
+  expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(false)
  }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
 })
 
-test('allows the six real stock searches ninety active seconds while excluding paused time',async()=>{
+test('keeps the stock search budget at ninety active seconds while excluding paused time',async()=>{
  vi.useFakeTimers();const f=fixture();let adding=false
  const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail.command==='board-add'){adding=true;return}if(detail.command!=='dispose')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))}
  window.addEventListener('sherlock:home-guide-native-request',receive)
  try{
   await f.controller.start('board');await vi.advanceTimersByTimeAsync(10000);expect(adding).toBe(true)
   await vi.advanceTimersByTimeAsync(35000);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
-  document.querySelector<HTMLButtonElement>('[data-control=pause]')!.click();await vi.advanceTimersByTimeAsync(120000)
+  visibility(true);await vi.advanceTimersByTimeAsync(120000)
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused')
-  document.querySelector<HTMLButtonElement>('[data-control=play]')!.click();await vi.advanceTimersByTimeAsync(54999)
+  visibility(false);await vi.advanceTimersByTimeAsync(54999)
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
   await vi.advanceTimersByTimeAsync(1);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error')
  }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
@@ -161,7 +174,7 @@ test('reveals the native conversation only after a still-owned handover has fini
 test('PPT assigns reading holds to the visible work without an introduction or bottom instruction slot',async()=>{
  vi.useFakeTimers();const f=fixture();await f.controller.start('ppt');await vi.advanceTimersByTimeAsync(0)
  expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief'])
- expect(document.querySelector('[role=status]')?.textContent).not.toContain('离线')
+ expect(document.querySelector('.odyssey-home-guide-status')?.textContent).not.toContain('离线')
  expect(document.querySelector('.pI_x6G_centerCol')?.getAttribute('style')||'').not.toContain('controls-height')
  await vi.advanceTimersByTimeAsync(1599);expect(f.runStep).toHaveBeenCalledTimes(1)
  await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['brief','send'])
@@ -177,9 +190,9 @@ test('hands the saved scene back to the real client after completion',async()=>{
  expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review','select','optimize','replace','note-task-compose','note-task-review','note-task-apply','note-select-paragraph','note-rewrite','note-rewrite-apply']);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
  expect(document.querySelector('[data-home-guide]')).toBeNull();expect(document.querySelector('.odyssey-home-guide-pointer')).toBeNull();expect(f.text.parentElement?.inert).toBe(false)
 })
-test('keeps mount and completion save errors visible instead of hiding them with the controls information',async()=>{
+test('keeps mount and completion save faults visible without playback controls',async()=>{
  vi.useFakeTimers();const f=fixture();f.adapters.mountNotes.mockRejectedValueOnce(Error('笔记打开失败'));await f.controller.start('note')
- expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('笔记打开失败')
+ expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('笔记打开失败');expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(false)
  await f.controller.reset();f.flush.mockRejectedValueOnce(Error('保存冲突'));await f.controller.start('note');await vi.advanceTimersByTimeAsync(30000)
- expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('保存冲突')
+ expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('保存冲突');expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(false)
 })

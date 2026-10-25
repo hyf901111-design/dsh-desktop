@@ -1,4 +1,7 @@
 import {NativeHomeNotesGuidePortal as NotesGuidePortalDefinition} from './home-guide-notes-native.mjs'
+import {HOME_BOARD_SMART_PATH as boardSmartPathDefinition, HOME_BOARD_SMART_PROMPT as boardSmartPromptDefinition} from '../../packages/dsh-research-task-runtime/home-board-smart-contract.js'
+const homeGuideNativeSmartPath = boardSmartPathDefinition
+const homeGuideNativeSmartPrompt = boardSmartPromptDefinition
 // Keep serialized references local when the test loader rewrites ESM imports.
 const NativeHomeNotesGuidePortal = NotesGuidePortalDefinition
 const START = '/* odyssey:home-guide-native:start:v1 */'
@@ -17,11 +20,7 @@ function homeGuideNativeBoardSymbols() {
     { market: 'SH', code: '600900', name: '长江电力' },
     { market: 'SH', code: '601138', name: '工业富联' },
     { market: 'SZ', code: '000858', name: '五粮液' },
-    { market: 'SZ', code: '000425', name: '徐工机械' },
-    { market: 'SH', code: '603040', name: '新坐标' },
-    { market: 'SH', code: '600008', name: '首创环保' },
-    { market: 'SH', code: '600519', name: '贵州茅台' },
-    { market: 'HK', code: '00003', name: '香港中华煤气' }
+    { market: 'SZ', code: '000425', name: '徐工机械' }
   ]
 }
 
@@ -275,8 +274,10 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
     const release = ticket => {
       ticket.controller.abort()
       if (ticket.resource.owner !== ticket) return
-      ticket.resource.owner = null
       const workspace = ticket.resource.workspace
+      const pending=ticket.smartPending,node=pending&&workspace.getSnapshot().artifacts.find(node=>node.id===pending.nodeId)
+      if(node?.generationStatus==='queued'&&!node.generationTaskId&&node.containerPrompt===pending.prompt)workspace.failGeneration(node.id,'示例已结束，生成已取消。')
+      ticket.resource.owner = null
       if (ticket.ownedSelection && JSON.stringify(workspace.getSnapshot().selection) === ticket.ownedSelection) {
         workspace.setSelection(ticket.originalSelection)
         workspace.persist()
@@ -294,7 +295,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         if (owned.current && owned.current.detail.runId !== detail.runId) throw changed()
         dispose(); return
       }
-      const allowed = ['mount-board', 'board-library', 'board-indices', 'board-watchlist', 'board-quote', 'board-news', 'board-announcements', 'board-calendar', 'board-link', 'board-add', 'board-arrange']
+      const allowed = ['mount-board', 'board-library', 'board-indices', 'board-watchlist', 'board-quote', 'board-news', 'board-announcements', 'board-calendar', 'board-link', 'board-add', 'board-arrange', 'board-smart-container', 'board-smart-generate']
       if (!allowed.includes(detail.command)) throw Error('不支持的教程操作。')
       if (detail.command === 'mount-board') {
         const host = mainHost(detail)
@@ -305,6 +306,35 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         resource.workspace.setViewport({ x: 0, y: 0, scale: 1 })
         const nodes = Object.fromEntries(['indices','watchlist','quote','news','announcements','calendar'].flatMap(widget => { const node = resource.workspace.getSnapshot().artifacts.find(node => widget === 'calendar' ? node.containerSpec?.type === 'calendar-tool' : node.containerSpec?.widget === widget); return node ? [[widget, node.id]] : [] }))
         const ticket = { detail, host, resource, provider: { ...resource.provider, runId: detail.runId }, controller: new window.AbortController(), nodes, originalSelection: structuredClone(resource.workspace.getSnapshot().selection), ownedSelection: null, playing: playback?.runId === detail.runId ? playback.playing : true }
+        const recoveredSmart=resource.workspace.getSnapshot().artifacts.find(node=>node.workbenchId==='home-guide:'+sessionId&&node.workbenchIndex===6&&node.kind==='generated-container')
+        if(recoveredSmart)ticket.nodes.smart=recoveredSmart.id
+        ticket.selectionGeneration={
+          inspect:inspectResearchTask,cancel:cancelResearchTask,
+          async generate(request){
+            const workspace=resource.workspace
+            const queued=()=>{
+              check(ticket)
+              const node=workspace.getSnapshot().artifacts.find(node=>node.id===request.targetNodeId)
+              if(request.sessionId!==resource.id||request.kind!=='container'||request.targetNodeId!==ticket.nodes.smart||request.prompt!==homeGuideNativeSmartPrompt||sherlockBoardsAdapter?.getHomeGuideSession?.(resource.id)?.kind!=='board'||node?.generationStatus!=='queued'||node.generationTaskId||node.containerPrompt!==request.prompt)throw changed()
+              return node
+            }
+            const node=queued(),pending={nodeId:node.id,prompt:request.prompt,revision:JSON.stringify(node)};ticket.smartPending=pending
+            try{
+              await delay(ticket,1800);await playing(ticket)
+              if(JSON.stringify(queued())!==pending.revision)throw changed()
+              const response=await window.fetch(homeGuideNativeSmartPath,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:resource.id,runId:detail.runId,canvasNodeId:node.id,prompt:request.prompt}),signal:ticket.controller.signal})
+              const task=await response.json()
+              if(!response.ok)throw Error(typeof task?.error==='string'?task.error:'示例组件未能生成。')
+              await playing(ticket)
+              if(JSON.stringify(queued())!==pending.revision)throw changed()
+              if(task?.canvasNodeId!==node.id||task.state!=='completed'||typeof task.taskId!=='string'||!task.taskId.trim()||typeof task.finalOutput!=='string'||parseResearchContainerSpec(task.finalOutput)?.type!=='table')throw Error('示例组件结果尚未就绪。')
+              if(!workspace.applyWorkbench({id:'home-guide:'+resource.id,createdAt:task.createdAt,panels:[{nodeId:node.id,taskId:task.taskId,preparedOutput:task.finalOutput}]}))throw Error('示例组件未能应用。')
+              const completed=workspace.getSnapshot().artifacts.find(current=>current.id===node.id)
+              if(completed?.generationStatus!=='completed'||completed.generationTaskId!==task.taskId||completed.containerSpec?.type!=='table')throw Error('示例组件结果尚未就绪。')
+              return{ok:true,taskId:task.taskId}
+            }finally{if(ticket.smartPending===pending)ticket.smartPending=null}
+          }
+        }
         resource.owner = ticket; owned.current = ticket
         react_dom.flushSync(() => setEntry(ticket))
         await settle(ticket, () => {
@@ -339,11 +369,11 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         return current
       }
       const layoutBoard = (reset = false) => {
-        const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width), pair = metrics.minColumns <= 20
+        const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width), pair = metrics.minColumns <= 20, calendarPair=pair&&metrics.width>=800
         const namesById = new Map(Object.entries(ticket.nodes).map(([name,nodeId])=>[nodeId,name]))
-        workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:['indices','calendar'].includes(namesById.get(node.id)),workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
-        const rows = [['indices'], ...(pair ? [['watchlist','quote'],['news','announcements']] : [['watchlist'],['quote'],['news'],['announcements']]), ['calendar']]
-        const heights = {indices:(metrics.width-48<=520?420:340),watchlist:470,quote:470,news:340,announcements:340,calendar:420}, fitted = new Map()
+        workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar','smart'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:namesById.get(node.id)==='indices'||namesById.get(node.id)==='calendar'&&!ticket.nodes.smart,workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
+        const rows = [['indices'], ...(pair ? [['watchlist','quote'],['news','announcements']] : [['watchlist'],['quote'],['news'],['announcements']]), ...(ticket.nodes.smart?(calendarPair?[['calendar','smart']]:[['calendar'],['smart']]):[['calendar']])]
+        const heights = {indices:(metrics.width-48<=520?420:340),watchlist:470,quote:470,news:340,announcements:340,calendar:420,smart:420}, fitted = new Map()
         let top = 0
         for (const names of rows) {
           const members = names.filter(name => ticket.nodes[name]), height = Math.ceil((Math.max(...members.map(name => heights[name]),0)+metrics.gap)/metrics.rowStep)
@@ -388,6 +418,51 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         const canvas = ticket.host.querySelector('[data-research-canvas]'); if (canvas) revealWorkbenchNode(canvas, workspace, ticket.nodes[widget])
         await settle(ticket)
         await save(ticket); return
+      }
+      if(detail.command==='board-smart-container'){
+        if(!ticket.nodes.calendar)throw Error('请先创建日历组件。')
+        if(!ticket.nodes.smart){
+          const tool=toolbar()?.querySelector('[data-research-global-container]')
+          await click(ticket,tool,'打开智能容器工具');await playing(ticket);targetReady(ticket,tool,true)
+          const calendar=workspace.getSnapshot().artifacts.find(node=>node.id===ticket.nodes.calendar),size=workspace.getSnapshot().canvasSize
+          const node=workspace.createContainerDraft({x:(size.availableWidth||size.width)/2,y:calendar.y,width:485,height:420,sizeMode:'manual',preserveGenerationSize:true})
+          if(!node)throw Error('智能容器暂时无法添加。')
+          ticket.nodes.smart=node.id;layoutBoard()
+        }
+        const canvas=ticket.host.querySelector('[data-research-canvas]');if(canvas)revealWorkbenchNode(canvas,workspace,ticket.nodes.smart)
+        await settle(ticket,()=>!!ticket.host.querySelector('[data-research-node-id="'+CSS.escape(ticket.nodes.smart)+'"]'))
+        const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(ticket.nodes.smart)+'"]')
+        await cue(ticket,card.querySelector('.ew-grid-header')||card,'查看新建的智能容器','move')
+        await click(ticket,toolbar()?.querySelector('[data-research-global-select]'),'切回选择工具')
+        await save(ticket);return
+      }
+      if(detail.command==='board-smart-generate'){
+        const node=workspace.getSnapshot().artifacts.find(node=>node.id===ticket.nodes.smart)
+        if(!node)throw Error('请先添加智能容器。')
+        if(node.generationStatus!=='completed'||!node.containerSpec){
+          const card=()=>ticket.host.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]'),input=card()?.querySelector('[data-research-container-prompt]')
+          if(node.generationStatus!=='draft'||!input||node.containerPrompt&&node.containerPrompt!==homeGuideNativeSmartPrompt)throw changed()
+          await click(ticket,input,'输入研究观察清单需求');input.focus({preventScroll:true})
+          let expected=node.containerPrompt||''
+          if(input.value!==expected)throw changed()
+          if(!expected)for(let index=1;index<=homeGuideNativeSmartPrompt.length;index++){
+            await playing(ticket);targetReady(ticket,input,true)
+            const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id)
+            if(input.value!==expected||current?.generationStatus!=='draft'||current.title!==node.title||current.containerPrompt!==expected)throw changed()
+            expected=homeGuideNativeSmartPrompt.slice(0,index)
+            react_dom.flushSync(()=>{input.value=expected;input.dispatchEvent(new window.Event('input',{bubbles:true}))})
+            await delay(ticket,45)
+          }
+          const submit=card()?.querySelector('[data-research-container-submit]')
+          await settle(ticket,()=>!submit?.disabled&&workspace.getSnapshot().artifacts.find(current=>current.id===node.id)?.containerPrompt===homeGuideNativeSmartPrompt)
+          await click(ticket,submit,'创建自选股研究观察清单')
+          await settle(ticket,()=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current)throw changed();if(['failed','cancelled','interrupted'].includes(current.generationStatus))throw Error(current.generationError||'示例组件未能生成。');return current.generationStatus==='completed'&&current.containerSpec?.type==='table'},2,20000,true)
+        }
+        await playing(ticket);layoutBoard()
+        const canvas=ticket.host.querySelector('[data-research-canvas]');if(canvas)revealWorkbenchNode(canvas,workspace,node.id)
+        const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')
+        await cue(ticket,card?.querySelector('.ew-grid-header')||card,'阅读五只自选股的研究观察清单','move')
+        await save(ticket);return
       }
       const { watchlist, quote, news, announcements } = ticket.nodes
       if (!watchlist || !quote || !news) throw Error('请先创建自选、行情和新闻组件。')
@@ -452,7 +527,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         }
         const state = await workspace.canvasAction('inspect', { ids: [watchlist] }); await playing(ticket)
         const node = workspace.getSnapshot().artifacts.find(node => node.id === watchlist), order = new Map(provider.symbols.map((symbol, index) => [symbol.market + ':' + symbol.code, index]))
-        await workspace.canvasAction('apply', { requestId: detail.requestId + ':order', revision: state.revision, changes: [{ op: 'update', id: watchlist, fields: { containerSpec: { ...node.containerSpec, symbols: [...node.containerSpec.symbols].sort((a,b) => order.get(a.market+':'+a.code)-order.get(b.market+':'+b.code)) } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
+        await workspace.canvasAction('apply', { requestId: detail.requestId + ':order', revision: state.revision, changes: [{ op: 'update', id: watchlist, fields: { containerSpec: { ...node.containerSpec, symbols: node.containerSpec.symbols.filter(symbol=>order.has(symbol.market+':'+symbol.code)).sort((a,b) => order.get(a.market+':'+a.code)-order.get(b.market+':'+b.code)), selectedSymbol: order.has(node.containerSpec.selectedSymbol)?node.containerSpec.selectedSymbol:'US:AAPL' } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
         await settle(ticket, () => JSON.stringify([...(card()?.querySelectorAll('[data-stock-code]') ?? [])].map(row => row.dataset.stockMarket+':'+row.dataset.stockCode)) === JSON.stringify(provider.symbols.map(symbol => symbol.market+':'+symbol.code)))
         const stock = () => [...(card()?.querySelectorAll('[data-stock-code]') ?? [])].find(row => row.dataset.stockCode === '000858' && row.dataset.stockMarket === 'SZ')
         await settle(ticket, () => !!stock())
@@ -470,10 +545,6 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         await settle(ticket, () => !canvas?.__eworkContentFit)
         await playing(ticket)
         layoutBoard(true)
-        // Dismiss only this demo's native edit receipt for the final overview.
-        const receipt = [...document.querySelectorAll('[data-canvas-action-receipt]')].find(node => node.dataset.eworkToolbarOwner === id)
-        const dismiss = receipt?.querySelector('[data-canvas-action-dismiss]')
-        if (dismiss) await click(ticket, dismiss, '关闭整理结果提示')
         // Finish at the document start so native component headers stay visible.
         react_dom.flushSync(() => { workspace.setViewport({ x: 0, y: 0, scale: 1 }); workspace.updateSelection(Object.values(ticket.nodes), 'replace') })
         ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
@@ -528,7 +599,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
   if (!entry || entry.controller.signal.aborted || entry.detail.sessionId !== sessionId || subagentPanel) return null
   return react_dom.createPortal(react.createElement(HomeGuideNativeFinancialContext.Provider, { value: entry.provider },
     react.createElement('div', { 'data-home-guide-native': entry.detail.runId, 'aria-label': '研究看板操作示例', style: { position: 'absolute', inset: 0, minWidth: 0, minHeight: 0, overflow: 'hidden' } },
-      react.createElement(ResearchCanvas, { sessionId: entry.resource.id, t: key => key, researchWorkspaces: entry.resource.registry })
+      react.createElement(ResearchCanvas, { sessionId: entry.resource.id, t: key => key, researchWorkspaces: entry.resource.registry, selectionGeneration: entry.selectionGeneration })
     )), entry.host)
 }
 
@@ -565,7 +636,7 @@ function residentChanges(legacy = false, priorV2 = false, priorV3 = false, prior
 
 /** Restore the native anchors before older source patches run again. */
 export function stripHomeGuideNative(source) {
-  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident']
+  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'homeGuideNativeSmartPath', 'homeGuideNativeSmartPrompt', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident']
   if (!source.includes(START)) {
     if (owned.some(token => source.includes(token))) throw Error('Home guide native partial patch drifted')
     return source
@@ -615,7 +686,7 @@ export function stripHomeGuideNative(source) {
 /** Add an isolated native React portal without replacing any conversation child. */
 export function patchHomeGuideNative(source) {
   if (source.includes(START)) source = stripHomeGuideNative(source)
-  const definitions = START + '\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
+  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
   if (source.includes(START)) {
     const first = source.indexOf(START), end = source.indexOf(END, first)
     if (end < 0 || source.indexOf(START, first + START.length) >= 0 || !source.includes('function HomeGuideNativeOriginalConversationRoot(')) throw Error('Home guide native refresh anchor drifted')

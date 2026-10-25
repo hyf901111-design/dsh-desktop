@@ -1,6 +1,6 @@
 // Deterministic IPC substitute for renderer tests only; production uses the Host bridge.
 export function homeGuideFinancialBridgeFixture(record=()=>{}) {
- const symbols=[['US','AAPL','苹果'],['SH','600900','长江电力'],['SH','601138','工业富联'],['SZ','000858','五粮液'],['SZ','000425','徐工机械'],['SH','603040','新坐标'],['SH','600008','首创环保'],['SH','600519','贵州茅台'],['HK','00003','香港中华煤气']].map(([market,code,name])=>({market,code,name}))
+ const symbols=[['US','AAPL','苹果'],['SH','600900','长江电力'],['SH','601138','工业富联'],['SZ','000858','五粮液'],['SZ','000425','徐工机械']].map(([market,code,name])=>({market,code,name}))
  return {async request(input){
   record(input)
   const source='行情桥测试服务',receivedAt='2026-10-25T01:00:00Z'
