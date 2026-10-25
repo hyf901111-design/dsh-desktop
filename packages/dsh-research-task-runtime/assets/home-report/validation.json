@@ -1,0 +1,68 @@
+{
+  "ok": true,
+  "synthetic": false,
+  "scope": "local-snapshot-fields-and-deterministic-calculations",
+  "externalAuthenticity": "unverified",
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[0]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[1]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[2]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[3]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[4]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[5]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[6]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[7]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[8]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    },
+    {
+      "severity": "warning",
+      "code": "SOURCE_AUTHENTICITY_UNVERIFIED",
+      "path": "sources[9]",
+      "message": "已实际读取并核对本地快照哈希；发布者/URL声明不构成来源真实性认证，PDF提取忠实性未验证"
+    }
+  ]
+}

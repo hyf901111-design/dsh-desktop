@@ -1,0 +1,118 @@
+{
+  "engineVersion": "1.4.0",
+  "status": "rendered-for-review",
+  "delivery": {
+    "requested": [
+      "html",
+      "pdf"
+    ],
+    "completed": [
+      "html",
+      "pdf"
+    ],
+    "pdf": {
+      "status": "generated",
+      "bytes": 4714982,
+      "sha256": "0220f9ea1e92bf7798e2361960109e6843481bf0cd3faa97337f7788c42b22b0",
+      "pageCount": 64,
+      "navigationTargets": 117
+    }
+  },
+  "researchCoverage": {
+    "profile": "full",
+    "structureComplete": true,
+    "hasGaps": false,
+    "sections": [
+      {
+        "kind": "business",
+        "status": "supported",
+        "title": "商业模式与增长来源：社交生态上的多引擎变现"
+      },
+      {
+        "kind": "industry",
+        "status": "supported",
+        "title": "行业与竞争：公司披露口径下的相对位置"
+      },
+      {
+        "kind": "performance",
+        "status": "supported",
+        "title": "业绩与经营驱动：年度实绩、最近四季度与一年市场表现"
+      },
+      {
+        "kind": "profitability",
+        "status": "supported",
+        "title": "盈利质量：毛利率上移与费用再投入"
+      },
+      {
+        "kind": "balance",
+        "status": "supported",
+        "title": "资产负债与营运资本：负营运资本与庞大的投资组合"
+      },
+      {
+        "kind": "cashflow",
+        "status": "supported",
+        "title": "现金流与资本配置：AI投入优先下的再平衡"
+      },
+      {
+        "kind": "forecast",
+        "status": "supported",
+        "title": "预测与情景假设：六年三情景的经营驱动"
+      },
+      {
+        "kind": "valuation",
+        "status": "supported",
+        "title": "估值与敏感性：情景价值、折现率与现价隐含条件"
+      },
+      {
+        "kind": "risks",
+        "status": "supported",
+        "title": "风险与反证条件"
+      },
+      {
+        "kind": "monitoring",
+        "status": "supported",
+        "title": "跟踪与下次验证"
+      }
+    ],
+    "thesisCount": 5,
+    "researchRequirements": {
+      "standard": "ework-equity-v5",
+      "complete": true,
+      "missing": [],
+      "grade": "screen-grade",
+      "professionalSignOff": false,
+      "reliance": "Program verifies structure, local evidence binding and calculations; economic judgment and external completeness require review."
+    },
+    "reliance": "structure-and-citations-only; economic reasoning requires analyst review"
+  },
+  "researchRequirements": {
+    "standard": "ework-equity-v5",
+    "complete": true,
+    "missing": [],
+    "grade": "screen-grade",
+    "professionalSignOff": false,
+    "reliance": "Program verifies structure, local evidence binding and calculations; economic judgment and external completeness require review."
+  },
+  "createdAt": "2026-10-25T12:48:56.241Z",
+  "inputSha256": "99401dff2fce59bdef923135b6441cc21db5225de6db862169c50b50018c5e37",
+  "engineSha256": "45fd6c866508ed26793c98910f85ee8ce77b8868986aa7a692ecbbc9ad1f57f6",
+  "synthetic": false,
+  "externalAuthenticity": "unverified",
+  "artifacts": {
+    "evidence": "evidence.json",
+    "calculations": "calculations.json",
+    "validation": "validation.json",
+    "html": "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.html",
+    "quality": "report-quality.json",
+    "pdf": "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.pdf",
+    "manifest": "run.json"
+  },
+  "outputs": {
+    "evidence.json": "6297f730580f7fcf7baa9c60876d6dc376e15dabe7e177f6c4041c17466128e9",
+    "calculations.json": "d7a20b5e2703a9eb703357a8e6e7e4c793100fe74c5df449a8d914e52c00357d",
+    "validation.json": "56f0c0e8a9fd751097b289162e69fc7a470e7fd0ac66543b64e12af37e1ee9b0",
+    "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.html": "5eab85fc8591ec1c45b30f04dee8e129ddcbce056753b15ce7095a98af82876d",
+    "report-quality.json": "a3ffd6e1b4d6ef999934968cef8a23d3c89365d09cbcc36814482d32c01a4fac",
+    "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.pdf": "0220f9ea1e92bf7798e2361960109e6843481bf0cd3faa97337f7788c42b22b0"
+  }
+}
