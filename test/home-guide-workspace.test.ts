@@ -15,7 +15,7 @@ import { SessionStore, SessionId } from '@deepseek-ai/dsh-session'
 import { JsonlSessionPersistence } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
+import LlmRuntime, { MessageId } from '@deepseek-ai/dsh-llm'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
@@ -46,7 +46,7 @@ const browserRuntimes = Promise.all([
   loadBrowserRuntime('dsh-client-runtime', { '@deepseek-ai/cordis': cordis, '@deepseek-ai/dsh-client-ui-slots': slots })
 ])
 
-async function fixture(legacyKind?: string, options: {legacyTitle?:string;currentTitle?:string;projectedTitle?:string;deferTitleList?:boolean;childOrigin?:boolean;failRename?:boolean;failStorage?:number;renameGate?:Promise<void>} = {}) {
+async function fixture(legacyKind?: string, options: {legacyTitle?:string;currentTitle?:string;projectedTitle?:string;deferTitleList?:boolean;childOrigin?:boolean;failRename?:boolean;failStorage?:number;renameGate?:Promise<void>;registration?:'missing'|'other-owner'|'wrong-cwd';savedWork?:boolean} = {}) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'home-guide-workspace-'))), ctx = new Context()
   new Storage(ctx)
   const backend = new JsonStorageBackend(join(root, 'storage'))
@@ -101,7 +101,9 @@ async function fixture(legacyKind?: string, options: {legacyTitle?:string;curren
   let legacy: { sessionId: string; cwd: string } | undefined
   if (legacyKind) {
     const title=options.legacyTitle??'已保存示例',cwd = join(root, 'legacy-' + legacyKind); await mkdir(cwd, { recursive: true }); const sessionId = await sessions.create({ cwd });const actual=options.currentTitle??title;await nativeFor(sessionId).rename(actual);const current=list.getSnapshot();list.set({...current,byId:{...current.byId,[sessionId]:{...current.byId[sessionId],title:actual,displayTitle:actual,...(options.childOrigin?{parentId:'parent',origin:'subagent'}:{})}}});if(options.projectedTitle)await nativeFor(sessionId).rename(options.projectedTitle)
-    disk.set('sherlock.home-guide.sessions.v1:' + encodeURIComponent('account:owner'), JSON.stringify({ version: 1, scope: 'account:owner', entries: [{ kind: legacyKind, sessionId, cwd, title, createdAt: 1 }] }))
+    if(options.savedWork){ctx.agents.get(SessionId(sessionId))!.session.append('user/message',{id:MessageId('saved-guide-message'),role:'user',source:{kind:'user'},content:[{type:'text',text:'保留既有笔记、任务和交付内容'}]},{surfaceOp:'append'});await writeFile(join(cwd,'既有任务与成果.json'),JSON.stringify({task:{status:'completed'},note:'原笔记正文',output:'既有成果'}))}
+    const scope=options.registration==='other-owner'?'account:other':'account:owner'
+    if(options.registration!=='missing')disk.set('sherlock.home-guide.sessions.v1:' + encodeURIComponent(scope), JSON.stringify({ version: 1, scope, entries: [{ kind: legacyKind, sessionId, cwd:options.registration==='wrong-cwd'?root:cwd, title, createdAt: 1 }] }))
     legacy = { sessionId, cwd }
   }
   const page = createResearchBoardsPage({ document: win.document as unknown as Document, sessions, workspaces, inputHub: { shells: new Map() }, researchWorkspaces: { for: () => ({ getSnapshot: () => ({ files: [], artifacts: [] }), subscribe: () => () => {}, persist: () => true }) }, bridge: { isSharedSession: () => false, getSnapshot: async () => state, subscribe: (fn: any) => { emit = fn; return () => {} }, invoke: async (action: string, input: any) => {
@@ -154,12 +156,28 @@ it('does not write a legacy migration into another account after the real rename
  await expect.poll(()=>f.calls.some(row=>row[0]==='session.rename')).toBe(true);f.setOwner('other');finish();await new Promise(resolve=>setTimeout(resolve,20))
  expect(JSON.parse(f.disk.get(key)!).entries[0].title).toBe(title);expect(f.disk.has('sherlock.home-guide.sessions.v1:account%3Aother')).toBe(false);expect(f.opened).toEqual([])
 })
-it('preserves a user-renamed registered default and appends the suffix after an existing practice-copy label',async()=>{
+it('preserves a user-renamed registered default and removes the old practice-copy label',async()=>{
  const custom=await fixture('note',{legacyTitle:oldGuideTitles.note,currentTitle:'我的自定义研究笔记'}),id=custom.legacy!.sessionId
  expect(await custom.reply(custom.send('note'))).toMatchObject({ok:true,sessionId:id});expect(custom.sessions.list.getSnapshot().byId[id].title).toBe('我的自定义研究笔记');expect(custom.calls.filter(row=>row[0]==='session.rename')).toEqual([])
  const title=oldGuideTitles.ppt+' · 练习副本',copy=await fixture('ppt',{legacyTitle:title})
- await expect.poll(()=>copy.sessions.list.getSnapshot().byId[copy.legacy!.sessionId].title).toBe(title+'（演示案例）')
- expect(await copy.reply(copy.send('ppt'))).toMatchObject({ok:true,title:title+'（演示案例）'})
+ await expect.poll(()=>copy.sessions.list.getSnapshot().byId[copy.legacy!.sessionId].title).toBe(oldGuideTitles.ppt+'（演示案例）')
+ expect(await copy.reply(copy.send('ppt'))).toMatchObject({ok:true,title:oldGuideTitles.ppt+'（演示案例）'})
+})
+it.each(Object.entries(oldGuideTitles))('cold-cleans the registered %s replay title once without changing its work or directory',async(kind,title)=>{
+ const oldTitle=title+' · 练习副本（演示案例）',f=await fixture(kind,{legacyTitle:oldTitle,savedWork:true}),old=f.legacy!,agent=f.ctx.agents.get(SessionId(old.sessionId))!,expected=title+'（演示案例）'
+ const events=agent.session.events.filter(event=>event.type!=='session/title'),file=join(old.cwd,'既有任务与成果.json'),bytes=await readFile(file),key='sherlock.home-guide.sessions.v1:account%3Aowner'
+ await expect.poll(()=>f.sessions.list.getSnapshot().byId[old.sessionId].title).toBe(expected)
+ await expect.poll(()=>JSON.parse(f.disk.get(key)!).entries[0].title).toBe(expected)
+ expect(agent.session.header.cwd).toBe(old.cwd);expect(agent.session.events.filter(event=>event.type!=='session/title')).toEqual(events);expect(await readFile(file)).toEqual(bytes)
+ expect(agent.session.events.filter(event=>event.type==='session/title').map(event=>event.data.title)).toEqual([oldTitle,expected])
+ expect(await f.reply(f.send(kind))).toMatchObject({ok:true,sessionId:old.sessionId,cwd:old.cwd,title:expected,fresh:false})
+ expect(agent.session.events.filter(event=>event.type==='session/title')).toHaveLength(2)
+ expect(f.calls.filter(row=>row[0]==='session.create')).toHaveLength(1);expect(f.calls.filter(row=>row[0]==='local.directory')).toEqual([])
+})
+it.each(['missing','other-owner','wrong-cwd'] as const)('does not rename a default-looking session with %s registration',async registration=>{
+ const title=oldGuideTitles.note+' · 练习副本（演示案例）',f=await fixture('note',{legacyTitle:title,registration}),id=f.legacy!.sessionId,before=[...f.disk]
+ await new Promise(resolve=>setTimeout(resolve,25))
+ expect(f.sessions.list.getSnapshot().byId[id].title).toBe(title);expect(f.calls.filter(row=>row[0]==='session.rename')).toEqual([]);expect([...f.disk]).toEqual(before)
 })
 it.each(['board', 'note', 'ppt', 'report'])('registers a durable Workspace through the production browser transport and binds the same %s session before success', async kind => {
   const f = await fixture(), ids = [f.send(kind), f.send(kind)], [first, concurrent] = await Promise.all(ids.map(f.reply))

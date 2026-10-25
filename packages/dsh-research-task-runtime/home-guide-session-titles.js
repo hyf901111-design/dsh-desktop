@@ -6,11 +6,11 @@ export function legacyHomeGuideSessionTitle(kind,replay=false){
  return titles[kind]+(replay?' · 练习副本':'')
 }
 
-export function homeGuideSessionTitle(kind,replay=false){
- return legacyHomeGuideSessionTitle(kind,replay)+suffix
+export function homeGuideSessionTitle(kind){
+ return legacyHomeGuideSessionTitle(kind)+suffix
 }
 
 export function isHomeGuideSessionTitle(kind,title){
  if(!Object.hasOwn(titles,kind)||typeof title!=='string')return false
- return [false,true].some(replay=>title===legacyHomeGuideSessionTitle(kind,replay)||title===homeGuideSessionTitle(kind,replay))
+ return [false,true].some(replay=>title===legacyHomeGuideSessionTitle(kind,replay)||title===legacyHomeGuideSessionTitle(kind,replay)+suffix)
 }

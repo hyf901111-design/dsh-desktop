@@ -1,5 +1,5 @@
 import {waitForMemorySource} from './memory/source'
-import {homeGuideSessionTitle,legacyHomeGuideSessionTitle} from '../../packages/dsh-research-task-runtime/home-guide-session-titles.js'
+import {homeGuideSessionTitle,isHomeGuideSessionTitle} from '../../packages/dsh-research-task-runtime/home-guide-session-titles.js'
 import { researchBoardRunning } from './research-board-activity'
 import { orderBoardConversationGroups } from './research-board-conversation-order'
 import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
@@ -867,8 +867,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         const summary=()=>deps.sessions.list.getSnapshot().byId[entry.sessionId]
         const rootSession=()=>!summary()?.parentId&&summary()?.origin!=='subagent'
         if(!rootSession())continue
-        const replay=entry.title===legacyHomeGuideSessionTitle(entry.kind,true),oldTitle=legacyHomeGuideSessionTitle(entry.kind,replay),title=homeGuideSessionTitle(entry.kind,replay)
-        if(entry.title!==oldTitle)continue
+        const oldTitle=entry.title,title=homeGuideSessionTitle(entry.kind)
+        if(!isHomeGuideSessionTitle(entry.kind,oldTitle)||oldTitle===title)continue
         if(summary()?.title!==oldTitle&&summary()?.title!==title)continue
         const binding=deps.sessions.binding(entry.sessionId)
         // Native rename settles this projection before the list's next frame.
