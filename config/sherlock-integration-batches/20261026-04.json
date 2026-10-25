@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-04",
+  "branch": "codex/integration/20261026-04",
+  "baseMainCommit": "b0f991187c6891d109d3f7d7a5babd5c2d665f28",
+  "expectedMainCommit": "b0f991187c6891d109d3f7d7a5babd5c2d665f28",
+  "createdAt": "2026-10-25T22:32:14.029Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "简化用例会话标题并紧凑排版PPT标注备注",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "12735bf3f7a27fb01a0b61cc78f72a1fd9452089",
+        "tipCommit": "691003766e15fdb5e185a876e6fd4514a0c17977",
+        "commits": [
+          {
+            "commit": "c088871638c93270e2edd62e7a4cac646d6cc7a3",
+            "parents": [
+              "12735bf3f7a27fb01a0b61cc78f72a1fd9452089"
+            ],
+            "subject": "简化用例会话标题并安全迁移已注册默认名称"
+          },
+          {
+            "commit": "691003766e15fdb5e185a876e6fd4514a0c17977",
+            "parents": [
+              "c088871638c93270e2edd62e7a4cac646d6cc7a3"
+            ],
+            "subject": "修复PPT标注标签与备注的同行排版"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-input.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-ranges.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-workspace.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-input-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-input.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-install.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-ranges.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-15-feature-check-1-20261026.log",
+            "verifiedCommit": "691003766e15fdb5e185a876e6fd4514a0c17977",
+            "completedAt": "2026-10-25T22:27:49.144253+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-15-feature-check-2-20261026.log",
+            "verifiedCommit": "691003766e15fdb5e185a876e6fd4514a0c17977",
+            "completedAt": "2026-10-25T22:27:56.543413+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotation-ranges.test.js",
+              "test/pptx-annotation-input.test.js",
+              "test/pptx-annotation-input-browser.test.js",
+              "test/pptx-annotation-install.test.js",
+              "test/pptx-annotation-coordinator.test.js",
+              "test/pptx-annotation-native.test.js",
+              "test/pptx-annotation-reveal.test.js",
+              "test/pptx-annotation-reveal-browser.test.js",
+              "test/home-guide-session.test.ts",
+              "test/home-guide-workspace.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-guide-notes-portal.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-15-feature-check-3-20261026.log",
+            "verifiedCommit": "691003766e15fdb5e185a876e6fd4514a0c17977",
+            "completedAt": "2026-10-25T22:28:52.701899+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-15-feature-check-4-20261026.log",
+            "verifiedCommit": "691003766e15fdb5e185a876e6fd4514a0c17977",
+            "completedAt": "2026-10-25T22:29:01.303659+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-15-feature-check-5-20261026.log",
+            "verifiedCommit": "691003766e15fdb5e185a876e6fd4514a0c17977",
+            "completedAt": "2026-10-25T22:29:01.324119+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "正式14 Notes完整结束/两任务/回顶终态/新对话与保存回访10项实测通过；本次命名与标注紧凑排版已有真实Shell/InputHub浏览器和独立review、159直接相关测试通过，正式15实际标题及真实两标注模型闭环待构建后核验。"
+        },
+        "acceptanceCriteria": [
+          "四用例新建和重播标题不再出现练习副本，保留（演示案例）；仅安全迁移registered默认名，不动用户改名与路径。",
+          "新建/重新加入标注为标签+空格+备注同行，下一项正常换行，删除和undo保原用户文字及必要分隔。",
+          "严格旧安装块升级与权限/CAS等既有保护不弱化；正式客户端实际核对标记修改输出生效。"
+        ],
+        "risks": [
+          "正式15标题、紧凑输入与2标注实际模型输出待构建后核验；旧用户草稿不自动重排。",
+          "系统级概率鼠标冻结仍未稳定复现，fixed=false。"
+        ],
+        "generatedAt": "2026-10-25T22:32:11.954409+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/pptx-annotation-ranges.test.js",
+        "test/pptx-annotation-input.test.js",
+        "test/pptx-annotation-input-browser.test.js",
+        "test/pptx-annotation-install.test.js",
+        "test/pptx-annotation-coordinator.test.js",
+        "test/pptx-annotation-native.test.js",
+        "test/pptx-annotation-reveal.test.js",
+        "test/pptx-annotation-reveal-browser.test.js",
+        "test/home-guide-session.test.ts",
+        "test/home-guide-workspace.test.ts",
+        "test/home-guide-native.test.js",
+        "test/home-guide-notes-portal.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
