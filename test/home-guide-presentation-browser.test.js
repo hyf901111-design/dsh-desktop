@@ -1,4 +1,4 @@
-import {readFile,mkdir} from 'node:fs/promises'
+import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {join,resolve} from 'node:path'
 import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
@@ -36,6 +36,7 @@ beforeAll(async()=>{
  const store=initial=>{let value=initial;const listeners=new Set();return{getSnapshot:()=>value,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},update:patch=>{value={...value,...patch};listeners.forEach(fn=>fn())}}};
  const view=store({view:'chat',draft:'',selection:null}),summary=store({byId:{[sessionId]:{id:sessionId,displayTitle:'公司风格演示示例',cwd:window.cwd,blank:true}}}),projections=store({todos:null});
  const referenceSources=[{name:'chat-file',codec:native.chatFileReferenceCodec}];const inputTriggers={track(){},arbitrate:()=> 'pass',onSpace:()=>false,adjudicate:async()=>undefined,serializeReference:async(source,ref,signal)=>{const value=await triggers.InputTriggerController.prototype.serializeReference.call({deps:{roster:{all:()=>referenceSources}}},source,ref,signal);window.probe.serializations.push({source,ref,value});return value}};const shell=new native.SessionInputShell({actx:{},inputTriggers:()=>inputTriggers,defaultSink:async text=>{const before=shell.snapshot;await window.nativeBackend({action:'send',text});shell.commitSend(before.imageIds,before.draft)}}),inputHub=new native.InputHub(ctx,(...args)=>t(...args));inputHub.shells.set(sessionId,shell);
+ const conversation=new native.ConversationController(ctx,{input:inputHub,blocks:{}});
  const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),useSession=use({subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()}),useInput=use(shell.state),useStore=use(view),useSessions=use(summary),useProjection=name=>use(projections)(s=>s[name]);
  const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'}]},actions={setView:value=>view.update({view:value}),setDraft:draft=>view.update({draft}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
  const t=(key,args)=>key==='todo.progress.total'?args.done+'/'+args.total:({'hero.headline':'探索更远，洞见更深。','input.send':'发送消息','input.commands':'命令','command.skills.name':'技能','command.skills.description':'选择在对话中使用的技能','input.placeholder':'描述你的任务…','todo.title':'任务清单'})[key]??key;
@@ -44,10 +45,10 @@ beforeAll(async()=>{
  const chooseCommand=()=>{roster.set({...roster.getSnapshot(),open:false});commands.CommandUiRuntime.prototype.openPopup.call({scopeFor:()=>({}),popupFor:()=>popup},'skills',skillCommand.ui,{sessionId:sessionId},{via:'menu',span:{...commandSelection,draftRev:shell.snapshot.draftRev}})};
  function SkillMenus(){return <div style={{position:'fixed',top:120,left:40,zIndex:1000,background:'white'}}><triggers.__Menu menu={roster} onPick={chooseCommand} onHighlight={()=>{}} onDismiss={()=>roster.set({...roster.getSnapshot(),open:false})} t={t}/><commands.__Popup popup={popup} t={t}/></div>}
  const renderSlotChain=(name,owner)=>{if(name!=='conversation.chat.turnTail')return null;const matched=deliverySlot.select(owner);return matched===null?null:<deliverySlot.Component {...owner} {...deliverySlot.inject()} matched={matched} useHostDescription={select=>select({canOpenPath:true})}/>};
- const shared={sessionId:sessionId,useSession,useSessions,useStore,actions,views,t},inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection,sessionId:sessionId,t};
+ const shared={sessionId:sessionId,useSession,useSessions,useStore,actions,views,t},inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,draftImages:ids=>conversation.draftImages(ids),useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection,sessionId:sessionId,t};
  const sidebarState={composerHost:null,conversationHost:null},sidebarStore={subscribe:()=>()=>{},getSnapshot:()=>sidebarState},sidebar={storeFor:()=>sidebarStore,publish(){},enter(){},leave(){},service:{async openFile(scope,path){window.probe.opened.push({scope,path});await window.nativeBackend({action:'verify-file',path});document.querySelector('#right').textContent=path.split('/').pop()+' · 原生文件路径已校验'}}};
  const openFile=path=>sidebar.service.openFile({sessionId:sessionId,cwd:window.cwd},path),renderSlot=(name,props={},scope={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={renderSlot}/>:name==='conversation.input.left'?React.createElement(filePickSlot,props):name==='conversation.input.dock'?<native.__Todo useSession={useSession} useProjection={useProjection} t={t}/>:name==='conversation.view'?<native.__Chat {...shared} {...props} renderSlot={renderSlot} openFile={openFile} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>[]}/>:name==='conversation.chat.node'&&scope.entryKey==='user'?<native.__User {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.__Assistant {...props} useTurnData={()=>null} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='turn-tail'?<native.__Tail {...props} sessionId={sessionId} useSession={useSession} renderSlot={renderSlot} renderSlotChain={renderSlotChain} t={t}/>:scope.fallback??null;
- window.probe={native,inputHub,shell,session,fileInsertions:[],serializations:[],drafts:[],stageTimings:[],requests:[],opened:[],cues:[],guide:null,events:[],refresh:async()=>{const data=await window.nativeBackend({action:'history'});window.probe.events=data.events;session.blankBit=!data.events.some(e=>e.type==='user/message');session.installWindow(data.events.map(event=>({event,view:event.type})),false);projections.update({todos:data.events.findLast(e=>e.type==='todo/write')?.data.todos??null})}};
+ window.probe={native,inputHub,conversation,shell,session,fileInsertions:[],serializations:[],drafts:[],stageTimings:[],requests:[],opened:[],cues:[],guide:null,events:[],refresh:async()=>{const data=await window.nativeBackend({action:'history'});window.probe.events=data.events;session.blankBit=!data.events.some(e=>e.type==='user/message');session.installWindow(data.events.map(event=>({event,view:event.type})),false);projections.update({todos:data.events.findLast(e=>e.type==='todo/write')?.data.todos??null})}};
  native.__bind({inputHub,researchSidebar:sidebar,getHomeGuideSession:id=>window.probe.registered===false?undefined:{kind:window.actorKind,sessionId:id,cwd:window.cwd}});
  const skill=window.actorKind==='report'?{id:'builtin:ework-equity-research',revision:1,label:'ework-equity-research',invocationName:'ework-skill-778d85796a6c426b',name:'公司研究报告助手',enabled:true,usable:true}:{id:'builtin:efund-ppt-maker',revision:1,label:'efund-ppt-maker',invocationName:'ework-skill-180a6a3f86f8942e',name:'PPT制作助手',enabled:true,usable:true};
  const request=async input=>{if(input.type==='snapshot'&&window.probe.deferSkills){window.probe.skillSnapshotPending=true;await new Promise(resolve=>{window.probe.releaseSkills=resolve})}return input.type==='snapshot'?{type:'snapshot',snapshot:{rows:[{...skill,invocationLabel:skill.label,kind:'skill',description:'公司规范'}]}}:{...skill,type:'skill-detail',invocationLabel:skill.label}};
@@ -155,6 +156,63 @@ it('serializes the native report skill plus exactly one space and brief, deliver
   expect(await page.locator('[data-home-guide-cue-target],[data-home-guide-drag-file]').count()).toBe(0);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },45000)
+it.each(['ppt','report'].flatMap(kind=>[
+ {kind,boundary:'holding',mutation:'draft'},
+ {kind,boundary:'send-ack',mutation:'draft'},
+ {kind,boundary:'send-ack',mutation:'revision'},
+ {kind,boundary:'holding',mutation:'image'},
+ {kind,boundary:'send-ack',mutation:'image'},
+ {kind,boundary:'send-ack',mutation:'file'}
+]))('stops native auto-send for $kind after $mutation changes at $boundary',async({kind,boundary,mutation})=>{
+ const f=await fixture({kind}),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1'})
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>window.probe.step('brief'))
+  expect(await page.evaluate(()=>window.probe.inputHub.shells.get(window.actorKind==='report'?'report-demo':'demo')===window.probe.shell)).toBe(true)
+  const admitted=await page.evaluate(()=>{const s=window.probe.shell.snapshot;return{draft:s.draft,draftRev:s.draftRev,occurrences:s.occurrences,imageIds:s.imageIds}})
+  expect(admitted.occurrences.map(ref=>ref.source)).toEqual(kind==='report'?['ework-managed-skill']:['ework-managed-skill','chat-file'])
+  if(boundary==='send-ack'){
+   await page.evaluate(()=>{window.probe.holdAtCue='发送演示需求';window.probe.pending=window.probe.step('send').then(()=>true,error=>{window.probe.failure=error.message;return false})})
+   await expect.poll(()=>page.evaluate(()=>window.probe.cues.at(-1)?.label)).toBe('发送演示需求')
+   expect(f.sent).toEqual([])
+  }
+  const attachmentPath=join(f.cwd,'用户补充说明.txt');if(mutation==='file')await writeFile(attachmentPath,'用户自行补充的研究意见。')
+  const changed=await page.evaluate(({mutation,attachmentPath})=>{
+   const {shell,conversation}=window.probe,s=shell.snapshot
+   if(mutation==='draft')shell.setDraft(s.draft+'\n这是用户后来写的新意见📈，请保留。')
+   else if(mutation==='revision'){shell.setDraft(s.draft+'用户临时修改');shell.setDraft(s.draft)}
+   else if(mutation==='file')shell.insertFilePaths([attachmentPath])
+   else{
+    const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jN0cAAAAASUVORK5CYII='),char=>char.charCodeAt(0))
+    const images=conversation.createDraftImages([new File([bytes],'用户新补充.png',{type:'image/png'})]);if(!shell.addImages(images.map(image=>image.id)))throw Error('Native image admission rejected')
+   }
+   const current=shell.snapshot;return{draft:current.draft,draftRev:current.draftRev,occurrences:current.occurrences,imageIds:current.imageIds,registry:conversation.draftImages(current.imageIds).map(image=>({kind:image.kind,name:image.file.name,type:image.file.type})),hasAttachments:Object.hasOwn(current,'attachments'),hasFilePaths:Object.hasOwn(current,'filePaths')}
+  },{mutation,attachmentPath})
+  if(mutation==='file')expect(changed.occurrences.slice(0,-1)).toEqual(admitted.occurrences)
+  else expect(changed.occurrences).toEqual(admitted.occurrences)
+  if(mutation==='image'){
+   expect(changed.draft).toBe(admitted.draft);expect(changed.draftRev).toBe(admitted.draftRev);expect(changed.imageIds).toHaveLength(1)
+   expect(changed.registry).toEqual([{kind:'image',name:'用户新补充.png',type:'image/png'}]);expect(changed.hasAttachments).toBe(false);expect(changed.hasFilePaths).toBe(false)
+  }else{
+   expect(changed.draftRev).toBeGreaterThan(admitted.draftRev)
+   if(mutation==='revision')expect(changed.draft).toBe(admitted.draft)
+   if(mutation==='file'){expect(changed.occurrences.at(-1)?.source).toBe('chat-file');expect(JSON.parse(changed.occurrences.at(-1).ref)).toEqual({path:attachmentPath,name:'用户补充说明.txt'})}
+  }
+  // Native skill chips use a display projection distinct from the canonical
+  // placeholder. Compare the real rendered value across the rejected send.
+  await expect.poll(()=>page.locator('textarea').inputValue()).toContain(changed.draft.replaceAll('\uFFFC','').trim())
+  const changedDisplay=await page.locator('textarea').inputValue()
+  if(boundary==='send-ack')await page.evaluate(()=>{const cue=window.probe.cues.at(-1);window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:cue.requestId,ok:true}}))})
+  else await page.evaluate(()=>{window.probe.pending=window.probe.step('send').then(()=>true,error=>{window.probe.failure=error.message;return false})})
+  const completed=await page.evaluate(()=>window.probe.pending),after=await page.evaluate(()=>{const s=window.probe.shell.snapshot;return{draft:s.draft,draftRev:s.draftRev,occurrences:s.occurrences,imageIds:s.imageIds}})
+  await writeFile(evidence+'/send-admission-'+kind+'-'+boundary+'-'+mutation+'.json',JSON.stringify({kind,boundary,mutation,admitted,changed,completed,after,sent:f.sent,failure:await page.evaluate(()=>window.probe.failure)},null,2))
+  expect(completed).toBe(false);expect(f.sent).toEqual([]);expect(f.agent.session.events.some(event=>event.type==='user/message')).toBe(false)
+  if(boundary==='holding')expect(await page.evaluate(()=>window.probe.cues.some(cue=>cue.label==='发送演示需求'))).toBe(false)
+  expect(after).toEqual({draft:changed.draft,draftRev:changed.draftRev,occurrences:changed.occurrences,imageIds:changed.imageIds})
+  expect(await page.locator('textarea').inputValue()).toBe(changedDisplay);expect(await page.locator('[data-home-guide-cue-target],[data-home-guide-drag-file]').count()).toBe(0)
+  expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
 it.each(['cancel','newer-draft'])('keeps report input intact on %s while a genuine pointer request is pending',async mode=>{
  const f=await fixture({kind:'report'}),{page}=f
  try{
