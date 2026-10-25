@@ -163,6 +163,85 @@
           "系统级概率鼠标冻结仍未稳定复现，fixed=false。"
         ],
         "generatedAt": "2026-10-25T22:32:11.954409+00:00"
+      },
+      "merged": {
+        "mergeCommit": "58175664fc6a1dc31a5e552c98b80ba5b13696fb",
+        "verificationCommit": "58175664fc6a1dc31a5e552c98b80ba5b13696fb",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "58175664fc6a1dc31a5e552c98b80ba5b13696fb",
+            "completedAt": "2026-10-25T22:32:32.480Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "58175664fc6a1dc31a5e552c98b80ba5b13696fb",
+            "completedAt": "2026-10-25T22:32:32.480Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotation-ranges.test.js",
+              "test/pptx-annotation-input.test.js",
+              "test/pptx-annotation-input-browser.test.js",
+              "test/pptx-annotation-install.test.js",
+              "test/pptx-annotation-coordinator.test.js",
+              "test/pptx-annotation-native.test.js",
+              "test/pptx-annotation-reveal.test.js",
+              "test/pptx-annotation-reveal-browser.test.js",
+              "test/home-guide-session.test.ts",
+              "test/home-guide-workspace.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-guide-notes-portal.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/pptx-annotation-ranges.test.js test/pptx-annotation-input.test.js test/pptx-annotation-input-browser.test.js test/pptx-annotation-install.test.js test/pptx-annotation-coordinator.test.js test/pptx-annotation-native.test.js test/pptx-annotation-reveal.test.js test/pptx-annotation-reveal-browser.test.js test/home-guide-session.test.ts test/home-guide-workspace.test.ts test/home-guide-native.test.js test/home-guide-notes-portal.test.js --maxWorkers=2",
+            "verifiedCommit": "58175664fc6a1dc31a5e552c98b80ba5b13696fb",
+            "completedAt": "2026-10-25T22:32:32.480Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "58175664fc6a1dc31a5e552c98b80ba5b13696fb",
+            "completedAt": "2026-10-25T22:32:32.480Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "58175664fc6a1dc31a5e552c98b80ba5b13696fb",
+            "completedAt": "2026-10-25T22:32:32.480Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T22:32:32.480Z"
       }
     }
   ],
