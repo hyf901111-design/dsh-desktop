@@ -58,4 +58,4 @@ Root实际查看标准和窄英截图：暗色未选tab在当前默认灰壁纸�
 - [ ] C：先以实际宽/窄/矮几何、hover、Light选中框、动画中快速反向、减少动态验证RED，再统一header与section的width/scale/top锚点。
 - [ ] C：仅panel做左右小幅滑动与交叉淡入淡出；维持原DOM/轮播状态/选中壁纸/订阅，隐藏与过渡交互遵守inert边界。预览hover轻抬/内部缩放，静态命中区、圆角裁切和文字保持。
 - [ ] C+D：聚焦渲染与生命周期检查、独审后中文提交。未修改native theme owner/API、规范key、壁纸资产/渲染器或guide演员。
-- [ ] Root：批次08已接受，不刷新它；按新Plan A批次09合入干净main后构建正式客户端，实际复核最新用户反馈、Light+Berber重启恢复与原Dark/default设置恢复、最终PPT交付右屏，保留应用打开。
+- [ ] Root：批次08已接受，不刷新它；按新Plan A批次09合入干净main后构建正式客户端，实际复核最新用户反馈、Light+Berber重启恢复与最终PPT交付右屏，保留应用打开。用户在实际试用中已经自主选择Dark/Jarrick，后续以用户最新设置为准，不覆盖回更早的default。
