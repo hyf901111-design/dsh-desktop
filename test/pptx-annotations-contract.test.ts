@@ -4,6 +4,13 @@ const modulePath = '../src/shared/pptx-annotations'
 const load = () => import(modulePath).catch(() => ({} as Record<string, any>))
 
 describe('PPT annotation transport validation', () => {
+  it('accepts only a locator tied to the real sending session for read-only source resolution', async () => {
+    const api = await load()
+    expect(api.parsePptxAnnotationResolveReferenceInput).toBeTypeOf('function')
+    const reference = { version: 1, sessionId: 'session', documentId: 'a'.repeat(64), fileVersion: 'b'.repeat(64), markId: 'mark-1' }, value = { sendingSessionId: 'session', reference }
+    expect(api.parsePptxAnnotationResolveReferenceInput(value)).toEqual(value)
+    for (const invalid of [{ ...value, sendingSessionId: 'note-files:fake' }, { ...value, path: '/private/guessed.pptx' }, { ...value, source: { kind: 'workspace', relativePath: 'copy.pptx' } }, { ...value, reference: { ...reference, sourceUrl: 'sherlock-preview://fake/' } }]) expect(() => api.parsePptxAnnotationResolveReferenceInput(invalid)).toThrow()
+  })
   it('rejects cross-session, non-versioned and extra-authority locators before file access', async () => {
     const api = await load()
     expect(api.parsePptxAnnotationReference).toBeTypeOf('function')

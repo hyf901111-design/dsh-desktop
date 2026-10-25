@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto'
 import { chmod, lstat, readFile, realpath } from 'node:fs/promises'
 import path from 'node:path'
 import {
-  parsePptxAnnotationMarkDraft, parsePptxAnnotationReference, parsePptxAnnotationSource, parsePptxAnnotationMessagePresentationInput,
+  parsePptxAnnotationMarkDraft, parsePptxAnnotationReference, parsePptxAnnotationSource, parsePptxAnnotationMessagePresentationInput, parsePptxAnnotationResolveReferenceInput,
   type PptxAnnotationSource, type PptxAnnotationMark, type PptxAnnotationState, type PptxAnnotationOpenValue,
   type PptxAnnotationResult, type PptxAnnotationErrorCode, type PptxAnnotationPrepareInput,
   type PptxAnnotationPrepareValue, type PptxAnnotationPreparedReference, type PptxAnnotationBindValue,
   type PptxAnnotationCompleteValue, type PptxAnnotationVersionRecord,
-  type PptxAnnotationOutputValue, type PptxAnnotationMessagePresentationValue,
+  type PptxAnnotationOutputValue, type PptxAnnotationMessagePresentationValue, type PptxAnnotationResolveReferenceValue,
 } from '../../shared/pptx-annotations'
 import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-trust'
 import { PptxAnnotationStore, annotationContains, annotationDirectory, annotationHash, annotationWriteExclusive } from './annotations-store'
@@ -23,6 +23,8 @@ export type PptxAnnotationOptions = {
   resolveAuthorizedSource(sessionId: string, source: Exclude<PptxAnnotationSource, { kind: 'workspace' }>): Promise<{ path: string; root: string } | null>
   readHistory(input: { sessionId: string; beforeSeq?: number; maxMessages: 100 }): Promise<PptxAnnotationHistoryPage>
   presentationSkill?(id: 'builtin:efund-ppt-maker'): Promise<{ id: string; invocationName: string; label: string } | null>
+  /** Restore an existing managed-file read capability only for an explicit reference reveal. */
+  previewSource?(sessionId: string, source: Exclude<PptxAnnotationSource, { kind: 'workspace' }>): Promise<{ url: string; path: string } | null>
   now?(): Date
 }
 type StoredDocument = {
@@ -415,6 +417,56 @@ export class PptxAnnotationService {
       return result ? { ...base, ...result } : { ...base, status: 'pending' }
     })
   }
+  async resolveReference(value: unknown): Promise<PptxAnnotationResult<PptxAnnotationResolveReferenceValue>> {
+    return this.transaction(async owner => {
+      let input: ReturnType<typeof parsePptxAnnotationResolveReferenceInput>
+      try { input = parsePptxAnnotationResolveReferenceInput(value) } catch { return fail('invalid', '标注定位引用无效。') }
+      const { reference } = input, sessionId = input.sendingSessionId
+      const denied = (error = '此标注不属于当前会话或原文件已不可访问。') => ({ status: 'denied' as const, error })
+      const stale = () => ({ status: 'stale' as const, error: 'PPT 或标注已更换版本，请重新打开原文件并重新定位。' })
+      const stored = await this.store.readExisting<StoredDocument>(owner, sessionId, `document:${reference.documentId}`)
+      this.current(owner)
+      const belongs = (doc: StoredDocument | null): doc is StoredDocument => !!doc && doc.owner === owner && doc.sessionId === sessionId && doc.documentId === reference.documentId
+      if (!belongs(stored)) return denied()
+      try {
+        const source = parsePptxAnnotationSource(stored.source), authorized = await this.authorize(owner, sessionId, source)
+        if (authorized.target !== stored.target || annotationHash(authorized.target) !== reference.documentId) return denied()
+        const file = await readAnnotationPptx(authorized.target); this.current(owner)
+        const inspect = (doc: StoredDocument): { mark: PptxAnnotationMark } | { status: 'stale' | 'deleted' | 'denied'; error: string } => {
+          const mark = doc.marks.find(mark => mark.id === reference.markId)
+          if (!mark) return doc.deleted.some(mark => mark.id === reference.markId) ? { status: 'deleted' as const, error: '此标注已删除，无法继续定位。' } : denied()
+          if (file.version !== reference.fileVersion || mark.fileVersion !== reference.fileVersion) return stale()
+          const slide = file.scene.slides[mark.slideIndex]
+          if (!Number.isSafeInteger(mark.ordinal) || mark.ordinal <= 0 || !slide || slide.part !== mark.slidePart || mark.nodeIds.some(id => !slide.nodes.some(node => node.id === id || node.nodeId === id))) return stale()
+          parsePptxAnnotationMarkDraft({ id: mark.id, slideIndex: mark.slideIndex, slidePart: mark.slidePart, kind: mark.kind, region: mark.region, nodeIds: mark.nodeIds, comment: mark.comment })
+          return { mark }
+        }
+        const initial = inspect(stored); if ('status' in initial) return initial
+        let sourceUrl: string | undefined
+        if (source.kind !== 'workspace') {
+          const preview = await this.options.previewSource?.(sessionId, source); this.current(owner)
+          if (!preview || typeof preview.url !== 'string' || !/^sherlock-preview:\/\/[A-Za-z0-9_-]{1,1024}\/$/.test(preview.url) || typeof preview.path !== 'string' || await realpath(preview.path) !== authorized.target) return denied('原文件的只读预览授权不可用，请重新打开原文件。')
+          this.current(owner); sourceUrl = preview.url
+        }
+        // Reread persisted marks after reader/authorization awaits; a deleted or renewed mark is not a warm-map hit.
+        const latest = await this.store.readExisting<StoredDocument>(owner, sessionId, `document:${reference.documentId}`); this.current(owner)
+        if (!belongs(latest) || latest.target !== authorized.target || canonicalJson(parsePptxAnnotationSource(latest.source)) !== canonicalJson(source)) return denied('标注来源授权已变化，请重新打开原文件。')
+        const checked = inspect(latest); if ('status' in checked) return checked
+        const again = await this.authorize(owner, sessionId, source)
+        if (again.target !== authorized.target || again.workspace !== authorized.workspace || annotationHash(again.target) !== reference.documentId) return denied()
+        const bytes = await readFile(again.target); this.current(owner)
+        if (annotationHash(bytes) !== reference.fileVersion) return stale()
+        const settled = await this.store.readExisting<StoredDocument>(owner, sessionId, `document:${reference.documentId}`); this.current(owner)
+        if (!belongs(settled) || settled.target !== authorized.target || canonicalJson(parsePptxAnnotationSource(settled.source)) !== canonicalJson(source)) return denied('标注来源授权已变化，请重新打开原文件。')
+        const final = inspect(settled); if ('status' in final) return final
+        const { id, ordinal, slideIndex, slidePart } = final.mark
+        return { status: 'ready' as const, reference, source: { sessionId, source }, path: authorized.target, name: path.basename(authorized.target), fileVersion: file.version, mark: { id, ordinal, slideIndex, slidePart }, ...(sourceUrl ? { sourceUrl } : {}) }
+      } catch {
+        this.current(owner)
+        return denied('原 PPT 文件或读取授权已失效，请重新打开原文件。')
+      }
+    })
+  }
   async messagePresentation(value: unknown): Promise<PptxAnnotationResult<PptxAnnotationMessagePresentationValue>> {
     return this.transaction(async owner => {
       let input: ReturnType<typeof parsePptxAnnotationMessagePresentationInput>
@@ -466,7 +518,7 @@ export class PptxAnnotationService {
 }
 
 export function registerPptxAnnotationHandlers(options: { ipcMain: { removeHandler(channel: string): void; handle(channel: string, handler: (event: any, value: unknown) => unknown): unknown }; getMainWindow(): TrustedWindow | undefined; service: PptxAnnotationService }) {
-  for (const action of ['open', 'mutate', 'prepare', 'bindSubmission', 'complete', 'lookupOutput', 'messagePresentation', 'cancel'] as const) {
+  for (const action of ['open', 'mutate', 'prepare', 'bindSubmission', 'complete', 'lookupOutput', 'messagePresentation', 'resolveReference', 'cancel'] as const) {
     const channel = `pptx:annotation:${action}`
     options.ipcMain.removeHandler(channel)
     registerTrustedMainWindowHandler(options.ipcMain, channel, options.getMainWindow, (_event, value: unknown) => options.service[action](value))
