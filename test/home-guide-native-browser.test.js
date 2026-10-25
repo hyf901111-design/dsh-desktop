@@ -7,6 +7,7 @@ import { afterAll, beforeAll, expect, it } from 'vitest'
 import { patchNoteSessionRuntime } from '../scripts/lib/notes-session.mjs'
 import { stripHomeGuidePresentationNative } from '../scripts/lib/home-guide-presentation-native.mjs'
 import { patchComposerDeliverablePreview } from '../scripts/lib/figma-composer-deliverable-preview.mjs'
+import { HOME_BOARD_SMART_PATH, HOME_BOARD_SMART_PROMPT, HOME_BOARD_SMART_ARTIFACT } from '../packages/dsh-research-task-runtime/home-board-smart-contract.js'
 
 // Browser plugin not available. Use the existing Playwright/Chromium runtime;
 // this fixture mounts production native components and blocks all live providers.
@@ -101,12 +102,19 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true,deferRegistration=false}={}) {
+async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true,deferRegistration=false,smartMode='ready'}={}) {
   const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion }), errors = [], external = []
   page.on('pageerror', error => errors.push(error.stack||error.message))
-  await page.route('**/*', route => {
+  const smartRequests=[];let releaseSmart;const smartGate=new Promise(resolve=>releaseSmart=resolve)
+  await page.route('**/*', async route => {
     const url = new URL(route.request().url())
     if (url.origin !== 'https://guide.local') { external.push(route.request().url()); return route.abort() }
+    if(url.pathname===HOME_BOARD_SMART_PATH){
+      const input=route.request().postDataJSON();smartRequests.push(input)
+      if(smartMode==='deferred')await smartGate
+      const now=Date.now(),task={taskId:'guide-smart-result',canvasNodeId:smartMode==='wrong-node'?'foreign-node':input.canvasNodeId,state:'completed',finalOutput:JSON.stringify(HOME_BOARD_SMART_ARTIFACT),createdAt:now,startedAt:now,completedAt:now,lastSeq:1,events:[]}
+      return route.fulfill({contentType:'application/json',body:JSON.stringify(task)})
+    }
     return route.fulfill({ contentType: url.pathname === '/' ? 'text/html' : 'application/json', body: url.pathname === '/' ? `<!doctype html><meta charset="utf-8"><title>Native homepage guide fixture</title><style>${styles}\nhtml,body{height:100%;margin:0}#native-root{height:100%;min-height:0}.pI_x6G_frame{display:grid;grid-template-columns:88px minmax(0,1fr);height:100vh}.pI_x6G_centerCol{position:relative;min-width:0;min-height:0}#guide-host{position:absolute;inset:${guideTop}px 18px ${guideBottom}px;z-index:10}[data-home-guide="${runId}"]{position:absolute;inset:0;pointer-events:none}[data-home-guide="${runId}"]>#guide-host{pointer-events:auto}#outside-host{position:fixed;left:0;top:0}</style><div class="pI_x6G_frame"><aside></aside><main class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="${runId}"><div id="guide-host"></div></section></main></div><div id="outside-host"></div><div id="side-composer"></div><div id="side-history"></div><script>window.__ModuleLoader__={load:value=>window.descriptor=value};window.guideProbe={providerCalls:0,workspaceCalls:0,financialCalls:0,libraryCalls:0,workspaceConnections:[],workspaceArchives:[],workspaceOpens:[],diskEntries:${JSON.stringify(diskEntries)}};window.dshDesktop={financialWidget:{request:async()=>{window.guideProbe.financialCalls++;throw Error('Global financial bridge must not be called')}},componentLibrary:{request:async()=>{window.guideProbe.libraryCalls++;throw Error('Global library bridge must not be called')}}};</script>` : '{"tasks":[],"plans":[]}' })
   })
   await page.setViewportSize({width,height})
@@ -119,7 +127,7 @@ async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,gui
   await page.waitForSelector('textarea', { timeout: 3000 }).catch(error=>{throw Error(JSON.stringify(errors)+' '+error.message)})
   await page.evaluate(() => { window.guideProbe.originalInput = document.querySelector('textarea'); window.guideProbe.originalRoot = document.querySelector('.wSkVaW_root'); document.querySelector('[data-srb-session-header]')?.setAttribute('data-ework-notes-session', 'guide-browser-session') })
   expect(errors).toEqual([])
-  return { page, errors, external }
+  return { page, errors, external, smartRequests, releaseSmart }
 }
 
 async function command(page, name, overrides = {}, replyTimeout = name==='board-add'?40000:8000) {
@@ -168,6 +176,87 @@ it.each([{width:1460,height:1000},{width:580,height:1000},{width:1080,height:640
   await preserved(page);expect(errors).toEqual([]);expect(external).toEqual([])
  }finally{await page.evaluate(()=>window.guideProbe.realPointer?.dispose()).catch(()=>{});await page.close()}
 },60000)
+it('creates a real native smart draft beside the calendar through the existing canvas tools',async()=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000})
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.smartToolCues=[];window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return;const target=[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===d.targetToken);window.guideProbe.smartToolCues.push({container:target?.hasAttribute('data-research-global-container'),select:target?.hasAttribute('data-research-global-select')});window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange'])await succeeds(page,step)
+  await succeeds(page,'board-smart-container')
+  const state=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
+  expect(state).toHaveLength(7)
+  const smart=state.find(node=>node.title==='智能容器'),calendar=state.find(node=>node.containerSpec.type==='calendar-tool')
+  expect(smart.generationStatus).toBe('draft');expect(smart.containerSpec).toBeUndefined();expect(smart.containerPrompt).toBe('')
+  expect(smart.y).toBe(calendar.y);expect(calendar.x).toBeLessThan(smart.x);expect(smart.width).toBe(calendar.width)
+  expect(await page.locator('#guide-host [data-research-container-prompt]').count()).toBe(1)
+  expect(await page.locator('#guide-host [data-research-canvas]').getAttribute('data-canvas-tool')).toBe('select')
+  expect(await page.evaluate(()=>window.guideProbe.smartToolCues.some(cue=>cue.container))).toBe(true);expect(await page.evaluate(()=>window.guideProbe.smartToolCues.some(cue=>cue.select))).toBe(true)
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},30000)
+
+it.each([{width:1460,height:1000},{width:1080,height:640,compact:true}])('generates the native five-stock research table from its real smart input at $width × $height',async({width,height,compact})=>{
+ const{page,errors,smartRequests}=await fixture({nativeLayout:true,width,height,guideTop:compact?52:70,guideBottom:compact?100:70,reducedMotion:compact?'no-preference':'reduce'})
+ try{
+  await page.evaluate(compact=>{if(compact){const host=document.getElementById('guide-host');host.style.left='0px';host.style.right='366px'}document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.smartInputs=[];document.addEventListener('input',event=>{if(event.target.matches?.('[data-research-container-prompt]'))window.guideProbe.smartInputs.push(event.target.value)},true);window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return;const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));if(!window.guideProbe.smartPointer){reply(true);return}const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token);void window.guideProbe.smartPointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action}).then(()=>reply(true),error=>reply(false,error.message))})},compact)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange'])await succeeds(page,step)
+  await page.evaluate(()=>{window.guideProbe.smartPointer=window.guideProbe.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})})
+  for(const step of ['board-smart-container','board-smart-generate'])await succeeds(page,step)
+  const state=await page.evaluate(()=>{const p=window.guideProbe;return{nodes:p.registry.for('guide-browser-session').getSnapshot().artifacts,disk:JSON.parse(p.memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session')),inputs:p.smartInputs}})
+  expect(state.nodes).toHaveLength(7)
+  const smart=state.nodes.find(node=>node.containerSpec?.type==='table'),calendar=state.nodes.find(node=>node.containerSpec?.type==='calendar-tool')
+  expect(smart).toMatchObject({generationStatus:'completed',generationTaskId:'guide-smart-result',containerPrompt:'为这5只自选股创建研究观察清单，列出关注因素、跟踪指标和风险信号。'})
+  expect(smart.containerSpec.title).toBe('自选股研究观察清单');expect(smart.containerSpec.rows).toHaveLength(5)
+  expect(smart.containerSpec.rows.map(row=>row[0])).toEqual(['苹果（AAPL）','长江电力（600900）','工业富联（601138）','五粮液（000858）','徐工机械（000425）'])
+  expect(smartRequests).toEqual([{sessionId:'guide-browser-session',runId:'guide-browser-run',canvasNodeId:smart.id,prompt:HOME_BOARD_SMART_PROMPT}])
+  expect(state.inputs.length).toBeGreaterThan(1);expect(state.inputs.at(-1)).toBe(HOME_BOARD_SMART_PROMPT)
+  if(compact){expect(calendar.width).toBe(smart.width);expect(calendar.y).toBeLessThan(smart.y);expect(smart.width).toBeGreaterThan(580)}else{expect(calendar.y).toBe(smart.y);expect(calendar.x).toBeLessThan(smart.x)}
+  expect(state.disk.find(node=>node.id===smart.id)?.containerSpec?.rows).toHaveLength(5)
+  expect(await page.locator('#guide-host [data-research-node-id="'+smart.id+'"] table tbody tr').count()).toBe(5)
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.evaluate(()=>window.guideProbe.smartPointer?.dispose()).catch(()=>{});await page.close()}
+},45000)
+
+it.each(['paused','deleted','moved','disposed'])('guards a native prepared smart response when %s during the request',async outcome=>{
+ const{page,errors,smartRequests,releaseSmart}=await fixture({nativeLayout:true,smartMode:'deferred'})
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange','board-smart-container'])await succeeds(page,step)
+  const pending=command(page,'board-smart-generate',{},30000)
+  await expect.poll(()=>smartRequests.length,{timeout:10000}).toBe(1)
+  const targetId=smartRequests[0].canvasNodeId
+  if(outcome==='disposed')await succeeds(page,'dispose')
+  else await page.evaluate(({outcome,targetId})=>{
+   if(outcome==='paused')window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:false}}))
+   else{const workspace=window.guideProbe.registry.for('guide-browser-session');if(outcome==='deleted')workspace.setArtifacts(workspace.getSnapshot().artifacts.filter(node=>node.id!==targetId));else{const before=workspace.getSnapshot().artifacts.find(node=>node.id===targetId);workspace.applyWorkbenchCells(workspace.getWorkbenchCells().map(cell=>cell.id===targetId?{...cell,y:cell.y+10,freePosition:true}:cell),true);window.guideProbe.userSmartY=workspace.getSnapshot().artifacts.find(node=>node.id===targetId).y;if(window.guideProbe.userSmartY<=before.y)throw Error('Native move fixture did not move its target')}}
+  },{outcome,targetId})
+  releaseSmart()
+  if(outcome==='paused'){
+   await page.waitForTimeout(180)
+   expect(await page.evaluate(id=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.find(node=>node.id===id)?.generationStatus,targetId)).toBe('queued')
+   expect(await page.evaluate(id=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.find(node=>node.id===id)?.containerSpec,targetId)).toBeUndefined()
+   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:true}})))
+  }
+  expect(await pending).toMatchObject({ok:outcome==='paused'})
+  await page.waitForTimeout(80)
+  const state=await page.evaluate(id=>{const nodes=window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts;return{count:nodes.length,node:nodes.find(node=>node.id===id),tables:nodes.filter(node=>node.containerSpec?.type==='table').length}},targetId)
+  if(outcome==='paused')expect(state.node).toMatchObject({generationStatus:'completed',generationTaskId:'guide-smart-result'})
+  else{expect(state.tables).toBe(0);if(outcome==='deleted'){expect(state.count).toBe(6);expect(state.node).toBeUndefined()}else{expect(state.node.generationStatus).toBe('failed');if(outcome==='moved')expect(state.node.y).toBe(await page.evaluate(()=>window.guideProbe.userSmartY))}}
+  expect(smartRequests).toHaveLength(1);await preserved(page);expect(errors).toEqual([])
+ }finally{releaseSmart();await page.close()}
+},30000)
+
+it('rejects a completed task for a different smart node before native hydration',async()=>{
+ const{page,errors}=await fixture({nativeLayout:true,smartMode:'wrong-node'})
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange','board-smart-container'])await succeeds(page,step)
+  expect(await command(page,'board-smart-generate')).toMatchObject({ok:false,message:'示例组件结果尚未就绪。'})
+  const nodes=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
+  expect(nodes).toHaveLength(7);expect(nodes.some(node=>node.containerSpec?.type==='table')).toBe(false)
+  expect(nodes.find(node=>node.workbenchIndex===6).generationStatus).toBe('failed');expect(errors).toEqual([])
+ }finally{await page.close()}
+},25000)
+
 it.each(['hidden','visible'])('finishes native arrange without chasing an optional %s action receipt',async state=>{
  const {page,errors}=await fixture({nativeLayout:true})
  try{
