@@ -1,0 +1,541 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-01",
+  "branch": "codex/integration/20261026-01",
+  "baseMainCommit": "7b5f5a229db020731e85059b72c4649f54057ae1",
+  "expectedMainCommit": "7b5f5a229db020731e85059b72c4649f54057ae1",
+  "createdAt": "2026-10-25T18:22:52.263Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "补全子代理头像、真实研报与PPT标注消息呈现",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "7b5f5a229db020731e85059b72c4649f54057ae1",
+        "tipCommit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+        "commits": [
+          {
+            "commit": "c43c25bb04c56c8f6edb625caed82b37d7f2ad58",
+            "parents": [
+              "7b5f5a229db020731e85059b72c4649f54057ae1"
+            ],
+            "subject": "修复PPT标注发送成功后残留的技能错误提示"
+          },
+          {
+            "commit": "257a6f411f1a3a1e17ae1a3aa69fd346a679a07b",
+            "parents": [
+              "c43c25bb04c56c8f6edb625caed82b37d7f2ad58"
+            ],
+            "subject": "为真实子代理入口接入稳定神话头像与呼吸运行提示"
+          },
+          {
+            "commit": "40360e8a2cdbdac28a95c8c21cb9edd418c13cb9",
+            "parents": [
+              "257a6f411f1a3a1e17ae1a3aa69fd346a679a07b"
+            ],
+            "subject": "增加PPT标注消息的只读权威呈现信息"
+          },
+          {
+            "commit": "56c8892d212c90161620bbc2fe4e75d570691a73",
+            "parents": [
+              "40360e8a2cdbdac28a95c8c21cb9edd418c13cb9"
+            ],
+            "subject": "采用正式客户端真实重生成并核验的六十三页研报用例"
+          },
+          {
+            "commit": "e389f069b9cb0f9497bf344188f1a794f383f54d",
+            "parents": [
+              "56c8892d212c90161620bbc2fe4e75d570691a73"
+            ],
+            "subject": "优化PPT标注消息的可信标签呈现"
+          },
+          {
+            "commit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+            "parents": [
+              "e389f069b9cb0f9497bf344188f1a794f383f54d"
+            ],
+            "subject": "接通标注消息呈现并记录本会话七十四项优化对账"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/achilles.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/aeolus.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/agamemnon.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/aphrodite.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/apollo.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/arc-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/arc-24.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/artemis.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/athena.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/calypso.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/cassandra.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/charybdis.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/circe.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/hades.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/hector.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/helen.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/hera.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/hermes.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/manifest.json"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/menelaus.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/nausicaa.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/odysseus.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/paris.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/patroclus.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/penelope.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/persephone.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/polyphemus.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/poseidon.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/scylla.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/siren.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/telemachus.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/track-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/track-24.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/trojan-horse.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/subagent-avatars/zeus.png"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-26-subagent-avatars.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/reviews/2026-10-26-session-optimization-coverage.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/reviews/2026-10-26-session-optimization-coverage.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-26-subagent-avatars-design.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/calculations.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/research-report.html"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/research-report.pdf"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/run.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/source-metadata.json"
+          },
+          {
+            "status": "M",
+            "path": "scripts/install-brand-assets.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-refinements-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-subagent-panel.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-coordinator.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-message.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/subagent-avatars.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/pptx/annotations-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/pptx/annotations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/pptx-annotations.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-content-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-continuable-composer.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-menu.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-panel-destination.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-panel.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/pptx-annotation-input-browser.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/pptx-annotation-message.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/subagent-avatars-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-input-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-install.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-message-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-message-install.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-message.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotations-contract.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotations.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/subagent-avatars-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/subagent-avatars.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-12-feature-final-pipeline-1-20261026.log",
+            "verifiedCommit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+            "completedAt": "2026-10-25T18:22:01.594485+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-12-feature-final-pipeline-2-20261026.log",
+            "verifiedCommit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+            "completedAt": "2026-10-25T18:22:01.594485+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/install-brand-assets.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-12-feature-final-assets-20261026.log",
+            "verifiedCommit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+            "completedAt": "2026-10-25T18:22:01.594485+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotations.test.ts",
+              "test/pptx-annotations-contract.test.ts",
+              "test/integration-service.test.ts",
+              "test/pptx-annotation-message.test.js",
+              "test/pptx-annotation-message-browser.test.js",
+              "test/pptx-annotation-message-install.test.js",
+              "test/pptx-annotation-input-browser.test.js",
+              "test/pptx-annotation-install.test.js",
+              "test/subagent-avatars.test.js",
+              "test/subagent-avatars-browser.test.js",
+              "test/home-report-assets.test.js",
+              "test/home-report-publication.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-12-feature-final-focused-20261026.log",
+            "verifiedCommit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+            "completedAt": "2026-10-25T18:22:01.594485+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-12-feature-final-typecheck-20261026.log",
+            "verifiedCommit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+            "completedAt": "2026-10-25T18:22:01.594485+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "git diff --check",
+            "verifiedCommit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+            "completedAt": "2026-10-25T18:22:01.594485+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "源码真实Native renderer/Main直接182项、两遍安装链、头像静态资源SHA/复制、tsc通过，独审完成。正式11已实际完成K3high两处标注→新20页PPT→真实交付卡右预览→PowerPoint无修复弹窗，原件SHA不变；真实run05研报63页已独立复核并点击正式11交付卡预览。这些不等同最终12包四场回放。"
+        },
+        "acceptanceCriteria": [
+          "30原角色按真实child UUID稳定分配，catalog/detail首行对齐，独立24/20脉冲环，inactive不推成功。",
+          "研报使用正式EWork K3high实际run05原字节，63页HTML/PDF与四审计JSON一致，保原专业文件名和来源/签发边界。",
+          "PPT真实发送的错误提示仅在本轮成功后清理；消息仅按Main实际human/RPC/seq/原文证明投影HUG，历史/模型/manifest不改，失败回原文。",
+          "冷恢复/跨owner/取消/权限和UTF16范围均直接覆盖；首轮占位短暂且有超时，不能保留被拒绝的旧标签。",
+          "只从clean main构建正式身份本地客户端，保持1.3.5，不公证/上传/push；构建后原生验证四场/头像/标注消息/窄窗并保持打开。"
+        ],
+        "risks": [
+          "最后12包四用例回放、头像与标注消息的实际原生显示待构建后验证。",
+          "系统级概率性鼠标冻结仍未稳定复现，未确认根因，不标记fixed。",
+          "研报保留原screen-grade及externalAuthenticity=unverified/professionalSignOff=false，未改成专业签发稿。"
+        ],
+        "generatedAt": "2026-10-25T18:22:01.594485+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/install-brand-assets.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/pptx-annotations.test.ts",
+        "test/pptx-annotations-contract.test.ts",
+        "test/integration-service.test.ts",
+        "test/pptx-annotation-message.test.js",
+        "test/pptx-annotation-message-browser.test.js",
+        "test/pptx-annotation-message-install.test.js",
+        "test/pptx-annotation-input-browser.test.js",
+        "test/pptx-annotation-install.test.js",
+        "test/subagent-avatars.test.js",
+        "test/subagent-avatars-browser.test.js",
+        "test/home-report-assets.test.js",
+        "test/home-report-publication.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
