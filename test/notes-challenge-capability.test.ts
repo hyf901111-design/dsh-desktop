@@ -31,7 +31,7 @@ it('saves and reads back Yjs settings while leaving text intact and reporting qu
  expect(f.effects.map(effect=>effect.state)).toEqual(['applied','saved']);expect(f.saved).toHaveLength(1)
  const restored=new Y.Doc();Y.applyUpdate(restored,Buffer.from(f.saved[0].yjs,'base64'));expect(restored.getMap('note-challenge').toJSON()).toEqual({level:3,marginExpanded:true})
  expect(JSON.stringify(f.blocks)).toBe(before);expect(result.message).toContain('等待');expect(result.message).not.toContain('校验已完成')
- expect(capabilityReceiptText([{...result,capability:action}],'en')).toContain('AI challenge settings: Completed. Settings saved')
+ expect(capabilityReceiptText([{...result,capability:action}],'en')).toContain('AI Copilot settings: Completed. Settings saved')
  expect(noteCapabilityReceiptMessage({...result,message:result.message+'磁盘中文详情'},'en')).toContain('磁盘中文详情')
 })
 it.each(['applied','persist'])('retains the actual configuration effect when cancelled at %s',async cancelAt=>{
@@ -53,7 +53,7 @@ it.each([['idle','当前没有运行中的校验'],['failed','最近一次校验
 })
 it('reports off as disabled and stores canonical receipt copy regardless of renderer locale',async()=>{
  vi.stubGlobal('document',{documentElement:{dataset:{odysseyLocale:'en'}}})
- try{const f=fixture(),receipt=await f.call({level:0,commentsExpanded:false});expect(receipt.message).toContain('自动挑战已关闭');expect(receipt.message).not.toContain('等待调度');expect(receipt.message).not.toContain('Settings saved')}finally{vi.unstubAllGlobals()}
+ try{const f=fixture(),receipt=await f.call({level:0,commentsExpanded:false});expect(receipt.message).toContain('AI随航已关闭');expect(receipt.message).not.toContain('等待调度');expect(receipt.message).not.toContain('Settings saved')}finally{vi.unstubAllGlobals()}
 })
 it('leaves malformed restored configuration receipts literal instead of crashing or inventing success',()=>{
  for(const effect of [{kind:'challenge'},{kind:'challenge',state:'saved',phase:'idle',settings:{}},{kind:'challenge',state:'saved',phase:'completed',settings:{level:3,commentsExpanded:true}},{kind:'challenge',state:'unexpected',phase:'idle',settings:{level:3,commentsExpanded:true}}])expect(noteCapabilityReceiptMessage({status:'failed',message:'历史原始详情',effect} as any,'en')).toBe('历史原始详情')

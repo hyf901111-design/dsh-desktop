@@ -17,18 +17,18 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 async function fixture(width=2000){const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(5000);await page.route('http://127.0.0.1/challenge',r=>r.fulfill({contentType:'text/html',body:'<span data-ework-notes-session="challenge"></span><div data-ework-note-view="challenge"></div>'}));await page.goto('http://127.0.0.1/challenge');if(css)await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();await page.evaluate(()=>window.editor.replaceBlocks(window.editor.document,[{id:'p',type:'paragraph',content:[{type:'text',text:'这项结论的成度较高。',styles:{bold:true}}]},{id:'other',type:'paragraph',content:'另一段保持不变。'}]));return{context,page,errors}}
 const reply={version:1,issues:[{blockId:'p',quote:'成度',category:'typo',message:'这里是否应为“程度”？',evidence:[{kind:'note',label:'笔记原文',blockId:'p',quote:'这项结论的成度较高。'}]}],coveredBlockIds:['p','other'],checks:[{kind:'note',status:'completed',detail:'已检查原文。'}]}
-async function enable(page){await page.getByRole('button',{name:'挑战模式，当前关闭'}).click();const slider=page.getByRole('slider',{name:'挑战强度'});await slider.focus();await slider.press('ArrowRight');await slider.press('ArrowRight');await page.getByRole('button',{name:'挑战模式，当前标准'}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length),{timeout:7000}).toBe(1).catch(async e=>{console.log('challenge diagnostic',await page.evaluate(()=>({level:window.challenge.level,pref:window.noteDoc.getMap('note-challenge').get('level'),focus:document.hasFocus(),visibility:document.visibilityState,blocks:window.editor.document,calls:window.calls})));throw e})}
+async function enable(page){await page.getByRole('button',{name:'随航模式，当前关闭'}).click();const slider=page.getByRole('slider',{name:'随航强度'});await slider.focus();await slider.press('ArrowRight');await slider.press('ArrowRight');await page.getByRole('button',{name:'随航模式，当前标准'}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length),{timeout:7000}).toBe(1).catch(async e=>{console.log('challenge diagnostic',await page.evaluate(()=>({level:window.challenge.level,pref:window.noteDoc.getMap('note-challenge').get('level'),focus:document.hasFocus(),visibility:document.visibilityState,blocks:window.editor.document,calls:window.calls})));throw e})}
 async function finish(page,value=reply){await page.evaluate(value=>Object.values(window.jobs).at(-1).resolve(value),value)}
 it('keeps writing quiet until real anchored issues exist, persists the five-level choice, and supports same-thread reply, evidence, optimize and resolution',async()=>{
  const{context,page,errors}=await fixture();try{
   expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge').length)).toBe(0)
   expect(await page.locator('.en-challenge-card').count()).toBe(0)
   await enable(page);expect(await page.locator('.en-challenge-card').count()).toBe(0)
-  const focused=await page.evaluate(()=>document.activeElement?.className);await finish(page);await page.getByRole('article',{name:'AI挑战评论'}).waitFor();expect(await page.evaluate(()=>document.activeElement?.className)).toBe(focused);await page.screenshot({path:'/tmp/notes-challenge-wide-light-20261021.png'})
+  const focused=await page.evaluate(()=>document.activeElement?.className);await finish(page);await page.getByRole('article',{name:'AI随航评论'}).waitFor();expect(await page.evaluate(()=>document.activeElement?.className)).toBe(focused);await page.screenshot({path:'/tmp/notes-challenge-wide-light-20261021.png'})
   expect(await page.locator('.en-challenge-card').count()).toBe(1);expect(await page.locator('[data-challenge-wide=true]').count()).toBe(1)
   expect(await page.evaluate(()=>window.editor.getBlock('p').content[0].styles.bold)).toBe(true)
   await page.getByRole('button',{name:'查看依据',exact:true}).click();expect(await page.evaluate(()=>window.events.some(e=>e.name==='open'&&e.detail.evidence[0].quote==='这项结论的成度较高。'))).toBe(true)
-  const input=page.getByRole('textbox',{name:'回复AI挑战'});await input.fill('请解释理由');await input.press('Shift+Enter');await input.type('保留我的观点');expect(await input.inputValue()).toBe('请解释理由\n保留我的观点')
+  const input=page.getByRole('textbox',{name:'回复AI评论员'});await input.fill('请解释理由');await input.press('Shift+Enter');await input.type('保留我的观点');expect(await input.inputValue()).toBe('请解释理由\n保留我的观点')
   expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge').length)).toBe(1)
   await input.press('Meta+Enter');await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(2);expect(await page.evaluate(()=>Object.keys(Object.values(window.jobs).at(-1).input.thread).sort())).toEqual(['blockId','category','message','messages','quote'])
   await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'只是文字用法问题，研究观点可以保留。'}})
@@ -54,7 +54,7 @@ it('uses an anchored nearby bubble on narrow panes, keeps drafts on close, and r
   await finish(page);await expect.poll(()=>page.locator('[data-bn-thread-id]').count()).not.toBe(0)
   expect(await page.locator('.en-challenge-card').count()).toBe(0)
   await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.locator('.en-challenge-card').waitFor();await page.evaluate(()=>document.querySelector('.en-root').dataset.dark='true');await page.screenshot({path:'/tmp/notes-challenge-narrow-dark-20261021.png'})
-  const input=page.getByRole('textbox',{name:'回复AI挑战'});await input.fill('保留这份回复草稿。');await page.getByRole('button',{name:'收起挑战评论'}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
+  const input=page.getByRole('textbox',{name:'回复AI评论员'});await input.fill('保留这份回复草稿。');await page.getByRole('button',{name:'收起随航评论'}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
   await page.locator('.bn-editor [data-bn-thread-id]').first().click();await expect.poll(()=>input.inputValue()).toBe('保留这份回复草稿。')
   await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(2)
   await page.evaluate(()=>window.editor.updateBlock('p',{content:'我刚改成了新的结论。'}));await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'旧建议',replacement:'程度'}})
@@ -66,11 +66,11 @@ it('uses an anchored nearby bubble on narrow panes, keeps drafts on close, and r
 it('preserves native manual comments and restores challenge preferences, anchors and reply drafts from the saved Yjs document',async()=>{
  const{context,page,errors}=await fixture();try{
   await enable(page);await finish(page);await page.locator('.en-challenge-card').waitFor()
-  await page.getByRole('textbox',{name:'回复AI挑战'}).fill('未发送的讨论草稿。')
+  await page.getByRole('textbox',{name:'回复AI评论员'}).fill('未发送的讨论草稿。')
   await expect.poll(()=>page.evaluate(()=>!!window.saved?.yjs)).toBe(true)
   await page.waitForTimeout(850);await page.evaluate(()=>window.remount())
-  await page.getByRole('button',{name:'挑战模式，当前标准'}).waitFor()
-  await expect.poll(()=>page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('未发送的讨论草稿。')
+  await page.getByRole('button',{name:'随航模式，当前标准'}).waitFor()
+  await expect.poll(()=>page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('未发送的讨论草稿。')
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的成度较高。')
   await page.evaluate(()=>{window.challenge.setLevel(0);window.editor.setSelection('p','other');window.editor.getExtension(window.CommentsExtension).startPendingComment()})
   const manual=page.locator('.bn-thread .bn-editor');await manual.waitFor();await manual.fill('用户原生手动评论');await manual.press('Enter')
@@ -88,7 +88,7 @@ it('keeps every comment reachable in a scrolling wide gutter and keeps prior dis
   const gutter=page.locator('.en-challenge-comments');await gutter.hover({position:{x:4,y:16}});await page.mouse.wheel(0,700);await expect.poll(()=>gutter.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);await gutter.evaluate(el=>el.scrollTop=el.scrollHeight)
   await expect.poll(async()=>{await gutter.evaluate(el=>el.scrollTop=el.scrollHeight);const end=await page.locator('.en-challenge-card').last().boundingBox(),outer=await gutter.boundingBox();return end.y+end.height-outer.y-outer.height}).toBeLessThanOrEqual(1)
   await page.evaluate(()=>window.challenge.setLevel(0));expect(await page.locator('.en-challenge-card').count()).toBe(5)
-  expect(await page.getByRole('button',{name:'挑战模式，当前关闭'}).count()).toBe(1)
+  expect(await page.getByRole('button',{name:'随航模式，当前关闭'}).count()).toBe(1)
   expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
@@ -104,7 +104,7 @@ it('continues a discussion after reopening a resolved long optimization, bounds 
   await page.evaluate(()=>window.editor.transact(tr=>{tr.setMeta('addToHistory',false);return window.editor.getExtension(window.CommentsExtension).threadStore.unresolveThread({threadId:[...window.noteDoc.getMap('threads').keys()][0]})}))
   await page.locator('.en-challenge-card').waitFor()
   await page.evaluate(async()=>{const c=window.editor.getExtension(window.CommentsExtension),thread=window.challenge.threads[0];for(let i=0;i<8;i++)await c.threadStore.addComment({threadId:thread.id,comment:{body:[{type:'paragraph',content:[{type:'text',text:'旧的完整讨论内容。'.repeat(350),styles:{}}]}]}})})
-  await page.getByRole('textbox',{name:'回复AI挑战'}).fill('请保留研究观点。');await page.getByRole('button',{name:'发送挑战回复'}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(3)
+  await page.getByRole('textbox',{name:'回复AI评论员'}).fill('请保留研究观点。');await page.getByRole('button',{name:'发送评论回复'}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(3)
   const input=await page.evaluate(()=>Object.values(window.jobs).at(-1).input.thread);expect(input.quote).toBe(replacement);expect(JSON.stringify(input).length).toBeLessThanOrEqual(16000);expect(input.messages.at(-1).text).toBe('请保留研究观点。')
   await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'保留原有研究立场。'}})
   await expect.poll(()=>page.getByRole('button',{name:'AI优化',exact:true}).isEnabled()).toBe(true)

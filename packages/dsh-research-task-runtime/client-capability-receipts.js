@@ -17,16 +17,19 @@ export function noteCapabilityReceiptMessage(receipt,locale='zh'){
 
  if(receipt.effect?.kind==='challenge'&&['applied','saved'].includes(receipt.effect.state)&&['off','idle','waiting','running','paused','limited','failed'].includes(receipt.effect.phase)&&Number.isInteger(receipt.effect.settings?.level)&&receipt.effect.settings.level>=0&&receipt.effect.settings.level<=4&&typeof receipt.effect.settings.commentsExpanded==='boolean'){
   const effect=receipt.effect
-  const render=locale=>{
-   const t=value=>noteUiText(value,locale),settings=effect.settings
+  const render=(locale,legacy=false)=>{
+   const t=value=>legacy?value:noteUiText(value,locale),settings=effect.settings
    const phase=settings.level===0?'自动挑战已关闭。':effect.phase==='running'?'校验正在运行；本次回执仅确认设置。':effect.phase==='limited'?'校验等待用量恢复；本次回执仅确认设置。':effect.phase==='idle'?'当前没有运行中的校验；本次回执仅确认设置。':effect.phase==='failed'?'最近一次校验未完成；本次回执仅确认设置。':effect.phase==='waiting'||effect.phase==='paused'?'校验等待调度；本次回执仅确认设置。':'校验尚未启动；本次回执仅确认设置。'
    return t(effect.state==='saved'?'AI挑战设置已保存。':'AI挑战设置已应用，尚未确认保存。')+t('等级：{level}；评论展开偏好：{comments}。').replace('{level}',t(['关闭','宽松','标准','严格','抬杠'][settings.level])).replace('{comments}',t(settings.commentsExpanded?'展开':'收起'))+t(phase)
   }
-  const original=render('zh'),display=render(locale)
+  const original=render('zh'),display=render(locale),legacy=render('zh',true)
   if(!message)return display
   if(message.startsWith(original))return display+noteUiError(message.slice(original.length),locale)
+  if(message.startsWith(legacy))return display+noteUiError(message.slice(legacy.length),locale)
   const english=render('en')
   if(message.startsWith(english))return display+message.slice(english.length)
+  const legacyEnglish=english.replace('AI Copilot is off.','Automatic challenge is off.')
+  if(message.startsWith(legacyEnglish))return display+message.slice(legacyEnglish.length)
   return message
  }
  if(locale!=='en'||typeof message!=='string')return message

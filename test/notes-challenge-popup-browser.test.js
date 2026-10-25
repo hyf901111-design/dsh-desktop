@@ -39,10 +39,10 @@ it('anchors a wrapped popup at the clicked character and line, and follows that 
   const caret=await clickText(page,clicked,clicked.left+185),card=page.locator('.en-challenge-card')
   await expect.poll(async()=>Math.abs((await card.boundingBox()).y-clicked.bottom-10)).toBeLessThanOrEqual(2)
   await expect.poll(async()=>Math.abs((await card.boundingBox()).x-await expectedX(page,caret.left))).toBeLessThanOrEqual(2)
-  await page.getByRole('textbox',{name:'回复AI挑战'}).fill('定位变化保留未发送回复。')
+  await page.getByRole('textbox',{name:'回复AI评论员'}).fill('定位变化保留未发送回复。')
   const before=await card.boundingBox();await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop+=30)
   await expect.poll(async()=>Math.abs((await card.boundingBox()).y-before.y+30)).toBeLessThanOrEqual(2)
-  expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('定位变化保留未发送回复。')
+  expect(await page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('定位变化保留未发送回复。')
   await page.screenshot({path:'/tmp/notes-challenge-popup-click-line-20261022.png'});expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

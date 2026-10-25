@@ -167,8 +167,8 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  }
  const challenge=async()=>{
   await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
-  options.onStatus?.('打开 AI 挑战，选择严格模式检查全文')
-  const trigger=await until(()=>toolQuery<HTMLButtonElement>('.en-challenge-trigger'));await click(trigger,'打开 AI 挑战')
+  options.onStatus?.('打开 AI随航，选择严格模式检查全文')
+  const trigger=await until(()=>toolQuery<HTMLButtonElement>('.en-challenge-trigger'));await click(trigger,'打开 AI随航')
   const slider=await until(()=>document.querySelector<HTMLElement>('.en-challenge-popover [role="slider"]'))
   const stop=await until(()=>document.querySelector<HTMLElement>('.en-challenge-popover .en-challenge-stop:nth-of-type(4)'))
   const thumb=await until(()=>document.querySelector<HTMLElement>('.en-challenge-popover .en-challenge-thumb'))

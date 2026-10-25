@@ -236,7 +236,8 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const editorActive=()=>foreground.current&&noteEditorVisible(scroll.current)
   const doc = useMemo(() => createNoteDocument(props.initial).doc, [])
   const [editedAt,setEditedAt]=useState(()=>noteEditTimestamp(doc.getMap('note-metadata').get('editedAt'))),editFingerprint=useRef('')
-  const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: id===CHALLENGE_USER?t('AI挑战'):t('我'), avatarUrl: '' }))), [])
+  const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: id===CHALLENGE_USER?t('AI评论员'):t('我'), avatarUrl: '' }))), [])
+  useEffect(()=>{users.setUser({id:CHALLENGE_USER,username:t('AI评论员'),avatarUrl:''})},[users,document.documentElement.dataset.odysseyLocale])
   const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)}, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: t('我'), color: '#94b2ff' } }, extensions: [NoteAiSelection(), NoteReplacementHighlights(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new NoteThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
   editor.dictionary = document.documentElement.dataset.odysseyLocale==='en'?en:zh
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()

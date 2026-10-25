@@ -407,7 +407,7 @@ it('keeps the swords static while waiting, animates a real review, and stops for
   const staticSrc=await icon.getAttribute('src')
   const bounds=()=>trigger.evaluate(el=>{const r=el.getBoundingClientRect(),i=el.querySelector('img').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,iconX:i.x,iconY:i.y,iconWidth:i.width,iconHeight:i.height}})
   await page.clock.install()
-  await trigger.click();await page.getByRole('slider',{name:'挑战强度'}).press('ArrowRight');await page.getByRole('slider',{name:'挑战强度'}).press('ArrowRight')
+  await trigger.click();await page.getByRole('slider',{name:'随航强度'}).press('ArrowRight');await page.getByRole('slider',{name:'随航强度'}).press('ArrowRight')
   await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('paused')
   const waitingBounds=await bounds(),waitingLabel=await trigger.getAttribute('aria-label')
   expect(waitingBounds.iconWidth).toBe(16);expect(waitingBounds.iconHeight).toBe(16)
@@ -704,7 +704,7 @@ it('keeps optimization running when its bubble closes and saves the preview with
   expect(await page.evaluate(()=>window.challenge.selected||null)).toBeNull();expect(await page.locator('.en-challenge-card').count()).toBe(0)
   expect(await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))).toEqual(before)
   await page.evaluate(id=>window.challenge.select(id),id);await page.getByRole('button',{name:'替换到原文',exact:true}).waitFor()
-  expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('关卡片时仍保留的草稿');expect(await page.locator('.en-challenge-replacement-text').textContent()).toBe('这项结论的程度较高。')
+  expect(await page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('关卡片时仍保留的草稿');expect(await page.locator('.en-challenge-replacement-text').textContent()).toBe('这项结论的程度较高。')
   expect(await page.evaluate(()=>window.messages())).toContain('可替换的优化建议。');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
@@ -737,7 +737,7 @@ it('shows a flowing perimeter only during work, keeps picker geometry and clicks
    const first=await perimeter();expect(first.animation).toBe('en-challenge-orbit');expect(first.pointerEvents).toBe('none');expect(first.mask).toContain('exclude');expect(first.background).toContain('conic-gradient');expect(first.background).toContain('rgba(0, 0, 0, 0)');expect(first.background).toContain(dark?'255, 255, 255':'84, 103, 130')
    await expect.poll(async()=>(await perimeter()).angle).not.toBe(first.angle)
    expect(await trigger.boundingBox()).toEqual(before)
-   await trigger.click();await page.getByRole('slider',{name:'挑战强度'}).waitFor();await page.keyboard.press('Escape')
+   await trigger.click();await page.getByRole('slider',{name:'随航强度'}).waitFor();await page.keyboard.press('Escape')
    await trigger.screenshot({path:'/tmp/notes-challenge-orbit-'+(dark?'dark':'light')+'-20261022.png'})
   }
   await page.emulateMedia({reducedMotion:'reduce'});await expect.poll(async()=>(await perimeter()).animation).toBe('none');expect((await perimeter()).background).toContain('conic-gradient')
@@ -763,7 +763,7 @@ it('automatically reviews a fresh unpunctuated edit while its caret remains in t
 
 it('coalesces slider changes and starts the selected tier immediately after closing, including after a recent review',async()=>{
  const{context,page,errors}=await fixture();try{
-  await page.clock.install();const trigger=page.locator('.en-challenge-trigger'),slider=page.getByRole('slider',{name:'挑战强度'})
+  await page.clock.install();const trigger=page.locator('.en-challenge-trigger'),slider=page.getByRole('slider',{name:'随航强度'})
   await trigger.click();await slider.press('ArrowRight');expect(await page.locator('.en-challenge-description').textContent()).toBe('仅指出错别字及拼写错误')
   await slider.press('ArrowRight');expect(await page.locator('.en-challenge-description').textContent()).toBe('指出事实、逻辑、表达方面问题')
   await page.clock.fastForward(60000);expect(await page.evaluate(()=>window.jobs.length)).toBe(0)
@@ -829,7 +829,7 @@ it('retains and saves an explicit tier review when its close handler is followed
 it('releases a visible picker pause when the native header retargets its portal',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.clock.install();await page.evaluate(()=>{document.body.insertAdjacentHTML('beforeend','<div id="slot-a" data-en-challenge-tools="note-a"></div><div id="slot-b" data-en-challenge-tools="other"></div>')})
-  await page.locator('#slot-a .en-challenge-trigger').waitFor();await page.locator('#slot-a .en-challenge-trigger').click();await page.getByRole('slider',{name:'挑战强度'}).press('ArrowRight')
+  await page.locator('#slot-a .en-challenge-trigger').waitFor();await page.locator('#slot-a .en-challenge-trigger').click();await page.getByRole('slider',{name:'随航强度'}).press('ArrowRight')
   await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('paused')
   await page.evaluate(()=>{document.querySelector('#slot-a').dataset.enChallengeTools='other';document.querySelector('#slot-b').dataset.enChallengeTools='note-a'})
   await page.locator('#slot-b .en-challenge-trigger').waitFor();await page.clock.fastForward(1)
@@ -843,7 +843,7 @@ async function applyTrackedReplacement(page,replacement='这项结论的程度�
 }
 it('highlights the complete marked replacement, opens an original/replacement comparison, and restores only its own scope',async()=>{
  const{context,page,errors,id}=await fixture();try{
-  await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.getByRole('textbox',{name:'回复AI挑战'}).fill('保留未发送的原讨论草稿')
+  await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.getByRole('textbox',{name:'回复AI评论员'}).fill('保留未发送的原讨论草稿')
   const replacement=await applyTrackedReplacement(page),mark=page.locator('.en-replacement-mark');expect(await mark.textContent()).toBe('程度')
   await mark.click();const popup=page.getByRole('dialog',{name:'替换对照'});await popup.waitFor();expect(await popup.locator('[data-replacement-before]').textContent()).toBe('成度');expect(await popup.locator('[data-replacement-after]').textContent()).toBe('程度')
   const bounds=await popup.boundingBox(),area=await page.locator('.en-main').boundingBox();expect(bounds.y).toBeGreaterThanOrEqual(area.y);expect(bounds.y+bounds.height).toBeLessThanOrEqual(area.y+area.height)

@@ -38,13 +38,13 @@ for(const width of [3440,1600,1180,900])it(`keeps the note centered with right-s
 },15000)
 it('tracks the real note region when the global evidence sidebar changes without losing reply text',async()=>{
  const {context,page,errors}=await fixture(1600);try{
-  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('这份未发送回复不能丢。')
+  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI评论员'}).fill('这份未发送回复不能丢。')
   for(const evidenceWidth of [420,0]){
    await page.evaluate(width=>window.setEvidenceWidth(width),evidenceWidth);await openSelected(page)
    await expect.poll(async()=>{const value=await dimensions(page);return Math.abs(value.center-value.areaCenter)}).toBeLessThanOrEqual(1)
    await expect.poll(()=>assertHorizontalPlacement(page)).toBeUndefined()
-   expect(await page.getByRole('textbox',{name:'回复AI挑战'}).evaluate(el=>document.activeElement===el)).toBe(true)
-   expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('这份未发送回复不能丢。');expect((await dimensions(page)).overflow).toBe(false)
+   expect(await page.getByRole('textbox',{name:'回复AI评论员'}).evaluate(el=>document.activeElement===el)).toBe(true)
+   expect(await page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('这份未发送回复不能丢。');expect((await dimensions(page)).overflow).toBe(false)
   }
   expect(errors).toEqual([])
  }finally{await context.close()}
@@ -64,10 +64,10 @@ it('keeps a long nearby narrow reply reachable and closes it without reopening o
   await page.evaluate(()=>window.seed(1,true));await openSelected(page)
   await expect.poll(async()=>{const value=await dimensions(page);return value.areaBottom-value.cardBottom}).toBeGreaterThanOrEqual(8)
   expect(await page.locator('.en-challenge-messages').evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true)
-  const input=page.getByRole('textbox',{name:'回复AI挑战'});await input.fill('第一行未发送内容。\n第二行继续保留。')
+  const input=page.getByRole('textbox',{name:'回复AI评论员'});await input.fill('第一行未发送内容。\n第二行继续保留。')
   const reply=await page.locator('.en-challenge-reply').boundingBox(),value=await dimensions(page);expect(reply.y+reply.height).toBeLessThanOrEqual(value.areaBottom-8);await assertHorizontalPlacement(page)
   await page.screenshot({path:'/tmp/notes-challenge-layout-narrow-900.png'})
-  await page.getByRole('button',{name:'收起挑战评论'}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
+  await page.getByRole('button',{name:'收起随航评论'}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
   await openSelected(page);expect(await input.inputValue()).toBe('第一行未发送内容。\n第二行继续保留。');await input.focus();await page.keyboard.press('Escape');await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
@@ -106,7 +106,7 @@ it('keeps a narrow bubble inside the note when its marked text is near the right
 for(const direction of ['above','below'])it(`keeps a focused reply visible when its marked paragraph scrolls ${direction} the viewport`,async()=>{
  const {context,page,errors}=await fixture(900);try{
   await page.evaluate(()=>window.seed(13));const quote=page.locator('.bn-editor [data-bn-thread-id]').nth(direction==='above'?0:12)
-  await quote.click();const input=page.getByRole('textbox',{name:'回复AI挑战'});await input.fill('滚动时继续保留正在输入的回复。')
+  await quote.click();const input=page.getByRole('textbox',{name:'回复AI评论员'});await input.fill('滚动时继续保留正在输入的回复。')
   await page.locator('.en-document-scroll').evaluate((el,direction)=>el.scrollTop=direction==='above'?500:0,direction)
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
   await expect.poll(()=>page.locator('.en-challenge-card').evaluate(el=>{const card=el.getBoundingClientRect(),area=document.querySelector('.en-main').getBoundingClientRect();return card.top>=area.top+16&&card.bottom<=area.bottom-16})).toBe(true)
@@ -128,9 +128,9 @@ it('places persistent note tools before export and preserves tabs while a long h
  const {context,page}=await fixture(1800,true);try{
   await page.evaluate(()=>window.seed());await openSelected(page)
   const tools=page.locator('[data-en-challenge-tools="layout-note"]');await expect.poll(()=>tools.locator('.en-challenge-trigger').count()).toBe(1)
-  expect(await page.locator('[data-srb-utilities]').evaluate(el=>[...el.querySelectorAll('button')].map(button=>button.textContent))).toEqual(['收起评论','AI挑战关闭','导出'])
+  expect(await page.locator('[data-srb-utilities]').evaluate(el=>[...el.querySelectorAll('button')].map(button=>button.textContent))).toEqual(['收起评论','AI随航关闭','导出'])
   const box=await page.locator('.en-challenge-trigger').boundingBox(),exportBox=await page.locator('.en-header-export').boundingBox();expect(box.width).toBe(128);expect(box.height).toBe(30);expect(exportBox.x-box.x-box.width).toBe(12);expect((await page.locator('.en-challenge-margin-toggle').boundingBox()).width).toBe(96)
-  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');await page.getByRole('button',{name:'Challenge mode: Off'}).click();await page.getByRole('slider',{name:'Challenge intensity'}).press('End');await expect.poll(()=>page.evaluate(()=>window.challenge.level)).toBe(4)
+  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');await page.getByRole('button',{name:'AI Copilot mode: Off'}).click();await page.getByRole('slider',{name:'AI Copilot intensity'}).press('End');await expect.poll(()=>page.evaluate(()=>window.challenge.level)).toBe(4)
   const englishTools=()=>page.locator('[data-srb-utilities]').evaluate(el=>{const trigger=el.querySelector('.en-challenge-trigger'),r=trigger.getBoundingClientRect(),tabs=document.querySelector('[data-srb-tabs]').getBoundingClientRect(),tools=el.querySelector('.en-challenge-tools').getBoundingClientRect(),exportButton=el.querySelector('.en-header-export').getBoundingClientRect();return{width:r.width,contentsFit:[...trigger.querySelectorAll('span,img')].every(child=>{const c=child.getBoundingClientRect();return c.left>=r.left-1&&c.right<=r.right+1}),noOverlap:tabs.right<=tools.left+1&&r.right+11<=exportButton.left}})
   await expect.poll(englishTools).toMatchObject({contentsFit:true,noOverlap:true});expect((await englishTools()).width).toBeGreaterThan(128)
   await page.setViewportSize({width:850,height:900});await expect.poll(()=>page.locator('.en-challenge-margin-toggle').count()).toBe(0)
@@ -142,7 +142,7 @@ it('places persistent note tools before export and preserves tabs while a long h
 
 it('remembers collapsed margin comments after reload without losing drafts or overwriting preference on narrow resize',async()=>{
  const {context,page}=await fixture(2000,true);try{
-  const before=await dimensions(page);await page.evaluate(()=>window.seed(2));await openSelected(page);const input=page.getByRole('textbox',{name:'回复AI挑战'}).first();await input.fill('收起和重载都保留这份草稿。')
+  const before=await dimensions(page);await page.evaluate(()=>window.seed(2));await openSelected(page);const input=page.getByRole('textbox',{name:'回复AI评论员'}).first();await input.fill('收起和重载都保留这份草稿。')
   await page.getByRole('button',{name:'收起评论',exact:true}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
   expect(await page.evaluate(()=>window.challenge.marginExpanded)).toBe(false);await openSelected(page);expect(await input.inputValue()).toBe('收起和重载都保留这份草稿。');expect((await dimensions(page)).bodyLeft).toBe(before.bodyLeft)
   await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('layout-note')||'null')?.yjs.length||0)).toBeGreaterThan(0)
@@ -163,19 +163,19 @@ for(const dark of [false,true])it(`uses weak neutral selection only for multiple
   await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
   await openSelected(page);expect(await page.locator('.en-challenge-card[data-selected=true]').count()).toBe(0)
   expect(await page.locator('.en-challenge-card').evaluate(el=>getComputedStyle(el).borderTopColor)).toBe(dark?'rgb(58, 58, 58)':'rgb(228, 228, 228)')
-  await page.getByRole('button',{name:'挑战模式，当前关闭'}).click();const picker=await page.locator('.en-challenge-popover').evaluate(el=>{const style=getComputedStyle(el);return{width:el.offsetWidth,height:el.offsetHeight,radius:style.borderRadius,background:style.backgroundColor,title:getComputedStyle(el.querySelector('.en-challenge-level-name')).textAlign}});expect(picker).toEqual({width:280,height:112,radius:'20px',background:dark?'rgb(37, 37, 37)':'rgb(255, 255, 255)',title:'center'})
+  await page.getByRole('button',{name:'随航模式，当前关闭'}).click();const picker=await page.locator('.en-challenge-popover').evaluate(el=>{const style=getComputedStyle(el);return{width:el.offsetWidth,height:el.offsetHeight,radius:style.borderRadius,background:style.backgroundColor,title:getComputedStyle(el.querySelector('.en-challenge-level-name')).textAlign}});expect(picker).toEqual({width:280,height:112,radius:'20px',background:dark?'rgb(37, 37, 37)':'rgb(255, 255, 255)',title:'center'})
   await page.screenshot({path:'/tmp/notes-challenge-v15-'+(dark?'dark':'light')+'.png'})
  }finally{await context.close()}
 },15000)
 
 it('keeps reply waiting below the user message with initial actions in place and collapse preserving the running reply',async()=>{
  const {context,page,errors}=await fixture(2000,true);try{
-  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('请核实这份判断的依据');await page.getByRole('button',{name:'发送挑战回复'}).click();await page.getByRole('status').filter({hasText:'思考回复中…'}).waitFor()
+  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI评论员'}).fill('请核实这份判断的依据');await page.getByRole('button',{name:'发送评论回复'}).click();await page.getByRole('status').filter({hasText:'思考回复中…'}).waitFor()
   const order=await page.locator('.en-challenge-messages').evaluate(el=>({actionsBeforeUser:!!(el.querySelector('.en-challenge-actions').compareDocumentPosition(el.querySelectorAll('.en-challenge-message')[1])&Node.DOCUMENT_POSITION_FOLLOWING),userBeforeThinking:!!(el.querySelectorAll('.en-challenge-message')[1].compareDocumentPosition(el.querySelector('.en-challenge-thinking'))&Node.DOCUMENT_POSITION_FOLLOWING),waitingInside:el.contains(el.querySelector('.en-challenge-thinking')),ring:getComputedStyle(el.querySelector('.en-challenge-thinking>span')).borderTopColor}));expect(order).toMatchObject({actionsBeforeUser:true,userBeforeThinking:true,waitingInside:true,ring:'rgb(123, 123, 123)'})
-  await page.screenshot({path:'/tmp/notes-challenge-v15-reply-waiting.png'});expect(await page.getByRole('button',{name:'发送挑战回复'}).isDisabled()).toBe(true);expect(await page.getByRole('button',{name:'AI优化',exact:true}).isDisabled()).toBe(true);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('请求中继续保留的新草稿。')
+  await page.screenshot({path:'/tmp/notes-challenge-v15-reply-waiting.png'});expect(await page.getByRole('button',{name:'发送评论回复'}).isDisabled()).toBe(true);expect(await page.getByRole('button',{name:'AI优化',exact:true}).isDisabled()).toBe(true);await page.getByRole('textbox',{name:'回复AI评论员'}).fill('请求中继续保留的新草稿。')
   await page.getByRole('button',{name:'收起评论',exact:true}).click();expect(await page.evaluate(()=>window.stops.length)).toBe(0);expect(await page.evaluate(()=>window.challenge.actionKind)).toBe('reply');await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));expect(await page.locator('.en-challenge-card').count()).toBe(0)
-  await openSelected(page);await page.getByRole('button',{name:'展开评论',exact:true}).click();expect(await page.evaluate(()=>window.stops.length)).toBe(0);expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('请求中继续保留的新草稿。')
+  await openSelected(page);await page.getByRole('button',{name:'展开评论',exact:true}).click();expect(await page.evaluate(()=>window.stops.length)).toBe(0);expect(await page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('请求中继续保留的新草稿。')
   await page.evaluate(()=>Object.values(window.jobs).at(-1).resolve({version:1,issues:[],checks:[],coveredBlockIds:[],reply:{text:'还需要补充同周期和渠道数据，再判断这份结论。'}}));await expect.poll(()=>page.locator('.en-challenge-thinking').count()).toBe(0);expect(await page.locator('.en-challenge-text').allTextContents()).toEqual(['这段判断需要哪些实际依据？','请核实这份判断的依据','还需要补充同周期和渠道数据，再判断这份结论。']);expect(errors).toEqual([])
   await page.screenshot({path:'/tmp/notes-challenge-v15-reply-finished.png'})
  }finally{await context.close()}
@@ -183,15 +183,15 @@ it('keeps reply waiting below the user message with initial actions in place and
 
 it('restores each note display preference and unsent reply when switching notes in the same page',async()=>{
  const {context,page}=await fixture(2000,true);try{
-  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('第一份笔记的草稿。');const beforeSave=await page.evaluate(()=>localStorage.getItem('layout-note'));await page.getByRole('button',{name:'收起评论',exact:true}).click();await expect.poll(()=>page.evaluate(()=>localStorage.getItem('layout-note'))).not.toBe(beforeSave)
+  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI评论员'}).fill('第一份笔记的草稿。');const beforeSave=await page.evaluate(()=>localStorage.getItem('layout-note'));await page.getByRole('button',{name:'收起评论',exact:true}).click();await expect.poll(()=>page.evaluate(()=>localStorage.getItem('layout-note'))).not.toBe(beforeSave)
   await page.evaluate(()=>window.switchNote('another-note'));await page.locator('[data-note-source-session="another-note"]').waitFor();await page.getByRole('button',{name:'收起评论',exact:true}).waitFor();await page.evaluate(()=>{window.editor.replaceBlocks(window.editor.document,window.initialNote.blocks);return window.seed()});await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(1)
-  await page.evaluate(()=>window.switchNote('layout-note'));await page.locator('[data-note-source-session="layout-note"]').waitFor();await page.getByRole('button',{name:'展开评论',exact:true}).waitFor();expect(await page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('第一份笔记的草稿。')
+  await page.evaluate(()=>window.switchNote('layout-note'));await page.locator('[data-note-source-session="layout-note"]').waitFor();await page.getByRole('button',{name:'展开评论',exact:true}).waitFor();expect(await page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);expect(await page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('第一份笔记的草稿。')
  }finally{await context.close()}
 },15000)
 
 it('keeps the composer reachable while a long pending conversation scrolls and uses selection glow only when multiple margin cards are visible',async()=>{
  const {context,page}=await fixture(2000,true);try{
-  await page.evaluate(()=>window.seed(2,true));await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.getByRole('textbox',{name:'回复AI挑战'}).first().fill('请继续核对');await page.getByRole('button',{name:'发送挑战回复'}).first().click();await page.locator('.en-challenge-thinking').waitFor();await page.locator('.en-challenge-comments').evaluate(el=>el.scrollTop=0)
+  await page.evaluate(()=>window.seed(2,true));await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.getByRole('textbox',{name:'回复AI评论员'}).first().fill('请继续核对');await page.getByRole('button',{name:'发送评论回复'}).first().click();await page.locator('.en-challenge-thinking').waitFor();await page.locator('.en-challenge-comments').evaluate(el=>el.scrollTop=0)
   const value=await page.locator('.en-challenge-card').first().evaluate(el=>{const close=el.querySelector('.en-challenge-reply').getBoundingClientRect(),card=el.getBoundingClientRect(),area=document.querySelector('.en-main').getBoundingClientRect();return{closeVisible:close.top>=card.top&&close.bottom<=Math.min(card.bottom,area.bottom),selected:el.dataset.selected==='true'}});expect(value.closeVisible).toBe(true);const visible=await page.locator('.en-challenge-card').evaluateAll(cards=>{const area=document.querySelector('.en-main').getBoundingClientRect();return cards.filter(card=>{const r=card.getBoundingClientRect();return r.bottom>area.top&&r.top<area.bottom}).length});expect(await page.locator('.en-challenge-card[data-selected=true]').count()).toBe(visible>1?1:0)
  }finally{await context.close()}
 },15000)
@@ -204,20 +204,20 @@ async function nativeHeaderAncestors(page){
 }
 it('keeps the picker above the real isolated native header stack with keyboard, drag, resize and session cleanup',async()=>{
  const {context,page,errors}=await fixture(2000,true);try{
-  await nativeHeaderAncestors(page);await page.evaluate(()=>window.seed());await page.evaluate(()=>window.challenge.setMarginExpanded(false));await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('调整等级不能中断这份回复');await page.getByRole('button',{name:'发送挑战回复'}).click();await page.locator('.en-challenge-thinking').waitFor()
-  await page.getByRole('button',{name:'挑战模式，当前关闭'}).focus();await page.keyboard.press('Enter');const popup=page.locator('.en-challenge-popover'),slider=page.getByRole('slider',{name:'挑战强度'});await popup.waitFor();expect(await slider.evaluate(el=>document.activeElement===el)).toBe(true);expect(await page.evaluate(()=>window.challenge.level)).toBe(0)
+  await nativeHeaderAncestors(page);await page.evaluate(()=>window.seed());await page.evaluate(()=>window.challenge.setMarginExpanded(false));await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);await page.getByRole('textbox',{name:'回复AI评论员'}).fill('调整等级不能中断这份回复');await page.getByRole('button',{name:'发送评论回复'}).click();await page.locator('.en-challenge-thinking').waitFor()
+  await page.getByRole('button',{name:'随航模式，当前关闭'}).focus();await page.keyboard.press('Enter');const popup=page.locator('.en-challenge-popover'),slider=page.getByRole('slider',{name:'随航强度'});await popup.waitFor();expect(await slider.evaluate(el=>document.activeElement===el)).toBe(true);expect(await page.evaluate(()=>window.challenge.level)).toBe(0)
   expect(await popup.evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('.en-challenge-popover')===el})).toBe(true)
   expect(await popup.evaluate(el=>el.parentElement===document.body)).toBe(true);expect(await popup.locator('.en-challenge-track').evaluate(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}))).toEqual({width:252,height:24});await page.keyboard.press('ArrowRight');await expect.poll(()=>page.evaluate(()=>window.challenge.level)).toBe(1)
   const track=await slider.boundingBox();await page.mouse.move(track.x+12,track.y+13);await page.mouse.down();await page.mouse.move(track.x+240,track.y+13);await page.mouse.up();await expect.poll(()=>page.evaluate(()=>window.challenge.level)).toBe(4);expect(await page.evaluate(()=>window.stops.length)).toBe(0)
   await page.setViewportSize({width:1900,height:900});await expect.poll(()=>popup.evaluate(el=>Math.abs(el.getBoundingClientRect().right-document.querySelector('.en-challenge-trigger').getBoundingClientRect().right))).toBeLessThanOrEqual(1)
   await page.screenshot({path:'/tmp/notes-challenge-v15-native-portal-open.png'});await page.keyboard.press('Escape');expect(await popup.count()).toBe(0);expect(await page.locator('.en-challenge-trigger').evaluate(el=>document.activeElement===el)).toBe(true);expect(await page.evaluate(()=>window.challenge.actionKind)).toBe('reply');expect(await page.evaluate(()=>window.stops.length)).toBe(0)
-  await page.getByRole('button',{name:'挑战模式，当前抬杠'}).click();await popup.waitFor();await page.evaluate(()=>window.switchNote('another-note'));await page.locator('[data-note-source-session="another-note"]').waitFor();expect(await popup.count()).toBe(0);expect(errors).toEqual([])
+  await page.getByRole('button',{name:'随航模式，当前抬杠'}).click();await popup.waitFor();await page.evaluate(()=>window.switchNote('another-note'));await page.locator('[data-note-source-session="another-note"]').waitFor();expect(await popup.count()).toBe(0);expect(errors).toEqual([])
   await page.screenshot({path:'/tmp/notes-challenge-v15-native-portal-cleanup.png'})
  }finally{await context.close()}
 },15000)
 for(const readingOlder of [false,true])it(`follows a completed reply in a long thread ${readingOlder?'without interrupting a reader who scrolled upward':'when the reader was following its bottom'}`,async()=>{
  const {context,page}=await fixture(900);try{
-  await page.evaluate(()=>window.seed(1,true));await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('请继续核对');await page.getByRole('button',{name:'发送挑战回复'}).click();await page.locator('.en-challenge-thinking').waitFor();const messages=page.locator('.en-challenge-messages');await expect.poll(()=>messages.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
+  await page.evaluate(()=>window.seed(1,true));await openSelected(page);await page.getByRole('textbox',{name:'回复AI评论员'}).fill('请继续核对');await page.getByRole('button',{name:'发送评论回复'}).click();await page.locator('.en-challenge-thinking').waitFor();const messages=page.locator('.en-challenge-messages');await expect.poll(()=>messages.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
   if(readingOlder){await messages.evaluate(el=>el.scrollTop=0);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))}
   await page.evaluate(()=>Object.values(window.jobs).at(-1).resolve({version:1,issues:[],checks:[],coveredBlockIds:[],reply:{text:'还需要补充同周期和渠道数据，再判断这份结论。'.repeat(3)}}));await expect.poll(()=>page.locator('.en-challenge-thinking').count()).toBe(0)
   if(readingOlder)expect(await messages.evaluate(el=>el.scrollTop)).toBeLessThanOrEqual(1)
@@ -229,20 +229,20 @@ for(const readingOlder of [false,true])it(`follows a completed reply in a long t
 for(const settingsRoute of ['keyboard-overlay','surface-state'])it(`closes the resident picker for ${settingsRoute} settings and leaves it closed after restoring notes`,async()=>{
  const {context,page,errors}=await fixture(2000,true);try{
   await nativeHeaderAncestors(page);await page.evaluate(()=>window.seed());await page.evaluate(()=>window.challenge.setMarginExpanded(false));await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page)
-  await page.getByRole('textbox',{name:'回复AI挑战'}).fill('设置不应取消正在进行的回复');await page.getByRole('button',{name:'发送挑战回复'}).click();await page.locator('.en-challenge-thinking').waitFor();await page.getByRole('textbox',{name:'回复AI挑战'}).fill('设置期间保留的新草稿。')
-  await page.getByRole('button',{name:'挑战模式，当前关闭'}).focus();await page.keyboard.press('Enter');await page.locator('.en-challenge-popover').waitFor()
+  await page.getByRole('textbox',{name:'回复AI评论员'}).fill('设置不应取消正在进行的回复');await page.getByRole('button',{name:'发送评论回复'}).click();await page.locator('.en-challenge-thinking').waitFor();await page.getByRole('textbox',{name:'回复AI评论员'}).fill('设置期间保留的新草稿。')
+  await page.getByRole('button',{name:'随航模式，当前关闭'}).focus();await page.keyboard.press('Enter');await page.locator('.en-challenge-popover').waitFor()
   if(settingsRoute==='keyboard-overlay'){
    await page.evaluate(()=>{const open=event=>{if(event.metaKey&&event.key===','){const overlay=document.createElement('div');overlay.className='VOzbGW_overlay';document.body.append(overlay);document.removeEventListener('keydown',open)}};document.addEventListener('keydown',open)});await page.keyboard.press('Meta+,');await page.locator('.VOzbGW_overlay').waitFor({state:'attached'})
   }else await page.evaluate(()=>document.querySelector('.en-root').dataset.settingsOpen='true')
   await expect.poll(()=>page.locator('.en-challenge-popover').count()).toBe(0);expect(await page.evaluate(()=>window.challenge.level)).toBe(0);expect(await page.evaluate(()=>window.challenge.actionKind)).toBe('reply');expect(await page.evaluate(()=>window.stops.length)).toBe(0)
-  await page.evaluate(()=>{document.querySelector('.VOzbGW_overlay')?.remove();document.querySelector('.en-root').dataset.settingsOpen='false'});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));expect(await page.locator('.en-challenge-popover').count()).toBe(0);expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('设置期间保留的新草稿。');expect(errors).toEqual([])
+  await page.evaluate(()=>{document.querySelector('.VOzbGW_overlay')?.remove();document.querySelector('.en-root').dataset.settingsOpen='false'});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));expect(await page.locator('.en-challenge-popover').count()).toBe(0);expect(await page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('设置期间保留的新草稿。');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 
 it('keeps wide comments mounted and focused while their original anchors scroll out of view',async()=>{
  const{context,page,errors}=await fixture(3440);try{
   await page.evaluate(()=>window.seed(10));await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(10)
-  const input=page.getByRole('textbox',{name:'回复AI挑战'}).first();await input.fill('滚动保留这份草稿');await input.evaluate(el=>window.retainedInput=el)
+  const input=page.getByRole('textbox',{name:'回复AI评论员'}).first();await input.fill('滚动保留这份草稿');await input.evaluate(el=>window.retainedInput=el)
   await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop=500)
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
   expect(await page.locator('.en-challenge-card').count()).toBe(10)
@@ -253,11 +253,11 @@ it('keeps wide comments mounted and focused while their original anchors scroll 
 it('sends with Enter while preserving Shift+Enter and IME composition, and uses exact v16 geometry under native host CSS',async()=>{
  const{context,page,errors}=await fixture(2000,true);try{
   await nativeHeaderAncestors(page);await page.evaluate(()=>window.seed());await openSelected(page)
-  const input=page.getByRole('textbox',{name:'回复AI挑战'});await input.fill('第一行');await page.keyboard.press('Shift+Enter');expect(await input.inputValue()).toBe('第一行\n')
+  const input=page.getByRole('textbox',{name:'回复AI评论员'});await input.fill('第一行');await page.keyboard.press('Shift+Enter');expect(await input.inputValue()).toBe('第一行\n')
   await input.dispatchEvent('keydown',{key:'Enter',code:'Enter',isComposing:true});expect(await page.evaluate(()=>Object.keys(window.jobs).length)).toBe(0)
   await input.fill('发送中文');await page.keyboard.press('Enter');await page.locator('.en-challenge-thinking').waitFor()
   expect(await page.evaluate(()=>Object.keys(window.jobs).length)).toBe(1)
-  expect(await page.locator('.en-challenge-author strong').allTextContents()).toEqual(['AI挑战者','我'])
+  expect(await page.locator('.en-challenge-author strong').allTextContents()).toEqual(['AI评论员','我'])
   await page.evaluate(()=>{window.challenge.setMarginExpanded(false);window.challenge.select(window.challenge.threads[0].id)});await page.locator('.en-challenge-close').waitFor()
   const geometry=await page.locator('.en-challenge-card').evaluate(card=>{const box=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return{width:r.width,height:r.height,padding:s.padding,minWidth:s.minWidth,bg:s.backgroundColor}},close=card.querySelector('.en-challenge-close'),icon=close.querySelector('img'),c=close.getBoundingClientRect(),i=icon.getBoundingClientRect();return{card:box(card),close:box(close),send:box(card.querySelector('.en-challenge-reply>button')),input:box(card.querySelector('textarea')),iconCentered:Math.abs(c.x+c.width/2-i.x-i.width/2)<.1&&Math.abs(c.y+c.height/2-i.y-i.height/2)<.1}})
   expect(geometry.card.width).toBe(320);expect(geometry.close.width).toBe(24);expect(geometry.close.height).toBe(24);expect(geometry.close.padding).toBe('0px');expect(geometry.send.width).toBe(36);expect(geometry.send.height).toBe(32);expect(geometry.input.width).toBe(244);expect(geometry.input.height).toBe(36);expect(geometry.iconCentered).toBe(true)
@@ -268,7 +268,7 @@ it('sends with Enter while preserving Shift+Enter and IME composition, and uses 
 for(const width of [2000,900])it(`limits long cards to 560px with a fixed composer and internally consumed wheel at ${width}px`,async()=>{
  const{context,page,errors}=await fixture(width,true);try{
   await page.setViewportSize({width:width+250,height:700});await page.evaluate(()=>window.seed(1,true));await openSelected(page)
-  const card=page.locator('.en-challenge-card'),messages=card.locator('.en-challenge-messages'),input=card.getByRole('textbox',{name:'回复AI挑战'})
+  const card=page.locator('.en-challenge-card'),messages=card.locator('.en-challenge-messages'),input=card.getByRole('textbox',{name:'回复AI评论员'})
   await expect.poll(()=>card.evaluate(el=>el.getBoundingClientRect().height)).toBeLessThanOrEqual(560)
   expect(await messages.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true)
   expect(await card.locator('.en-challenge-close').count()).toBe(width===2000?0:1)
@@ -283,18 +283,18 @@ for(const width of [2000,900])it(`limits long cards to 560px with a fixed compos
   await page.evaluate(()=>Object.values(window.jobs).at(-1).resolve({version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'可替换建议如下。',replacement:window.longSuggestion}}));await expect.poll(()=>card.locator('.en-challenge-replacement-text').textContent()).toBe('完整建议。'.repeat(700))
   await card.getByRole('button',{name:'替换到原文',exact:true}).scrollIntoViewIfNeeded();expect(await card.evaluate(el=>{const button=el.querySelector('.en-challenge-replace').getBoundingClientRect(),messages=el.querySelector('.en-challenge-messages').getBoundingClientRect(),reply=el.querySelector('.en-challenge-reply').getBoundingClientRect();return button.top>=messages.top&&button.bottom<=messages.bottom&&reply.top>=messages.bottom-1})).toBe(true)
   expect(await input.inputValue()).toBe('内部滚动保留我的草稿')
-  if(width===900){const close=card.getByRole('button',{name:'收起挑战评论'});expect(await close.evaluate(el=>getComputedStyle(el).backgroundColor===getComputedStyle(el.closest('article')).backgroundColor)).toBe(true);expect(await close.evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el})).toBe(true);await page.screenshot({path:'/tmp/notes-challenge-v16-fix2-popup-close.png'});await close.click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('内部滚动保留我的草稿')}
+  if(width===900){const close=card.getByRole('button',{name:'收起随航评论'});expect(await close.evaluate(el=>getComputedStyle(el).backgroundColor===getComputedStyle(el.closest('article')).backgroundColor)).toBe(true);expect(await close.evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el})).toBe(true);await page.screenshot({path:'/tmp/notes-challenge-v16-fix2-popup-close.png'});await close.click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);expect(await page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('内部滚动保留我的草稿')}
   await page.screenshot({path:'/tmp/notes-challenge-v16-fix1-long-'+width+'.png'});expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 it('shows no margin close control but preserves draft when the toolbar changes the card into a closable popup',async()=>{
  const{context,page}=await fixture(2000,true);try{
-  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('常驻与浮层切换保留草稿')
+  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI评论员'}).fill('常驻与浮层切换保留草稿')
   expect(await page.locator('.en-challenge-close').count()).toBe(0)
   expect(await page.locator('.en-challenge-quote').evaluate(el=>({width:el.getBoundingClientRect().width,right:getComputedStyle(el).paddingRight}))).toEqual({width:288,right:'0px'})
   await page.getByRole('button',{name:'收起评论',exact:true}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);await expect.poll(()=>page.locator('.en-challenge-close').count()).toBe(1)
   expect(await page.locator('.en-challenge-quote').evaluate(el=>getComputedStyle(el).paddingRight)).toBe('16px')
-  await page.getByRole('button',{name:'收起挑战评论'}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('常驻与浮层切换保留草稿')
+  await page.getByRole('button',{name:'收起随航评论'}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);expect(await page.getByRole('textbox',{name:'回复AI评论员'}).inputValue()).toBe('常驻与浮层切换保留草稿')
   await page.getByRole('button',{name:'展开评论',exact:true}).click();await expect.poll(()=>page.locator('.en-challenge-close').count()).toBe(0)
  }finally{await context.close()}
 },15000)
@@ -302,7 +302,7 @@ it('shows no margin close control but preserves draft when the toolbar changes t
 for(const reducedMotion of [false,true])it(`aligns margin comments to export and ${reducedMotion?'hides immediately for reduced motion':'fades out and reverses a rapid collapse without losing drafts'}`,async()=>{
  const {context,page,errors}=await fixture(2000,true);try{
   await page.emulateMedia({reducedMotion:reducedMotion?'reduce':'no-preference'});await page.evaluate(()=>window.seed(2));await openSelected(page)
-  const rail=page.locator('.en-challenge-comments'),input=page.getByRole('textbox',{name:'回复AI挑战'}).first();await input.fill('展开收起不能丢失的草稿。')
+  const rail=page.locator('.en-challenge-comments'),input=page.getByRole('textbox',{name:'回复AI评论员'}).first();await input.fill('展开收起不能丢失的草稿。')
   await expect.poll(()=>rail.evaluate(el=>Number(getComputedStyle(el).opacity))).toBe(1)
   const before=await dimensions(page);expect(Math.abs(before.exportRight-before.cardRight)).toBeLessThanOrEqual(1);expect(before.exportRight-before.triggerRight).toBeGreaterThan(20)
   await page.getByRole('button',{name:'收起评论',exact:true}).click()
