@@ -473,6 +473,96 @@
           "研报保留原screen-grade及externalAuthenticity=unverified/professionalSignOff=false，未改成专业签发稿。"
         ],
         "generatedAt": "2026-10-25T18:22:01.594485+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e99c47ec4b9fe73da752d7dcbf9d7fa886778819",
+        "verificationCommit": "e99c47ec4b9fe73da752d7dcbf9d7fa886778819",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "e99c47ec4b9fe73da752d7dcbf9d7fa886778819",
+            "completedAt": "2026-10-25T18:28:02.971Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "e99c47ec4b9fe73da752d7dcbf9d7fa886778819",
+            "completedAt": "2026-10-25T18:28:02.971Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/install-brand-assets.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/install-brand-assets.mjs",
+            "verifiedCommit": "e99c47ec4b9fe73da752d7dcbf9d7fa886778819",
+            "completedAt": "2026-10-25T18:28:02.971Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotations.test.ts",
+              "test/pptx-annotations-contract.test.ts",
+              "test/integration-service.test.ts",
+              "test/pptx-annotation-message.test.js",
+              "test/pptx-annotation-message-browser.test.js",
+              "test/pptx-annotation-message-install.test.js",
+              "test/pptx-annotation-input-browser.test.js",
+              "test/pptx-annotation-install.test.js",
+              "test/subagent-avatars.test.js",
+              "test/subagent-avatars-browser.test.js",
+              "test/home-report-assets.test.js",
+              "test/home-report-publication.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/pptx-annotations.test.ts test/pptx-annotations-contract.test.ts test/integration-service.test.ts test/pptx-annotation-message.test.js test/pptx-annotation-message-browser.test.js test/pptx-annotation-message-install.test.js test/pptx-annotation-input-browser.test.js test/pptx-annotation-install.test.js test/subagent-avatars.test.js test/subagent-avatars-browser.test.js test/home-report-assets.test.js test/home-report-publication.test.js --maxWorkers=2",
+            "verifiedCommit": "e99c47ec4b9fe73da752d7dcbf9d7fa886778819",
+            "completedAt": "2026-10-25T18:28:02.971Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e99c47ec4b9fe73da752d7dcbf9d7fa886778819",
+            "completedAt": "2026-10-25T18:28:02.971Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "e99c47ec4b9fe73da752d7dcbf9d7fa886778819",
+            "completedAt": "2026-10-25T18:28:02.971Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T18:28:02.971Z"
       }
     }
   ],
