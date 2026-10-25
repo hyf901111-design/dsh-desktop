@@ -1,5 +1,5 @@
 /** Bind the native sidebar header to the PPT viewer's existing mode controls. */
-export function patchSidebarPptxToolbar(source) {
+function patchSidebarPptxToolbarMode(source) {
   const marker = '/* odyssey:sidebar-pptx-mode:v2 */',legacyMarker='/* odyssey:sidebar-pptx-mode:v1 */'
   const anchor = 'function EditorHost(props) {'
   const start = source.indexOf(anchor), end = source.indexOf('\n\t\t/**', start)
@@ -103,4 +103,27 @@ export function patchSidebarPptxToolbar(source) {
     host = host.replace(before, after)
   }
   return prefix + host + suffix
+}
+
+/** Metadata from the explicit Main-authorized reference opener; never a sending identity. */
+export function sidebarPptxAnnotationProps(tab,scope){
+ const value=tab?.meta?.sherlockPptAnnotationPreview,source=value?.source,grant=source?.source
+ if(!source||source.sessionId!==scope?.sessionId||!grant||!['workspace','research','note-file'].includes(grant.kind))return null
+ if(grant.kind==='workspace'){
+  if(typeof grant.relativePath!=='string'||!grant.relativePath||grant.relativePath.split(/[\\/]/).some(value=>value==='..')||value.sourceUrl)return null
+ }else if(typeof grant.nodeId!=='string'||!grant.nodeId||typeof grant.authorizationId!=='string'||!grant.authorizationId||!/^sherlock-preview:\/\/[A-Za-z0-9_-]+\/$/.test(value.sourceUrl??''))return null
+ return{annotationSource:source,path:value.sourceUrl||tab.path,annotationCanonicalPath:tab.path}
+}
+export function patchSidebarPptxToolbar(source){
+ const marker='/* sherlock:pptx-annotation-sidebar-source:v1 */'
+ const before='const path = tab.path ?? "";',after=before+'\n'+marker+'\n'+sidebarPptxAnnotationProps.toString()+'\nconst annotationPreview=sidebarPptxAnnotationProps(tab,scope);'
+ const props='path,\n\t\t\t\t\t\t\t\ttitle,\n\t\t\t\t\t\t\t\tviewerId: load.viewer.id,',installed='path: annotationPreview?.path ?? path,\n                                annotationSource: annotationPreview?.annotationSource,\n                                annotationCanonicalPath: annotationPreview?.annotationCanonicalPath,\n\t\t\t\t\t\t\t\ttitle,\n\t\t\t\t\t\t\t\tviewerId: load.viewer.id,'
+ if(source.includes(marker)){
+  if(source.split(marker).length!==2||source.split(after).length!==2||source.split(installed).length!==2)throw Error('PPT annotation sidebar source installation drifted')
+  source=source.replace(after,before).replace(installed,props)
+ }else if(source.includes('annotationPreview?.annotationSource')||source.includes('const annotationPreview=sidebarPptxAnnotationProps'))throw Error('PPT annotation sidebar source orphan drifted')
+ source=patchSidebarPptxToolbarMode(source)
+ const start=source.indexOf('function EditorHost(props) {'),end=source.indexOf('\n\t\t/**',start),host=source.slice(start,end)
+ if(host.split(before).length!==2||host.split(props).length!==2)throw Error('PPT annotation sidebar source anchors drifted')
+ return source.slice(0,start)+host.replace(before,after).replace(props,installed)+source.slice(end)
 }

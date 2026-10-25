@@ -1,4 +1,6 @@
-import {PPTX_ANNOTATION_INPUT_DEFINITIONS,annotationAdmission,annotationAdmissionCurrent} from './pptx-annotation-input.mjs'
+import {createHash} from 'node:crypto'
+import {createPptxAnnotationRevealController,openPptxAnnotationPreview} from './pptx-annotation-reveal.mjs'
+import {PPTX_ANNOTATION_INPUT_DEFINITIONS,parsePptxAnnotationLocator,annotationAdmission,annotationAdmissionCurrent} from './pptx-annotation-input.mjs'
 import {createPptxAnnotationCoordinator} from './pptx-annotation-coordinator.mjs'
 
 export function annotationTargetVisible(target,win){
@@ -69,24 +71,25 @@ export function createPptxAnnotationNativeRuntime(options){
    if(source==='conversation-component'&&options.serializeComponent)return options.serializeComponent(ref,identity.sessionId)
    const triggers=identity.shell.deps.inputTriggers?.();if(!triggers)throw Error('输入引用序列化尚未就绪。');return triggers.serializeReference(source,ref,controller.signal)
   }})
+ const reveal=createPptxAnnotationRevealController({bridge,resolveInput,isCurrent:valid,parseReference:parsePptxAnnotationLocator,openPreview:(identity,value,options)=>{if(!valid(identity))throw changed();return openPptxAnnotationPreview(entry().researchSidebar,identity,value,options)}})
  const captureSelection=event=>{try{const root=entry(),input=inputFor(root),shell=options.inputHub.shell(root.sessionId);if(event.target===input&&input.value.length===shell.snapshot.draft.length)coordinator.getShellBinding(shell)?.setSelection({start:input.selectionStart,end:input.selectionEnd})}catch{}}
  const compositionStart=event=>{if(event.target?.matches?.('.uV2eYG_root textarea')){captureSelection(event);composing.add(event.target)}}
  const compositionEnd=event=>{composing.delete(event.target);win.setTimeout(()=>{if(stopped)return;try{const root=entry();if(inputFor(root)===event.target)coordinator.getShellBinding(options.inputHub.shell(root.sessionId))?.flush()}catch{}},0)}
  const refresh=()=>win.queueMicrotask(()=>{if(stopped)return;coordinator.refreshIdentity();try{const root=entry(),shell=options.inputHub.shell(root.sessionId),identity={sessionId:root.sessionId,shell,input:inputFor(root),ordinary:true,epoch};if(valid(identity)){coordinator.adoptInput(identity);coordinator.getShellBinding(shell)?.flush()}}catch{}}),offSessions=options.sessions.list.subscribe?.(refresh)??(()=>{})
  const reset=()=>{epoch++;refresh()},pagehide=()=>runtime.dispose()
  doc.addEventListener('beforeinput',captureSelection,true);doc.addEventListener('compositionstart',compositionStart,true);doc.addEventListener('compositionend',compositionEnd,true);win.addEventListener('sherlock:skill-menu-reset',reset);doc.addEventListener('sherlock:notes-reset',reset);win.addEventListener('pagehide',pagehide)
- const runtime={...coordinator,registerView(value){if(stopped||!value.sessionId||value.subagentPanel)return()=>{};const ticket={...value};roots.set(value.sessionId,ticket);refresh();return()=>{if(roots.get(value.sessionId)===ticket){roots.delete(value.sessionId);refresh()}}},dispose(){if(stopped)return;stopped=true;controller.abort();offSessions();coordinator.dispose();roots.clear();doc.removeEventListener('beforeinput',captureSelection,true);doc.removeEventListener('compositionstart',compositionStart,true);doc.removeEventListener('compositionend',compositionEnd,true);win.removeEventListener('sherlock:skill-menu-reset',reset);doc.removeEventListener('sherlock:notes-reset',reset);win.removeEventListener('pagehide',pagehide);if(win[key]===runtime)delete win[key]}}
+ const runtime={...coordinator,...reveal,registerView(value){if(stopped||!value.sessionId||value.subagentPanel)return()=>{};const ticket={...value};roots.set(value.sessionId,ticket);refresh();return()=>{if(roots.get(value.sessionId)===ticket){roots.delete(value.sessionId);refresh()}}},dispose(){if(stopped)return;stopped=true;controller.abort();offSessions();reveal.dispose();coordinator.dispose();roots.clear();doc.removeEventListener('beforeinput',captureSelection,true);doc.removeEventListener('compositionstart',compositionStart,true);doc.removeEventListener('compositionend',compositionEnd,true);win.removeEventListener('sherlock:skill-menu-reset',reset);doc.removeEventListener('sherlock:notes-reset',reset);win.removeEventListener('pagehide',pagehide);if(win[key]===runtime)delete win[key]}}
  win[key]=runtime;return runtime
 }
 function PptxAnnotationNativePortal(props){
  const view=props.useStore?.(state=>state.view??'chat')??'chat'
- react.useEffect(()=>PptxAnnotationNativeRuntime?.registerView({sessionId:props.sessionId,subagentPanel:props.subagentPanel,view,actions:props.actions}),[props.sessionId,props.subagentPanel,view,props.actions])
+ react.useEffect(()=>PptxAnnotationNativeRuntime?.registerView({sessionId:props.sessionId,subagentPanel:props.subagentPanel,view,actions:props.actions,researchSidebar:props.researchSidebar??defaultResearchSidebar}),[props.sessionId,props.subagentPanel,view,props.actions,props.researchSidebar])
  return null
 }
 function pptxAnnotationReferenceSource(){return{trigger:'@',name:'pptx-annotation',order:99,candidates:async()=>[],onPick:()=>undefined,codec:{clipboardText:ref=>{parsePptxAnnotationLocator(ref);return'PPT 标注'},serialize:async()=>{throw Error('请在当前普通输入框中整批发送 PPT 标注。')}}}}
 
 const START='/* sherlock:pptx-annotation-input:start:v1 */',END='/* sherlock:pptx-annotation-input:end:v1 */'
-const DEFINITIONS=[...PPTX_ANNOTATION_INPUT_DEFINITIONS,createPptxAnnotationCoordinator,annotationTargetVisible,annotationSkillRequest,createPptxAnnotationNativeRuntime,PptxAnnotationNativePortal,pptxAnnotationReferenceSource]
+const DEFINITIONS=[...PPTX_ANNOTATION_INPUT_DEFINITIONS,createPptxAnnotationCoordinator,createPptxAnnotationRevealController,openPptxAnnotationPreview,annotationTargetVisible,annotationSkillRequest,createPptxAnnotationNativeRuntime,PptxAnnotationNativePortal,pptxAnnotationReferenceSource]
 const BLOCK='\n'+START+'\n'+DEFINITIONS.map(value=>value.toString()).join('\n')+'\nlet PptxAnnotationNativeRuntime=null;\nconst PptxAnnotationOriginalRoot=ConversationRoot;\nConversationRoot=function(props){return react.createElement(react.Fragment,null,react.createElement(PptxAnnotationOriginalRoot,props),react.createElement(PptxAnnotationNativePortal,props))};\n'+END+'\n'
 // Accept only the complete previous serialized block, never a partial installed definition.
 const NOTICE_INTERCEPT=`  interceptSend(shell,draft,mode){
@@ -112,7 +115,9 @@ const exactly=(source,from,to)=>{if(source.split(from).length!==2)throw Error('P
 export function stripPptxAnnotationInput(source){
  if(!source.includes('sherlock:pptx-annotation-input:'))return source
  if(LEGACY_BLOCK===BLOCK||LEGACY_BLOCK.includes('submissionNotices'))throw Error('PPT annotation legacy notice adapter drifted')
- const block=source.includes(BLOCK)?BLOCK:source.includes(LEGACY_BLOCK)?LEGACY_BLOCK:null
+ const start=source.indexOf('\n'+START),finish=source.indexOf(END,start),installed=start>=0&&finish>=0?source.slice(start,finish+END.length+1):''
+ const knownPrior=['1449ab328137c2250b31a4dc36105cab365330a4a29d8187a95ade22d1d7a701','e29163c847d85ba75b4a41f079acf92ce7325323cd3640491739e40b6dbb1dcd'].includes(createHash('sha256').update(installed).digest('hex'))
+ const block=source.includes(BLOCK)?BLOCK:source.includes(LEGACY_BLOCK)?LEGACY_BLOCK:knownPrior?installed:null
  if(source.split(START).length!==2||source.split(END).length!==2||!block)throw Error('PPT annotation installed source drifted')
  let result=source.replace(block,'');for(const[from,to]of TRANSACTIONS)result=exactly(result,to,from)
  if(result.includes('sherlock:pptx-annotation-input:'))throw Error('PPT annotation unknown or duplicate installed block')

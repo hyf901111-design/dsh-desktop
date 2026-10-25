@@ -89,10 +89,10 @@ export function createPptxEditorComponent(React,Preview,download,createPortal,an
   finally{current.saving=false;emit(current);if(!current.discarded&&dirty(current)&&current.status!=='failed')scheduleAuto(current,current.autoTarget||target)}
  }
  return function PptxView(props){
-  const {scope,path,toolbar,onToolbarState,onToolbarControls}=props,root=React.useRef(null),previewHost=React.useRef(null),entryRef=React.useRef(null),viewerRef=React.useRef(null),controller=React.useRef(null),generation=React.useRef(0),opening=React.useRef(null),token=React.useRef(null),pageRef=React.useRef(0),selectionRef=React.useRef(null),zoomRef=React.useRef(100),draftGeneration=React.useRef(0),renderTimer=React.useRef(null),renderJob=React.useRef(null),pendingRender=React.useRef(false),gestureRef=React.useRef(false),floatingToolbar=React.useRef(null),anchorRect=React.useRef(null),toolbarDrag=React.useRef(null),manualPosition=React.useRef(false),toolbarPosition=React.useRef(null),previewPath=React.useRef(null),sourceRef=React.useRef(null),sourceKeyRef=React.useRef(null),entrySourceKey=React.useRef(null),instance=React.useRef({}),keyboardRef=React.useRef(null),modeRef=React.useRef('preview'),modeJob=React.useRef(null),readOnlyRef=React.useRef(!!props.readOnly),composingRef=React.useRef(false),noticeTimer=React.useRef(null),scrollRef=React.useRef(null),writePermit=React.useRef(null),refreshKeyRef=React.useRef(null)
+  const {scope,path,toolbar,onToolbarState,onToolbarControls}=props,root=React.useRef(null),previewHost=React.useRef(null),entryRef=React.useRef(null),viewerRef=React.useRef(null),viewerSourceKeyRef=React.useRef(null),controller=React.useRef(null),generation=React.useRef(0),opening=React.useRef(null),token=React.useRef(null),pageRef=React.useRef(0),selectionRef=React.useRef(null),zoomRef=React.useRef(100),draftGeneration=React.useRef(0),renderTimer=React.useRef(null),renderJob=React.useRef(null),pendingRender=React.useRef(false),gestureRef=React.useRef(false),floatingToolbar=React.useRef(null),anchorRect=React.useRef(null),toolbarDrag=React.useRef(null),manualPosition=React.useRef(false),toolbarPosition=React.useRef(null),previewPath=React.useRef(null),sourceRef=React.useRef(null),sourceKeyRef=React.useRef(null),entrySourceKey=React.useRef(null),instance=React.useRef({}),keyboardRef=React.useRef(null),modeRef=React.useRef('preview'),modeJob=React.useRef(null),readOnlyRef=React.useRef(!!props.readOnly),composingRef=React.useRef(false),noticeTimer=React.useRef(null),scrollRef=React.useRef(null),writePermit=React.useRef(null),refreshKeyRef=React.useRef(null)
   const [entry,setEntry]=React.useState(null),[page,setPage]=React.useState(0),[zoom,setZoom]=React.useState(100),[loading,setLoading]=React.useState(false),[error,setError]=React.useState(''),[revision,setRevision]=React.useState(0),[selection,setSelection]=React.useState(null),[chart,setChart]=React.useState(null),[,tick]=React.useState(0)
   const [mode,updateMode]=React.useState('preview'),[modeBusy,setModeBusy]=React.useState(false),[notice,setNotice]=React.useState('')
-  const annotation=React.useRef(null),annotationJob=React.useRef(null),annotationEpoch=React.useRef(0),annotationOwnerRef=React.useRef(null),viewerWaiters=React.useRef(new Set())
+  const annotation=React.useRef(null),annotationJob=React.useRef(null),annotationEpoch=React.useRef(0),annotationOwnerRef=React.useRef(null),viewerWaiters=React.useRef(new Set()),annotationRevealRef=React.useRef(null)
   const [annotationUi,setAnnotationUi]=React.useState({active:false,busy:false,count:0,tool:'rect'})
   modeRef.current=mode;readOnlyRef.current=!!props.readOnly
   pageRef.current=page;selectionRef.current=selection;zoomRef.current=zoom
@@ -178,13 +178,15 @@ export function createPptxEditorComponent(React,Preview,download,createPortal,an
    const timer=setTimeout(()=>finish(null,Error('预览尚未更新，请重新打开预览后标注。')),10000)
    if(signal.aborted){abort();return}signal.addEventListener('abort',abort,{once:true});viewerWaiters.current.add(ready)
   })
-  const setAnnotations=async active=>{
+  const setAnnotations=async(active,request={})=>{
+   if(request.signal?.aborted)return false
    if(!active){stopAnnotations();return true}
    if(annotation.current?.key===annotationOwnerKey)return true
    if(!annotationSupported||annotationJob.current||modeJob.current)return false
    const job={key:annotationOwnerKey,epoch:++annotationEpoch.current,controller:new AbortController()};annotationJob.current=job;setAnnotationUi(old=>({...old,busy:true}))
    const valid=()=>annotationJob.current===job&&job.key===annotationOwnerRef.current&&job.epoch===annotationEpoch.current&&!job.controller.signal.aborted
    let handle,record
+   const abort=()=>job.controller.abort();request.signal?.addEventListener("abort",abort,{once:true})
    try{
     if(modeRef.current==='edit'&&!await setMode('preview'))return false
     if(!valid())return false
@@ -203,8 +205,31 @@ export function createPptxEditorComponent(React,Preview,download,createPortal,an
     if(!valid()||annotation.current!==record){record.layer?.destroy();return false}
     setAnnotationUi(old=>({...old,active:true,busy:false}));return true
    }catch(failure){if(valid())setError(failure.message||'标注暂不可用，原草稿已保留。');job.controller.abort();if(annotation.current===record){annotation.current=null;record?.layer?.destroy()}handle?.dispose();return false}
-   finally{if(annotationJob.current===job){annotationJob.current=null;if(!annotation.current)setAnnotationUi({active:false,busy:false,count:0,tool:'rect'})}}
+   finally{request.signal?.removeEventListener("abort",abort);if(annotationJob.current===job){annotationJob.current=null;if(!annotation.current)setAnnotationUi({active:false,busy:false,count:0,tool:'rect'})}}
   }
+  annotationRevealRef.current=async(reference,{signal})=>{
+   const owner=annotationOwnerKey,assert=()=>{if(signal.aborted||annotationOwnerRef.current!==owner||!root.current?.isConnected)throw Error('PPT 预览已切换，请重新定位。')}
+   assert()
+   const before=annotation.current?.handle.getSnapshot().basis
+   if(before&&(before.documentId!==reference.documentId||before.fileVersion!==reference.fileVersion))stopAnnotations()
+   if(!await setAnnotations(true,{signal}))throw Error('暂不能开启标注，请确认编辑已保存或稍后重试。')
+   assert();const record=annotation.current,snapshot=record?.handle.getSnapshot()
+   if(!record||snapshot.active===false||snapshot.basis.documentId!==reference.documentId||snapshot.basis.fileVersion!==reference.fileVersion){if(record)stopAnnotations();throw Error('原文件身份或版本已变化，请重新打开后定位。')}
+   const mark=snapshot.marks.find(mark=>mark.id===reference.markId)
+   if(!mark||mark.stale||mark.fileVersion!==reference.fileVersion){stopAnnotations();throw Error('标记已删除或需要重新定位。')}
+   return{cancel(){if(annotation.current===record&&annotationOwnerRef.current===owner)stopAnnotations()},select(){assert();if(annotation.current!==record||record.handle.getSnapshot().active===false)throw Error('标注视图已关闭，请重新定位。');record.handle.select(reference.markId)}}
+  }
+  React.useEffect(()=>{
+   const api=window[Symbol.for('sherlock:pptx-annotation-input')]
+   if(!annotationSupported||typeof api?.registerViewer!=='function')return
+   const isAvailable=()=>{
+    const target=root.current;if(!target?.isConnected||!target.closest('#odyssey-right-workspace-panel')||target.closest('[hidden],[inert]'))return false
+    const rect=target.getBoundingClientRect();if(rect.width<=0||rect.height<=0||rect.bottom<=0||rect.right<=0||rect.top>=window.innerHeight||rect.left>=window.innerWidth)return false
+    for(let element=target;element;element=element.parentElement){const style=window.getComputedStyle(element);if(style.display==='none'||style.visibility==='hidden'||Number.parseFloat(style.opacity)===0)return false}
+    return true
+   }
+   return api.registerViewer({source:annotationSource,path:String(path),canonicalPath:props.annotationCanonicalPath??String(path),canReuse:()=>!!(root.current?.isConnected&&annotationOwnerRef.current===annotationOwnerKey&&((viewerRef.current&&viewerSourceKeyRef.current===sourceKey)||(entryRef.current&&entrySourceKey.current===sourceKey))),isAvailable,activate:(...args)=>annotationRevealRef.current(...args)})
+  },[annotationOwnerKey,annotationSupported])
   const toggleAnnotations=()=>setAnnotations(!annotation.current)
   React.useEffect(()=>{setAnnotationUi({active:false,busy:false,count:0,tool:'rect'});return()=>stopAnnotations(false)},[annotationOwnerKey])
 
@@ -232,7 +257,7 @@ export function createPptxEditorComponent(React,Preview,download,createPortal,an
   React.useLayoutEffect(()=>positionToolbar(),[selection,chart,mode])
   React.useEffect(()=>{const move=event=>{const drag=toolbarDrag.current,bar=floatingToolbar.current;if(!drag||!bar)return;event.preventDefault();bar.style.left=drag.left+event.clientX-drag.x+'px';bar.style.top=drag.top+event.clientY-drag.y+'px';positionToolbar(undefined,true)},end=()=>{toolbarDrag.current=null},resize=()=>positionToolbar();document.addEventListener('pointermove',move);document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);window.addEventListener('resize',resize);return()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',end);document.removeEventListener('pointercancel',end);window.removeEventListener('resize',resize)}},[])
   React.useEffect(()=>{const shortcut=event=>{if(modeRef.current==='edit'&&document.activeElement===document.body&&document[shortcutOwnerKey]===instance.current&&entryRef.current&&entrySourceKey.current===sourceKeyRef.current){keyboardRef.current?.(event);if(event.defaultPrevented)event.stopImmediatePropagation()}},focus=event=>{if(event.target!==document.body&&document[shortcutOwnerKey]===instance.current&&!root.current?.contains(event.target)&&!floatingToolbar.current?.contains(event.target))controller.current?.clearSelection()};document.addEventListener('keydown',shortcut,true);document.addEventListener('focusin',focus,true);return()=>{document.removeEventListener('keydown',shortcut,true);document.removeEventListener('focusin',focus,true);if(document[shortcutOwnerKey]===instance.current)delete document[shortcutOwnerKey]}},[])
-  const attachViewer=React.useCallback((viewer,bytes)=>{if(!viewer){if(annotation.current)stopAnnotations();captureViewport(false,sourceKey);viewerRef.current=null;return}viewerRef.current=createStablePptxViewer(viewer,bytes);for(const notify of [...viewerWaiters.current])notify(viewerRef.current);if(zoomRef.current!==100)void viewerRef.current.setZoom?.(zoomRef.current);Promise.resolve(viewerRef.current.goToSlide?.(pageRef.current,{behavior:'auto',block:'nearest'})).then(()=>{const saved=scrollRef.current,scroll=viewer.viewerOptions?.scrollContainer;if(saved?.key===sourceKey&&scroll){scroll.scrollTop=saved.top;scroll.scrollLeft=saved.left}});if(pendingRender.current)renderDraft()},[sourceKey])
+  const attachViewer=React.useCallback((viewer,bytes)=>{if(!viewer){if(annotation.current)stopAnnotations();captureViewport(false,sourceKey);viewerRef.current=null;viewerSourceKeyRef.current=null;return}viewerRef.current=createStablePptxViewer(viewer,bytes);viewerSourceKeyRef.current=sourceKey;for(const notify of [...viewerWaiters.current])notify(viewerRef.current);if(zoomRef.current!==100)void viewerRef.current.setZoom?.(zoomRef.current);Promise.resolve(viewerRef.current.goToSlide?.(pageRef.current,{behavior:'auto',block:'nearest'})).then(()=>{const saved=scrollRef.current,scroll=viewer.viewerOptions?.scrollContainer;if(saved?.key===sourceKey&&scroll){scroll.scrollTop=saved.top;scroll.scrollLeft=saved.left}});if(pendingRender.current)renderDraft()},[sourceKey])
   React.useEffect(()=>{generation.current++;entryRef.current=null;opening.current=null;token.current=null;setEntry(null);setPage(0);setSelection(null);setChart(null);gestureRef.current=false;manualPosition.current=false;toolbarDrag.current=null;pendingRender.current=false;renderJob.current=null;entrySourceKey.current=null;clearTimeout(renderTimer.current);previewPath.current=props.path;setError('');modeRef.current='preview';updateMode('preview');modeJob.current=null;setModeBusy(false);composingRef.current=false;clearTimeout(noticeTimer.current);setNotice('');setLoading(false);return()=>{generation.current++;modeJob.current=null;clearTimeout(noticeTimer.current);draftGeneration.current++;entryRef.current=null;clearTimeout(renderTimer.current);if(document[shortcutOwnerKey]===instance.current)delete document[shortcutOwnerKey]}},[sourceKey])
   React.useEffect(()=>{if(mode!=='edit'||!entry||entrySourceKey.current!==sourceKey||!previewHost.current)return;controller.current=attachPptxDirectEditor(previewHost.current,{getEntry:()=>entryRef.current,changeText,changeObject,begin,end,render:renderDraft,renderPending:()=>{if(pendingRender.current)renderDraft()},select:selectNode,position:positionToolbar,isToolTarget:target=>floatingToolbar.current?.contains(target)||root.current?.querySelector('.sherlock-ppt-chart')?.contains(target),interaction:value=>{gestureRef.current=value;if(entryRef.current){entryRef.current.gesture=value;if(value)clearTimeout(entryRef.current.autoTimer);emit(entryRef.current)}},editChart:node=>setChart({id:node.id,value:clone(node.chart),documentId:entryRef.current.document.id,generation:generation.current})});controller.current.setEnabled(mode==='edit');if(dirty(entry))renderDraft();return()=>{controller.current?.destroy();controller.current=null}},[entry,mode,sourceKey])
   React.useEffect(()=>controller.current?.setEnabled(mode==='edit'),[mode])
@@ -276,7 +301,7 @@ function renderPptxNode(t, n) {`],
  ['G.textContent = I + " ";','G.textContent = I + " "; G.dataset.pptxBullet="";'],
  ['const f = document.createElement("td");\n\t\t\t\t\tf.style.overflow', 'const f = document.createElement("td"); f.dataset.pptxRow=String(x); f.dataset.pptxColumn=String(u);\n\t\t\t\t\tf.style.overflow']
 ]
-const marker='/* sherlock:pptx-content-editor:v8 */'
+const marker='/* sherlock:pptx-content-editor:v9 */'
 const endMarker='/* sherlock:pptx-content-editor:end */\n'
 const viewerAttach='viewerRef.current = viewer;'
 const legacyAttached=viewerAttach+' props.onPptxViewer?.(viewer);'

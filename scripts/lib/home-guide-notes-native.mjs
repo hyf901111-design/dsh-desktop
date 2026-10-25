@@ -50,6 +50,17 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false}){
    ticket.typing=true
    try{
     await playing(ticket)
+    // Viewing challenge evidence selects another real sidebar tab. Return to
+    // this session's existing conversation pane before targeting its input.
+    const currentInput=inputFor(ticket)
+    let visible=false
+    if(currentInput)try{valid(ticket,currentInput);visible=true}catch{check(ticket)}
+    if(!visible){
+     const service=typeof defaultResearchSidebar==='undefined'?null:defaultResearchSidebar.service
+     if(service?.getSnapshot?.().sessionId!==sessionId||typeof service.activateTab!=='function'||typeof service.setPanelState!=='function')throw changed()
+     service.activateTab('sherlock-research-conversation',{sessionId});service.setPanelState({open:true},{sessionId})
+     await until(ticket,()=>{const target=inputFor(ticket);if(target)try{valid(ticket,target);return target}catch{check(ticket)}})
+    }
     const record=await until(ticket,()=>{const value=recordFor(ticket);return value?.active&&value.ready&&!value.running&&!value.preparing&&inputFor(ticket)&&value}),input=inputFor(ticket),shell=record.shell,prompt=ticket.prepared.prompts[stage]
     let draft=shell.snapshot.draft,revision=shell.snapshot.draftRev
     const cas=()=>{check(ticket);if(recordFor(ticket)!==record||shell.snapshot.draft!==draft||shell.snapshot.draftRev!==revision||shell.snapshot.imageIds.length||shell.snapshot.occurrences?.length)throw Error('输入内容已变化，已保留用户草稿。')}

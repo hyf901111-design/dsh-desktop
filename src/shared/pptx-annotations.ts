@@ -83,6 +83,14 @@ export type PptxAnnotationMessagePresentationValue = null | {
   }>
   skill?: { start: number; end: number; text: string; id: 'builtin:efund-ppt-maker'; label: string }
 }
+export type PptxAnnotationResolveReferenceInput = { sendingSessionId: string; reference: PptxAnnotationReference }
+export type PptxAnnotationResolveReferenceValue =
+  | {
+      status: 'ready'; reference: PptxAnnotationReference; source: PptxAnnotationOpenInput
+      path: string; name: string; fileVersion: string; sourceUrl?: string
+      mark: Pick<PptxAnnotationMark, 'id' | 'ordinal' | 'slideIndex' | 'slidePart'>
+    }
+  | { status: 'stale' | 'deleted' | 'denied'; error: string }
 export type PptxAnnotationErrorCode =
   | 'invalid' | 'forbidden' | 'unavailable' | 'conflict' | 'stale' | 'reanchor-required'
   | 'cancelled' | 'not-ready' | 'ambiguous' | 'source-changed' | 'unchanged' | 'invalid-output'
@@ -96,6 +104,7 @@ export type PptxAnnotationBridge = {
   complete(input: PptxAnnotationCompleteInput): Promise<PptxAnnotationResult<PptxAnnotationCompleteValue>>
   lookupOutput(input: { sendingSessionId: string; path: string }): Promise<PptxAnnotationResult<PptxAnnotationOutputValue>>
   messagePresentation(input: PptxAnnotationMessagePresentationInput): Promise<PptxAnnotationResult<PptxAnnotationMessagePresentationValue>>
+  resolveReference(input: PptxAnnotationResolveReferenceInput): Promise<PptxAnnotationResult<PptxAnnotationResolveReferenceValue>>
   cancel(input: { sessionId: string; sendId: string }): Promise<PptxAnnotationResult<{ cancelled: boolean }>>
 }
 
@@ -112,6 +121,10 @@ export function parsePptxAnnotationMessagePresentationInput(value: unknown): Ppt
   const sendingSessionId = text(item.sendingSessionId), preparedId = text(item.preparedId), submissionId = text(item.submissionId)
   if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(preparedId) || !Number.isSafeInteger(item.userSeq) || Number(item.userSeq) < 0 || typeof item.text !== 'string' || !item.text || item.text.length > 1024 * 1024 || item.text.includes('\0')) throw new Error('消息呈现凭据无效')
   return { sendingSessionId, preparedId, userSeq: Number(item.userSeq), submissionId, text: item.text }
+}
+export function parsePptxAnnotationResolveReferenceInput(value: unknown): PptxAnnotationResolveReferenceInput {
+  const item = object(value, ['sendingSessionId', 'reference']), sendingSessionId = text(item.sendingSessionId)
+  return { sendingSessionId, reference: parsePptxAnnotationReference(item.reference, sendingSessionId) }
 }
 export function parsePptxAnnotationSource(value: unknown): PptxAnnotationSource {
   const item = object(value, ['kind', 'relativePath', 'authorizationId', 'nodeId'])

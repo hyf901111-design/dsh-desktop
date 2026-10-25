@@ -1440,6 +1440,16 @@ async function bootstrap(): Promise<void> {
       }
       return researchFilePreviewRegistry!.resolvePptxEditIdentity({ sessionId, nodeId: source.nodeId, authorizationId: source.authorizationId })
     },
+    previewSource: async (sessionId, source) => {
+      if (!canReadNoteSession(sessionId)) return null
+      const previewSessionId = source.kind === 'note-file'
+        ? (await noteFiles.bind(integrationOwner() || 'local', sessionId, source)).previewSessionId
+        : sessionId
+      const preview = await researchFilePreviewRegistry!.restore({ sessionId: previewSessionId, nodeId: source.nodeId, authorizationId: source.authorizationId })
+      if (!preview) return null
+      const resolved = await researchFilePreviewRegistry!.resolvePptxEditSource(preview.url)
+      return resolved ? { url: preview.url, path: resolved.path } : null
+    },
     readHistory: async input => {
       const history = await taskRpc<{ events: Array<{ event: PptxAnnotationHistoryEvent }>; hasMore: boolean }>('session.history', input)
       return { events: history.events.map(item => item.event), hasMore: history.hasMore }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { chmod, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fixture } from './fixtures/pptx'
@@ -297,7 +297,7 @@ it('rejects every privileged annotation action from subframes and unrelated wind
   const f = await setup(), api = await import(modulePath), handlers = new Map<string, any>()
   const webContents = { mainFrame: { processId: 11, routingId: 12 } }, window = { isDestroyed: () => false, webContents }
   api.registerPptxAnnotationHandlers({ service: f.service, getMainWindow: () => window, ipcMain: { removeHandler: (channel: string) => handlers.delete(channel), handle: (channel: string, handler: any) => handlers.set(channel, handler) } })
-  expect(handlers.size).toBe(8)
+  expect(handlers.size).toBe(9)
   for (const handler of handlers.values()) {
     expect(() => handler({ sender: webContents, senderFrame: { processId: 11, routingId: 13 } }, source)).toThrow(/main EWork/)
     expect(() => handler({ sender: {}, senderFrame: webContents.mainFrame }, source)).toThrow(/main EWork/)
@@ -324,6 +324,117 @@ async function treeBytes(root: string, prefix = ''): Promise<Record<string, stri
   }
   return result
 }
+
+function resolveInput(reference: any) {
+  const { expectedStateRevision: _revision, ...locator } = reference
+  return { sendingSessionId: 'session', reference: locator }
+}
+describe('cold read-only annotation reference source resolution', () => {
+  it('resolves only the persisted original source and physical page after restart without any edit token or writes', async () => {
+    const f = await setup(), { doc, reference, state } = await marked(f), api = await import(modulePath), before = await treeBytes(f.root)
+    const restart = new api.PptxAnnotationService(f.options)
+    expect(restart.resolveReference).toBeTypeOf('function')
+    const result = await restart.resolveReference(resolveInput(reference))
+    expect(result).toMatchObject({ ok: true, value: { status: 'ready', reference: resolveInput(reference).reference, source, name: 'deck.pptx', path: await realpath(path.join(f.workspace, 'deck.pptx')), fileVersion: doc.version, mark: { id: state.marks[0].id, ordinal: 1, slideIndex: 0, slidePart: 'ppt/slides/slide2.xml' } } })
+    expect(result.value).not.toHaveProperty('editToken'); expect(result.value).not.toHaveProperty('sourceUrl'); expect(result.value.mark).not.toHaveProperty('region')
+    expect(await treeBytes(f.root)).toEqual(before)
+  })
+
+  it('denies unknown, cross-owner and forged sender identities without creating metadata or accepting guessed paths', async () => {
+    const empty = await setup()
+    expect(empty.service.resolveReference).toBeTypeOf('function')
+    const unknown = { version: 1, sessionId: 'session', documentId: 'a'.repeat(64), fileVersion: 'b'.repeat(64), markId: 'mark-1' }
+    expect(await empty.service.resolveReference(resolveInput(unknown))).toMatchObject({ ok: true, value: { status: 'denied' } })
+    await expect(readdir(path.join(empty.root, 'state'))).rejects.toMatchObject({ code: 'ENOENT' })
+    const f = await setup(), { reference } = await marked(f), input = resolveInput(reference)
+    expect(await f.service.resolveReference({ ...input, sendingSessionId: 'other' })).toMatchObject({ ok: false, code: 'invalid' })
+    expect(await f.service.resolveReference({ ...input, path: 'PPT标注修改/same-bytes.pptx' })).toMatchObject({ ok: false, code: 'invalid' })
+    f.owner('bob'); const before = await treeBytes(f.root)
+    expect(await f.service.resolveReference(input)).toMatchObject({ ok: true, value: { status: 'denied' } }); expect(await treeBytes(f.root)).toEqual(before)
+  })
+
+  it('reports deleted and stale references without a source or old coordinates, including an already reanchored mark', async () => {
+    const deleted = await setup(), first = await marked(deleted)
+    await deleted.service.mutate({ sessionId: 'session', documentId: first.doc.documentId, version: first.doc.version, expectedStateRevision: 1, operations: [{ op: 'remove', markId: first.reference.markId }] })
+    const removed = await deleted.service.resolveReference(resolveInput(first.reference)); expect(removed).toMatchObject({ ok: true, value: { status: 'deleted' } }); expect(removed.value).not.toHaveProperty('source')
+    const stale = await setup(), second = await marked(stale); await writeFile(path.join(stale.workspace, 'deck.pptx'), changedBytes(stale.bytes))
+    const old = await stale.service.resolveReference(resolveInput(second.reference)); expect(old).toMatchObject({ ok: true, value: { status: 'stale' } }); expect(old.value).not.toHaveProperty('mark')
+    const current = await opened(stale)
+    await stale.service.mutate({ sessionId: 'session', documentId: second.doc.documentId, version: current.version, expectedStateRevision: 1, operations: [{ op: 'reanchor', markId: second.reference.markId, location: point }] })
+    expect(await stale.service.resolveReference(resolveInput(second.reference))).toMatchObject({ ok: true, value: { status: 'stale' } })
+    expect(await stale.service.resolveReference(resolveInput({ ...second.reference, fileVersion: current.version }))).toMatchObject({ ok: true, value: { status: 'ready', fileVersion: current.version } })
+  })
+
+  it('never substitutes a same-byte generated copy for the canonical original document', async () => {
+    const f = await setup(), { reference } = await marked(f), copy = path.join(f.workspace, 'modified-output.pptx')
+    await writeFile(copy, f.bytes); await rm(path.join(f.workspace, 'deck.pptx')); await symlink(copy, path.join(f.workspace, 'deck.pptx'))
+    const result = await f.service.resolveReference(resolveInput(reference))
+    expect(result).toMatchObject({ ok: true, value: { status: 'denied' } }); expect(result.value).not.toHaveProperty('path')
+  })
+
+  it('restores real NoteFile and Research read capabilities after cold loading without confusing their same-byte document identities', async () => {
+    const f = await setup(), api = await import(modulePath), { ResearchFilePreviewRegistry, FileResearchPreviewAuthorizationStorage } = await import('../src/main/state/research-file-preview'), { NoteFiles } = await import('../src/main/notes/files')
+    const storage = new FileResearchPreviewAuthorizationStorage(f.root)
+    let registry = new ResearchFilePreviewRegistry({ storage })
+    const makeFiles = () => new NoteFiles({ root: path.join(f.root, 'note-files'), registry, owner: () => 'alice', canRead: id => id === 'session', workspaceRoot: f.options.resolveWorkspace, reveal: () => {} })
+    let files = makeFiles()
+    const note = await files.admit('alice', 'session', { nodeId: 'note-file-resolve', relativePath: 'deck.pptx' }), research = await registry.admitFinder({ path: path.join(f.workspace, 'deck.pptx'), sessionId: 'session', nodeId: 'research-resolve' }, true)
+    expect(research).toBeTruthy()
+    const options = { ...f.options, resolveAuthorizedSource: async (sessionId: string, source: any) => {
+      if (source.kind === 'note-file') { const file = await files.reference('alice', sessionId, source); return { path: file.path, root: path.dirname(file.path) } }
+      return registry.resolvePptxEditIdentity({ sessionId, nodeId: source.nodeId, authorizationId: source.authorizationId })
+    }, previewSource: async (sessionId: string, source: any) => {
+      const reader = source.kind === 'note-file' ? (await files.bind('alice', sessionId, source)).previewSessionId : sessionId
+      const preview = await registry.restore({ sessionId: reader, nodeId: source.nodeId, authorizationId: source.authorizationId }), verified = preview && await registry.resolvePptxEditSource(preview.url)
+      return preview && verified ? { url: preview.url, path: verified.path } : null
+    } }
+    const service = new api.PptxAnnotationService(options), sources = [{ sessionId: 'session', source: { kind: 'note-file', nodeId: note.id, authorizationId: note.authorizationId } }, { sessionId: 'session', source: { kind: 'research', nodeId: 'research-resolve', authorizationId: research!.authorizationId } }]
+    const references: any[] = []
+    for (const source of sources) {
+      const opened = (await service.open(source)).value, marked = (await service.mutate({ sessionId: 'session', documentId: opened.documentId, version: opened.version, expectedStateRevision: 0, operations: [{ op: 'put', mark: point }] })).value
+      references.push({ version: 1, sessionId: 'session', documentId: opened.documentId, fileVersion: opened.version, markId: marked.marks[0].id })
+    }
+    expect(references[0].documentId).not.toBe(references[1].documentId)
+    registry = new ResearchFilePreviewRegistry({ storage: new FileResearchPreviewAuthorizationStorage(f.root) }); files = makeFiles()
+    const restart = new api.PptxAnnotationService(options), before = await treeBytes(f.root), results: any[] = []
+    for (const [index, reference] of references.entries()) {
+      const result = await restart.resolveReference(resolveInput(reference)); expect(result).toMatchObject({ ok: true, value: { status: 'ready', source: sources[index], reference } })
+      expect(result.value.sourceUrl).toMatch(/^sherlock-preview:\/\//)
+      const capability = await registry.resolvePptxEditSource(result.value.sourceUrl)
+      expect(capability?.path).toBe(result.value.path); expect(capability?.identity.sessionId).toBe(index === 0 ? note.previewSessionId : 'session'); results.push(result.value)
+    }
+    expect(await treeBytes(f.root)).toEqual(before)
+    const missingReader = new api.PptxAnnotationService({ ...options, previewSource: undefined })
+    expect(await missingReader.resolveReference(resolveInput(references[0]))).toMatchObject({ ok: true, value: { status: 'denied' } })
+    const wrongReader = new api.PptxAnnotationService({ ...options, previewSource: async () => ({ url: results[1].sourceUrl, path: results[1].path }) })
+    expect(await wrongReader.resolveReference(resolveInput(references[0]))).toMatchObject({ ok: true, value: { status: 'denied' } })
+    registry.revokeNode(note.previewSessionId, note.id)
+    expect(await restart.resolveReference(resolveInput(references[0]))).toMatchObject({ ok: true, value: { status: 'denied' } })
+  })
+
+  it.each(['owner', 'revoked', 'deleted'])('does not return an old ready result after %s changes during authorization', async change => {
+    const f = await setup(), { doc, reference } = await marked(f), api = await import(modulePath)
+    let entered!: () => void, release!: () => void
+    const started = new Promise<void>(resolve => { entered = resolve }), waiting = new Promise<void>(resolve => { release = resolve })
+    const restart = new api.PptxAnnotationService({ ...f.options, resolveWorkspace: async (id: string) => { entered(); await waiting; return f.options.resolveWorkspace(id) } })
+    const result = restart.resolveReference(resolveInput(reference)); await started
+    if (change === 'owner') f.owner('bob')
+    if (change === 'revoked') f.allow(false)
+    if (change === 'deleted') await f.service.mutate({ sessionId: 'session', documentId: doc.documentId, version: doc.version, expectedStateRevision: 1, operations: [{ op: 'remove', markId: reference.markId }] })
+    release(); const after = await result
+    expect(after).toMatchObject(change === 'owner' ? { ok: false, code: 'forbidden' } : { ok: true, value: { status: change === 'deleted' ? 'deleted' : 'denied' } })
+  })
+
+  it('rereads a mark deleted while the last authorization check is waiting', async () => {
+    const f = await setup(), { doc, reference } = await marked(f), api = await import(modulePath)
+    let count = 0, entered!: () => void, release!: () => void
+    const started = new Promise<void>(resolve => { entered = resolve }), waiting = new Promise<void>(resolve => { release = resolve })
+    const restart = new api.PptxAnnotationService({ ...f.options, resolveWorkspace: async (id: string) => { if (++count === 2) { entered(); await waiting } return f.options.resolveWorkspace(id) } })
+    const result = restart.resolveReference(resolveInput(reference)); await started
+    await f.service.mutate({ sessionId: 'session', documentId: doc.documentId, version: doc.version, expectedStateRevision: 1, operations: [{ op: 'remove', markId: reference.markId }] }); release()
+    expect(await result).toMatchObject({ ok: true, value: { status: 'deleted' } })
+  })
+})
 
 describe('read-only authoritative sent annotation presentation', () => {
   it('labels a frozen rectangle as a region even when it includes a named title node', async () => {
