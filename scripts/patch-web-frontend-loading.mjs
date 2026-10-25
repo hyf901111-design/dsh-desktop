@@ -1,3 +1,4 @@
+import {patchHomeThemeAppearance} from './lib/home-theme-appearance.mjs'
 import {patchAssistantReveal} from './lib/assistant-reveal.mjs'
 import {patchConversationComponents} from './lib/conversation-components.mjs'
 import {patchConversationCompactionLifecycle} from './lib/conversation-compaction-lifecycle.mjs'
@@ -189,7 +190,7 @@ for (const [name, patch] of [
   ['dsh-client-ui-conversation', source => patchDesktopResearchDefaults(patchFigmaEnterDescription(patchFigmaContainerMenu(patchFigmaCanvasContextMenu(patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source)))))))],
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', source => patchFigmaProviderMenu(patchFigmaSettingsModels(source))],
-  ['dsh-client-ui-theme', patchFigmaSettingsAppearance],
+  ['dsh-client-ui-theme', source => patchHomeThemeAppearance(patchFigmaSettingsAppearance(source))],
   ['dsh-client-ui-agent-preset', source => patchFigmaSettingsModeDescription(patchFigmaRefinementPreset(patchFigmaSettingsPreset(source)))],
   ['dsh-client-ui-subagent', patchFigmaRefinementSubagent],
   ['dsh-client-ui-input-trigger', patchFigmaRefinementInputTrigger]

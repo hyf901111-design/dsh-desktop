@@ -8,6 +8,7 @@ import { PNG } from 'pngjs'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 
 const evidence = '/tmp/ework-home-operations-20261023'
+const galleryEvidence = resolve('output/home-theme-gallery-20261025')
 const read = path => readFileSync(path, 'utf8')
 const assets = 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
 const frontend = readdirSync(assets).filter(name => /^index-.*\.css$/.test(name)).map(name => read(`${assets}/${name}`)).join('\n')
@@ -22,8 +23,9 @@ beforeAll(async () => {
     stdin: { resolveDir: process.cwd(), loader: 'ts', contents: `
       import {mountDesktopShellStyles} from './src/preload/shell-style';
       import {mountHomeOperations} from './src/preload/home-operations';
-      import {mountHomeThemes} from './src/preload/home-themes';
-      window.homeOperations={mount(themes=false){mountDesktopShellStyles(document);if(themes)this.disposeThemes=mountHomeThemes(document);this.original=document.querySelector('textarea');const before=[...document.querySelectorAll('style')];this.dispose=mountHomeOperations(document,{onAction:this.onAction,onExample:this.onExample});this.ownStyles=[...document.querySelectorAll('style')].filter(style=>!before.includes(style))}};
+      import {mountHomeThemes,getHomeThemeController} from './src/preload/home-themes';
+      import {toggleHomeAppearance} from './src/preload/home-theme-controls';
+      window.homeOperations={thumbnailRequests:[],mount(themes=false){mountDesktopShellStyles(document);if(themes)this.disposeThemes=mountHomeThemes(document);this.original=document.querySelector('textarea');const before=[...document.querySelectorAll('style')];const controller=getHomeThemeController(document);this.controller=controller;this.dispose=mountHomeOperations(document,{onAction:this.onAction,onExample:this.onExample,themeController:controller?{...controller,getThumbnail:(id)=>{this.thumbnailRequests.push(id);return controller.getThumbnail(id)}}:undefined,onToggleAppearance:()=>toggleHomeAppearance(document)});this.ownStyles=[...document.querySelectorAll('style')].filter(style=>!before.includes(style))}};
     ` }, bundle: true, format: 'iife', platform: 'browser', write: false,
     plugins: [{ name: 'home-operations-assets', setup(builder) {
       builder.onResolve({ filter: /\.(?:svg|png|jpe?g|webp)\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'home-inline' }))
@@ -41,6 +43,7 @@ beforeAll(async () => {
   const module = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
   browser = await (module.default ?? module).chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell', args: ['--enable-unsafe-swiftshader'] })
   await mkdir(evidence, { recursive: true })
+  await mkdir(galleryEvidence, { recursive: true })
 }, 30000)
 afterAll(async () => browser?.close())
 
@@ -55,6 +58,11 @@ async function fixture({ dark = false, reduced = true, width = 1380, height = 90
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor, reducedMotion: reduced ? 'reduce' : 'no-preference' })
   if (clock) await page.clock.install({ time: new Date('2026-10-23T00:00:00Z') })
   await page.route('**/*', request => request.abort())
+  if (themes) {
+    await page.route('http://home-operations.test/', route => route.fulfill({contentType:'text/html',body:'<!doctype html>'}))
+    await page.route('http://home-operations.test/fonts/NotoSansSC.woff2', route => route.fulfill({contentType:'font/woff2',path:resolve('build/fonts/NotoSansSC.woff2')}))
+    await page.goto('http://home-operations.test/')
+  }
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>${frontend}\n${native}\n${portalCss}</style><body ${dark ? 'data-ds-dark-theme' : ''} ${surface ? `data-workspace-surface="${surface}"` : ''} ${panelWidth ? `style="--dsh-sidebar-width:${panelWidth}px"` : ''}>
     <div id="root"><div data-slot="root" style="display:contents"><div class="pI_x6G_frame" data-dsh-frame="true" style="grid-template-columns:${sidebarWidth}px minmax(0,1fr) 0px">
       <aside></aside><main class="pI_x6G_centerCol" data-pane="conversation"><div data-slot="conversation" style="display:contents"><div class="wSkVaW_root" data-phase="${route === 'home' ? 'hero' : 'active'}" data-odyssey-page="${route}">
@@ -64,6 +72,7 @@ async function fixture({ dark = false, reduced = true, width = 1380, height = 90
       </div></div></main>
     </div></div></div><aside data-dsh-panel-host data-odyssey-panel-right="${panelWidth ? 'open' : 'closed'}"></aside>
   </body>`)
+  if (themes) await page.evaluate(() => document.fonts.ready)
   await page.locator('textarea').first().fill('保留原生输入草稿\n第二行 🔎')
   await page.addScriptTag({ content: runtime })
   await page.evaluate(themes => window.homeOperations.mount(themes), themes)
@@ -165,7 +174,7 @@ it('switches regions with the bottom button, including its Enter and Space activ
   const page = await fixture()
   try {
     const pane = await page.locator('.pI_x6G_centerCol').boundingBox(), button = await toggle(page).boundingBox()
-    expect(Math.abs(pane.y + pane.height - button.y - 104), 'the undocked toggle is raised by 32px').toBeLessThanOrEqual(1)
+    expect(Math.abs(pane.y + pane.height - button.y - 104), 'the undocked toggle retains the approved raised position').toBeLessThanOrEqual(1)
     for (let index = 0; index < 12 && !await toggle(page).evaluate(button => document.activeElement === button); index++) await page.keyboard.press('Tab')
     expect(await toggle(page).evaluate(button => document.activeElement === button && button.matches(':focus-visible'))).toBe(true)
     await page.keyboard.press('Enter'); await waitState(page, 'operations')
@@ -666,7 +675,7 @@ it('colors only the hovered illustration without changing its neighbors', async 
     await page.mouse.move(1, 1)
     await expect.poll(async () => (await appearance()).every(card => card.normal === 1 && card.colored === 0)).toBe(true)
     await cards.first().hover({ position: { x: 12, y: 12 } })
-    await expect.poll(async () => (await appearance())[0].colored).toBe(1)
+    await expect.poll(async () => { const card = (await appearance())[0]; return { normal: card.normal, colored: card.colored } }).toEqual({ normal: 0, colored: 1 })
     const hovered = await appearance()
     expect(hovered[0].normal).toBe(0)
     expect(hovered.slice(1).every(card => card.normal === 1 && card.colored === 0)).toBe(true)
@@ -789,8 +798,7 @@ it('preserves the unfinished illustration mix when scrolling moves its anchor aw
   } finally { await page.close() }
 }, 15000)
 
-it('adds one reversible presentation-blue glass tint to all four quick cards without pointer glow, shadows, or lift', async () => {
-  for (const dark of [false, true]) {
+it.each([false, true])('adds one reversible presentation-blue glass tint to all four quick cards without pointer glow, shadows, or lift (dark=%s)', async dark => {
     const page = await fixture({ reduced: false, dark })
     try {
       await toggle(page).click()
@@ -842,7 +850,6 @@ it('adds one reversible presentation-blue glass tint to all four quick cards wit
       await writeFile(`${evidence}/hover-material-${dark ? 'dark' : 'light'}.json`, JSON.stringify(tints, null, 2))
       expect(new Set(tints).size).toBe(1)
     } finally { await page.close() }
-  }
 }, 15000)
 
 it('keeps all five card surfaces distinct and description text readable over black, white, and busy backgrounds', async () => {
@@ -966,16 +973,21 @@ it('shows an outside focus ring for keyboard navigation and leaves pointer-hover
   } finally { await page.close() }
 }, 15000)
 
-it('gives all five cards a stronger bounded tilt and keeps a stationary pointer stable', async () => {
-  const page = await fixture({ reduced: false })
+it.each([false, true])('makes quick-card perspective clear while keeping the case card restrained and a stationary pointer stable (dark=%s)', async dark => {
+  const page = await fixture({ dark, reduced: false }), observations = []
   try {
     await toggle(page).click()
     await waitState(page, 'operations')
     const cards = page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card')
     expect(await cards.count()).toBe(5)
     for (const card of await cards.all()) {
+      const kind = await card.getAttribute('data-card')
       await page.mouse.move(1, 1)
       await page.waitForTimeout(340)
+      const artworkSize = await card.evaluate(card => {
+        const image = card.querySelector('.odyssey-operations-illustration')
+        return image ? { width: image.offsetWidth, height: image.offsetHeight } : null
+      })
       const bounds = await card.boundingBox(), point = { x: bounds.x + bounds.width * .06, y: bounds.y + bounds.height * .06 }
       await page.mouse.move(point.x, point.y)
       let previousPose, stableFrames = 0
@@ -1001,16 +1013,22 @@ it('gives all five cards a stronger bounded tilt and keeps a stationary pointer 
       expect(samples.every(sample => sample.textTransform === 'none')).toBe(true)
       for (const name of ['rx', 'ry']) {
         const values = samples.map(sample => sample[name])
-        expect(Math.abs(values.at(-1))).toBeGreaterThan(4)
-        expect(Math.max(...values.map(Math.abs))).toBeLessThanOrEqual(5.2)
+        expect(Math.abs(values.at(-1)), 'quick-card tilt is clearly visible at the pointer corner').toBeGreaterThan(kind ? 7 : 4)
+        expect(Math.max(...values.map(Math.abs))).toBeLessThanOrEqual(kind ? 9.2 : 5.2)
         expect(Math.max(...values) - Math.min(...values)).toBeLessThan(.03)
       }
+      if (kind) {
+        expect(await card.evaluate(card => { const image = card.querySelector('.odyssey-operations-illustration'); return { width: image.offsetWidth, height: image.offsetHeight, transform: getComputedStyle(image).transform } })).toEqual({ ...artworkSize, transform: 'none' })
+        await region(page).screenshot({ path: `${evidence}/quick-tilt-enhanced-${dark ? 'dark' : 'light'}-${kind}.png` })
+      }
+      observations.push({ kind: kind || 'case', ...samples.at(-1) })
       await page.mouse.move(1, 1)
       await expect.poll(() => card.evaluate(element => ({ flag: element.hasAttribute('data-odyssey-operations-tilting'), transform: getComputedStyle(element).transform }))).toEqual({ flag: false, transform: 'none' })
       await card.dispatchEvent('pointermove', { clientX: point.x, clientY: point.y, pointerType: 'touch', bubbles: true })
       await nextPaint(page)
       expect(await card.evaluate(element => getComputedStyle(element).transform)).toBe('none')
     }
+    await writeFile(`${evidence}/quick-tilt-enhanced-${dark ? 'dark' : 'light'}.json`, JSON.stringify(observations, null, 2))
   } finally { await page.close() }
 }, 20000)
 
@@ -1038,7 +1056,7 @@ it('separates neutral dark glass faces from black, blue-black, and busy backgrou
   } finally { await page.close() }
 }, 15000)
 
-it('renders a faint moving ambient gradient inside every quick card without obscuring white-backdrop labels or leaking past the corners', async () => {
+it('renders clearly moving distinct ambient gradients inside every quick card without obscuring white-backdrop labels or leaking past the corners', async () => {
   const observations = []
   const difference = (first, second, card) => {
     let sum = 0, count = 0
@@ -1063,10 +1081,17 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
       }))
       const frames = []
       const seek = fraction => page.locator('.odyssey-operations-quick-card').evaluateAll((cards, fraction) => {
-        for (const card of cards) for (const animation of card.getAnimations({ subtree: true })) if ('animationName' in animation) { animation.pause(); animation.currentTime = 16000 * fraction }
+        const phases = []
+        for (const card of cards) for (const animation of card.getAnimations({ subtree: true })) if ('animationName' in animation) {
+          const timing = animation.effect.getTiming()
+          animation.pause(); animation.currentTime = Number(timing.duration) * (1 + fraction) + timing.delay
+          phases.push({ direction: timing.direction, progress: animation.effect.getComputedTiming().progress })
+        }
+        return phases
       }, fraction)
       for (const phase of [0, .25, .5, .75]) {
-        await seek(phase)
+        const timing = await seek(phase)
+        if (phase === 0 || phase === .5) for (const sample of timing) expect(sample.progress, 'the raster samples the actual animation endpoint or peak').toBeCloseTo(phase === .5 ? .5 : sample.direction === 'reverse' ? 1 : 0, 5)
         await page.locator('.odyssey-operations-quick-label').evaluateAll(labels => labels.forEach(label => label.style.visibility = 'hidden'))
         const frame = PNG.sync.read(await page.screenshot()); frames.push(frame)
         for (const [index, card] of geometry.entries()) {
@@ -1084,7 +1109,7 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
         const phaseDifferences = []
         for (let from = 0; from < frames.length; from++) for (let to = from + 1; to < frames.length; to++) phaseDifferences.push(difference(frames[from], frames[to], card))
         const outside = [[card.x - 2, card.y + card.height / 2], [card.x + card.width + 2, card.y + card.height / 2], [card.x + card.width / 2, card.y - 2], [card.x + 1, card.y + 1]]
-        const outsideDifference = Math.max(...outside.map(([x, y]) => patchRgb(frames[0], x, y, 0).reduce((sum, value, channel) => sum + Math.abs(value - patchRgb(plain, x, y, 0)[channel]), 0) / 3))
+        const outsideDifference = Math.max(...frames.flatMap(frame => outside.map(([x, y]) => patchRgb(frame, x, y, 0).reduce((sum, value, channel) => sum + Math.abs(value - patchRgb(plain, x, y, 0)[channel]), 0) / 3)))
         const headerPatches = []
         for (let y = 8; y < 40; y += 4) for (let x = 8; x < card.width - 8; x += 4) {
           const actual = patchRgb(frames[0], card.x + x, card.y + y), bare = patchRgb(plain, card.x + x, card.y + y)
@@ -1110,10 +1135,10 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
   for (const observation of observations) {
     if ('minimumLabelContrast' in observation) expect(observation.minimumLabelContrast, `${observation.dark ? 'dark' : 'light'} card ${observation.index} label at phase ${observation.phase}`).toBeGreaterThanOrEqual(4.5)
     else {
-      expect(observation.decorationDifference, 'the ambient gradient is visibly present beyond the opaque artwork').toBeGreaterThan(3)
-      expect(observation.visibleHeaderDifference, 'a visible header patch reveals the gradient instead of hiding it beneath the illustration').toBeGreaterThan(5)
-      expect(observation.decorationDifference, 'the ambient layer remains restrained').toBeLessThan(10)
-      expect(observation.maximumPhaseDifference, 'the ambient layer moves subtly over its full cycle').toBeGreaterThan(.02)
+      expect(observation.decorationDifference, 'the ambient gradient is clearly present beyond the opaque artwork').toBeGreaterThan(5)
+      expect(observation.visibleHeaderDifference, 'a visible header patch reveals the gradient instead of hiding it beneath the illustration').toBeGreaterThan(8)
+      expect(observation.decorationDifference, 'the ambient layer remains restrained').toBeLessThan(16)
+      expect(observation.maximumPhaseDifference, 'every gradient visibly changes over its full cycle').toBeGreaterThan(1.25)
       expect(observation.outsideDifference, 'the ambient layer remains inside the clipped card').toBeLessThanOrEqual(1)
     }
   }
@@ -1320,8 +1345,9 @@ it('keeps the toggle at one low fixed position throughout state changes and hove
     await toggle(page).click()
     for (const delay of [0, 30, 80, 180, 360]) { await page.waitForTimeout(delay); positions.push((await toggle(page).boundingBox()).y) }
     await waitState(page, 'operations')
-    const dock = await page.locator('[data-odyssey-theme-dock]').boundingBox(), expanded = await toggle(page).boundingBox()
-    expect(expanded.y + expanded.height).toBeLessThanOrEqual(dock.y - 42)
+    const expanded = await toggle(page).boundingBox()
+    expect(expanded.y).toBeCloseTo(initial.y,1)
+    expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(0)
     await toggle(page).click()
     await waitState(page, 'input')
     positions.push((await toggle(page).boundingBox()).y)
@@ -1442,7 +1468,7 @@ it.each([{ dark: false }, { dark: true }])('fits all five cards without scrollin
     const initial = await page.evaluate(() => {
       const host = document.querySelector('.pI_x6G_centerCol'), section = host.querySelector('[data-odyssey-home-operations]')
       const rect = element => { const bounds = element.getBoundingClientRect(); return { x: bounds.x, y: bounds.y, right: bounds.right, bottom: bounds.bottom, width: bounds.width, height: bounds.height } }
-      return { pane: rect(host), section: rect(section), heading: rect(section.querySelector('h2')), usecase: rect(section.querySelector('.odyssey-operations-usecase')), title: rect(section.querySelector('.odyssey-operations-title')), cards: [...section.querySelectorAll('.odyssey-operations-quick-card')].map(rect), scrollTop: section.scrollTop, scrollHeight: section.scrollHeight, clientHeight: section.clientHeight, overflow: section.scrollWidth > section.clientWidth }
+      return { pane: rect(host), section: rect(section), heading: rect(section.querySelector('.odyssey-operations-heading')), usecase: rect(section.querySelector('.odyssey-operations-usecase')), title: rect(section.querySelector('.odyssey-operations-title')), cards: [...section.querySelectorAll('.odyssey-operations-quick-card')].map(rect), scrollTop: section.scrollTop, scrollHeight: section.scrollHeight, clientHeight: section.clientHeight, overflow: section.scrollWidth > section.clientWidth }
     })
     await writeFile(`${evidence}/responsive-600-${options.dark ? 'dark' : 'light'}-initial.json`, JSON.stringify(initial, null, 2))
     await page.screenshot({ path: `${evidence}/responsive-600-${options.dark ? 'dark' : 'light'}-initial.png` })
@@ -1526,7 +1552,7 @@ it('adapts the operation collection to panel and short-pane resizing without car
   const page = await fixture({ themes: true, deviceScaleFactor: 2 })
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
-  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text() + ' ' + message.location().url) })
   try {
     await toggle(page).click()
     await waitState(page, 'operations')
@@ -1610,71 +1636,47 @@ it('keeps every small-pane card visible without inner scrolling while the bottom
   } finally { await page.close() }
 }, 15000)
 
-it('keeps the native theme dock independent from operation snapping and preserves it on cleanup', async () => {
+it('keeps the native wallpaper owner independent from operation snapping and cleanup', async () => {
   const page = await fixture({ themes: true })
   try {
-    const themeDock = page.locator('[data-odyssey-theme-dock]')
-    expect(await themeDock.count()).toBe(1)
+    expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(0)
+    await toggle(page).click(); await waitState(page,'operations')
+    await wallpaperTab(page).click(); await wallpaperCards(page).last().click()
+    expect(await state(page)).toBe('operations')
+    await page.evaluate(()=>window.homeOperations.dispose())
+    expect(await page.locator('[data-home-theme-canvas="koi-pond"]').count()).toBe(1)
+    await page.evaluate(()=>window.homeOperations.controller.select('default'))
     expect(await page.locator('[data-home-theme-canvas="default"]').count()).toBe(1)
-    expect(await dispatchKey(page, '[data-odyssey-theme-dock] [aria-pressed="true"]', 'ArrowDown')).toBe(false)
-    expect(await dispatchWheel(page, '[data-odyssey-theme-dock]', 120)).toBe(false)
-    expect(await state(page)).toBe('input')
-    await toggle(page).click()
-    await waitState(page, 'operations')
-    expect(await dispatchKey(page, '[data-odyssey-theme-dock] [aria-pressed="true"]', 'ArrowUp')).toBe(false)
-    expect(await dispatchWheel(page, '[data-odyssey-theme-dock]', -120)).toBe(false)
-    expect(await state(page)).toBe('operations')
-    await page.mouse.move(1, 1)
-    await page.screenshot({ path: `${evidence}/theme-integrated-light-operations.png` })
-    await region(page).screenshot({ path: `${evidence}/region-light.png` })
-    await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', ''))
-    await page.screenshot({ path: `${evidence}/theme-integrated-dark-operations.png` })
-    await region(page).screenshot({ path: `${evidence}/region-dark.png` })
-    await page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]').press('ArrowRight')
-    await expect.poll(() => themeDock.getAttribute('data-current-theme')).not.toBe('default')
-    expect(await state(page)).toBe('operations')
-    await page.evaluate(() => window.homeOperations.dispose())
-    expect(await themeDock.count()).toBe(1)
-    expect(await page.locator('canvas[data-home-theme-canvas]').count()).toBe(1)
-    expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
-  } finally { await page.close() }
-}, 15000)
+    expect(await page.evaluate(()=>document.querySelector('textarea')===window.homeOperations.original)).toBe(true)
+  }finally{await page.close()}
+},15000)
 
 it.each([
   { width: 800, panel: false },
   { width: 1040, panel: false },
   { width: 1380, panel: false },
   { width: 1040, panel: true }
-])('keeps the return arrow and expanded theme dock independently clickable in a short window %j', async options => {
-  const page = await fixture({ themes: true, height: 640, reduced: true, ...options })
+])('keeps the return arrow and complete wallpaper gallery independently clickable in a short window %j', async options => {
+  const page = await fixture({ themes:true,height:640,reduced:true,...options })
   try {
-    if (options.panel) await page.locator('[data-dsh-panel-host]').evaluate(element => element.dataset.odysseyPanelRight = 'open')
-    const themeDock = page.locator('[data-odyssey-theme-dock]')
-    await themeDock.hover()
-    await toggle(page).click()
-    await waitState(page, 'operations')
-    const centerIsClickable = locator => locator.evaluate(element => {
-      const rect = element.getBoundingClientRect(), hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
-      return element === hit || element.contains(hit)
-    })
-    await expect.poll(() => centerIsClickable(toggle(page))).toBe(true)
-    const arrowBounds = await toggle(page).boundingBox(), dockBounds = await themeDock.boundingBox()
-    expect(arrowBounds.width).toBeGreaterThanOrEqual(32); expect(arrowBounds.height).toBeGreaterThanOrEqual(32)
-    expect(arrowBounds.y + arrowBounds.height).toBeLessThanOrEqual(dockBounds.y - 42)
-    const currentTheme = page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]')
-    expect(await centerIsClickable(currentTheme)).toBe(true)
-    const selected = await themeDock.getAttribute('data-current-theme')
-    await currentTheme.click()
-    expect(await themeDock.getAttribute('data-current-theme')).toBe(selected)
-    expect(await state(page)).toBe('operations')
-    await toggle(page).click()
-    await waitState(page, 'input')
-  } finally { await page.close() }
-}, 15000)
+    if(options.panel)await page.locator('[data-dsh-panel-host]').evaluate(element=>element.dataset.odysseyPanelRight='open')
+    await toggle(page).click();await waitState(page,'operations');await wallpaperTab(page).click()
+    const clickable=locator=>locator.evaluate(element=>{const rect=element.getBoundingClientRect(),hit=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);return element===hit||element.contains(hit)})
+    expect(await clickable(toggle(page))).toBe(true)
+    for(const card of await wallpaperCards(page).all())expect(await clickable(card)).toBe(true)
+    const selected=await page.evaluate(()=>window.homeOperations.controller.getSelected())
+    await wallpaperCards(page).first().click();expect(await state(page)).toBe('operations')
+    expect(await page.evaluate(()=>window.homeOperations.controller.getSelected())).toBe(selected)
+    await toggle(page).click();await waitState(page,'input')
+    expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(0)
+  }finally{await page.close()}
+},15000)
 
 it.each([
   { dark: false, reduced: false, name: 'light-wide' },
   { dark: true, reduced: false, name: 'dark-wide' },
+  { dark: false, reduced: false, width: 1040, height: 640, panel: true, enhancedCorners: true, name: 'light-narrow-motion' },
+  { dark: true, reduced: false, width: 1040, height: 640, panel: true, enhancedCorners: true, name: 'dark-narrow-motion' },
   { dark: false, reduced: true, width: 1040, height: 640, panel: true, name: 'light-narrow-reduced' },
   { dark: true, reduced: true, width: 1040, height: 640, panel: true, name: 'dark-narrow-reduced' }
 ])('keeps %s operations visible and every quick card reachable inside the center pane', async options => {
@@ -1725,6 +1727,21 @@ it.each([
       expect(motion.animation.split(',').every(value => parseFloat(value) <= .001)).toBe(true)
       expect(motion.transform).toBe('none')
       await region(page).evaluate(element => element.scrollTop = 0)
+    }
+    if (options.enhancedCorners) {
+      for (const anchor of await page.locator('.odyssey-operations-quick-anchor').all()) {
+        await anchor.scrollIntoViewIfNeeded()
+        for (const corner of [.06, .94]) {
+          const bounds = await anchor.boundingBox(), point = { x: bounds.x + bounds.width * corner, y: bounds.y + bounds.height * corner }
+          await page.mouse.move(point.x, point.y)
+          await expect.poll(() => anchor.locator('.odyssey-operations-quick-card').evaluate(card => Math.abs(parseFloat(card.style.getPropertyValue('--ry')) || 0))).toBeGreaterThan(7)
+          await expect.poll(() => anchor.evaluate((anchor, point) => {
+            const card = anchor.firstElementChild, rect = card.getBoundingClientRect(), pane = anchor.closest('.pI_x6G_centerCol').getBoundingClientRect(), hit = document.elementFromPoint(point.x, point.y)
+            return { hit: hit === anchor || anchor.contains(hit), inside: rect.left >= pane.left && rect.right <= pane.right && rect.top >= pane.top && rect.bottom <= pane.bottom, colored: Number(getComputedStyle(card.querySelector('img.colored')).opacity) }
+          }, point)).toEqual({ hit: true, inside: true, colored: 1 })
+        }
+      }
+      await region(page).screenshot({ path: `${evidence}/${options.name}-tilted.png` })
     }
     await page.mouse.move(1, 1)
     await page.waitForTimeout(options.reduced ? 0 : 220)
@@ -1802,7 +1819,7 @@ it('connects every quick-start card to its action once while a previous click is
       window.homeOperations.mount()
     })
     await toggle(page).click(); await waitState(page, 'operations')
-    const selectedTheme = await page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]').getAttribute('data-home-theme-id')
+    const selectedTheme = await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-home-theme-id')
     for (const [index, key] of ['board', 'note', 'ppt', 'report'].entries()) {
       const card = page.locator(`.odyssey-operations-quick-card[data-card="${key}"]`)
       await card.click()
@@ -1816,7 +1833,7 @@ it('connects every quick-start card to its action once while a previous click is
     expect(await page.evaluate(() => window.homeOperations.actionCalls.map(action => action.card))).toEqual(['board', 'note', 'ppt', 'report'])
     expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
     expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
-    expect(await page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]').getAttribute('data-home-theme-id')).toBe(selectedTheme)
+    expect(await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-home-theme-id')).toBe(selectedTheme)
   } finally { await page.close() }
 }, 15000)
 
@@ -1845,7 +1862,7 @@ it.each(['ppt', 'report'])('waits for the native composer to settle before %s pr
     expect(await alert.textContent()).toContain('原有草稿已保留')
     expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
     expect(await page.evaluate(() => document.querySelector('textarea') === window.homeOperations.original)).toBe(true)
-    expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(1)
+    expect(await page.locator('[data-odyssey-home-theme-background]').count()).toBe(1)
   } finally { await page.close() }
 }, 15000)
 
@@ -1896,3 +1913,165 @@ it('starts only the visible large-card example by click or keyboard, never by it
   await expect.poll(()=>page.evaluate(()=>window.examples)).toEqual(['board','note','ppt'])
   await page.close()
 })
+
+const wallpaperKeys = ['default','berber','vghodki','jarrick','lowfreez','accelbia','boz','shashidhar','haseeb','kirian','splines','antiquue','crt-warp','dither','koi-pond']
+const wallpaperNamesZh = ['静谧起航','星海航迹','碧海潮汐','星门微光','银河帆影','翡翠秘境','深空讯号','星云风暴','极光之境','远星尘光','虹光跃迁','日曜航线','时空回声','墨海流岚','锦鲤浮光']
+const wallpaperNamesEn = ['Quiet Departure','Star Trails','Ocean Tides','Stargate Glow','Galactic Sails','Emerald Haven','Deep Space Signal','Nebula Storm','Aurora Realm','Distant Stardust','Prismatic Drift','Solar Passage','Temporal Echo','Inksea Mist','Koi Shimmer']
+const wallpaperTab = page => page.locator('[data-odyssey-operations-tab="wallpapers"]')
+const quickTab = page => page.locator('[data-odyssey-operations-tab="quick"]')
+const wallpaperCards = page => page.locator('[data-odyssey-theme-gallery] [data-home-theme-id]')
+
+it('opens all fifteen native wallpaper previews only in the visible gallery and matches the standard Figma grid', async () => {
+  const page = await fixture({themes:true,deviceScaleFactor:2})
+  try {
+    expect(await page.evaluate(() => window.homeOperations.thumbnailRequests)).toEqual([])
+    await toggle(page).click(); await waitState(page,'operations')
+    expect(await page.evaluate(() => window.homeOperations.thumbnailRequests)).toEqual([])
+    expect(await wallpaperTab(page).count()).toBe(1)
+    await wallpaperTab(page).click()
+    expect(await wallpaperCards(page).evaluateAll(cards=>cards.map(card=>card.dataset.homeThemeId))).toEqual(wallpaperKeys)
+    expect(await wallpaperCards(page).locator('.odyssey-wallpaper-name').allTextContents()).toEqual(wallpaperNamesZh)
+    expect(await wallpaperCards(page).locator('img').evaluateAll(images=>Promise.all(images.map(async image=>{await image.decode();return image.naturalWidth>0&&image.naturalHeight>0})))).toEqual(Array(15).fill(true))
+    expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(0)
+    expect(await page.locator('[data-home-theme-canvas]').count()).toBe(1)
+    const geometry=await wallpaperCards(page).evaluateAll(cards=>cards.map(card=>{const preview=card.querySelector('.odyssey-wallpaper-preview').getBoundingClientRect(),label=card.querySelector('.odyssey-wallpaper-name'),style=getComputedStyle(label);return {x:preview.x,y:preview.y,width:preview.width,height:preview.height,font:parseFloat(style.fontSize),line:parseFloat(style.lineHeight)}}))
+    expect(new Set(geometry.map(card=>Math.round(card.x))).size).toBe(5)
+    expect(new Set(geometry.map(card=>Math.round(card.y))).size).toBe(3)
+    for(const card of geometry){expect(card.width).toBeCloseTo(146.4,0);expect(card.height).toBeCloseTo(78,0);expect(card.font).toBe(12);expect(card.line).toBe(18)}
+    expect(await wallpaperCards(page).locator('svg').count()).toBe(0)
+    expect(await wallpaperCards(page).filter({has:page.locator('.odyssey-wallpaper-preview')}).count()).toBe(15)
+    expect(await wallpaperCards(page).first().locator('.odyssey-wallpaper-preview').evaluate(element=>getComputedStyle(element).boxShadow)).toMatch(/0px 0px 0px 1\.5px$/)
+    const count=await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)
+    await quickTab(page).click()
+    await page.evaluate(()=>document.body.setAttribute('data-ds-dark-theme',''))
+    await nextPaint(page)
+    expect(await page.evaluate(()=>window.homeOperations.thumbnailRequests.length)).toBe(count)
+    await page.evaluate(()=>window.homeOperations.dispose())
+    expect(await page.locator('[data-home-theme-canvas]').count()).toBe(1)
+    expect(await page.locator('[data-odyssey-theme-gallery]').count()).toBe(0)
+  }finally{await page.close()}
+},30000)
+
+it('keeps the gallery tab, native wallpaper and Quick Start instances through appearance and locale changes',async()=>{
+  const page=await fixture({themes:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations')
+    await page.locator('.odyssey-operations-pagination button').nth(2).click();await waitCase(page,2)
+    await page.evaluate(()=>{window.homeOperations.retained=[document.querySelector('.odyssey-operations-grid'),document.querySelector('.odyssey-operations-usecase'),document.querySelector('.odyssey-operations-quick-card')];window.homeOperations.appearanceRequests=[];document.addEventListener('sherlock:home-appearance-request',event=>window.homeOperations.appearanceRequests.push(event.detail))})
+    await wallpaperTab(page).click();await wallpaperCards(page).last().click()
+    expect(await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-home-theme-id')).toBe('koi-pond')
+    const mode=page.locator('[data-odyssey-operations-appearance]')
+    expect(await mode.getAttribute('aria-label')).toBe('切换为深色')
+    expect(await mode.evaluate(element=>({button:element.offsetWidth,image:element.querySelector('img').offsetWidth}))).toEqual({button:32,image:18})
+    expect(await mode.locator('img').evaluate(async image=>{await image.decode();return [image.naturalWidth,image.naturalHeight]})).toEqual([18,18])
+    await mode.click();await mode.evaluate(element=>element.click())
+    expect(await page.evaluate(()=>window.homeOperations.appearanceRequests.length)).toBe(1)
+    expect(await page.locator('body').getAttribute('data-ds-dark-theme')).toBeNull()
+    await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');await nextPaint(page)
+    expect(await wallpaperCards(page).locator('.odyssey-wallpaper-name').allTextContents()).toEqual(wallpaperNamesEn)
+    await page.evaluate(()=>{document.body.setAttribute('data-ds-dark-theme','');document.dispatchEvent(new CustomEvent('sherlock:home-appearance-reply',{detail:{requestId:window.homeOperations.appearanceRequests[0].requestId,ok:true}}))})
+    await expect.poll(()=>mode.getAttribute('aria-label')).toBe('Switch to light mode')
+    expect(await mode.locator('img').evaluate(async image=>{await image.decode();return [image.naturalWidth,image.naturalHeight]})).toEqual([18,18])
+    expect(await wallpaperTab(page).getAttribute('aria-selected')).toBe('true')
+    expect(await wallpaperCards(page).last().getAttribute('aria-pressed')).toBe('true')
+    expect(await page.evaluate(()=>localStorage.getItem('ework.home-background.v1'))).toBe('koi-pond')
+    await quickTab(page).click();await waitCase(page,2)
+    expect(await page.evaluate(()=>window.homeOperations.retained.every(element=>element.isConnected)&&window.homeOperations.retained[0]===document.querySelector('.odyssey-operations-grid'))).toBe(true)
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+  }finally{await page.close()}
+},30000)
+
+it('navigates wallpaper tabs and the five-column gallery by keyboard and keeps a failed appearance request recoverable',async()=>{
+  const page=await fixture({themes:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations')
+    await quickTab(page).focus();await page.keyboard.press('ArrowRight')
+    expect(await wallpaperTab(page).getAttribute('aria-selected')).toBe('true')
+    await page.keyboard.press('Tab');expect(await page.locator('[data-odyssey-operations-appearance]').evaluate(element=>element===document.activeElement)).toBe(true)
+    await page.keyboard.press('Tab');expect(await wallpaperCards(page).first().evaluate(element=>element===document.activeElement)).toBe(true)
+    await page.keyboard.press('ArrowDown');expect(await wallpaperCards(page).nth(5).evaluate(element=>element===document.activeElement)).toBe(true)
+    await page.keyboard.press('End');expect(await wallpaperCards(page).last().evaluate(element=>element===document.activeElement)).toBe(true)
+    expect(await wallpaperCards(page).last().evaluate(element=>getComputedStyle(element).outlineStyle)).toBe('solid')
+    await page.keyboard.press('Space')
+    expect(await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-home-theme-id')).toBe('koi-pond')
+    await page.evaluate(()=>document.addEventListener('sherlock:home-appearance-request',event=>document.dispatchEvent(new CustomEvent('sherlock:home-appearance-reply',{detail:{requestId:event.detail.requestId,ok:false,error:'原生明暗设置暂不可用'}}))))
+    const mode=page.locator('[data-odyssey-operations-appearance]');await mode.click()
+    await expect.poll(()=>page.getByRole('alert').textContent()).toContain('原生明暗设置暂不可用')
+    expect(await mode.isEnabled()).toBe(true)
+    expect(await wallpaperTab(page).getAttribute('aria-selected')).toBe('true')
+    expect(await wallpaperCards(page).last().getAttribute('aria-pressed')).toBe('true')
+    expect(await page.locator('body').getAttribute('data-ds-dark-theme')).toBeNull()
+  }finally{await page.close()}
+},30000)
+
+it.each([
+  {width:1380,height:900,dark:false,en:false}, {width:1380,height:900,dark:true,en:false},
+  {width:1380,height:900,dark:false,en:true}, {width:1380,height:900,dark:true,en:true},
+  ...[400,550,780].flatMap(contentWidth=>[480,640].flatMap(contentHeight=>[false,true].map(dark=>({width:contentWidth+(contentWidth<502?322:338),height:contentHeight+20,contentWidth,contentHeight,dark,en:dark}))))
+])('keeps all wallpaper previews and full names readable and clickable without inner scrolling %j',async options=>{
+  const page=await fixture({...options,themes:true})
+  try{
+    if(options.en)await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en')
+    await toggle(page).click();await waitState(page,'operations')
+    const quickReturnTop=(await toggle(page).boundingBox()).y
+    await wallpaperTab(page).click();await nextPaint(page)
+    expect((await toggle(page).boundingBox()).y).toBeCloseTo(quickReturnTop,1)
+    const geometry=await page.evaluate(()=>{
+      const section=document.querySelector('[data-odyssey-home-operations]'),pane=document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(),button=document.querySelector('[data-odyssey-home-operations-toggle]').getBoundingClientRect()
+      return {galleryWidth:document.querySelector('[data-odyssey-theme-gallery]').getBoundingClientRect().width,columns:getComputedStyle(document.querySelector('[data-odyssey-theme-gallery]')).gridTemplateColumns.split(' ').length,returnClearance:pane.bottom-button.top,pane:{x:pane.x,y:pane.y,width:pane.width,height:pane.height},scrollX:section.scrollWidth>section.clientWidth+1,scrollY:section.scrollHeight>section.clientHeight+1,cards:[...document.querySelectorAll('[data-odyssey-theme-gallery] [data-home-theme-id]')].map(card=>{const rect=card.getBoundingClientRect(),label=card.querySelector('.odyssey-wallpaper-name'),preview=card.querySelector('.odyssey-wallpaper-preview').getBoundingClientRect(),hit=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2),range=document.createRange();range.selectNodeContents(label);return {id:card.dataset.homeThemeId,width:rect.width,height:rect.height,inside:rect.left>=pane.left&&rect.right<=pane.right&&rect.top>=pane.top&&rect.bottom<=Math.min(pane.bottom,button.top-12),hit:hit===card||card.contains(hit),previewHeight:preview.height,previewWidth:preview.width,font:parseFloat(getComputedStyle(label).fontSize),nameLines:range.getClientRects().length,nameClipped:label.scrollWidth>label.clientWidth+1||label.scrollHeight>label.clientHeight+1}})}
+    })
+    if(options.contentWidth)expect(geometry.galleryWidth).toBeCloseTo(options.contentWidth,0)
+    if(options.contentHeight)expect(geometry.returnClearance).toBeCloseTo(options.contentHeight===480?48:104,1)
+    expect(geometry.scrollX).toBe(false);expect(geometry.scrollY).toBe(false);expect(geometry.cards).toHaveLength(15)
+    for(const card of geometry.cards){expect(card.inside,card.id).toBe(true);expect(card.hit,card.id).toBe(true);expect(card.nameClipped,card.id).toBe(false);expect(card.font).toBe(12);expect(card.previewHeight).toBeGreaterThanOrEqual(24);expect(card.previewWidth/card.previewHeight).toBeCloseTo(146.4/78,1);expect(card.nameLines).toBeLessThanOrEqual(2)}
+    expect(await wallpaperCards(page).locator('.odyssey-wallpaper-name').allTextContents()).toEqual(options.en?wallpaperNamesEn:wallpaperNamesZh)
+    const name=`${options.dark?'dark':'light'}-${options.en?'en':'zh'}-${options.width}x${options.height}-${options.panelWidth||0}`
+    await region(page).screenshot({path:`${galleryEvidence}/${name}.png`})
+    await page.locator('.pI_x6G_centerCol').screenshot({path:`${galleryEvidence}/${name}-pane.png`})
+    await writeFile(`${galleryEvidence}/${name}.json`,JSON.stringify(geometry,null,2))
+  }finally{await page.close()}
+},30000)
+
+it('returns from a complete narrow wallpaper gallery with the native outer wheel gesture while preserving stacked Quick Start gestures',async()=>{
+  const page=await fixture({width:722,height:660,themes:true})
+  try{
+    await toggle(page).click();await waitState(page,'operations');await wallpaperTab(page).click()
+    expect(await dispatchWheel(page,'[data-odyssey-theme-gallery] [data-home-theme-id]',-800)).toBe(true)
+    await waitState(page,'input')
+    expect(await page.evaluate(()=>document.querySelector('.wSkVaW_composerHero').inert)).toBe(false)
+    await toggle(page).click();await waitState(page,'operations');await quickTab(page).click()
+    expect(await dispatchWheel(page,'.odyssey-operations-quick-card',-800)).toBe(false)
+    expect(await state(page)).toBe('operations')
+    expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+  }finally{await page.close()}
+},15000)
+
+it.each([{width:722,height:500,en:true,name:'400-en'},{width:1380,height:900,en:false,name:'780-zh'}])('keeps the inactive dark tab readable over the unchanged native gray wallpaper %j',async options=>{
+  const page=await fixture({...options,dark:true,themes:true})
+  try{
+    if(options.en)await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en')
+    await toggle(page).click();await waitState(page,'operations');await wallpaperTab(page).click();await nextPaint(page)
+    const rect=await quickTab(page).boundingBox()
+    const enhanced=PNG.sync.read(await page.screenshot())
+    await region(page).screenshot({path:`${galleryEvidence}/readability-${options.name}-enhanced.png`})
+    const appearances=await page.locator('[data-odyssey-operations-tab]').evaluateAll(tabs=>tabs.map(tab=>{const style=getComputedStyle(tab);return {selected:tab.getAttribute('aria-selected')==='true',color:style.color,background:style.backgroundColor,border:style.borderTopWidth}}))
+    expect(appearances[0].color).not.toBe(appearances[1].color)
+    for(const tab of appearances){expect(tab.background).toBe('rgba(0, 0, 0, 0)');expect(tab.border).toBe('0px')}
+    await page.locator('[data-odyssey-operations-tab]').evaluateAll(tabs=>tabs.forEach(tab=>{tab.style.setProperty('text-shadow','none','important');tab.style.setProperty('color',tab.getAttribute('aria-selected')==='true'?'#ededed':'#999','important')}))
+    const control=PNG.sync.read(await page.screenshot())
+    await region(page).screenshot({path:`${galleryEvidence}/readability-${options.name}-control.png`})
+    await quickTab(page).evaluate(tab=>tab.style.setProperty('color','transparent','important'))
+    const bare=PNG.sync.read(await page.screenshot())
+    const energy=frame=>{
+      let sum=0,count=0
+      for(let y=Math.ceil(rect.y);y<rect.y+rect.height;y++)for(let x=Math.ceil(rect.x);x<rect.x+rect.width;x++){
+        const pixel=patchRgb(frame,x,y,0),background=patchRgb(bare,x,y,0)
+        sum+=pixel.reduce((total,value,channel)=>total+Math.abs(value-background[channel]),0)/3;count++
+      }
+      return sum/count
+    }
+    const metrics={enhanced:energy(enhanced),control:energy(control),ratio:energy(enhanced)/energy(control),appearances}
+    await writeFile(`${galleryEvidence}/readability-${options.name}.json`,JSON.stringify(metrics,null,2))
+    expect(metrics.ratio,'the real gray-background tab gains visible ink contrast without a backing').toBeGreaterThan(1.25)
+  }finally{await page.close()}
+},20000)
