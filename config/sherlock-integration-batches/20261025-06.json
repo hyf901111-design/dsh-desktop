@@ -1,0 +1,395 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-06",
+  "branch": "codex/integration/20261025-06",
+  "baseMainCommit": "6b3fc0549aadb962e808e4f62ccde0adb006821d",
+  "expectedMainCommit": "6b3fc0549aadb962e808e4f62ccde0adb006821d",
+  "createdAt": "2026-10-25T01:37:10.003Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首页真实六组件看板与十二步原生笔记演示",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "6b3fc0549aadb962e808e4f62ccde0adb006821d",
+        "tipCommit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+        "commits": [
+          {
+            "commit": "d86079f6e990a17ea342762829122c47a216c07e",
+            "parents": [
+              "6b3fc0549aadb962e808e4f62ccde0adb006821d"
+            ],
+            "subject": "按六组件真实看板编排首页演示步骤与阅读节奏"
+          },
+          {
+            "commit": "d4538ad40f03d539569f86d0644270356b81fc65",
+            "parents": [
+              "d86079f6e990a17ea342762829122c47a216c07e"
+            ],
+            "subject": "明确真实数据六组件看板与笔记任务演示扩展方案"
+          },
+          {
+            "commit": "081f679ea1e2f09d97af70ef37a515ae23954e83",
+            "parents": [
+              "d4538ad40f03d539569f86d0644270356b81fc65"
+            ],
+            "subject": "为批量自选股演示保留暂停可控的搜索时间预算"
+          },
+          {
+            "commit": "5890f468138a1f197b589bb5308ef71ef9dd29c6",
+            "parents": [
+              "081f679ea1e2f09d97af70ef37a515ae23954e83"
+            ],
+            "subject": "保留教程期间的原生侧栏折叠并继续拦截会话导航"
+          },
+          {
+            "commit": "4edf114e9f76df9010759ac4ca41fbf910f9c350",
+            "parents": [
+              "5890f468138a1f197b589bb5308ef71ef9dd29c6"
+            ],
+            "subject": "接入笔记示例原生任务输入与持久化演示回复"
+          },
+          {
+            "commit": "2c80d58edb15cbd2da0dab0150ee096c4c11f185",
+            "parents": [
+              "4edf114e9f76df9010759ac4ca41fbf910f9c350"
+            ],
+            "subject": "扩展笔记示例十二步原生任务与段落改写流程"
+          },
+          {
+            "commit": "6f8a079e20d7da84c2e062112395261e862b6c38",
+            "parents": [
+              "2c80d58edb15cbd2da0dab0150ee096c4c11f185"
+            ],
+            "subject": "扩展笔记用例的原生优化任务与选段改写流程"
+          },
+          {
+            "commit": "9aafdd2ec2fc4a7245edb2a9656299c29797de51",
+            "parents": [
+              "6f8a079e20d7da84c2e062112395261e862b6c38"
+            ],
+            "subject": "记录笔记十二步演示的聚焦验证结果"
+          },
+          {
+            "commit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+            "parents": [
+              "9aafdd2ec2fc4a7245edb2a9656299c29797de51"
+            ],
+            "subject": "接入真实行情六组件看板并稳定原生教程取景与侧栏"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-10-25-natural-home-guides.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/superpowers/specs/2026-10-25-natural-home-guides-design.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-notes-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-guide-notes-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes-data.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guide-notes-native.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-guide-financial-bridge.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-strip.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-data.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-native-editor.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-native.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-portal.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides-review.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-notes-host.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-notes-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-send-preview.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-expanded-pipeline-1-20261025.log",
+            "verifiedCommit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+            "completedAt": "2026-10-25T01:36:32.734Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-expanded-pipeline-2-20261025.log",
+            "verifiedCommit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+            "completedAt": "2026-10-25T01:36:32.734Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-notes-runtime.test.js",
+              "test/home-notes-host.test.js",
+              "test/home-guide-notes-native.test.ts",
+              "test/home-guide-notes-data.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-expanded-units-20261025.log",
+            "verifiedCommit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+            "completedAt": "2026-10-25T01:36:32.734Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "builds six live native components.*stacked=true|opens native.*resident transition|waits for a stable.*initially-hidden",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-expanded-native-critical-20261025.log",
+            "verifiedCommit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+            "completedAt": "2026-10-25T01:36:32.734Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-notes-shell-browser.test.js",
+              "-t",
+              "600px pane walkthrough",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-expanded-note-shell-20261025.log",
+            "verifiedCommit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+            "completedAt": "2026-10-25T01:36:32.734Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-guide-expanded-typecheck-20261025.log",
+            "verifiedCommit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+            "completedAt": "2026-10-25T01:36:32.734Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "git diff --check passed",
+            "verifiedCommit": "98b5e0799594912f5d11e4c51bc1d19139b0c7b3",
+            "completedAt": "2026-10-25T01:36:32.734Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实renderer聚焦：C81/81、B74、D35及普通Notes30；Root最终83直接检查、实际production pointer单列六卡及侧栏4场、600px十二步保存重开1场通过。Electron正式包仍待clean main构建实机验收；未把夹具等同真实客户端。"
+        },
+        "acceptanceCriteria": [
+          "六组件10指数9自选3条真实联动，采用正式数据桥及原生来源/时点/错误/日历；布局符合截图并可完整阅读。",
+          "Board/Notes开始即折左栏开原生右栏；选择、任务、建议与应用均使用原生界面，暂停/取消/CAS保持。",
+          "PPT使用原EWork/Kimi K3实际生成20页资产，简短需求及最终点击交付卡打开右屏保持。",
+          "从干净本地main构建签名客户端，版本1.3.5不变、不发布、不推送，实际三场及回访通过后交还用户。"
+        ],
+        "risks": [
+          "正式Electron跨隔离世界、真实数据源搜索和新增两段Notes仍需新包实际验收，源测试不替代。"
+        ],
+        "generatedAt": "2026-10-25T01:36:32.734Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native.test.js",
+        "test/home-guide-native-strip.test.js",
+        "test/home-guide-pointer.test.ts",
+        "test/home-guides.test.ts",
+        "test/home-guides-review.test.ts",
+        "test/home-notes-runtime.test.js",
+        "test/home-notes-host.test.js",
+        "test/home-guide-notes-native.test.ts",
+        "test/home-guide-notes-data.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native-browser.test.js",
+        "-t",
+        "builds six live native components.*stacked=true|opens native.*resident transition|waits for a stable.*initially-hidden",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-notes-shell-browser.test.js",
+        "-t",
+        "600px pane walkthrough",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
