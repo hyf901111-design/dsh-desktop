@@ -30,23 +30,25 @@ Files: `src/preload/home-themes.ts`、new `src/preload/home-theme-controls.ts`�
 
 Contract: `HomeThemeController { getSelected(): HomeTheme; select(id: HomeTheme): void; getThumbnail(id: HomeTheme): string | null; subscribe(listener: () => void): () => void }` exported from home-theme-controls.ts. `getHomeThemeController(doc: Document): HomeThemeController | undefined` exported from home-themes.ts. Operations Options receives optional `themeController` and `onToggleAppearance?: () => Promise<void>`; index wires both after mountHomeThemes. B/C可在编辑前协商必要最小调整并通知Root。
 
-- [ ] 编写最小失败检查：真实设置路径、选择/订阅/恢复、隐藏预览不提前创建、dispose。
-- [ ] 公开controller，移除dock UI并沿用真实持久化/动态背景。
-- [ ] 接入真实native ThemeRuntime最小桥，不导入整个native插件到preload，不伪造body模式。
-- [ ] 运行直接相关测试/类型检查，独审后中文提交。
+- [x] 编写最小失败检查：真实设置路径、选择/订阅/恢复、隐藏预览不提前创建、dispose。
+- [x] 公开controller，移除dock UI并沿用真实持久化/动态背景。
+- [x] 接入真实native ThemeRuntime最小桥，不导入整个native插件到preload，不伪造body模式。
+- [x] 运行直接相关测试/类型检查，独审后中文提交。88767f52，7文件60项直接检查与tsc通过；旧preset无关fixture失败独立记录。
 
 ## Task 2 — Figma tabs and gallery (C)
 
 Files: `src/preload/home-operations.ts`、`home-operations.css`、如需独立`home-theme-gallery.ts/css`、`figma-home.css`旧dock空白清理、直接browser测试。不得编辑B的owner/index/native transform。
 
-- [ ] 锁定15预览/标准网格、页签/模式保留、无dock、窄高/键盘的行为和渲染回归。
-- [ ] 消费Task1接口，Figma中英显示名，不改变规范key，不另建壁纸或store。
-- [ ] 保持Quick Start原实例、carousel/hero.inert/区域切换和guide；页签隐藏停止相应无用绘制。
-- [ ] 聚焦真实browser/raster检查、类型检查、独审和中文提交。
+- [x] 锁定15预览/标准网格、页签/模式保留、无dock、窄高/键盘的行为和渲染回归。
+- [x] 消费Task1接口，Figma中英显示名，不改变规范key，不另建壁纸或store。
+- [x] 保持Quick Start原实例、carousel/hero.inert/区域切换和guide；页签隐藏停止相应无用绘制。
+- [x] 聚焦真实browser/raster检查、类型检查、独审和中文提交。b0e55e85。初次102项直接回归101通过，旧tint双模式共用15秒预算超时；保留全部断言拆为两模式独立场景后随5项最终定向通过，矩阵/键盘/滚轮18项通过，tsc通过。未冒称重新跑完整套。
+
+Root实际查看标准和窄英截图：暗色未选tab在当前默认灰壁纸上不够可辨，因此授权仅暗色header适度提亮并加克制黑text-shadow；仍然无tab背景/描边、不改壁纸。标准780×640为5×3，窄高按真实名称测量调整列数，始终保持预览比例146.4:78、字体12/18、名称至多两行。正常pane高度>=600保持已验收按钮H-104，短480高度响应H-48，Quick/Gallery同位置。
 
 ## Task 3 — Integration and visible client (Root + D review)
 
-- [ ] 独立复核数据/事件/生命周期和四卡增强最终范围；聚焦检查通过。
+- [x] 独立复核数据/事件/生命周期和四卡增强最终范围；聚焦检查通过。D审B/C无阻塞，B审小卡无阻塞；Root补查真实渲染图。
 - [ ] Plan A batch08或更新批次合入干净main，仅从main build_and_run --verify。
 - [ ] 实际签名包/preload检查，正式UI验证主题/明暗/恢复/窄尺寸/四卡；PPT最终交付自动点击路径复核，保持客户端打开。
 - [ ] 更新持久证据和实施勾选，本地中文提交；不发外部消息、不push。
