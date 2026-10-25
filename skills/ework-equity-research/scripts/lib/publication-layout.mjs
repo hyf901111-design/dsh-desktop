@@ -155,6 +155,8 @@ tbody tr:nth-child(even){background:#fafcfd}
 .table-wrap{overflow-x:auto}
 .table-title{margin-bottom:4px}
 .table-meta{margin:3px 0}
+.model-rationale-index table{table-layout:fixed}
+.model-rationale-index th:first-child,.model-rationale-index td:first-child{width:4.5em;min-width:4.5em;white-space:nowrap;overflow-wrap:normal}
 .source-note{margin:5px 0 10px}
 .source-note a{text-decoration:none}
 .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
@@ -184,7 +186,7 @@ table{font-size:11px}
 @page{size:A4;margin:14mm 15mm 16mm}
 @media print{.cover-main{width:68%}.cover-sidebar{float:right;width:29%;margin-bottom:0}.cover-history,.chart-grid,.visual-index{grid-template-columns:1fr 1fr}.cover-subtitle{display:flex}.cover-subtitle strong{display:inline;margin-top:0}.cover-identity span{display:inline;margin-left:22px}body{background:white;font-size:9.5pt;line-height:1.65}
 main{margin:0;padding:0;max-width:none}
-.publication-cover{border-top-width:2.7mm;padding-top:3mm;break-after:page}
+.publication-cover{border-top-width:2.7mm;padding-top:3mm;break-after:auto}
 .cover-date{font-size:9pt}
 .publication-brand{top:3mm;font-size:14pt}
 .official-logo svg{width:30mm;height:auto}
@@ -214,7 +216,7 @@ h1{font-size:20pt;margin:6mm 0 2mm;line-height:1.45}
 .cover-history th,.cover-history td{padding:.8mm}
 .cover-history .small,.cover-history .table-meta{font-size:6.2pt;line-height:1.4}
 .forecast-status{font-size:7.3pt;line-height:1.6;padding-top:1.5mm}
-.publication-contents{margin-top:0;break-after:page}
+.publication-contents{margin-top:0;break-after:auto}
 .publication-contents h2:first-child{margin-top:0}
 .publication-contents h2{font-size:12pt;margin-top:4mm}
 .contents-list{font-size:9pt}
@@ -230,7 +232,7 @@ h1,h2,h3{break-inside:avoid;break-after:avoid}
 .small,small,.table-meta,.scope-note{font-size:7.3pt}
 p{orphans:3;widows:3;margin:2.3mm 0}
 dl{font-size:8.3pt}
-.thesis{padding:2mm 0}
+.thesis{padding:2mm 0;break-inside:avoid;page-break-inside:avoid}
 .note{font-size:8.4pt;padding:2.5mm 3mm;margin:3mm 0}
 .gap{break-inside:auto}
 .synthetic{font-size:8pt;padding:2mm 3mm}

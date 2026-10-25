@@ -329,7 +329,7 @@ export function runForecastDCF(packet,verifiedFacts,successfulCalculations,diagn
     try{
      const evaluate=growth=>valueScenario(b.scenario,forecasts(b.scenario,base,interim,get,model.valuationAsOf,{constantGrowth:growth}),wacc.value,b.g.value,b.roic.value,bridge,model.valuationAsOf,wacc.output.sourceRefs).perShareValue
      let lo=low.value,hi=high.value,flo=evaluate(lo).sub(bridge.price.value),fhi=evaluate(hi).sub(bridge.price.value)
-     if(flo.cmp('0')*fhi.cmp('0')>0)sensitivities.reverseGrowth=unavailable('NO_BRACKET','显式收入增长区间未夹住当前价格，未虚构根。')
+     if(flo.cmp('0')*fhi.cmp('0')>0)sensitivities.reverseGrowth={...unavailable('NO_BRACKET','显式收入增长区间未夹住当前价格，未虚构根。'),lowerPerShareValue:flo.add(bridge.price.value),upperPerShareValue:fhi.add(bridge.price.value),price:bridge.price.value,fixedAssumptions:'首个预测年保持原情景；仅后续五年收入增长统一求根，利润率、税率、D&A、capex、NWC、WACC、g/ROIC及价值桥不变。'}
      else{
       let mid=lo,value=evaluate(lo),residual=value.sub(bridge.price.value),iterations=0
       for(;iterations<160;iterations++){

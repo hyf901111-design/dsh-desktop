@@ -54,7 +54,7 @@ function dcfPlan(dcf){
  summary.push(...(dcf.limitations??[]).map(text=>note(text,allRefs)))
  const reasons=[...new Set((dcf.assumptions??[]).map(a=>a.reason??''))],reasonKey=reason=>'R'+String(reasons.indexOf(reason)+1).padStart(2,'0')
  const assumptionRefs=refsOf((dcf.assumptions??[]).flatMap(a=>a.refs))
- const wacc=dcf.wacc??{},assumptions=[note('经营驱动、折现参数及价值调整按证据属性区分。代理推导与研究假设不冒充公司披露。相同理由以索引引用，下表保留全部研究依据原文。',allRefs),table('经营与估值研究假设',['参数','数值','属性','依据索引 / 时点'],(dcf.assumptions??[]).map(a=>[a.label??a.id,cell(a.value,a.unit),KINDS[a.kind]??a.kind,`${reasonKey(a.reason??'')}${a.asOf?' · '+a.asOf:''}`]),assumptionRefs),...(reasons.length?[table('研究依据全文索引',['索引','完整研究依据'],reasons.map(reason=>[reasonKey(reason),reason]),assumptionRefs,'同一理由仅完整列示一次，逐参数索引与时点见上表；不截断原文。')]:[]),table('WACC参数与折现口径',['参数','数值'],[['无风险利率',ratio(wacc.riskFree)],['Beta',cell(wacc.beta,'multiple')],['权益风险溢价',ratio(wacc.erp)],['债务权重',ratio(wacc.debtWeight)],['税前债务成本',ratio(wacc.debtCost)],['税率',ratio(wacc.tax)],['WACC',ratio(wacc.value)]],wacc.sourceRefs??[]),note(wacc.formula??'WACC公式以计算结果为准。',wacc.sourceRefs??[])]
+ const wacc=dcf.wacc??{},assumptions=[note('经营驱动、折现参数及价值调整按证据属性区分。代理推导与研究假设不冒充公司披露。相同理由以索引引用，下表保留全部研究依据原文。',allRefs),table('经营与估值研究假设',['参数','数值','属性','依据索引 / 时点'],(dcf.assumptions??[]).map(a=>[a.label??a.id,cell(a.value,a.unit),KINDS[a.kind]??a.kind,`${reasonKey(a.reason??'')}${a.asOf?' · '+a.asOf:''}`]),assumptionRefs),...(reasons.length?[{...table('研究依据全文索引',['索引','完整研究依据'],reasons.map(reason=>[reasonKey(reason),reason]),assumptionRefs,'同一理由仅完整列示一次，逐参数索引与时点见上表；不截断原文。'),layout:'rationale-index'}]:[]),table('WACC参数与折现口径',['参数','数值'],[['无风险利率',ratio(wacc.riskFree)],['Beta',cell(wacc.beta,'multiple')],['权益风险溢价',ratio(wacc.erp)],['债务权重',ratio(wacc.debtWeight)],['税前债务成本',ratio(wacc.debtCost)],['税率',ratio(wacc.tax)],['WACC',ratio(wacc.value)]],wacc.sourceRefs??[]),note(wacc.formula??'WACC公式以计算结果为准。',wacc.sourceRefs??[])]
  const forecasts=[],discounts=[],bridges=[]
  for(const s of scenarios){
   const name=scenarioName(s),rows=s.forecastRows??[],refs=refsOf(s.sourceRefs,rows.flatMap(r=>r.sourceRefs))
@@ -82,6 +82,12 @@ function dcfPlan(dcf){
  const reverse=sensitivity.reverseGrowth,reverseNodes=[]
  if(reverse?.status==='calculated'&&available(reverse.constantRevenueGrowth??reverse.value)){
   reverseNodes.push(note('现价隐含增长为固定其他条件后的受控反解，非一致预期；不证明市场实际采用该假设。',reverse.sourceRefs??[]),table('受控反向增长求解',['项目','结果'],[['现价隐含常量收入增长',ratio(reverse.constantRevenueGrowth??reverse.value)],['求解下界',ratio(reverse.lowerGrowth)],['求解上界',ratio(reverse.upperGrowth)],['模型每股值',perShare(reverse.perShareValue)],['已核验价格',perShare(reverse.price)],['单股估值残差',cell(reverse.residualPerShare,'exact_per_share')],['迭代次数',cell(String(reverse.iterations),'integer')]],reverse.sourceRefs??[]),note(reverse.fixedAssumptions??'其余固定假设见计算结果。',reverse.sourceRefs??[]))
+ }else if(reverse?.code==='NO_BRACKET'){
+  const refs=reverse.sourceRefs??[],endpoints=available(reverse.lowerPerShareValue)&&available(reverse.upperPerShareValue)
+  reverseNodes.push(note(reverse.reason,refs),table('反向估值区间核对',['核对项目','本次模型结果'],[['求解状态','显式区间未夹住登记价格，未求得根'],['测试增长率下界',ratio(reverse.lowerGrowth)],['下界每股模型值',perShare(reverse.lowerPerShareValue)],['测试增长率上界',ratio(reverse.upperGrowth)],['上界每股模型值',perShare(reverse.upperPerShareValue)],['已核验登记价格',perShare(reverse.price??dcf.currentPrice?.value)]],refs))
+  if(reverse.fixedAssumptions)reverseNodes.push(note('控制条件：'+reverse.fixedAssumptions,refs))
+  if(!endpoints)reverseNodes.push(note('本次结果未保存区间端点的每股模型值，不能据此判断登记价格位于两端结果的哪一侧。',refs))
+  reverseNodes.push(note('该结果仅说明：在本次经营驱动、折现、终值与价值桥条件固定时，测试区间无法定位与登记价格相等的增长率。不代表市场实际采用的增长预期，也不能单独证明市场价格错误；应结合后续披露更新假设后重新检验。',refs))
  }else reverseNodes.push(note(reverse?.reason??'本次未提供受控反向增长求解结果，不推定当前价格隐含的增长率。',reverse?.sourceRefs??[]))
  return [section('section-dcf-summary','驱动式DCF情景估值',summary),section('section-dcf-assumptions','研究假设与WACC参数',assumptions),section('section-dcf-forecast','经营驱动与FCFF预测',forecasts),section('section-dcf-discount','实际年限折现与现值',discounts),section('section-dcf-terminal','终值与企业价值构成',terminals),section('section-dcf-owner-bridge','归属经营价值与权益桥',bridges),...(sensitivities.length?[section('section-dcf-sensitivity','估值敏感性与参数边界',sensitivities)]:[]),section('section-dcf-reverse','反向估值与价格隐含条件',reverseNodes)]
 }
@@ -187,7 +193,7 @@ export function renderResearchV5(calculation,helpers,index,{startNumber=0}={}){
   if(node.type==='note')return `<p class="small model-note">${e(node.text)}</p>${sourceNote(node.refs??[])}`
   if(node.type==='table'){
    const entry=index.table(node.title),body=node.rows.map(row=>'<tr>'+row.map(value=>`<td${value&&typeof value==='object'?' class="number"':''}>${e(value&&typeof value==='object'?displayValue(value):value)}</td>`).join('')+'</tr>')
-   return `<div class="numbered-table model-table"><h3 id="${entry.id}" class="table-title" data-publication-kind="table">${e(entry.title)}</h3>${node.meta?`<div class="table-meta">${e(node.meta)}</div>`:''}${helpers.table(node.headers,body)}${sourceNote(node.refs??[])}</div>`
+   return `<div class="numbered-table model-table${node.layout==='rationale-index'?' model-rationale-index':''}"><h3 id="${entry.id}" class="table-title" data-publication-kind="table">${e(entry.title)}</h3>${node.meta?`<div class="table-meta">${e(node.meta)}</div>`:''}${helpers.table(node.headers,body)}${sourceNote(node.refs??[])}</div>`
   }
   const entry=index.chart(node.title),svg=node.kind==='value-bridge'?bridgeSvg(node,e):node.kind==='heatmap'?heatmapSvg(node,e):seriesSvg(node,e)
   return `<figure class="wide model-chart" id="${entry.id}" data-publication-kind="figure" data-chart-kind="${node.kind}"><figcaption>${e(entry.title)}<small>${e(node.meta)}</small></figcaption>${svg}${sourceNote(node.refs??[])}</figure>`

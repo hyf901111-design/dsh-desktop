@@ -103,6 +103,22 @@ describe('V5 deterministic driver FCFF',()=>{
   const f=createForecastDcfFixture();parameter(f,'reverse-low').value='0.1';parameter(f,'reverse-high').value='0.3'
   const{result}=run(f);expect(result.status).toBe('calculated');expect(result.sensitivities.reverseGrowth).toMatchObject({status:'unavailable',code:'NO_BRACKET'})
  })
+ it('retains exact evaluated endpoints for an unavailable reverse range without changing its scenario or inventing a root',()=>{
+  const f=createForecastDcfFixture();parameter(f,'reverse-low').value='0.1';parameter(f,'reverse-high').value='0.3'
+  const{result,diagnostics}=run(f),reverse=result.sensitivities.reverseGrowth
+  expect(diagnostics).toEqual([]);expect(reverse).toMatchObject({status:'unavailable',code:'NO_BRACKET',lowerGrowth:'0.1',upperGrowth:'0.3',price:'100',isConsensus:false})
+  expect(reverse.fixedAssumptions).toContain('首个预测年保持原情景');expect(reverse.constantRevenueGrowth).toBeUndefined()
+  expect(result.scenarios.find(s=>s.id==='base').perShareValue).toBe('242.564025869986521178385162')
+  // Independent public model inputs express the same two endpoint scenarios:
+  // the first year is unchanged; only subsequent years use constant growth.
+  for(const [growth,field]of[['0.1','lowerPerShareValue'],['0.3','upperPerShareValue']]){
+   const endpoint=createForecastDcfFixture();endpoint.packet.dcf.reverseGrowth.requested=false
+   endpoint.packet.dcf.parameters.push({id:'endpoint-growth',value:growth,unit:'ratio',kind:'assumption',reason:'受控测试端点，非市场预期。',refs:['research-basis']})
+   endpoint.packet.dcf.scenarios.find(s=>s.id==='base').drivers.slice(1).forEach(row=>row.volumeGrowthRef='endpoint-growth')
+   const calculated=run(endpoint);expect(calculated.diagnostics).toEqual([])
+   expect(reverse[field]).toBe(calculated.result.scenarios.find(s=>s.id==='base').perShareValue)
+  }
+ })
  it('rolls official issued shares forward only by dated verified share-count events',()=>{
   const f=createForecastDcfFixture();f.facts.find(x=>x.id==='shares').period='2026-06-30'
   f.facts.push({id:'cancelled',metric:'sharesChange',period:'2026-08-31',scope:'合并',status:'verified',normalizedValue:'-1',normalizedUnit:'shares'})
