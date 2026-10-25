@@ -4,6 +4,7 @@ import {createConversationComponentService} from './conversation-components/serv
 import {installConversationComponentHandlers} from './conversation-components/ipc'
 import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
+import { PptxAnnotationService, registerPptxAnnotationHandlers, type PptxAnnotationHistoryEvent } from './pptx/annotations'
 import { createHomeGuideAssetService, registerHomeGuideAssetHandlers } from './home-guide-assets'
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import {installCalendarService} from './calendar/calendar-service'
@@ -59,7 +60,7 @@ import { isTrustedMainWindowEvent, registerTrustedMainWindowHandler } from './ip
 import { spawn } from 'node:child_process'
 import { homedir, tmpdir } from 'node:os'
 import { localAcceptanceOrigin } from './local-acceptance-services'
-import { isAbsolute, join, normalize, resolve } from 'node:path'
+import { dirname, isAbsolute, join, normalize, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { stat } from 'node:fs/promises'
@@ -1426,6 +1427,23 @@ async function bootstrap(): Promise<void> {
   let noteComponentLibrary:Awaited<ReturnType<typeof installComponentLibrary>>
   const calendarNotes = new NotesStore(join(app.getPath('userData'),'workspace-notes'))
   const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
+  const noteFiles = new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
+  registerPptxAnnotationHandlers({ ipcMain, getMainWindow: () => mainWindow, service: new PptxAnnotationService({
+    root: join(app.getPath('userData'), 'pptx-annotations'), owner: () => integrationOwner() || 'local',
+    resolveWorkspace: sessionId => canReadNoteSession(sessionId) ? new HarnessWorkspaceFileResolver(dshHome).resolveRoot(sessionId) : Promise.resolve(null),
+    resolveAuthorizedSource: async (sessionId, source) => {
+      if (!canReadNoteSession(sessionId)) return null
+      if (source.kind === 'note-file') {
+        const file = await noteFiles.reference(integrationOwner() || 'local', sessionId, { nodeId: source.nodeId, authorizationId: source.authorizationId })
+        return { path: file.path, root: dirname(file.path) }
+      }
+      return researchFilePreviewRegistry!.resolvePptxEditIdentity({ sessionId, nodeId: source.nodeId, authorizationId: source.authorizationId })
+    },
+    readHistory: async input => {
+      const history = await taskRpc<{ events: Array<{ event: PptxAnnotationHistoryEvent }>; hasMore: boolean }>('session.history', input)
+      return { events: history.events.map(item => item.event), hasMore: history.hasMore }
+    },
+  }) })
   const noteNativeMenu = new NoteNativeMenu({getWindow:()=>mainWindow,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession})
   app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow, onDocumentAdapter:adapter=>{notesDocumentAdapter=adapter},
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
@@ -1433,7 +1451,7 @@ async function bootstrap(): Promise<void> {
     canRead:canReadNoteSession,canWrite:sessionId=>!researchBoardsService?.isSharedSession(sessionId),canvasAvailable:sessionId=>canvasActions.isAvailable(sessionId),inspectCanvas:(sessionId,signal,args)=>canvasActions.execute({sessionId,method:'inspect',args:args??{}},signal),resetZoom:()=>executeDesktopMenuCommand('zoom-reset'),windowAction:clientWindowAction,nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,
     componentData:{request:(sessionId,args,control)=>{if(!noteComponentDataService)throw Error('组件数据刷新服务暂不可用。');return noteComponentDataService.request(sessionId,args,control)},visible:(sessionId,active)=>noteComponentDataService?.engine.setVisible(sessionId,active),reply:value=>noteComponentActions.respond(value)},
     captureSources:(sessionId,sources)=>{if(!researchContextBridge)throw Error('笔记资料服务暂不可用。');return researchContextBridge.captureSources(sessionId,sources)},
-    files:new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
+    files:noteFiles
   }))
   try {
     integrationService = await IntegrationService.open({
