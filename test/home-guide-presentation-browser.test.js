@@ -1,33 +1,37 @@
 import {readFile,mkdir} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
-import {join} from 'node:path'
+import {join,resolve} from 'node:path'
+import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
+import {patchDshFileDropClientSource} from '../src/main/state/dsh-file-drop-compat'
 import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {presentationHostFixture} from './fixtures/home-presentation-host.js'
 import {patchHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 const evidence='/tmp/home-presentation-natural-20261024'
-let browser,entry,conversationSource,runtimeSource,commandsSource,triggersSource,deliverySource
+let browser,entry,conversationSource,runtimeSource,commandsSource,triggersSource,deliverySource,fileDropSource
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  conversationSource=patchHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__Todo=TodoDock;exports.__User=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
  commandsSource=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__Popup=PopupSelectView;')
  triggersSource=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__Menu=MenuView;')
  deliverySource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8')
+ fileDropSource=patchDshFileDropClientSource(await readFile('test/fixtures/dsh-file-drop-1.0.0-client.js','utf8'));if(!fileDropSource)throw Error('Actual file-drop fixture drifted')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomePresentationGuide}from'./src/preload/home-guide-presentation';import{installSkillComposer}from'./src/preload/integrations/skill-composer';import{createSkillUseBridge}from'./src/preload/integrations/skill-use';import{installSkillCommandBridge}from'./src/preload/integrations/skill-command-bridge';import{installSkillCommand}from'./src/preload/integrations/skill-command';
+ import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomePresentationGuide}from'./src/preload/home-guide-presentation';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';import{installSkillComposer}from'./src/preload/integrations/skill-composer';import{createSkillUseBridge}from'./src/preload/integrations/skill-use';import{installSkillCommandBridge}from'./src/preload/integrations/skill-command-bridge';import{installSkillCommand}from'./src/preload/integrations/skill-command';
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});const empty=()=>null;
  const primitives=new Proxy({useAnchoredMaxHeight:()=>400,Tooltip:({children})=>children,MarkdownText:({text})=><div style={{whiteSpace:'pre-wrap'}}>{text}</div>,Markdown:({text})=><div>{text}</div>},{get:(target,key)=>target[key]??empty});
  const cordis={Service:class{constructor(ctx){this.ctx=ctx}}};
  const modules=id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/cordis'?cordis:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:empty,AttachmentRail:empty,ImageGallery:empty}:fake;
  const rt=window.runtimeDescriptor.factory(modules),native=window.conversationDescriptor.factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?rt:modules(id));
- const nativeModule=descriptor=>descriptor.factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?rt:modules(id)),commands=nativeModule(window.commandsDescriptor),triggers=nativeModule(window.triggersDescriptor),delivery=nativeModule(window.deliveryDescriptor);
+ const nativeModule=descriptor=>descriptor.factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?rt:modules(id)),commands=nativeModule(window.commandsDescriptor),triggers=nativeModule(window.triggersDescriptor),delivery=nativeModule(window.deliveryDescriptor),fileDrop=nativeModule(window.fileDropDescriptor);
  const disposers=[],ctx={get:()=>undefined,reflect:{provide(){}},effect(start){const stop=start();if(typeof stop==='function')disposers.push(stop);return stop??(()=>{})}};
+ let filePickSlot;fileDrop.apply({...ctx,slots:{inject:(_name,install)=>install(),register:(entry,Component)=>{if(entry.name==='conversation.input.left')filePickSlot=Component;return()=>{}}}});
  const events=new rt.ConversationEventRegistry(ctx),viewRegistry=new rt.ConversationViewRegistry(ctx);native.__register({...ctx,conversationEvents:events,conversationViews:viewRegistry});
  let deliverySlot;delivery.apply({...ctx,provide(){},get:name=>name==='connection'?{isLoopback:true}:name==='workspaces'?{openPath:async()=>{}}:undefined,conversationEvents:events,locale:{register:()=>()=>{},bind:()=>key=>key},slots:{inject:(_name,install)=>install(),register:(entry,Component)=>{deliverySlot={...entry,Component};return()=>{}}}});
  const sessionsRuntime=new rt.SessionRuntime(ctx,{sessions:{}},{},{events,views:viewRegistry}),session=sessionsRuntime.manager.get('demo');session.openState='open';session.installWindow([],false);
  const store=initial=>{let value=initial;const listeners=new Set();return{getSnapshot:()=>value,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},update:patch=>{value={...value,...patch};listeners.forEach(fn=>fn())}}};
  const view=store({view:'chat',draft:'',selection:null}),summary=store({byId:{demo:{id:'demo',displayTitle:'公司风格演示示例',cwd:window.cwd,blank:true}}}),projections=store({todos:null});
- const inputTriggers={adjudicate:async()=>undefined,serializeReference:(source,ref,signal)=>source==='chat-file'?native.chatFileReferenceCodec.serialize(ref,signal):Promise.resolve('/'+JSON.parse(ref).invocationName)};const shell=new native.SessionInputShell({actx:{},inputTriggers:()=>inputTriggers,defaultSink:async text=>{const before=shell.snapshot;await window.nativeBackend({action:'send',text});shell.commitSend(before.imageIds,before.draft)}}),inputHub={shell:()=>shell};
+ const inputTriggers={track(){},arbitrate:()=> 'pass',onSpace:()=>false,adjudicate:async()=>undefined,serializeReference:(source,ref,signal)=>source==='chat-file'?native.chatFileReferenceCodec.serialize(ref,signal):Promise.resolve('/'+JSON.parse(ref).invocationName)};const shell=new native.SessionInputShell({actx:{},inputTriggers:()=>inputTriggers,defaultSink:async text=>{const before=shell.snapshot;await window.nativeBackend({action:'send',text});shell.commitSend(before.imageIds,before.draft)}}),inputHub={shell:()=>shell};
  const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),useSession=use({subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()}),useInput=use(shell.state),useStore=use(view),useSessions=use(summary),useProjection=name=>use(projections)(s=>s[name]);
  const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'}]},actions={setView:value=>view.update({view:value}),setDraft:draft=>view.update({draft}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
  const t=(key,args)=>key==='todo.progress.total'?args.done+'/'+args.total:({'hero.headline':'探索更远，洞见更深。','input.send':'发送消息','input.commands':'命令','command.skills.name':'技能','command.skills.description':'选择在对话中使用的技能','input.placeholder':'描述你的任务…','todo.title':'任务清单'})[key]??key;
@@ -38,29 +42,36 @@ beforeAll(async()=>{
  const renderSlotChain=(name,owner)=>{if(name!=='conversation.chat.turnTail')return null;const matched=deliverySlot.select(owner);return matched===null?null:<deliverySlot.Component {...owner} {...deliverySlot.inject()} matched={matched} useHostDescription={select=>select({canOpenPath:true})}/>};
  const shared={sessionId:'demo',useSession,useSessions,useStore,actions,views,t},inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection,sessionId:'demo',t};
  const sidebarState={composerHost:null,conversationHost:null},sidebarStore={subscribe:()=>()=>{},getSnapshot:()=>sidebarState},sidebar={storeFor:()=>sidebarStore,publish(){},enter(){},leave(){},service:{async openFile(scope,path){window.probe.opened.push({scope,path});await window.nativeBackend({action:'verify-file',path});document.querySelector('#right').textContent='人工智能周期与资产配置.pptx · 原生文件路径已校验'}}};
- const openFile=path=>sidebar.service.openFile({sessionId:'demo',cwd:window.cwd},path),renderSlot=(name,props={},scope={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.input.dock'?<native.__Todo useSession={useSession} useProjection={useProjection} t={t}/>:name==='conversation.view'?<native.__Chat {...shared} {...props} renderSlot={renderSlot} openFile={openFile} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>[]}/>:name==='conversation.chat.node'&&scope.entryKey==='user'?<native.__User {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.__Assistant {...props} useTurnData={()=>null} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='turn-tail'?<native.__Tail {...props} sessionId="demo" useSession={useSession} renderSlot={renderSlot} renderSlotChain={renderSlotChain} t={t}/>:scope.fallback??null;
+ const openFile=path=>sidebar.service.openFile({sessionId:'demo',cwd:window.cwd},path),renderSlot=(name,props={},scope={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={renderSlot}/>:name==='conversation.input.left'?React.createElement(filePickSlot,props):name==='conversation.input.dock'?<native.__Todo useSession={useSession} useProjection={useProjection} t={t}/>:name==='conversation.view'?<native.__Chat {...shared} {...props} renderSlot={renderSlot} openFile={openFile} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>[]}/>:name==='conversation.chat.node'&&scope.entryKey==='user'?<native.__User {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.__Assistant {...props} useTurnData={()=>null} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='turn-tail'?<native.__Tail {...props} sessionId="demo" useSession={useSession} renderSlot={renderSlot} renderSlotChain={renderSlotChain} t={t}/>:scope.fallback??null;
  window.probe={native,shell,session,opened:[],cues:[],guide:null,events:[],refresh:async()=>{const data=await window.nativeBackend({action:'history'});window.probe.events=data.events;session.blankBit=!data.events.some(e=>e.type==='user/message');session.installWindow(data.events.map(event=>({event,view:event.type})),false);projections.update({todos:data.events.findLast(e=>e.type==='todo/write')?.data.todos??null})}};
  native.__bind({inputHub,researchSidebar:sidebar,getHomeGuideSession:id=>window.probe.registered===false?undefined:{kind:'ppt',sessionId:id,cwd:window.cwd}});
  const skill={id:'builtin:efund-ppt-maker',revision:1,label:'efund-ppt-maker',invocationName:'ework-skill-180a6a3f86f8942e',name:'PPT制作助手',enabled:true,usable:true};
- const request=async input=>input.type==='snapshot'?{type:'snapshot',snapshot:{rows:[{...skill,kind:'skill',description:'公司规范'}]}}:{...skill,type:'skill-detail',invocationLabel:skill.label};
+ const request=async input=>{if(input.type==='snapshot'&&window.probe.deferSkills){window.probe.skillSnapshotPending=true;await new Promise(resolve=>{window.probe.releaseSkills=resolve})}return input.type==='snapshot'?{type:'snapshot',snapshot:{rows:[{...skill,kind:'skill',description:'公司规范'}]}}:{...skill,type:'skill-detail',invocationLabel:skill.label}};
  const skillUse=createSkillUseBridge(document,{request},()=>{}),skillBridge=installSkillCommandBridge(document,{request,useSkill:skillUse.useSkill}),skillComposer=installSkillComposer({document,inputHub,sessions:{list:{getSnapshot:()=>({current:'demo'})},binding:()=>({session:{getSnapshot:()=>({})}}),subagentAddress:()=>undefined},composerBlocks:{storeFor:()=>({getSnapshot:()=>undefined})},researchSidebar:{stores:new Map(),service:sidebar.service}});
  disposers.push(installSkillCommand({document,command:{register:definition=>{skillCommand=definition;return()=>{}}},sessions:{subagentAddress:()=>undefined}}));inputProps.toggleCommandMenu=toggleCommands;
  disposers.push(()=>{skillBridge.dispose();skillUse.dispose();skillComposer()});
 
  const registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true}),root=createRoot(document.querySelector('#native-root'));
  root.render(<><native.ConversationRoot {...shared} useProjection={useProjection} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{throw Error('Must not create another workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例',sessionIds:['demo']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/><SkillMenus/></>);
- window.addEventListener('sherlock:home-guide-cue',event=>{const raw=event.detail,cue=typeof raw.targetToken==='string'?JSON.parse(JSON.stringify(raw)):raw,target=typeof cue.targetToken==='string'?[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue.targetToken):cue.target;window.probe.cues.push({label:cue.label,tag:target?.tagName,requestId:cue.requestId,action:cue.action,targetToken:cue.targetToken,keys:Object.keys(raw).sort(),jsonOnly:Object.values(raw).every(value=>typeof value==='string'),payload:cue.targetToken?cue:null,tokenPresent:!!cue.targetToken&&target?.getAttribute('data-home-guide-cue-target')===cue.targetToken,filePath:target?.closest('.ew-delivery-card')?.dataset.filePath,skillOption:target?.closest('[data-ework-command="skills"]')?target.textContent:null});if(window.probe.autoAck!==false&&cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected}}))});
+ window.addEventListener('sherlock:home-guide-cue',event=>{const raw=event.detail,cue=typeof raw.targetToken==='string'?JSON.parse(JSON.stringify(raw)):raw,target=typeof cue.targetToken==='string'?[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue.targetToken):cue.target;window.probe.cues.push({sources:shell.snapshot.occurrences.map(ref=>ref.source),inputState:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,inputInert:!!document.querySelector('.wSkVaW_composerHero')?.inert,isPaperclip:!!target?.matches('button.dsh-paperclip'),label:cue.label,tag:target?.tagName,requestId:cue.requestId,action:cue.action,targetToken:cue.targetToken,keys:Object.keys(raw).sort(),jsonOnly:Object.values(raw).every(value=>typeof value==='string'),payload:cue.targetToken?cue:null,tokenPresent:!!cue.targetToken&&target?.getAttribute('data-home-guide-cue-target')===cue.targetToken,filePath:target?.closest('.ew-delivery-card')?.dataset.filePath,skillOption:target?.closest('[data-ework-command="skills"]')?target.textContent:null});if(window.probe.holdAtCue===cue.label)window.probe.autoAck=false;if(window.operationsCase&&window.probe.pauseAtCue===cue.label)window.__testHomeGuideTimeline.pause();if(window.probe.autoAck!==false&&cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected}}))});
+ let guideController,disposeOperations=()=>{};
+ if(window.operationsCase){
+  window.probe.autoAck=false;window.probe.entryFrames=[];
+  const receive=event=>{const value=event.detail;window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:value.requestId,ok:true,sessionId:'demo',cwd:window.cwd,title:'公司风格演示示例',fresh:true}}))};window.addEventListener('sherlock:home-guide-session-request',receive);disposers.push(()=>window.removeEventListener('sherlock:home-guide-session-request',receive));
+  guideController=mountHomeGuides(document,{mountNotes:async()=>{throw Error('PPT fixture cannot mount Notes')},mountPresentation:mountHomePresentationGuide});
+  disposeOperations=mountHomeOperations(document,{onExample:async(kind,context)=>{let frame;const capture=()=>{const hero=document.querySelector('.wSkVaW_composerHero');window.probe.entryFrames.push({inert:hero?.inert,state:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,y:hero?.getBoundingClientRect().y});frame=requestAnimationFrame(capture)};capture();try{await playHomeGuideFromOperations(guideController,kind,context)}finally{cancelAnimationFrame(frame)}}});
+ }
  const timer=setInterval(()=>window.probe.refresh(),30);
- Object.assign(window.probe,{async mount(fresh=true){this.guide=await mountHomePresentationGuide(document,document.querySelector('#guide-host'),{signal:(this.controller=new AbortController()).signal,sessionId:'demo',cwd:window.cwd,runId:'run-1',fresh})},step:step=>window.probe.guide.runStep(step),play(playing){window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'demo',runId:'run-1',playing}}))},dispose(){this.guide?.dispose()},unmount(){clearInterval(timer);root.unmount();shell.dispose();disposers.reverse().forEach(fn=>fn())}});
- `},bundle:true,platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"development"'}})
+ Object.assign(window.probe,{async mount(fresh=true){this.guide=await mountHomePresentationGuide(document,document.querySelector('#guide-host'),{signal:(this.controller=new AbortController()).signal,sessionId:'demo',cwd:window.cwd,runId:'run-1',fresh})},step:step=>window.probe.guide.runStep(step),play(playing){window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'demo',runId:'run-1',playing}}))},dispose(){this.guide?.dispose()},unmount(){disposeOperations();guideController?.dispose();clearInterval(timer);root.unmount();shell.dispose();disposers.reverse().forEach(fn=>fn())}});
+ `},bundle:true,loader:{'.svg':'dataurl'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"development"'},plugins:[homeGuidePlaybackFixture(),{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
  entry=output.outputFiles[0].text
  const pw=await import(/* @vite-ignore */pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
  await mkdir(evidence,{recursive:true})
 },30000)
 afterAll(()=>browser?.close())
-async function fixture(){
- const f=await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion:'reduce'}),errors=[]
+async function fixture({operations=false,reducedMotion='reduce'}={}){
+ const f=await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion}),errors=[]
  page.on('pageerror',e=>errors.push(e.stack??e.message))
  const backend=async input=>{
   if(input.action==='history')return{events:f.agent.session.events}
@@ -73,15 +84,16 @@ async function fixture(){
   const url=new URL(route.request().url())
   if(url.origin!=='https://presentation.local')return route.abort()
   if(url.pathname==='/sherlock/home-guide/presentation'){try{return route.fulfill({contentType:'application/json',body:JSON.stringify(await backend(route.request().postDataJSON()))})}catch(error){return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({ok:false,message:error.message})})}}
-  return route.fulfill({contentType:url.pathname==='/'?'text/html':'application/json',body:url.pathname==='/'?'<meta charset="utf-8"><div class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="run-1"><div id="guide-host"></div></section></div><aside id="right"></aside><script>window.__ModuleLoader__={load:d=>window.descriptor=d}</script>':'{}'})
+  return route.fulfill({contentType:url.pathname==='/'?'text/html':'application/json',body:url.pathname==='/'?'<meta charset="utf-8"><div class="pI_x6G_centerCol"><div id="native-root"></div>'+(!operations?'<section data-home-guide="run-1"><div id="guide-host"></div></section>':'')+'</div><aside id="right"></aside><script>window.__ModuleLoader__={load:d=>window.descriptor=d}</script>':'{}'})
  })
- await page.goto('https://presentation.local/');await page.evaluate(cwd=>window.cwd=cwd,f.cwd)
+ await page.goto('https://presentation.local/');await page.evaluate(value=>{window.cwd=value.cwd;window.operationsCase=value.operations},{cwd:f.cwd,operations})
  await page.addScriptTag({content:runtimeSource});await page.evaluate(()=>window.runtimeDescriptor=window.descriptor)
  await page.addScriptTag({content:conversationSource});await page.evaluate(()=>window.conversationDescriptor=window.descriptor)
  await page.addScriptTag({content:commandsSource});await page.evaluate(()=>window.commandsDescriptor=window.descriptor)
  await page.addScriptTag({content:triggersSource});await page.evaluate(()=>window.triggersDescriptor=window.descriptor)
  await page.addScriptTag({content:deliverySource});await page.evaluate(()=>window.deliveryDescriptor=window.descriptor)
- const styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading'].map(n=>readFile('src/preload/'+n+'.css','utf8')))).join('\n')
+ await page.addScriptTag({content:fileDropSource});await page.evaluate(()=>window.fileDropDescriptor=window.descriptor)
+ const styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements'].map(n=>readFile('src/preload/'+n+'.css','utf8')))).join('\n')
  await page.addStyleTag({content:styles+'\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;height:100vh;width:1000px}#native-root{height:100%}[data-home-guide]{position:absolute;inset:0;pointer-events:none}#right{position:fixed;left:1000px;top:60px;width:350px;padding:15px}.wSkVaW_root{height:100%}'})
  await page.addScriptTag({content:entry});await page.waitForSelector('textarea',{timeout:4000}).catch(async error=>{throw Error(JSON.stringify({errors,body:await page.locator('body').innerText()})+' '+error.message)})
  await page.evaluate(()=>window.probe.original=document.querySelector('textarea'))
@@ -183,12 +195,48 @@ it.each(['disabled','disconnected','offscreen'])('rejects a %s real input after 
   expect(f.agent.session.events.some(event=>event.type==='user/message')).toBe(false)
  }finally{await f.close()}
 },15000)
+it.each(['paused','hidden'])('keeps focus unchanged when a deferred skill list resolves while %s',async state=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.deferSkills=true})
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true))
+  await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await expect.poll(()=>page.evaluate(()=>window.probe.skillSnapshotPending)).toBe(true)
+  await page.evaluate(state=>{if(state==='paused')window.probe.play(false);else{Object.defineProperty(document,'hidden',{configurable:true,get:()=>window.probe.hidden===true});window.probe.hidden=true;document.dispatchEvent(new Event('visibilitychange'))}const control=document.createElement('button');control.id='outside-guide-focus';control.textContent='other control';document.body.append(control);control.focus();window.probe.releaseSkills()},state)
+  await page.waitForTimeout(120)
+  expect(await page.evaluate(()=>document.activeElement.id)).toBe('outside-guide-focus')
+  expect(await page.locator('[data-ework-command-menu-selection]').count()).toBe(0)
+  await page.evaluate(state=>{window.probe.deferSkills=false;if(state==='paused')window.probe.play(true);else{window.probe.hidden=false;document.dispatchEvent(new Event('visibilitychange'))}},state)
+  expect(await page.evaluate(()=>window.probe.pending)).toBe(true)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.map(ref=>ref.source))).toEqual(['ework-managed-skill','chat-file'])
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},12000)
+it.each(['添加原始研报 PDF','填写研报转换要求'])('preserves a newer same-text draft revision while the %s pointer is pending',async label=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(label=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.holdAtCue=label},label)
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true))
+  await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await expect.poll(()=>page.evaluate(label=>window.probe.cues.some(cue=>cue.label===label),label),{timeout:5000}).toBe(true)
+  const before=await page.evaluate(()=>window.probe.shell.snapshot.draft)
+  await page.evaluate(()=>{const value=window.probe.shell.snapshot.draft;window.probe.shell.setDraft(value+'user edit');window.probe.shell.setDraft(value);const cue=window.probe.cues.at(-1);window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:cue.requestId,ok:true}}))})
+  expect(await page.evaluate(()=>window.probe.pending)).toBe(false)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.draft)).toBe(before)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.map(ref=>ref.source))).toEqual(label==='添加原始研报 PDF'?['ework-managed-skill']:['ework-managed-skill','chat-file'])
+  expect(f.agent.session.events.some(event=>event.type==='user/message')).toBe(false)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},12000)
 it('types and sends through the resident native InputBar, renders persisted chat/tasks and opens the ordinary workspace file',async()=>{
  const f=await fixture(),{page}=f
  try{
   await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1'})
   await page.evaluate(()=>window.probe.mount());expect(await page.locator('textarea').count()).toBe(1)
   await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>window.probe.step('brief'))
+  expect(await page.evaluate(()=>window.probe.cues.find(cue=>cue.skillOption)?.sources)).not.toContain('chat-file')
+  expect(await page.evaluate(()=>window.probe.cues.find(cue=>cue.label==='添加原始研报 PDF'))).toMatchObject({tag:'BUTTON',isPaperclip:true,action:'move',sources:['ework-managed-skill']})
   expect(await page.locator('textarea').inputValue()).toContain('帮我把这份研报整理成一份公司风格的汇报PPT，20页左右')
   expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.map(ref=>ref.source))).toEqual(['ework-managed-skill','chat-file'])
   expect(await page.locator('[data-reference-source="chat-file"]').count()).toBe(1)
@@ -221,6 +269,66 @@ it('types and sends through the resident native InputBar, renders persisted chat
   expect(await readFile(join(f.cwd,'人工智能周期与资产配置.pptx'))).toEqual(f.bytes);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
+
+async function playPresentationCard(page){
+ await page.getByRole('button',{name:'切换到快速开始',exact:true}).click()
+ await expect.poll(()=>page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-state')).toBe('operations')
+ expect(await page.locator('.wSkVaW_composerHero').evaluate(node=>node.inert)).toBe(true)
+ await page.getByRole('button',{name:'了解PPT制作能力',exact:true}).click()
+ await page.getByRole('button',{name:'播放示例：了解PPT制作能力',exact:true}).click()
+}
+it('slides from the real presentation card to the native composer, selects the slash skill before its PDF, sends and opens the delivered file',async()=>{
+ const f=await fixture({operations:true,reducedMotion:'no-preference'}),{page}=f
+ try{
+  let fileChoosers=0;page.on('filechooser',()=>fileChoosers++)
+  await playPresentationCard(page)
+  const deadline=Date.now()+55000
+  while(Date.now()<deadline){
+   if(await page.locator('[data-home-guide][data-phase="error"]').count())throw Error(await page.locator('.odyssey-home-guide-status').innerText())
+   if(await page.evaluate(()=>window.probe.opened.length===1)&&await page.locator('[data-home-guide]').count()===0)break
+   await page.evaluate(()=>{const clock=window.__testHomeGuideTimeline;if(clock?.snapshot().holding)clock.next()})
+   await page.waitForTimeout(70)
+  }
+  const probe=await page.evaluate(()=>({cues:window.probe.cues,frames:window.probe.entryFrames,opened:window.probe.opened}))
+  expect(probe.opened).toEqual([{scope:{sessionId:'demo',cwd:f.cwd},path:join(f.cwd,'人工智能周期与资产配置.pptx')}])
+  const skill=probe.cues.find(cue=>cue.skillOption),attachment=probe.cues.find(cue=>cue.isPaperclip),send=probe.cues.find(cue=>cue.label==='发送演示需求')
+  expect(skill.sources).toEqual([]);expect(attachment.sources).toEqual(['ework-managed-skill'])
+  expect(probe.cues.indexOf(skill)).toBeLessThan(probe.cues.indexOf(attachment))
+  expect(probe.cues.indexOf(attachment)).toBeLessThan(probe.cues.indexOf(send))
+  expect(attachment.action).toBe('move');expect(send.sources).toEqual(['ework-managed-skill','chat-file'])
+  const firstInput=probe.cues.find(cue=>cue.tag==='TEXTAREA');expect(firstInput).toMatchObject({inputState:'input',inputInert:false})
+  expect(probe.frames[0]).toMatchObject({state:'operations',inert:true})
+  expect(probe.frames.some(frame=>frame.state==='input'&&!frame.inert)).toBe(true)
+  expect(new Set(probe.frames.map(frame=>Math.round(frame.y))).size).toBeGreaterThan(4)
+  expect(fileChoosers).toBe(0);expect(await page.locator('.odyssey-home-guide-footer,[data-home-guide] [role=toolbar]').count()).toBe(0)
+  await expect.poll(()=>page.locator('#right').textContent()).toContain('人工智能周期与资产配置.pptx')
+  expect(await readFile(join(f.cwd,'人工智能周期与资产配置.pptx'))).toEqual(f.bytes)
+  expect(await readFile(join(f.cwd,'Vanguard-2026经济与市场展望.pdf'))).toEqual(f.sourceBytes)
+  await f.ctx.sessions.flush(f.agent.session)
+  expect((await f.ctx.sessionPersistence.inspect('demo')).events.some(event=>event.type==='assistant/message')).toBe(true)
+  expect(f.errors).toEqual([]);expect(f.outside).toEqual([])
+ }finally{await f.close()}
+},65000)
+it('cancels the real entry at the paperclip cue without attaching, sending or taking back the user draft',async()=>{
+ const f=await fixture({operations:true,reducedMotion:'no-preference'}),{page}=f
+ try{
+  await page.evaluate(()=>window.probe.pauseAtCue='添加原始研报 PDF')
+  await playPresentationCard(page)
+  await expect.poll(()=>page.evaluate(()=>window.probe.cues.some(cue=>cue.isPaperclip)),{timeout:15000}).toBe(true)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.map(ref=>ref.source))).toEqual(['ework-managed-skill'])
+  await page.keyboard.press('Escape');await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
+  await page.locator('textarea').focus();await page.keyboard.type('keep my later draft')
+  const draft=await page.evaluate(()=>window.probe.shell.snapshot.draft)
+  await page.waitForTimeout(300)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.draft)).toBe(draft)
+  expect(draft).toContain('keep my later draft')
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.map(ref=>ref.source))).toEqual(['ework-managed-skill'])
+  expect(await page.evaluate(()=>window.probe.opened)).toEqual([])
+  expect(f.agent.session.events.some(event=>event.type==='user/message')).toBe(false)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+  expect(f.errors).toEqual([]);expect(f.outside).toEqual([])
+ }finally{await f.close()}
+},25000)
 it('pauses before sending, aborts on lost ownership, and revisits without replacing the native draft',async()=>{
  const f=await fixture(),{page}=f
  try{

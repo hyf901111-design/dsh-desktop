@@ -128,6 +128,13 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   for(let offset=titleStride;offset<HOME_NOTES_GUIDE_TITLE.length+titleStride;offset+=titleStride){
    await playing();editor!.setDocument(HOME_NOTES_GUIDE_TITLE.slice(0,offset),[{...first,content:''}]);expected=fingerprint();await wait(reduced?20:85)
   }
+  if(options.persistence){
+   await playing()
+   // The guide editor suppresses ordinary edit effects. Retain this edited
+   // copy in the native list before New Chat can reuse its stale blank bit.
+   document.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId}}))
+   await bridge.request('engage',{sessionId,title:HOME_NOTES_GUIDE_TITLE,locale:document.documentElement.dataset.odysseyLocale})
+  }
   const body=await until(()=>query<HTMLElement>('.bn-editor'))
   await click(body,'写入研究笔记')
   const focusText=(blockId:string)=>{
@@ -153,7 +160,6 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   }
   const growth=query<HTMLElement>('[data-id="guide-note-growth"]');if(growth)scrollTo(growth)
   await wait(reduced?34:450)
-  if(options.persistence)await bridge.request('engage',{sessionId,title:HOME_NOTES_GUIDE_TITLE,locale:document.documentElement.dataset.odysseyLocale})
   await flush()
  }
  const challenge=async()=>{

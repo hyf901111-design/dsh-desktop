@@ -84,32 +84,40 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
     if(index===0){
      const input=inputFor(ticket),initialDraft=ticket.shell.snapshot.draft,initialRevision=ticket.shell.snapshot.draftRev
      if(initialDraft.trim()||ticket.shell.snapshot.occurrences?.length)throw Error('输入框已有内容，已停止自动填写。')
-     await cue(ticket,input,'添加原始研报 PDF')
-     if(ticket.shell.snapshot.draft!==initialDraft||ticket.shell.snapshot.draftRev!==initialRevision)throw Error('输入内容已更改，已停止自动填写。')
-     input.focus({preventScroll:true})
-     ticket.shell.insertFilePaths([ticket.prepared.sourcePath])
-     if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='chat-file'&&JSON.parse(ref.ref).path===ticket.prepared.sourcePath))throw Error('研报附件未能加入原生输入框。')
-     await waitFor(ticket,()=>!!input.closest('.uV2eYG_root')?.querySelector('[data-reference-source="chat-file"]'))
-     await cue(ticket,input.closest('.uV2eYG_root').querySelector('[data-reference-source="chat-file"]'),'原始研报 PDF','move')
+     const initialUnchanged=()=>{if(ticket.shell.snapshot.draft!==initialDraft||ticket.shell.snapshot.draftRev!==initialRevision)throw Error('输入内容已更改，已停止自动填写。')}
+     await cue(ticket,input,'选择技能位置')
+     initialUnchanged()
      const rows=await skillRequest(ticket,'list'),skill=Array.isArray(rows)&&rows.find(row=>row.id==='builtin:efund-ppt-maker')
      if(!skill)throw Error('请先启用“PPT制作助手”，再打开演示教程。')
-     await cue(ticket,input,'选择技能位置');input.focus({preventScroll:true});input.setSelectionRange(0,0)
+     await playing(ticket)
+     initialUnchanged()
+     input.focus({preventScroll:true});input.setSelectionRange(0,0)
      const launcher=input.closest('.uV2eYG_root')?.querySelector('button[aria-haspopup="listbox"]')
-     await cue(ticket,launcher,'打开技能菜单');launcher.click()
+     await cue(ticket,launcher,'打开技能菜单');initialUnchanged();launcher.click()
      const command=()=>[...document.querySelectorAll('[data-ework-command-menu-selection] [role="option"]')].find(row=>[...row.querySelectorAll('span')].some(span=>['技能','Skills'].includes(span.textContent?.trim())))
      await waitFor(ticket,()=>!!command());const skillCommand=command();await cue(ticket,skillCommand,'选择技能')
+     initialUnchanged()
      // The native slash roster selects on mousedown, not click.
      skillCommand.dispatchEvent(new window.MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}))
      const option=()=>[...document.querySelectorAll('[data-ework-command="skills"] [role="option"]')].find(row=>[...row.querySelectorAll('span')].some(span=>span.textContent?.trim()===skill.label))
-     await waitFor(ticket,()=>!!option());const choice=option();await cue(ticket,choice,'选择公司 PPT 制作技能');choice.click()
+     await waitFor(ticket,()=>!!option());const choice=option();await cue(ticket,choice,'选择公司 PPT 制作技能');initialUnchanged();choice.click()
      await waitFor(ticket,()=>(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id==='builtin:efund-ppt-maker'))
      if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id==='builtin:efund-ppt-maker'))throw Error('公司PPT技能未能加入原生输入框。')
-     const preparedDraft=ticket.shell.snapshot.draft
+     const skillDraft=ticket.shell.snapshot.draft,skillRevision=ticket.shell.snapshot.draftRev
+     const paperclip=()=>input.closest('.uV2eYG_root')?.querySelector('button.dsh-paperclip')
+     await waitFor(ticket,()=>!!paperclip());await cue(ticket,paperclip(),'添加原始研报 PDF','move')
+     if(inputFor(ticket)!==input||input.disabled||input.readOnly)throw changed()
+     if(ticket.shell.snapshot.draft!==skillDraft||ticket.shell.snapshot.draftRev!==skillRevision)throw Error('输入内容已更改，已停止自动填写。')
+     input.focus({preventScroll:true});ticket.shell.insertFilePaths([ticket.prepared.sourcePath])
+     if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='chat-file'&&JSON.parse(ref.ref).path===ticket.prepared.sourcePath))throw Error('研报附件未能加入原生输入框。')
+     const preparedDraft=ticket.shell.snapshot.draft,preparedRevision=ticket.shell.snapshot.draftRev
+     await waitFor(ticket,()=>!!input.closest('.uV2eYG_root')?.querySelector('[data-reference-source="chat-file"]'))
+     await cue(ticket,input.closest('.uV2eYG_root').querySelector('[data-reference-source="chat-file"]'),'原始研报 PDF','move')
      await cue(ticket,input,'填写研报转换要求')
-     if(ticket.shell.snapshot.draft!==preparedDraft)throw Error('输入内容已更改，已停止自动填写。')
+     if(ticket.shell.snapshot.draft!==preparedDraft||ticket.shell.snapshot.draftRev!==preparedRevision)throw Error('输入内容已更改，已停止自动填写。')
      const prefix=ticket.shell.snapshot.draft+'\n',brief=ticket.prepared.brief
-     let prior=ticket.shell.snapshot.draft;ticket.shell.setDraft(prefix);prior=prefix
-     for(let i=0;i<brief.length;i+=2){await playing(ticket);if(ticket.shell.snapshot.draft!==prior)throw Error('输入内容已更改，已停止自动填写。');prior=prefix+brief.slice(0,Math.min(i+2,brief.length));ticket.shell.setDraft(prior);await delay(ticket,65)}
+     ticket.shell.setDraft(prefix);let prior=prefix,revision=ticket.shell.snapshot.draftRev
+     for(let i=0;i<brief.length;i+=2){await playing(ticket);if(ticket.shell.snapshot.draft!==prior||ticket.shell.snapshot.draftRev!==revision)throw Error('输入内容已更改，已停止自动填写。');prior=prefix+brief.slice(0,Math.min(i+2,brief.length));ticket.shell.setDraft(prior);revision=ticket.shell.snapshot.draftRev;await delay(ticket,65)}
     }else if(index===1){
      const input=inputFor(ticket),button=input?.closest('.uV2eYG_root')?.querySelector('button.uV2eYG_primary')
      if(!button||button.disabled)throw Error('原生发送按钮暂不可用。')
