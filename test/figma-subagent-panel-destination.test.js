@@ -9,10 +9,15 @@ import { SlotOwnershipError, StaleAuthorizationError } from '@deepseek-ai/dsh-cl
 import { afterEach, expect, it, vi } from 'vitest'
 import { patchSubagentPanelConversation, patchSubagentPanelRenderer } from '../scripts/lib/figma-subagent-panel.mjs'
 import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
+import {existsSync} from 'node:fs'
+import {homedir} from 'node:os'
+import {join} from 'node:path'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); document.body.replaceChildren() })
-const conversation = patchSubagentPanelConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+const conversation = patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
 function loadConversation() {
   const start = conversation.indexOf('function createResearchSidebarStore(')
   const end = conversation.indexOf('const defaultResearchSidebar =', start)
@@ -22,7 +27,9 @@ const { ResearchSidebarCoordinator, OdysseySubagentPanel, Portals } = loadConver
 const address = id => ({parentSessionId:'parent',childSessionId:id,mode:'one-shot'})
 const snapshot = {current:'parent',subagentsByParent:{parent:{entries:['child','second'].map(id=>({kind:'child',id,mode:'one-shot',label:id}))}}}
 async function sidebar() {
-  const source=patchBetterSidebarClient(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8'))
+  const built='build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js'
+  const actual=process.env.SHERLOCK_TEST_SIDEBAR||(existsSync(built)?built:join(homedir(),'Library/Application Support/sherlock-desktop/harness/profiles/web/node_modules/dsh-better-sidebar/lib/client.js'))
+  const source=patchBetterSidebarClient(await readFile(actual,'utf8'))
   const start=source.indexOf('const SIDEBAR_PREFS_DEFAULTS ='),end=source.indexOf('//#region src/client/chunk-loader.ts',start)
   const {SidebarStore,createBetterSidebarService}=new Function(source.slice(start,end)+';return {SidebarStore,createBetterSidebarService}')()
   const store=new SidebarStore();store.setSession('parent')

@@ -27,4 +27,12 @@ describe('PPT annotation transport validation', () => {
       { ...point, slidePart: '../slides/slide2.xml' },
     ]) expect(() => api.parsePptxAnnotationMarkDraft(input)).toThrow()
   })
+
+  it('limits read-only message projection hints while keeping the complete UTF16 message unchanged', async () => {
+    const api = await load()
+    expect(api.parsePptxAnnotationMessagePresentationInput).toBeTypeOf('function')
+    const valid = { sendingSessionId: 'session', preparedId: '089686f5-1f15-446e-83c6-99955a1789e1', userSeq: 9, submissionId: 'actual-rpc', text: '整体要求📈\n原始提交正文' }
+    expect(api.parsePptxAnnotationMessagePresentationInput(valid)).toEqual(valid)
+    for (const value of [{ ...valid, userSeq: undefined }, { ...valid, submissionId: undefined }, { ...valid, userSeq: -1 }, { ...valid, userSeq: 1.5 }, { ...valid, text: '\0' }, { ...valid, text: 'a'.repeat(1024 * 1024 + 1) }, { ...valid, owner: 'alice' }, { ...valid, preparedId: '../another' }]) expect(() => api.parsePptxAnnotationMessagePresentationInput(value)).toThrow()
+  })
 })

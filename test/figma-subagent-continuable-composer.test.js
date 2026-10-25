@@ -4,14 +4,17 @@ import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { expect, it, vi } from 'vitest'
 import { patchSubagentPanelConversation } from '../scripts/lib/figma-subagent-panel.mjs'
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 
 const raw = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-const patched = patchSubagentPanelConversation(raw)
+const patched = patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(raw)))
 const jsx = (type, props) => ({ type, props })
 
 it('keeps native send, stop and attachment callbacks reachable, with Escape and outside dismissal', () => {
-  const start = patched.indexOf('function OdysseySubagentComposerRow('), end = patched.indexOf('\n\t\tfunction InputBar(', start)
+  const start = patched.indexOf('function OdysseySubagentComposerRow('), end = patched.indexOf('\n}\n', start)+3
   expect(start).toBeGreaterThan(-1)
+  expect(end).toBeGreaterThan(start)
   let open = false, effect
   const focus = vi.fn(), anchor = { contains: target => target === 'inside', querySelector: () => ({ focus }) }
   const document = { addEventListener: vi.fn(), removeEventListener: vi.fn() }
@@ -53,7 +56,11 @@ it('keeps native send, stop and attachment callbacks reachable, with Escape and 
   expect(open).toBe(false); expect(focus).toHaveBeenCalledOnce()
   expect(patchSubagentPanelConversation(patched)).toBe(patched)
   expect(patched).toContain('compact: subagentPanel && continuable')
-  expect(patched).toContain('const primaryStops = running && subagent === null;')
+  const primary=patched.match(/const primaryStops = ([^\n]+);/)[1]
+  const stopPrimary=new Function('eworkNotes','running','canvasRunning','canvasComposerEmpty','draft','attachments','empty','subagent','return '+primary)
+  expect(stopPrimary(false,true,false,()=>false,'',[],true,{})).toBe(false)
+  expect(stopPrimary(false,true,false,()=>false,'',[],true,null)).toBe(true)
+  expect(stopPrimary(false,true,false,()=>false,'已有草稿',[],false,null)).toBe(false)
   expect(patched).toContain('const interruptible = running && continuable;')
   expect(patched).toContain('footer: subagentPanel && continuable ? footer : void 0,')
   expect(patched).toContain('(subagentPanel && continuable ? null : footer)')

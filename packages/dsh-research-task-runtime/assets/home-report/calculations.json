@@ -7849,7 +7849,11 @@
           "obsInterimFcf",
           "obsQ2Buyback",
           "obsInterimFinancing"
-        ]
+        ],
+        "lowerPerShareValue": "383.218492481527951602369256",
+        "upperPerShareValue": "725.315602182293389615149446",
+        "price": "329",
+        "fixedAssumptions": "首个预测年保持原情景；仅后续五年收入增长统一求根，利润率、税率、D&A、capex、NWC、WACC、g/ROIC及价值桥不变。"
       }
     },
     "limitations": [

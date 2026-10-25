@@ -1,4 +1,5 @@
 import { installBootBranding } from './lib/boot-branding.mjs'
+import {copySubagentAvatarAssets} from './lib/subagent-avatars.mjs'
 import { copyFile, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -59,6 +60,7 @@ function replaceRequiredAny(contents, searches, replacement, file) {
 await installBootBranding(projectRoot)
 
 await mkdir(destinationDirectory, { recursive: true })
+await copySubagentAvatarAssets(destinationDirectory)
 await copyFile(path.join(projectRoot, 'build/brand/figma-welcome-illustration.png'), path.join(destinationDirectory, 'figma-welcome-illustration.png'))
 await mkdir(path.join(destinationDirectory, 'fonts'), { recursive: true })
 await copyFile(path.join(projectRoot, 'build/fonts/NotoSansSC.woff2'), path.join(destinationDirectory, 'fonts/NotoSansSC.woff2'))

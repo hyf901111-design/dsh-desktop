@@ -2,7 +2,7 @@ import {annotationLocatorKey,parsePptxAnnotationLocator,annotationDraftKey,annot
 
 /** Root-owned input and submission facts outlive individual viewer handles. */
 export function createPptxAnnotationCoordinator(deps){
- const records=new Map(),bindings=new Map(),bindingIdentities=new Map(),listeners=new Set(),tickets=new Map(),jobs=new Set(),flights=new Map()
+ const records=new Map(),bindings=new Map(),bindingIdentities=new Map(),listeners=new Set(),tickets=new Map(),jobs=new Set(),flights=new Map(),submissionNotices=new WeakMap()
  let disposed=false,revision=0
  const id=()=>deps.newId?.()??crypto.randomUUID()
  const error=value=>value instanceof Error?value:Error(String(value))
@@ -187,7 +187,17 @@ export function createPptxAnnotationCoordinator(deps){
   adoptInput(identity){current(identity);for(const record of records.values())if(record.identity.sessionId===identity.sessionId&&record.identity.shell===identity.shell&&record.identity.epoch===identity.epoch){const previous=record.identity;record.identity=identity;bindingFor(identity);if(record.error==='实际会话或输入已切换，请重新开启标注。')record.error=null;if(previous.input!==identity.input)publish(record)}},
   removeReference(shell,occurrenceId){const binding=bindings.get(shell),range=binding?.ranges().find(value=>value.occurrenceId===occurrenceId);if(!range)return undefined;const caret=range.blockStart;return binding.remove(range.key)?caret:undefined},
   submit,retry,
-  interceptSend(shell,draft,mode){if(!shell.snapshot.occurrences.some(value=>value.source==='pptx-annotation'))return false;watch(submit(shell,mode).catch(reason=>shell.notify('error',error(reason).message)));return true},
+  interceptSend(shell,draft,mode){
+   if(!shell.snapshot.occurrences.some(value=>value.source==='pptx-annotation'))return false
+   const previous=submissionNotices.get(shell)
+   watch(submit(shell,mode).then(()=>{
+    if(previous&&shell.notices?.getSnapshot()===previous)shell.notices.set(null)
+    if(submissionNotices.get(shell)===previous)submissionNotices.delete(shell)
+   },reason=>{
+    shell.notify('error',error(reason).message)
+    const notice=shell.notices?.getSnapshot();if(notice)submissionNotices.set(shell,notice)
+   }));return true
+  },
   getSubmissions:()=>[...tickets.values()].map(ticket=>({sendId:ticket.sendId,sessionId:ticket.identity.sessionId,prepared:ticket.prepared,submissionId:ticket.rpcId,status:ticket.status,error:ticket.error})),
   async recoverSubmission(preparedId){const ticket=[...tickets.values()].find(value=>value.prepared?.preparedId===preparedId);if(!ticket)throw Error('提交快照不存在。');ticket.bindingResult=unwrap(await deps.bridge.bindSubmission({sendingSessionId:ticket.identity.sessionId,preparedId,...(ticket.rpcId?{submissionId:ticket.rpcId}:{})}));ticket.status=ticket.bindingResult.status;publish();return ticket.bindingResult},
   async whenIdle(){for(let pass=0;pass<10;pass++){const pending=[...records.values()].map(record=>record.tail).concat([...jobs]);await Promise.allSettled(pending);await Promise.resolve();if(!jobs.size)return}},

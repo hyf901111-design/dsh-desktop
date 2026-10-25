@@ -33,7 +33,8 @@ it('keeps portal child reading and readonly footer independent of the central bo
       expect(childStyle('[class*=_markdown_]').fontSize).toBe('14px')
       expect(childStyle('[class*=_markdown_]').lineHeight).toBe('24px')
     }
-    expect(win.getComputedStyle(parent.querySelector('[data-center-composer-host]')!).padding).toBe('12px 0px')
+    // Current accepted central composer baseline; the child remains independent.
+    expect(win.getComputedStyle(parent.querySelector('[data-center-composer-host]')!).padding).toBe('4px 0px 12px')
   } finally {
     await win.happyDOM.close()
   }

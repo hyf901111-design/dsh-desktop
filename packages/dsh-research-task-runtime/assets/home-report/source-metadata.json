@@ -6,19 +6,19 @@
   },
   "audit": {
     "evidence.json": "6297f730580f7fcf7baa9c60876d6dc376e15dabe7e177f6c4041c17466128e9",
-    "calculations.json": "d7a20b5e2703a9eb703357a8e6e7e4c793100fe74c5df449a8d914e52c00357d",
+    "calculations.json": "00611e0b6c3e4e8e76f49060d51b2c2f6d4d678cd55832e4f56723852c5f6bfa",
     "validation.json": "56f0c0e8a9fd751097b289162e69fc7a470e7fd0ac66543b64e12af37e1ee9b0",
-    "run.json": "22a630bc56c8d256832aca892e69de4e873cda0d3b49b5b74357e84e63f5206a"
+    "run.json": "429ff3a4d054edd14a1ba284b612b4e24762facbdda99dd180b9463cce1dc6e0"
   },
   "reportTitle": "现金流质量与AI投入的再平衡：腾讯控股增长韧性研究",
   "companyName": "腾讯控股",
   "companyCode": "0700.HK",
   "researchAsOf": "2026-10-25",
-  "reportPages": 64,
+  "reportPages": 63,
   "htmlFile": "research-report.html",
   "pdfFile": "research-report.pdf",
-  "htmlSha256": "5eab85fc8591ec1c45b30f04dee8e129ddcbce056753b15ce7095a98af82876d",
-  "pdfSha256": "0220f9ea1e92bf7798e2361960109e6843481bf0cd3faa97337f7788c42b22b0",
+  "htmlSha256": "29deec5b2ef1e3c069431187b62cc65ed196a29d25c227a5757c0f3b2972095f",
+  "pdfSha256": "cf4620a54a96a78584722f99399b83d547158b17718f29a20011d4d9d708e49b",
   "localPresetOnly": true,
   "chapters": [
     {
@@ -157,11 +157,11 @@
     "product": "EWork Odyssey",
     "sessionId": "session-253912dd-cf7d-4669-9da7-361d4bf24166",
     "model": "Kimi K3 (high)",
-    "generatedAt": "2026-10-25T12:48:56.241Z"
+    "generatedAt": "2026-10-25T16:05:59.380Z"
   },
   "publicationReview": {
-    "status": "baseline-pending-renderer-regeneration",
-    "acceptedAsFinalExample": false,
-    "note": "真实EWork生成的run04基线，仅用于更新生成器后回放验证；最终用例将由更新后的内置技能重新生成。"
+    "status": "verified-real-ework-generation",
+    "acceptedAsFinalExample": true,
+    "note": "真实 EWork Kimi K3/high 经内置 research_report 工具重生成 run05；已独立复核数据、63 页排版与118个目录页码，并在正式客户端点击真实交付卡加载PDF。专业签发及资料真实性的边界保留原报告声明。"
   }
 }

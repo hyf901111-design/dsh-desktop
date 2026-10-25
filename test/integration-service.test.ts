@@ -1,5 +1,5 @@
-import {afterEach,expect,it} from 'vitest'
-import {mkdtemp,rm} from 'node:fs/promises'
+import {afterEach,expect,it,vi} from 'vitest'
+import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {IntegrationService} from '../src/main/integrations/service'
@@ -38,4 +38,26 @@ it('rejects a stale form rather than overwriting a newer connection',async()=>{
     await expect(service.request({type:'set-enabled',kind:'connection',id:row.id,enabled:true,meta:{requestId:'stale',expectedRevision:row.revision}})).rejects.toMatchObject({code:'VERSION_CONFLICT'})
     expect(service.store.snapshot().connections[row.id]?.enabled).toBe(false)
   }finally{await service.dispose()}
+})
+it('reads the real owned builtin presentation label without requests, heartbeat or state changes',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'ework-skill-presentation-'));roots.push(root);let owner:string|undefined='one'
+  const bundle=join(root,'bundled'),skill=join(bundle,'efund-ppt-maker');await mkdir(skill,{recursive:true})
+  await writeFile(join(skill,'SKILL.md'),'---\nname: efund-ppt-maker\ndescription: 制作正式演示文稿\n---\n\n# 正文\n')
+  await writeFile(join(skill,'_meta.json'),JSON.stringify({slug:'efund-ppt-maker',source:'eSkill',cnName:'PPT制作助手',version:'1.0.0'}))
+  const service=await IntegrationService.open({root:join(root,'state'),encryption,getOwnerId:()=>owner,bundledSkillDirectory:bundle})
+  try{
+    expect(service.getPresentationSkill).toBeTypeOf('function');const before=service.store.snapshot()
+    const request=vi.spyOn(service,'request').mockImplementation(async()=>{throw Error('Presentation must not refresh integrations')})
+    const heartbeat=vi.spyOn(service,'runtimeSnapshot').mockImplementation(()=>{throw Error('Presentation must not set heartbeat')})
+    expect(service.getPresentationSkill('builtin:efund-ppt-maker')).toEqual({id:'builtin:efund-ppt-maker',invocationName:'ework-skill-180a6a3f86f8942e',label:'/efund-ppt-maker'})
+    expect(service.getPresentationSkill('imported:efund-ppt-maker')).toBeNull();expect(service.store.snapshot()).toEqual(before)
+    await service.store.change(state=>{state.bundledSkillPreferences??={};state.bundledSkillPreferences.one={'builtin:efund-ppt-maker':{enabled:false,revision:1}}})
+    expect(service.getPresentationSkill('builtin:efund-ppt-maker')).toBeNull();owner='two';expect(service.getPresentationSkill('builtin:efund-ppt-maker')).toMatchObject({id:'builtin:efund-ppt-maker'})
+    owner=undefined;expect(service.getPresentationSkill('builtin:efund-ppt-maker')).toBeNull();request.mockRestore();heartbeat.mockRestore()
+  }finally{vi.restoreAllMocks();await service.dispose()}
+})
+it('does not invent a presentation skill when the actual builtin bundle was not loaded',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'ework-skill-presentation-empty-'));roots.push(root)
+  const service=await IntegrationService.open({root,encryption,getOwnerId:()=> 'owner'})
+  try{expect(service.getPresentationSkill).toBeTypeOf('function');expect(service.getPresentationSkill('builtin:efund-ppt-maker')).toBeNull()}finally{await service.dispose()}
 })

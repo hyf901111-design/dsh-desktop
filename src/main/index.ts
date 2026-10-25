@@ -1430,6 +1430,7 @@ async function bootstrap(): Promise<void> {
   const noteFiles = new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
   registerPptxAnnotationHandlers({ ipcMain, getMainWindow: () => mainWindow, service: new PptxAnnotationService({
     root: join(app.getPath('userData'), 'pptx-annotations'), owner: () => integrationOwner() || 'local',
+    presentationSkill: async id => integrationService?.getPresentationSkill(id) ?? null,
     resolveWorkspace: sessionId => canReadNoteSession(sessionId) ? new HarnessWorkspaceFileResolver(dshHome).resolveRoot(sessionId) : Promise.resolve(null),
     resolveAuthorizedSource: async (sessionId, source) => {
       if (!canReadNoteSession(sessionId)) return null

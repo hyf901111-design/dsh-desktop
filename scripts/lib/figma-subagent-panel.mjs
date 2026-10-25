@@ -1,3 +1,4 @@
+import {patchSubagentAvatars,stripSubagentAvatars} from './subagent-avatars.mjs'
 export async function openComponentProcess(sessions, parentSessionId, childSessionId) {
   if (!parentSessionId || !childSessionId) throw Error('任务尚未启动，暂无子 Agent 过程。')
   await sessions.refreshSubagents(parentSessionId)
@@ -130,8 +131,9 @@ function OdysseySubagentPanelHeader({sessionId,useSession,useSessions}) {
 }
 `;
 export function patchSubagentPanelConversation(source) {
+  source=stripSubagentAvatars(source,'detail')
   const marker='/* odyssey:subagent-conversation-tab:v1 */'
-  if(source.includes(marker))return patchComponentProcessEntry(finishSubagentPanelScope(source))
+  if(source.includes(marker))return patchSubagentAvatars(patchComponentProcessEntry(finishSubagentPanelScope(source)),'detail')
   source=exact(source,'class ResearchSidebarCoordinator {',marker+'\n'+panelComponent+'\nclass ResearchSidebarCoordinator {\n sessions=null;')
   source=exact(source,'attach(service, t) {','attach(service, t, sessions) {\n this.sessions=sessions;')
   source=exact(source,'return () => {\n\t\t\t\t\tunregister?.();',`const unregisterSubagent=service.registerTab({id:'sherlock-subagent-conversation',title:()=> '子代理',hidden:true,single:false,component:props=>react_jsx_runtime.jsx(OdysseySubagentPanel,{...props,coordinator})});
@@ -162,7 +164,7 @@ export function patchSubagentPanelConversation(source) {
   source=source.slice(0,a)+`const odysseyConversationOptions=${options};
       slots.register({...odysseyConversationOptions,children:{...odysseyConversationOptions.children,'conversation.subagent.panel':{kind:'single',scope:'session'}}},ConversationRoot);
       slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel'},ConversationRoot);`+source.slice(b+'}, ConversationRoot);'.length)
-  return patchComponentProcessEntry(finishSubagentPanelScope(source))
+  return patchSubagentAvatars(patchComponentProcessEntry(finishSubagentPanelScope(source)),'detail')
 }
 
 const subagentHeader=`function OdysseySubagentPanelHeader({sessionId,useSession,useSessions,useProjection}) {
