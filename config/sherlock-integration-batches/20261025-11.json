@@ -1,0 +1,917 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-11",
+  "branch": "codex/integration/20261025-11",
+  "baseMainCommit": "4a0ea774a7e96278263fcc19b1661624d95e7bdd",
+  "expectedMainCommit": "4a0ea774a7e96278263fcc19b1661624d95e7bdd",
+  "createdAt": "2026-10-25T15:32:25.089Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "四用例自然演示、PPT标注闭环与今日界面优化",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "4a0ea774a7e96278263fcc19b1661624d95e7bdd",
+        "tipCommit": "6c4073268bd4f3929d53970763a0b2590076038e",
+        "commits": [
+          {
+            "commit": "35cdd6355eb7c60bb4923d86d920ca411de17437",
+            "parents": [
+              "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed",
+              "4a0ea774a7e96278263fcc19b1661624d95e7bdd"
+            ],
+            "subject": "合并已验收用例修复批次的本地主干记录"
+          },
+          {
+            "commit": "63c150673eb35ae4da5ca8dec9ad0335b0c96bbc",
+            "parents": [
+              "35cdd6355eb7c60bb4923d86d920ca411de17437"
+            ],
+            "subject": "明确PPT标注修改的设计合同与分步验收计划"
+          },
+          {
+            "commit": "e4f7c1e8757e3a49f8bcdad5c65db582dc2a4989",
+            "parents": [
+              "63c150673eb35ae4da5ca8dec9ad0335b0c96bbc"
+            ],
+            "subject": "实现PPT标注持久化与可信版本改写后端"
+          },
+          {
+            "commit": "adc43df1716b5e2fd8bbd85f344e09c40f80ae40",
+            "parents": [
+              "e4f7c1e8757e3a49f8bcdad5c65db582dc2a4989"
+            ],
+            "subject": "增加PPT原生预览标注与紧凑编号引用交互"
+          },
+          {
+            "commit": "3328ef847ef25d989fb1aca4fc508762a88a4c20",
+            "parents": [
+              "adc43df1716b5e2fd8bbd85f344e09c40f80ae40"
+            ],
+            "subject": "新增研报用例轮播与首页下滑背景提示"
+          },
+          {
+            "commit": "70bfc220721a3ed6fea74b5cba91e27c60bf7736",
+            "parents": [
+              "3328ef847ef25d989fb1aca4fc508762a88a4c20"
+            ],
+            "subject": "接通独立研究报告示例的真实会话与双格式交付服务"
+          },
+          {
+            "commit": "41c74ce36f30b9df7732297dcdd3572e423ab3f0",
+            "parents": [
+              "70bfc220721a3ed6fea74b5cba91e27c60bf7736"
+            ],
+            "subject": "接入PPT标注的原生输入同步与批次发送"
+          },
+          {
+            "commit": "073b6a80b9f6c7cc4ff74feb159458806913e70b",
+            "parents": [
+              "41c74ce36f30b9df7732297dcdd3572e423ab3f0"
+            ],
+            "subject": "透传研究与笔记PPT标注的真实授权来源"
+          },
+          {
+            "commit": "ea8ecfc2385b92fcc5515a6382fb1b9155f21bfe",
+            "parents": [
+              "073b6a80b9f6c7cc4ff74feb159458806913e70b"
+            ],
+            "subject": "锁定PPT首次验收字节防止替换后重认交付"
+          },
+          {
+            "commit": "bd3349c4557590a375f96bba0afeec291fbe0439",
+            "parents": [
+              "ea8ecfc2385b92fcc5515a6382fb1b9155f21bfe"
+            ],
+            "subject": "补全PPT旧标注冷恢复列表与显式重新定位入口"
+          },
+          {
+            "commit": "f42c92710e8e85cd5ac754a445583ef85da3e63a",
+            "parents": [
+              "bd3349c4557590a375f96bba0afeec291fbe0439"
+            ],
+            "subject": "重新定位PPT标注时保留较新备注与原生撤销记录"
+          },
+          {
+            "commit": "5fbcd6a85ad2fcb66b1feb1a730cae4b48f9ac57",
+            "parents": [
+              "f42c92710e8e85cd5ac754a445583ef85da3e63a"
+            ],
+            "subject": "补充笔记演示的券商预测口径与来源校验"
+          },
+          {
+            "commit": "e55626a24c6896586f1a4dbe137984e53e9bc254",
+            "parents": [
+              "5fbcd6a85ad2fcb66b1feb1a730cae4b48f9ac57"
+            ],
+            "subject": "按真实验收状态展示并打开PPT标注交付文件"
+          },
+          {
+            "commit": "cdec11703b8aa9824710e4b64c4d59232c62f372",
+            "parents": [
+              "e55626a24c6896586f1a4dbe137984e53e9bc254"
+            ],
+            "subject": "验证报告原生演示发送交付与PPT文件拖入流程"
+          },
+          {
+            "commit": "df2d925643f5da0aec78d05466e3453da75abb46",
+            "parents": [
+              "cdec11703b8aa9824710e4b64c4d59232c62f372"
+            ],
+            "subject": "为笔记演示增加保持编辑器的平滑回顶"
+          },
+          {
+            "commit": "bc5ee59ec7b733e2f5f9276e5d7ed9ee3f7d185e",
+            "parents": [
+              "df2d925643f5da0aec78d05466e3453da75abb46"
+            ],
+            "subject": "完善笔记示例预测依据修订与同页回顶流程"
+          },
+          {
+            "commit": "be8b44005a4be6a1db7b14a32aaf59eefc9da645",
+            "parents": [
+              "bc5ee59ec7b733e2f5f9276e5d7ed9ee3f7d185e"
+            ],
+            "subject": "接通PPT标注总安装流程并恢复已保存报告会话"
+          },
+          {
+            "commit": "12c541c4327e9b3d7c25242c020487a2a17edafe",
+            "parents": [
+              "be8b44005a4be6a1db7b14a32aaf59eefc9da645"
+            ],
+            "subject": "补全演示自动发送的草稿与附件准入回归"
+          },
+          {
+            "commit": "627eb8ba90ae106c7295081124a17dc84e83a1fb",
+            "parents": [
+              "12c541c4327e9b3d7c25242c020487a2a17edafe"
+            ],
+            "subject": "验证笔记演示向普通编辑器交接时的真实浏览器连续性"
+          },
+          {
+            "commit": "a2a08af0bca8c44a732a24d2019cf5196b80bc7a",
+            "parents": [
+              "627eb8ba90ae106c7295081124a17dc84e83a1fb"
+            ],
+            "subject": "完善四类演示节奏并保护草稿与笔记交接"
+          },
+          {
+            "commit": "24a67b56d48086ec0d714291fd4280408bfabf69",
+            "parents": [
+              "a2a08af0bca8c44a732a24d2019cf5196b80bc7a"
+            ],
+            "subject": "改善彭博模式原生图例与思维导图对比度"
+          },
+          {
+            "commit": "397f6fbd8f4e45dc50ccdc20a6d1c9d54d145752",
+            "parents": [
+              "24a67b56d48086ec0d714291fd4280408bfabf69"
+            ],
+            "subject": "统一演示案例会话命名并安全补齐旧标题"
+          },
+          {
+            "commit": "cfc7de4bb26c8a241da8ec3d0a5ec4fd938a42e0",
+            "parents": [
+              "397f6fbd8f4e45dc50ccdc20a6d1c9d54d145752"
+            ],
+            "subject": "记录四类演示与PPT标注的实现边界和待验收项"
+          },
+          {
+            "commit": "f203021fe6262a6eceb67e7aa2c6383452eade64",
+            "parents": [
+              "cfc7de4bb26c8a241da8ec3d0a5ec4fd938a42e0"
+            ],
+            "subject": "补齐研究报告原名交付与四份审计文件原子发布"
+          },
+          {
+            "commit": "5f615fcf10af20357577cc2454cab0fd7c16eb97",
+            "parents": [
+              "f203021fe6262a6eceb67e7aa2c6383452eade64"
+            ],
+            "subject": "优化研报分页与反向估值区间说明"
+          },
+          {
+            "commit": "1c99031671ccf68d6aa94c94f05502c0726993c2",
+            "parents": [
+              "5f615fcf10af20357577cc2454cab0fd7c16eb97"
+            ],
+            "subject": "将笔记AI挑战界面更名为AI随航并区分系统评论员"
+          },
+          {
+            "commit": "39889a7935a53f3e502578acc3f0c31f6686b098",
+            "parents": [
+              "1c99031671ccf68d6aa94c94f05502c0726993c2"
+            ],
+            "subject": "更新研究看板与笔记随航大卡的中英文文案"
+          },
+          {
+            "commit": "c65b2e27c07258eab014e4216a0da230ae79d007",
+            "parents": [
+              "39889a7935a53f3e502578acc3f0c31f6686b098"
+            ],
+            "subject": "预置EWork真实研报基线以验证双格式回放交付"
+          },
+          {
+            "commit": "6c4073268bd4f3929d53970763a0b2590076038e",
+            "parents": [
+              "c65b2e27c07258eab014e4216a0da230ae79d007"
+            ],
+            "subject": "修正标注安装测试对已安装模块的基线识别"
+          }
+        ],
+        "boundaryParents": [
+          "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-10-25-natural-home-guides.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-25-ppt-annotations.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/superpowers/specs/2026-10-25-natural-home-guides-design.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-25-ppt-annotations-design.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/calculations.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/evidence.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/research-report.html"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/research-report.pdf"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/run.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/source-metadata.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/validation.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capability-receipts.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-board-smart-runtime.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-presentation-runtime.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-report-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-report-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-report-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/attachment-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-pptx-mode.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/deliverable-cards.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-inline-references-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-session-catalog.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-files.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-assets.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-coordinator.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-delivery.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-input.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-ranges.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-viewer.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-viewer.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-pptx-toolbar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-equity-research/scripts/lib/forecast-dcf.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-equity-research/scripts/lib/publication-layout.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-equity-research/scripts/lib/research-v5-layout.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/pptx/annotations-files.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/pptx/annotations-store.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/pptx/annotations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes-data.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guide-notes-scroll.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-pointer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-assets.ts"
+          },
+          {
+            "status": "C089",
+            "path": "src/preload/home-operations-assets/case-report-dark-glow.svg",
+            "previousPath": "src/preload/home-operations-assets/case-ppt-dark-glow.svg"
+          },
+          {
+            "status": "C088",
+            "path": "src/preload/home-operations-assets/case-report-glow.svg",
+            "previousPath": "src/preload/home-operations-assets/case-ppt-glow.svg"
+          },
+          {
+            "status": "C091",
+            "path": "src/preload/home-operations-assets/case-report-trend-dark.svg",
+            "previousPath": "src/preload/home-operations-assets/trend-up.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-carousel.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-case-transition.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/mount.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/close16.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/mark16-normal.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/mark16-selected.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/pin18-normal.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/pin18-selected.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/pin20-selected.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/pin28-normal.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/pin28-selected.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/point14-normal.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotation-icons/rect14-selected.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/pptx-annotations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/pptx-annotations.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-pptx-mode.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/composer-inline-tags-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/equity-research-forecast-dcf.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/equity-research-publication-print-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/equity-research-v5-publication.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-note-challenge-sidebar.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-note-handoff-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-report-assets.js"
+          },
+          {
+            "status": "C052",
+            "path": "test/fixtures/home-report-runtime.js",
+            "previousPath": "test/fixtures/home-presentation-runtime.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/pptx-annotation-input-browser.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-board-smart-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-data.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-handoff-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-scroll.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-pointer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session-catalog.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-session-title-presentation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-workspace.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-notes-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-report-assets.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-report-publication.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-report-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-capability-receipt-locale.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-capability.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-client-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-controller-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-coverage.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-editor-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-layout-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-popup-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-undo-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-english-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-recent-locale.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-coordinator.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-delivery.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-editor.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-input-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-input.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-install.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-native.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-profile-install.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-ranges.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-viewer-install.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotations-contract.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotations.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-storage.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-pptx-toolbar.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-bloomberg-contrast-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-11-feature-final-pipeline-1-20261025.log",
+            "verifiedCommit": "6c4073268bd4f3929d53970763a0b2590076038e",
+            "completedAt": "2026-10-25T15:29:40Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-11-feature-final-pipeline-2-20261025.log",
+            "verifiedCommit": "6c4073268bd4f3929d53970763a0b2590076038e",
+            "completedAt": "2026-10-25T15:29:40Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotation-install.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-11-feature-final-smoke-20261025.log",
+            "verifiedCommit": "6c4073268bd4f3929d53970763a0b2590076038e",
+            "completedAt": "2026-10-25T15:29:40Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-11-feature-final-typecheck-20261025.log",
+            "verifiedCommit": "6c4073268bd4f3929d53970763a0b2590076038e",
+            "completedAt": "2026-10-25T15:29:40Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "git diff --check",
+            "verifiedCommit": "6c4073268bd4f3929d53970763a0b2590076038e",
+            "completedAt": "2026-10-25T15:29:40Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "源码阶段真实原生renderer/Main聚焦验证与逐scope独审通过；本轮75个临界用例通过，安装夹具已安装基线识别修正后3/3通过。Notes交接4/4及209帧连续性、native发送准入12/12、双格式出版80/80、彭博18/18、AI随航双语206/206、命名57+28+5及中英文卡片几何8/8均有独立证据。这里只记录源码/renderer验证，正式11包和真实模型标注仍待构建后验证。"
+        },
+        "acceptanceCriteria": [
+          "四用例保持原生会话/保存/虚拟鼠标顺序；17段笔记可查看预测依据并自然回顶交还，新对话真实新建。",
+          "PPT慢输入、外部PDF拖入、详细回复、真实文件卡自动打开；研报按真实原名与固定四JSON完整排他交付。",
+          "PPT标注的真实授权/持久编号/双侧备注/原生输入/真实提交绑定与独立输出验收接通；普通快速预览不增加编辑开销。",
+          "四类演示后缀、彭博图表/导图对比、AI随航/AI评论员和两大卡中英新文案进入正式身份客户端。",
+          "只从干净main本地构建，保持1.3.5，不公证/上传/push；包完成后原生实测，不以fixture冒充。"
+        ],
+        "risks": [
+          "研报资产是正式EWork run04真实64页基线，metadata明确acceptedAsFinalExample=false；需新生成器装入正式客户端后再由EWork重生成最终稿。",
+          "子agent头像Figma只读recon已完成，尚未开发；将在本批构建后继续实现，不纳入本批已实现声明。",
+          "PPT标注真实模型新版及最新四用例正式包仍待原生验证。",
+          "概率性系统鼠标冻结未复现根因，不标fixed；完整74项对照表保留当前状态。"
+        ],
+        "generatedAt": "2026-10-25T15:29:40Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/pptx-annotations.test.ts",
+        "test/pptx-annotation-install.test.js",
+        "test/pptx-annotation-input-browser.test.js",
+        "test/pptx-annotation-browser.test.js",
+        "test/pptx-annotation-delivery.test.js",
+        "test/home-guide-notes-handoff-browser.test.js",
+        "test/home-report-publication.test.js",
+        "test/workbench-bloomberg-contrast-browser.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
