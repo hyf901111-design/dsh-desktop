@@ -50,9 +50,9 @@ it('refreshes coverage without stealing input focus or a selected conversation, 
   await page.evaluate(()=>window.openEvidence());await page.getByRole('button',{name:'定位原文',exact:true}).waitFor()
   await page.getByRole('button',{name:'对话',exact:true}).click();await page.locator('#draft').focus();await page.evaluate(()=>window.updateChallenge())
   expect(await page.locator('#draft').evaluate(el=>document.activeElement===el)).toBe(true);expect(await page.locator('#draft').inputValue()).toBe('未发送草稿');expect(await page.getByText('既有对话内容').isVisible()).toBe(true)
-  await page.getByRole('button',{name:'挑战',exact:true}).click();expect(await page.locator('[data-notes-challenge-panel]').textContent()).toContain('2 / 7 段');expect(await page.locator('[data-notes-challenge-panel]').textContent()).toContain('infodb连接当前不可用，尚未完成')
-  await page.getByRole('button',{name:'关闭挑战',exact:true}).click();expect(await page.locator('[data-notes-challenge-panel]').count()).toBe(0)
-  await page.evaluate(()=>window.updateChallenge());expect(await page.getByRole('button',{name:'挑战',exact:true}).count()).toBe(0)
+  await page.getByRole('button',{name:'AI随航',exact:true}).click();expect(await page.locator('[data-notes-challenge-panel]').textContent()).toContain('2 / 7 段');expect(await page.locator('[data-notes-challenge-panel]').textContent()).toContain('infodb连接当前不可用，尚未完成')
+  await page.getByRole('button',{name:'关闭AI随航',exact:true}).click();expect(await page.locator('[data-notes-challenge-panel]').count()).toBe(0)
+  await page.evaluate(()=>window.updateChallenge());expect(await page.getByRole('button',{name:'AI随航',exact:true}).count()).toBe(0)
   expect(await page.evaluate(()=>window.challengeController.storeFor('s').getSnapshot())).toBeNull();expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
@@ -74,12 +74,12 @@ it('switches evidence chrome and fixed review details live while preserving the 
    document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-state',{detail:{sessionId:'s',level:2,coverage:{checked:2,total:4},checks:[{kind:'review',status:'completed',detail:'本次实际审查2/4个待检查正文块；只检查本次正文及已提供的局部原文对照，未核验外部事实。'},{kind:'coverage',status:'partial',detail:'部分长段落超出单段处理上限，已保留为待检查，尚未完成检查。'},{kind:'custom',status:'unavailable',detail:'模型原生中文：不能修改用户正文。'}],issues:[{threadId:'thread',quote:'用户中文原文',category:'logic',message:'原生模型问题',evidence:[{kind:'note',label:'用户原始证据标题',blockId:'original',quote:'原文依据不应翻译。'}]}]}}))
    window.beforeLocale=JSON.stringify(window.challengeController.storeFor('s').getSnapshot());document.documentElement.dataset.odysseyLocale='en'
   })
-  await page.getByRole('button',{name:'Challenge',exact:true}).waitFor();await page.getByRole('region',{name:'Challenge evidence',exact:true}).waitFor()
+  await page.getByRole('button',{name:'AI Copilot',exact:true}).waitFor();await page.getByRole('region',{name:'Copilot evidence',exact:true}).waitFor()
   const panel=page.locator('[data-notes-challenge-panel]');await expect.poll(()=>panel.textContent()).toContain('Reviewed 2/4 pending text blocks')
   expect(await panel.textContent()).toContain('Review coverage');expect(await panel.textContent()).toContain('2 / 4 paragraphs');expect(await panel.textContent()).toContain('Incomplete checks')
   expect(await panel.textContent()).toContain('用户中文原文');expect(await panel.textContent()).toContain('用户原始证据标题');expect(await panel.textContent()).toContain('原文依据不应翻译。');expect(await panel.textContent()).toContain('模型原生中文：不能修改用户正文。')
   expect(await page.evaluate(()=>JSON.stringify(window.challengeController.storeFor('s').getSnapshot())===window.beforeLocale)).toBe(true)
-  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await page.getByRole('button',{name:'挑战',exact:true}).waitFor();await expect.poll(()=>panel.textContent()).toContain('本次实际审查2/4个待检查正文块')
+  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await page.getByRole('button',{name:'AI随航',exact:true}).waitFor();await expect.poll(()=>panel.textContent()).toContain('本次实际审查2/4个待检查正文块')
   expect(await page.evaluate(()=>window.rechecks.length)).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

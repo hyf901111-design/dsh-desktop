@@ -2,6 +2,15 @@ import {expect,it} from 'vitest'
 import {execFileSync} from 'node:child_process'
 import {capabilityReceiptText,noteCapabilityReceiptMessage} from '../packages/dsh-research-task-runtime/client-capabilities.js'
 
+it('presents saved legacy Copilot configuration receipts with new names without rewriting their stored messages',()=>{
+ const receipt={capability:'notes.challenge.configure',status:'succeeded',effect:{kind:'challenge',state:'saved',settings:{level:0,commentsExpanded:false},phase:'off'},message:'AI挑战设置已保存。等级：关闭；评论展开偏好：收起。自动挑战已关闭。'},before=JSON.stringify(receipt)
+ expect(capabilityReceiptText([receipt],'zh')).toBe('AI随航设置：已完成。AI随航设置已保存。等级：关闭；评论展开偏好：收起。AI随航已关闭。')
+ expect(capabilityReceiptText([receipt],'en')).toBe('AI Copilot settings: Completed. Settings saved. Level: Close; comments preference: Collapsed. AI Copilot is off.')
+ expect(JSON.stringify(receipt)).toBe(before)
+ const native={...receipt,message:'用户自己的说明：AI挑战设置已保存。'}
+ expect(noteCapabilityReceiptMessage(native,'zh')).toBe(native.message)
+})
+
 it('keeps default runtime receipts byte-for-byte Chinese and explicitly renders English chrome',()=>{
  const receipts=[{capability:'notes.components.create',status:'succeeded',message:'已生成并保存组件'},{capability:'notes.components.style',status:'succeeded',message:'已保存 2 个组件的样式。',changedBlockIds:['a','b']},{capability:'notes.export',status:'succeeded',path:'/tmp/用户中文报告 $&.pdf'}],before=JSON.stringify(receipts)
  expect(capabilityReceiptText(receipts)).toBe('创建组件：已完成。已生成并保存组件\n组件样式：已完成。已保存 2 个组件的样式。\n导出笔记：已完成 — /tmp/用户中文报告 $&.pdf')

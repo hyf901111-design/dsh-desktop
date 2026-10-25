@@ -18,6 +18,7 @@ import { mountAccountUi } from './account-ui'
 import { createResearchBoardsBridge } from './research-boards'
 import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron'
 import type { UpdateStatus } from '../shared/contracts'
+import type { PptxAnnotationBridge } from '../shared/pptx-annotations'
 import { developerModeEnabledFromArguments } from '../shared/developer-mode'
 import { appVersionFromArguments } from '../shared/app-info'
 import { createSherlockAboutBridge } from './about-info'
@@ -253,7 +254,7 @@ function initializeUi(): void {
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
-  const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuide(session.sessionId), revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide })
+  const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuide(session.sessionId), prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide })
   const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { themeController: getHomeThemeController(document), onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample: (kind, context) => playHomeGuideFromOperations(homeGuides,kind,context) }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {
@@ -303,6 +304,16 @@ contextBridge.exposeInMainWorld('sherlockPptEditor', Object.freeze({
   save: (value: unknown) => ipcRenderer.invoke('pptx:editor:save', value),
   preview: (value: unknown) => ipcRenderer.invoke('pptx:editor:preview', value)
 }))
+
+contextBridge.exposeInMainWorld('sherlockPptAnnotations', Object.freeze({
+  open: value => ipcRenderer.invoke('pptx:annotation:open', value),
+  mutate: value => ipcRenderer.invoke('pptx:annotation:mutate', value),
+  prepare: value => ipcRenderer.invoke('pptx:annotation:prepare', value),
+  bindSubmission: value => ipcRenderer.invoke('pptx:annotation:bindSubmission', value),
+  complete: value => ipcRenderer.invoke('pptx:annotation:complete', value),
+  lookupOutput: value => ipcRenderer.invoke('pptx:annotation:lookupOutput', value),
+  cancel: value => ipcRenderer.invoke('pptx:annotation:cancel', value),
+} satisfies PptxAnnotationBridge))
 
 contextBridge.exposeInMainWorld(
   'dshDesktop',

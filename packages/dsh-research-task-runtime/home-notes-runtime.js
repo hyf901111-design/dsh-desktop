@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto'
 import {readFile,lstat,realpath} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
+import {isHomeGuideSessionTitle} from './home-guide-session-titles.js'
 import {noteConversationRows,recordNoteConversation,setNoteConversationRunning} from './notes-session.js'
 import {noteMessageReferences} from './notes-message-references.js'
 import {HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT} from './home-notes-guide-contract.js'
@@ -25,7 +26,7 @@ export function createHomeNotesRuntime(ctx,{env=process.env}={}){
    const agent=ctx.agents.get(input.sessionId),session=agent?.session
    if(!session||session.header.cwd!==input.cwd||session.header.parentSession||session.header.origin==='subagent'||agent.status==='running'||session.events.some(event=>['user/message','assistant/message','turn/start','tool/call','workspace-note/edited','workspace-note/conversation'].includes(event.type)))throw Error('只能在新建的独立笔记示例会话中启动。')
    const rows=JSON.parse(await readFile(join(env.DSH_HOME,'research-board-directories.json'),'utf8'))
-   if(!Object.values(rows).some(row=>row.sessionId===input.sessionId&&row.path===input.cwd&&/^AI 护航研究笔记示例(?: · 练习副本)?$/.test(row.title)))throw Error('笔记示例目录尚未登记。')
+   if(!Object.values(rows).some(row=>row.sessionId===input.sessionId&&row.path===input.cwd&&isHomeGuideSessionTitle('note',row.title)))throw Error('笔记示例目录尚未登记。')
    if((await lstat(input.cwd)).isSymbolicLink()||await realpath(input.cwd)!==input.cwd)throw Error('笔记示例目录已变化。')
    if(closed||cancelled.has(key(input))||ctx.agents.get(input.sessionId)!==agent||session.events.some(event=>['user/message','assistant/message','turn/start','workspace-note/edited','workspace-note/conversation'].includes(event.type)))throw abortError()
    if(runs.has(input.sessionId)){current(input);if(runs.get(input.sessionId).cwd!==input.cwd)throw Error('笔记示例目录已变化。');return{prompts:{note:HOME_NOTES_TASK_PROMPT,selection:HOME_NOTES_REWRITE_PROMPT}}}

@@ -69,7 +69,7 @@ it('isolates explicit optimization in native Yjs undo/redo without undoing the p
 
 it('keeps the same discussion and unsent draft readable at the restored quote after native undo and redo',async()=>{
  const f=await fixture();try{
-  await f.page.getByRole('textbox',{name:'回复AI挑战'}).fill('这份未发送讨论草稿不能丢。')
+  await f.page.getByRole('textbox',{name:'回复AI评论员'}).fill('这份未发送讨论草稿不能丢。')
   await optimize(f.page);await nativeHistory(f.page)
   await expect.poll(()=>f.page.evaluate(id=>window.editor.getBlock(id).content.map(part=>part.text).join(''),f.blockId)).toBe(original)
   await expect.poll(()=>f.page.locator('.en-challenge-quote').textContent()).toBe(original)

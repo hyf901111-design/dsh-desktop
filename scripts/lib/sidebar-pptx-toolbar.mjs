@@ -1,9 +1,10 @@
 /** Bind the native sidebar header to the PPT viewer's existing mode controls. */
 export function patchSidebarPptxToolbar(source) {
-  const marker = '/* odyssey:sidebar-pptx-mode:v1 */'
+  const marker = '/* odyssey:sidebar-pptx-mode:v2 */',legacyMarker='/* odyssey:sidebar-pptx-mode:v1 */'
   const anchor = 'function EditorHost(props) {'
   const start = source.indexOf(anchor), end = source.indexOf('\n\t\t/**', start)
   if (start < 0 || end < 0 || source.split(anchor).length !== 2) throw Error('Sidebar PPT toolbar host anchor drifted')
+  const prefix=source.slice(0,start),suffix=source.slice(end)
   let host = source.slice(start, end)
   const beforeState = `const [toolbar, setToolbar] = (0, react.useState)(null);
 \t\t\tconst controlsRef = (0, react.useRef)(null);
@@ -58,6 +59,23 @@ export function patchSidebarPptxToolbar(source) {
                             onClick: togglePptxMode,
                             children: (0, react_jsx_runtime.jsx)("svg", {width:14,height:14,viewBox:"0 0 16 16",fill:"none",stroke:"currentColor",strokeWidth:1.4,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true,children:(0,react_jsx_runtime.jsx)("path",{d:toolbar?.mode === "edit" ? "M1.5 8s2-4.5 6.5-4.5S14.5 8 14.5 8s-2 4.5-6.5 4.5S1.5 8 1.5 8ZM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" : "m10 2 4 4-7.5 7.5-4.5.5.5-4.5L10 2ZM8.5 3.5l4 4M2.5 9.5l4 4"})})
                         })`
+  const annotationState = `
+            const [annotationPending,setAnnotationPending] = (0,react.useState)(null), annotationRequestRef=(0,react.useRef)(null);
+            const annotationBusy = toolbar?.annotationBusy === true || annotationPending === toolbarOwner;
+            const togglePptxAnnotations = async()=>{
+                const controls=getToolbarControls();
+                if(!isPptx||toolbar?.annotations!==true||annotationBusy||pptModeBusy||annotationRequestRef.current?.owner===toolbarOwner||typeof controls?.toggleAnnotations!=="function")return;
+                const request={owner:toolbarOwner};annotationRequestRef.current=request;setAnnotationPending(toolbarOwner);
+                try{await controls.toggleAnnotations();}catch{/* The viewer retains the confirmed state and error. */}
+                finally{if(annotationRequestRef.current===request){annotationRequestRef.current=null;if(toolbarOwnerRef.current===toolbarOwner)setAnnotationPending(null);}}
+            };`
+  const annotationButton = `,
+                        isPptx && toolbar?.annotations === true && (0,react_jsx_runtime.jsx)("button",{
+                            type:"button",className:clsx(sidebar_module_css_default.iconButton,toolbar.annotationActive&&sidebar_module_css_default.editorTreeToggleActive),
+                            "data-odyssey-pptx-annotation-toggle":true,"aria-label":toolbar.annotationActive?"关闭标注模式":"标注演示文稿",title:toolbar.annotationActive?"关闭标注模式":"标注演示文稿",
+                            "aria-pressed":!!toolbar.annotationActive,"aria-busy":annotationBusy||void 0,disabled:load.status!=="ready"||annotationBusy||pptModeBusy,onClick:togglePptxAnnotations,
+                            children:(0,react_jsx_runtime.jsx)("img",{src:toolbar.annotationIcon,width:16,height:16,alt:"","aria-hidden":true})
+                        })`
   const replacements = [
     [beforeState, afterState],
     ['setToolbar(null);\n\t\t\t\tif (showEmpty) return;', '/* The file-scoped record rejects stale state without clearing a new child effect. */\n\t\t\t\tif (showEmpty) return;'],
@@ -68,6 +86,14 @@ export function patchSidebarPptxToolbar(source) {
     ['controlsRef.current?.save();', 'getToolbarControls()?.save();'],
     [folder, withButton]
   ]
+  if(source.includes(legacyMarker)){
+    const prior=replacements.map(([before,after])=>[before,after.replace(marker,legacyMarker)])
+    if(source.split(legacyMarker).length!==2||prior.some(([,after])=>host.split(after).length!==2))throw Error('Legacy sidebar PPT toolbar installation drifted')
+    for(const[before,after]of prior)host=host.replace(after,before)
+    source=prefix+host+suffix
+  }
+  replacements[0][1]+=annotationState
+  replacements[replacements.length-1][1]+=annotationButton
   if (source.includes(marker)) {
     if (source.split(marker).length !== 2 || replacements.some(([, after]) => host.split(after).length !== 2)) throw Error('Sidebar PPT toolbar installation drifted')
     return source
@@ -76,5 +102,5 @@ export function patchSidebarPptxToolbar(source) {
     if (host.split(before).length !== 2) throw Error('Sidebar PPT toolbar source drifted: ' + before.slice(0, 70))
     host = host.replace(before, after)
   }
-  return source.slice(0, start) + host + source.slice(end)
+  return prefix + host + suffix
 }

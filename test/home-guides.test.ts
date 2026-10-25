@@ -17,7 +17,7 @@ function fixture(fresh = true) {
  }
  window.addEventListener('sherlock:home-guide-session-request',listener);off=()=>window.removeEventListener('sherlock:home-guide-session-request',listener)
  const runStep=vi.fn(async(_step:string)=>{}),release=vi.fn(),flush=vi.fn(async()=>{})
- const adapters={mountNotes:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountPresentation:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush}))}
+ const adapters={prepareHandoff:vi.fn(async(_session:any,_signal:AbortSignal):Promise<void|(()=>void)>=>{}),mountNotes:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountPresentation:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush}))}
  const controller=mountHomeGuides(document,adapters);dispose=controller.dispose
  return{controller,adapters,runStep,release,flush,text,header,requests,setOpen:(fn:(detail:any,reply:(value:any)=>void)=>void)=>{open=fn},setPrepare:(fn:(detail:any)=>void)=>{prepare=fn}}
 }
@@ -52,6 +52,31 @@ test('PPT keeps the real history and input usable instead of mounting a replacem
  expect(f.text.closest<HTMLElement>('.wSkVaW_root')?.dataset.homeGuideLive).toBe('true')
  expect(f.text.parentElement?.inert).not.toBe(true);expect(document.querySelector<HTMLElement>('.wSkVaW_scrollBody')?.inert).not.toBe(true)
  expect(f.adapters.mountPresentation.mock.calls[0]?.[2]).toMatchObject({sessionId:'example-ppt',fresh:true})
+})
+test.each(['note','ppt'] as const)('briefly explains token-free %s playback below the header and removes the notice',async kind=>{
+ vi.useFakeTimers();const f=fixture();await f.controller.start(kind)
+ const notice=document.querySelector<HTMLElement>('.odyssey-home-guide-mode-notice')
+ expect(notice?.textContent).toBe('当前为演示模式，不消耗 Token')
+ expect(notice?.closest('[data-home-guide]')).not.toBeNull()
+ expect(document.querySelector('[data-center-composer-host] .odyssey-home-guide-mode-notice')).toBeNull()
+ await vi.advanceTimersByTimeAsync(5300)
+ expect(document.querySelector('.odyssey-home-guide-mode-notice')).toBeNull()
+})
+test('keeps the saved note visible until the ordinary editor is ready to take over',async()=>{
+ vi.useFakeTimers();const f=fixture();let ready!:()=>void
+ f.adapters.prepareHandoff.mockImplementationOnce(()=>new Promise<void>(resolve=>{ready=resolve}))
+ await f.controller.start('note');await vi.advanceTimersByTimeAsync(50000)
+ expect(f.flush).toHaveBeenCalledOnce()
+ expect(f.adapters.prepareHandoff).toHaveBeenCalledWith(expect.objectContaining({kind:'note',sessionId:'example-note'}),expect.any(AbortSignal))
+ expect(f.release).not.toHaveBeenCalled();expect(document.querySelector('[data-home-guide]')).not.toBeNull()
+ ready();await vi.advanceTimersByTimeAsync(0)
+ expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull()
+})
+test('commits a ready same-session note handoff before cancelling its preparation signal',async()=>{
+ vi.useFakeTimers();const f=fixture(),shown=vi.fn()
+ f.adapters.prepareHandoff.mockImplementationOnce(async(_session:any,signal:AbortSignal)=>()=>{if(!signal.aborted)shown()})
+ await f.controller.start('note');await vi.advanceTimersByTimeAsync(50000)
+ expect(shown).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
 })
 test('flushes the note before releasing its view and never restores an old session',async()=>{
  const f=fixture();await f.controller.start('note');let finish!:()=>void
@@ -186,13 +211,13 @@ test('PPT assigns reading holds to the visible work without an introduction or b
 })
 
 test('hands the saved scene back to the real client after completion',async()=>{
- vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(30000)
- expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review','select','optimize','replace','note-task-compose','note-task-review','note-task-apply','note-select-paragraph','note-rewrite','note-rewrite-apply']);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
+ vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(50000)
+ expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review','select','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-task-compose','note-task-review','note-task-apply','note-select-paragraph','note-rewrite','note-rewrite-apply','note-return-top']);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
  expect(document.querySelector('[data-home-guide]')).toBeNull();expect(document.querySelector('.odyssey-home-guide-pointer')).toBeNull();expect(f.text.parentElement?.inert).toBe(false)
 })
 test('keeps mount and completion save faults visible without playback controls',async()=>{
  vi.useFakeTimers();const f=fixture();f.adapters.mountNotes.mockRejectedValueOnce(Error('笔记打开失败'));await f.controller.start('note')
  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('笔记打开失败');expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(false)
- await f.controller.reset();f.flush.mockRejectedValueOnce(Error('保存冲突'));await f.controller.start('note');await vi.advanceTimersByTimeAsync(30000)
+ await f.controller.reset();f.flush.mockRejectedValueOnce(Error('保存冲突'));await f.controller.start('note');await vi.advanceTimersByTimeAsync(50000)
  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('保存冲突');expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(false)
 })

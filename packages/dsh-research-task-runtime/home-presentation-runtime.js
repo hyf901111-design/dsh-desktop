@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto'
 import {lstat,mkdir,readFile,realpath,writeFile} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {isHomeGuideSessionTitle} from './home-guide-session-titles.js'
 
 export function createHomePresentationBrief(metadata){return `帮我把这份研报整理成一份公司风格的汇报PPT，${metadata.presentationSlides}页左右，讲清主要观点并配上关键图表。`}
 export const HOME_PRESENTATION_FILE='人工智能周期与资产配置.pptx'
@@ -26,12 +27,12 @@ export function createHomePresentationReplay(metadata){
  let chapters=clean((Array.isArray(metadata.chapters)?metadata.chapters:[]).map(chapter=>chapter?.title))
  if(!chapters.length)chapters=clean(pages.filter(page=>page.kind==='toc').map(page=>page.title?.replace(/^目录[：:\s]*/u,'')))
  const sections=chapters.length?chapters:clean(pages.filter(page=>!['cover','closing','toc'].includes(page.kind)).map(page=>page.title)).slice(0,4)
- const structure=sections.length?`我会按${sections.length}个${chapters.length?'章节':'阅读重点'}组织汇报：\n\n`+sections.map((chapter,index)=>`${index+1}. ${chapter}`).join('\n')+'\n\n用关键图表支撑观点，保留目录、原报告页码和数据时点。':'我会先提炼研究观点，再用关键图表组织证据，保留目录、来源页码和数据时点。'
+ const structure=sections.length?`汇报将按${sections.length}个${chapters.length?'章节':'阅读重点'}展开：\n\n`+sections.map((chapter,index)=>`${index+1}. ${chapter}`).join('\n')+'\n\n我会先把主要结论说清楚，再用图表解释判断依据。涉及增长、资本开支与资产回报的数字会保留原报告页码和数据时点；原报告预测与研读判断分开呈现，避免把不同口径混在一起。':'我会先提炼研究观点，再用关键图表组织证据，保留目录、来源页码和数据时点。'
  return {
-  intro:`好的，我会将这份${metadata.sourcePages}页研报整理成《${title}》${slides}页汇报。分析沿用 ${metadata.publisher??'Vanguard'} 于${metadata.publicationDate}发布的报告及其历史预测口径，不将其作为当前投资建议。`,
+  intro:`好的，我先阅读附件，提炼适合内部交流的观点和关键数据，再整理成《${title}》${slides}页公司风格汇报。\n\n这份${metadata.sourcePages}页资料由 ${metadata.publisher??'Vanguard'} 于${metadata.publicationDate}发布。我会沿用报告当时的历史预测和数据口径，在开篇说明资料时点。`,
   structure,
-  layout:'研究框架和图表安排已整理好。接下来统一公司模板排版，核对封面、章节导航、图表口径与来源标注，确保正文清晰可读。',
-  delivery:`已完成并保存《${title}》${slides}页汇报${chapters.length?`，共${chapters.length}个章节`:''}。关键图表与来源标注已保留，可继续编辑。\n\n[打开可编辑演示文稿](./${HOME_PRESENTATION_FILE})\n\n[查看原始研究报告](./${HOME_PRESENTATION_SOURCE_FILE})`,
+  layout:'资料与章节已经梳理好，正在整理正文和图表。\n\n- 宏观与 AI 投入部分：用数据对照解释增长预期及资金能力，避免只罗列数字。\n- 估值与配置部分：把情景假设、回报预测和风险条件放在一起，便于比较。\n- 版式部分：统一公司封面、章节目录、字体与页脚，核对表头、图表标签、来源页码和正文对齐。\n\n接下来完成文件保存，再打开成稿检查阅读效果。',
+  delivery:`已完成并保存《${title}》${slides}页公司风格汇报${chapters.length?`，共${chapters.length}个章节`:''}，可编辑的 PPT 和原始研报已保存到当前工作区。\n\n**内容包括**\n\n- 报告要点与宏观预测，先交代结论、资料时点和阅读框架。\n- AI 投资、资本开支与生产率路径，用图表展示关键证据。\n- 估值情景、资产角色和风险观察，把判断与成立条件一起呈现。\n\n**文件说明**\n\n关键图表与来源标注已保留，PPT可继续编辑。已保留规范目录与章节导航；原报告的历史预测与本稿研读判断分开标注。建议先浏览目录和核心结论，再按章节检查图表与风险观察。\n\n[打开可编辑演示文稿](./${HOME_PRESENTATION_FILE})\n\n[查看原始研究报告](./${HOME_PRESENTATION_SOURCE_FILE})\n\n如果需要调整页内表达或补充内容，可以继续在当前对话提出修改要求。`,
   todos:['研读报告，核对来源与数据时点',`按章节组织${slides}页汇报，统一品牌排版并检查图表`,'保存可编辑汇报与原始报告']
  }
 }
@@ -121,7 +122,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
     if(!agent||session.header.cwd!==input.cwd||session.header.parentSession||session.header.origin==='subagent'||agent.status==='running'||session.events.some(e=>['user/message','assistant/message','tool/call','turn/start',EVENT].includes(e.type)))throw Error('演示只能在新建的独立空白会话中启动。')
     if(typeof env.DSH_HOME!=='string')throw Error('客户端示例资源尚未就绪。')
     const rows=JSON.parse(await readFile(join(env.DSH_HOME,'research-board-directories.json'),'utf8'))
-    if(!Object.values(rows).some(row=>row.sessionId===session.id&&row.path===input.cwd&&/^公司风格演示示例(?: · 练习副本)?$/.test(row.title)))throw Error('示例会话未登记专属目录。')
+    if(!Object.values(rows).some(row=>row.sessionId===session.id&&row.path===input.cwd&&isHomeGuideSessionTitle('ppt',row.title)))throw Error('示例会话未登记专属目录。')
     await mkdir(input.cwd,{recursive:true});if((await lstat(input.cwd)).isSymbolicLink())throw Error('示例目录不能是符号链接。');const root=await realpath(input.cwd)
     const {metadata,sourceBytes,bytes}=await loadHomePresentationAssets()
     checkPreparing()

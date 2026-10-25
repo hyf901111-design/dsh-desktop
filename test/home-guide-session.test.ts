@@ -14,7 +14,7 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   const state: any = { version: 1, eventSeq: 1, account: { status: 'ready', generation: 1, user: { userId: 'owner' } }, favorites: [], boards: [], current: null, recoveries: [], notifications: { cursor: 0, unreadCount: 0, pendingCount: 0, notifications: [] } }
   const canvases = new Map<string, any>()
   const workspaces = { list: store({ items: [] as any[] }), create: async ({path}: {path:string}) => { requests.push(['workspace.create',path]); const existing=workspaces.list.getSnapshot().items.find(item=>item.path===path);if(existing)return existing;const item={workspaceId:'workspace:'+path,path,sessionIds:[]};workspaces.list.set({items:[...workspaces.list.getSnapshot().items,item]});return item }, api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: '/workspace' } } }) }, sessions: {create:async(input:any)=>{requests.push(['workspace.attach',input]);workspaces.list.set({items:workspaces.list.getSnapshot().items.map(item=>item.workspaceId===input.workspaceId?{...item,sessionIds:[input.sessionId]}:item)});return {result:{ok:true,value:{sessionId:input.sessionId}}}}} }, archiveSession: async (id: string) => { archived.push(id) } }
-  const sessions = { list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) }, async create({ cwd }: any) { requests.push(['create', cwd]); await createGate; const id = 'guide-' + (++sequence); list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd, blank: true, title: '新对话' } } }); return id }, binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], subscribe: () => () => {}, rename: async (title: string) => list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { ...list.getSnapshot().byId[id], title, displayTitle: title } } }) } } } }
+  const sessions = { list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) }, async create({ cwd }: any) { requests.push(['create', cwd]); await createGate; const id = 'guide-' + (++sequence); list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd, blank: true, title: '新对话' } } }); return id }, binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], subscribe: () => () => {}, rename: async (title: string) => {list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { ...list.getSnapshot().byId[id], title, displayTitle: title } } });return{ok:true,value:{title,seq:1}}} } } } }
   ;(win as any).dshDesktop = { researchCanvasStorage: { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
   globalThis.Event = win.Event as unknown as typeof Event
   globalThis.document = win.document as unknown as Document
@@ -28,6 +28,20 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
   return { win, page, sessions, workspaces, state, requests, opened, archived, disk, replies, send, reply, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
+it('prepares a dedicated report session, persists it and creates a separate practice copy without a board', async () => {
+  const f = await fixture(), first = await f.reply(f.send('report'))
+  expect(first).toMatchObject({ ok: true, title: '研究报告示例（演示案例）', fresh: true })
+  const repeated = await f.reply(f.send('report'))
+  expect(repeated).toMatchObject({ ok: true, sessionId: first.sessionId, fresh: false })
+  const copy = await f.reply(f.send('report', 'prepare', { replay: true }))
+  expect(copy).toMatchObject({ ok: true, title: '研究报告示例 · 练习副本（演示案例）', fresh: true })
+  expect(copy.sessionId).not.toBe(first.sessionId); expect(copy.cwd).not.toBe(first.cwd)
+  expect(f.requests.filter(item => item[0] === 'favorite.add')).toEqual([])
+  const reopen = await fixture({ disk: f.disk, byId: f.sessions.list.getSnapshot().byId })
+  expect(await reopen.reply(reopen.send('report'))).toMatchObject({ ok: true, sessionId: copy.sessionId, fresh: false })
+  reopen.setOwner('another')
+  expect(await reopen.reply(reopen.send('report', 'open', { sessionId: copy.sessionId }))).toMatchObject({ ok: false })
+})
 it('prepares a real dedicated board without navigation, reuses it and opens only a registered matching session', async () => {
   const f = await fixture(), a = f.send(), b = f.send()
   const first = await f.reply(a), second = await f.reply(b)

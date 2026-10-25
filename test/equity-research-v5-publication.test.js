@@ -113,6 +113,20 @@ describe('V5 deep research publication',()=>{
   const html=renderReport(f.packet,f.validation,f.calculation),model=html.split('id="section-dcf-summary"')[1].split('id="financial-statements"')[0],visible=model.replace(/<[^>]*>/g,'')
   expect(visible).not.toContain('正式财务披露');expect(model).toContain('title="正式财务披露"');expect(model).toContain('href="#source-disclosure"')
   expect(model.match(new RegExp(reason,'g'))).toHaveLength(1);expect(model).toContain('研究依据全文索引');expect(model).toContain('R02')
+  expect(model).toContain('model-rationale-index')
+ })
+ it('explains an unbracketed range with its persisted endpoint prices and fixed conditions instead of claiming a solved market expectation',()=>{
+  const f=fixture();f.calculation.dcf.sensitivities.reverseGrowth={status:'unavailable',code:'NO_BRACKET',reason:'显式收入增长区间未夹住当前价格，未虚构根。',lowerGrowth:'-0.05',upperGrowth:'0.12',lowerPerShareValue:'30',upperPerShareValue:'60',price:'25',fixedAssumptions:'首个预测年保持原情景；其余经营率、折现和价值桥不变。',sourceRefs:['financial']}
+  const html=renderReport(f.packet,f.validation,f.calculation),reverse=html.split('id="section-dcf-reverse"')[1].split('id="financial-statements"')[0]
+  expect(reverse).toContain('反向估值区间核对');expect(reverse).toContain('未求得根');expect(reverse).toContain('30.00 元/股');expect(reverse).toContain('60.00 元/股');expect(reverse).toContain('25.00 元/股')
+  expect(reverse).toContain('首个预测年保持原情景');expect(reverse).toContain('不代表市场实际采用的增长预期');expect(reverse).toContain('显式收入增长区间未夹住当前价格，未虚构根。')
+  expect(reverse).not.toMatch(/现价隐含常量收入增长|undefined|NaN/)
+  expect(publicationTargetCount(f.packet,f.validation.facts,new Map(),f.calculation,0)).toBe([...html.matchAll(/data-publication-target=/g)].length)
+ })
+ it('keeps legacy unavailable results honest when no endpoint prices were saved',()=>{
+  const f=fixture();f.calculation.dcf.sensitivities.reverseGrowth={status:'unavailable',code:'NO_BRACKET',reason:'显式区间内无可行根。',lowerGrowth:'-0.05',upperGrowth:'0.12',sourceRefs:['financial']}
+  const reverse=renderReport(f.packet,f.validation,f.calculation).split('id="section-dcf-reverse"')[1].split('id="financial-statements"')[0]
+  expect(reverse).toContain('未保存区间端点');expect(reverse).toContain('显式区间内无可行根。');expect(reverse).not.toMatch(/undefined|NaN|30.00 元\/股/)
  })
  it('maps concise bridge-axis keys to full adjustment names in the exact detail table',()=>{
   const f=fixture(),html=renderReport(f.packet,f.validation,f.calculation),bridge=html.split('id="section-dcf-owner-bridge"')[1].split('id="section-dcf-sensitivity"')[0]

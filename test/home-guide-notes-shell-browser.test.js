@@ -8,11 +8,14 @@ import {pathToFileURL} from 'node:url'
 import {NotesStore} from '../src/main/notes/store'
 import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 import {homeNoteNativeSessionBrowser,isolatedNoteStorage} from './fixtures/home-note-native-session-browser.js'
+import {homeNoteChallengeSidebarSource} from './fixtures/home-note-challenge-sidebar.js'
 let browser,script,css,nativeSessionScript
 beforeAll(async()=>{
  nativeSessionScript=await homeNoteNativeSessionBrowser()
+ const challengeSidebar=await homeNoteChallengeSidebarSource()
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountHomeGuides}from'./src/preload/home-guides';import{mountHomeNotesGuide}from'./src/preload/home-guide-notes';import{mountNotes}from'./src/preload/notes/mount';import{WorkspaceSurfaceHost}from'./src/preload/workspace-surface-host';
+ ${challengeSidebar}
  import{HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT}from'./packages/dsh-research-task-runtime/home-notes-guide-contract.js';
  window.noteLoads=[];window.originalInput=document.querySelector('#original-draft');window.originalInput.focus();window.originalInput.setSelectionRange(1,3);
  window.guideCueHistory=[];window.addEventListener('sherlock:home-guide-cue',event=>{const detail=event.detail,target=detail.target??[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===detail.targetToken);window.guideCueHistory.push({label:detail.label,tag:target?.tagName,className:target?.className});});
@@ -205,9 +208,13 @@ it('keeps the original native editor and its recovery draft when handover cannot
 },15000)
 it('keeps strict review alive during a long pause and then preserves the finished note',async()=>{
  const f=await fixture(),{page,errors,logs}=f;try{
+  // Writing motion is covered by the full walkthroughs above. Start this
+  // scheduler test quickly enough to pause the actual strict review itself.
+  await page.emulateMedia({reducedMotion:'reduce'})
   await page.evaluate(()=>window.guides.start('note'))
-  const deadline=Date.now()+30000
-  while(Date.now()<deadline){if(await page.locator('.en-challenge-popover').count()===0&&await page.locator('.en-challenge-grade').count()>0&&await page.locator('.en-challenge-grade').innerText()==='严格'&&await page.locator('[data-home-guide] .bn-editor [data-bn-thread-id]').count()<3)break;await page.evaluate(()=>{if(window.__testHomeGuideTimeline.snapshot().holding)window.__testHomeGuideTimeline.next()});await page.waitForTimeout(50)}
+  const deadline=Date.now()+30000;let reachedStrict=false
+  while(Date.now()<deadline){if(await page.locator('.en-challenge-popover').count()===0&&await page.locator('.en-challenge-grade').count()>0&&await page.locator('.en-challenge-grade').innerText()==='严格'&&await page.locator('[data-home-guide] .bn-editor [data-bn-thread-id]').count()<4){reachedStrict=true;break}await page.evaluate(()=>{if(window.__testHomeGuideTimeline.snapshot().holding)window.__testHomeGuideTimeline.next()});await page.waitForTimeout(50)}
+  expect(reachedStrict).toBe(true)
   await page.evaluate(()=>window.__testHomeGuideTimeline.pause());await page.waitForTimeout(11200)
   expect(await page.locator('[data-home-guide] .bn-editor').count()).toBe(1);expect(await page.locator('.odyssey-home-guide-status').innerText()).not.toContain('未就绪')
   await page.evaluate(()=>window.__testHomeGuideTimeline.play());await complete(page);expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')

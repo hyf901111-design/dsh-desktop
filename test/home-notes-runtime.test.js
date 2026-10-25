@@ -8,15 +8,25 @@ import {HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_GUIDE_SELECT
 import {noteConversationRows,recordNoteConversation} from '../packages/dsh-research-task-runtime/notes-session.js'
 const releases=[]
 afterEach(async()=>{vi.useRealTimers();for(const off of releases.splice(0))await off()})
-async function fixture(){
+async function fixture(title='AI 护航研究笔记示例（演示案例）'){
  const root=await realpath(await mkdtemp(join(tmpdir(),'home-notes-runtime-'))),cwd=join(root,'note');await mkdir(cwd)
- await writeFile(join(root,'research-board-directories.json'),JSON.stringify({note:{sessionId:'note-session',path:cwd,title:'AI 护航研究笔记示例'}}))
+ await writeFile(join(root,'research-board-directories.json'),JSON.stringify({note:{sessionId:'note-session',path:cwd,title}}))
  const session=Session.create('note-session',undefined,{version:0,id:'note-session',createdAt:Date.now(),cwd}),agent={id:session.id,session,status:'idle'}
  const runtime=createHomeNotesRuntime({sessions:{get:id=>id===session.id?session:undefined},agents:{get:id=>id===session.id?agent:undefined}},{env:{DSH_HOME:root}})
  releases.push(async()=>{await runtime.dispose();await rm(root,{recursive:true,force:true})})
  const run={sessionId:session.id,runId:'note-run',cwd,fresh:true},input={sessionId:session.id,requestId:'task-1',prompt:HOME_NOTES_TASK_PROMPT,title:'研究笔记',markdown:'收入从120亿元增至132亿元，同比增长10%。',selection:'',context:{scope:'note',components:[]},images:[],mode:'write'}
  return{root,cwd,session,agent,runtime,run,input}
 }
+it.each(['AI 护航研究笔记示例','AI 护航研究笔记示例 · 练习副本','AI 护航研究笔记示例（演示案例）','AI 护航研究笔记示例 · 练习副本（演示案例）'])('prepares the registered native note session titled %s',async title=>{
+ const f=await fixture(title)
+ expect(await f.runtime.prepare(f.run)).toEqual({prompts:{note:HOME_NOTES_TASK_PROMPT,selection:HOME_NOTES_REWRITE_PROMPT}})
+ expect(noteConversationRows(f.session)).toEqual([])
+})
+it('refuses a renamed note session before recording a task',async()=>{
+ const f=await fixture('AI 护航研究笔记示例（演示案例） · 练习副本')
+ await expect(f.runtime.prepare(f.run)).rejects.toThrow('尚未登记')
+ expect(noteConversationRows(f.session)).toEqual([])
+})
 it('records two genuine native note tasks and restores their ready/adopted history without creating agent turns',async()=>{
  const f=await fixture();await f.runtime.prepare(f.run);await f.runtime.playback({...f.run,playing:true});vi.useFakeTimers()
  const progress=[],first=f.runtime.generate({...f.run,input:f.input},undefined,value=>progress.push(value));await vi.advanceTimersByTimeAsync(20000)

@@ -10,6 +10,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  let position:Point|undefined,busy=false,closed=false,state='idle'
  type Connection={source:HTMLElement;target:HTMLElement;canvas:HTMLElement;guide:HTMLElement;svg:SVGSVGElement;path:SVGPathElement}
  let connection:Connection|undefined
+ let draggedFile:{node:HTMLElement;origin:Point;transform:string}|undefined
  const clearConnection=()=>{connection?.svg.remove();connection=undefined}
  const aborted=()=>Object.assign(Error('操作已取消。'),{name:'AbortError'})
  let rejectInterrupt!:(error:Error)=>void
@@ -57,7 +58,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
   // pointer; the real workspace still owns the final persisted connection.
   link.path.setAttribute('d',`M ${from.x} ${from.y} C ${from.x+bend} ${from.y} ${next.x-bend} ${next.y} ${next.x} ${next.y}`)
  }
- const paint=(next:Point,phase:string)=>{paintConnection(next,phase);position=next;state=phase;element.hidden=false;element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`}
+ const paint=(next:Point,phase:string)=>{paintConnection(next,phase);if(draggedFile){if(!draggedFile.node.isConnected)throw aborted();draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`}position=next;state=phase;element.hidden=false;element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`}
  const reduced=()=>win.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true
  const travel=async(target:HTMLElement,duration:number,phase='moving')=>{
   const destination=point(target),start=position??{x:Math.max(8,destination.x-64),y:Math.max(8,destination.y-40)},steps=reduced()?1:Math.max(1,Math.ceil(duration/16))
@@ -72,19 +73,22 @@ export function createHomeGuidePointer(document:Document,options:Options){
   hide(){element.hidden=true;clearConnection()},
   async perform(action:HomeGuidePointerAction){
    ensure();if(busy)throw Error('上一项指针操作尚未完成。');busy=true
+   let completed=false
    try{
     await gate();const target=point(action.target)
     if(action.action==='drag'){
      if(!action.fromTarget)throw Error('连接操作缺少起点。')
-     await travel(action.fromTarget,320);beginConnection(action.fromTarget,action.target);paint(point(action.fromTarget),'pressed');await wait(reduced()?0:80)
+     await travel(action.fromTarget,320);beginConnection(action.fromTarget,action.target)
+     if(action.fromTarget.dataset.homeGuideDragFile===options.runId)draggedFile={node:action.fromTarget,origin:point(action.fromTarget),transform:action.fromTarget.style.transform}
+     paint(point(action.fromTarget),'pressed');await wait(reduced()?0:80)
      await travel(action.target,780,'dragging');paint(point(action.target),'released');await wait(reduced()?0:160)
     }else{
      const distance=position?Math.hypot(target.x-position.x,target.y-position.y):120
      await travel(action.target,Math.max(280,Math.min(620,230+distance*.4)))
      if(action.action!=='move'){paint(point(action.target),'pressed');await wait(reduced()?0:80);paint(point(action.target),'released');await wait(reduced()?0:160)}
     }
-    ensure();paint(point(action.target),'idle')
-   }finally{clearConnection();busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
+    ensure();paint(point(action.target),'idle');completed=true
+   }finally{if(draggedFile&&!completed)draggedFile.node.style.transform=draggedFile.transform;draggedFile=undefined;clearConnection();busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
   },
   dispose(){stop();options.signal.removeEventListener('abort',stop);element.remove()}
  }

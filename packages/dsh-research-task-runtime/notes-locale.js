@@ -1,5 +1,7 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+  "AI随航": "AI Copilot",
+  "AI评论员": "AI Commentator",
 "客户端请求已被较新用户输入替代，请重新读取能力目录。":"A newer user request superseded this action. Read the capability catalog again.",
 "笔记文档上下文无效。":"Invalid note document context.",
 "当前笔记编辑器尚未就绪，请稍后重新读取能力目录。":"The current note editor is not ready. Read the capability catalog again shortly.",
@@ -267,25 +269,25 @@ export const NOTE_ENGLISH = {
   "Word 文档": "Word document",
   "PDF 文档": "PDF document",
   "Markdown 文档": "Markdown document",
-  "AI挑战": "AI Challenge",
-  "AI挑战正在执行": "AI Challenge is running",
-  "挑战模式，当前{level}": "Challenge mode: {level}",
-  "挑战强度": "Challenge intensity",
+  "AI挑战": "AI Copilot",
+  "AI挑战正在执行": "AI Copilot is running",
+  "挑战模式，当前{level}": "AI Copilot mode: {level}",
+  "挑战强度": "AI Copilot intensity",
   "挑战模式关闭": "Off",
   "宽松": "Relaxed",
   "标准": "Standard",
   "严格": "Strict",
   "抬杠": "Challenger",
-  "专注写作，暂停自动挑战": "Focus on writing; pause automatic reviews",
+  "专注写作，暂停自动挑战": "Focus on writing; pause AI Copilot",
   "仅指出错别字及拼写错误": "Flag only typos and spelling errors",
   "指出事实、逻辑、表达方面问题": "Flag factual, logical and wording issues",
   "深入检查证据、前提与推理": "Examine evidence, assumptions and reasoning",
   "热衷质疑与追问，协助完善内容": "Challenge ideas and ask questions to improve the content",
   "收起评论": "Hide comments",
   "展开评论": "Show comments",
-  "AI挑战评论": "AI Challenge comments",
-  "收起挑战评论": "Hide challenge comments",
-  "AI挑战者": "AI challenger",
+  "AI挑战评论": "AI Copilot comments",
+  "收起挑战评论": "Hide Copilot comments",
+  "AI挑战者": "AI Commentator",
   "错别字": "Typo",
   "表达建议": "Wording suggestion",
   "前后矛盾": "Contradiction",
@@ -294,7 +296,7 @@ export const NOTE_ENGLISH = {
   "研究挑战": "Research review",
   "反驳与追问": "Counterpoints and questions",
   "待核验": "Unverified",
-  "挑战": "Challenge",
+  "挑战": "AI Copilot",
   "已替换到原文": "Applied to note",
   "原文已变化": "Original text changed",
   "替换到原文": "Apply to note",
@@ -303,9 +305,9 @@ export const NOTE_ENGLISH = {
   "查看依据": "View evidence",
   "已解决": "Resolved",
   "思考回复中…": "Thinking of a reply…",
-  "回复AI挑战": "Reply to AI Challenge",
+  "回复AI挑战": "Reply to AI Commentator",
   "回复 AI，继续处理这段文字…": "Reply to AI to continue working on this passage…",
-  "发送挑战回复": "Send challenge reply",
+  "发送挑战回复": "Send comment reply",
   "发送": "Send",
   "查看替换对照": "View replacement comparison",
   "替换对照": "Replacement comparison",
@@ -319,24 +321,24 @@ export const NOTE_ENGLISH = {
   "段落经{level}模式 AI 挑战校对，已解决 {count} 处问题": "Reviewed in {level} mode; {count} issues resolved",
   "段落已通过{level}模式的 AI 挑战，本轮未发现问题": "Passed the {level} review; no issues found in this round",
   "组件样式": "Component style",
-  "AI挑战设置": "AI challenge settings",
+  "AI挑战设置": "AI Copilot settings",
   "AI挑战设置已保存。": "Settings saved. ",
   "AI挑战设置已应用，尚未确认保存。": "Settings applied; saving is not yet confirmed. ",
   "等级：{level}；评论展开偏好：{comments}。": "Level: {level}; comments preference: {comments}. ",
   "展开": "Expanded",
   "收起": "Collapsed",
-  "自动挑战已关闭。": "Automatic challenge is off.",
+  "自动挑战已关闭。": "AI Copilot is off.",
   "校验正在运行；本次回执仅确认设置。": "Review is running; this receipt confirms settings only.",
   "校验等待用量恢复；本次回执仅确认设置。": "Review is waiting for its usage allowance; this receipt confirms settings only.",
   "校验等待调度；本次回执仅确认设置。": "Review is waiting to be scheduled; this receipt confirms settings only.",
   "当前没有运行中的校验；本次回执仅确认设置。": "No review is currently running; this receipt confirms settings only.",
   "最近一次校验未完成；本次回执仅确认设置。": "The last review did not finish; this receipt confirms settings only.",
   "校验尚未启动；本次回执仅确认设置。": "Review has not started; this receipt confirms settings only.",
-  "请指定AI挑战等级或评论展开偏好。": "Specify the AI challenge level or comments preference.",
-  "AI挑战设置参数无效。": "The AI challenge settings are invalid.",
-  "当前笔记的AI挑战设置不可用。": "AI challenge settings are unavailable in the current note.",
-  "AI挑战设置未应用，请重试。": "The AI challenge settings were not applied. Try again.",
-  "AI挑战设置已变化，请重新发送请求。": "The AI challenge settings changed. Send the request again.",
+  "请指定AI挑战等级或评论展开偏好。": "Specify the AI Copilot level or comments preference.",
+  "AI挑战设置参数无效。": "The AI Copilot settings are invalid.",
+  "当前笔记的AI挑战设置不可用。": "AI Copilot settings are unavailable in the current note.",
+  "AI挑战设置未应用，请重试。": "The AI Copilot settings were not applied. Try again.",
+  "AI挑战设置已变化，请重新发送请求。": "The AI Copilot settings changed. Send the request again.",
   "样式": "Style",
   "配色": "Color theme",
   "组件配色": "Component color theme",
@@ -349,8 +351,8 @@ export const NOTE_ENGLISH = {
   "显示组件外框": "Show component frame",
   "笔记任务过程": "Note activity",
   "探索更远，洞见更深": "Explore further, see deeper",
-  "尚无可查看的挑战依据。": "No challenge evidence to view yet.",
-  "挑战依据": "Challenge evidence",
+  "尚无可查看的挑战依据。": "No Copilot evidence to view yet.",
+  "挑战依据": "Copilot evidence",
   "依据": "Evidence",
   "定位原文": "Locate original text",
   "当前问题已无可查看依据。": "No evidence is currently available for this issue.",
@@ -376,7 +378,7 @@ export const NOTE_ENGLISH = {
   "观点拓展未完成或回执不完整；保留已验证问题，未将抬杠维度视为完成。": "Viewpoint exploration did not finish or its response was incomplete. Verified findings were kept; the Challenger review is incomplete.",
   "部分年度盈利预测缺少可比数值或口径，未将其他预测的专项结果视为这些段落已通过。": "Some annual earnings forecasts lack comparable values or definitions. Results for other forecasts do not establish that these paragraphs passed.",
   "本批包含证券年度盈利预测，但基准日、指标、数值、单位或可比口径未完整确认，未执行一致预期比对。": "This batch contains annual earnings forecasts, but the reference date, metric, value, unit or comparable definition is incomplete. No consensus comparison was performed.",
-  "挑战模式已关闭。": "Challenge mode is off.",
+  "挑战模式已关闭。": "AI Copilot is off.",
   "部分长段落超出单段处理上限，已保留为待检查，尚未完成检查。": "Some long paragraphs exceed the per-paragraph limit. They remain pending and have not been fully reviewed.",
   "研究元数据与待检查段落超出本轮容量，相关段落已保留为待检查，尚未完成本等级检查。": "The research metadata and pending paragraphs exceed this review's capacity. Affected paragraphs remain pending and have not completed this review level.",
   "本轮检查未完成，待正文变化或主动重查后继续，未将未核验结果写入正文。": "This review did not finish. It will resume after the text changes or you request another review. Unverified results were not added to the note.",
@@ -402,7 +404,7 @@ export const NOTE_ENGLISH = {
   "修订家数缺失或不一致，未采用这些家数作月度方向判断": "Revision counts are missing or inconsistent; they were not used to judge the monthly direction",
   "中值为空或零，不作相对偏离判断": "The median is missing or zero; no relative deviation was assessed",
   "区间或标准差字段缺失/无效，对应规则未执行": "The range or standard deviation is missing or invalid; the corresponding rules were not run",
-  "笔记挑战参数无效或超出容量。": "The note challenge parameters are invalid or exceed capacity.",
+  "笔记挑战参数无效或超出容量。": "The note Copilot parameters are invalid or exceed capacity.",
   "挑战原文已变化或不唯一，请重新定位后重试。": "The original passage changed or is not unique. Locate it again and retry.",
   "挑战检查结果格式不完整。": "The review result is incomplete.",
   "挑战检查结果格式无效。": "The review result format is invalid.",
@@ -412,13 +414,13 @@ export const NOTE_ENGLISH = {
   "当前会话模型不可用，请选择模型后重试。": "The current session model is unavailable. Select a model and retry.",
   "完整句优化范围超过6000字，请缩小或分段后重新优化。": "The full-sentence optimization exceeds 6,000 characters. Select a shorter passage or split it into sections.",
   "完整句与讨论上下文过长，请缩小或分段后重试。": "The full sentence and discussion context are too long. Select a shorter passage or split it into sections.",
-  "挑战回复格式不完整。": "The challenge reply is incomplete.",
-  "挑战后台任务已达到并发限制。": "The concurrent challenge task limit was reached.",
-  "挑战后台任务繁忙。": "Background challenge tasks are busy.",
-  "挑战检查暂不可用。": "The challenge review is unavailable.",
-  "挑战检查已取消。": "The challenge review was cancelled.",
-  "挑战检查超时。": "The challenge review timed out.",
-  "已有更新的笔记挑战请求。": "A newer note challenge request is available.",
+  "挑战回复格式不完整。": "The Copilot reply is incomplete.",
+  "挑战后台任务已达到并发限制。": "The concurrent Copilot task limit was reached.",
+  "挑战后台任务繁忙。": "Background Copilot tasks are busy.",
+  "挑战检查暂不可用。": "The Copilot review is unavailable.",
+  "挑战检查已取消。": "The Copilot review was cancelled.",
+  "挑战检查超时。": "The Copilot review timed out.",
+  "已有更新的笔记挑战请求。": "A newer note Copilot request is available.",
   "原文与建议一致，无需替换。": "The original text already matches the suggestion. No replacement is needed.",
   "建议如下，可确认后替换到原文。": "Review the suggestion below, then apply it to the note.",
   "已优化这段表达，并保留原有研究立场。": "The wording was improved while preserving your research position.",
@@ -428,7 +430,7 @@ export const NOTE_ENGLISH = {
   "没能完成，请重试": "Could not finish. Try again.",
   "审查提醒应保留在评论中，这次建议未替换正文，请重新优化。": "Review notices belong in comments. This suggestion was not applied to the note; request another optimization.",
   "尚需确认的提醒仅保留在这条评论中。": "Notices that still require confirmation remain in this comment.",
-  "挑战请求无效。": "The challenge request is invalid.",
+  "挑战请求无效。": "The Copilot request is invalid.",
   "检查服务尚未就绪。": "The review service is not ready.",
   "请等待当前检查结束。": "Wait for the current review to finish.",
   "本轮检查未完成。": "This review did not finish.",
@@ -583,15 +585,32 @@ export const NOTE_ENGLISH = {
   "基于本次授权资料生成 · 快照": "Generated from the authorized materials · Snapshot"
 }
 export function noteUiText(value, locale = globalThis.document?.documentElement?.dataset?.odysseyLocale) {
- if (locale !== 'en' || typeof value !== 'string') return value
- return NOTE_ENGLISH[value] ?? value
+ if(typeof value!=='string')return value
+ if(locale==='en')return NOTE_ENGLISH[value]??value
+ // Exact presentation aliases keep saved checks and serialized UI keys
+ // compatible. Never replace a substring in note text or an author's name.
+ return {
+  'AI挑战':'AI随航','AI挑战正在执行':'AI随航正在执行','挑战模式，当前{level}':'随航模式，当前{level}','挑战强度':'随航强度','挑战模式关闭':'随航已关闭',
+  '专注写作，暂停自动挑战':'专注写作，暂停AI随航','AI挑战评论':'AI随航评论','收起挑战评论':'收起随航评论','AI挑战者':'AI评论员',
+  '逻辑挑战':'逻辑核验','研究挑战':'研究核验','挑战':'AI随航','回复AI挑战':'回复AI评论员','发送挑战回复':'发送评论回复',
+  '段落经{level}模式 AI 挑战校对，当前有 {count} 处未解决问题':'段落经{level}模式 AI 随航校对，当前有 {count} 处未解决问题',
+  '段落经{level}模式 AI 挑战校对，已解决 {count} 处问题':'段落经{level}模式 AI 随航校对，已解决 {count} 处问题',
+  '段落已通过{level}模式的 AI 挑战，本轮未发现问题':'段落已通过{level}模式的 AI 随航，本轮未发现问题',
+  'AI挑战设置':'AI随航设置','AI挑战设置已保存。':'AI随航设置已保存。','AI挑战设置已应用，尚未确认保存。':'AI随航设置已应用，尚未确认保存。','自动挑战已关闭。':'AI随航已关闭。',
+  '请指定AI挑战等级或评论展开偏好。':'请指定AI随航等级或评论展开偏好。','AI挑战设置参数无效。':'AI随航设置参数无效。','当前笔记的AI挑战设置不可用。':'当前笔记的AI随航设置不可用。','AI挑战设置未应用，请重试。':'AI随航设置未应用，请重试。','AI挑战设置已变化，请重新发送请求。':'AI随航设置已变化，请重新发送请求。',
+  '尚无可查看的挑战依据。':'尚无可查看的随航依据。','挑战依据':'随航依据','挑战模式已关闭。':'AI随航已关闭。',
+  '笔记挑战参数无效或超出容量。':'笔记随航参数无效或超出容量。','挑战原文已变化或不唯一，请重新定位后重试。':'随航原文已变化或不唯一，请重新定位后重试。',
+  '挑战检查结果格式不完整。':'随航检查结果格式不完整。','挑战检查结果格式无效。':'随航检查结果格式无效。','挑战检查返回内容超出边界。':'随航检查返回内容超出边界。','挑战检查输出过长。':'随航检查输出过长。','挑战检查未完整结束。':'随航检查未完整结束。','挑战回复格式不完整。':'随航回复格式不完整。',
+  '挑战后台任务已达到并发限制。':'随航后台任务已达到并发限制。','挑战后台任务繁忙。':'随航后台任务繁忙。','挑战检查暂不可用。':'随航检查暂不可用。','挑战检查已取消。':'随航检查已取消。','挑战检查超时。':'随航检查超时。','已有更新的笔记挑战请求。':'已有更新的笔记随航请求。','挑战请求无效。':'随航请求无效。'
+ }[value]??value
 }
 
 /** Fixed host checks only. Stored details and arbitrary source/model text stay intact. */
 export function noteChallengeCheckText(value, locale = globalThis.document?.documentElement?.dataset?.odysseyLocale) {
- if(locale!=='en'||typeof value!=='string')return value
+ if(typeof value!=='string')return value
  const fixed=noteUiText(value,locale)
  if(fixed!==value)return fixed
+ if(locale!=='en')return value
  const templates=[
   [/^本次实际审查(\d{1,6})\/(\d{1,6})个待检查正文块；只检查本次正文及已提供的局部原文对照，未核验外部事实。$/u,'本次实际审查{count}/{total}个待检查正文块；只检查本次正文及已提供的局部原文对照，未核验外部事实。',['count','total']],
   [/^深度复查实际覆盖(\d{1,6})\/(\d{1,6})个正文块；新增问题仍仅依据正文或标明未联网的常识筛查。$/u,'深度复查实际覆盖{count}/{total}个正文块；新增问题仍仅依据正文或标明未联网的常识筛查。',['count','total']],
@@ -622,7 +641,7 @@ export function noteChallengeCheckText(value, locale = globalThis.document?.docu
 
 /** Translate only recognized fixed errors at the notes IPC boundary. */
 export function noteUiError(value, locale = globalThis.document?.documentElement?.dataset?.odysseyLocale) {
- if(locale!=='en'||typeof value!=='string')return value
+ if(typeof value!=='string')return value
  const match=/^Error invoking remote method 'notes:request': Error: ([\s\S]+)$/u.exec(value),message=match?.[1]??value
  // UI labels are not error messages, even when an adapter/model happens to
  // return exactly the same words as a control label.

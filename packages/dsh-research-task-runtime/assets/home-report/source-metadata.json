@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "deliveryNames": {
+    "html": "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.html",
+    "pdf": "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.pdf"
+  },
+  "audit": {
+    "evidence.json": "6297f730580f7fcf7baa9c60876d6dc376e15dabe7e177f6c4041c17466128e9",
+    "calculations.json": "d7a20b5e2703a9eb703357a8e6e7e4c793100fe74c5df449a8d914e52c00357d",
+    "validation.json": "56f0c0e8a9fd751097b289162e69fc7a470e7fd0ac66543b64e12af37e1ee9b0",
+    "run.json": "22a630bc56c8d256832aca892e69de4e873cda0d3b49b5b74357e84e63f5206a"
+  },
+  "reportTitle": "现金流质量与AI投入的再平衡：腾讯控股增长韧性研究",
+  "companyName": "腾讯控股",
+  "companyCode": "0700.HK",
+  "researchAsOf": "2026-10-25",
+  "reportPages": 64,
+  "htmlFile": "research-report.html",
+  "pdfFile": "research-report.pdf",
+  "htmlSha256": "5eab85fc8591ec1c45b30f04dee8e129ddcbce056753b15ce7095a98af82876d",
+  "pdfSha256": "0220f9ea1e92bf7798e2361960109e6843481bf0cd3faa97337f7788c42b22b0",
+  "localPresetOnly": true,
+  "chapters": [
+    {
+      "id": "business",
+      "title": "商业模式与增长来源：社交生态上的多引擎变现"
+    },
+    {
+      "id": "industry",
+      "title": "行业与竞争：公司披露口径下的相对位置"
+    },
+    {
+      "id": "performance",
+      "title": "业绩与经营驱动：年度实绩、最近四季度与一年市场表现"
+    },
+    {
+      "id": "profitability",
+      "title": "盈利质量：毛利率上移与费用再投入"
+    },
+    {
+      "id": "balance",
+      "title": "资产负债与营运资本：负营运资本与庞大的投资组合"
+    },
+    {
+      "id": "cashflow",
+      "title": "现金流与资本配置：AI投入优先下的再平衡"
+    },
+    {
+      "id": "forecast",
+      "title": "预测与情景假设：六年三情景的经营驱动"
+    },
+    {
+      "id": "valuation",
+      "title": "估值与敏感性：情景价值、折现率与现价隐含条件"
+    },
+    {
+      "id": "risks",
+      "title": "风险与反证条件"
+    },
+    {
+      "id": "monitoring",
+      "title": "跟踪与下次验证"
+    }
+  ],
+  "sources": [
+    {
+      "id": "annual25",
+      "title": "腾讯控股2025年年度报告（英文原件）",
+      "url": "https://static.www.tencent.com/uploads/2026/04/09/62d786fcf3d3c8cb7e54791ee95439ac.pdf",
+      "asOf": "2026-04-09"
+    },
+    {
+      "id": "interim26",
+      "title": "腾讯控股2026年中期报告（英文原件）",
+      "url": "https://www.tencent.com/wp-content/uploads/2026/08/E700_IR.pdf",
+      "asOf": "2026-08-12"
+    },
+    {
+      "id": "q2results",
+      "title": "腾讯控股2026年第二季度业绩公告（英文原件）",
+      "url": "https://www.tencent.com/wp-content/uploads/2026/08/Tencent-Announces-2026-Second-Quarter-Results.pdf",
+      "asOf": "2026-08-12"
+    },
+    {
+      "id": "q3results",
+      "title": "腾讯控股2025年第三季度业绩公告（英文原件）",
+      "url": "https://static.www.tencent.com/uploads/2025/11/13/",
+      "asOf": "2025-11-13"
+    },
+    {
+      "id": "q4results",
+      "title": "腾讯控股2025年第四季度及全年业绩公告（英文原件）",
+      "url": "https://static.www.tencent.com/uploads/2026/03/18/",
+      "asOf": "2026-03-18"
+    },
+    {
+      "id": "q1results",
+      "title": "腾讯控股2026年第一季度业绩公告（英文原件）",
+      "url": "https://static.www.tencent.com/uploads/2026/05/13/",
+      "asOf": "2026-05-13"
+    },
+    {
+      "id": "chinabond",
+      "title": "中债收益率曲线和指数日评（2026年10月23日）",
+      "url": "https://www.chinabond.com.cn/xxwsy/sy_zdgz_ath/202610/t20261023_855472795.html",
+      "asOf": "2026-10-23"
+    },
+    {
+      "id": "sinashares",
+      "title": "腾讯控股翌日披露报表转载：已发行股份总数（2026-10-02）",
+      "url": "https://finance.sina.com.cn/stock/aigc/hkgg/2026-10-02/doc-initvpqz4620300.shtml",
+      "asOf": "2026-10-02"
+    }
+  ],
+  "chartCatalog": [
+    {
+      "id": "business-chart-1",
+      "title": "增值服务收入（年度）",
+      "sourceIds": [
+        "annual25"
+      ],
+      "asOf": "2026-10-25"
+    },
+    {
+      "id": "business-chart-2",
+      "title": "营销服务收入（年度）",
+      "sourceIds": [
+        "annual25"
+      ],
+      "asOf": "2026-10-25"
+    },
+    {
+      "id": "business-chart-3",
+      "title": "金融科技及企业服务收入（年度）",
+      "sourceIds": [
+        "annual25"
+      ],
+      "asOf": "2026-10-25"
+    },
+    {
+      "id": "business-chart-4",
+      "title": "其他分部收入（年度）",
+      "sourceIds": [
+        "annual25"
+      ],
+      "asOf": "2026-10-25"
+    }
+  ],
+  "keyFindings": [
+    "腾讯的收入增长正从用户规模驱动转向变现效率驱动：营销服务与高毛利平台收入占比上升，使毛利润增长持续快于收入增长。",
+    "利润现金兑现能力强，但AI算力投入使自由现金流进入阶段性低谷，这是主动取舍而非经营恶化。",
+    "AI投入同时作用于收入端与成本端：广告与云的效率收益已经可见，模型与产品的收入化处于早期，折旧与研发费用上升已经开始体现。",
+    "投资组合与净现金构成重要的价值缓冲：非经营资产规模可观，但公允价值波动会影响账面利润与综合收益。",
+    "在已核验收盘价下，市场价格隐含的增长要求显著低于本研究基准情景，受控反向求解在测试区间内未夹住现价；但模型终值占比高，结论对折现率与长期假设敏感。"
+  ],
+  "provenance": {
+    "product": "EWork Odyssey",
+    "sessionId": "session-253912dd-cf7d-4669-9da7-361d4bf24166",
+    "model": "Kimi K3 (high)",
+    "generatedAt": "2026-10-25T12:48:56.241Z"
+  },
+  "publicationReview": {
+    "status": "baseline-pending-renderer-regeneration",
+    "acceptedAsFinalExample": false,
+    "note": "真实EWork生成的run04基线，仅用于更新生成器后回放验证；最终用例将由更新后的内置技能重新生成。"
+  }
+}

@@ -1,6 +1,6 @@
 import styles from './home-operations.css?raw'
-import { OPERATIONS_CASE_GLOWS, OPERATIONS_ILLUSTRATIONS, OPERATIONS_TREND_UP } from './home-operations-assets'
-import { createHomeOperationsCarousel, type HomeOperationsCarousel } from './home-operations-carousel'
+import { OPERATIONS_CASE_GLOWS, OPERATIONS_ILLUSTRATIONS, OPERATIONS_TREND_UP, OPERATIONS_REPORT_TREND_DARK } from './home-operations-assets'
+import { createHomeOperationsCarousel, HOME_OPERATIONS_CASE_COUNT, type HomeOperationsCarousel } from './home-operations-carousel'
 import { createHomeOperationsCaseTransition, type HomeOperationsCaseTransition } from './home-operations-case-transition'
 import type { HomeThemeController } from './home-theme-controls'
 import { createHomeThemeGallery, homeAppearanceIcon, type HomeThemeGallery } from './home-theme-gallery'
@@ -10,7 +10,7 @@ type Motion = 'idle' | 'settling'
 export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
 export type HomeOperationActionContext = { signal: AbortSignal; revealComposer(): Promise<void> }
 type Card = HomeOperationCard
-type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: Exclude<Card, 'report'>, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void> }
+type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: Card, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void> }
 const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
 const DESIGN_WIDTH = 780
@@ -26,18 +26,20 @@ const COPY = {
     heading: '快速开始', wallpapers: '主题壁纸', light: '切换为浅色', dark: '切换为深色', down: '切换到快速开始', up: '返回输入区', pagination: '用例切换',
     cards: ['创建研究看板', '撰写研究笔记', '制作演示文稿', '制作研究报告'],
     cases: [
-      ['快速创建', '自选行情看板', '通过研究模式，快速创建自选行情看板，以了解研究看板基础功能。'],
-      ['观点挑战', '体验有AI护航文档', '打开示例笔记，体验 AI 追问观点、\n核查事实，发现研究中的盲点。'],
-      ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。']
+      ['研究看板', '快速创建行情看板', '通过研究模式，快速创建自选行情看板，以了解研究看板基础功能。'],
+      ['笔记随航', '体验有AI护航的文档', '打开示例笔记，体验 AI 追问观点、\n核查事实，发现研究中的盲点。'],
+      ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。'],
+      ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。']
     ]
   },
   en: {
     heading: 'Quick start', wallpapers: 'Wallpapers', light: 'Switch to light mode', dark: 'Switch to dark mode', down: 'Show quick start', up: 'Return to the composer', pagination: 'Examples',
     cards: ['Create a research board', 'Write research notes', 'Create a presentation', 'Create a research report'],
     cases: [
-      ['Quick create', 'Watchlist dashboard', 'Create a watchlist dashboard in Research to explore the basics of research boards.'],
-      ['Challenge your views', 'Explore AI-assisted notes', 'Open an example note to see AI question ideas,\ncheck facts and uncover blind spots.'],
-      ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.']
+      ['Research board', 'Quickly create a market dashboard', 'Create a watchlist dashboard in Research to explore the basics of research boards.'],
+      ['Notes Copilot', 'Explore AI-assisted documents', 'Open an example note to see AI question ideas,\ncheck facts and uncover blind spots.'],
+      ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.'],
+      ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.']
     ]
   }
 } as const
@@ -57,6 +59,26 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   let host: HTMLElement | null = null, root: HTMLElement | null = null, hero: HTMLElement | null = null
   let heroWasInert = false
   let section: HTMLElement | null = null, toggle: HTMLButtonElement | null = null
+  let attentionTimer=0,attentionEpoch=0,attentionStarted=0,attentionVisit=false,attentionFinished=false,attentionOwner:string|null=null
+  const clearAttention=()=>{attentionEpoch++;if(attentionTimer)win.clearTimeout(attentionTimer);attentionTimer=0;toggle?.removeAttribute('data-odyssey-home-attention')}
+  const finishAttention=()=>{clearAttention();attentionFinished=true}
+  const syncAttention=()=>{
+    if(!toggle||!root||!visible)return
+    const owner=hero?.querySelector<HTMLElement>('[data-odyssey-file-reference-session]')?.dataset.odysseyFileReferenceSession||root.querySelector<HTMLElement>('[data-srb-session-header]')?.dataset.eworkNotesSession||root.dataset.sessionId||null
+    const now=win.performance.now()
+    if(!attentionVisit||owner&&attentionOwner&&owner!==attentionOwner){clearAttention();attentionVisit=true;attentionFinished=false;attentionStarted=now;attentionOwner=owner}
+    else if(owner&&!attentionOwner)attentionOwner=owner
+    if(doc.hidden||reduced.matches||state!=='input'||intent!=='input'||motion!=='idle'){finishAttention();return}
+    if(attentionFinished)return
+    const elapsed=now-attentionStarted,remaining=4000-elapsed
+    if(remaining<=0){finishAttention();return}
+    if(!toggle.hasAttribute('data-odyssey-home-attention')){
+      toggle.setAttribute('data-odyssey-home-attention','')
+      const animation=toggle.getAnimations?.({subtree:true}).find(animation=>(animation as CSSAnimation).animationName==='odyssey-home-toggle-attention')
+      if(animation)animation.currentTime=elapsed
+    }
+    if(!attentionTimer){const expected=attentionEpoch;attentionTimer=win.setTimeout(()=>{if(expected===attentionEpoch)finishAttention()},remaining)}
+  }
   let heading: HTMLElement | null = null
   let quickTab: HTMLButtonElement | null = null, wallpaperTab: HTMLButtonElement | null = null, appearance: HTMLButtonElement | null = null
   let quickPanel: HTMLElement | null = null, gallery: HomeThemeGallery | null = null
@@ -128,6 +150,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     for (const layer of usecase.querySelectorAll<HTMLElement>('[data-odyssey-operations-case-layer]')) {
       const index = Number(layer.dataset.case)
       layer.style.setProperty('--odyssey-operations-glow-two-image', `url("${OPERATIONS_CASE_GLOWS[theme][index]}")`)
+      const trend = layer.querySelector<HTMLImageElement>('.odyssey-operations-trend');if(trend)trend.src = index === 3 && theme === 'dark' ? OPERATIONS_REPORT_TREND_DARK : OPERATIONS_TREND_UP
     }
   }
   const updateCase = () => {
@@ -344,6 +367,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   const setSection = (next: Section, force = false) => {
     if (!visible || !host || !hero || !section || !toggle) return false
     intent = next
+    if(next==='operations')finishAttention()
     // Let an in-flight tab mixture leave with the region instead of snapping
     // to its destination while the collection is still fully visible.
     if (next === 'input') gallery?.setVisible(false)
@@ -411,7 +435,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     actionController = controller; setActionBusy(true)
     try {
       const context = { signal: controller.signal, revealComposer: () => revealComposer(controller.signal) }
-      if (example && card !== 'report') await options.onExample!(card, context)
+      if (example) await options.onExample!(card, context)
       else await options.onAction!(card, context)
     }
     catch (error) {
@@ -584,7 +608,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     quickPanel = grid; grid.id = 'odyssey-home-quick-panel'; grid.setAttribute('role', 'tabpanel'); grid.setAttribute('aria-labelledby', quickTab.id)
     usecase = doc.createElement('article'); usecase.className = 'odyssey-operations-usecase'
     exampleButton = doc.createElement('button'); exampleButton.type = 'button'; exampleButton.className = 'odyssey-operations-example-open'; exampleButton.dataset.odysseyOperationsOpenExample = ''; exampleButton.tabIndex = -1
-    exampleButton.addEventListener('click', () => { void runAction((['board', 'note', 'ppt'] as const)[caseIndex]!, true) })
+    exampleButton.addEventListener('click', () => { void runAction(CARDS[caseIndex]!, true) })
     usecase.append(exampleButton)
     const createCaseLayer = (index: number) => {
       const layer = doc.createElement('div')
@@ -594,7 +618,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       const caseCopy = doc.createElement('div'); caseCopy.className = 'odyssey-operations-case-copy'
       const title = doc.createElement('h3'); title.className = 'odyssey-operations-title'
       const strong = doc.createElement('strong'); strong.textContent = text[0]
-      const trend = doc.createElement('img'); trend.className = 'odyssey-operations-trend'; trend.src = OPERATIONS_TREND_UP; trend.alt = ''; trend.setAttribute('aria-hidden', 'true'); trend.draggable = false
+      const trend = doc.createElement('img'); trend.className = 'odyssey-operations-trend'; trend.src = index === 3 && doc.body.hasAttribute('data-ds-dark-theme') ? OPERATIONS_REPORT_TREND_DARK : OPERATIONS_TREND_UP; trend.alt = ''; trend.setAttribute('aria-hidden', 'true'); trend.draggable = false
       title.append(strong, trend)
       const subtitle = doc.createElement('p'); subtitle.className = 'odyssey-operations-subtitle'; subtitle.textContent = text[1]
       caseCopy.append(title, subtitle)
@@ -605,10 +629,16 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       return layer
     }
     const pagination = doc.createElement('div'); pagination.className = 'odyssey-operations-pagination'
-    for (let index = 0; index < 3; index++) {
+    for (let index = 0; index < HOME_OPERATIONS_CASE_COUNT; index++) {
       const page = doc.createElement('button'); page.type = 'button'; page.dataset.case = String(index); page.tabIndex = -1
       page.append(doc.createElement('i'))
       page.addEventListener('click', () => { if (state === 'operations') carousel?.select(index) })
+      page.addEventListener('keydown', event => {
+        if (state !== 'operations' || event.altKey || event.ctrlKey || event.metaKey || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return
+        event.preventDefault()
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? HOME_OPERATIONS_CASE_COUNT - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + HOME_OPERATIONS_CASE_COUNT) % HOME_OPERATIONS_CASE_COUNT
+        carousel?.select(next); pages[next]?.focus({preventScroll:true})
+      })
       pages.push(page); pagination.append(page)
     }
     usecase.append(pagination)
@@ -644,6 +674,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   const resize = new win.ResizeObserver(measure)
   const detach = (preserveAction = false) => {
     if (!preserveAction) { actionController?.abort(); clearFeedback() }
+    clearAttention()
     cancelSettlement()
     carousel?.dispose(); carousel = null
     caseTransition?.dispose(); caseTransition = null
@@ -679,6 +710,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     const nextHero = nextRoot?.querySelector<HTMLElement>('.wSkVaW_composerHero') ?? null
     const canShow = !!nextHost && !!nextRoot && !!nextHero && shown(nextRoot) && !doc.body.hasAttribute('data-workspace-surface') && !settingsShown()
     if (!canShow || !nextHost || !nextRoot || !nextHero) {
+      attentionVisit=false;attentionOwner=null
       if (host) detach()
       return
     }
@@ -689,6 +721,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if (renderedTheme !== (doc.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light')) updateImages()
     if (!wasVisible) setSection('input', true)
     else measure()
+    syncAttention()
   }
   const scheduleSync = () => {
     if (disposed || frame) return
@@ -698,7 +731,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if (records.every(record => own(record.target) || record.target === host && record.type === 'attributes' && record.attributeName === 'style' || record.type === 'childList' && [...record.addedNodes, ...record.removedNodes].every(own))) return
     scheduleSync()
   })
-  changes.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-page', 'data-ds-dark-theme', 'data-workspace-surface', 'class', 'style', 'hidden', 'aria-hidden'] })
+  changes.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-page', 'data-odyssey-file-reference-session', 'data-ework-notes-session', 'data-session-id', 'data-ds-dark-theme', 'data-workspace-surface', 'class', 'style', 'hidden', 'aria-hidden'] })
   const localeChanges = new win.MutationObserver(scheduleSync)
   localeChanges.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
   const onFontsReady = () => { if (!disposed) { galleryFontRevision++; scheduleSync() } }
@@ -706,6 +739,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   const onVisibility = () => {
     if (!doc.hidden) { sync(); return }
     actionController?.abort()
+    finishAttention()
     cancelSettlement()
     finishTabMotion()
     resetWheel()
@@ -713,7 +747,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     progress = targetProgress = state === 'operations' ? 1 : 0
     paint()
   }
-  const onReduced = () => { clearPointers(); clearIllustrationBlends(); if (reduced.matches) finishTabMotion(); if (reduced.matches && motion !== 'idle') setSection(intent, true); else measure() }
+  const onReduced = () => { if(reduced.matches)finishAttention();clearPointers(); clearIllustrationBlends(); if (reduced.matches) finishTabMotion(); if (reduced.matches && motion !== 'idle') setSection(intent, true); else measure() }
   doc.addEventListener('visibilitychange', onVisibility)
   doc.addEventListener('sherlock:workspace-surface-change', scheduleSync)
   reduced.addEventListener('change', onReduced)

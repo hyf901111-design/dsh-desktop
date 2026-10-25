@@ -14,25 +14,25 @@ const source=patchBetterSidebarClient(original)
 const start=source.indexOf('function EditorHost(props) {'),end=source.indexOf('\n\t\t/**',start)
 if(start<0||end<0)throw Error('Real sidebar EditorHost boundary missing')
 
-async function fixture(initial='/work/a.pptx',options:{editable?:boolean,load?:'ready'|'loading'|'error',nativeEditor?:boolean,bridge?:any}={}){
+async function fixture(initial='/work/a.pptx',options:{editable?:boolean,load?:'ready'|'loading'|'error',nativeEditor?:boolean,bridge?:any,annotations?:boolean,annotationCoordinator?:any}={}){
  const win=new Window({url:'http://localhost/'}),previous=new Map<string,PropertyDescriptor|undefined>()
  for(const [key,value]of Object.entries({window:win,document:win.document,navigator:win.navigator,CustomEvent:win.CustomEvent,IS_REACT_ACT_ENVIRONMENT:true})){previous.set(key,Object.getOwnPropertyDescriptor(globalThis,key));Object.defineProperty(globalThis,key,{configurable:true,value})}
  const mounted=new Map<string,any>(),requests:string[]=[],waiting:Array<(value:boolean)=>void>=[]
  function Viewer(props:any){
   React.useEffect(()=>{
-   let current={modes:true,mode:'preview',editable:options.editable!==false,modeBusy:false,saveState:'idle',downloadUrl:'/download/'+props.path.split('/').at(-1)}
+   let current={modes:true,mode:'preview',editable:options.editable!==false,modeBusy:false,saveState:'idle',downloadUrl:'/download/'+props.path.split('/').at(-1),...(options.annotations?{annotations:true,annotationActive:false,annotationBusy:false,annotationIcon:'data:image/svg+xml,fixture'}:{})}
    const publish=(patch:any)=>{current={...current,...patch};props.onToolbarState(current)}
-   const controls={save:()=>{},toggleMode:async()=>{requests.push(props.path);publish({modeBusy:true});const ok=await new Promise<boolean>(done=>waiting.push(done));publish({modeBusy:false,...(ok?{mode:current.mode==='edit'?'preview':'edit'}:{})});return ok},setMode:()=>{}}
+   const controls={save:()=>{},toggleAnnotations:async()=>{requests.push('annotations:'+props.path);publish({annotationBusy:true});const ok=await new Promise<boolean>(done=>waiting.push(done));publish({annotationBusy:false,...(ok?{annotationActive:!current.annotationActive}:{})});return ok},toggleMode:async()=>{requests.push(props.path);publish({modeBusy:true});const ok=await new Promise<boolean>(done=>waiting.push(done));publish({modeBusy:false,...(ok?{mode:current.mode==='edit'?'preview':'edit'}:{})});return ok},setMode:()=>{}}
    mounted.set(props.path,{publish,props,controls});props.onToolbarControls(controls);publish({})
    return()=>props.onToolbarControls(null)
   },[props.path,props.onToolbarControls,props.onToolbarState])
   return React.createElement('div',{'data-viewer':props.path},'PPT preview')
  }
  if(options.nativeEditor){
-  Object.assign(win,{sherlockPptEditor:options.bridge})
+  Object.assign(win,{sherlockPptEditor:options.bridge});if(options.annotationCoordinator)(win as any)[Symbol.for('sherlock:pptx-annotation-input')]=options.annotationCoordinator
   win.HTMLElement.prototype.getBoundingClientRect=function(){return new win.DOMRect(0,0,800,600)}
  }
- const RegisteredViewer=options.nativeEditor?createPptxEditorComponent(React,()=>React.createElement('div',{'data-pptx-node-id':'2','data-pptx-part':'ppt/slides/slide1.xml','data-pptx-width':200,'data-pptx-height':100},React.createElement('div',{'data-pptx-paragraph':0},'原始标题')),undefined,require('react-dom').createPortal):Viewer
+ const RegisteredViewer=options.nativeEditor?createPptxEditorComponent(React,(props:any)=>{const viewer=React.useMemo(()=>({getFileVersion:async()=>'v1'}),[]);React.useEffect(()=>{props.onPptxViewer(viewer);return()=>props.onPptxViewer(null)},[props.onPptxViewer]);return React.createElement('div',{'data-pptx-node-id':'2','data-pptx-part':'ppt/slides/slide1.xml','data-pptx-width':200,'data-pptx-height':100},React.createElement('div',{'data-pptx-paragraph':0},'原始标题'))},undefined,require('react-dom').createPortal):Viewer
  const empty=()=>null,primitives=new Proxy({},{get:()=>empty}),classes=new Proxy({},{get:(_t,key)=>String(key)})
  const Host=runInNewContext(source.slice(start,end)+'\nEditorHost',{react:React,react_jsx_runtime:jsx,_deepseek_ai_dsh_client_ui_primitives:primitives,sidebar_module_css_default:classes,clsx:(...items:any[])=>items.filter(Boolean).join(' '),baseName$1:(path:string)=>path.split('/').at(-1),treeWidthOf:()=>240,treeOpenOf:()=>false,clampTreeWidth:(v:number)=>v,EditorPathInput:()=>React.createElement('input'),TreePanel:empty,BinaryDownload:empty,openSidebarFile:()=>{},patchMeta:()=>{},mediaUrl:()=>'',planFirstMatch:()=>options.load==='loading'?{kind:'customLoad',viewer:{load:()=>new Promise(()=>{})}}:options.load==='error'?{kind:'customLoad',viewer:{load:async()=>{throw Error('cannot read file')}}}:{kind:'render',viewer:{id:'office-pptx',component:RegisteredViewer}},AbortController,JSON,console,t:(key:string)=>({downloadToView:'下载',editorTreeToggle:'打开文件夹',save:'保存',preview:'预览',edit:'编辑'}[key]??key)})
  const store={subscribe:()=>()=>{},getSnapshot:()=>({prefs:{editorExplorer:true}})},ctx={betterSidebar:{matchFileViewer:()=>({})}},scope={sessionId:'session-a',cwd:'/work'}
@@ -112,5 +112,24 @@ it('connects the real PPT editor to the sidebar icon without opening its edit br
   expect(f.host.querySelector('[data-ppt-editor] [role=status]')?.textContent).toContain('编辑模式')
   await f.click();expect(f.button().getAttribute('aria-label')).toBe('编辑演示文稿');expect(f.host.querySelector('[contenteditable=true]')).toBeNull()
   await f.render('/work/next.pptx');expect(opens).toHaveLength(1);expect(f.button().getAttribute('aria-pressed')).toBe('false');expect(f.host.querySelector('[role=status]')).toBeNull()
+ }finally{await f.close()}
+})
+
+it('keeps the annotation icon in the same native header row and follows only the current viewer state',async()=>{
+ const f=await fixture('/work/a.pptx',{annotations:true});try{
+  const button=()=>f.host.querySelector('[data-odyssey-pptx-annotation-toggle]') as any
+  expect(button()?.previousElementSibling).toBe(f.button());expect(button()?.getAttribute('aria-label')).toBe('标注演示文稿');expect(button()?.querySelector('img')?.width).toBe(16)
+  await React.act(async()=>{button().click();button().click()});expect(f.requests).toEqual(['annotations:/work/a.pptx']);expect(button().disabled).toBe(true)
+  await f.settle(true);expect(button().getAttribute('aria-pressed')).toBe('true');expect(button().getAttribute('aria-label')).toBe('关闭标注模式');expect(f.button().getAttribute('aria-pressed')).toBe('false')
+  const old=f.mounted.get('/work/a.pptx');await f.render('/work/b.pptx');await React.act(async()=>old.publish({annotationActive:true}));expect(button().getAttribute('aria-pressed')).toBe('false')
+ }finally{await f.close()}
+})
+it('opens actual read-only annotations from the real header without opening or saving the manual editor',async()=>{
+ let disposed=0;const bridge={open:()=>{throw Error('must stay cold')},save:()=>{throw Error('must not save')}}
+ const handle={getSnapshot:()=>({scene:{slides:[],slideSize:{width:800,height:450}},basis:{documentId:'doc',fileVersion:'v1'},marks:[],selectedId:null,revealSeq:0}),subscribe:()=>()=>{},dispose:()=>disposed++}
+ const opened:any[]=[],f=await fixture('/work/a.pptx',{nativeEditor:true,bridge,annotationCoordinator:{open:async(source:any)=>{opened.push(source);return handle}}});try{
+  await React.act(async()=>{(f.host.querySelector('[data-odyssey-pptx-annotation-toggle]') as any).click();await Promise.resolve()})
+  expect(opened).toEqual([{sessionId:'session-a',source:{kind:'workspace',relativePath:'a.pptx'}}]);expect(f.host.querySelector('[data-pptx-annotation-toolbar]')).not.toBeNull();expect(f.button().getAttribute('aria-pressed')).toBe('false')
+  await React.act(async()=>{(f.host.querySelector('[data-odyssey-pptx-annotation-toggle]') as any).click()});expect(f.host.querySelector('[data-pptx-annotation-toolbar]')).toBeNull();expect(disposed).toBe(1)
  }finally{await f.close()}
 })

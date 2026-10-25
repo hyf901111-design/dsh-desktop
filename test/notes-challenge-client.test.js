@@ -25,7 +25,7 @@ it('opens only explicit evidence for the current session through the existing ri
   f.send('open',{sessionId:'other',evidence:[evidence]});f.send('open',{sessionId:'s',evidence:[]})
   expect(f.service.openTab).not.toHaveBeenCalled()
   f.send('open',{sessionId:'s',threadId:'thread',quote:'原句',evidence:[evidence],checks})
-  expect(f.service.openTab).toHaveBeenCalledExactlyOnceWith({id:'notes-challenge:s',type:'sherlock-notes-challenge',title:'挑战',meta:{sherlockPanel:'right'}},{sessionId:'s'})
+  expect(f.service.openTab).toHaveBeenCalledExactlyOnceWith({id:'notes-challenge:s',type:'sherlock-notes-challenge',title:'AI随航',meta:{sherlockPanel:'right'}},{sessionId:'s'})
   expect(f.service.setPanelState).toHaveBeenCalledExactlyOnceWith({open:true},{sessionId:'s'})
   expect(f.sidebar.storeFor('s').getSnapshot()).toMatchObject({sessionId:'s',quote:'原句',evidence:[evidence],checks})
  }finally{f.dispose()}

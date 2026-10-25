@@ -6,6 +6,20 @@ export function componentPptxModeHost(root) {
   return hosts.find(host => !host.closest('[hidden]') && host.__eworkPptxMode?.state?.modes === true) ?? null
 }
 
+// Reader capability scopes are not durable source grants or sending identities.
+export function componentPptxAnnotationSource(node, sessionId, provided) {
+  const valid = value => typeof value === 'string' && value.trim().length > 0
+  const owner = value => valid(value) && !/^(?:note-files:|sherlock-research$)/.test(value)
+  if (!valid(node?.id) || !valid(node?.authorizationId)) return undefined
+  if (node.noteDocument === true) {
+    const source = provided?.source
+    if (!owner(provided?.sessionId) || source?.kind !== 'note-file' || source.nodeId !== node.id || source.authorizationId !== node.authorizationId) return undefined
+    return { sessionId: provided.sessionId, source: { kind: 'note-file', authorizationId: source.authorizationId, nodeId: source.nodeId } }
+  }
+  if (!owner(sessionId)) return undefined
+  return { sessionId, source: { kind: 'research', authorizationId: node.authorizationId, nodeId: node.id } }
+}
+
 export function useComponentPptxMode(target, active = true) {
   const [value, setValue] = react.useState(null)
   react.useLayoutEffect(() => {
@@ -52,10 +66,13 @@ export function PptxComponentEditorHost({ Component, readOnly = false, fileInfo,
 }
 
 const begin = '/* EWORK_COMPONENT_PPTX_MODE_BEGIN */', end = '/* EWORK_COMPONENT_PPTX_MODE_END */'
+const legacyPptxProps = '...(kind === "pptx" ? { Component: service.Component, readOnly: readOnly || node.readOnly === true || sherlockShared(sessionId) && sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit !== true, ...(typeof node.path === "string" && node.path ? { refreshSource: { sessionId, path: node.path } } : {}) } : {}),\n                        sourceUrl: preview.descriptor.url,'
+const fileInfoPptxProps = legacyPptxProps.replace('...(typeof node.path', 'fileInfo: { name: node.name, path: node.path }, ...(typeof node.path')
+const annotationPptxProps = fileInfoPptxProps.replace('fileInfo: {', 'annotationSource: componentPptxAnnotationSource(node, sessionId, annotationSource), fileInfo: {')
 const replacements = [
-  ['function ResearchCanvasOfficePreview({ node, sessionId, kind, visible, service, resizing }) {', 'function ResearchCanvasOfficePreview({ node, sessionId, kind, visible, service, resizing, readOnly = false }) {'],
+  ['function ResearchCanvasOfficePreview({ node, sessionId, kind, visible, service, resizing }) {', 'function ResearchCanvasOfficePreview({ node, sessionId, kind, visible, service, resizing, readOnly = false, annotationSource }) {', 'function ResearchCanvasOfficePreview({ node, sessionId, kind, visible, service, resizing, readOnly = false }) {'],
   ['const Component = service.Component;', 'const Component = kind === "pptx" ? PptxComponentEditorHost : service.Component;'],
-  ['sourceUrl: preview.descriptor.url,', '...(kind === "pptx" ? { Component: service.Component, readOnly: readOnly || node.readOnly === true || sherlockShared(sessionId) && sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit !== true, fileInfo: { name: node.name, path: node.path }, ...(typeof node.path === "string" && node.path ? { refreshSource: { sessionId, path: node.path } } : {}) } : {}),\n                        sourceUrl: preview.descriptor.url,', '...(kind === "pptx" ? { Component: service.Component, readOnly: readOnly || node.readOnly === true || sherlockShared(sessionId) && sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit !== true, ...(typeof node.path === "string" && node.path ? { refreshSource: { sessionId, path: node.path } } : {}) } : {}),\n                        sourceUrl: preview.descriptor.url,']
+  ['sourceUrl: preview.descriptor.url,', annotationPptxProps, fileInfoPptxProps, legacyPptxProps]
 ]
 export function stripComponentPptxMode(source) {
   const metadata = source.indexOf('/* EWORK_GRID_RESTORE '), suffix = metadata < 0 ? '' : source.slice(metadata)
@@ -77,7 +94,7 @@ export function patchComponentPptxMode(source) {
   source = stripComponentPptxMode(source)
   const metadata = source.indexOf('/* EWORK_GRID_RESTORE '), suffix = metadata < 0 ? '' : source.slice(metadata)
   if (metadata >= 0) source = source.slice(0, metadata)
-  const definitions = begin + '\n' + [componentPptxModeHost, useComponentPptxMode, PptxComponentEditorHost].map(fn => fn.toString()).join('\n') + '\n' + end + '\n'
+  const definitions = begin + '\n' + [componentPptxModeHost, componentPptxAnnotationSource, useComponentPptxMode, PptxComponentEditorHost].map(fn => fn.toString()).join('\n') + '\n' + end + '\n'
   const anchor = 'function ResearchCanvasOfficePreview('
   if (source.split(anchor).length !== 2) throw Error('PPT component Office renderer anchor drifted')
   source = source.replace(anchor, definitions + anchor)

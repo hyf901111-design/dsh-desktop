@@ -1,5 +1,6 @@
 import {readFile,lstat,realpath} from 'node:fs/promises'
 import {join,isAbsolute} from 'node:path'
+import {isHomeGuideSessionTitle} from './home-guide-session-titles.js'
 import {HOME_BOARD_SMART_PATH,HOME_BOARD_SMART_PROMPT,HOME_BOARD_SMART_ARTIFACT} from './home-board-smart-contract.js'
 export {HOME_BOARD_SMART_PATH} from './home-board-smart-contract.js'
 const id=value=>typeof value==='string'&&/^[\w:-]{1,128}$/.test(value)
@@ -15,7 +16,7 @@ export function createHomeBoardSmartRuntime(ctx,tasks,{env=process.env}={}){
    if(!session||typeof cwd!=='string'||!isAbsolute(cwd)||typeof env.DSH_HOME!=='string')throw Error('示例看板尚未就绪。')
    current()
    const rows=JSON.parse(await readFile(join(env.DSH_HOME,'research-board-directories.json'),'utf8'))
-   if(!Object.values(rows).some(row=>row?.sessionId===input.sessionId&&row.path===cwd&&/^自选行情示例看板(?: · 练习副本)?$/.test(row.title))||(await lstat(cwd)).isSymbolicLink()||await realpath(cwd)!==cwd)throw Error('示例看板目录尚未登记。')
+   if(!Object.values(rows).some(row=>row?.sessionId===input.sessionId&&row.path===cwd&&isHomeGuideSessionTitle('board',row.title))||(await lstat(cwd)).isSymbolicLink()||await realpath(cwd)!==cwd)throw Error('示例看板目录尚未登记。')
    current()
    const key=JSON.stringify([input.sessionId,input.canvasNodeId]),fingerprint=JSON.stringify([input.runId,input.prompt]),old=pending.get(key)
    if(old){if(old.fingerprint!==fingerprint)throw Error('智能容器正由另一轮示例使用。');return old.promise}

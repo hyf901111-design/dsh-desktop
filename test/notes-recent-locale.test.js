@@ -4,19 +4,19 @@ import * as locale from '../packages/dsh-research-task-runtime/notes-locale.js'
 afterEach(()=>{delete globalThis.document})
 
 it('translates the recent challenge and component controls through explicit UI keys',()=>{
- for(const [key,value]of Object.entries({'AI挑战':'AI Challenge','AI优化':'AI optimize','检查覆盖':'Review coverage','组件样式':'Component style','跟随客户端':'Follow app theme','笔记任务过程':'Note activity','探索更远，洞见更深':'Explore further, see deeper'}))expect(locale.noteUiText(key,'en')).toBe(value)
- expect(locale.noteUiText('挑战模式，当前{level}','en').replace('{level}',locale.noteUiText('标准','en'))).toBe('Challenge mode: Standard')
+ for(const [key,value]of Object.entries({'AI挑战':'AI Copilot','AI挑战者':'AI Commentator','AI优化':'AI optimize','检查覆盖':'Review coverage','组件样式':'Component style','跟随客户端':'Follow app theme','笔记任务过程':'Note activity','探索更远，洞见更深':'Explore further, see deeper'}))expect(locale.noteUiText(key,'en')).toBe(value)
+ expect(locale.noteUiText('挑战模式，当前{level}','en').replace('{level}',locale.noteUiText('标准','en'))).toBe('AI Copilot mode: Standard')
  expect(locale.noteUiText('段落经{level}模式 AI 挑战校对，当前有 {count} 处未解决问题','en').replace('{level}','Standard').replace('{count}','3')).toBe('Reviewed in Standard mode; 3 unresolved issues')
 })
 
 it('renders only known fixed review details and exact bounded count templates in English',()=>{
- expect(locale.noteChallengeCheckText('挑战模式已关闭。','en')).toBe('Challenge mode is off.')
+ expect(locale.noteChallengeCheckText('挑战模式已关闭。','en')).toBe('AI Copilot is off.')
  expect(locale.noteChallengeCheckText('本次实际审查2/4个待检查正文块；只检查本次正文及已提供的局部原文对照，未核验外部事实。','en')).toBe('Reviewed 2/4 pending text blocks using only this note and the supplied local source excerpts; external facts were not verified.')
  expect(locale.noteChallengeCheckText('深度复查实际覆盖1/2个正文块；新增问题仍仅依据正文或标明未联网的常识筛查。','en')).toContain('1/2')
  const native='模型原生内容：挑战模式已关闭。\n用户正文和任意来源不得翻译。'
  expect(locale.noteChallengeCheckText(native,'en')).toBe(native)
  expect(locale.noteChallengeCheckText('本次实际审查-2/4个待检查正文块；只检查本次正文及已提供的局部原文对照，未核验外部事实。','en')).toContain('本次实际审查')
- expect(locale.noteChallengeCheckText('挑战模式已关闭。','zh')).toBe('挑战模式已关闭。')
+ expect(locale.noteChallengeCheckText('挑战模式已关闭。','zh')).toBe('AI随航已关闭。')
 })
 
 it('translates recognized note IPC errors while preserving unknown service and model errors',()=>{
@@ -49,10 +49,21 @@ it('localizes independent review phases without rewriting model explanations',()
 it('uses the current display locale without changing stored review text or user content',()=>{
  const saved={detail:'挑战模式已关闭。'},body='用户中文正文：智能组件和标题',before=JSON.stringify(saved)
  globalThis.document={documentElement:{dataset:{odysseyLocale:'en'}}}
- expect(locale.noteChallengeCheckText(saved.detail)).toBe('Challenge mode is off.')
+ expect(locale.noteChallengeCheckText(saved.detail)).toBe('AI Copilot is off.')
  globalThis.document.documentElement.dataset.odysseyLocale='zh'
- expect(locale.noteChallengeCheckText(saved.detail)).toBe(saved.detail)
+ expect(locale.noteChallengeCheckText(saved.detail)).toBe('AI随航已关闭。')
  expect(JSON.stringify(saved)).toBe(before);expect(locale.noteUiText(body,'en')).toBe(body)
+})
+
+it('renames only exact fixed UI labels and keeps arbitrary names and authored prose literal',()=>{
+ for(const [key,zh,en]of [['AI挑战','AI随航','AI Copilot'],['AI挑战者','AI评论员','AI Commentator'],['挑战依据','随航依据','Copilot evidence'],['AI挑战设置','AI随航设置','AI Copilot settings'],['回复AI挑战','回复AI评论员','Reply to AI Commentator']]){
+  expect(locale.noteUiText(key,'zh')).toBe(zh);expect(locale.noteUiText(key,'en')).toBe(en)
+ }
+ const authored='用户原文：AI挑战与AI挑战者是我的自定义名称。'
+ expect(locale.noteUiText(authored,'zh')).toBe(authored);expect(locale.noteUiText(authored,'en')).toBe(authored)
+ expect(locale.noteUiError('AI挑战设置参数无效。','zh')).toBe('AI随航设置参数无效。')
+ expect(locale.noteUiError('AI挑战设置参数无效。','en')).toBe('The AI Copilot settings are invalid.')
+ expect(locale.noteUiError('自定义服务：AI挑战设置参数无效。','zh')).toBe('自定义服务：AI挑战设置参数无效。')
 })
 
 it('formats actual consensus dates and complete fixed notice groups without changing opaque text',()=>{
