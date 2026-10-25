@@ -160,6 +160,76 @@
           "用户正在试用Dark/Jarrick，最终保留用户最新选择，不能覆盖回更早的default。"
         ],
         "generatedAt": "2026-10-25T06:22:18.621Z"
+      },
+      "merged": {
+        "mergeCommit": "730b0594e541a87e694a3dd2d8d129bd0fc266fd",
+        "verificationCommit": "730b0594e541a87e694a3dd2d8d129bd0fc266fd",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "730b0594e541a87e694a3dd2d8d129bd0fc266fd",
+            "completedAt": "2026-10-25T06:23:54.450Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "730b0594e541a87e694a3dd2d8d129bd0fc266fd",
+            "completedAt": "2026-10-25T06:23:54.450Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "single unscaled tab/header|bounded wallpaper hover|softer light selected|reverses tab slides|retains carousel elapsed|settles tab motion|reuses the hidden gallery measurement|painted tab mixture continuous",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js -t single unscaled tab/header|bounded wallpaper hover|softer light selected|reverses tab slides|retains carousel elapsed|settles tab motion|reuses the hidden gallery measurement|painted tab mixture continuous --maxWorkers=2",
+            "verifiedCommit": "730b0594e541a87e694a3dd2d8d129bd0fc266fd",
+            "completedAt": "2026-10-25T06:23:54.450Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "730b0594e541a87e694a3dd2d8d129bd0fc266fd",
+            "completedAt": "2026-10-25T06:23:54.450Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "730b0594e541a87e694a3dd2d8d129bd0fc266fd",
+            "completedAt": "2026-10-25T06:23:54.450Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T06:23:54.450Z"
       }
     }
   ],
