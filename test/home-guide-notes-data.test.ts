@@ -48,6 +48,25 @@ describe('homepage note example data and isolated bridge',()=>{
   abort.abort();await expect(bridge.request('load',{sessionId})).rejects.toThrow()
   await expect(bridge.draft({sessionId,clientId:'guide',revision:0,content:{title:'',blocks:[],yjs:''}})).rejects.toThrow()
  })
+ it('routes native generation only through its admitted example driver and keeps late replies cancelled',async()=>{
+  let resolve!:(value:any)=>void;const generated:any[]=[],stopped:string[]=[]
+  const driver={generate:(input:any)=>{generated.push(input);return new Promise<any>(done=>resolve=done)},stop:async(id:string)=>{stopped.push(id)}}
+  const bridge=createHomeNotesGuideBridge(sessionId,new AbortController().signal,undefined,undefined,undefined,driver)
+  const input={sessionId,requestId:'native-generation',prompt:'请整理当前笔记。',context:{scope:'note'}}
+  const pending=bridge.request('generate',input);await vi.waitFor(()=>expect(generated).toEqual([input]))
+  await expect(bridge.request('generate',{...input,sessionId:'another-session'})).rejects.toThrow('会话')
+  await bridge.request('stop',{sessionId,requestId:input.requestId});await expect(pending).rejects.toThrow('取消');expect(stopped).toEqual([input.requestId])
+  resolve({kind:'text',markdown:'取消之后的建议。'});bridge.dispose()
+ })
+ it('forwards accepted native conversation state only to the same prepared persistence session',async()=>{
+  const storage={request:vi.fn(async(method:string)=>method==='load'?{saved:{title:'',blocks:[],yjs:'',revision:0,updatedAt:0}}:{ok:true}),draft:async()=>{}}
+  const driver={generate:async()=>({kind:'text' as const,markdown:'研究摘要。'}),stop:async()=>{}}
+  const bridge=createHomeNotesGuideBridge(sessionId,new AbortController().signal,undefined,{bridge:storage,fresh:true},undefined,driver)
+  await expect(bridge.request('generate',{sessionId,requestId:'not-admitted',prompt:'研究摘要'})).rejects.toThrow('读取')
+  await bridge.request('load',{sessionId});await bridge.request('conversation-state',{sessionId,requestId:'accepted-native',phase:'accepted'})
+  expect(storage.request).toHaveBeenLastCalledWith('conversation-state',{sessionId,requestId:'accepted-native',phase:'accepted'})
+  await expect(bridge.request('conversation-state',{sessionId:'foreign',requestId:'accepted-native',phase:'accepted'})).rejects.toThrow('会话');bridge.dispose()
+ })
  it('cancels pending review on disposal without returning late results',async()=>{
   const abort=new AbortController(),bridge=createHomeNotesGuideBridge(sessionId,abort.signal),pending=bridge.request('challenge',review())
   bridge.dispose();await expect(pending).rejects.toThrow()

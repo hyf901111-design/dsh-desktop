@@ -12,12 +12,14 @@ beforeAll(async()=>{
  import{mountHomeNotesGuide}from'./src/preload/home-guide-notes';
  import React from'react';import{createRoot}from'react-dom/client';import{NotesApp}from'./src/preload/notes/editor';
  import'@blocknote/mantine/style.css';import'./src/preload/notes/style.css';import'./src/preload/notes/challenge.css';
+ import{HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT}from'./packages/dsh-research-task-runtime/home-notes-guide-contract.js';
  window.guideNativeEvents=[];for(const name of ['notes-edited','notes-composer-state','notes-composer-draft','notes-task-state'])document.addEventListener('sherlock:'+name,()=>window.guideNativeEvents.push(name));window.mountAnotherGuide=signal=>mountHomeNotesGuide(document,document.querySelector('#guide'),{signal});window.abortGuide=new AbortController();window.guideStatuses=[];window.guideGate=()=>Promise.resolve();window.readyGuide=mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:window.abortGuide.signal,runId:'standalone-note-run',onStatus:text=>window.guideStatuses.push(text),waitUntilPlaying:()=>window.guideGate()}).then(api=>window.guide=api);
  window.cueTarget=token=>typeof token==='string'?document.querySelector('[data-home-guide-cue-target="'+CSS.escape(token)+'"]'):null;
  window.guideCues=[];window.guidePointerPending=[];window.addEventListener('sherlock:home-guide-cue',event=>{const wire=event.detail,target=wire.target||window.cueTarget(wire.targetToken),fromTarget=wire.fromTarget||window.cueTarget(wire.fromTargetToken);window.guideCues.push({label:wire.label,connected:target?.isConnected===true,runId:wire.runId,requestId:wire.requestId,action:wire.action});if(wire.requestId)window.guidePointerPending.push({...wire,target,fromTarget,wire})});
  window.persistentBridge={request:(method,input)=>window.noteStorageRequest(method,input),draft:input=>window.noteStorageRequest('draft',input)};
  window.startPersistentGuide=async fresh=>{window.guide.dispose();await new Promise(resolve=>setTimeout(resolve,50));window.guide=await mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:new AbortController().signal,sessionId:'real-guide-session',runId:'notes-natural-run',fresh,persistence:window.persistentBridge});};
  window.openSavedNativeNote=()=>{window.nativeRoot=createRoot(document.querySelector('#guide'));window.nativeRoot.render(React.createElement(NotesApp,{sessionId:'real-guide-session',bridge:window.persistentBridge,dark:false,navigate:()=>{}}));};
+ window.startNativeGuide=async()=>{window.guide.dispose();await new Promise(resolve=>setTimeout(resolve,50));document.documentElement.dataset.homeGuidePointerRun='notes-natural-run';window.nativeGuideRequests=[];const native={type:async stage=>{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'real-guide-session',prompt:stage==='note'?HOME_NOTES_TASK_PROMPT:HOME_NOTES_REWRITE_PROMPT,images:[],submissionId:window.nativeGuideRequests.length}}))},generate:async input=>{window.nativeGuideRequests.push(input);await new Promise(resolve=>setTimeout(resolve,80));return{kind:'text',markdown:input.selection?HOME_NOTES_REWRITE_RESULT:HOME_NOTES_TASK_RESULT}},stop:async()=>{},dispose:()=>{window.nativeGuideDisposed=true}};window.guide=await mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:new AbortController().signal,sessionId:'real-guide-session',runId:'notes-natural-run',fresh:true,persistence:window.persistentBridge,native,wait:async()=>{}});window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))});};
  `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text;css=output.outputFiles.find(file=>file.path.endsWith('.css'))?.text||''
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -29,6 +31,27 @@ async function fixture(storage){
  await page.route('http://127.0.0.1/notes-guide',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content"><title>笔记用例教程</title><body data-workspace-surface="notes"><div id="guide" class="en-root" data-home-guide-notes="" style="left:0;top:0;right:0;bottom:0"></div>'}))
  await page.goto('http://127.0.0.1/notes-guide');if(storage)await page.exposeFunction('noteStorageRequest',storage);await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.evaluate(()=>window.readyGuide);return{context,page,errors,network,logs}
 }
+it('extends the saved native note with a research summary and an actual paragraph rewrite without replacing the original document',async()=>{
+ const directory=mkdtempSync(join(tmpdir(),'home-guide-note-native-')),store=new NotesStore(directory)
+ const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
+ const{context,page,errors}=await fixture(storage);try{
+  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
+  for(const step of ['write','challenge','review','select','optimize','replace','note-task-compose','note-task-review','note-task-apply','note-select-paragraph','note-rewrite','note-rewrite-apply']){
+   await page.evaluate(step=>window.guide.runStep(step),step)
+   if(step==='note-select-paragraph'){await page.evaluate(()=>{const next=document.createElement('button');next.textContent='下一步';next.id='native-note-next';document.body.append(next);next.click();next.focus()});await page.waitForTimeout(300)}
+  }
+  const requests=await page.evaluate(()=>window.nativeGuideRequests)
+  expect(requests).toHaveLength(2);expect(requests[0].context.scope).toBe('note');expect(requests[0].selection).toBe('');expect(requests[0].markdown).toContain('同比增长10%')
+  expect(requests[1].context.scope).toBe('selection');expect(requests[1].markdown).toBe('');expect(requests[1].selection).toContain('订单同比增长即可保证全年净利润翻倍')
+  expect(await page.locator('[data-id="guide-note-intro"] .bn-inline-content').innerText()).toContain('虚构公司与演示数据')
+  expect(await page.locator('[data-id="guide-note-logic"] .bn-inline-content').innerText()).toContain('不能直接推导全年净利润翻倍')
+  expect(await page.locator('.bn-editor').innerText()).toContain('研究摘要');expect(await page.locator('.bn-editor').innerText()).toContain('同比增长10%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
+  await page.evaluate(()=>window.guide.flush());await page.evaluate(()=>window.guide.dispose())
+  const saved=store.load('owner','real-guide-session');expect(JSON.stringify(saved.saved.blocks)).toContain('不能直接推导全年净利润翻倍');expect(JSON.stringify(saved.saved.blocks)).toContain('样本公司收入由120亿元增至132亿元');expect(saved.draft).toBeUndefined()
+  await page.evaluate(()=>{delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()});await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('不能直接推导全年净利润翻倍')
+  expect(errors).toEqual([]);await page.evaluate(()=>window.nativeRoot.unmount())
+ }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
+},35000)
 it('waits for the matching pointer acknowledgement before title and body input and cancels a pending click',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.pointerWrite=window.guide.runStep('write').catch(error=>error.name)})
