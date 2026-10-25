@@ -121,6 +121,75 @@
           "系统级概率鼠标冻结仍未稳定复现，fixed=false。"
         ],
         "generatedAt": "2026-10-25T21:32:05.282243+00:00"
+      },
+      "merged": {
+        "mergeCommit": "64f0dd43a338d83eff54d488ad8b9e72195119d4",
+        "verificationCommit": "64f0dd43a338d83eff54d488ad8b9e72195119d4",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "64f0dd43a338d83eff54d488ad8b9e72195119d4",
+            "completedAt": "2026-10-25T21:32:25.240Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "64f0dd43a338d83eff54d488ad8b9e72195119d4",
+            "completedAt": "2026-10-25T21:32:25.240Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-notes-portal.test.js",
+              "test/home-guide-native.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-notes-portal.test.js test/home-guide-native.test.js --maxWorkers=2",
+            "verifiedCommit": "64f0dd43a338d83eff54d488ad8b9e72195119d4",
+            "completedAt": "2026-10-25T21:32:25.240Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "64f0dd43a338d83eff54d488ad8b9e72195119d4",
+            "completedAt": "2026-10-25T21:32:25.240Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "64f0dd43a338d83eff54d488ad8b9e72195119d4",
+            "completedAt": "2026-10-25T21:32:25.240Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T21:32:25.240Z"
       }
     }
   ],
