@@ -26,8 +26,8 @@ const COPY = {
     heading: '快速开始', wallpapers: '主题壁纸', light: '切换为浅色', dark: '切换为深色', down: '切换到快速开始', up: '返回输入区', pagination: '用例切换',
     cards: ['创建研究看板', '撰写研究笔记', '制作演示文稿', '制作研究报告'],
     cases: [
-      ['快速创建', '自选行情看板', '通过研究模式，快速创建自选行情看板，以了解研究看板基础功能。'],
-      ['观点挑战', '体验有AI护航文档', '打开示例笔记，体验 AI 追问观点、\n核查事实，发现研究中的盲点。'],
+      ['研究看板', '快速创建行情看板', '通过研究模式，快速创建自选行情看板，以了解研究看板基础功能。'],
+      ['笔记随航', '体验有AI护航的文档', '打开示例笔记，体验 AI 追问观点、\n核查事实，发现研究中的盲点。'],
       ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。'],
       ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。']
     ]
@@ -36,8 +36,8 @@ const COPY = {
     heading: 'Quick start', wallpapers: 'Wallpapers', light: 'Switch to light mode', dark: 'Switch to dark mode', down: 'Show quick start', up: 'Return to the composer', pagination: 'Examples',
     cards: ['Create a research board', 'Write research notes', 'Create a presentation', 'Create a research report'],
     cases: [
-      ['Quick create', 'Watchlist dashboard', 'Create a watchlist dashboard in Research to explore the basics of research boards.'],
-      ['Challenge your views', 'Explore AI-assisted notes', 'Open an example note to see AI question ideas,\ncheck facts and uncover blind spots.'],
+      ['Research board', 'Quickly create a market dashboard', 'Create a watchlist dashboard in Research to explore the basics of research boards.'],
+      ['Notes Copilot', 'Explore AI-assisted documents', 'Open an example note to see AI question ideas,\ncheck facts and uncover blind spots.'],
       ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.'],
       ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.']
     ]
