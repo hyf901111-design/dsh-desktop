@@ -174,6 +174,78 @@
           "PPT标注功能仅已完成HF设计/recon/spec草稿，未作为本批实现，后续独立开发。"
         ],
         "generatedAt": "2026-10-25 08:02:52 UTC"
+      },
+      "merged": {
+        "mergeCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+        "verificationCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "-t",
+              "creates a new native session|keeps replayed|does not reselect|broad neutral-gray Light outline|translucent broad Light selected|opens all fifteen native|slides from the real presentation card|cancels the real entry|skill list",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js test/home-guide-notes-shell-browser.test.js test/home-guide-presentation-browser.test.js -t creates a new native session|keeps replayed|does not reselect|broad neutral-gray Light outline|translucent broad Light selected|opens all fifteen native|slides from the real presentation card|cancels the real entry|skill list --maxWorkers=2",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T08:07:40.255Z"
       }
     }
   ],
