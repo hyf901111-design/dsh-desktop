@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-02",
+  "branch": "codex/integration/20261026-02",
+  "baseMainCommit": "20a47fc9b95b58ca69b9f4d35aa6b69a33c09cc5",
+  "expectedMainCommit": "20a47fc9b95b58ca69b9f4d35aa6b69a33c09cc5",
+  "createdAt": "2026-10-25T20:07:38.335Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "补齐正式客户端笔记演示续播与历史PPT标注跳转",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "04ea9db28e3ae53f336faec52d62a641ebb916de",
+        "tipCommit": "88e512077696da0e396f16e51b9c914f61de68d0",
+        "commits": [
+          {
+            "commit": "caad2474ac86a8517b5033b166b304d39c8e9c89",
+            "parents": [
+              "04ea9db28e3ae53f336faec52d62a641ebb916de"
+            ],
+            "subject": "支持冷启动标注标签的原PPT只读定位解析"
+          },
+          {
+            "commit": "dd3f5f745d7b0d2697cd9dbf2fa8180ec0793494",
+            "parents": [
+              "caad2474ac86a8517b5033b166b304d39c8e9c89"
+            ],
+            "subject": "修复历史PPT标注标签的冷启动预览定位"
+          },
+          {
+            "commit": "0456227ee1e5f89b6b4c7e4e125162baf68da3d9",
+            "parents": [
+              "dd3f5f745d7b0d2697cd9dbf2fa8180ec0793494"
+            ],
+            "subject": "接通标注引用的只读预览授权与主进程桥"
+          },
+          {
+            "commit": "88e512077696da0e396f16e51b9c914f61de68d0",
+            "parents": [
+              "0456227ee1e5f89b6b4c7e4e125162baf68da3d9"
+            ],
+            "subject": "修复笔记演示查看依据后无法继续原生优化任务"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-notes-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-message.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-annotation-reveal.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-pptx-toolbar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/pptx/annotations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/pptx-annotations.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-portal.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-editor.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-message-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-native.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-reveal-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-reveal.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-sidebar-source.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotations-contract.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotations.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-13-feature-check-1-20261026.log",
+            "verifiedCommit": "88e512077696da0e396f16e51b9c914f61de68d0",
+            "completedAt": "2026-10-25T20:03:39.073065+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-13-feature-check-2-20261026.log",
+            "verifiedCommit": "88e512077696da0e396f16e51b9c914f61de68d0",
+            "completedAt": "2026-10-25T20:03:46.481577+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotations.test.ts",
+              "test/pptx-annotations-contract.test.ts",
+              "test/pptx-annotation-reveal.test.js",
+              "test/pptx-annotation-reveal-browser.test.js",
+              "test/pptx-annotation-sidebar-source.test.js",
+              "test/pptx-annotation-message-browser.test.js",
+              "test/pptx-annotation-native.test.js",
+              "test/pptx-annotation-install.test.js",
+              "test/home-guide-notes-portal.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-13-feature-check-3-20261026.log",
+            "verifiedCommit": "88e512077696da0e396f16e51b9c914f61de68d0",
+            "completedAt": "2026-10-25T20:04:27.647825+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-13-feature-check-4-20261026.log",
+            "verifiedCommit": "88e512077696da0e396f16e51b9c914f61de68d0",
+            "completedAt": "2026-10-25T20:04:35.839647+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-13-feature-check-5-20261026.log",
+            "verifiedCommit": "88e512077696da0e396f16e51b9c914f61de68d0",
+            "completedAt": "2026-10-25T20:04:35.862188+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "正式12已实际复验研报/PPT交付卡自动右栏预览、五自选加智能容器、800×640完整运营卡、浅灰主题选中框与真实头像目录详情。现场发现Notes查看依据后中断及冷标注tag无跳转，本批已实际RED→GREEN、严格授权/草稿和版本保护聚焦检查；补丁13客户端原生闭环待构建。"
+        },
+        "acceptanceCriteria": [
+          "PPT历史标注显式点击先由Main只读核真实owner/session/原doc/version/mark，拒绝和过期可见提示；不猜原文路径。",
+          "复用原生右栏，默认preview不读标注/不开edit，显式定位才安全激活和跳页气泡；保活编辑dirty/undo、冷cap续期、草稿不改。",
+          "笔记查看依据后在同session恢复原生conversation tab，保原guard/postACK/CAS；续摘要和选区改写并自然回顶。",
+          "只从clean main重建正式身份本地包，聚焦native验收并保持打开。"
+        ],
+        "risks": [
+          "概率性系统鼠标冻结仍未稳定复现或确认根因，不能标记fixed。",
+          "本批13原生冷标注跳转及完整Notes17步骤仍待构建后实际验收。"
+        ],
+        "generatedAt": "2026-10-25T20:06:49.591026+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/pptx-annotations.test.ts",
+        "test/pptx-annotations-contract.test.ts",
+        "test/pptx-annotation-reveal.test.js",
+        "test/pptx-annotation-reveal-browser.test.js",
+        "test/pptx-annotation-sidebar-source.test.js",
+        "test/pptx-annotation-message-browser.test.js",
+        "test/pptx-annotation-native.test.js",
+        "test/pptx-annotation-install.test.js",
+        "test/home-guide-notes-portal.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
