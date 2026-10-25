@@ -207,6 +207,82 @@
           "本批13原生冷标注跳转及完整Notes17步骤仍待构建后实际验收。"
         ],
         "generatedAt": "2026-10-25T20:06:49.591026+00:00"
+      },
+      "merged": {
+        "mergeCommit": "9ef7094b86f6c7ee4a6e1ac895bcf98ec141ae3f",
+        "verificationCommit": "9ef7094b86f6c7ee4a6e1ac895bcf98ec141ae3f",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "9ef7094b86f6c7ee4a6e1ac895bcf98ec141ae3f",
+            "completedAt": "2026-10-25T20:12:06.309Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "9ef7094b86f6c7ee4a6e1ac895bcf98ec141ae3f",
+            "completedAt": "2026-10-25T20:12:06.309Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotations.test.ts",
+              "test/pptx-annotations-contract.test.ts",
+              "test/pptx-annotation-reveal.test.js",
+              "test/pptx-annotation-reveal-browser.test.js",
+              "test/pptx-annotation-sidebar-source.test.js",
+              "test/pptx-annotation-message-browser.test.js",
+              "test/pptx-annotation-native.test.js",
+              "test/pptx-annotation-install.test.js",
+              "test/home-guide-notes-portal.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/pptx-annotations.test.ts test/pptx-annotations-contract.test.ts test/pptx-annotation-reveal.test.js test/pptx-annotation-reveal-browser.test.js test/pptx-annotation-sidebar-source.test.js test/pptx-annotation-message-browser.test.js test/pptx-annotation-native.test.js test/pptx-annotation-install.test.js test/home-guide-notes-portal.test.js --maxWorkers=2",
+            "verifiedCommit": "9ef7094b86f6c7ee4a6e1ac895bcf98ec141ae3f",
+            "completedAt": "2026-10-25T20:12:06.309Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9ef7094b86f6c7ee4a6e1ac895bcf98ec141ae3f",
+            "completedAt": "2026-10-25T20:12:06.309Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "9ef7094b86f6c7ee4a6e1ac895bcf98ec141ae3f",
+            "completedAt": "2026-10-25T20:12:06.309Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T20:12:06.309Z"
       }
     }
   ],
