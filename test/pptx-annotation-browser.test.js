@@ -133,6 +133,48 @@ it('keeps persistent pin numbering through delete/undo/readd and requires explic
   await expect.poll(()=>f.page.evaluate(()=>window.snapshot.marks[0].stale)).toBe(false);expect(await f.page.locator('.pptxa-pin-number').textContent()).toBe('1');expect(await f.page.evaluate(()=>window.snapshot.marks[0].comment)).toBe('保留这一条意见');expect(await f.page.evaluate(()=>[window.editCalls,window.saveCalls])).toEqual([0,0]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
+it('reopens cold persisted stale marks from the count without old tags or selected pins and explicitly reanchors the same ordinal',async()=>{
+ const f=await fixture(360,true);try{
+  await f.page.evaluate(()=>{
+   const mark=(id,ordinal,slideIndex,comment)=>({id,ordinal,revision:2,fileVersion:'0'.repeat(64),stale:true,slideIndex,slidePart:window.snapshot.scene.slides[slideIndex].part,kind:'point',region:{x:.25,y:.3},nodeIds:[],comment,referenced:false})
+   window.snapshot={...window.snapshot,marks:[mark('old-seven',7,10,'旧第七条，保留整段备注'),mark('old-two',2,0,'旧第二条')],selectedId:null,revealSeq:0,stale:true}
+  })
+  await f.activate();expect(await f.page.locator('[data-pptx-annotation-pin],.pptxa-bubble:visible,[data-inline-reference-chip]').count()).toBe(0)
+  const count=f.page.getByRole('button',{name:'标注列表',exact:true});await expect.poll(()=>count.count()).toBe(1)
+  await count.click();const list=f.page.getByRole('menu',{name:'标注列表',exact:true});await list.waitFor()
+  expect(await list.getByRole('menuitem').allTextContents()).toEqual(['标注2 · 第1页 · 位置 · 需重新定位','标注7 · 第11页 · 位置 · 需重新定位'])
+  await list.getByRole('menuitem').nth(1).click();await f.page.locator('.pptxa-bubble:visible').waitFor()
+  expect(await f.page.getByRole('textbox',{name:'标注备注'}).inputValue()).toBe('旧第七条，保留整段备注')
+  expect(await f.page.getByRole('textbox',{name:'标注备注'}).isDisabled()).toBe(true)
+  expect(await f.page.evaluate(()=>window.snapshot.marks.map(m=>[m.id,m.ordinal,m.stale]))).toEqual([['old-seven',7,true],['old-two',2,true]])
+  expect(await f.page.locator('[data-pptx-annotation-pin]').count()).toBe(0)
+  await f.page.getByRole('button',{name:'重新定位',exact:true}).click();const r=await contentBox(f.page)
+  await f.page.mouse.click(r.x+r.width*.45,r.y+r.height*.45)
+  await expect.poll(()=>f.page.evaluate(()=>window.snapshot.marks.find(m=>m.id==='old-seven').stale)).toBe(false)
+  expect(await f.page.locator('[data-pptx-annotation-pin="old-seven"] .pptxa-pin-number').textContent()).toBe('7')
+  expect(await f.page.evaluate(()=>window.snapshot.marks.find(m=>m.id==='old-seven').comment)).toBe('旧第七条，保留整段备注')
+  expect(await f.page.evaluate(()=>window.snapshot.marks.find(m=>m.id==='old-two').stale)).toBe(true)
+  expect(await f.page.evaluate(()=>[window.editCalls,window.saveCalls])).toEqual([0,0]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+it.each([false,true])('keeps the cold mark list keyboard accessible, bounded and disposable in dark mode %s',async dark=>{
+ const f=await fixture(dark?360:620,dark);try{
+  await f.page.evaluate(()=>{window.snapshot={...window.snapshot,marks:[2,7].map(ordinal=>({id:'old-'+ordinal,ordinal,revision:1,fileVersion:'0'.repeat(64),stale:true,slideIndex:0,slidePart:window.snapshot.scene.slides[0].part,kind:'point',region:{x:.2,y:.3},nodeIds:[],comment:'持久备注'+ordinal,referenced:false})),selectedId:null,revealSeq:0,stale:true}})
+  await f.activate();const count=f.page.getByRole('button',{name:'标注列表',exact:true});await count.focus();await f.page.keyboard.press('ArrowDown')
+  const list=f.page.getByRole('menu',{name:'标注列表',exact:true});await list.waitFor();expect(await list.getByRole('menuitem').nth(0).evaluate(el=>el===document.activeElement)).toBe(true)
+  await f.page.keyboard.press('ArrowDown');expect(await list.getByRole('menuitem').nth(1).evaluate(el=>el===document.activeElement)).toBe(true)
+  await f.page.evaluate(()=>{window.snapshot={...window.snapshot,revision:window.snapshot.revision+1,marks:window.snapshot.marks.map(m=>({...m,comment:m.comment+'保持焦点'}))};for(const f of window.subscribers)f()})
+  await f.page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));expect(await list.getByRole('menuitem').nth(1).evaluate(el=>el===document.activeElement)).toBe(true)
+  const geometry=await list.evaluate(el=>{const r=el.getBoundingClientRect(),host=document.querySelector('#surface').getBoundingClientRect();return{left:r.left,right:r.right,bottom:r.bottom,hostLeft:host.left,hostRight:host.right,windowBottom:innerHeight}})
+  expect(geometry.left).toBeGreaterThanOrEqual(geometry.hostLeft);expect(geometry.right).toBeLessThanOrEqual(geometry.hostRight);expect(geometry.bottom).toBeLessThanOrEqual(geometry.windowBottom-8)
+  const directory='output/ppt-markup-design-20261025/cold-stale-validation';await mkdir(directory,{recursive:true});await f.page.screenshot({path:directory+'/mark-list-'+(dark?'dark':'light')+'.png'})
+  await f.page.keyboard.press('Escape');expect(await list.count()).toBe(0);expect(await count.evaluate(el=>el===document.activeElement)).toBe(true)
+  await count.click();await list.waitFor();await f.page.keyboard.press('End');await f.page.keyboard.press('Enter');await f.page.locator('.pptxa-bubble:visible').waitFor();expect(await f.page.evaluate(()=>window.snapshot.selectedId)).toBe('old-7')
+  await count.click();await list.waitFor();await f.page.getByRole('button',{name:'中央其他控件',exact:true}).click();expect(await list.count()).toBe(0)
+  await count.click();await list.waitFor();await f.page.evaluate(()=>window.controls.setAnnotations(false));expect(await f.page.locator('.pptxa-mark-list,.pptxa-bubble,[data-pptx-annotation-toolbar]').count()).toBe(0);expect(await f.page.evaluate(()=>window.subscribers.size)).toBe(0)
+  expect(await f.page.evaluate(()=>[window.editCalls,window.saveCalls,window.openCalls])).toEqual([0,0,1]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
 it('closes a comment on a blank slide click and commits one complete IME remark without stealing the central focus',async()=>{
  const f=await fixture();try{
   await f.activate();await point(f.page);await f.page.locator('.pptxa-bubble:visible').waitFor()

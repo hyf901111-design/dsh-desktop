@@ -19,7 +19,7 @@ export function attachPptxAnnotationViewer(host,options){
  const toolbar=node('div','pptxa-toolbar',uiRoot);toolbar.dataset.pptxAnnotationToolbar='';toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','标注工具')
  uiRoot.insertBefore(toolbar,host)
  const rectTool=action('框选',()=>setTool('rect'),toolbar,'pptxa-tool'),pointTool=action('点选',()=>setTool('point'),toolbar,'pptxa-tool')
- rectTool.prepend(image('rect14-selected',null,14));pointTool.prepend(image('point14-normal',null,14));const count=node('span','pptxa-count',toolbar)
+ rectTool.prepend(image('rect14-selected',null,14));pointTool.prepend(image('point14-normal',null,14));const count=action('',()=>toggleMarkList(),toolbar,'pptxa-count');count.setAttribute('aria-label','标注列表');count.setAttribute('aria-haspopup','menu');count.setAttribute('aria-expanded','false')
  const bubble=node('section','pptxa-bubble',doc.body);bubble.hidden=true;bubble.dataset.noteExportOmit='';bubble.setAttribute('aria-label','标注备注')
  const header=node('header','pptxa-bubble-header',bubble),badge=node('span','pptxa-bubble-pin',header);image('pin20-selected',badge,20);const ordinal=node('span','',badge),title=node('span','pptxa-bubble-title',header)
  const close=action('',()=>closeBubble(),header,'pptxa-bubble-close');close.setAttribute('aria-label','关闭标注气泡');image('close16',close,16)
@@ -27,6 +27,7 @@ export function attachPptxAnnotationViewer(host,options){
  const error=node('div','pptxa-error',bubble),actions=node('div','pptxa-bubble-actions',bubble)
  const menu=node('div','pptxa-menu',doc.body);menu.hidden=true;menu.setAttribute('role','menu')
  action('删除标注',()=>{const id=menu.dataset.markId;menu.hidden=true;if(id)void run(()=>handle.remove(id)).then(ok=>{if(ok){lastDeleted=true;closeBubble();render()}})},menu)
+ const list=node('div','pptxa-menu pptxa-mark-list',doc.body),listItems=new Map();list.hidden=true;list.setAttribute('role','menu');list.setAttribute('aria-label','标注列表')
  const notice=node('div','pptxa-notice',doc.body);notice.hidden=true;const noticeText=node('span','',notice)
  action('撤销',()=>void run(()=>handle.undo()).then(ok=>{if(ok){lastDeleted=false;render()}}),notice)
  const own=el=>el?.nodeType===1&&(el.dataset?.pptxAnnotationOwner===owner||el.closest?.('[data-pptx-annotation-owner]')?.dataset.pptxAnnotationOwner===owner)
@@ -38,8 +39,28 @@ export function attachPptxAnnotationViewer(host,options){
  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v))
  const label=mark=>{const slide=snapshot().scene?.slides.find(s=>s.index===mark.slideIndex),target=slide?.nodes?.find(n=>mark.nodeIds?.includes(n.id));return '第'+(mark.slideIndex+1)+'页 · '+(target?.name||(mark.kind==='rect'?'框选区域':'位置'))}
  const run=async operation=>{if(!current())return false;try{await operation();if(!current())return false;localError='';render();return true}catch(failure){if(current()){localError=failure?.message||'标注操作失败，原备注已保留。';render()}return false}}
- const closeBubble=()=>{bubbleId=null;pendingReveal=null;bubble.hidden=true;menu.hidden=true}
- const setTool=value=>{cancelGesture();tool=value;render();options.onTool?.(value)}
+ const closeMarkList=()=>{list.hidden=true;count.setAttribute('aria-expanded','false')}
+ const renderMarkList=()=>{
+  if(list.hidden)return
+  const s=snapshot(),marks=[...s.marks].sort((a,b)=>a.ordinal-b.ordinal),ids=new Set(marks.map(mark=>mark.id))
+  for(const[id,item]of listItems)if(!ids.has(id)){item.remove();listItems.delete(id)}
+  marks.forEach((mark,index)=>{
+   let item=listItems.get(mark.id)
+   if(!item){item=action('',()=>{closeMarkList();void run(()=>handle.select(mark.id))},null);item.setAttribute('role','menuitem');item.dataset.pptxAnnotationListMark=mark.id;listItems.set(mark.id,item)}
+   const text='标注'+mark.ordinal+' · '+label(mark)+(validMark(mark)?'':' · 需重新定位');if(item.textContent!==text)item.textContent=text
+   item.title=mark.comment||text;item.setAttribute('aria-current',String(s.selectedId===mark.id));if(list.children[index]!==item)list.insertBefore(item,list.children[index]||null)
+  })
+  if(!marks.length){closeMarkList();return}
+  const r=count.getBoundingClientRect(),viewport=host.getBoundingClientRect(),width=Math.min(320,Math.max(160,viewport.width-16),win.innerWidth-16)
+  list.style.width=width+'px';list.style.left=clamp(r.right-width,Math.max(8,viewport.left+8),Math.min(win.innerWidth-width-8,Math.max(viewport.left+8,viewport.right-width-8)))+'px'
+  list.style.top=clamp(r.bottom+5,8,Math.max(8,win.innerHeight-list.getBoundingClientRect().height-8))+'px'
+ }
+ const toggleMarkList=()=>{
+  if(!current())return;if(!list.hidden){closeMarkList();return}
+  cancelGesture();closeBubble();list.hidden=false;count.setAttribute('aria-expanded','true');renderMarkList();list.querySelector('button')?.focus({preventScroll:true})
+ }
+ const closeBubble=()=>{bubbleId=null;pendingReveal=null;bubble.hidden=true;menu.hidden=true;closeMarkList()}
+ const setTool=value=>{cancelGesture();closeMarkList();tool=value;render();options.onTool?.(value)}
  const slideFor=target=>{
   const item=target?.closest?.('[data-slide-index]');if(!item||!host.contains(item)||item.dataset.pptxThumbnail==='true')return null
   const wrapper=item.firstElementChild,content=wrapper?.firstElementChild,index=Number(item.dataset.slideIndex),slide=snapshot().scene?.slides.find(s=>s.index===index)
@@ -103,7 +124,7 @@ export function attachPptxAnnotationViewer(host,options){
  }
  const render=()=>{
   if(!current()){cancelGesture();return}
-  const s=snapshot();if(s.active===false||basisKey()!==initialBasis){cancelGesture();closeBubble();options.onInactive?.(s.error||(basisKey()!==initialBasis?'文件版本已变化，请重新打开标注以核对位置。':'实际会话或输入已切换，请重新开启标注。'));return}count.textContent=s.marks.length+' 处标注';rectTool.setAttribute('aria-pressed',String(tool==='rect'));pointTool.setAttribute('aria-pressed',String(tool==='point'))
+  const s=snapshot();if(s.active===false||basisKey()!==initialBasis){cancelGesture();closeBubble();options.onInactive?.(s.error||(basisKey()!==initialBasis?'文件版本已变化，请重新打开标注以核对位置。':'实际会话或输入已切换，请重新开启标注。'));return}count.textContent=s.marks.length+' 处标注';count.disabled=s.marks.length===0;renderMarkList();rectTool.setAttribute('aria-pressed',String(tool==='rect'));pointTool.setAttribute('aria-pressed',String(tool==='point'))
   const wrappers=new Set()
   for(const item of host.querySelectorAll('[data-slide-index]')){
    const slide=slideFor(item.firstElementChild?.firstElementChild);if(!slide)continue;wrappers.add(slide.wrapper)
@@ -113,7 +134,7 @@ export function attachPptxAnnotationViewer(host,options){
    const valid=new Set()
    for(const mark of s.marks){if(mark.slideIndex!==slide.index||mark.slidePart!==slide.slide.part||!validMark(mark))continue;valid.add(mark.id)
     let view=layer.items.get(mark.id)
-    if(!view){const group=node('div','',layer.element),region=node('div','pptxa-region',group),pin=action('',()=>{if(current())handle.select(mark.id)},group,'pptxa-pin');pin.dataset.pptxAnnotationPin=mark.id;const icon=image('pin28-normal',pin,28),number=node('span','pptxa-pin-number',pin);pin.addEventListener('contextmenu',event=>{if(!current())return;event.preventDefault();menu.dataset.markId=mark.id;menu.hidden=false;menu.style.left=clamp(event.clientX,8,win.innerWidth-120)+'px';menu.style.top=clamp(event.clientY,8,win.innerHeight-50)+'px'});view={group,region,pin,icon,number};layer.items.set(mark.id,view)}
+    if(!view){const group=node('div','',layer.element),region=node('div','pptxa-region',group),pin=action('',()=>{if(current()){closeMarkList();handle.select(mark.id)}},group,'pptxa-pin');pin.dataset.pptxAnnotationPin=mark.id;const icon=image('pin28-normal',pin,28);const number=node('span','pptxa-pin-number',pin);pin.addEventListener('contextmenu',event=>{if(!current())return;event.preventDefault();closeMarkList();menu.dataset.markId=mark.id;menu.hidden=false;menu.style.left=clamp(event.clientX,8,win.innerWidth-120)+'px';menu.style.top=clamp(event.clientY,8,win.innerHeight-50)+'px'});view={group,region,pin,icon,number};layer.items.set(mark.id,view)}
     const selected=s.selectedId===mark.id,x=mark.region.x*slide.rect.width,y=mark.region.y*slide.rect.height
     view.region.hidden=mark.kind!=='rect';Object.assign(view.region.style,{left:x+'px',top:y+'px',width:(mark.region.width||0)*slide.rect.width+'px',height:(mark.region.height||0)*slide.rect.height+'px'})
     view.region.toggleAttribute('data-selected',selected);view.pin.style.left=x-(mark.kind==='rect'?(selected?2:1):0)+'px';view.pin.style.top=y-(mark.kind==='rect'&&selected?1:0)+'px'
@@ -139,8 +160,8 @@ export function attachPptxAnnotationViewer(host,options){
  function schedule(){if(!current()||frame)return;frame=win.requestAnimationFrame(()=>{frame=0;render()})}
  const writeComment=()=>{if(!bubbleId||composing)return;const id=bubbleId,text=comment.value;if(markById(id)?.comment===text)return;void run(()=>handle.updateComment(id,text))}
  comment.addEventListener('input',writeComment);comment.addEventListener('compositionstart',()=>{composing=true});comment.addEventListener('compositionend',()=>{composing=false;writeComment()})
- const outside=event=>{if(!own(event.target)){menu.hidden=true;if(!host.contains(event.target)||!slideFor(event.target))closeBubble()}}
- const key=event=>{if(event.isComposing||event.defaultPrevented)return;if(event.key==='Escape'){closeBubble();cancelGesture();reanchorId=null;return}const pin=event.target.closest?.('[data-pptx-annotation-pin]');if(pin&&own(pin)&&['Delete','Backspace'].includes(event.key)){event.preventDefault();void run(()=>handle.remove(pin.dataset.pptxAnnotationPin)).then(ok=>{if(ok){lastDeleted=true;closeBubble();render()}})}}
+ const outside=event=>{if(!own(event.target)){menu.hidden=true;closeMarkList();if(!host.contains(event.target)||!slideFor(event.target))closeBubble()}}
+ const key=event=>{if(event.isComposing||event.defaultPrevented)return;if(event.key==='Escape'){const returnFocus=!list.hidden;closeBubble();cancelGesture();reanchorId=null;if(returnFocus)count.focus({preventScroll:true});return}if(event.target===count&&event.key==='ArrowDown'){event.preventDefault();if(list.hidden)toggleMarkList();else list.querySelector('button')?.focus({preventScroll:true});return}if(!list.hidden&&list.contains(event.target)&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const items=[...list.querySelectorAll('button')],index=items.indexOf(doc.activeElement),next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus({preventScroll:true});return}const pin=event.target.closest?.('[data-pptx-annotation-pin]');if(pin&&own(pin)&&['Delete','Backspace'].includes(event.key)){event.preventDefault();void run(()=>handle.remove(pin.dataset.pptxAnnotationPin)).then(ok=>{if(ok){lastDeleted=true;closeBubble();render()}})}}
  const observer=new win.MutationObserver(records=>{if(records.every(record=>own(record.target)||record.type==='childList'&&[...record.addedNodes,...record.removedNodes].every(own)))return;schedule()})
  observer.observe(host,{subtree:true,childList:true,attributes:true,attributeFilter:['style','data-mounted']})
  const geometryChanged=()=>{cancelGesture();schedule()}
@@ -148,7 +169,7 @@ export function attachPptxAnnotationViewer(host,options){
  const off=handle.subscribe(schedule)
  host.addEventListener('pointerdown',down,true);host.addEventListener('pointermove',move,true);host.addEventListener('pointerup',up,true);host.addEventListener('pointercancel',cancel,true);host.addEventListener('lostpointercapture',cancel,true)
  doc.addEventListener('pointerdown',outside,true);doc.addEventListener('keydown',key);win.addEventListener('blur',cancel);win.addEventListener('resize',geometryChanged);doc.addEventListener('scroll',geometryChanged,true)
- const destroy=()=>{if(disposed)return;options.signal?.removeEventListener('abort',destroy);cancelGesture();disposed=true;stop.abort();if(frame)win.cancelAnimationFrame(frame);off?.();observer.disconnect();resize?.disconnect();host.removeEventListener('pointerdown',down,true);host.removeEventListener('pointermove',move,true);host.removeEventListener('pointerup',up,true);host.removeEventListener('pointercancel',cancel,true);host.removeEventListener('lostpointercapture',cancel,true);doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key);win.removeEventListener('blur',cancel);win.removeEventListener('resize',geometryChanged);doc.removeEventListener('scroll',geometryChanged,true);for(const[wrapper,layer]of layers){layer.element.remove();if(layer.parent.style.position==='relative'&&layer.position!=='relative')layer.parent.style.position=layer.position}layers.clear();toolbar.remove();bubble.remove();menu.remove();notice.remove();style.remove()}
+ const destroy=()=>{if(disposed)return;options.signal?.removeEventListener('abort',destroy);cancelGesture();disposed=true;stop.abort();if(frame)win.cancelAnimationFrame(frame);off?.();observer.disconnect();resize?.disconnect();host.removeEventListener('pointerdown',down,true);host.removeEventListener('pointermove',move,true);host.removeEventListener('pointerup',up,true);host.removeEventListener('pointercancel',cancel,true);host.removeEventListener('lostpointercapture',cancel,true);doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key);win.removeEventListener('blur',cancel);win.removeEventListener('resize',geometryChanged);doc.removeEventListener('scroll',geometryChanged,true);for(const[wrapper,layer]of layers){layer.element.remove();if(layer.parent.style.position==='relative'&&layer.position!=='relative')layer.parent.style.position=layer.position}layers.clear();listItems.clear();toolbar.remove();bubble.remove();menu.remove();list.remove();notice.remove();style.remove()}
  if(options.signal){if(options.signal.aborted)destroy();else options.signal.addEventListener('abort',destroy,{once:true})}
  if(!disposed)render()
  return{destroy,setTool,closeBubble}
