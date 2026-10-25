@@ -1,8 +1,8 @@
 /** Canonical draft offsets are UTF16 code units, never painted chip geometry. */
 export function annotationBlock(before,comment){
  if(typeof before!=='string'||typeof comment!=='string')throw Error('标注文本无效。')
- const prefix=before?(before.endsWith('\n')?'\n':'\n\n'):'',token='@pptx',tagOffset=prefix.length,start=tagOffset+2
- return {text:prefix+token+'\n'+comment+'\n\n',inserted:prefix+'\uFFFC\n'+comment+'\n\n',componentStart:tagOffset,componentEnd:tagOffset+token.length,tagOffset,start,end:start+comment.length}
+ const prefix=before&&!before.endsWith('\n')?'\n':'',token='@pptx',tagOffset=prefix.length,start=tagOffset+2
+ return {text:prefix+token+' '+comment+'\n',inserted:prefix+'\uFFFC '+comment+'\n',componentStart:tagOffset,componentEnd:tagOffset+token.length,tagOffset,start,end:start+comment.length}
 }
 export function annotationEdit(before,after,selection){
  if(selection&&Number.isInteger(selection.start)&&Number.isInteger(selection.end)&&selection.start>=0&&selection.end>=selection.start&&selection.end<=before.length){
@@ -45,6 +45,8 @@ export function augmentAnnotationDeletion(before,next,ranges,selection){
  const edit=annotationEdit(before,next,selection),removed=ranges.filter(range=>annotationRangeValid(before,range)&&edit.start<=range.tagOffset&&edit.end>range.tagOffset)
  if(!removed.length)return {draft:next,removed:[],editRange:{start:edit.start,end:edit.end,insertedLength:edit.text.length}}
  const start=Math.min(edit.start,...removed.map(range=>range.blockStart)),end=Math.max(edit.end,...removed.map(range=>range.blockEnd))
- return {draft:before.slice(0,start)+edit.text+before.slice(end),removed:removed.map(range=>range.key),editRange:{start,end,insertedLength:edit.text.length}}
+ // Transfer the required line separator to the next owned tag, never to user text.
+ const following=ranges.find(range=>!removed.includes(range)&&range.blockStart===end&&range.tagOffset===end&&annotationRangeValid(before,range)),left=before.slice(0,start)+edit.text,retain=following&&left&&!left.endsWith('\n'),text=edit.text+(retain?'\n':'')
+ return {draft:before.slice(0,start)+text+before.slice(end),removed:removed.map(range=>range.key),editRange:{start,end,insertedLength:text.length},...(retain?{retainedSeparator:{key:following.key,start:start+edit.text.length}}:{})}
 }
 export const PPTX_ANNOTATION_RANGE_DEFINITIONS=[annotationBlock,annotationEdit,annotationRangeValid,trackAnnotationRanges,augmentAnnotationDeletion]

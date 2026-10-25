@@ -28,19 +28,29 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
   return { win, page, sessions, workspaces, state, requests, opened, archived, disk, replies, send, reply, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
-it('prepares a dedicated report session, persists it and creates a separate practice copy without a board', async () => {
+it('prepares a dedicated report session and gives its separate replay the same concise demo title', async () => {
   const f = await fixture(), first = await f.reply(f.send('report'))
   expect(first).toMatchObject({ ok: true, title: '研究报告示例（演示案例）', fresh: true })
   const repeated = await f.reply(f.send('report'))
   expect(repeated).toMatchObject({ ok: true, sessionId: first.sessionId, fresh: false })
   const copy = await f.reply(f.send('report', 'prepare', { replay: true }))
-  expect(copy).toMatchObject({ ok: true, title: '研究报告示例 · 练习副本（演示案例）', fresh: true })
+  expect(copy).toMatchObject({ ok: true, title: '研究报告示例（演示案例）', fresh: true })
   expect(copy.sessionId).not.toBe(first.sessionId); expect(copy.cwd).not.toBe(first.cwd)
   expect(f.requests.filter(item => item[0] === 'favorite.add')).toEqual([])
   const reopen = await fixture({ disk: f.disk, byId: f.sessions.list.getSnapshot().byId })
   expect(await reopen.reply(reopen.send('report'))).toMatchObject({ ok: true, sessionId: copy.sessionId, fresh: false })
   reopen.setOwner('another')
   expect(await reopen.reply(reopen.send('report', 'open', { sessionId: copy.sessionId }))).toMatchObject({ ok: false })
+})
+it.each([
+ ['board','自选行情示例看板（演示案例）'],['note','AI 护航研究笔记示例（演示案例）'],
+ ['ppt','公司风格演示示例（演示案例）'],['report','研究报告示例（演示案例）']
+])('keeps the concise %s title for both first use and an independently stored replay',async(kind,title)=>{
+ const f=await fixture(),first=await f.reply(f.send(kind)),replay=await f.reply(f.send(kind,'prepare',{replay:true}))
+ for(const row of [first,replay])expect(row).toMatchObject({ok:true,title,fresh:true})
+ expect(replay.sessionId).not.toBe(first.sessionId);expect(replay.cwd).not.toBe(first.cwd)
+ expect(f.sessions.list.getSnapshot().byId[first.sessionId].title).toBe(title)
+ expect(f.sessions.list.getSnapshot().byId[replay.sessionId].title).toBe(title)
 })
 it('prepares a real dedicated board without navigation, reuses it and opens only a registered matching session', async () => {
   const f = await fixture(), a = f.send(), b = f.send()

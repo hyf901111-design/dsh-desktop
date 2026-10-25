@@ -11,6 +11,25 @@ async function nativeShell(){
 }
 const locator=id=>({version:1,sessionId:'actual-session',documentId:'a'.repeat(64),fileVersion:'b'.repeat(64),markId:id})
 const reference=id=>({source:'pptx-annotation',ref:JSON.stringify(locator(id)),label:'#'+id,clipboardText:'标注 '+id})
+it('keeps compact inline remarks and exact multiline ownership through two native tags, updates, deletion and undo',async()=>{
+ const shell=await nativeShell(),before='用户整体要求\n\n保持用户段落📌',changes=[];shell.setDraft(before)
+ const binding=createPptxAnnotationShellBinding(shell,{onComments:value=>changes.push(...value)})
+ binding.insert(reference('1'),'标题改为长期价值📈');binding.insert(reference('2'),'保留备注\n内的换行')
+ const full=before+'\n\uFFFC 标题改为长期价值📈\n\uFFFC 保留备注\n内的换行\n'
+ expect(shell.snapshot.draft).toBe(full)
+ const [first,second]=binding.ranges();expect(first.start).toBe(first.tagOffset+2);expect(second.start).toBe(second.tagOffset+2)
+ expect(binding.ranges().map(range=>shell.snapshot.draft.slice(range.start,range.end))).toEqual(['标题改为长期价值📈','保留备注\n内的换行'])
+ binding.setSelection({start:first.start,end:first.end});shell.insertText('中央修改📈',{start:first.start,end:first.end,draftRev:shell.snapshot.draftRev})
+ expect(changes.at(-1)).toEqual({key:annotationLocatorKey(locator('1')),comment:'中央修改📈'})
+ binding.update(annotationLocatorKey(locator('2')),'右侧修改');expect(shell.snapshot.draft).toBe(before+'\n\uFFFC 中央修改📈\n\uFFFC 右侧修改\n')
+ const compact=shell.snapshot.draft;binding.remove(annotationLocatorKey(locator('1')))
+ expect(shell.snapshot.draft).toBe(before+'\n\uFFFC 右侧修改\n');expect(shell.snapshot.occurrences).toHaveLength(1)
+ expect(binding.ranges().map(range=>range.comment)).toEqual(['右侧修改'])
+ binding.remove(annotationLocatorKey(locator('2')));expect(shell.snapshot.draft).toBe(before);expect(shell.snapshot.occurrences).toHaveLength(0)
+ shell.undo();expect(shell.snapshot.draft).toBe(before+'\n\uFFFC 右侧修改\n');expect(binding.ranges()[0].comment).toBe('右侧修改')
+ shell.undo();expect(shell.snapshot.draft).toBe(compact);expect(binding.ranges().map(range=>range.comment)).toEqual(['中央修改📈','右侧修改'])
+ binding.dispose()
+})
 it('inserts two native references and explicitly owned remarks while preserving the global text and foreign file/skill refs',async()=>{
  const shell=await nativeShell();shell.setDraft('整体要求📌：保留品牌');shell.insertReference({source:'chat-file',ref:'file',label:'附件',clipboardText:'附件'},{start:0,end:0,draftRev:shell.snapshot.draftRev});shell.insertReference({source:'ework-managed-skill',ref:'existing-skill',label:'原技能',clipboardText:'原技能'},{start:0,end:0,draftRev:shell.snapshot.draftRev})
  const before=shell.snapshot.draft,changes=[],binding=createPptxAnnotationShellBinding(shell,{onComments:value=>changes.push(...value)})

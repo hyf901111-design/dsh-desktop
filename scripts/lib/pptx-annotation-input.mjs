@@ -34,7 +34,8 @@ export function createPptxAnnotationShellBinding(shell,options={}){
  const wrapped=function(text,editRange){
   if(disposed)return original.call(shell,text,editRange)
   const before=annotationAdmission(shell.snapshot),old=copy(ranges),captured=selection??options.getSelection?.(),expanded=options.isComposing?.()?{draft:text,editRange}:augmentAnnotationDeletion(before.draft,text,ranges,captured)
-  remember();const tracked=trackAnnotationRanges(before.draft,expanded.draft,ranges,captured)
+  remember();const tracked=trackAnnotationRanges(before.draft,expanded.draft,ranges,expanded.removed?.length?expanded.editRange:captured)
+  if(expanded.retainedSeparator){const next=tracked.ranges.find(range=>range.key===expanded.retainedSeparator.key);if(next)next.blockStart=expanded.retainedSeparator.start}
   writing=true
   try{original.call(shell,expanded.draft,expanded.editRange??editRange)}finally{writing=false}
   ranges=validate(tracked.ranges);last=annotationAdmission(shell.snapshot);selection=undefined;remember();notify(old,ranges)

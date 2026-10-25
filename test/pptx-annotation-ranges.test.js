@@ -6,6 +6,15 @@ function sample(comment='调整📈图表\n保留出处'){
  const range={key:'mark-1',occurrenceId:1,tagOffset:prefix.length+block.tagOffset,start:prefix.length+block.start,end:prefix.length+block.end,blockStart:prefix.length,blockEnd:draft.length,comment}
  return {prefix,block,draft,range}
 }
+it.each(['','整体要求','整体要求\n','整体要求\n\n'])('puts the remark beside its tag with one controlled line break while preserving prior text %j',before=>{
+ const first=annotationBlock(before,'改为长期价值📈'),after=before+first.inserted,second=annotationBlock(after,'补充风险说明')
+ const prefix=before&&!before.endsWith('\n')?'\n':''
+ expect(first.inserted).toBe(prefix+'\uFFFC 改为长期价值📈\n')
+ expect(first.text).toBe(prefix+'@pptx 改为长期价值📈\n')
+ expect(after+second.inserted).toBe(before+prefix+'\uFFFC 改为长期价值📈\n\uFFFC 补充风险说明\n')
+ expect(first.start).toBe(first.tagOffset+2)
+ expect(first.inserted.slice(first.start,first.end)).toBe('改为长期价值📈')
+})
 it('uses explicit UTF16 owned text and separates it from existing and future overall instructions',()=>{
  const f=sample();expect(f.draft.slice(f.range.start,f.range.end)).toBe('调整📈图表\n保留出处')
  expect(f.range.end-f.range.start).toBe('调整📈图表\n保留出处'.length)
