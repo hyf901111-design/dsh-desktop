@@ -31,6 +31,16 @@ it('keeps one native undo unit for inserting a pin and its remark',async()=>{
  const shell=await nativeShell();shell.setDraft('整体');const binding=createPptxAnnotationShellBinding(shell)
  binding.insert(reference('1'),'正文');shell.undo();expect(shell.snapshot.draft).toBe('整体');expect(shell.snapshot.occurrences).toHaveLength(0);binding.dispose()
 })
+it('refreshes the native locator without changing UTF16 text or adding an undo transaction',async()=>{
+ const shell=await nativeShell(),changes=[];shell.setDraft('整体📌');const binding=createPptxAnnotationShellBinding(shell,{onComments:value=>changes.push(...value)})
+ shell.insertReference({source:'chat-file',ref:'file',label:'附件',clipboardText:'附件'},{start:0,end:0,draftRev:shell.snapshot.draftRev});binding.insert(reference('1'),'旧备注')
+ let range=binding.ranges()[0];binding.setSelection({start:range.start,end:range.end});shell.insertText('较新📈\n备注',{start:range.start,end:range.end,draftRev:shell.snapshot.draftRev})
+ const before=shell.snapshot,next={...reference('1'),ref:JSON.stringify({...locator('1'),fileVersion:'c'.repeat(64)}),label:'新位置'}
+ expect(binding.replaceReference(annotationLocatorKey(locator('1')),next)).toBe(true)
+ expect(shell.snapshot.draft).toBe(before.draft);expect(shell.snapshot.draftRev).toBe(before.draftRev);expect(shell.snapshot.occurrences.map(value=>value.occurrenceId)).toEqual(before.occurrences.map(value=>value.occurrenceId));expect(binding.ranges()[0].comment).toBe('较新📈\n备注')
+ shell.undo();expect(shell.snapshot.draft).toContain('旧备注');expect(shell.snapshot.occurrences.find(value=>value.source==='pptx-annotation').ref).toBe(next.ref);expect(binding.ranges()[0].comment).toBe('旧备注');expect(changes.at(-1)).toEqual({key:annotationLocatorKey(JSON.parse(next.ref)),comment:'旧备注'})
+ shell.redo();expect(binding.ranges()[0].comment).toBe('较新📈\n备注');expect(shell.snapshot.occurrences[0].source).toBe('chat-file');binding.dispose()
+})
 it('synchronizes real UTF16 edits both directions and preserves later overall instructions',async()=>{
  const shell=await nativeShell(),changes=[];shell.setDraft('整体');const binding=createPptxAnnotationShellBinding(shell,{onComments:value=>changes.push(...value)})
  binding.insert(reference('1'),'原📈\n意见');let range=binding.ranges()[0]

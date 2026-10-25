@@ -59,6 +59,19 @@ export function createPptxAnnotationShellBinding(shell,options={}){
    if(range.comment===comment)return true
    selection={start:range.start,end:range.end};return shell.insertText(comment,{start:range.start,end:range.end,draftRev:shell.snapshot.draftRev})
   },
+  replaceReference(key,reference){
+   assert();if(reference?.source!=='pptx-annotation'||typeof shell.updateReferenceOccurrence!=='function')throw Error('原生标注引用无法更新。')
+   const nextKey=annotationLocatorKey(reference.ref),occurrences=shell.snapshot.occurrences.filter(value=>value.source==='pptx-annotation'&&annotationLocatorKey(value.ref)===key)
+   if(!occurrences.length)return false
+   const ids=new Set(occurrences.map(value=>value.occurrenceId)),rekey=values=>values.map(value=>ids.has(value.occurrenceId)&&value.key===key?{...value,key:nextKey}:value)
+   remember();writing=true
+   try{for(const occurrence of occurrences)shell.updateReferenceOccurrence(occurrence.occurrenceId,reference)}finally{writing=false}
+   const restored=new Map()
+   for(const [fingerprint,values]of memory){const [draft,refs]=JSON.parse(fingerprint);restored.set(JSON.stringify([draft,refs.map(value=>ids.has(value[0])&&value[2]==='pptx-annotation'&&value[3]===key?[...value.slice(0,3),reference.ref]:value)]),rekey(values))}
+   memory.clear();for(const [fingerprint,values]of restored)memory.set(fingerprint,values)
+   ranges=validate(rekey(ranges));if(pending.has(key)){pending.set(nextKey,pending.get(key));if(key!==nextKey)pending.delete(key)}
+   last=annotationAdmission(shell.snapshot);remember();options.onReferenceState?.();return true
+  },
   remove(key){
    assert();const range=ranges.find(value=>value.key===key),occurrence=shell.snapshot.occurrences.find(value=>value.source==='pptx-annotation'&&annotationLocatorKey(value.ref)===key),offset=range?.tagOffset??occurrence?.offset;if(offset===undefined)return false
    selection={start:offset,end:offset+1};const before=shell.snapshot
