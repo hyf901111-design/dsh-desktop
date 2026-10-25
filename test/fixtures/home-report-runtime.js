@@ -15,8 +15,8 @@ import {homeReportAssetsFixture} from './home-report-assets.js'
 import * as mod from '../../packages/dsh-research-task-runtime/home-report-runtime.js'
 import {createHomeReportBrief} from '../../packages/dsh-research-task-runtime/home-report-contract.js'
 
-export async function reportRuntimeFixture(){
- const assets=await homeReportAssetsFixture(),root=await mkdtemp(join(tmpdir(),'home-report-runtime-')),cwd=join(root,'研究报告示例-fixture'),home=join(root,'profile')
+export async function reportRuntimeFixture(options={}){
+ const assets=await homeReportAssetsFixture(options),root=await mkdtemp(join(tmpdir(),'home-report-runtime-')),cwd=join(root,'研究报告示例-fixture'),home=join(root,'profile')
  await mkdir(cwd);await mkdir(home)
  await writeFile(join(home,'research-board-directories.json'),JSON.stringify({report:{sessionId:'report-demo',path:cwd,title:'研究报告示例'}}))
  const ctx=new Context(),outside=[],errors=[]
