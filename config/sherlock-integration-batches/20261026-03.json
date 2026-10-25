@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-03",
+  "branch": "codex/integration/20261026-03",
+  "baseMainCommit": "8e836e77cc5b17346884d1fe28c58b215cfef450",
+  "expectedMainCommit": "8e836e77cc5b17346884d1fe28c58b215cfef450",
+  "createdAt": "2026-10-25T21:32:06.999Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复笔记演示真实原生侧栏实例透传",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "88e512077696da0e396f16e51b9c914f61de68d0",
+        "tipCommit": "12735bf3f7a27fb01a0b61cc78f72a1fd9452089",
+        "commits": [
+          {
+            "commit": "471fde35cce4ebaacea0ddeaadb341a0264d396a",
+            "parents": [
+              "88e512077696da0e396f16e51b9c914f61de68d0"
+            ],
+            "subject": "覆盖笔记演示原生包装器侧栏实例透传回归"
+          },
+          {
+            "commit": "12735bf3f7a27fb01a0b61cc78f72a1fd9452089",
+            "parents": [
+              "471fde35cce4ebaacea0ddeaadb341a0264d396a"
+            ],
+            "subject": "修复笔记演示原生侧栏实例绑定"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-notes-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-portal.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-14-feature-check-1-20261026.log",
+            "verifiedCommit": "12735bf3f7a27fb01a0b61cc78f72a1fd9452089",
+            "completedAt": "2026-10-25T21:29:05.133181+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-14-feature-check-2-20261026.log",
+            "verifiedCommit": "12735bf3f7a27fb01a0b61cc78f72a1fd9452089",
+            "completedAt": "2026-10-25T21:29:12.146512+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-notes-portal.test.js",
+              "test/home-guide-native.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-14-feature-check-3-20261026.log",
+            "verifiedCommit": "12735bf3f7a27fb01a0b61cc78f72a1fd9452089",
+            "completedAt": "2026-10-25T21:30:01.392450+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-14-feature-check-4-20261026.log",
+            "verifiedCommit": "12735bf3f7a27fb01a0b61cc78f72a1fd9452089",
+            "completedAt": "2026-10-25T21:30:09.796808+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-14-feature-check-5-20261026.log",
+            "verifiedCommit": "12735bf3f7a27fb01a0b61cc78f72a1fd9452089",
+            "completedAt": "2026-10-25T21:30:09.821611+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "正式13确认历史标注冷恢复和滚离后重定位原PPT第3页、备注、空草稿通过。笔记仍实际中断，确定位双coordinator绑定错误；本批真实已安装Root wrapper+Portal/双实例 RED→33 GREEN、两遍安装链及tsc已过，正式14完整17步仍待原生复验。"
+        },
+        "acceptanceCriteria": [
+          "Root wrapper传实际props.researchSidebar到NotesPortal，effect依赖该实例，只激活同session真实conversation；不读未attach的模块default。",
+          "保留页面身份、cue前后确认、草稿CAS、取消和隐藏保护，不吞错误。",
+          "从clean main构建正式客户端，实际完整验收17步骤含来源、两任务、自然回顶和重开持久化。"
+        ],
+        "risks": [
+          "最后正式14笔记整场原生验收待构建后完成。",
+          "系统级概率鼠标冻结仍未稳定复现，fixed=false。"
+        ],
+        "generatedAt": "2026-10-25T21:32:05.282243+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-notes-portal.test.js",
+        "test/home-guide-native.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
