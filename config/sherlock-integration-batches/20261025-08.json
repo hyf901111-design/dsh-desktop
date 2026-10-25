@@ -244,6 +244,94 @@
           "无关旧preset测试fixture失败保持单独记录；本次appearance测试Node/Vitest字节差异已用test-only修复，未放宽生产drift校验。"
         ],
         "generatedAt": "2026-10-25T05:20:05.156Z"
+      },
+      "merged": {
+        "mergeCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+        "verificationCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-controls.test.ts",
+              "test/home-theme-appearance.test.js",
+              "test/home-theme-preferences.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-theme-controller.test.ts test/home-theme-controls.test.ts test/home-theme-appearance.test.js test/home-theme-preferences.test.ts --maxWorkers=2",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "all fifteen native wallpaper|gallery tab, native wallpaper|navigates wallpaper tabs",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js -t all fifteen native wallpaper|gallery tab, native wallpaper|navigates wallpaper tabs --maxWorkers=2",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ffe53873534fe149a5c2467511b5f104760a3a8a",
+            "completedAt": "2026-10-25T05:23:11.544Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T05:23:11.544Z"
       }
     }
   ],
