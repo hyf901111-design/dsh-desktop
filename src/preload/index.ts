@@ -313,6 +313,7 @@ contextBridge.exposeInMainWorld('sherlockPptAnnotations', Object.freeze({
   complete: value => ipcRenderer.invoke('pptx:annotation:complete', value),
   lookupOutput: value => ipcRenderer.invoke('pptx:annotation:lookupOutput', value),
   messagePresentation: value => ipcRenderer.invoke('pptx:annotation:messagePresentation', value),
+  resolveReference: value => ipcRenderer.invoke('pptx:annotation:resolveReference', value),
   cancel: value => ipcRenderer.invoke('pptx:annotation:cancel', value),
 } satisfies PptxAnnotationBridge))
 
