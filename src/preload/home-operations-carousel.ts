@@ -1,5 +1,5 @@
 const CASE_DURATION_MS = 6000
-const CASE_COUNT = 3
+export const HOME_OPERATIONS_CASE_COUNT = 4
 const PROGRESS_PROPERTY = '--odyssey-operations-case-progress'
 
 export interface HomeOperationsCarousel {
@@ -18,7 +18,7 @@ export function createHomeOperationsCarousel(options: {
   const { win, card, onChange } = options
   const doc = card.ownerDocument
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)')
-  let index = Math.max(0, Math.min(CASE_COUNT - 1, Math.trunc(options.initialIndex)))
+  let index = Math.max(0, Math.min(HOME_OPERATIONS_CASE_COUNT - 1, Math.trunc(options.initialIndex)))
   let elapsed = 0, lastTime: number | null = null, frame = 0
   let visible = false, hovered = false, keyboardFocused = false, disposed = false
 
@@ -31,7 +31,7 @@ export function createHomeOperationsCarousel(options: {
     const advances = Math.floor(elapsed / CASE_DURATION_MS)
     if (advances) {
       elapsed %= CASE_DURATION_MS
-      index = (index + advances) % CASE_COUNT
+      index = (index + advances) % HOME_OPERATIONS_CASE_COUNT
       onChange(index)
     }
   }
@@ -96,7 +96,7 @@ export function createHomeOperationsCarousel(options: {
     },
     select(next) {
       if (disposed || !Number.isFinite(next)) return
-      index = Math.max(0, Math.min(CASE_COUNT - 1, Math.trunc(next)))
+      index = Math.max(0, Math.min(HOME_OPERATIONS_CASE_COUNT - 1, Math.trunc(next)))
       elapsed = 0
       lastTime = frame ? win.performance.now() : null
       onChange(index)

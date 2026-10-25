@@ -1,3 +1,5 @@
+import { HOME_OPERATIONS_CASE_COUNT } from './home-operations-carousel'
+
 const CROSSFADE_MS = 400
 const ease = (value: number) => value * value * (3 - 2 * value)
 
@@ -88,7 +90,7 @@ export function createHomeOperationsCaseTransition(options: {
   return {
     select(next) {
       if (disposed || !Number.isFinite(next)) return
-      next = Math.max(0, Math.min(2, Math.trunc(next)))
+      next = Math.max(0, Math.min(HOME_OPERATIONS_CASE_COUNT - 1, Math.trunc(next)))
       if (next === target) return
       // Capture the current mixture before retargeting. Rapid selections retain
       // every visible weight rather than replacing a partially painted case.

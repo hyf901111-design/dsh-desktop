@@ -20,6 +20,9 @@ import pptGlow from './home-operations-assets/case-ppt-glow.svg?inline'
 import boardDarkGlow from './home-operations-assets/case-board-dark-glow.svg?inline'
 import noteDarkGlow from './home-operations-assets/case-note-dark-glow.svg?inline'
 import pptDarkGlow from './home-operations-assets/case-ppt-dark-glow.svg?inline'
+import reportGlow from './home-operations-assets/case-report-glow.svg?inline'
+import reportDarkGlow from './home-operations-assets/case-report-dark-glow.svg?inline'
+import reportTrendDark from './home-operations-assets/case-report-trend-dark.svg?inline'
 import trendUp from './home-operations-assets/trend-up.svg?inline'
 
 export type OperationsIllustrationTheme = 'light' | 'dark'
@@ -28,10 +31,11 @@ export type OperationsIllustrationCard = 'board' | 'note' | 'ppt' | 'report'
 
 // These static fills and the arrow retain the native Figma vector geometry.
 export const OPERATIONS_CASE_GLOWS = {
-  light: [boardGlow, noteGlow, pptGlow],
-  dark: [boardDarkGlow, noteDarkGlow, pptDarkGlow],
+  light: [boardGlow, noteGlow, pptGlow, reportGlow],
+  dark: [boardDarkGlow, noteDarkGlow, pptDarkGlow, reportDarkGlow],
 } as const
 export const OPERATIONS_TREND_UP = trendUp
+export const OPERATIONS_REPORT_TREND_DARK = reportTrendDark
 
 // Individually exported Figma artwork; Vite embeds each SVG as a data URL.
 export const OPERATIONS_ILLUSTRATIONS: Record<OperationsIllustrationTheme, Record<OperationsIllustrationState, Record<OperationsIllustrationCard, string>>> = {
