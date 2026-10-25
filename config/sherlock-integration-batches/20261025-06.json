@@ -311,6 +311,116 @@
           "正式Electron跨隔离世界、真实数据源搜索和新增两段Notes仍需新包实际验收，源测试不替代。"
         ],
         "generatedAt": "2026-10-25T01:36:32.734Z"
+      },
+      "merged": {
+        "mergeCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+        "verificationCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+            "completedAt": "2026-10-25T01:39:34.923Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+            "completedAt": "2026-10-25T01:39:34.923Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guides.test.ts",
+              "test/home-guides-review.test.ts",
+              "test/home-notes-runtime.test.js",
+              "test/home-notes-host.test.js",
+              "test/home-guide-notes-native.test.ts",
+              "test/home-guide-notes-data.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native.test.js test/home-guide-native-strip.test.js test/home-guide-pointer.test.ts test/home-guides.test.ts test/home-guides-review.test.ts test/home-notes-runtime.test.js test/home-notes-host.test.js test/home-guide-notes-native.test.ts test/home-guide-notes-data.test.ts --maxWorkers=2",
+            "verifiedCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+            "completedAt": "2026-10-25T01:39:34.923Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "builds six live native components.*stacked=true|opens native.*resident transition|waits for a stable.*initially-hidden",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native-browser.test.js -t builds six live native components.*stacked=true|opens native.*resident transition|waits for a stable.*initially-hidden --maxWorkers=2",
+            "verifiedCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+            "completedAt": "2026-10-25T01:39:34.923Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-notes-shell-browser.test.js",
+              "-t",
+              "600px pane walkthrough",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-notes-shell-browser.test.js -t 600px pane walkthrough --maxWorkers=2",
+            "verifiedCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+            "completedAt": "2026-10-25T01:39:34.923Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+            "completedAt": "2026-10-25T01:39:34.923Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "8fb4c0e6b3bd723d2fbebce11030e91415faf247",
+            "completedAt": "2026-10-25T01:39:34.923Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T01:39:34.923Z"
       }
     }
   ],
