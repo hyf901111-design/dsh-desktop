@@ -8,16 +8,19 @@ export function createHomeGuidePointer(document:Document,options:Options){
  element.innerHTML='<span class="odyssey-home-guide-pointer-pulse"></span><svg viewBox="0 0 25 32" width="25" height="32"><path d="M3 2.5v23l6.3-5.7 4.6 10 4.5-2.1-4.8-9.6 8.5-.5Z" fill="#fff" stroke="#202329" stroke-width="1.6" stroke-linejoin="round"/></svg>'
  document.body.append(element)
  let position:Point|undefined,busy=false,closed=false,state='idle'
+ type Connection={source:HTMLElement;target:HTMLElement;canvas:HTMLElement;guide:HTMLElement;svg:SVGSVGElement;path:SVGPathElement}
+ let connection:Connection|undefined
+ const clearConnection=()=>{connection?.svg.remove();connection=undefined}
  const aborted=()=>Object.assign(Error('操作已取消。'),{name:'AbortError'})
  let rejectInterrupt!:(error:Error)=>void
  const interrupted=new Promise<never>((_resolve,reject)=>{rejectInterrupt=reject});void interrupted.catch(()=>{})
- const stop=()=>{if(closed)return;closed=true;element.hidden=true;rejectInterrupt(aborted())}
+ const stop=()=>{if(closed)return;closed=true;element.hidden=true;clearConnection();rejectInterrupt(aborted())}
  options.signal.addEventListener('abort',stop,{once:true});if(options.signal.aborted)stop()
  const ensure=()=>{if(closed||options.signal.aborted)throw aborted()}
  const gate=async()=>{ensure();await Promise.race([options.waitUntilPlaying(),interrupted]);ensure()}
  const wait=async(ms:number)=>{await gate();await Promise.race([options.wait(ms),interrupted]);await gate()}
  const point=(target:HTMLElement):Point=>{
-  if(!target?.isConnected||target.closest('[hidden],[inert]')||['hidden','collapse'].includes(win.getComputedStyle(target).visibility))throw Error('操作目标不可用，请重新打开。')
+  if(!target?.isConnected||target.ownerDocument!==document||(target as HTMLButtonElement).disabled||target.getAttribute('aria-disabled')==='true'||target.closest('[hidden],[inert]')||['hidden','collapse'].includes(win.getComputedStyle(target).visibility))throw Error('操作目标不可用，请重新打开。')
   const box=target.getBoundingClientRect();let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(win.innerWidth,box.right),bottom=Math.min(win.innerHeight,box.bottom)
   for(let node:HTMLElement|null=target;node;node=node.parentElement){
    const style=win.getComputedStyle(node)
@@ -28,7 +31,33 @@ export function createHomeGuidePointer(document:Document,options:Options){
   const text=target.matches('textarea,input:not([type=button]):not([type=checkbox]),[contenteditable=true]')
   return text?{x:left+Math.min(22,(right-left)/3),y:top+Math.min(18,(bottom-top)/3)}:{x:(left+right)/2,y:(top+bottom)/2}
  }
- const paint=(next:Point,phase:string)=>{position=next;state=phase;element.hidden=false;element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`}
+ const ownedPort=(port:HTMLElement,side:string)=>port.dataset.financialPort===side&&!!port.dataset.financialPortNode&&port.closest<HTMLElement>('[data-research-node-id]')?.dataset.researchNodeId===port.dataset.financialPortNode&&!!port.closest('[data-financial-widget]')
+ const beginConnection=(source:HTMLElement,target:HTMLElement)=>{
+  const canvas=source.closest<HTMLElement>('[data-research-canvas]'),guide=canvas?.closest<HTMLElement>('[data-home-guide]')
+  if(!canvas||target.closest('[data-research-canvas]')!==canvas||!guide||guide.dataset.kind!=='board'||guide.dataset.homeGuide!==options.runId||!ownedPort(source,'output')||!ownedPort(target,'input')||source.dataset.financialPortNode===target.dataset.financialPortNode)return
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'),path=document.createElementNS('http://www.w3.org/2000/svg','path')
+  svg.dataset.homeGuideConnection=options.runId;svg.setAttribute('aria-hidden','true');svg.style.cssText='position:fixed;inset:0;z-index:2147482999;pointer-events:none;overflow:hidden'
+  for(const[name,value]of Object.entries({fill:'none',stroke:'currentColor','stroke-width':'1.5','stroke-linecap':'round','stroke-linejoin':'round','vector-effect':'non-scaling-stroke'}))path.setAttribute(name,value)
+  svg.append(path);document.body.append(svg);connection={source,target,canvas,guide,svg,path}
+ }
+ const paintConnection=(next:Point,phase:string)=>{
+  const link=connection;if(!link)return
+  const marker=document.documentElement.dataset.homeGuidePointerRun
+  if(marker&&marker!==options.runId||!link.canvas.isConnected||!ownedPort(link.source,'output')||!ownedPort(link.target,'input')||link.source.closest('[data-research-canvas]')!==link.canvas||link.target.closest('[data-research-canvas]')!==link.canvas||link.canvas.closest('[data-home-guide]')!==link.guide||link.guide.dataset.kind!=='board'||link.guide.dataset.homeGuide!==options.runId)throw aborted()
+  const from=point(link.source);point(link.target)
+  const bounds=link.canvas.getBoundingClientRect();let left=Math.max(0,bounds.left),top=Math.max(0,bounds.top),right=Math.min(win.innerWidth,bounds.right),bottom=Math.min(win.innerHeight,bounds.bottom)
+  for(let parent=link.canvas.parentElement;parent;parent=parent.parentElement){const style=win.getComputedStyle(parent),box=parent.getBoundingClientRect();if(/hidden|auto|scroll|clip/.test(style.overflowX||style.overflow)){left=Math.max(left,box.left);right=Math.min(right,box.right)}if(/hidden|auto|scroll|clip/.test(style.overflowY||style.overflow)){top=Math.max(top,box.top);bottom=Math.min(bottom,box.bottom)}}
+  if(right<=left||bottom<=top)throw Error('操作目标不可用，请先滚动到目标。')
+  const bend=Math.hypot(next.x-from.x,next.y-from.y)<1?0:Math.max(40,Math.min(160,Math.abs(next.x-from.x)/2))
+  link.svg.setAttribute('width',String(win.innerWidth));link.svg.setAttribute('height',String(win.innerHeight));link.svg.setAttribute('viewBox',`0 0 ${win.innerWidth} ${win.innerHeight}`)
+  link.svg.style.clipPath=`inset(${top}px ${win.innerWidth-right}px ${win.innerHeight-bottom}px ${left}px)`
+  link.svg.style.color=win.getComputedStyle(link.source).getPropertyValue('--fw-accent').trim()||win.getComputedStyle(link.canvas).getPropertyValue('--fw-accent').trim()||'#249bfa'
+  link.svg.dataset.state=phase
+  // Match the native draft curve while keeping its free end on the visual
+  // pointer; the real workspace still owns the final persisted connection.
+  link.path.setAttribute('d',`M ${from.x} ${from.y} C ${from.x+bend} ${from.y} ${next.x-bend} ${next.y} ${next.x} ${next.y}`)
+ }
+ const paint=(next:Point,phase:string)=>{paintConnection(next,phase);position=next;state=phase;element.hidden=false;element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`}
  const reduced=()=>win.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true
  const travel=async(target:HTMLElement,duration:number,phase='moving')=>{
   const destination=point(target),start=position??{x:Math.max(8,destination.x-64),y:Math.max(8,destination.y-40)},steps=reduced()?1:Math.max(1,Math.ceil(duration/16))
@@ -40,14 +69,14 @@ export function createHomeGuidePointer(document:Document,options:Options){
  }
  return{
   snapshot:()=>({...position,state}),
-  hide(){element.hidden=true},
+  hide(){element.hidden=true;clearConnection()},
   async perform(action:HomeGuidePointerAction){
    ensure();if(busy)throw Error('上一项指针操作尚未完成。');busy=true
    try{
     await gate();const target=point(action.target)
     if(action.action==='drag'){
      if(!action.fromTarget)throw Error('连接操作缺少起点。')
-     await travel(action.fromTarget,320);paint(point(action.fromTarget),'pressed');await wait(reduced()?0:80)
+     await travel(action.fromTarget,320);beginConnection(action.fromTarget,action.target);paint(point(action.fromTarget),'pressed');await wait(reduced()?0:80)
      await travel(action.target,780,'dragging');paint(point(action.target),'released');await wait(reduced()?0:160)
     }else{
      const distance=position?Math.hypot(target.x-position.x,target.y-position.y):120
@@ -55,7 +84,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
      if(action.action!=='move'){paint(point(action.target),'pressed');await wait(reduced()?0:80);paint(point(action.target),'released');await wait(reduced()?0:160)}
     }
     ensure();paint(point(action.target),'idle')
-   }finally{busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
+   }finally{clearConnection();busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
   },
   dispose(){stop();options.signal.removeEventListener('abort',stop);element.remove()}
  }
