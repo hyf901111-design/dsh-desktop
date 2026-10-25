@@ -12,10 +12,10 @@
     ],
     "pdf": {
       "status": "generated",
-      "bytes": 4714982,
-      "sha256": "0220f9ea1e92bf7798e2361960109e6843481bf0cd3faa97337f7788c42b22b0",
-      "pageCount": 64,
-      "navigationTargets": 117
+      "bytes": 4754458,
+      "sha256": "cf4620a54a96a78584722f99399b83d547158b17718f29a20011d4d9d708e49b",
+      "pageCount": 63,
+      "navigationTargets": 118
     }
   },
   "researchCoverage": {
@@ -93,9 +93,9 @@
     "professionalSignOff": false,
     "reliance": "Program verifies structure, local evidence binding and calculations; economic judgment and external completeness require review."
   },
-  "createdAt": "2026-10-25T12:48:56.241Z",
+  "createdAt": "2026-10-25T16:05:59.380Z",
   "inputSha256": "99401dff2fce59bdef923135b6441cc21db5225de6db862169c50b50018c5e37",
-  "engineSha256": "45fd6c866508ed26793c98910f85ee8ce77b8868986aa7a692ecbbc9ad1f57f6",
+  "engineSha256": "8ede4c11cece268a08e0967d55618ef1cc88dea37bc361e07d43a04be6530a31",
   "synthetic": false,
   "externalAuthenticity": "unverified",
   "artifacts": {
@@ -109,10 +109,10 @@
   },
   "outputs": {
     "evidence.json": "6297f730580f7fcf7baa9c60876d6dc376e15dabe7e177f6c4041c17466128e9",
-    "calculations.json": "d7a20b5e2703a9eb703357a8e6e7e4c793100fe74c5df449a8d914e52c00357d",
+    "calculations.json": "00611e0b6c3e4e8e76f49060d51b2c2f6d4d678cd55832e4f56723852c5f6bfa",
     "validation.json": "56f0c0e8a9fd751097b289162e69fc7a470e7fd0ac66543b64e12af37e1ee9b0",
-    "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.html": "5eab85fc8591ec1c45b30f04dee8e129ddcbce056753b15ce7095a98af82876d",
+    "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.html": "29deec5b2ef1e3c069431187b62cc65ed196a29d25c227a5757c0f3b2972095f",
     "report-quality.json": "a3ffd6e1b4d6ef999934968cef8a23d3c89365d09cbcc36814482d32c01a4fac",
-    "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.pdf": "0220f9ea1e92bf7798e2361960109e6843481bf0cd3faa97337f7788c42b22b0"
+    "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.pdf": "cf4620a54a96a78584722f99399b83d547158b17718f29a20011d4d9d708e49b"
   }
 }
