@@ -17,7 +17,8 @@ beforeAll(async () => {
   const require = createRequire(import.meta.url)
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'ts', contents: `
-      import {mountHomeThemes} from './src/preload/home-themes';
+      import {mountHomeThemes,getHomeThemeController} from './src/preload/home-themes';
+      import {HOME_THEMES} from './src/shared/home-themes';
       import {mountDesktopShellStyles} from './src/preload/shell-style';
       const records=[];const animate=HTMLElement.prototype.animate;
       HTMLElement.prototype.animate=function(frames,options){const result=animate.call(this,frames,options);records.push({element:this,animation:result,frames,options});return result};
@@ -25,7 +26,7 @@ beforeAll(async () => {
       WebGL2RenderingContext.prototype.blendColor=function(r,g,b,a){if(this.canvas.hasAttribute('data-home-theme-canvas'))colors.push({time:performance.now(),alpha:a});return blendColor.call(this,r,g,b,a)};
       const draw=WebGL2RenderingContext.prototype.drawArrays;
       WebGL2RenderingContext.prototype.drawArrays=function(...args){const result=draw.apply(this,args),capture=window.themeMotion?.captureAppearance;if(capture&&this.canvas.hasAttribute('data-home-theme-canvas')&&!this.getParameter(this.FRAMEBUFFER_BINDING)){const blend=this.isEnabled(this.BLEND),alpha=this.getParameter(this.BLEND_COLOR)[3],key=blend?(alpha>.98?'light':'middle'):'dark';if(!capture[key]){const still=document.createElement('canvas');still.width=360;still.height=280;still.getContext('2d').drawImage(this.canvas,0,0,360,280);capture[key]=still.toDataURL()}}return result};
-      window.themeMotion={records,colors,captureAppearance:null,mount(){mountDesktopShellStyles(document);this.dispose=mountHomeThemes(document)},surface(value){if(value)document.body.dataset.workspaceSurface=value;else delete document.body.dataset.workspaceSurface;document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))},next(){document.querySelector('[data-home-theme-position="next"]').click()},current(){return document.querySelector('[aria-pressed="true"][data-home-theme-id]').dataset.homeThemeId}};
+      window.themeMotion={records,colors,captureAppearance:null,mount(){mountDesktopShellStyles(document);this.dispose=mountHomeThemes(document)},surface(value){if(value)document.body.dataset.workspaceSurface=value;else delete document.body.dataset.workspaceSurface;document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))},next(){const c=getHomeThemeController(document);c.select(HOME_THEMES[(HOME_THEMES.indexOf(c.getSelected())+1)%HOME_THEMES.length])},select(id){getHomeThemeController(document).select(id)},thumbnail(){const c=getHomeThemeController(document);return c.getThumbnail(c.getSelected())},current(){return getHomeThemeController(document).getSelected()}};
     ` }, bundle: true, format: 'iife', platform: 'browser', write: false,
     plugins: [{ name: 'inline-theme-images', setup(builder) {
       builder.onResolve({ filter: /\.(?:png|jpg)\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'theme-inline' }))
@@ -70,14 +71,8 @@ async function fixture({ dark = false, reduced = false, theme = 'default', width
   await page.evaluate(() => window.themeMotion.mount())
   return page
 }
-const current = page => page.locator('[data-odyssey-theme-dock] [aria-pressed="true"]')
-const dock = page => page.locator('[data-odyssey-theme-dock]')
-const pauseEntry = (page, time) => page.evaluate(time => {
-  for (const record of window.themeMotion.records.filter(record => record.element.classList.contains('odyssey-theme-card-body'))) {
-    record.animation.pause(); record.animation.currentTime = time
-  }
-  return [...document.querySelectorAll('[data-home-theme-position]')].filter(button => button.dataset.homeThemePosition !== 'outside').map(button => ({ position: button.dataset.homeThemePosition, opacity: Number(getComputedStyle(button.firstElementChild).opacity), transform: getComputedStyle(button.firstElementChild).transform }))
-}, time)
+const current = page => page.evaluate(() => window.themeMotion.current())
+const background = page => page.locator('[data-odyssey-home-theme-background]')
 const summary = buffer => {
   const { data, width, height } = PNG.sync.read(buffer)
   let mean = 0, white = 0
@@ -95,7 +90,7 @@ describe('real homepage theme motion and interaction', () => {
       await expect.poll(() => canvas.getAttribute('data-home-koi-state')).toBe('ready')
       await page.locator('textarea').fill('检查锦鲤主题下的输入与切换')
       expect(await page.locator('textarea').inputValue()).toBe('检查锦鲤主题下的输入与切换')
-      expect(await current(page).getAttribute('aria-label')).toBe('当前背景：锦鲤水面')
+      expect(await current(page)).toBe('koi-pond')
       await page.screenshot({ path: `${evidence}/koi-home-dark-${reduced}.png` })
       await page.evaluate(() => { window.koiSurface = document.querySelector('canvas[data-home-theme-canvas="koi-pond"]'); document.body.removeAttribute('data-ds-dark-theme') })
       await expect.poll(() => page.evaluate(() => window.koiSurface === document.querySelector('canvas[data-home-theme-canvas="koi-pond"]'))).toBe(true)
@@ -104,72 +99,15 @@ describe('real homepage theme motion and interaction', () => {
       await expect.poll(() => page.locator('[data-odyssey-home-theme-background]').getAttribute('data-render-state')).toBe('paused')
       await page.evaluate(() => window.themeMotion.surface())
       await expect.poll(() => page.locator('[data-odyssey-home-theme-background]').getAttribute('data-render-state')).toBe(reduced ? 'paused' : 'running')
-      await current(page).press('ArrowRight')
-      expect(await current(page).getAttribute('data-home-theme-id')).toBe('default')
+      await page.evaluate(() => window.themeMotion.next())
+      expect(await current(page)).toBe('default')
       expect(await page.evaluate(() => window.koiSurface.dataset.homeKoiState)).toBe('disposed')
-      await current(page).press('ArrowLeft')
+      await page.evaluate(() => window.themeMotion.select('koi-pond'))
       await expect.poll(() => canvas.getAttribute('data-home-koi-state')).toBe('ready')
       expect(await page.evaluate(() => localStorage.getItem('ework.home-background.v1'))).toBe('koi-pond')
       expect(errors).toEqual([])
     } finally { await page.close() }
   }, 20000)
-
-  it.each([[900, 700, false, false], [280, 400, true, false], [680, 500, true, true]])('auto-hides to one third and rebounds on hover at %ix%i (dark: %s, reduced: %s)', async (width, height, dark, reduced) => {
-    const page = await fixture({ width, height, dark, reduced, clock: true })
-    const errors = []
-    page.on('pageerror', error => errors.push(error.message))
-    const bounds = () => page.evaluate(() => {
-      const pane = document.querySelector('.pI_x6G_centerCol').getBoundingClientRect()
-      const card = document.querySelector('[data-home-theme-position="current"]').getBoundingClientRect()
-      return { pane: pane.toJSON(), card: card.toJSON(), visible: (pane.bottom - card.top) / card.height }
-    })
-    try {
-      await page.clock.runFor(2999)
-      const expanded = await bounds()
-      expect(expanded.card.bottom).toBeLessThan(expanded.pane.bottom)
-      await page.screenshot({ path: `${evidence}/dock-${width}-expanded.png` })
-      await page.clock.runFor(601)
-      // The clock controls the idle timer; CSS transitions use compositor time.
-      await expect.poll(async () => (await bounds()).visible).toBeCloseTo(1 / 3, 2)
-      const collapsed = await bounds()
-      expect(collapsed.visible).toBeCloseTo(1 / 3, 2)
-      await page.screenshot({ path: `${evidence}/dock-${width}-collapsed.png` })
-      // Keep the pointer at the exposed bottom edge while the cards move up.
-      // The hover area must continue down to that edge to avoid bouncing shut.
-      await page.mouse.move(collapsed.card.x + collapsed.card.width / 2, collapsed.pane.bottom - 3)
-      await page.clock.runFor(600)
-      await expect.poll(async () => (await bounds()).card.top).toBeCloseTo(expanded.card.top, 1)
-      await page.clock.runFor(4000)
-      expect((await bounds()).card.top).toBeCloseTo(expanded.card.top, 1)
-      await page.screenshot({ path: `${evidence}/dock-${width}-hover.png` })
-      await page.locator('[data-home-theme-position="next"]').click()
-      expect(await current(page).getAttribute('data-home-theme-id')).toBe('berber')
-      await page.mouse.move(5, 5)
-      await page.clock.runFor(3600)
-      await expect.poll(async () => (await bounds()).visible).toBeCloseTo(1 / 3, 2)
-      // Pointer focus stays on the current card; starting keyboard interaction
-      // must reveal it even though no new focusin event is dispatched.
-      await page.keyboard.press('Space')
-      await page.clock.runFor(4600)
-      await expect.poll(async () => (await bounds()).card.top).toBeCloseTo(expanded.card.top, 1)
-      await current(page).press('ArrowRight')
-      expect(await current(page).getAttribute('data-home-theme-id')).toBe('vghodki')
-      await page.locator('textarea').focus()
-      await page.clock.runFor(3600)
-      await expect.poll(async () => (await bounds()).visible).toBeCloseTo(1 / 3, 2)
-      const entry = Number(await dock(page).getAttribute('data-entry-generation'))
-      await page.evaluate(() => window.themeMotion.surface('notes'))
-      await page.clock.runFor(4000)
-      expect(await dock(page).isVisible()).toBe(false)
-      await page.evaluate(() => window.themeMotion.surface())
-      await page.clock.runFor(2999)
-      expect(Number(await dock(page).getAttribute('data-entry-generation'))).toBe(entry + 1)
-      await expect.poll(async () => (await bounds()).card.top).toBeCloseTo(expanded.card.top, 1)
-      await page.clock.runFor(601)
-      await expect.poll(async () => (await bounds()).visible).toBeCloseTo(1 / 3, 2)
-      expect(errors).toEqual([])
-    } finally { await page.close() }
-  }, 30000)
 
   for (const theme of ['default', 'jarrick']) for (const dark of [false, true]) it(`matches the workspace chevron to its label and folder in ${theme} ${dark ? 'dark' : 'light'}`, async () => {
     const page = await fixture({ theme, dark, reduced: true })
@@ -190,54 +128,33 @@ describe('real homepage theme motion and interaction', () => {
     } finally { await page.close() }
   })
 
-  it('stagger-pops three cards, re-enters from notes/settings, and leaves ordinary DOM edits alone', async () => {
-    const page = await fixture()
+  it('keeps only the background owner, pauses away from home and ignores ordinary DOM updates', async () => {
+    const page=await fixture()
     try {
-      const timings = await page.evaluate(() => window.themeMotion.records.filter(record => record.element.classList.contains('odyssey-theme-card-body')).map(record => ({ position: record.element.closest('button').dataset.homeThemePosition, ...record.animation.effect.getTiming() })))
-      expect(timings).toHaveLength(3)
-      expect(timings.find(timing => timing.position === 'previous').delay).toBe(35)
-      expect(timings.find(timing => timing.position === 'current').delay).toBe(100)
-      expect(timings.find(timing => timing.position === 'next').delay).toBe(175)
-      expect(timings.every(timing => timing.duration === 570)).toBe(true)
-      let sample = await pauseEntry(page, 80)
-      expect(sample.find(item => item.position === 'previous').opacity).toBeGreaterThan(0)
-      expect(sample.find(item => item.position === 'current').opacity).toBe(0)
-      expect(sample.find(item => item.position === 'next').opacity).toBe(0)
-      await page.screenshot({ path: `${evidence}/entry-080.png` })
-      sample = await pauseEntry(page, 140)
-      expect(sample.find(item => item.position === 'current').opacity).toBeGreaterThan(0)
-      expect(sample.find(item => item.position === 'next').opacity).toBe(0)
-      await page.screenshot({ path: `${evidence}/entry-140.png` })
-      await pauseEntry(page, 745)
-      await page.screenshot({ path: `${evidence}/entry-rest.png` })
-      const first = Number(await dock(page).getAttribute('data-entry-generation'))
-      await page.locator('textarea').fill('合成输入，不应重播背景卡片')
-      await page.evaluate(() => { const status = document.createElement('span'); status.textContent = '普通 DOM 更新'; document.querySelector('.wSkVaW_scrollBody').append(status) })
-      await page.waitForTimeout(40)
-      expect(Number(await dock(page).getAttribute('data-entry-generation'))).toBe(first)
-      await page.evaluate(() => window.themeMotion.surface('notes'))
-      expect(await dock(page).isVisible()).toBe(false)
-      await page.evaluate(() => window.themeMotion.surface())
-      await expect.poll(async () => Number(await dock(page).getAttribute('data-entry-generation'))).toBe(first + 1)
-      await page.evaluate(() => { const settings = document.createElement('div'); settings.dataset.sherlockSettingsPanel = ''; settings.dataset.settings = ''; document.body.append(settings) })
-      await expect.poll(() => dock(page).isVisible()).toBe(false)
-      await page.locator('[data-sherlock-settings-panel]').evaluate(node => node.remove())
-      await expect.poll(async () => Number(await dock(page).getAttribute('data-entry-generation'))).toBe(first + 2)
-      expect(await page.locator('textarea').inputValue()).toBe('合成输入，不应重播背景卡片')
-      await writeFile(`${evidence}/entry-timings.json`, JSON.stringify(timings, null, 2))
+      expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(0)
+      const initial=await page.evaluate(()=>{window.originalThemeCanvas=document.querySelector('[data-home-theme-canvas]');return window.themeMotion.records.length})
+      await page.locator('textarea').fill('普通 DOM 更新不重建主题')
+      await page.evaluate(()=>{const node=document.createElement('span');node.textContent='status';document.querySelector('.wSkVaW_scrollBody').append(node)})
+      expect(await page.evaluate(()=>document.querySelector('[data-home-theme-canvas]')===window.originalThemeCanvas)).toBe(true)
+      expect(await page.evaluate(()=>window.themeMotion.records.length)).toBe(initial)
+      await page.evaluate(()=>window.themeMotion.surface('notes'));await expect.poll(()=>background(page).isVisible()).toBe(false)
+      await page.evaluate(()=>window.themeMotion.surface());await expect.poll(()=>background(page).isVisible()).toBe(true)
+      await page.evaluate(()=>{const settings=document.createElement('div');settings.dataset.sherlockSettingsPanel='';document.body.append(settings)})
+      await expect.poll(()=>background(page).isVisible()).toBe(false)
+      await page.locator('[data-sherlock-settings-panel]').evaluate(node=>node.remove());await expect.poll(()=>background(page).isVisible()).toBe(true)
+      expect(await page.locator('textarea').inputValue()).toBe('普通 DOM 更新不重建主题')
     } finally { await page.close() }
-  }, 30000)
+  },30000)
 
   it('cycles every theme, keeps rapid-switch visual and aria state aligned, and freezes the displayed blend', async () => {
     const page = await fixture({ dark: true , width: 520, height: 440 }), errors = []
     page.on('pageerror', error => errors.push(error.message))
     try {
-      await pauseEntry(page, 745)
-      const ids = []
+            const ids = []
       for (let i = 0; i < 15; i++) {
-        await page.locator('[data-home-theme-position="next"]').click()
+        await page.evaluate(() => window.themeMotion.next())
         await expect.poll(() => page.locator('[data-theme-freeze]').count()).toBe(0)
-        const id = await current(page).getAttribute('data-home-theme-id'); ids.push(id)
+        const id = await current(page); ids.push(id)
         expect(await page.locator('[data-home-theme-canvas]').getAttribute('data-home-theme-canvas')).toBe(id)
         expect(await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-home-theme-id')).toBe(id)
       }
@@ -260,7 +177,7 @@ describe('real homepage theme motion and interaction', () => {
       })
       await page.screenshot({ path: `${evidence}/rapid-first-frame-dark.png` })
       await expect.poll(() => page.locator('[data-theme-freeze]').count()).toBe(0)
-      expect(await current(page).getAttribute('data-home-theme-id')).toBe('berber')
+      expect(await current(page)).toBe('berber')
       expect(await page.locator('[data-home-theme-canvas]').getAttribute('data-home-theme-canvas')).toBe('berber')
       await page.screenshot({ path: `${evidence}/rapid-final-dark.png` })
       expect(errors).toEqual([])
@@ -272,8 +189,7 @@ describe('real homepage theme motion and interaction', () => {
     const page = await fixture({ dark: true, theme: 'berber' })
     const clip = { x: 60, y: 70, width: 190, height: 140 }
     try {
-      await pauseEntry(page, 745)
-      const before = summary(await page.screenshot({ clip }))
+            const before = summary(await page.screenshot({ clip }))
       await page.evaluate(() => window.themeMotion.next())
       const blend = await page.evaluate(() => {
         const animation = document.querySelector('[data-home-theme-canvas]').getAnimations()[0]
@@ -317,11 +233,11 @@ describe('real homepage theme motion and interaction', () => {
     try {
       expect(await page.evaluate(() => window.themeMotion.records.length)).toBe(0)
       expect(await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-render-state')).toBe('paused')
-      await page.locator('[data-home-theme-position="next"]').click()
-      expect(await current(page).getAttribute('data-home-theme-id')).toBe('berber')
+      await page.evaluate(() => window.themeMotion.next())
+      expect(await current(page)).toBe('berber')
       expect(await page.locator('[data-theme-freeze]').count()).toBe(0)
       expect(await page.evaluate(() => window.themeMotion.records.length)).toBe(0)
-      expect(await current(page).evaluate(button => getComputedStyle(button).transitionDuration)).toBe('0s')
+      expect(await page.locator('[data-odyssey-theme-dock]').count()).toBe(0)
       await page.evaluate(() => document.body.removeAttribute('data-ds-dark-theme'))
       await page.waitForTimeout(30)
       expect(await page.evaluate(() => window.themeMotion.records.length)).toBe(0)
@@ -331,86 +247,20 @@ describe('real homepage theme motion and interaction', () => {
   it('refreshes theme thumbnails after appearance changes while the home is hidden by notes or settings', async () => {
     const page = await fixture({ reduced: true, theme: 'berber' })
     try {
-      const light = await current(page).evaluate(button => button.style.getPropertyValue('--theme-thumbnail'))
+      const light = await page.evaluate(() => window.themeMotion.thumbnail())
       await page.evaluate(() => { window.themeMotion.surface('notes'); document.body.setAttribute('data-ds-dark-theme', '') })
-      await expect.poll(() => dock(page).isVisible()).toBe(false)
+      await expect.poll(() => background(page).isVisible()).toBe(false)
       await page.evaluate(() => window.themeMotion.surface())
-      await expect.poll(() => current(page).evaluate(button => button.style.getPropertyValue('--theme-thumbnail'))).not.toBe(light)
-      const dark = await current(page).evaluate(button => button.style.getPropertyValue('--theme-thumbnail'))
+      await expect.poll(() => page.evaluate(() => window.themeMotion.thumbnail())).not.toBe(light)
+      const dark = await page.evaluate(() => window.themeMotion.thumbnail())
       expect(dark).toContain('data:image/png;base64,')
       await page.evaluate(() => { const settings = document.createElement('div'); settings.dataset.sherlockSettingsPanel = ''; document.body.append(settings) })
-      await expect.poll(() => dock(page).isVisible()).toBe(false)
+      await expect.poll(() => background(page).isVisible()).toBe(false)
       await page.evaluate(() => document.body.removeAttribute('data-ds-dark-theme'))
       await page.locator('[data-sherlock-settings-panel]').evaluate(node => node.remove())
-      await expect.poll(() => current(page).evaluate(button => button.style.getPropertyValue('--theme-thumbnail'))).toBe(light)
-      expect(await current(page).getAttribute('data-home-theme-id')).toBe('berber')
+      await expect.poll(() => page.evaluate(() => window.themeMotion.thumbnail())).toBe(light)
+      expect(await current(page)).toBe('berber')
     } finally { await page.close() }
   }, 30000)
 
-  it.each([[900, 700], [280, 400]])('centers every glass backing on its thumbnail at %ix%i', async (width, height) => {
-    const page = await fixture({ reduced: true, width, height })
-    try {
-      // Native styles may contribute line boxes and button sizing; compare the
-      // actually painted child bounds, including both neighboring cards.
-      const bounds = await page.evaluate(() => [...document.querySelectorAll('[data-odyssey-theme-dock] [aria-hidden="false"]')].map(button => {
-        const glass = button.querySelector('.odyssey-theme-glass').getBoundingClientRect()
-        const preview = button.querySelector('.odyssey-theme-preview').getBoundingClientRect()
-        return { top: preview.top - glass.top, bottom: glass.bottom - preview.bottom, left: preview.left - glass.left, right: glass.right - preview.right }
-      }))
-      for (const b of bounds) {
-        expect(b.top).toBeGreaterThan(0)
-        expect(Math.abs(b.top - b.bottom)).toBeLessThan(.1)
-        expect(Math.abs(b.left - b.right)).toBeLessThan(.1)
-      }
-    } finally { await page.close() }
-  })
-
-  it.each([[900, 700], [1560, 900], [560, 700]])('centers the current card and both neighbors on the %ix%i background', async (width, height) => {
-    const page = await fixture({ reduced: true, width, height })
-    try {
-      for (let i = 0; i < 14; i++) {
-        const bounds = await page.evaluate(() => {
-          const bg = document.querySelector('[data-odyssey-home-theme-background]').getBoundingClientRect()
-          const cards = [...document.querySelectorAll('[data-odyssey-theme-dock] [aria-hidden="false"]')].map(button => ({position:button.dataset.homeThemePosition,rect:button.getBoundingClientRect().toJSON()}))
-          const center = rect => rect.x + rect.width / 2
-          const byPosition = value => cards.find(card => card.position === value).rect
-          return { background:center(bg), current:center(byPosition('current')), neighbors:(center(byPosition('previous'))+center(byPosition('next')))/2 }
-        })
-        expect(Math.abs(bounds.background - bounds.current)).toBeLessThan(.6)
-        expect(Math.abs(bounds.background - bounds.neighbors)).toBeLessThan(.6)
-        await page.locator('[data-home-theme-position="next"]').click()
-      }
-    } finally { await page.close() }
-  }, 30000)
-
-  it.each([[180, 700], [280, 700], [320, 400], [380, 360]])('keeps all three cards inside a %ix%i pane and below the native composer', async (width, height) => {
-    const page = await fixture({ reduced: true, width, height })
-    try {
-      const measurements = []
-      for (const dark of [false, true]) {
-        await page.evaluate(dark => document.body.toggleAttribute('data-ds-dark-theme', dark), dark)
-        await page.waitForTimeout(30)
-        const bounds = await page.evaluate(() => {
-          const pane = document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(), composer = document.querySelector('.uV2eYG_card').getBoundingClientRect()
-          const cards = [...document.querySelectorAll('[data-odyssey-theme-dock] [aria-hidden="false"]')].map(button => { const rect = button.getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, hit: button.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)) } })
-          const rect = document.querySelector('textarea').getBoundingClientRect()
-          return { pane: pane.toJSON(), composer: composer.toJSON(), cards, inputHit: document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)?.tagName, typedDivision: CSS.supports('transform', 'scale(clamp(.25, calc((100cqw - 24px) / 292px), 1))'), stripScale: new DOMMatrix(getComputedStyle(document.querySelector('.odyssey-theme-strip')).transform).a }
-        })
-        measurements.push({ dark, ...bounds })
-        expect(bounds.typedDivision).toBe(true)
-        if (width < 316) { expect(bounds.stripScale).toBeGreaterThan(0); expect(bounds.stripScale).toBeLessThan(1) }
-        expect(bounds.cards).toHaveLength(3)
-        for (const card of bounds.cards) {
-          expect(card.left).toBeGreaterThanOrEqual(bounds.pane.left)
-          expect(card.right).toBeLessThanOrEqual(bounds.pane.right)
-          expect(card.bottom).toBeLessThanOrEqual(bounds.pane.bottom)
-          expect(card.top).toBeGreaterThanOrEqual(bounds.composer.bottom)
-          expect(card.hit).toBe(true)
-        }
-        expect(bounds.inputHit).toBe('TEXTAREA')
-        await page.screenshot({ path: `${evidence}/pane-${width}x${height}-${dark ? 'dark' : 'light'}.png` })
-      }
-      await writeFile(`${evidence}/pane-${width}x${height}.json`, JSON.stringify(measurements, null, 2))
-    } finally { await page.close() }
-  }, 30000)
 })

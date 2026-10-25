@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { mountHomeThemes } from '../src/preload/home-themes'
+import { mountHomeThemes, getHomeThemeController } from '../src/preload/home-themes'
+import type { HomeTheme } from '../src/shared/home-themes'
 import { HomeThemePreferenceStore } from '../src/main/home-theme-preferences'
 import koiLight from '../src/preload/home-theme-assets/koi-pond-light.png?inline'
 import koiDark from '../src/preload/home-theme-assets/koi-pond-dark.png?inline'
@@ -77,13 +78,12 @@ function fixture({ reducedMotion = false, initial = undefined as string | undefi
     },
     dock() { return doc.querySelector<HTMLElement>('[data-odyssey-theme-dock]') },
     background() { return doc.querySelector<HTMLElement>('[data-odyssey-home-theme-background]') },
-    cards() { return [...doc.querySelectorAll<HTMLButtonElement>('[data-odyssey-theme-dock] button[data-home-theme-id]')] },
-    current() { return doc.querySelector<HTMLButtonElement>('[data-odyssey-theme-dock] [aria-pressed="true"][data-home-theme-id]') },
+    current() { return getHomeThemeController(doc)?.getSelected() },
     click(position: string) {
-      const card = doc.querySelector<HTMLButtonElement>(`[data-odyssey-theme-dock] [data-home-theme-position="${position}"]`)
-      expect(card, `The ${position} card should be available`).not.toBeNull()
-      card!.click()
+      const control = getHomeThemeController(doc)!, index = THEME_IDS.indexOf(control.getSelected())
+      control.select(THEME_IDS[position === 'next' ? (index + 1) % THEME_IDS.length : position === 'previous' ? (index + THEME_IDS.length - 1) % THEME_IDS.length : index] as HomeTheme)
     }
+
   }
   fixtures.push(result)
   return result
@@ -107,328 +107,195 @@ afterEach(async () => {
 })
 
 describe('home background theme controller', () => {
-  it('migrates the current legacy choice and restores subsequent changes after a new client origin', () => {
-    const userData = mkdtempSync(join(tmpdir(), 'ework-home-theme-restart-'))
-    userDataDirectories.push(userData)
-    const preferences = new HomeThemePreferenceStore(userData)
-    const first = fixture({ initial: 'jarrick', url: 'http://127.0.0.1:49195/' })
-    first.mount(preferences)
-    expect(new HomeThemePreferenceStore(userData).get()).toBe('jarrick')
-    first.click('next')
-    expect(first.current()!.dataset.homeThemeId).toBe('lowfreez')
-    first.dispose()
-    const restarted = fixture({ url: 'http://127.0.0.1:53584/' })
-    restarted.mount(new HomeThemePreferenceStore(userData))
-    expect(restarted.current()!.dataset.homeThemeId).toBe('lowfreez')
-  })
-
-  it('migrates a removed legacy theme to the durable default', () => {
-    let saved: unknown = null
-    const f = fixture({ initial: 'liquid-chrome' })
-    f.mount({ get: () => saved, set: theme => { saved = theme; return true } })
-    expect(saved).toBe('default')
-    expect(f.current()!.dataset.homeThemeId).toBe('default')
-  })
-
-  it('prefers the durable choice over stale local storage and works when local storage is blocked', () => {
-    const preferences = { get: () => 'jarrick', set: () => true }
-    const stale = fixture({ initial: 'default' })
-    stale.mount(preferences)
-    expect(stale.current()!.dataset.homeThemeId).toBe('jarrick')
-    const blocked = fixture({ storageBlocked: true })
-    blocked.mount(preferences)
-    expect(blocked.current()!.dataset.homeThemeId).toBe('jarrick')
-  })
-
-  it.each(['false', 'throw'])('preserves an unsaved selection when the native write returns %s and retries after remount', failure => {
-    let saved = 'jarrick', writable = false
-    const preferences = { get: () => saved, set: (theme: string) => {
-      if (!writable) { if (failure === 'throw') throw Error('disk unavailable'); return false }
-      saved = theme; return true
-    } }
-    const f = fixture()
-    f.mount(preferences); f.click('next')
-    expect(f.current()!.dataset.homeThemeId).toBe('lowfreez')
-    f.dispose(); f.mount(preferences)
-    expect(f.current()!.dataset.homeThemeId).toBe('lowfreez')
-    expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('lowfreez')
-    writable = true
-    f.dispose(); f.mount(preferences)
-    expect(saved).toBe('lowfreez')
-  })
-
-  it('does not overwrite a newer native choice with a failed write from an older page', () => {
-    let saved = 'jarrick', writable = false
-    const preferences = { get: () => saved, set: (theme: string) => { if (!writable) return false; saved = theme; return true } }
-    const f = fixture()
-    f.mount(preferences); f.click('next')
-    f.dispose()
-    saved = 'boz'; writable = true
-    f.mount(preferences)
-    expect(f.current()!.dataset.homeThemeId).toBe('boz')
-    expect(saved).toBe('boz')
-  })
-
-  it.each(['emreturan', 'abramovdesign', 'pattern-waves', 'gradient-ascii', 'faulty-terminal', 'liquid-chrome'])('migrates removed theme %s and retains the approved choices', removed => {
-    const f = fixture({ initial: removed })
-    f.mount()
-    expect(f.current()!.dataset.homeThemeId).toBe('default')
-    expect(f.cards().some(card => card.dataset.homeThemeId === removed)).toBe(false)
-    expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('default')
-    for (const id of ['crt-warp', 'dither']) {
-      const card = f.cards().find(card => card.dataset.homeThemeId === id)!
-      expect(card).toBeDefined()
-    }
-  })
-
-  it('mounts one accessible dock only in the actual main home, and repeated mounting is idempotent', () => {
-    const f = fixture()
-    const dispose = f.mount()
-    expect(mountHomeThemes(f.doc)).toBe(dispose)
-    expect(f.doc.querySelectorAll('[data-odyssey-theme-dock]')).toHaveLength(1)
-    expect(f.dock()!.closest('.pI_x6G_centerCol')).not.toBeNull()
-    expect(f.doc.querySelector('[data-odyssey-subagent-panel] [data-odyssey-theme-dock]')).toBeNull()
-    expect(f.dock()!.getAttribute('role')).toBe('group')
-    expect(f.dock()!.getAttribute('aria-label')).toBe('首页背景主题')
-    expect(f.background()!.closest('.pI_x6G_centerCol')).not.toBeNull()
-    expect(f.cards().map(card => card.dataset.homeThemeId)).toEqual(THEME_IDS)
-    expect(f.current()!.dataset.homeThemeId).toBe('default')
-    expect(f.doc.querySelector('textarea')!.getAttribute('aria-label')).toBe('发送消息')
-  })
-
-  it('loads thumbnails only when cards enter the visible strip, using the current color mode', async () => {
-    const f = fixture({ initial: 'koi-pond' })
-    f.mount()
-    const image = (id: string) => f.cards().find(card => card.dataset.homeThemeId === id)!.style.getPropertyValue('--theme-thumbnail')
-    const lightDither = image('dither')
-    expect(lightDither).toContain('data:image/jpeg')
-    expect(image('crt-warp')).toBe('')
-    f.win.document.body.setAttribute('data-ds-dark-theme', '')
-    await f.settle()
-    expect(image('dither')).not.toBe(lightDither)
-    f.current()!.dispatchEvent(new f.win.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }) as unknown as Event)
-    await f.settle()
-    expect(image('crt-warp')).toContain('data:image/jpeg')
-  })
-
-  it('waits for the actual home to arrive after preload initialization, without mounting on a subagent home', async () => {
-    const f = fixture()
-    const main = f.doc.querySelector('.pI_x6G_centerCol')!
-    const home = main.firstElementChild!
-    home.remove()
-    f.mount()
-    expect(f.dock()).toBeNull()
-    expect(f.background()).toBeNull()
-    expect(f.frames.size).toBe(0)
-    main.append(home)
-    await f.settle()
-    expect(visible(f.dock())).toBe(true)
-    expect(visible(f.background())).toBe(true)
-    expect(f.doc.querySelectorAll('[data-odyssey-theme-dock]')).toHaveLength(1)
-  })
-
-  it('keeps three visible positions, skips hidden cards in keyboard navigation, and cycles in both directions', async () => {
-    const f = fixture()
-    f.mount()
-    const originalCards = f.cards()
-    const check = (id: string) => {
-      expect(f.cards()).toEqual(originalCards)
-      expect(f.cards().filter(card => card.getAttribute('aria-pressed') === 'true')).toHaveLength(1)
-      expect(f.current()!.dataset.homeThemeId).toBe(id)
-      expect(f.current()!.dataset.homeThemePosition).toBe('current')
-      expect(f.cards().filter(card => ['previous', 'current', 'next'].includes(card.dataset.homeThemePosition!))).toHaveLength(3)
-      for (const card of f.cards()) {
-        if (card.dataset.homeThemePosition === 'outside') {
-          expect(card.getAttribute('aria-hidden')).toBe('true')
-          expect(card.tabIndex).toBe(-1)
-        } else {
-          expect(card.getAttribute('aria-hidden')).not.toBe('true')
-          expect(card.tabIndex).toBeGreaterThanOrEqual(0)
+    it('migrates the legacy choice and restores native changes after a new client origin', () => {
+        const path = mkdtempSync(join(tmpdir(), 'ework-home-theme-restart-'));
+        userDataDirectories.push(path);
+        const first = fixture({ initial: 'jarrick', url: 'http://127.0.0.1:49195/' });
+        first.mount(new HomeThemePreferenceStore(path));
+        expect(new HomeThemePreferenceStore(path).get()).toBe('jarrick');
+        first.click('next');
+        expect(first.current()).toBe('lowfreez');
+        first.dispose();
+        const next = fixture({ url: 'http://127.0.0.1:53584/' });
+        next.mount(new HomeThemePreferenceStore(path));
+        expect(next.current()).toBe('lowfreez');
+    });
+    it('prefers the durable choice and handles blocked local storage', () => {
+        const prefs = { get: () => 'jarrick', set: () => true }, f = fixture({ initial: 'default' });
+        f.mount(prefs);
+        expect(f.current()).toBe('jarrick');
+        const blocked = fixture({ storageBlocked: true });
+        blocked.mount(prefs);
+        expect(blocked.current()).toBe('jarrick');
+        blocked.click('next');
+        expect(blocked.current()).toBe('lowfreez');
+    });
+    it.each(['false', 'throw'])('preserves failed native writes (%s) and retries after remount', failure => {
+        let saved = 'jarrick', writable = false;
+        const prefs = { get: () => saved, set: (theme: string) => { if (!writable) {
+                if (failure === 'throw')
+                    throw Error('disk unavailable');
+                return false;
+            } saved = theme; return true; } };
+        const f = fixture();
+        f.mount(prefs);
+        f.click('next');
+        expect(f.current()).toBe('lowfreez');
+        f.dispose();
+        f.mount(prefs);
+        expect(f.current()).toBe('lowfreez');
+        expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('lowfreez');
+        writable = true;
+        f.dispose();
+        f.mount(prefs);
+        expect(saved).toBe('lowfreez');
+    });
+    it('does not overwrite a newer native choice with an older failed write', () => {
+        let saved = 'jarrick', writable = false;
+        const prefs = { get: () => saved, set: (value: string) => { if (!writable)
+                return false; saved = value; return true; } };
+        const f = fixture();
+        f.mount(prefs);
+        f.click('next');
+        f.dispose();
+        saved = 'boz';
+        writable = true;
+        f.mount(prefs);
+        expect(f.current()).toBe('boz');
+        expect(saved).toBe('boz');
+    });
+    it.each(['emreturan', 'abramovdesign', 'pattern-waves', 'gradient-ascii', 'faulty-terminal', 'liquid-chrome'])('migrates removed %s to default without changing the 15 native choices', initial => {
+        const f = fixture({ initial });
+        f.mount();
+        expect(f.current()).toBe('default');
+        expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('default');
+        for (const id of THEME_IDS) {
+            getHomeThemeController(f.doc)!.select(id as HomeTheme);
+            expect(f.current()).toBe(id);
         }
-      }
-    }
-    check('default')
-    for (const id of [...THEME_IDS.slice(1), 'default']) {
-      f.click('next')
-      await f.settle()
-      check(id)
-    }
-    f.click('previous')
-    await f.settle()
-    check('koi-pond')
-    f.click('current')
-    await f.settle()
-    check('koi-pond')
-  })
-
-  it('navigates all themes with keyboard wrap and Home/End', async () => {
-    const f = fixture({ initial: 'boz' })
-    f.mount()
-    expect(f.current()!.dataset.homeThemeId).toBe('boz')
-    const key = async (value: string) => {
-      f.current()!.dispatchEvent(new f.win.KeyboardEvent('keydown', { key: value, bubbles: true }) as unknown as Event)
-      await f.settle()
-    }
-    await key('End')
-    expect(f.current()!.dataset.homeThemeId).toBe('koi-pond')
-    await key('ArrowRight')
-    expect(f.current()!.dataset.homeThemeId).toBe('default')
-    await key('ArrowLeft')
-    expect(f.current()!.dataset.homeThemeId).toBe('koi-pond')
-    await key('Home')
-    expect(f.current()!.dataset.homeThemeId).toBe('default')
-    for (const id of THEME_IDS.slice(1)) {
-      await key('ArrowRight')
-      expect(f.current()!.dataset.homeThemeId).toBe(id)
-      expect(f.win.document.activeElement?.getAttribute('data-home-theme-id')).toBe(id)
-    }
-  })
-
-  it('restores Koi Pond with the approved mode-specific card and preserves the theme during appearance changes', async () => {
-    const f = fixture({ initial: 'koi-pond' })
-    f.mount()
-    expect(f.current()!.dataset.homeThemeId).toBe('koi-pond')
-    expect(f.current()!.getAttribute('aria-label')).toContain('锦鲤水面')
-    expect(f.background()!.dataset.homeThemeFamily).toBe('koi')
-    const light = f.current()!.style.getPropertyValue('--theme-thumbnail')
-    expect(light.includes(koiLight)).toBe(true)
-    f.win.document.body.setAttribute('data-ds-dark-theme', 'true')
-    await f.settle()
-    expect(f.current()!.dataset.homeThemeId).toBe('koi-pond')
-    expect(f.current()!.style.getPropertyValue('--theme-thumbnail').includes(koiDark)).toBe(true)
-    expect(f.frames.size).toBe(1)
-    f.surface('settings')
-    await f.settle()
-    expect(f.frames.size).toBe(0)
-  })
-
-  it('restores a whitelisted preference and saves switches without changing the application light or dark mode', async () => {
-    const f = fixture({ initial: 'jarrick' })
-    f.win.document.body.setAttribute('data-ds-dark-theme', 'true')
-    f.mount()
-    expect(f.current()!.dataset.homeThemeId).toBe('jarrick')
-    f.click('next')
-    await f.settle()
-    expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('lowfreez')
-    expect(f.win.document.body.getAttribute('data-ds-dark-theme')).toBe('true')
-    f.win.document.body.removeAttribute('data-ds-dark-theme')
-    await f.settle()
-    expect(f.current()!.dataset.homeThemeId).toBe('lowfreez')
-    f.click('next')
-    await f.settle()
-    expect(f.win.document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
-    expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('accelbia')
-  })
-
-  it.each(['lotustech', 'not-a-theme', '{"id":"berber"}', '<img src=x onerror=alert(1)>'])('ignores an unknown stored preference: %s', (initial) => {
-    const f = fixture({ initial })
-    f.mount()
-    expect(f.current()!.dataset.homeThemeId).toBe('default')
-    expect(f.doc.querySelector('img')).toBeNull()
-  })
-
-  it('continues switching in memory when browser storage is unavailable', async () => {
-    const f = fixture({ storageBlocked: true })
-    expect(() => f.mount()).not.toThrow()
-    expect(() => f.click('next')).not.toThrow()
-    await f.settle()
-    expect(f.current()!.dataset.homeThemeId).toBe('berber')
-    expect(() => f.click('previous')).not.toThrow()
-    await f.settle()
-    expect(f.current()!.dataset.homeThemeId).toBe('default')
-  })
-
-  it('hides and pauses behind a workspace surface and replays entry only after returning home', async () => {
-    const f = fixture()
-    f.mount()
-    const firstEntry = Number(f.dock()!.dataset.entryGeneration)
-    expect(firstEntry).toBeGreaterThan(0)
-    expect(f.frames.size).toBeGreaterThan(0)
-    expect(f.background()!.dataset.renderState).toBe('running')
-    f.step()
-    expect(f.frames.size).toBeGreaterThan(0)
-    for (const surface of ['notes', 'integrations']) {
-      f.surface(surface)
-      await f.settle()
-      expect(visible(f.dock())).toBe(false)
-      expect(visible(f.background())).toBe(false)
-      expect(f.frames.size).toBe(0)
-      expect(f.background()!.dataset.renderState).toBe('paused')
-      f.surface()
-      await f.settle()
-      expect(visible(f.dock())).toBe(true)
-      expect(visible(f.background())).toBe(true)
-      expect(Number(f.dock()!.dataset.entryGeneration)).toBeGreaterThan(firstEntry)
-    }
-    const entry = f.dock()!.dataset.entryGeneration
-    f.doc.querySelector('textarea')!.setAttribute('placeholder', '撰写消息')
-    await f.settle()
-    expect(f.dock()!.dataset.entryGeneration).toBe(entry)
-  })
-
-  it('does not leave the dock or rendering loop over a conversation, settings, or a subagent home', async () => {
-    const f = fixture()
-    f.mount()
-    const home = f.doc.querySelector<HTMLElement>('.pI_x6G_centerCol [data-odyssey-page]')!
-    home.dataset.odysseyPage = 'conversation'
-    await f.settle()
-    expect(visible(f.dock())).toBe(false)
-    expect(f.frames.size).toBe(0)
-    home.dataset.odysseyPage = 'home'
-    await f.settle()
-    expect(visible(f.dock())).toBe(true)
-    const settings = f.doc.createElement('div')
-    settings.className = 'VOzbGW_overlay'
-    f.doc.body.append(settings)
-    await f.settle()
-    expect(visible(f.dock())).toBe(false)
-    expect(f.frames.size).toBe(0)
-    settings.hidden = true
-    await f.settle()
-    expect(visible(f.dock())).toBe(true)
-    home.remove()
-    await f.settle()
-    expect(visible(f.dock())).toBe(false)
-    expect(f.doc.querySelector('[data-odyssey-subagent-panel] [data-odyssey-theme-dock]')).toBeNull()
-    expect(f.frames.size).toBe(0)
-  })
-
-  it('retains all switching behavior with reduced motion and no animation frames or entry animations', async () => {
-    const f = fixture({ reducedMotion: true })
-    f.mount()
-    expect(visible(f.dock())).toBe(true)
-    expect(f.frames.size).toBe(0)
-    expect(f.animations).toHaveLength(0)
-    expect(f.background()!.dataset.renderState).toBe('paused')
-    f.click('next')
-    await f.settle()
-    expect(f.current()!.dataset.homeThemeId).toBe('berber')
-    f.surface('notes')
-    await f.settle()
-    f.surface()
-    await f.settle()
-    expect(visible(f.dock())).toBe(true)
-    expect(f.frames.size).toBe(0)
-    expect(f.animations).toHaveLength(0)
-  })
-
-  it('disposes every owned surface and stops responding to later page events, then permits a clean remount', async () => {
-    const f = fixture()
-    const originalMarkup = f.doc.body.innerHTML
-    const dispose = f.mount()
-    dispose()
-    dispose()
-    expect(f.doc.querySelector('[data-odyssey-theme-dock]')).toBeNull()
-    expect(f.background()).toBeNull()
-    expect(f.doc.querySelector('canvas')).toBeNull()
-    expect(f.frames.size).toBe(0)
-    f.surface('notes')
-    f.surface()
-    await f.settle()
-    expect(f.doc.querySelector('[data-odyssey-theme-dock]')).toBeNull()
-    expect(f.frames.size).toBe(0)
-    expect(f.doc.body.innerHTML).toBe(originalMarkup)
-    expect(f.mount()).not.toBe(dispose)
-    expect(f.doc.querySelectorAll('[data-odyssey-theme-dock]')).toHaveLength(1)
-  })
-})
+    });
+    it.each(['lotustech', 'not-a-theme', '{"id":"berber"}', '<img src=x onerror=alert(1)>'])('ignores unknown stored preference %s', initial => {
+        const f = fixture({ initial });
+        f.mount();
+        expect(f.current()).toBe('default');
+        expect(f.doc.querySelector('img')).toBeNull();
+        getHomeThemeController(f.doc)!.select(initial as HomeTheme);
+        expect(f.current()).toBe('default');
+    });
+    it('shares exactly one background owner and never creates the old dock', () => {
+        const f = fixture(), dispose = f.mount();
+        expect(mountHomeThemes(f.doc)).toBe(dispose);
+        expect(f.dock()).toBeNull();
+        expect(f.doc.querySelectorAll('[data-odyssey-home-theme-background]')).toHaveLength(1);
+        expect(f.background()!.closest('.pI_x6G_centerCol')).not.toBeNull();
+        expect(f.doc.querySelector('[data-odyssey-subagent-panel] canvas')).toBeNull();
+        expect(f.doc.querySelector('textarea')!.getAttribute('aria-label')).toBe('发送消息');
+    });
+    it('waits for the main home without attaching to a subagent home', async () => {
+        const f = fixture(), main = f.doc.querySelector('.pI_x6G_centerCol')!, home = main.firstElementChild!;
+        home.remove();
+        f.mount();
+        expect(f.background()).toBeNull();
+        expect(f.frames.size).toBe(0);
+        main.append(home);
+        await f.settle();
+        expect(visible(f.background())).toBe(true);
+        expect(f.dock()).toBeNull();
+    });
+    it('uses the actual mode-specific Koi thumbnail without resetting its selection', async () => {
+        const f = fixture({ initial: 'koi-pond' });
+        f.mount();
+        const c = getHomeThemeController(f.doc)!;
+        expect(c.getThumbnail('koi-pond')).toBe(koiLight);
+        expect(f.background()!.dataset.homeThemeFamily).toBe('koi');
+        f.doc.body.setAttribute('data-ds-dark-theme', 'true');
+        await f.settle();
+        expect(c.getThumbnail('koi-pond')).toBe(koiDark);
+        expect(c.getSelected()).toBe('koi-pond');
+        expect(f.frames.size).toBe(1);
+    });
+    it('switches every native key without changing the global application mode', async () => {
+        const f = fixture();
+        f.doc.body.setAttribute('data-ds-dark-theme', 'true');
+        f.mount();
+        for (const id of THEME_IDS) {
+            getHomeThemeController(f.doc)!.select(id as HomeTheme);
+            await f.settle();
+            expect(f.current()).toBe(id);
+            expect(f.background()!.dataset.homeThemeId).toBe(id);
+            expect(f.doc.body.getAttribute('data-ds-dark-theme')).toBe('true');
+        }
+        const blocked = fixture({ storageBlocked: true });
+        blocked.mount();
+        blocked.click('next');
+        expect(blocked.current()).toBe('berber');
+    });
+    it('hides and pauses behind workspaces, conversations, settings and detached homes', async () => {
+        const f = fixture();
+        f.mount();
+        expect(f.background()!.dataset.renderState).toBe('running');
+        for (const surface of ['notes', 'integrations']) {
+            f.surface(surface);
+            await f.settle();
+            expect(visible(f.background())).toBe(false);
+            expect(f.frames.size).toBe(0);
+            f.surface();
+            await f.settle();
+            expect(visible(f.background())).toBe(true);
+            expect(f.frames.size).toBe(1);
+        }
+        const home = f.doc.querySelector<HTMLElement>('.pI_x6G_centerCol [data-odyssey-page]')!;
+        home.dataset.odysseyPage = 'conversation';
+        await f.settle();
+        expect(visible(f.background())).toBe(false);
+        expect(f.frames.size).toBe(0);
+        home.dataset.odysseyPage = 'home';
+        await f.settle();
+        const settings = f.doc.createElement('div');
+        settings.className = 'VOzbGW_overlay';
+        f.doc.body.append(settings);
+        await f.settle();
+        expect(visible(f.background())).toBe(false);
+        settings.hidden = true;
+        await f.settle();
+        expect(visible(f.background())).toBe(true);
+        home.remove();
+        await f.settle();
+        expect(visible(f.background())).toBe(false);
+        expect(f.frames.size).toBe(0);
+    });
+    it('retains selection and rendering with reduced motion without starting frame loops', async () => {
+        const f = fixture({ reducedMotion: true });
+        f.mount();
+        expect(f.frames.size).toBe(0);
+        expect(f.animations).toHaveLength(0);
+        expect(f.background()!.dataset.renderState).toBe('paused');
+        f.click('next');
+        await f.settle();
+        expect(f.current()).toBe('berber');
+        f.surface('notes');
+        await f.settle();
+        f.surface();
+        await f.settle();
+        expect(visible(f.background())).toBe(true);
+        expect(f.frames.size).toBe(0);
+        expect(f.animations).toHaveLength(0);
+    });
+    it('releases every surface, ignores late events and permits a clean remount', async () => {
+        const f = fixture(), original = f.doc.body.innerHTML, dispose = f.mount();
+        dispose();
+        dispose();
+        expect(f.background()).toBeNull();
+        expect(f.doc.querySelector('canvas')).toBeNull();
+        expect(f.frames.size).toBe(0);
+        expect(getHomeThemeController(f.doc)).toBeUndefined();
+        f.surface('notes');
+        f.surface();
+        await f.settle();
+        expect(f.frames.size).toBe(0);
+        expect(f.doc.body.innerHTML).toBe(original);
+        expect(f.mount()).not.toBe(dispose);
+        expect(f.dock()).toBeNull();
+        expect(f.doc.querySelectorAll('[data-odyssey-home-theme-background]')).toHaveLength(1);
+    });
+});

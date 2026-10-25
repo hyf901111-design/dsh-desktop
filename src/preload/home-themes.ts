@@ -1,4 +1,4 @@
-import {noteUiText} from '../../packages/dsh-research-task-runtime/notes-locale.js'
+import type {HomeThemeController} from './home-theme-controls'
 import { createHomeFlowField } from './home-flow'
 import { createHomeThemeRenderer, type HomeShaderThemeId } from './home-theme-renderer'
 import { isReactBitsTheme } from './home-reactbits-renderer'
@@ -9,9 +9,10 @@ import koiLight from './home-theme-assets/koi-pond-light.png?inline'
 import koiDark from './home-theme-assets/koi-pond-dark.png?inline'
 import { HOME_THEMES as THEMES, HOME_THEME_STORAGE_KEY as STORAGE_KEY, isHomeTheme as validTheme, normalizeHomeTheme, type HomeTheme as Theme, type HomeThemePreferences } from '../shared/home-themes'
 
-const LABELS: Record<Theme, string> = { 'default': '默认', 'berber': 'Berber', 'vghodki': 'Vghodki', 'jarrick': 'Jarrick', 'lowfreez': 'Lowfreez', 'accelbia': 'Accelbia', 'boz': 'Boz', 'shashidhar': 'Shashidhar', 'haseeb': 'Haseeb', 'kirian': 'Kirian', 'splines': 'Splines', 'antiquue': 'Antiquue', 'crt-warp': 'CRT Warp', 'dither': 'Dither', 'koi-pond': '锦鲤水面' }
 const PENDING_STORAGE_KEY = `${STORAGE_KEY}.pending-native`
 const mounted = new WeakMap<Document, () => void>()
+const controllers = new WeakMap<Document, HomeThemeController>()
+export function getHomeThemeController(doc: Document = document): HomeThemeController | undefined { return controllers.get(doc) }
 type Surface = { canvas: HTMLCanvasElement; render(seconds: number, dark: boolean): boolean; resize(width: number, height: number): void; dispose(): void }
 
 /** One owner for homepage decoration; the native composer and appearance store stay native. */
@@ -50,12 +51,11 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     win.localStorage.setItem(STORAGE_KEY, selected)
     win.localStorage.removeItem(PENDING_STORAGE_KEY)
   } catch {}
-  let host: HTMLElement | null = null, background: HTMLElement | null = null, dock: HTMLElement | null = null
+  let host: HTMLElement | null = null, background: HTMLElement | null = null
   let surface: Surface | null = null, visible = false, dark = doc.body.hasAttribute('data-ds-dark-theme')
-  let disposed = false, frame = 0, previous = 0, elapsed = 0, generation = 0, cleanupTimer = 0
-  let collapseTimer = 0, dockHovered = false
-  const buttons = new Map<Theme, HTMLButtonElement>(), thumbs = new Map<string, string>()
-  const entries = new Set<Animation>(), transitions = new Set<Animation>()
+  let disposed = false, frame = 0, previous = 0, elapsed = 0, cleanupTimer = 0
+  const thumbs = new Map<string, string>(), listeners = new Set<() => void>()
+  const transitions = new Set<Animation>()
   const field = createHomeFlowField({ speed: 1.5, strength: 1.3 })
   const isShown = (element: Element | null): boolean => {
     for (let node = element; node; node = node.parentElement) {
@@ -70,24 +70,6 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     const animation = element.animate(keyframes, options)
     set.add(animation)
     void animation.finished.then(() => { set.delete(animation) }, () => { set.delete(animation) })
-  }
-  const cancelDockCollapse = () => {
-    if (collapseTimer) win.clearTimeout(collapseTimer)
-    collapseTimer = 0
-  }
-  const expandDock = () => {
-    cancelDockCollapse()
-    if (dock) dock.dataset.dockState = 'expanded'
-  }
-  // A mouse click leaves focus behind; only keyboard focus should pin the dock.
-  const hasDockKeyboardFocus = () => !!dock?.contains(doc.activeElement) && doc.activeElement?.matches(':focus-visible') === true
-  const scheduleDockCollapse = () => {
-    cancelDockCollapse()
-    if (!visible || doc.hidden || dockHovered || hasDockKeyboardFocus()) return
-    collapseTimer = win.setTimeout(() => {
-      collapseTimer = 0
-      if (visible && !doc.hidden && !dockHovered && dock && !hasDockKeyboardFocus()) dock.dataset.dockState = 'collapsed'
-    }, 3000)
   }
   const stop = () => {
     if (frame) win.cancelAnimationFrame(frame)
@@ -197,6 +179,8 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     resume()
   }
   const thumbnail = (theme: Theme): string | null => {
+    if (disposed || !validTheme(theme)) return null
+    const dark = doc.body.hasAttribute('data-ds-dark-theme')
     if (theme === 'default') return dark ? defaultDark : defaultLight
     if (theme === 'koi-pond') return dark ? koiDark : koiLight
     if (isReactBitsTheme(theme)) return REACT_BITS_PREVIEWS[theme][dark ? 'dark' : 'light']
@@ -212,89 +196,35 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
       thumbs.set(key, value); return value
     } catch { return null } finally { renderer.dispose() }
   }
-  const updateCards = () => {
-    const current = THEMES.indexOf(selected)
-    for (const [id, button] of buttons) {
-      let offset = (THEMES.indexOf(id) - current + THEMES.length) % THEMES.length
-      if (offset > Math.floor(THEMES.length / 2)) offset -= THEMES.length
-      const position = offset === -1 ? 'previous' : offset === 0 ? 'current' : offset === 1 ? 'next' : 'outside'
-      button.dataset.homeThemePosition = position
-      button.style.setProperty('--theme-offset', String(offset))
-      button.setAttribute('aria-hidden', String(Math.abs(offset) > 1))
-      button.setAttribute('aria-pressed', String(offset === 0))
-      button.tabIndex = Math.abs(offset) > 1 ? -1 : 0
-      button.setAttribute('aria-label', doc.documentElement.dataset.odysseyLocale==='en' ? (offset===0?'Current background: ':'Switch background: ')+noteUiText(LABELS[id],'en') : offset === 0 ? '当前背景：' + LABELS[id] : '切换到 ' + LABELS[id] + ' 背景')
-      button.title = noteUiText(LABELS[id],doc.documentElement.dataset.odysseyLocale)
-      // Only the current card and its neighbors are painted. Avoid compiling
-      // every hidden OpenShaders thumbnail during startup or a mode change.
-      if (position !== 'outside') {
-        const value = thumbnail(id)
-        if (value) button.style.setProperty('--theme-thumbnail', `url("${value}")`)
-        else button.style.removeProperty('--theme-thumbnail')
-      }
-    }
-    if (dock) dock.dataset.currentTheme = selected
-  }
+  const notify = () => { for (const listener of listeners) { try { listener() } catch {} } }
   const select = (id: Theme, persist = true) => {
-    if (id === selected) return
+    if (disposed || !validTheme(id) || id === selected) return
     selected = id
     if (persist) savePreference(id)
-    if (visible) { updateCards(); replaceSurface(true) }
+    if (visible) replaceSurface(true)
+    notify()
   }
-  const enter = () => {
-    cancelAnimations(entries)
-    if (!dock) return
-    expandDock(); scheduleDockCollapse()
-    dock.dataset.entryGeneration = String(++generation)
-    for (const button of buttons.values()) {
-      const position = button.dataset.homeThemePosition
-      if (position === 'outside') continue
-      const delay = position === 'current' ? 100 : position === 'next' ? 175 : 35
-      const body = button.firstElementChild as HTMLElement
-      animate(body, [{ opacity: 0, transform: 'translateY(24px) scale(.9)' }, { opacity: 1, transform: 'translateY(-2px) scale(1.015)', offset: .72 }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 570, delay, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }, entries)
-    }
+  const controller: HomeThemeController = {
+    getSelected: () => selected,
+    select,
+    getThumbnail: thumbnail,
+    subscribe(listener) { if (disposed) return () => {}; listeners.add(listener); return () => { listeners.delete(listener) } }
   }
+  controllers.set(doc, controller)
   const teardown = () => {
-    stop(); clearTransition(); cancelAnimations(entries); cancelDockCollapse(); dockHovered = false
+    stop(); clearTransition()
     observer.disconnect(); surface?.dispose(); surface = null
-    background?.remove(); dock?.remove(); background = dock = null; buttons.clear()
+    background?.remove(); background = null
   }
   const attach = (next: HTMLElement) => {
     teardown(); host = next
     background = doc.createElement('div'); background.dataset.odysseyHomeThemeBackground = ''; background.setAttribute('aria-hidden', 'true')
-    dock = doc.createElement('div'); dock.dataset.odysseyThemeDock = ''; dock.setAttribute('role', 'group'); dock.setAttribute('aria-label', '首页背景主题')
-    dock.addEventListener('pointerenter', () => { dockHovered = true; expandDock() })
-    dock.addEventListener('pointerleave', () => { dockHovered = false; scheduleDockCollapse() })
-    dock.addEventListener('focusin', expandDock)
-    dock.addEventListener('focusout', scheduleDockCollapse)
-    const strip = doc.createElement('div'); strip.className = 'odyssey-theme-strip'
-    for (const id of THEMES) {
-      const button = doc.createElement('button'); button.type = 'button'; button.dataset.homeThemeId = id
-      const body = doc.createElement('span'); body.className = 'odyssey-theme-card-body'
-      const glass = doc.createElement('span'); glass.className = 'odyssey-theme-glass'
-      const preview = doc.createElement('span'); preview.className = 'odyssey-theme-preview'
-      const blur = doc.createElement('span'); blur.className = 'odyssey-theme-edge-blur'
-      preview.append(blur); body.append(glass, preview); button.append(body)
-      button.addEventListener('click', () => { if (button.getAttribute('aria-hidden') !== 'true') select(id) })
-      button.addEventListener('keydown', event => {
-        expandDock()
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-        event.preventDefault(); event.stopPropagation()
-        const index = THEMES.indexOf(selected)
-        select(THEMES[event.key === 'Home' ? 0 : event.key === 'End' ? THEMES.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : THEMES.length - 1)) % THEMES.length]!)
-        buttons.get(selected)?.focus({ preventScroll: true })
-      })
-      buttons.set(id, button); strip.append(button)
-    }
-    dock.append(strip); host.prepend(background); host.append(dock)
-    updateCards(); replaceSurface(false); observer.observe(host)
+    host.prepend(background)
+    replaceSurface(false); observer.observe(host)
   }
   const observer = new win.ResizeObserver(resize)
-  let renderedLocale=doc.documentElement.dataset.odysseyLocale
   const sync = () => {
     if (disposed) return
-    dock?.setAttribute('aria-label',noteUiText('首页背景主题',doc.documentElement.dataset.odysseyLocale))
-    if(renderedLocale!==doc.documentElement.dataset.odysseyLocale){renderedLocale=doc.documentElement.dataset.odysseyLocale;if(dock)updateCards()}
     const root = [...doc.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]')].find(node => !node.closest('[data-odyssey-subagent-panel]'))
     const nextHost = root?.closest<HTMLElement>('.pI_x6G_centerCol') ?? null
     const nextDark = doc.body.hasAttribute('data-ds-dark-theme')
@@ -304,29 +234,28 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     dark = nextDark
     if (nextHost && nextHost !== host) { attach(nextHost); visible = false }
     visible = nextVisible
-    if (dock && dock.hidden === visible) dock.hidden = !visible
     if (background && background.hidden === visible) background.hidden = !visible
-    if (!visible) { stop(); clearTransition(); cancelAnimations(entries); cancelDockCollapse(); dockHovered = false; return }
-    if (background?.dataset.homeThemeId !== selected) { updateCards(); replaceSurface(false) }
-    else if (themeChanged || !wasVisible) { updateCards(); if (themeChanged && (doc.hidden || reduced.matches)) render() }
-    if (!wasVisible || !surface) { if (!surface) replaceSurface(false); enter(); resume() }
+    if (themeChanged) notify()
+    if (!visible) { stop(); clearTransition(); return }
+    if (background?.dataset.homeThemeId !== selected) replaceSurface(false)
+    else if (themeChanged && (doc.hidden || reduced.matches)) render()
+    if (!wasVisible || !surface) { if (!surface) replaceSurface(false); resume() }
   }
-  const onVisibility = () => { if (doc.hidden) { stop(); cancelAnimations(entries); clearTransition(); cancelDockCollapse() } else { sync(); resume(); scheduleDockCollapse() } }
-  const onReduced = () => { clearTransition(); cancelAnimations(entries); resume() }
+  const onVisibility = () => { if (doc.hidden) { stop(); clearTransition() } else { sync(); resume() } }
+  const onReduced = () => { clearTransition(); resume() }
   const onStorage = (event: StorageEvent) => { if (event.key !== STORAGE_KEY) return; const value = event.newValue === null ? 'default' : event.newValue; if (validTheme(value)) select(value, false) }
   const changes = new win.MutationObserver(sync)
   changes.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-page', 'data-ds-dark-theme', 'data-workspace-surface', 'hidden', 'class', 'style'] })
-  const localeObserver=new win.MutationObserver(sync);localeObserver.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']})
   doc.addEventListener('visibilitychange', onVisibility)
   doc.addEventListener('sherlock:workspace-surface-change', sync)
   reduced.addEventListener('change', onReduced); win.addEventListener('storage', onStorage)
   sync()
   const dispose = () => {
     if (disposed) return
-    disposed = true; changes.disconnect(); localeObserver.disconnect(); teardown()
+    disposed = true; changes.disconnect(); teardown()
     doc.removeEventListener('visibilitychange', onVisibility); doc.removeEventListener('sherlock:workspace-surface-change', sync)
     reduced.removeEventListener('change', onReduced); win.removeEventListener('storage', onStorage)
-    thumbs.clear(); mounted.delete(doc)
+    thumbs.clear(); listeners.clear(); controllers.delete(doc); mounted.delete(doc)
   }
   mounted.set(doc, dispose)
   return dispose
