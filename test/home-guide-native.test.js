@@ -101,7 +101,7 @@ it('uses actual native components and live bridge links, then unmounts only the 
  for(const command of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])expect(await f.command(command)).toMatchObject({ok:true})
  expect(f.doc.querySelectorAll('[data-home-guide-native] [data-financial-widget]')).toHaveLength(3)
  expect(f.doc.querySelector('[data-home-guide-native] [data-financial-link]')).not.toBeNull()
- expect(f.doc.querySelectorAll('[data-home-guide-native] .ew-watch-row')).toHaveLength(9)
+ expect(f.doc.querySelectorAll('[data-home-guide-native] .ew-watch-row')).toHaveLength(5)
  expect(f.doc.querySelector('[data-home-guide-native]').textContent).toContain('行情桥测试服务')
  expect(f.liveCalls()).toBeGreaterThan(0)
  expect(f.doc.querySelector('textarea')).toBe(input);expect(input.value).toBe('原草稿')
@@ -182,8 +182,21 @@ it('adds the example stock through native search controls while retaining the sa
  expect(cues.some(cue=>cue.target?.getAttribute('aria-label')==='添加自选股')).toBe(true)
  expect(cues.some(cue=>cue.target?.getAttribute('aria-label')==='搜索个股代码或名字')).toBe(true)
  expect(f.workspace.getSnapshot().artifacts.map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort())
- expect(f.workspace.getSnapshot().artifacts.find(node=>node.id===watch.id).containerSpec.symbols).toHaveLength(9)
+ expect(f.workspace.getSnapshot().artifacts.find(node=>node.id===watch.id).containerSpec.symbols).toHaveLength(5)
 },35000)
+
+it('normalizes a resumed nine-stock tutorial to the five requested stocks without replacing its components',async()=>{
+ const f=await fixture(),{watch,quote,news}=seedBoard(f)
+ const symbols=[['US','AAPL','苹果'],['SH','600900','长江电力'],['SH','601138','工业富联'],['SZ','000858','五粮液'],['SZ','000425','徐工机械'],['SH','603040','新坐标'],['SH','600008','首创环保'],['SH','600519','贵州茅台'],['HK','00003','香港中华煤气']].map(([market,code,name])=>({market,code,name}))
+ f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(node=>node.id===watch.id?{...node,containerSpec:{...node.containerSpec,symbols,selectedSymbol:'HK:00003'}}:node.id===quote.id?{...node,containerSpec:{...node.containerSpec,linkedWatchlistId:watch.id}}:{...node,containerSpec:{...node.containerSpec,linkedSourceId:quote.id}}))
+ await f.command('mount-board');pointerFixture(f,{automatic:true})
+ expect(await f.command('board-add')).toMatchObject({ok:true})
+ const nodes=f.workspace.getSnapshot().artifacts
+ expect(nodes.map(node=>node.id)).toEqual([watch.id,quote.id,news.id])
+ expect(nodes.find(node=>node.id===watch.id).containerSpec.symbols.map(s=>s.market+':'+s.code)).toEqual(['US:AAPL','SH:600900','SH:601138','SZ:000858','SZ:000425'])
+ expect(nodes.find(node=>node.id===quote.id).containerSpec.symbols[0].code).toBe('000858')
+ expect(JSON.parse(f.disk.get('sherlock.research.canvas.artifacts.v1:owner')).find(node=>node.id===watch.id).containerSpec.symbols).toHaveLength(5)
+},10000)
 
 const pump=async predicate=>{for(let i=0;i<150;i++){if(predicate())return;await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,20))})}throw Error('Pointer fixture timed out')}
 function pointerFixture(f,{automatic=false}={}){
@@ -271,9 +284,9 @@ it('types the stock code character by character through actual search and keeps 
  f.doc.addEventListener('input',event=>{if(event.target.getAttribute?.('role')==='combobox')typed.push(event.target.value)},true)
  expect((await f.command('board-link')).ok).toBe(true);expect(p.cues.filter(cue=>cue.action==='drag')).toHaveLength(2)
  const added=await f.command('board-add');expect(added,JSON.stringify({added,typed:typeof typed==='undefined'?undefined:typed,nodes:f.workspace.getSnapshot().artifacts.map(n=>n.containerSpec)})).toMatchObject({ok:true})
- expect(typed).toEqual(['000858','000425','603040','600008','600519','00003'].flatMap(code=>Array.from({length:code.length},(_,index)=>code.slice(0,index+1))))
+ expect(typed).toEqual(['000858','000425'].flatMap(code=>Array.from({length:code.length},(_,index)=>code.slice(0,index+1))))
  const nodes=f.workspace.getSnapshot().artifacts
- expect(nodes.map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort());expect(nodes.find(node=>node.id===watch.id).containerSpec.symbols).toHaveLength(9)
+ expect(nodes.map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort());expect(nodes.find(node=>node.id===watch.id).containerSpec.symbols).toHaveLength(5)
  expect(nodes.find(node=>node.id===quote.id).containerSpec.symbols[0].code).toBe('000858')
  expect(JSON.parse(f.disk.get('sherlock.research.canvas.artifacts.v1:owner')).map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort());expect(f.liveCalls()).toBeGreaterThan(0)
 },35000)

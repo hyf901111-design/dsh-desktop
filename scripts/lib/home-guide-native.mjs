@@ -17,11 +17,7 @@ function homeGuideNativeBoardSymbols() {
     { market: 'SH', code: '600900', name: '长江电力' },
     { market: 'SH', code: '601138', name: '工业富联' },
     { market: 'SZ', code: '000858', name: '五粮液' },
-    { market: 'SZ', code: '000425', name: '徐工机械' },
-    { market: 'SH', code: '603040', name: '新坐标' },
-    { market: 'SH', code: '600008', name: '首创环保' },
-    { market: 'SH', code: '600519', name: '贵州茅台' },
-    { market: 'HK', code: '00003', name: '香港中华煤气' }
+    { market: 'SZ', code: '000425', name: '徐工机械' }
   ]
 }
 
@@ -452,7 +448,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         }
         const state = await workspace.canvasAction('inspect', { ids: [watchlist] }); await playing(ticket)
         const node = workspace.getSnapshot().artifacts.find(node => node.id === watchlist), order = new Map(provider.symbols.map((symbol, index) => [symbol.market + ':' + symbol.code, index]))
-        await workspace.canvasAction('apply', { requestId: detail.requestId + ':order', revision: state.revision, changes: [{ op: 'update', id: watchlist, fields: { containerSpec: { ...node.containerSpec, symbols: [...node.containerSpec.symbols].sort((a,b) => order.get(a.market+':'+a.code)-order.get(b.market+':'+b.code)) } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
+        await workspace.canvasAction('apply', { requestId: detail.requestId + ':order', revision: state.revision, changes: [{ op: 'update', id: watchlist, fields: { containerSpec: { ...node.containerSpec, symbols: node.containerSpec.symbols.filter(symbol=>order.has(symbol.market+':'+symbol.code)).sort((a,b) => order.get(a.market+':'+a.code)-order.get(b.market+':'+b.code)), selectedSymbol: order.has(node.containerSpec.selectedSymbol)?node.containerSpec.selectedSymbol:'US:AAPL' } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
         await settle(ticket, () => JSON.stringify([...(card()?.querySelectorAll('[data-stock-code]') ?? [])].map(row => row.dataset.stockMarket+':'+row.dataset.stockCode)) === JSON.stringify(provider.symbols.map(symbol => symbol.market+':'+symbol.code)))
         const stock = () => [...(card()?.querySelectorAll('[data-stock-code]') ?? [])].find(row => row.dataset.stockCode === '000858' && row.dataset.stockMarket === 'SZ')
         await settle(ticket, () => !!stock())
@@ -470,10 +466,6 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         await settle(ticket, () => !canvas?.__eworkContentFit)
         await playing(ticket)
         layoutBoard(true)
-        // Dismiss only this demo's native edit receipt for the final overview.
-        const receipt = [...document.querySelectorAll('[data-canvas-action-receipt]')].find(node => node.dataset.eworkToolbarOwner === id)
-        const dismiss = receipt?.querySelector('[data-canvas-action-dismiss]')
-        if (dismiss) await click(ticket, dismiss, '关闭整理结果提示')
         // Finish at the document start so native component headers stay visible.
         react_dom.flushSync(() => { workspace.setViewport({ x: 0, y: 0, scale: 1 }); workspace.updateSelection(Object.values(ticket.nodes), 'replace') })
         ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)

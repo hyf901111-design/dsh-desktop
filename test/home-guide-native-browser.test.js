@@ -151,7 +151,7 @@ it.each([{width:1460,height:1000},{width:580,height:1000},{width:1080,height:640
   expect(state.nodes).toHaveLength(6)
   if(clipped){const box=await page.locator('#guide-host [data-research-canvas]').boundingBox();expect(box.width).toBe(stacked?560:624);expect(box.height).toBe(424);expect((await page.locator('#guide-host').boundingBox()).height).toBe(468)}
   const node=kind=>state.nodes.find(n=>kind==='calendar'?n.containerSpec.type==='calendar-tool':n.containerSpec.widget===kind),watch=node('watchlist'),quote=node('quote'),indices=node('indices'),news=node('news'),announcements=node('announcements'),calendar=node('calendar')
-  expect(watch.containerSpec.symbols.map(s=>s.market+':'+s.code)).toEqual(['US:AAPL','SH:600900','SH:601138','SZ:000858','SZ:000425','SH:603040','SH:600008','SH:600519','HK:00003'])
+  expect(watch.containerSpec.symbols.map(s=>s.market+':'+s.code)).toEqual(['US:AAPL','SH:600900','SH:601138','SZ:000858','SZ:000425'])
   expect(watch.containerSpec.symbols[0].name).toBe('苹果');expect(indices.containerSpec.symbols.map(s=>s.code)).toEqual(['000300','000001','399001','399006','000688','000016','^GSPC','^IXIC','^NDX','^RUT'])
   expect(watch.containerSpec.selectedSymbol).toBe('SZ:000858');expect(quote.containerSpec.symbols[0].code).toBe('000858')
   expect(quote.containerSpec.linkedWatchlistId).toBe(watch.id);expect(news.containerSpec.linkedSourceId).toBe(quote.id);expect(announcements.containerSpec.linkedSourceId).toBe(quote.id)
@@ -168,6 +168,27 @@ it.each([{width:1460,height:1000},{width:580,height:1000},{width:1080,height:640
   await preserved(page);expect(errors).toEqual([]);expect(external).toEqual([])
  }finally{await page.evaluate(()=>window.guideProbe.realPointer?.dispose()).catch(()=>{});await page.close()}
 },60000)
+it.each(['hidden','visible'])('finishes native arrange without chasing an optional %s action receipt',async state=>{
+ const {page,errors}=await fixture({nativeLayout:true})
+ try{
+  await page.evaluate(()=>{
+   document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.arrangeCues=[]
+   window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return;window.guideProbe.arrangeCues.push(d);const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));if(!window.guideProbe.arrangePointer){reply(true);return}const target=[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===d.targetToken);void window.guideProbe.arrangePointer.perform({target,action:d.action}).then(()=>reply(true),error=>reply(false,error.message))})
+  })
+  for(const step of ['mount-board','board-watchlist','board-quote','board-news','board-link'])await succeeds(page,step)
+  const receipt=page.locator('[data-canvas-action-receipt][data-ework-toolbar-owner="guide-browser-session"]')
+  await expect.poll(()=>receipt.count()).toBe(1)
+  if(state==='hidden')await receipt.evaluate(element=>element.style.setProperty('visibility','hidden','important'))
+  await page.evaluate(()=>{window.guideProbe.arrangePointer=window.guideProbe.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})})
+  const before=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(node=>node.id))
+  expect(await command(page,'board-arrange')).toMatchObject({ok:true})
+  expect(await page.evaluate(()=>window.guideProbe.arrangeCues.some(cue=>cue.label==='整理六个组件，保留完整阅读空间'&&cue.action==='click'))).toBe(true)
+  expect(await page.evaluate(()=>window.guideProbe.arrangeCues.some(cue=>cue.label==='关闭整理结果提示'))).toBe(false)
+  expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(node=>node.id))).toEqual(before)
+  expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0);await preserved(page);expect(errors).toEqual([])
+  await expect.poll(()=>receipt.count(),{timeout:7000}).toBe(0)
+ }finally{await page.evaluate(()=>window.guideProbe.arrangePointer?.dispose()).catch(()=>{});await page.close()}
+},16000)
 it.each(['rejected','disposed','user-layout'])('keeps the native connection focus bounded when %s',async mode=>{
  const {page,errors}=await fixture({nativeLayout:true,width:1080,height:640,guideTop:52,guideBottom:100})
  try{
@@ -218,8 +239,8 @@ it.each(['slow','failed'])('waits for the real asynchronous stock search result 
   await succeeds(page,'mount-board')
   const response=await command(page,'board-add')
   const state=await page.evaluate(()=>{const p=window.guideProbe,nodes=p.registry.for('guide-browser-session').getSnapshot().artifacts;return{watch:nodes.find(n=>n.id===p.searchIds.watch).containerSpec,quote:nodes.find(n=>n.id===p.searchIds.quote).containerSpec}})
-  if(mode==='slow'){expect(response).toMatchObject({ok:true});expect(state.watch.symbols).toHaveLength(9);expect(state.watch.selectedSymbol).toBe('SZ:000858');expect(state.quote.symbols[0].code).toBe('000858')}
-  else{expect(response).toMatchObject({ok:false,message:'实际搜索服务暂不可用'});expect(state.watch.symbols).toHaveLength(8);expect(state.watch.selectedSymbol).toBe('US:AAPL')}
+  if(mode==='slow'){expect(response).toMatchObject({ok:true});expect(state.watch.symbols).toHaveLength(5);expect(state.watch.selectedSymbol).toBe('SZ:000858');expect(state.quote.symbols[0].code).toBe('000858')}
+  else{expect(response).toMatchObject({ok:false,message:'实际搜索服务暂不可用'});expect(state.watch.symbols).toHaveLength(4);expect(state.watch.selectedSymbol).toBe('US:AAPL')}
   expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0);expect(errors).toEqual([])
  }finally{await page.close()}
 },20000)
@@ -294,7 +315,7 @@ it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged re
   for(const cue of result.cues)expect(Object.keys(cue.payload).sort()).toEqual(['runId','requestId','label','action','targetToken',...(cue.action==='drag'?['fromTargetToken']:[])].sort())
   expect(drags.map(cue=>[cue.from,cue.fromSide,cue.target,cue.toSide])).toEqual([[watch.id,'output',quote.id,'input'],[quote.id,'output',news.id,'input']])
   for(const cue of drags)for(const box of [cue.fromRect,cue.targetRect]){expect(box.width).toBeGreaterThan(0);expect(box.y).toBeGreaterThanOrEqual(cue.canvas.y-1);expect(box.bottom).toBeLessThanOrEqual(cue.canvas.bottom+1)}
-  expect(result.typed).toEqual(['000858','000425','603040','600008','600519','00003'].flatMap(code=>Array.from({length:code.length},(_,index)=>code.slice(0,index+1))));expect(watch.spec.symbols).toHaveLength(9);expect(quote.spec.symbols[0].code).toBe('000858');expect(quote.spec.linkedWatchlistId).toBe(watch.id);expect(news.spec.linkedSourceId).toBe(quote.id)
+  expect(result.typed).toEqual(['000858','000425'].flatMap(code=>Array.from({length:code.length},(_,index)=>code.slice(0,index+1))));expect(watch.spec.symbols).toHaveLength(5);expect(quote.spec.symbols[0].code).toBe('000858');expect(quote.spec.linkedWatchlistId).toBe(watch.id);expect(news.spec.linkedSourceId).toBe(quote.id)
   expect(result.stored.map(node=>node.id).sort()).toEqual(result.nodes.map(node=>node.id).sort())
   expect(await page.locator('#guide-host .ew-financial-connection-line').count()).toBe(2)
   expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
@@ -354,7 +375,7 @@ it('runs the live-bridge board tutorial on the real native canvas and retains th
     await widget(page, 'watchlist').locator('[data-stock-code]').nth(1).click()
     await expect.poll(() => widget(page, 'quote').locator('.ew-quote-price-line').textContent()).not.toBe(firstPrice)
     await succeeds(page, 'board-add')
-    await expect.poll(() => widget(page, 'watchlist').locator('[data-stock-code]').count()).toBe(9)
+    await expect.poll(() => widget(page, 'watchlist').locator('[data-stock-code]').count()).toBe(5)
     await expect.poll(() => widget(page, 'quote').locator('.ew-quote-price-line strong').textContent()).toContain('101.00')
     await succeeds(page, 'board-arrange')
     await expect.poll(() => canvas(page).evaluate(el => Boolean(el.__eworkContentFit))).toBe(false)
@@ -539,7 +560,7 @@ it.each([{width:1380,height:900},{width:1380,height:768},{width:1080,height:900}
    expect(footer.bottom,widget+' provenance remains inside its native frame').toBeLessThanOrEqual(rect.bottom+1)
    if(chart)expect(chart.height,'a useful native chart remains visible').toBeGreaterThan(80)
   }
-  expect(await page.locator('[data-canvas-action-receipt][data-ework-toolbar-owner="guide-browser-session"]').count()).toBe(0)
+  await expect.poll(()=>page.locator('[data-canvas-action-receipt][data-ework-toolbar-owner="guide-browser-session"]').count(),{timeout:7000}).toBe(0)
   await preserved(page);expect(errors).toEqual([])
  }finally{await page.close()}
 },45000)
