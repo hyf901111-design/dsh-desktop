@@ -421,8 +421,9 @@ export function mountHomeOperations(doc: Document = document, options: Options =
         const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width))
         const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
         const tilt = tiltStates.get(card) || { rx: 0, ry: 0, targetX: 0, targetY: 0, lastTime: 0 }
-        tilt.targetX = (.5 - y) * 10
-        tilt.targetY = (x - .5) * 10
+        const range = card.classList.contains('odyssey-operations-quick-card') ? 18 : 10
+        tilt.targetX = (.5 - y) * range
+        tilt.targetY = (x - .5) * range
         tiltStates.set(card, tilt)
         card.dataset.odysseyOperationsTilting = ''
         animate()

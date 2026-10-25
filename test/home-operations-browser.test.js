@@ -966,16 +966,21 @@ it('shows an outside focus ring for keyboard navigation and leaves pointer-hover
   } finally { await page.close() }
 }, 15000)
 
-it('gives all five cards a stronger bounded tilt and keeps a stationary pointer stable', async () => {
-  const page = await fixture({ reduced: false })
+it.each([false, true])('makes quick-card perspective clear while keeping the case card restrained and a stationary pointer stable (dark=%s)', async dark => {
+  const page = await fixture({ dark, reduced: false }), observations = []
   try {
     await toggle(page).click()
     await waitState(page, 'operations')
     const cards = page.locator('.odyssey-operations-usecase, .odyssey-operations-quick-card')
     expect(await cards.count()).toBe(5)
     for (const card of await cards.all()) {
+      const kind = await card.getAttribute('data-card')
       await page.mouse.move(1, 1)
       await page.waitForTimeout(340)
+      const artworkSize = await card.evaluate(card => {
+        const image = card.querySelector('.odyssey-operations-illustration')
+        return image ? { width: image.offsetWidth, height: image.offsetHeight } : null
+      })
       const bounds = await card.boundingBox(), point = { x: bounds.x + bounds.width * .06, y: bounds.y + bounds.height * .06 }
       await page.mouse.move(point.x, point.y)
       let previousPose, stableFrames = 0
@@ -1001,16 +1006,22 @@ it('gives all five cards a stronger bounded tilt and keeps a stationary pointer 
       expect(samples.every(sample => sample.textTransform === 'none')).toBe(true)
       for (const name of ['rx', 'ry']) {
         const values = samples.map(sample => sample[name])
-        expect(Math.abs(values.at(-1))).toBeGreaterThan(4)
-        expect(Math.max(...values.map(Math.abs))).toBeLessThanOrEqual(5.2)
+        expect(Math.abs(values.at(-1)), 'quick-card tilt is clearly visible at the pointer corner').toBeGreaterThan(kind ? 7 : 4)
+        expect(Math.max(...values.map(Math.abs))).toBeLessThanOrEqual(kind ? 9.2 : 5.2)
         expect(Math.max(...values) - Math.min(...values)).toBeLessThan(.03)
       }
+      if (kind) {
+        expect(await card.evaluate(card => { const image = card.querySelector('.odyssey-operations-illustration'); return { width: image.offsetWidth, height: image.offsetHeight, transform: getComputedStyle(image).transform } })).toEqual({ ...artworkSize, transform: 'none' })
+        await region(page).screenshot({ path: `${evidence}/quick-tilt-enhanced-${dark ? 'dark' : 'light'}-${kind}.png` })
+      }
+      observations.push({ kind: kind || 'case', ...samples.at(-1) })
       await page.mouse.move(1, 1)
       await expect.poll(() => card.evaluate(element => ({ flag: element.hasAttribute('data-odyssey-operations-tilting'), transform: getComputedStyle(element).transform }))).toEqual({ flag: false, transform: 'none' })
       await card.dispatchEvent('pointermove', { clientX: point.x, clientY: point.y, pointerType: 'touch', bubbles: true })
       await nextPaint(page)
       expect(await card.evaluate(element => getComputedStyle(element).transform)).toBe('none')
     }
+    await writeFile(`${evidence}/quick-tilt-enhanced-${dark ? 'dark' : 'light'}.json`, JSON.stringify(observations, null, 2))
   } finally { await page.close() }
 }, 20000)
 
@@ -1038,7 +1049,7 @@ it('separates neutral dark glass faces from black, blue-black, and busy backgrou
   } finally { await page.close() }
 }, 15000)
 
-it('renders a faint moving ambient gradient inside every quick card without obscuring white-backdrop labels or leaking past the corners', async () => {
+it('renders clearly moving distinct ambient gradients inside every quick card without obscuring white-backdrop labels or leaking past the corners', async () => {
   const observations = []
   const difference = (first, second, card) => {
     let sum = 0, count = 0
@@ -1063,10 +1074,17 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
       }))
       const frames = []
       const seek = fraction => page.locator('.odyssey-operations-quick-card').evaluateAll((cards, fraction) => {
-        for (const card of cards) for (const animation of card.getAnimations({ subtree: true })) if ('animationName' in animation) { animation.pause(); animation.currentTime = 16000 * fraction }
+        const phases = []
+        for (const card of cards) for (const animation of card.getAnimations({ subtree: true })) if ('animationName' in animation) {
+          const timing = animation.effect.getTiming()
+          animation.pause(); animation.currentTime = Number(timing.duration) * (1 + fraction) + timing.delay
+          phases.push({ direction: timing.direction, progress: animation.effect.getComputedTiming().progress })
+        }
+        return phases
       }, fraction)
       for (const phase of [0, .25, .5, .75]) {
-        await seek(phase)
+        const timing = await seek(phase)
+        if (phase === 0 || phase === .5) for (const sample of timing) expect(sample.progress, 'the raster samples the actual animation endpoint or peak').toBeCloseTo(phase === .5 ? .5 : sample.direction === 'reverse' ? 1 : 0, 5)
         await page.locator('.odyssey-operations-quick-label').evaluateAll(labels => labels.forEach(label => label.style.visibility = 'hidden'))
         const frame = PNG.sync.read(await page.screenshot()); frames.push(frame)
         for (const [index, card] of geometry.entries()) {
@@ -1084,7 +1102,7 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
         const phaseDifferences = []
         for (let from = 0; from < frames.length; from++) for (let to = from + 1; to < frames.length; to++) phaseDifferences.push(difference(frames[from], frames[to], card))
         const outside = [[card.x - 2, card.y + card.height / 2], [card.x + card.width + 2, card.y + card.height / 2], [card.x + card.width / 2, card.y - 2], [card.x + 1, card.y + 1]]
-        const outsideDifference = Math.max(...outside.map(([x, y]) => patchRgb(frames[0], x, y, 0).reduce((sum, value, channel) => sum + Math.abs(value - patchRgb(plain, x, y, 0)[channel]), 0) / 3))
+        const outsideDifference = Math.max(...frames.flatMap(frame => outside.map(([x, y]) => patchRgb(frame, x, y, 0).reduce((sum, value, channel) => sum + Math.abs(value - patchRgb(plain, x, y, 0)[channel]), 0) / 3)))
         const headerPatches = []
         for (let y = 8; y < 40; y += 4) for (let x = 8; x < card.width - 8; x += 4) {
           const actual = patchRgb(frames[0], card.x + x, card.y + y), bare = patchRgb(plain, card.x + x, card.y + y)
@@ -1110,10 +1128,10 @@ it('renders a faint moving ambient gradient inside every quick card without obsc
   for (const observation of observations) {
     if ('minimumLabelContrast' in observation) expect(observation.minimumLabelContrast, `${observation.dark ? 'dark' : 'light'} card ${observation.index} label at phase ${observation.phase}`).toBeGreaterThanOrEqual(4.5)
     else {
-      expect(observation.decorationDifference, 'the ambient gradient is visibly present beyond the opaque artwork').toBeGreaterThan(3)
-      expect(observation.visibleHeaderDifference, 'a visible header patch reveals the gradient instead of hiding it beneath the illustration').toBeGreaterThan(5)
-      expect(observation.decorationDifference, 'the ambient layer remains restrained').toBeLessThan(10)
-      expect(observation.maximumPhaseDifference, 'the ambient layer moves subtly over its full cycle').toBeGreaterThan(.02)
+      expect(observation.decorationDifference, 'the ambient gradient is clearly present beyond the opaque artwork').toBeGreaterThan(5)
+      expect(observation.visibleHeaderDifference, 'a visible header patch reveals the gradient instead of hiding it beneath the illustration').toBeGreaterThan(8)
+      expect(observation.decorationDifference, 'the ambient layer remains restrained').toBeLessThan(16)
+      expect(observation.maximumPhaseDifference, 'every gradient visibly changes over its full cycle').toBeGreaterThan(1.25)
       expect(observation.outsideDifference, 'the ambient layer remains inside the clipped card').toBeLessThanOrEqual(1)
     }
   }
@@ -1675,6 +1693,8 @@ it.each([
 it.each([
   { dark: false, reduced: false, name: 'light-wide' },
   { dark: true, reduced: false, name: 'dark-wide' },
+  { dark: false, reduced: false, width: 1040, height: 640, panel: true, enhancedCorners: true, name: 'light-narrow-motion' },
+  { dark: true, reduced: false, width: 1040, height: 640, panel: true, enhancedCorners: true, name: 'dark-narrow-motion' },
   { dark: false, reduced: true, width: 1040, height: 640, panel: true, name: 'light-narrow-reduced' },
   { dark: true, reduced: true, width: 1040, height: 640, panel: true, name: 'dark-narrow-reduced' }
 ])('keeps %s operations visible and every quick card reachable inside the center pane', async options => {
@@ -1725,6 +1745,21 @@ it.each([
       expect(motion.animation.split(',').every(value => parseFloat(value) <= .001)).toBe(true)
       expect(motion.transform).toBe('none')
       await region(page).evaluate(element => element.scrollTop = 0)
+    }
+    if (options.enhancedCorners) {
+      for (const anchor of await page.locator('.odyssey-operations-quick-anchor').all()) {
+        await anchor.scrollIntoViewIfNeeded()
+        for (const corner of [.06, .94]) {
+          const bounds = await anchor.boundingBox(), point = { x: bounds.x + bounds.width * corner, y: bounds.y + bounds.height * corner }
+          await page.mouse.move(point.x, point.y)
+          await expect.poll(() => anchor.locator('.odyssey-operations-quick-card').evaluate(card => Math.abs(parseFloat(card.style.getPropertyValue('--ry')) || 0))).toBeGreaterThan(7)
+          await expect.poll(() => anchor.evaluate((anchor, point) => {
+            const card = anchor.firstElementChild, rect = card.getBoundingClientRect(), pane = anchor.closest('.pI_x6G_centerCol').getBoundingClientRect(), hit = document.elementFromPoint(point.x, point.y)
+            return { hit: hit === anchor || anchor.contains(hit), inside: rect.left >= pane.left && rect.right <= pane.right && rect.top >= pane.top && rect.bottom <= pane.bottom, colored: Number(getComputedStyle(card.querySelector('img.colored')).opacity) }
+          }, point)).toEqual({ hit: true, inside: true, colored: 1 })
+        }
+      }
+      await region(page).screenshot({ path: `${evidence}/${options.name}-tilted.png` })
     }
     await page.mouse.move(1, 1)
     await page.waitForTimeout(options.reduced ? 0 : 220)
