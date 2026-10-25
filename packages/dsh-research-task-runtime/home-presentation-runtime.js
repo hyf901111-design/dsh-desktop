@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto'
 import {lstat,mkdir,readFile,realpath,writeFile} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {isHomeGuideSessionTitle} from './home-guide-session-titles.js'
 
 export function createHomePresentationBrief(metadata){return `帮我把这份研报整理成一份公司风格的汇报PPT，${metadata.presentationSlides}页左右，讲清主要观点并配上关键图表。`}
 export const HOME_PRESENTATION_FILE='人工智能周期与资产配置.pptx'
@@ -121,7 +122,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
     if(!agent||session.header.cwd!==input.cwd||session.header.parentSession||session.header.origin==='subagent'||agent.status==='running'||session.events.some(e=>['user/message','assistant/message','tool/call','turn/start',EVENT].includes(e.type)))throw Error('演示只能在新建的独立空白会话中启动。')
     if(typeof env.DSH_HOME!=='string')throw Error('客户端示例资源尚未就绪。')
     const rows=JSON.parse(await readFile(join(env.DSH_HOME,'research-board-directories.json'),'utf8'))
-    if(!Object.values(rows).some(row=>row.sessionId===session.id&&row.path===input.cwd&&/^公司风格演示示例(?: · 练习副本)?$/.test(row.title)))throw Error('示例会话未登记专属目录。')
+    if(!Object.values(rows).some(row=>row.sessionId===session.id&&row.path===input.cwd&&isHomeGuideSessionTitle('ppt',row.title)))throw Error('示例会话未登记专属目录。')
     await mkdir(input.cwd,{recursive:true});if((await lstat(input.cwd)).isSymbolicLink())throw Error('示例目录不能是符号链接。');const root=await realpath(input.cwd)
     const {metadata,sourceBytes,bytes}=await loadHomePresentationAssets()
     checkPreparing()

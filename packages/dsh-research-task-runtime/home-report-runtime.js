@@ -5,6 +5,7 @@ import {constants} from 'node:fs'
 import {lstat,mkdir,open,readFile,realpath,writeFile,link,unlink} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {isHomeGuideSessionTitle} from './home-guide-session-titles.js'
 import {streamHomePresentationReplayText} from './home-presentation-runtime.js'
 import {HOME_REPORT_PATH,HOME_REPORT_EVENT,HOME_REPORT_SKILL_ID,HOME_REPORT_HTML_FILE,HOME_REPORT_PDF_FILE,HOME_REPORT_ORIGIN_SESSION_ID,createHomeReportBrief} from './home-report-contract.js'
 
@@ -118,7 +119,7 @@ export function createHomeReportRuntime(ctx,{env=process.env,assetsDirectory}={}
     if(!agent||session.header.cwd!==input.cwd||session.header.parentSession||session.header.origin==='subagent'||agent.status==='running'||occupied())throw Error('报告示例只能在新建独立空白会话中启动。')
     if(typeof env.DSH_HOME!=='string')throw Error('报告示例资料尚未就绪。')
     const directories=JSON.parse(await readFile(join(env.DSH_HOME,'research-board-directories.json'),'utf8'))
-    if(!Object.values(directories).some(row=>row.sessionId===session.id&&row.path===input.cwd&&/^研究报告示例(?: · 练习副本)?$/.test(row.title)))throw Error('报告示例尚未登记专属目录。')
+    if(!Object.values(directories).some(row=>row.sessionId===session.id&&row.path===input.cwd&&isHomeGuideSessionTitle('report',row.title)))throw Error('报告示例尚未登记专属目录。')
     await mkdir(input.cwd,{recursive:true});if((await lstat(input.cwd)).isSymbolicLink())throw Error('报告示例目录不能是符号链接。');const root=await realpath(input.cwd)
     const {metadata,htmlBytes,pdfBytes}=await loadHomeReportAssets(assetsDirectory);valid()
     if(ctx.agents.get(input.sessionId)!==agent||agent.status==='running'||occupied())throw Error('会话已有内容，未启动报告示例。')

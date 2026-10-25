@@ -1,4 +1,5 @@
 import {waitForMemorySource} from './memory/source'
+import {homeGuideSessionTitle,legacyHomeGuideSessionTitle} from '../../packages/dsh-research-task-runtime/home-guide-session-titles.js'
 import { researchBoardRunning } from './research-board-activity'
 import { orderBoardConversationGroups } from './research-board-conversation-order'
 import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
@@ -830,7 +831,6 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   let guideSelectedSession = current(), guideSelectionRevision = 0, guideSelectedAttempt = ''
   const guideRequests = new Map<string, { fingerprint: string; promise: Promise<Record<string, unknown>>; owner?: string; generation?: number; revision?: number }>()
   const guideReadyWaiters = new Set<{ resolve(): void; reject(error: Error): void }>()
-  const guideTitles = { board: '自选行情示例看板', note: 'AI 护航研究笔记示例', ppt: '公司风格演示示例', report: '研究报告示例' }
   const guideOwner = () => state.account.user?.userId ? 'account:' + state.account.user.userId : 'local'
   const guideStorage = () => {
     const storage = (win as Window & { dshDesktop?: { researchCanvasStorage?: { getItem(key: string): string | null; setItem(key: string, value: string): boolean } } }).dshDesktop?.researchCanvasStorage
@@ -855,6 +855,51 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const archived = deps.workspaces.list.getSnapshot().archivedSessionIds ?? []
     return summary && !summary.removed && !summary.subagent && summary.cwd === entry.cwd && !archived.includes(entry.sessionId)
   }
+  const guideTitleFlights=new Map<string,Promise<void>>(),guideTitleAttempts=new Set<string>()
+  const migrateGuideTitles=(retry=false):Promise<void>=>{
+    if(disposed||state.account.status==='loading')return Promise.resolve()
+    const owner=guideOwner(),generation=state.account.generation,revision=guideIdentityRevision,key=JSON.stringify([owner,generation,revision])
+    const previous=guideTitleFlights.get(key);if(previous)return previous
+    const valid=()=>{if(disposed||owner!==guideOwner()||generation!==state.account.generation||revision!==guideIdentityRevision)throw Error('账号或页面已变化，未更新示例名称。')}
+    const work=(async()=>{
+      for(const entry of guideRegistry(owner)){
+        valid();if(!guideSessionAvailable(entry))continue
+        const summary=()=>deps.sessions.list.getSnapshot().byId[entry.sessionId]
+        const rootSession=()=>!summary()?.parentId&&summary()?.origin!=='subagent'
+        if(!rootSession())continue
+        const replay=entry.title===legacyHomeGuideSessionTitle(entry.kind,true),oldTitle=legacyHomeGuideSessionTitle(entry.kind,replay),title=homeGuideSessionTitle(entry.kind,replay)
+        if(entry.title!==oldTitle)continue
+        if(summary()?.title!==oldTitle&&summary()?.title!==title)continue
+        const binding=deps.sessions.binding(entry.sessionId)
+        // Native rename settles this projection before the list's next frame.
+        const actualTitle=()=>binding?.session?.projections?.faceOf?.('title')?.getSnapshot?.()??summary()?.title
+        if(actualTitle()!==oldTitle&&actualTitle()!==title)continue
+        const attempt=JSON.stringify([key,entry.sessionId,entry.cwd,oldTitle]);if(!retry&&guideTitleAttempts.has(attempt))continue
+        guideTitleAttempts.add(attempt)
+        if(actualTitle()===oldTitle){
+          if(!binding?.session?.rename)throw Error('示例会话尚未就绪。')
+          const result=await binding.session.rename(title);valid()
+          if(result?.ok!==true)throw Error(result?.error?.message||'示例名称保存失败。')
+        }
+        valid();if(!guideSessionAvailable(entry)||!rootSession()||actualTitle()!==title)continue
+        const latest=guideRegistry(owner),index=latest.findIndex(row=>row.sessionId===entry.sessionId&&row.cwd===entry.cwd&&row.title===oldTitle)
+        if(index<0)continue
+        const next=latest.map((row,i)=>i===index?{...row,title}:row)
+        if(guideStorage().setItem(guidePrefix+encodeURIComponent(owner),JSON.stringify({version:1,scope:owner,entries:next}))!==true)throw Error('示例名称已更新，注册记录尚未保存，请重试。')
+        guideRecords.set(owner,next);notify()
+      }
+    })()
+    guideTitleFlights.set(key,work);void work.finally(()=>{if(guideTitleFlights.get(key)===work)guideTitleFlights.delete(key)}).catch(()=>{})
+    return work
+  }
+  let guideTitleScheduled=false
+  const scheduleGuideTitles=()=>{
+    if(disposed||guideTitleScheduled||state.account.status==='loading')return
+    guideTitleScheduled=true
+    win.queueMicrotask(()=>{guideTitleScheduled=false;if(!disposed)void migrateGuideTitles().catch(()=>{})})
+  }
+  listeners.add(scheduleGuideTitles);cleanups.push(()=>{listeners.delete(scheduleGuideTitles);guideTitleAttempts.clear()})
+  scheduleGuideTitles()
   const getHomeGuideSession = (id: string): GuideSession | undefined => {
     if (disposed || state.account.status === 'loading') return
     try { return guideRegistry().find(entry => entry.sessionId === id && guideSessionAvailable(entry)) } catch { return }
@@ -922,6 +967,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (disposed || guideOwner() !== owner || state.account.generation !== generation || identityRevision !== guideIdentityRevision) throw Error('账号或页面已变化，请重新打开示例。')
     }
     valid()
+    await migrateGuideTitles(true);valid()
     const records = guideRegistry(owner)
     const previous = !replay && [...records].reverse().find(entry => entry.kind === kind && guideSessionAvailable(entry))
     const key = JSON.stringify([owner, generation, identityRevision, kind, replay])
@@ -930,13 +976,14 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       flight = (async () => {
         if (previous) { await ensureGuideWorkspace(previous, valid); return previous }
         if (records.filter(guideSessionAvailable).length >= 100) throw Error('已保存较多示例，请先整理不再需要的示例会话。')
-        const title = guideTitles[kind] + (replay ? ' · 练习副本' : '')
+        const title = homeGuideSessionTitle(kind,replay)
         const basePath = await defaultDirectory(); valid()
         const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath }); valid()
         const sessionId = await deps.sessions.create({ cwd: directory.path }); valid()
         const binding = deps.sessions.binding(sessionId)
         if (!binding?.session?.rename) throw Error('示例会话尚未就绪，请稍后重试。')
-        await binding.session.rename(title); valid()
+        const renamed=await binding.session.rename(title);valid()
+        if(renamed?.ok!==true)throw Error(renamed?.error?.message||'示例名称保存失败。')
         await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId }); valid()
         await call('local.directory', { mode: 'ensure', sessionId }); valid()
         const entry: GuideSession = { kind, sessionId, cwd: directory.path, title, createdAt: Date.now() }

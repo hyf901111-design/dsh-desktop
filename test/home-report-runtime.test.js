@@ -11,7 +11,20 @@ import {HOME_REPORT_HTML_FILE,HOME_REPORT_PDF_FILE} from '../packages/dsh-resear
 const clean=[]
 afterEach(async()=>{for(const dispose of clean.splice(0).reverse())await dispose()})
 const until=async(fn)=>{for(let i=0;i<500;i++){if(fn())return;await new Promise(resolve=>setTimeout(resolve,10))}throw Error('native report event timeout')}
-async function fixture(){expect(mod.createHomeReportRuntime).toBeTypeOf('function');const f=await reportRuntimeFixture();clean.push(f.dispose);return f}
+async function fixture(title='研究报告示例（演示案例）'){expect(mod.createHomeReportRuntime).toBeTypeOf('function');const f=await reportRuntimeFixture();clean.push(f.dispose);await writeFile(join(f.home,'research-board-directories.json'),JSON.stringify({report:{sessionId:f.input.sessionId,path:f.cwd,title}}));return f}
+
+it.each(['研究报告示例','研究报告示例 · 练习副本','研究报告示例（演示案例）','研究报告示例 · 练习副本（演示案例）'])('prepares the registered native report session titled %s',async title=>{
+ const f=await fixture(title)
+ expect(await f.runtime.prepare(f.input)).toMatchObject({ready:true,reportTitle:f.metadata.reportTitle})
+ expect(f.agent.session.events.some(event=>event.type==='home-guide/report')).toBe(true)
+ expect(f.outside).toEqual([])
+})
+it('refuses a renamed report session before taking ownership',async()=>{
+ const f=await fixture('研究报告示例（演示案例） · 练习副本')
+ await expect(f.runtime.prepare(f.input)).rejects.toThrow('专属目录')
+ expect(f.agent.session.events.some(event=>event.type==='home-guide/report')).toBe(false)
+ expect(f.outside).toEqual([])
+})
 
 it('saves both real artifact formats through the actual agent tools and preserves public history without a model call',async()=>{
  const f=await fixture()
