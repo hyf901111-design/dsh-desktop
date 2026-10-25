@@ -1,0 +1,5 @@
+export const HOME_NOTES_TASK_PROMPT:string
+export const HOME_NOTES_REWRITE_PROMPT:string
+export const HOME_NOTES_GUIDE_SELECTION:string
+export const HOME_NOTES_TASK_RESULT:string
+export const HOME_NOTES_REWRITE_RESULT:string

@@ -4,15 +4,20 @@ import {NotesApp,type NotesGuideEditorApi,type NotesGuideBinding} from './notes/
 import {noteText} from '../shared/workspace-notes'
 import type {NotesBridge} from '../shared/workspace-notes'
 import {HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_GUIDE_TITLE,createHomeNotesGuideBridge} from './home-guide-notes-data'
+import {createHomeNotesNativeBridge,type HomeNotesNativeBridge} from './home-guide-notes-native'
+import {HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 
-export type HomeNotesGuideStep='write'|'challenge'|'review'|'select'|'optimize'|'replace'
+export type HomeNotesGuideStep='write'|'challenge'|'review'|'select'|'optimize'|'replace'|'note-task-compose'|'note-task-review'|'note-task-apply'|'note-select-paragraph'|'note-rewrite'|'note-rewrite-apply'
 export type HomeNotesGuide={runStep(step:HomeNotesGuideStep):Promise<void>;flush():Promise<void>;dispose():void}
-type Options={signal:AbortSignal;sessionId?:string;runId?:string;fresh?:boolean;persistence?:NotesBridge;onStatus?(text:string):void;waitUntilPlaying?():Promise<void>;wait?(ms:number,signal?:AbortSignal):Promise<void>}
+type Options={signal:AbortSignal;sessionId?:string;runId?:string;cwd?:string;fresh?:boolean;persistence?:NotesBridge;native?:HomeNotesNativeBridge;onStatus?(text:string):void;waitUntilPlaying?():Promise<void>;wait?(ms:number,signal?:AbortSignal):Promise<void>}
 /** Real editor and comments; only its prepared session persists, with local demo AI responses. */
 export async function mountHomeNotesGuide(document:Document,host:HTMLElement,options:Options):Promise<HomeNotesGuide>{
  if(options.persistence&&(!options.sessionId||typeof options.fresh!=='boolean'))throw Error('请先准备独立的教程笔记会话。')
  const scope=new AbortController(),signal=scope.signal,sessionId=options.sessionId||'home-guide-notes-'+crypto.randomUUID()
- const bridge=createHomeNotesGuideBridge(sessionId,signal,()=>playing(),options.persistence?{bridge:options.persistence,fresh:options.fresh!}:undefined,ms=>wait(ms)),container=document.createElement('div')
+ const useNative=options.fresh!==false&&(!!options.native||!!(options.persistence&&options.sessionId&&options.cwd&&options.runId&&document.documentElement.dataset.homeGuidePointerRun===options.runId))
+ if(useNative&&!options.runId)throw Error('请先准备独立的教程播放标识。')
+ let native=options.native
+ const bridge=createHomeNotesGuideBridge(sessionId,signal,()=>playing(),options.persistence?{bridge:options.persistence,fresh:options.fresh!}:undefined,ms=>wait(ms),useNative?{generate:async input=>{if(!native)throw Error('原生笔记输入区尚未就绪。');return native.generate(input)},stop:async requestId=>{await native?.stop(requestId)}}:undefined),container=document.createElement('div')
  container.className='en-editor-host';container.style.height='100%';host.append(container)
  const root=createRoot(container)
  let editor:NotesGuideEditorApi|undefined,disposed=false,completed=0,busy=false,selectedThread='',expected='',finalFlush:Promise<void>|undefined
@@ -101,16 +106,16 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   // storage bridge open until this queue settles, even on a direct abort.
   finalFlush=flush();disposed=true
   host.removeEventListener('beforeinput',interrupted,true);host.removeEventListener('paste',interrupted,true);host.removeEventListener('drop',interrupted,true)
-  options.signal.removeEventListener('abort',dispose);root.unmount();container.remove()
+  options.signal.removeEventListener('abort',dispose);native?.dispose();root.unmount();container.remove()
   void finalFlush.catch(()=>{}).finally(()=>{scope.abort(new DOMException('演示已结束。','AbortError'));bridge.dispose()})
  }
  const interrupted=(event:Event)=>{if((event.target as Element)?.closest?.('.bn-editor,.en-title,.en-challenge-reply'))dispose()}
  if(options.fresh!==false){host.addEventListener('beforeinput',interrupted,true);host.addEventListener('paste',interrupted,true);host.addEventListener('drop',interrupted,true)}
  options.signal.addEventListener('abort',dispose,{once:true})
  if(options.signal.aborted){dispose();throw abortError()}
- const binding:NotesGuideBinding={ready:api=>{if(disposed)return;editor=api},dispose:api=>{if(editor===api)editor=undefined}}
+ const binding:NotesGuideBinding={...(useNative?{native:{runId:options.runId!}}:{}),ready:api=>{if(disposed)return;editor=api},dispose:api=>{if(editor===api)editor=undefined}}
  root.render(<NotesApp sessionId={sessionId} activityId={sessionId} bridge={bridge} dark={host.dataset.dark==='true'||document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>dispose()} guide={binding}/>)
- try{await until(()=>editor&&query('.bn-editor'))}
+ try{await until(()=>editor&&query('.bn-editor'));if(useNative&&!native)native=await createHomeNotesNativeBridge(document,host,{sessionId,runId:options.runId!,cwd:options.cwd!,fresh:options.fresh!,signal,wait})}
  catch(error){dispose();throw error}
  const scrollTo=(element:HTMLElement,onlyIfNeeded=false)=>{const scroll=query('.en-document-scroll');if(scroll){const rect=element.getBoundingClientRect(),area=scroll.getBoundingClientRect();if(onlyIfNeeded&&rect.top>=area.top+40&&rect.bottom<=area.bottom-50)return;scroll.scrollTo({top:scroll.scrollTop+rect.top-area.top-Math.max(70,area.height*.18),behavior:'smooth'})}}
  const write=async()=>{
@@ -211,7 +216,46 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   await until(()=>editor!.reviewReady(),10000);await flush()
   options.onStatus?.('增速已统一为 10%，这篇笔记和挑战记录已保留')
  }
- const steps=[write,challenge,review,select,optimize,replace]
- return {async runStep(step){assert();const index=(['write','challenge','review','select','optimize','replace'] as const).indexOf(step);if(busy||index<0||index!==completed)throw Error('演示步骤顺序已变化，请重新播放。');busy=true
+ const nativeReady=()=>{assert();if(!native||document.documentElement.dataset.homeGuidePointerRun!==options.runId)throw Error('原生笔记输入区已变化，请重新播放。');return native}
+ const unchanged=()=>{if(fingerprint()!==expected)throw Error('演示笔记已被编辑，较新内容已保留。')}
+ const rewriteButton=()=>{assert();return [...document.querySelectorAll<HTMLButtonElement>('.en-ai-format')].find(button=>{try{validTarget(button,true);return true}catch{return false}})}
+ const preview=async(replace=false)=>until(()=>{
+  const error=query('.en-error');if(error)throw Error(error.textContent||'笔记生成未完成。')
+  return [...host.querySelectorAll<HTMLButtonElement>('.en-preview button')].find(button=>button.textContent=== (replace?'替换所选':'添加至正文'))
+ },90000)
+ const taskCompose=async()=>{await playing();unchanged();editor!.prepareNative();await nativeReady().type('note')}
+ const taskReview=async()=>{await preview();unchanged();await playing()}
+ const taskApply=async()=>{
+  const apply=await preview();unchanged();await click(apply,'把研究摘要添加至正文')
+  await until(()=>text().includes(HOME_NOTES_TASK_RESULT.split('\n\n')[1]!));await frame();expected=fingerprint();await flush()
+ }
+ const selectParagraph=async()=>{
+  await playing();nativeReady();unchanged()
+  const paragraph=await until(()=>query<HTMLElement>('[data-id="guide-note-logic"] .bn-inline-content'))
+  if(paragraph.textContent!==HOME_NOTES_GUIDE_SELECTION)throw Error('演示段落已变化。')
+  scrollTo(paragraph);await wait(550)
+  const endpoints=()=>{const range=document.createRange();range.selectNodeContents(paragraph);const boxes=[...range.getClientRects()].filter(box=>box.width>0&&box.height>0),first=boxes[0],last=boxes.at(-1);if(!first||!last)throw Error('演示段落尚未就绪。');return[{x:first.left+1,y:first.top+first.height/2},{x:last.right-1,y:last.top+last.height/2}]}
+  const points=endpoints(),anchors=points.map(point=>{const anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;background:transparent;left:'+point.x+'px;top:'+point.y+'px';document.body.append(anchor);return anchor})
+  try{
+   await point(anchors[1]!,'选中这一整段研究判断','drag',anchors[0]);unchanged()
+   if(endpoints().some((point,index)=>Math.hypot(point.x-points[index]!.x,point.y-points[index]!.y)>4))throw Error('演示段落的位置已变化，请重新播放。')
+   editor!.selectParagraph('guide-note-logic',HOME_NOTES_GUIDE_SELECTION)
+  }finally{for(const anchor of anchors)anchor.remove()}
+  await until(rewriteButton);await frame()
+ }
+ const rewrite=async()=>{
+  await playing();unchanged()
+  // Next/pause are real outside controls. Restore the same validated paragraph
+  // after they take focus, so the native floating toolbar can reopen normally.
+  editor!.selectParagraph('guide-note-logic',HOME_NOTES_GUIDE_SELECTION)
+  await until(rewriteButton);await frame();const button=await until(rewriteButton)
+  await click(button,'AI 改写所选段落');await nativeReady().type('selection');await preview(true);unchanged()
+ }
+ const rewriteApply=async()=>{
+  const apply=await preview(true);unchanged();await click(apply,'替换所选段落，保留其余研究内容')
+  await until(()=>text().includes(HOME_NOTES_REWRITE_RESULT));await frame();expected=fingerprint();await until(()=>editor!.reviewReady(),10000);await flush()
+ }
+ const steps=[write,challenge,review,select,optimize,replace,taskCompose,taskReview,taskApply,selectParagraph,rewrite,rewriteApply]
+ return {async runStep(step){assert();const index=(['write','challenge','review','select','optimize','replace','note-task-compose','note-task-review','note-task-apply','note-select-paragraph','note-rewrite','note-rewrite-apply'] as const).indexOf(step);if(busy||index<0||index!==completed)throw Error('演示步骤顺序已变化，请重新播放。');busy=true
    try{await steps[index]!();assert();completed++}catch(error){dispose();throw error}finally{busy=false}},flush,dispose}
 }

@@ -2,13 +2,15 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
 import {notesComposerSource,patchNotesComposer} from '../scripts/lib/notes-composer.mjs'
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 const repo=process.cwd(),require=createRequire(repo+'/package.json'),{build}=require('esbuild')
 // Production serializes these helpers with native Node, not Vite's SSR-import rewrites.
 const {patchNotesActivity}=require('./scripts/lib/notes-activity.mjs')
 let browser,script,css
 beforeAll(async()=>{
  const runtime=await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- const native=patchNotesActivity(patchNotesComposer(await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))).replace('exports.SessionInputShell = SessionInputShell;','exports.SessionInputShell = SessionInputShell; exports.__InputBar=InputBar; exports.__NoteHistory=EWorkNotesActivity;')
+ const native=patchNotesActivity(patchNotesComposer(stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))).replace('exports.SessionInputShell = SessionInputShell;','exports.SessionInputShell = SessionInputShell; exports.__InputBar=InputBar; exports.__NoteHistory=EWorkNotesActivity;')
 const output=await build({stdin:{resolveDir:repo,loader:'tsx',contents:`
 import React from 'react';import * as jsxRuntime from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';
 import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
@@ -151,7 +153,7 @@ it('acknowledges immediately while real stages use the existing native progress 
   await page.clock.install();await send(page,'优化本篇笔记')
   const feedback=page.locator('#history [data-note-feedback]');await feedback.waitFor();expect(await feedback.textContent()).toContain('已收到，正在处理这条笔记指令。')
   const id=await page.evaluate(()=>window.noteTasks.find(row=>row.phase==='preparing').requestId)
-  for(const [stage,label]of [['model','正在连接当前模型'],['thinking','正在思考'],['writing','正在撰写内容'],['validating','正在检查生成内容']]){
+  for(const [stage,label]of [['model','正在思考'],['thinking','正在思考'],['writing','正在撰写内容'],['validating','正在检查生成内容']]){
    await page.evaluate(({id,stage})=>document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:{sessionId:'send-preview',requestId:id,stage,reasoning:'PRIVATE-REASONING',outputChars:0}})),{id,stage})
    await expect.poll(()=>page.locator('[data-native-note-progress]').textContent()).toContain(label);expect(await feedback.textContent()).toBe('已收到，正在处理这条笔记指令。');expect(await feedback.count()).toBe(1);expect(await feedback.locator('.en-task-feedback-progress').count()).toBe(0)
   }

@@ -1,6 +1,8 @@
 import type {ChallengeRequest,ChallengeResult,ChallengeIssue} from '../shared/notes-challenge'
 import type {NotesBridge,NoteContent,SavedNote,NoteLoad} from '../shared/workspace-notes'
 import {challengeReplacementScope} from '../shared/notes-challenge'
+import type {HomeNotesNativeBridge} from './home-guide-notes-native'
+import {HOME_NOTES_GUIDE_SELECTION} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 
 export const HOME_NOTES_GUIDE_TITLE='AI算力产业链：从订单增长到利润兑现'
 export const HOME_NOTES_GUIDE_BLOCKS=[
@@ -9,7 +11,7 @@ export const HOME_NOTES_GUIDE_BLOCKS=[
  {id:'guide-note-growth',type:'paragraph',content:'根据演示数据，样本公司2025年收入为120亿元，2026年预计收入为132亿元，同比增长20%。新增订单主要来自推理集群与存量机房改造，但交付排期、客户验收和供电条件仍可能影响确认节奏，应把订单余额与当期收入分开观察。'},
  {id:'guide-note-typo',type:'paragraph',content:'供给端的关键变化是产能利用率的边际改膳。先进封装、互联网络与电力基础设施共同决定交付能力，单一环节扩产并不等于整条产业链约束已消除；后续需要交叉验证设备交期、在制品规模与库存周转天数。'},
  {id:'guide-note-heading2',type:'heading',props:{level:2},content:'二、盈利弹性与证据链'},
- {id:'guide-note-logic',type:'paragraph',content:'订单同比增长即可保证全年净利润翻倍。这一判断隐含了产品价格稳定、费用率不变且新增产能立即满产的假设。研究中应分别建立销量、单价、毛利率与费用率的敏感性分析，并追踪现金回款与利润增速是否一致。'},
+ {id:'guide-note-logic',type:'paragraph',content:HOME_NOTES_GUIDE_SELECTION},
  {id:'guide-note-evidence',type:'paragraph',content:'下一步验证分为三层：先核对订单口径与重复统计，再比较收入增长和经营现金流，最后检查资本开支能否形成合理回报。若收入增加但应收款持续攀升，需重新评估增长质量；若毛利改善来自一次性补贴，也应从持续盈利中剔除。'},
  {id:'guide-note-heading3',type:'heading',props:{level:2},content:'三、跟踪指标与反证条件'},
  {id:'guide-note-risks',type:'paragraph',content:'核心跟踪指标包括在手订单转化率、交付周期、毛利率、经营现金流与客户集中度。若两期订单转化率连续下降，或现金回款明显落后于收入，应降低对增长兑现速度的判断。所有预测保留基准、乐观与审慎三种情景，并明确每项结论所依赖的证据与失效条件。对估值的讨论应落在可持续自由现金流上，区分行业景气带来的短期溢价与企业竞争优势，避免以单季度高增长外推长期表现。每次更新保留原始假设与修订原因，形成可以回溯的判断记录。'}
@@ -33,7 +35,7 @@ export function homeNotesGuideChallengeResult(request:ChallengeRequest):Challeng
 
 export type HomeNotesGuideBridge=NotesBridge&{dispose():void}
 /** Only this prepared session reaches storage; challenge responses stay local. */
-export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,beforeReply?:()=>Promise<void>,persistence?:{bridge:NotesBridge;fresh:boolean},replyWait?:(ms:number)=>Promise<void>):HomeNotesGuideBridge{
+export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,beforeReply?:()=>Promise<void>,persistence?:{bridge:NotesBridge;fresh:boolean},replyWait?:(ms:number)=>Promise<void>,native?:Pick<HomeNotesNativeBridge,'generate'|'stop'>):HomeNotesGuideBridge{
  let closed=false,saved:SavedNote={title:'',blocks:[],yjs:'',revision:0,updatedAt:Date.now()}
  let admitted=!persistence
  const jobs=new Map<string,{cancel:()=>void}>()
@@ -57,6 +59,18 @@ export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,b
     return {status:'saved',saved:structuredClone(saved)}
    }
    if(method==='engage')return persistence?persistence.bridge.request('engage',input):{ok:true}
+   if(method==='conversation-state'&&native&&persistence)return persistence.bridge.request(method,input)
+   if(method==='stop'&&native){jobs.get(input.requestId)?.cancel();await native.stop(input.requestId);return {ok:true}}
+   if(method==='generate'&&native){
+    if(typeof input.requestId!=='string'||!input.requestId||typeof input.prompt!=='string'||!input.prompt.trim()||jobs.has(input.requestId))throw Error('演示笔记生成请求无效。')
+    const result=await new Promise<any>((resolve,reject)=>{
+     let settled=false
+     const finish=(error:unknown,value?:unknown)=>{if(settled)return;settled=true;jobs.delete(input.requestId);error?reject(error):resolve(value)}
+     jobs.set(input.requestId,{cancel:()=>finish(new DOMException('演示生成已取消。','AbortError'))})
+     void native.generate(input).then(value=>finish(null,value),error=>finish(error))
+    })
+    await beforeReply?.();assert(input);return result
+   }
    if(method==='challenge-stop'){jobs.get(input.requestId)?.cancel();return {ok:true}}
    if(method==='challenge'){
     const value=input as ChallengeRequest

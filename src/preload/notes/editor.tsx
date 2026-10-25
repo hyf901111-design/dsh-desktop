@@ -57,8 +57,10 @@ export type NotesGuideEditorApi = {
   setDocument(title:string,blocks:any[]):void
   appendBlock(block:any):void
   updateText(blockId:string,text:string):void
+  prepareNative():void
+  selectParagraph(blockId:string,expectedText:string):void
 }
-export type NotesGuideBinding = {ready(api:NotesGuideEditorApi):void;dispose?(api:NotesGuideEditorApi):void}
+export type NotesGuideBinding = {native?:{runId:string};ready(api:NotesGuideEditorApi):void;dispose?(api:NotesGuideEditorApi):void}
 export type NotesSaveBinding = {ready(flush:()=>Promise<void>):void;dispose?(flush:()=>Promise<void>):void}
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; active?:boolean; activityId?:string; navigate(view: string): void;guide?:NotesGuideBinding;saveBinding?:NotesSaveBinding }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -433,11 +435,12 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }
   useNoteDragAndDrop({editor,root:scroll,sessionId:props.sessionId,clientId:client.current,readOnly:!!props.recovery||props.active===false,dropFiles,finish:()=>setFileDrag(false)})
   useNoteReplyInsertion({editor,sessionId:props.sessionId,root:scroll,readOnly:!!props.recovery||props.active===false})
-  const publishComposer = (value: {running?: boolean;ready?: boolean}) => {if(!props.guide&&editorActive())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:!props.recovery,running:!!request.current||!!externalCapabilities.current?.pending(),...value}}))}
-  const setNativeDraft = (text?: string, focus=false) => {if(!props.guide)document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))}
-  const commitNativeDraft = (admission?:ComposerAdmission) => {if(!props.guide)document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))}
-  const rollbackNativeDraft = (admission?:ComposerAdmission) => {if(!props.guide)document.dispatchEvent(new CustomEvent('sherlock:notes-composer-rollback',{detail:{sessionId:props.sessionId,admission}}))}
-  const publishTask = (requestId:string,phase:string,value:Record<string,unknown>={}) => {if(props.guide)return;document.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:props.sessionId,requestId,phase,...value}}));if(['accepted','discarded'].includes(phase))void props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId,phase}).catch(()=>{})}
+  const nativeCurrent=()=>!props.guide||!!props.guide.native&&document.documentElement.dataset.homeGuidePointerRun===props.guide.native.runId
+  const publishComposer = (value: {running?: boolean;ready?: boolean}) => {if(nativeCurrent()&&editorActive())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:!props.recovery,running:!!request.current||!!externalCapabilities.current?.pending(),...value}}))}
+  const setNativeDraft = (text?: string, focus=false) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))}
+  const commitNativeDraft = (admission?:ComposerAdmission) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))}
+  const rollbackNativeDraft = (admission?:ComposerAdmission) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-rollback',{detail:{sessionId:props.sessionId,admission}}))}
+  const publishTask = (requestId:string,phase:string,value:Record<string,unknown>={}) => {if(!nativeCurrent())return;document.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:props.sessionId,requestId,phase,...value}}));if(['accepted','discarded'].includes(phase))void props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId,phase}).catch(()=>{})}
   const lastRequest=useRef<{prompt:string;images:any[];admission?:ComposerAdmission;captured:typeof selection.current;fingerprint:string;context:NoteReferenceContext;draftBlockId?:string}>()
   const generatingBlock = useRef('')
   const activeGeneration=useRef<{requestId:string;blockId:string;expected:string}>()
@@ -451,7 +454,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     }catch{return}
   }
   const generate = async (prompt: string, images: any[] = [], admission?:ComposerAdmission, retry?:typeof lastRequest.current, targetDraft?:string) => {
-    if ((!prompt.trim() && !images.length) || request.current || externalCapabilities.current?.pending() || props.recovery||!editorActive()) return
+    if ((!prompt.trim() && !images.length) || request.current || externalCapabilities.current?.pending() || props.recovery||!editorActive()||!nativeCurrent()) return
     externalCapabilities.current?.revoke()
     const draftBlockId=targetDraft||retry?.draftBlockId
     const draftBlock=draftBlockId?editor.getBlock(draftBlockId):undefined
@@ -485,7 +488,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       capabilityFingerprint.current=noteCapabilityFingerprint(snapshot())
       dataRefreshGuard.current.begin(requestId,snapshot())
       const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
-      if (disposed.current || epoch.current !== attempt) return
+      if (disposed.current || epoch.current !== attempt||!nativeCurrent()) return
       if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
       // Legacy component results still honor explicit creation after the generic
       // conversation loop has completed; they never bypass capability planning.
@@ -544,7 +547,8 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const stop = () => { externalCapabilities.current?.revoke();epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。"));challengeScheduleSync.current?.() }
   const inlineComponents=useInlineComponentGeneration({sessionId:props.sessionId,bridge:props.bridge,editor,current:()=>!disposed.current&&!props.recovery&&editorActive(),persist:persistConfirmed,changed,update:updateSystemComponent})
   const apply = async (replace: boolean) => {
-    if (!preview) return
+    if (!preview||!nativeCurrent()) return
+    if(props.guide?.native&&JSON.stringify(editor.document)!==preview.fingerprint){setError(t('笔记已变化，请重新生成建议，较新内容已保留。'));return}
     editor.focus()
     const blocks = preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
     const range=editor.getExtension(NoteAiSelection)?.currentRange()
@@ -558,7 +562,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const regenerate=()=>{const previous=lastRequest.current;if(!previous||request.current)return;if(preview)publishTask(preview.requestId,'discarded');const range=editor.getExtension(NoteAiSelection)?.currentRange();void generate(previous.prompt,previous.images,previous.admission,{...previous,captured:{...previous.captured,...(range||{from:0,to:0}),text:range?editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n'):''}})}
   const commands = useRef({generate,stop,exportNote:(_format?:string)=>{}});commands.current={generate,stop,exportNote:(format?:string)=>{void exportNote(format)}}
   useEffect(()=>{
-    if(props.guide)return
+    if(props.guide&&!props.guide.native)return
     const progress=(event:Event)=>{
       const value=(event as CustomEvent).detail
       if(value?.sessionId!==props.sessionId||value.requestId!==request.current)return
@@ -575,7 +579,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       updateSystemComponent(active.blockId,next);active.expected=JSON.stringify(next)
     }
     document.addEventListener('sherlock:notes-generation-progress',progress)
-    const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!editorActive()||detail?.sessionId!==props.sessionId||props.recovery||request.current||externalCapabilities.current?.pending()||(!detail.prompt?.trim()&&!detail.images?.length))return;document.dispatchEvent(new CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:props.sessionId,submissionId:detail.submissionId}}));void commands.current.generate(detail.prompt,detail.images,detail.admission)}
+    const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!nativeCurrent()||!editorActive()||detail?.sessionId!==props.sessionId||props.recovery||request.current||externalCapabilities.current?.pending()||(!detail.prompt?.trim()&&!detail.images?.length))return;document.dispatchEvent(new CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:props.sessionId,submissionId:detail.submissionId}}));void commands.current.generate(detail.prompt,detail.images,detail.admission)}
     const exportRequested=(event:Event)=>{if(editorActive()&&(event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.exportNote((event as CustomEvent).detail.format)}
     document.addEventListener('sherlock:notes-export',exportRequested)
     const cancel=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.stop()}
@@ -654,7 +658,17 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       },
       setDocument:(nextTitle,blocks)=>{assert();titleRef.current=nextTitle;setTitle(nextTitle);editor.replaceBlocks(editor.document,blocks);changed()},
       appendBlock:block=>{assert();editor.insertBlocks([block],editor.document.at(-1),'after')},
-      updateText:(blockId,text)=>{assert();if(!editor.getBlock(blockId))throw Error('演示段落已变化。');editor.updateBlock(blockId,{content:text})}
+      updateText:(blockId,text)=>{assert();if(!editor.getBlock(blockId))throw Error('演示段落已变化。');editor.updateBlock(blockId,{content:text})},
+      prepareNative:()=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError');clearSelection();const last=editor.document.at(-1);if(last)editor.setTextCursorPosition(last.id,'end')},
+      selectParagraph:(blockId,expectedText)=>{
+        assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')
+        const block=editor.getBlock(blockId)
+        if(!block||block.type!=='paragraph'||!expectedText.trim()||noteText(block.content)!==expectedText)throw Error('演示段落已变化。')
+        editor.focus();editor.setTextCursorPosition(blockId,'start')
+        const from=editor._tiptapEditor.state.selection.from,to=from+expectedText.length
+        if(!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,{from,to})||editor._tiptapEditor.state.doc.textBetween(from,to,'\n')!==expectedText)throw Error('演示段落已变化。')
+        editor._tiptapEditor.commands.setTextSelection({from,to})
+      }
     }
     props.guide.ready(api)
     return()=>{live=false;props.guide?.dispose?.(api);doc.destroy()}

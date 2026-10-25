@@ -44,6 +44,16 @@ test('manual navigation stops playback and reveals the saved native surface',asy
  const f=fixture();await f.controller.start('note');document.getElementById('another-session')!.click()
  await Promise.resolve();expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull()
 })
+test('keeps the current guide during a pure native sidebar layout toggle but still exits on session navigation',async()=>{
+ const f=fixture(),sidebar=document.querySelector('[data-dsh-sidebar-root]')!,toggle=document.createElement('button')
+ toggle.className='hHd-Xa_toggle';toggle.innerHTML='<span>折叠侧栏</span>';sidebar.prepend(toggle)
+ let collapsed=false;toggle.addEventListener('click',()=>{collapsed=!collapsed})
+ await f.controller.start('note');const guide=document.querySelector('[data-home-guide]')
+ toggle.querySelector('span')!.click();await Promise.resolve()
+ expect(collapsed).toBe(true);expect(document.querySelector('[data-home-guide]')).toBe(guide);expect(f.release).not.toHaveBeenCalled()
+ document.getElementById('another-session')!.click();await Promise.resolve()
+ expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull()
+})
 test('resolves a serializable cue through its run-scoped DOM token and acknowledges the real target',async()=>{
  vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(0)
  const target=document.getElementById('header-action')!,id=document.querySelector<HTMLElement>('[data-home-guide]')!.dataset.homeGuide!,requestId='native-world',token=id+':'+requestId+':target',replies:any[]=[]

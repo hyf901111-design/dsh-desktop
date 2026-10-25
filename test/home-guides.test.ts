@@ -92,6 +92,63 @@ test('a board action can remain paused for more than its active timeout budget',
  }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
 })
 
+test('builds all six board components after native readiness, with reading time after each completed action',async()=>{
+ vi.useFakeTimers();const f=fixture(),commands:string[]=[];let mount:any,library:any
+ const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-link',2200],['board-add',2200],['board-arrange',3000]]
+ const reply=(detail:any)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))
+ const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;commands.push(detail.command);if(detail.command==='mount-board')mount=detail;else if(detail.command==='board-library')library=detail;else if(detail.command!=='dispose')reply(detail)}
+ window.addEventListener('sherlock:home-guide-native-request',receive)
+ try{
+  const starting=f.controller.start('board');await vi.waitFor(()=>expect(mount).toBeDefined())
+  await vi.advanceTimersByTimeAsync(5000);expect(commands).toEqual(['mount-board'])
+  reply(mount);await starting;await vi.advanceTimersByTimeAsync(0)
+  expect(commands).toEqual(['mount-board','board-library'])
+  await vi.advanceTimersByTimeAsync(3000);expect(commands).toHaveLength(2)
+  reply(library);await vi.advanceTimersByTimeAsync(0)
+  expect(document.querySelector('.odyssey-home-guide-count')?.textContent).toContain('1 / 10')
+  for(let index=0;index<scenes.length;index++){
+   expect(commands).toEqual(['mount-board',...scenes.slice(0,index+1).map(scene=>scene[0])])
+   const hold=scenes[index]![1]
+   if(index===6){
+    await vi.advanceTimersByTimeAsync(300);document.querySelector<HTMLButtonElement>('[data-control=pause]')!.click()
+    await vi.advanceTimersByTimeAsync(5000);expect(commands.at(-1)).toBe('board-calendar')
+    document.querySelector<HTMLButtonElement>('[data-control=play]')!.click();await vi.advanceTimersByTimeAsync(hold-301)
+   }else await vi.advanceTimersByTimeAsync(hold-1)
+   expect(commands.at(-1)).toBe(scenes[index]![0]);await vi.advanceTimersByTimeAsync(1)
+  }
+  expect(commands).toEqual(['mount-board',...scenes.map(scene=>scene[0]),'dispose'])
+  expect(document.querySelector('[data-home-guide]')).toBeNull();expect(f.header.dataset.eworkNotesSession).toBe('example-board');expect(f.text.value).toBe('原有草稿')
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
+})
+
+test('stops the board on a failed calendar action before linking, selecting stocks or claiming a saved result',async()=>{
+ vi.useFakeTimers();const f=fixture(),commands:string[]=[]
+ const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;commands.push(detail.command);if(detail.command==='dispose')return;window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:detail.command!=='board-calendar',message:detail.command==='board-calendar'?'日历工具未能打开':undefined}}))}
+ window.addEventListener('sherlock:home-guide-native-request',receive)
+ try{
+  await f.controller.start('board');await vi.advanceTimersByTimeAsync(50000)
+  expect(commands).toEqual(['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar'])
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error')
+  expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('日历工具未能打开')
+  expect(document.querySelector<HTMLButtonElement>('[data-home-guide-next]')?.disabled).toBe(true)
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
+})
+
+test('allows the six real stock searches ninety active seconds while excluding paused time',async()=>{
+ vi.useFakeTimers();const f=fixture();let adding=false
+ const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail.command==='board-add'){adding=true;return}if(detail.command!=='dispose')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))}
+ window.addEventListener('sherlock:home-guide-native-request',receive)
+ try{
+  await f.controller.start('board');await vi.advanceTimersByTimeAsync(10000);expect(adding).toBe(true)
+  await vi.advanceTimersByTimeAsync(35000);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
+  document.querySelector<HTMLButtonElement>('[data-control=pause]')!.click();await vi.advanceTimersByTimeAsync(120000)
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused')
+  document.querySelector<HTMLButtonElement>('[data-control=play]')!.click();await vi.advanceTimersByTimeAsync(54999)
+  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
+  await vi.advanceTimersByTimeAsync(1);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error')
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',receive)}
+})
+
 test('reveals the native conversation only after a still-owned handover has finished',async()=>{
  const f=fixture(),reveal=vi.fn();await f.controller.dispose()
  const save=vi.fn(async()=>{}),controller=mountHomeGuides(document,{...f.adapters,beforeOpen:save,revealConversation:reveal});dispose=controller.dispose
@@ -116,13 +173,13 @@ test('PPT assigns reading holds to the visible work without an introduction or b
 })
 
 test('hands the saved scene back to the real client after completion',async()=>{
- vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(20000)
- expect(f.runStep).toHaveBeenCalledTimes(6);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
+ vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(30000)
+ expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review','select','optimize','replace','note-task-compose','note-task-review','note-task-apply','note-select-paragraph','note-rewrite','note-rewrite-apply']);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
  expect(document.querySelector('[data-home-guide]')).toBeNull();expect(document.querySelector('.odyssey-home-guide-pointer')).toBeNull();expect(f.text.parentElement?.inert).toBe(false)
 })
 test('keeps mount and completion save errors visible instead of hiding them with the controls information',async()=>{
  vi.useFakeTimers();const f=fixture();f.adapters.mountNotes.mockRejectedValueOnce(Error('笔记打开失败'));await f.controller.start('note')
  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('笔记打开失败')
- await f.controller.reset();f.flush.mockRejectedValueOnce(Error('保存冲突'));await f.controller.start('note');await vi.advanceTimersByTimeAsync(20000)
+ await f.controller.reset();f.flush.mockRejectedValueOnce(Error('保存冲突'));await f.controller.start('note');await vi.advanceTimersByTimeAsync(30000)
  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('保存冲突')
 })
