@@ -1,4 +1,5 @@
 import { registerHomePresentationRuntime } from './home-presentation-runtime.js'
+import { registerHomeReportRuntime } from './home-report-runtime.js'
 import { registerHomeNotesRuntime } from './home-notes-runtime.js'
 import { registerHomeBoardSmartRuntime } from './home-board-smart-runtime.js'
 import {registerClientTools} from './client-tools.js'
@@ -2993,6 +2994,7 @@ export async function apply(ctx) {
     const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomePresentation = registerHomePresentationRuntime(ctx, {isTrustedRequest, readJsonBody})
+    const disposeHomeReport = registerHomeReportRuntime(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomeNotes = registerHomeNotesRuntime(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomeBoardSmart = registerHomeBoardSmartRuntime(ctx, runtime, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
@@ -3016,6 +3018,7 @@ export async function apply(ctx) {
       disposeNotesChallenge()
       disposeNoteSessions()
       void disposeHomePresentation()
+      void disposeHomeReport()
       void disposeHomeNotes()
       disposeHomeBoardSmart()
       throw error
@@ -3042,6 +3045,7 @@ export async function apply(ctx) {
       disposeNotesChallenge()
       disposeNoteSessions()
       await disposeHomePresentation()
+      await disposeHomeReport()
       await disposeHomeNotes()
       disposeHomeBoardSmart()
       await runtime.dispose()

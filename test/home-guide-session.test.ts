@@ -28,6 +28,20 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
   return { win, page, sessions, workspaces, state, requests, opened, archived, disk, replies, send, reply, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
+it('prepares a dedicated report session, persists it and creates a separate practice copy without a board', async () => {
+  const f = await fixture(), first = await f.reply(f.send('report'))
+  expect(first).toMatchObject({ ok: true, title: '研究报告示例', fresh: true })
+  const repeated = await f.reply(f.send('report'))
+  expect(repeated).toMatchObject({ ok: true, sessionId: first.sessionId, fresh: false })
+  const copy = await f.reply(f.send('report', 'prepare', { replay: true }))
+  expect(copy).toMatchObject({ ok: true, title: '研究报告示例 · 练习副本', fresh: true })
+  expect(copy.sessionId).not.toBe(first.sessionId); expect(copy.cwd).not.toBe(first.cwd)
+  expect(f.requests.filter(item => item[0] === 'favorite.add')).toEqual([])
+  const reopen = await fixture({ disk: f.disk, byId: f.sessions.list.getSnapshot().byId })
+  expect(await reopen.reply(reopen.send('report'))).toMatchObject({ ok: true, sessionId: copy.sessionId, fresh: false })
+  reopen.setOwner('another')
+  expect(await reopen.reply(reopen.send('report', 'open', { sessionId: copy.sessionId }))).toMatchObject({ ok: false })
+})
 it('prepares a real dedicated board without navigation, reuses it and opens only a registered matching session', async () => {
   const f = await fixture(), a = f.send(), b = f.send()
   const first = await f.reply(a), second = await f.reply(b)

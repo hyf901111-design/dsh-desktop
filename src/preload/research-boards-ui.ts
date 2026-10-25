@@ -820,7 +820,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id
   }
-  type GuideKind = 'board' | 'note' | 'ppt'
+  type GuideKind = 'board' | 'note' | 'ppt' | 'report'
   type GuideSession = { kind: GuideKind; sessionId: string; cwd: string; title: string; createdAt: number }
   const guidePrefix = 'sherlock.home-guide.sessions.v1:'
   let guideIdentityRevision = 0
@@ -830,7 +830,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   let guideSelectedSession = current(), guideSelectionRevision = 0, guideSelectedAttempt = ''
   const guideRequests = new Map<string, { fingerprint: string; promise: Promise<Record<string, unknown>>; owner?: string; generation?: number; revision?: number }>()
   const guideReadyWaiters = new Set<{ resolve(): void; reject(error: Error): void }>()
-  const guideTitles = { board: '自选行情示例看板', note: 'AI 护航研究笔记示例', ppt: '公司风格演示示例' }
+  const guideTitles = { board: '自选行情示例看板', note: 'AI 护航研究笔记示例', ppt: '公司风格演示示例', report: '研究报告示例' }
   const guideOwner = () => state.account.user?.userId ? 'account:' + state.account.user.userId : 'local'
   const guideStorage = () => {
     const storage = (win as Window & { dshDesktop?: { researchCanvasStorage?: { getItem(key: string): string | null; setItem(key: string, value: string): boolean } } }).dshDesktop?.researchCanvasStorage
@@ -845,7 +845,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (raw) {
       const value = JSON.parse(raw)
       if (value?.version !== 1 || value.scope !== owner || !Array.isArray(value.entries)) throw Error('示例记录暂时无法读取。')
-      entries = value.entries.filter((entry: GuideSession) => entry && ['board', 'note', 'ppt'].includes(entry.kind) && typeof entry.sessionId === 'string' && typeof entry.cwd === 'string' && typeof entry.title === 'string' && Number.isFinite(entry.createdAt))
+      entries = value.entries.filter((entry: GuideSession) => entry && ['board', 'note', 'ppt', 'report'].includes(entry.kind) && typeof entry.sessionId === 'string' && typeof entry.cwd === 'string' && typeof entry.title === 'string' && Number.isFinite(entry.createdAt))
     }
     guideRecords.set(owner, entries)
     return entries
@@ -969,7 +969,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const stale = value.ok === true && record && (record.owner !== guideOwner() || record.generation !== state.account.generation || record.revision !== guideIdentityRevision)
       win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-session-reply', { detail: { requestId, ...(stale ? { ok: false, message: '账号或页面已变化，请重新打开示例。' } : value) } }))
     }
-    if (!['board','note','ppt'].includes(kind) || !['prepare','open'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command === 'open' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
+    if (!['board','note','ppt','report'].includes(kind) || !['prepare','open'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command === 'open' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
     const fingerprint = JSON.stringify([kind, command, request.replay === true, request.sessionId])
     const prior = guideRequests.get(requestId)
     if (prior) { if (prior.fingerprint !== fingerprint) reply({ ok: false, message: '示例请求标识已使用。' }); else void prior.promise.then(value => reply(value, prior)); return }

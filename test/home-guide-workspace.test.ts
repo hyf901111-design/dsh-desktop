@@ -117,7 +117,7 @@ async function fixture(legacyKind?: string) {
   return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, headers: () => sessionStore.list().map(session => session.header), async coldSession(id: string) { await sessionStore.flush(ctx.agents.get(SessionId(id))!.session); await handles.get(id)!.dispose() }, gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
 
-it.each(['board', 'note', 'ppt'])('registers a durable Workspace through the production browser transport and binds the same %s session before success', async kind => {
+it.each(['board', 'note', 'ppt', 'report'])('registers a durable Workspace through the production browser transport and binds the same %s session before success', async kind => {
   const f = await fixture(), ids = [f.send(kind), f.send(kind)], [first, concurrent] = await Promise.all(ids.map(f.reply))
   expect(first).toMatchObject({ ok: true, fresh: true }); expect(concurrent.sessionId).toBe(first.sessionId)
   const workspace = await f.registry.resolveByPath(first.cwd)
@@ -135,7 +135,7 @@ it.each(['board', 'note', 'ppt'])('registers a durable Workspace through the pro
   expect(f.calls.filter(row => row[0] === 'workspace.attach')).toHaveLength(1)
 })
 
-it.each(['board', 'note', 'ppt'])('repairs legacy %s examples with the existing path/entity/session and preserves previous work', async kind => {
+it.each(['board', 'note', 'ppt', 'report'])('repairs legacy %s examples with the existing path/entity/session and preserves previous work', async kind => {
   const f = await fixture(kind), old = f.legacy!, agent = f.ctx.agents.get(SessionId(old.sessionId))!, events = [...agent.session.events]
   const summary = { ...f.sessions.list.getSnapshot().byId[old.sessionId], blank: false, title: '我的保留成果' }
   f.sessions.list.set({ ...f.sessions.list.getSnapshot(), byId: { ...f.sessions.list.getSnapshot().byId, [old.sessionId]: summary } })
@@ -265,7 +265,7 @@ it('shares a pending current-example binding with an explicit prepare without in
   expect(f.opened).toEqual([old.sessionId, 'original'])
 })
 
-it.each(['board', 'note', 'ppt'])('binds the same persisted %s example after its Agent has been unloaded', async kind => {
+it.each(['board', 'note', 'ppt', 'report'])('binds the same persisted %s example after its Agent has been unloaded', async kind => {
   const f = await fixture(kind), old = f.legacy!
   await f.coldSession(old.sessionId)
   expect(f.ctx.agents.get(SessionId(old.sessionId))).toBeUndefined()
