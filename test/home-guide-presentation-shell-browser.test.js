@@ -4,6 +4,7 @@ import {resolve} from 'node:path'
 import {build} from 'esbuild'
 import {beforeAll,afterAll,expect,it} from 'vitest'
 import {patchHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 
 // Browser plugin not available. This headless fixture keeps the production
 // ConversationRoot, InputBar, session store and Figma styles; only external I/O
@@ -37,8 +38,8 @@ beforeAll(async()=>{
  let guideStatus=()=>{};const adapter=async(_document,_host,options)=>{guideStatus=options.onStatus;return{runStep:async()=>{if(window.shellCase.failure)throw Error("输入区已变化，请重新打开示例。")},dispose(){}}},controller=mountHomeGuides(document,{mountNotes:adapter,mountPresentation:adapter});
  const disposeOperations=window.shellCase.operations?mountHomeOperations(document,{onExample:(kind,context)=>playHomeGuideFromOperations(controller,kind,context)}):()=>{};
  const receive=event=>{const request=event.detail;window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:request.requestId,ok:true,sessionId:'shell-demo',cwd:'/tmp/shell-demo',title:'公司风格演示示例',fresh:true}}))};window.addEventListener('sherlock:home-guide-session-request',receive);
- window.shellProbe={sent:0,shell,controller,status:text=>guideStatus(text),async start(){await controller.start('ppt');document.querySelector('.odyssey-home-guide-footer button').click()},async close(){await controller.reset(false)},async dispose(){disposeOperations();await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
- `},bundle:true,loader:{'.svg':'dataurl'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
+ window.shellProbe={sent:0,shell,controller,status:text=>guideStatus(text),async start(){await controller.start('ppt');window.__testHomeGuideTimeline.pause()},async close(){await controller.reset(false)},async dispose(){disposeOperations();await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
+ `},bundle:true,loader:{'.svg':'dataurl'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'},plugins:[homeGuidePlaybackFixture(),{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
  entry=output.outputFiles[0].text
  const mod=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href),pw=mod.default??mod
  browser=await pw.chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -74,7 +75,7 @@ for(const value of [{width:1000,height:900},{width:620,height:480}]){
    await page.getByRole('button',{name:'了解PPT制作能力',exact:true}).click()
    await page.getByRole('button',{name:'播放示例：了解PPT制作能力',exact:true}).click()
    await page.waitForSelector('[data-home-guide-kind="ppt"]')
-   await page.getByRole('button',{name:'暂停',exact:true}).click()
+   await page.evaluate(()=>window.__testHomeGuideTimeline.pause())
    expect(await page.locator('.wSkVaW_composerHero').evaluate(node=>node.inert)).toBe(false)
    expect(await page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-state')).toBe('input')
    expect(await geometry(page)).toMatchObject({phase:'hero',sameInput:true,heroVisible:true,inputHit:true,sendHit:true})
@@ -83,24 +84,26 @@ for(const value of [{width:1000,height:900},{width:620,height:480}]){
    expect(await input.evaluate(node=>document.activeElement===node)).toBe(true)
    expect(await input.inputValue()).toContain('PPT_ENTRY_KEYBOARD_PROBE');expect(await input.inputValue()).not.toBe(before)
    expect(await page.evaluate(()=>window.shellProbe.shell.snapshot.draft)).toBe(await input.inputValue())
-   await page.getByRole('button',{name:'结束示例教程',exact:true}).click()
+   const editedDraft=await input.inputValue()
+   await page.keyboard.press('Escape')
    await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
+   expect(await page.evaluate(()=>window.shellProbe.shell.snapshot.draft)).toBe(editedDraft)
    expect(await geometry(page)).toMatchObject({sameInput:true,heroVisible:true,inputHit:true,sendHit:true});expect(f.errors).toEqual([])
   }finally{await f.close()}
  },15000)
 }
 
-// Playback controls stay small and above the real conversation. They must not
-// reserve a second surface below the composer or intercept its native input.
+// A test-only bundle alias captures the real timeline. Production contains no
+// controls or test API; native history/input must retain their exact geometry.
 for(const value of [{width:1000,height:900,hero:false},{width:620,height:700,hero:false},{width:420,height:480,hero:false},{width:1000,height:900,hero:true},{width:620,height:480,hero:true}]){
- it(`keeps native ${value.hero?'hero':'active'} input geometry with floating controls in a ${value.width}×${value.height} pane`,async()=>{
+ it(`keeps native ${value.hero?'hero':'active'} input geometry without playback controls in a ${value.width}×${value.height} pane`,async()=>{
   const f=await fixture(value),{page}=f
   try{
    const ordinary=await geometry(page);await page.evaluate(()=>window.shellProbe.start());await page.waitForSelector('[data-home-guide-kind="ppt"]')
-   await expect.poll(async()=>!!(await geometry(page)).footer).toBe(true)
+   expect(await page.locator('.odyssey-home-guide-footer,[data-home-guide] [role=toolbar]').count()).toBe(0)
    const layout=await geometry(page)
    expect(layout.phase).toBe(value.hero?'hero':'active');expect(layout.sameInput).toBe(true);expect(layout.heroVisible).toBe(true)
-   expect(layout.footer.bottom).toBeLessThanOrEqual(layout.input.top);expect(layout.footer.height).toBeLessThanOrEqual(40);expect(layout.footer.width).toBeLessThan(145)
+   expect(layout.footer).toBeNull()
    expect(layout.resident.height).toBeCloseTo(ordinary.resident.height,0);expect(layout.send.bottom,JSON.stringify({ordinary,layout})).toBeCloseTo(ordinary.send.bottom,0)
    expect(layout.sendHit).toBe(true);expect(layout.inputHit).toBe(true);expect(layout.input.width).toBeGreaterThan(200)
    if(!value.hero){expect(layout.scroll.height).toBeGreaterThan(90);expect(layout.scrollable).toBe(true);await page.locator('.wSkVaW_scrollBody').evaluate(node=>{node.scrollTop=node.scrollHeight});expect(await page.locator('[data-history-row="17"]').evaluate(node=>{const rect=node.getBoundingClientRect(),area=node.closest('.wSkVaW_scrollBody').getBoundingClientRect();return rect.top>=area.top&&rect.bottom<=area.bottom})).toBe(true)}
@@ -113,21 +116,21 @@ for(const value of [{width:1000,height:900,hero:false},{width:620,height:700,her
  },15000)
 }
 
-it('keeps a long accessible status out of the composer layout when the pane narrows',async()=>{
+it('keeps routine status invisible and out of the composer layout when the pane narrows',async()=>{
  const f=await fixture({width:1000,height:560,hero:false}),{page}=f
  try{
   await page.evaluate(()=>window.shellProbe.start())
   const wide=await geometry(page)
   await page.evaluate(()=>{document.querySelector('.pI_x6G_centerCol').style.width='420px';window.shellProbe.status('正在核对原始研报中的数据时点、研究假设与图表来源。每页保留原报告页码，并把历史预测与当前信息区分，确认后再交付八页可编辑公司风格汇报。')})
   await expect.poll(()=>page.evaluate(()=>document.querySelector('.pI_x6G_centerCol').style.getPropertyValue('--odyssey-home-guide-controls-height'))).toBe('')
-  await expect.poll(async()=>{const layout=await geometry(page);return layout.footer.height===wide.footer.height&&layout.footer.bottom<=layout.input.top&&layout.sendHit&&layout.inputHit}).toBe(true)
+  await expect.poll(async()=>{const layout=await geometry(page);return layout.footer===null&&layout.send.bottom===wide.send.bottom&&layout.sendHit&&layout.inputHit}).toBe(true)
   const layout=await geometry(page)
   expect(layout.input.width).toBeGreaterThan(200);expect(layout.scroll.height).toBeGreaterThan(90)
   await page.screenshot({path:evidence+'/active-dynamic-footer.png'});expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
-it('shows an action failure next to the playback controls and keeps exit reachable',async()=>{
+it('shows a standalone action fault without playback controls and keeps exit reachable',async()=>{
  const f=await fixture({width:620,height:700,hero:false,failure:true}),{page}=f
- try{await page.evaluate(async()=>{await window.shellProbe.start();document.querySelector('[data-control="play"]')?.click()});await expect.poll(()=>page.locator('[data-home-guide]').getAttribute('data-phase')).toBe('error');expect(await page.locator('.odyssey-home-guide-count').isVisible()).toBe(false);const status=page.locator('.odyssey-home-guide-status');expect(await status.innerText()).toContain('输入区已变化');expect(await status.evaluate(node=>{const r=node.getBoundingClientRect(),footer=node.closest('footer').getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return r.top>=footer.bottom&&r.width>180&&(node===hit||node.contains(hit))})).toBe(true);await page.getByRole('button',{name:'结束示例教程'}).click();expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(f.errors).toEqual([])}finally{await f.close()}
+ try{await page.evaluate(async()=>{await window.shellProbe.start();window.__testHomeGuideTimeline.play()});await expect.poll(()=>page.locator('[data-home-guide]').getAttribute('data-phase')).toBe('error');expect(await page.locator('.odyssey-home-guide-footer,[data-home-guide] [role=toolbar]').count()).toBe(0);const status=page.locator('.odyssey-home-guide-status');expect(await status.innerText()).toContain('输入区已变化');expect(await status.evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return r.width>180&&(node===hit||node.contains(hit))})).toBe(true);expect(await page.getByRole('alert').isVisible()).toBe(true);await page.getByRole('button',{name:'关闭示例'}).click();expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(f.errors).toEqual([])}finally{await f.close()}
 },15000)

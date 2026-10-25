@@ -23,7 +23,7 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
   ['board-announcements','添加公司公告','公司公告单独保留，便于与行情和资讯对照阅读。',1200],
   ['board-calendar','加入日历工具','日历已加入，可以安排后续研究。',1000],
   ['board-link','连接行情、资讯与公告','自选股切换行情标的，行情再带动相关资讯和公告。',2200],
-  ['board-add','补齐自选股，查看五粮液','9只自选股已齐，当前选中五粮液（000858），可以对照行情、资讯和公告。',2200],
+  ['board-add','补齐自选股，查看五粮液','5只自选股已齐，当前选中五粮液（000858），可以对照行情、资讯和公告。',2200],
   ['board-arrange','整理并保存六组件看板','六个组件已按行情概览、个股跟踪、资讯公告和日历分层排列，并保存到个人看板。',3000]
  ]},
  note:{title:'AI 护航研究笔记',view:'笔记',intro:'整理研究笔记，用严格挑战核对数据，再从右侧发送优化任务，并改写选中段落。',steps:[
@@ -57,12 +57,6 @@ export async function playHomeGuideFromOperations(controller:Pick<ReturnType<typ
  if(context.signal.aborted)throw aborted()
  await controller.start(kind,{replay:true})
 }
-function setControl(button:HTMLButtonElement,icon:'pause'|'play'|'next'|'replay'|'exit',label:string){
- const paths={pause:'M6 4v12M14 4v12',play:'m6 3 10 7-10 7Z',next:'m7 4 7 6-7 6',replay:'M4 7a7 7 0 1 1 0 6M4 2v5h5',exit:'m5 5 10 10M15 5 5 15'}
- button.className=icon==='exit'?'odyssey-home-guide-exit':'odyssey-home-guide-button';button.setAttribute('aria-label',label);button.title=label;button.dataset.control=icon
- button.innerHTML='<svg aria-hidden="true" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="'+paths[icon]+'"/></svg><span class="odyssey-home-guide-control-label"></span>'
- button.querySelector('span')!.textContent=label
-}
 function exchangeSession(document:Document,input:Record<string,unknown>,signal:AbortSignal):Promise<Session>{
  const win=document.defaultView!
  return new Promise((resolve,reject)=>{
@@ -94,12 +88,12 @@ function mountBoard(document:Document,host:HTMLElement,options:HomeGuideMountOpt
  return exchange('mount-board').then(()=>({runStep:async step=>{await options.waitUntilPlaying();await exchange(step)},dispose}),error=>{dispose();throw error})
 }
 
-/** Saved examples use normal sessions; this shell owns only teaching controls. */
+/** Saved examples use normal sessions; this shell owns their autoplay lifetime. */
 export function mountHomeGuides(document:Document,adapters:Adapters){
  const win=document.defaultView!,style=document.createElement('style');style.id='odyssey-home-guide-style';style.textContent=styles;document.head.append(style)
  let disposed=false,generation=0,ownedNavigation=0,preparing:{controller:AbortController;source?:string;target?:string}|undefined,closing=Promise.resolve()
  let transition:string|undefined
- type Run={id:string;kind:HomeGuideKind;sessionId:string;abort:AbortController;root:HTMLElement;resident:HTMLElement;center:HTMLElement;content:HTMLElement;adapter?:HomeGuideAdapter;timeline?:GuideTimeline;pointer?:ReturnType<typeof createHomeGuidePointer>;cleanup():void;status:HTMLElement}
+ type Run={id:string;kind:HomeGuideKind;sessionId:string;abort:AbortController;root:HTMLElement;resident:HTMLElement;center:HTMLElement;content:HTMLElement;adapter?:HomeGuideAdapter;timeline?:GuideTimeline;hiddenPause?:boolean;pointer?:ReturnType<typeof createHomeGuidePointer>;cleanup():void;status:HTMLElement}
  let active:Run|undefined
  const selected=()=>[...document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol [data-srb-session-header][data-ework-notes-session]')].find(node=>!node.closest('[data-odyssey-subagent-panel]'))?.dataset.eworkNotesSession
  const releaseTransition=()=>{if(transition&&document.documentElement.dataset.homeGuideTransition===transition){delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession}transition=undefined}
@@ -144,17 +138,12 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const center=document.querySelector<HTMLElement>('.pI_x6G_centerCol'),resident=[...(center?.querySelectorAll<HTMLElement>('.wSkVaW_root')||[])].find(node=>!node.closest('[data-odyssey-subagent-panel]'))
   if(!center||!resident){controller.abort();releaseTransition();throw Error('示例页面尚未就绪。')}
   const definition=EXAMPLES[kind],id=win.crypto.randomUUID(),root=document.createElement('section');root.className='odyssey-home-guide';root.dataset.homeGuide=id;root.dataset.kind=kind;root.setAttribute('aria-label',definition.title+' · 示例教程')
-  const header=document.createElement('header');header.className='odyssey-home-guide-header'
-  const title=document.createElement('strong');title.textContent=definition.title
-  const exit=document.createElement('button');exit.type='button';setControl(exit,'exit','结束示例教程');exit.addEventListener('click',()=>{void close()});header.append(title)
   const content=document.createElement('div');content.id='odyssey-home-guide-content-'+id;content.className='odyssey-home-guide-content'+(kind==='note'?' en-root':'');content.dataset.homeGuideContent='';if(kind==='note')content.dataset.homeGuideNotes='';content.dataset.dark=String(document.body.hasAttribute('data-ds-dark-theme'))
-  const footer=document.createElement('footer');footer.className='odyssey-home-guide-footer';footer.setAttribute('role','toolbar');footer.setAttribute('aria-label','播放控制')
-  const information=document.createElement('div'),count=document.createElement('span');information.className='odyssey-home-guide-information';count.className='odyssey-home-guide-count'
-  const status=document.createElement('p');status.className='odyssey-home-guide-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.textContent='正在打开已保存的示例…';information.append(count,status)
-  const pause=document.createElement('button');pause.type='button';setControl(pause,'pause','暂停');pause.disabled=true
-  const next=document.createElement('button');next.type='button';setControl(next,'next','下一步');next.dataset.homeGuideNext='';next.disabled=true
-  const replay=document.createElement('button');replay.type='button';setControl(replay,'replay','重新演示');replay.disabled=true;replay.addEventListener('click',()=>{void start(kind,{replay:true}).catch(()=>{})})
-  footer.append(information,pause,next,replay,exit);root.append(header,content,footer)
+  const notice=document.createElement('div');notice.className='odyssey-home-guide-fault';notice.hidden=true;notice.setAttribute('role','alert')
+  const status=document.createElement('p');status.className='odyssey-home-guide-status';status.textContent='正在打开已保存的示例…'
+  const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='×';dismiss.setAttribute('aria-label','关闭示例');dismiss.addEventListener('click',()=>{void close()})
+  notice.append(status,dismiss);root.append(content,notice)
+  const fault=(message:string)=>{root.dataset.phase='error';notice.hidden=false;status.textContent=message}
   const blocked=new Map<HTMLElement,boolean>()
   const run:Run={id,kind,sessionId:session.sessionId,abort:controller,root,resident,center,content,status,cleanup:()=>{}}
   active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt')resident.dataset.homeGuideLive='true'
@@ -172,26 +161,23 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   run.pointer=createHomeGuidePointer(document,options);document.documentElement.dataset.homeGuidePointerRun=id
   try{
    const adapter=await(kind==='board'?mountBoard(document,content,options):kind==='note'?adapters.mountNotes(document,content,options):adapters.mountPresentation(document,content,options))
-   if(active!==run||controller.signal.aborted){adapter.dispose();throw aborted()}run.adapter=adapter;ensure();replay.disabled=false
+   if(active!==run||controller.signal.aborted){adapter.dispose();throw aborted()}run.adapter=adapter;ensure()
    if(session.fresh===false){await close(false,true);return}
    const scenes:readonly Scene[]=definition.steps
    run.timeline=createHomeGuideTimeline({steps:scenes.map(([id,,,hold])=>({id,hold})),run:async step=>{ensure();await adapter.runStep(step);ensure()},onChange:state=>{
     if(active!==run||state.phase==='disposed')return
     playback(run,state.phase==='playing');root.dataset.phase=state.phase
-    count.textContent=state.phase==='completed'?'演示完成 · 正在确认保存':(state.index+1)+' / '+scenes.length+' · '+(scenes[state.index]?.[1]||definition.title)
-    if(state.phase==='completed'){hideCue();void (adapter.flush?.()??Promise.resolve()).then(()=>{if(active===run)void close(false,true)},error=>{if(active===run){root.dataset.phase='error';count.textContent='演示完成 · 保存未成功';status.textContent=error instanceof Error?error.message:'示例尚未保存，请重试。'}})}
+    if(state.phase==='completed'){hideCue();void (adapter.flush?.()??Promise.resolve()).then(()=>{if(active===run)void close(false,true)},error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
     else if(state.holding){status.textContent=scenes[state.index]?.[2]||''}
     else if(state.index===0)status.textContent=definition.intro
-    setControl(pause,state.phase==='paused'?'play':'pause',state.phase==='paused'?'继续播放':'暂停');pause.disabled=state.phase==='completed'||state.phase==='error';next.disabled=state.busy||state.phase==='completed'||state.phase==='error'
-   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();status.textContent=error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。';pause.disabled=true;next.disabled=true}})
-   pause.disabled=false;next.disabled=false;pause.addEventListener('click',()=>{if(active!==run)return;run.timeline?.snapshot().phase==='playing'?run.timeline.pause():run.timeline?.play()});next.addEventListener('click',()=>{if(active===run)run.timeline?.next()})
-   run.timeline.play();if(document.hidden)run.timeline.pause()
-  }catch(error){if(active!==run||controller.signal.aborted)throw error;playback(run,false);root.dataset.phase='error';status.textContent=error instanceof Error?error.message:'示例尚未就绪，请重试。';pause.disabled=true;next.disabled=true;replay.disabled=false}
+   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。')}})
+   run.timeline.play();if(document.hidden){run.hiddenPause=true;run.timeline.pause()}
+  }catch(error){if(active!==run||controller.signal.aborted)throw error;playback(run,false);fault(error instanceof Error?error.message:'示例尚未就绪，请重试。')}
  }
  const changed=()=>{if(preparing){const current=selected();if(current===preparing.source||current===preparing.target)return;preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&selected()!==active.sessionId)void close(false)}
  const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target||target.matches('[data-dsh-sidebar-root] button.hHd-Xa_toggle'))return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false)}
  const escape=(event:KeyboardEvent)=>{if(active&&event.key==='Escape'){event.preventDefault();void close()}}
- const visibility=()=>{if(document.hidden)active?.timeline?.pause()}
+ const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.timeline.play()}}
  const cueTarget=(value:any,key:'target'|'fromTarget')=>{
   const token=value?.[key+'Token']
   if(token===undefined)return value?.[key]

@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {NotesStore} from '../src/main/notes/store'
+import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 let browser,script,css
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
@@ -28,7 +29,7 @@ beforeAll(async()=>{
  for(const tab of document.querySelectorAll('[data-conversation-view-id]'))tab.addEventListener('click',()=>chooseView(tab.dataset.conversationViewId));
  window.addEventListener('sherlock:home-guide-session-request',event=>{const value=event.detail;let session;if(value.command==='prepare'){const fresh=!window.latestExample||value.replay===true;if(fresh)window.latestExample={sessionId:'example-note-'+(++window.sessionCount),cwd:'/example-notes',title:'笔记教程副本'};session={...window.latestExample,fresh};}else{session={...window.latestExample};const header=document.querySelector('[data-ework-notes-session]'),view=header.querySelector('[aria-selected=true]').dataset.conversationViewId;header.dataset.eworkNotesSession=session.sessionId;header.querySelector('[data-en-challenge-tools]').dataset.enChallengeTools=session.sessionId;chooseView(view);window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed'));}window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:value.requestId,ok:true,...session}}));});
  window.guides=mountHomeGuides(document,{beforeOpen:session=>window.nativeNotes.prepareGuide(session.sessionId),revealConversation:()=>workspaceHost.revealConversation(),mountNotes:(doc,host,options)=>mountHomeNotesGuide(doc,host,{...options,persistence:bridge,native:nativeFor(options)}),mountPresentation:async()=>({runStep:async()=>{},dispose:()=>{}})});
- `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-styles',setup(b){b.onResolve({filter:/\.css\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/,''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>{const contents=await readFile(args.path,'utf8');if(!contents.includes('@import'))return{contents,loader:'text'};const compiled=await build({entryPoints:[args.path],conditions:['browser','import','style'],bundle:true,write:false,outfile:'notes.css',logLevel:'silent',loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}});return{contents:compiled.outputFiles.find(file=>file.path.endsWith('.css')).text,loader:'text'}})}}]})
+ `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[homeGuidePlaybackFixture(),{name:'inline-styles',setup(b){b.onResolve({filter:/\.css\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/,''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>{const contents=await readFile(args.path,'utf8');if(!contents.includes('@import'))return{contents,loader:'text'};const compiled=await build({entryPoints:[args.path],conditions:['browser','import','style'],bundle:true,write:false,outfile:'notes.css',logLevel:'silent',loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}});return{contents:compiled.outputFiles.find(file=>file.path.endsWith('.css')).text,loader:'text'}})}}]})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text;css=output.outputFiles.find(file=>file.path.endsWith('.css'))?.text||''
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -48,24 +49,24 @@ async function complete(page){
  while(Date.now()<deadline){
   if(await page.locator('[data-home-guide]').count()===0)return
   const phase=await page.locator('[data-home-guide]').getAttribute('data-phase');if(phase==='completed'){await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);return}
-  if(phase==='error')throw Error(await page.locator('[data-home-guide] [role=status]').innerText()+' '+JSON.stringify(await page.evaluate(()=>window.guideCueHistory)))
+  if(phase==='error')throw Error(await page.locator('.odyssey-home-guide-status').innerText()+' '+JSON.stringify(await page.evaluate(()=>window.guideCueHistory)))
   if(!capturedPopover&&await page.locator('.en-challenge-popover').count()){
    expect(await page.locator('.en-challenge-popover').evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return node===hit||node.contains(hit)})).toBe(true)
    await page.screenshot({path:'/tmp/home-guide-note-native-popover-20261025.png'});capturedPopover=true
   }
-  const next=page.locator('[data-home-guide-next]');if(await next.isEnabled())await next.click()
+  await page.evaluate(()=>{if(window.__testHomeGuideTimeline.snapshot().holding)window.__testHomeGuideTimeline.next()})
   await page.waitForTimeout(90)
  }
- throw Error('笔记教程未完成：'+await page.locator('[data-home-guide] [role=status]').innerText())
+ throw Error('笔记教程未完成：'+await page.locator('.odyssey-home-guide-status').innerText())
 }
 async function startWriting(page){await page.evaluate(()=>window.guides.start('note'));await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('研究摘要')}
 for(const width of [600,700])it(`saves and reopens the native note without clipping a ${width}px pane walkthrough`,async()=>{
  const f=await fixture(width),{page,errors,logs,store,requests}=f;try{
   await page.evaluate(()=>window.guides.start('note'))
   await expect.poll(()=>page.locator('.odyssey-home-guide-pointer').evaluate(node=>node.hidden),{timeout:5000}).toBe(false)
-  expect(await page.locator('.odyssey-home-guide-footer').evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+20,r.top+r.height/2);return node===hit||node.contains(hit)})).toBe(true)
+  expect(await page.locator('.odyssey-home-guide-footer,[data-home-guide] [role=toolbar]').count()).toBe(0);expect(await page.locator('.odyssey-home-guide-fault').isVisible()).toBe(false)
   await page.screenshot({path:'/tmp/home-guide-note-virtual-pointer-'+width+'-20261025.png'})
-  expect(await page.locator('[data-home-guide]').evaluate(root=>{const box=root.getBoundingClientRect(),pane=document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(),footer=root.querySelector('.odyssey-home-guide-footer').getBoundingClientRect(),content=root.querySelector('[data-home-guide-content]').getBoundingClientRect();return box.left>=pane.left&&box.right<=pane.right+1&&box.bottom<=pane.bottom+1&&Math.abs(content.bottom-box.bottom)<1&&footer.height<=40&&footer.width<145&&root.scrollWidth<=root.clientWidth})).toBe(true)
+  expect(await page.locator('[data-home-guide]').evaluate(root=>{const box=root.getBoundingClientRect(),pane=document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(),footer=root.querySelector('.odyssey-home-guide-footer'),content=root.querySelector('[data-home-guide-content]').getBoundingClientRect();return box.left>=pane.left&&box.right<=pane.right+1&&box.bottom<=pane.bottom+1&&Math.abs(content.bottom-box.bottom)<1&&footer===null&&root.scrollWidth<=root.clientWidth})).toBe(true)
   await complete(page)
   expect(await page.getByRole('tab',{name:'笔记'}).getAttribute('aria-selected')).toBe('true');expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
   expect(await page.evaluate(()=>document.querySelector('#original-draft')===window.originalInput&&window.originalInput.value==='用户原有提示词与技能标签')).toBe(true)
@@ -82,10 +83,10 @@ for(const width of [600,700])it(`saves and reopens the native note without clipp
 },75000)
 it('pauses readable writing and replays into a new session while preserving the first partial result',async()=>{
  const f=await fixture(),{page,store,errors}=f;try{
-  await startWriting(page);await page.getByRole('button',{name:'暂停',exact:true}).click();await page.waitForTimeout(180);const paused=await page.locator('[data-home-guide] .bn-editor').innerText();await page.waitForTimeout(350);expect(await page.locator('[data-home-guide] .bn-editor').innerText()).toBe(paused)
-  await page.getByRole('button',{name:'重新演示',exact:true}).click();await expect.poll(()=>page.locator('[data-ework-notes-session]').getAttribute('data-ework-notes-session')).toBe('example-note-2')
+  await startWriting(page);await page.evaluate(()=>window.__testHomeGuideTimeline.pause());await page.waitForTimeout(180);const paused=await page.locator('[data-home-guide] .bn-editor').innerText();await page.waitForTimeout(350);expect(await page.locator('[data-home-guide] .bn-editor').innerText()).toBe(paused)
+  await page.evaluate(()=>window.guides.start('note',{replay:true}));await expect.poll(()=>page.locator('[data-ework-notes-session]').getAttribute('data-ework-notes-session')).toBe('example-note-2')
   expect(store.load('owner','example-note-1').saved.title).toContain('AI算力产业链');expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('研究摘要')
-  await page.getByRole('button',{name:'结束示例教程'}).click();await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([])
+  await page.keyboard.press('Escape');await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([])
  }finally{await f.dispose()}
 },15000)
 it('preserves partial content and respects a user switching native tabs',async()=>{
@@ -97,7 +98,7 @@ it('preserves partial content and respects a user switching native tabs',async()
 },15000)
 it('awaits a delayed final save before exposing the native Notes surface',async()=>{
  const f=await fixture(),{page,errors}=f;try{
-  await startWriting(page);await page.evaluate(()=>window.deferNoteSave=true);await page.getByRole('button',{name:'结束示例教程'}).click()
+  await startWriting(page);await page.evaluate(()=>window.deferNoteSave=true);await page.keyboard.press('Escape')
   expect(await page.locator('[data-home-guide]').count()).toBe(1);expect(await page.locator('[data-note-editor-session]').count()).toBe(0)
   await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('研究摘要');expect(errors).toEqual([])
  }finally{await f.dispose()}
@@ -126,10 +127,10 @@ it('keeps strict review alive during a long pause and then preserves the finishe
  const f=await fixture(),{page,errors,logs}=f;try{
   await page.evaluate(()=>window.guides.start('note'))
   const deadline=Date.now()+30000
-  while(Date.now()<deadline){if(await page.locator('.en-challenge-popover').count()===0&&await page.locator('.en-challenge-grade').count()>0&&await page.locator('.en-challenge-grade').innerText()==='严格'&&await page.locator('[data-home-guide] .bn-editor [data-bn-thread-id]').count()<3)break;const next=page.locator('[data-home-guide-next]');if(await next.isEnabled())await next.click();await page.waitForTimeout(50)}
-  await page.getByRole('button',{name:'暂停',exact:true}).click();await page.waitForTimeout(11200)
-  expect(await page.locator('[data-home-guide] .bn-editor').count()).toBe(1);expect(await page.locator('[data-home-guide] [role=status]').innerText()).not.toContain('未就绪')
-  await page.getByRole('button',{name:'继续播放',exact:true}).click();await complete(page);expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
+  while(Date.now()<deadline){if(await page.locator('.en-challenge-popover').count()===0&&await page.locator('.en-challenge-grade').count()>0&&await page.locator('.en-challenge-grade').innerText()==='严格'&&await page.locator('[data-home-guide] .bn-editor [data-bn-thread-id]').count()<3)break;await page.evaluate(()=>{if(window.__testHomeGuideTimeline.snapshot().holding)window.__testHomeGuideTimeline.next()});await page.waitForTimeout(50)}
+  await page.evaluate(()=>window.__testHomeGuideTimeline.pause());await page.waitForTimeout(11200)
+  expect(await page.locator('[data-home-guide] .bn-editor').count()).toBe(1);expect(await page.locator('.odyssey-home-guide-status').innerText()).not.toContain('未就绪')
+  await page.evaluate(()=>window.__testHomeGuideTimeline.play());await complete(page);expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
   expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([]);expect(logs).toEqual([])
  }finally{await f.dispose()}
 },65000)

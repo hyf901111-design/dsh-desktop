@@ -18,7 +18,8 @@ test('does not autoplay a late mount after the page became hidden while preparin
  f.mountNotes.mockImplementationOnce(()=>new Promise(done=>{resolve=done}))
  const pending=f.controller.start('note');await vi.waitFor(()=>expect(resolve).toBeTypeOf('function'))
  hidden=true;document.dispatchEvent(new Event('visibilitychange'));resolve({runStep:f.runStep,dispose:f.release});await pending
- expect(f.runStep).not.toHaveBeenCalled();expect(document.querySelector('.odyssey-home-guide-footer button')?.textContent).toBe('继续播放')
+ expect(f.runStep).not.toHaveBeenCalled();expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused');expect(document.querySelector('.odyssey-home-guide-footer')).toBeNull()
+ hidden=false;document.dispatchEvent(new Event('visibilitychange'));await vi.waitFor(()=>expect(f.runStep).toHaveBeenCalledOnce())
 })
 test('keeps the underlying note input inert but the real session header navigable',async()=>{
  const f=fixture();await f.controller.start('note')
@@ -35,7 +36,7 @@ test('acknowledges a scoped visual pointer only after travel and a click pulse w
  window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:'old-run',requestId:'old',target,label:'陈旧提示'}}))
  expect(document.querySelector<HTMLElement>('.odyssey-home-guide-pointer')?.hidden).toBe(true);expect(replies[0]).toMatchObject({requestId:'old',ok:false})
  window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:id,requestId:'current',target,label:'点击 AI 挑战'}}))
- expect(document.querySelector('[role=status]')?.textContent).toBe('点击 AI 挑战')
+ expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('点击 AI 挑战')
  await vi.advanceTimersByTimeAsync(200);expect(document.querySelector<HTMLElement>('.odyssey-home-guide-pointer')?.hidden).toBe(false);expect(replies).toHaveLength(1)
  await vi.advanceTimersByTimeAsync(900);expect(replies[1]).toMatchObject({requestId:'current',ok:true});expect(clicked).not.toHaveBeenCalled();expect(document.activeElement).toBe(focused)
  await f.controller.reset();expect(document.querySelector('.odyssey-home-guide-pointer')).toBeNull();window.removeEventListener('sherlock:home-guide-cue-reply',receive)
