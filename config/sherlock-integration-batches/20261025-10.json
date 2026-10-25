@@ -1,0 +1,300 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261025-10",
+  "branch": "codex/integration/20261025-10",
+  "baseMainCommit": "3aff8bc3612f09ad5ed9fbf6f07e5699a5acbf09",
+  "expectedMainCommit": "3aff8bc3612f09ad5ed9fbf6f07e5699a5acbf09",
+  "createdAt": "2026-10-25T08:05:02.139Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复笔记用例新会话与完善PPT开场及浅色壁纸选中态",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "3aff8bc3612f09ad5ed9fbf6f07e5699a5acbf09",
+        "tipCommit": "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed",
+        "commits": [
+          {
+            "commit": "f473e50084783b21c9de6628c8605c78ec1a9a10",
+            "parents": [
+              "f5979dbdf3d13a1f437f353c8fab58aa84042e35",
+              "3aff8bc3612f09ad5ed9fbf6f07e5699a5acbf09"
+            ],
+            "subject": "合并已验收页签动效批次的本地主干记录"
+          },
+          {
+            "commit": "a7ad03badd78c355df638d5b220a94bd249b9ca6",
+            "parents": [
+              "f473e50084783b21c9de6628c8605c78ec1a9a10"
+            ],
+            "subject": "将浅色壁纸选中轮廓改为清透淡蓝细框"
+          },
+          {
+            "commit": "a465d3b724a9b231a2f9c3c0cf4c9aa159cec038",
+            "parents": [
+              "a7ad03badd78c355df638d5b220a94bd249b9ca6"
+            ],
+            "subject": "修复笔记用例结束后新对话复用原会话"
+          },
+          {
+            "commit": "c0139aec8fe296a92f4411c47104c8f4a40cea1c",
+            "parents": [
+              "a465d3b724a9b231a2f9c3c0cf4c9aa159cec038"
+            ],
+            "subject": "按最新要求改用浅灰半透明粗选中描边"
+          },
+          {
+            "commit": "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed",
+            "parents": [
+              "c0139aec8fe296a92f4411c47104c8f4a40cea1c"
+            ],
+            "subject": "按原生技能附件顺序优化PPT用例开场"
+          }
+        ],
+        "boundaryParents": [
+          "f5979dbdf3d13a1f437f353c8fab58aa84042e35"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/specs/2026-10-25-home-theme-gallery.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-note-native-session-browser.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-notes-10-pipeline-1-20261025.log",
+            "verifiedCommit": "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed",
+            "completedAt": "2026-10-25T08:02:52Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-notes-10-pipeline-2-20261025.log",
+            "verifiedCommit": "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed",
+            "completedAt": "2026-10-25T08:02:52Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "-t",
+              "creates a new native session|keeps replayed|does not reselect|broad neutral-gray Light outline|translucent broad Light selected|opens all fifteen native|slides from the real presentation card|cancels the real entry|skill list",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-notes-10-root-critical-20261025.log",
+            "verifiedCommit": "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed",
+            "completedAt": "2026-10-25T08:02:52Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-theme-notes-10-typecheck-20261025.log",
+            "verifiedCommit": "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed",
+            "completedAt": "2026-10-25T08:02:52Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "git diff --check",
+            "verifiedCommit": "a74674b4b9ca6b8175d63b09d885a05fa7eaa0ed",
+            "completedAt": "2026-10-25T08:02:52Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Root真实Chromium Main/isolated原生壳14/14聚焦验证、两遍pipeline、tsc和diff通过；B Notes51及PPT开场61直接checks、C Light7直接checks与D/B/C独审通过。Root查看3px浅灰32%轮廓的真实Haseeb renderer整pane。正式10包仍需clean main构建后原生验收，未把fixture当真包。"
+        },
+        "acceptanceCriteria": [
+          "Notes完整/中途/replay保存后原生对话→新对话真正产生新session，旧笔记和任务保留，取消无迟到抢回。",
+          "PPT大卡点击真正上滑回原生输入框，虚拟鼠标先原生技能再附件再短prompt，真实交付卡点击保持，暂停/hidden/CAS正常。",
+          "Light选中态3px rgba(145,145,145,.32)零blur，Dark不变；几何、原生15壁纸内容及用户最新偏好保留。",
+          "干净main以正式身份本地构建并真实验收，跳过公证上传/push/版本变更。"
+        ],
+        "risks": [
+          "正式10实际主界面与最新开场仍待clean main构建后验证。",
+          "PPT标注功能仅已完成HF设计/recon/spec草稿，未作为本批实现，后续独立开发。"
+        ],
+        "generatedAt": "2026-10-25 08:02:52 UTC"
+      },
+      "merged": {
+        "mergeCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+        "verificationCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "test/home-guide-notes-shell-browser.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "-t",
+              "creates a new native session|keeps replayed|does not reselect|broad neutral-gray Light outline|translucent broad Light selected|opens all fifteen native|slides from the real presentation card|cancels the real entry|skill list",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js test/home-guide-notes-shell-browser.test.js test/home-guide-presentation-browser.test.js -t creates a new native session|keeps replayed|does not reselect|broad neutral-gray Light outline|translucent broad Light selected|opens all fifteen native|slides from the real presentation card|cancels the real entry|skill list --maxWorkers=2",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "fe76fb293d5099225290763eae4eb479163eab45",
+            "completedAt": "2026-10-25T08:07:40.255Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T08:07:40.255Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "test/home-guide-notes-shell-browser.test.js",
+        "test/home-guide-presentation-browser.test.js",
+        "-t",
+        "creates a new native session|keeps replayed|does not reselect|broad neutral-gray Light outline|translucent broad Light selected|opens all fifteen native|slides from the real presentation card|cancels the real entry|skill list",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
