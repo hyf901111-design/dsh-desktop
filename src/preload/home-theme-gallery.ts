@@ -21,7 +21,7 @@ export type HomeThemeGallery = {
   element: HTMLElement
   setVisible(visible: boolean): void
   refresh(): void
-  layout(width: number, availableHeight: number): number
+  layout(width: number, availableHeight: number, fontRevision?: number): number
   dispose(): void
 }
 
@@ -31,7 +31,7 @@ export function createHomeThemeGallery(doc: Document, controller: HomeThemeContr
   element.className = 'odyssey-theme-gallery'
   element.dataset.odysseyThemeGallery = ''
   const cards = new Map<HomeTheme, HTMLButtonElement>()
-  let visible = false, columns = 5
+  let visible = false, columns = 5, layoutSignature = '', layoutHeight = 0
   const english = () => doc.documentElement.dataset.odysseyLocale === 'en'
   const labels = () => {
     for (const [id, card] of cards) {
@@ -80,27 +80,34 @@ export function createHomeThemeGallery(doc: Document, controller: HomeThemeContr
       for (const card of cards.values()) card.tabIndex = visible ? 0 : -1
       if (visible) refresh()
     },
-    layout(width, availableHeight) {
-      element.style.width = `${width}px`
-      const gap = width < 420 ? 8 : 12, nameGap = width < 420 ? 4 : 8
-      let previewHeight = 78, rowHeight = 106, totalHeight = 342
-      for (let count = width >= 650 ? 5 : 3; count <= 8; count++) {
-        columns = count
-        element.style.setProperty('--odyssey-wallpaper-columns', String(columns))
-        element.style.setProperty('--odyssey-wallpaper-gap', `${gap}px`)
-        element.style.setProperty('--odyssey-wallpaper-name-gap', `${nameGap}px`)
-        const column = Math.max(1, (width - gap * (columns - 1)) / columns)
-        const rows = Math.ceil(HOME_THEMES.length / columns), gaps = gap * (rows - 1)
-        const hiddenLines = english() ? column < 65 ? 3 : column < 115 ? 2 : 1 : column < 48 ? 2 : 1
-        const labelHeight = Math.max(20, ...[...cards.values()].map(card => { const label = card.querySelector<HTMLElement>('.odyssey-wallpaper-name')!; return Math.max(label.offsetHeight, label.scrollHeight) || hiddenLines * 18 }))
-        previewHeight = column * 78 / 146.4
-        rowHeight = previewHeight + nameGap + labelHeight
-        totalHeight = rowHeight * rows + gaps
-        if (totalHeight <= availableHeight) break
-      }
-      element.style.setProperty('--odyssey-wallpaper-preview-height', `${previewHeight}px`)
-      element.style.setProperty('--odyssey-wallpaper-row-height', `${rowHeight}px`)
-      return totalHeight
+    layout(width, availableHeight, fontRevision = 0) {
+      const signature = `${width}:${availableHeight}:${english()}:${fontRevision}:${doc.fonts?.status}`
+      if (signature === layoutSignature) return layoutHeight
+      const wasHidden = element.hidden, visibility = element.style.visibility
+      if (wasHidden) { element.style.visibility = 'hidden'; element.hidden = false }
+      try {
+        element.style.width = `${width}px`
+        const gap = width < 420 ? 8 : 12, nameGap = width < 420 ? 4 : 8
+        let previewHeight = 78, rowHeight = 106, totalHeight = 342
+        for (let count = width >= 650 ? 5 : 3; count <= 8; count++) {
+          columns = count
+          element.style.setProperty('--odyssey-wallpaper-columns', String(columns))
+          element.style.setProperty('--odyssey-wallpaper-gap', `${gap}px`)
+          element.style.setProperty('--odyssey-wallpaper-name-gap', `${nameGap}px`)
+          const column = Math.max(1, (width - gap * (columns - 1)) / columns)
+          const rows = Math.ceil(HOME_THEMES.length / columns), gaps = gap * (rows - 1)
+          const hiddenLines = english() ? column < 65 ? 3 : column < 115 ? 2 : 1 : column < 48 ? 2 : 1
+          const labelHeight = Math.max(20, ...[...cards.values()].map(card => { const label = card.querySelector<HTMLElement>('.odyssey-wallpaper-name')!; return Math.max(label.offsetHeight, label.scrollHeight) || hiddenLines * 18 }))
+          previewHeight = column * 78 / 146.4
+          rowHeight = previewHeight + nameGap + labelHeight
+          totalHeight = rowHeight * rows + gaps
+          if (totalHeight <= availableHeight) break
+        }
+        element.style.setProperty('--odyssey-wallpaper-preview-height', `${previewHeight}px`)
+        element.style.setProperty('--odyssey-wallpaper-row-height', `${rowHeight}px`)
+        layoutSignature = signature; layoutHeight = totalHeight
+        return totalHeight
+      } finally { if (wasHidden) { element.hidden = true; element.style.visibility = visibility } }
     },
     dispose() { visible = false; unsubscribe(); element.remove() }
   }
