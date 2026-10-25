@@ -7,8 +7,10 @@ import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {NotesStore} from '../src/main/notes/store'
 import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
-let browser,script,css
+import {homeNoteNativeSessionBrowser,isolatedNoteStorage} from './fixtures/home-note-native-session-browser.js'
+let browser,script,css,nativeSessionScript
 beforeAll(async()=>{
+ nativeSessionScript=await homeNoteNativeSessionBrowser()
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountHomeGuides}from'./src/preload/home-guides';import{mountHomeNotesGuide}from'./src/preload/home-guide-notes';import{mountNotes}from'./src/preload/notes/mount';import{WorkspaceSurfaceHost}from'./src/preload/workspace-surface-host';
  import{HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT}from'./packages/dsh-research-task-runtime/home-notes-guide-contract.js';
@@ -35,30 +37,108 @@ beforeAll(async()=>{
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },60000)
 afterAll(async()=>browser?.close())
-async function fixture(paneWidth=600){
+async function fixture(paneWidth=600,{isolated=false,deferEngage=false}={}){
  const directory=mkdtempSync(join(tmpdir(),'home-guide-note-shell-')),store=new NotesStore(directory),requests=[]
+ let releaseEngage;const engageGate=deferEngage?new Promise(resolve=>releaseEngage=resolve):Promise.resolve()
  const context=await browser.newContext({viewport:{width:paneWidth+480,height:752}}),page=await context.newPage(),errors=[],logs=[];page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(['warning','error'].includes(message.type()))logs.push(message.text()+' '+JSON.stringify(message.location()))})
- await page.exposeFunction('noteStorageRequest',async(method,input)=>{requests.push({method,sessionId:input.sessionId});if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);if(method==='challenge')throw Error('教程不应请求真实模型');return{ok:true}})
+ await page.exposeFunction('noteStorageRequest',async(method,input)=>{requests.push({method,sessionId:input.sessionId});if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);if(method==='engage')await engageGate;if(method==='challenge')throw Error('教程不应请求真实模型');return{ok:true}})
  await page.route('http://127.0.0.1/notes-guide-shell',route=>route.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content"><title>首页笔记教程集成验收</title><style>body{margin:0;font-family:system-ui}.pI_x6G_centerCol{position:absolute;left:88px;top:10px;width:${paneWidth}px;bottom:10px;border-radius:12px;overflow:hidden;background:#eee}.wSkVaW_root{height:100%;position:relative}.wSkVaW_header{height:44px;display:flex;align-items:center;padding-inline:12px}.wSkVaW_header button{height:30px;border:0;border-radius:7px;padding:0 14px;background:transparent}.wSkVaW_header button[aria-selected=true]{background:#ddd}#original-draft{position:absolute;top:250px;left:20px;width:calc(100% - 50px)}[data-srb-tabs]{display:flex}.en-root{z-index:45}</style><div class="pI_x6G_centerCol"><div class="wSkVaW_root"><header class="wSkVaW_header" data-srb-session-header data-ework-notes-session="original-session"><div data-srb-tabs role="tablist"><button role="tab" data-conversation-view-id="chat" aria-selected="true">对话</button><button role="tab" data-conversation-view-id="research" aria-selected="false">研究</button><button role="tab" data-conversation-view-id="notes" aria-selected="false">笔记</button></div><div data-en-challenge-tools="original-session"></div></header><div id="resident-body" style="height:calc(100% - 44px)"><textarea id="original-draft">用户原有提示词与技能标签</textarea></div></div></div>`}))
- await page.goto('http://127.0.0.1/notes-guide-shell');if(css)await page.addStyleTag({content:css});await page.addScriptTag({content:script});return{context,page,errors,logs,store,requests,dispose:async()=>{await context.close();rmSync(directory,{recursive:true,force:true})}}
+ await page.route('http://127.0.0.1/sherlock-research.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg"/>'}));await page.goto('http://127.0.0.1/notes-guide-shell');if(css)await page.addStyleTag({content:css})
+ let evaluate=fn=>page.evaluate(fn)
+ if(isolated){
+  await page.addScriptTag({content:nativeSessionScript})
+  const cdp=await context.newCDPSession(page),{frameTree}=await cdp.send('Page.getFrameTree'),{executionContextId}=await cdp.send('Page.createIsolatedWorld',{frameId:frameTree.frame.id,worldName:'notes-preload',grantUniversalAccess:true})
+  const run=async expression=>{const value=await cdp.send('Runtime.evaluate',{expression,contextId:executionContextId,awaitPromise:true,returnByValue:true});if(value.exceptionDetails)throw Error(value.exceptionDetails.exception?.description||value.exceptionDetails.text);return value.result.value}
+  evaluate=fn=>run('('+fn.toString()+')()')
+  await run(isolatedNoteStorage+script)
+ }else await page.addScriptTag({content:script})
+ return{context,page,errors,logs,store,requests,evaluate,releaseEngage,dispose:async()=>{releaseEngage?.();await context.close();rmSync(directory,{recursive:true,force:true})}}
 }
 // Real public "next" actions skip reading holds in this focused test; adapters
 // retain their actual stream, native scheduler and UI-stability waits.
-async function complete(page){
+async function complete(page,evaluate=fn=>page.evaluate(fn)){
  const deadline=Date.now()+65000;let capturedPopover=false
  while(Date.now()<deadline){
   if(await page.locator('[data-home-guide]').count()===0)return
   const phase=await page.locator('[data-home-guide]').getAttribute('data-phase');if(phase==='completed'){await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);return}
-  if(phase==='error')throw Error(await page.locator('.odyssey-home-guide-status').innerText()+' '+JSON.stringify(await page.evaluate(()=>window.guideCueHistory)))
+  if(phase==='error')throw Error(await page.locator('.odyssey-home-guide-status').innerText()+' '+JSON.stringify(await evaluate(()=>window.guideCueHistory)))
   if(!capturedPopover&&await page.locator('.en-challenge-popover').count()){
    expect(await page.locator('.en-challenge-popover').evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return node===hit||node.contains(hit)})).toBe(true)
    await page.screenshot({path:'/tmp/home-guide-note-native-popover-20261025.png'});capturedPopover=true
   }
-  await page.evaluate(()=>{if(window.__testHomeGuideTimeline.snapshot().holding)window.__testHomeGuideTimeline.next()})
+  await evaluate(()=>{if(window.__testHomeGuideTimeline.snapshot().holding)window.__testHomeGuideTimeline.next()})
   await page.waitForTimeout(90)
  }
  throw Error('笔记教程未完成：'+await page.locator('.odyssey-home-guide-status').innerText())
 }
+it('creates a new native session after an isolated Notes walkthrough without losing the saved note or applied task history',async()=>{
+ const f=await fixture(600,{isolated:true}),{page,evaluate,store}=f;try{
+  expect(await page.evaluate(()=>typeof window.guides)).toBe('undefined')
+  expect(await evaluate(()=>typeof window.nativeSessionProbe)).toBe('undefined')
+  await evaluate(()=>window.guides.start('note'));await complete(page,evaluate)
+  const saved=store.load('owner','example-note-1'),tasks=await evaluate(()=>window.noteNativeTasks)
+  expect(tasks.map(task=>task.scope)).toEqual(['note','selection'])
+  expect(JSON.stringify(saved.saved.blocks)).toContain('同比增长10%')
+  expect(JSON.stringify(saved.saved.blocks)).toContain('不能直接推导全年净利润翻倍')
+  await page.getByRole('tab',{name:'对话'}).click()
+  const before=await page.evaluate(()=>window.nativeSessionProbe.snapshot())
+  expect(before.current).toBe('example-note-1')
+  await page.getByRole('button',{name:'新建对话',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.nativeSessionProbe.snapshot().created.length)).toBe(1)
+  const after=await page.evaluate(()=>window.nativeSessionProbe.snapshot())
+  expect(after.current).not.toBe('example-note-1');expect(after.current).toBe(after.created[0].sessionId)
+  expect(after.byId['example-note-1'].blank).toBe(false)
+  expect(store.load('owner','example-note-1')).toEqual(saved)
+  expect(await evaluate(()=>window.noteNativeTasks)).toEqual(tasks)
+  await page.waitForTimeout(100)
+  expect((await page.evaluate(()=>window.nativeSessionProbe.snapshot())).current).toBe(after.current)
+  // The guide handoff must leave ordinary Notes' own edit/retention path intact.
+  await page.getByRole('tab',{name:'笔记'}).click()
+  const ordinary=page.locator('[data-note-editor-session="'+after.current+'"] .en-title')
+  await ordinary.fill('普通笔记的真实编辑')
+  await expect.poll(()=>page.evaluate(()=>{const value=window.nativeSessionProbe.snapshot();return value.byId[value.current].blank})).toBe(false)
+  await page.getByRole('tab',{name:'对话'}).click()
+  await expect.poll(()=>store.load('owner',after.current).saved.title).toBe('普通笔记的真实编辑')
+  expect(store.load('owner','example-note-1')).toEqual(saved)
+  expect(f.errors).toEqual([]);expect(f.logs).toEqual([])
+ }finally{await f.dispose()}
+},75000)
+it('keeps replayed and interrupted Notes copies while native New Chat leaves them without a late guide selection',async()=>{
+ const f=await fixture(600,{isolated:true}),{page,evaluate,store}=f;try{
+  const write=async()=>{await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('研究摘要')}
+  await evaluate(()=>window.guides.start('note'));await write()
+  await evaluate(()=>window.guides.start('note',{replay:true}));await write()
+  await page.getByRole('tab',{name:'对话'}).click();await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
+  const copies=['example-note-1','example-note-2'].map(id=>store.load('owner',id))
+  for(const note of copies)expect(JSON.stringify(note.saved.blocks)).toContain('研究摘要')
+  const before=await page.evaluate(()=>window.nativeSessionProbe.snapshot())
+  expect(before.retained).toEqual(['example-note-1','example-note-2'])
+  await page.getByRole('button',{name:'新建对话',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.nativeSessionProbe.snapshot().created.length)).toBe(1)
+  const after=await page.evaluate(()=>window.nativeSessionProbe.snapshot())
+  expect(after.current).toBe(after.created[0].sessionId)
+  expect(['example-note-1','example-note-2'].map(id=>store.load('owner',id))).toEqual(copies)
+  await page.waitForTimeout(150)
+  expect((await page.evaluate(()=>window.nativeSessionProbe.snapshot())).current).toBe(after.current)
+  expect(f.errors).toEqual([]);expect(f.logs).toEqual([])
+ }finally{await f.dispose()}
+},25000)
+it('does not reselect or emit a late edit after cancelling an isolated guide with its Host engage reply pending',async()=>{
+ const f=await fixture(600,{isolated:true,deferEngage:true}),{page,evaluate,store}=f;try{
+  await evaluate(()=>window.guides.start('note'))
+  await expect.poll(()=>f.requests.some(item=>item.method==='engage'),{timeout:6000}).toBe(true)
+  await page.getByRole('button',{name:'新建对话',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.nativeSessionProbe.snapshot().created.length)).toBe(1)
+  await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
+  const before=await page.evaluate(()=>window.nativeSessionProbe.snapshot()),saved=store.load('owner','example-note-1')
+  expect(before.retained).toEqual(['example-note-1']);expect(saved.saved.title).toContain('AI算力产业链')
+  f.releaseEngage();await page.waitForTimeout(200)
+  expect(await page.evaluate(()=>window.nativeSessionProbe.snapshot())).toEqual(before)
+  expect(store.load('owner','example-note-1')).toEqual(saved)
+  expect(await evaluate(()=>window.noteNativeTasks)).toEqual([])
+  expect(f.errors).toEqual([]);expect(f.logs).toEqual([])
+ }finally{await f.dispose()}
+},15000)
 async function startWriting(page){await page.evaluate(()=>window.guides.start('note'));await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('研究摘要')}
 for(const width of [600,700])it(`saves and reopens the native note without clipping a ${width}px pane walkthrough`,async()=>{
  const f=await fixture(width),{page,errors,logs,store,requests}=f;try{
