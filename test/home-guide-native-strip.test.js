@@ -9,12 +9,12 @@ import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../script
 
 const installed=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
 const withoutPresentation=source=>presentation.stripHomeGuidePresentationNative(source)
-it.each([false,true])('preserves the native PPT chat page for hero=%s while retaining board/note guide pages',hero=>{
+it.each([false,true])('preserves the native PPT chat page for hero=%s and uses native board/note page styling',hero=>{
  const patched=guide.patchHomeGuideNative(withoutPresentation(installed)),matches=[...patched.matchAll(/"data-odyssey-page": ([^\n]+),/g)]
  expect(matches).toHaveLength(1)
  const page=new Function('homeGuideResident','research','hero','activeView','return '+matches[0][1])
  expect(page(true,false,hero,'chat')).toBe(hero?'home':'conversation')
- expect(page(true,true,hero,'research')).toBe('guide');expect(page(true,false,hero,'notes')).toBe('guide')
+ expect(page(true,true,hero,'research')).toBe('research');expect(page(true,false,hero,'notes')).toBe(hero?'home':'conversation')
  expect(page(false,true,hero,'research')).toBe('research');expect(page(false,false,hero,'chat')).toBe(hero?'home':'conversation')
 })
 it('exposes a strict inverse that leaves an unpatched native source unchanged',()=>{
@@ -32,10 +32,13 @@ it('restores the exact native source before earlier patches refresh and is a no-
  expect(guide.stripHomeGuideNative('const ordinary = 1;')).toBe('const ordinary = 1;')
  new Script(native)
 })
-it.each([1,2,3])('upgrades resident v%s and still restores the native activation effect exactly',version=>{
+it.each([1,2,3,4])('upgrades resident v%s and still restores the native activation effect exactly',version=>{
  const current=guide.patchHomeGuideNative(withoutPresentation(installed))
  const legacyEffect='(0, react.useEffect)(() => {\n\t\t\t\tif (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tif (!homeGuideNativeResidentSession(sessionId,subagentPanel)) setResearchActive(sessionId, false);\n\t\t\t\t};\n\t\t\t}, [research, homeGuideResident, sessionId, setResearchActive]);'
- let legacy=current.replace('/* odyssey:home-guide-resident-isolation:v4 */','/* odyssey:home-guide-resident-isolation:v'+version+' */').replace('homeGuideResident && (research || activeView === "notes") ? "guide"','homeGuideResident ? "guide"')
+ let legacy=current.replace('/* odyssey:home-guide-resident-isolation:v5 */','/* odyssey:home-guide-resident-isolation:v'+version+' */')
+ legacy=legacy.replace("const homeGuideResearch=research||(activeView==='notes'&&(homeGuideSidebar||sherlockBoardsAdapter?.getHomeGuideSession?.(sessionId)?.kind==='note'));\n",'').replace('sessionId,homeGuideResearch,','sessionId,research,')
+ legacy=legacy.replace('const homeGuideSidebar=homeGuideResident&&homeGuideNativeSidebarSession(sessionId);\n','').replace("&&(!homeGuideResident||homeGuideSidebar)",'&&!homeGuideResident').replaceAll('homeGuideResident&&!homeGuideSidebar','homeGuideResident')
+ legacy=legacy.replace('"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",','"data-odyssey-page": '+(version===4?'homeGuideResident && (research || activeView === "notes")':'homeGuideResident')+' ? "guide" : research ? "research" : hero ? "home" : "conversation",')
  if(version===1)legacy=legacy.replace('useHomeGuideNativeResearchActivation(sessionId,research,homeGuideResident,setResearchActive);',legacyEffect)
  if(version<=2)legacy=legacy.replace('useHomeGuideNativeResident(sessionId,false,rootRef)','useHomeGuideNativeResident(sessionId)').replace('if (homeGuideNativeResidentSession(sessionId)) return;\n\t\t\t\tconst beforeDraft','const beforeDraft')
  new Script(legacy)

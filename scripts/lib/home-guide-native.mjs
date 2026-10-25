@@ -1,40 +1,37 @@
+import {NativeHomeNotesGuidePortal as NotesGuidePortalDefinition} from './home-guide-notes-native.mjs'
+// Keep serialized references local when the test loader rewrites ESM imports.
+const NativeHomeNotesGuidePortal = NotesGuidePortalDefinition
 const START = '/* odyssey:home-guide-native:start:v1 */'
 const END = '/* odyssey:home-guide-native:end:v1 */'
 const RESIDENT_V1 = '/* odyssey:home-guide-resident-isolation:v1 */'
 const RESIDENT_V2 = '/* odyssey:home-guide-resident-isolation:v2 */'
 const RESIDENT_V3 = '/* odyssey:home-guide-resident-isolation:v3 */'
-const RESIDENT = '/* odyssey:home-guide-resident-isolation:v4 */'
+const RESIDENT_V4 = '/* odyssey:home-guide-resident-isolation:v4 */'
+const RESIDENT = '/* odyssey:home-guide-resident-isolation:v5 */'
 const PERSISTENT = '/* odyssey:home-guide-persistent-board:v1 */'
 const CANVAS = '/* odyssey:home-guide-shared-workspace-canvas:v1 */'
 
-function homeGuideNativeSampleProvider() {
-  const symbols = [
+function homeGuideNativeBoardSymbols() {
+  return [
+    { market: 'US', code: 'AAPL', name: '苹果' },
+    { market: 'SH', code: '600900', name: '长江电力' },
+    { market: 'SH', code: '601138', name: '工业富联' },
+    { market: 'SZ', code: '000858', name: '五粮液' },
+    { market: 'SZ', code: '000425', name: '徐工机械' },
+    { market: 'SH', code: '603040', name: '新坐标' },
+    { market: 'SH', code: '600008', name: '首创环保' },
     { market: 'SH', code: '600519', name: '贵州茅台' },
-    { market: 'SZ', code: '000001', name: '平安银行' },
-    { market: 'HK', code: '00700', name: '腾讯控股' }
+    { market: 'HK', code: '00003', name: '香港中华煤气' }
   ]
-  return {
-    symbols,
-    async request(input) {
-      const source = '离线教程示例 · 2026-10-20', receivedAt = '2026-10-20T07:00:00Z'
-      if (input?.action === 'search') {
-        const query = String(input.query || '').toLowerCase()
-        return { symbols: symbols.filter(s => (s.name + s.code + s.market).toLowerCase().includes(query)), source }
-      }
-      const row = symbol => { const i = symbols.findIndex(s => s.market === symbol?.market && s.code === symbol?.code); if (i < 0) throw Error('该标的不在离线示例数据中。'); return { price: [1456.8, 11.52, 462.4][i], changePercent: [0.82, -0.35, 1.16][i] } }
-      if (input?.action === 'quotes') return { source, receivedAt, quotes: (input.symbols || []).map(s => ({ ...s, ...row(s), priceChange: 1.2, quotedAt: receivedAt, asOf: '2026-10-20', series: [.97, .98, .976, .99, .985, 1].map(v => v * row(s).price) })) }
-      if (input?.action === 'history') return { source, receivedAt, nativePeriod: true, volumeUnit: '股', bars: Array.from({ length: 80 }, (_, i) => {
-        const close = row(input.symbols?.[0]).price * (1 + (i - 79) * .001 + (Math.sin(i / 4) - Math.sin(79 / 4)) * .004)
-        return { date: new Date(Date.UTC(2026, 6, 1 + i)).toISOString().slice(0, 10), open: close - .6, high: close + 1.8, low: close - 1.5, close, volume: 150000 + (i % 7) * 23000 }
-      }) }
-      if (input?.action === 'news') return { source, receivedAt, news: [
-        { id: 'guide-news-1', title: '示例：关注公司经营与行业变化', summary: '离线教程预置内容，仅用于学习组件联动，不代表实时新闻或投资建议。', time: '2026-10-20 15:00', source },
-        { id: 'guide-news-2', title: '示例：将行情与相关资讯放在同一看板', summary: '切换自选标的后，原生连接会同步更新下游组件。', time: '2026-10-20 14:30', source }
-      ] }
-      if (input?.action === 'announcements') return { source, receivedAt, announcements: [] }
-      throw Error('教程数据不支持此操作。')
-    }
-  }
+}
+
+// Keep the existing bridge, provenance and errors; no tutorial market values.
+function homeGuideNativeSampleProvider() {
+  return { symbols: homeGuideNativeBoardSymbols(), async request(input) {
+    const bridge = window.dshDesktop?.financialWidget
+    if (typeof bridge?.request !== 'function') throw Error('数据服务暂不可用')
+    return bridge.request(input)
+  } }
 }
 
 // Reuse the real registered workspace; the cache owns no private storage.
@@ -51,9 +48,7 @@ function useHomeGuideNativeFinancialProvider(sessionId) {
   const inherited = react.useContext(HomeGuideNativeFinancialContext)
   const page = sherlockBoardsAdapter
   react.useSyncExternalStore(page?.subscribe ?? (() => () => {}), page?.version ?? (() => 0), () => 0)
-  const entry = page?.getHomeGuideSession?.(sessionId)
-  const sample = react.useMemo(() => entry?.kind === 'board' ? homeGuideNativeSampleProvider() : null, [entry?.sessionId, entry?.kind])
-  return { provider: inherited ?? sample, ready: Boolean(inherited) || page?.homeGuideSessionsReady?.() !== false }
+  return { provider: inherited?.runId ? inherited : null, ready: Boolean(inherited?.runId) || page?.homeGuideSessionsReady?.() !== false }
 }
 
 // Only one mounted canvas may measure a real workspace at a time. The
@@ -94,8 +89,21 @@ function homeGuideNativeResidentSession(sessionId, subagentPanel = false) {
   return false
 }
 
+function homeGuideNativeSidebarSession(sessionId) {
+  if (!homeGuideNativeResidentSession(sessionId)) return false
+  return [...document.querySelectorAll('.pI_x6G_centerCol')].some(center => {
+    const root = center.querySelector('.wSkVaW_root'), run = center.dataset.homeGuideActive
+    return root?.querySelector('[data-ework-notes-session]')?.dataset.eworkNotesSession === sessionId && [...center.querySelectorAll('[data-home-guide]')].some(guide => guide.dataset.homeGuide === run && ['board','note'].includes(guide.dataset.kind))
+  })
+}
+
 function useHomeGuideNativeResident(sessionId, subagentPanel = false, canvasRef = null) {
-  const snapshot = react.useCallback(() => canvasRef?.current?.closest('[data-home-guide-native]') ? false : homeGuideNativeResidentSession(sessionId, subagentPanel), [sessionId, subagentPanel, canvasRef])
+  const snapshot = react.useCallback(() => {
+    if(canvasRef?.current?.closest('[data-home-guide-native]') || !homeGuideNativeResidentSession(sessionId,subagentPanel))return false
+    // A transition already owns the resident. Mounting its native Board/Note
+    // still changes sidebar readiness, even while resident ownership stays true.
+    return homeGuideNativeSidebarSession(sessionId)?'native-sidebar':'resident'
+  }, [sessionId, subagentPanel, canvasRef])
   const subscribe = react.useCallback(listener => {
     const observer = new window.MutationObserver(listener)
     observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-home-guide-active', 'data-home-guide-resident', 'data-home-guide-transition', 'data-home-guide-transition-session', 'data-ework-notes-session'] })
@@ -135,6 +143,12 @@ function useHomeGuideNativeResearchActivation(sessionId, research, homeGuideResi
 function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorkspaces }) {
   const [entry, setEntry] = react.useState(null)
   const owned = react.useRef(null)
+  const layoutResident = useHomeGuideNativeResident(sessionId, subagentPanel)
+  react.useLayoutEffect(() => {
+    if (!layoutResident || !homeGuideNativeSidebarSession(sessionId)) return
+    const frame = document.querySelector('.pI_x6G_frame'), toggle = frame?.querySelector('button.hHd-Xa_toggle')
+    if (frame && frame.dataset.sidebarCollapsed !== 'true' && toggle && !toggle.disabled) toggle.click()
+  }, [layoutResident, sessionId, subagentPanel])
   react.useEffect(() => {
     if (subagentPanel || !sessionId || window.top !== window) return
     let stopped = false
@@ -164,13 +178,14 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       raf = window.requestAnimationFrame(() => finish())
       timer = window.setTimeout(() => finish(), 48)
     })
-    const settle = async (ticket, ready = () => true, frames = 2) => {
-      const until = Date.now() + 2400
-      let stable = 0
+    const settle = async (ticket, ready = () => true, frames = 2, budget = 2400, active = false) => {
+      let deadline = Date.now() + budget, stable = 0
       while (stable < frames) {
+        if (active) { const waiting = Date.now(); await playing(ticket); deadline += Date.now() - waiting }
         check(ticket); await frame(ticket); check(ticket)
+        if (active && !ticket.playing) { stable = 0; continue }
         stable = ready() ? stable + 1 : 0
-        if (Date.now() > until) throw Error('原生研究画布尚未就绪，请重试。')
+        if (Date.now() > deadline) throw Error('原生研究画布尚未就绪，请重试。')
       }
     }
     const delay = async (ticket, duration) => {
@@ -196,9 +211,34 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
     }
     const cue = async (ticket, target, label, action = 'move', fromTarget) => {
       await playing(ticket); targetReady(ticket, target); if (fromTarget) targetReady(ticket, fromTarget)
-      target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }); fromTarget?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
       const marker = document.documentElement.dataset.homeGuidePointerRun
       if (marker && marker !== ticket.detail.runId) throw changed()
+      const targets = [target,fromTarget].filter(Boolean)
+      let previous
+      const positioned = visible => () => {
+        const geometry = []
+        for(const element of targets) {
+          targetReady(ticket,element)
+          const rect=element.getBoundingClientRect();let left=Math.max(0,rect.left),top=Math.max(0,rect.top),right=Math.min(window.innerWidth,rect.right),bottom=Math.min(window.innerHeight,rect.bottom)
+          if(rect.width<=0||rect.height<=0)return false
+          if(visible&&marker)for(let node=element;node;node=node.parentElement){
+            const style=window.getComputedStyle(node)
+            if(node.hidden||node.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')return false
+            if(node!==element){const clip=node.getBoundingClientRect();if(/hidden|auto|scroll|clip/.test(style.overflowX||style.overflow)){left=Math.max(left,clip.left);right=Math.min(right,clip.right)}if(/hidden|auto|scroll|clip/.test(style.overflowY||style.overflow)){top=Math.max(top,clip.top);bottom=Math.min(bottom,clip.bottom)}}
+          }
+          if(visible&&(right<=left||bottom<=top)){previous=undefined;return false}
+          geometry.push(rect.left,rect.top,rect.width,rect.height)
+        }
+        const stable=previous&&geometry.every((value,index)=>Math.abs(value-previous[index])<.5);previous=geometry
+        return stable
+      }
+      // Native cards animate their real grid geometry. Frame the settled ports,
+      // rather than scrolling to an intermediate position during that motion.
+      await settle(ticket,positioned(false),2,2400,true)
+      target.scrollIntoView?.({ block:'nearest',inline:'nearest',behavior:'instant' });fromTarget?.scrollIntoView?.({ block:'nearest',inline:'nearest',behavior:'instant' })
+      previous=undefined
+      await settle(ticket,positioned(true),2,2400,true)
+      if(document.documentElement.dataset.homeGuidePointerRun!==marker)throw changed()
       if (marker) {
         ticket.pointerRun = marker
         await new Promise((resolve, reject) => {
@@ -254,7 +294,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         if (owned.current && owned.current.detail.runId !== detail.runId) throw changed()
         dispose(); return
       }
-      const allowed = ['mount-board', 'board-library', 'board-watchlist', 'board-quote', 'board-news', 'board-link', 'board-add', 'board-arrange']
+      const allowed = ['mount-board', 'board-library', 'board-indices', 'board-watchlist', 'board-quote', 'board-news', 'board-announcements', 'board-calendar', 'board-link', 'board-add', 'board-arrange']
       if (!allowed.includes(detail.command)) throw Error('不支持的教程操作。')
       if (detail.command === 'mount-board') {
         const host = mainHost(detail)
@@ -263,7 +303,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         const resource = homeGuideNativeResource(sessionId, researchWorkspaces)
         if (resource.owner) throw Error('另一个教程仍在使用研究画布。')
         resource.workspace.setViewport({ x: 0, y: 0, scale: 1 })
-        const nodes = Object.fromEntries(['watchlist','quote','news'].flatMap(widget => { const node = resource.workspace.getSnapshot().artifacts.find(node => node.containerSpec?.widget === widget); return node ? [[widget, node.id]] : [] }))
+        const nodes = Object.fromEntries(['indices','watchlist','quote','news','announcements','calendar'].flatMap(widget => { const node = resource.workspace.getSnapshot().artifacts.find(node => widget === 'calendar' ? node.containerSpec?.type === 'calendar-tool' : node.containerSpec?.widget === widget); return node ? [[widget, node.id]] : [] }))
         const ticket = { detail, host, resource, provider: { ...resource.provider, runId: detail.runId }, controller: new window.AbortController(), nodes, originalSelection: structuredClone(resource.workspace.getSnapshot().selection), ownedSelection: null, playing: playback?.runId === detail.runId ? playback.playing : true }
         resource.owner = ticket; owned.current = ticket
         react_dom.flushSync(() => setEntry(ticket))
@@ -298,6 +338,21 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         }
         return current
       }
+      const layoutBoard = (reset = false) => {
+        const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width), pair = metrics.minColumns <= 20
+        const namesById = new Map(Object.entries(ticket.nodes).map(([name,nodeId])=>[nodeId,name]))
+        workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:['indices','calendar'].includes(namesById.get(node.id)),workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
+        const rows = [['indices'], ...(pair ? [['watchlist','quote'],['news','announcements']] : [['watchlist'],['quote'],['news'],['announcements']]), ['calendar']]
+        const heights = {indices:(metrics.width-48<=520?420:340),watchlist:470,quote:470,news:340,announcements:340,calendar:420}, fitted = new Map()
+        let top = 0
+        for (const names of rows) {
+          const members = names.filter(name => ticket.nodes[name]), height = Math.ceil((Math.max(...members.map(name => heights[name]),0)+metrics.gap)/metrics.rowStep)
+          for (const [index,name] of members.entries()) fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:index*(40/members.length),y:top,w:40/members.length,h:height})
+          if (members.length) top += height
+        }
+        if (!workspace.applyWorkbenchCells(workspace.getWorkbenchCells().map(cell => fitted.get(cell.id) || cell), false)) throw Error('看板布局暂时无法调整。')
+        const canvas = ticket.host.querySelector('[data-research-canvas]'); if (reset && canvas) canvas.scrollTop = 0
+      }
       const library = () => [...document.querySelectorAll('[data-home-guide-native-library]')].find(el => el.dataset.homeGuideNativeLibrary === detail.runId)
       if (detail.command === 'board-library') {
         const button = await libraryButton()
@@ -306,119 +361,121 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         const menu = library(); if (menu) menu.__homeGuideRunId = detail.runId
         await save(ticket); return
       }
-      if (['board-watchlist', 'board-quote', 'board-news'].includes(detail.command)) {
+      if (['board-indices', 'board-watchlist', 'board-quote', 'board-news', 'board-announcements', 'board-calendar'].includes(detail.command)) {
         const widget = detail.command.slice(6)
         if (!ticket.nodes[widget]) {
           const before = new Set(workspace.getSnapshot().artifacts.map(n => n.id))
           const button = await libraryButton()
           if (button?.getAttribute('aria-expanded') !== 'true') await click(ticket, button, '打开组件库')
           await settle(ticket, () => !!library()?.querySelector('[data-financial-place="' + widget + '"]'))
-          await click(ticket, library().querySelector('[data-financial-place="' + widget + '"]'), { watchlist: '加入自选列表', quote: '加入行情面板', news: '加入资讯列表' }[widget])
-          await settle(ticket, () => workspace.getSnapshot().artifacts.some(n => !before.has(n.id) && n.containerSpec?.widget === widget))
-          const node = workspace.getSnapshot().artifacts.find(n => !before.has(n.id) && n.containerSpec?.widget === widget)
+          await click(ticket, library().querySelector('[data-financial-place="' + widget + '"]'), { indices: '加入市场指数', watchlist: '加入自选列表', quote: '加入行情面板', news: '加入资讯列表', announcements: '加入公告列表', calendar: '加入日历' }[widget])
+          await settle(ticket, () => workspace.getSnapshot().artifacts.some(n => !before.has(n.id) && (widget === 'calendar' ? n.containerSpec?.type === 'calendar-tool' : n.containerSpec?.widget === widget)))
+          const node = workspace.getSnapshot().artifacts.find(n => !before.has(n.id) && (widget === 'calendar' ? n.containerSpec?.type === 'calendar-tool' : n.containerSpec?.widget === widget))
           ticket.nodes[widget] = node.id
+          if (widget === 'indices') {
+            const state = await workspace.canvasAction('inspect', { ids: [node.id] }); await playing(ticket)
+            const symbols = [...node.containerSpec.symbols, ...[['^GSPC','标普500'],['^IXIC','纳斯达克综合指数'],['^NDX','纳斯达克100'],['^RUT','罗素2000']].map(([code,name])=>({market:'INDEX',code,name}))]
+            await workspace.canvasAction('apply', { requestId: detail.requestId + ':indices', revision: state.revision, changes: [{op:'update',id:node.id,fields:{containerSpec:{...node.containerSpec,symbols}}}] }, { isCancelled:()=>ticket.controller.signal.aborted })
+          }
           if (widget === 'watchlist') {
             const state = await workspace.canvasAction('inspect', { ids: [node.id] }); check(ticket)
             await playing(ticket)
-            await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 2), selectedSymbol: 'SH:600519', refreshEnabled: false } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
+            await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
           }
         }
-        await settle(ticket, () => !!ticket.host.querySelector('[data-financial-widget="' + widget + '"]'))
+        await playing(ticket); layoutBoard()
+        await settle(ticket, () => !!ticket.host.querySelector(widget === 'calendar' ? '[data-calendar-tool]' : '[data-financial-widget="' + widget + '"]'))
+        const canvas = ticket.host.querySelector('[data-research-canvas]'); if (canvas) revealWorkbenchNode(canvas, workspace, ticket.nodes[widget])
+        await settle(ticket)
         await save(ticket); return
       }
-      const { watchlist, quote, news } = ticket.nodes
+      const { watchlist, quote, news, announcements } = ticket.nodes
       if (!watchlist || !quote || !news) throw Error('请先创建自选、行情和新闻组件。')
       if (detail.command === 'board-link') {
-        for (const [sourceId, targetId, field, label] of [[watchlist, quote, 'linkedWatchlistId', '连接自选股与行情'], [quote, news, 'linkedSourceId', '连接行情与资讯']]) {
-          if (workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId) continue
-          const port = (nodeId, side) => ticket.host.querySelector('[data-financial-port-node="' + CSS.escape(nodeId) + '"][data-financial-port="' + side + '"]')
-          await settle(ticket, () => !!port(sourceId, 'output') && !!port(targetId, 'input'))
-          const from = port(sourceId, 'output'), target = port(targetId, 'input')
-          await cue(ticket, target, label, 'drag', from)
-          const state = await workspace.canvasAction('inspect', { ids: [sourceId, targetId] })
-          await playing(ticket); targetReady(ticket, from, true); targetReady(ticket, target, true)
-          const node = workspace.getSnapshot().artifacts.find(node => node.id === targetId)
-          await workspace.canvasAction('apply', { requestId: detail.requestId + ':link:' + targetId, revision: state.revision, changes: [{ op: 'update', id: targetId, fields: { containerSpec: { ...node.containerSpec, [field]: sourceId, refreshEnabled: false } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
-          await playing(ticket); react_dom.flushSync(() => workspace.updateSelection([watchlist, quote, news], 'replace'))
-          ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
-          await settle(ticket, () => workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId && !!ticket.host.querySelector('[data-financial-link]'))
+        const canvas = ticket.host.querySelector('[data-research-canvas]'), before = workspace.getWorkbenchCells().map(cell=>({...cell}))
+        const signature = cells => JSON.stringify(cells.map(({id,x,y,w,h,arrangeColumns,freePosition})=>[id,x,y,w,h,arrangeColumns,freePosition]).sort((a,b)=>a[0].localeCompare(b[0])))
+        let focusSignature
+        try {
+          for (const [sourceId, targetId, field, label] of [[watchlist, quote, 'linkedWatchlistId', '连接自选股与行情'], [quote, news, 'linkedSourceId', '连接行情与资讯'], ...(announcements ? [[quote, announcements, 'linkedSourceId', '连接行情与公告']] : [])]) {
+            await playing(ticket)
+            if(focusSignature && signature(workspace.getWorkbenchCells())!==focusSignature)throw changed()
+            if (workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId) continue
+            const port = (nodeId, side) => ticket.host.querySelector('[data-financial-port-node="' + CSS.escape(nodeId) + '"][data-financial-port="' + side + '"]')
+            await settle(ticket, () => !!port(sourceId, 'output') && !!port(targetId, 'input'))
+            const from = port(sourceId, 'output'), target = port(targetId, 'input'), a = from.getBoundingClientRect(), b = target.getBoundingClientRect()
+            // Keep full-size type while focusing the active pair in a short
+            // single-column viewport. Advance directly between linked pairs;
+            // restore the reading layout once all three connections finish.
+            if (canvas && Math.max(a.bottom,b.bottom)-Math.min(a.top,b.top)>canvas.clientHeight-24) {
+              const current = workspace.getSnapshot(), metrics = createResearchGrid().metrics(current.canvasSize.availableWidth||current.canvasSize.width), source = before.find(cell=>cell.id===sourceId)
+              const height = Math.max(metrics.minRows,Math.floor((canvas.clientHeight-56)/metrics.rowStep)), offset = source.h+height
+              const own = new Set(Object.values(ticket.nodes))
+              const focused = before.map(cell=>cell.id===sourceId?{...cell,x:0,y:0,w:40}:cell.id===targetId?{...cell,x:0,y:source.h,w:40,h:height}:own.has(cell.id)?{...cell,y:cell.y+offset}:cell)
+              if(!workspace.applyWorkbenchCells(focused,false))throw Error('连接端口暂时无法同时显示。')
+              focusSignature = signature(workspace.getWorkbenchCells())
+              if(workspace.persist()!==true)throw Error('连接布局暂时无法保存。')
+              await settle(ticket)
+            }
+            await cue(ticket, target, label, 'drag', from)
+            if(focusSignature && signature(workspace.getWorkbenchCells())!==focusSignature)throw changed()
+            const state = await workspace.canvasAction('inspect', { ids: [sourceId, targetId] })
+            await playing(ticket); targetReady(ticket, from, true); targetReady(ticket, target, true)
+            if(focusSignature && signature(workspace.getWorkbenchCells())!==focusSignature)throw changed()
+            const node = workspace.getSnapshot().artifacts.find(node => node.id === targetId)
+            await workspace.canvasAction('apply', { requestId: detail.requestId + ':link:' + targetId, revision: state.revision, changes: [{ op: 'update', id: targetId, fields: { containerSpec: { ...node.containerSpec, [field]: sourceId, refreshEnabled: true } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
+            await playing(ticket); react_dom.flushSync(() => workspace.updateSelection(Object.values(ticket.nodes), 'replace'))
+            ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
+            await settle(ticket, () => workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId && !!ticket.host.querySelector('[data-financial-link]'))
+          }
+        } finally {
+          if(focusSignature && (!ticket.resource.owner||ticket.resource.owner===ticket) && signature(workspace.getWorkbenchCells())===focusSignature && !workspace.applyWorkbenchCells(before,true))throw Error('连接后的阅读布局暂时无法恢复。')
         }
       } else if (detail.command === 'board-add') {
-        const symbol = provider.symbols[2], card = () => ticket.host.querySelector('[data-research-node-id="' + CSS.escape(watchlist) + '"]')
-        const hasStock = () => workspace.getSnapshot().artifacts.find(node => node.id === watchlist)?.containerSpec.symbols.some(item => item.market === symbol.market && item.code === symbol.code)
-        if (!hasStock()) {
-          await click(ticket, card()?.querySelector('[aria-label="添加自选股"]'), '点击加号，搜索要关注的新标的')
+        const card = () => ticket.host.querySelector('[data-research-node-id="' + CSS.escape(watchlist) + '"]')
+        for (const symbol of provider.symbols.slice(3)) {
+          const hasStock = () => workspace.getSnapshot().artifacts.find(node => node.id === watchlist)?.containerSpec.symbols.some(item => item.market === symbol.market && item.code === symbol.code)
+          if (hasStock()) continue
+          await click(ticket, card()?.querySelector('[aria-label="添加自选股"]'), '添加关注标的 ' + symbol.code)
           await settle(ticket, () => !!card()?.querySelector('input[role="combobox"]'))
           const input = card().querySelector('input[role="combobox"]')
-          await click(ticket, input, '输入腾讯控股的代码 00700')
+          await click(ticket, input, '搜索 ' + symbol.name + ' ' + symbol.code)
           input.focus({ preventScroll: true })
           for (let index = 1; index <= symbol.code.length; index++) {
             await playing(ticket); targetReady(ticket, input, true)
             react_dom.flushSync(() => { input.value = symbol.code.slice(0, index); input.dispatchEvent(new window.Event('input', { bubbles: true })) })
             await delay(ticket, 100)
           }
-          const result = () => [...(document.getElementById(input.getAttribute('aria-controls'))?.querySelectorAll('button[role="option"]') ?? [])].find(button => button.textContent.includes(symbol.code))
-          await settle(ticket, () => !!result())
-          await click(ticket, result(), '加入腾讯控股到自选列表')
+          const result = () => [...(document.getElementById(input.getAttribute('aria-controls'))?.querySelectorAll('button[role="option"]') ?? [])].find(button => button.querySelector('small')?.textContent === symbol.market && [...button.querySelectorAll('small')].some(label => label.textContent === symbol.code))
+          await settle(ticket, () => { if (result()) return true; const status = document.getElementById(input.getAttribute('aria-controls'))?.querySelector('[role="status"]')?.textContent; if (status && status !== '搜索中…') throw Error(status); return false }, 2, 15000, true)
+          await click(ticket, result(), '加入 ' + symbol.name)
           await settle(ticket, hasStock)
         }
-        const stock = () => [...(card()?.querySelectorAll('[data-stock-code]') ?? [])].find(row => row.dataset.stockCode === symbol.code && row.dataset.stockMarket === symbol.market)
+        const state = await workspace.canvasAction('inspect', { ids: [watchlist] }); await playing(ticket)
+        const node = workspace.getSnapshot().artifacts.find(node => node.id === watchlist), order = new Map(provider.symbols.map((symbol, index) => [symbol.market + ':' + symbol.code, index]))
+        await workspace.canvasAction('apply', { requestId: detail.requestId + ':order', revision: state.revision, changes: [{ op: 'update', id: watchlist, fields: { containerSpec: { ...node.containerSpec, symbols: [...node.containerSpec.symbols].sort((a,b) => order.get(a.market+':'+a.code)-order.get(b.market+':'+b.code)) } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
+        await settle(ticket, () => JSON.stringify([...(card()?.querySelectorAll('[data-stock-code]') ?? [])].map(row => row.dataset.stockMarket+':'+row.dataset.stockCode)) === JSON.stringify(provider.symbols.map(symbol => symbol.market+':'+symbol.code)))
+        const stock = () => [...(card()?.querySelectorAll('[data-stock-code]') ?? [])].find(row => row.dataset.stockCode === '000858' && row.dataset.stockMarket === 'SZ')
         await settle(ticket, () => !!stock())
-        await click(ticket, stock(), '选择新标的，观察行情和资讯同步更新')
-        await settle(ticket, () => workspace.getSnapshot().artifacts.find(node => node.id === quote)?.containerSpec.symbols[0]?.code === symbol.code)
+        await click(ticket, stock(), '选择五粮液，查看行情、资讯和公告')
+        await settle(ticket, () => workspace.getSnapshot().artifacts.find(node => node.id === quote)?.containerSpec.symbols[0]?.code === '000858')
+        for (const feedId of [news, announcements].filter(Boolean)) {
+          const feed = ticket.host.querySelector('[data-research-node-id="' + CSS.escape(feedId) + '"]')
+          await cue(ticket, feed?.querySelector('.ew-grid-header') || feed, '查看所选股票的资讯与公告', 'move')
+          await settle(ticket)
+        }
       } else {
-        const size = workspace.getSnapshot().canvasSize
-        const overview = Math.min(size.width || 0, size.availableWidth || size.width || 0) >= 960
-        const toggle = overview ? toolbar()?.querySelector('[data-workbench-arrange-toggle]') : null
         const button = toolbar()?.querySelector('[data-research-global-arrange]')
-        if (toggle && !toggle.disabled) {
-          await click(ticket, toggle, '选择适合当前画布的整理方式')
-          const menu = () => [...document.querySelectorAll('[data-workbench-arrange-menu]')].find(el => el.dataset.eworkToolbarOwner === id)
-          await settle(ticket, () => !!menu()?.querySelector('[data-arrange-mode="three"]'))
-          await click(ticket, menu().querySelector('[data-arrange-mode="three"]'), '将三个组件整理成清晰的分栏')
-        } else if (button && !button.disabled) await click(ticket, button, '整理组件，保留清晰可读的内容')
-        else if (ticket.pointerRun || !workspace.organizeCanvas(new Map(), overview ? 'three' : 'standard')) throw Error('画布暂时无法整理。')
+        if (button && !button.disabled) await click(ticket, button, '整理六个组件，保留完整阅读空间')
         const canvas = ticket.host.querySelector('[data-research-canvas]')
-        // Arrange performs a delayed native content measurement. Let it finish
-        // before the expert sizes this private board to its actual viewport.
         await settle(ticket, () => !canvas?.__eworkContentFit)
         await playing(ticket)
-        if (canvas) {
-          canvas.scrollTop = 0
-          const bounds = canvas.getBoundingClientRect(), tools = toolbar()?.getBoundingClientRect()
-          const safeBottom = Math.min(bounds.bottom - 12, tools?.height > 0 ? tools.top - 12 : bounds.bottom - 12)
-          const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width)
-          const cells = workspace.getWorkbenchVisibleCells(), nodes = new Map(current.artifacts.map(node => [node.id, node]))
-          const rows = [...new Set(cells.map(cell => cell.y))].sort((a, b) => a - b).map(y => {
-            const members = cells.filter(cell => cell.y === y)
-            // Keep native labels, the three stock rows and a useful price chart
-            // readable. If these minima do not fit, retain native canvas scroll.
-            const minimum = Math.max(...members.map(cell => Math.ceil((({ watchlist: 238, quote: 280, news: 180 }[nodes.get(cell.id)?.containerSpec?.widget] || 160) + metrics.gap) / metrics.rowStep)))
-            const desired = Math.max(...members.map(cell => cell.h))
-            return { y, minimum, desired, height: Math.min(desired, minimum) }
-          })
-          const budget = Math.floor((safeBottom - bounds.top - metrics.inset + metrics.gap) / metrics.rowStep)
-          const desired = rows.reduce((sum, row) => sum + row.desired, 0), minimum = rows.reduce((sum, row) => sum + row.height, 0)
-          if (desired > budget && minimum <= budget) {
-            const capacity = desired - minimum, extra = budget - minimum
-            for (const row of rows) row.height += Math.floor(extra * (row.desired - row.height) / capacity)
-            let remaining = budget - rows.reduce((sum, row) => sum + row.height, 0)
-            for (const row of rows) if (remaining && row.height < row.desired) { row.height++; remaining-- }
-            let top = 0
-            const fitted = new Map()
-            for (const row of rows) {
-              for (const cell of cells.filter(cell => cell.y === row.y)) fitted.set(cell.id, { ...cell, y: top, h: Math.min(cell.h, row.height) })
-              top += row.height
-            }
-            if (!workspace.applyWorkbenchCells(cells.map(cell => fitted.get(cell.id)), false)) throw Error('教程画布暂时无法调整。')
-          }
-        }
+        layoutBoard(true)
         // Dismiss only this demo's native edit receipt for the final overview.
         const receipt = [...document.querySelectorAll('[data-canvas-action-receipt]')].find(node => node.dataset.eworkToolbarOwner === id)
         const dismiss = receipt?.querySelector('[data-canvas-action-dismiss]')
         if (dismiss) await click(ticket, dismiss, '关闭整理结果提示')
         // Finish at the document start so native component headers stay visible.
-        react_dom.flushSync(() => { workspace.setViewport({ x: 0, y: 0, scale: 1 }); workspace.updateSelection([watchlist, quote, news], 'replace') })
+        react_dom.flushSync(() => { workspace.setViewport({ x: 0, y: 0, scale: 1 }); workspace.updateSelection(Object.values(ticket.nodes), 'replace') })
         ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
         await settle(ticket, () => {
           if (!canvas) return false
@@ -470,7 +527,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
   }, [sessionId, subagentPanel, researchWorkspaces])
   if (!entry || entry.controller.signal.aborted || entry.detail.sessionId !== sessionId || subagentPanel) return null
   return react_dom.createPortal(react.createElement(HomeGuideNativeFinancialContext.Provider, { value: entry.provider },
-    react.createElement('div', { 'data-home-guide-native': entry.detail.runId, 'aria-label': '研究看板离线示例', style: { position: 'absolute', inset: 0, minWidth: 0, minHeight: 0, overflow: 'hidden' } },
+    react.createElement('div', { 'data-home-guide-native': entry.detail.runId, 'aria-label': '研究看板操作示例', style: { position: 'absolute', inset: 0, minWidth: 0, minHeight: 0, overflow: 'hidden' } },
       react.createElement(ResearchCanvas, { sessionId: entry.resource.id, t: key => key, researchWorkspaces: entry.resource.registry })
     )), entry.host)
 }
@@ -478,7 +535,8 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
 function ConversationRoot(props) {
   return react.createElement(react.Fragment, null,
     react.createElement(HomeGuideNativeOriginalConversationRoot, props),
-    react.createElement(NativeHomeGuidePortal, { sessionId: props.sessionId, subagentPanel: props.subagentPanel, researchWorkspaces: props.researchWorkspaces })
+    react.createElement(NativeHomeGuidePortal, { sessionId: props.sessionId, subagentPanel: props.subagentPanel, researchWorkspaces: props.researchWorkspaces }),
+    react.createElement(NativeHomeNotesGuidePortal, { sessionId: props.sessionId, subagentPanel: props.subagentPanel })
   )
 }
 
@@ -487,26 +545,27 @@ function replaceOne(source, anchor, next) {
   return source.replace(anchor, next)
 }
 
-function residentChanges(legacy = false, priorV2 = false, priorV3 = false) {
+function residentChanges(legacy = false, priorV2 = false, priorV3 = false, priorV4 = false) {
+  const modern = !legacy && !priorV2 && !priorV3 && !priorV4
   const activation = '(0, react.useEffect)(() => {\n\t\t\t\tif (sessionId === void 0) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tsetResearchActive(sessionId, false);\n\t\t\t\t};\n\t\t\t}, [research, sessionId, setResearchActive]);'
   const changes = [
-    ["const sidebarMode=research || activeView==='notes';", (legacy ? RESIDENT_V1 : priorV2 ? RESIDENT_V2 : priorV3 ? RESIDENT_V3 : RESIDENT) + "\nconst homeGuideResident=useHomeGuideNativeResident(sessionId,subagentPanel);\nconst sidebarMode=(research || activeView==='notes')&&!homeGuideResident;"],
+    ["const sidebarMode=research || activeView==='notes';", (legacy ? RESIDENT_V1 : priorV2 ? RESIDENT_V2 : priorV3 ? RESIDENT_V3 : priorV4 ? RESIDENT_V4 : RESIDENT) + "\nconst homeGuideResident=useHomeGuideNativeResident(sessionId,subagentPanel);\n"+(modern?"const homeGuideSidebar=homeGuideResident&&homeGuideNativeSidebarSession(sessionId);\nconst sidebarMode=(research || activeView==='notes')&&(!homeGuideResident||homeGuideSidebar);":"const sidebarMode=(research || activeView==='notes')&&!homeGuideResident;")],
     ['if (sessionId === void 0) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tsetResearchActive(sessionId, false);\n\t\t\t\t};', 'if (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tif (!homeGuideNativeResidentSession(sessionId,subagentPanel)) setResearchActive(sessionId, false);\n\t\t\t\t};'],
     ['}, [research, sessionId, setResearchActive]);', '}, [research, homeGuideResident, sessionId, setResearchActive]);'],
-    ['if (sessionId === void 0) return;\n\t\t\t\tconst previous = researchStateRef.current;', 'if (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tconst previous = researchStateRef.current;'],
+    ['if (sessionId === void 0) return;\n\t\t\t\tconst previous = researchStateRef.current;', 'if (sessionId === void 0 || '+(modern?'homeGuideResident&&!homeGuideSidebar':'homeGuideResident')+') return;\n\t\t\t\tconst previous = researchStateRef.current;'],
     ['}, [resolvedActions, detailsSelection, sidebarMode, researchSidebar, sessionId]);', '}, [resolvedActions, detailsSelection, sidebarMode, homeGuideResident, researchSidebar, sessionId]);'],
-    ['"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",', '"data-odyssey-page": '+(legacy||priorV2||priorV3?'homeGuideResident':'homeGuideResident && (research || activeView === "notes")')+' ? "guide" : research ? "research" : hero ? "home" : "conversation",'],
+    ['"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",', modern?'"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",':'"data-odyssey-page": '+(legacy||priorV2||priorV3?'homeGuideResident':'homeGuideResident && (research || activeView === "notes")')+' ? "guide" : research ? "research" : hero ? "home" : "conversation",'],
     ['function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {', 'function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {\n  const homeGuideResident=useHomeGuideNativeResident(sessionId'+(legacy||priorV2?'':',false,rootRef')+')'],
     ["return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?", "return homeGuideResident ? null : react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?"]
   ]
-  if (!legacy) changes.splice(1, 2, [activation, 'useHomeGuideNativeResearchActivation(sessionId,research,homeGuideResident,setResearchActive);'])
+  if (!legacy) changes.splice(1, 2, [activation, 'useHomeGuideNativeResearchActivation(sessionId,research,homeGuideResident'+(modern?'&&!homeGuideSidebar':'')+',setResearchActive);'])
   if (!legacy && !priorV2) changes.push(['const beforeDraft = keyboard.snapshot.draft;\n\t\t\t\tconst activeProvisionalKeys =', 'if (homeGuideNativeResidentSession(sessionId)) return;\n\t\t\t\tconst beforeDraft = keyboard.snapshot.draft;\n\t\t\t\tconst activeProvisionalKeys ='])
   return changes
 }
 
 /** Restore the native anchors before older source patches run again. */
 export function stripHomeGuideNative(source) {
-  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident']
+  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident']
   if (!source.includes(START)) {
     if (owned.some(token => source.includes(token))) throw Error('Home guide native partial patch drifted')
     return source
@@ -521,8 +580,9 @@ export function stripHomeGuideNative(source) {
     'function homeGuideNativeSampleProvider(', 'function homeGuideNativeResource(',
     'function NativeHomeGuidePortal(', 'function ConversationRoot(props)'
   ]) if (runtime.split(anchor).length !== 2) throw Error('Home guide native runtime anchor drifted: ' + anchor)
+  if (runtime.includes('NativeHomeNotesGuidePortal') && runtime.split('function NativeHomeNotesGuidePortal(').length !== 2) throw Error('Home guide notes native anchor drifted')
   source = source.slice(0, start) + source.slice(end + END.length + 1)
-  if (source.includes(RESIDENT) || source.includes(RESIDENT_V1) || source.includes(RESIDENT_V2) || source.includes(RESIDENT_V3)) for (const [native, patched] of residentChanges(source.includes(RESIDENT_V1), source.includes(RESIDENT_V2), source.includes(RESIDENT_V3))) source = replaceOne(source, patched, native)
+  if (source.includes(RESIDENT) || source.includes(RESIDENT_V1) || source.includes(RESIDENT_V2) || source.includes(RESIDENT_V3) || source.includes(RESIDENT_V4)) for (const [native, patched] of residentChanges(source.includes(RESIDENT_V1), source.includes(RESIDENT_V2), source.includes(RESIDENT_V3), source.includes(RESIDENT_V4))) source = replaceOne(source, patched, native)
   source = replaceOne(source, 'function HomeGuideNativeOriginalConversationRoot({ subagentPanel=false,', 'function ConversationRoot({ subagentPanel=false,')
   if (source.includes(CANVAS)) source = replaceOne(source, CANVAS + '\nfunction HomeGuideNativeOriginalResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {', 'function ResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {')
   if (source.includes(PERSISTENT)) {
@@ -538,11 +598,16 @@ export function stripHomeGuideNative(source) {
   for (const [patched, native] of [
     ['const bridge=homeGuideProvider??window.dshDesktop?.financialWidget;', 'const bridge=window.dshDesktop?.financialWidget;'],
     ["await (homeGuideProvider??window.dshDesktop?.financialWidget)?.request({action:'search',query:text.trim()})", "await window.dshDesktop?.financialWidget?.request({action:'search',query:text.trim()})"],
-    ["const load=react.useCallback(async()=>{if(homeGuideProvider){setItems([]);setError('');return;}if(!window.dshDesktop?.componentLibrary?.request)return;", 'const load=react.useCallback(async()=>{if(!window.dshDesktop?.componentLibrary?.request)return;'],
+    ["const load=react.useCallback(async()=>{if(homeGuideProvider?.runId){setItems([]);setError('');return;}if(!window.dshDesktop?.componentLibrary?.request)return;", 'const load=react.useCallback(async()=>{if(!window.dshDesktop?.componentLibrary?.request)return;'],
     ["className:'ew-grid-menu ew-financial-library','data-home-guide-native-library':homeGuideProvider?.runId,", "className:'ew-grid-menu ew-financial-library',"],
-    ["'data-financial-place':widget,disabled:busy||Boolean(homeGuideProvider&&!['watchlist','quote','news'].includes(widget)),", "'data-financial-place':widget,disabled:busy,"],
+    ["'data-financial-place':widget,disabled:busy||Boolean(homeGuideProvider?.runId&&!['indices','watchlist','quote','news','announcements','calendar'].includes(widget)),", "'data-financial-place':widget,disabled:busy,"],
     ['\n\t\texports.NativeHomeGuidePortal = NativeHomeGuidePortal;', '']
-  ]) source = replaceOne(source, patched, native)
+  ]) {
+    const variants = [...new Set([patched, ...((patched.startsWith('const load=') || patched.startsWith("'data-financial-place'")) ? [patched.replace('homeGuideProvider?.runId','homeGuideProvider'),patched.replace("['indices','watchlist','quote','news','announcements','calendar']","['watchlist','quote','news']"),patched.replace('homeGuideProvider?.runId','homeGuideProvider').replace("['indices','watchlist','quote','news','announcements','calendar']","['watchlist','quote','news']")] : [])])]
+    const matches = variants.map(value=>({value,count:source.split(value).length-1}))
+    if (matches.some(item=>item.count>1) || matches.reduce((sum,item)=>sum+item.count,0)!==1) throw Error('Home guide native inverse anchor drifted')
+    source = replaceOne(source, matches.find(item=>item.count===1).value, native)
+  }
   if (owned.some(token => source.includes(token))) throw Error('Home guide native partial references remain after strip')
   return source
 }
@@ -550,7 +615,7 @@ export function stripHomeGuideNative(source) {
 /** Add an isolated native React portal without replacing any conversation child. */
 export function patchHomeGuideNative(source) {
   if (source.includes(START)) source = stripHomeGuideNative(source)
-  const definitions = START + '\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
+  const definitions = START + '\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
   if (source.includes(START)) {
     const first = source.indexOf(START), end = source.indexOf(END, first)
     if (end < 0 || source.indexOf(START, first + START.length) >= 0 || !source.includes('function HomeGuideNativeOriginalConversationRoot(')) throw Error('Home guide native refresh anchor drifted')
@@ -568,11 +633,11 @@ export function patchHomeGuideNative(source) {
   if (!source.includes(bridge)) source = replaceOne(source, 'const bridge=window.dshDesktop?.financialWidget;', bridge)
   const search = "await (homeGuideProvider??window.dshDesktop?.financialWidget)?.request({action:'search',query:text.trim()})"
   if (!source.includes(search)) source = replaceOne(source, "await window.dshDesktop?.financialWidget?.request({action:'search',query:text.trim()})", search)
-  const library = "const load=react.useCallback(async()=>{if(homeGuideProvider){setItems([]);setError('');return;}if(!window.dshDesktop?.componentLibrary?.request)return;"
+  const library = "const load=react.useCallback(async()=>{if(homeGuideProvider?.runId){setItems([]);setError('');return;}if(!window.dshDesktop?.componentLibrary?.request)return;"
   if (!source.includes(library)) source = replaceOne(source, 'const load=react.useCallback(async()=>{if(!window.dshDesktop?.componentLibrary?.request)return;', library)
   const menu = "className:'ew-grid-menu ew-financial-library','data-home-guide-native-library':homeGuideProvider?.runId,"
   if (!source.includes(menu)) source = replaceOne(source, "className:'ew-grid-menu ew-financial-library',", menu)
-  const place = "'data-financial-place':widget,disabled:busy||Boolean(homeGuideProvider&&!['watchlist','quote','news'].includes(widget)),"
+  const place = "'data-financial-place':widget,disabled:busy||Boolean(homeGuideProvider?.runId&&!['indices','watchlist','quote','news','announcements','calendar'].includes(widget)),"
   if (!source.includes(place)) source = replaceOne(source, "'data-financial-place':widget,disabled:busy,", place)
   const exportPortal = 'exports.NativeHomeGuidePortal = NativeHomeGuidePortal;'
   if (!source.includes(exportPortal)) source = replaceOne(source, 'exports.ConversationRoot = ConversationRoot;', 'exports.ConversationRoot = ConversationRoot;\n\t\t' + exportPortal)
