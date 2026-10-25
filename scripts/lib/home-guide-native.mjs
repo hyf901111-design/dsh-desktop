@@ -607,7 +607,7 @@ function ConversationRoot(props) {
   return react.createElement(react.Fragment, null,
     react.createElement(HomeGuideNativeOriginalConversationRoot, props),
     react.createElement(NativeHomeGuidePortal, { sessionId: props.sessionId, subagentPanel: props.subagentPanel, researchWorkspaces: props.researchWorkspaces }),
-    react.createElement(NativeHomeNotesGuidePortal, { sessionId: props.sessionId, subagentPanel: props.subagentPanel })
+    react.createElement(NativeHomeNotesGuidePortal, { sessionId: props.sessionId, subagentPanel: props.subagentPanel, researchSidebar: props.researchSidebar })
   )
 }
 

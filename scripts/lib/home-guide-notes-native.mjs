@@ -1,5 +1,5 @@
 /** Serialized into the native conversation module; dependencies stay in that module. */
-export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false}){
+export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,researchSidebar}){
  react.useEffect(()=>{
   if(!sessionId||subagentPanel||window.top!==window)return
   let owned=null,closed=false
@@ -56,7 +56,7 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false}){
     let visible=false
     if(currentInput)try{valid(ticket,currentInput);visible=true}catch{check(ticket)}
     if(!visible){
-     const service=typeof defaultResearchSidebar==='undefined'?null:defaultResearchSidebar.service
+     const service=researchSidebar?.service
      if(service?.getSnapshot?.().sessionId!==sessionId||typeof service.activateTab!=='function'||typeof service.setPanelState!=='function')throw changed()
      service.activateTab('sherlock-research-conversation',{sessionId});service.setPanelState({open:true},{sessionId})
      await until(ticket,()=>{const target=inputFor(ticket);if(target)try{valid(ticket,target);return target}catch{check(ticket)}})
@@ -115,6 +115,6 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false}){
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ework-notes-session','data-home-guide']})
   window.addEventListener('sherlock:home-guide-notes-native-request',receive);window.addEventListener('sherlock:home-guide-playback',playback);window.addEventListener('sherlock:home-action-context-changed',reset);document.addEventListener('sherlock:notes-reset',reset)
   return()=>{dispose();closed=true;observer.disconnect();window.removeEventListener('sherlock:home-guide-notes-native-request',receive);window.removeEventListener('sherlock:home-guide-playback',playback);window.removeEventListener('sherlock:home-action-context-changed',reset);document.removeEventListener('sherlock:notes-reset',reset)}
- },[sessionId,subagentPanel])
+ },[sessionId,subagentPanel,researchSidebar])
  return null
 }
