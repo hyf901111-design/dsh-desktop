@@ -2,26 +2,67 @@ import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { Window } from 'happy-dom';
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-let patch, install, toggle, nativeSource;
+import { join, resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+let install, toggle, nativeSource, pristineSource, installedSource;
 const clean = [];
-beforeAll(async () => { nativeSource = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js', 'utf8'); const mod = await import('../scripts/lib/home-theme-appearance.mjs').catch(() => ({})); patch = mod.patchHomeThemeAppearance; install = mod.installHomeThemeAppearance; toggle = (await import('../src/preload/home-theme-controls').catch(() => ({}))).toggleHomeAppearance; });
+// The installer serializes its exact function text. Run it with the same native
+// Node loader as postinstall/build, not Vitest's semicolon-inserting transform.
+function patch(source) {
+    const moduleUrl = pathToFileURL(resolve('scripts/lib/home-theme-appearance.mjs')).href;
+    const script = 'import {patchHomeThemeAppearance} from ' + JSON.stringify(moduleUrl) + ';import {readFileSync} from "node:fs";try{process.stdout.write(patchHomeThemeAppearance(readFileSync(0,"utf8")))}catch(error){process.stderr.write(error.message);process.exitCode=1}';
+    try {
+        return execFileSync(process.execPath, ['--input-type=module', '-e', script], {input: source, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 5000, maxBuffer: 2 * 1024 * 1024});
+    } catch (error) {
+        throw new Error(error.stderr?.toString() || error.message);
+    }
+}
+function pristineFixture(installed) {
+    // Validate with the production gate BEFORE removing owned blocks for a test
+    // fixture. Never normalize or repair a mismatched resident installation.
+    expect(patch(installed)).toBe(installed);
+    const definition = installed.match(/\/\* sherlock-home-theme-appearance-v1 \*\/\nfunction installHomeThemeAppearance[\s\S]*?\/\* sherlock-home-theme-appearance-definition-end \*\/\n/)?.[0];
+    const hook = '\n\t\t\t/* sherlock-home-theme-appearance-v1 */\n\t\t\tctx.effect(() => installHomeThemeAppearance(theme), "desktop: home appearance bridge");\n\t\t\t/* sherlock-home-theme-appearance-end */';
+    expect(definition).toBeTypeOf('string');
+    expect(installed.split(hook)).toHaveLength(2);
+    return installed.replace(definition, '').replace(hook, '');
+}
+beforeAll(async () => {
+    nativeSource = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js', 'utf8');
+    const mod = await import('../scripts/lib/home-theme-appearance.mjs');
+    install = mod.installHomeThemeAppearance;
+    toggle = (await import('../src/preload/home-theme-controls')).toggleHomeAppearance;
+    installedSource = patch(nativeSource);
+    pristineSource = pristineFixture(installedSource);
+});
 afterEach(async () => { vi.useRealTimers(); for (const fn of clean.splice(0).reverse())
     await fn(); });
 function fixture() { const win = new Window({ url: 'https://theme.test/' }); clean.push(() => win.happyDOM.close()); const dir = mkdtempSync(join(tmpdir(), 'native-appearance-')); clean.push(() => rmSync(dir, { recursive: true, force: true })); const file = join(dir, 'settings.json'); writeFileSync(file, JSON.stringify({ preference: 'system' })); const listeners = new Set(), effects = [], events = []; const ctx = { effect: fn => { const dispose = fn(); if (typeof dispose === 'function')
         effects.push(dispose); }, emit: (name, value) => events.push({ name, value }) }; const host = { getSnapshot: () => ({ value: JSON.parse(readFileSync(file, 'utf8')) }), subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); }, set: (key, value) => { const data = JSON.parse(readFileSync(file, 'utf8')); data[key] = value; writeFileSync(file, JSON.stringify(data)); for (const fn of listeners)
         fn(); } }; const begin = nativeSource.indexOf('var ThemeRuntime = class'), end = nativeSource.indexOf('\n\t\t/**\n\t\t* Runtime shape check', begin); const ThemeRuntime = new Function('BUILTIN_THEMES', 'DEFAULT_PREFERENCE', 'isThemePreference', 'THEME_PREFERENCE_FIELD', 'matchMedia', nativeSource.slice(begin, end) + ';return ThemeRuntime')([{ id: 'light', colorScheme: 'light', tokens: {} }, { id: 'dark', colorScheme: 'dark', tokens: {} }], 'system', value => ['light', 'dark', 'system'].includes(value), 'preference', () => ({ matches: false, addEventListener() { }, removeEventListener() { } })); const runtime = new ThemeRuntime(ctx, host); clean.push(() => effects.forEach(fn => fn())); return { win, doc: win.document, runtime, events, file, host, remount: () => new ThemeRuntime(ctx, host) }; }
-it('patches exactly the real native service once and rejects drift or duplicate installations', () => { expect(patch).toBeTypeOf('function'); const result = patch(nativeSource); expect(patch(result)).toBe(result); expect(result).toContain('ctx.effect(() => installHomeThemeAppearance(theme)'); expect(() => patch(nativeSource.replace('ctx.provide("theme", theme);', 'ctx.provide("themeV2", theme);'))).toThrow(); expect(() => patch(result.replace('installHomeThemeAppearance(theme)', 'installHomeThemeAppearance(other)'))).toThrow(); });
+it.each(['pristine', 'installed'])('patches the %s native source exactly once and rejects byte drift or duplicates', kind => {
+    const source = kind === 'pristine' ? pristineSource : installedSource;
+    const result = patch(source);
+    expect(result).toBe(installedSource);
+    expect(patch(result)).toBe(result);
+    expect(result).toContain('ctx.effect(() => installHomeThemeAppearance(theme)');
+    expect(() => patch(pristineSource.replace('ctx.provide("theme", theme);', 'ctx.provide("themeV2", theme);'))).toThrow(/native service hook drifted/);
+    expect(() => patch(result.replace('installHomeThemeAppearance(theme)', 'installHomeThemeAppearance(other)'))).toThrow(/installed source drifted/);
+    expect(() => patch(result.replace('const data = event.detail', 'const data = event.detail /* changed bytes */'))).toThrow(/installed source drifted/);
+    expect(() => patch(result.replace('/* sherlock-home-theme-appearance-v1 */', '/* sherlock-home-theme-appearance-v1 *//* sherlock-home-theme-appearance-v1 */'))).toThrow(/installed source drifted/);
+    expect(() => patch(result.replaceAll('sherlock-home-theme-appearance-v1', 'sherlock-home-theme-appearance-v999'))).toThrow(/drifted/);
+});
 it('crosses a JSON-only request/reply boundary into the real ThemeRuntime and restores the persisted global preference', async () => { expect(install).toBeTypeOf('function'); expect(toggle).toBeTypeOf('function'); const f = fixture(), requests = []; const off = install(f.runtime, f.doc); clean.push(off); f.doc.addEventListener('sherlock:home-appearance-request', event => requests.push(JSON.parse(JSON.stringify(event.detail)))); await toggle(f.doc); expect(requests).toHaveLength(1); expect(Object.keys(requests[0]).sort()).toEqual(['action', 'requestId']); expect(f.runtime.getTheme().active.colorScheme).toBe('dark'); expect(JSON.parse(readFileSync(f.file, 'utf8')).preference).toBe('dark'); expect(f.doc.body.hasAttribute('data-ds-dark-theme')).toBe(false); expect(f.events.some(e => e.name === 'theme/change' && e.value.active.colorScheme === 'dark')).toBe(true); expect(f.remount().getTheme().active.colorScheme).toBe('dark'); const original = f.runtime; await toggle(f.doc); expect(f.runtime).toBe(original); expect(f.runtime.getTheme().active.colorScheme).toBe('light'); });
 it('rejects native failures and unavailable bridges without changing DOM mode, and removes late listeners', async () => { expect(install).toBeTypeOf('function'); expect(toggle).toBeTypeOf('function'); const f = fixture(); const off = install({ getTheme: () => f.runtime.getTheme(), setTheme: () => { throw Error('settings write failed'); } }, f.doc); await expect(toggle(f.doc)).rejects.toThrow('settings write failed'); expect(f.doc.body.hasAttribute('data-ds-dark-theme')).toBe(false); off(); vi.useFakeTimers(); f.win.setTimeout = globalThis.setTimeout; f.win.clearTimeout = globalThis.clearTimeout; const promise = toggle(f.doc); const check = expect(promise).rejects.toThrow(/unavailable|超时/); await vi.advanceTimersByTimeAsync(6000); await check; expect(f.runtime.getTheme().active.colorScheme).toBe('light'); });
 it('single-flights concurrent toggles and ignores unmatched replies and extra request fields', async () => { expect(install).toBeTypeOf('function'); expect(toggle).toBeTypeOf('function'); const f = fixture(); const off = install(f.runtime, f.doc); clean.push(off); f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:home-appearance-request', { detail: { requestId: 'wrong', action: 'toggle', mode: 'dark' } })); expect(f.runtime.getTheme().active.colorScheme).toBe('light'); const first = toggle(f.doc), second = toggle(f.doc); expect(second).toBe(first); await first; expect(f.runtime.getTheme().active.colorScheme).toBe('dark'); });
-it('executes the patched native plugin apply lifecycle using its actual service and settings namespace', async () => {
+it.each(['pristine', 'installed'])('executes the %s patched native plugin apply lifecycle using its actual service and settings namespace', async kind => {
     const f = fixture(), provided = new Map(), bound = [], scoped = [];
     const ctx = { effect: fn => { const off = fn(); if (typeof off === 'function') {
             clean.push(off);
             scoped.push(off);
         } }, emit: (name, value) => f.events.push({ name, value }), provide: (name, value) => provided.set(name, value), settingsScope: { bind: value => { bound.push(value); return f.host; } }, locale: { register: () => () => { } }, on: () => () => { }, slots: { inject: () => () => { } } };
-    const source = patch(nativeSource), start = source.indexOf('function apply(ctx)'), end = source.indexOf('\n\t\t//#endregion', start), namespace = JSON.parse(nativeSource.match(/const THEME_SETTINGS_NAMESPACE = ("[^"]+")/)[1]);
+    const source = patch(kind === 'pristine' ? pristineSource : installedSource), start = source.indexOf('function apply(ctx)'), end = source.indexOf('\n\t\t//#endregion', start), namespace = JSON.parse(nativeSource.match(/const THEME_SETTINGS_NAMESPACE = ("[^"]+")/)[1]);
     const apply = new Function('ThemeRuntime', 'THEME_SETTINGS_NAMESPACE', 'SETTINGS_NS', 'zh', 'en', 'createAppearanceRowStore', 'document', source.slice(start, end) + ';return apply')(f.runtime.constructor, namespace, 'ui-theme', {}, {}, () => ({}), f.doc);
     apply(ctx);
     expect(bound).toEqual([{ namespace }]);
