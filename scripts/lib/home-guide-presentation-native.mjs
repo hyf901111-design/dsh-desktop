@@ -13,12 +13,12 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
    const header=[...center.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')].find(el=>!el.closest('[data-odyssey-subagent-panel]'))
    if(!header||header.dataset.eworkNotesSession!==sessionId)throw changed()
    const entry=HomePresentationNativeDeps?.getHomeGuideSession?.(sessionId)
-   if(!entry||entry.kind!=='ppt'||entry.cwd!==detail.cwd)throw Error('请从首页重新创建独立的演示示例会话。')
+   if(!entry||!['ppt','report'].includes(detail.kind??'ppt')||entry.kind!==(detail.kind??'ppt')||entry.cwd!==detail.cwd)throw Error('请从首页重新创建独立的演示示例会话。')
    return host
   }
   const check=ticket=>{if(stopped||owned!==ticket||ticket.controller.signal.aborted||hostFor(ticket.detail)!==ticket.host)throw changed()}
   const rpc=async(ticket,action,extra={})=>{
-   const response=await window.fetch('/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action,sessionId,runId:ticket.detail.runId,...extra}),signal:ticket.controller.signal})
+   const response=await window.fetch(ticket.kind==='report'?'/sherlock/home-guide/report':'/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action,sessionId,runId:ticket.detail.runId,...extra}),signal:ticket.controller.signal})
    const result=await response.json();check(ticket);if(!response.ok||!result?.ok)throw Error(result?.message||'离线预置执行器尚未就绪。');return result
   }
   const skillRequest=(ticket,action,args={})=>new Promise((resolve,reject)=>{
@@ -37,27 +37,28 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
   })
   const playing=async ticket=>{for(;;){check(ticket);if(ticket.playing&&!document.hidden)return;await delay(ticket,35)}}
   const waitFor=async(ticket,predicate,requiresPlayback=true)=>{for(let i=0;i<200;i++){if(requiresPlayback)await playing(ticket);check(ticket);if(predicate())return;await delay(ticket,25)}throw Error('原生会话暂未就绪，请重试。')}
-  const dispose=()=>{const ticket=owned;if(!ticket)return;owned=null;ticket.controller.abort();if(ticket.detail.fresh)void window.fetch('/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId}),keepalive:true}).catch(()=>{})}
+  const dispose=()=>{const ticket=owned;if(!ticket)return;owned=null;ticket.controller.abort();if(ticket.detail.fresh)void window.fetch(ticket.kind==='report'?'/sherlock/home-guide/report':'/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId}),keepalive:true}).catch(()=>{})}
   const inputFor=ticket=>[...ticket.host.closest('.pI_x6G_centerCol').querySelectorAll('textarea[data-odyssey-file-reference-session]')].find(input=>input.dataset.odysseyFileReferenceSession===sessionId&&!input.closest('[data-odyssey-subagent-panel]'))
-  const cue=async(ticket,target,label,action='click')=>{
+  const cue=async(ticket,target,label,action='click',fromTarget)=>{
    await playing(ticket)
-   const valid=(visible=false)=>{check(ticket);if(!target?.isConnected||target.ownerDocument!==document||target.disabled||target.readOnly||target.getAttribute('aria-disabled')==='true'||target.closest('[inert]'))throw changed();if(visible){const rect=target.getBoundingClientRect();if(rect.width<=0||rect.height<=0||rect.right<=0||rect.bottom<=0||rect.left>=window.innerWidth||rect.top>=window.innerHeight)throw changed()}}
+   const valid=(visible=false)=>{check(ticket);for(const node of [target,...fromTarget?[fromTarget]:[]]){if(!node?.isConnected||node.ownerDocument!==document||node.disabled||node.readOnly||node.getAttribute('aria-disabled')==='true'||node.closest('[inert]'))throw changed();if(visible){const rect=node.getBoundingClientRect();if(rect.width<=0||rect.height<=0||rect.right<=0||rect.bottom<=0||rect.left>=window.innerWidth||rect.top>=window.innerHeight)throw changed()}}}
    valid()
    const marker=document.documentElement.dataset.homeGuidePointerRun,requestId=window.crypto.randomUUID(),detail={runId:ticket.detail.runId,requestId,label,action}
    if(marker&&marker!==ticket.detail.runId)throw changed()
    target.scrollIntoView?.({block:'nearest',inline:'nearest'})
    if(marker){
-    const targetToken=detail.runId+':'+requestId+':target';detail.targetToken=targetToken
+    const targetToken=detail.runId+':'+requestId+':target',fromToken=fromTarget?detail.runId+':'+requestId+':from':undefined;detail.targetToken=targetToken;if(fromToken)detail.fromTargetToken=fromToken
+    const markers=[[target,targetToken],...fromTarget?[[fromTarget,fromToken]]:[]]
     await new Promise((resolve,reject)=>{
      let remaining=10000,last=window.performance.now()
-     const clean=()=>{window.clearInterval(timer);window.removeEventListener('sherlock:home-guide-cue-reply',receive);ticket.controller.signal.removeEventListener('abort',abort);if(target.getAttribute('data-home-guide-cue-target')===targetToken)target.removeAttribute('data-home-guide-cue-target')}
+     const clean=()=>{window.clearInterval(timer);window.removeEventListener('sherlock:home-guide-cue-reply',receive);ticket.controller.signal.removeEventListener('abort',abort);for(const[node,token]of markers)if(node.getAttribute('data-home-guide-cue-target')===token)node.removeAttribute('data-home-guide-cue-target')}
      const abort=()=>{clean();reject(changed())},receive=event=>{const reply=event.detail;if(reply?.runId!==detail.runId||reply.requestId!==requestId)return;clean();reply.ok?resolve():reject(Error(reply.message||'操作目标暂不可用。'))}
      const timer=window.setInterval(()=>{const now=window.performance.now();if(ticket.playing&&!document.hidden)remaining-=now-last;last=now;if(remaining<=0){clean();reject(Error('操作提示暂未就绪，请重试。'))}},100)
      window.addEventListener('sherlock:home-guide-cue-reply',receive);ticket.controller.signal.addEventListener('abort',abort,{once:true})
-     try{target.setAttribute('data-home-guide-cue-target',targetToken);window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail}))}catch(error){clean();reject(error)}
+     try{for(const[node,token]of markers)node.setAttribute('data-home-guide-cue-target',token);window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail}))}catch(error){clean();reject(error)}
     })
    }else{
-    window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail:{...detail,target}}))
+    window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue',{detail:{...detail,target,...fromTarget?{fromTarget}:{} }}))
     for(let ms=0;ms<650;ms+=50){await playing(ticket);await delay(ticket,50)}
    }
    await playing(ticket);valid(true);if(marker&&document.documentElement.dataset.homeGuidePointerRun!==marker)throw changed()
@@ -70,8 +71,9 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
     dispose()
     const deps=HomePresentationNativeDeps,shell=deps?.inputHub.shell(sessionId)
     if(!shell||shell.disposed)throw Error('原生输入框尚未就绪。')
-    const ticket={detail,host,shell,controller:new window.AbortController(),stage:-1,busy:false,playing:false};owned=ticket
-    if(detail.fresh){if(shell.snapshot.draft.trim()||shell.snapshot.attachments?.length)throw Error('示例会话中已有草稿，未替换。');ticket.prepared=await rpc(ticket,'prepare',{fresh:true,cwd:detail.cwd});if(typeof ticket.prepared.brief!=='string'||!ticket.prepared.brief||typeof ticket.prepared.sourcePath!=='string'||typeof ticket.prepared.presentationPath!=='string')throw Error('预制研报示例尚未就绪。')}
+    const kind=detail.kind??'ppt',skillId=kind==='report'?'builtin:ework-equity-research':'builtin:efund-ppt-maker'
+    const ticket={detail,kind,skillId,host,shell,controller:new window.AbortController(),stage:-1,busy:false,playing:false};owned=ticket
+    if(detail.fresh){if(shell.snapshot.draft.trim()||shell.snapshot.imageIds?.length||shell.snapshot.occurrences?.length)throw Error('示例会话中已有草稿，未替换。');ticket.prepared=await rpc(ticket,'prepare',{fresh:true,cwd:detail.cwd});if(typeof ticket.prepared.brief!=='string'||!ticket.prepared.brief||(kind==='report'?typeof ticket.prepared.htmlPath!=='string'||typeof ticket.prepared.pdfPath!=='string':typeof ticket.prepared.sourcePath!=='string'||typeof ticket.prepared.presentationPath!=='string'))throw Error('预制研究示例尚未就绪。')}
     await waitFor(ticket,()=>!!inputFor(ticket),false);return
    }
    const ticket=owned
@@ -83,12 +85,12 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
     await playing(ticket)
     if(index===0){
      const input=inputFor(ticket),initialDraft=ticket.shell.snapshot.draft,initialRevision=ticket.shell.snapshot.draftRev
-     if(initialDraft.trim()||ticket.shell.snapshot.occurrences?.length)throw Error('输入框已有内容，已停止自动填写。')
-     const initialUnchanged=()=>{if(ticket.shell.snapshot.draft!==initialDraft||ticket.shell.snapshot.draftRev!==initialRevision)throw Error('输入内容已更改，已停止自动填写。')}
+     if(initialDraft.trim()||ticket.shell.snapshot.occurrences?.length||ticket.shell.snapshot.imageIds?.length)throw Error('输入框已有内容，已停止自动填写。')
+     const initialUnchanged=()=>{if(ticket.shell.snapshot.draft!==initialDraft||ticket.shell.snapshot.draftRev!==initialRevision||ticket.shell.snapshot.imageIds?.length)throw Error('输入内容已更改，已停止自动填写。')}
      await cue(ticket,input,'选择技能位置')
      initialUnchanged()
-     const rows=await skillRequest(ticket,'list'),skill=Array.isArray(rows)&&rows.find(row=>row.id==='builtin:efund-ppt-maker')
-     if(!skill)throw Error('请先启用“PPT制作助手”，再打开演示教程。')
+     const rows=await skillRequest(ticket,'list'),skill=Array.isArray(rows)&&rows.find(row=>row.id===ticket.skillId)
+     if(!skill)throw Error(ticket.kind==='report'?'请先启用“研报写作”，再打开演示教程。':'请先启用“PPT制作助手”，再打开演示教程。')
      await playing(ticket)
      initialUnchanged()
      input.focus({preventScroll:true});input.setSelectionRange(0,0)
@@ -100,34 +102,51 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      // The native slash roster selects on mousedown, not click.
      skillCommand.dispatchEvent(new window.MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}))
      const option=()=>[...document.querySelectorAll('[data-ework-command="skills"] [role="option"]')].find(row=>[...row.querySelectorAll('span')].some(span=>span.textContent?.trim()===skill.label))
-     await waitFor(ticket,()=>!!option());const choice=option();await cue(ticket,choice,'选择公司 PPT 制作技能');initialUnchanged();choice.click()
-     await waitFor(ticket,()=>(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id==='builtin:efund-ppt-maker'))
-     if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id==='builtin:efund-ppt-maker'))throw Error('公司PPT技能未能加入原生输入框。')
-     const skillDraft=ticket.shell.snapshot.draft,skillRevision=ticket.shell.snapshot.draftRev
-     const paperclip=()=>input.closest('.uV2eYG_root')?.querySelector('button.dsh-paperclip')
-     await waitFor(ticket,()=>!!paperclip());await cue(ticket,paperclip(),'添加原始研报 PDF','move')
-     if(inputFor(ticket)!==input||input.disabled||input.readOnly)throw changed()
-     if(ticket.shell.snapshot.draft!==skillDraft||ticket.shell.snapshot.draftRev!==skillRevision)throw Error('输入内容已更改，已停止自动填写。')
-     input.focus({preventScroll:true});ticket.shell.insertFilePaths([ticket.prepared.sourcePath])
+     await waitFor(ticket,()=>!!option());const choice=option();await cue(ticket,choice,ticket.kind==='report'?'选择研究报告写作技能':'选择公司 PPT 制作技能');initialUnchanged();choice.click()
+     await waitFor(ticket,()=>(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id===ticket.skillId))
+     if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id===ticket.skillId))throw Error('制作技能未能加入原生输入框。')
+     if(ticket.shell.snapshot.imageIds?.length||ticket.shell.snapshot.occurrences?.length!==1||ticket.shell.snapshot.draft.replaceAll('\uFFFC','').trim())throw Error('输入内容已更改，已停止自动填写。')
+     if(ticket.kind==='ppt'){
+     const skillDraft=ticket.shell.snapshot.draft,skillRevision=ticket.shell.snapshot.draftRev,skillOccurrences=JSON.stringify(ticket.shell.snapshot.occurrences??[])
+     const dropFile=document.createElement('div'),fileType=document.createElement('span'),fileName=document.createElement('span')
+     dropFile.className='odyssey-home-guide-drag-file';dropFile.dataset.homeGuideDragFile=ticket.detail.runId;dropFile.setAttribute('aria-hidden','true')
+     fileType.className='odyssey-home-guide-drag-file-type';fileType.textContent='PDF';fileName.textContent=ticket.prepared.sourcePath.split(/[\\/]/).pop()
+     dropFile.append(fileType,fileName);const bounds=input.getBoundingClientRect(),center=ticket.host.closest('.pI_x6G_centerCol').getBoundingClientRect()
+     dropFile.style.left=Math.max(12,Math.min(window.innerWidth-252,center.right-252))+'px';dropFile.style.top=Math.max(72,bounds.top-105)+'px';document.body.append(dropFile)
+     try{
+      await cue(ticket,input,'把参考研报拖入输入框','drag',dropFile)
+      if(inputFor(ticket)!==input||input.disabled||input.readOnly)throw changed()
+      if(ticket.shell.snapshot.draft!==skillDraft||ticket.shell.snapshot.draftRev!==skillRevision||ticket.shell.snapshot.imageIds?.length||JSON.stringify(ticket.shell.snapshot.occurrences??[])!==skillOccurrences)throw Error('输入内容已更改，已停止自动填写。')
+      input.focus({preventScroll:true});ticket.shell.insertFilePaths([ticket.prepared.sourcePath])
+     }finally{dropFile.remove()}
      if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='chat-file'&&JSON.parse(ref.ref).path===ticket.prepared.sourcePath))throw Error('研报附件未能加入原生输入框。')
-     const preparedDraft=ticket.shell.snapshot.draft,preparedRevision=ticket.shell.snapshot.draftRev
+     }
+     const preparedDraft=ticket.shell.snapshot.draft,preparedRevision=ticket.shell.snapshot.draftRev,preparedOccurrences=JSON.stringify(ticket.shell.snapshot.occurrences??[])
+     if(ticket.kind==='ppt'){
      await waitFor(ticket,()=>!!input.closest('.uV2eYG_root')?.querySelector('[data-reference-source="chat-file"]'))
      await cue(ticket,input.closest('.uV2eYG_root').querySelector('[data-reference-source="chat-file"]'),'原始研报 PDF','move')
-     await cue(ticket,input,'填写研报转换要求')
-     if(ticket.shell.snapshot.draft!==preparedDraft||ticket.shell.snapshot.draftRev!==preparedRevision)throw Error('输入内容已更改，已停止自动填写。')
-     const prefix=ticket.shell.snapshot.draft+'\n',brief=ticket.prepared.brief
+     }
+     await cue(ticket,input,ticket.kind==='report'?'填写研究问题':'填写研报转换要求')
+     if(ticket.shell.snapshot.draft!==preparedDraft||ticket.shell.snapshot.draftRev!==preparedRevision||ticket.shell.snapshot.imageIds?.length||JSON.stringify(ticket.shell.snapshot.occurrences??[])!==preparedOccurrences)throw Error('输入内容已更改，已停止自动填写。')
+     if(ticket.shell.snapshot.imageIds?.length)throw Error('输入附件已更改，已停止自动填写。')
+     const unchanged=()=>ticket.shell.snapshot.draft===prior&&ticket.shell.snapshot.draftRev===revision&&!ticket.shell.snapshot.imageIds?.length&&JSON.stringify(ticket.shell.snapshot.occurrences??[])===preparedOccurrences
+     const prefix=ticket.kind==='report'?ticket.shell.snapshot.draft.trimEnd()+' ':ticket.shell.snapshot.draft+'\n',brief=ticket.prepared.brief
      ticket.shell.setDraft(prefix);let prior=prefix,revision=ticket.shell.snapshot.draftRev
-     for(let i=0;i<brief.length;i+=2){await playing(ticket);if(ticket.shell.snapshot.draft!==prior||ticket.shell.snapshot.draftRev!==revision)throw Error('输入内容已更改，已停止自动填写。');prior=prefix+brief.slice(0,Math.min(i+2,brief.length));ticket.shell.setDraft(prior);revision=ticket.shell.snapshot.draftRev;await delay(ticket,65)}
+     for(let i=0;i<brief.length;i+=2){await playing(ticket);if(!unchanged())throw Error('输入内容已更改，已停止自动填写。');prior=prefix+brief.slice(0,Math.min(i+2,brief.length));ticket.shell.setDraft(prior);revision=ticket.shell.snapshot.draftRev;await delay(ticket,/[，。；！？]$/.test(prior)?240:140)}
+     if(!unchanged())throw Error('输入内容已更改，已停止自动填写。')
+     ticket.typedInput={draft:prior,revision,occurrences:preparedOccurrences}
     }else if(index===1){
+     const admission=ticket.typedInput,unchanged=()=>admission&&ticket.shell.snapshot.draft===admission.draft&&ticket.shell.snapshot.draftRev===admission.revision&&!ticket.shell.snapshot.imageIds?.length&&JSON.stringify(ticket.shell.snapshot.occurrences??[])===admission.occurrences
+     if(!unchanged())throw Error('输入内容已更改，演示已停止，草稿已保留。')
      const input=inputFor(ticket),button=input?.closest('.uV2eYG_root')?.querySelector('button.uV2eYG_primary')
      if(!button||button.disabled)throw Error('原生发送按钮暂不可用。')
-     await cue(ticket,button,'发送演示需求');button.click()
+     await cue(ticket,button,'发送演示需求');if(!unchanged())throw Error('输入内容已更改，演示已停止，草稿已保留。');button.click()
      await waitFor(ticket,()=>ticket.shell.snapshot.draft==='')
     }else if(index<=4){await rpc(ticket,'checkpoint',{stage:detail.command})}
     else{
-     const root=ticket.host.closest('.pI_x6G_centerCol'),file=()=>[...root.querySelectorAll('.ew-delivery-card[data-file-path]')].find(node=>node.dataset.filePath===ticket.prepared.presentationPath)?.querySelector('button.ew-delivery-open')
+     const root=ticket.host.closest('.pI_x6G_centerCol'),file=()=>[...root.querySelectorAll('.ew-delivery-card[data-file-path]')].find(node=>node.dataset.filePath===(ticket.kind==='report'?ticket.prepared.pdfPath:ticket.prepared.presentationPath))?.querySelector('button.ew-delivery-open')
      await waitFor(ticket,()=>!!file());const target=file()
-     await cue(ticket,target,'打开可编辑文件');target.click()
+     await cue(ticket,target,ticket.kind==='report'?'打开研究报告 PDF':'打开可编辑文件');target.click()
      await delay(ticket,80);await playing(ticket);await waitFor(ticket,()=>!target.isConnected||target.getAttribute('aria-busy')!=='true')
      const error=target.closest('.ew-delivery-item')?.querySelector('.ew-delivery-status[data-error="true"]')
      if(error)throw Error(error.textContent||'演示文稿未能打开。')
@@ -138,7 +157,7 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
   const receive=event=>{
    const detail=event.detail
    if(!detail||detail.sessionId!==sessionId||!['requestId','runId','sessionId','hostId'].every(key=>typeof detail[key]==='string'&&/^[\w:-]{1,128}$/.test(detail[key]))||typeof detail.command!=='string')return
-   const key=JSON.stringify([detail.runId,detail.sessionId,detail.hostId,detail.command,detail.cwd,detail.fresh]),prior=requests.get(detail.requestId)
+   const key=JSON.stringify([detail.runId,detail.sessionId,detail.hostId,detail.command,detail.cwd,detail.fresh,detail.kind]),prior=requests.get(detail.requestId)
    if(prior){if(prior.key!==key){reply(detail,false,'教程请求标识已使用。');return}prior.promise.then(()=>reply(detail,true),error=>reply(detail,false,error?.message));return}
    const promise=execute(detail);requests.set(detail.requestId,{key,promise});if(requests.size>128)requests.delete(requests.keys().next().value)
    promise.then(()=>reply(detail,true),error=>{if(owned?.detail.runId===detail.runId)dispose();reply(detail,false,error?.message||'演示未完成，请重试。')})

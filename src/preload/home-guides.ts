@@ -2,11 +2,12 @@ import styles from './home-guides.css?raw'
 import { createHomeGuideTimeline, type GuideTimeline } from './home-guide-timeline'
 import {createHomeGuidePointer, type HomeGuidePointerAction} from './home-guide-pointer'
 
-export type HomeGuideKind = 'board' | 'note' | 'ppt'
+export type HomeGuideKind = 'board' | 'note' | 'ppt' | 'report'
 export type HomeGuideAdapter = { runStep(step: any): Promise<void>; flush?(): Promise<void>; dispose(): void }
-export type HomeGuideMountOptions = { signal: AbortSignal; runId: string; sessionId: string; cwd: string; fresh: boolean; wait(ms: number, signal?: AbortSignal): Promise<void>; waitUntilPlaying(): Promise<void>; onStatus(text: string): void }
+export type HomeGuideMountOptions = { kind?:HomeGuideKind; signal: AbortSignal; runId: string; sessionId: string; cwd: string; fresh: boolean; wait(ms: number, signal?: AbortSignal): Promise<void>; waitUntilPlaying(): Promise<void>; onStatus(text: string): void }
 type Adapters = {
  beforeOpen?(session: Session & {kind:HomeGuideKind}): void | Promise<void>
+ prepareHandoff?(session: Session & {kind:HomeGuideKind},signal:AbortSignal): void | (()=>void) | Promise<void | (()=>void)>
  revealConversation?():void
  mountNotes(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
  mountPresentation(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
@@ -54,6 +55,14 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
   ['layout','整理观点与图表','内容与图表正在整理，随后完成公司模板排版。',2600],
   ['deliver','接收可继续使用的 PPT 文件','文件已经保存到示例工作区。点击交付文件即可打开预览。',1800],
   ['open','打开右侧预览，检查成稿','成稿已在右侧打开。会话、任务记录和文件都会保留。',3200]
+ ]},
+ report:{title:'公司研究报告',view:'对话',intro:'从研究问题出发，核验公开资料，形成公司研究报告并查看成稿。',steps:[
+  ['brief','选择研报技能并输入研究问题','研报写作技能已加入，研究要求已填写。',1600],
+  ['send','发送研究需求','研究问题已成为会话中可回看的用户消息。',700],
+  ['plan','检索资料并规划研究框架','先明确研究主线，再核对公开披露与关键口径。',2600],
+  ['layout','形成观点并整理专业图表','将经营驱动、现金流与风险条件整理成有依据的研究判断。',2600],
+  ['deliver','接收完整研究报告','HTML 与 PDF 已保存，可继续阅读并核对数据来源。',1800],
+  ['open','打开右侧报告预览','报告已在右侧打开，会话、任务记录和文件都会保留。',3200]
  ]}
 }
 const aborted=()=>Object.assign(Error('教程已结束。'),{name:'AbortError'})
@@ -100,7 +109,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  const win=document.defaultView!,style=document.createElement('style');style.id='odyssey-home-guide-style';style.textContent=styles;document.head.append(style)
  let disposed=false,generation=0,ownedNavigation=0,preparing:{controller:AbortController;source?:string;target?:string}|undefined,closing=Promise.resolve()
  let transition:string|undefined
- type Run={id:string;kind:HomeGuideKind;sessionId:string;abort:AbortController;root:HTMLElement;resident:HTMLElement;center:HTMLElement;content:HTMLElement;adapter?:HomeGuideAdapter;timeline?:GuideTimeline;hiddenPause?:boolean;pointer?:ReturnType<typeof createHomeGuidePointer>;cleanup():void;status:HTMLElement}
+ type Run={id:string;kind:HomeGuideKind;sessionId:string;abort:AbortController;root:HTMLElement;resident:HTMLElement;center:HTMLElement;content:HTMLElement;adapter?:HomeGuideAdapter;timeline?:GuideTimeline;hiddenPause?:boolean;pointer?:ReturnType<typeof createHomeGuidePointer>;handoff?:()=>void;cleanup():void;status:HTMLElement}
  let active:Run|undefined
  const selected=()=>[...document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol [data-srb-session-header][data-ework-notes-session]')].find(node=>!node.closest('[data-odyssey-subagent-panel]'))?.dataset.eworkNotesSession
  const releaseTransition=()=>{if(transition&&document.documentElement.dataset.homeGuideTransition===transition){delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession}transition=undefined}
@@ -113,9 +122,12 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   active=undefined;run.timeline?.dispose();run.pointer?.dispose();playback(run,false)
   if(document.documentElement.dataset.homeGuidePointerRun===run.id)delete document.documentElement.dataset.homeGuidePointerRun
   const finish=()=>{
-   run.abort.abort();run.adapter?.dispose();run.cleanup();run.root.remove()
-   if(run.center.dataset.homeGuideActive===run.id){delete run.center.dataset.homeGuideActive;delete run.center.dataset.homeGuideKind;run.center.style.removeProperty('--odyssey-home-guide-controls-height')}
-   if(run.resident.dataset.homeGuideResident===run.id){delete run.resident.dataset.homeGuideResident;delete run.resident.dataset.homeGuideLive}
+   try{
+    run.cleanup();run.root.remove()
+    if(run.center.dataset.homeGuideActive===run.id){delete run.center.dataset.homeGuideActive;delete run.center.dataset.homeGuideKind;run.center.style.removeProperty('--odyssey-home-guide-controls-height')}
+    if(run.resident.dataset.homeGuideResident===run.id){delete run.resident.dataset.homeGuideResident;delete run.resident.dataset.homeGuideLive}
+    run.handoff?.()
+   }finally{run.abort.abort();run.adapter?.dispose()}
    if(restoreFocus&&selected()===run.sessionId)run.resident.querySelector<HTMLElement>('[data-srb-tabs] [aria-selected=true]')?.focus({preventScroll:true})
   }
   if(alreadySaved||!run.adapter?.flush){finish();return Promise.resolve()}
@@ -147,24 +159,27 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const definition=EXAMPLES[kind],id=win.crypto.randomUUID(),root=document.createElement('section');root.className='odyssey-home-guide';root.dataset.homeGuide=id;root.dataset.kind=kind;root.setAttribute('aria-label',definition.title+' · 示例教程')
   const content=document.createElement('div');content.id='odyssey-home-guide-content-'+id;content.className='odyssey-home-guide-content'+(kind==='note'?' en-root':'');content.dataset.homeGuideContent='';if(kind==='note')content.dataset.homeGuideNotes='';content.dataset.dark=String(document.body.hasAttribute('data-ds-dark-theme'))
   const notice=document.createElement('div');notice.className='odyssey-home-guide-fault';notice.hidden=true;notice.setAttribute('role','alert')
+  const modeNotice=kind==='board'?undefined:document.createElement('div')
+  if(modeNotice){modeNotice.className='odyssey-home-guide-mode-notice';modeNotice.setAttribute('role','status');modeNotice.textContent='当前为演示模式，不消耗 Token';root.append(modeNotice)}
+  const modeTimer=modeNotice?win.setTimeout(()=>{modeNotice.dataset.leaving='true';win.setTimeout(()=>modeNotice.remove(),180)},5000):undefined
   const status=document.createElement('p');status.className='odyssey-home-guide-status';status.textContent='正在打开已保存的示例…'
   const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='×';dismiss.setAttribute('aria-label','关闭示例');dismiss.addEventListener('click',()=>{void close()})
   notice.append(status,dismiss);root.append(content,notice)
   const fault=(message:string)=>{root.dataset.phase='error';notice.hidden=false;status.textContent=message}
   const blocked=new Map<HTMLElement,boolean>()
   const run:Run={id,kind,sessionId:session.sessionId,abort:controller,root,resident,center,content,status,cleanup:()=>{}}
-  active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt')resident.dataset.homeGuideLive='true'
-  const blockResident=()=>{if(kind==='ppt')return;const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');for(const child of resident.children){if(!(child instanceof win.HTMLElement)||child===chrome||child.contains(chrome))continue;if(!blocked.has(child))blocked.set(child,child.inert);child.inert=true}}
+  active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt'||kind==='report')resident.dataset.homeGuideLive='true'
+  const blockResident=()=>{if(kind==='ppt'||kind==='report')return;const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');for(const child of resident.children){if(!(child instanceof win.HTMLElement)||child===chrome||child.contains(chrome))continue;if(!blocked.has(child))blocked.set(child,child.inert);child.inert=true}}
   blockResident();center.append(root);releaseTransition();playback(run,false)
   const position=()=>{if(!root.isConnected)return;const bounds=center.getBoundingClientRect(),chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header')?.getBoundingClientRect(),top=Math.max(bounds.top,chrome?.bottom??bounds.top+44);root.style.left=bounds.left+'px';root.style.top=top+'px';root.style.width=bounds.width+'px';root.style.height=Math.max(1,bounds.bottom-top)+'px'}
   const resize=new win.ResizeObserver(position);resize.observe(center);const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');if(chrome)resize.observe(chrome);win.addEventListener('resize',position);position()
   const context=new win.MutationObserver(()=>{if(active!==run)return;if(selected()!==run.sessionId||!resident.isConnected||document.querySelector('.VOzbGW_overlay')||document.body.hasAttribute('data-workspace-surface'))void close(false);else blockResident()})
   context.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ework-notes-session','data-workspace-surface']})
-  run.cleanup=()=>{resize.disconnect();context.disconnect();win.removeEventListener('resize',position);for(const[body,inert]of blocked)body.inert=inert}
+  run.cleanup=()=>{if(modeTimer!==undefined)win.clearTimeout(modeTimer);modeNotice?.remove();resize.disconnect();context.disconnect();win.removeEventListener('resize',position);for(const[body,inert]of blocked)body.inert=inert}
   const guideTab=kind==='board'?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+guideTab+'"]')
   ownedNavigation++;try{if(tab?.getAttribute('aria-selected')!=='true')tab?.click()}finally{ownedNavigation--}
   const ensure=()=>{if(active!==run||controller.signal.aborted||selected()!==run.sessionId)throw aborted()}
-  const options:HomeGuideMountOptions={signal:controller.signal,sessionId:run.sessionId,cwd:session.cwd,runId:id,fresh:session.fresh!==false,waitUntilPlaying:()=>run.timeline?run.timeline.waitUntilPlaying():Promise.resolve(),wait:(ms,signal)=>run.timeline?run.timeline.wait(ms,signal):new Promise((resolve,reject)=>{const signals=[controller.signal,...(signal?[signal]:[])];if(signals.some(item=>item.aborted)){reject(aborted());return}const clean=()=>{win.clearTimeout(timer);for(const item of signals)item.removeEventListener('abort',stop)},stop=()=>{clean();reject(aborted())},timer=win.setTimeout(()=>{clean();resolve()},ms);for(const item of signals)item.addEventListener('abort',stop,{once:true})}),onStatus:text=>{if(active===run)status.textContent=text}}
+  const options:HomeGuideMountOptions={kind,signal:controller.signal,sessionId:run.sessionId,cwd:session.cwd,runId:id,fresh:session.fresh!==false,waitUntilPlaying:()=>run.timeline?run.timeline.waitUntilPlaying():Promise.resolve(),wait:(ms,signal)=>run.timeline?run.timeline.wait(ms,signal):new Promise((resolve,reject)=>{const signals=[controller.signal,...(signal?[signal]:[])];if(signals.some(item=>item.aborted)){reject(aborted());return}const clean=()=>{win.clearTimeout(timer);for(const item of signals)item.removeEventListener('abort',stop)},stop=()=>{clean();reject(aborted())},timer=win.setTimeout(()=>{clean();resolve()},ms);for(const item of signals)item.addEventListener('abort',stop,{once:true})}),onStatus:text=>{if(active===run)status.textContent=text}}
   run.pointer=createHomeGuidePointer(document,options);document.documentElement.dataset.homeGuidePointerRun=id
   try{
    const adapter=await(kind==='board'?mountBoard(document,content,options):kind==='note'?adapters.mountNotes(document,content,options):adapters.mountPresentation(document,content,options))
@@ -174,7 +189,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    run.timeline=createHomeGuideTimeline({steps:scenes.map(([id,,,hold])=>({id,hold})),run:async step=>{ensure();await adapter.runStep(step);ensure()},onChange:state=>{
     if(active!==run||state.phase==='disposed')return
     playback(run,state.phase==='playing');root.dataset.phase=state.phase
-    if(state.phase==='completed'){hideCue();void (adapter.flush?.()??Promise.resolve()).then(()=>{if(active===run)void close(false,true)},error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
+    if(state.phase==='completed'){hideCue();void (adapter.flush?.()??Promise.resolve()).then(async()=>{ensure();const handoff=await adapters.prepareHandoff?.({...session,kind},controller.signal);ensure();if(handoff)run.handoff=handoff;await close(false,true)}).catch(error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
     else if(state.holding){status.textContent=scenes[state.index]?.[2]||''}
     else if(state.index===0)status.textContent=definition.intro
    },onError:error=>{if(active!==run)return;playback(run,false);hideCue();fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。')}})

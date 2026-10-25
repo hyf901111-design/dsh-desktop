@@ -70,6 +70,17 @@ test('moves a DOM arrow then acknowledges its click without clicking or focusing
  await vi.advanceTimersByTimeAsync(80);expect(finished).toBe(false);expect(document.querySelector('[data-home-guide-pointer]')?.getAttribute('aria-hidden')).toBe('true');expect(document.activeElement).not.toBe(f.target)
  await vi.runAllTimersAsync();await action;expect(finished).toBe(true);expect(click).not.toHaveBeenCalled();expect(f.pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
 })
+test('carries an owned PDF tile with the virtual pointer before the drop is acknowledged',async()=>{
+ const f=fixture();f.source.dataset.homeGuideDragFile='run'
+ const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source})
+ await vi.advanceTimersByTimeAsync(600)
+ const first=f.source.style.transform
+ expect(first).toContain('translate3d');expect(first).not.toBe('translate3d(0px,0px,0)')
+ await vi.advanceTimersByTimeAsync(100);expect(f.source.style.transform).not.toBe(first)
+ await vi.runAllTimersAsync();await action
+ expect(f.pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
+ expect(f.source.isConnected).toBe(true)
+})
 test('pauses mid-travel and only finishes the same action after resume',async()=>{
  const f=fixture();let finished=false;const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source}).then(()=>{finished=true})
  await vi.advanceTimersByTimeAsync(160);f.pause();await vi.advanceTimersByTimeAsync(80);const paused=f.pointer.snapshot();await vi.advanceTimersByTimeAsync(4000)
