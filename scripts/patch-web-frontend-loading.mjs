@@ -4,6 +4,7 @@ import {patchConversationComponents} from './lib/conversation-components.mjs'
 import {patchConversationCompactionLifecycle} from './lib/conversation-compaction-lifecycle.mjs'
 import {patchConversationThinkingStatus} from './lib/conversation-thinking-status.mjs'
 import {stripPptxAnnotationInput,patchPptxAnnotationInput} from './lib/pptx-annotation-native.mjs'
+import {stripPptxAnnotationMessages,patchPptxAnnotationMessages} from './lib/pptx-annotation-message.mjs'
 import {patchMemorySourceAnchors} from './lib/memory-source-anchors.mjs'
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
 import { patchNotesClient } from './lib/notes-client.mjs'
@@ -168,7 +169,7 @@ patchStyles(asset('.css'))
 
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(gridConversationPath,restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(readFileSync(gridConversationPath,'utf8'))))))
+writeFileSync(gridConversationPath,restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(readFileSync(gridConversationPath,'utf8')))))))
 await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
@@ -304,3 +305,5 @@ writeFileSync(conversationPath,patchConversationComponents(readFileSync(conversa
 writeFileSync(conversationPath,patchConversationCompactionLifecycle(readFileSync(conversationPath,'utf8')))
 // The input coordinator wraps the final native sink and Root after every other renderer/input pass.
 writeFileSync(conversationPath,patchPptxAnnotationInput(readFileSync(conversationPath,'utf8')))
+// Sent messages project only Main-verified marks after the native renderers are final.
+writeFileSync(conversationPath,patchPptxAnnotationMessages(readFileSync(conversationPath,'utf8')))
