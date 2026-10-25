@@ -860,6 +860,81 @@
           "概率性系统鼠标冻结未复现根因，不标fixed；完整74项对照表保留当前状态。"
         ],
         "generatedAt": "2026-10-25T15:29:40Z"
+      },
+      "merged": {
+        "mergeCommit": "fdeba9169ded2a710e4855595fe7effb35d35b74",
+        "verificationCommit": "fdeba9169ded2a710e4855595fe7effb35d35b74",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "fdeba9169ded2a710e4855595fe7effb35d35b74",
+            "completedAt": "2026-10-25T15:38:17.615Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "fdeba9169ded2a710e4855595fe7effb35d35b74",
+            "completedAt": "2026-10-25T15:38:17.615Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotations.test.ts",
+              "test/pptx-annotation-install.test.js",
+              "test/pptx-annotation-input-browser.test.js",
+              "test/pptx-annotation-browser.test.js",
+              "test/pptx-annotation-delivery.test.js",
+              "test/home-guide-notes-handoff-browser.test.js",
+              "test/home-report-publication.test.js",
+              "test/workbench-bloomberg-contrast-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/pptx-annotations.test.ts test/pptx-annotation-install.test.js test/pptx-annotation-input-browser.test.js test/pptx-annotation-browser.test.js test/pptx-annotation-delivery.test.js test/home-guide-notes-handoff-browser.test.js test/home-report-publication.test.js test/workbench-bloomberg-contrast-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "fdeba9169ded2a710e4855595fe7effb35d35b74",
+            "completedAt": "2026-10-25T15:38:17.615Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fdeba9169ded2a710e4855595fe7effb35d35b74",
+            "completedAt": "2026-10-25T15:38:17.615Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "fdeba9169ded2a710e4855595fe7effb35d35b74",
+            "completedAt": "2026-10-25T15:38:17.615Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-25T15:38:17.615Z"
       }
     }
   ],
