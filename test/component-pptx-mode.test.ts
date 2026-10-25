@@ -1,4 +1,5 @@
 import {readFileSync} from 'node:fs'
+import {execFileSync} from 'node:child_process'
 import {createRequire} from 'node:module'
 import {runInNewContext} from 'node:vm'
 import {afterEach,expect,it,vi} from 'vitest'
@@ -20,7 +21,7 @@ const cleanups:Array<()=>Promise<void>>=[]
 afterEach(async()=>{for(const cleanup of cleanups.splice(0).reverse())await cleanup()})
 
 const pptxDocument={id:'native-component',version:'1',editToken:'edit-token',slides:[{index:0,part:'ppt/slides/slide1.xml',nodes:[{id:'ppt/slides/slide1.xml#node:2',nodeId:'2',part:'ppt/slides/slide1.xml',type:'shape',name:'标题',geometry:{x:0,y:0,width:200,height:100,rotation:0}}],fields:[{id:'title',nodeId:'2',paragraphIndex:0,label:'标题',text:'原始标题'}]}]}
-async function fixture(readOnly=false,surface='reader',actual=false,storedInline=false){
+async function fixture(readOnly=false,surface='reader',actual=false,storedInline=false,identity:Record<string,string>={}){
  const win=new Window({url:'https://component-pptx.test/'}),previous=new Map(['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]))
  for(const[key,value]of Object.entries({window:win,document:win.document,navigator:win.navigator,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,key,{configurable:true,value})
  win.HTMLElement.prototype.getBoundingClientRect=function(){return new win.DOMRect(0,0,800,600)}
@@ -29,8 +30,11 @@ async function fixture(readOnly=false,surface='reader',actual=false,storedInline
  const source=patchComponentPptxMode(patchResearchOfficeResize(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  const start=source.indexOf('function freezeOfficePreviewDuringResize('),end=source.indexOf('function ResearchCanvasFileCard(',start)
  const api:any=runInNewContext(source.slice(start,end)+'\n'+Object.values(ui).map((fn:any)=>fn.toString()).join('\n')+'\n'+EWorkNoteFileView.toString()+'\n'+ResearchAttachmentLocalPreview.toString()+';({Office:ResearchCanvasOfficePreview,Menu:WorkbenchMenu,Note:EWorkNoteFileView})',{react:React,react_dom:{createPortal},react_jsx_runtime:jsx,window:win,document:win.document,CSS:win.CSS,useWorkbenchLocale:()=>{},workbenchText:(value:string)=>value,supportsResearchOfficePreview:()=>true,ResearchOfficePreviewErrorBoundary:({children}:any)=>children,sherlockShared:()=>false,sherlockBoardsAdapter:null,MutationObserver:win.MutationObserver,ResizeObserver:win.ResizeObserver,componentDataStatusStore:{subscribe:()=>()=>{},read:()=>null},componentRssStatusView:()=>null,canSaveCustomComponent:()=>false,RESEARCH_MIND_MAP_DETAIL_OPTIONS:[],RESEARCH_ACTIVE_GENERATION_STATUSES:new Set(),clearTimeout,setTimeout,requestAnimationFrame:win.requestAnimationFrame.bind(win)})
- const modes:any[]=[],previewMounts:any[]=[]
+ const modes:any[]=[],previewMounts:any[]=[],componentProps:any[]=[]
+ const annotationOpen=vi.fn(async(_source:unknown,_options:unknown)=>{throw Error('授权来源已送达协调器')})
+ Object.assign(win,{[Symbol.for('sherlock:pptx-annotation-input')]:{open:annotationOpen}})
  function Service(props:any){
+  componentProps.push(props)
   const [mode,setMode]=React.useState('preview')
   React.useEffect(()=>{props.onToolbarState?.({modes:true,mode,editable:props.readOnly!==true,modeBusy:false});props.onToolbarControls?.({setMode:async(next:string)=>{setMode(next);return true},toggleMode:async()=>{setMode(mode==='edit'?'preview':'edit');return true},save:async()=>true})})
   modes.push(mode)
@@ -40,18 +44,58 @@ async function fixture(readOnly=false,surface='reader',actual=false,storedInline
  Object.assign(win,{sherlockPptEditor:bridge})
  function Preview(props:any){React.useEffect(()=>{previewMounts.push(props.path)},[]);return React.createElement('div',{'data-native-pptx-preview':'','data-pptx-node-id':'2','data-pptx-part':'ppt/slides/slide1.xml','data-pptx-width':200,'data-pptx-height':100},React.createElement('div',{'data-pptx-paragraph':0},'原始标题'))}
  const Central=createPptxEditorComponent(React,Preview,undefined,createPortal)
- const Adapter=(props:any)=>React.createElement(Central,{...props,scope:{sessionId:'s',cwd:''},path:props.sourceUrl})
+ const Adapter=(props:any)=>{componentProps.push(props);return React.createElement(Central,{...props,scope:{sessionId:'sherlock-research',cwd:''},path:props.sourceUrl})}
  const officePreview={Component:actual?Adapter:Service}
  const host=win.document.createElement('section');host.dataset.researchNodeId='ppt';win.document.body.append(host)
- const mount=win.document.createElement('div');win.document.body.append(mount);const root=createRoot(mount as any),node={id:'ppt',name:'demo.pptx',path:'/work/demo.pptx',authorizationId:'a',previewSessionId:'s'}
+ const mount=win.document.createElement('div');win.document.body.append(mount);const root=createRoot(mount as any),sessionId=identity.sessionId??'s',node={id:identity.nodeId??'ppt',name:'demo.pptx',path:'/work/demo.pptx',authorizationId:identity.authorizationId??'a',previewSessionId:identity.previewSessionId??sessionId}
  let showMenu:()=>void=()=>{}
- function Research(){const[menu,setMenu]=React.useState(false);showMenu=()=>setMenu(true);return React.createElement(React.Fragment,null,createPortal(React.createElement(api.Office,{node,sessionId:'s',kind:'pptx',visible:true,service:officePreview,readOnly}),host as unknown as Element),menu&&React.createElement(api.Menu,{target:{node,root:host,left:0,top:0,sessionId:'s'},workspace:{},readOnly,onClose:()=>setMenu(false)}))}
+ function Research(){const[menu,setMenu]=React.useState(false);showMenu=()=>setMenu(true);return React.createElement(React.Fragment,null,createPortal(React.createElement(api.Office,{node,sessionId,kind:'pptx',visible:true,service:officePreview,readOnly}),host as unknown as Element),menu&&React.createElement(api.Menu,{target:{node,root:host,left:0,top:0,sessionId},workspace:{},readOnly,onClose:()=>setMenu(false)}))}
  const header=win.document.createElement('header'),reader=win.document.createElement('div');if(surface==='notes'){host.append(header,reader)}
- const entry={instanceId:'note-instance',sessionId:'s',host:reader,header,node,readOnly,inline:storedInline}
+ const entry={instanceId:'note-instance',sessionId,host:reader,header,node,readOnly,inline:storedInline}
  await act(async()=>root.render(surface==='notes'?React.createElement(api.Note,{entry,officePreview}):React.createElement(Research)))
  cleanups.push(async()=>{await act(async()=>root.unmount());await win.happyDOM.abort();for(const[key,value]of previous){if(value)Object.defineProperty(globalThis,key,value);else delete(globalThis as any)[key]}})
- return{win,host,header,entry,root,api,modes,previewMounts,restore,bridge,officePreview,async menu(){await act(async()=>{if(surface==='notes')(header.querySelector('[data-workbench-more]') as any).click();else showMenu()})}}
+ return{win,host,header,entry,root,api,modes,previewMounts,restore,bridge,officePreview,componentProps,annotationOpen,async menu(){await act(async()=>{if(surface==='notes')(header.querySelector('[data-workbench-more]') as any).click();else showMenu()})}}
 }
+
+it.each(['research','notes'])('carries the real managed %s grant through the actual parent to Office without using the fake reader scope',async surface=>{
+ const f=await fixture(false,surface,true,true,{sessionId:'actual-owner',previewSessionId:'note-files:reader-only'}),before=JSON.stringify(f.entry.node),expected={sessionId:'actual-owner',source:{kind:surface==='notes'?'note-file':'research',authorizationId:'a',nodeId:'ppt'}}
+ expect(f.componentProps.at(-1)?.annotationSource).toEqual(expected)
+ expect(f.componentProps.at(-1)?.sourceUrl).toBe('sherlock-preview://ppt/')
+ expect(f.restore).toHaveBeenCalledWith({sessionId:surface==='notes'?'note-files:reader-only':'actual-owner',nodeId:'ppt',authorizationId:'a'})
+ expect(f.bridge.open).not.toHaveBeenCalled();expect(f.bridge.save).not.toHaveBeenCalled();expect(f.annotationOpen).not.toHaveBeenCalled()
+ const host=f.host.querySelector('[data-component-pptx-mode-host]') as any
+ await act(async()=>{expect(await host.__eworkPptxMode.controls.setAnnotations(true)).toBe(false)})
+ expect(f.annotationOpen).toHaveBeenCalledTimes(1)
+ expect(f.annotationOpen.mock.calls[0]?.[0]).toEqual(expected)
+ expect(JSON.stringify(f.entry.node)).toBe(before)
+ expect(f.bridge.open).not.toHaveBeenCalled();expect(f.bridge.save).not.toHaveBeenCalled()
+})
+it.each([
+ ['research',{sessionId:'actual-owner',authorizationId:'   '}],
+ ['notes',{sessionId:'actual-owner',authorizationId:''}],
+ ['notes',{sessionId:'',previewSessionId:'note-files:reader-only'}],
+ ['research',{sessionId:'sherlock-research'}],
+ ['notes',{sessionId:'note-files:reader-only',previewSessionId:'note-files:reader-only'}],
+ ['research',{sessionId:'actual-owner',nodeId:'   '}]
+] as const)('never manufactures an annotation grant for an invalid %s identity %j',async(surface,identity)=>{
+ const f=await fixture(false,surface,true,true,identity)
+ expect(f.componentProps.at(-1)?.annotationSource).toBeUndefined()
+ const host=f.host.querySelector('[data-component-pptx-mode-host]') as any
+ if(host)await act(async()=>{expect(await host.__eworkPptxMode.controls.setAnnotations(true)).toBe(false)})
+ expect(f.annotationOpen).not.toHaveBeenCalled();expect(f.bridge.open).not.toHaveBeenCalled()
+})
+it.each([
+ undefined,
+ {sessionId:'actual-owner',source:{kind:'note-file',authorizationId:'wrong-grant',nodeId:'ppt'}},
+ {sessionId:'actual-owner',source:{kind:'note-file',authorizationId:'a',nodeId:'different-node'}},
+ {sessionId:'actual-owner',source:{kind:'research',authorizationId:'a',nodeId:'ppt'}}
+])('rejects a missing or mismatched explicit note grant without falling back to its reader (%j)',async annotationSource=>{
+ const f=await fixture(false,'research',true),node={...f.entry.node,noteDocument:true}
+ await act(async()=>f.root.render(React.createElement(f.api.Office,{node,sessionId:'note-files:reader-only',kind:'pptx',visible:true,service:f.officePreview,annotationSource})))
+ expect(f.componentProps.at(-1)?.annotationSource).toBeUndefined()
+ expect(f.restore).toHaveBeenLastCalledWith({sessionId:'note-files:reader-only',nodeId:'ppt',authorizationId:'a'})
+ expect(f.annotationOpen).not.toHaveBeenCalled();expect(f.bridge.open).not.toHaveBeenCalled()
+})
 
 it('forwards native PPT mode controls to a right-aligned component footer',async()=>{
  const f=await fixture(),button=f.host.querySelector('[data-component-pptx-edit]') as any
@@ -151,8 +195,19 @@ it('installs and strips the actual resident representation without changing grid
  expect(patchResearchGridWorkbench(installed)).toBe(installed)
  expect(()=>patchComponentPptxMode(patched.replace('Component: service.Component, readOnly:','Component: null, readOnly:'))).toThrow(/drifted/)
  const currentBinding=patched.match(/\.\.\.\(kind === "pptx" \? \{ Component: service\.Component, readOnly:[^\n]+\n\s*sourceUrl: preview\.descriptor\.url,/)! [0]
- const oldBinding=currentBinding.replace('fileInfo: { name: node.name, path: node.path }, ','')
+ const oldBinding=currentBinding.replace('annotationSource: componentPptxAnnotationSource(node, sessionId, annotationSource), ','').replace('fileInfo: { name: node.name, path: node.path }, ','')
  const mixed=patched.replace('/* EWORK_GRID_RESTORE ','/* duplicated legacy props\n'+oldBinding+'\n'+oldBinding+'\n*/\n/* EWORK_GRID_RESTORE ')
  expect(()=>stripComponentPptxMode(mixed)).toThrow(/drifted/)
  expect(()=>patchComponentPptxMode(mixed)).toThrow(/drifted/)
+},15000)
+it('upgrades the complete previous managed renderer, strictly strips it and installs twice',async()=>{
+ const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),base=stripComponentPptxMode(resident)
+ const prior=execFileSync('git',['show','adc43df1:scripts/lib/component-pptx-mode.mjs'],{encoding:'utf8'})
+ const legacy=await import(/* @vite-ignore */'data:text/javascript;base64,'+Buffer.from(prior).toString('base64'))
+ const upgraded=patchComponentPptxMode(legacy.patchComponentPptxMode(base)),fresh=patchComponentPptxMode(base)
+ expect(upgraded).toBe(fresh);expect(patchComponentPptxMode(upgraded)).toBe(fresh);expect(stripComponentPptxMode(upgraded)).toBe(base)
+ expect(()=>stripComponentPptxMode(upgraded.replace('componentPptxAnnotationSource(node, sessionId, annotationSource)','unverifiedSource(node)'))).toThrow(/drifted/)
+ const signature='function ResearchCanvasOfficePreview({ node, sessionId, kind, visible, service, resizing, readOnly = false }) {'
+ const duplicate=upgraded.replace('/* EWORK_GRID_RESTORE ','/* duplicated legacy signature\n'+signature+'\n'+signature+'\n*/\n/* EWORK_GRID_RESTORE ')
+ expect(()=>stripComponentPptxMode(duplicate)).toThrow(/drifted/)
 },15000)
