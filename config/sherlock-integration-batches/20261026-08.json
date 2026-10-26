@@ -1,0 +1,404 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-08",
+  "branch": "codex/integration/20261026-08",
+  "baseMainCommit": "8b50f91688b70e0f3cebf423bbe584d5fc469575",
+  "expectedMainCommit": "8b50f91688b70e0f3cebf423bbe584d5fc469575",
+  "createdAt": "2026-10-26T11:10:01.493Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "优化演示提示与输入轨迹、正常组件尺寸、标记删除和客户端交互细节",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "b388315663c4dcde16e06c8594f878e934d05317",
+        "tipCommit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+        "commits": [
+          {
+            "commit": "715c4582bdd7bdd7272b377cf15fa1bdbd84ae59",
+            "parents": [
+              "b388315663c4dcde16e06c8594f878e934d05317"
+            ],
+            "subject": "统一新笔记侧栏图标尺寸与灰色渲染"
+          },
+          {
+            "commit": "2f229e01131886c8e94b428d64cfdd34b8f0f641",
+            "parents": [
+              "715c4582bdd7bdd7272b377cf15fa1bdbd84ae59"
+            ],
+            "subject": "在PPT标注备注气泡中新增删除标记入口"
+          },
+          {
+            "commit": "a8e6c554de76b7b6c7fcda9be56e994a53ca40a1",
+            "parents": [
+              "2f229e01131886c8e94b428d64cfdd34b8f0f641"
+            ],
+            "subject": "在用例大卡原位提示演示并优化指针接近轨迹"
+          },
+          {
+            "commit": "a41e051d14f22229761026927a71f581d59b2926",
+            "parents": [
+              "a8e6c554de76b7b6c7fcda9be56e994a53ca40a1"
+            ],
+            "subject": "修复导出会话弹窗关闭图标被全局内边距压缩"
+          },
+          {
+            "commit": "ea75b30c3efb9ec574679875125aabaa13114b0b",
+            "parents": [
+              "a41e051d14f22229761026927a71f581d59b2926"
+            ],
+            "subject": "优化演示入口和光标定位并让提示词逐字淡入"
+          },
+          {
+            "commit": "d1f08acbac8ecbdee822891f2609317a2d167af2",
+            "parents": [
+              "ea75b30c3efb9ec574679875125aabaa13114b0b"
+            ],
+            "subject": "固定演示提示前真实播放点击的指针起点"
+          },
+          {
+            "commit": "71691104ea8d1485a7026b7241b6a65da88efa48",
+            "parents": [
+              "d1f08acbac8ecbdee822891f2609317a2d167af2"
+            ],
+            "subject": "收紧首页PPT技能输入高度并保持关闭图标悬停描边"
+          },
+          {
+            "commit": "b5c85f2b0ee0b0972fd8548b0cbd6a4b98d8d453",
+            "parents": [
+              "71691104ea8d1485a7026b7241b6a65da88efa48"
+            ],
+            "subject": "对调任务规划栏展开与收起箭头方向"
+          },
+          {
+            "commit": "74a7d15c71fe9c7e5a5914d3190194a60505f786",
+            "parents": [
+              "b5c85f2b0ee0b0972fd8548b0cbd6a4b98d8d453"
+            ],
+            "subject": "调整收起侧栏底部留白并恢复头像圆形悬停"
+          },
+          {
+            "commit": "2f000bfbeb2e555b18432221a9a4e1c411ea4491",
+            "parents": [
+              "74a7d15c71fe9c7e5a5914d3190194a60505f786"
+            ],
+            "subject": "修复斜杠命令选择后的光标与删除补全意图"
+          },
+          {
+            "commit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+            "parents": [
+              "2f000bfbeb2e555b18432221a9a4e1c411ea4491"
+            ],
+            "subject": "恢复看板演示正常尺寸并仅选中出线组件"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/assistant-reveal.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/plain-slash-input.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-viewer.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-pointer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/pptx-annotations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-task-progress.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/plain-slash-input-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-composer-reveal-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-pointer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/input-deliverable-preview-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-command-scope.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/plain-slash-input-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/plain-slash-input-install.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-viewer-install.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/session-export-dialog-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-account-rail-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-note-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-note-install.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/check-home18-feature-evidence-20261026.py"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-18-final2-check-1-20261026.log",
+            "verifiedCommit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+            "completedAt": "2026-10-26T11:06:55.036615+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-18-final2-check-2-20261026.log",
+            "verifiedCommit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+            "completedAt": "2026-10-26T11:07:01.883257+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-18-final2-check-3-20261026.log",
+            "verifiedCommit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+            "completedAt": "2026-10-26T11:07:08.895137+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guide-pointer.test.ts",
+              "test/figma-task-progress.test.ts",
+              "test/plain-slash-input-install.test.js",
+              "test/skill-command-patch.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-18-final2-check-4-20261026.log",
+            "verifiedCommit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+            "completedAt": "2026-10-26T11:07:20.883287+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-18-final2-check-5-20261026.log",
+            "verifiedCommit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+            "completedAt": "2026-10-26T11:07:28.546763+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-18-final2-check-6-20261026.log",
+            "verifiedCommit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+            "completedAt": "2026-10-26T11:07:28.568688+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "直接相关真实组件浏览器与原生模块夹具已完成；逐文件哈希验证后复用冻结的聚焦证据。正式16 Notes连续180秒及回访通过；正式16四卡取景实拍失败已保留并据实修复。正式18新增交互仍待本批干净main构建后原生复验。"
+        },
+        "acceptanceCriteria": [
+          "新笔记图标复用侧栏16px共享灰色；收起侧栏头像与通知上移且头像hover正圆，展开布局保留。",
+          "PPT短输入区154px、正文106px与48px工具栏贴合配图；长文本自然增长，研报199px保留；配图hover不加粗描边。",
+          "导出会话弹窗原生关闭按钮显式零padding与14px不收缩图标，28px点击区和原关闭行为保留。",
+          "PPT标记气泡右下角删除仅委托现有持久删除事务；当前引用与图钉同步、其他标记/正文/文件不误删、撤销保留。",
+          "只有任务规划栏箭头对调：收起时向上表示展开，展开时向下表示收起。",
+          "四大用例卡原位淡出描述并渐进提示不消耗Token，提示完整停留后才开始同一虚拟鼠标动作；顶部旧提示移除。",
+          "PPT与研报上滑后直接选skill，无多余Chat tab点击；鼠标准确点正文末尾并同步原生caret，提示词逐grapheme真实写入且复用回复淡入。",
+          "鼠标接近轨迹轻弧线且加减速，精准拖选和数据连线路径原协议保留。",
+          "普通slash命令选定后caret落在命令末尾，退格删除不重开补全，正常新斜杠输入/Notes归属/IME/undo保护保留。",
+          "看板添加保原生正常宽高与日历正常宽度，Arrange才自适应填边；连线仅源组件选中，不压扁或缩字。空间充足才四卡全貌，不足则平滑分行取景并保留明确极短视口边界。",
+          "干净main构建正式客户端；保留原有会话文件与配置，不发布、不推送、不递增版本。"
+        ],
+        "risks": [
+          "正式18新增交互的原生验收待构建后完成；用户正式17实测反馈保持历史证据。",
+          "系统级概率鼠标冻结仍未稳定复现，fixed=false。",
+          "旧已持久化演示回复文字保留；去除快捷链接作用于重新启动的演示。",
+          "此前常规headless截图路径写入已分别记录，原始Native证据不改写。"
+        ],
+        "generatedAt": "2026-10-26T11:09:59.920632+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "python3",
+        "/tmp/check-home18-integration-source-20261026.py"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guides.test.ts",
+        "test/home-guide-pointer.test.ts",
+        "test/figma-task-progress.test.ts",
+        "test/plain-slash-input-install.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
