@@ -66,6 +66,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const [phase,setPhase]=useState<ChallengeScheduleState['phase']>('off')
  const running=phase==='running'||!!pending
  const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,ParagraphReview>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0),picker=useRef({open:false,initialLevel:readLevel()})
+ const reviewResolutions=useRef(new Map<string,{before:string;after:string;identity:string}>())
  const activityId=useRef(options.activityId??crypto.randomUUID()),activity=useRef({running:false,pending:0,failed:false}),restoring=useRef(true),flushQueue=useRef(Promise.resolve())
  // Keep the originating editor resident through an action and its confirmed save,
  // even when the user closes its bubble, switches sessions or leaves the app.
@@ -123,7 +124,13 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  }
  useEffect(()=>{
   live.current=true
-  const s=new NoteChallengeScheduler({sessionId,run:request,getReviewAnchors:()=>[...ai.getThreads().values()].flatMap((thread:any)=>{
+  const reviewedThreads=new WeakMap<ChallengeResult,Array<{id:string;snapshot:string}>>()
+  const s=new NoteChallengeScheduler({sessionId,run:async(input,signal)=>{
+   // A later clean receipt may retire only the system findings it actually
+   // started with, never a new/edited discussion created while it was pending.
+   const existing=[...ai.getThreads().values()].filter(thread=>thread.metadata?.kind===CHALLENGE_KIND&&!thread.resolved&&!thread.deletedAt&&thread.comments.find(comment=>!comment.deletedAt)?.userId===CHALLENGE_USER&&input.blocks.some(block=>block.id===thread.metadata.issue.blockId)).map(thread=>({id:thread.id,snapshot:JSON.stringify(thread)}))
+   const result=await request(input,signal);reviewedThreads.set(result,existing);return result
+  },getReviewAnchors:()=>[...ai.getThreads().values()].flatMap((thread:any)=>{
    const issue=thread.metadata?.issue
    return thread.metadata?.kind===CHALLENGE_KIND&&!thread.resolved&&!thread.deletedAt&&issue?[{blockId:issue.blockId,quote:issue.quote}]:[]
   }),onResult:async(result,captured)=>{
@@ -161,6 +168,20 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    if(live.current&&readLevel()===captured.level&&fingerprint(latest.current.title,blocks())===captured.key){
     // Fail closed for an older host which cannot attest full tier completion.
     const complete=new Set(result.completeBlockIds??[]),ids=new Set(captured.blocks.map(b=>b.id))
+    const passed=new Set(result.coveredBlockIds.filter(id=>complete.has(id)&&!result.issues.some(issue=>issue.blockId===id)))
+    for(const prior of reviewedThreads.get(result)??[]){
+     if(!live.current||readLevel()!==captured.level||fingerprint(latest.current.title,blocks())!==captured.key)break
+     const thread=ai.getThreads().get(prior.id)
+     if(thread&&passed.has(thread.metadata?.issue?.blockId)&&JSON.stringify(thread)===prior.snapshot){
+      const after=captured.blocks.find(block=>block.id===thread.metadata.issue.blockId)!.text
+      // Rechecking unchanged prose is not an acknowledgement of its discussion.
+      if(thread.metadata.sourceText===after)continue
+      reviewResolutions.current.set(thread.id,{before:thread.metadata.sourceText,after,identity:JSON.stringify([thread.metadata,thread.comments])})
+      await setAutomaticResolution(thread.id,true)
+     }
+    }
+    reviewedThreads.delete(result)
+    if(!live.current||readLevel()!==captured.level||fingerprint(latest.current.title,blocks())!==captured.key)return
     for(const id of covered.current.keys())if(!ids.has(id))covered.current.delete(id)
     for(const id of result.coveredBlockIds){const block=captured.blocks.find(b=>b.id===id);if(block)covered.current.set(id,{text:block.text,title:captured.title,level:captured.level,complete:complete.has(id),issueCount:result.issues.filter(issue=>issue.blockId===id).length})}
    }
@@ -194,10 +215,11 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    if(restoredBlocks.size)queueMicrotask(()=>{if(!live.current)return;for(const thread of ai.getThreads().values()){
     const data=thread.metadata as ChallengeThread['metadata']|undefined
     if(blocks().find(b=>b.id===thread.metadata?.issue?.blockId)?.text!==restoredBlocks.get(thread.metadata?.issue?.blockId))continue
-    const automatic=[...doc.getMap<any>('note-replacement-reviews').values()].some(r=>r.threadId===thread.id&&r.autoResolved&&!r.resolved)
+    const reviewed=reviewResolutions.current.get(thread.id),reviewedCurrent=reviewed&&reviewed.identity===JSON.stringify([data,thread.comments])?reviewed:undefined
+    const automatic=!!reviewedCurrent||[...doc.getMap<any>('note-replacement-reviews').values()].some(r=>r.threadId===thread.id&&r.autoResolved&&!r.resolved)
     if(data?.kind!==CHALLENGE_KIND||thread.deletedAt||thread.resolved&&!automatic)continue
     const restored=anchorHistory(data.anchorHistory).find(value=>value.sourceText===restoredBlocks.get(data.issue.blockId)&&findChallengeQuote(editor,data.issue.blockId,value.quote))
-    if(automatic){const resolution=(data as any).replacementResolutionHistory?.find((r:any)=>r.sourceText===restoredBlocks.get(data.issue.blockId));if(resolution&&resolution.resolved!==!!thread.resolved){void setAutomaticResolution(thread.id,resolution.resolved);if(!resolution.resolved&&!comments.store.state.selectedThreadId){comments.selectThread(thread.id,false);setSelected(thread.id)}}}
+    if(automatic){const text=restoredBlocks.get(data.issue.blockId),resolution=reviewedCurrent?(text===reviewedCurrent.before?{resolved:false}:text===reviewedCurrent.after?{resolved:true}:undefined):(data as any).replacementResolutionHistory?.find((r:any)=>r.sourceText===text);if(resolution&&resolution.resolved!==!!thread.resolved){void setAutomaticResolution(thread.id,resolution.resolved);if(!resolution.resolved&&!comments.store.state.selectedThreadId){comments.selectThread(thread.id,false);setSelected(thread.id)}}}
     if(restored&&(data.issue.quote!==restored.quote||data.sourceText!==restored.sourceText))metadata(thread.id,{issue:{...data.issue,quote:restored.quote},sourceText:restored.sourceText})
    }sync();refresh()})
    sync();refresh()
@@ -232,7 +254,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  })}
  const getConfiguration=()=>({level:readLevel(),commentsExpanded:readMarginExpanded(),phase:state.current.phase})
  const close=(id:string)=>{setPopupAnchor(undefined);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
- const resolve=async(id:string)=>{setPopupAnchor(undefined);cancelAction(id);replacementReviews.resolveThread(id);comments.selectThread(undefined,false);setSelected(undefined);await comments.threadStore.resolveThread({threadId:id});sync();refresh()}
+ const resolve=async(id:string)=>{setPopupAnchor(undefined);cancelAction(id);reviewResolutions.current.delete(id);replacementReviews.resolveThread(id);comments.selectThread(undefined,false);setSelected(undefined);await comments.threadStore.resolveThread({threadId:id});sync();refresh()}
  const applyReplacement=async(threadId:string,commentId:string)=>{
   if(action.current||latest.current.busy||!active()||dismissed.current.has(threadId))return
   const thread=ai.getThreads().get(threadId),comment=thread?.comments.find(c=>c.id===commentId&&!c.deletedAt);let suggestion=comment?.metadata?.challengeReplacement as ChallengeReplacement|undefined
