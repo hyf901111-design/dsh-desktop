@@ -105,6 +105,78 @@
           "既有用户案例未迁移；新建研报演示采用本次修订资源。"
         ],
         "generatedAt": "2026-10-26T16:45:53.216753+00:00"
+      },
+      "merged": {
+        "mergeCommit": "a266d9899c2892fd0a26110d6420ae88bc2d06eb",
+        "verificationCommit": "a266d9899c2892fd0a26110d6420ae88bc2d06eb",
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/home-report-links-integration-20261027/check-source.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 /tmp/home-report-links-integration-20261027/check-source.py",
+            "verifiedCommit": "a266d9899c2892fd0a26110d6420ae88bc2d06eb",
+            "completedAt": "2026-10-26T16:46:15.257Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "--input-type=module",
+              "-e",
+              "import {loadHomeReportAssets} from './packages/dsh-research-task-runtime/home-report-runtime.js'; const a=await loadHomeReportAssets(); if(a.metadata.sourceLinkRevision?.modelRerun!==false) throw Error('Revision provenance missing'); console.log(JSON.stringify({pages:a.metadata.reportPages,pdf:a.metadata.pdfSha256,sources:a.metadata.sources.length}));"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node --input-type=module -e import {loadHomeReportAssets} from './packages/dsh-research-task-runtime/home-report-runtime.js'; const a=await loadHomeReportAssets(); if(a.metadata.sourceLinkRevision?.modelRerun!==false) throw Error('Revision provenance missing'); console.log(JSON.stringify({pages:a.metadata.reportPages,pdf:a.metadata.pdfSha256,sources:a.metadata.sources.length}));",
+            "verifiedCommit": "a266d9899c2892fd0a26110d6420ae88bc2d06eb",
+            "completedAt": "2026-10-26T16:46:15.257Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-report-assets.test.js",
+              "test/home-report-runtime.test.js",
+              "test/home-report-publication.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-report-assets.test.js test/home-report-runtime.test.js test/home-report-publication.test.js --maxWorkers=2",
+            "verifiedCommit": "a266d9899c2892fd0a26110d6420ae88bc2d06eb",
+            "completedAt": "2026-10-26T16:46:15.257Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a266d9899c2892fd0a26110d6420ae88bc2d06eb",
+            "completedAt": "2026-10-26T16:46:15.257Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "a266d9899c2892fd0a26110d6420ae88bc2d06eb",
+            "completedAt": "2026-10-26T16:46:15.257Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-26T16:46:15.257Z"
       }
     }
   ],
