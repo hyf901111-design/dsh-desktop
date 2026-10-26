@@ -5,7 +5,6 @@ import { build } from 'esbuild'
 import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDeclaration } from 'typescript'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { patchNoteSessionRuntime } from '../scripts/lib/notes-session.mjs'
-import { patchComposerDeliverablePreview } from '../scripts/lib/figma-composer-deliverable-preview.mjs'
 import { HOME_BOARD_SMART_PATH, HOME_BOARD_SMART_PROMPT, HOME_BOARD_SMART_ARTIFACT } from '../packages/dsh-research-task-runtime/home-board-smart-contract.js'
 
 // Browser plugin not available. Use the existing Playwright/Chromium runtime;
@@ -16,6 +15,8 @@ const sessionId = 'guide-browser-session'
 const draft = '保留我的原生输入草稿\n第二行 🔎'
 // Serialize the production functions without Vitest's imported-binding rewrites.
 const requireNative=createRequire(import.meta.url)
+const {patchComposerDeliverablePreview}=requireNative('../scripts/lib/figma-composer-deliverable-preview.mjs')
+const {stripPlainSlashInput}=requireNative('../scripts/lib/plain-slash-input.mjs')
 const {patchNotesSidebar}=requireNative('../scripts/lib/notes-sidebar.mjs')
 const {stripHomeGuidePresentationNative}=requireNative('../scripts/lib/home-guide-presentation-native.mjs')
 const {patchHomeGuideNative,stripHomeGuideNative}=requireNative('../scripts/lib/home-guide-native.mjs')
@@ -26,7 +27,7 @@ let browser, runtimeSource, conversationSource, entry, styles
 
 beforeAll(async () => {
   runtimeSource = patchNoteSessionRuntime(await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js', 'utf8'))
-  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))))))
+  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))))))
   conversationSource = patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native)))
     .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};exports.__page=sherlockBoardsPage;')
   const workspaceSource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'),pickerStart=workspaceSource.indexOf('function WorkspacePickFlow('),pickerEnd=workspaceSource.indexOf('\n\t\t/**',pickerStart),workspacePicker=workspaceSource.slice(pickerStart,pickerEnd)
@@ -155,6 +156,54 @@ async function preserved(page) {
   expect(await page.evaluate(() => window.guideProbe.shell.snapshot.draft)).toBe(draft)
   expect(await page.evaluate(() => { const {registry,memory}=window.guideProbe,nodes=registry.for('guide-browser-session').getSnapshot().artifacts; return !nodes.length||JSON.stringify(JSON.parse(memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session')).map(n=>n.id))===JSON.stringify(nodes.map(n=>n.id)) })).toBe(true)
 }
+async function scrollMotionSetup(page) {
+ await page.evaluate(()=>{window.guideProbe.view.update({view:'research'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(!d.requestId)return;const canvas=document.querySelector('#guide-host [data-research-canvas]');(window.guideProbe.motionCues??=[]).push({label:d.label,top:canvas?.scrollTop,time:performance.now(),target:[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===d.targetToken)?.getBoundingClientRect().toJSON()});window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+}
+async function recordScrollMotion(page,step) {
+ await page.evaluate(()=>{const p=window.guideProbe,canvas=document.querySelector('#guide-host [data-research-canvas]');p.motionFrames=[];p.motionCues=[];p.motionRecording=true;const record=()=>{p.motionFrames.push({top:canvas.scrollTop,time:performance.now()});if(p.motionRecording)requestAnimationFrame(record)};record()})
+ const reply=await command(page,step,{},15000)
+ await page.waitForTimeout(150)
+ return page.evaluate(reply=>{const p=window.guideProbe;p.motionRecording=false;return{reply,frames:p.motionFrames,cues:p.motionCues}},reply)
+}
+it('naturally scrolls added components, Arrange and stock controls before issuing settled pointer cues',async()=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000})
+ const out='/tmp/home-board-natural-scroll-20261026';await mkdir(out,{recursive:true})
+ try{
+  await scrollMotionSetup(page)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements'])await succeeds(page,step)
+  await page.emulateMedia({reducedMotion:'no-preference'})
+  const stages={};for(const step of ['board-calendar','board-arrange'])stages[step]=await recordScrollMotion(page,step)
+  await succeeds(page,'board-link')
+  await page.evaluate(()=>{const c=document.querySelector('#guide-host [data-research-canvas]');c.scrollTop=c.scrollHeight})
+  stages['board-add']=await recordScrollMotion(page,'board-add')
+  stages['board-smart-container']=await recordScrollMotion(page,'board-smart-container')
+  await writeFile(out+'/stages.json',JSON.stringify(stages,null,2));await page.screenshot({path:out+'/after-smart.png'})
+  for(const[step,{reply,frames,cues}]of Object.entries(stages)){
+   expect(reply,step).toMatchObject({ok:true});const values=frames.map(f=>f.top),range=Math.max(...values)-Math.min(...values),deltas=values.slice(1).map((v,i)=>Math.abs(v-values[i]));
+   expect(range,step+' must actually travel').toBeGreaterThan(120);expect(new Set(values.map(Math.round)).size,step+' intermediate frames').toBeGreaterThan(8);expect(Math.max(...deltas),step+' must not jump').toBeLessThan(range*.4+4)
+   for(const cue of cues){const prior=frames.filter(f=>f.time<=cue.time).slice(-3);expect(prior.length).toBe(3);expect(Math.max(...prior.map(f=>f.top))-Math.min(...prior.map(f=>f.top)),step+' pointer after scroll settles').toBeLessThan(1.1)}
+  }
+  const w=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot());expect(w.artifacts.find(n=>n.containerSpec.widget==='watchlist').containerSpec.symbols).toHaveLength(5);expect(w.artifacts.filter(n=>n.containerSpec?.linkedSourceId||n.containerSpec?.linkedWatchlistId)).toHaveLength(3);expect(w.viewport.scale).toBe(1);await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},45000)
+it.each(['paused','disposed','manual-wheel'])('protects the current scroll position when %s interrupts Arrange travel',async mode=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000})
+ try{
+  await scrollMotionSetup(page);for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar'])await succeeds(page,step)
+  await page.emulateMedia({reducedMotion:'no-preference'})
+  await page.evaluate(()=>{const p=window.guideProbe,c=document.querySelector('#guide-host [data-research-canvas]');p.motionStart=c.scrollTop;p.motionFrames=[];p.motionRecording=true;const record=()=>{p.motionFrames.push(c.scrollTop);if(p.motionRecording)requestAnimationFrame(record)};record()})
+  const pending=command(page,'board-arrange',{},15000)
+  await expect.poll(()=>page.evaluate(()=>{const p=window.guideProbe,c=document.querySelector('#guide-host [data-research-canvas]');return c.scrollTop>5&&Math.abs(c.scrollTop-p.motionStart)>6}),{timeout:4000}).toBe(true)
+  if(mode==='paused'){
+   const held=await page.evaluate(()=>{window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:false}}));return document.querySelector('#guide-host [data-research-canvas]').scrollTop});await page.waitForTimeout(180);expect(await page.locator('#guide-host [data-research-canvas]').evaluate(c=>c.scrollTop)).toBe(held);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:true}})));expect(await pending).toMatchObject({ok:true});expect(await page.locator('#guide-host [data-research-canvas]').evaluate(c=>c.scrollTop)).toBe(0)
+  }else{
+   if(mode==='disposed')await succeeds(page,'dispose');else{const box=await page.locator('#guide-host [data-research-canvas]').boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.wheel(0,90)}
+   expect(await pending).toMatchObject({ok:false});await page.waitForTimeout(100);const stopped=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().viewport.y);await page.waitForTimeout(200);expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().viewport.y)).toBe(stopped);if(mode==='manual-wheel')expect(stopped).not.toBe(0)
+  }
+  if(mode!=='disposed')expect(await page.locator('#guide-host [data-research-canvas]').evaluate(c=>c.style.getPropertyValue('scroll-behavior'))).toBe('')
+  await page.evaluate(()=>window.guideProbe.motionRecording=false);expect(errors).toEqual([])
+ }finally{await page.close()}
+},25000)
 it.each([{width:1380,height:900},{width:1900,height:1090}])('keeps native reading sizes while adding and only fills rows after Arrange at $width × $height',async({width,height})=>{
  const{page,errors}=await fixture({nativeLayout:true,width,height,guideTop:34,guideBottom:10})
  const output='/tmp/home-board-normal-size-20261026/'+width+'x'+height;await mkdir(output,{recursive:true})
