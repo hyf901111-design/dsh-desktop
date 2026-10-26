@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs'
-import {mkdir} from 'node:fs/promises'
+import {mkdir,writeFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
@@ -9,7 +9,7 @@ let browser,runtime
 let nativeSource=patchComposerDeliverablePreview(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
 const runtimeSource=readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
 nativeSource=nativeSource.replace('\t\texports.apply = apply;','\t\texports.apply = apply;\nexports.__testInputBar = InputBar;')
-const evidence='/tmp/skill-cover-close-20261026/browser'
+const evidence='/tmp/skill-cover-home-only-20261026/browser'
 beforeAll(async()=>{
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'js',contents:`
  import {createPptxAnnotationShellBinding} from './scripts/lib/pptx-annotation-input.mjs';import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';
@@ -38,7 +38,7 @@ beforeAll(async()=>{
  await mkdir(evidence,{recursive:true})
 },30000)
 afterAll(()=>browser?.close())
-async function fixture({width=780,dark=false,mode='home'}={}){
+async function fixture({width=780,dark=false,mode='home',inputProps={}}={}){
  const page=await browser.newPage({viewport:{width:Math.max(860,width+40),height:800},deviceScaleFactor:2})
  const errors=[];page.on('pageerror',error=>{errors.push(error.stack||error.message);console.error(error.stack||error.message)})
  // Reading seats retain their existing 16px native clearance on both sides.
@@ -52,6 +52,7 @@ async function fixture({width=780,dark=false,mode='home'}={}){
  await page.addStyleTag({content:styles+'\nbody{margin:20px;--dsh-composer-side-clearance:0;--dsh-composer-card-max-width:780px;--dsw-font-family:system-ui;--odyssey-font-ui:system-ui;--odyssey-home-input:rgba(255,255,255,.5);--dsw-alias-label-primary:#252525}body[data-ds-dark-theme]{--odyssey-home-input:rgba(0,0,0,.49);--dsw-alias-label-primary:#e5e5e5}.wSkVaW_root{display:block;height:auto}.uV2eYG_root{width:100%}#fixture{margin:0}'});
  await page.addScriptTag({content:runtime})
  await page.waitForSelector('textarea',{timeout:3000}).catch(error=>{throw Error(errors.join('\n')||error.message)})
+ await page.evaluate(async({mode,inputProps})=>{const workspaceSnapshot={files:[],artifacts:[{id:'research-real-context',title:'已有研究组件'}],selection:{selectedNodeIds:[]}};window.previewFixture.workspace={subscribe:()=>()=>{},getSnapshot:()=>workspaceSnapshot};await window.previewFixture.force({variant:mode==='home'?'hero':'composer',...inputProps})},{mode,inputProps})
  return page
 }
 
@@ -75,7 +76,7 @@ it('runs the real installed InputBar after the complete dependency pipeline with
  }finally{await page.close()}
 },15000)
 
-it.each([{kind:'ppt',dark:false},{kind:'ppt',dark:true},{kind:'report',dark:false},{kind:'report',dark:true},{kind:'ppt',dark:true,mode:'conversation'},{kind:'report',dark:false,mode:'conversation'}])('matches the accepted native input layout and real assets ($kind dark=$dark mode=$mode)',async({kind,dark,mode})=>{
+it.each([{kind:'ppt',dark:false},{kind:'ppt',dark:true},{kind:'report',dark:false},{kind:'report',dark:true}])('matches the accepted native input layout and real assets ($kind dark=$dark mode=$mode)',async({kind,dark,mode})=>{
  const page=await fixture({dark,mode})
  try{
   await page.evaluate(kind=>{window.previewFixture.add(kind);window.previewFixture.append('请围绕研究主题填写需求。\n先核对资料，再交付可编辑文件。')},kind)
@@ -103,8 +104,9 @@ it.each([{kind:'ppt',dark:false},{kind:'ppt',dark:true},{kind:'report',dark:fals
 },15000)
 
 it('uses the last actual target reference, and native deletion restores text layout without replacing or blurring the textarea',async()=>{
- const page=await fixture({mode:'conversation'})
+ const page=await fixture()
  try{
+  const normalBackground=await page.locator('[data-composer-card]').evaluate(card=>getComputedStyle(card).backgroundColor)
   await page.evaluate(()=>{window.previewFixture.add('ppt');window.previewFixture.add('report');window.previewFixture.append('保留的正文');window.savedInput=document.querySelector('textarea')})
   await expect.poll(()=>page.locator('[data-odyssey-deliverable-art="report"]').count()).toBe(1)
   await page.evaluate(()=>window.previewFixture.removeLast())
@@ -117,7 +119,7 @@ it('uses the last actual target reference, and native deletion restores text lay
   expect(await page.evaluate(()=>window.savedInput===document.querySelector('textarea')&&document.activeElement===window.savedInput)).toBe(true)
   expect(await page.locator('textarea').evaluate(input=>input.selectionStart)).toBe(0)
   expect(await page.locator('textarea').evaluate(input=>getComputedStyle(input).paddingLeft)).toBe('17px')
-  expect(await page.locator('[data-composer-card]').evaluate(card=>getComputedStyle(card).backgroundColor)).toBe('rgb(249, 249, 249)')
+  expect(await page.locator('[data-composer-card]').evaluate(card=>getComputedStyle(card).backgroundColor)).toBe(normalBackground)
   expect(await page.evaluate(()=>window.submissions)).toBe(0)
  }finally{await page.close()}
 },15000)
@@ -132,8 +134,8 @@ it('does not decorate typed tag-like text or an unrelated skill that shares the 
  }finally{await page.close()}
 },15000)
 
-it.each(['home','conversation'])('keeps the cover fixed while only long native text scrolls above the independent toolbar (%s)',async mode=>{
- const page=await fixture({mode})
+it('keeps the home cover fixed while only long native text scrolls above the independent toolbar',async()=>{
+ const page=await fixture()
  try{
   await page.evaluate(()=>{window.previewFixture.add('report');window.previewFixture.append('需要保留的正文\n'.repeat(90))})
   await page.waitForSelector('[data-odyssey-deliverable-art]',{state:'attached'})
@@ -263,5 +265,62 @@ it('returns keyboard focus to the same native input when Enter removes the last 
   await expect.poll(()=>page.evaluate(()=>document.activeElement===window.keepInput)).toBe(true)
   expect(await page.locator('textarea').evaluate(el=>[el.selectionStart,el.selectionEnd])).toEqual([2,4])
   expect(await page.evaluate(()=>window.submissions)).toBe(0)
+ }finally{await page.close()}
+},15000)
+
+it.each(['ppt','report'])('keeps %s covers and their special layout strictly in the genuine ordinary home composer',async kind=>{
+ const page=await fixture({mode:'conversation'})
+ try{
+  await page.evaluate(kind=>{const f=window.previewFixture;f.append('用户正文😀\n\n保留原段落');window.normalInput=document.querySelector('textarea');window.normalStyle={padding:getComputedStyle(window.normalInput).paddingLeft,background:getComputedStyle(document.querySelector('[data-composer-card]')).backgroundColor,blur:getComputedStyle(document.querySelector('[data-composer-card]')).backdropFilter};f.add(kind);f.shell.addImages(['keep-image'])},kind)
+  await expect.poll(()=>page.locator('[data-figma-inline-ready]').count()).toBe(1)
+  const before=await page.evaluate(()=>window.previewFixture.shell.snapshot)
+  const contexts=[
+   {name:'settled-chat',props:{variant:'composer',subagentPanel:false,eworkNotes:false}},
+   {name:'research-empty',props:{variant:'composer',research:true,populated:false}},
+   {name:'research-populated',props:{variant:'composer',research:true,populated:true}},
+   {name:'notes-empty',props:{variant:'composer',eworkNotes:true}},
+   {name:'notes-populated',props:{variant:'composer',eworkNotes:true}},
+   {name:'subagent',props:{variant:'hero',subagentPanel:true}},
+   {name:'notes-hero-rejected',props:{variant:'hero',eworkNotes:true}},
+   {name:'research-hero-rejected',props:{variant:'hero',research:true,populated:true}}
+  ]
+  const measurements=[]
+  for(const context of contexts){
+   await page.evaluate(async({props})=>{const f=window.previewFixture;const snapshot={files:[],artifacts:props.populated?[{id:'research-context',title:'已有研究组件'}]:[],selection:{selectedNodeIds:[]}};await f.force({variant:props.variant,subagentPanel:!!props.subagentPanel,eworkNotes:!!props.eworkNotes,researchCanvasWorkspace:props.research?{subscribe:()=>()=>{},getSnapshot:()=>snapshot}:undefined})},context)
+   expect(await page.locator('[data-odyssey-deliverable-preview]').count(),context.name).toBe(0)
+   expect(await page.locator('[data-odyssey-deliverable-art]').count(),context.name).toBe(0)
+   expect(await page.locator('.odyssey-deliverable-close').count(),context.name).toBe(0)
+   const style=await page.evaluate(()=>{const card=getComputedStyle(document.querySelector('[data-composer-card]'));return{padding:getComputedStyle(document.querySelector('textarea')).paddingLeft,background:card.backgroundColor,blur:card.backdropFilter}})
+   expect(parseFloat(style.padding),context.name).toBeLessThan(48)
+   if(context.props.variant==='composer'){expect(style.background,context.name).toBe(await page.evaluate(()=>window.normalStyle.background));expect(style.blur,context.name).toBe(await page.evaluate(()=>window.normalStyle.blur))}
+   measurements.push({context:context.name,...style})
+   if(['settled-chat','research-populated','notes-populated'].includes(context.name))await page.locator('[data-composer-card]').screenshot({path:evidence+'/'+kind+'-'+context.name+'-normal.png'})
+   expect(await page.evaluate(()=>window.previewFixture.shell.snapshot)).toEqual(before)
+   expect(await page.evaluate(()=>window.normalInput===document.querySelector('textarea'))).toBe(true)
+  }
+  await writeFile(evidence+'/'+kind+'-native-contexts.json',JSON.stringify(measurements,null,2))
+  expect(await page.evaluate(()=>window.submissions)).toBe(0)
+ }finally{await page.close()}
+},15000)
+
+it('switches actual native composer contexts without replacing its textarea or mutating tags, attachments, focus and selection',async()=>{
+ const page=await fixture()
+ try{
+  await page.evaluate(()=>{const f=window.previewFixture;f.add('ppt');f.add('report');f.append('保留正文😀\n\n全局要求');f.shell.insertReference({source:'file',ref:'{"path":"保留.pdf"}',label:'保留.pdf',clipboardText:'保留.pdf'},{start:f.shell.snapshot.draft.length,end:f.shell.snapshot.draft.length,draftRev:f.shell.snapshot.draftRev});f.shell.addImages(['keep-image']);window.beforeSwitch=f.shell.snapshot;window.sameInput=document.querySelector('textarea')})
+  await page.locator('textarea').focus();await page.locator('textarea').evaluate(el=>el.setSelectionRange(2,7,'backward'))
+  const cases=[{variant:'composer'},{variant:'composer',eworkNotes:true},{variant:'composer',research:true},{variant:'hero',subagentPanel:true},{variant:'hero'}]
+  for(const props of cases){
+   await page.evaluate(async props=>{document.querySelector('[data-odyssey-page]').dataset.odysseyPage=props.variant==='hero'?'home':'conversation';const f=window.previewFixture;await f.force({variant:props.variant,subagentPanel:!!props.subagentPanel,eworkNotes:!!props.eworkNotes,researchCanvasWorkspace:props.research?f.workspace:undefined})},props)
+   expect(await page.evaluate(()=>document.querySelector('textarea')===window.sameInput&&document.activeElement===window.sameInput)).toBe(true)
+   expect(await page.locator('textarea').evaluate(el=>[el.selectionStart,el.selectionEnd,el.selectionDirection])).toEqual([2,7,'backward'])
+   expect(await page.evaluate(()=>window.previewFixture.shell.snapshot)).toEqual(await page.evaluate(()=>window.beforeSwitch))
+   const visible=props.variant==='hero'&&!props.subagentPanel
+   expect(await page.locator('[data-odyssey-deliverable-art]').count()).toBe(visible?1:0)
+   expect(await page.locator('textarea').evaluate(el=>parseFloat(getComputedStyle(el).paddingLeft))).toBe(visible?165:17)
+  }
+  await page.getByRole('button',{name:'移除研报技能及配图'}).click()
+  expect(await page.locator('[data-odyssey-deliverable-art="ppt"]').count()).toBe(1)
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.imageIds)).toEqual(['keep-image'])
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft)).toContain('保留正文😀\n\n全局要求')
  }finally{await page.close()}
 },15000)

@@ -105,14 +105,15 @@ export function renderComposerDeliverablePreview(jsx, kind, assets, control) {
   })
 }
 
-const startMarker = '/* sherlock:composer-deliverable-preview:v2:start */'
-const endMarker = '/* sherlock:composer-deliverable-preview:v2:end */'
-const inputMarker = '/* sherlock:composer-deliverable-preview:input:v2 */'
+const startMarker = '/* sherlock:composer-deliverable-preview:v3:start */'
+const endMarker = '/* sherlock:composer-deliverable-preview:v3:end */'
+const inputMarker = '/* sherlock:composer-deliverable-preview:input:v3 */'
 const draftAnchor = 'const draft = input?.draft ?? "";'
 const rootAnchor = 'className: clsx(InputBar_module_css_default.root, variant === "hero" && InputBar_module_css_default.hero),'
 const scrollAnchor = '\t\t\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\t\t\tref: scrollRef,'
 const busyAnchor = 'const machineBusy = input?.phase === "adjudicating" || input?.phase === "submitting" || input?.researchContextPreparing === true;'
 const kindCall = 'const deliverablePreviewKind = composerDeliverableKind(draft, input?.occurrences ?? []);'
+const homeKindCall = 'const deliverablePreviewKind = variant === "hero" && !subagentPanel && !eworkNotes && researchCanvasWorkspace == null ? composerDeliverableKind(draft, input?.occurrences ?? []) : undefined;'
 const attribute = '"data-odyssey-deliverable-preview": deliverablePreviewKind,'
 const controlCall = 'const deliverablePreviewControl = useComposerDeliverablePreview(react, {keyboard, sessionId, inputRef, draft, draftRev: input?.draftRev, occurrences: input?.occurrences ?? [], locked, machineBusy, composingRef, remove: deleteInlineReferenceOccurrence, onSelected: setSelectedResearchOccurrenceId});'
 const renderCall = 'renderComposerDeliverablePreview(react_jsx_runtime, deliverablePreviewKind, composerDeliverableAssets, deliverablePreviewControl),'
@@ -124,14 +125,14 @@ function replaceOne(source, anchor, replacement) {
 }
 function insertions(version) {
   const marker = `/* sherlock:composer-deliverable-preview:input:v${version} */`
-  return [[draftAnchor,`${draftAnchor}\n${marker}\n${kindCall}`],[rootAnchor,`${rootAnchor}\n${attribute}`],
+  return [[draftAnchor,`${draftAnchor}\n${marker}\n${version===3?homeKindCall:kindCall}`],[rootAnchor,`${rootAnchor}\n${attribute}`],
     [scrollAnchor,(version===1?legacyRender:renderCall)+'\n'+scrollAnchor],
-    ...(version===2?[[busyAnchor,`${busyAnchor}\n${controlCall}`]]:[])]
+    ...(version>=2?[[busyAnchor,`${busyAnchor}\n${controlCall}`]]:[])]
 }
 
-/** Both complete v1/v2 installs and the exact known grid/notes orphan are reversible. */
+/** Complete v1/v2/v3 installs and the exact known grid/notes orphan are reversible. */
 export function stripComposerDeliverablePreview(source) {
-  const versions = [1,2].filter(version=>source.includes(`/* sherlock:composer-deliverable-preview:input:v${version} */`))
+  const versions = [1,2,3].filter(version=>source.includes(`/* sherlock:composer-deliverable-preview:input:v${version} */`))
   const mentioned = /sherlock:composer-deliverable-preview|\bcomposerDeliverable(?:Kind|Target|Assets)\b|\b(?:render|use)ComposerDeliverablePreview\b/.test(source)
   if (!mentioned) return source
   const fail = () => { throw Error('Composer deliverable preview installed patch drifted') }
@@ -149,10 +150,10 @@ export function stripComposerDeliverablePreview(source) {
   const start=body.search(/^[\t ]*function InputBar\(\{/m),endInput=body.indexOf('\n\t\t//#endregion',start)
   if(start<0||endInput<0||(body.match(/^[\t ]*function InputBar\(\{/gm)??[]).length!==1)return fail()
   let input=body.slice(start,endInput)
-  const fields=[`/* sherlock:composer-deliverable-preview:input:v${version} */`,kindCall,attribute,version===1?legacyRender:renderCall,...(version===2?[controlCall]:[])]
+  const fields=[`/* sherlock:composer-deliverable-preview:input:v${version} */`,version===3?homeKindCall:kindCall,attribute,version===1?legacyRender:renderCall,...(version>=2?[controlCall]:[])]
   if(fields.some(value=>body.split(value).length!==2||input.split(value).length!==2))return fail()
   if(['function composerDeliverableKind(', 'function composerDeliverableTarget(', 'function renderComposerDeliverablePreview(', 'function useComposerDeliverablePreview(', 'const composerDeliverableAssets ='].some(value=>body.includes(value)))return fail()
-  for(const name of ['composerDeliverableKind','renderComposerDeliverablePreview','composerDeliverableAssets',...(version===2?['useComposerDeliverablePreview','deliverablePreviewControl']:[])]){
+  for(const name of ['composerDeliverableKind','renderComposerDeliverablePreview','composerDeliverableAssets',...(version>=2?['useComposerDeliverablePreview','deliverablePreviewControl']:[])]){
     const expected=name==='deliverablePreviewControl'?2:1
     if((body.match(new RegExp('\\b'+name+'\\b','g'))??[]).length!==expected)return fail()
   }
@@ -180,6 +181,6 @@ export function patchComposerDeliverablePreview(source) {
   const start=source.search(/^[\t ]*function InputBar\(\{/m),end=source.indexOf('\n\t\t//#endregion',start)
   if(start<0||end<0)throw Error('Composer deliverable preview InputBar boundary drifted')
   let input=source.slice(start,end)
-  for(const [anchor,installed]of insertions(2))input=replaceOne(input,anchor,installed)
+  for(const [anchor,installed]of insertions(3))input=replaceOne(input,anchor,installed)
   return source.slice(0,start)+block+input+source.slice(end)
 }
