@@ -23,6 +23,7 @@ const smootherStep = (value: number) => {
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
 const COPY = {
   zh: {
+    demoIntro: '即将进入实例演示，演示过程不消耗Token',
     heading: '快速开始', wallpapers: '主题壁纸', light: '切换为浅色', dark: '切换为深色', down: '切换到快速开始', up: '返回输入区', pagination: '用例切换',
     cards: ['创建研究看板', '撰写研究笔记', '制作演示文稿', '制作研究报告'],
     cases: [
@@ -33,6 +34,7 @@ const COPY = {
     ]
   },
   en: {
+    demoIntro: 'Entering the example demo. This demo uses no tokens.',
     heading: 'Quick start', wallpapers: 'Wallpapers', light: 'Switch to light mode', dark: 'Switch to dark mode', down: 'Show quick start', up: 'Return to the composer', pagination: 'Examples',
     cards: ['Create a research board', 'Write research notes', 'Create a presentation', 'Create a research report'],
     cases: [
@@ -241,7 +243,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     }
     // A departing case keeps its current visual mixture; only its timer pauses.
     caseTransition?.setVisible(visible && !quickPanel.hidden && tabProgress < 1 && !section.hidden && progress > .14)
-    carousel?.setVisible(ready && activeTab === 'quick' && !section.hidden)
+    carousel?.setVisible(ready && activeTab === 'quick' && !section.hidden && !actionController)
   }
   const tickTab = (time: number) => {
     tabFrame = 0
@@ -411,7 +413,36 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   const setActionBusy = (busy: boolean) => {
     section?.setAttribute('aria-busy', String(busy))
     for (const card of [...quickCards, ...(exampleButton ? [exampleButton] : [])]) card.disabled = busy
+    paintTabs()
   }
+  const examplePrelude = (controller: AbortController) => new Promise<() => void>((resolve,reject) => {
+    const priorRoot=root,priorHero=hero,priorCard=usecase,index=caseIndex,language=locale(),input=hero?.querySelector('textarea'),draft=input?.value
+    const description=usecase?.querySelector<HTMLElement>('[data-odyssey-operations-case-layer][data-case="'+index+'"] .odyssey-operations-description')
+    const identity=()=>hero?.querySelector<HTMLElement>('[data-odyssey-file-reference-session]')?.dataset.odysseyFileReferenceSession||root?.querySelector<HTMLElement>('[data-srb-session-header]')?.dataset.eworkNotesSession||root?.dataset.sessionId||''
+    const owner=identity(),notice=copy().demoIntro,letters=Array.from(notice),opacity=description?.style.opacity||''
+    let pendingFrame=0,started:number|null=null,finished=false
+    const restore=()=>{if(description){description.style.opacity=opacity;description.textContent=copy().cases[index]![2];delete description.dataset.odysseyOperationsIntro}}
+    const cleanup=()=>{if(pendingFrame)win.cancelAnimationFrame(pendingFrame);controller.signal.removeEventListener('abort',abort);doc.removeEventListener('pointerdown',takePointer,true);doc.removeEventListener('keydown',takeKey,true);doc.removeEventListener('beforeinput',takeInput,true);win.removeEventListener('blur',takeInput)}
+    const abort=()=>{if(finished)return;finished=true;cleanup();restore();reject(Object.assign(Error('本次示例操作已取消。'),{name:'AbortError'}))}
+    const takeInput=()=>controller.abort()
+    const takePointer=(event:PointerEvent)=>{if(!priorCard?.contains(event.target as Node))controller.abort()}
+    const takeKey=(event:KeyboardEvent)=>{if(event.isTrusted&&!['Shift','Control','Meta','Alt'].includes(event.key))controller.abort()}
+    const valid=()=>!controller.signal.aborted&&!disposed&&visible&&!doc.hidden&&doc.hasFocus()&&root===priorRoot&&hero===priorHero&&usecase===priorCard&&description?.isConnected&&input?.isConnected&&input.value===draft&&identity()===owner&&caseIndex===index&&locale()===language&&state==='operations'&&intent==='operations'&&motion==='idle'&&activeTab==='quick'&&!doc.body.hasAttribute('data-workspace-surface')&&!settingsShown()
+    const tick=(now:number)=>{
+      pendingFrame=0
+      if(!valid()){controller.abort();return}
+      // Let an already-running case crossfade settle before changing its copy.
+      if(priorCard?.querySelector('[data-odyssey-operations-case-blending]')){pendingFrame=win.requestAnimationFrame(tick);return}
+      started??=now
+      const elapsed=now-started,fade=reduced.matches?0:180,typing=reduced.matches?0:letters.length*(language==='en'?14:26)
+      if(elapsed<fade){description!.dataset.odysseyOperationsIntro='fading';description!.style.opacity=String(1-elapsed/fade)}
+      else{description!.dataset.odysseyOperationsIntro='streaming';description!.style.opacity='1';description!.textContent=letters.slice(0,typing?Math.min(letters.length,Math.floor((elapsed-fade)/typing*letters.length)):letters.length).join('')}
+      if(elapsed>=fade+typing+650){finished=true;cleanup();resolve(restore);return}
+      pendingFrame=win.requestAnimationFrame(tick)
+    }
+    controller.signal.addEventListener('abort',abort,{once:true});doc.addEventListener('pointerdown',takePointer,true);doc.addEventListener('keydown',takeKey,true);doc.addEventListener('beforeinput',takeInput,true);win.addEventListener('blur',takeInput)
+    if(controller.signal.aborted)abort();else pendingFrame=win.requestAnimationFrame(tick)
+  })
   const revealComposer = (signal: AbortSignal) => new Promise<void>((resolve, reject) => {
     if (signal.aborted || !visible || !toggle) { reject(Error('首页已变化，请重新点击卡片。')); return }
     if(intent!=='input')toggle.click()
@@ -434,7 +465,10 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     clearFeedback()
     const controller = new win.AbortController()
     actionController = controller; actionHandedOff=false; setActionBusy(true)
+    let restoreIntro: (()=>void)|undefined
     try {
+      if(example)restoreIntro=await examplePrelude(controller)
+      if(controller.signal.aborted)return
       const bounds=exampleButton?.getBoundingClientRect()
       const context = { signal: controller.signal, ...(example&&bounds?{origin:{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}}:{}), revealComposer: () => revealComposer(controller.signal),handoff:()=>{if(actionController!==controller||controller.signal.aborted)throw Error('本次卡片操作已取消。');actionHandedOff=true} }
       if (example) await options.onExample!(card, context)
@@ -444,6 +478,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       if (controller.signal.aborted || disposed || error instanceof Error && error.name==='AbortError') return
       showFeedback(error)
     } finally {
+      restoreIntro?.()
       if (actionController === controller) { actionController = null; actionHandedOff=false; setActionBusy(false) }
     }
   }

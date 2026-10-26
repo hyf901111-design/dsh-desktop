@@ -1914,6 +1914,49 @@ it('starts only the visible large-card example by click or keyboard, never by it
   await page.close()
 })
 
+it.each([{index:0,kind:'board',en:false},{index:1,kind:'note',en:true},{index:2,kind:'ppt',en:false},{index:3,kind:'report',en:true}])('streams the $kind demo notice in the original description before handing off its unchanged entry',async({index,kind,en})=>{
+ const page=await fixture({reduced:false,clock:true});try{
+  await page.evaluate(en=>{document.documentElement.dataset.odysseyLocale=en?'en':'zh';window.examples=[];window.homeOperations.onExample=async(card,context)=>window.examples.push({card,description:document.querySelector('[data-odyssey-operations-case-layer][aria-hidden="false"] .odyssey-operations-description').textContent,origin:context.origin});window.homeOperations.dispose();window.homeOperations.mount()},en)
+  await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
+  await page.locator(`.odyssey-operations-pagination [data-case="${index}"]`).evaluate(e=>e.click());await page.clock.runFor(450)
+  const description=page.locator('[data-odyssey-operations-case-layer][aria-hidden="false"] .odyssey-operations-description'),original=await description.textContent(),before=await page.locator('.odyssey-operations-usecase').boundingBox(),notice=en?'Entering the example demo. This demo uses no tokens.':'即将进入实例演示，演示过程不消耗Token'
+  await page.locator('[data-odyssey-operations-open-example]').evaluate(e=>e.click());await page.clock.runFor(80)
+  expect(await page.evaluate(()=>window.examples)).toEqual([]);expect(parseFloat(await description.evaluate(e=>getComputedStyle(e).opacity))).toBeLessThan(.9)
+  await page.clock.runFor(400);const partial=await description.textContent();expect(partial.length).toBeGreaterThan(0);expect(partial.length).toBeLessThan(notice.length);expect(notice.startsWith(partial)).toBe(true);expect(await page.evaluate(()=>window.examples)).toEqual([])
+  await page.clock.runFor(700);expect(await description.textContent()).toBe(notice);expect(await page.evaluate(()=>window.examples)).toEqual([])
+  const after=await page.locator('.odyssey-operations-usecase').boundingBox();expect(after).toEqual(before)
+  await mkdir('/tmp/home-demo-intro-20261026',{recursive:true});await page.locator('.odyssey-operations-usecase').screenshot({path:`/tmp/home-demo-intro-20261026/${kind}-${en?'en':'zh'}.png`})
+  await page.clock.runFor(1200);expect((await page.evaluate(()=>window.examples)).map(value=>value.card)).toEqual([kind]);expect((await page.evaluate(()=>window.examples))[0].description).toBe(notice);expect((await page.evaluate(()=>window.examples))[0].origin.x).toBeGreaterThan(0)
+  expect(await description.textContent()).toBe(original);expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+ }finally{await page.close()}
+},15000)
+it.each(['owner','navigation','hidden','blur','typing','escape','locale','dispose'])('cancels the pending card intro on %s before any actor starts',async reason=>{
+ const page=await fixture({reduced:false,clock:true});try{
+  await page.evaluate(()=>{window.examples=[];window.homeOperations.onExample=async card=>window.examples.push(card);window.homeOperations.dispose();window.homeOperations.mount()});await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
+  const original=await page.locator('.odyssey-operations-description').textContent();await page.locator('[data-odyssey-operations-open-example]').evaluate(e=>e.click());await page.clock.runFor(400)
+  if(reason==='owner')await page.locator('.wSkVaW_root').first().evaluate(e=>e.dataset.sessionId='new-owner')
+  else if(reason==='navigation')await page.evaluate(()=>document.body.dataset.workspaceSurface='settings')
+  else if(reason==='hidden')await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'))})
+  else if(reason==='blur')await page.evaluate(()=>window.dispatchEvent(new Event('blur')))
+  else if(reason==='typing')await page.evaluate(()=>document.dispatchEvent(new InputEvent('beforeinput',{bubbles:true,inputType:'insertText',data:'用户接管'})))
+  else if(reason==='escape')await page.keyboard.press('Escape')
+  else if(reason==='locale')await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en')
+  else await page.evaluate(()=>window.homeOperations.dispose())
+  await page.clock.runFor(4000);expect(await page.evaluate(()=>window.examples)).toEqual([]);expect(await page.locator('[data-home-guide-pointer]').count()).toBe(0);expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+  if(['owner','blur','typing','escape'].includes(reason))expect(await page.locator('.odyssey-operations-description').textContent()).toBe(original)
+ }finally{await page.close()}
+},15000)
+it('shows a static complete demo notice with reduced motion and keeps the four small-card actions immediate',async()=>{
+ const page=await fixture({reduced:true,clock:true});try{
+  await page.evaluate(()=>{window.examples=[];window.quickActions=[];window.homeOperations.onExample=async card=>window.examples.push(card);window.homeOperations.onAction=async card=>window.quickActions.push(card);window.homeOperations.dispose();window.homeOperations.mount()});await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
+  await page.locator('[data-odyssey-operations-open-example]').evaluate(e=>e.click());await page.clock.runFor(32)
+  const description=page.locator('.odyssey-operations-description');expect(await description.textContent()).toBe('即将进入实例演示，演示过程不消耗Token');expect(await description.evaluate(e=>getComputedStyle(e).opacity)).toBe('1');expect(await page.evaluate(()=>window.examples)).toEqual([])
+  await page.clock.runFor(700);expect(await page.evaluate(()=>window.examples)).toEqual(['board'])
+  for(const kind of ['board','note','ppt','report'])await page.locator(`.odyssey-operations-quick-card[data-card="${kind}"]`).evaluate(e=>e.click())
+  expect(await page.evaluate(()=>window.quickActions)).toEqual(['board','note','ppt','report']);expect(await page.evaluate(()=>window.examples)).toEqual(['board']);expect(await page.locator('[data-odyssey-operations-intro]').count()).toBe(0)
+ }finally{await page.close()}
+},15000)
+
 const wallpaperKeys = ['default','berber','vghodki','jarrick','lowfreez','accelbia','boz','shashidhar','haseeb','kirian','splines','antiquue','crt-warp','dither','koi-pond']
 const wallpaperNamesZh = ['静谧起航','星海航迹','碧海潮汐','星门微光','银河帆影','翡翠秘境','深空讯号','星云风暴','极光之境','远星尘光','虹光跃迁','日曜航线','时空回声','墨海流岚','锦鲤浮光']
 const wallpaperNamesEn = ['Quiet Departure','Star Trails','Ocean Tides','Stargate Glow','Galactic Sails','Emerald Haven','Deep Space Signal','Nebula Storm','Aurora Realm','Distant Stardust','Prismatic Drift','Solar Passage','Temporal Echo','Inksea Mist','Koi Shimmer']

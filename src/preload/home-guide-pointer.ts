@@ -81,7 +81,12 @@ export function createHomeGuidePointer(document:Document,options:Options){
   paint(start,phase)
   for(let index=1;index<=steps;index++){
    await wait(reduced()?0:duration/steps);ensure();const end=point(target),t=index/steps,eased=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2
-   paint({x:start.x+(end.x-start.x)*eased,y:start.y+(end.y-start.y)*eased},phase)
+   const dx=end.x-start.x,dy=end.y-start.y,distance=Math.hypot(dx,dy),bend=phase==='moving'&&!reduced()?Math.min(20,distance*.12):0
+   // A shallow approach arc shares the existing eased clock. Precision drags
+   // keep their exact selected/drop path and onFrame coordinates unchanged.
+   if(!bend){paint({x:start.x+dx*eased,y:start.y+dy*eased},phase);continue}
+   const control={x:Math.max(0,Math.min(win.innerWidth,(start.x+end.x)/2-dy/distance*bend)),y:Math.max(0,Math.min(win.innerHeight,(start.y+end.y)/2+dx/distance*bend))}
+   paint({x:(1-eased)**2*start.x+2*(1-eased)*eased*control.x+eased**2*end.x,y:(1-eased)**2*start.y+2*(1-eased)*eased*control.y+eased**2*end.y},phase)
   }
  }
  return{
