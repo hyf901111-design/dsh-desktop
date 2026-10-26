@@ -23,7 +23,7 @@ const smootherStep = (value: number) => {
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
 const COPY = {
   zh: {
-    demoIntro: '即将进入实例演示，演示过程不消耗费用',
+    demoIntro: '即将进入实例演示，\n演示过程不消耗费用',
     heading: '快速开始', wallpapers: '主题壁纸', light: '切换为浅色', dark: '切换为深色', down: '切换到快速开始', up: '返回输入区', pagination: '用例切换',
     cards: ['创建研究看板', '撰写研究笔记', '制作演示文稿', '制作研究报告'],
     cases: [
@@ -34,7 +34,7 @@ const COPY = {
     ]
   },
   en: {
-    demoIntro: 'Entering the example demo. There is no charge.',
+    demoIntro: 'Entering the demo.\nThere is no charge.',
     heading: 'Quick start', wallpapers: 'Wallpapers', light: 'Switch to light mode', dark: 'Switch to dark mode', down: 'Show quick start', up: 'Return to the composer', pagination: 'Examples',
     cards: ['Create a research board', 'Write research notes', 'Create a presentation', 'Create a research report'],
     cases: [
