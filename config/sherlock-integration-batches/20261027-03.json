@@ -90,6 +90,56 @@
           "额外两个PPT/Report完整交付回归已在同一冻结sourceSHA通过（retained-delivery.log），其证据与提交源逐字节相等，不重复纳入核心16计数。"
         ],
         "generatedAt": "2026-10-26T22:46:36.568243+00:00"
+      },
+      "merged": {
+        "mergeCommit": "1aebd4bce56fad1deeff80db9c9112d333f893c8",
+        "verificationCommit": "1aebd4bce56fad1deeff80db9c9112d333f893c8",
+        "checks": [
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_USER_FIRST_EVIDENCE=/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/release-cloudflare/1.4.0/integration-user-message/browser",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-user-message-browser.test.js",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-adapter.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：env SHERLOCK_USER_FIRST_EVIDENCE=/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/release-cloudflare/1.4.0/integration-user-message/browser npx --no-install vitest run test/home-guide-user-message-browser.test.js test/home-guide-presentation-patch.test.js test/home-guide-presentation-binding.test.ts test/home-guide-presentation-adapter.test.ts",
+            "verifiedCommit": "1aebd4bce56fad1deeff80db9c9112d333f893c8",
+            "completedAt": "2026-10-26T22:49:24.010Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "1aebd4bce56fad1deeff80db9c9112d333f893c8",
+            "completedAt": "2026-10-26T22:49:24.010Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "1aebd4bce56fad1deeff80db9c9112d333f893c8",
+            "completedAt": "2026-10-26T22:49:24.010Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-26T22:49:24.010Z"
       }
     }
   ],
