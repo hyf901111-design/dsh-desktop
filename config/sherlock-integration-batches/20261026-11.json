@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-11",
+  "branch": "codex/integration/20261026-11",
+  "baseMainCommit": "7cb554ce64d509174414aec853a2f7f5fca948e1",
+  "expectedMainCommit": "7cb554ce64d509174414aec853a2f7f5fca948e1",
+  "createdAt": "2026-10-26T14:58:44.273Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "放大并对齐演示加载提示、显示费用文案三秒并放慢四用例操作",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+        "tipCommit": "228eb630f9dfb132fc5fb0fe1ae01b15abd43796",
+        "commits": [
+          {
+            "commit": "1c42ad296828d6f5a77518f4a4cc09b624097669",
+            "parents": [
+              "15fd1d37a3784e8b57acc6aaf291a109d017df29"
+            ],
+            "subject": "调整用例加载提示布局与费用文案并停留三秒"
+          },
+          {
+            "commit": "228eb630f9dfb132fc5fb0fe1ae01b15abd43796",
+            "parents": [
+              "1c42ad296828d6f5a77518f4a4cc09b624097669"
+            ],
+            "subject": "放慢四类演示指针并自动结束容器创建工具"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-pointer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-strip.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-pointer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/home-loading-pace-20261026/check-source.py"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-loading-pace-20261026/source-parity.log",
+            "verifiedCommit": "228eb630f9dfb132fc5fb0fe1ae01b15abd43796",
+            "completedAt": "2026-10-26T14:51:56.801998+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-loading-pace-20261026/frontend-first.log",
+            "verifiedCommit": "228eb630f9dfb132fc5fb0fe1ae01b15abd43796",
+            "completedAt": "2026-10-26T14:52:03.360516+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-loading-pace-20261026/frontend-second.log",
+            "verifiedCommit": "228eb630f9dfb132fc5fb0fe1ae01b15abd43796",
+            "completedAt": "2026-10-26T14:52:09.886694+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-loading-pace-20261026/typecheck.log",
+            "verifiedCommit": "228eb630f9dfb132fc5fb0fe1ae01b15abd43796",
+            "completedAt": "2026-10-26T14:52:17.606487+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-loading-pace-20261026/diff.log",
+            "verifiedCommit": "228eb630f9dfb132fc5fb0fe1ae01b15abd43796",
+            "completedAt": "2026-10-26T14:52:17.631705+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "20项实际HomeOperations DOM/时钟布局与73项指针/原生画布/跨四例直接检查证据的源哈希精确一致；圆环18px、26px缩进、完整文案后至少3000ms；正式身份客户端构建后补验。"
+        },
+        "acceptanceCriteria": [
+          "四用例共享中英不消耗费用文案，18px圆环与标题左对齐，提示整行缩进26px，完整显示后停留3秒。",
+          "四用例共享指针移动及点选时钟放慢30%，保留弧线、加减速、暂停及取消保护。",
+          "智能容器创建后沿真实画布完成链自动回到选择工具，虚拟鼠标直接点击输入框，不额外点击工具栏。",
+          "只从干净main构建本地正式身份客户端，不改版本、不发布、不推送、不触碰既有用户数据。"
+        ],
+        "risks": [
+          "系统级概率鼠标冻结仍无稳定复现或根因，不属于本次减速修改的已修复声明。",
+          "正式客户端当前新包交互待构建后补验。"
+        ],
+        "generatedAt": "2026-10-26T14:58:42.918788+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "python3",
+        "/tmp/home-loading-pace-20261026/check-source.py"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-pointer.test.ts",
+        "test/home-guide-native-strip.test.js",
+        "test/home-guide-native.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
