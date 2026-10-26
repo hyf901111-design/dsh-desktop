@@ -79,17 +79,19 @@ body .gdEzaW_bubble .gdEzaW_refChip { margin-inline-end:4px!important; }
 body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] {
   --odyssey-deliverable-slot:128px; --odyssey-deliverable-gap:20px;
   --odyssey-composer-fill:rgba(255,255,255,.5)!important; --odyssey-composer-backdrop:blur(12px)!important;
-  position:relative; min-height:199px; max-height:384px; padding:0; gap:0;
+  position:relative; min-height:var(--odyssey-deliverable-card-min,199px); max-height:384px; padding:0; gap:0;
 }
 body[data-ds-dark-theme] .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] { --odyssey-composer-fill:rgba(0,0,0,.49)!important; }
+/* Short PPT drafts follow the landscape cover; longer text still sizes naturally. */
+body .uV2eYG_root[data-odyssey-deliverable-preview="ppt"] .uV2eYG_card[data-composer-card] { --odyssey-deliverable-card-min:154px; --odyssey-deliverable-body-min:106px; }
 body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] .uV2eYG_scroll {
-  min-height:151px; max-height:336px; flex:0 1 auto; overflow-y:auto; overscroll-behavior:contain;
+  min-height:var(--odyssey-deliverable-body-min,151px); max-height:336px; flex:0 1 auto; overflow-y:auto; overscroll-behavior:contain;
 }
 body .uV2eYG_root[data-odyssey-deliverable-preview] :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) {
   padding:15px 17px 8px calc(17px + var(--odyssey-deliverable-slot) + var(--odyssey-deliverable-gap))!important;
   font-size:16px!important; line-height:24px!important;
 }
-body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_mirror { min-height:151px; }
+body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_mirror { min-height:var(--odyssey-deliverable-body-min,151px); }
 body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] .uV2eYG_row { min-height:48px; flex:0 0 48px; box-sizing:border-box; padding:8px 11px 8px 8px; }
 .odyssey-deliverable-preview { position:absolute; z-index:2; left:17px; top:15px; width:var(--odyssey-deliverable-slot); height:128px; pointer-events:none; user-select:none; }
 /* Figma 43B: the original 28px SVG surrounds a 20px circle; its anchor is
@@ -98,8 +100,8 @@ body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-c
 .odyssey-deliverable-preview[data-odyssey-deliverable-art=report] .odyssey-deliverable-close { left:calc(50% + 30.52251px); top:.97291px; }
 .odyssey-deliverable-close > img { position:absolute; inset:0; width:28px; height:28px; pointer-events:none; }
 .odyssey-deliverable-close-hover { opacity:0; }
-.odyssey-deliverable-close:is(:hover,:focus-visible):not(:disabled) > img:first-child { opacity:0; }
-.odyssey-deliverable-close:is(:hover,:focus-visible):not(:disabled) > .odyssey-deliverable-close-hover { opacity:1; }
+.odyssey-deliverable-close:focus-visible:not(:disabled) > img:first-child { opacity:0; }
+.odyssey-deliverable-close:focus-visible:not(:disabled) > .odyssey-deliverable-close-hover { opacity:1; }
 .odyssey-deliverable-close:disabled { opacity:1; cursor:default; }
 .odyssey-deliverable-artboard { position:absolute; left:50%; top:8px; transform:translateX(-50%); display:grid; place-items:center; }
 .odyssey-deliverable-preview[data-odyssey-deliverable-art=ppt] .odyssey-deliverable-artboard { width:122.185px; height:77.018px; }
