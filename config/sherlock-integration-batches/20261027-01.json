@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261027-01",
+  "branch": "codex/integration/20261027-01",
+  "baseMainCommit": "f0f117448110df16457356cffa41fa8d9ef49e6a",
+  "expectedMainCommit": "f0f117448110df16457356cffa41fa8d9ef49e6a",
+  "createdAt": "2026-10-26T16:45:54.672Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "补齐研报示例三处官方来源深链并保留原生成追溯",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "228eb630f9dfb132fc5fb0fe1ae01b15abd43796",
+        "tipCommit": "727054b59f5163d20517737db245cfb56f53a9b2",
+        "commits": [
+          {
+            "commit": "727054b59f5163d20517737db245cfb56f53a9b2",
+            "parents": [
+              "228eb630f9dfb132fc5fb0fe1ae01b15abd43796"
+            ],
+            "subject": "补齐研报示例官方来源深链并保留原生成追溯"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/evidence.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/research-report.html"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/research-report.pdf"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/run.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/assets/home-report/source-metadata.json"
+          },
+          {
+            "status": "M",
+            "path": "test/home-report-assets.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-report-publication.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/home-report-links-integration-20261027/check-source.py"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-report-links-integration-20261027/source-parity.log",
+            "verifiedCommit": "727054b59f5163d20517737db245cfb56f53a9b2",
+            "completedAt": "2026-10-26T16:45:52.993975+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "--input-type=module",
+              "-e",
+              "import {loadHomeReportAssets} from './packages/dsh-research-task-runtime/home-report-runtime.js'; const a=await loadHomeReportAssets(); if(a.metadata.sourceLinkRevision?.modelRerun!==false) throw Error('Revision provenance missing'); console.log(JSON.stringify({pages:a.metadata.reportPages,pdf:a.metadata.pdfSha256,sources:a.metadata.sources.length}));"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-report-links-integration-20261027/actual-assets-loader.log",
+            "verifiedCommit": "727054b59f5163d20517737db245cfb56f53a9b2",
+            "completedAt": "2026-10-26T16:45:53.191535+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-report-links-integration-20261027/diff.log",
+            "verifiedCommit": "727054b59f5163d20517737db245cfb56f53a9b2",
+            "completedAt": "2026-10-26T16:45:53.216711+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原报告63页108dpi逐页像素、文本、content引用完全一致，三处最新PDF Link URI与HTML/来源证据一致；87项资产/发布/运行时直接检查及类型检查已完成，原始产物和用户资料未动；正式包新建研报后补验。"
+        },
+        "acceptanceCriteria": [
+          "仅修三处已核实官方PDF深链，正文图表和研究时点不变。",
+          "保留原Kimi任务和输入历史，独立记录本地补链，重新校验完整交付SHA链。",
+          "真实双交付结构和特殊中文标点文件名回归保留，校验器和回滚拒绝不弱化。",
+          "从干净本地主干构建正式身份客户端，既有用户资料不变，不发布或推送。"
+        ],
+        "risks": [
+          "系统鼠标冻结仍未复现或证实修复，不作已修复声明。",
+          "既有用户案例未迁移；新建研报演示采用本次修订资源。"
+        ],
+        "generatedAt": "2026-10-26T16:45:53.216753+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "python3",
+        "/tmp/home-report-links-integration-20261027/check-source.py"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "--input-type=module",
+        "-e",
+        "import {loadHomeReportAssets} from './packages/dsh-research-task-runtime/home-report-runtime.js'; const a=await loadHomeReportAssets(); if(a.metadata.sourceLinkRevision?.modelRerun!==false) throw Error('Revision provenance missing'); console.log(JSON.stringify({pages:a.metadata.reportPages,pdf:a.metadata.pdfSha256,sources:a.metadata.sources.length}));"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-report-assets.test.js",
+        "test/home-report-runtime.test.js",
+        "test/home-report-publication.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
