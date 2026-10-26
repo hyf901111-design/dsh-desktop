@@ -8,7 +8,7 @@ import {patchSubagentPanelConversation} from '../scripts/lib/figma-subagent-pane
 import {patchFinancialWidgetClient} from '../scripts/lib/financial-widget-client.mjs'
 import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 
-const installed=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
 const withoutPresentation=source=>presentation.stripHomeGuidePresentationNative(source)
 // Installed definitions are serialized by Node. Use that same production loader
 // for their strict inverse; Vitest's function.toString() formatting is different.
@@ -19,6 +19,7 @@ const stripOuterLayers=source=>execFileSync(process.execPath,['--input-type=modu
  import{stripPptxAnnotationInput}from${JSON.stringify(new URL('../scripts/lib/pptx-annotation-native.mjs',import.meta.url).href)};
  process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(readFileSync(0,'utf8')))));
 `],{input:source,encoding:'utf8',maxBuffer:64*1024*1024})
+const installed=stripOuterLayers(resident)
 
 it.each([false,true])('preserves the native PPT chat page for hero=%s and uses native board/note page styling',hero=>{
  const patched=guide.patchHomeGuideNative(withoutPresentation(installed)),matches=[...patched.matchAll(/"data-odyssey-page": ([^\n]+),/g)]
