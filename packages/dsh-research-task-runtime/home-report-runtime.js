@@ -6,7 +6,7 @@ import {constants} from 'node:fs'
 import {lstat,mkdir,open,readFile,realpath,writeFile,link,unlink} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {isHomeGuideSessionTitle} from './home-guide-session-titles.js'
+import {homeGuideSessionTitle,isHomeGuideSessionTitle} from './home-guide-session-titles.js'
 import {streamHomePresentationReplayText} from './home-presentation-runtime.js'
 import {HOME_REPORT_PATH,HOME_REPORT_EVENT,HOME_REPORT_SKILL_ID,HOME_REPORT_HTML_FILE,HOME_REPORT_PDF_FILE,HOME_REPORT_AUDIT_FILES,HOME_REPORT_ORIGIN_SESSION_ID,createHomeReportBrief} from './home-report-contract.js'
 
@@ -100,12 +100,13 @@ export function createHomeReportRuntime(ctx,{env=process.env,assetsDirectory}={}
    const run=current({sessionId:request.sessionId,runId:runs.get(request.sessionId)?.runId});request.signal?.throwIfAborted()
    if(request.purpose!==undefined){
     if(!['compaction','session-title'].includes(request.purpose))throw Error('离线报告示例不接受此辅助请求。')
-    const value=request.purpose==='session-title'?run.metadata.reportTitle:`当前为《${run.metadata.reportTitle}》离线示例，按演示检查点继续。研究时点${run.metadata.researchAsOf}；HTML/PDF${run.published?'已保存':'尚未保存'}。`
+    const value=request.purpose==='session-title'?homeGuideSessionTitle('report'):`当前为《${run.metadata.reportTitle}》离线示例，按演示检查点继续。研究时点${run.metadata.researchAsOf}；HTML/PDF${run.published?'已保存':'尚未保存'}。`
     yield{type:'block-start',index:0,blockType:'text'};yield{type:'text-delta',index:0,text:value};yield{type:'block-end',index:0,block:{type:'text',text:value}};yield{type:'finish',reason:{kind:'stop'}};return
    }
    await wait(run,()=>run.playing,request.signal)
    const users=run.agent.session.events.filter(event=>event.type==='user/message'&&event.data.source?.kind==='user')
    if(users.length!==1||users[0].data.content?.filter(block=>block.type==='text').map(block=>block.text).join('')!==prompt(run))throw Error('报告示例只接受本次固定研究需求，请退出示例后继续普通任务。')
+   run.milestones.get('accepted').resolve()
    const index=run.sequence++
    if(index===0){await wait(run,()=>run.playing&&run.allowed>=1,request.signal);yield*text(run,run.replay.intro+'\n\n'+run.replay.structure,request.signal,1800);yield*tool('todo_write',{todos:todo(run,0)},'home-report-plan')}
    else if(index===1){run.milestones.get('plan').resolve();await wait(run,()=>run.playing&&run.allowed>=2,request.signal);yield*text(run,run.replay.layout,request.signal,1500);yield*tool('todo_write',{todos:todo(run,1)},'home-report-layout')}
@@ -159,7 +160,7 @@ export function createHomeReportRuntime(ctx,{env=process.env,assetsDirectory}={}
     const htmlPath=join(input.cwd,deliveryNames.html),pdfPath=join(input.cwd,deliveryNames.pdf)
     const prepared={ready:true,brief:createHomeReportBrief(metadata),htmlPath,pdfPath,deliveryPaths:{html:htmlPath,pdf:pdfPath},reportTitle:metadata.reportTitle,researchAsOf:metadata.researchAsOf,chapters:metadata.chapters}
     const originalConfig=session.requestHeader()?.config??{provider:agent.options.provider,model:agent.options.model,...agent.options.maxTokens===undefined?{}:{maxTokens:agent.options.maxTokens}}
-    const run={...input,root,agent,htmlBytes,pdfBytes,auditBytes,metadata,replay:createHomeReportReplay(metadata),prepared,originalConfig,sequence:0,allowed:0,playing:false,cancelled:false,complete:false,published:false,waiters:new Set(),milestones:new Map(['plan','layout','deliver'].map(stage=>[stage,deferred()])),off:[]}
+    const run={...input,root,agent,htmlBytes,pdfBytes,auditBytes,metadata,replay:createHomeReportReplay(metadata),prepared,originalConfig,sequence:0,allowed:0,playing:false,cancelled:false,complete:false,published:false,waiters:new Set(),milestones:new Map(['accepted','plan','layout','deliver'].map(stage=>[stage,deferred()])),off:[]}
     session.append(HOME_REPORT_EVENT,{version:1,runId:run.runId,purpose:'offline-professional-investment-report',cwd:run.cwd,htmlFile:deliveryNames.html,pdfFile:deliveryNames.pdf,htmlSha256:metadata.htmlSha256,pdfSha256:metadata.pdfSha256,...metadata.schemaVersion===2?{audit:metadata.audit}:{},researchAsOf:metadata.researchAsOf,provenance:metadata.provenance})
     const expected=session.events.length
     if(!(await ctx.sessions.flush(session)))throw Error('报告示例所有权未能保存。')
@@ -175,7 +176,7 @@ export function createHomeReportRuntime(ctx,{env=process.env,assetsDirectory}={}
    }finally{if(preparing.get(input.sessionId)===ticket)preparing.delete(input.sessionId)}
   },
   async playback(input){const run=current(input);run.playing=input.playing===true;notify(run);return{playing:run.playing}},
-  async checkpoint(input){const run=current(input),index=['plan','layout','deliver'].indexOf(input.stage);if(index<0||index+1<run.allowed||index>run.allowed)throw Error('报告示例步骤顺序已变化。');run.allowed=index+1;notify(run);await run.milestones.get(input.stage).promise;return{stage:input.stage}},
+  async checkpoint(input){const run=current(input);if(input.stage==='accepted'){await run.milestones.get('accepted').promise;current(input);return{stage:input.stage}}const index=['plan','layout','deliver'].indexOf(input.stage);if(index<0||index+1<run.allowed||index>run.allowed)throw Error('报告示例步骤顺序已变化。');run.allowed=index+1;notify(run);await run.milestones.get(input.stage).promise;return{stage:input.stage}},
   async disposeRun(input){remember(input);const ticket=preparing.get(input.sessionId);if(ticket?.runId===input.runId)ticket.cancelled=true;const run=runs.get(input.sessionId);if(run?.runId===input.runId){await cancel(run);if(runs.get(input.sessionId)===run)runs.delete(input.sessionId)}return{}},
   async dispose(){if(stopped)return;stopped=true;for(const ticket of preparing.values())ticket.cancelled=true;for(const run of runs.values())await cancel(run);offAdapter();runs.clear()},
  }

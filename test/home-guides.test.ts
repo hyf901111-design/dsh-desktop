@@ -17,6 +17,7 @@ function fixture(fresh = true) {
   const reply=(result:any)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:detail.requestId,ok:true,...result}}))
   if(detail.command==='prepare'){if(prepare){prepare(detail);return}reply({sessionId:'example-'+detail.kind+(detail.replay?'-new':''),cwd:'/tmp/example',title:'已保存示例',fresh:detail.replay||fresh})}
   else if(detail.command==='open'){header.dataset.eworkNotesSession=detail.sessionId;if(open){open(detail,reply);return}reply({sessionId:detail.sessionId,cwd:'/tmp/example',title:'已保存示例'});window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed'))}
+  else if(detail.command==='activate-title')reply({sessionId:detail.sessionId,cwd:'/tmp/example',title:'已保存示例'})
  }
  window.addEventListener('sherlock:home-guide-session-request',listener);off=()=>window.removeEventListener('sherlock:home-guide-session-request',listener)
  const runStep=vi.fn(async(_step:string)=>{}),release=vi.fn(),flush=vi.fn(async()=>{})
@@ -24,6 +25,40 @@ function fixture(fresh = true) {
  const controller=mountHomeGuides(document,adapters);dispose=controller.dispose
  return{controller,adapters,runStep,release,flush,text,header,requests,setOpen:(fn:(detail:any,reply:(value:any)=>void)=>void)=>{open=fn},setPrepare:(fn:(detail:any)=>void)=>{prepare=fn}}
 }
+test.each(['ppt','report','note'] as const)('defers the %s title until its actual send or initial write succeeds',async kind=>{
+ vi.useFakeTimers();const f=fixture(),order:string[]=[];let sent!:()=>void
+ f.runStep.mockImplementation(async step=>{order.push(step);if(step===(kind==='note'?'write':'send'))await new Promise<void>(resolve=>{sent=resolve})})
+ await f.controller.start(kind,{replay:true});await vi.advanceTimersByTimeAsync(1800)
+ expect(order).toEqual(kind==='note'?['write']:['brief','send']);expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(0)
+ sent();await vi.advanceTimersByTimeAsync(0)
+ expect(f.requests.filter(row=>row.command==='activate-title')).toEqual([expect.objectContaining({kind,sessionId:'example-'+kind+'-new'})])
+ await f.controller.reset(false)
+})
+test.each(['reject','cancel'])('does not rename when a send checkpoint is %s',async outcome=>{
+ vi.useFakeTimers();const f=fixture();let fail!:(error:Error)=>void,finish!:()=>void
+ f.runStep.mockImplementation(async step=>{if(step==='send')await new Promise<void>((resolve,reject)=>{finish=resolve;fail=reject})})
+ await f.controller.start('ppt',{replay:true});await vi.advanceTimersByTimeAsync(1800)
+ if(outcome==='reject')fail(Error('发送未被接纳'));else{await f.controller.reset(false);finish()}
+ await vi.advanceTimersByTimeAsync(0);expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(0)
+})
+test('waits for foreground playback when an admitted send finishes while hidden',async()=>{
+ vi.useFakeTimers();const f=fixture();let sent!:()=>void
+ f.runStep.mockImplementation(async step=>{if(step==='send')await new Promise<void>(resolve=>{sent=resolve})})
+ await f.controller.start('ppt',{replay:true});await vi.advanceTimersByTimeAsync(1800);visibility(true);sent();await vi.advanceTimersByTimeAsync(0)
+ expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(0)
+ visibility(false);await vi.advanceTimersByTimeAsync(0);expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(1)
+ await f.controller.reset(false)
+})
+test.each([true,false])('names the board only after its first component is persisted (%s)',async accepted=>{
+ vi.useFakeTimers();const f=fixture();let finish!:(ok:boolean)=>void
+ const native=(event:Event)=>{const detail=(event as CustomEvent).detail,reply=(ok=true)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok,message:ok?undefined:'组件未保存'}}));if(detail.command==='board-indices')finish=reply;else reply()}
+ window.addEventListener('sherlock:home-guide-native-request',native)
+ try{await f.controller.start('board',{replay:true});await vi.advanceTimersByTimeAsync(1100)
+  expect(finish).toBeTypeOf('function');expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(0)
+  finish(accepted);await vi.advanceTimersByTimeAsync(0)
+  expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(accepted?1:0)
+ }finally{window.removeEventListener('sherlock:home-guide-native-request',native);await f.controller.reset(false)}
+})
 function operationsEntryFixture(){
  const f=fixture(),center=document.querySelector<HTMLElement>('.pI_x6G_centerCol')!,resident=f.header.parentElement!,card=document.createElement('div'),back=document.createElement('button'),events:string[]=[],abort=new AbortController()
  resident.dataset.odysseyPage='home';card.className='odyssey-operations-usecase';back.dataset.odysseyHomeOperationsToggle='';center.append(card,back)

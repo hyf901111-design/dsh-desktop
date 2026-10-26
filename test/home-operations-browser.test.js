@@ -1902,17 +1902,17 @@ it('starts only the visible large-card example by click or keyboard, never by it
   const open=card.locator('[data-odyssey-operations-open-example]')
   expect(await open.getAttribute('type')).toBe('button')
   await card.click({position:{x:70,y:90}})
-  await expect.poll(()=>page.evaluate(()=>window.examples)).toEqual(['board'])
+  await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['board'])
   await page.locator('.odyssey-operations-pagination button[data-case="1"]').click()
   await waitCase(page,1)
   expect(await page.evaluate(()=>window.examples)).toEqual(['board'])
   await open.focus(); await page.keyboard.press('Enter')
-  await expect.poll(()=>page.evaluate(()=>window.examples)).toEqual(['board','note'])
+  await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['board','note'])
   await page.locator('.odyssey-operations-pagination button[data-case="2"]').click();await waitCase(page,2)
   await open.focus();await page.keyboard.press('Space')
-  await expect.poll(()=>page.evaluate(()=>window.examples)).toEqual(['board','note','ppt'])
+  await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['board','note','ppt'])
   await page.close()
-})
+},10000)
 
 it.each([{index:0,kind:'board',en:false},{index:1,kind:'note',en:true},{index:2,kind:'ppt',en:false},{index:3,kind:'report',en:true}])('streams the $kind demo notice in the original description before handing off its unchanged entry',async({index,kind,en})=>{
  const page=await fixture({reduced:false,clock:true});try{
@@ -1925,15 +1925,32 @@ it.each([{index:0,kind:'board',en:false},{index:1,kind:'note',en:true},{index:2,
   await page.clock.runFor(400);const partial=await description.textContent();expect(partial.length).toBeGreaterThan(0);expect(partial.length).toBeLessThan(notice.length);expect(notice.startsWith(partial)).toBe(true);expect(await page.evaluate(()=>window.examples)).toEqual([])
   await page.clock.runFor(700);expect(await description.textContent()).toBe(notice);expect(await page.evaluate(()=>window.examples)).toEqual([])
   const after=await page.locator('.odyssey-operations-usecase').boundingBox();expect(after).toEqual(before)
-  await mkdir('/tmp/home-demo-intro-20261026',{recursive:true});await page.locator('.odyssey-operations-usecase').screenshot({path:`/tmp/home-demo-intro-20261026/${kind}-${en?'en':'zh'}.png`})
-  await page.clock.runFor(1200);expect((await page.evaluate(()=>window.examples)).map(value=>value.card)).toEqual([kind]);expect((await page.evaluate(()=>window.examples))[0].description).toBe(notice);expect((await page.evaluate(()=>window.examples))[0].origin.x).toBeGreaterThan(0)
+  await mkdir('/tmp/home-demo-intro-loading-20261026',{recursive:true});await page.locator('.odyssey-operations-usecase').screenshot({path:`/tmp/home-demo-intro-loading-20261026/streamed-${kind}-${en?'en':'zh'}.png`})
+  await page.clock.runFor(2200);expect((await page.evaluate(()=>window.examples)).map(value=>value.card)).toEqual([kind]);expect((await page.evaluate(()=>window.examples))[0].description).toBe(notice);expect((await page.evaluate(()=>window.examples))[0].origin.x).toBeGreaterThan(0)
   expect(await description.textContent()).toBe(original);expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
+ }finally{await page.close()}
+},15000)
+it.each([{dark:false,reduced:false,width:1380,height:900},{dark:true,reduced:false,width:1380,height:900},{dark:false,reduced:true,width:680,height:480},{dark:true,reduced:true,width:680,height:480}])('keeps an inline loading ring and a full two-second reading hold (dark=$dark, reduced=$reduced, $width×$height)',async({dark,reduced,width,height})=>{
+ const page=await fixture({dark,reduced,width,height,clock:true});try{
+  await page.evaluate(()=>{window.introReceipt={full:null,started:null};window.homeOperations.onExample=async()=>window.introReceipt.started=performance.now();window.homeOperations.dispose();window.homeOperations.mount()});await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
+  const description=page.locator('.odyssey-operations-description'),before=await description.boundingBox()
+  await description.evaluate(e=>{window.introObserver=new MutationObserver(()=>{if(window.introReceipt.full===null&&e.textContent==='即将进入实例演示，演示过程不消耗Token')window.introReceipt.full=performance.now()});window.introObserver.observe(e,{childList:true,characterData:true,subtree:true})})
+  await page.locator('[data-odyssey-operations-open-example]').evaluate(e=>e.click());await page.clock.runFor(reduced?32:1100)
+  const ring=description.locator('[data-odyssey-operations-intro-spinner]');expect(await ring.count()).toBe(1)
+  const geometry=await description.evaluate(e=>{const ring=e.querySelector('[data-odyssey-operations-intro-spinner]'),r=ring.getBoundingClientRect(),p=e.getBoundingClientRect(),card=e.closest('.odyssey-operations-usecase').getBoundingClientRect();return{ring:{x:r.x,y:r.y,width:r.width,height:r.height},paragraph:{x:p.x,y:p.y,width:p.width},cardLeft:card.left,color:getComputedStyle(ring).color,hidden:ring.getAttribute('aria-hidden'),rotation:ring.querySelector('path').style.transform}})
+  expect(geometry.paragraph.x).toBe(before.x);expect(geometry.paragraph.width).toBe(before.width);expect(geometry.ring.width).toBeCloseTo(12,1);expect(geometry.ring.height).toBeCloseTo(12,1);expect(geometry.ring.x).toBeGreaterThanOrEqual(geometry.cardLeft);expect(geometry.ring.x+geometry.ring.width).toBeLessThan(before.x);expect(geometry.ring.y).toBeGreaterThanOrEqual(before.y);expect(geometry.hidden).toBe('true');expect(geometry.color).not.toBe('rgba(0, 0, 0, 0)')
+  const rotation=geometry.rotation;await page.clock.runFor(160);const nextRotation=await ring.evaluate(e=>e.querySelector('path').style.transform);if(reduced)expect(nextRotation).toBe(rotation);else expect(nextRotation).not.toBe(rotation)
+  const receipt=await page.evaluate(()=>window.introReceipt);expect(receipt.full).not.toBe(null);expect(receipt.started).toBe(null)
+  const remaining=await page.evaluate(()=>window.introReceipt.full+1999-performance.now());if(remaining>0)await page.clock.runFor(remaining)
+  expect((await page.evaluate(()=>window.introReceipt)).started).toBe(null)
+  await mkdir('/tmp/home-demo-intro-loading-20261026',{recursive:true});await page.locator('.odyssey-operations-usecase').screenshot({path:`/tmp/home-demo-intro-loading-20261026/${dark?'dark':'light'}-${reduced?'reduced':'motion'}.png`})
+  await page.clock.runFor(32);const done=await page.evaluate(()=>window.introReceipt);expect(done.started-done.full).toBeGreaterThanOrEqual(2000);expect(done.started-done.full).toBeLessThanOrEqual(2017);expect(await ring.count()).toBe(0);expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎');await writeFile(`/tmp/home-demo-intro-loading-20261026/${dark?'dark':'light'}-${reduced?'reduced':'motion'}.json`,JSON.stringify({viewport:{width,height},dark,reduced,geometry,timing:done,holdMs:done.started-done.full},null,2));await page.evaluate(()=>window.introObserver.disconnect())
  }finally{await page.close()}
 },15000)
 it.each(['owner','navigation','hidden','blur','typing','escape','locale','dispose'])('cancels the pending card intro on %s before any actor starts',async reason=>{
  const page=await fixture({reduced:false,clock:true});try{
   await page.evaluate(()=>{window.examples=[];window.homeOperations.onExample=async card=>window.examples.push(card);window.homeOperations.dispose();window.homeOperations.mount()});await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
-  const original=await page.locator('.odyssey-operations-description').textContent();await page.locator('[data-odyssey-operations-open-example]').evaluate(e=>e.click());await page.clock.runFor(400)
+  const original=await page.locator('.odyssey-operations-description').textContent();await page.locator('[data-odyssey-operations-open-example]').evaluate(e=>e.click());await page.clock.runFor(['owner','blur'].includes(reason)?1100:400)
   if(reason==='owner')await page.locator('.wSkVaW_root').first().evaluate(e=>e.dataset.sessionId='new-owner')
   else if(reason==='navigation')await page.evaluate(()=>document.body.dataset.workspaceSurface='settings')
   else if(reason==='hidden')await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'))})
@@ -1943,7 +1960,7 @@ it.each(['owner','navigation','hidden','blur','typing','escape','locale','dispos
   else if(reason==='locale')await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en')
   else await page.evaluate(()=>window.homeOperations.dispose())
   await page.clock.runFor(4000);expect(await page.evaluate(()=>window.examples)).toEqual([]);expect(await page.locator('[data-home-guide-pointer]').count()).toBe(0);expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
-  if(['owner','blur','typing','escape'].includes(reason))expect(await page.locator('.odyssey-operations-description').textContent()).toBe(original)
+  expect(await page.locator('[data-odyssey-operations-intro-spinner]').count()).toBe(0);if(['owner','blur','typing','escape'].includes(reason))expect(await page.locator('.odyssey-operations-description').textContent()).toBe(original)
  }finally{await page.close()}
 },15000)
 it('shows a static complete demo notice with reduced motion and keeps the four small-card actions immediate',async()=>{
@@ -1951,7 +1968,7 @@ it('shows a static complete demo notice with reduced motion and keeps the four s
   await page.evaluate(()=>{window.examples=[];window.quickActions=[];window.homeOperations.onExample=async card=>window.examples.push(card);window.homeOperations.onAction=async card=>window.quickActions.push(card);window.homeOperations.dispose();window.homeOperations.mount()});await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
   await page.locator('[data-odyssey-operations-open-example]').evaluate(e=>e.click());await page.clock.runFor(32)
   const description=page.locator('.odyssey-operations-description');expect(await description.textContent()).toBe('即将进入实例演示，演示过程不消耗Token');expect(await description.evaluate(e=>getComputedStyle(e).opacity)).toBe('1');expect(await page.evaluate(()=>window.examples)).toEqual([])
-  await page.clock.runFor(700);expect(await page.evaluate(()=>window.examples)).toEqual(['board'])
+  await page.clock.runFor(1900);expect(await page.evaluate(()=>window.examples)).toEqual([]);await page.clock.runFor(120);expect(await page.evaluate(()=>window.examples)).toEqual(['board'])
   for(const kind of ['board','note','ppt','report'])await page.locator(`.odyssey-operations-quick-card[data-card="${kind}"]`).evaluate(e=>e.click())
   expect(await page.evaluate(()=>window.quickActions)).toEqual(['board','note','ppt','report']);expect(await page.evaluate(()=>window.examples)).toEqual(['board']);expect(await page.locator('[data-odyssey-operations-intro]').count()).toBe(0)
  }finally{await page.close()}
@@ -1960,7 +1977,7 @@ it('keeps the actual Play click origin while its hover tilt settles during the s
  const page=await fixture({reduced:false,clock:true});try{
   await page.evaluate(()=>{window.exampleOrigin=null;window.homeOperations.onExample=async(_card,context)=>window.exampleOrigin=context.origin;window.homeOperations.dispose();window.homeOperations.mount();document.addEventListener('click',event=>{const button=event.target.closest?.('[data-odyssey-operations-open-example]');if(button){const r=button.getBoundingClientRect();window.clickedOrigin={x:r.left+r.width/2,y:r.top+r.height/2}}},true)})
   await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
-  const button=page.locator('[data-odyssey-operations-open-example]'),box=await button.boundingBox();await page.mouse.move(box.x+box.width*.9,box.y+box.height*.1);await page.clock.runFor(32);await page.mouse.down();await page.mouse.up();await page.clock.runFor(2600)
+  const button=page.locator('[data-odyssey-operations-open-example]'),box=await button.boundingBox();await page.mouse.move(box.x+box.width*.9,box.y+box.height*.1);await page.clock.runFor(32);await page.mouse.down();await page.mouse.up();await page.clock.runFor(4000)
   const result=await page.evaluate(()=>{const r=document.querySelector('[data-odyssey-operations-open-example]').getBoundingClientRect();return{actual:window.clickedOrigin,origin:window.exampleOrigin,settled:{x:r.left+r.width/2,y:r.top+r.height/2}}})
   expect(result.origin.x).toBeCloseTo(result.actual.x,4);expect(result.origin.y).toBeCloseTo(result.actual.y,4);expect(Math.hypot(result.settled.x-result.actual.x,result.settled.y-result.actual.y)).toBeGreaterThan(.5)
  }finally{await page.close()}
@@ -2375,7 +2392,7 @@ it('offers the fourth report example with exact copy, four keyboard tracks and a
   expect(await page.locator('.odyssey-operations-description').textContent()).toBe('从检索资料到形成观点，\n回看研究过程，查看完整研报。')
   expect(await page.locator('[data-odyssey-operations-case-layer] img').count()).toBe(1)
   expect(await page.locator('[data-odyssey-operations-case-layer] img').getAttribute('class')).toBe('odyssey-operations-trend')
-  await page.locator('[data-odyssey-operations-open-example]').focus();await page.keyboard.press('Enter');await expect.poll(()=>page.evaluate(()=>window.examples)).toEqual(['report'])
+  await page.locator('[data-odyssey-operations-open-example]').focus();await page.keyboard.press('Enter');await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['report'])
   await page.locator('.odyssey-operations-quick-card[data-card="report"]').click();await expect.poll(()=>page.evaluate(()=>window.quickActions)).toEqual(['report']);expect(await page.evaluate(()=>window.examples)).toEqual(['report'])
   await tracks.nth(3).focus();await page.keyboard.press('ArrowRight');await waitCase(page,0);await page.keyboard.press('ArrowLeft');await waitCase(page,3);await page.keyboard.press('Home');await waitCase(page,0)
   expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')

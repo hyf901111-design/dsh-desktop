@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto'
 import {lstat,mkdir,readFile,realpath,writeFile} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {isHomeGuideSessionTitle} from './home-guide-session-titles.js'
+import {homeGuideSessionTitle,isHomeGuideSessionTitle} from './home-guide-session-titles.js'
 
 export function createHomePresentationBrief(metadata){return `帮我把这份研报整理成一份公司风格的汇报PPT，${metadata.presentationSlides}页左右，讲清主要观点并配上关键图表。`}
 export const HOME_PRESENTATION_FILE='人工智能周期与资产配置.pptx'
@@ -95,7 +95,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
    if(request.purpose!==undefined){
     if(!['compaction','session-title'].includes(request.purpose))throw Error('离线预置示例不接受此类辅助请求。')
     const title=run.metadata.presentationTitle??run.metadata.presentation?.title??'人工智能周期与资产配置'
-    const text=request.purpose==='session-title'?title:`当前为《${title}》离线预置演示，按教程检查点继续，不调用外部模型。原研报：${HOME_PRESENTATION_SOURCE_FILE}；成稿：${HOME_PRESENTATION_FILE}（${run.published?'已保存':'尚未保存'}）。`
+    const text=request.purpose==='session-title'?homeGuideSessionTitle('ppt'):`当前为《${title}》离线预置演示，按教程检查点继续，不调用外部模型。原研报：${HOME_PRESENTATION_SOURCE_FILE}；成稿：${HOME_PRESENTATION_FILE}（${run.published?'已保存':'尚未保存'}）。`
     yield{type:'block-start',index:0,blockType:'text'};yield{type:'text-delta',index:0,text};yield{type:'block-end',index:0,block:{type:'text',text}};yield{type:'finish',reason:{kind:'stop'}};return
    }
    await wait(run,()=>run.playing,request.signal)
@@ -103,6 +103,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
    // user/message too. Only human prompts define this run's exact admission.
    const user=run.agent.session.events.filter(e=>e.type==='user/message'&&e.data.source?.kind==='user')
    if(user.length!==1||user[0].data.content?.filter(block=>block.type==='text').map(block=>block.text).join('')!==message(run))throw Error('离线预置只接受本次研报附件和制作需求，请退出演示后继续。')
+   run.milestones.get('accepted').resolve()
    const n=run.sequence++
    if(n===0){await wait(run,()=>run.playing&&run.allowed>=1,request.signal);yield*emitText(run,run.replay.intro+'\n\n'+run.replay.structure,request.signal,2200);yield*emitTool('todo_write',{todos:todo(run,0)},'home-plan')}
    else if(n===1){run.milestones.get('plan').resolve();await wait(run,()=>run.playing&&run.allowed>=2,request.signal);yield*emitText(run,run.replay.layout,request.signal,1500);yield*emitTool('todo_write',{todos:todo(run,1)},'home-layout')}
@@ -138,7 +139,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
     if(ctx.agents.get(input.sessionId)!==agent||agent.status==='running'||session.events.some(e=>['user/message','assistant/message','turn/start',EVENT].includes(e.type)))throw Error('会话内容已变化，未启动演示。')
     const prepared={ready:true,brief:createHomePresentationBrief(metadata),sourcePath,presentationPath:join(input.cwd,HOME_PRESENTATION_FILE),sourceTitle:metadata.sourceTitle,publicationDate:metadata.publicationDate,outline:metadata.pageOutline.map(page=>({slide:page.slide,title:page.title}))}
     const originalConfig=session.requestHeader()?.config??{provider:agent.options.provider,model:agent.options.model,...agent.options.maxTokens===undefined?{}:{maxTokens:agent.options.maxTokens}}
-    const run={...input,root,agent,bytes,sourceBytes,sourcePath,metadata,replay:createHomePresentationReplay(metadata),prepared,originalConfig,sequence:0,allowed:0,playing:false,cancelled:false,complete:false,waiters:new Set(),milestones:new Map(['plan','layout','deliver'].map(stage=>[stage,deferred()])),off:[]}
+    const run={...input,root,agent,bytes,sourceBytes,sourcePath,metadata,replay:createHomePresentationReplay(metadata),prepared,originalConfig,sequence:0,allowed:0,playing:false,cancelled:false,complete:false,waiters:new Set(),milestones:new Map(['accepted','plan','layout','deliver'].map(stage=>[stage,deferred()])),off:[]}
     session.append(EVENT,{version:2,runId:run.runId,purpose:'offline-investment-report-presentation',cwd:run.cwd,sourceFile:HOME_PRESENTATION_SOURCE_FILE,presentationFile:HOME_PRESENTATION_FILE,sourceSha256:metadata.sourceSha256,presentationSha256:metadata.presentationSha256})
     const expectedEventCount=session.events.length
     if(!(await ctx.sessions.flush(session)))throw Error('示例所有权未能保存。')
@@ -161,7 +162,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
    }finally{if(preparing.get(input.sessionId)===ticket)preparing.delete(input.sessionId)}
   },
   async playback(input){const run=current(input);run.playing=input.playing===true;notify(run);return{playing:run.playing}},
-  async checkpoint(input){const run=current(input),index=['plan','layout','deliver'].indexOf(input.stage);if(index<0||index+1<run.allowed||index>run.allowed)throw Error('示例步骤顺序已变化。');run.allowed=index+1;notify(run);await run.milestones.get(input.stage).promise;return{stage:input.stage}},
+  async checkpoint(input){const run=current(input);if(input.stage==='accepted'){await run.milestones.get('accepted').promise;current(input);return{stage:input.stage}}const index=['plan','layout','deliver'].indexOf(input.stage);if(index<0||index+1<run.allowed||index>run.allowed)throw Error('示例步骤顺序已变化。');run.allowed=index+1;notify(run);await run.milestones.get(input.stage).promise;return{stage:input.stage}},
   async disposeRun(input){rememberCancellation(input);const ticket=preparing.get(input.sessionId);if(ticket?.runId===input.runId)ticket.cancelled=true;const run=runs.get(input.sessionId);if(run?.runId===input.runId){await cancel(run);if(runs.get(input.sessionId)===run)runs.delete(input.sessionId)}return{}},
   async dispose(){if(stopped)return;stopped=true;for(const ticket of preparing.values())ticket.cancelled=true;for(const run of runs.values())await cancel(run);offAdapter();runs.clear()}
  }

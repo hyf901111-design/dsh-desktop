@@ -216,20 +216,62 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
     const scrollBoard = async (ticket, canvas, top) => {
       await playing(ticket)
       const start = canvas.scrollTop, end = Math.max(0, Math.min(top, canvas.scrollHeight - canvas.clientHeight))
-      if (Math.abs(start - end) < 1) return
-      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { canvas.scrollTop = end; await settle(ticket); return }
-      let elapsed = 0, previous = Date.now()
-      while (elapsed < 680) {
-        check(ticket); await frame(ticket); check(ticket)
-        const now = Date.now()
-        if (ticket.playing) {
-          elapsed += Math.min(80, now - previous)
-          const progress = Math.min(1, elapsed / 680), eased = (1 - Math.cos(Math.PI * progress)) / 2
-          canvas.scrollTop = start + (end - start) * eased
-        }
-        previous = now
+      let interrupted = false, written = start, previousPosition
+      const manual = event => { if (event.isTrusted) interrupted = true }
+      const key = event => { if (['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key) && !event.target?.closest('input,textarea,[contenteditable="true"]')) manual(event) }
+      const current = () => {
+        check(ticket)
+        if (!canvas.isConnected || interrupted || Math.abs(canvas.scrollTop-written)>2) throw Error('画布已由用户滚动，请重新播放示例。')
       }
-      await playing(ticket); canvas.scrollTop = end; await settle(ticket)
+      const write = value => { current(); canvas.scrollTop = value; written = canvas.scrollTop }
+      const style = canvas.style.getPropertyValue('scroll-behavior'), priority = canvas.style.getPropertyPriority('scroll-behavior')
+      canvas.style.setProperty('scroll-behavior','auto','important')
+      for (const type of ['wheel','touchstart','pointerdown']) canvas.addEventListener(type,manual,{capture:true,passive:true})
+      canvas.addEventListener('keydown',key,true)
+      try {
+        if (Math.abs(start-end)>=1) {
+          if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) write(end)
+          else {
+            const duration = Math.min(720, Math.max(420, 380+Math.abs(end-start)*.12))
+            let elapsed = 0, previous = Date.now()
+            while (elapsed < duration) {
+              current(); await frame(ticket); current()
+              const now = Date.now()
+              if (ticket.playing) {
+                elapsed += Math.min(80, now-previous)
+                const progress = Math.min(1,elapsed/duration), eased = (1-Math.cos(Math.PI*progress))/2
+                write(start+(end-start)*eased)
+              }
+              previous = now
+            }
+            await playing(ticket); write(end)
+          }
+        }
+        await settle(ticket,()=>{current();const next=canvas.scrollTop,stable=previousPosition!==undefined&&Math.abs(next-previousPosition)<.5;previousPosition=next;return stable&&Math.abs(next-end)<1},3,2400,true)
+      } finally {
+        for (const type of ['wheel','touchstart','pointerdown']) canvas.removeEventListener(type,manual,true)
+        canvas.removeEventListener('keydown',key,true)
+        if (canvas.style.getPropertyValue('scroll-behavior')==='auto' && canvas.style.getPropertyPriority('scroll-behavior')==='important') {
+          if (style) canvas.style.setProperty('scroll-behavior',style,priority); else canvas.style.removeProperty('scroll-behavior')
+        }
+      }
+    }
+    const scrollTarget = async (ticket, target) => {
+      for (let parent=target.parentElement;parent&&parent!==document.body;parent=parent.parentElement) {
+        if (!/auto|scroll/.test(window.getComputedStyle(parent).overflowY) || parent.scrollHeight<=parent.clientHeight+1) continue
+        const rect=target.getBoundingClientRect(), bounds=parent.getBoundingClientRect(), scale=bounds.height/parent.clientHeight||1
+        const view=parent.hasAttribute('data-research-canvas')?boardFrame(ticket,parent):{top:bounds.top,bottom:bounds.bottom,scaleY:scale}
+        const top=view.top+12*view.scaleY,bottom=view.bottom-12*view.scaleY
+        const delta=rect.height>bottom-top?(rect.top<top||rect.top>=bottom?rect.top-top:0):rect.top<top?rect.top-top:rect.bottom>bottom?rect.bottom-bottom:0
+        if (delta) await scrollBoard(ticket,parent,parent.scrollTop+delta/view.scaleY)
+      }
+    }
+    const revealBoard = async (ticket, nodeId) => {
+      const canvas=ticket.host.querySelector('[data-research-canvas]'),card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(nodeId)+'"]')
+      if (!canvas||!card) throw changed()
+      let previous
+      await settle(ticket,()=>{const box=card.getBoundingClientRect(),geometry=[box.top+canvas.scrollTop,box.width,box.height],stable=previous&&geometry.every((value,index)=>Math.abs(value-previous[index])<.5);previous=geometry;return stable},2,2400,true)
+      await scrollTarget(ticket,card)
     }
     const targetReady = (ticket, target, visible = false) => {
       check(ticket)
@@ -265,7 +307,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       // Native cards animate their real grid geometry. Frame the settled ports,
       // rather than scrolling to an intermediate position during that motion.
       await settle(ticket,positioned(false),2,2400,true)
-      if (!keepCanvasFrame) { target.scrollIntoView?.({ block:'nearest',inline:'nearest',behavior:'instant' });fromTarget?.scrollIntoView?.({ block:'nearest',inline:'nearest',behavior:'instant' }) }
+      if (!keepCanvasFrame) { await scrollTarget(ticket,target); if(fromTarget)await scrollTarget(ticket,fromTarget) }
       previous=undefined
       await settle(ticket,positioned(true),2,2400,true)
       if(document.documentElement.dataset.homeGuidePointerRun!==marker)throw changed()
@@ -306,7 +348,11 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       if (ticket.selectionEpoch !== ticket.selectionBaselineEpoch) {
         ticket.originalSelection = structuredClone(before); ticket.selectionBaselineEpoch = ticket.selectionEpoch
       }
+      const canvas=ticket.host.querySelector('[data-research-canvas]'),pendingReveal=canvas?.__eworkReveal
       react_dom.flushSync(() => target.click())
+      // Cancel only this native click's queued reveal; the actor awaits its own
+      // pause-aware scroll after the final grid geometry has settled.
+      if(canvas?.__eworkReveal && canvas.__eworkReveal!==pendingReveal)delete canvas.__eworkReveal
       const selection = ticket.resource.workspace.getSnapshot().selection
       if (selection !== before && JSON.stringify(selection) !== JSON.stringify(before)) {
         ticket.ownedSelectionEpoch = ticket.selectionEpoch; ticket.ownedSelection = JSON.stringify(selection)
@@ -420,9 +466,8 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         }
         return current
       }
-      const layoutBoard = (reset = false, adding = false) => {
+      const layoutBoard = (adding = false) => {
         const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width), pair = metrics.minColumns <= 20, calendarPair=pair&&metrics.width>=800
-        const canvas = ticket.host.querySelector('[data-research-canvas]')
         const watchRows = Math.ceil((600+metrics.gap)/metrics.rowStep), feedRows = Math.ceil((340+metrics.gap)/metrics.rowStep)
         const readingRows = {watchlist:watchRows,quote:watchRows,news:feedRows,announcements:feedRows}
         const namesById = new Map(Object.entries(ticket.nodes).map(([name,nodeId])=>[nodeId,name]))
@@ -454,7 +499,6 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           }
         }
         if (!workspace.applyWorkbenchCells(workspace.getWorkbenchCells().map(cell => fitted.get(cell.id) || cell), false)) throw Error('看板布局暂时无法调整。')
-        if (reset && canvas) canvas.scrollTop = 0
       }
       const library = () => [...document.querySelectorAll('[data-home-guide-native-library]')].find(el => el.dataset.homeGuideNativeLibrary === detail.runId)
       if (detail.command === 'board-library') {
@@ -489,9 +533,9 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         }
         // Preserve native reading sizes on entry, wrapping when a row cannot fit.
         // Only the visible Arrange action fills the available row widths.
-        await playing(ticket); layoutBoard(false, !ticket.arranged)
+        await playing(ticket); layoutBoard(!ticket.arranged)
         await settle(ticket, () => !!ticket.host.querySelector(widget === 'calendar' ? '[data-calendar-tool]' : '[data-financial-widget="' + widget + '"]'))
-        const canvas = ticket.host.querySelector('[data-research-canvas]'); if (canvas) revealWorkbenchNode(canvas, workspace, ticket.nodes[widget])
+        await revealBoard(ticket,ticket.nodes[widget])
         await settle(ticket)
         clearOwnedSelection(ticket); await save(ticket); return
       }
@@ -505,7 +549,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           if(!node)throw Error('智能容器暂时无法添加。')
           ticket.nodes.smart=node.id;ticket.ownedSelectionEpoch=ticket.selectionEpoch;ticket.ownedSelection=JSON.stringify(workspace.getSnapshot().selection);clearOwnedSelection(ticket);layoutBoard()
         }
-        const canvas=ticket.host.querySelector('[data-research-canvas]');if(canvas)revealWorkbenchNode(canvas,workspace,ticket.nodes.smart)
+        await revealBoard(ticket,ticket.nodes.smart)
         await settle(ticket,()=>!!ticket.host.querySelector('[data-research-node-id="'+CSS.escape(ticket.nodes.smart)+'"]'))
         const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(ticket.nodes.smart)+'"]')
         await cue(ticket,card.querySelector('.ew-grid-header')||card,'查看新建的智能容器','move')
@@ -535,7 +579,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           await settle(ticket,()=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current)throw changed();if(['failed','cancelled','interrupted'].includes(current.generationStatus))throw Error(current.generationError||'示例组件未能生成。');return current.generationStatus==='completed'&&current.containerSpec?.type==='table'},2,20000,true)
         }
         await playing(ticket);layoutBoard()
-        const canvas=ticket.host.querySelector('[data-research-canvas]');if(canvas)revealWorkbenchNode(canvas,workspace,node.id)
+        await revealBoard(ticket,node.id)
         const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')
         await cue(ticket,card?.querySelector('.ew-grid-header')||card,'阅读五只自选股的研究观察清单','move')
         await save(ticket);return
@@ -636,15 +680,16 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           await settle(ticket)
         }
       } else {
+        const canvas = ticket.host.querySelector('[data-research-canvas]')
+        // Move before the native Arrange changes content height, so the browser
+        // never clamps a bottom viewport to a newly shortened document.
+        if (canvas) await scrollBoard(ticket,canvas,0)
         const button = toolbar()?.querySelector('[data-research-global-arrange]')
         if (button && !button.disabled) await click(ticket, button, '整理六个组件，保留完整阅读空间')
-        const canvas = ticket.host.querySelector('[data-research-canvas]')
         await settle(ticket, () => !canvas?.__eworkContentFit)
         await playing(ticket)
-        layoutBoard(true)
+        layoutBoard()
         ticket.arranged = true
-        // Finish at the document start so native component headers stay visible.
-        react_dom.flushSync(() => workspace.setViewport({ x: 0, y: 0, scale: 1 }))
         clearOwnedSelection(ticket)
         await settle(ticket, () => {
           if (!canvas) return false

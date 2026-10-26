@@ -420,7 +420,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     const description=usecase?.querySelector<HTMLElement>('[data-odyssey-operations-case-layer][data-case="'+index+'"] .odyssey-operations-description')
     const identity=()=>hero?.querySelector<HTMLElement>('[data-odyssey-file-reference-session]')?.dataset.odysseyFileReferenceSession||root?.querySelector<HTMLElement>('[data-srb-session-header]')?.dataset.eworkNotesSession||root?.dataset.sessionId||''
     const owner=identity(),notice=copy().demoIntro,letters=Array.from(notice),opacity=description?.style.opacity||''
-    let pendingFrame=0,started:number|null=null,finished=false
+    let pendingFrame=0,started:number|null=null,completeAt:number|null=null,finished=false,spinner:SVGSVGElement|null=null,spinnerArc:SVGPathElement|null=null,message:Text|null=null
     const restore=()=>{if(description){description.style.opacity=opacity;description.textContent=copy().cases[index]![2];delete description.dataset.odysseyOperationsIntro}}
     const cleanup=()=>{if(pendingFrame)win.cancelAnimationFrame(pendingFrame);controller.signal.removeEventListener('abort',abort);doc.removeEventListener('pointerdown',takePointer,true);doc.removeEventListener('keydown',takeKey,true);doc.removeEventListener('beforeinput',takeInput,true);win.removeEventListener('blur',takeInput)}
     const abort=()=>{if(finished)return;finished=true;cleanup();restore();reject(Object.assign(Error('本次示例操作已取消。'),{name:'AbortError'}))}
@@ -436,8 +436,21 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       started??=now
       const elapsed=now-started,fade=reduced.matches?0:180,typing=reduced.matches?0:letters.length*(language==='en'?14:26)
       if(elapsed<fade){description!.dataset.odysseyOperationsIntro='fading';description!.style.opacity=String(1-elapsed/fade)}
-      else{description!.dataset.odysseyOperationsIntro='streaming';description!.style.opacity='1';description!.textContent=letters.slice(0,typing?Math.min(letters.length,Math.floor((elapsed-fade)/typing*letters.length)):letters.length).join('')}
-      if(elapsed>=fade+typing+650){finished=true;cleanup();resolve(restore);return}
+      else{
+        if(!spinner){
+          spinner=doc.createElementNS('http://www.w3.org/2000/svg','svg');spinner.dataset.odysseyOperationsIntroSpinner='';spinner.setAttribute('viewBox','0 0 12 12');spinner.setAttribute('aria-hidden','true');spinner.setAttribute('focusable','false')
+          // Keep the original text anchor and wrapping; the ring fits its existing left inset.
+          spinner.style.cssText='position:absolute;left:-18px;top:calc(.5lh - 6px);width:12px;height:12px;overflow:visible;pointer-events:none;color:inherit'
+          const circle=doc.createElementNS('http://www.w3.org/2000/svg','circle');circle.setAttribute('cx','6');circle.setAttribute('cy','6');circle.setAttribute('r','4.5');circle.setAttribute('fill','none');circle.setAttribute('stroke','currentColor');circle.setAttribute('stroke-width','1.5');circle.setAttribute('opacity','.25')
+          const arc=doc.createElementNS('http://www.w3.org/2000/svg','path');arc.setAttribute('d','M6 1.5a4.5 4.5 0 0 1 4.5 4.5');arc.setAttribute('fill','none');arc.setAttribute('stroke','currentColor');arc.setAttribute('stroke-width','1.5');arc.setAttribute('stroke-linecap','round')
+          arc.style.transformOrigin='6px 6px';spinnerArc=arc;spinner.append(circle,arc);message=doc.createTextNode('');description!.replaceChildren(spinner,message)
+        }
+        const count=typing?Math.min(letters.length,Math.floor((elapsed-fade)/typing*letters.length)):letters.length,text=letters.slice(0,count).join('')
+        description!.dataset.odysseyOperationsIntro=count===letters.length?'holding':'streaming';description!.style.opacity='1';if(message!.data!==text)message!.data=text
+        spinnerArc!.style.transform=reduced.matches?'none':`rotate(${(elapsed-fade)*.36}deg)`
+        if(count===letters.length)completeAt??=now
+      }
+      if(completeAt!==null&&now-completeAt>=2000){finished=true;cleanup();resolve(restore);return}
       pendingFrame=win.requestAnimationFrame(tick)
     }
     controller.signal.addEventListener('abort',abort,{once:true});doc.addEventListener('pointerdown',takePointer,true);doc.addEventListener('keydown',takeKey,true);doc.addEventListener('beforeinput',takeInput,true);win.addEventListener('blur',takeInput)

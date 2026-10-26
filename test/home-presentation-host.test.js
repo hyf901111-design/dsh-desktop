@@ -4,6 +4,12 @@ import {join} from 'node:path'
 import {presentationHostFixture} from './fixtures/home-presentation-host.js'
 const clean=[]
 afterEach(async()=>{for(const dispose of clean.splice(0).reverse())await dispose()})
+it('keeps the send receipt pending until the real Host admits its exact human prompt',async()=>{
+ const f=await presentationHostFixture();clean.push(f.dispose);await f.command('prepare');await f.command('playback',{playing:true})
+ let state='pending';const accepted=f.command('checkpoint',{stage:'accepted'}).then(value=>{state='accepted';return value},error=>{state='rejected';throw error});void accepted.catch(()=>{})
+ await new Promise(resolve=>setTimeout(resolve,30));expect(state).toBe('pending')
+ await f.prompt(f.message());expect(await accepted).toMatchObject({stage:'accepted'});expect(f.outside).toEqual([])
+},15000)
 it('runs the preset through the actual registered Workspace, host API, integration skill and complete research middleware',async()=>{
  const f=await presentationHostFixture();clean.push(f.dispose)
  const workspace=await f.registry.resolveByPath(f.cwd)
@@ -38,7 +44,7 @@ it('keeps the tutorial cursor and durable publish intact when the real host auto
  await f.command('prepare')
  const titleChunks=[]
  for await(const chunk of f.ctx.llm.stream({provider:'sherlock-home-presentation',model:'v1',sessionId:f.agent.id,purpose:'session-title',messages:[]}))titleChunks.push(chunk)
- expect(titleChunks.filter(chunk=>chunk.type==='block-end').map(chunk=>chunk.block)).toEqual([{type:'text',text:f.metadata.presentationTitle}])
+ expect(titleChunks.filter(chunk=>chunk.type==='block-end').map(chunk=>chunk.block)).toEqual([{type:'text',text:'公司风格演示示例（演示案例）'}])
  await f.command('playback',{playing:true});await f.prompt(f.message())
  for(const stage of ['plan','layout','deliver'])await f.command('checkpoint',{stage})
  await f.agent.whenIdle();expect(f.errors).toEqual([]);expect(f.outside).toEqual([])

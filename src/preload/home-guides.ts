@@ -230,7 +230,13 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    if(active!==run||controller.signal.aborted){adapter.dispose();throw aborted()}run.adapter=adapter;ensure()
    if(session.fresh===false){await close(false,true);return}
    const scenes:readonly Scene[]=definition.steps
-   run.timeline=createHomeGuideTimeline({steps:scenes.map(([id,,,hold])=>({id,hold})),run:async step=>{ensure();await adapter.runStep(step);ensure()},onChange:state=>{
+   run.timeline=createHomeGuideTimeline({steps:scenes.map(([id,,,hold])=>({id,hold})),run:async step=>{
+    ensure();await adapter.runStep(step);ensure()
+    if(kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
+     await options.waitUntilPlaying();ensure()
+     await exchangeSession(document,{kind,command:'activate-title',sessionId:run.sessionId},controller.signal);ensure()
+    }
+   },onChange:state=>{
     if(active!==run||state.phase==='disposed')return
     playback(run,state.phase==='playing');root.dataset.phase=state.phase
     if(state.phase==='completed'){hideCue();void (adapter.flush?.()??Promise.resolve()).then(async()=>{ensure();const handoff=await adapters.prepareHandoff?.({...session,kind},controller.signal);ensure();if(handoff)run.handoff=handoff;await close(false,true)}).catch(error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}

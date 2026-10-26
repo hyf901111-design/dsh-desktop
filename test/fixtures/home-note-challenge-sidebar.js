@@ -1,9 +1,11 @@
 import {readFile} from 'node:fs/promises'
-import {patchBetterSidebarClient} from '../../scripts/lib/patch-sherlock-better-sidebar.mjs'
+import {execFileSync} from 'node:child_process'
 
 /** Real sidebar store/service and production evidence component, with a fixture-only mount. */
 export async function homeNoteChallengeSidebarSource(){
- const source=patchBetterSidebarClient(await readFile(process.env.SHERLOCK_TEST_SIDEBAR_SOURCE||'build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8'))
+ // Installed helpers are serialized by native Node; Vitest transforms their
+ // function.toString() bytes. Validate with the same strict production loader.
+ const source=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{patchBetterSidebarClient}from'./scripts/lib/patch-sherlock-better-sidebar.mjs';process.stdout.write(patchBetterSidebarClient(readFileSync(0,'utf8')));"],{input:await readFile(process.env.SHERLOCK_TEST_SIDEBAR_SOURCE||'build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8'),encoding:'utf8',maxBuffer:16*1024*1024})
  const start=source.indexOf('const SIDEBAR_PREFS_DEFAULTS ='),end=source.indexOf('//#region src/client/chunk-loader.ts',start)
  if(start<0||end<0)throw Error('Native notes challenge service fixture source drifted')
  return `

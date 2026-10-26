@@ -2,19 +2,27 @@ import { Window } from 'happy-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => Object.fromEntries(['StateDot','Modal','Button','IconTrashOutline16','Menu','IconPlusOutline16','IconEllipsisOutline16','IconSearchOutline16','IconFolderOpenOutline16','IconEditOutline16','IconTriangleRightFill14'].map(name => [name, () => null])))
 import { createResearchBoardsPage } from '../src/preload/research-boards-ui'
+import {Session} from '@deepseek-ai/dsh-session'
+import {readFileSync} from 'node:fs'
+import {runInNewContext} from 'node:vm'
+import ts from 'typescript'
+
+const runtimeTree=ts.createSourceFile('runtime.js',readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS),titleFunctions=new Map<string,string>()
+const visit=(node:ts.Node)=>{if(ts.isFunctionDeclaration(node)&&node.name&&['displayTitleOf','workspaceTitleOf'].includes(node.name.text))titleFunctions.set(node.name.text,node.getText(runtimeTree));ts.forEachChild(node,visit)};visit(runtimeTree)
+const nativeDisplayTitle=runInNewContext([...titleFunctions.values()].join('\n')+';displayTitleOf') as (title:string|undefined,cwd:string,id:string)=>string
 
 const cleanup: Array<() => void> = []
 afterEach(() => cleanup.splice(0).reverse().forEach(stop => stop()))
 function store<T>(value: T) { const listeners = new Set<() => void>(); return { getSnapshot: () => value, subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, set(next: T) { value = next; listeners.forEach(fn => fn()) } } }
 async function fixture({ disk = new Map<string, string>(), byId = {} as Record<string, any>, createGate = Promise.resolve() } = {}) {
   const oldEvent = globalThis.Event, oldDocument = globalThis.document
-  const win = new Window({ url: 'http://localhost:43210' }), requests: any[] = [], opened: string[] = [], archived: string[] = []
+  const win = new Window({ url: 'http://localhost:43210' }), requests: any[] = [], opened: string[] = [], archived: string[] = [],nativeSessions=new Map<string,any>()
   const list = store<{ current: string; byId: Record<string, any> }>({ current: 'original', byId: { original: { id: 'original', title: '我的研究', cwd: '/workspace' }, ...byId } })
   let emit: (event: any) => void = () => {}, sequence = 0
   const state: any = { version: 1, eventSeq: 1, account: { status: 'ready', generation: 1, user: { userId: 'owner' } }, favorites: [], boards: [], current: null, recoveries: [], notifications: { cursor: 0, unreadCount: 0, pendingCount: 0, notifications: [] } }
   const canvases = new Map<string, any>()
   const workspaces = { list: store({ items: [] as any[] }), create: async ({path}: {path:string}) => { requests.push(['workspace.create',path]); const existing=workspaces.list.getSnapshot().items.find(item=>item.path===path);if(existing)return existing;const item={workspaceId:'workspace:'+path,path,sessionIds:[]};workspaces.list.set({items:[...workspaces.list.getSnapshot().items,item]});return item }, api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: '/workspace' } } }) }, sessions: {create:async(input:any)=>{requests.push(['workspace.attach',input]);workspaces.list.set({items:workspaces.list.getSnapshot().items.map(item=>item.workspaceId===input.workspaceId?{...item,sessionIds:[input.sessionId]}:item)});return {result:{ok:true,value:{sessionId:input.sessionId}}}}} }, archiveSession: async (id: string) => { archived.push(id) } }
-  const sessions = { list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) }, async create({ cwd }: any) { requests.push(['create', cwd]); await createGate; const id = 'guide-' + (++sequence); list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd, blank: true, title: '新对话' } } }); return id }, binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], subscribe: () => () => {}, rename: async (title: string) => {list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { ...list.getSnapshot().byId[id], title, displayTitle: title } } });return{ok:true,value:{title,seq:1}}} } } } }
+  const sessions = { list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) }, async create({ cwd }: any) { requests.push(['create', cwd]); await createGate; const id = 'guide-' + (++sequence); nativeSessions.set(id,Session.create(id as Parameters<typeof Session.create>[0])); list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd, blank: true } } }); return id }, binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], projections:{faceOf:()=>({getSnapshot:()=>nativeSessions.has(id)?nativeSessions.get(id).events.findLast((event:any)=>event.type==='session/title')?.data.title:list.getSnapshot().byId[id]?.title})}, subscribe: () => () => {}, rename: async (title: string) => {nativeSessions.get(id)?.append('session/title',{title,source:{kind:'user'}});list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { ...list.getSnapshot().byId[id], title, displayTitle: title } } });return{ok:true,value:{title,seq:1}}} } } } }
   ;(win as any).dshDesktop = { researchCanvasStorage: { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
   globalThis.Event = win.Event as unknown as typeof Event
   globalThis.document = win.document as unknown as Document
@@ -26,7 +34,7 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   const reply = async (id: string) => { await expect.poll(() => replies.find(value => value.requestId === id), { timeout: 500 }).toBeTruthy(); return replies.find(value => value.requestId === id) }
   await Promise.resolve(); await Promise.resolve()
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
-  return { win, page, sessions, workspaces, state, requests, opened, archived, disk, replies, send, reply, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
+  return { win, page, sessions, workspaces, state, requests, opened, archived, disk, replies, send, reply,nativeSessions, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
 it('prepares a dedicated report session and gives its separate replay the same concise demo title', async () => {
   const f = await fixture(), first = await f.reply(f.send('report'))
@@ -49,8 +57,36 @@ it.each([
  const f=await fixture(),first=await f.reply(f.send(kind)),replay=await f.reply(f.send(kind,'prepare',{replay:true}))
  for(const row of [first,replay])expect(row).toMatchObject({ok:true,title,fresh:true})
  expect(replay.sessionId).not.toBe(first.sessionId);expect(replay.cwd).not.toBe(first.cwd)
- expect(f.sessions.list.getSnapshot().byId[first.sessionId].title).toBe(title)
- expect(f.sessions.list.getSnapshot().byId[replay.sessionId].title).toBe(title)
+ expect(f.sessions.list.getSnapshot().byId[first.sessionId].title).toBe(kind==='board'?'新研究':kind==='note'?'新笔记':'新会话')
+ expect(f.sessions.list.getSnapshot().byId[replay.sessionId].title).toBe(kind==='board'?'新研究':kind==='note'?'新笔记':'新会话')
+})
+it.each(['board','note','ppt','report'])('names the registered %s only after its current successful activity checkpoint',async kind=>{
+ const f=await fixture(),entry=await f.reply(f.send(kind));expect(f.sessions.list.getSnapshot().byId[entry.sessionId].title).toBe(kind==='board'?'新研究':kind==='note'?'新笔记':'新会话')
+ expect(await f.reply(f.send(kind,'activate-title',{sessionId:entry.sessionId}))).toMatchObject({ok:false})
+ await f.reply(f.send(kind,'open',{sessionId:entry.sessionId}))
+ expect(await f.reply(f.send(kind,'activate-title',{sessionId:entry.sessionId}))).toMatchObject({ok:true})
+ expect(f.sessions.list.getSnapshot().byId[entry.sessionId].title).toBe(entry.title)
+ expect(await f.reply(f.send(kind,'activate-title',{sessionId:entry.sessionId}))).toMatchObject({ok:true})
+})
+it.each(['board','note','ppt','report'])('keeps the actual native %s title projection from falling back to its final workspace name',async kind=>{
+ for(const english of [false,true]){
+  const f=await fixture();f.win.document.documentElement.dataset.odysseyLocale=english?'en':'zh'
+  const entry=await f.reply(f.send(kind)),row=f.sessions.list.getSnapshot().byId[entry.sessionId]
+  const expected=english?{board:'New Research',note:'New Note',ppt:'New Session',report:'New Session'}[kind]:{board:'新研究',note:'新笔记',ppt:'新会话',report:'新会话'}[kind]
+  const event=f.nativeSessions.get(entry.sessionId).events.findLast((event:any)=>event.type==='session/title')
+  expect(nativeDisplayTitle(undefined,entry.cwd,entry.sessionId)).toBe(entry.cwd.split('/').at(-1))
+  expect(nativeDisplayTitle(event?.data.title,entry.cwd,entry.sessionId)).toBe(expected)
+  expect(row.title).toBe(expected);expect(event.data.title).not.toBe(entry.title)
+ }
+})
+it.each(['custom','directory','owner'])('does not rename after a %s change to a prepared session',async change=>{
+ const f=await fixture(),entry=await f.reply(f.send('ppt'));await f.reply(f.send('ppt','open',{sessionId:entry.sessionId}))
+ if(change==='custom')await f.sessions.binding(entry.sessionId).session.rename('用户自己的名字')
+ if(change==='directory'){const list=f.sessions.list.getSnapshot();f.sessions.list.set({...list,byId:{...list.byId,[entry.sessionId]:{...list.byId[entry.sessionId],cwd:'/changed'}}})}
+ if(change==='owner')f.setOwner('other')
+ const result=await f.reply(f.send('ppt','activate-title',{sessionId:entry.sessionId}))
+ expect(result.ok).toBe(change==='custom')
+ expect(f.sessions.list.getSnapshot().byId[entry.sessionId].title).toBe(change==='custom'?'用户自己的名字':'新会话')
 })
 it('prepares a real dedicated board without navigation, reuses it and opens only a registered matching session', async () => {
   const f = await fixture(), a = f.send(), b = f.send()
