@@ -657,3 +657,23 @@ it('patches the page plugin effect once and disposes its adapter with the owning
     expect(patchIntegrationSkillComposer(patch)).toBe(patch)
     expect(() => new Script(patchIntegrationSkillComposer(source))).not.toThrow()
 })
+
+it('strictly upgrades the known composer effect and resolves the Notes owner only for the active Notes surface', () => {
+    const anchor = 'const composerBlocks = new ComposerBlockRegistry();'
+    const current = patchIntegrationSkillComposer(anchor)
+    const installed = /\/\* sherlock:integration-skill-composer:v2 \*\/[\s\S]*?"Sherlock integration skill composer"\);/.exec(current)![0]
+    const legacy = `/* sherlock:integration-skill-composer:v1 */
+      ctx.effect(() => {
+        if (window.top !== window) return;
+        return sherlockBoardsPage.installSkillComposer({sessions,inputHub,composerBlocks,researchSidebar});
+      }, "Sherlock integration skill composer");`
+    expect(patchIntegrationSkillComposer(current.replace(installed, legacy))).toBe(current)
+    expect(patchIntegrationSkillComposer(current)).toBe(current)
+    for (const bad of [current.replace('activeInput:', 'wrongInput:'), current.replace('v2 */', 'v99 */'), current+'\n'+installed, current.replace(installed, legacy.replace('sessions,inputHub', 'sessions,wrongHub'))])
+        expect(() => patchIntegrationSkillComposer(bad)).toThrow(/drifted|duplicate|unknown/)
+    const ordinary = {}, notes = {}, document = {body:{dataset:{workspaceSurface:'notes'}}}, win:any={};win.top=win
+    let options:any
+    runInNewContext(current, {ComposerBlockRegistry:class{},ctx:{inject:()=>{},effect:(fn:()=>unknown)=>fn()},document,window:win,sessions:{},inputHub:{},researchSidebar:{},eworkActiveInput:(id:string,shell:unknown)=>{expect(id).toBe('owner');expect(shell).toBe(ordinary);return notes},sherlockBoardsPage:{installSkillComposer:(deps:unknown)=>{options=deps;return()=>{}}}})
+    expect(options.activeInput('owner',ordinary)).toBe(notes)
+    for (const mode of ['', 'integrations', 'research']) {document.body.dataset.workspaceSurface=mode;expect(options.activeInput('owner',ordinary)).toBe(ordinary)}
+})

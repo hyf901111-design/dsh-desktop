@@ -1,7 +1,7 @@
 import type { IntegrationBridge, SkillCommandSegment, SkillComposerPrefill } from '../../shared/integration-ui';
 import type {SkillReference} from '../../shared/skill-reference';
 
-type ComposerReply = { requestId: string; ok: boolean; token?: string; message?: string };
+type ComposerReply = { requestId: string; ok: boolean; token?: string; surface?: 'notes'; message?: string };
 type ComposerRequest = { phase: 'prepare' | 'insert' | 'cancel' | 'focus'; token?: string; invocationName?: string; reference?:SkillReference; sessionId?:string; expectedDraftRev?:number; commandSegment?:SkillCommandSegment; prefill?:SkillComposerPrefill };
 const requestEvent = 'sherlock:skill-compose-request';
 const replyEvent = 'sherlock:skill-compose-reply';
@@ -54,7 +54,7 @@ export function createSkillUseBridge(document: Document, bridge: Pick<Integratio
             // Use the freshly verified runtime name, never a display name or stale UI alias.
             await exchange({ phase: 'insert', token, invocationName: detail.invocationName, ...(detail.invocationLabel?{reference:{id:detail.id,revision:detail.revision,invocationName:detail.invocationName,label:detail.invocationLabel}}:{}), ...(input.prefill !== undefined?{prefill:input.prefill}:{}) }, input.signal);
             if (attempt !== generation || disposed || input.signal?.aborted) return;
-            revealConversation();
+            if (prepared.surface !== 'notes') revealConversation();
             await exchange({ phase: 'focus', token }, input.signal);
         } finally {
             tokens.delete(token);
