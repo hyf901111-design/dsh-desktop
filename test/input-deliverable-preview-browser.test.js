@@ -9,7 +9,7 @@ let browser,runtime
 let nativeSource=patchComposerDeliverablePreview(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
 const runtimeSource=readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
 nativeSource=nativeSource.replace('\t\texports.apply = apply;','\t\texports.apply = apply;\nexports.__testInputBar = InputBar;')
-const evidence='/tmp/skill-cover-home-only-20261026/browser'
+const evidence=process.env.SHERLOCK_DELIVERABLE_PREVIEW_ARTIFACT_ROOT||'/tmp/skill-cover-home-only-20261026/browser'
 beforeAll(async()=>{
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'js',contents:`
  import {createPptxAnnotationShellBinding} from './scripts/lib/pptx-annotation-input.mjs';import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';
@@ -44,12 +44,15 @@ async function fixture({width=780,dark=false,mode='home',inputProps={}}={}){
  // Reading seats retain their existing 16px native clearance on both sides.
  await page.setContent(`<body ${dark?'data-ds-dark-theme':''}><div class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="${mode}"><main id="fixture" data-center-composer-host style="width:${width+(mode==='conversation'?32:0)}px"></main></div></div></body>`)
  await page.evaluate(()=>{window.__nativeDescriptors=[];window.__ModuleLoader__={load:descriptor=>window.__nativeDescriptors.push(descriptor)}})
- await page.addScriptTag({content:runtimeSource})
- await page.addScriptTag({content:nativeSource})
  // Preserve the production cascade order from shell-style.ts, including the
  // reading overrides that come after inline-reference/deliverable styles.
  const styles=['figma-final-shell.css','figma-home.css','figma-panels.css','figma-file-panel.css','figma-trajectory.css','figma-inline-references.css','figma-motion.css','figma-refinements.css','figma-reading.css','figma-welcome.css','focus-style.css','client-typography.css'].map(name=>readFileSync('src/preload/'+name,'utf8')).join('\n')
- await page.addStyleTag({content:styles+'\nbody{margin:20px;--dsh-composer-side-clearance:0;--dsh-composer-card-max-width:780px;--dsw-font-family:system-ui;--odyssey-font-ui:system-ui;--odyssey-home-input:rgba(255,255,255,.5);--dsw-alias-label-primary:#252525}body[data-ds-dark-theme]{--odyssey-home-input:rgba(0,0,0,.49);--dsw-alias-label-primary:#e5e5e5}.wSkVaW_root{display:block;height:auto}.uV2eYG_root{width:100%}#fixture{margin:0}'});
+ const desktopStyles=await page.addStyleTag({content:styles+'\nbody{margin:20px;--dsh-composer-side-clearance:0;--dsh-composer-card-max-width:780px;--dsw-font-family:system-ui;--odyssey-font-ui:system-ui;--odyssey-home-input:rgba(255,255,255,.5);--dsw-alias-label-primary:#252525}body[data-ds-dark-theme]{--odyssey-home-input:rgba(0,0,0,.49);--dsw-alias-label-primary:#e5e5e5}.wSkVaW_root{display:block;height:auto}.uV2eYG_root{width:100%}#fixture{margin:0}'});
+ // The packaged preload mounts this stylesheet before the native factory.
+ // Mark the actual loaded cascade so the native legacy fallback does not add a stale duplicate.
+ await desktopStyles.evaluate(style=>{style.id='sherlock-desktop-shell-style'})
+ await page.addScriptTag({content:runtimeSource})
+ await page.addScriptTag({content:nativeSource})
  await page.addScriptTag({content:runtime})
  await page.waitForSelector('textarea',{timeout:3000}).catch(error=>{throw Error(errors.join('\n')||error.message)})
  await page.evaluate(async({mode,inputProps})=>{const workspaceSnapshot={files:[],artifacts:[{id:'research-real-context',title:'已有研究组件'}],selection:{selectedNodeIds:[]}};window.previewFixture.workspace={subscribe:()=>()=>{},getSnapshot:()=>workspaceSnapshot};await window.previewFixture.force({variant:mode==='home'?'hero':'composer',...inputProps})},{mode,inputProps})
@@ -89,7 +92,7 @@ it.each([{kind:'ppt',dark:false},{kind:'ppt',dark:true},{kind:'report',dark:fals
     layers:['textarea','[data-input-backdrop]','[data-input-mirror]'].map(selector=>{const element=document.querySelector(selector),style=getComputedStyle(element);return{...rect(element),left:style.paddingLeft,right:style.paddingRight,top:style.paddingTop,bottom:style.paddingBottom,font:style.fontSize,lineHeight:style.lineHeight}}),
     hidden:board.getAttribute('aria-hidden'),interactive:getComputedStyle(art).pointerEvents,images:[...art.querySelectorAll('.odyssey-deliverable-cover img')].map(image=>({width:image.naturalWidth,height:image.naturalHeight,src:image.src.slice(0,22)}))}
   })
-  expect(geometry.card.width).toBeCloseTo(780,1);expect(geometry.card.height).toBeCloseTo(199,1)
+  expect(geometry.card.width).toBeCloseTo(780,1);expect(geometry.card.height).toBeCloseTo(kind==='ppt'?154:199,1)
   expect(geometry.surface).toBe(dark?'rgba(0, 0, 0, 0.49)':'rgba(255, 255, 255, 0.5)');expect(geometry.blur).toBe('blur(12px)')
   expect(geometry.board.y-geometry.card.y).toBeCloseTo(23,1)
   expect(geometry.art.width).toBeCloseTo(128,1);expect(geometry.art.height).toBeCloseTo(128,1)
@@ -210,7 +213,7 @@ it.each([{kind:'ppt',dark:false,width:780},{kind:'ppt',dark:true,width:520},{kin
   expect(Math.abs(before.x+14-before.cornerX)).toBeLessThan(.08);expect(Math.abs(before.y+14-before.cornerY)).toBeLessThan(.08)
   expect(before.assets).toEqual([[28,28,'28','28'],[28,28,'28','28']])
   await page.locator('[data-composer-card]').screenshot({path:evidence+`/close-${kind}-${dark?'dark':'light'}-${width}.png`})
-  await button.hover();expect(await button.locator('.odyssey-deliverable-close-hover').evaluate(el=>getComputedStyle(el).opacity)).toBe('1')
+  await button.hover();expect(await button.locator('.odyssey-deliverable-close-hover').evaluate(el=>getComputedStyle(el).opacity)).toBe('0')
   await page.locator('[data-composer-card]').screenshot({path:evidence+`/close-${kind}-${dark?'dark':'light'}-${width}-hover.png`})
   await page.evaluate(()=>window.previewFixture.append('\n长正文不移动配图。'.repeat(80)))
   await page.locator('[data-input-scroll]').evaluate(el=>{el.scrollTop=120})
@@ -322,5 +325,28 @@ it('switches actual native composer contexts without replacing its textarea or m
   expect(await page.locator('[data-odyssey-deliverable-art="ppt"]').count()).toBe(1)
   expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.imageIds)).toEqual(['keep-image'])
   expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft)).toContain('保留正文😀\n\n全局要求')
+ }finally{await page.close()}
+},15000)
+
+
+it.each([{kind:'ppt',dark:false},{kind:'ppt',dark:true},{kind:'report',dark:false},{kind:'report',dark:true}])('keeps a short homepage skill composer close to its cover and its hover stroke steady ($kind dark=$dark)',async({kind,dark})=>{
+ const page=await fixture({dark})
+ try{
+  await page.evaluate(kind=>window.previewFixture.add(kind),kind)
+  await page.locator('.odyssey-deliverable-close').waitFor()
+  const read=()=>page.evaluate(()=>{
+   const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return{top:r.top,bottom:r.bottom,height:r.height}}
+   return{card:rect('[data-composer-card]'),cover:rect('.odyssey-deliverable-cover'),row:rect('.uV2eYG_row'),scroll:rect('[data-input-scroll]'),images:[...document.querySelectorAll('.odyssey-deliverable-close>img')].map(el=>getComputedStyle(el).opacity)}
+  })
+  const before=await read();expect(before.card.height).toBeCloseTo(kind==='ppt'?154:199,1)
+  expect(before.row.top-before.cover.bottom).toBeGreaterThanOrEqual(4)
+  expect(before.row.top-before.cover.bottom).toBeLessThan(20)
+  await page.locator('.odyssey-deliverable-close').hover();const hovered=await read()
+  expect(hovered.images).toEqual(['1','0']);expect(hovered.card).toEqual(before.card)
+  await page.locator('[data-composer-card]').screenshot({path:evidence+'/compact-'+kind+'-'+(dark?'dark':'light')+'.png'})
+  await page.evaluate(()=>window.previewFixture.append('内容增长时仍需自然撑高。'.repeat(400)))
+  await expect.poll(async()=>(await read()).card.height).toBeCloseTo(384,1)
+  const grown=await read();expect(grown.row.bottom).toBeCloseTo(grown.card.bottom,1);expect(grown.scroll.height).toBeCloseTo(336,1)
+  expect(await page.evaluate(()=>window.submissions)).toBe(0)
  }finally{await page.close()}
 },15000)

@@ -86,6 +86,16 @@ test('moves a DOM arrow then acknowledges its click without clicking or focusing
  await vi.advanceTimersByTimeAsync(80);expect(finished).toBe(false);expect(document.querySelector('[data-home-guide-pointer]')?.getAttribute('aria-hidden')).toBe('true');expect(document.activeElement).not.toBe(f.target)
  await vi.runAllTimersAsync();await action;expect(finished).toBe(true);expect(click).not.toHaveBeenCalled();expect(f.pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
 })
+test('approaches controls along a small smooth arc with slower endpoints while keeping precision drags on their selected path',async()=>{
+ const f=fixture(),first=f.pointer.perform({target:f.source,action:'move'});await vi.runAllTimersAsync();await first
+ const frames:Array<{x:number;y:number;phase:string}>=[],move=f.pointer.perform({target:f.target,action:'move',onFrame:frame=>frames.push(frame)})
+ await vi.runAllTimersAsync();await move
+ const moving=frames.filter(frame=>frame.phase==='moving'),offset=(p:{x:number;y:number})=>Math.abs((p.x-90)*130-(p.y-110)*270)/Math.hypot(270,130)
+ expect(Math.max(...moving.map(offset))).toBeGreaterThan(2);expect(Math.max(...moving.map(offset))).toBeLessThan(14)
+ const speeds=moving.slice(1).map((p,i)=>Math.hypot(p.x-moving[i]!.x,p.y-moving[i]!.y));expect(Math.max(...speeds)).toBeGreaterThan(speeds[0]!*5);expect(Math.max(...speeds)).toBeGreaterThan(speeds.at(-1)!*5);expect(f.pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
+ const dragFrames:Array<{x:number;y:number;phase:string}>=[],drag=f.pointer.perform({target:f.target,fromTarget:f.source,action:'drag',onFrame:frame=>dragFrames.push(frame)})
+ await vi.runAllTimersAsync();await drag;expect(Math.max(...dragFrames.filter(frame=>frame.phase==='dragging').map(offset))).toBeLessThan(.01)
+})
 test('carries an owned PDF tile with the virtual pointer before the drop is acknowledged',async()=>{
  const f=fixture();f.source.dataset.homeGuideDragFile='run'
  const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source})

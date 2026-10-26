@@ -28,15 +28,18 @@ it('keeps the actual bridge failure instead of returning tutorial prices or news
  expect(card.textContent).not.toContain('1,456.80');expect(card.textContent).not.toContain('离线教程示例')
 })
 async function fixture({sessionId='owner',subagentPanel=false}={}){
- const win=new Window({url:'https://guide.test'}),doc=win.document,previous=new Map(['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
+ const win=new Window({url:'https://guide.test',width:1100,height:720}),doc=win.document,previous=new Map(['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
  for(const[k,v]of Object.entries({window:win,document:doc,navigator:win.navigator,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,k,{value:v,configurable:true})
  doc.body.innerHTML='<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="owner"></header><textarea>原草稿</textarea></div><section data-home-guide="run-a"><div id="guide-host"></div></section></main><div id="outside"></div>'
  Object.defineProperty(win.HTMLElement.prototype,'clientWidth',{configurable:true,get(){return 1100}})
  Object.defineProperty(win.HTMLElement.prototype,'clientHeight',{configurable:true,get(){return 720}})
  // Happy DOM has no layout engine. Expose native card inline geometry here;
  // actual CSS transitions, viewport fitting and footer bounds run in Chromium.
+ Object.defineProperty(win.HTMLElement.prototype,'scrollHeight',{configurable:true,get(){return this.hasAttribute('data-research-canvas')?Math.max(720,...[...this.querySelectorAll('[data-research-node-id]')].map(card=>parseFloat(card.style.top)+parseFloat(card.style.height)/2+86).filter(Number.isFinite)):0}})
  win.HTMLElement.prototype.getBoundingClientRect=function(){
-  const card=this.hasAttribute('data-research-node-id'),width=card?parseFloat(this.style.width):1100,height=card?parseFloat(this.style.height):720,left=card?parseFloat(this.style.left)-width/2:0,top=card?parseFloat(this.style.top)-height/2:0
+  const card=this.hasAttribute('data-research-node-id'),canvas=this.closest('[data-research-canvas]'),port=this.getAttribute('data-financial-port')
+  let width=card?parseFloat(this.style.width):1100,height=card?parseFloat(this.style.height):720,left=card?parseFloat(this.style.left)-width/2:0,top=card?parseFloat(this.style.top)-height/2-(canvas?.scrollTop||0):0
+  if(port){const bounds=this.closest('[data-research-node-id]').getBoundingClientRect();width=height=20;left=port==='output'?bounds.right-26:bounds.left+6;top=bounds.bottom-30}
   return{x:left,y:top,left,top,right:left+width,bottom:top+height,width,height,toJSON(){return{left,top,width,height}}}
  }
  win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})

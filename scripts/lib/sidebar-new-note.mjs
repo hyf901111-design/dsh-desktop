@@ -1,5 +1,3 @@
-import {readFileSync} from 'node:fs'
-
 // Serialized into the native conversation plugin. The preload first reserves
 // this exact owner, flushes its Note, then commits the same ticket.
 export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,getInput}) {
@@ -102,8 +100,8 @@ export function patchSidebarNewNoteShell(input){
   const start=source.indexOf(begin),stop=source.indexOf(',\n\t\t\t\t\t(0,react_jsx_runtime.jsxs)("div",{"data-srb-navigation-scroll"',start)
   if(start<0||stop<0)throw Error('Native Sidebar New Session group drift')
   const group=source.slice(start,stop),last=group.lastIndexOf('})]')
-  const asset='data:image/svg+xml;base64,'+readFileSync(new URL('../../src/preload/scheduled/assets/new-note-light.svg',import.meta.url)).toString('base64')
-  const note='(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("session.newNote.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-new-note":"","aria-label":t("session.newNote.label"),onClick:()=>window.dispatchEvent(new CustomEvent("sherlock:sidebar-new-note")),children:(0,react_jsx_runtime.jsx)("span",{className:"sherlock-sidebar-note-icon","aria-hidden":"true",style:{width:18,height:18,display:"inline-block",background:"currentColor",mask:"url('+asset+') center/contain no-repeat"}})})})'
+
+  const note='(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("session.newNote.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-new-note":"","aria-label":t("session.newNote.label"),onClick:()=>window.dispatchEvent(new CustomEvent("sherlock:sidebar-new-note")),children:void 0})})'
   const controls=group.slice(0,last)+'}), !wide && '+note+']'+group.slice(last+3)
   const root='\t\t\treturn (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\tref: column,'
   const foot='(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.footArea,'

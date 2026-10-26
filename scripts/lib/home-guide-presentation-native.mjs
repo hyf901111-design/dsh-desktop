@@ -134,13 +134,49 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      await waitFor(ticket,()=>!!input.closest('.uV2eYG_root')?.querySelector('[data-reference-source="chat-file"]'))
      await cue(ticket,input.closest('.uV2eYG_root').querySelector('[data-reference-source="chat-file"]'),'原始研报 PDF','move')
      }
-     await cue(ticket,input,ticket.kind==='report'?'填写研究问题':'填写研报转换要求')
+     const caretBounds=()=>{
+      check(ticket);if(inputFor(ticket)!==input||input.disabled||input.readOnly||input.getAttribute('aria-disabled')==='true')throw changed()
+      const segments=[...input.closest('.uV2eYG_root').querySelectorAll('.uV2eYG_backdrop [data-draft-end]')],segment=segments.filter(node=>Number(node.dataset.draftEnd)===preparedDraft.length).at(-1)
+      if(!segment)throw changed()
+      const range=document.createRange();range.selectNodeContents(segment)
+      const rect=segment.hasAttribute('data-occurrence')?segment.getBoundingClientRect():[...range.getClientRects()].at(-1),box=input.getBoundingClientRect()
+      if(!rect||rect.height<=0)throw changed()
+      const x=rect.right,y=rect.top+rect.height/2
+      let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(window.innerWidth,box.right),bottom=Math.min(window.innerHeight,box.bottom)
+      for(let node=input;node;node=node.parentElement){const style=window.getComputedStyle(node);if(node.hidden||node.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')throw changed();if(node!==input){const clip=node.getBoundingClientRect();if(/hidden|auto|scroll|clip/.test(style.overflowX||style.overflow)){left=Math.max(left,clip.left);right=Math.min(right,clip.right)}if(/hidden|auto|scroll|clip/.test(style.overflowY||style.overflow)){top=Math.max(top,clip.top);bottom=Math.min(bottom,clip.bottom)}}}
+      if(x<=left||x>=right||y<=top||y>=bottom)throw changed()
+      return[x,y,box.left,box.top,box.right,box.bottom]
+     }
+     let previousCaret,stableCaret
+     await waitFor(ticket,()=>{const next=caretBounds(),stable=previousCaret&&next.every((value,index)=>Math.abs(value-previousCaret[index])<.5);previousCaret=next;if(stable)stableCaret=next;return stable})
+     const caretTarget=document.createElement('span');caretTarget.dataset.homeGuideInputCaret=ticket.detail.runId;caretTarget.setAttribute('aria-hidden','true');caretTarget.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(stableCaret[0]-1)+'px;top:'+(stableCaret[1]-1)+'px';document.body.append(caretTarget)
+     try{
+      await cue(ticket,caretTarget,ticket.kind==='report'?'填写研究问题':'填写研报转换要求')
+      if(caretBounds().some((value,index)=>Math.abs(value-stableCaret[index])>2))throw changed()
+      if(ticket.shell.snapshot.draft!==preparedDraft||ticket.shell.snapshot.draftRev!==preparedRevision||ticket.shell.snapshot.imageIds?.length||JSON.stringify(ticket.shell.snapshot.occurrences??[])!==preparedOccurrences)throw Error('输入内容已更改，已停止自动填写。')
+      input.focus({preventScroll:true});input.click();input.setSelectionRange(input.value.length,input.value.length);ticket.shell.track(preparedDraft,preparedDraft.length)
+     }finally{caretTarget.remove()}
      if(ticket.shell.snapshot.draft!==preparedDraft||ticket.shell.snapshot.draftRev!==preparedRevision||ticket.shell.snapshot.imageIds?.length||JSON.stringify(ticket.shell.snapshot.occurrences??[])!==preparedOccurrences)throw Error('输入内容已更改，已停止自动填写。')
      if(ticket.shell.snapshot.imageIds?.length)throw Error('输入附件已更改，已停止自动填写。')
      const unchanged=()=>ticket.shell.snapshot.draft===prior&&ticket.shell.snapshot.draftRev===revision&&!ticket.shell.snapshot.imageIds?.length&&JSON.stringify(ticket.shell.snapshot.occurrences??[])===preparedOccurrences
      const prefix=ticket.shell.snapshot.draft.trimEnd()+' ',brief=ticket.prepared.brief
      ticket.shell.setDraft(prefix);let prior=prefix,revision=ticket.shell.snapshot.draftRev
-     for(let i=0;i<brief.length;i+=2){await playing(ticket);if(!unchanged())throw Error('输入内容已更改，已停止自动填写。');prior=prefix+brief.slice(0,Math.min(i+2,brief.length));ticket.shell.setDraft(prior);revision=ticket.shell.snapshot.draftRev;await delay(ticket,/[，。；！？]$/.test(prior)?240:140)}
+     await waitFor(ticket,()=>input.value.length===prior.length)
+     const backdrop=input.closest('.uV2eYG_root').querySelector('[data-input-backdrop]')
+     if(!backdrop||typeof createAssistantTextPaint!=='function')throw Error('输入文字显示尚未就绪，请重试。')
+     const reveal=createAssistantTextPaint(backdrop,{epoch:1,live:true},'composer'),paintObserver=new MutationObserver(()=>{if(owned===ticket&&!ticket.controller.signal.aborted)reveal.update()})
+     reveal.update();paintObserver.observe(backdrop,{childList:true,subtree:true,characterData:true})
+     try{
+      for(const{segment}of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(brief)){
+       await playing(ticket);if(!unchanged())throw Error('输入内容已更改，已停止自动填写。')
+       prior+=segment;ticket.shell.setDraft(prior);revision=ticket.shell.snapshot.draftRev
+       await waitFor(ticket,()=>input.value.length===prior.length)
+       if(inputFor(ticket)!==input||!input.isConnected)throw changed()
+       if(!unchanged())throw Error('输入内容已更改，已停止自动填写。')
+       input.setSelectionRange(input.value.length,input.value.length);ticket.shell.track(prior,prior.length);reveal.update()
+       await delay(ticket,/[，。；！？]$/.test(segment)?240:50)
+      }
+     }finally{paintObserver.disconnect();reveal.dispose()}
      if(!unchanged())throw Error('输入内容已更改，已停止自动填写。')
      ticket.typedInput={draft:prior,revision,occurrences:preparedOccurrences}
     }else if(index===1){
