@@ -9,10 +9,10 @@ let browser,runtime
 let nativeSource=patchComposerDeliverablePreview(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
 const runtimeSource=readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
 nativeSource=nativeSource.replace('\t\texports.apply = apply;','\t\texports.apply = apply;\nexports.__testInputBar = InputBar;')
-const evidence='/tmp/ework-input-deliverable-preview-20261024'
+const evidence='/tmp/skill-cover-close-20261026/browser'
 beforeAll(async()=>{
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'js',contents:`
- import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';
+ import {createPptxAnnotationShellBinding} from './scripts/lib/pptx-annotation-input.mjs';import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';
  const empty=()=>null;
  const primitives=new Proxy({Tooltip:({children})=>children},{get:(target,key)=>target[key]??empty});
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
@@ -21,12 +21,12 @@ beforeAll(async()=>{
  const native=window.__nativeDescriptors[1].factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?clientRuntime:modules(id));
  const shell=new native.SessionInputShell({actx:{},defaultSink:()=>{window.submissions++}});
  window.submissions=0;
- const label={ppt:'efund-ppt-maker',report:'ework-equity-research'};
+ let phase='plain';const label={ppt:'efund-ppt-maker',report:'ework-equity-research'};
  const props={useSession:select=>select({running:false,promptError:null,subagent:null,removed:false}),
-  useInput:select=>React.useSyncExternalStore(shell.state.subscribe,()=>select(shell.snapshot),()=>select(shell.snapshot)),
-  inputActions:shell.actions,keyboard:shell,renderSlot:()=>null,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:(_key,select)=>select?.(undefined),sessionId:'native-preview',t:key=>key,variant:'hero'};
+  useInput:select=>{const snapshot=React.useSyncExternalStore(shell.state.subscribe,()=>shell.snapshot,()=>shell.snapshot);return select(phase==='plain'?snapshot:{...snapshot,phase})},
+  inputActions:shell.actions,keyboard:shell,renderSlot:()=>null,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:(_key,select)=>select?.(undefined),sessionId:'native-preview',draftImages:ids=>ids.map(id=>({id,file:{name:'保留图片.png'}})),t:key=>key,variant:'hero'};
  const root=createRoot(document.querySelector('#fixture'));root.render(React.createElement(native.__testInputBar,props));
- window.previewFixture={shell,dispose:()=>root.unmount(),
+ window.previewFixture={shell,force(options){Object.assign(props,options);root.render(React.createElement(native.__testInputBar,props));return new Promise(resolve=>requestAnimationFrame(()=>resolve()))},phase(value){phase=value;root.render(React.createElement(native.__testInputBar,props));return new Promise(resolve=>requestAnimationFrame(()=>resolve()))},bindAnnotation(){const binding=createPptxAnnotationShellBinding(shell,{getSelection:()=>{const el=document.querySelector('textarea');return{start:el.selectionStart,end:el.selectionEnd}}});window[Symbol.for('sherlock:pptx-annotation-input')]={getShellBinding:keyboard=>keyboard===shell?binding:undefined};const ref={source:'pptx-annotation',ref:JSON.stringify({version:1,sessionId:'native-preview',documentId:'a'.repeat(64),fileVersion:'b'.repeat(64),markId:'keep'}),label:'标注 1',clipboardText:'标注 1'};binding.insert(ref,'保留的标注意见👩🏽‍💻\\n第二行');this.binding=binding},dispose:()=>root.unmount(),
   add(kind,source='ework-managed-skill',id){const name=label[kind];return shell.insertReference({source,ref:JSON.stringify({id:id??'builtin:'+name,revision:1,invocationName:'ework-skill-0123456789abcdef',label:name}),label:'/'+name,clipboardText:'/'+name},{start:shell.snapshot.draft.length,end:shell.snapshot.draft.length,draftRev:shell.snapshot.draftRev})},
   text(value){shell.setDraft(value,{start:0,end:shell.snapshot.draft.length,insertedLength:value.length})},
   append(value){shell.insertText(value,{start:shell.snapshot.draft.length,end:shell.snapshot.draft.length,draftRev:shell.snapshot.draftRev})},
@@ -40,7 +40,7 @@ beforeAll(async()=>{
 afterAll(()=>browser?.close())
 async function fixture({width=780,dark=false,mode='home'}={}){
  const page=await browser.newPage({viewport:{width:Math.max(860,width+40),height:800},deviceScaleFactor:2})
- const errors=[];page.on('pageerror',error=>errors.push(error.stack||error.message))
+ const errors=[];page.on('pageerror',error=>{errors.push(error.stack||error.message);console.error(error.stack||error.message)})
  // Reading seats retain their existing 16px native clearance on both sides.
  await page.setContent(`<body ${dark?'data-ds-dark-theme':''}><div class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="${mode}"><main id="fixture" data-center-composer-host style="width:${width+(mode==='conversation'?32:0)}px"></main></div></div></body>`)
  await page.evaluate(()=>{window.__nativeDescriptors=[];window.__ModuleLoader__={load:descriptor=>window.__nativeDescriptors.push(descriptor)}})
@@ -86,7 +86,7 @@ it.each([{kind:'ppt',dark:false},{kind:'ppt',dark:true},{kind:'report',dark:fals
    const card=document.querySelector('[data-composer-card]'),art=document.querySelector('[data-odyssey-deliverable-art]'),board=art.firstElementChild,cover=board.firstElementChild;
    return{card:rect(card),surface:getComputedStyle(card).backgroundColor,blur:getComputedStyle(card).backdropFilter,art:rect(art),board:rect(board),cover:{width:parseFloat(getComputedStyle(cover).width),height:parseFloat(getComputedStyle(cover).height)},row:rect(document.querySelector('.uV2eYG_row')),
     layers:['textarea','[data-input-backdrop]','[data-input-mirror]'].map(selector=>{const element=document.querySelector(selector),style=getComputedStyle(element);return{...rect(element),left:style.paddingLeft,right:style.paddingRight,top:style.paddingTop,bottom:style.paddingBottom,font:style.fontSize,lineHeight:style.lineHeight}}),
-    hidden:art.getAttribute('aria-hidden'),interactive:getComputedStyle(art).pointerEvents,images:[...art.querySelectorAll('img')].map(image=>({width:image.naturalWidth,height:image.naturalHeight,src:image.src.slice(0,22)}))}
+    hidden:board.getAttribute('aria-hidden'),interactive:getComputedStyle(art).pointerEvents,images:[...art.querySelectorAll('.odyssey-deliverable-cover img')].map(image=>({width:image.naturalWidth,height:image.naturalHeight,src:image.src.slice(0,22)}))}
   })
   expect(geometry.card.width).toBeCloseTo(780,1);expect(geometry.card.height).toBeCloseTo(199,1)
   expect(geometry.surface).toBe(dark?'rgba(0, 0, 0, 0.49)':'rgba(255, 255, 255, 0.5)');expect(geometry.blur).toBe('blur(12px)')
@@ -161,5 +161,107 @@ it.each([520,400,280])('preserves a usable native input in a %spx pane',async wi
   expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft)).toContain('补充')
   expect(await page.evaluate(()=>window.savedInput===document.querySelector('textarea'))).toBe(true)
   await page.locator('[data-composer-card]').screenshot({path:evidence+'/pane-'+width+'.png'})
+ }finally{await page.close()}
+},15000)
+
+it('closes only the shown skill through the native journal and keeps text, other references, images, selection and undo',async()=>{
+ const page=await fixture()
+ try{
+  await page.evaluate(()=>{const f=window.previewFixture;f.add('ppt');f.append('正文😀\n保留空行\n\n');f.add('report');f.shell.insertReference({source:'file',ref:'{"path":"keep.pdf"}',label:'keep.pdf',clipboardText:'keep.pdf'},{start:f.shell.snapshot.draft.length,end:f.shell.snapshot.draft.length,draftRev:f.shell.snapshot.draftRev});f.shell.addImages(['image-keep']);window.beforeClose=f.shell.snapshot;window.keepInput=document.querySelector('textarea')})
+  const input=page.locator('textarea');await input.focus()
+  await input.evaluate(el=>el.setSelectionRange(2,el.value.length,'backward'))
+  await page.getByRole('button',{name:'移除研报技能及配图'}).click({timeout:1500})
+  const after=await page.evaluate(()=>{const f=window.previewFixture,b=window.beforeClose,at=b.occurrences.find(o=>JSON.parse(o.ref).id==='builtin:ework-equity-research').offset,el=document.querySelector('textarea');return{draft:f.shell.snapshot.draft,expected:b.draft.slice(0,at)+b.draft.slice(at+1),ids:f.shell.snapshot.occurrences.map(o=>o.occurrenceId),expectedIds:b.occurrences.filter(o=>o.offset!==at).map(o=>o.occurrenceId),images:f.shell.snapshot.imageIds,range:[el.selectionStart,el.selectionEnd,el.selectionDirection],focus:document.activeElement===window.keepInput,length:b.draft.length}})
+  expect(after.draft).toBe(after.expected);expect(after.ids).toEqual(after.expectedIds);expect(after.images).toEqual(['image-keep']);expect(after.range).toEqual([2,after.length-1,'backward']);expect(after.focus).toBe(true)
+  expect(await page.locator('[data-odyssey-deliverable-art="ppt"]').count()).toBe(1)
+  await page.evaluate(()=>window.previewFixture.shell.undo())
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft===window.beforeClose.draft&&JSON.stringify(window.previewFixture.shell.snapshot.occurrences)===JSON.stringify(window.beforeClose.occurrences))).toBe(true)
+  expect(await page.evaluate(()=>window.submissions)).toBe(0)
+ }finally{await page.close()}
+},15000)
+
+it('limits annotation sidecar deletion to the cover skill even when the entire Chinese and emoji draft is selected',async()=>{
+ const page=await fixture()
+ try{
+  await page.evaluate(()=>{const f=window.previewFixture;f.add('ppt');f.append('整体要求😀\n');f.bindAnnotation();f.add('report');f.append('尾部用户要求');window.beforeClose=f.shell.snapshot;window.beforeRanges=f.binding.ranges()})
+  await page.locator('textarea').focus();await page.locator('textarea').evaluate(el=>el.setSelectionRange(0,el.value.length,'backward'))
+  await page.getByRole('button',{name:'移除研报技能及配图'}).click({timeout:1500})
+  const result=await page.evaluate(()=>{const f=window.previewFixture,b=window.beforeClose,at=b.occurrences.find(o=>{try{return JSON.parse(o.ref).id==='builtin:ework-equity-research'}catch{return false}}).offset;return{actual:f.shell.snapshot.draft,expected:b.draft.slice(0,at)+b.draft.slice(at+1),ranges:f.binding.ranges(),before:window.beforeRanges}})
+  expect(result.actual).toBe(result.expected);expect(result.ranges).toEqual(result.before)
+  await page.evaluate(()=>window.previewFixture.add('ppt'))
+  expect(await page.evaluate(()=>window.previewFixture.binding.ranges())).toEqual(result.before)
+  await page.evaluate(()=>{window.previewFixture.shell.undo();window.previewFixture.shell.undo()})
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft)).toBe(await page.evaluate(()=>window.beforeClose.draft))
+ }finally{await page.close()}
+},15000)
+
+it.each([{kind:'ppt',dark:false,width:780},{kind:'ppt',dark:true,width:520},{kind:'report',dark:false,width:520},{kind:'report',dark:true,width:780}])('anchors the original upright 43B SVG to the rotated cover corner through growth and scrolling ($kind dark=$dark width=$width)',async({kind,dark,width})=>{
+ const page=await fixture({dark,width})
+ try{
+  await page.evaluate(kind=>{window.previewFixture.add(kind);window.previewFixture.append('研究需求😀')},kind)
+  const button=page.locator('.odyssey-deliverable-close')
+  await button.waitFor()
+  await page.waitForFunction(()=>[...document.querySelectorAll('.odyssey-deliverable-close img')].every(image=>image.complete&&image.naturalWidth===28))
+  const geometry=()=>page.evaluate(()=>{const el=document.querySelector('.odyssey-deliverable-close'),cover=document.querySelector('.odyssey-deliverable-cover'),r=el.getBoundingClientRect(),c=cover.getBoundingClientRect(),s=getComputedStyle(cover),m=new DOMMatrix(s.transform),w=parseFloat(s.width),h=parseFloat(s.height);return{x:r.x,y:r.y,width:r.width,height:r.height,cornerX:c.x+c.width/2+m.a*w/2-m.c*h/2,cornerY:c.y+c.height/2+m.b*w/2-m.d*h/2,transform:getComputedStyle(el).transform,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el,assets:[...el.querySelectorAll('img')].map(i=>[i.naturalWidth,i.naturalHeight,i.getAttribute('width'),i.getAttribute('height')])}})
+  const before=await geometry()
+  expect(before.width).toBe(28);expect(before.height).toBe(28);expect(before.transform).toBe('none');expect(before.hit).toBe(true)
+  expect(Math.abs(before.x+14-before.cornerX)).toBeLessThan(.08);expect(Math.abs(before.y+14-before.cornerY)).toBeLessThan(.08)
+  expect(before.assets).toEqual([[28,28,'28','28'],[28,28,'28','28']])
+  await page.locator('[data-composer-card]').screenshot({path:evidence+`/close-${kind}-${dark?'dark':'light'}-${width}.png`})
+  await button.hover();expect(await button.locator('.odyssey-deliverable-close-hover').evaluate(el=>getComputedStyle(el).opacity)).toBe('1')
+  await page.locator('[data-composer-card]').screenshot({path:evidence+`/close-${kind}-${dark?'dark':'light'}-${width}-hover.png`})
+  await page.evaluate(()=>window.previewFixture.append('\n长正文不移动配图。'.repeat(80)))
+  await page.locator('[data-input-scroll]').evaluate(el=>{el.scrollTop=120})
+  const after=await geometry();expect(after.x).toBeCloseTo(before.x,2);expect(after.y).toBeCloseTo(before.y,2);expect(after.hit).toBe(true)
+ }finally{await page.close()}
+},15000)
+
+it('removes only the last duplicate and leaves earlier identical native skills usable',async()=>{
+ const page=await fixture()
+ try{
+  await page.evaluate(()=>{const f=window.previewFixture;f.add('ppt');f.append('保留文字\n\n');f.add('ppt');window.beforeClose=f.shell.snapshot})
+  await page.getByRole('button',{name:'移除 PPT 技能及配图'}).click()
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.occurrences.map(o=>o.occurrenceId))).toEqual(await page.evaluate(()=>[window.beforeClose.occurrences[0].occurrenceId]))
+  expect(await page.locator('[data-odyssey-deliverable-art="ppt"]').count()).toBe(1)
+  await page.getByRole('button',{name:'移除 PPT 技能及配图'}).click()
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft)).toBe(await page.evaluate(()=>window.beforeClose.draft.replaceAll('\uFFFC','')))
+  expect(await page.locator('[data-odyssey-deliverable-art]').count()).toBe(0)
+ }finally{await page.close()}
+},15000)
+
+it('rejects old ABA handlers, changed session owners, composition, locked and busy states',async()=>{
+ const page=await fixture()
+ try{
+  await page.evaluate(()=>window.previewFixture.add('ppt'))
+  await page.locator('.odyssey-deliverable-close').waitFor()
+  await page.evaluate(()=>{const button=document.querySelector('.odyssey-deliverable-close');window.oldButton=button;window.oldClose=button[Object.keys(button).find(key=>key.startsWith('__reactProps$'))].onClick;const f=window.previewFixture;f.append('临时');f.shell.undo();window.beforeClose=f.shell.snapshot})
+  await page.evaluate(()=>window.oldClose({preventDefault(){},stopPropagation(){},currentTarget:window.oldButton}))
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draftRev)).toBe(await page.evaluate(()=>window.beforeClose.draftRev))
+  await page.evaluate(()=>window.previewFixture.force({sessionId:'another-owner'}))
+  await page.evaluate(()=>window.oldClose({preventDefault(){},stopPropagation(){},currentTarget:window.oldButton}))
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft)).toBe(await page.evaluate(()=>window.beforeClose.draft))
+  await page.locator('textarea').dispatchEvent('compositionstart')
+  await page.locator('.odyssey-deliverable-close').click()
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft)).toBe(await page.evaluate(()=>window.beforeClose.draft))
+  await page.locator('textarea').dispatchEvent('compositionend');await page.waitForTimeout(20)
+  await page.evaluate(()=>window.previewFixture.force({disabled:true}))
+  expect(await page.locator('.odyssey-deliverable-close').isDisabled()).toBe(true)
+  await page.evaluate(()=>window.previewFixture.force({disabled:false}))
+  await page.evaluate(()=>window.previewFixture.phase('submitting'))
+  expect(await page.locator('.odyssey-deliverable-close').isDisabled()).toBe(true)
+  expect(await page.evaluate(()=>window.previewFixture.shell.snapshot.draft)).toBe(await page.evaluate(()=>window.beforeClose.draft))
+  expect(await page.evaluate(()=>window.submissions)).toBe(0)
+ }finally{await page.close()}
+},15000)
+
+it('returns keyboard focus to the same native input when Enter removes the last cover button',async()=>{
+ const page=await fixture()
+ try{
+  await page.evaluate(()=>{window.previewFixture.add('ppt');window.previewFixture.append('正文保留');window.keepInput=document.querySelector('textarea')})
+  await page.locator('textarea').evaluate(el=>el.setSelectionRange(3,5))
+  const button=page.getByRole('button',{name:'移除 PPT 技能及配图'});await button.focus();await button.press('Enter')
+  await expect.poll(()=>page.evaluate(()=>document.activeElement===window.keepInput)).toBe(true)
+  expect(await page.locator('textarea').evaluate(el=>[el.selectionStart,el.selectionEnd])).toEqual([2,4])
+  expect(await page.evaluate(()=>window.submissions)).toBe(0)
  }finally{await page.close()}
 },15000)
