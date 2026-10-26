@@ -1,4 +1,5 @@
 import {patchHomeThemeAppearance} from './lib/home-theme-appearance.mjs'
+import {patchSidebarNewNoteConversation,patchSidebarNewNoteShell} from './lib/sidebar-new-note.mjs'
 import {patchAssistantReveal} from './lib/assistant-reveal.mjs'
 import {patchConversationComponents} from './lib/conversation-components.mjs'
 import {patchConversationCompactionLifecycle} from './lib/conversation-compaction-lifecycle.mjs'
@@ -307,3 +308,7 @@ writeFileSync(conversationPath,patchConversationCompactionLifecycle(readFileSync
 writeFileSync(conversationPath,patchPptxAnnotationInput(readFileSync(conversationPath,'utf8')))
 // Sent messages project only Main-verified marks after the native renderers are final.
 writeFileSync(conversationPath,patchPptxAnnotationMessages(readFileSync(conversationPath,'utf8')))
+// Normal new-Note actions use the final native stores; the rail keeps DOM/AX order.
+writeFileSync(conversationPath,patchSidebarNewNoteConversation(readFileSync(conversationPath,'utf8')))
+const sidebarNewNotePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js')
+writeFileSync(sidebarNewNotePath,patchSidebarNewNoteShell(readFileSync(sidebarNewNotePath,'utf8')))

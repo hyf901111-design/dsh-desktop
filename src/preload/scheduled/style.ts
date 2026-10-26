@@ -7,6 +7,10 @@ export const scheduledStyles = `
 [data-dsh-sidebar-root] .hHd-Xa_newSessionGroup .hHd-Xa_newSession>svg,[data-dsh-sidebar-root] .hHd-Xa_researchIcon{display:none!important}
 [data-dsh-sidebar-root] .hHd-Xa_newSession::before{content:'';width:16px;height:16px;flex:none;background:currentColor;mask:url('${icons.chat}') center/contain no-repeat}
 [data-dsh-sidebar-root] .hHd-Xa_newSession:nth-child(2)::before{mask-image:url('${icons.research}')}
+[data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{display:none!important}
+.st-menu[data-sidebar-more] .st-icon{width:18px;height:18px}
+.st-menu[data-sidebar-more] button{gap:10px!important}
+.st-new-note-error{padding:12px;font-size:13px;line-height:1.5}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup{flex-direction:column!important}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup .hHd-Xa_newSession{flex:none!important;width:32px!important}
 [data-dsh-sidebar-wide=false] [data-srb-navigation-scroll]{flex:0 0 auto!important;overflow:visible!important;min-height:0}

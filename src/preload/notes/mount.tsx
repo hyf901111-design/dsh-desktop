@@ -34,6 +34,13 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
     for(const [id,entry]of entries)if(id!==sessionId&&!entry.retaining&&!entry.capabilityRetaining)entries.delete(id)
     renderEntries()
   }
+  const flushCurrent=async()=>{
+    if(host.current()?.surface!=='notes')return
+    const id=sessionId,entry=entries.get(id)
+    if(!entry?.flush)throw Error('笔记尚在读取，请稍后再新建笔记。')
+    await entry.flush()
+    if(resetting||sessionId!==id||entries.get(id)!==entry||host.current()?.surface!=='notes')throw new DOMException('当前笔记已变化，请重试。','AbortError')
+  }
   const prepareGuide=async(id:string)=>{
     const entry=entries.get(id);if(!entry)return
     if(entry.retaining||entry.capabilityRetaining)throw Error('此笔记仍有任务正在完成，请稍后重新打开示例。')
@@ -96,12 +103,12 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
     if (locale !== document.documentElement.dataset.odysseyLocale) { locale = document.documentElement.dataset.odysseyLocale; surface.setAttribute('aria-label',t('工作区笔记'));render() }
     const id = document.querySelector<HTMLElement>('[data-ework-notes-session]')?.dataset.eworkNotesSession
     const anchor = id ? document.querySelector('[data-ework-note-view="' + CSS.escape(id) + '"]') : null
-    if (anchor && (anchor !== lastAnchor || !host.current()) && !document.querySelector('.VOzbGW_overlay')) { lastAnchor = anchor; open() }
+    if (anchor && (id !== sessionId || anchor !== lastAnchor || !host.current()) && !document.querySelector('.VOzbGW_overlay')) { lastAnchor = anchor; open() }
     else if (!anchor) lastAnchor = null
   }
   const observer = new MutationObserver(() => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; sync() }) }); observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-ework-notes-session', 'data-odyssey-locale', 'data-home-guide-transition'] })
   const theme = new MutationObserver(render); theme.observe(surface, { attributes: true, attributeFilter: ['data-dark'] })
   const identity = () => { resetting=true;entries.clear();handoffPreloads.clear();reactRoot?.unmount();reactRoot=undefined;sessionId='';host.close('notes');resetting=false;document.dispatchEvent(new CustomEvent('sherlock:notes-reset')) }
   document.addEventListener('sherlock:notes-capability-activity',capabilityActivity);document.addEventListener('sherlock:notes-challenge-activity',activity);document.addEventListener('sherlock:notes-open', open); document.addEventListener('sherlock:notes-close', close); document.addEventListener('click', onNativeTabClick, true); sync()
-  return { prepareGuide,finishGuide,resetIdentity: identity, dispose: () => { identity(); observer.disconnect(); theme.disconnect(); cancelAnimationFrame(frame); style.remove(); surface.remove(); document.removeEventListener('sherlock:notes-capability-activity',capabilityActivity);document.removeEventListener('sherlock:notes-challenge-activity',activity);document.removeEventListener('sherlock:notes-open', open); document.removeEventListener('sherlock:notes-close', close); document.removeEventListener('click', onNativeTabClick, true) } }
+  return { flushCurrent,prepareGuide,finishGuide,resetIdentity: identity, dispose: () => { identity(); observer.disconnect(); theme.disconnect(); cancelAnimationFrame(frame); style.remove(); surface.remove(); document.removeEventListener('sherlock:notes-capability-activity',capabilityActivity);document.removeEventListener('sherlock:notes-challenge-activity',activity);document.removeEventListener('sherlock:notes-open', open); document.removeEventListener('sherlock:notes-close', close); document.removeEventListener('click', onNativeTabClick, true) } }
 }
