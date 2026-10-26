@@ -80,8 +80,8 @@ function DeliveryFileCard({path,sessionId,openFile,openSystemFile,canOpenSystem,
    if(gate&&['open-side','default-app'].includes(action)){const value=await gate.inspect({sendingSessionId:sessionId,path},{signal:controller.signal,force:true});if(!active())return;setAnnotationState({owner,value});if(value.kind!=='ordinary'&&value.status!=='success')throw Error(pptxAnnotationDeliveryText(value,en))}
    if(!active())return
    if(action==='open-side')await openFile(path)
-   else if(action==='default-app'){await openSystemFile(path);tell(en?'Opened with the default application':'已请求用默认应用打开')}
-   else if(action==='finder'){await window.dshDesktop.showItemInFolder(path);tell(en?'Shown in file manager':'已在文件管理器中显示')}
+   else if(action==='default-app')await openSystemFile(path)
+   else if(action==='finder')await window.dshDesktop.showItemInFolder(path)
   }catch(error){tell(error?.message||(en?'Unable to open this file. Please try again.':'文件暂时无法打开，请重试。'),true)}
   finally{if(owner.abort===controller){owner.busy=false;if(current())setBusy(false)}}
  }
