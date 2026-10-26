@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-05",
+  "branch": "codex/integration/20261026-05",
+  "baseMainCommit": "ef4ca306238cb6b5bca14c0a6ada9de514eb1ede",
+  "expectedMainCommit": "ef4ca306238cb6b5bca14c0a6ada9de514eb1ede",
+  "createdAt": "2026-10-26T02:00:34.700Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "同步笔记拖动选区、统一随航盾牌并补齐任务树子代理头像",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "691003766e15fdb5e185a876e6fd4514a0c17977",
+        "tipCommit": "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c",
+        "commits": [
+          {
+            "commit": "7bca800a510186728225e71fb9156c48e6859129",
+            "parents": [
+              "691003766e15fdb5e185a876e6fd4514a0c17977"
+            ],
+            "subject": "统一AI随航与评论员的盾牌图标"
+          },
+          {
+            "commit": "674f11bd55cead9c852aa8803eea04744de39d38",
+            "parents": [
+              "7bca800a510186728225e71fb9156c48e6859129"
+            ],
+            "subject": "让笔记演示选区随虚拟拖动同步扩展"
+          },
+          {
+            "commit": "b4c2e53b855dd45e132dd22c10df8a5c54f205f1",
+            "parents": [
+              "674f11bd55cead9c852aa8803eea04744de39d38"
+            ],
+            "subject": "验证笔记演示失焦暂停与检查恢复的真实调度边界"
+          },
+          {
+            "commit": "f69b74fcd5efbbcd73292a7935bdf062489c1490",
+            "parents": [
+              "b4c2e53b855dd45e132dd22c10df8a5c54f205f1"
+            ],
+            "subject": "同步笔记演示拖动选区并在失焦时暂停计时"
+          },
+          {
+            "commit": "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c",
+            "parents": [
+              "f69b74fcd5efbbcd73292a7935bdf062489c1490"
+            ],
+            "subject": "补齐任务管理子代理树的稳定角色头像"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/subagent-avatars.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-pointer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-shield-busy.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/assets/challenge-shield.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/challenge-ui.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/guide-selection.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/subagent-task-tree-avatars-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-notes-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-native-editor.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-pointer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-controller-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/subagent-task-tree-avatars-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/subagent-task-tree-avatars.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-feature-check-1-20261026.log",
+            "verifiedCommit": "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c",
+            "completedAt": "2026-10-26T01:56:15.771462+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-feature-check-2-20261026.log",
+            "verifiedCommit": "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c",
+            "completedAt": "2026-10-26T01:56:22.067708+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_SIDEBAR_SOURCE=/tmp/notes-selection-sync-20261026/sidebar-fixture-base.js",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guide-notes-native-editor.test.js",
+              "test/home-guide-notes-browser.test.js",
+              "test/home-guide-notes-focus-browser.test.js",
+              "test/home-guides.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/notes-challenge-controller-browser.test.js",
+              "test/subagent-avatars.test.js",
+              "test/subagent-avatars-browser.test.js",
+              "test/subagent-task-tree-avatars.test.js",
+              "test/subagent-task-tree-avatars-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-feature-check-3-20261026.log",
+            "verifiedCommit": "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c",
+            "completedAt": "2026-10-26T01:59:23.458661+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-feature-check-4-20261026.log",
+            "verifiedCommit": "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c",
+            "completedAt": "2026-10-26T01:59:31.940559+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-feature-check-5-20261026.log",
+            "verifiedCommit": "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c",
+            "completedAt": "2026-10-26T01:59:31.987073+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实NotesApp/原生Selection/生产Pointer中途帧与任务树实际SubagentView均通过聚焦浏览器验证；正式15本轮新四用例原生终态、PPT拖附件和Board连线中途帧已证。正式16实时文字框选/盾牌/任务管理头像待构建后原生复验。"
+        },
+        "acceptanceCriteria": [
+          "笔记用例文字选区随同一虚拟指针绘制逐步扩展，保留严格双token、段落位置与内容校验；取消尊重新用户选择；原生AI改写继续生效。",
+          "笔记用例失焦与原生随航检查共享暂停门闩，恢复同一步及剩余预算，关闭后不复活。",
+          "AI随航和AI评论员统一静态/运行态盾牌，保留深浅色、英文、reduced-motion。",
+          "任务管理正常与摘要水合子代理行复用同UUID头像和运行环，保留主代理、诊断、任务和操作语义。",
+          "clean main构建正式客户端并完成真实主界面与相关动作验收。"
+        ],
+        "risks": [
+          "正式16相关Native验收待构建后完成。",
+          "系统级概率鼠标冻结仍未稳定复现，fixed=false。",
+          "探索420px笔记区的完整原生格式工具条裁切边界保留，未绕过可见性校验。"
+        ],
+        "generatedAt": "2026-10-26T02:00:32.842354+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "env",
+        "SHERLOCK_TEST_SIDEBAR_SOURCE=/tmp/notes-selection-sync-20261026/sidebar-fixture-base.js",
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-pointer.test.ts",
+        "test/home-guide-notes-native-editor.test.js",
+        "test/home-guide-notes-browser.test.js",
+        "test/home-guide-notes-focus-browser.test.js",
+        "test/home-guides.test.ts",
+        "test/home-guide-timeline.test.ts",
+        "test/notes-challenge-controller-browser.test.js",
+        "test/subagent-avatars.test.js",
+        "test/subagent-avatars-browser.test.js",
+        "test/subagent-task-tree-avatars.test.js",
+        "test/subagent-task-tree-avatars-browser.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 600000
+    }
+  ],
+  "mainSynchronizations": []
+}
