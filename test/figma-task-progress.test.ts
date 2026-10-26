@@ -65,3 +65,16 @@ it('keeps the live list mounted through collapse and derives its header from tod
  expect(card.props['data-odyssey-task-collapsed']).toBe(true)
  expect(card.props.children.props.children[0].props.children[0].props.children.props.status).toBe('completed')
 })
+
+it('shows up to expand and down to collapse only in the task planning header',async()=>{
+ const win=new Window(),doc=win.document
+ doc.head.innerHTML='<style>'+await readFile('src/preload/figma-reading.css','utf8')+'</style>'
+ doc.body.innerHTML='<section class="lXshSW_root" data-odyssey-task-collapsed="true"><button class="lXshSW_header" aria-expanded="false"><span class="lXshSW_chevron"><svg viewBox="0 0 14 14"><path d="m3 5 4 4 4-4"/></svg></span></button></section><button><span class="unrelated-chevron" style="transform:rotate(0deg)">other</span></button>'
+ try{
+  const card=doc.querySelector('.lXshSW_root')!,arrow=doc.querySelector('.lXshSW_chevron')!
+  expect(win.getComputedStyle(arrow).transform).toBe('rotate(180deg)')
+  card.setAttribute('data-odyssey-task-collapsed','false');doc.querySelector('.lXshSW_header')!.setAttribute('aria-expanded','true')
+  expect(win.getComputedStyle(arrow).transform).toBe('rotate(0deg)')
+  expect(win.getComputedStyle(doc.querySelector('.unrelated-chevron')!).transform).toBe('rotate(0deg)')
+ }finally{await win.happyDOM.close()}
+})

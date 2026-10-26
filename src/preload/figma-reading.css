@@ -63,9 +63,9 @@ body .lXshSW_item { box-sizing:border-box; height:28px; min-height:28px; flex:no
 body .lXshSW_item .lXshSW_content { color:var(--odyssey-task-muted); font:400 13px/22px var(--odyssey-font-ui); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 body .lXshSW_item[data-status=in_progress] { background:var(--odyssey-task-active); }
 body .lXshSW_item[data-status=in_progress] .lXshSW_content { color:var(--odyssey-task-text); }
-body .lXshSW_chevron { width:12px; height:12px; flex:none; margin-left:auto; transform:rotate(180deg); transition:transform 180ms ease-in-out; }
+body .lXshSW_chevron { width:12px; height:12px; flex:none; margin-left:auto; transform:rotate(0deg); transition:transform 180ms ease-in-out; }
 body .lXshSW_chevron svg { width:12px; height:12px; }
-body .lXshSW_root[data-odyssey-task-collapsed=true] .lXshSW_chevron { transform:rotate(0); transition-duration:160ms; }
+body .lXshSW_root[data-odyssey-task-collapsed=true] .lXshSW_chevron { transform:rotate(180deg); transition-duration:160ms; }
 body .odyssey-task-reveal { display:grid; grid-template-rows:1fr; transition:grid-template-rows 180ms ease-in-out; }
 body .odyssey-task-reveal>div { min-height:0; overflow:hidden; }
 body .odyssey-task-list-seat { padding-bottom:8px; }
