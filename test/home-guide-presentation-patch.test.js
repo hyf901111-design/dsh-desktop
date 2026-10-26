@@ -10,7 +10,22 @@ import {patchPptxResize,stripPptxResizePatch} from '../scripts/lib/pptx-resize-s
 import {mkdtemp,writeFile,mkdir,readFile,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+import {execFileSync} from 'node:child_process'
+// Exercise this inner layer only after undoing the installed outer layers in
+// the same order as the production pipeline; keep its strict guards intact.
+const source=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripPlainSlashInput}from'./scripts/lib/plain-slash-input.mjs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(readFileSync(0,'utf8'))))))"],{input:readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),encoding:'utf8',maxBuffer:64*1024*1024})
+it('installs the real submitted-user projection and removes its exact hooks before native reentry',()=>{
+ const result=JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',`
+  import{readFileSync}from'node:fs';import{Script}from'node:vm';
+  import{patchHomeGuidePresentationNative as patch,stripHomeGuidePresentationNative as strip}from'./scripts/lib/home-guide-presentation-native.mjs';
+  import{stripPlainSlashInput}from'./scripts/lib/plain-slash-input.mjs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';
+  const source=stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))),raw=strip(source),once=patch(raw),twice=patch(once);
+  new Script(once);
+  const hook='const homePresentationSubmission=useHomePresentationSubmission(sessionId,order,nodeStore);',render='homePresentationSubmission&&react.createElement(HomePresentationSubmittedUser,';
+  console.log(JSON.stringify({hook:once.split(hook).length-1,render:once.split(render).length-1,exactInverse:strip(once)===raw,double:twice===once,legacy:patch(source)===once,drift:(()=>{try{strip(once.replace(hook,hook+'/*changed*/'));return false}catch{return true}})(),duplicate:(()=>{try{strip(once+'\\n'+hook);return false}catch{return true}})()}));
+ `],{encoding:'utf8',maxBuffer:64*1024*1024}))
+ expect(result).toEqual({hook:1,render:1,exactInverse:true,double:true,legacy:true,drift:true,duplicate:true})
+})
 it('uses the ordinary native composer and persisted file path without a private fake surface',()=>{
  const patched=patchHomeGuidePresentationNative(source)
  expect(patchHomeGuidePresentationNative(patched)).toBe(patched);expect(()=>new Script(patched)).not.toThrow()
