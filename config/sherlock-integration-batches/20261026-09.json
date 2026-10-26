@@ -200,6 +200,89 @@
           "看板极短视口仍保正常尺寸并有明确端点空间边界，不伪称所有小尺寸完整同时显示。"
         ],
         "generatedAt": "2026-10-26T12:52:08.504819+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6398abd97a72a564f88d2d5b0b86ef410e1aae7c",
+        "verificationCommit": "6398abd97a72a564f88d2d5b0b86ef410e1aae7c",
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/check-home19-integration-source-20261026.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 /tmp/check-home19-integration-source-20261026.py",
+            "verifiedCommit": "6398abd97a72a564f88d2d5b0b86ef410e1aae7c",
+            "completedAt": "2026-10-26T12:52:28.647Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "6398abd97a72a564f88d2d5b0b86ef410e1aae7c",
+            "completedAt": "2026-10-26T12:52:28.647Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "6398abd97a72a564f88d2d5b0b86ef410e1aae7c",
+            "completedAt": "2026-10-26T12:52:28.647Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-presentation-host.test.js",
+              "test/home-report-runtime.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guides.test.ts test/home-guide-session.test.ts test/home-guide-native.test.js test/home-presentation-host.test.js test/home-report-runtime.test.js --maxWorkers=2",
+            "verifiedCommit": "6398abd97a72a564f88d2d5b0b86ef410e1aae7c",
+            "completedAt": "2026-10-26T12:52:28.647Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6398abd97a72a564f88d2d5b0b86ef410e1aae7c",
+            "completedAt": "2026-10-26T12:52:28.647Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "6398abd97a72a564f88d2d5b0b86ef410e1aae7c",
+            "completedAt": "2026-10-26T12:52:28.647Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-26T12:52:28.647Z"
       }
     }
   ],
