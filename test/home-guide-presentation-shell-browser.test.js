@@ -9,7 +9,8 @@ import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 // Browser plugin not available. This headless fixture keeps the production
 // ConversationRoot, InputBar, session store and Figma styles; only external I/O
 // and the tutorial's content adapter are replaced.
-const evidence='/tmp/home-guide-entry-native-20261026/shell'
+const artifactRoot=process.env.SHERLOCK_HOME_GUIDE_ENTRY_ARTIFACT_ROOT||'/tmp/home-guide-entry-native-20261026'
+const evidence=artifactRoot+'/shell'
 let browser,runtimeSource,conversationSource,entry,styles
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
@@ -71,7 +72,7 @@ async function geometry(page){return page.evaluate(()=>{
 
 for(const[kind,index,view]of [['board',0,'research'],['note',1,'notes'],['ppt',2,'chat'],['report',3,'chat']]){
  it(`visibly returns through the real home button and ${view} Tab before starting the ${kind} example`,async()=>{
-  const f=await fixture({width:1000,height:900,hero:true,operations:true,entryKind:kind,reducedMotion:'no-preference'}),{page}=f,output='/tmp/home-guide-entry-native-20261026'
+  const f=await fixture({width:1000,height:900,hero:true,operations:true,entryKind:kind,reducedMotion:'no-preference'}),{page}=f,output=artifactRoot
   try{
    await mkdir(output,{recursive:true});await page.getByRole('button',{name:'切换到快速开始',exact:true}).click();await expect.poll(()=>page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-motion')).toBe('idle')
    await page.locator('button[data-case="'+index+'"]').click();await expect.poll(()=>page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(String(index))
@@ -79,7 +80,7 @@ for(const[kind,index,view]of [['board',0,'research'],['note',1,'notes'],['ppt',2
    await expect.poll(()=>page.evaluate(()=>window.shellProbe.entryTrace.actions.some(value=>value.type==='return'))).toBe(true)
    await page.screenshot({path:output+'/'+kind+'-return.png'})
    await page.waitForSelector('[data-home-guide-kind="'+kind+'"]',{timeout:5500}).catch(async error=>{await writeFile(output+'/'+kind+'-diagnostic.json',JSON.stringify({errors:f.errors,state:await page.evaluate(()=>({trace:window.shellProbe.entryTrace,header:document.querySelector('[data-srb-session-header]')?.outerHTML,feedback:document.querySelector('[data-odyssey-operations-feedback]')?.textContent,transition:document.documentElement.dataset.homeGuideTransitionSession}))},null,2)+'\n');throw error});await page.evaluate(()=>window.__testHomeGuideTimeline?.pause())
-   const trace=await page.evaluate(()=>window.shellProbe.entryTrace);expect(trace.actions.slice(0,4).map(value=>value.type)).toEqual(['return','tab:'+view,'prepare','open']);expect(trace.actions[0]).toMatchObject({phase:'idle',inert:true});expect(trace.actions[1]).toMatchObject({phase:'idle',inert:false});expect(trace.actions[2].selected).toBe(view)
+   const trace=await page.evaluate(()=>window.shellProbe.entryTrace);expect(trace.actions.slice(0,4).map(value=>value.type)).toEqual(['return','prepare','tab:'+view,'open']);expect(trace.actions[0]).toMatchObject({phase:'idle',inert:true});expect(trace.actions[2]).toMatchObject({phase:'idle',inert:false});expect(trace.actions[1].selected).toBe('chat')
    const frames=trace.frames.filter(value=>value.pointer);expect(frames.length).toBeGreaterThan(5);expect(frames[0].x).toBeCloseTo(trace.origin.x,0);expect(frames[0].y).toBeCloseTo(trace.origin.y,0)
    expect(new Set(frames.map(value=>value.pointer)).size).toBe(1);expect(frames.some(value=>value.phase==='moving')).toBe(true);expect(frames.some(value=>value.phase==='pressed')).toBe(true);expect(frames.some(value=>value.inert===false)).toBe(true)
    if(view==='chat')expect(await page.locator('textarea').inputValue()).toBe(before);expect(await page.evaluate(()=>window.shellProbe.shell.snapshot.draft)).toBe(before);expect(await page.evaluate(()=>window.shellProbe.sent)).toBe(0);expect(f.errors).toEqual([])
@@ -94,7 +95,7 @@ it('honors real typing in the original native composer while example preparation
   await expect.poll(()=>page.evaluate(()=>typeof window.shellProbe.releasePrepare)).toBe('function')
   await page.locator('textarea').focus();await page.keyboard.press('End');await page.keyboard.type('保留用户接管后的新内容📈');const draft=await page.locator('textarea').inputValue()
   await page.evaluate(()=>window.shellProbe.releasePrepare());await page.waitForTimeout(100)
-  expect(await page.evaluate(()=>window.shellProbe.entryTrace.actions.map(value=>value.type))).toEqual(['return','tab:chat','prepare']);expect(await page.locator('[data-home-guide]').count()).toBe(0)
+  expect(await page.evaluate(()=>window.shellProbe.entryTrace.actions.map(value=>value.type))).toEqual(['return','prepare']);expect(await page.locator('[data-home-guide]').count()).toBe(0)
   expect(await page.locator('[data-home-guide-pointer]').count()).toBe(0);expect(await page.evaluate(()=>window.shellProbe.shell.snapshot.draft)).toBe(draft);expect(draft).toContain('保留用户接管后的新内容📈');expect(await page.locator('textarea').evaluate(node=>node===document.activeElement)).toBe(true);expect(f.errors).toEqual([])
   expect(await page.locator('[data-odyssey-operations-feedback]').count()).toBe(0)
  }finally{await f.close()}

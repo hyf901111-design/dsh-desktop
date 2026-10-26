@@ -36,10 +36,10 @@ function operationsEntryFixture(){
  f.setOpen((detail,reply)=>{events.push('open');reply({sessionId:detail.sessionId,cwd:'/tmp/example'})})
  return{...f,center,card,back,events,abort,context}
 }
-test('demonstrates the real return control and source Notes tab before preparing a separate example',async()=>{
+test('prepares the separate example while approaching the real Notes tab, before leaving the source composer',async()=>{
  vi.useFakeTimers();const f=operationsEntryFixture(),pending=f.controller.start('note',{replay:true,entry:f.context} as any)
  await vi.advanceTimersByTimeAsync(2600);await pending
- expect(f.events.slice(0,4)).toEqual(['return','tab:notes','prepare','open']);expect(f.context.handoff).toHaveBeenCalledOnce();expect(f.text.value).toBe('原有草稿')
+ expect(f.events.slice(0,4)).toEqual(['return','prepare','tab:notes','open']);expect(f.context.handoff).toHaveBeenCalledOnce();expect(f.text.value).toBe('原有草稿')
  await f.controller.reset(false);expect(document.querySelector('[data-home-guide-pointer]')).toBeNull()
 })
 test.each(['abort','draft','composition','navigation','escape'])('cancels an operations entry on %s before any independent session is prepared',async change=>{
@@ -61,6 +61,19 @@ test('does not continue after cancellation during the real input handover wait',
  const pending=f.controller.start('note',{replay:true,entry:f.context}).then(()=>null,error=>error)
  await vi.advanceTimersByTimeAsync(900);expect(f.context.revealComposer).toHaveBeenCalledOnce();f.abort.abort();reveal();await vi.advanceTimersByTimeAsync(0)
  expect(await pending).toMatchObject({name:'AbortError'});expect(f.events).toEqual(['return']);expect(f.requests).toEqual([]);expect(f.context.handoff).not.toHaveBeenCalled();expect(f.text.value).toBe('原有草稿');expect(document.querySelector('[data-home-guide-pointer]')).toBeNull()
+})
+test('holds a prepared entry while the platform focus gate is paused and resumes without repeating preparation',async()=>{
+ vi.useFakeTimers();const f=operationsEntryFixture();let complete!:()=>void
+ f.setPrepare(detail=>{f.events.push('prepare');complete=()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:detail.requestId,ok:true,sessionId:'example-note-new',cwd:'/tmp/example',title:'已保存示例',fresh:true}}))})
+ const pending=f.controller.start('note',{replay:true,entry:f.context});await vi.advanceTimersByTimeAsync(1600);expect(complete).toBeTypeOf('function')
+ focus(false);complete();await vi.advanceTimersByTimeAsync(1500);expect(f.events).toEqual(['return','prepare']);expect(f.context.handoff).not.toHaveBeenCalled()
+ focus(true);await vi.advanceTimersByTimeAsync(1600);await pending;expect(f.events).toEqual(['return','prepare','tab:notes','open']);expect(f.requests.filter(request=>request.command==='prepare')).toHaveLength(1)
+})
+test('does not open the prepared example when the actual native tab did not accept its mode action',async()=>{
+ vi.useFakeTimers();const f=operationsEntryFixture(),tab=f.header.querySelector<HTMLButtonElement>('[data-conversation-view-id="notes"]')!
+ tab.addEventListener('click',event=>event.stopImmediatePropagation(),true)
+ const pending=f.controller.start('note',{replay:true,entry:f.context}).then(()=>null,error=>error);await vi.advanceTimersByTimeAsync(3000)
+ expect(await pending).toMatchObject({message:'模式入口尚未就绪，请重试。'});expect(f.requests.map(request=>request.command)).toEqual(['prepare']);expect(f.text.value).toBe('原有草稿');expect(document.querySelector('[data-home-guide-pointer]')).toBeNull()
 })
 test('prepares and opens an independent saved session before mounting the tutorial',async()=>{
  const f=fixture();await f.controller.start('note')
