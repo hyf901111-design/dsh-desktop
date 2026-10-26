@@ -3,9 +3,12 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { mountHomeGuides } from '../src/preload/home-guides'
 let dispose = () => {}, off = () => {}
 const hiddenDescriptor=Object.getOwnPropertyDescriptor(document,'hidden')
+const focusDescriptor=Object.getOwnPropertyDescriptor(document,'hasFocus')
+function focus(focused:boolean){Object.defineProperty(document,'hasFocus',{configurable:true,value:()=>focused});window.dispatchEvent(new Event(focused?'focus':'blur'))}
 function visibility(hidden:boolean){Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});document.dispatchEvent(new Event('visibilitychange'))}
-afterEach(async () => { await dispose(); off(); document.body.innerHTML = ''; delete document.documentElement.dataset.homeGuideTransition; delete document.documentElement.dataset.homeGuideTransitionSession;hiddenDescriptor?Object.defineProperty(document,'hidden',hiddenDescriptor):delete(document as any).hidden; vi.useRealTimers() })
+afterEach(async () => { await dispose(); off(); document.body.innerHTML = ''; delete document.documentElement.dataset.homeGuideTransition; delete document.documentElement.dataset.homeGuideTransitionSession;hiddenDescriptor?Object.defineProperty(document,'hidden',hiddenDescriptor):delete(document as any).hidden;focusDescriptor?Object.defineProperty(document,'hasFocus',focusDescriptor):delete(document as any).hasFocus; vi.useRealTimers() })
 function fixture(fresh = true) {
+ focus(true)
  document.body.innerHTML = '<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="original"><div data-srb-tabs><button data-conversation-view-id="chat" aria-selected="true">对话</button><button data-conversation-view-id="notes" aria-selected="false">笔记</button><button data-conversation-view-id="research" aria-selected="false">研究</button></div></header><div class="wSkVaW_scrollBody">已保存历史</div><div data-center-composer-host><textarea>原有草稿</textarea></div></div></main>'
  const header=document.querySelector<HTMLElement>('header')!, text=document.querySelector('textarea')!, requests:any[]=[]
  for(const button of header.querySelectorAll('button'))button.addEventListener('click',()=>{for(const tab of header.querySelectorAll('button'))tab.setAttribute('aria-selected',String(tab===button))})
@@ -220,4 +223,47 @@ test('keeps mount and completion save faults visible without playback controls',
  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('笔记打开失败');expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(false)
  await f.controller.reset();f.flush.mockRejectedValueOnce(Error('保存冲突'));await f.controller.start('note');await vi.advanceTimersByTimeAsync(50000)
  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error');expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('保存冲突');expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(false)
+})
+
+// A token-owned note selection is the only cue that may publish live drag frames.
+function dragTarget(token:string,x:number,y:number){
+ const node=document.createElement('span');node.setAttribute('data-home-guide-cue-target',token);node.getBoundingClientRect=()=>({left:x,top:y,right:x+2,bottom:y+2,width:2,height:2,x,y,toJSON(){return{}}});document.body.append(node);return node
+}
+test('publishes live JSON selection frames from the same note pointer drag before acknowledgement',async()=>{
+ vi.useFakeTimers();const f=fixture();f.runStep.mockImplementation(()=>new Promise(()=>{}));await f.controller.start('note')
+ const runId=document.documentElement.dataset.homeGuidePointerRun!,requestId='selection-one',targetToken=runId+':'+requestId+':target',fromTargetToken=runId+':'+requestId+':from'
+ dragTarget(fromTargetToken,120,140);dragTarget(targetToken,400,260)
+ const frames:any[]=[],replies:any[]=[],receive=(event:Event)=>frames.push((event as CustomEvent).detail),reply=(event:Event)=>replies.push((event as CustomEvent).detail)
+ window.addEventListener('sherlock:home-guide-cue-progress',receive);window.addEventListener('sherlock:home-guide-cue-reply',reply)
+ try{
+  window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId,requestId,targetToken,fromTargetToken,action:'drag',selection:true}}))
+  await vi.advanceTimersByTimeAsync(800)
+  const moving=frames.filter(frame=>frame.phase==='dragging');expect(moving.length).toBeGreaterThan(2);expect(replies).toEqual([])
+  expect(new Set(moving.map(frame=>frame.x)).size).toBeGreaterThan(2)
+  for(const frame of frames){expect(frame.runId).toBe(runId);expect(frame.requestId).toBe(requestId);expect(Number.isFinite(frame.x)&&Number.isFinite(frame.y)).toBe(true);expect(JSON.parse(JSON.stringify(frame))).toEqual(frame);expect(Object.values(frame).every(value=>['string','number'].includes(typeof value))).toBe(true)}
+  await vi.advanceTimersByTimeAsync(1000);expect(frames.some(frame=>frame.phase==='released')).toBe(true);expect(replies).toEqual([{runId,requestId,ok:true,message:undefined}])
+ }finally{window.removeEventListener('sherlock:home-guide-cue-progress',receive);window.removeEventListener('sherlock:home-guide-cue-reply',reply)}
+})
+test.each([['note',false],['ppt',true]] as const)('does not publish selection frames for %s cues without a note selection lease',async(kind,selection)=>{
+ vi.useFakeTimers();const f=fixture();f.runStep.mockImplementation(()=>new Promise(()=>{}));await f.controller.start(kind)
+ const runId=document.documentElement.dataset.homeGuidePointerRun!,requestId='no-selection',targetToken=runId+':'+requestId+':target',fromTargetToken=runId+':'+requestId+':from'
+ dragTarget(fromTargetToken,120,140);dragTarget(targetToken,400,260)
+ const frames:any[]=[],receive=(event:Event)=>frames.push((event as CustomEvent).detail);window.addEventListener('sherlock:home-guide-cue-progress',receive)
+ try{window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId,requestId,targetToken,fromTargetToken,action:'drag',selection}}));await vi.advanceTimersByTimeAsync(1800);expect(frames).toEqual([])}finally{window.removeEventListener('sherlock:home-guide-cue-progress',receive)}
+})
+
+test('pauses a newly opened note before its first actor action when the native editor has no window focus',async()=>{
+ vi.useFakeTimers();const f=fixture();focus(false);await f.controller.start('note');await vi.advanceTimersByTimeAsync(35000)
+ expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused');expect(f.runStep).not.toHaveBeenCalled()
+ focus(true);await vi.advanceTimersByTimeAsync(0);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write'])
+})
+test('preserves a note review readiness budget across window blur and resumes the same step on focus',async()=>{
+ vi.useFakeTimers();const f=fixture();let reviewed=false
+ f.runStep.mockImplementation(async step=>{if(step==='review'){await f.adapters.mountNotes.mock.calls[0]![2].wait(10000);reviewed=true}})
+ await f.controller.start('note');await vi.advanceTimersByTimeAsync(2100);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review'])
+ await vi.advanceTimersByTimeAsync(500);focus(false);await vi.advanceTimersByTimeAsync(35000)
+ expect(reviewed).toBe(false);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused');expect(f.release).not.toHaveBeenCalled()
+ focus(true);await vi.advanceTimersByTimeAsync(9499);expect(reviewed).toBe(false);await vi.advanceTimersByTimeAsync(1);expect(reviewed).toBe(true)
+ expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing');expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review'])
+ await f.controller.reset(false);focus(false);focus(true);await vi.advanceTimersByTimeAsync(35000);expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull()
 })

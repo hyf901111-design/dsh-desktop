@@ -2,6 +2,7 @@ import { patchResearchTabIcons } from './research-tab-icons.mjs'
 import { patchSidebarSystemTitles } from './sidebar-system-titles.mjs'
 import { patchSidebarFileRefresh, patchSidebarRefreshFeedback } from './sidebar-file-refresh.mjs'
 import { patchSubagentPanelDestination, patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
+import {patchSubagentAvatars} from './subagent-avatars.mjs'
 import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
 import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
 import { readFile, writeFile, stat } from 'node:fs/promises'
@@ -1175,6 +1176,7 @@ function patchScheduledGlobalPanel(source) {
 }
 
 export function patchBetterSidebarClient(source) {
+  source = patchSubagentAvatars(source, 'task-tree')
   source = patchSidebarPptxToolbar(source)
   source = patchResearchTabIcons(source)
   source = source.replace("tab.id === componentTabId ? (0, react_jsx_runtime.jsxs)('svg', {width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1,children:[(0, react_jsx_runtime.jsx)('circle',{cx:8,cy:8,r:6}),(0, react_jsx_runtime.jsx)('path',{d:'M8 4v4l3 2'})]}) : getTabIcon?.(tab) ?? null", "getTabIcon?.(tab.id === componentTabId ? {...tab,type:'scheduled'} : tab) ?? null")

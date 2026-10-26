@@ -8,6 +8,7 @@ import {returnHomeNotesToTop} from './home-guide-notes-scroll'
 import {createHomeNotesNativeBridge,type HomeNotesNativeBridge} from './home-guide-notes-native'
 import {HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 import {noteUiText as t} from '../../packages/dsh-research-task-runtime/notes-locale.js'
+import type {HomeGuidePointerFrame} from './home-guide-pointer'
 
 export type HomeNotesGuideStep='write'|'challenge'|'review'|'select'|'optimize'|'replace'|'consensus-select'|'consensus-evidence'|'consensus-optimize'|'consensus-replace'|'note-task-compose'|'note-task-review'|'note-task-apply'|'note-select-paragraph'|'note-rewrite'|'note-rewrite-apply'|'note-return-top'
 export type HomeNotesGuide={runStep(step:HomeNotesGuideStep):Promise<void>;flush():Promise<void>;dispose():void}
@@ -77,7 +78,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   }
   if(right<=left||bottom<=top)throw Error('演示控件已移出视口，请重新打开。')
  }
- const point=async(target:HTMLElement,label:string,action:'move'|'click'|'drag'='click',fromTarget?:HTMLElement)=>{
+ const point=async(target:HTMLElement,label:string,action:'move'|'click'|'drag'='click',fromTarget?:HTMLElement,onProgress?:(frame:HomeGuidePointerFrame)=>void)=>{
   await playing();validTarget(target);if(fromTarget)validTarget(fromTarget)
   const win=document.defaultView!,pointerRun=document.documentElement.dataset.homeGuidePointerRun
   if(pointerRun&&pointerRun!==options.runId)throw abortError()
@@ -87,15 +88,27 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    const requestId=crypto.randomUUID(),deadline=new AbortController()
    const targetToken=options.runId+':'+requestId+':target',fromTargetToken=fromTarget?options.runId+':'+requestId+':from':undefined
    const markers:Array<[HTMLElement,string]>=[[target,targetToken],...(fromTarget&&fromTargetToken?[[fromTarget,fromTargetToken] as [HTMLElement,string]]:[])]
-   const clean=()=>{deadline.abort();signal.removeEventListener('abort',stop);win.removeEventListener('sherlock:home-guide-cue-reply',reply);for(const[node,token]of markers)if(node.getAttribute('data-home-guide-cue-target')===token)node.removeAttribute('data-home-guide-cue-target')}
-   const stop=()=>{clean();reject(abortError())}
-   const reply=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.runId!==options.runId||value?.requestId!==requestId)return;clean();value.ok===true?resolve():reject(Error(value.message||'演示控件已变化，请重新打开。'))}
-   signal.addEventListener('abort',stop,{once:true});win.addEventListener('sherlock:home-guide-cue-reply',reply)
-   void wait(10000,deadline.signal).then(()=>{clean();reject(Error('演示指针未能到达控件，请重新播放。'))},()=>{})
+   let done=false
+   const clean=()=>{deadline.abort();signal.removeEventListener('abort',stop);win.removeEventListener('sherlock:home-guide-cue-reply',reply);win.removeEventListener('sherlock:home-guide-cue-progress',progress);for(const[node,token]of markers)if(node.getAttribute('data-home-guide-cue-target')===token)node.removeAttribute('data-home-guide-cue-target')}
+   const finish=(error?:unknown)=>{if(done)return;done=true;clean();error?reject(error):resolve()}
+   const stop=()=>finish(abortError())
+   const reply=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.runId!==options.runId||value?.requestId!==requestId)return;finish(value.ok===true?undefined:Error(value.message||'演示控件已变化，请重新打开。'))}
+   const progress=(event:Event)=>{
+    const value=(event as CustomEvent).detail
+    if(done||!onProgress||value?.runId!==options.runId||value?.requestId!==requestId)return
+    try{
+     assert();if(document.documentElement.dataset.homeGuidePointerRun!==options.runId||markers.some(([node,token])=>node.getAttribute('data-home-guide-cue-target')!==token))throw abortError()
+     if(!Number.isFinite(value.x)||!Number.isFinite(value.y)||!['moving','pressed','dragging','released','idle'].includes(value.phase))throw Error('演示选区进度已变化。')
+     validTarget(target,true);if(fromTarget)validTarget(fromTarget,true)
+     onProgress({x:value.x,y:value.y,phase:value.phase})
+    }catch(error){finish(error)}
+   }
+   signal.addEventListener('abort',stop,{once:true});win.addEventListener('sherlock:home-guide-cue-reply',reply);if(onProgress)win.addEventListener('sherlock:home-guide-cue-progress',progress)
+   void wait(10000,deadline.signal).then(()=>finish(Error('演示指针未能到达控件，请重新播放。')),()=>{})
    try{
     for(const[node,token]of markers)node.setAttribute('data-home-guide-cue-target',token)
-    win.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:options.runId,requestId,label,action,targetToken,...(fromTargetToken?{fromTargetToken}:{})}}))
-   }catch(error){clean();reject(error)}
+    win.dispatchEvent(new CustomEvent('sherlock:home-guide-cue',{detail:{runId:options.runId,requestId,label,action,targetToken,...(fromTargetToken?{fromTargetToken}:{}),...(onProgress?{selection:true}:{})}}))
+   }catch(error){finish(error)}
   })
   await playing();validTarget(target,true);if(fromTarget)validTarget(fromTarget,true)
   if(tracked&&document.documentElement.dataset.homeGuidePointerRun!==options.runId)throw abortError()
@@ -274,11 +287,23 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   scrollTo(paragraph);await wait(550)
   const endpoints=()=>{const range=document.createRange();range.selectNodeContents(paragraph);const boxes=[...range.getClientRects()].filter(box=>box.width>0&&box.height>0),first=boxes[0],last=boxes.at(-1);if(!first||!last)throw Error('演示段落尚未就绪。');return[{x:first.left+1,y:first.top+first.height/2},{x:last.right-1,y:last.top+last.height/2}]}
   const points=endpoints(),anchors=points.map(point=>{const anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;background:transparent;left:'+point.x+'px;top:'+point.y+'px';document.body.append(anchor);return anchor})
+  let selection:ReturnType<NotesGuideEditorApi['beginParagraphSelection']>|undefined,released=false,dragged=false
   try{
-   await point(anchors[1]!,'选中这一整段研究判断','drag',anchors[0]);unchanged()
+   await point(anchors[1]!,'选中这一整段研究判断','drag',anchors[0],frame=>{
+    unchanged()
+    if(frame.phase==='pressed'){
+     if(selection)throw Error('演示选区进度已变化。')
+     selection=editor!.beginParagraphSelection('guide-note-logic',HOME_NOTES_GUIDE_SELECTION)
+    }
+    if(frame.phase==='dragging'||frame.phase==='released'){
+     if(!selection||released||frame.phase==='released'&&!dragged)throw Error('演示选区进度已变化。')
+     selection.updateAt(frame);if(frame.phase==='dragging')dragged=true;else released=true
+    }
+   });unchanged()
    if(endpoints().some((point,index)=>Math.hypot(point.x-points[index]!.x,point.y-points[index]!.y)>4))throw Error('演示段落的位置已变化，请重新播放。')
-   editor!.selectParagraph('guide-note-logic',HOME_NOTES_GUIDE_SELECTION)
-  }finally{for(const anchor of anchors)anchor.remove()}
+   if(document.documentElement.dataset.homeGuidePointerRun===options.runId){if(!selection||!released)throw Error('演示选区未完成，请重新播放。');selection.finish()}
+   else editor!.selectParagraph('guide-note-logic',HOME_NOTES_GUIDE_SELECTION)
+  }finally{selection?.cancel();for(const anchor of anchors)anchor.remove()}
   await until(rewriteButton);await frame()
  }
  const rewrite=async()=>{

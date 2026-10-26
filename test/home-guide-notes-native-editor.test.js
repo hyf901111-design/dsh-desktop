@@ -1,16 +1,23 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
+import {writeFileSync,mkdirSync,mkdtempSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+const selectionOutput=process.env.SHERLOCK_NOTE_SELECTION_OUTPUT_DIR||mkdtempSync(join(tmpdir(),'home-note-selection-'));mkdirSync(selectionOutput,{recursive:true})
 let browser,script,css
 beforeAll(async()=>{
  const built=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import React from'react';import{createRoot}from'react-dom/client';import{NotesApp}from'./src/preload/notes/editor';
+ import React from'react';import{createRoot}from'react-dom/client';import{NotesApp}from'./src/preload/notes/editor';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';
  import'@blocknote/mantine/style.css';import'./src/preload/notes/style.css';import'./src/preload/notes/challenge.css';
+ import'./src/preload/home-guides.css';
  document.documentElement.dataset.homeGuidePointerRun='native-note-run';window.events=[];window.requests=[];window.results=[];
  for(const name of ['notes-composer-state','notes-composer-draft','notes-submit-accepted','notes-task-state','notes-reference-state'])document.addEventListener('sherlock:'+name,event=>window.events.push({name,detail:event.detail}));
  const bridge={request:async(method,input)=>{window.requests.push({method,input});if(method==='load')return{saved:{title:'',blocks:[],yjs:'',revision:0,updatedAt:0}};if(method==='save')return{status:'saved',saved:{...input.content,revision:input.revision+1}};if(method==='generate')return new Promise(resolve=>window.results.push({resolve,input}));return{}},draft:async()=>{}};
  window.noteRoot=createRoot(document.querySelector('#note'));window.noteRoot.render(<NotesApp sessionId='native-note-session' bridge={bridge} dark={false} navigate={()=>{}} guide={{native:{runId:'native-note-run'},ready:api=>window.noteApi=api,dispose:()=>window.noteApi=undefined}}/>);
  window.submitNative=(prompt='请整理专业研究摘要。',sessionId='native-note-session')=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId,prompt,images:[],submissionId:window.requests.length,admission:{draft:prompt,draftRev:1,imageIds:[]}}}));
+ window.selectionPoint=offset=>{const root=document.querySelector('[data-id="logic"] .bn-inline-content'),walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;while(node=walk.nextNode()){if(offset<node.length){const range=document.createRange();range.setStart(node,offset);range.setEnd(node,Math.min(node.length,offset+1));const box=range.getBoundingClientRect();return{x:box.left+Math.min(1,box.width/4),y:box.top+box.height/2}}offset-=node.length}throw Error('selection point missing')};
+ window.dragSelection=()=>{const text=document.querySelector('[data-id="logic"] .bn-inline-content').textContent,range=document.createRange();range.selectNodeContents(document.querySelector('[data-id="logic"] .bn-inline-content'));const boxes=[...range.getClientRects()].filter(r=>r.width&&r.height),start=boxes[0],end=boxes.at(-1),anchor=point=>{const node=document.createElement('span');node.style.cssText='position:fixed;width:2px;height:2px;left:'+point.x+'px;top:'+point.y+'px';document.body.append(node);return node},from=anchor({x:start.left,y:start.top+start.height/2}),to=anchor({x:end.right-2,y:end.top+end.height/2});let lease,gate;window.selectionSamples=[];window.selectionAbort=new AbortController();window.selectionPause=()=>gate=new Promise(resolve=>window.selectionResume=()=>{gate=undefined;resolve()});window.selectionPointer=createHomeGuidePointer(document,{runId:'native-note-run',signal:window.selectionAbort.signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>gate||Promise.resolve()});window.selectionAction=window.selectionPointer.perform({target:to,fromTarget:from,action:'drag',onFrame:frame=>{if(frame.phase==='pressed')lease=window.noteApi.beginParagraphSelection('logic',text);if(lease&&['pressed','dragging','released'].includes(frame.phase)){lease.updateAt(frame);window.selectionSamples.push({...frame,text:getSelection().toString(),rects:[...getSelection().getRangeAt(0).getClientRects()].filter(r=>r.width>0).length})}}}).then(()=>{lease.finish();window.selectionDone=true},error=>{lease?.cancel();window.selectionError=error.message}).finally(()=>{from.remove();to.remove();window.selectionPointer.dispose()})};
  `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}})
  script=built.outputFiles.find(file=>file.path.endsWith('.js')).text;css=built.outputFiles.find(file=>file.path.endsWith('.css'))?.text||''
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -79,5 +86,53 @@ it('does not surface a late generation after its run has been cancelled',async()
   await page.evaluate(()=>{window.noteApi.prepareNative();window.submitNative()});await expect.poll(()=>page.evaluate(()=>window.results.length)).toBe(1)
   await page.evaluate(()=>{delete document.documentElement.dataset.homeGuidePointerRun;window.results[0].resolve({kind:'text',markdown:'取消后不应该出现。'})});await page.waitForTimeout(100)
   expect(await page.locator('.en-preview').count()).toBe(0);expect(await page.locator('.bn-editor').innerText()).not.toContain('取消后');expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it('extends a real multi-line Chinese and emoji selection with the painted drag before release',async()=>{
+ const{context,page,errors}=await fixture();try{
+  expect(await page.evaluate(()=>typeof window.noteApi.beginParagraphSelection)).toBe('function')
+  await page.setViewportSize({width:760,height:900})
+  const text='订单增长📈不能保证利润翻倍，仍需验证产品价格与回款。研究员👩🏽‍💻需要逐季核验现金流，观察毛利率、合同负债与风险信号。'
+  await page.evaluate(text=>{window.noteApi.setDocument('研究笔记',[{id:'intro',type:'paragraph',content:'原文摘要必须保留。'},{id:'logic',type:'paragraph',content:[{type:'text',text:text.slice(0,8),styles:{bold:true}},{type:'text',text:text.slice(8),styles:{}}]}])},text)
+  await page.locator('[data-id="logic"] .bn-inline-content').scrollIntoViewIfNeeded();await page.evaluate(()=>window.dragSelection())
+  await expect.poll(()=>page.evaluate(()=>window.selectionSamples.filter(row=>row.phase==='dragging'&&row.text.length>0&&row.text.length<document.querySelector('[data-id="logic"] .bn-inline-content').textContent.length).length)).toBeGreaterThan(2)
+  await page.evaluate(()=>{window.selectionPause()});await page.waitForTimeout(80);const paused=await page.evaluate(()=>({count:window.selectionSamples.length,text:getSelection().toString()}));await page.waitForTimeout(200);expect(await page.evaluate(()=>({count:window.selectionSamples.length,text:getSelection().toString()}))).toEqual(paused)
+  await page.screenshot({path:join(selectionOutput,'selection-multiline-partial-1.png')})
+  await page.evaluate(()=>window.selectionResume());await page.waitForFunction(({first,total})=>getSelection().toString().length>Math.max(first+4,total*.45)&&getSelection().toString().length<total,{first:paused.text.length,total:text.length});await page.evaluate(()=>{window.selectionPause()});await page.waitForTimeout(60);await page.screenshot({path:join(selectionOutput,'selection-multiline-partial-2.png')})
+  await page.evaluate(()=>window.selectionResume());await page.evaluate(()=>window.selectionAction)
+  const result=await page.evaluate(()=>({samples:window.selectionSamples,selected:getSelection().toString(),error:window.selectionError,done:window.selectionDone}));expect(result.error).toBeUndefined();expect(result.done).toBe(true);expect(result.selected).toBe(text)
+  const partial=result.samples.filter(row=>row.phase==='dragging'&&row.text.length>0&&row.text.length<text.length),boundaries=new Set([...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text)].map(row=>row.index));expect(new Set(partial.map(row=>row.text)).size).toBeGreaterThan(2);expect(partial.some(row=>row.rects>1)).toBe(true);expect(partial.every(row=>text.startsWith(row.text)&&boundaries.has(row.text.length))).toBe(true);expect(await page.evaluate(()=>window.results.length)).toBe(0);expect(errors).toEqual([])
+  writeFileSync(join(selectionOutput,'selection-frame-samples.json'),JSON.stringify(result,null,2))
+  await page.screenshot({path:join(selectionOutput,'selection-multiline-released.png')})
+ }finally{await context.close()}
+},15000)
+it('uses viewport coordinates after scrolling and preserves a newer user selection on cancellation',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{window.noteApi.setDocument('研究笔记',[...Array.from({length:12},(_,i)=>({id:'p'+i,type:'paragraph',content:'前置内容保持。'.repeat(12)})),{id:'logic',type:'paragraph',content:'中文📈研究判断需要检查现金回款和利润质量。'},{id:'after',type:'paragraph',content:'用户新的选择必须保留。'}])})
+  await page.locator('[data-id="logic"] .bn-inline-content').scrollIntoViewIfNeeded()
+  const selected=await page.evaluate(()=>{window.lease=window.noteApi.beginParagraphSelection('logic','中文📈研究判断需要检查现金回款和利润质量。');window.lease.updateAt(window.selectionPoint(12));return getSelection().toString()});expect(selected.length).toBeGreaterThan(0);expect(selected.length).toBeLessThan(25)
+  await page.evaluate(()=>{window.noteApi.selectParagraph('after','用户新的选择必须保留。');window.lease.cancel()});expect(await page.evaluate(()=>getSelection().toString())).toBe('用户新的选择必须保留。');expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it('cancels a selection lease after document geometry changes without restoring a stale range',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{window.lease=window.noteApi.beginParagraphSelection('logic','订单增长不能保证利润翻倍，仍需验证产品价格和回款。');window.lease.updateAt(window.selectionPoint(10))})
+  await page.evaluate(()=>document.querySelector('[data-id="logic"]').style.transform='translateY(40px)')
+  expect(await page.evaluate(()=>{try{window.lease.updateAt(window.selectionPoint(15));return'accepted'}catch(error){window.lease.cancel();return error.message}})).toContain('变化');expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it('restores only its own interrupted selection and leaves a newer outside selection and focus intact',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{window.noteApi.selectParagraph('intro','原文摘要必须保留。');window.lease=window.noteApi.beginParagraphSelection('logic','订单增长不能保证利润翻倍，仍需验证产品价格和回款。');window.lease.updateAt(window.selectionPoint(10));window.lease.cancel()});expect(await page.evaluate(()=>getSelection().toString())).toBe('原文摘要必须保留。')
+  await page.evaluate(()=>{window.lease=window.noteApi.beginParagraphSelection('logic','订单增长不能保证利润翻倍，仍需验证产品价格和回款。');window.lease.updateAt(window.selectionPoint(10));const p=document.createElement('p'),button=document.createElement('button');p.id='user-selection';p.textContent='用户在其他区域的新选择';button.id='user-focus';document.body.append(p,button);button.focus();const r=document.createRange();r.selectNodeContents(p);getSelection().removeAllRanges();getSelection().addRange(r);window.lease.cancel()})
+  expect(await page.evaluate(()=>({selected:getSelection().toString(),focus:document.activeElement.id}))).toEqual({selected:'用户在其他区域的新选择',focus:'user-focus'});expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
+it.each(['abort','owner','user-selection'])('keeps a user selection outside Notes when an in-flight drag loses %s',async reason=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>window.dragSelection())
+  await expect.poll(()=>page.evaluate(()=>window.selectionSamples.filter(row=>row.phase==='dragging'&&row.text.length>0).length)).toBeGreaterThan(1)
+  await page.evaluate(reason=>{const p=document.createElement('p'),button=document.createElement('button');p.textContent='用户保留的其他选择';button.id='new-focus';document.body.append(p,button);button.focus();const range=document.createRange();range.selectNodeContents(p);getSelection().removeAllRanges();getSelection().addRange(range);if(reason==='abort')window.selectionAbort.abort();else if(reason==='owner')document.documentElement.dataset.homeGuidePointerRun='another-run'},reason)
+  await page.evaluate(()=>window.selectionAction);const final=await page.evaluate(()=>({text:getSelection().toString(),focus:document.activeElement.id,count:window.selectionSamples.length,error:window.selectionError}));expect(final).toMatchObject({text:'用户保留的其他选择',focus:'new-focus'});expect(final.error).toBeTruthy();await page.waitForTimeout(100);expect(await page.evaluate(()=>window.selectionSamples.length)).toBe(final.count);expect(errors).toEqual([])
  }finally{await context.close()}
 },12000)

@@ -11,7 +11,7 @@ if(manifest.decorations?.length!==4||manifest.decorations.some(r=>! /^(track|arc
 const roles=manifest.characters.map(({key,name,englishName,file})=>({key,name,englishName,file}))
 const prefix='sherlock:subagent-avatars'
 // A literal generated block has identical bytes under Node and test transforms.
-// Both native plugin closures receive this same stateless implementation.
+// Every native entry receives this same stateless implementation.
 const definition='/* '+prefix+':definition:v1 */\nconst ODYSSEY_SUBAGENT_ROLES = '+JSON.stringify(roles)+';\n'+String.raw`function odysseySubagentRole(id) {
   if (typeof id !== 'string' || !id || id.length > 256) return null;
   let hash = 2166136261;
@@ -40,22 +40,30 @@ function OdysseySubagentAvatar({sessionId, activity, size = 32, statusLabel}) {
 `+'/* '+prefix+':definition:end */\n'
 const hooks={
  catalog:{anchor:'function CatalogRows(',before:'(0, react_jsx_runtime.jsx)("span", { "data-odyssey-subagent-activity": entry.activity === "running" ? "running" : "idle", "aria-hidden": "true" })',after:'/* sherlock:subagent-avatars:catalog:v1 */(0, react_jsx_runtime.jsx)(OdysseySubagentAvatar, { sessionId: entry.id, activity: entry.activity, size: 32, statusLabel: activity })/* sherlock:subagent-avatars:catalog:end */'},
- detail:{anchor:'function OdysseySubagentPanelHeader(',before:"react_jsx_runtime.jsx('span',{'data-odyssey-subagent-activity':session.running?'running':'idle','aria-hidden':true})",after:"/* sherlock:subagent-avatars:detail:v1 */react_jsx_runtime.jsx(OdysseySubagentAvatar, { sessionId: sessionId, activity: session.running ? 'running' : 'inactive', size: 24, statusLabel: session.running ? '正在运行' : '当前未运行' })/* sherlock:subagent-avatars:detail:end */"}
+ detail:{anchor:'function OdysseySubagentPanelHeader(',before:"react_jsx_runtime.jsx('span',{'data-odyssey-subagent-activity':session.running?'running':'idle','aria-hidden':true})",after:"/* sherlock:subagent-avatars:detail:v1 */react_jsx_runtime.jsx(OdysseySubagentAvatar, { sessionId: sessionId, activity: session.running ? 'running' : 'inactive', size: 24, statusLabel: session.running ? '正在运行' : '当前未运行' })/* sherlock:subagent-avatars:detail:end */"},
+ 'task-tree':{anchor:'function CatalogLoadingRows(',replacements:[
+  {before:'(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {\n\t\t\t\t\tstate: summary.running === true ? "ongoing" : "done",\n\t\t\t\t\tclassName: SubagentView_module_css_default.subagentDot\n\t\t\t\t})',after:'/* sherlock:subagent-avatars:task-tree-loading:v1 */(0, react_jsx_runtime.jsx)(OdysseySubagentAvatar, { sessionId: summary.id, activity: summary.running === true ? "running" : "inactive", size: 24, statusLabel: summary.running === true ? t("subagentRunning") : t("subagentInactive") })/* sherlock:subagent-avatars:task-tree-loading:end */'},
+  {before:'(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {\n\t\t\t\t\t\t\t\tstate: entry.activity === "running" ? "ongoing" : "done",\n\t\t\t\t\t\t\t\tclassName: SubagentView_module_css_default.subagentDot\n\t\t\t\t\t\t\t})',after:'/* sherlock:subagent-avatars:task-tree-child:v1 */(0, react_jsx_runtime.jsx)(OdysseySubagentAvatar, { sessionId: entry.id, activity: entry.activity, size: 24, statusLabel: entry.activity === "running" ? t("subagentRunning") : t("subagentInactive") })/* sherlock:subagent-avatars:task-tree-child:end */'}
+ ]}
 }
 function hookFor(kind){const hook=hooks[kind];if(!hook)throw Error('Subagent avatar kind drifted');return hook}
+function replacementsFor(hook){return hook.replacements??[hook]}
 function count(source,token){return source.split(token).length-1}
 export function stripSubagentAvatars(source,kind){
- const hook=hookFor(kind)
+ const hook=hookFor(kind),replacements=replacementsFor(hook)
  if(!source.includes(prefix))return source
- if(count(source,definition)!==1||count(source,hook.after)!==1)throw Error('Subagent avatar installed source drifted')
- const stripped=source.replace(definition,'').replace(hook.after,hook.before)
+ if(count(source,definition)!==1||replacements.some(value=>count(source,value.after)!==1))throw Error('Subagent avatar installed source drifted')
+ let stripped=source.replace(definition,'')
+ for(const value of replacements)stripped=stripped.replace(value.after,value.before)
  if(stripped.includes(prefix))throw Error('Subagent avatar duplicate or unknown marker drifted')
  return stripped
 }
 export function patchSubagentAvatars(source,kind){
- const hook=hookFor(kind),bare=stripSubagentAvatars(source,kind)
- if(count(bare,hook.anchor)!==1||count(bare,hook.before)!==1)throw Error('Subagent avatar native hook drifted: '+kind)
- return bare.replace(hook.anchor,definition+hook.anchor).replace(hook.before,hook.after)
+ const hook=hookFor(kind),bare=stripSubagentAvatars(source,kind),replacements=replacementsFor(hook)
+ if(count(bare,hook.anchor)!==1||replacements.some(value=>count(bare,value.before)!==1))throw Error('Subagent avatar native hook drifted: '+kind)
+ let installed=bare.replace(hook.anchor,definition+hook.anchor)
+ for(const value of replacements)installed=installed.replace(value.before,value.after)
+ return installed
 }
 export async function copySubagentAvatarAssets(destination){
  const directory=join(destination,'subagent-avatars');await mkdir(directory,{recursive:true})
