@@ -77,6 +77,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  const paint=(next:Point,phase:HomeGuidePointerFrame['phase'])=>{paintConnection(next,phase);if(draggedFile){if(!draggedFile.node.isConnected)throw aborted();draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`}position=next;state=phase;element.hidden=false;raiseLayer();element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`;onFrame?.({...next,phase})}
  const reduced=()=>win.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true
  const travel=async(target:HTMLElement,duration:number,phase:HomeGuidePointerFrame['phase']='moving')=>{
+  duration*=1.3
   const destination=point(target),start=position??{x:Math.max(8,destination.x-64),y:Math.max(8,destination.y-40)},steps=reduced()?1:Math.max(1,Math.ceil(duration/16))
   paint(start,phase)
   for(let index=1;index<=steps;index++){
@@ -101,12 +102,12 @@ export function createHomeGuidePointer(document:Document,options:Options){
      if(!action.fromTarget)throw Error('连接操作缺少起点。')
      await travel(action.fromTarget,320);beginConnection(action.fromTarget,action.target)
      if(action.fromTarget.dataset.homeGuideDragFile===options.runId)draggedFile={node:action.fromTarget,origin:point(action.fromTarget),transform:action.fromTarget.style.transform}
-     paint(point(action.fromTarget),'pressed');await wait(reduced()?0:80)
-     await travel(action.target,780,'dragging');paint(point(action.target),'released');await wait(reduced()?0:160)
+     paint(point(action.fromTarget),'pressed');await wait(reduced()?0:104)
+     await travel(action.target,780,'dragging');paint(point(action.target),'released');await wait(reduced()?0:208)
     }else{
      const distance=position?Math.hypot(target.x-position.x,target.y-position.y):120
      await travel(action.target,Math.max(280,Math.min(620,230+distance*.4)))
-     if(action.action!=='move'){paint(point(action.target),'pressed');await wait(reduced()?0:80);paint(point(action.target),'released');await wait(reduced()?0:160)}
+     if(action.action!=='move'){paint(point(action.target),'pressed');await wait(reduced()?0:104);paint(point(action.target),'released');await wait(reduced()?0:208)}
     }
     ensure();paint(point(action.target),'idle');completed=true
    }finally{onFrame=undefined;if(draggedFile&&!completed)draggedFile.node.style.transform=draggedFile.transform;draggedFile=undefined;clearConnection();busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
