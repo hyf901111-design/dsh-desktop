@@ -10,7 +10,7 @@ import {reportRuntimeFixture} from './fixtures/home-report-runtime.js'
 import {createUserMessage} from '@deepseek-ai/dsh-llm'
 import {HOME_REPORT_PATH,HOME_REPORT_SKILL_ID} from '../packages/dsh-research-task-runtime/home-report-contract.js'
 import {patchHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
-const evidence='/tmp/home-presentation-natural-20261024'
+const evidence='/tmp/home-demo-output-input-20261026'
 let browser,entry,conversationSource,runtimeSource,commandsSource,triggersSource,deliverySource,fileDropSource
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
@@ -20,9 +20,9 @@ beforeAll(async()=>{
  deliverySource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8')
  fileDropSource=patchDshFileDropClientSource(await readFile('test/fixtures/dsh-file-drop-1.0.0-client.js','utf8'));if(!fileDropSource)throw Error('Actual file-drop fixture drifted')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomePresentationGuide}from'./src/preload/home-guide-presentation';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';import{installSkillComposer}from'./src/preload/integrations/skill-composer';import{createSkillUseBridge}from'./src/preload/integrations/skill-use';import{installSkillCommandBridge}from'./src/preload/integrations/skill-command-bridge';import{installSkillCommand}from'./src/preload/integrations/skill-command';
+ import{MarkdownText}from'@deepseek-ai/dsh-client-ui-primitives';import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomePresentationGuide}from'./src/preload/home-guide-presentation';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';import{installSkillComposer}from'./src/preload/integrations/skill-composer';import{createSkillUseBridge}from'./src/preload/integrations/skill-use';import{installSkillCommandBridge}from'./src/preload/integrations/skill-command-bridge';import{installSkillCommand}from'./src/preload/integrations/skill-command';
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});const empty=()=>null;
- const primitives=new Proxy({useAnchoredMaxHeight:()=>400,Tooltip:({children})=>children,MarkdownText:({text})=><div style={{whiteSpace:'pre-wrap'}}>{text}</div>,Markdown:({text})=><div>{text}</div>},{get:(target,key)=>target[key]??empty});
+ const primitives=new Proxy({useAnchoredMaxHeight:()=>400,Tooltip:({children})=>children,MarkdownText,Markdown:({text})=><MarkdownText text={text}/>},{get:(target,key)=>target[key]??empty});
  const cordis={Service:class{constructor(ctx){this.ctx=ctx}}};
  const modules=id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/cordis'?cordis:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:empty,AttachmentRail:empty,ImageGallery:empty}:fake;
  const sessionId=window.actorKind==='report'?'report-demo':'demo';
@@ -58,7 +58,7 @@ beforeAll(async()=>{
 
  const registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true}),root=createRoot(document.querySelector('#native-root'));
  root.render(<><native.ConversationRoot {...shared} useProjection={useProjection} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{throw Error('Must not create another workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例',sessionIds:[sessionId]}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/><SkillMenus/></>);
- window.addEventListener('sherlock:home-guide-cue',event=>{const raw=event.detail,cue=typeof raw.targetToken==='string'?JSON.parse(JSON.stringify(raw)):raw,target=typeof cue.targetToken==='string'?[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue.targetToken):cue.target;window.probe.cues.push({sources:shell.snapshot.occurrences.map(ref=>ref.source),inputState:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,inputInert:!!document.querySelector('.wSkVaW_composerHero')?.inert,isPaperclip:!!target?.matches('button.dsh-paperclip'),label:cue.label,tag:target?.tagName,requestId:cue.requestId,action:cue.action,targetToken:cue.targetToken,fromTargetToken:cue.fromTargetToken,fromPresent:!!cue.fromTargetToken&&!!document.querySelector('[data-home-guide-drag-file]')?.matches('[data-home-guide-cue-target=\"'+cue.fromTargetToken+'\"]'),ghostText:document.querySelector('[data-home-guide-drag-file]')?.textContent,keys:Object.keys(raw).sort(),jsonOnly:Object.values(raw).every(value=>typeof value==='string'),payload:cue.targetToken?cue:null,tokenPresent:!!cue.targetToken&&target?.getAttribute('data-home-guide-cue-target')===cue.targetToken,filePath:target?.closest('.ew-delivery-card')?.dataset.filePath,skillOption:target?.closest('[data-ework-command="skills"]')?target.textContent:null});if(window.probe.holdAtCue===cue.label||window.probe.holdAtAction===cue.action||window.probe.holdAfterFile&&target?.tagName==='TEXTAREA'&&shell.snapshot.occurrences.some(ref=>ref.source==='chat-file'))window.probe.autoAck=false;if(window.operationsCase&&window.probe.pauseAtCue===cue.label)window.__testHomeGuideTimeline.pause();if(window.probe.autoAck!==false&&cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected}}))});
+ window.addEventListener('sherlock:home-guide-cue',event=>{const raw=event.detail,cue=typeof raw.targetToken==='string'?JSON.parse(JSON.stringify(raw)):raw,target=typeof cue.targetToken==='string'?[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue.targetToken):cue.target;window.probe.cues.push({sources:shell.snapshot.occurrences.map(ref=>ref.source),inputState:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,inputInert:!!document.querySelector('.wSkVaW_composerHero')?.inert,isPaperclip:!!target?.matches('button.dsh-paperclip'),isInputDropTarget:target?.dataset.homeGuideFileDropTarget===cue.runId,label:cue.label,tag:target?.tagName,requestId:cue.requestId,action:cue.action,targetToken:cue.targetToken,fromTargetToken:cue.fromTargetToken,fromPresent:!!cue.fromTargetToken&&!!document.querySelector('[data-home-guide-drag-file]')?.matches('[data-home-guide-cue-target=\"'+cue.fromTargetToken+'\"]'),ghostText:document.querySelector('[data-home-guide-drag-file]')?.textContent,keys:Object.keys(raw).sort(),jsonOnly:Object.values(raw).every(value=>typeof value==='string'),payload:cue.targetToken?cue:null,tokenPresent:!!cue.targetToken&&target?.getAttribute('data-home-guide-cue-target')===cue.targetToken,filePath:target?.closest('.ew-delivery-card')?.dataset.filePath,skillOption:target?.closest('[data-ework-command="skills"]')?target.textContent:null});if(window.probe.holdAtCue===cue.label||window.probe.holdAtAction===cue.action||window.probe.holdAfterFile&&target?.tagName==='TEXTAREA'&&shell.snapshot.occurrences.some(ref=>ref.source==='chat-file'))window.probe.autoAck=false;if(window.operationsCase&&window.probe.pauseAtCue===cue.label)window.__testHomeGuideTimeline.pause();if(window.probe.autoAck!==false&&cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected}}))});
  let guideController,disposeOperations=()=>{};
  if(window.operationsCase){
   window.probe.autoAck=false;window.probe.entryFrames=[];
@@ -66,21 +66,21 @@ beforeAll(async()=>{
   guideController=mountHomeGuides(document,{mountNotes:async()=>{throw Error('PPT fixture cannot mount Notes')},mountPresentation:mountHomePresentationGuide});
   disposeOperations=mountHomeOperations(document,{onExample:async(kind,context)=>{let frame;const capture=()=>{const hero=document.querySelector('.wSkVaW_composerHero');window.probe.entryFrames.push({inert:hero?.inert,state:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,y:hero?.getBoundingClientRect().y});frame=requestAnimationFrame(capture)};capture();try{await playHomeGuideFromOperations(guideController,kind,context)}finally{cancelAnimationFrame(frame)}}});
  }
- window.probe.performCue=async value=>{const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),pointer=createHomeGuidePointer(document,{runId:'run-1',signal:window.probe.controller.signal,wait:ms=>new Promise(r=>setTimeout(r,ms)),waitUntilPlaying:async()=>{while(!window.probe.playing||document.hidden){if(window.probe.controller.signal.aborted)throw new DOMException('已取消','AbortError');await new Promise(r=>setTimeout(r,25))}}});try{await pointer.perform({action:value.action,target:find(value.targetToken),fromTarget:value.fromTargetToken?find(value.fromTargetToken):undefined});window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:value.requestId,ok:true}}))}finally{pointer.dispose()}};
+ window.probe.performCue=async value=>{const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),pointer=createHomeGuidePointer(document,{runId:'run-1',signal:window.probe.controller.signal,wait:ms=>new Promise(r=>setTimeout(r,ms)),waitUntilPlaying:async()=>{while(!window.probe.playing||document.hidden){if(window.probe.controller.signal.aborted)throw new DOMException('已取消','AbortError');await new Promise(r=>setTimeout(r,25))}}});try{await pointer.perform({action:value.action,target:find(value.targetToken),fromTarget:value.fromTargetToken?find(value.fromTargetToken):undefined});window.probe.lastPointer={...pointer.snapshot()};window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:value.requestId,ok:true}}))}finally{pointer.dispose()}};
  disposers.push(shell.state.subscribe(()=>{const draft=shell.snapshot.draft,edits=window.probe.drafts;if(edits.at(-1)?.draft!==draft)edits.push({draft,time:performance.now()})}));
  const insertFilePaths=shell.insertFilePaths.bind(shell);shell.insertFilePaths=paths=>{window.probe.fileInsertions.push([...paths]);return insertFilePaths(paths)};
  window.addEventListener('sherlock:home-guide-presentation-request',event=>window.probe.requests.push(JSON.parse(JSON.stringify(event.detail))));
  const timer=setInterval(()=>window.probe.refresh(),30);
  Object.assign(window.probe,{async mount(fresh=true){this.guide=await mountHomePresentationGuide(document,document.querySelector('#guide-host'),{signal:(this.controller=new AbortController()).signal,sessionId:sessionId,cwd:window.cwd,runId:'run-1',fresh,...(window.actorKind==='report'?{kind:'report'}:{})})},step:async step=>{window.probe.phase=step;window.probe.stageTimings.push({step,event:'start',time:performance.now()});try{const value=await window.probe.guide.runStep(step);window.probe.phase=step+':done';window.probe.stageTimings.push({step,event:'done',time:performance.now()});return value}catch(error){window.probe.phase=step+':error';throw error}},play(playing){this.playing=playing;window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:sessionId,runId:'run-1',playing}}))},dispose(){this.controller?.abort();this.guide?.dispose()},unmount(){disposeOperations();guideController?.dispose();clearInterval(timer);root.unmount();shell.dispose();disposers.reverse().forEach(fn=>fn())}});
- `},bundle:true,loader:{'.svg':'dataurl'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"development"'},plugins:[homeGuidePlaybackFixture(),{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
+ `},bundle:true,loader:{'.svg':'dataurl','.css':'empty'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"development"'},plugins:[homeGuidePlaybackFixture(),{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
  entry=output.outputFiles[0].text
  const pw=await import(/* @vite-ignore */pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
  await mkdir(evidence,{recursive:true})
 },30000)
 afterAll(()=>browser?.close())
-async function fixture({operations=false,reducedMotion='reduce',kind='ppt'}={}){
- const f=kind==='report'?await reportRuntimeFixture():await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion}),errors=[]
+async function fixture({operations=false,reducedMotion='reduce',kind='ppt',reportSchemaVersion=1}={}){
+ const f=kind==='report'?await reportRuntimeFixture({schemaVersion:reportSchemaVersion}):await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion}),errors=[]
  page.on('pageerror',e=>errors.push(e.stack??e.message))
  const sent=[],http=[];
  const backend=async input=>{
@@ -255,6 +255,8 @@ it('moves the real PPT PDF ghost with the shared pointer before native insertFil
   await page.waitForFunction(before=>{const el=document.querySelector('[data-home-guide-drag-file]');if(!el)return false;const r=el.getBoundingClientRect();return Math.abs(r.x-before.x)+Math.abs(r.y-before.y)>8},before)
   await page.screenshot({path:evidence+'/ppt-ghost-in-flight-20261025.png'})
   await page.evaluate(()=>window.probe.drag)
+  const drop=await page.evaluate(()=>{const r=document.querySelector('textarea[data-odyssey-file-reference-session]').getBoundingClientRect(),p=window.probe.lastPointer;return{x:(p.x-r.left)/r.width,y:(p.y-r.top)/r.height}})
+  expect(drop.x).toBeGreaterThan(.35);expect(drop.x).toBeLessThan(.75);expect(drop.y).toBeGreaterThan(.3);expect(drop.y).toBeLessThan(.8)
   await expect.poll(()=>page.evaluate(()=>window.probe.fileInsertions)).toEqual([[join(f.cwd,'Vanguard-2026经济与市场展望.pdf')]])
   expect(await page.locator('[data-home-guide-drag-file]').count()).toBe(0)
   expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.map(ref=>ref.source))).toEqual(['ework-managed-skill','chat-file'])
@@ -393,12 +395,13 @@ it('types and sends through the resident native InputBar, renders persisted chat
   await page.evaluate(()=>window.probe.mount());expect(await page.locator('textarea').count()).toBe(1)
   await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>window.probe.step('brief'))
   expect(await page.evaluate(()=>window.probe.cues.find(cue=>cue.skillOption)?.sources)).not.toContain('chat-file')
-  expect(await page.evaluate(()=>window.probe.cues.find(cue=>cue.label==='把参考研报拖入输入框'))).toMatchObject({tag:'TEXTAREA',fromPresent:true,action:'drag',sources:['ework-managed-skill']})
+  expect(await page.evaluate(()=>window.probe.cues.find(cue=>cue.label==='把参考研报拖入输入框'))).toMatchObject({tag:'SPAN',isInputDropTarget:true,fromPresent:true,action:'drag',sources:['ework-managed-skill']})
   expect(await page.locator('textarea').inputValue()).toContain('帮我把这份研报整理成一份公司风格的汇报PPT，20页左右')
   expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.map(ref=>ref.source))).toEqual(['ework-managed-skill','chat-file'])
   expect(await page.locator('[data-reference-source="chat-file"]').count()).toBe(1)
   expect(await page.locator('[data-reference-source="ework-managed-skill"]').count()).toBe(1)
   expect(await readFile(join(f.cwd,'Vanguard-2026经济与市场展望.pdf'))).toEqual(f.sourceBytes)
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.draft)).not.toContain('\n')
   await page.screenshot({path:evidence+'/01-native-brief.png'})
   await page.evaluate(()=>window.probe.step('send')).catch(async error=>{throw Error(JSON.stringify({errors:f.errors,pageErrors:f.errors,snapshot:await page.evaluate(()=>window.probe.shell.snapshot),events:f.agent.session.events},null,2)+error.message)});expect(f.sent).toEqual([f.message()]);await page.evaluate(()=>window.probe.step('plan'))
   await page.waitForSelector('[data-testid="todo-panel"]',{timeout:3000}).catch(async error=>{throw Error(JSON.stringify({pageErrors:f.errors,body:await page.locator('body').innerText(),events:f.agent.session.events.map(e=>e.type)},null,2)+error.message)});expect(await page.locator('[data-status="in_progress"]').count()).toBe(1)
@@ -497,5 +500,43 @@ it('pauses before sending, aborts on lost ownership, and revisits without replac
   await page.evaluate(()=>window.probe.mount(false));expect(await page.locator('textarea').inputValue()).toBe('保留我回访时输入的文字')
   expect(await page.evaluate(()=>window.probe.original===document.querySelector('textarea'))).toBe(true)
   expect(f.agent.session.events.some(e=>e.type==='user/message')).toBe(false);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('keeps schema2 report streams readable while retaining both original file cards and the real PDF preview',async()=>{
+ const f=await fixture({kind:'report',reportSchemaVersion:2}),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.visibleReports=[];window.probe.reportObserver=new MutationObserver(()=>{window.probe.visibleReports.push(document.querySelector('#native-root').innerText)});window.probe.reportObserver.observe(document.querySelector('#native-root'),{subtree:true,childList:true,characterData:true})})
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>window.probe.step('brief'))
+  expect(await page.evaluate(()=>window.probe.shell.snapshot.draft)).not.toContain('\n')
+  await page.evaluate(()=>window.probe.step('send'))
+  for(const stage of ['plan','layout','deliver'])await page.evaluate(stage=>window.probe.step(stage),stage)
+  await f.agent.whenIdle();await page.evaluate(()=>window.probe.refresh())
+  const html=join(f.cwd,f.metadata.deliveryNames.html),pdf=join(f.cwd,f.metadata.deliveryNames.pdf)
+  await expect.poll(()=>page.locator('.ew-delivery-card[data-file-path]').evaluateAll(nodes=>nodes.map(node=>node.dataset.filePath))).toEqual([html,pdf])
+  const texts=await page.evaluate(()=>window.probe.visibleReports);expect(texts.length).toBeGreaterThan(1)
+  for(const text of texts)expect(text).not.toMatch(/%[0-9A-F]{2}|\[阅读全文\]|\[打开\d+页PDF报告\]/u)
+  expect(await page.locator('#native-root').innerText()).toContain(f.metadata.keyFindings[0])
+  await page.screenshot({path:evidence+'/report-final-real-markdown.png'})
+  await page.evaluate(()=>window.probe.step('open'));expect(await page.evaluate(()=>window.probe.opened.map(value=>value.path))).toEqual([pdf])
+  expect(await page.locator('#right').innerText()).toContain(f.metadata.deliveryNames.pdf)
+  expect(await readFile(pdf)).toEqual(f.pdf);expect(await readFile(html)).toEqual(f.html)
+  expect(f.sent).toEqual([f.message()]);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
+  await page.evaluate(()=>window.probe.reportObserver.disconnect())
+ }finally{await f.close()}
+},60000)
+
+it.each(['inert','moved'])('keeps the file unattached when its real input becomes %s after the drop cue',async mutation=>{
+ const f=await fixture(),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.holdAtAction='drag'})
+  await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await expect.poll(()=>page.evaluate(()=>window.probe.cues.some(cue=>cue.action==='drag'))).toBe(true)
+  const before=await page.evaluate(()=>window.probe.shell.snapshot.draft)
+  await page.evaluate(mutation=>{const input=document.querySelector('textarea[data-odyssey-file-reference-session]'),cue=window.probe.cues.find(cue=>cue.action==='drag');if(mutation==='inert')input.closest('.uV2eYG_root').inert=true;else input.style.transform='translateY(35px)';window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))},mutation)
+  expect(await page.evaluate(()=>window.probe.pending)).toBe(false)
+  expect(await page.evaluate(()=>window.probe.fileInsertions)).toEqual([]);expect(await page.evaluate(()=>window.probe.shell.snapshot.draft)).toBe(before)
+  expect(await page.locator('[data-home-guide-cue-target],[data-home-guide-drag-file],[data-home-guide-file-drop-target]').count()).toBe(0)
+  expect(f.sent).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)

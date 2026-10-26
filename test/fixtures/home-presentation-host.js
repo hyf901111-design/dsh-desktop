@@ -68,7 +68,7 @@ export async function presentationHostFixture({bindWorkspace=true,autoCompaction
  const command=async(action,extra={})=>{const response=await fetch(origin+HOME_PRESENTATION_PATH,{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({...input,action,...extra})});const reply=await response.json();if(!reply.ok)throw Error(reply.message);return reply}
  const metadata=JSON.parse(await readFile('packages/dsh-research-task-runtime/assets/home-presentation/source-metadata.json','utf8'))
  const bytes=await readFile('packages/dsh-research-task-runtime/assets/home-presentation/company-research-briefing.pptx'),sourceBytes=await readFile('packages/dsh-research-task-runtime/assets/home-presentation/source-report.pdf')
- const message=()=>'/ework-skill-180a6a3f86f8942e 📎 文件：`'+join(cwd,'Vanguard-2026经济与市场展望.pdf')+'` \n'+createHomePresentationBrief(metadata)
+ const message=()=>'/ework-skill-180a6a3f86f8942e 📎 文件：`'+join(cwd,'Vanguard-2026经济与市场展望.pdf')+'` '+createHomePresentationBrief(metadata)
  const prompt=(text,mode='followup')=>request(api.sessions.prompt,{sessionId,mode,content:[{type:'text',text}]})
  const dispose=async()=>{await integrations.dispose();await ctx.fiber.dispose();await bridge.dispose();await service.dispose();await domain.closeAll();await backend.close();if(previousHome===undefined)delete process.env.DSH_HOME;else process.env.DSH_HOME=previousHome;await rm(root,{recursive:true,force:true})}
  return{ctx,root,cwd,home,agent,api,registry,service,integrations,input,metadata,bytes,sourceBytes,message,command,prompt,request,bind,outside,errors,dispose}
