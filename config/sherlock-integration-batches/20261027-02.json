@@ -79,6 +79,54 @@
           "正式包验证、Plan A集成、签名打包及发布由Root后续执行；本功能分支没有构建共享客户端。"
         ],
         "generatedAt": "2026-10-26T22:10:43.546Z"
+      },
+      "merged": {
+        "mergeCommit": "ac67503b8b5cdcf13f9980a114d7d6477a931888",
+        "verificationCommit": "ac67503b8b5cdcf13f9980a114d7d6477a931888",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "demo notice|18px loading ring|pending card intro|actual Play click origin",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-operations-browser.test.js -t demo notice|18px loading ring|pending card intro|actual Play click origin --maxWorkers=1",
+            "verifiedCommit": "ac67503b8b5cdcf13f9980a114d7d6477a931888",
+            "completedAt": "2026-10-26T22:22:02.021Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ac67503b8b5cdcf13f9980a114d7d6477a931888",
+            "completedAt": "2026-10-26T22:22:02.021Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ac67503b8b5cdcf13f9980a114d7d6477a931888",
+            "completedAt": "2026-10-26T22:22:02.021Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-26T22:22:02.021Z"
       }
     }
   ],
