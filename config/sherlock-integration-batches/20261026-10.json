@@ -131,6 +131,86 @@
           "系统级概率鼠标冻结仍未稳定复现，fixed=false。"
         ],
         "generatedAt": "2026-10-26T13:19:42.143453+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3da7c858df301dab679ee81f06b62c3f3876ba82",
+        "verificationCommit": "3da7c858df301dab679ee81f06b62c3f3876ba82",
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/check-home20-integration-source-20261026.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 /tmp/check-home20-integration-source-20261026.py",
+            "verifiedCommit": "3da7c858df301dab679ee81f06b62c3f3876ba82",
+            "completedAt": "2026-10-26T13:19:59.631Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "3da7c858df301dab679ee81f06b62c3f3876ba82",
+            "completedAt": "2026-10-26T13:19:59.631Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "3da7c858df301dab679ee81f06b62c3f3876ba82",
+            "completedAt": "2026-10-26T13:19:59.631Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotation-viewer-install.test.js",
+              "test/pptx-annotation-editor.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/pptx-annotation-viewer-install.test.js test/pptx-annotation-editor.test.ts --maxWorkers=2",
+            "verifiedCommit": "3da7c858df301dab679ee81f06b62c3f3876ba82",
+            "completedAt": "2026-10-26T13:19:59.631Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3da7c858df301dab679ee81f06b62c3f3876ba82",
+            "completedAt": "2026-10-26T13:19:59.631Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "3da7c858df301dab679ee81f06b62c3f3876ba82",
+            "completedAt": "2026-10-26T13:19:59.631Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-26T13:19:59.631Z"
       }
     }
   ],
