@@ -133,6 +133,87 @@
           "正式客户端当前新包交互待构建后补验。"
         ],
         "generatedAt": "2026-10-26T14:58:42.918788+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4c1fcdf93598b2b3214f671413b48bcd2a82844e",
+        "verificationCommit": "4c1fcdf93598b2b3214f671413b48bcd2a82844e",
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/home-loading-pace-20261026/check-source.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 /tmp/home-loading-pace-20261026/check-source.py",
+            "verifiedCommit": "4c1fcdf93598b2b3214f671413b48bcd2a82844e",
+            "completedAt": "2026-10-26T14:59:05.775Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "4c1fcdf93598b2b3214f671413b48bcd2a82844e",
+            "completedAt": "2026-10-26T14:59:05.775Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "4c1fcdf93598b2b3214f671413b48bcd2a82844e",
+            "completedAt": "2026-10-26T14:59:05.775Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guide-native-strip.test.js",
+              "test/home-guide-native.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-pointer.test.ts test/home-guide-native-strip.test.js test/home-guide-native.test.js --maxWorkers=2",
+            "verifiedCommit": "4c1fcdf93598b2b3214f671413b48bcd2a82844e",
+            "completedAt": "2026-10-26T14:59:05.775Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4c1fcdf93598b2b3214f671413b48bcd2a82844e",
+            "completedAt": "2026-10-26T14:59:05.775Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "4c1fcdf93598b2b3214f671413b48bcd2a82844e",
+            "completedAt": "2026-10-26T14:59:05.775Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-26T14:59:05.775Z"
       }
     }
   ],
