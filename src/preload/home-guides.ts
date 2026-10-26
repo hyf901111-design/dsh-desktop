@@ -193,13 +193,15 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     else if(state.holding){status.textContent=scenes[state.index]?.[2]||''}
     else if(state.index===0)status.textContent=definition.intro
    },onError:error=>{if(active!==run)return;playback(run,false);hideCue();fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。')}})
-   run.timeline.play();if(document.hidden){run.hiddenPause=true;run.timeline.pause()}
+   run.timeline.play();visibility()
   }catch(error){if(active!==run||controller.signal.aborted)throw error;playback(run,false);fault(error instanceof Error?error.message:'示例尚未就绪，请重试。')}
  }
  const changed=()=>{if(preparing){const current=selected();if(current===preparing.source||current===preparing.target)return;preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&selected()!==active.sessionId)void close(false)}
  const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target||target.matches('[data-dsh-sidebar-root] button.hHd-Xa_toggle'))return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false)}
  const escape=(event:KeyboardEvent)=>{if(active&&event.key==='Escape'){event.preventDefault();void close()}}
- const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.timeline.play()}}
+ // The native note reviewer also pauses on window blur. Its actor must share
+ // that gate so background time cannot consume a foreground review budget.
+ const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden||run.kind==='note'&&!document.hasFocus()){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.timeline.play()}}
  const cueTarget=(value:any,key:'target'|'fromTarget')=>{
   const token=value?.[key+'Token']
   if(token===undefined)return value?.[key]
@@ -213,11 +215,16 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   if(!run||value?.runId!==run.id||!(target instanceof win.HTMLElement)||!target.isConnected||selected()!==run.sessionId){reply(false,'操作目标已变化。');return}
   if(typeof value.label==='string')run.status.textContent=value.label
   if(!run.pointer){reply(false,'指针尚未就绪。');return}
-  void run.pointer.perform({target,action:value.action,fromTarget} as HomeGuidePointerAction).then(()=>{
+  const selection=run.kind==='note'&&value.action==='drag'&&value.selection===true&&typeof value.requestId==='string'&&value.targetToken===run.id+':'+value.requestId+':target'&&value.fromTargetToken===run.id+':'+value.requestId+':from'
+  const onFrame:HomeGuidePointerAction['onFrame']=selection?frame=>{
+   if(active!==run||run.abort.signal.aborted||selected()!==run.sessionId)throw aborted()
+   win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-cue-progress',{detail:{runId:run.id,requestId:value.requestId,...frame}}))
+  }:undefined
+  void run.pointer.perform({target,action:value.action,fromTarget,onFrame} as HomeGuidePointerAction).then(()=>{
    if(active===run&&!run.abort.signal.aborted&&selected()===run.sessionId&&target.isConnected)reply(true);else reply(false,'操作已取消。')
   },error=>reply(false,error instanceof Error?error.message:'操作未完成。'))
  }
  win.addEventListener('sherlock:home-action-context-changed',changed);win.addEventListener('sherlock:skill-menu-reset',changed);win.addEventListener('sherlock:home-guide-cue',showCue)
- document.addEventListener('keydown',escape,true);document.addEventListener('click',navigate,true);document.addEventListener('visibilitychange',visibility)
- return{start,reset:(restoreFocus=true)=>{generation++;preparing?.controller.abort();preparing=undefined;releaseTransition();return close(restoreFocus)},dispose:async()=>{if(disposed)return;disposed=true;generation++;preparing?.controller.abort();preparing=undefined;await close(false);releaseTransition();win.removeEventListener('sherlock:home-action-context-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',changed);win.removeEventListener('sherlock:home-guide-cue',showCue);document.removeEventListener('keydown',escape,true);document.removeEventListener('click',navigate,true);document.removeEventListener('visibilitychange',visibility);for(const notice of notices)notice.remove();notices.clear();style.remove()}}
+ document.addEventListener('keydown',escape,true);document.addEventListener('click',navigate,true);document.addEventListener('visibilitychange',visibility);win.addEventListener('blur',visibility);win.addEventListener('focus',visibility)
+ return{start,reset:(restoreFocus=true)=>{generation++;preparing?.controller.abort();preparing=undefined;releaseTransition();return close(restoreFocus)},dispose:async()=>{if(disposed)return;disposed=true;generation++;preparing?.controller.abort();preparing=undefined;await close(false);releaseTransition();win.removeEventListener('sherlock:home-action-context-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',changed);win.removeEventListener('sherlock:home-guide-cue',showCue);document.removeEventListener('keydown',escape,true);document.removeEventListener('click',navigate,true);document.removeEventListener('visibilitychange',visibility);win.removeEventListener('blur',visibility);win.removeEventListener('focus',visibility);for(const notice of notices)notice.remove();notices.clear();style.remove()}}
 }
