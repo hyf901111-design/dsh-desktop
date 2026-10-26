@@ -220,6 +220,86 @@
           "探索420px笔记区的完整原生格式工具条裁切边界保留，未绕过可见性校验。"
         ],
         "generatedAt": "2026-10-26T02:00:32.842354+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4eb4a04a5d6d099d0faa33586e5fc97fe037dba7",
+        "verificationCommit": "4eb4a04a5d6d099d0faa33586e5fc97fe037dba7",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "4eb4a04a5d6d099d0faa33586e5fc97fe037dba7",
+            "completedAt": "2026-10-26T02:00:54.010Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "4eb4a04a5d6d099d0faa33586e5fc97fe037dba7",
+            "completedAt": "2026-10-26T02:00:54.010Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_SIDEBAR_SOURCE=/tmp/notes-selection-sync-20261026/sidebar-fixture-base.js",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guide-notes-native-editor.test.js",
+              "test/home-guide-notes-browser.test.js",
+              "test/home-guide-notes-focus-browser.test.js",
+              "test/home-guides.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/notes-challenge-controller-browser.test.js",
+              "test/subagent-avatars.test.js",
+              "test/subagent-avatars-browser.test.js",
+              "test/subagent-task-tree-avatars.test.js",
+              "test/subagent-task-tree-avatars-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：env SHERLOCK_TEST_SIDEBAR_SOURCE=/tmp/notes-selection-sync-20261026/sidebar-fixture-base.js npx --no-install vitest run test/home-guide-pointer.test.ts test/home-guide-notes-native-editor.test.js test/home-guide-notes-browser.test.js test/home-guide-notes-focus-browser.test.js test/home-guides.test.ts test/home-guide-timeline.test.ts test/notes-challenge-controller-browser.test.js test/subagent-avatars.test.js test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars.test.js test/subagent-task-tree-avatars-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "4eb4a04a5d6d099d0faa33586e5fc97fe037dba7",
+            "completedAt": "2026-10-26T02:00:54.010Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4eb4a04a5d6d099d0faa33586e5fc97fe037dba7",
+            "completedAt": "2026-10-26T02:00:54.010Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "4eb4a04a5d6d099d0faa33586e5fc97fe037dba7",
+            "completedAt": "2026-10-26T02:00:54.010Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-10-26T02:00:54.010Z"
       }
     }
   ],
