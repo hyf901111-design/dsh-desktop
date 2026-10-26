@@ -401,7 +401,7 @@ it('includes the persisted proposed wording in later discussion context without 
 },15000)
 
 // Uses the real mounted scheduler; only the transport is deferred above.
-it('keeps the swords static while waiting, animates a real review, and stops for success, failure, off and leaving notes',async()=>{
+it('keeps the Copilot shield static while waiting, animates a real review, and stops for success, failure, off and leaving notes',async()=>{
  const{context,page,errors}=await fixture();try{
   const trigger=page.locator('.en-challenge-trigger'),icon=trigger.locator('img').first()
   const staticSrc=await icon.getAttribute('src')
@@ -445,11 +445,35 @@ it('keeps the swords static while waiting, animates a real review, and stops for
  }finally{await context.close()}
 },15000)
 
-it('retains every original sword path and independently counter-swings both groups while respecting reduced motion',async()=>{
- const originalSvg=await readFile('src/preload/notes/assets/challenge-swords.svg','utf8'),busySvg=await readFile('src/preload/notes/assets/challenge-swords-busy.svg','utf8')
+it.each([{dark:false,locale:'zh'},{dark:true,locale:'zh'},{dark:false,locale:'en'},{dark:true,locale:'en'}])('uses the same 16px shield for Copilot and only the system commentator ($locale, dark=$dark)',async({dark,locale})=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(({dark,locale,id})=>{document.documentElement.dataset.odysseyLocale=locale;document.querySelector('.en-root').dataset.dark=String(dark);window.challenge.select(id)},{dark,locale,id})
+  const trigger=page.locator('.en-challenge-trigger'),icon=trigger.locator('img').first(),avatar=page.locator('.en-challenge-author img').first()
+  await avatar.waitFor();await expect.poll(()=>avatar.evaluate(el=>el.complete&&el.naturalWidth>0)).toBe(true)
+  expect(await avatar.getAttribute('src')).toBe(await icon.getAttribute('src'))
+  const silhouette=await icon.evaluate(el=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=160;const ctx=canvas.getContext('2d');ctx.drawImage(el,0,0,160,160);return[[8,1.5],[3,6],[13,6],[8,14.5],[1,8],[15,8],[8,12]].map(([x,y])=>ctx.getImageData(x*10,y*10,1,1).data[3])})
+  expect(silhouette).toEqual([255,255,255,255,0,0,0])
+  expect(await page.locator('.en-challenge-author strong').first().textContent()).toBe(locale==='en'?'AI Commentator':'AI评论员')
+  const metrics=await avatar.evaluate(el=>{const r=el.getBoundingClientRect();return{width:r.width,height:r.height,filter:getComputedStyle(el).filter,opacity:getComputedStyle(el).opacity}})
+  expect(metrics).toMatchObject({width:16,height:16});expect(Number(metrics.opacity)).toBeGreaterThanOrEqual(.65)
+  expect(metrics.filter).toContain(dark?'invert(0.8)':'brightness(0)')
+  const originalText=await page.evaluate(()=>JSON.stringify(window.editor.document))
+  await start(page)
+  await expect.poll(()=>page.locator('.en-challenge-author strong').count()).toBe(2)
+  expect(await page.locator('.en-challenge-author strong').allTextContents()).toEqual([locale==='en'?'AI Commentator':'AI评论员',locale==='en'?'Me':'我'])
+  expect(await page.locator('.en-challenge-author').nth(1).locator('img').count()).toBe(0)
+  expect(await page.locator('.en-challenge-author img').count()).toBe(1)
+  await page.locator('.en-challenge-card').screenshot({path:'/tmp/notes-copilot-shield-'+locale+'-'+(dark?'dark':'light')+'.png'})
+  await trigger.screenshot({path:'/tmp/notes-copilot-shield-trigger-'+locale+'-'+(dark?'dark':'light')+'.png'})
+  expect(await page.evaluate(()=>JSON.stringify(window.editor.document))).toBe(originalText);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('keeps the shield silhouette fixed and only breathes its check while respecting reduced motion',async()=>{
+ const originalSvg=await readFile('src/preload/notes/assets/challenge-shield.svg','utf8'),busySvg=await readFile('src/preload/notes/assets/challenge-shield-busy.svg','utf8')
  const context=await browser.newContext(),page=await context.newPage()
  try{
-  await page.setContent(`<style>body{background:#252525;color:white;font:14px sans-serif}section{display:inline-flex;flex-direction:column;gap:12px;align-items:center;margin:24px}section svg{width:160px;height:160px}</style><section>原图${originalSvg}</section><section>初始${busySvg}</section><section>相向摆动${busySvg}</section><section>反向摆动${busySvg}</section>`)
+  await page.setContent(`<style>body{background:#252525;color:white;font:14px sans-serif}section{display:inline-flex;flex-direction:column;gap:12px;align-items:center;margin:24px}section svg{width:160px;height:160px}</style><section>静态盾牌${originalSvg}</section><section>初始${busySvg}</section><section>呼吸中点${busySvg}</section><section>完整一轮${busySvg}</section>`)
   const geometry=await page.evaluate(()=>{
    const svgs=[...document.querySelectorAll('svg')],paths=svg=>[...svg.querySelectorAll('path')].map(path=>[...path.attributes].map(a=>[a.name,a.value])).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))
    return svgs.map(svg=>({width:svg.getAttribute('width'),height:svg.getAttribute('height'),viewBox:svg.getAttribute('viewBox'),paths:paths(svg)}))
@@ -458,19 +482,18 @@ it('retains every original sword path and independently counter-swings both grou
   const samples=await page.evaluate(()=>{
    const svgs=[...document.querySelectorAll('svg')].slice(1)
    return svgs.map((svg,index)=>{
-    const animations=svg.getAnimations({subtree:true});for(const animation of animations){animation.pause();animation.currentTime=[0,275,825][index]}
-    return [...svg.querySelectorAll('.sword')].map(sword=>({ids:[...sword.querySelectorAll('path')].map(p=>p.id),matrix:getComputedStyle(sword).transform}))
+    const animations=svg.getAnimations({subtree:true});for(const animation of animations){animation.pause();animation.currentTime=[0,900,1800][index]}
+    const shield=svg.querySelector('.copilot-shield'),check=svg.querySelector('.copilot-check')
+    return{shieldTransform:getComputedStyle(shield).transform,shieldOpacity:getComputedStyle(shield).opacity,checkOpacity:Number(getComputedStyle(check).opacity),animationCount:animations.length}
    })
   })
-  expect(samples[0].map(s=>s.ids)).toEqual([['Vector','Vector_2','Vector_4','Vector_5'],['Vector_3','Vector_6','Vector_7','Vector_8']])
-  const degrees=matrix=>{const [a,b]=matrix.slice(7,-1).split(',').map(Number);return Math.atan2(b,a)*180/Math.PI}
-  expect(degrees(samples[1][0].matrix)).toBeCloseTo(7,3);expect(degrees(samples[1][1].matrix)).toBeCloseTo(-7,3)
-  expect(degrees(samples[2][0].matrix)).toBeCloseTo(-7,3);expect(degrees(samples[2][1].matrix)).toBeCloseTo(7,3)
-  await page.screenshot({path:'/tmp/notes-challenge-v16-motion-geometry.png'})
+  for(const sample of samples)expect(sample).toMatchObject({shieldTransform:'none',shieldOpacity:'1',animationCount:1})
+  expect(samples.map(s=>s.checkOpacity)).toEqual([1,.35,1])
+  await page.screenshot({path:'/tmp/notes-copilot-shield-motion-geometry.png'})
   await page.emulateMedia({reducedMotion:'reduce'})
-  expect(await page.evaluate(()=>[...document.querySelectorAll('.sword')].map(s=>getComputedStyle(s).transform))).toEqual(Array(6).fill('none'))
+  expect(await page.evaluate(()=>[...document.querySelectorAll('.copilot-check')].map(s=>getComputedStyle(s).opacity))).toEqual(Array(4).fill('1'))
   expect(await page.evaluate(()=>document.getAnimations().length)).toBe(0)
-  await page.screenshot({path:'/tmp/notes-challenge-v16-motion-reduced.png'})
+  await page.screenshot({path:'/tmp/notes-copilot-shield-motion-reduced.png'})
  }finally{await context.close()}
 },15000)
 
