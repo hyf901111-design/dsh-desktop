@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-09",
+  "branch": "codex/integration/20261026-09",
+  "baseMainCommit": "d489c19223a4c9315eb7db1994f776cec2f8d41c",
+  "expectedMainCommit": "d489c19223a4c9315eb7db1994f776cec2f8d41c",
+  "createdAt": "2026-10-26T12:52:10.074Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "完善用例演示的自然滚动、加载停留和会话命名时机",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313",
+        "tipCommit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+        "commits": [
+          {
+            "commit": "5f177accdf73847968b49e6736f88bcd1991bb5e",
+            "parents": [
+              "b9b55ff6fcbf53fb1c4ee745c1b397fdf6a1e313"
+            ],
+            "subject": "为用例卡片提示增加加载圆环并停留两秒"
+          },
+          {
+            "commit": "69d8db01250b6ecf64d0424de205ce5749a177f1",
+            "parents": [
+              "5f177accdf73847968b49e6736f88bcd1991bb5e"
+            ],
+            "subject": "让看板演示自然滚动并等待视图稳定后操作"
+          },
+          {
+            "commit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+            "parents": [
+              "69d8db01250b6ecf64d0424de205ce5749a177f1"
+            ],
+            "subject": "按实际处理进度更新四个演示会话标题"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-report-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-note-challenge-sidebar.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-binding.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-presentation-host.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-report-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/check-home19-feature-evidence-20261026.py"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-19-final2-check-1-20261026.log",
+            "verifiedCommit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+            "completedAt": "2026-10-26T12:48:55.123118+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-19-final2-check-2-20261026.log",
+            "verifiedCommit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+            "completedAt": "2026-10-26T12:49:01.615651+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-19-final2-check-3-20261026.log",
+            "verifiedCommit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+            "completedAt": "2026-10-26T12:49:08.005993+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/home-guide-native.test.js",
+              "test/home-presentation-host.test.js",
+              "test/home-report-runtime.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-19-final2-check-4-20261026.log",
+            "verifiedCommit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+            "completedAt": "2026-10-26T12:50:25.258313+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-19-final2-check-5-20261026.log",
+            "verifiedCommit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+            "completedAt": "2026-10-26T12:50:33.339311+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-19-final2-check-6-20261026.log",
+            "verifiedCommit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+            "completedAt": "2026-10-26T12:50:33.362370+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "直接相关真实组件浏览器与原生模块夹具已完成，按提交和文件哈希绑定。正式18已实际核验新建笔记、同排多技能、普通命令键盘光标与退格、侧栏头像圆形、紧凑配图与关闭保留正文、看板七组件终态；正式19新增加载停留、滚动及命名时机待构建后原生复验。"
+        },
+        "acceptanceCriteria": [
+          "四大卡片原位提示前显示克制圆环loading，文本完整后实际停留2000ms再启动演员；深浅色、减动与取消保护保留。",
+          "看板添加、整理、切股、连线与智能容器统一平滑加减速滚动，停稳才定位pointer/ports；无instant或硬置顶，不缩小正常组件。",
+          "上滑输入和选择技能附件时保持新会话；PPT/研报Host实际接受后才命名；看板/笔记内容实际建立后命名；保留演示案例后缀且不覆盖人工标题。",
+          "只集成本轮限定源，从干净本地main构建正式身份客户端，保留原用户会话文件配置，不发布不推送不改版本。"
+        ],
+        "risks": [
+          "正式19新增动态过程仍待真实构建后复验；浏览器夹具结果不冒充系统客户端验收。",
+          "系统级概率鼠标冻结仍未稳定复现，fixed=false。",
+          "看板极短视口仍保正常尺寸并有明确端点空间边界，不伪称所有小尺寸完整同时显示。"
+        ],
+        "generatedAt": "2026-10-26T12:52:08.504819+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "python3",
+        "/tmp/check-home19-integration-source-20261026.py"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guides.test.ts",
+        "test/home-guide-session.test.ts",
+        "test/home-guide-native.test.js",
+        "test/home-presentation-host.test.js",
+        "test/home-report-runtime.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
