@@ -1,0 +1,500 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-07",
+  "branch": "codex/integration/20261026-07",
+  "baseMainCommit": "86e11ed6a0315b682ebc1531187352f8b8b7dfc8",
+  "expectedMainCommit": "86e11ed6a0315b682ebc1531187352f8b8b7dfc8",
+  "createdAt": "2026-10-26T09:01:02.388Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "同步首页与笔记技能、随航状态、新笔记入口及演示切换布局和持久交付",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "7df7168c9b12b3dd59692a951176141c057806f1",
+        "tipCommit": "b388315663c4dcde16e06c8594f878e934d05317",
+        "commits": [
+          {
+            "commit": "7519b5ae016e5fde9c7c02a9b34672f16b066ce7",
+            "parents": [
+              "7df7168c9b12b3dd59692a951176141c057806f1"
+            ],
+            "subject": "为技能配图增加固定关闭按钮并保留原生草稿与选区"
+          },
+          {
+            "commit": "ba071b39e86ca1620a47da006484d42b0eb74aad",
+            "parents": [
+              "7519b5ae016e5fde9c7c02a9b34672f16b066ce7"
+            ],
+            "subject": "按真实画布可视区域完整呈现四卡连线过程"
+          },
+          {
+            "commit": "95e5bcefdb9e7db77ace1b21f2d91734e65598cd",
+            "parents": [
+              "ba071b39e86ca1620a47da006484d42b0eb74aad"
+            ],
+            "subject": "修正笔记复查通过后的评论高亮并更新四芒星盾牌"
+          },
+          {
+            "commit": "15a3f318c06d2b334b9a0f5e3022cc189a382e88",
+            "parents": [
+              "95e5bcefdb9e7db77ace1b21f2d91734e65598cd"
+            ],
+            "subject": "仅在对话首页展示技能配图与专用输入样式"
+          },
+          {
+            "commit": "69a0a528ebe4dbb9d3dcbafedfeae43aec2a606b",
+            "parents": [
+              "15a3f318c06d2b334b9a0f5e3022cc189a382e88"
+            ],
+            "subject": "修复笔记技能菜单的输入壳归属与焦点恢复"
+          },
+          {
+            "commit": "36d3dd7763dfd15b9bfdaeefb9ed6708362c8a31",
+            "parents": [
+              "69a0a528ebe4dbb9d3dcbafedfeae43aec2a606b"
+            ],
+            "subject": "改用持久交付卡片打开演示文稿与研报示例文件"
+          },
+          {
+            "commit": "34a8d5e5a012c2c0472599dd14f6634b321f4005",
+            "parents": [
+              "36d3dd7763dfd15b9bfdaeefb9ed6708362c8a31"
+            ],
+            "subject": "新增侧栏新笔记并统一收起栏创建入口顺序"
+          },
+          {
+            "commit": "58385955324190d77bd5952050d09ccb27d1f9ff",
+            "parents": [
+              "34a8d5e5a012c2c0472599dd14f6634b321f4005"
+            ],
+            "subject": "消除首页演示切换模式时的多余空白页"
+          },
+          {
+            "commit": "9ec33e78e8b8d50c923a90f951f5e387cf6cf2b3",
+            "parents": [
+              "58385955324190d77bd5952050d09ccb27d1f9ff"
+            ],
+            "subject": "修复新笔记外层补丁的前端重复安装顺序"
+          },
+          {
+            "commit": "3f35f050f04cc3bcbff3911d8043d5a18233fd01",
+            "parents": [
+              "9ec33e78e8b8d50c923a90f951f5e387cf6cf2b3"
+            ],
+            "subject": "优化看板示例逐步排布并保留用户选区"
+          },
+          {
+            "commit": "b388315663c4dcde16e06c8594f878e934d05317",
+            "parents": [
+              "3f35f050f04cc3bcbff3911d8043d5a18233fd01"
+            ],
+            "subject": "归一已安装外层补丁的前端测试输入"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-report-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/deliverable-cards.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/delivery-file-model.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-composer-deliverable-preview.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-integration-skill-composer.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/sidebar-new-note.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/input-deliverable-assets/skill-cover-close-hover.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/input-deliverable-assets/skill-cover-close.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-composer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-use.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/assets/challenge-shield-busy.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/assets/challenge-shield.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/challenge-controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/mount.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/scheduled/assets/new-note-dark.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/scheduled/assets/new-note-light.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/icons.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/sidebar-new-note.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/deliverable-cards.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/delivery-file-model.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-guide-entry-handoff-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-report-runtime.js"
+          },
+          {
+            "status": "C098",
+            "path": "test/fixtures/input-deliverable-preview-v1.mjs",
+            "previousPath": "scripts/lib/figma-composer-deliverable-preview.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/input-deliverable-preview-v2.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/notes-skill-menu-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/sidebar-new-note-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-entry-handoff-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-strip.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-presentation-host.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-presentation-replay.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-presentation-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-report-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/input-deliverable-preview-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/input-deliverable-preview-install.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/input-deliverable-preview-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-skill-composer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-controller-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-challenge-resolution-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-skill-menu-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-view.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-new-note-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-new-note-install.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/check-home17-feature-evidence-20261026.py"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-17-final2-check-1-20261026.log",
+            "verifiedCommit": "b388315663c4dcde16e06c8594f878e934d05317",
+            "completedAt": "2026-10-26T08:57:38.674004+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-17-final2-check-2-20261026.log",
+            "verifiedCommit": "b388315663c4dcde16e06c8594f878e934d05317",
+            "completedAt": "2026-10-26T08:57:44.670097+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-17-final2-check-3-20261026.log",
+            "verifiedCommit": "b388315663c4dcde16e06c8594f878e934d05317",
+            "completedAt": "2026-10-26T08:57:50.673856+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/input-deliverable-preview-patch.test.js",
+              "test/input-deliverable-preview-install.test.js",
+              "test/integration-skill-composer.test.ts",
+              "test/integration-skill-use.test.ts",
+              "test/skill-command-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js",
+              "test/home-presentation-replay.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-report-runtime.test.js",
+              "test/home-presentation-host.test.js",
+              "test/delivery-file-model.test.js",
+              "test/deliverable-cards.test.js",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/scheduled-task-view.test.ts",
+              "test/sidebar-new-note-install.test.js",
+              "test/home-guides.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-17-final2-check-4-20261026.log",
+            "verifiedCommit": "b388315663c4dcde16e06c8594f878e934d05317",
+            "completedAt": "2026-10-26T09:00:05.697501+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-17-final2-check-5-20261026.log",
+            "verifiedCommit": "b388315663c4dcde16e06c8594f878e934d05317",
+            "completedAt": "2026-10-26T09:00:14.822424+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-17-final2-check-6-20261026.log",
+            "verifiedCommit": "b388315663c4dcde16e06c8594f878e934d05317",
+            "completedAt": "2026-10-26T09:00:14.862778+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "直接相关真实组件浏览器与原生模块夹具已完成；逐文件哈希验证后复用冻结的聚焦证据。正式16 Notes连续180秒及回访通过；正式16四卡取景实拍失败已保留并据实修复。正式17新增交互仍待本批干净main构建后原生复验。"
+        },
+        "acceptanceCriteria": [
+          "Figma43B配图关闭仅移除实际显示的技能occurrence与配图，正文、其他技能/附件、焦点、选区和撤销保持。",
+          "仅真正对话首页的PPT与研报技能出现配图及特殊样式，普通对话/研究/笔记/子代理均为原生普通标签。",
+          "Notes技能菜单绑定真实NotesInputRecord并保留模式、会话与草稿版本保护，不误写普通chat或跳回chat。",
+          "改写后当前完整随航校验通过才解决旧AI黄标，人工/新/异步旧问题不误清，历史与撤销保留；统一宽扁四芒星盾牌且仅星呼吸。",
+          "看板创建自选与行情等高窄宽成行并填满边缘，新闻与公告下一行、日历再下一行；真实整理拉高资讯并按有效viewport适配；四卡完整取景后边拖边连线，完成后只清理actor持有选择，保留人工选择，不缩放原生字体图表。",
+          "研究和笔记演示在实际tab点击前准备新会话并暖好目标，点击后直接进入新目标；真实Native Root与NotesMount逐帧验证无旧会话空体或新会话Chat闪帧，保留原草稿、取消与焦点保护。",
+          "PPT与研报新演示无冗余快捷链接，只有成功发布结果才能形成两张持久原名交付卡片，失败/取消/早报不能交付，冷恢复后点击仍能预览。",
+          "展开侧栏更多菜单新笔记置顶；收起侧栏按添加工作区、对话、研究、笔记真实DOM顺序排列且更多不重复，创建当前工作区真正新会话并直接持久Notes模式。",
+          "从干净本地main构建同一正式客户端，保留现有用户数据，不发布、不递增版本、不推送。"
+        ],
+        "risks": [
+          "正式17新增交互的原生验收待构建后完成。",
+          "系统级概率鼠标冻结仍未稳定复现，fixed=false。",
+          "旧已持久化演示回复文字保留；去除快捷链接作用于重新启动的演示。",
+          "此前常规headless截图路径写入已分别记录，原始Native证据不改写。"
+        ],
+        "generatedAt": "2026-10-26T09:01:00.591837+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "python3",
+        "/tmp/check-home17-integration-source-20261026.py"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native.test.js",
+        "test/delivery-file-model.test.js",
+        "test/integration-skill-composer.test.ts",
+        "test/input-deliverable-preview-patch.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
