@@ -20,13 +20,13 @@ export function createAssistantRevealLedger(){
 export function createAssistantTextPaint(root,record,route){
  if(!root||!record)return{update(){},dispose(){}}
  const doc=root.ownerDocument,view=doc.defaultView,media=view?.matchMedia?.('(prefers-reduced-motion: reduce)'),registry=view?.CSS?.highlights
- const epoch=record.epoch,transferRoute=route==='progress'||route==='node'
+ const epoch=record.epoch,transferRoute=route==='progress'||route==='node',composer=route==='composer'&&root.matches('[data-input-backdrop]')&&root.closest('.uV2eYG_root')!==null
  const fade=180,step=12,levels=32,maxTail=2200-fade,palettes=new Map(),prefix='ework-ai-reveal-'+Math.random().toString(36).slice(2)
  let frame=0,style,units=[],parts=[],names=[],disposed=false,selecting=false,quietUntil=0,lastStart,hiddenCommitted=false,blurred=false
  const clear=()=>{view?.cancelAnimationFrame(frame);frame=0;units=[];for(const name of names)registry?.delete(name);delete root.dataset.aiRevealing;delete root.__eworkAssistantRevealEnd;delete record.handoff}
  // A non-key Electron window can still be visible to the reader. New arrivals
  // are gated by actual surface visibility, independently of keyboard focus.
- const visible=()=>doc.visibilityState!=='hidden'&&root.getClientRects().length>0&&!root.closest('[hidden],[inert],[aria-hidden="true"]')
+ const visible=()=>{if(doc.visibilityState==='hidden'||!root.getClientRects().length||root.closest('[hidden],[inert]')||(composer?root.parentElement?.closest('[aria-hidden="true"]'):root.closest('[aria-hidden="true"]')))return false;if(composer)for(let el=root;el;el=el.parentElement){const style=view.getComputedStyle(el);if(['hidden','collapse'].includes(style.visibility)||style.opacity==='0')return false}return true}
  // Only a different trusted seat in this same commit may resume these times.
  const inherited=record.handoff;delete record.handoff
  if(inherited&&transferRoute&&inherited.route!==route&&inherited.epoch===epoch&&(record.fresh||record.live)&&visible()&&!media?.matches){units=inherited.units;lastStart=inherited.lastStart;quietUntil=inherited.quietUntil??0;blurred=inherited.blurred??false;record.skipNext=false}
@@ -40,7 +40,7 @@ export function createAssistantTextPaint(root,record,route){
  const selection=()=>{if(hasSelection())finish()}
  doc.addEventListener('selectionchange',selection)
  // Reasoning disclosure summaries are separate from the public reply timeline.
- const collect=()=>{const nodes=[],walker=doc.createTreeWalker(root,4,{acceptNode(node){return node.parentElement?.closest('button,svg,style,script,[aria-hidden="true"],[data-variant="think"],.katex-mathml')?2:1}});let node,text='';while(node=walker.nextNode()){nodes.push({node,start:text.length,end:text.length+node.data.length});text+=node.data}return{nodes,text}}
+ const collect=()=>{const nodes=[],walker=doc.createTreeWalker(root,4,{acceptNode(node){const parent=node.parentElement,hidden=parent?.closest('[aria-hidden="true"]');return parent?.closest('button,svg,style,script,[data-variant="think"],.katex-mathml'+(composer?',[data-occurrence]':''))||hidden&&(!composer||hidden!==root)?2:1}});let node,text='';while(node=walker.nextNode()){nodes.push({node,start:text.length,end:text.length+node.data.length});text+=node.data}return{nodes,text}}
  // Real return events can settle a baseline already committed while hidden. If
  // rendering paused entirely, keep the first returned commit as its baseline.
  const resume=()=>{if(!record.skipNext||!hiddenCommitted||!record.initialized||record.epoch!==epoch||!root.isConnected||!visible())return;const{text}=collect();finish();record.text=text;record.skipNext=false;hiddenCommitted=false;lastStart=undefined}

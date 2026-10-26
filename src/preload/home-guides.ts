@@ -165,24 +165,28 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     await entryPointer.perform({target:back,action:'click'});ensurePending()
     if(!back.isConnected||!center.contains(back))throw aborted()
     await entry.revealComposer();ensurePending()
-    const view=kind==='board'?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+view+'"]')
-    if(!tab)throw Error('示例入口尚未就绪，请重新打开首页。')
+    const view=kind==='board'?'research':kind==='note'?'notes':undefined,tab=view?resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+view+'"]'):null
+    if(view&&!tab)throw Error('示例入口尚未就绪，请重新打开首页。')
     // Keep the real composer visible while native workspace/session preparation
     // runs alongside the pointer. Never expose the old session's empty mode.
     const preparation=exchangeSession(document,{kind,command:'prepare',replay:input.replay===true},controller.signal)
     void preparation.catch(()=>{})
-    await entryPointer.perform({target:tab,action:'move'});ensurePending()
+    if(tab)await entryPointer.perform({target:tab,action:'move'});ensurePending()
     prepared=await preparation;ensurePending();pending.target=prepared.sessionId
     await adapters.beforeOpen?.({...prepared,kind});await gate();ensurePending();preflighted=true
-    if(!tab.isConnected||!resident.contains(tab)||tab.disabled||tab.getAttribute('aria-disabled')==='true')throw aborted()
-    await entryPointer.perform({target:tab,action:'click'});ensurePending()
-    // The native mode click leaves the homepage. Transfer cancellation to this
-    // controller before that expected detach; real navigation still aborts it.
+    if(tab){
+     if(!tab.isConnected||!resident.contains(tab)||tab.disabled||tab.getAttribute('aria-disabled')==='true')throw aborted()
+     await entryPointer.perform({target:tab,action:'click'});ensurePending()
+    }
+    // Transfer cancellation before the expected native mode/session handoff.
+    // Real user navigation still aborts this controller.
     entry.handoff?.();clearEntry();ensurePending()
     transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;document.documentElement.dataset.homeGuideTransitionSession=pending.source
-    ownedNavigation++;try{tab.click()}finally{ownedNavigation--}
-    await Promise.resolve();ensurePending()
-    if(!tab.isConnected||tab.getAttribute('aria-selected')!=='true')throw Error('模式入口尚未就绪，请重试。')
+    if(tab){
+     ownedNavigation++;try{tab.click()}finally{ownedNavigation--}
+     await Promise.resolve();ensurePending()
+     if(!tab.isConnected||tab.getAttribute('aria-selected')!=='true')throw Error('模式入口尚未就绪，请重试。')
+    }
    }
    session=prepared??await exchangeSession(document,{kind,command:'prepare',replay:input.replay===true},controller.signal);ensurePending();pending.target=session.sessionId
    transition||=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;if(!input.entry)document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
@@ -202,9 +206,6 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const definition=EXAMPLES[kind],root=document.createElement('section');root.className='odyssey-home-guide';root.dataset.homeGuide=id;root.dataset.kind=kind;root.setAttribute('aria-label',definition.title+' · 示例教程')
   const content=document.createElement('div');content.id='odyssey-home-guide-content-'+id;content.className='odyssey-home-guide-content'+(kind==='note'?' en-root':'');content.dataset.homeGuideContent='';if(kind==='note')content.dataset.homeGuideNotes='';content.dataset.dark=String(document.body.hasAttribute('data-ds-dark-theme'))
   const notice=document.createElement('div');notice.className='odyssey-home-guide-fault';notice.hidden=true;notice.setAttribute('role','alert')
-  const modeNotice=kind==='board'?undefined:document.createElement('div')
-  if(modeNotice){modeNotice.className='odyssey-home-guide-mode-notice';modeNotice.setAttribute('role','status');modeNotice.textContent='当前为演示模式，不消耗 Token';root.append(modeNotice)}
-  const modeTimer=modeNotice?win.setTimeout(()=>{modeNotice.dataset.leaving='true';win.setTimeout(()=>modeNotice.remove(),180)},5000):undefined
   const status=document.createElement('p');status.className='odyssey-home-guide-status';status.textContent='正在打开已保存的示例…'
   const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='×';dismiss.setAttribute('aria-label','关闭示例');dismiss.addEventListener('click',()=>{void close()})
   notice.append(status,dismiss);root.append(content,notice)
@@ -218,7 +219,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const resize=new win.ResizeObserver(position);resize.observe(center);const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');if(chrome)resize.observe(chrome);win.addEventListener('resize',position);position()
   const context=new win.MutationObserver(()=>{if(active!==run)return;if(selected()!==run.sessionId||!resident.isConnected||document.querySelector('.VOzbGW_overlay')||document.body.hasAttribute('data-workspace-surface'))void close(false);else blockResident()})
   context.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ework-notes-session','data-workspace-surface']})
-  run.cleanup=()=>{if(modeTimer!==undefined)win.clearTimeout(modeTimer);modeNotice?.remove();resize.disconnect();context.disconnect();win.removeEventListener('resize',position);for(const[body,inert]of blocked)body.inert=inert}
+  run.cleanup=()=>{resize.disconnect();context.disconnect();win.removeEventListener('resize',position);for(const[body,inert]of blocked)body.inert=inert}
   const guideTab=kind==='board'?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+guideTab+'"]')
   ownedNavigation++;try{if(tab?.getAttribute('aria-selected')!=='true')tab?.click()}finally{ownedNavigation--}
   const ensure=()=>{if(active!==run||controller.signal.aborted||selected()!==run.sessionId)throw aborted()}

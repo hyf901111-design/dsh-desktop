@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
@@ -14,7 +15,7 @@ const evidence=artifactRoot+'/shell'
 let browser,runtimeSource,conversationSource,entry,styles
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- conversationSource=patchHomeGuideNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;')
+ conversationSource=patchHomeGuideNative(execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(readFileSync(0,'utf8')))))"],{input:await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),encoding:'utf8',maxBuffer:64*1024*1024})).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;')
  styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';
@@ -71,16 +72,16 @@ async function geometry(page){return page.evaluate(()=>{
 })}
 
 for(const[kind,index,view]of [['board',0,'research'],['note',1,'notes'],['ppt',2,'chat'],['report',3,'chat']]){
- it(`visibly returns through the real home button and ${view} Tab before starting the ${kind} example`,async()=>{
+ it(`visibly returns through the real home button${view==='chat'?' without clicking Chat':' and '+view+' Tab'} before starting the ${kind} example`,async()=>{
   const f=await fixture({width:1000,height:900,hero:true,operations:true,entryKind:kind,reducedMotion:'no-preference'}),{page}=f,output=artifactRoot
   try{
    await mkdir(output,{recursive:true});await page.getByRole('button',{name:'切换到快速开始',exact:true}).click();await expect.poll(()=>page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-motion')).toBe('idle')
    await page.locator('button[data-case="'+index+'"]').click();await expect.poll(()=>page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(String(index))
    const before=await page.locator('textarea').inputValue();await page.locator('[data-odyssey-operations-open-example]').click()
-   await expect.poll(()=>page.evaluate(()=>window.shellProbe.entryTrace.actions.some(value=>value.type==='return'))).toBe(true)
+   await expect.poll(()=>page.evaluate(()=>window.shellProbe.entryTrace.actions.some(value=>value.type==='return')),{timeout:6500}).toBe(true).catch(async error=>{await writeFile(output+'/'+kind+'-intro-diagnostic.json',JSON.stringify(await page.evaluate(()=>({focused:document.hasFocus(),hidden:document.hidden,surface:document.body.dataset.workspaceSurface,feedback:document.querySelector('[data-odyssey-operations-feedback]')?.textContent,description:document.querySelector('.odyssey-operations-usecase')?.outerHTML,trace:window.shellProbe.entryTrace})),null,2));throw error})
    await page.screenshot({path:output+'/'+kind+'-return.png'})
    await page.waitForSelector('[data-home-guide-kind="'+kind+'"]',{timeout:5500}).catch(async error=>{await writeFile(output+'/'+kind+'-diagnostic.json',JSON.stringify({errors:f.errors,state:await page.evaluate(()=>({trace:window.shellProbe.entryTrace,header:document.querySelector('[data-srb-session-header]')?.outerHTML,feedback:document.querySelector('[data-odyssey-operations-feedback]')?.textContent,transition:document.documentElement.dataset.homeGuideTransitionSession}))},null,2)+'\n');throw error});await page.evaluate(()=>window.__testHomeGuideTimeline?.pause())
-   const trace=await page.evaluate(()=>window.shellProbe.entryTrace);expect(trace.actions.slice(0,4).map(value=>value.type)).toEqual(['return','prepare','tab:'+view,'open']);expect(trace.actions[0]).toMatchObject({phase:'idle',inert:true});expect(trace.actions[2]).toMatchObject({phase:'idle',inert:false});expect(trace.actions[1].selected).toBe('chat')
+   const trace=await page.evaluate(()=>window.shellProbe.entryTrace);expect(trace.actions.slice(0,4).map(value=>value.type)).toEqual(view==='chat'?['return','prepare','open']:['return','prepare','tab:'+view,'open']);expect(trace.actions[0]).toMatchObject({phase:'idle',inert:true});if(view!=='chat')expect(trace.actions[2]).toMatchObject({phase:'idle',inert:false});expect(trace.actions[1].selected).toBe('chat')
    const frames=trace.frames.filter(value=>value.pointer);expect(frames.length).toBeGreaterThan(5);expect(frames[0].x).toBeCloseTo(trace.origin.x,0);expect(frames[0].y).toBeCloseTo(trace.origin.y,0)
    expect(new Set(frames.map(value=>value.pointer)).size).toBe(1);expect(frames.some(value=>value.phase==='moving')).toBe(true);expect(frames.some(value=>value.phase==='pressed')).toBe(true);expect(frames.some(value=>value.inert===false)).toBe(true)
    if(view==='chat')expect(await page.locator('textarea').inputValue()).toBe(before);expect(await page.evaluate(()=>window.shellProbe.shell.snapshot.draft)).toBe(before);expect(await page.evaluate(()=>window.shellProbe.sent)).toBe(0);expect(f.errors).toEqual([])

@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {join,resolve} from 'node:path'
@@ -9,13 +10,14 @@ import {presentationHostFixture} from './fixtures/home-presentation-host.js'
 import {reportRuntimeFixture} from './fixtures/home-report-runtime.js'
 import {createUserMessage} from '@deepseek-ai/dsh-llm'
 import {HOME_REPORT_PATH,HOME_REPORT_SKILL_ID} from '../packages/dsh-research-task-runtime/home-report-contract.js'
+import {patchAssistantReveal} from '../scripts/lib/assistant-reveal.mjs'
 import {patchHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 import {patchDeliverableCards} from '../scripts/lib/deliverable-cards.mjs'
 const evidence=process.env.SHERLOCK_TEST_DEMO_OUTPUT_EVIDENCE||'/tmp/home-demo-output-input-20261026'
 let browser,entry,conversationSource,runtimeSource,commandsSource,triggersSource,deliverySource,fileDropSource
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- conversationSource=patchHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__Todo=TodoDock;exports.__User=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
+ conversationSource=patchHomeGuidePresentationNative(patchAssistantReveal(execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(readFileSync(0,'utf8')))))"],{input:await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),encoding:'utf8',maxBuffer:64*1024*1024}))).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__Todo=TodoDock;exports.__User=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
  commandsSource=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__Popup=PopupSelectView;')
  triggersSource=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__Menu=MenuView;')
  deliverySource=patchDeliverableCards(await readFile('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8'))
@@ -59,7 +61,7 @@ beforeAll(async()=>{
 
  const registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true}),root=createRoot(document.querySelector('#native-root'));
  root.render(<><native.ConversationRoot {...shared} useProjection={useProjection} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{throw Error('Must not create another workspace')}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例',sessionIds:[sessionId]}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/><SkillMenus/></>);
- window.addEventListener('sherlock:home-guide-cue',event=>{const raw=event.detail,cue=typeof raw.targetToken==='string'?JSON.parse(JSON.stringify(raw)):raw,target=typeof cue.targetToken==='string'?[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue.targetToken):cue.target;window.probe.cues.push({sources:shell.snapshot.occurrences.map(ref=>ref.source),inputState:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,inputInert:!!document.querySelector('.wSkVaW_composerHero')?.inert,isPaperclip:!!target?.matches('button.dsh-paperclip'),isInputDropTarget:target?.dataset.homeGuideFileDropTarget===cue.runId,label:cue.label,tag:target?.tagName,requestId:cue.requestId,action:cue.action,targetToken:cue.targetToken,fromTargetToken:cue.fromTargetToken,fromPresent:!!cue.fromTargetToken&&!!document.querySelector('[data-home-guide-drag-file]')?.matches('[data-home-guide-cue-target=\"'+cue.fromTargetToken+'\"]'),ghostText:document.querySelector('[data-home-guide-drag-file]')?.textContent,keys:Object.keys(raw).sort(),jsonOnly:Object.values(raw).every(value=>typeof value==='string'),payload:cue.targetToken?cue:null,tokenPresent:!!cue.targetToken&&target?.getAttribute('data-home-guide-cue-target')===cue.targetToken,filePath:target?.closest('.ew-delivery-card')?.dataset.filePath,skillOption:target?.closest('[data-ework-command="skills"]')?target.textContent:null});if(window.probe.holdAtCue===cue.label||window.probe.holdAtAction===cue.action||window.probe.holdAfterFile&&target?.tagName==='TEXTAREA'&&shell.snapshot.occurrences.some(ref=>ref.source==='chat-file'))window.probe.autoAck=false;if(window.operationsCase&&window.probe.pauseAtCue===cue.label)window.__testHomeGuideTimeline.pause();if(window.probe.autoAck!==false&&cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected}}))});
+ window.addEventListener('sherlock:home-guide-cue',event=>{const raw=event.detail,cue=typeof raw.targetToken==='string'?JSON.parse(JSON.stringify(raw)):raw,target=typeof cue.targetToken==='string'?[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue.targetToken):cue.target;window.probe.cues.push({isInputCaret:target?.dataset.homeGuideInputCaret===cue.runId,targetRect:target?.getBoundingClientRect().toJSON(),sources:shell.snapshot.occurrences.map(ref=>ref.source),inputState:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,inputInert:!!document.querySelector('.wSkVaW_composerHero')?.inert,isPaperclip:!!target?.matches('button.dsh-paperclip'),isInputDropTarget:target?.dataset.homeGuideFileDropTarget===cue.runId,label:cue.label,tag:target?.tagName,requestId:cue.requestId,action:cue.action,targetToken:cue.targetToken,fromTargetToken:cue.fromTargetToken,fromPresent:!!cue.fromTargetToken&&!!document.querySelector('[data-home-guide-drag-file]')?.matches('[data-home-guide-cue-target=\"'+cue.fromTargetToken+'\"]'),ghostText:document.querySelector('[data-home-guide-drag-file]')?.textContent,keys:Object.keys(raw).sort(),jsonOnly:Object.values(raw).every(value=>typeof value==='string'),payload:cue.targetToken?cue:null,tokenPresent:!!cue.targetToken&&target?.getAttribute('data-home-guide-cue-target')===cue.targetToken,filePath:target?.closest('.ew-delivery-card')?.dataset.filePath,skillOption:target?.closest('[data-ework-command="skills"]')?target.textContent:null});if(window.probe.holdAtCue===cue.label||window.probe.holdAtAction===cue.action||window.probe.holdAfterFile&&(target?.tagName==='TEXTAREA'||target?.hasAttribute('data-home-guide-input-caret'))&&shell.snapshot.occurrences.some(ref=>ref.source==='chat-file'))window.probe.autoAck=false;if(window.operationsCase&&window.probe.pauseAtCue===cue.label)window.__testHomeGuideTimeline.pause();if(window.probe.autoAck!==false&&cue.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected}}))});
  let guideController,disposeOperations=()=>{};
  if(window.operationsCase){
   window.probe.autoAck=false;window.probe.entryFrames=[];
@@ -67,7 +69,7 @@ beforeAll(async()=>{
   guideController=mountHomeGuides(document,{mountNotes:async()=>{throw Error('PPT fixture cannot mount Notes')},mountPresentation:mountHomePresentationGuide});
   disposeOperations=mountHomeOperations(document,{onExample:async(kind,context)=>{let frame;const capture=()=>{const hero=document.querySelector('.wSkVaW_composerHero');window.probe.entryFrames.push({inert:hero?.inert,state:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,y:hero?.getBoundingClientRect().y});frame=requestAnimationFrame(capture)};capture();try{await playHomeGuideFromOperations(guideController,kind,context)}finally{cancelAnimationFrame(frame)}}});
  }
- window.probe.performCue=async value=>{const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),pointer=createHomeGuidePointer(document,{runId:'run-1',signal:window.probe.controller.signal,wait:ms=>new Promise(r=>setTimeout(r,ms)),waitUntilPlaying:async()=>{while(!window.probe.playing||document.hidden){if(window.probe.controller.signal.aborted)throw new DOMException('已取消','AbortError');await new Promise(r=>setTimeout(r,25))}}});try{await pointer.perform({action:value.action,target:find(value.targetToken),fromTarget:value.fromTargetToken?find(value.fromTargetToken):undefined});window.probe.lastPointer={...pointer.snapshot()};window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:value.requestId,ok:true}}))}finally{pointer.dispose()}};
+ window.probe.performCue=async value=>{const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),pointer=createHomeGuidePointer(document,{runId:'run-1',signal:window.probe.controller.signal,wait:ms=>new Promise(r=>setTimeout(r,ms)),waitUntilPlaying:async()=>{while(!window.probe.playing||document.hidden){if(window.probe.controller.signal.aborted)throw new DOMException('已取消','AbortError');await new Promise(r=>setTimeout(r,25))}}});try{await pointer.perform({action:value.action,target:find(value.targetToken),fromTarget:value.fromTargetToken?find(value.fromTargetToken):undefined});window.probe.lastPointer={...pointer.snapshot()};if(window.probe.captureCaret)await new Promise(resolve=>{window.probe.releaseCaretScreenshot=resolve});window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:value.requestId,ok:true}}))}finally{pointer.dispose()}};
  disposers.push(shell.state.subscribe(()=>{const draft=shell.snapshot.draft,edits=window.probe.drafts;if(edits.at(-1)?.draft!==draft)edits.push({draft,time:performance.now()})}));
  const insertFilePaths=shell.insertFilePaths.bind(shell);shell.insertFilePaths=paths=>{window.probe.fileInsertions.push([...paths]);return insertFilePaths(paths)};
  window.addEventListener('sherlock:home-guide-presentation-request',event=>window.probe.requests.push(JSON.parse(JSON.stringify(event.detail))));
@@ -80,17 +82,18 @@ beforeAll(async()=>{
  await mkdir(evidence,{recursive:true})
 },30000)
 afterAll(()=>browser?.close())
-async function fixture({operations=false,reducedMotion='reduce',kind='ppt',reportSchemaVersion=1}={}){
+async function fixture({operations=false,reducedMotion='reduce',kind='ppt',reportSchemaVersion=1,brief}={}){
  const f=kind==='report'?await reportRuntimeFixture({schemaVersion:reportSchemaVersion}):await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion}),errors=[]
  page.on('pageerror',e=>errors.push(e.stack??e.message))
  const sent=[],http=[];
- const backend=async input=>{
+ const rawBackend=async input=>{
   if(input.action==='history')return f.request(f.api.sessions.history,{sessionId:f.agent.id,maxMessages:100})
   if(input.action==='send'){sent.push(input.text);if(kind==='report')f.agent.followup(createUserMessage({content:[{type:'text',text:input.text}],source:{kind:'user'}}));else await f.prompt(input.text);return{ok:true}}
   if(input.action==='verify-file'){expect(await readFile(input.path)).toEqual(kind==='report'?f.pdf:f.bytes);return{ok:true}}
   if(kind==='report'){const method={prepare:'prepare',playback:'playback',checkpoint:'checkpoint',dispose:'disposeRun'}[input.action];return{ok:true,...await f.runtime[method]({...f.input,...input})}}
   return f.command(input.action,input)
  }
+ const backend=async input=>{const result=await rawBackend(input);return input.action==='prepare'&&brief!==undefined?{...result,brief}:result}
  await page.exposeFunction('nativeBackend',backend)
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url())
@@ -105,7 +108,7 @@ async function fixture({operations=false,reducedMotion='reduce',kind='ppt',repor
  await page.addScriptTag({content:triggersSource});await page.evaluate(()=>window.triggersDescriptor=window.descriptor)
  await page.addScriptTag({content:deliverySource});await page.evaluate(()=>window.deliveryDescriptor=window.descriptor)
  await page.addScriptTag({content:fileDropSource});await page.evaluate(()=>window.fileDropDescriptor=window.descriptor)
- const styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements','home-guides'].map(n=>readFile('src/preload/'+n+'.css','utf8')))).join('\n')
+ const styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-inline-references','figma-reading','figma-refinements','home-guides'].map(n=>readFile('src/preload/'+n+'.css','utf8')))).join('\n')
  await page.addStyleTag({content:styles+'\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;height:100vh;width:1000px}#native-root{height:100%}[data-home-guide]{position:absolute;inset:0;pointer-events:none}#right{position:fixed;left:1000px;top:60px;width:350px;padding:15px}.wSkVaW_root{height:100%}'})
  await page.addScriptTag({content:entry});await page.waitForSelector('textarea',{timeout:4000}).catch(async error=>{throw Error(JSON.stringify({errors,body:await page.locator('body').innerText()})+' '+error.message)})
  await page.evaluate(()=>window.probe.original=document.querySelector('textarea'))
@@ -142,7 +145,7 @@ it('serializes the native report skill plus exactly one space and brief, deliver
   expect(before.files).toEqual([]);expect(before.refs.map(value=>value.source)).toEqual(['ework-managed-skill']);expect(JSON.parse(before.refs[0].ref).id).toBe(HOME_REPORT_SKILL_ID)
   expect(before.cues.some(value=>value.action==='drag'||value.isPaperclip)).toBe(false)
   const brief=f.message().slice(f.message().indexOf(' ')+1),typed=await page.evaluate(brief=>window.probe.drafts.filter(value=>value.draft.startsWith('\uFFFC ')&&value.draft.length>2&&brief.startsWith(value.draft.slice(2))),brief)
-  expect(typed).toHaveLength(Math.ceil(brief.length/2));for(let i=1;i<typed.length;i++)expect(typed[i].time-typed[i-1].time).toBeGreaterThanOrEqual(110)
+  expect(typed).toHaveLength([...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(brief)].length);for(let i=1;i<typed.length;i++)expect(typed[i].time-typed[i-1].time).toBeGreaterThanOrEqual(40)
   await page.evaluate(()=>window.probe.step('send'));expect(f.sent).toEqual([f.message()])
   expect(await page.evaluate(()=>window.probe.serializations.map(value=>value.value))).toEqual(['/ework-skill-778d85796a6c426b'])
   for(const step of ['plan','layout','deliver'])await page.evaluate(step=>window.probe.step(step),step)
@@ -548,3 +551,48 @@ it.each(['inert','moved'])('keeps the file unattached when its real input become
   expect(f.sent).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
+
+for(const kind of ['ppt','report'])for(const width of [1000,620])it('points at the real tagged composer caret and focuses its native end before typing the '+kind+' brief at '+width+'px',async()=>{
+ const f=await fixture({kind}),{page}=f,label=kind==='ppt'?'填写研报转换要求':'填写研究问题'
+ try{
+  await page.addStyleTag({content:'.pI_x6G_centerCol{width:'+width+'px}'});
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.holdAtCue=window.actorKind==='ppt'?'填写研报转换要求':'填写研究问题'});await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').catch(error=>{window.probe.failure=error.message;throw error})})
+  await expect.poll(()=>page.evaluate(()=>window.probe.cues.at(-1)?.label),{timeout:10000}).toBe(label).catch(async error=>{await mkdir(evidence,{recursive:true});await writeFile(evidence+'/'+kind+'-caret-diagnostic.json',JSON.stringify(await page.evaluate(()=>({geometry:(()=>{const input=document.querySelector('textarea'),s=input.closest('.uV2eYG_root').querySelector('.uV2eYG_backdrop')?.lastElementChild,r=document.createRange();r.selectNodeContents(s);r.collapse(false);return{input:input.getBoundingClientRect().toJSON(),segment:s.getBoundingClientRect().toJSON(),range:r.getBoundingClientRect().toJSON(),inputPadding:getComputedStyle(input).padding,backdropPadding:getComputedStyle(s.parentElement).padding}})(),html:document.querySelector('.uV2eYG_root')?.outerHTML,draft:window.probe.shell.snapshot.draft,errors:window.probe.failure,cues:window.probe.cues})),null,2));throw error})
+  const cue=await page.evaluate(()=>window.probe.cues.at(-1));expect(cue.isInputCaret).toBe(true)
+  const measured=await page.evaluate(()=>{const input=document.querySelector('textarea'),labels=[...input.closest('.uV2eYG_root').querySelectorAll('.uV2eYG_chipLabel')],last=labels.at(-1).getBoundingClientRect(),rect=input.getBoundingClientRect();input.setSelectionRange(0,0);const set=window.probe.shell.setDraft.bind(window.probe.shell);window.probe.shell.setDraft=(...args)=>{window.probe.beforeFirstTyped??={selectionStart:input.selectionStart,selectionEnd:input.selectionEnd,length:input.value.length,focused:document.activeElement===input};return set(...args)};return{last:last.toJSON(),input:rect.toJSON()}})
+  if(cue.targetRect.y<measured.last.bottom)expect(cue.targetRect.x).toBeGreaterThan(measured.last.right-1);else expect(cue.targetRect.y).toBeGreaterThan(measured.last.bottom);expect(cue.targetRect.x).toBeGreaterThan(measured.input.x);expect(cue.targetRect.x).toBeLessThan(measured.input.right);expect(cue.targetRect.y).toBeGreaterThan(measured.last.top);expect(cue.targetRect.y).toBeLessThan(measured.input.bottom)
+  await page.evaluate(cue=>{window.probe.captureCaret=true;window.probe.caretMotion=window.probe.performCue(cue.payload)},cue);await expect.poll(()=>page.evaluate(()=>typeof window.probe.releaseCaretScreenshot)).toBe('function');await mkdir(evidence,{recursive:true});await page.screenshot({path:evidence+'/'+kind+'-'+width+'-precise-caret.png'});await writeFile(evidence+'/'+kind+'-'+width+'-precise-caret.json',JSON.stringify({cue,measured,pointer:await page.evaluate(()=>window.probe.lastPointer)},null,2)+'\n');await page.evaluate(()=>window.probe.releaseCaretScreenshot());await page.evaluate(()=>window.probe.caretMotion);await page.evaluate(()=>window.probe.pending)
+  expect(await page.evaluate(()=>window.probe.beforeFirstTyped)).toEqual(expect.objectContaining({focused:true}));expect(await page.evaluate(()=>{const v=window.probe.beforeFirstTyped;return v.selectionStart===v.length&&v.selectionEnd===v.length})).toBe(true)
+  const snapshot=await page.evaluate(()=>window.probe.shell.snapshot);expect(snapshot.occurrences.map(ref=>ref.source)).toEqual(kind==='ppt'?['ework-managed-skill','chat-file']:['ework-managed-skill']);expect(snapshot.draft).not.toContain('\n');expect(f.sent).toEqual([]);expect(await page.locator('[data-home-guide-input-caret]').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+it.each(['moved','inert'])('does not type when the native composer becomes %s after its precise caret cue',async mutation=>{
+ const f=await fixture({kind:'report'}),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.holdAtCue='填写研究问题'});await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await expect.poll(()=>page.evaluate(()=>window.probe.cues.at(-1)?.label),{timeout:6000}).toBe('填写研究问题')
+  const before=await page.evaluate(()=>window.probe.shell.snapshot)
+  await page.evaluate(mutation=>{const input=document.querySelector('textarea');if(mutation==='moved')input.style.transform='translateY(8px)';else input.closest('.uV2eYG_root').inert=true;const cue=window.probe.cues.at(-1);window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:'run-1',requestId:cue.requestId,ok:true}}))},mutation)
+  expect(await page.evaluate(()=>window.probe.pending)).toBe(false);expect(await page.evaluate(()=>window.probe.shell.snapshot)).toEqual(before);expect(await page.locator('[data-home-guide-input-caret]').count()).toBe(0);expect(f.sent).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},12000)
+
+for(const kind of ['ppt','report'])it('streams the '+kind+' prompt as whole native graphemes with the existing reply reveal painter',async()=>{
+ const brief='保留👨‍👩‍👧‍👦与é，再写中文。',f=await fixture({kind,brief,reducedMotion:'no-preference'}),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1';window.probe.inputRevealFrames=[];document.addEventListener('sherlock:assistant-reveal-frame',event=>{if(event.target.matches('[data-input-backdrop]'))window.probe.inputRevealFrames.push({size:CSS.highlights.size,ranges:[...CSS.highlights.values()].flatMap(value=>[...value].map(range=>range.toString()))})})});await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>{window.probe.pending=window.probe.step('brief')});await expect.poll(()=>page.evaluate(()=>window.probe.inputRevealFrames.some(frame=>frame.size>0))).toBe(true);await mkdir(evidence,{recursive:true});await page.screenshot({path:evidence+'/'+kind+'-prompt-stream.png'});await page.evaluate(()=>window.probe.pending)
+  const result=await page.evaluate(()=>({draft:window.probe.shell.snapshot.draft,drafts:window.probe.drafts,frames:window.probe.inputRevealFrames,inputLength:document.querySelector('textarea').value.length,caret:document.querySelector('textarea').selectionEnd,highlightCount:CSS.highlights.size})),prefix=result.draft.slice(0,-brief.length),typed=result.drafts.filter(entry=>entry.draft.startsWith(prefix)&&entry.draft.length>prefix.length)
+  let previous='';const changes=typed.map(entry=>{const suffix=entry.draft.slice(prefix.length),delta=suffix.slice(previous.length);previous=suffix;return delta})
+  expect(changes).toEqual([...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(brief)].map(unit=>unit.segment));expect(result.draft).toBe(prefix+brief);expect(result.frames.some(frame=>frame.size>0)).toBe(true);expect(result.frames.flatMap(frame=>frame.ranges).join('')).not.toMatch(/ework-|Vanguard/);expect(result.caret).toBe(result.inputLength);expect(result.highlightCount).toBe(0);expect(f.sent).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+it('pauses and cancels a native grapheme stream without any late draft write or remaining reveal',async()=>{
+ const brief='逐字显示正在输入的研究需求，保留👨‍👩‍👧‍👦与é。'.repeat(3),f=await fixture({kind:'report',brief,reducedMotion:'no-preference'}),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1'});await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>{window.probe.pending=window.probe.step('brief').then(()=>true,()=>false)})
+  await expect.poll(()=>page.evaluate(()=>window.probe.shell.snapshot.draft.includes('逐字')),{timeout:6000}).toBe(true)
+  await page.evaluate(()=>window.probe.play(false));const paused=await page.evaluate(()=>window.probe.shell.snapshot);await page.waitForTimeout(200);expect(await page.evaluate(()=>window.probe.shell.snapshot)).toEqual(paused)
+  await page.evaluate(()=>window.probe.controller.abort());expect(await page.evaluate(()=>window.probe.pending)).toBe(false);await page.waitForTimeout(100);expect(await page.evaluate(()=>window.probe.shell.snapshot)).toEqual(paused);expect(await page.evaluate(()=>CSS.highlights.size)).toBe(0);expect(await page.locator('[data-input-backdrop][data-ai-revealing]').count()).toBe(0);expect(f.sent).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},12000)

@@ -42,6 +42,12 @@ test('prepares the separate example while approaching the real Notes tab, before
  expect(f.events.slice(0,4)).toEqual(['return','prepare','tab:notes','open']);expect(f.context.handoff).toHaveBeenCalledOnce();expect(f.text.value).toBe('原有草稿')
  await f.controller.reset(false);expect(document.querySelector('[data-home-guide-pointer]')).toBeNull()
 })
+test.each(['ppt','report'] as const)('opens the independent %s composer without clicking the source Chat tab',async kind=>{
+ vi.useFakeTimers();const f=operationsEntryFixture(),pending=f.controller.start(kind,{replay:true,entry:f.context} as any)
+ await vi.advanceTimersByTimeAsync(2600);await pending
+ expect(f.events).toEqual(['return','prepare','open']);expect(f.context.handoff).toHaveBeenCalledOnce();expect(f.text.value).toBe('原有草稿')
+ await f.controller.reset(false)
+})
 test.each(['abort','draft','composition','navigation','escape'])('cancels an operations entry on %s before any independent session is prepared',async change=>{
  vi.useFakeTimers();const f=operationsEntryFixture(),pending=f.controller.start('note',{replay:true,entry:f.context} as any).then(()=>null,error=>error)
  await vi.advanceTimersByTimeAsync(64)
@@ -107,11 +113,10 @@ test('PPT keeps the real history and input usable instead of mounting a replacem
  expect(f.text.parentElement?.inert).not.toBe(true);expect(document.querySelector<HTMLElement>('.wSkVaW_scrollBody')?.inert).not.toBe(true)
  expect(f.adapters.mountPresentation.mock.calls[0]?.[2]).toMatchObject({sessionId:'example-ppt',fresh:true})
 })
-test.each(['note','ppt'] as const)('briefly explains token-free %s playback below the header and removes the notice',async kind=>{
+test.each(['note','ppt','report'] as const)('does not add a token notice over the %s example',async kind=>{
  vi.useFakeTimers();const f=fixture();await f.controller.start(kind)
  const notice=document.querySelector<HTMLElement>('.odyssey-home-guide-mode-notice')
- expect(notice?.textContent).toBe('当前为演示模式，不消耗 Token')
- expect(notice?.closest('[data-home-guide]')).not.toBeNull()
+ expect(notice).toBeNull()
  expect(document.querySelector('[data-center-composer-host] .odyssey-home-guide-mode-notice')).toBeNull()
  await vi.advanceTimersByTimeAsync(5300)
  expect(document.querySelector('.odyssey-home-guide-mode-notice')).toBeNull()
