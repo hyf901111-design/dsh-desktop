@@ -6,7 +6,7 @@ type Options={runId:string;signal:AbortSignal;wait(ms:number):Promise<void>;wait
 /** A visual actor only. The owning scenario performs its real action after acknowledgement. */
 export function createHomeGuidePointer(document:Document,options:Options){
  const win=document.defaultView!,element=document.createElement('div');element.className='odyssey-home-guide-pointer';element.dataset.homeGuidePointer=options.runId;element.setAttribute('aria-hidden','true');element.hidden=true
- element.innerHTML='<span class="odyssey-home-guide-pointer-pulse"></span><svg viewBox="0 0 25 32" width="25" height="32"><path d="M3 2.5v23l6.3-5.7 4.6 10 4.5-2.1-4.8-9.6 8.5-.5Z" fill="#fff" stroke="#202329" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+ element.innerHTML='<span class="odyssey-home-guide-pointer-pulse"></span><svg viewBox="0 0 18 20" width="18" height="20"><path d="M2.75 2.5C2.06 2.5 1.64 3.04 1.72 3.75L3.02 15.05C3.13 16.03 4.32 16.28 4.82 15.43L7.43 10.98L12.78 9.14C13.71 8.82 13.81 7.55 12.94 7.09L3.45 2.66C3.2 2.52 2.95 2.48 2.75 2.5Z" fill="#45474A" stroke="#D7D8DA" stroke-opacity=".92" stroke-width="1.35" stroke-linejoin="round"/></svg>'
  document.body.append(element)
  let position:Point|undefined,busy=false,closed=false,state='idle'
  type Connection={source:HTMLElement;target:HTMLElement;canvas:HTMLElement;guide:HTMLElement;svg:SVGSVGElement;path:SVGPathElement}
