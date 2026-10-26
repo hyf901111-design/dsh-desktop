@@ -344,6 +344,88 @@
           "此前常规headless截图路径写入已分别记录，原始Native证据不改写。"
         ],
         "generatedAt": "2026-10-26T11:09:59.920632+00:00"
+      },
+      "merged": {
+        "mergeCommit": "09f9ce48fd1f670a657bf0994264f3b9c0a8034c",
+        "verificationCommit": "09f9ce48fd1f670a657bf0994264f3b9c0a8034c",
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/check-home18-integration-source-20261026.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 /tmp/check-home18-integration-source-20261026.py",
+            "verifiedCommit": "09f9ce48fd1f670a657bf0994264f3b9c0a8034c",
+            "completedAt": "2026-10-26T11:10:18.859Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "09f9ce48fd1f670a657bf0994264f3b9c0a8034c",
+            "completedAt": "2026-10-26T11:10:18.859Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "09f9ce48fd1f670a657bf0994264f3b9c0a8034c",
+            "completedAt": "2026-10-26T11:10:18.859Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guide-pointer.test.ts",
+              "test/figma-task-progress.test.ts",
+              "test/plain-slash-input-install.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guides.test.ts test/home-guide-pointer.test.ts test/figma-task-progress.test.ts test/plain-slash-input-install.test.js --maxWorkers=2",
+            "verifiedCommit": "09f9ce48fd1f670a657bf0994264f3b9c0a8034c",
+            "completedAt": "2026-10-26T11:10:18.859Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "09f9ce48fd1f670a657bf0994264f3b9c0a8034c",
+            "completedAt": "2026-10-26T11:10:18.859Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "09f9ce48fd1f670a657bf0994264f3b9c0a8034c",
+            "completedAt": "2026-10-26T11:10:18.859Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-26T11:10:18.859Z"
       }
     }
   ],
