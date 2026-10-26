@@ -5,10 +5,10 @@
     "pdf": "腾讯控股（0700.HK）2026中报公司深度研究与DCF情景估值报告_2026-10-25.pdf"
   },
   "audit": {
-    "evidence.json": "6297f730580f7fcf7baa9c60876d6dc376e15dabe7e177f6c4041c17466128e9",
+    "evidence.json": "30609a7351c73a267b407e352ec624a0244645aa04ef6de48add895a2e7698a6",
     "calculations.json": "00611e0b6c3e4e8e76f49060d51b2c2f6d4d678cd55832e4f56723852c5f6bfa",
     "validation.json": "56f0c0e8a9fd751097b289162e69fc7a470e7fd0ac66543b64e12af37e1ee9b0",
-    "run.json": "429ff3a4d054edd14a1ba284b612b4e24762facbdda99dd180b9463cce1dc6e0"
+    "run.json": "6cb6d955cf50a01441bfa8b08217148bfafd7ef168af040e2e381ea5a4bf3084"
   },
   "reportTitle": "现金流质量与AI投入的再平衡：腾讯控股增长韧性研究",
   "companyName": "腾讯控股",
@@ -17,8 +17,8 @@
   "reportPages": 63,
   "htmlFile": "research-report.html",
   "pdfFile": "research-report.pdf",
-  "htmlSha256": "29deec5b2ef1e3c069431187b62cc65ed196a29d25c227a5757c0f3b2972095f",
-  "pdfSha256": "cf4620a54a96a78584722f99399b83d547158b17718f29a20011d4d9d708e49b",
+  "htmlSha256": "167d521bd1e0e6754593f9b748e2148665cd15e3ac9df4b41b6cd4935125cf90",
+  "pdfSha256": "65fa8109e4d9d65fa5a313fb7c8db4f77d2f01b7ed35226cef3853f1810936fc",
   "localPresetOnly": true,
   "chapters": [
     {
@@ -84,19 +84,19 @@
     {
       "id": "q3results",
       "title": "腾讯控股2025年第三季度业绩公告（英文原件）",
-      "url": "https://static.www.tencent.com/uploads/2025/11/13/",
+      "url": "https://static.www.tencent.com/uploads/2025/11/13/a33b6f19738615834787623f17d20ba3.pdf",
       "asOf": "2025-11-13"
     },
     {
       "id": "q4results",
       "title": "腾讯控股2025年第四季度及全年业绩公告（英文原件）",
-      "url": "https://static.www.tencent.com/uploads/2026/03/18/",
+      "url": "https://static.www.tencent.com/uploads/2026/03/18/e6a646796d0d869acc76271c9ee1a6a5.pdf",
       "asOf": "2026-03-18"
     },
     {
       "id": "q1results",
       "title": "腾讯控股2026年第一季度业绩公告（英文原件）",
-      "url": "https://static.www.tencent.com/uploads/2026/05/13/",
+      "url": "https://static.www.tencent.com/uploads/2026/05/13/47382ae415a209fd161bc19a1f9b3704.pdf",
       "asOf": "2026-05-13"
     },
     {
@@ -163,5 +163,42 @@
     "status": "verified-real-ework-generation",
     "acceptedAsFinalExample": true,
     "note": "真实 EWork Kimi K3/high 经内置 research_report 工具重生成 run05；已独立复核数据、63 页排版与118个目录页码，并在正式客户端点击真实交付卡加载PDF。专业签发及资料真实性的边界保留原报告声明。"
+  },
+  "sourceLinkRevision": {
+    "version": 1,
+    "kind": "local-source-link-postprocess",
+    "appliedAt": "2026-10-26T16:17:38.277Z",
+    "modelRerun": false,
+    "originalInputSha256": "99401dff2fce59bdef923135b6441cc21db5225de6db862169c50b50018c5e37",
+    "correctedPacketSha256": "d0f41b58ae6000341c4b22ff793afe2338377f77d13dd82aa9e7fb1e0171569a",
+    "correctedPacketCanonicalSha256": "b36774c1a9c7edf9172b34cbd62f346f11edaf12d5179c6be8b39171b1bb15c0",
+    "originalArtifacts": {
+      "html": "29deec5b2ef1e3c069431187b62cc65ed196a29d25c227a5757c0f3b2972095f",
+      "pdf": "cf4620a54a96a78584722f99399b83d547158b17718f29a20011d4d9d708e49b",
+      "evidence": "6297f730580f7fcf7baa9c60876d6dc376e15dabe7e177f6c4041c17466128e9"
+    },
+    "mappings": [
+      {
+        "sourceId": "q3results",
+        "from": "https://static.www.tencent.com/uploads/2025/11/13/",
+        "to": "https://static.www.tencent.com/uploads/2025/11/13/a33b6f19738615834787623f17d20ba3.pdf"
+      },
+      {
+        "sourceId": "q4results",
+        "from": "https://static.www.tencent.com/uploads/2026/03/18/",
+        "to": "https://static.www.tencent.com/uploads/2026/03/18/e6a646796d0d869acc76271c9ee1a6a5.pdf"
+      },
+      {
+        "sourceId": "q1results",
+        "from": "https://static.www.tencent.com/uploads/2026/05/13/",
+        "to": "https://static.www.tencent.com/uploads/2026/05/13/47382ae415a209fd161bc19a1f9b3704.pdf"
+      }
+    ],
+    "verifiedSourcePdfSha256": {
+      "q3results": "fb7c420e1052dc48b79b9115fe91376af5c71a7e538a35d99fbf43b110093dc3",
+      "q4results": "488ec858349c1c9064d8d691b8a313d2eadf6bca486c986e4752260aa377594f",
+      "q1results": "2d07b610009a3c4564fe8a6b5a88f741794fe347ab22aff79d0775b8d2e92254"
+    },
+    "scope": "Three source URLs only; original Kimi generation timestamp, model, session, research date, facts, calculations and external-authenticity boundaries are retained. HTML hrefs and PDF Link URIs are locally updated; no financial report body is regenerated."
   }
 }

@@ -2,6 +2,7 @@ import {afterEach,expect,it} from 'vitest'
 import {createHash} from 'node:crypto'
 import {readFile,rm,symlink,unlink,writeFile} from 'node:fs/promises'
 import {join} from 'node:path'
+import {fileURLToPath} from 'node:url'
 import {micromark} from 'micromark'
 import {JSDOM} from 'jsdom'
 import {deliveryPathsFromMarkdown} from '../scripts/lib/delivery-file-model.mjs'
@@ -14,6 +15,41 @@ const modules=async()=>({runtime:await import(runtimePath).catch(()=>({})),contr
 const fixture=async options=>{const f=await homeReportAssetsFixture(options);dirs.push(f.directory);return f}
 const saveMetadata=(f,metadata)=>writeFile(join(f.directory,'source-metadata.json'),JSON.stringify(metadata))
 const unavailable=(runtime,directory)=>expect(runtime.loadHomeReportAssets(directory).then(()=>undefined)).rejects.toThrow()
+const packagedReportDirectory=new URL('../packages/dsh-research-task-runtime/assets/home-report/',import.meta.url)
+const correctedReportSources=[
+ ['q3results','https://static.www.tencent.com/uploads/2025/11/13/','https://static.www.tencent.com/uploads/2025/11/13/a33b6f19738615834787623f17d20ba3.pdf'],
+ ['q4results','https://static.www.tencent.com/uploads/2026/03/18/','https://static.www.tencent.com/uploads/2026/03/18/e6a646796d0d869acc76271c9ee1a6a5.pdf'],
+ ['q1results','https://static.www.tencent.com/uploads/2026/05/13/','https://static.www.tencent.com/uploads/2026/05/13/47382ae415a209fd161bc19a1f9b3704.pdf'],
+]
+let packagedPdfLinks
+const publishedPdfLinks=()=>packagedPdfLinks??=Promise.all([import('pdfjs-dist/legacy/build/pdf.mjs'),readFile(new URL('research-report.pdf',packagedReportDirectory))]).then(async([pdfjs,bytes])=>{
+ const pdf=await pdfjs.getDocument({data:new Uint8Array(bytes),disableFontFace:true}).promise
+ try{expect(pdf.numPages).toBe(63);return(await(await pdf.getPage(63)).getAnnotations()).filter(item=>item.subtype==='Link'&&item.url).map(item=>item.url)}finally{await pdf.destroy()}
+})
+
+it.each(correctedReportSources)('publishes the same complete official %s source in HTML, PDF, metadata and evidence',async(id,directoryUrl,url)=>{
+ const [html,metadata,evidence,pdfLinks]=await Promise.all([readFile(new URL('research-report.html',packagedReportDirectory),'utf8'),readFile(new URL('source-metadata.json',packagedReportDirectory),'utf8').then(JSON.parse),readFile(new URL('evidence.json',packagedReportDirectory),'utf8').then(JSON.parse),publishedPdfLinks()])
+ const dom=new JSDOM(html)
+ try{expect(dom.window.document.querySelector(`#source-${id} a`).getAttribute('href')).toBe(url)}finally{dom.window.close()}
+ expect(metadata.sources.find(source=>source.id===id).url).toBe(url)
+ expect(evidence.sources.find(source=>source.id===id).url).toBe(url)
+ expect(pdfLinks.filter(value=>value===url)).toHaveLength(1)
+ expect(pdfLinks).not.toContain(directoryUrl)
+})
+
+it('records source-link postprocessing separately from the original Kimi generation and keeps the packaged hash chain valid',async()=>{
+ const {runtime}=await modules(),loaded=await runtime.loadHomeReportAssets(fileURLToPath(packagedReportDirectory)),metadata=loaded.metadata,run=JSON.parse(loaded.auditBytes['run.json'].toString()),evidence=JSON.parse(loaded.auditBytes['evidence.json'].toString())
+ expect(metadata.sourceLinkRevision).toMatchObject({version:1,kind:'local-source-link-postprocess',modelRerun:false,originalInputSha256:'99401dff2fce59bdef923135b6441cc21db5225de6db862169c50b50018c5e37',originalArtifacts:{html:'29deec5b2ef1e3c069431187b62cc65ed196a29d25c227a5757c0f3b2972095f',pdf:'cf4620a54a96a78584722f99399b83d547158b17718f29a20011d4d9d708e49b',evidence:'6297f730580f7fcf7baa9c60876d6dc376e15dabe7e177f6c4041c17466128e9'}})
+ expect(run.sourceLinkRevision).toEqual(metadata.sourceLinkRevision)
+ expect(run.sourceLinkRevision.mappings).toEqual(correctedReportSources.map(([sourceId,from,to])=>({sourceId,from,to})))
+ expect(run.inputSha256).toBe(run.sourceLinkRevision.originalInputSha256)
+ expect(run.sourceLinkRevision.correctedPacketSha256).toMatch(/^[a-f0-9]{64}$/)
+ expect(run.sourceLinkRevision.correctedPacketSha256).not.toBe(run.inputSha256)
+ expect(evidence.packetSha256).toBe(run.sourceLinkRevision.correctedPacketCanonicalSha256)
+ expect(metadata.provenance).toMatchObject({sessionId:'session-253912dd-cf7d-4669-9da7-361d4bf24166',model:'Kimi K3 (high)',generatedAt:'2026-10-25T16:05:59.380Z'})
+ expect(run.createdAt).toBe(metadata.provenance.generatedAt)
+ expect(run.externalAuthenticity).toBe('unverified');expect(run.researchRequirements.professionalSignOff).toBe(false)
+})
 const saveAudit=async(f,name,bytes)=>{
  f.auditBytes={...f.auditBytes,[name]:bytes};f.metadata={...f.metadata,audit:{...f.metadata.audit,[name]:hash(bytes)}}
  if(name!=='run.json'){
@@ -53,7 +89,7 @@ it('builds public, paced walkthrough text from the real content index without in
  const {runtime,contract}=await modules();expect(runtime.createHomeReportReplay).toBeTypeOf('function')
  const f=await fixture(),replay=runtime.createHomeReportReplay(f.metadata)
  expect(replay.structure).toContain('财务分析');expect(replay.structure).toContain('估值比较');expect(replay.intro).toContain('2026-10-23')
- expect(replay.delivery).toContain(f.metadata.keyFindings[0]);expect(replay.delivery).toContain('./'+contract.HOME_REPORT_PDF_FILE);expect(replay.delivery).toContain('./'+contract.HOME_REPORT_HTML_FILE)
+ expect(replay.delivery).toContain(f.metadata.keyFindings[0]);expect(replay.delivery).not.toContain('./'+contract.HOME_REPORT_PDF_FILE);expect(replay.delivery).not.toContain('./'+contract.HOME_REPORT_HTML_FILE)
  expect(replay.delivery).not.toContain('原始附件');expect(replay.delivery).not.toContain('正在实时生成')
  expect(await readFile(join(f.directory,'source-metadata.json'),'utf8')).toContain('Kimi K3')
 })
@@ -195,7 +231,7 @@ it('does not treat href-like text in comments or script bodies as published JSON
  expect((await runtime.loadHomeReportAssets(f.directory)).metadata).toEqual(f.metadata)
 })
 
-it('encodes original delivery basenames as URI paths without renaming files or losing quick file cards',async()=>{
+it('preserves special delivery basenames while replay leaves file-card delivery to the native publisher',async()=>{
  const {runtime}=await modules(),f=await fixture({schemaVersion:2}),deliveryNames={html:'报告 #1? (中文) 50%.html',pdf:'报告 #1? (中文) 50%.pdf'}
  const manifest=JSON.parse(f.auditBytes['run.json'].toString());manifest.artifacts=deliveryNames
  delete manifest.outputs[f.deliveryNames.html];delete manifest.outputs[f.deliveryNames.pdf]
@@ -204,11 +240,8 @@ it('encodes original delivery basenames as URI paths without renaming files or l
  const loaded=await runtime.loadHomeReportAssets(f.directory),reply=runtime.createHomeReportReplay(loaded.metadata).delivery
  const dom=new JSDOM(micromark(reply),{url:'https://preview.invalid/workspace/'})
  const links=[...dom.window.document.querySelectorAll('a')]
- expect(links).toHaveLength(2)
- for(const [index,name]of Object.values(deliveryNames).entries()){
-  const url=new URL(links[index].href)
-  expect(decodeURIComponent(url.pathname)).toBe('/workspace/'+name);expect(url.search).toBe('');expect(url.hash).toBe('')
- }
- expect(deliveryPathsFromMarkdown(reply,'/workspace')).toEqual(Object.values(deliveryNames).map(name=>'/workspace/'+name))
+ expect(links).toHaveLength(0)
+ expect(deliveryPathsFromMarkdown(reply,'/workspace')).toEqual([])
+ for(const finding of f.metadata.keyFindings)expect(reply).toContain(finding)
  expect(loaded.metadata.deliveryNames).toEqual(deliveryNames);dom.window.close()
 })
