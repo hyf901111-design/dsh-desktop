@@ -422,28 +422,36 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       }
       const layoutBoard = (reset = false, adding = false) => {
         const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width), pair = metrics.minColumns <= 20, calendarPair=pair&&metrics.width>=800
-        const canvas = ticket.host.querySelector('[data-research-canvas]'), budget = canvas ? Math.floor((boardFrame(ticket,canvas).height-24)/metrics.rowStep) : 0
-        const minimumWatch = Math.ceil((340+metrics.gap)/metrics.rowStep), minimumFeed = Math.ceil((220+metrics.gap)/metrics.rowStep)
-        let watchRows = Math.ceil((470+metrics.gap)/metrics.rowStep), feedRows = Math.ceil((340+metrics.gap)/metrics.rowStep)
-        if (adding) { watchRows = Math.ceil((340+metrics.gap)/metrics.rowStep); feedRows = Math.ceil((180+metrics.gap)/metrics.rowStep) }
-        else if (pair && budget >= minimumWatch+minimumFeed) {
-          const total = Math.min(budget,watchRows+feedRows)
-          watchRows = Math.max(minimumWatch,Math.min(watchRows,total-minimumFeed,Math.round(total*.58)))
-          feedRows = Math.min(feedRows,total-watchRows)
-        }
+        const canvas = ticket.host.querySelector('[data-research-canvas]')
+        const watchRows = Math.ceil((600+metrics.gap)/metrics.rowStep), feedRows = Math.ceil((340+metrics.gap)/metrics.rowStep)
         const readingRows = {watchlist:watchRows,quote:watchRows,news:feedRows,announcements:feedRows}
         const namesById = new Map(Object.entries(ticket.nodes).map(([name,nodeId])=>[nodeId,name]))
-        workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar','smart'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:namesById.get(node.id)==='indices'||namesById.get(node.id)==='calendar'&&!ticket.nodes.smart,workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
+        workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar','smart'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:namesById.get(node.id)==='indices'||namesById.get(node.id)==='calendar'&&!ticket.nodes.smart&&!adding,workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
         const rows = [['indices'], ...(pair ? [['watchlist','quote'],['news','announcements']] : [['watchlist'],['quote'],['news'],['announcements']]), ...(ticket.nodes.smart?(calendarPair?[['calendar','smart']]:[['calendar'],['smart']]):[['calendar']])]
         const heights = {indices:(metrics.width-48<=520?420:340),calendar:420,smart:420}, fitted = new Map()
         let top = 0
         for (const names of rows) {
-          const members = names.filter(name => ticket.nodes[name]), height = Math.max(...members.map(name => readingRows[name] ?? Math.ceil((heights[name]+metrics.gap)/metrics.rowStep)),0)
-          for (const name of members) {
-            const index = names.indexOf(name), split = names.length===2 && names[0]==='watchlist' && metrics.minColumns<=16
-            fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:split?(index===0?0:16):index*(40/names.length),y:top,w:split?(index===0?16:24):40/names.length,h:height})
+          const members = names.filter(name => ticket.nodes[name])
+          if (adding) {
+            let left = 0, height = 0
+            for (const name of members) {
+              const node = current.artifacts.find(node=>node.id===ticket.nodes[name])
+              const normal = name==='calendar'?{width:620,height:420}:financialWidgetDimensions(node.containerSpec,true)??{width:node.width,height:node.height}
+              const width = name==='indices'?40:Math.min(40,Math.max(metrics.minColumns,Math.ceil((normal.width+metrics.gap)/metrics.step)))
+              const rows = Math.ceil(((name==='indices'?heights.indices:['watchlist','quote'].includes(name)?600:normal.height)+metrics.gap)/metrics.rowStep)
+              if (left && left+width>40) { top+=height; left=0; height=0 }
+              fitted.set(node.id,{id:node.id,x:left,y:top,w:width,h:rows})
+              left+=width; height=Math.max(height,rows)
+            }
+            top+=height
+          } else {
+            const height = Math.max(...members.map(name => readingRows[name] ?? Math.ceil((heights[name]+metrics.gap)/metrics.rowStep)),0)
+            for (const name of members) {
+              const index = names.indexOf(name), split = names.length===2 && names[0]==='watchlist' && metrics.minColumns<=16
+              fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:split?(index===0?0:16):index*(40/names.length),y:top,w:split?(index===0?16:24):40/names.length,h:height})
+            }
+            if (members.length) top += height
           }
-          if (members.length) top += height
         }
         if (!workspace.applyWorkbenchCells(workspace.getWorkbenchCells().map(cell => fitted.get(cell.id) || cell), false)) throw Error('看板布局暂时无法调整。')
         if (reset && canvas) canvas.scrollTop = 0
@@ -479,8 +487,8 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
           }
         }
-        // Fill reserved rows as components arrive; the visible Arrange action
-        // later expands the feed bodies using the actual reading viewport.
+        // Preserve native reading sizes on entry, wrapping when a row cannot fit.
+        // Only the visible Arrange action fills the available row widths.
         await playing(ticket); layoutBoard(false, !ticket.arranged)
         await settle(ticket, () => !!ticket.host.querySelector(widget === 'calendar' ? '[data-calendar-tool]' : '[data-financial-widget="' + widget + '"]'))
         const canvas = ticket.host.querySelector('[data-research-canvas]'); if (canvas) revealWorkbenchNode(canvas, workspace, ticket.nodes[widget])
@@ -541,7 +549,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         const beforeSignature = signature(before)
         const selectionLease = {selection:structuredClone(workspace.getSnapshot().selection),owned:ticket.ownedSelection,epoch:ticket.ownedSelectionEpoch,input:ticket.selectionEpoch}
         ticket.selectionRestore = selectionLease
-        let focusSignature, keepCanvasFrame = false
+        let keepCanvasFrame = false
         try {
           if (canvas) {
             const cards = [watchlist,quote,news,announcements].filter(Boolean).map(nodeId => ticket.host.querySelector('[data-research-node-id="' + CSS.escape(nodeId) + '"]')).filter(Boolean)
@@ -556,32 +564,32 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           }
           for (const [sourceId, targetId, field, label] of [[watchlist, quote, 'linkedWatchlistId', '连接自选股与行情'], [quote, news, 'linkedSourceId', '连接行情与资讯'], ...(announcements ? [[quote, announcements, 'linkedSourceId', '连接行情与公告']] : [])]) {
             await playing(ticket)
-            if(signature(workspace.getWorkbenchCells())!==(focusSignature||beforeSignature))throw changed()
+            if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
             if (workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId) continue
             if (ticket.selectionEpoch !== selectionLease.input) throw changed()
-            react_dom.flushSync(() => workspace.updateSelection([sourceId,targetId], 'replace'))
+            react_dom.flushSync(() => workspace.updateSelection([sourceId], 'replace'))
             ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection); ticket.ownedSelectionEpoch = ticket.selectionEpoch
             const port = (nodeId, side) => ticket.host.querySelector('[data-financial-port-node="' + CSS.escape(nodeId) + '"][data-financial-port="' + side + '"]')
             await settle(ticket, () => !!port(sourceId, 'output') && !!port(targetId, 'input'))
             const from = port(sourceId, 'output'), target = port(targetId, 'input'), a = from.getBoundingClientRect(), b = target.getBoundingClientRect()
-            // Keep full-size type while focusing the active pair in a short
-            // single-column viewport. Advance directly between linked pairs;
-            // restore the reading layout once all three connections finish.
-            if (canvas && Math.max(a.bottom,b.bottom)-Math.min(a.top,b.top)>canvas.clientHeight-24) {
-              const current = workspace.getSnapshot(), metrics = createResearchGrid().metrics(current.canvasSize.availableWidth||current.canvasSize.width), source = before.find(cell=>cell.id===sourceId)
-              const height = Math.max(metrics.minRows,Math.floor((canvas.clientHeight-56)/metrics.rowStep)), offset = source.h+height
-              const own = new Set(Object.values(ticket.nodes))
-              const focused = before.map(cell=>cell.id===sourceId?{...cell,x:0,y:0,w:40}:cell.id===targetId?{...cell,x:0,y:source.h,w:40,h:height}:own.has(cell.id)?{...cell,y:cell.y+offset}:cell)
-              if(!workspace.applyWorkbenchCells(focused,false))throw Error('连接端口暂时无法同时显示。')
-              focusSignature = signature(workspace.getWorkbenchCells())
-              if(workspace.persist()!==true)throw Error('连接布局暂时无法保存。')
-              await settle(ticket)
+            let keepPairFrame = keepCanvasFrame
+            if (canvas && !keepPairFrame) {
+              const view = boardFrame(ticket,canvas), room = (view.height-24)*view.scaleY
+              const sourceCard = from.closest('[data-research-node-id]').getBoundingClientRect(), targetCard = target.closest('[data-research-node-id]').getBoundingClientRect()
+              const choices = [[Math.min(sourceCard.top,targetCard.top),Math.max(sourceCard.bottom,targetCard.bottom)],[Math.min(a.top,targetCard.top),Math.max(a.bottom,targetCard.bottom)],[Math.min(a.top,b.top),Math.max(a.bottom,b.bottom)]]
+              const fit = choices.find(([top,bottom])=>bottom-top<=room)
+              if (!fit) throw Error('当前研究区高度不足以同时显示连接端点，请增大窗口后重试。')
+              await scrollBoard(ticket,canvas,canvas.scrollTop+(fit[0]-view.top)/view.scaleY-12)
+              if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
+              const framed = boardFrame(ticket,canvas)
+              if (![from,target].every(port=>{const box=port.getBoundingClientRect();return box.top>=framed.top-1&&box.bottom<=framed.bottom-12*framed.scaleY+1})) throw Error('连接端点尚未完整显示，请增大研究区后重试。')
+              keepPairFrame = true
             }
-            await cue(ticket, target, label, 'drag', from, keepCanvasFrame)
-            if(signature(workspace.getWorkbenchCells())!==(focusSignature||beforeSignature))throw changed()
+            await cue(ticket, target, label, 'drag', from, keepPairFrame)
+            if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
             const state = await workspace.canvasAction('inspect', { ids: [sourceId, targetId] })
             await playing(ticket); targetReady(ticket, from, true); targetReady(ticket, target, true)
-            if(signature(workspace.getWorkbenchCells())!==(focusSignature||beforeSignature))throw changed()
+            if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
             const node = workspace.getSnapshot().artifacts.find(node => node.id === targetId)
             await workspace.canvasAction('apply', { requestId: detail.requestId + ':link:' + targetId, revision: state.revision, changes: [{ op: 'update', id: targetId, fields: { containerSpec: { ...node.containerSpec, [field]: sourceId, refreshEnabled: true } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
             await playing(ticket)
@@ -593,7 +601,6 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             ticket.ownedSelection = selectionLease.owned; ticket.ownedSelectionEpoch = selectionLease.epoch
           }
           if (ticket.selectionRestore === selectionLease) delete ticket.selectionRestore
-          if(focusSignature && (!ticket.resource.owner||ticket.resource.owner===ticket) && signature(workspace.getWorkbenchCells())===focusSignature && !workspace.applyWorkbenchCells(before,true))throw Error('连接后的阅读布局暂时无法恢复。')
         }
       } else if (detail.command === 'board-add') {
         const card = () => ticket.host.querySelector('[data-research-node-id="' + CSS.escape(watchlist) + '"]')
