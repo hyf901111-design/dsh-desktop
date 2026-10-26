@@ -45,6 +45,7 @@ import {useNoteChallenge,CHALLENGE_USER} from './challenge-controller'
 import {challengeDocumentBlocks} from './challenge-scheduler'
 import {restoreChallengeReviewState} from './challenge-review-state'
 import {noteEditorVisible} from './editor-visibility'
+import {beginNoteGuideSelection,type NoteGuideSelection} from './guide-selection'
 import {ChallengeToolbar,ChallengeComments,ManualNoteThreads} from './challenge-ui'
 import {NoteReplacementPopover,NoteReplacementHighlights} from './replacement-review'
 import {noteEditFingerprint,noteEditTimestamp,noteHasSavedContent,noteEditDate} from './edit-date'
@@ -59,6 +60,7 @@ export type NotesGuideEditorApi = {
   updateText(blockId:string,text:string):void
   prepareNative():void
   selectParagraph(blockId:string,expectedText:string):void
+  beginParagraphSelection(blockId:string,expectedText:string):NoteGuideSelection
 }
 export type NotesGuideBinding = {native?:{runId:string};ready(api:NotesGuideEditorApi):void;dispose?(api:NotesGuideEditorApi):void}
 export type NotesSaveBinding = {ready(flush:()=>Promise<void>):void;dispose?(flush:()=>Promise<void>):void}
@@ -661,6 +663,12 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       appendBlock:block=>{assert();editor.insertBlocks([block],editor.document.at(-1),'after')},
       updateText:(blockId,text)=>{assert();if(!editor.getBlock(blockId))throw Error('演示段落已变化。');editor.updateBlock(blockId,{content:text})},
       prepareNative:()=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError');clearSelection();const last=editor.document.at(-1);if(last)editor.setTextCursorPosition(last.id,'end')},
+      beginParagraphSelection:(blockId,expectedText)=>{
+        const current=()=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')}
+        current();const block=editor.getBlock(blockId),element=scroll.current?.querySelector<HTMLElement>('[data-id="'+CSS.escape(blockId)+'"] .bn-inline-content')
+        if(!block||block.type!=='paragraph'||!expectedText.trim()||noteText(block.content)!==expectedText||!element)throw Error('演示段落已变化。')
+        return beginNoteGuideSelection(editor,element,expectedText,current)
+      },
       selectParagraph:(blockId,expectedText)=>{
         assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')
         const block=editor.getBlock(blockId)

@@ -21,6 +21,22 @@ function financialFixture(){
  port(f.source,'watchlist-node','output','watchlist');port(f.target,'quote-node','input','quote');guide.append(canvas);document.body.append(guide)
  return{...f,guide,canvas,line:()=>document.querySelector<SVGSVGElement>('[data-home-guide-connection="run"]')}
 }
+test('publishes each optional drag frame after painting the same native pointer position',async()=>{
+ const f=fixture(),frames:Array<{x:number;y:number;phase:string}>=[]
+ const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source,onFrame:frame=>{
+  expect(f.pointer.snapshot()).toMatchObject({x:frame.x,y:frame.y,state:frame.phase});frames.push(frame)
+ }})
+ void action.catch(()=>{})
+ await vi.advanceTimersByTimeAsync(600)
+ const midway=frames.filter(frame=>frame.phase==='dragging');expect(midway.length).toBeGreaterThan(1);expect(midway.at(-1)!.x).toBeGreaterThan(midway[0]!.x)
+ f.pause();await vi.advanceTimersByTimeAsync(80);const count=frames.length;await vi.advanceTimersByTimeAsync(1000);expect(frames).toHaveLength(count)
+ f.resume();await vi.runAllTimersAsync();await action;expect(frames.at(-1)).toMatchObject({x:360,y:240,phase:'idle'})
+})
+test('stops the optional drag frame hook after a rejection or abort without applying a real click',async()=>{
+ const f=fixture(),click=vi.fn(),frames=vi.fn(()=>{throw Error('选区已变化。')});f.target.addEventListener('click',click)
+ const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source,onFrame:frames}).catch(error=>error.message)
+ await vi.runAllTimersAsync();expect(await action).toBe('选区已变化。');const count=frames.mock.calls.length;await vi.advanceTimersByTimeAsync(1000);expect(frames).toHaveBeenCalledTimes(count);expect(click).not.toHaveBeenCalled()
+})
 test('extends the native-colored Board connection to every intermediate virtual pointer frame and removes it on release',async()=>{
  const f=financialFixture(),click=vi.fn();f.source.addEventListener('click',click);f.target.addEventListener('click',click)
  const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source})
