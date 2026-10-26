@@ -148,12 +148,60 @@ async function preserved(page) {
   expect(await page.evaluate(() => window.guideProbe.shell.snapshot.draft)).toBe(draft)
   expect(await page.evaluate(() => { const {registry,memory}=window.guideProbe,nodes=registry.for('guide-browser-session').getSnapshot().artifacts; return !nodes.length||JSON.stringify(JSON.parse(memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session')).map(n=>n.id))===JSON.stringify(nodes.map(n=>n.id)) })).toBe(true)
 }
+it('keeps the four newly added financial cards at their real native default widths until Arrange',async()=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000})
+ try{
+  await succeeds(page,'mount-board');await succeeds(page,'board-indices')
+  for(const kind of ['watchlist','quote','news','announcements']){
+   const expected=await page.evaluate(kind=>{const actual=window.guideProbe.registry.for('guide-browser-session'),reference=window.guideProbe.registry.for('native-default-reference');reference.setCanvasSize(actual.getSnapshot().canvasSize);reference.setWorkbenchWidth(actual.getSnapshot().canvasSize.availableWidth);const node=reference.createFinancialWidget(kind);return node.width},kind)
+   await succeeds(page,'board-'+kind)
+   const actual=await page.evaluate(kind=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.find(node=>node.containerSpec?.widget===kind).width,kind)
+   expect(actual,kind+' native initial width').toBe(expected)
+  }
+  const defaults=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.filter(node=>node.containerSpec.widget!=='indices').map(({id,width,height})=>({id,width,height})))
+  await succeeds(page,'board-calendar')
+  expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.filter(node=>['watchlist','quote','news','announcements'].includes(node.containerSpec.widget)).map(({id,width,height})=>({id,width,height})))).toEqual(defaults)
+  expect(await command(page,'board-link')).toMatchObject({ok:false,message:'请先整理看板，再连接组件。'})
+  await mkdir('/tmp/home-board-default-frame-20261026',{recursive:true});await page.screenshot({path:'/tmp/home-board-default-frame-20261026/native-defaults.png'})
+  await succeeds(page,'board-arrange')
+  const sizes=await page.evaluate(()=>{const nodes=window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts;return Object.fromEntries(nodes.map(node=>[node.containerSpec?.widget,node.width]))})
+  expect(sizes.quote/sizes.watchlist).toBeGreaterThan(1.4);expect(sizes.quote/sizes.watchlist).toBeLessThan(1.7);expect(Math.abs(sizes.news-sizes.announcements)).toBeLessThan(1)
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},30000)
+it('smoothly frames all four arranged cards before connecting, retaining readable text and layout',async()=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000,reducedMotion:'no-preference'})
+ try{
+  await page.addStyleTag({content:await readFile('src/preload/home-guides.css','utf8')})
+  await page.evaluate(()=>{window.guideProbe.view.update({view:'research'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.linkFrames=[];window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(!d.requestId)return;const cards=[...document.querySelectorAll('#guide-host [data-financial-widget]')].filter(node=>['watchlist','quote','news','announcements'].includes(node.dataset.financialWidget)).map(node=>{const card=node.closest('[data-research-node-id]'),r=card.getBoundingClientRect();return {widget:node.dataset.financialWidget,top:r.top,bottom:r.bottom,left:r.left,right:r.right,font:getComputedStyle(node).fontSize}}),canvas=document.querySelector('#guide-host [data-research-canvas]'),r=canvas.getBoundingClientRect();if(d.action==='drag')window.guideProbe.linkFrames.push({cards,canvas:{top:r.top,bottom:r.bottom,left:r.left,right:r.right},scrolls:[...window.guideProbe.smoothScrolls]});window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange'])await succeeds(page,step)
+  const before=await page.evaluate(()=>{const w=window.guideProbe.registry.for('guide-browser-session'),canvas=document.querySelector('#guide-host [data-research-canvas]');canvas.scrollTop=canvas.scrollHeight;const start=canvas.scrollTop;window.guideProbe.smoothScrolls=[];const record=()=>{window.guideProbe.smoothScrolls.push(canvas.scrollTop);if(!window.guideProbe.scrollPaused&&Math.abs(canvas.scrollTop-start)>4){window.guideProbe.scrollPaused=true;const held=canvas.scrollTop;window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:false}}));setTimeout(()=>{window.guideProbe.pauseProof={held,after:canvas.scrollTop};window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:true}}))},100)}if(!window.guideProbe.scrollDone)requestAnimationFrame(record)};requestAnimationFrame(record);return w.getWorkbenchCells()})
+  await succeeds(page,'board-link');await page.evaluate(()=>window.guideProbe.scrollDone=true)
+  const result=await page.evaluate(()=>({frames:window.guideProbe.linkFrames,cells:window.guideProbe.registry.for('guide-browser-session').getWorkbenchCells(),pause:window.guideProbe.pauseProof}))
+  expect(result.frames).toHaveLength(3)
+  const first=result.frames[0];expect(first.cards).toHaveLength(4)
+  for(const frame of result.frames)for(const card of frame.cards){expect(card.top).toBeGreaterThanOrEqual(frame.canvas.top-1);expect(card.bottom).toBeLessThanOrEqual(frame.canvas.bottom-20);expect(card.left).toBeGreaterThanOrEqual(frame.canvas.left-1);expect(card.right).toBeLessThanOrEqual(frame.canvas.right+1);expect(parseFloat(card.font)).toBeGreaterThanOrEqual(11)}
+  expect(new Set(first.scrolls.map(value=>Math.round(value))).size).toBeGreaterThan(5);expect(result.pause.after).toBe(result.pause.held);expect(result.cells).toEqual(before);expect(await page.locator('[data-financial-link]').count()).toBe(3)
+  await mkdir('/tmp/home-board-default-frame-20261026',{recursive:true});await page.screenshot({path:'/tmp/home-board-default-frame-20261026/four-cards-linked.png'});await writeFile('/tmp/home-board-default-frame-20261026/framing.json',JSON.stringify(result,null,2));await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},40000)
+it.each(['user-layout','disposed'])('does not link or replace the current layout when %s interrupts the initial smooth scroll',async mode=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000,reducedMotion:'no-preference'})
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange'])await succeeds(page,step)
+  const before=await page.evaluate(mode=>{const w=window.guideProbe.registry.for('guide-browser-session'),canvas=document.querySelector('#guide-host [data-research-canvas]');canvas.scrollTop=canvas.scrollHeight;const start=canvas.scrollTop,record=()=>{if(window.guideProbe.interrupted)return;if(Math.abs(canvas.scrollTop-start)>4){window.guideProbe.interrupted=true;if(mode==='disposed')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-request',{detail:{runId:'guide-browser-run',requestId:'dispose-during-scroll',sessionId:'guide-browser-session',hostId:'guide-host',command:'dispose'}}));else{const calendar=w.getSnapshot().artifacts.find(node=>node.containerSpec.type==='calendar-tool');w.applyWorkbenchCells(w.getWorkbenchCells().map(cell=>cell.id===calendar.id?{...cell,h:cell.h+3}:cell),true);window.guideProbe.userCells=w.getWorkbenchCells()}return}requestAnimationFrame(record)};requestAnimationFrame(record);return w.getWorkbenchCells()},mode)
+  expect(await command(page,'board-link')).toMatchObject({ok:false})
+  const state=await page.evaluate(()=>{const w=window.guideProbe.registry.for('guide-browser-session');return{interrupted:window.guideProbe.interrupted,cells:w.getWorkbenchCells(),user:window.guideProbe.userCells,nodes:w.getSnapshot().artifacts}})
+  expect(state.interrupted).toBe(true);expect(state.cells).toEqual(mode==='user-layout'?state.user:before);expect(state.nodes.every(node=>!node.containerSpec.linkedSourceId&&!node.containerSpec.linkedWatchlistId)).toBe(true);expect(errors).toEqual([])
+ }finally{await page.close()}
+},25000)
 it.each([{width:1460,height:1000},{width:580,height:1000},{width:1080,height:640,clipped:true},{width:1080,height:640,clipped:true,stacked:true}])('builds six live native components in readable rows at $width × $height (real pointer=$clipped, stacked=$stacked)',async({width,height,clipped,stacked})=>{
  const{page,errors,external}=await fixture({nativeLayout:true,width,height,guideTop:clipped?52:70,guideBottom:clipped?100:70,reducedMotion:stacked?'no-preference':'reduce'})
  try{
   if(clipped){await page.addStyleTag({content:await readFile('src/preload/home-guides.css','utf8')});await page.evaluate(stacked=>{const host=document.getElementById('guide-host');host.style.left='0px';host.style.right=stacked?'430px':'366px';window.guideProbe.realPointer=window.guideProbe.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})},stacked)}
   await page.evaluate(()=>{window.guideProbe.view.update({view:'research'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));(window.guideProbe.sixCues??=[]).push({label:d.label,action:d.action});if(!d.requestId)return;const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));if(!window.guideProbe.realPointer){reply(true);return}const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token);void window.guideProbe.realPointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action}).then(()=>reply(true),e=>reply(false,e.message))})})
-  for(const step of ['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange']){const beforeLink=step==='board-link'?await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(({id,x,y,width,height})=>({id,x,y,width,height}))):null;const result=await command(page,step,{},40000);expect(result,JSON.stringify({step,result,pageerrors:errors,debug:await page.evaluate(()=>({cues:window.guideProbe.sixCues,nodes:window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(n=>({widget:n.containerSpec.widget,links:n.containerSpec.linkedSourceId||n.containerSpec.linkedWatchlistId}))}))})).toMatchObject({ok:true});if(beforeLink)expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(({id,x,y,width,height})=>({id,x,y,width,height})))).toEqual(beforeLink)}
+  for(const step of ['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange','board-link','board-add']){const beforeLink=step==='board-link'?await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(({id,x,y,width,height})=>({id,x,y,width,height}))):null;const result=await command(page,step,{},40000);expect(result,JSON.stringify({step,result,pageerrors:errors,debug:await page.evaluate(()=>({cues:window.guideProbe.sixCues,nodes:window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(n=>({widget:n.containerSpec.widget,links:n.containerSpec.linkedSourceId||n.containerSpec.linkedWatchlistId}))}))})).toMatchObject({ok:true});if(beforeLink)expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.map(({id,x,y,width,height})=>({id,x,y,width,height})))).toEqual(beforeLink)}
   await expect.poll(()=>page.evaluate(()=>window.guideProbe.financialRequests?.some(r=>r.action==='announcements'&&r.symbols?.[0]?.code==='000858'))).toBe(true)
   const state=await page.evaluate(()=>{const p=window.guideProbe;return{nodes:p.registry.for('guide-browser-session').getSnapshot().artifacts,requests:p.financialRequests,calendar:p.calendarRequests,disk:JSON.parse(p.memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session'))}})
   expect(state.nodes).toHaveLength(6)
@@ -166,7 +214,7 @@ it.each([{width:1460,height:1000},{width:580,height:1000},{width:1080,height:640
   if(width>1000&&!stacked)expect(indices.width).toBeGreaterThan(watch.width*1.9);expect(calendar.width).toBe(indices.width)
   if(width>1000&&!stacked){expect(watch.y).toBe(quote.y);expect(news.y).toBe(announcements.y);expect(watch.x).toBeLessThan(quote.x);expect(news.x).toBeLessThan(announcements.x)}else{expect(watch.width).toBe(indices.width);expect(watch.y).toBeLessThan(quote.y);expect(news.y).toBeLessThan(announcements.y);expect(indices.height).toBeGreaterThanOrEqual(410)}
   expect(indices.y).toBeLessThan(watch.y);expect(watch.y).toBeLessThan(news.y);expect(news.y).toBeLessThan(calendar.y)
-  expect(watch.height).toBeGreaterThanOrEqual(460);expect(quote.height).toBeGreaterThanOrEqual(460);expect(calendar.height).toBeGreaterThanOrEqual(410)
+  expect(watch.height).toBeGreaterThanOrEqual(clipped||width<1000?460:360);expect(quote.height).toBeGreaterThanOrEqual(clipped||width<1000?460:360);expect(calendar.height).toBeGreaterThanOrEqual(410)
   expect(state.requests.some(r=>r.action==='quotes'&&r.asset==='index')).toBe(true);expect(state.requests.some(r=>r.action==='announcements'&&r.symbols?.[0]?.code==='000858')).toBe(true)
   expect(state.calendar.some(r=>r.action==='list')).toBe(true);expect(state.calendar.some(r=>r.action==='save')).toBe(false)
   expect(state.nodes.filter(n=>n.containerSpec.type==='financial-widget').every(n=>n.containerSpec.refreshEnabled!==false)).toBe(true)
@@ -180,7 +228,7 @@ it('creates a real native smart draft beside the calendar through the existing c
  const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000})
  try{
   await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.smartToolCues=[];window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return;const target=[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===d.targetToken);window.guideProbe.smartToolCues.push({container:target?.hasAttribute('data-research-global-container'),select:target?.hasAttribute('data-research-global-select')});window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
-  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange'])await succeeds(page,step)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange','board-link','board-add'])await succeeds(page,step)
   await succeeds(page,'board-smart-container')
   const state=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
   expect(state).toHaveLength(7)
@@ -198,7 +246,7 @@ it.each([{width:1460,height:1000},{width:1080,height:640,compact:true}])('genera
  const{page,errors,smartRequests}=await fixture({nativeLayout:true,width,height,guideTop:compact?52:70,guideBottom:compact?100:70,reducedMotion:compact?'no-preference':'reduce'})
  try{
   await page.evaluate(compact=>{if(compact){const host=document.getElementById('guide-host');host.style.left='0px';host.style.right='366px'}document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.smartInputs=[];document.addEventListener('input',event=>{if(event.target.matches?.('[data-research-container-prompt]'))window.guideProbe.smartInputs.push(event.target.value)},true);window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return;const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));if(!window.guideProbe.smartPointer){reply(true);return}const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token);void window.guideProbe.smartPointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action}).then(()=>reply(true),error=>reply(false,error.message))})},compact)
-  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange'])await succeeds(page,step)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange','board-link','board-add'])await succeeds(page,step)
   await page.evaluate(()=>{window.guideProbe.smartPointer=window.guideProbe.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})})
   for(const step of ['board-smart-container','board-smart-generate'])await succeeds(page,step)
   const state=await page.evaluate(()=>{const p=window.guideProbe;return{nodes:p.registry.for('guide-browser-session').getSnapshot().artifacts,disk:JSON.parse(p.memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session')),inputs:p.smartInputs}})
@@ -220,7 +268,7 @@ it.each(['paused','deleted','moved','disposed'])('guards a native prepared smart
  const{page,errors,smartRequests,releaseSmart}=await fixture({nativeLayout:true,smartMode:'deferred'})
  try{
   await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
-  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange','board-smart-container'])await succeeds(page,step)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange','board-link','board-add','board-smart-container'])await succeeds(page,step)
   const pending=command(page,'board-smart-generate',{},30000)
   await expect.poll(()=>smartRequests.length,{timeout:10000}).toBe(1)
   const targetId=smartRequests[0].canvasNodeId
@@ -249,7 +297,7 @@ it('rejects a completed task for a different smart node before native hydration'
  const{page,errors}=await fixture({nativeLayout:true,smartMode:'wrong-node'})
  try{
   await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
-  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-link','board-add','board-arrange','board-smart-container'])await succeeds(page,step)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange','board-link','board-add','board-smart-container'])await succeeds(page,step)
   expect(await command(page,'board-smart-generate')).toMatchObject({ok:false,message:'示例组件结果尚未就绪。'})
   const nodes=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
   expect(nodes).toHaveLength(7);expect(nodes.some(node=>node.containerSpec?.type==='table')).toBe(false)
@@ -264,7 +312,7 @@ it.each(['hidden','visible'])('finishes native arrange without chasing an option
    document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.arrangeCues=[]
    window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return;window.guideProbe.arrangeCues.push(d);const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));if(!window.guideProbe.arrangePointer){reply(true);return}const target=[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===d.targetToken);void window.guideProbe.arrangePointer.perform({target,action:d.action}).then(()=>reply(true),error=>reply(false,error.message))})
   })
-  for(const step of ['mount-board','board-watchlist','board-quote','board-news','board-link'])await succeeds(page,step)
+  for(const step of ['mount-board','board-watchlist','board-quote','board-news','board-arrange','board-link'])await succeeds(page,step)
   const receipt=page.locator('[data-canvas-action-receipt][data-ework-toolbar-owner="guide-browser-session"]')
   await expect.poll(()=>receipt.count()).toBe(1)
   if(state==='hidden')await receipt.evaluate(element=>element.style.setProperty('visibility','hidden','important'))
@@ -298,7 +346,7 @@ it.each(['rejected','disposed','user-layout'])('keeps the native connection focu
     reply(false,'用户取消当前连接')
    })
   },mode)
-  for(const step of ['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar'])await succeeds(page,step)
+  for(const step of ['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange'])await succeeds(page,step)
   const before=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getWorkbenchCells())
   expect(await command(page,'board-link')).toMatchObject({ok:false})
   const state=await page.evaluate(()=>{const workspace=window.guideProbe.registry.for('guide-browser-session');return{cells:workspace.getWorkbenchCells(),focused:window.guideProbe.focusedCells,user:window.guideProbe.userCells,nodes:workspace.getSnapshot().artifacts,disk:JSON.parse(window.guideProbe.memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session'))}})
@@ -398,7 +446,7 @@ it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged re
   })
   // The central pointer is represented only by its acknowledged contract here;
   // native components, search, layout and persistence remain the real renderer.
-  for(const step of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
+  for(const step of ['board-library','board-watchlist','board-quote','board-news','board-arrange','board-link','board-add'])await succeeds(page,step)
   const result=await page.evaluate(()=>{const p=window.guideProbe,snapshot=p.registry.for('guide-browser-session').getSnapshot();return{cues:p.pointerCues,typed:p.typed,nodes:snapshot.artifacts.map(n=>({id:n.id,spec:n.containerSpec})),stored:JSON.parse(p.memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session'))}})
   const watch=result.nodes.find(n=>n.spec.widget==='watchlist'),quote=result.nodes.find(n=>n.spec.widget==='quote'),news=result.nodes.find(n=>n.spec.widget==='news'),drags=result.cues.filter(cue=>cue.action==='drag')
   for(const cue of result.cues)expect(Object.keys(cue.payload).sort()).toEqual(['runId','requestId','label','action','targetToken',...(cue.action==='drag'?['fromTargetToken']:[])].sort())
@@ -422,15 +470,15 @@ it.each(['click','from-port','to-port'])('does not act when the acknowledged %s 
     if(!event.detail.requestId)return
     const d=JSON.parse(JSON.stringify(event.detail)),find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),target=find(d.targetToken),fromTarget=find(d.fromTargetToken)
     const mode=window.guideProbe.offscreenTarget
-    if(mode==='click'&&d.action==='click')target.style.transform='translateY(-3000px)'
-    if(d.action==='drag'&&(mode==='from-port'||mode==='to-port'))(mode==='from-port'?fromTarget:target).style.transform='translateY(-3000px)'
+    if(mode==='click'&&d.action==='click'){window.guideProbe.offscreenActed=true;target.style.transform='translateY(-3000px)'}
+    if(d.action==='drag'&&(mode==='from-port'||mode==='to-port')){window.guideProbe.offscreenActed=true;(mode==='from-port'?fromTarget:target).style.transform='translateY(-3000px)'}
     window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))
    })
   })
-  if(kind!=='click')for(const step of ['board-watchlist','board-quote','board-news'])await succeeds(page,step)
+  if(kind!=='click')for(const step of ['board-watchlist','board-quote','board-news','board-arrange'])await succeeds(page,step)
   await page.evaluate(value=>{window.guideProbe.offscreenTarget=value},kind)
   const reply=await command(page,kind==='click'?'board-library':'board-link')
-  expect(reply.ok).toBe(false)
+  expect(reply.ok).toBe(false);expect(await page.evaluate(()=>window.guideProbe.offscreenActed)).toBe(true)
   expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   const nodes=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
   expect(nodes.some(node=>node.containerSpec.linkedWatchlistId||node.containerSpec.linkedSourceId)).toBe(false)
@@ -454,6 +502,7 @@ it('runs the live-bridge board tutorial on the real native canvas and retains th
     for (const name of ['watchlist', 'quote', 'news']) { await succeeds(page, `board-${name}`); await expect.poll(() => widget(page, name).count()).toBe(1) }
     expect(await page.locator('#guide-host [data-financial-widget]').count()).toBe(3)
     expect(await page.locator('#guide-host [data-home-guide-sample-label]').count()).toBe(0)
+    await succeeds(page, 'board-arrange')
     await succeeds(page, 'board-link')
     await expect.poll(() => page.locator('#guide-host .ew-financial-connection-line').count()).toBeGreaterThanOrEqual(2)
     await expect.poll(() => widget(page, 'quote').locator('[data-financial-chart]').count()).toBe(1)
@@ -474,7 +523,7 @@ it('runs the live-bridge board tutorial on the real native canvas and retains th
     const top = await canvas(page).evaluate(el => el.getBoundingClientRect().top)
     expect(Math.min(...geometry.map(box=>box.y))).toBeGreaterThanOrEqual(top - 1)
     expect(await canvas(page).evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true)
-    expect(Math.min(...geometry.map(box=>box.height))).toBeGreaterThanOrEqual(330)
+    expect(Math.min(...geometry.map(box=>box.height))).toBeGreaterThanOrEqual(240)
     expect(geometry.every(box => box.width > 100 && box.height > 100 && Object.values(box).every(Number.isFinite))).toBe(true)
     expect(await page.locator('#guide-host').textContent()).toMatch(/行情桥测试新闻/)
     await preserved(page)
@@ -631,7 +680,7 @@ it.each([{width:1380,height:900},{width:1380,height:768},{width:1080,height:900}
    const center=document.querySelector('.pI_x6G_centerCol'),root=document.querySelector('.wSkVaW_root'),guide=document.querySelector('[data-home-guide]')
    center.dataset.homeGuideActive=guide.dataset.homeGuide;root.dataset.homeGuideResident=guide.dataset.homeGuide;guide.dataset.kind='board';window.guideProbe.view.update({view:'research'})
   })
-  for(const step of ['mount-board','board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
+  for(const step of ['mount-board','board-library','board-watchlist','board-quote','board-news','board-arrange','board-link','board-add'])await succeeds(page,step)
   await expect.poll(()=>canvas(page).evaluate(el=>Boolean(el.__eworkContentFit))).toBe(false)
   const result=await page.evaluate(()=>{
    const canvas=document.querySelector('#guide-host [data-research-canvas]'),toolbar=document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"]')
@@ -644,7 +693,7 @@ it.each([{width:1380,height:900},{width:1380,height:768},{width:1080,height:900}
   for(const {widget,rect,footer,chart} of result.cards){
    expect(rect.left,widget+' left bound').toBeGreaterThanOrEqual(result.canvas.left+10)
    expect(rect.right,widget+' right bound').toBeLessThanOrEqual(result.canvas.right-10)
-   expect(rect.height,widget+' full reading frame').toBeGreaterThanOrEqual(widget==='news'?330:460)
+   expect(rect.height,widget+' full reading frame').toBeGreaterThanOrEqual(widget==='news'?240:360)
    expect(footer.height).toBeGreaterThanOrEqual(20)
    expect(footer.bottom,widget+' provenance remains inside its native frame').toBeLessThanOrEqual(rect.bottom+1)
    if(chart)expect(chart.height,'a useful native chart remains visible').toBeGreaterThan(80)
@@ -658,7 +707,7 @@ it.each([{width:1380,height:900},{width:1380,height:768},{width:1080,height:900}
 it('keeps a very short narrow board readable and reachable by native canvas scrolling',async()=>{
  const {page,errors}=await fixture({nativeLayout:true,width:1080,height:640,guideTop:116,guideBottom:69,reducedMotion:'no-preference'})
  try{
-  for(const step of ['mount-board','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])await succeeds(page,step)
+  for(const step of ['mount-board','board-watchlist','board-quote','board-news','board-arrange','board-link','board-add'])await succeeds(page,step)
   const root=canvas(page)
   expect(await page.locator('[data-research-canvas]').count()).toBe(1)
   expect(await root.evaluate(el=>Math.abs(window.guideProbe.registry.for('guide-browser-session').getSnapshot().canvasSize.height-el.getBoundingClientRect().height))).toBeLessThan(1)

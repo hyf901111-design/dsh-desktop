@@ -17,7 +17,7 @@ const hash=bytes=>createHash('sha256').update(bytes).digest('hex')
 const aborted=()=>new DOMException('离线示例已停止。','AbortError')
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});promise.catch(()=>{});return{promise,resolve,reject}}
 const checkedString=value=>typeof value==='string'&&value.length>0&&value.length<=256&&!/[\x00-\x1f]/.test(value)
-const message=run=>'/'+SKILL_WIRE+' 📎 文件：`'+run.sourcePath.replaceAll('`','\\`')+'` \n'+run.prepared.brief
+const message=run=>'/'+SKILL_WIRE+' 📎 文件：`'+run.sourcePath.replaceAll('`','\\`')+'` '+run.prepared.brief
 
 /** Public walkthrough summaries only; never replay a source session or reasoning. */
 export function createHomePresentationReplay(metadata){
@@ -51,8 +51,13 @@ export async function* streamHomePresentationReplayText(text,{waitUntilPlaying,s
  })
  signal?.throwIfAborted();yield{type:'block-start',index:0,blockType:'text'}
  for(let remaining=thinkingMs;remaining>0;){await playback();const slice=Math.min(60,remaining);await delay(slice);remaining-=slice}
- const characters=Array.from(text)
- for(let i=0;i<characters.length;i+=3){await playback();yield{type:'text-delta',index:0,text:characters.slice(i,i+3).join('')};await delay()}
+ // A partial link exposes its encoded transport URL as visible prose. Keep the
+ // complete inline Markdown tokens atomic while ordinary sentences still type.
+ const parts=text.split(/(\[[^\]\r\n]*\]\((?:<[^>\r\n]*>|[^)\r\n]*)\)|\*\*[^*\r\n]+\*\*)/gu)
+ for(let part=0;part<parts.length;part++){
+  const characters=Array.from(parts[part]),stride=part%2?characters.length:3
+  for(let i=0;i<characters.length;i+=stride){await playback();yield{type:'text-delta',index:0,text:characters.slice(i,i+stride).join('')};await delay()}
+ }
  await playback();yield{type:'block-end',index:0,block:{type:'text',text}}
 }
 

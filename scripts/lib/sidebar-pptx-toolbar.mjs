@@ -1,3 +1,42 @@
+// This presentation layer is stripped before the established mode/source guards.
+// Its component keeps the native anchor, refs, disabled state and callbacks.
+const hintsMarker='/* sherlock:pptx-toolbar-hints:v1 */'
+const hintsDefinition=hintsMarker+String.raw`
+            const PptxToolbarAction = (0,react.useMemo)(()=>function PptxToolbarAction({as="button",hint,label,...props}){
+                const anchor=(0,react_jsx_runtime.jsx)(as,hint?{...props,title:undefined,"aria-label":label}:props);
+                return hint?(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label,side:"bottom",delayMs:500,children:anchor}):anchor;
+            },[]);
+            const pptToolbarLabel = kind=>{
+                const english=!activeLocale().toLowerCase().startsWith("zh");
+                if(kind==="download")return english?"Download":"下载";
+                if(kind==="folder")return english?"Open folder":"打开文件夹";
+                if(kind==="edit")return toolbar?.mode==="edit"?(english?"Exit edit mode":"关闭编辑模式"):(english?"Edit presentation":"编辑演示文稿");
+                return toolbar?.annotationActive?(english?"Exit annotation mode":"关闭标注模式"):(english?"Annotate presentation":"标注演示文稿");
+            };
+`+'/* sherlock:pptx-toolbar-hints:end */\n'
+const hintsHooks=[
+ ['(0, react_jsx_runtime.jsx)("a", {\n\t\t\t\t\t\t\tclassName: sidebar_module_css_default.iconButton,\n\t\t\t\t\t\t\thref: toolbar.downloadUrl,','(0, react_jsx_runtime.jsx)(PptxToolbarAction, {as:"a",hint:isPptx,label:pptToolbarLabel("download"),\n\t\t\t\t\t\t\tclassName: sidebar_module_css_default.iconButton,\n\t\t\t\t\t\t\thref: toolbar.downloadUrl,'],
+ ['(0, react_jsx_runtime.jsx)("button", {\n\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\tclassName: clsx(sidebar_module_css_default.iconButton, treeOpen && sidebar_module_css_default.editorTreeToggleActive),','(0, react_jsx_runtime.jsx)(PptxToolbarAction, {hint:isPptx,label:pptToolbarLabel("folder"),\n\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\tclassName: clsx(sidebar_module_css_default.iconButton, treeOpen && sidebar_module_css_default.editorTreeToggleActive),'],
+ ['(0, react_jsx_runtime.jsx)("button", {\n                            type: "button",\n                            className: clsx(sidebar_module_css_default.iconButton, toolbar?.mode === "edit" && sidebar_module_css_default.editorTreeToggleActive),','(0, react_jsx_runtime.jsx)(PptxToolbarAction, {hint:true,label:pptToolbarLabel("edit"),\n                            type: "button",\n                            className: clsx(sidebar_module_css_default.iconButton, toolbar?.mode === "edit" && sidebar_module_css_default.editorTreeToggleActive),'],
+ ['(0,react_jsx_runtime.jsx)("button",{\n                            type:"button",className:clsx(sidebar_module_css_default.iconButton,toolbar.annotationActive&&sidebar_module_css_default.editorTreeToggleActive),','(0,react_jsx_runtime.jsx)(PptxToolbarAction,{hint:true,label:pptToolbarLabel("annotation"),\n                            type:"button",className:clsx(sidebar_module_css_default.iconButton,toolbar.annotationActive&&sidebar_module_css_default.editorTreeToggleActive),']
+]
+export function stripSidebarPptxToolbarHints(source){
+ if(!source.includes('sherlock:pptx-toolbar-hints'))return source
+ if(source.split(hintsDefinition).length!==2||hintsHooks.some(([,after])=>source.split(after).length!==2))throw Error('PPT toolbar hint installation drifted')
+ source=source.replace('\n'+hintsDefinition,'')
+ for(const[before,after]of hintsHooks)source=source.replace(after,before)
+ if(source.includes('sherlock:pptx-toolbar-hints')||source.includes('const PptxToolbarAction ='))throw Error('PPT toolbar hint orphan drifted')
+ return source
+}
+function patchSidebarPptxToolbarHints(source){
+ const anchor='function EditorHost(props) {',start=source.indexOf(anchor),end=source.indexOf('\n\t\t/**',start)
+ let host=source.slice(start,end)
+ if(start<0||end<start||hintsHooks.some(([before])=>host.split(before).length!==2))throw Error('PPT toolbar hint source drifted')
+ host=host.replace(anchor,anchor+'\n'+hintsDefinition)
+ for(const[before,after]of hintsHooks)host=host.replace(before,after)
+ return source.slice(0,start)+host+source.slice(end)
+}
+
 /** Bind the native sidebar header to the PPT viewer's existing mode controls. */
 function patchSidebarPptxToolbarMode(source) {
   const marker = '/* odyssey:sidebar-pptx-mode:v2 */',legacyMarker='/* odyssey:sidebar-pptx-mode:v1 */'
@@ -115,6 +154,7 @@ export function sidebarPptxAnnotationProps(tab,scope){
  return{annotationSource:source,path:value.sourceUrl||tab.path,annotationCanonicalPath:tab.path}
 }
 export function patchSidebarPptxToolbar(source){
+ source=stripSidebarPptxToolbarHints(source)
  const marker='/* sherlock:pptx-annotation-sidebar-source:v1 */'
  const before='const path = tab.path ?? "";',after=before+'\n'+marker+'\n'+sidebarPptxAnnotationProps.toString()+'\nconst annotationPreview=sidebarPptxAnnotationProps(tab,scope);'
  const props='path,\n\t\t\t\t\t\t\t\ttitle,\n\t\t\t\t\t\t\t\tviewerId: load.viewer.id,',installed='path: annotationPreview?.path ?? path,\n                                annotationSource: annotationPreview?.annotationSource,\n                                annotationCanonicalPath: annotationPreview?.annotationCanonicalPath,\n\t\t\t\t\t\t\t\ttitle,\n\t\t\t\t\t\t\t\tviewerId: load.viewer.id,'
@@ -125,5 +165,5 @@ export function patchSidebarPptxToolbar(source){
  source=patchSidebarPptxToolbarMode(source)
  const start=source.indexOf('function EditorHost(props) {'),end=source.indexOf('\n\t\t/**',start),host=source.slice(start,end)
  if(host.split(before).length!==2||host.split(props).length!==2)throw Error('PPT annotation sidebar source anchors drifted')
- return source.slice(0,start)+host.replace(before,after).replace(props,installed)+source.slice(end)
+ return patchSidebarPptxToolbarHints(source.slice(0,start)+host.replace(before,after).replace(props,installed)+source.slice(end))
 }

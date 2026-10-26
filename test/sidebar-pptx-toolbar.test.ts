@@ -4,10 +4,10 @@ import {createRequire} from 'node:module'
 import {runInNewContext, Script} from 'node:vm'
 import {Window} from 'happy-dom'
 import {expect, it} from 'vitest'
-import {patchBetterSidebarClient} from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
 import {createPptxEditorComponent} from '../scripts/lib/pptx-editor-ui.mjs'
 
 const require=createRequire(import.meta.url),React=require('react'),jsx=require('react/jsx-runtime'),{createRoot}=require('react-dom/client')
+const {patchBetterSidebarClient}=require('../scripts/lib/patch-sherlock-better-sidebar.mjs')
 const relative='build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js'
 const original=readFileSync(existsSync(relative)?relative:resolve('../..',relative),'utf8')
 const source=patchBetterSidebarClient(original)
@@ -33,8 +33,8 @@ async function fixture(initial='/work/a.pptx',options:{editable?:boolean,load?:'
   win.HTMLElement.prototype.getBoundingClientRect=function(){return new win.DOMRect(0,0,800,600)}
  }
  const RegisteredViewer=options.nativeEditor?createPptxEditorComponent(React,(props:any)=>{const viewer=React.useMemo(()=>({getFileVersion:async()=>'v1'}),[]);React.useEffect(()=>{props.onPptxViewer(viewer);return()=>props.onPptxViewer(null)},[props.onPptxViewer]);return React.createElement('div',{'data-pptx-node-id':'2','data-pptx-part':'ppt/slides/slide1.xml','data-pptx-width':200,'data-pptx-height':100},React.createElement('div',{'data-pptx-paragraph':0},'原始标题'))},undefined,require('react-dom').createPortal):Viewer
- const empty=()=>null,primitives=new Proxy({},{get:()=>empty}),classes=new Proxy({},{get:(_t,key)=>String(key)})
- const Host=runInNewContext(source.slice(start,end)+'\nEditorHost',{react:React,react_jsx_runtime:jsx,_deepseek_ai_dsh_client_ui_primitives:primitives,sidebar_module_css_default:classes,clsx:(...items:any[])=>items.filter(Boolean).join(' '),baseName$1:(path:string)=>path.split('/').at(-1),treeWidthOf:()=>240,treeOpenOf:()=>false,clampTreeWidth:(v:number)=>v,EditorPathInput:()=>React.createElement('input'),TreePanel:empty,BinaryDownload:empty,openSidebarFile:()=>{},patchMeta:()=>{},mediaUrl:()=>'',planFirstMatch:()=>options.load==='loading'?{kind:'customLoad',viewer:{load:()=>new Promise(()=>{})}}:options.load==='error'?{kind:'customLoad',viewer:{load:async()=>{throw Error('cannot read file')}}}:{kind:'render',viewer:{id:'office-pptx',component:RegisteredViewer}},AbortController,JSON,console,t:(key:string)=>({downloadToView:'下载',editorTreeToggle:'打开文件夹',save:'保存',preview:'预览',edit:'编辑'}[key]??key)})
+ const empty=()=>null,primitives=new Proxy({Tooltip:({children}:any)=>children},{get:(target,key)=>target[key as keyof typeof target]??empty}),classes=new Proxy({},{get:(_t,key)=>String(key)})
+ const Host=runInNewContext(source.slice(start,end)+'\nEditorHost',{react:React,react_jsx_runtime:jsx,_deepseek_ai_dsh_client_ui_primitives:primitives,sidebar_module_css_default:classes,clsx:(...items:any[])=>items.filter(Boolean).join(' '),baseName$1:(path:string)=>path.split('/').at(-1),treeWidthOf:()=>240,treeOpenOf:()=>false,clampTreeWidth:(v:number)=>v,EditorPathInput:()=>React.createElement('input'),TreePanel:empty,BinaryDownload:empty,openSidebarFile:()=>{},patchMeta:()=>{},mediaUrl:()=>'',planFirstMatch:()=>options.load==='loading'?{kind:'customLoad',viewer:{load:()=>new Promise(()=>{})}}:options.load==='error'?{kind:'customLoad',viewer:{load:async()=>{throw Error('cannot read file')}}}:{kind:'render',viewer:{id:'office-pptx',component:RegisteredViewer}},AbortController,JSON,console,activeLocale:()=> 'zh',t:(key:string)=>({downloadToView:'下载',editorTreeToggle:'打开文件夹',save:'保存',preview:'预览',edit:'编辑'}[key]??key)})
  const store={subscribe:()=>()=>{},getSnapshot:()=>({prefs:{editorExplorer:true}})},ctx={betterSidebar:{matchFileViewer:()=>({})}},scope={sessionId:'session-a',cwd:'/work'}
  const host=win.document.createElement('main');win.document.body.append(host);const root=createRoot(host)
  const render=async(path:string)=>{await React.act(async()=>{root.render(React.createElement(Host,{ctx,store,scope,tab:{id:'editor',path,title:path.split('/').at(-1)},expanded:false}));await Promise.resolve()})}
@@ -55,7 +55,7 @@ it('wires the real PPT host icon beside the folder and derives its action from t
   await f.click();expect(f.requests).toHaveLength(1)
   await f.settle(true)
   expect(f.button().getAttribute('aria-label')).toBe('关闭编辑模式')
-  expect(f.button().getAttribute('title')).toBe('关闭编辑模式')
+  expect(f.button().getAttribute('title')).toBeNull()
   expect(f.button().getAttribute('aria-pressed')).toBe('true')
   expect(f.host.querySelector('[aria-label="保存"]')).not.toBeNull()
   await f.click();await f.settle(true);expect(f.button().getAttribute('aria-label')).toBe('编辑演示文稿')

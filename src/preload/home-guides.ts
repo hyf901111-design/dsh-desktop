@@ -1,6 +1,7 @@
 import styles from './home-guides.css?raw'
 import { createHomeGuideTimeline, type GuideTimeline } from './home-guide-timeline'
 import {createHomeGuidePointer, type HomeGuidePointerAction} from './home-guide-pointer'
+import type {HomeOperationActionContext} from './home-operations'
 
 export type HomeGuideKind = 'board' | 'note' | 'ppt' | 'report'
 export type HomeGuideAdapter = { runStep(step: any): Promise<void>; flush?(): Promise<void>; dispose(): void }
@@ -23,9 +24,9 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
   ['board-news','添加相关资讯','资讯面板用于跟踪所选股票的相关消息。',1100],
   ['board-announcements','添加公司公告','公司公告单独保留，便于与行情和资讯对照阅读。',1200],
   ['board-calendar','加入日历工具','日历已加入，可以安排后续研究。',1000],
+  ['board-arrange','整理并保存六组件看板','六个组件的布局已整理并保存，接下来连接行情、资讯与公告。',3000],
   ['board-link','连接行情、资讯与公告','自选股切换行情标的，行情再带动相关资讯和公告。',2200],
   ['board-add','补齐自选股，查看五粮液','5只自选股已齐，当前选中五粮液（000858），可以对照行情、资讯和公告。',2200],
-  ['board-arrange','整理并保存六组件看板','六个组件已分层排列并保存，接着在日历旁补充研究清单。',3000],
   ['board-smart-container','在日历右侧加入智能容器','智能容器已加入，接下来输入研究观察清单的要求。',1000],
   ['board-smart-generate','生成自选股研究观察清单','5只自选股的观察清单已生成并保存，可与行情、资讯和公告对照使用。',3000]
  ]},
@@ -67,11 +68,9 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
 }
 const aborted=()=>Object.assign(Error('教程已结束。'),{name:'AbortError'})
 /** Return the native composer before a tutorial reuses its existing hero. */
-export async function playHomeGuideFromOperations(controller:Pick<ReturnType<typeof mountHomeGuides>,'start'>,kind:HomeGuideKind,context:{signal:AbortSignal;revealComposer():Promise<void>}){
+export async function playHomeGuideFromOperations(controller:Pick<ReturnType<typeof mountHomeGuides>,'start'>,kind:HomeGuideKind,context:HomeOperationActionContext){
  if(context.signal.aborted)throw aborted()
- await context.revealComposer()
- if(context.signal.aborted)throw aborted()
- await controller.start(kind,{replay:true})
+ await controller.start(kind,{replay:true,entry:context})
 }
 function exchangeSession(document:Document,input:Record<string,unknown>,signal:AbortSignal):Promise<Session>{
  const win=document.defaultView!
@@ -135,28 +134,66 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   closing=run.adapter.flush().catch(error=>{saveFailure(error instanceof Error?error.message:'请返回示例后重试。');win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-save-error',{detail:{sessionId:run.sessionId,message:error instanceof Error?error.message:'示例尚未保存，请返回后重试。'}}))}).finally(finish)
   return closing
  }
- const start=async(kind:HomeGuideKind,input:{replay?:boolean}={})=>{
-  if(disposed)throw aborted();if(!(kind in EXAMPLES))throw Error('暂不支持此教程。')
+ const start=async(kind:HomeGuideKind,input:{replay?:boolean;entry?:HomeOperationActionContext}={})=>{
+  if(disposed||input.entry?.signal.aborted)throw aborted();if(!(kind in EXAMPLES))throw Error('暂不支持此教程。')
   const token=++generation;preparing?.controller.abort();preparing=undefined
   await close(false);releaseTransition();if(disposed||token!==generation)throw aborted()
   const controller=new win.AbortController(),pending={controller,source:selected(),target:undefined as string|undefined};preparing=pending
-  const ensurePending=()=>{if(disposed||controller.signal.aborted||token!==generation)throw aborted();const current=selected();if(current!==pending.source&&current!==pending.target)throw aborted()}
+  let entryPointer:ReturnType<typeof createHomeGuidePointer>|undefined,mountedOptions:HomeGuideMountOptions|undefined,checkDraft:(()=>void)|undefined,clearEntry=()=>{},clearTakeover=()=>{}
+  const id=win.crypto.randomUUID()
+  const ensurePending=()=>{if(disposed||controller.signal.aborted||token!==generation)throw aborted();const current=selected();if(current!==pending.source&&current!==pending.target)throw aborted();checkDraft?.()}
   let session:Session
   try{
+   if(input.entry){
+    const entry=input.entry,center=document.querySelector<HTMLElement>('.pI_x6G_centerCol'),resident=[...(center?.querySelectorAll<HTMLElement>('.wSkVaW_root')??[])].find(node=>!node.closest('[data-odyssey-subagent-panel]'))
+    const back=center?.querySelector<HTMLButtonElement>('[data-odyssey-home-operations-toggle]'),card=center?.querySelector<HTMLElement>('.odyssey-operations-usecase'),draft=resident?.querySelector<HTMLTextAreaElement>('textarea')
+    if(!pending.source||!center||!resident||!back||!card||!draft||entry.signal.aborted)throw aborted()
+    const original=draft.value,edited=()=>controller.abort(),cancel=()=>controller.abort()
+    checkDraft=()=>{if(!draft.isConnected||draft.value!==original)throw aborted()}
+    entry.signal.addEventListener('abort',cancel,{once:true});for(const name of ['beforeinput','input','compositionstart'])resident.addEventListener(name,edited,true)
+    clearEntry=()=>{entry.signal.removeEventListener('abort',cancel);for(const name of ['beforeinput','input','compositionstart'])resident.removeEventListener(name,edited,true);checkDraft=undefined}
+    // Native mode changes can replace the original textarea. Keep respecting
+    // real user input until the new session has actually taken over the page.
+    const takeover=(event:Event)=>{const current=selected();if(event.isTrusted&&preparing===pending&&(current===pending.source||current===pending.target))controller.abort()}
+    for(const name of ['beforeinput','input','compositionstart'])document.addEventListener(name,takeover,true)
+    clearTakeover=()=>{for(const name of ['beforeinput','input','compositionstart'])document.removeEventListener(name,takeover,true);controller.signal.removeEventListener('abort',clearTakeover)}
+    controller.signal.addEventListener('abort',clearTakeover,{once:true})
+    const gate=async()=>{ensurePending();while(document.hidden){await new Promise(resolve=>win.setTimeout(resolve,32));ensurePending()}}
+    const bounds=card.getBoundingClientRect(),origin=entry.origin??{x:Math.max(0,bounds.left)+Math.max(0,Math.min(win.innerWidth,bounds.right)-Math.max(0,bounds.left))/2,y:Math.max(0,bounds.top)+Math.max(0,Math.min(win.innerHeight,bounds.bottom)-Math.max(0,bounds.top))/2}
+    if(!Number.isFinite(origin.x)||!Number.isFinite(origin.y)||origin.x<0||origin.y<0||origin.x>win.innerWidth||origin.y>win.innerHeight)throw aborted()
+    entryPointer=createHomeGuidePointer(document,{runId:id,signal:controller.signal,initialPosition:origin,wait:ms=>mountedOptions?mountedOptions.wait(ms):new Promise(resolve=>win.setTimeout(resolve,ms)),waitUntilPlaying:()=>mountedOptions?mountedOptions.waitUntilPlaying():gate()})
+    await entryPointer.perform({target:back,action:'click'});ensurePending()
+    if(!back.isConnected||!center.contains(back))throw aborted()
+    await entry.revealComposer();ensurePending()
+    const view=kind==='board'?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+view+'"]')
+    if(!tab)throw Error('示例入口尚未就绪，请重新打开首页。')
+    await entryPointer.perform({target:tab,action:'click'});ensurePending()
+    if(!tab.isConnected||!resident.contains(tab)||tab.disabled||tab.getAttribute('aria-disabled')==='true')throw aborted()
+    // The native mode click leaves the homepage. Transfer cancellation to this
+    // controller before that expected detach; real navigation still aborts it.
+    entry.handoff?.();clearEntry();ensurePending()
+    transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;document.documentElement.dataset.homeGuideTransitionSession=pending.source
+    ownedNavigation++;try{tab.click()}finally{ownedNavigation--}
+    ensurePending()
+    let stable=0,remaining=3000,last=win.performance.now()
+    while(stable<2){await gate();await new Promise(resolve=>win.setTimeout(resolve,32));ensurePending();const now=win.performance.now();if(!document.hidden)remaining-=Math.min(80,now-last);last=now;if(remaining<=0)throw Error('模式入口尚未就绪，请重试。');stable=tab.isConnected&&tab.getAttribute('aria-selected')==='true'?stable+1:0}
+   }
    session=await exchangeSession(document,{kind,command:'prepare',replay:input.replay===true},controller.signal);ensurePending();pending.target=session.sessionId
-   transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
+   transition||=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;if(!input.entry)document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
    await adapters.beforeOpen?.({...session,kind});ensurePending();adapters.revealConversation?.();ensurePending()
    let opening:Promise<Session>
+   document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
    ownedNavigation++;try{opening=exchangeSession(document,{kind,command:'open',sessionId:session.sessionId},controller.signal)}finally{ownedNavigation--}
    await opening
    ensurePending()
    const deadline=Date.now()+6000
    while(selected()!==session.sessionId){ensurePending();if(Date.now()>deadline)throw Error('示例会话尚未打开，请重试。');await new Promise(resolve=>win.setTimeout(resolve,32))}
-  }catch(error){if(preparing===pending)preparing=undefined;controller.abort();releaseTransition();throw error}
+  }catch(error){clearEntry();clearTakeover();entryPointer?.dispose();if(preparing===pending)preparing=undefined;controller.abort();releaseTransition();throw error}
+  clearTakeover()
   if(preparing===pending)preparing=undefined
   const center=document.querySelector<HTMLElement>('.pI_x6G_centerCol'),resident=[...(center?.querySelectorAll<HTMLElement>('.wSkVaW_root')||[])].find(node=>!node.closest('[data-odyssey-subagent-panel]'))
-  if(!center||!resident){controller.abort();releaseTransition();throw Error('示例页面尚未就绪。')}
-  const definition=EXAMPLES[kind],id=win.crypto.randomUUID(),root=document.createElement('section');root.className='odyssey-home-guide';root.dataset.homeGuide=id;root.dataset.kind=kind;root.setAttribute('aria-label',definition.title+' · 示例教程')
+  if(!center||!resident){entryPointer?.dispose();controller.abort();releaseTransition();throw Error('示例页面尚未就绪。')}
+  const definition=EXAMPLES[kind],root=document.createElement('section');root.className='odyssey-home-guide';root.dataset.homeGuide=id;root.dataset.kind=kind;root.setAttribute('aria-label',definition.title+' · 示例教程')
   const content=document.createElement('div');content.id='odyssey-home-guide-content-'+id;content.className='odyssey-home-guide-content'+(kind==='note'?' en-root':'');content.dataset.homeGuideContent='';if(kind==='note')content.dataset.homeGuideNotes='';content.dataset.dark=String(document.body.hasAttribute('data-ds-dark-theme'))
   const notice=document.createElement('div');notice.className='odyssey-home-guide-fault';notice.hidden=true;notice.setAttribute('role','alert')
   const modeNotice=kind==='board'?undefined:document.createElement('div')
@@ -180,7 +217,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   ownedNavigation++;try{if(tab?.getAttribute('aria-selected')!=='true')tab?.click()}finally{ownedNavigation--}
   const ensure=()=>{if(active!==run||controller.signal.aborted||selected()!==run.sessionId)throw aborted()}
   const options:HomeGuideMountOptions={kind,signal:controller.signal,sessionId:run.sessionId,cwd:session.cwd,runId:id,fresh:session.fresh!==false,waitUntilPlaying:()=>run.timeline?run.timeline.waitUntilPlaying():Promise.resolve(),wait:(ms,signal)=>run.timeline?run.timeline.wait(ms,signal):new Promise((resolve,reject)=>{const signals=[controller.signal,...(signal?[signal]:[])];if(signals.some(item=>item.aborted)){reject(aborted());return}const clean=()=>{win.clearTimeout(timer);for(const item of signals)item.removeEventListener('abort',stop)},stop=()=>{clean();reject(aborted())},timer=win.setTimeout(()=>{clean();resolve()},ms);for(const item of signals)item.addEventListener('abort',stop,{once:true})}),onStatus:text=>{if(active===run)status.textContent=text}}
-  run.pointer=createHomeGuidePointer(document,options);document.documentElement.dataset.homeGuidePointerRun=id
+  mountedOptions=options;run.pointer=entryPointer??createHomeGuidePointer(document,options);document.documentElement.dataset.homeGuidePointerRun=id
   try{
    const adapter=await(kind==='board'?mountBoard(document,content,options):kind==='note'?adapters.mountNotes(document,content,options):adapters.mountPresentation(document,content,options))
    if(active!==run||controller.signal.aborted){adapter.dispose();throw aborted()}run.adapter=adapter;ensure()
@@ -198,7 +235,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  }
  const changed=()=>{if(preparing){const current=selected();if(current===preparing.source||current===preparing.target)return;preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&selected()!==active.sessionId)void close(false)}
  const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target||target.matches('[data-dsh-sidebar-root] button.hHd-Xa_toggle'))return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false)}
- const escape=(event:KeyboardEvent)=>{if(active&&event.key==='Escape'){event.preventDefault();void close()}}
+ const escape=(event:KeyboardEvent)=>{if((active||preparing)&&event.key==='Escape'){event.preventDefault();if(preparing){generation++;preparing.controller.abort();preparing=undefined;releaseTransition()}void close()}}
  // The native note reviewer also pauses on window blur. Its actor must share
  // that gate so background time cannot consume a foreground review budget.
  const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden||run.kind==='note'&&!document.hasFocus()){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.timeline.play()}}

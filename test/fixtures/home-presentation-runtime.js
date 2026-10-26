@@ -29,6 +29,6 @@ export async function presentationRuntimeFixture(){
  const agent=await create('demo'),runtime=mod.createHomePresentationRuntime(ctx,{env:{DSH_HOME:home}})
  const dispose=async()=>{await runtime.dispose();await ctx.fiber.dispose();await rm(root,{recursive:true,force:true})}
  const input={sessionId:'demo',cwd,runId:'run-1',fresh:true}
- const message=()=>'/ework-skill-180a6a3f86f8942e 📎 文件：`'+join(cwd,'Vanguard-2026经济与市场展望.pdf')+'` \n'+mod.createHomePresentationBrief(metadata)
+ const message=()=>'/ework-skill-180a6a3f86f8942e 📎 文件：`'+join(cwd,'Vanguard-2026经济与市场展望.pdf')+'` '+mod.createHomePresentationBrief(metadata)
  return{ctx,agent,runtime,input,cwd,bytes,sourceBytes,metadata,message,outside,errors,create,until,dispose}
 }

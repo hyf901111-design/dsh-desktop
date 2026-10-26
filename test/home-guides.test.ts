@@ -24,6 +24,44 @@ function fixture(fresh = true) {
  const controller=mountHomeGuides(document,adapters);dispose=controller.dispose
  return{controller,adapters,runStep,release,flush,text,header,requests,setOpen:(fn:(detail:any,reply:(value:any)=>void)=>void)=>{open=fn},setPrepare:(fn:(detail:any)=>void)=>{prepare=fn}}
 }
+function operationsEntryFixture(){
+ const f=fixture(),center=document.querySelector<HTMLElement>('.pI_x6G_centerCol')!,resident=f.header.parentElement!,card=document.createElement('div'),back=document.createElement('button'),events:string[]=[],abort=new AbortController()
+ resident.dataset.odysseyPage='home';card.className='odyssey-operations-usecase';back.dataset.odysseyHomeOperationsToggle='';center.append(card,back)
+ const rect=(left:number,top:number,width:number,height:number)=>({left,top,width,height,right:left+width,bottom:top+height,x:left,y:top,toJSON:()=>({})})
+ card.getBoundingClientRect=()=>rect(140,160,420,140);back.getBoundingClientRect=()=>rect(330,350,32,32)
+ for(const[ i,tab]of [...f.header.querySelectorAll<HTMLButtonElement>('button')].entries()){tab.getBoundingClientRect=()=>rect(100+i*80,20,72,30);tab.addEventListener('click',()=>events.push('tab:'+tab.dataset.conversationViewId))}
+ back.addEventListener('click',()=>events.push('return'))
+ const context={signal:abort.signal,revealComposer:vi.fn(async()=>back.click()),handoff:vi.fn()}
+ f.setPrepare(detail=>{events.push('prepare');window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:detail.requestId,ok:true,sessionId:'example-note-new',cwd:'/tmp/example',title:'已保存示例',fresh:true}}))})
+ f.setOpen((detail,reply)=>{events.push('open');reply({sessionId:detail.sessionId,cwd:'/tmp/example'})})
+ return{...f,center,card,back,events,abort,context}
+}
+test('demonstrates the real return control and source Notes tab before preparing a separate example',async()=>{
+ vi.useFakeTimers();const f=operationsEntryFixture(),pending=f.controller.start('note',{replay:true,entry:f.context} as any)
+ await vi.advanceTimersByTimeAsync(2600);await pending
+ expect(f.events.slice(0,4)).toEqual(['return','tab:notes','prepare','open']);expect(f.context.handoff).toHaveBeenCalledOnce();expect(f.text.value).toBe('原有草稿')
+ await f.controller.reset(false);expect(document.querySelector('[data-home-guide-pointer]')).toBeNull()
+})
+test.each(['abort','draft','composition','navigation','escape'])('cancels an operations entry on %s before any independent session is prepared',async change=>{
+ vi.useFakeTimers();const f=operationsEntryFixture(),pending=f.controller.start('note',{replay:true,entry:f.context} as any).then(()=>null,error=>error)
+ await vi.advanceTimersByTimeAsync(64)
+ if(change==='abort')f.abort.abort();else if(change==='draft'){f.text.value='保留我刚输入的新草稿📈';f.text.dispatchEvent(new Event('input',{bubbles:true}))}else if(change==='composition')f.text.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));else if(change==='escape')document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));else f.header.querySelector<HTMLButtonElement>('[data-conversation-view-id="research"]')!.click()
+ await vi.advanceTimersByTimeAsync(1600)
+ expect(await pending).toMatchObject({name:'AbortError'});expect(f.requests).toEqual([]);expect(f.context.handoff).not.toHaveBeenCalled();expect(document.querySelector('[data-home-guide-pointer]')).toBeNull()
+ expect(f.text.value).toBe(change==='draft'?'保留我刚输入的新草稿📈':'原有草稿')
+})
+test('keeps a failed real composer return visible without preparing a guide',async()=>{
+ vi.useFakeTimers();const f=operationsEntryFixture(),error=Error('输入区尚未就绪');f.context.revealComposer.mockRejectedValue(error)
+ const pending=f.controller.start('note',{replay:true,entry:f.context}).then(()=>null,error=>error);await vi.advanceTimersByTimeAsync(1600)
+ expect(await pending).toBe(error);expect(f.requests).toEqual([]);expect(f.context.handoff).not.toHaveBeenCalled();expect(document.querySelector('[data-home-guide-pointer]')).toBeNull()
+})
+test('does not continue after cancellation during the real input handover wait',async()=>{
+ vi.useFakeTimers();const f=operationsEntryFixture();let reveal!:()=>void
+ f.context.revealComposer.mockImplementation(()=>{f.back.click();return new Promise<void>(resolve=>{reveal=resolve})})
+ const pending=f.controller.start('note',{replay:true,entry:f.context}).then(()=>null,error=>error)
+ await vi.advanceTimersByTimeAsync(900);expect(f.context.revealComposer).toHaveBeenCalledOnce();f.abort.abort();reveal();await vi.advanceTimersByTimeAsync(0)
+ expect(await pending).toMatchObject({name:'AbortError'});expect(f.events).toEqual(['return']);expect(f.requests).toEqual([]);expect(f.context.handoff).not.toHaveBeenCalled();expect(f.text.value).toBe('原有草稿');expect(document.querySelector('[data-home-guide-pointer]')).toBeNull()
+})
 test('prepares and opens an independent saved session before mounting the tutorial',async()=>{
  const f=fixture();await f.controller.start('note')
  expect(f.requests.map(r=>r.command)).toEqual(['prepare','open'])
@@ -135,7 +173,7 @@ test('a board action can remain paused for more than its active timeout budget',
 
 test('builds all six board components after native readiness, with reading time after each completed action',async()=>{
  vi.useFakeTimers();const f=fixture(),commands:string[]=[];let mount:any,library:any
- const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-link',2200],['board-add',2200],['board-arrange',3000],['board-smart-container',1000],['board-smart-generate',3000]]
+ const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-arrange',3000],['board-link',2200],['board-add',2200],['board-smart-container',1000],['board-smart-generate',3000]]
  const reply=(detail:any)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))
  const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;commands.push(detail.command);if(detail.command==='mount-board')mount=detail;else if(detail.command==='board-library')library=detail;else if(detail.command!=='dispose')reply(detail)}
  window.addEventListener('sherlock:home-guide-native-request',receive)
@@ -180,7 +218,7 @@ test('keeps the stock search budget at ninety active seconds while excluding pau
  const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail.command==='board-add'){adding=true;return}if(detail.command!=='dispose')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))}
  window.addEventListener('sherlock:home-guide-native-request',receive)
  try{
-  await f.controller.start('board');await vi.advanceTimersByTimeAsync(10000);expect(adding).toBe(true)
+  await f.controller.start('board');await vi.advanceTimersByTimeAsync(13000);expect(adding).toBe(true)
   await vi.advanceTimersByTimeAsync(35000);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
   visibility(true);await vi.advanceTimersByTimeAsync(120000)
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused')

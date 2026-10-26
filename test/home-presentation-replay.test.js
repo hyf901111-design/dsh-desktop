@@ -1,7 +1,20 @@
 import {afterEach,it,expect,vi} from 'vitest'
 import * as runtime from '../packages/dsh-research-task-runtime/home-presentation-runtime.js'
+import {createHomeReportReplay} from '../packages/dsh-research-task-runtime/home-report-runtime.js'
+import {micromark} from 'micromark'
 const metadata={presentationTitle:'模拟研究汇报',presentationSlides:20,sourcePages:28,publisher:'Vanguard',publicationDate:'2025-12-10',chapters:[{id:'a',title:'模拟增长'},{id:'b',title:'模拟估值'},{id:'c',title:'模拟配置'},{id:'d',title:'模拟风险'}],pageOutline:Array.from({length:20},(_,i)=>({slide:i+1,title:'完整逐页提纲 '+(i+1),sourcePages:[2],kind:'content'}))}
 afterEach(()=>vi.useRealTimers())
+it.each(['ppt','report'])('streams readable %s prose without exposing partial Markdown or encoded delivery URLs',async kind=>{
+ vi.useFakeTimers()
+ const report={schemaVersion:2,deliveryNames:{html:'腾讯控股 #1 (中文) 50%.html',pdf:'腾讯控股 #1 (中文) 50%.pdf'},reportTitle:'现金流质量与AI投入',reportPages:64,researchAsOf:'2026-10-23',companyName:'腾讯控股',keyFindings:['现金流与投入需要同时观察。'],chapters:[{title:'主要观点'}],chartCatalog:[{title:'经营现金流'}]}
+ const text=(kind==='ppt'?runtime.createHomePresentationReplay(metadata):createHomeReportReplay(report)).delivery
+ const events=[],stream=runtime.streamHomePresentationReplayText(text,{waitUntilPlaying:async()=>{},signal:new AbortController().signal})
+ const consume=(async()=>{for await(const event of stream)events.push(event)})();await vi.runAllTimersAsync();await consume
+ let prefix=''
+ for(const event of events){if(event.type!=='text-delta')continue;prefix+=event.text;const visible=micromark(prefix).replace(/<[^>]*>/gu,'');expect(visible).not.toMatch(/%[0-9A-F]{2}|\[阅读全文\]|\[打开可编辑演示文稿\]|\[查看原始研究报告\]|\[打开64页PDF报告\]|\*\*/u)}
+ expect(prefix).toBe(text);expect(micromark(prefix).match(/<a /gu)).toHaveLength(2)
+ expect(events.at(-1)).toEqual({type:'block-end',index:0,block:{type:'text',text}})
+})
 it('uses the delivered title/count and compact metadata chapters while retaining the full outline',()=>{
  expect(runtime.createHomePresentationReplay).toBeTypeOf('function')
  const before=structuredClone(metadata),replay=runtime.createHomePresentationReplay(metadata)

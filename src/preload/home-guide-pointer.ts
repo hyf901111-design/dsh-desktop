@@ -1,14 +1,28 @@
 export type HomeGuidePointerFrame={x:number;y:number;phase:'moving'|'pressed'|'dragging'|'released'|'idle'}
 export type HomeGuidePointerAction={target:HTMLElement;action?:'move'|'click'|'drag';fromTarget?:HTMLElement;onFrame?(frame:HomeGuidePointerFrame):void}
 type Point={x:number;y:number}
-type Options={runId:string;signal:AbortSignal;wait(ms:number):Promise<void>;waitUntilPlaying():Promise<void>}
+type Options={runId:string;signal:AbortSignal;initialPosition?:Point;wait(ms:number):Promise<void>;waitUntilPlaying():Promise<void>}
 
 /** A visual actor only. The owning scenario performs its real action after acknowledgement. */
 export function createHomeGuidePointer(document:Document,options:Options){
  const win=document.defaultView!,element=document.createElement('div');element.className='odyssey-home-guide-pointer';element.dataset.homeGuidePointer=options.runId;element.setAttribute('aria-hidden','true');element.hidden=true
- element.innerHTML='<span class="odyssey-home-guide-pointer-pulse"></span><svg viewBox="0 0 25 32" width="25" height="32"><path d="M3 2.5v23l6.3-5.7 4.6 10 4.5-2.1-4.8-9.6 8.5-.5Z" fill="#fff" stroke="#202329" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+ element.innerHTML='<span class="odyssey-home-guide-pointer-pulse"></span><svg viewBox="0 0 18 20" width="18" height="20"><path d="M2.75 2.5C2.06 2.5 1.64 3.04 1.72 3.75L3.02 15.05C3.13 16.03 4.32 16.28 4.82 15.43L7.43 10.98L12.78 9.14C13.71 8.82 13.81 7.55 12.94 7.09L3.45 2.66C3.2 2.52 2.95 2.48 2.75 2.5Z" fill="#45474A" stroke="#D7D8DA" stroke-opacity=".92" stroke-width="1.35" stroke-linejoin="round"/></svg>'
  document.body.append(element)
- let position:Point|undefined,busy=false,closed=false,state='idle'
+ let position:Point|undefined=options.initialPosition?{...options.initialPosition}:undefined,busy=false,closed=false,state='idle'
+ // Native slash/skill menus are manual popovers. A body z-index cannot paint
+ // above that top layer; keep this non-interactive visual in the same layer.
+ const topLayer=typeof element.showPopover==='function'&&typeof element.hidePopover==='function'
+ if(topLayer)element.setAttribute('popover','manual')
+ const hideLayer=()=>{if(topLayer&&element.matches(':popover-open'))element.hidePopover()}
+ const raiseLayer=(reorder=false)=>{if(!topLayer||closed||!element.isConnected||element.hidden)return;if(reorder)hideLayer();if(!element.matches(':popover-open'))element.showPopover()}
+ const beforeToggle=(event:Event)=>{
+  const menu=event.target
+  if(!topLayer||menu===element||(event as ToggleEvent).newState!=='open'||!(menu instanceof win.HTMLElement))return
+  // Expanded-command tagging follows showPopover synchronously; the microtask
+  // runs after that tagging and before paint, without moving/focusing the menu.
+  win.queueMicrotask(()=>{if(menu.isConnected&&menu.matches('[data-ework-expanded-command]:popover-open'))raiseLayer(true)})
+ }
+ if(topLayer)document.addEventListener('beforetoggle',beforeToggle,true)
  type Connection={source:HTMLElement;target:HTMLElement;canvas:HTMLElement;guide:HTMLElement;svg:SVGSVGElement;path:SVGPathElement}
  let connection:Connection|undefined
  let draggedFile:{node:HTMLElement;origin:Point;transform:string}|undefined
@@ -17,7 +31,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  const aborted=()=>Object.assign(Error('操作已取消。'),{name:'AbortError'})
  let rejectInterrupt!:(error:Error)=>void
  const interrupted=new Promise<never>((_resolve,reject)=>{rejectInterrupt=reject});void interrupted.catch(()=>{})
- const stop=()=>{if(closed)return;closed=true;element.hidden=true;clearConnection();rejectInterrupt(aborted())}
+ const stop=()=>{if(closed)return;closed=true;hideLayer();element.hidden=true;document.removeEventListener('beforetoggle',beforeToggle,true);clearConnection();rejectInterrupt(aborted())}
  options.signal.addEventListener('abort',stop,{once:true});if(options.signal.aborted)stop()
  const ensure=()=>{if(closed||options.signal.aborted)throw aborted()}
  const gate=async()=>{ensure();await Promise.race([options.waitUntilPlaying(),interrupted]);ensure()}
@@ -60,7 +74,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
   // pointer; the real workspace still owns the final persisted connection.
   link.path.setAttribute('d',`M ${from.x} ${from.y} C ${from.x+bend} ${from.y} ${next.x-bend} ${next.y} ${next.x} ${next.y}`)
  }
- const paint=(next:Point,phase:HomeGuidePointerFrame['phase'])=>{paintConnection(next,phase);if(draggedFile){if(!draggedFile.node.isConnected)throw aborted();draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`}position=next;state=phase;element.hidden=false;element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`;onFrame?.({...next,phase})}
+ const paint=(next:Point,phase:HomeGuidePointerFrame['phase'])=>{paintConnection(next,phase);if(draggedFile){if(!draggedFile.node.isConnected)throw aborted();draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`}position=next;state=phase;element.hidden=false;raiseLayer();element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`;onFrame?.({...next,phase})}
  const reduced=()=>win.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true
  const travel=async(target:HTMLElement,duration:number,phase:HomeGuidePointerFrame['phase']='moving')=>{
   const destination=point(target),start=position??{x:Math.max(8,destination.x-64),y:Math.max(8,destination.y-40)},steps=reduced()?1:Math.max(1,Math.ceil(duration/16))
@@ -72,7 +86,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  }
  return{
   snapshot:()=>({...position,state}),
-  hide(){element.hidden=true;clearConnection()},
+  hide(){hideLayer();element.hidden=true;clearConnection()},
   async perform(action:HomeGuidePointerAction){
    ensure();if(busy)throw Error('上一项指针操作尚未完成。');busy=true;onFrame=action.onFrame
    let completed=false

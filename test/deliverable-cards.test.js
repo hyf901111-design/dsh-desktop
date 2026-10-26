@@ -68,6 +68,24 @@ it('opens the exact selected file and supports keyboard-dismissed open choices',
  await click(Array.from(el.querySelectorAll('[role=menuitem]')).find(e=>e.textContent.includes('默认应用')))
  expect(system).toHaveBeenCalledExactlyOnceWith('/work/report.pdf')
 })
+it.each([['zh','finder'],['zh','default-app'],['en','finder'],['en','default-app']])('opens via %s %s without an inline success notice',async(locale,action)=>{
+ document.documentElement.dataset.odysseyLocale=locale
+ try{
+  const finder=vi.fn(async()=>{}),system=vi.fn(async()=>{})
+  window.dshDesktop={showItemInFolder:finder,showFileContextMenu:vi.fn(async()=>action)}
+  const el=await render({matched:['/work/report.pdf'],openSystemFile:system,cwd:'/work'})
+  await click(el.querySelector('.ew-delivery-options'))
+  expect(action==='finder'?finder:system).toHaveBeenCalledExactlyOnceWith('/work/report.pdf')
+  expect(el.querySelector('.ew-delivery-status')).toBeNull();expect(el.querySelector('[role=menu]')).toBeNull();expect(el.querySelector('.ew-delivery-options').disabled).toBe(false)
+ }finally{delete document.documentElement.dataset.odysseyLocale}
+})
+it.each(['finder','default-app'])('retains an actionable %s failure after removing successful-open notices',async action=>{
+ const finder=vi.fn(async()=>{throw Error('文件暂时无法打开，请重试。')}),system=vi.fn(async()=>{throw Error('文件暂时无法打开，请重试。')})
+ window.dshDesktop={showItemInFolder:finder,showFileContextMenu:vi.fn(async()=>action)}
+ const el=await render({matched:['/work/report.pdf'],openSystemFile:system,cwd:'/work'})
+ await click(el.querySelector('.ew-delivery-options'))
+ expect(el.querySelector('[role=alert]')?.textContent).toContain('文件暂时无法打开');expect(el.querySelector('.ew-delivery-options').disabled).toBe(false)
+})
 it('opens from the whole file-card region while keeping the options button independent',async()=>{
  const open=vi.fn()
  const el=await render({matched:['/work/report.pdf'],openFile:open})

@@ -111,14 +111,22 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      const dropFile=document.createElement('div'),fileType=document.createElement('span'),fileName=document.createElement('span')
      dropFile.className='odyssey-home-guide-drag-file';dropFile.dataset.homeGuideDragFile=ticket.detail.runId;dropFile.setAttribute('aria-hidden','true')
      fileType.className='odyssey-home-guide-drag-file-type';fileType.textContent='PDF';fileName.textContent=ticket.prepared.sourcePath.split(/[\\/]/).pop()
+     const dropTarget=document.createElement('span');dropTarget.dataset.homeGuideFileDropTarget=ticket.detail.runId;dropTarget.setAttribute('aria-hidden','true')
+     const dropBounds=()=>{
+      check(ticket);if(inputFor(ticket)!==input||input.disabled||input.readOnly)throw changed()
+      const box=input.getBoundingClientRect();let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(window.innerWidth,box.right),bottom=Math.min(window.innerHeight,box.bottom)
+      for(let node=input;node;node=node.parentElement){const style=window.getComputedStyle(node);if(node.hidden||node.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')throw changed();if(node!==input){const clip=node.getBoundingClientRect();if(/hidden|auto|scroll|clip/.test(style.overflowX||style.overflow)){left=Math.max(left,clip.left);right=Math.min(right,clip.right)}if(/hidden|auto|scroll|clip/.test(style.overflowY||style.overflow)){top=Math.max(top,clip.top);bottom=Math.min(bottom,clip.bottom)}}}
+      if(right-left<4||bottom-top<4)throw changed();return[left,top,right,bottom]
+     }
+     const targetBounds=dropBounds();dropTarget.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;background:transparent;left:'+((targetBounds[0]+targetBounds[2])/2-1)+'px;top:'+((targetBounds[1]+targetBounds[3])/2-1)+'px'
      dropFile.append(fileType,fileName);const bounds=input.getBoundingClientRect(),center=ticket.host.closest('.pI_x6G_centerCol').getBoundingClientRect()
-     dropFile.style.left=Math.max(12,Math.min(window.innerWidth-252,center.right-252))+'px';dropFile.style.top=Math.max(72,bounds.top-105)+'px';document.body.append(dropFile)
+     dropFile.style.left=Math.max(12,Math.min(window.innerWidth-252,center.right-252))+'px';dropFile.style.top=Math.max(72,bounds.top-105)+'px';document.body.append(dropFile,dropTarget)
      try{
-      await cue(ticket,input,'把参考研报拖入输入框','drag',dropFile)
-      if(inputFor(ticket)!==input||input.disabled||input.readOnly)throw changed()
+      await cue(ticket,dropTarget,'把参考研报拖入输入框','drag',dropFile)
+      if(dropBounds().some((value,index)=>Math.abs(value-targetBounds[index])>2))throw changed()
       if(ticket.shell.snapshot.draft!==skillDraft||ticket.shell.snapshot.draftRev!==skillRevision||ticket.shell.snapshot.imageIds?.length||JSON.stringify(ticket.shell.snapshot.occurrences??[])!==skillOccurrences)throw Error('输入内容已更改，已停止自动填写。')
       input.focus({preventScroll:true});ticket.shell.insertFilePaths([ticket.prepared.sourcePath])
-     }finally{dropFile.remove()}
+     }finally{dropFile.remove();dropTarget.remove()}
      if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='chat-file'&&JSON.parse(ref.ref).path===ticket.prepared.sourcePath))throw Error('研报附件未能加入原生输入框。')
      }
      const preparedDraft=ticket.shell.snapshot.draft,preparedRevision=ticket.shell.snapshot.draftRev,preparedOccurrences=JSON.stringify(ticket.shell.snapshot.occurrences??[])
@@ -130,7 +138,7 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      if(ticket.shell.snapshot.draft!==preparedDraft||ticket.shell.snapshot.draftRev!==preparedRevision||ticket.shell.snapshot.imageIds?.length||JSON.stringify(ticket.shell.snapshot.occurrences??[])!==preparedOccurrences)throw Error('输入内容已更改，已停止自动填写。')
      if(ticket.shell.snapshot.imageIds?.length)throw Error('输入附件已更改，已停止自动填写。')
      const unchanged=()=>ticket.shell.snapshot.draft===prior&&ticket.shell.snapshot.draftRev===revision&&!ticket.shell.snapshot.imageIds?.length&&JSON.stringify(ticket.shell.snapshot.occurrences??[])===preparedOccurrences
-     const prefix=ticket.kind==='report'?ticket.shell.snapshot.draft.trimEnd()+' ':ticket.shell.snapshot.draft+'\n',brief=ticket.prepared.brief
+     const prefix=ticket.shell.snapshot.draft.trimEnd()+' ',brief=ticket.prepared.brief
      ticket.shell.setDraft(prefix);let prior=prefix,revision=ticket.shell.snapshot.draftRev
      for(let i=0;i<brief.length;i+=2){await playing(ticket);if(!unchanged())throw Error('输入内容已更改，已停止自动填写。');prior=prefix+brief.slice(0,Math.min(i+2,brief.length));ticket.shell.setDraft(prior);revision=ticket.shell.snapshot.draftRev;await delay(ticket,/[，。；！？]$/.test(prior)?240:140)}
      if(!unchanged())throw Error('输入内容已更改，已停止自动填写。')
