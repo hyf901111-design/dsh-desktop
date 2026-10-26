@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261027-03",
+  "branch": "codex/integration/20261027-03",
+  "baseMainCommit": "bf54651863df258816b030b2b30fd686edf9b79f",
+  "expectedMainCommit": "bf54651863df258816b030b2b30fd686edf9b79f",
+  "createdAt": "2026-10-26T22:49:07.281Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "演示发送后先呈现完整真实用户消息再思考",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "bf54651863df258816b030b2b30fd686edf9b79f",
+        "tipCommit": "e18ad8c2bbaf5d21730f736f2af49c75685e358f",
+        "commits": [
+          {
+            "commit": "e18ad8c2bbaf5d21730f736f2af49c75685e358f",
+            "parents": [
+              "bf54651863df258816b030b2b30fd686edf9b79f"
+            ],
+            "subject": "修复演示发送后用户消息晚于思考出现的空屏"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-guide-user-message-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-patch.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-user-message-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_USER_FIRST_EVIDENCE=/tmp/release140-user-message-first-20261027/verified-commit",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-user-message-browser.test.js",
+              "test/home-guide-presentation-patch.test.js",
+              "test/home-guide-presentation-binding.test.ts",
+              "test/home-guide-presentation-adapter.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-user-message-first-20261027/verified-commit-focused.log: 16/16 directly affected checks on this committed tip; actual Native Session.prompt and real preset Host pre-step gate, strict Node installer/binding/adapter.",
+            "verifiedCommit": "e18ad8c2bbaf5d21730f736f2af49c75685e358f",
+            "completedAt": "2026-10-26T22:46:36.568243+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-user-message-first-20261027/verified-commit-typecheck.log: EXIT0",
+            "verifiedCommit": "e18ad8c2bbaf5d21730f736f2af49c75685e358f",
+            "completedAt": "2026-10-26T22:46:36.568243+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Headless Chromium with real ConversationRoot/SessionRuntime/InputHub/UserStyleBubble and actual PPT/Report preset HTTP+AgentLoop on private storage. First non-hero RAF has the complete real skill/file/prompt; all handoff frames exactly one user bubble and one durable human event. Two source-identical PNGs were viewed in /tmp/release140-user-message-first-20261027/browser-complete. No actual client UI or app build was performed."
+        },
+        "acceptanceCriteria": [
+          "发送前原生清稿退出首页的首个对话绘制帧即显示实际发出请求的完整用户消息，技能/附件/提示词由原生UserStyleBubble绘制。",
+          "实际Host preStep等待时，下方才显示思考；匹配真实durable user.source.rpcId后在同render接替，无空帧或重复消息。",
+          "不append user、不重发、不修改模型payload或持久历史，仅fresh演示ticket拥有的真实session.prompt只读投影。",
+          "server拒绝、transport错误、取消或换session清理临时内容和监听，保留真实后续新稿；普通任务无watch，原路径不变。",
+          "笔记在thinking前已有真实request记录；看板智能容器是独立native prepared-task链，不增加重复ordinary user。详见diagnosis.md。",
+          "原presentation patch层严格支持已安装旧版本→新hook升级、两遍一致及精确strip；不放松guard，不新增外层pipeline补丁。"
+        ],
+        "risks": [
+          "正式包/Native主界面验收及新Plan A由Root执行；本feature未构建、操作UI、修改版本或上传。",
+          "额外两个PPT/Report完整交付回归已在同一冻结sourceSHA通过（retained-delivery.log），其证据与提交源逐字节相等，不重复纳入核心16计数。"
+        ],
+        "generatedAt": "2026-10-26T22:46:36.568243+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "env",
+        "SHERLOCK_USER_FIRST_EVIDENCE=/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/release-cloudflare/1.4.0/integration-user-message/browser",
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-user-message-browser.test.js",
+        "test/home-guide-presentation-patch.test.js",
+        "test/home-guide-presentation-binding.test.ts",
+        "test/home-guide-presentation-adapter.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
