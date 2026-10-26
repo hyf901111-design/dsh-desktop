@@ -132,13 +132,27 @@ function ProducedFiles({matched:paths,sessionId,openFile,openSystemFile,isLoopba
 
 function exact(source,before,after){if(source.split(before).length!==2)throw Error('Delivery cards anchor drifted: '+before.slice(0,90));return source.replace(before,after)}
 
+function patchHomeGuideDeliveryAccumulator(source){
+ const marker='/* ework:home-guide-delivery-accumulator:v1 */'
+ const before='calls.set(String(match.event.data.callId), match.view?.for === "call" ? match.view.view : null);'
+ const after=marker+'\n\t\t\t\t\tcalls.set(String(match.event.data.callId), {name:match.event.data.name,view:match.view?.for === "call" ? match.view.view : null});'
+ const oldAdditions='const additions = [...producedPaths(context.state.calls.get(callId) ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)].map((path) => ({'
+ const newAdditions='const completedCall = context.state.calls.get(callId);\n\t\t\t\tconst demoPublisher = completedCall?.name === "home_presentation_publish" || completedCall?.name === "home_report_publish";\n\t\t\t\tconst additions = (demoPublisher ? homeGuideDeliveryPaths(match.event.data.message,completedCall.name) : [...producedPaths(completedCall?.view ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)]).map((path) => ({'
+ if(source.includes(marker)){
+  if(source.split(marker).length!==2||source.split(after).length!==2||source.split(newAdditions).length!==2)throw Error('Home guide delivery accumulator anchor drifted')
+  return source
+ }
+ source=exact(source,before,after)
+ return exact(source,oldAdditions,newAdditions)
+}
+
 export function patchDeliverableCards(source){
  const marker='/* ework:delivery-cards:v1 */'
  const runtime=marker+'\nlet _deliveryIcons=require("@deepseek-ai/dsh-client-ui-primitives");\n'+deliveryModelSource+'\n'+deliveryIconSource+'\n'+PPTX_ANNOTATION_DELIVERY_SOURCE+'\n'+[deliveryFileType,DeliveryFileCard,ProducedFiles].map(fn=>fn.toString()).join('\n')+'\n'+`if(typeof document!=='undefined'&&!document.getElementById('ework-delivery-cards')){const tag=document.createElement('style');tag.id='ework-delivery-cards';tag.textContent=${JSON.stringify(DELIVERY_CARDS_CSS)};document.head.appendChild(tag);}\n`
  if(source.includes(marker)){
   const start=source.indexOf(marker),end=source.indexOf('\n\t\t//#endregion',start)
   if(end<0||source.indexOf(marker,start+marker.length)!==-1)throw Error('Delivery cards runtime anchor drifted')
-  return source.slice(0,start)+runtime+source.slice(end)
+  return patchHomeGuideDeliveryAccumulator(source.slice(0,start)+runtime+source.slice(end))
  }
  const start=source.indexOf('\t\tfunction ProducedFiles('),end=source.indexOf('\n\t\t//#endregion',start)
  if(start<0||end<0)throw Error('Delivery cards anchor missing: ProducedFiles')
@@ -147,7 +161,7 @@ export function patchDeliverableCards(source){
  source=exact(source,'const additions = producedPaths(context.state.calls.get(callId) ?? null).map((path) => ({','const additions = [...producedPaths(context.state.calls.get(callId) ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)].map((path) => ({')
  source=exact(source,'"conversationEvents",\n\t\t\t"connection"','"conversationEvents",\n            "workspaces",\n\t\t\t"connection"')
  source=exact(source,'isLoopback: connection.isLoopback,\n','isLoopback: connection.isLoopback,\n                    openSystemFile: path=>ctx.get("workspaces").openPath(path),\n')
- return source
+ return patchHomeGuideDeliveryAccumulator(source)
 }
 
 export function patchDeliveryConversation(source){

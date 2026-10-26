@@ -12,7 +12,7 @@ it.each(['ppt','report'])('streams readable %s prose without exposing partial Ma
  const consume=(async()=>{for await(const event of stream)events.push(event)})();await vi.runAllTimersAsync();await consume
  let prefix=''
  for(const event of events){if(event.type!=='text-delta')continue;prefix+=event.text;const visible=micromark(prefix).replace(/<[^>]*>/gu,'');expect(visible).not.toMatch(/%[0-9A-F]{2}|\[阅读全文\]|\[打开可编辑演示文稿\]|\[查看原始研究报告\]|\[打开64页PDF报告\]|\*\*/u)}
- expect(prefix).toBe(text);expect(micromark(prefix).match(/<a /gu)).toHaveLength(2)
+ expect(prefix).toBe(text);expect(micromark(prefix)).not.toContain('<a ')
  expect(events.at(-1)).toEqual({type:'block-end',index:0,block:{type:'text',text}})
 })
 it('uses the delivered title/count and compact metadata chapters while retaining the full outline',()=>{
@@ -25,7 +25,7 @@ it('uses the delivered title/count and compact metadata chapters while retaining
  expect(replay.delivery).toContain('《模拟研究汇报》20页');expect(replay.delivery).toContain('4个章节')
  expect(replay.intro).toContain('2025-12-10');expect(replay.intro).toContain('28页');expect(replay.intro).toContain('历史预测')
  expect(JSON.stringify(replay)).not.toMatch(/离线|预置|回放|不调用模型|这是.*示例/u)
- expect(replay.delivery).toContain('[打开可编辑演示文稿]');expect(replay.delivery).toContain('[查看原始研究报告]')
+ expect(replay.delivery).not.toMatch(/打开可编辑演示文稿|查看原始研究报告|\[[^\]]+\]\(/u)
  expect(JSON.stringify(replay)).not.toMatch(/Kimi|实时生成|正在调用|\/Users\//u)
  expect(replay.todos).toHaveLength(3);expect(replay.todos[0]).toContain('来源');expect(replay.todos[1]).toContain('章节');expect(replay.todos[1]).toContain('排版');expect(replay.todos[2]).toContain('保存')
 })

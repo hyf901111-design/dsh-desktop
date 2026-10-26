@@ -69,6 +69,7 @@ it('pauses before work and cancellation prevents late files while immediately re
  const stopping=f.runtime.disposeRun(f.input)
  f.agent.followup(createUserMessage({content:[{type:'text',text:'停止后马上继续提问'}],source:{kind:'user'}}));await stopping;await f.agent.whenIdle()
  await expect(waiting).rejects.toThrow();expect(f.outside).toHaveLength(1)
+ expect(JSON.stringify(f.agent.session.events.filter(e=>e.type==='tool/result'))).not.toContain('ework-home-guide-delivery')
  await expect(readFile(join(f.cwd,HOME_REPORT_HTML_FILE))).rejects.toThrow();await expect(readFile(join(f.cwd,HOME_REPORT_PDF_FILE))).rejects.toThrow()
 })
 it('rejects changed input on the isolated route and never falls through to a real model',async()=>{
@@ -94,6 +95,7 @@ it('preserves a user-saved PDF and never publishes a half-pair in its place',asy
  for(const stage of ['plan','layout'])await f.runtime.checkpoint({...f.input,stage})
  await expect(f.runtime.checkpoint({...f.input,stage:'deliver'})).rejects.toThrow(/预置报告未能保存/);await f.agent.whenIdle()
  expect(await readFile(prepared.pdfPath,'utf8')).toBe('用户已经保存的文件');await expect(readFile(prepared.htmlPath)).rejects.toThrow();expect(f.outside).toEqual([])
+ expect(JSON.stringify(f.agent.session.events.filter(e=>e.type==='tool/result'))).not.toContain('ework-home-guide-delivery')
 },20000)
 it('admits only trusted POST commands with the fixed report route and does not accept asset path overrides',async()=>{
  expect(mod.registerHomeReportRuntime).toBeTypeOf('function')
