@@ -186,6 +186,10 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      if(!button||button.disabled)throw Error('原生发送按钮暂不可用。')
      await cue(ticket,button,'发送演示需求');if(!unchanged())throw Error('输入内容已更改，演示已停止，草稿已保留。');button.click()
      await waitFor(ticket,()=>ticket.shell.snapshot.draft==='')
+     // Native commit clears the composer before session.prompt acknowledges.
+     // Only the preset Host's admitted human request proves this send succeeded.
+     await rpc(ticket,'checkpoint',{stage:'accepted'})
+     await playing(ticket)
     }else if(index<=4){await rpc(ticket,'checkpoint',{stage:detail.command})}
     else{
      const root=ticket.host.closest('.pI_x6G_centerCol'),file=()=>[...root.querySelectorAll('.ew-delivery-card[data-file-path]')].find(node=>node.dataset.filePath===(ticket.kind==='report'?ticket.prepared.pdfPath:ticket.prepared.presentationPath))?.querySelector('button.ew-delivery-open')

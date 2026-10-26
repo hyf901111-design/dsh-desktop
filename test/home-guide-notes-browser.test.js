@@ -7,6 +7,8 @@ import {join} from 'node:path'
 import {NotesStore} from '../src/main/notes/store'
 import {HOME_NOTES_GUIDE_TITLE,HOME_NOTES_CONSENSUS_REPLACEMENT} from '../src/preload/home-guide-notes-data'
 import {homeNoteChallengeSidebarSource} from './fixtures/home-note-challenge-sidebar.js'
+import {Session} from '@deepseek-ai/dsh-session'
+import {engageNoteSession} from '../packages/dsh-research-task-runtime/notes-session.js'
 let browser,script,css
 beforeAll(async()=>{
  const challengeSidebar=await homeNoteChallengeSidebarSource()
@@ -36,6 +38,21 @@ async function fixture(storage){
  await page.route('http://127.0.0.1/notes-guide',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content"><title>笔记用例教程</title><body data-workspace-surface="notes"><div id="guide" class="en-root" data-home-guide-notes="" style="left:0;top:0;right:360px;bottom:0"></div>'}))
  await page.goto('http://127.0.0.1/notes-guide');if(storage)await page.exposeFunction('noteStorageRequest',storage);await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.evaluate(()=>window.readyGuide);return{context,page,errors,network,logs}
 }
+it.each([false,true])('preserves native placeholder and custom title ownership while writing the real note (%s)',async custom=>{
+ const directory=mkdtempSync(join(tmpdir(),'home-guide-title-')),store=new NotesStore(directory),session=Session.create('real-guide-session'),engaged=[]
+ session.append('session/title',{title:custom?'用户自己的笔记名':'新笔记',source:{kind:'user'}})
+ const native={sessions:{get:()=>session},sessionTitle:{rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}}}
+ const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft'){store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}if(method==='engage'){engaged.push(input);return engageNoteSession(native,input)}return{ok:true}}
+ const{context,page,errors}=await fixture(storage);try{
+  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startPersistentGuide(true))
+  expect(engaged).toEqual([]);expect(session.events.findLast(event=>event.type==='session/title')?.data.title).toBe(custom?'用户自己的笔记名':'新笔记')
+  await page.evaluate(()=>window.guide.runStep('write'))
+  expect(engaged).toEqual([expect.objectContaining({title:HOME_NOTES_GUIDE_TITLE})])
+  expect(session.events.findLast(event=>event.type==='session/title').data.title).toBe(custom?'用户自己的笔记名':'新笔记')
+  expect(await page.locator('.en-title').inputValue()).toBe(HOME_NOTES_GUIDE_TITLE)
+  expect(await page.locator('.bn-editor').innerText()).toContain('同比增长20%');expect(errors).toEqual([])
+ }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
+},20000)
 it('checks three actual evidence cards, corrects the consensus and returns the same native editor smoothly to its title',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'home-guide-note-consensus-')),store=new NotesStore(directory)
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}

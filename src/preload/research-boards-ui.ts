@@ -690,7 +690,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       next.account.generation < state.account.generation
     )
       return
-    if (next.account.generation !== state.account.generation || next.account.user?.userId !== state.account.user?.userId) { guideIdentityRevision++; guideRequests.clear() }
+    if (next.account.generation !== state.account.generation || next.account.user?.userId !== state.account.user?.userId) { guideIdentityRevision++; guideRequests.clear(); guidePendingTitles.clear() }
     if (next.account.generation !== state.account.generation) {
       clearEditors()
       activeSession = null
@@ -827,6 +827,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   let guideIdentityRevision = 0
   const guideRecords = new Map<string, GuideSession[]>()
   const guideFlights = new Map<string, Promise<GuideSession>>()
+  const guidePendingTitles = new Map<string, {owner:string;generation:number;revision:number;cwd:string;original:string}>()
+  cleanups.push(()=>guidePendingTitles.clear())
   const guideWorkspaceFlights = new Map<string, { guards: Set<() => void>; promise?: Promise<void> }>()
   let guideSelectedSession = current(), guideSelectionRevision = 0, guideSelectedAttempt = ''
   const guideRequests = new Map<string, { fingerprint: string; promise: Promise<Record<string, unknown>>; owner?: string; generation?: number; revision?: number }>()
@@ -982,8 +984,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         const sessionId = await deps.sessions.create({ cwd: directory.path }); valid()
         const binding = deps.sessions.binding(sessionId)
         if (!binding?.session?.rename) throw Error('示例会话尚未就绪，请稍后重试。')
-        const renamed=await binding.session.rename(title);valid()
-        if(renamed?.ok!==true)throw Error(renamed?.error?.message||'示例名称保存失败。')
+        const original=binding.session.projections?.faceOf?.('title')?.getSnapshot?.()??deps.sessions.list.getSnapshot().byId[sessionId]?.title??''
+        const placeholder=doc.documentElement.dataset.odysseyLocale==='en'?{board:'New Research',note:'New Note',ppt:'New Session',report:'New Session'}[kind]:{board:'新研究',note:'新笔记',ppt:'新会话',report:'新会话'}[kind]
+        // Native summaries otherwise fall back to the reserved directory name
+        // as soon as composing begins. Keep the normal empty-session label.
+        if(!original.trim()){
+          const renamed=await binding.session.rename(placeholder);valid()
+          if(renamed?.ok!==true)throw Error(renamed?.error?.message||'示例名称保存失败。')
+        }
+        if(!original.trim()||original===placeholder)guidePendingTitles.set(sessionId,{owner,generation,revision:identityRevision,cwd:directory.path,original:placeholder})
         await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId }); valid()
         await call('local.directory', { mode: 'ensure', sessionId }); valid()
         const entry: GuideSession = { kind, sessionId, cwd: directory.path, title, createdAt: Date.now() }
@@ -1016,7 +1025,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const stale = value.ok === true && record && (record.owner !== guideOwner() || record.generation !== state.account.generation || record.revision !== guideIdentityRevision)
       win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-session-reply', { detail: { requestId, ...(stale ? { ok: false, message: '账号或页面已变化，请重新打开示例。' } : value) } }))
     }
-    if (!['board','note','ppt','report'].includes(kind) || !['prepare','open'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command === 'open' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
+    if (!['board','note','ppt','report'].includes(kind) || !['prepare','open','activate-title'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command !== 'prepare' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
     const fingerprint = JSON.stringify([kind, command, request.replay === true, request.sessionId])
     const prior = guideRequests.get(requestId)
     if (prior) { if (prior.fingerprint !== fingerprint) reply({ ok: false, message: '示例请求标识已使用。' }); else void prior.promise.then(value => reply(value, prior)); return }
@@ -1030,6 +1039,22 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (disposed || owner !== guideOwner() || generation !== state.account.generation || current() !== origin || identityRevision !== guideIdentityRevision) throw Error('账号或页面已变化，请重新打开示例。')
       const entry = getHomeGuideSession(request.sessionId)
       if (!entry || entry.kind !== kind) throw Error('该示例不属于当前账号，或会话已移除。')
+      if(command==='activate-title'){
+        if(origin!==entry.sessionId)throw Error('当前示例会话已变化，未更新名称。')
+        const pending=guidePendingTitles.get(entry.sessionId),binding=deps.sessions.binding(entry.sessionId)
+        const actualTitle=()=>binding?.session?.projections?.faceOf?.('title')?.getSnapshot?.()??deps.sessions.list.getSnapshot().byId[entry.sessionId]?.title??''
+        if(pending&&pending.owner===owner&&pending.generation===generation&&pending.revision===identityRevision&&pending.cwd===entry.cwd){
+          // Only the native title captured at creation is ours to replace.
+          // A user's later title wins, including a name changed during entry.
+          if(actualTitle()===pending.original){
+            const renamed=await binding?.session?.rename(entry.title)
+            if(renamed?.ok!==true)throw Error(renamed?.error?.message||'示例名称保存失败。')
+          }
+          if(disposed||owner!==guideOwner()||generation!==state.account.generation||identityRevision!==guideIdentityRevision||current()!==origin||!guideSessionAvailable(entry))throw Error('账号或页面已变化，未更新示例名称。')
+          guidePendingTitles.delete(entry.sessionId)
+        }
+        return {ok:true,sessionId:entry.sessionId,cwd:entry.cwd,title:entry.title}
+      }
       navigation++
       deps.sessions.open(entry.sessionId)
       if (kind === 'board') selectBoardSession(entry.sessionId)

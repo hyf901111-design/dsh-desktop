@@ -38,7 +38,7 @@ beforeAll(async()=>{
  const sessionsRuntime=new rt.SessionRuntime(ctx,{sessions:{}},{},{events,views:viewRegistry}),session=sessionsRuntime.manager.get(sessionId);session.openState='open';session.installWindow([],false);
  const store=initial=>{let value=initial;const listeners=new Set();return{getSnapshot:()=>value,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},update:patch=>{value={...value,...patch};listeners.forEach(fn=>fn())}}};
  const view=store({view:'chat',draft:'',selection:null}),summary=store({byId:{[sessionId]:{id:sessionId,displayTitle:'公司风格演示示例',cwd:window.cwd,blank:true}}}),projections=store({todos:null});
- const referenceSources=[{name:'chat-file',codec:native.chatFileReferenceCodec}];const inputTriggers={track(){},arbitrate:()=> 'pass',onSpace:()=>false,adjudicate:async()=>undefined,serializeReference:async(source,ref,signal)=>{const value=await triggers.InputTriggerController.prototype.serializeReference.call({deps:{roster:{all:()=>referenceSources}}},source,ref,signal);window.probe.serializations.push({source,ref,value});return value}};const shell=new native.SessionInputShell({actx:{},inputTriggers:()=>inputTriggers,defaultSink:async text=>{const before=shell.snapshot;await window.nativeBackend({action:'send',text});shell.commitSend(before.imageIds,before.draft)}}),inputHub=new native.InputHub(ctx,(...args)=>t(...args));inputHub.shells.set(sessionId,shell);
+ const referenceSources=[{name:'chat-file',codec:native.chatFileReferenceCodec}];const inputTriggers={track(){},arbitrate:()=> 'pass',onSpace:()=>false,adjudicate:async()=>undefined,serializeReference:async(source,ref,signal)=>{const value=await triggers.InputTriggerController.prototype.serializeReference.call({deps:{roster:{all:()=>referenceSources}}},source,ref,signal);window.probe.serializations.push({source,ref,value});return value}};const shell=new native.SessionInputShell({actx:{},inputTriggers:()=>inputTriggers,defaultSink:async text=>{const before=shell.snapshot;shell.commitSend(before.imageIds,before.draft);const committed=shell.snapshot.draftRev;try{await window.nativeBackend({action:'send',text})}catch{if(shell.snapshot.draft===''&&shell.snapshot.draftRev===committed)shell.restoreDraftState(before)}}}),inputHub=new native.InputHub(ctx,(...args)=>t(...args));inputHub.shells.set(sessionId,shell);
  const conversation=new native.ConversationController(ctx,{input:inputHub,blocks:{}});
  const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),useSession=use({subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()}),useInput=use(shell.state),useStore=use(view),useSessions=use(summary),useProjection=name=>use(projections)(s=>s[name]);
  const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'},{id:'notes',label:'笔记'},{id:'research',label:'研究'}]},actions={setView:value=>view.update({view:value}),setDraft:draft=>view.update({draft}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}};
@@ -82,13 +82,13 @@ beforeAll(async()=>{
  await mkdir(evidence,{recursive:true})
 },30000)
 afterAll(()=>browser?.close())
-async function fixture({operations=false,reducedMotion='reduce',kind='ppt',reportSchemaVersion=1,brief}={}){
+async function fixture({operations=false,reducedMotion='reduce',kind='ppt',reportSchemaVersion=1,brief,sendGate}={}){
  const f=kind==='report'?await reportRuntimeFixture({schemaVersion:reportSchemaVersion}):await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion}),errors=[]
  page.on('pageerror',e=>errors.push(e.stack??e.message))
  const sent=[],http=[];
  const rawBackend=async input=>{
   if(input.action==='history')return f.request(f.api.sessions.history,{sessionId:f.agent.id,maxMessages:100})
-  if(input.action==='send'){sent.push(input.text);if(kind==='report')f.agent.followup(createUserMessage({content:[{type:'text',text:input.text}],source:{kind:'user'}}));else await f.prompt(input.text);return{ok:true}}
+  if(input.action==='send'){if(sendGate&&await sendGate===false)throw Error('请求未被Host接受');sent.push(input.text);if(kind==='report')f.agent.followup(createUserMessage({content:[{type:'text',text:input.text}],source:{kind:'user'}}));else await f.prompt(input.text);return{ok:true}}
   if(input.action==='verify-file'){expect(await readFile(input.path)).toEqual(kind==='report'?f.pdf:f.bytes);return{ok:true}}
   if(kind==='report'){const method={prepare:'prepare',playback:'playback',checkpoint:'checkpoint',dispose:'disposeRun'}[input.action];return{ok:true,...await f.runtime[method]({...f.input,...input})}}
   return f.command(input.action,input)
@@ -391,6 +391,18 @@ it.each(['把参考研报拖入输入框','填写研报转换要求'])('preserve
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },12000)
+it('does not finish a send merely because native commit cleared the draft before Host acceptance',async()=>{
+ let release;const sendGate=new Promise(resolve=>{release=resolve}),f=await fixture({sendGate,brief:'保留全部资料'}),{page}=f
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='run-1'});await page.evaluate(()=>window.probe.mount());await page.evaluate(()=>window.probe.play(true));await page.evaluate(()=>window.probe.step('brief'))
+  await page.evaluate(()=>{window.sendFinished=false;window.sendPending=window.probe.step('send').then(()=>{window.sendFinished=true},error=>{window.sendFailure=error.message})})
+  await expect.poll(()=>page.evaluate(()=>window.probe.shell.snapshot.draft)).toBe('')
+  await page.waitForTimeout(180);expect(await page.evaluate(()=>window.sendFinished)).toBe(false)
+  expect(f.agent.session.events.some(event=>event.type==='user/message'&&event.data.source?.kind==='user')).toBe(false)
+  await page.evaluate(()=>window.probe.controller.abort());release(false);await page.evaluate(()=>window.sendPending)
+  expect(await page.evaluate(()=>window.sendFinished)).toBe(false);expect(f.sent).toEqual([])
+ }finally{release(false);await f.close()}
+},20000)
 it('types and sends through the resident native InputBar, renders persisted chat/tasks and opens the ordinary workspace file',async()=>{
  const f=await fixture(),{page}=f
  const started=Date.now()

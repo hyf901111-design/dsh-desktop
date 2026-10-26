@@ -19,6 +19,18 @@ it.each(['研究报告示例','研究报告示例 · 练习副本','研究报告
  expect(f.agent.session.events.some(event=>event.type==='home-guide/report')).toBe(true)
  expect(f.outside).toEqual([])
 })
+it('does not acknowledge a report send before its actual human prompt reaches the native agent',async()=>{
+ const f=await fixture();await f.runtime.prepare(f.input);await f.runtime.playback({...f.input,playing:true})
+ let state='pending';const accepted=f.runtime.checkpoint({...f.input,stage:'accepted'}).then(value=>{state='accepted';return value},error=>{state='rejected';throw error});void accepted.catch(()=>{})
+ await new Promise(resolve=>setTimeout(resolve,30));expect(state).toBe('pending')
+ f.agent.followup(createUserMessage({content:[{type:'text',text:f.message()}],source:{kind:'user'}}))
+ expect(await accepted).toMatchObject({stage:'accepted'});expect(f.outside).toEqual([])
+})
+it('returns the same final demo name through the native automatic title request after preparation',async()=>{
+ const f=await fixture();await f.runtime.prepare(f.input)
+ const chunks=[];for await(const chunk of f.ctx.llm.stream({provider:'sherlock-home-report',model:'v1',sessionId:f.agent.id,purpose:'session-title',messages:[]}))chunks.push(chunk)
+ expect(chunks.filter(chunk=>chunk.type==='block-end').map(chunk=>chunk.block)).toEqual([{type:'text',text:'研究报告示例（演示案例）'}]);expect(f.outside).toEqual([])
+})
 it('refuses a renamed report session before taking ownership',async()=>{
  const f=await fixture('研究报告示例（演示案例） · 练习副本')
  await expect(f.runtime.prepare(f.input)).rejects.toThrow('专属目录')
