@@ -25676,7 +25676,7 @@
       },
       "publishedAt": "2025-11-13",
       "accessedAt": "2026-10-25",
-      "url": "https://static.www.tencent.com/uploads/2025/11/13/",
+      "url": "https://static.www.tencent.com/uploads/2025/11/13/a33b6f19738615834787623f17d20ba3.pdf",
       "integrity": "verified",
       "authenticity": "unverified",
       "evidenceLevel": "extracted-text-only",
@@ -25754,7 +25754,7 @@
       },
       "publishedAt": "2026-03-18",
       "accessedAt": "2026-10-25",
-      "url": "https://static.www.tencent.com/uploads/2026/03/18/",
+      "url": "https://static.www.tencent.com/uploads/2026/03/18/e6a646796d0d869acc76271c9ee1a6a5.pdf",
       "integrity": "verified",
       "authenticity": "unverified",
       "evidenceLevel": "extracted-text-only",
@@ -25822,7 +25822,7 @@
       },
       "publishedAt": "2026-05-13",
       "accessedAt": "2026-10-25",
-      "url": "https://static.www.tencent.com/uploads/2026/05/13/",
+      "url": "https://static.www.tencent.com/uploads/2026/05/13/47382ae415a209fd161bc19a1f9b3704.pdf",
       "integrity": "verified",
       "authenticity": "unverified",
       "evidenceLevel": "extracted-text-only",
@@ -25885,5 +25885,5 @@
     }
   ],
   "synthetic": false,
-  "packetSha256": "5d2542c283f9f3665977916dcbc8678f8e44ccb14c8079d42a1e97b83a70602b"
+  "packetSha256": "b36774c1a9c7edf9172b34cbd62f346f11edaf12d5179c6be8b39171b1bb15c0"
 }
