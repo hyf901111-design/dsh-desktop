@@ -10,13 +10,13 @@ export function pptxAnnotationSource(props){
 /** Browser-only, self-contained. All document/draft mutations belong to the coordinator. */
 export function attachPptxAnnotationViewer(host,options){
  const doc=host.ownerDocument,win=doc.defaultView,uiRoot=options.uiRoot||host.parentElement,handle=options.handle,assets=options.assets||{},owner=options.viewerKey||win.crypto.randomUUID()
- let disposed=false,frame=0,gesture=null,tool='rect',bubbleId=null,pendingReveal=null,lastReveal=-1,localError='',composing=false,lastDeleted=false
+ let disposed=false,frame=0,gesture=null,tool='rect',bubbleId=null,pendingReveal=null,lastReveal=-1,localError='',composing=false,focusRevision=0
  const layers=new Map(),stop=new win.AbortController(),snapshot=()=>handle.getSnapshot(),current=()=>!disposed&&!stop.signal.aborted&&host.isConnected&&options.isCurrent?.()!==false
  const node=(tag,cls,parent)=>{const el=doc.createElement(tag);el.className=cls;el.dataset.pptxAnnotationUi='';el.dataset.noteExportOmit='';el.dataset.pptxAnnotationOwner=owner;if(parent)parent.append(el);return el}
  const image=(name,parent,size)=>{const el=node('img','',parent);el.src=assets[name]||'';el.alt='';el.draggable=false;el.width=size;el.height=size;return el}
  const action=(text,fn,parent,cls='')=>{const el=node('button',cls,parent);el.type='button';el.textContent=text;el.addEventListener('click',fn);return el}
  const style=node('style','',uiRoot);style.textContent=options.style||''
- const toolbar=node('div','pptxa-toolbar',uiRoot);toolbar.dataset.pptxAnnotationToolbar='';toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','标注工具')
+ const toolbar=node('div','pptxa-toolbar',uiRoot);toolbar.dataset.pptxAnnotationToolbar='';toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','标注工具');toolbar.tabIndex=-1
  uiRoot.insertBefore(toolbar,host)
  const rectTool=action('框选',()=>setTool('rect'),toolbar,'pptxa-tool'),pointTool=action('点选',()=>setTool('point'),toolbar,'pptxa-tool')
  rectTool.prepend(image('rect14-selected',null,14));pointTool.prepend(image('point14-normal',null,14));const count=action('',()=>toggleMarkList(),toolbar,'pptxa-count');count.setAttribute('aria-label','标注列表');count.setAttribute('aria-haspopup','menu');count.setAttribute('aria-expanded','false')
@@ -26,10 +26,8 @@ export function attachPptxAnnotationViewer(host,options){
  const comment=node('textarea','pptxa-comment',bubble);comment.setAttribute('aria-label','标注备注');comment.placeholder='写下修改意见…'
  const error=node('div','pptxa-error',bubble),actions=node('div','pptxa-bubble-actions',bubble)
  const menu=node('div','pptxa-menu',doc.body);menu.hidden=true;menu.setAttribute('role','menu')
- action('删除标注',()=>{const id=menu.dataset.markId;menu.hidden=true;if(id)void run(()=>handle.remove(id)).then(ok=>{if(ok){lastDeleted=true;closeBubble();render()}})},menu)
+ action('删除标注',()=>{const id=menu.dataset.markId;if(id)void removeMark(id);menu.hidden=true},menu)
  const list=node('div','pptxa-menu pptxa-mark-list',doc.body),listItems=new Map();list.hidden=true;list.setAttribute('role','menu');list.setAttribute('aria-label','标注列表')
- const notice=node('div','pptxa-notice',doc.body);notice.hidden=true;const noticeText=node('span','',notice)
- action('撤销',()=>void run(()=>handle.undo()).then(ok=>{if(ok){lastDeleted=false;render()}}),notice)
  const own=el=>el?.nodeType===1&&(el.dataset?.pptxAnnotationOwner===owner||el.closest?.('[data-pptx-annotation-owner]')?.dataset.pptxAnnotationOwner===owner)
  const basisKey=()=>JSON.stringify([snapshot().basis?.documentId,snapshot().basis?.fileVersion])
  const hitNode=(element,slide)=>{const id=element?.closest?.('[data-pptx-node-id]')?.dataset.pptxNodeId;return slide.nodes?.find(node=>node.nodeId===id&&node.part===slide.part)?.id}
@@ -39,6 +37,17 @@ export function attachPptxAnnotationViewer(host,options){
  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v))
  const label=mark=>{const slide=snapshot().scene?.slides.find(s=>s.index===mark.slideIndex),target=slide?.nodes?.find(n=>mark.nodeIds?.includes(n.id));return '第'+(mark.slideIndex+1)+'页 · '+(target?.name||(mark.kind==='rect'?'框选区域':'位置'))}
  const run=async operation=>{if(!current())return false;try{await operation();if(!current())return false;localError='';render();return true}catch(failure){if(current()){localError=failure?.message||'标注操作失败，原备注已保留。';render()}return false}}
+ const editable=element=>!!element?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')
+ // Separate DOM instances can preview the same source and share its viewerKey.
+ const ownsFocus=element=>own(element)&&(host.contains(element)||toolbar.contains(element)||bubble.contains(element)||menu.contains(element)||list.contains(element))
+ const removeMark=async id=>{
+  const focused=doc.activeElement,lease=focusRevision,restore=ownsFocus(focused)&&!editable(focused)
+  if(!await run(()=>handle.remove(id)))return
+  if(bubbleId===id)closeBubble();render()
+  // A removed focused pin/button needs a local keyboard destination. Never
+  // reclaim focus after another pointer or focus action during the mutation.
+  if(restore&&doc.hasFocus()&&!doc.hidden&&lease===focusRevision&&(doc.activeElement===focused||doc.activeElement===doc.body))toolbar.focus({preventScroll:true})
+ }
  const closeMarkList=()=>{list.hidden=true;count.setAttribute('aria-expanded','false')}
  const renderMarkList=()=>{
   if(list.hidden)return
@@ -121,7 +130,7 @@ export function attachPptxAnnotationViewer(host,options){
   if(stale)action(reanchorId===mark.id?'请在幻灯片中重新定位':'重新定位',()=>{reanchorId=mark.id;closeBubble();setTool(mark.kind)},actions)
   else if(!mark.referenced)action('重新加入输入框',()=>void run(()=>handle.readd(mark.id)),actions)
   const english=(doc.documentElement.dataset.odysseyLocale||doc.documentElement.lang).toLowerCase().startsWith('en')
-  const remove=action(english?'Delete mark':'删除标记',()=>void run(()=>handle.remove(mark.id)).then(ok=>{if(ok){lastDeleted=true;if(bubbleId===mark.id)closeBubble();render()}}),actions,'pptxa-delete');remove.disabled=snapshot().busy
+  const remove=action(english?'Delete mark':'删除标记',()=>void removeMark(mark.id),actions,'pptxa-delete');remove.disabled=snapshot().busy
   positionBubble()
  }
  const render=()=>{
@@ -156,14 +165,14 @@ export function attachPptxAnnotationViewer(host,options){
   }
   if(pendingReveal?.ready){const mark=markById(pendingReveal.id);if(mark&&(!validMark(mark)||locate(mark.slideIndex))){bubbleId=mark.id;pendingReveal=null}}
   if(bubbleId)renderBubble()
-  notice.hidden=!lastDeleted;noticeText.textContent='已删除标注';const r=host.getBoundingClientRect();notice.style.left=Math.max(8,r.left+8)+'px';notice.style.top=Math.min(win.innerHeight-42,r.bottom-42)+'px'
   options.onState?.({count:s.marks.length,busy:s.busy,error:s.error||localError,tool})
  }
  function schedule(){if(!current()||frame)return;frame=win.requestAnimationFrame(()=>{frame=0;render()})}
  const writeComment=()=>{if(!bubbleId||composing)return;const id=bubbleId,text=comment.value;if(markById(id)?.comment===text)return;void run(()=>handle.updateComment(id,text))}
  comment.addEventListener('input',writeComment);comment.addEventListener('compositionstart',()=>{composing=true});comment.addEventListener('compositionend',()=>{composing=false;writeComment()})
- const outside=event=>{if(!own(event.target)){menu.hidden=true;closeMarkList();if(!host.contains(event.target)||!slideFor(event.target))closeBubble()}}
- const key=event=>{if(event.isComposing||event.defaultPrevented)return;if(event.key==='Escape'){const returnFocus=!list.hidden;closeBubble();cancelGesture();reanchorId=null;if(returnFocus)count.focus({preventScroll:true});return}if(event.target===count&&event.key==='ArrowDown'){event.preventDefault();if(list.hidden)toggleMarkList();else list.querySelector('button')?.focus({preventScroll:true});return}if(!list.hidden&&list.contains(event.target)&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const items=[...list.querySelectorAll('button')],index=items.indexOf(doc.activeElement),next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus({preventScroll:true});return}const pin=event.target.closest?.('[data-pptx-annotation-pin]');if(pin&&own(pin)&&['Delete','Backspace'].includes(event.key)){event.preventDefault();void run(()=>handle.remove(pin.dataset.pptxAnnotationPin)).then(ok=>{if(ok){lastDeleted=true;closeBubble();render()}})}}
+ const focusChanged=()=>{focusRevision++}
+ const outside=event=>{focusRevision++;if(!own(event.target)){menu.hidden=true;closeMarkList();if(!host.contains(event.target)||!slideFor(event.target))closeBubble()}}
+ const key=event=>{if(event.isComposing||event.defaultPrevented)return;if((event.metaKey||event.ctrlKey)&&!event.altKey&&!event.shiftKey&&event.key.toLowerCase()==='z'&&doc.hasFocus()&&!doc.hidden&&current()&&!snapshot().busy&&ownsFocus(doc.activeElement)&&!editable(doc.activeElement)&&event.target===doc.activeElement){event.preventDefault();event.stopPropagation();void run(()=>handle.undo());return;}if(event.key==='Escape'){const returnFocus=!list.hidden;closeBubble();cancelGesture();reanchorId=null;if(returnFocus)count.focus({preventScroll:true});return}if(event.target===count&&event.key==='ArrowDown'){event.preventDefault();if(list.hidden)toggleMarkList();else list.querySelector('button')?.focus({preventScroll:true});return}if(!list.hidden&&list.contains(event.target)&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const items=[...list.querySelectorAll('button')],index=items.indexOf(doc.activeElement),next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus({preventScroll:true});return}const pin=event.target.closest?.('[data-pptx-annotation-pin]');if(pin&&ownsFocus(pin)&&['Delete','Backspace'].includes(event.key)){event.preventDefault();void removeMark(pin.dataset.pptxAnnotationPin)}}
  const observer=new win.MutationObserver(records=>{if(records.every(record=>own(record.target)||record.type==='childList'&&[...record.addedNodes,...record.removedNodes].every(own)))return;schedule()})
  observer.observe(host,{subtree:true,childList:true,attributes:true,attributeFilter:['style','data-mounted']})
  observer.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale','lang']})
@@ -171,8 +180,8 @@ export function attachPptxAnnotationViewer(host,options){
  const resize=typeof win.ResizeObserver==='function'?new win.ResizeObserver(geometryChanged):null;resize?.observe(host)
  const off=handle.subscribe(schedule)
  host.addEventListener('pointerdown',down,true);host.addEventListener('pointermove',move,true);host.addEventListener('pointerup',up,true);host.addEventListener('pointercancel',cancel,true);host.addEventListener('lostpointercapture',cancel,true)
- doc.addEventListener('pointerdown',outside,true);doc.addEventListener('keydown',key);win.addEventListener('blur',cancel);win.addEventListener('resize',geometryChanged);doc.addEventListener('scroll',geometryChanged,true)
- const destroy=()=>{if(disposed)return;options.signal?.removeEventListener('abort',destroy);cancelGesture();disposed=true;stop.abort();if(frame)win.cancelAnimationFrame(frame);off?.();observer.disconnect();resize?.disconnect();host.removeEventListener('pointerdown',down,true);host.removeEventListener('pointermove',move,true);host.removeEventListener('pointerup',up,true);host.removeEventListener('pointercancel',cancel,true);host.removeEventListener('lostpointercapture',cancel,true);doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key);win.removeEventListener('blur',cancel);win.removeEventListener('resize',geometryChanged);doc.removeEventListener('scroll',geometryChanged,true);for(const[wrapper,layer]of layers){layer.element.remove();if(layer.parent.style.position==='relative'&&layer.position!=='relative')layer.parent.style.position=layer.position}layers.clear();listItems.clear();toolbar.remove();bubble.remove();menu.remove();list.remove();notice.remove();style.remove()}
+ doc.addEventListener('pointerdown',outside,true);doc.addEventListener('focusin',focusChanged,true);doc.addEventListener('keydown',key);win.addEventListener('blur',cancel);win.addEventListener('blur',focusChanged);win.addEventListener('resize',geometryChanged);doc.addEventListener('scroll',geometryChanged,true)
+ const destroy=()=>{if(disposed)return;options.signal?.removeEventListener('abort',destroy);cancelGesture();disposed=true;stop.abort();if(frame)win.cancelAnimationFrame(frame);off?.();observer.disconnect();resize?.disconnect();host.removeEventListener('pointerdown',down,true);host.removeEventListener('pointermove',move,true);host.removeEventListener('pointerup',up,true);host.removeEventListener('pointercancel',cancel,true);host.removeEventListener('lostpointercapture',cancel,true);doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('focusin',focusChanged,true);doc.removeEventListener('keydown',key);win.removeEventListener('blur',cancel);win.removeEventListener('blur',focusChanged);win.removeEventListener('resize',geometryChanged);doc.removeEventListener('scroll',geometryChanged,true);for(const[wrapper,layer]of layers){layer.element.remove();if(layer.parent.style.position==='relative'&&layer.position!=='relative')layer.parent.style.position=layer.position}layers.clear();listItems.clear();toolbar.remove();bubble.remove();menu.remove();list.remove();style.remove()}
  if(options.signal){if(options.signal.aborted)destroy();else options.signal.addEventListener('abort',destroy,{once:true})}
  if(!disposed)render()
  return{destroy,setTool,closeBubble}

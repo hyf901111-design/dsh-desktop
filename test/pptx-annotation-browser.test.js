@@ -96,14 +96,14 @@ for(const english of [false,true])it(`deletes only the open mark from the ${engl
   await f.page.getByRole('button',{name:english?'删除标记':'Delete mark',exact:true}).waitFor();expect(await f.page.getByRole('textbox',{name:'标注备注'}).inputValue()).toBe('只删除这一处框选')
   await f.page.evaluate(english=>document.documentElement.dataset.odysseyLocale=english?'en':'zh',english);await button.waitFor()
   const placement=await button.evaluate(el=>{const b=el.getBoundingClientRect(),p=el.closest('.pptxa-bubble').getBoundingClientRect();return{right:p.right-b.right,bottom:p.bottom-b.bottom}});expect(placement.right).toBeLessThan(16);expect(placement.bottom).toBeLessThan(16)
-  await mkdir('/tmp/ppt-annotation-bubble-delete-20261026',{recursive:true});await f.page.locator('.pptxa-bubble').screenshot({path:`/tmp/ppt-annotation-bubble-delete-20261026/${english?'dark-en':'light-zh'}.png`})
+  await mkdir(artifactRoot+'/delete-silent',{recursive:true});await f.page.locator('.pptxa-bubble').screenshot({path:`${artifactRoot}/delete-silent/${english?'dark-en':'light-zh'}.png`})
   await button.click();await expect.poll(()=>backend.handle.getSnapshot().marks.map(mark=>mark.id)).toEqual([first.id])
   await expect.poll(()=>f.page.locator('.pptxa-bubble:visible').count()).toBe(0)
   expect(await f.page.locator(`[data-pptx-annotation-pin="${second.id}"]`).count()).toBe(0);expect(await f.page.locator(`[data-pptx-annotation-pin="${first.id}"]`).count()).toBe(1);expect(await f.page.locator('.pptxa-region:visible').count()).toBe(0)
   const nativeAfter=backend.shell.snapshot;expect(nativeAfter.draft).toContain('整体要求📌与用户正文保持不变');expect(nativeAfter.draft).toContain('第一条独立意见📌');expect(nativeAfter.draft).not.toContain('只删除这一处框选');expect(nativeAfter.occurrences.filter(value=>value.source==='chat-file')).toEqual(nativeBefore.occurrences.filter(value=>value.source==='chat-file'));expect(nativeAfter.occurrences.filter(value=>value.source==='pptx-annotation').map(value=>JSON.parse(value.ref).markId)).toEqual([first.id])
   const cold=await new PptxAnnotationService(backend.options).open(backend.source);expect(cold.ok).toBe(true);expect(cold.value.state.marks.map(mark=>mark.id)).toEqual([first.id]);expect(await backend.service.resolveReference({sendingSessionId:'actual-session',reference})).toMatchObject({ok:true,value:{status:'deleted'}})
   expect(await readFile(manifest)).toEqual(frozen);expect(await readFile(path.join(backend.workspace,'review.pptx'))).toEqual(bytes)
-  await f.page.getByRole('button',{name:'撤销',exact:true}).click();await expect.poll(()=>backend.handle.getSnapshot().marks.map(mark=>mark.ordinal)).toEqual([1,2]);expect(backend.shell.snapshot.draft).toBe(nativeBefore.draft);expect(f.errors).toEqual([])
+  expect(await f.page.locator('.pptxa-notice:visible').count()).toBe(0);await expect.poll(()=>f.page.evaluate(()=>document.activeElement===document.querySelector('[data-pptx-annotation-toolbar]'))).toBe(true);await f.page.screenshot({path:`${artifactRoot}/delete-silent/silent-${english?'dark-en':'light-zh'}.png`});await f.page.keyboard.press(english?'Control+z':'Meta+z');await expect.poll(()=>backend.handle.getSnapshot().marks.map(mark=>mark.ordinal)).toEqual([1,2]);expect(backend.shell.snapshot.draft).toBe(nativeBefore.draft);expect(f.errors).toEqual([])
   await f.page.locator(`[data-pptx-annotation-pin="${first.id}"]`).click();await expect.poll(()=>f.page.getByRole('textbox',{name:'标注备注'}).inputValue()).toBe('第一条独立意见📌')
   await button.click();await expect.poll(()=>backend.handle.getSnapshot().marks.map(mark=>mark.id)).toEqual([second.id]);expect(await f.page.locator('.pptxa-region:visible').count()).toBe(1);expect(backend.shell.snapshot.draft).not.toContain('第一条独立意见📌');expect(backend.shell.snapshot.draft).toContain('只删除这一处框选')
  }finally{await f.close();await backend.close()}
@@ -183,12 +183,32 @@ for(const dark of [false,true])it(`renders local original pin assets and a conci
  }finally{await f.close()}
 },20000)
 
+it.each(['context','keyboard'])('silently deletes through %s and confines mark undo to this viewer noneditable focus',async route=>{
+ const backend=await durableBackend(),f=await fixture(620,false,backend);try{
+  await f.activate();await point(f.page);await f.page.locator('.pptxa-bubble:visible').waitFor();const mark=backend.handle.getSnapshot().marks[0],pin=f.page.locator(`[data-pptx-annotation-pin="${mark.id}"]`)
+  await f.page.getByRole('textbox',{name:'标注备注'}).fill('保留键盘恢复');await backend.coordinator.whenIdle()
+  if(route==='context'){await pin.click({button:'right'});await f.page.getByRole('button',{name:'删除标注',exact:true}).click()}else{await pin.focus();await f.page.keyboard.press('Delete')}
+  await expect.poll(()=>backend.handle.getSnapshot().marks.length).toBe(0);expect(await f.page.locator('.pptxa-notice:visible').count()).toBe(0);await expect.poll(()=>f.page.evaluate(()=>document.activeElement===document.querySelector('[data-pptx-annotation-toolbar]'))).toBe(true)
+  await f.page.evaluate(()=>{window.undoKeys=[];document.body.insertAdjacentHTML('beforeend','<textarea id="other-input">其它输入稿</textarea><button id="other-viewer" data-pptx-annotation-owner="different-viewer">其它预览</button>');document.querySelector('#other-viewer').dataset.pptxAnnotationOwner=document.querySelector('[data-pptx-annotation-toolbar]').dataset.pptxAnnotationOwner;document.addEventListener('keydown',event=>{if(event.key.toLowerCase()==='z')window.undoKeys.push({id:event.target.id,prevented:event.defaultPrevented})})})
+  await f.page.locator('#other-input').focus();await f.page.keyboard.press('Meta+z');await f.page.locator('#other-viewer').focus();await f.page.keyboard.press('Control+z');expect(backend.handle.getSnapshot().marks).toEqual([]);expect(await f.page.evaluate(()=>window.undoKeys)).toEqual([{id:'other-input',prevented:false},{id:'other-viewer',prevented:false}])
+  await f.page.getByRole('toolbar',{name:'标注工具'}).focus();await f.page.keyboard.press('Control+z');await expect.poll(()=>backend.handle.getSnapshot().marks.map(m=>m.id)).toEqual([mark.id]);expect((await new PptxAnnotationService(backend.options).open(backend.source)).value.state.marks[0].comment).toBe('保留键盘恢复')
+  const input=f.page.getByRole('textbox',{name:'标注备注'});await input.waitFor();await input.focus();await f.page.keyboard.press('Meta+z');expect((await f.page.evaluate(()=>window.undoKeys)).at(-1).prevented).toBe(false);expect(backend.handle.getSnapshot().marks).toHaveLength(1);expect(f.errors).toEqual([])
+ }finally{await f.close();await backend.close()}
+},25000)
+it.each(['input','blur'])('does not take focus back after newer %s ownership while a durable delete is pending',async change=>{
+ const backend=await durableBackend(),f=await fixture(620,false,backend);try{
+  await f.activate();await point(f.page);await f.page.locator('.pptxa-bubble:visible').waitFor()
+  await f.page.evaluate(()=>{const remove=window.handle.remove;window.handle.remove=(...args)=>new Promise(resolve=>window.releaseDelete=async()=>{await remove(...args);resolve()});document.body.insertAdjacentHTML('beforeend','<textarea id="newer-input">用户当前草稿</textarea>')})
+  await f.page.getByRole('button',{name:'删除标记',exact:true}).click();if(change==='input'){await f.page.locator('#newer-input').focus();await f.page.locator('#newer-input').evaluate(e=>e.blur())}else await f.page.evaluate(()=>window.dispatchEvent(new Event('blur')));await f.page.evaluate(()=>window.releaseDelete());await expect.poll(()=>backend.handle.getSnapshot().marks.length).toBe(0);await f.page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
+  expect(await f.page.evaluate(()=>document.activeElement===document.body)).toBe(true);expect(await f.page.locator('#newer-input').inputValue()).toBe('用户当前草稿');expect(await f.page.locator('.pptxa-notice:visible').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close();await backend.close()}
+},20000)
 it('keeps persistent pin numbering through delete/undo/readd and requires explicit reanchor before drawing stale coordinates',async()=>{
  const f=await fixture();try{
   await f.activate();await point(f.page);await f.page.locator('.pptxa-bubble:visible').waitFor()
   await f.page.getByRole('textbox',{name:'标注备注'}).fill('保留这一条意见')
   await f.page.locator('[data-pptx-annotation-pin="m1"]').click({button:'right'});await f.page.getByRole('button',{name:'删除标注',exact:true}).click()
-  await expect.poll(()=>f.page.locator('[data-pptx-annotation-pin]').count()).toBe(0);await f.page.getByRole('button',{name:'撤销',exact:true}).click()
+  await expect.poll(()=>f.page.locator('[data-pptx-annotation-pin]').count()).toBe(0);expect(await f.page.locator('.pptxa-notice:visible').count()).toBe(0);await f.page.keyboard.press('Meta+z')
   await f.page.locator('.pptxa-bubble:visible').waitFor();expect(await f.page.getByRole('textbox',{name:'标注备注'}).inputValue()).toBe('保留这一条意见');expect(await f.page.locator('.pptxa-pin-number').textContent()).toBe('1')
   await f.page.evaluate(()=>{window.snapshot={...window.snapshot,marks:window.snapshot.marks.map(m=>({...m,referenced:false})),revealSeq:window.snapshot.revealSeq+1};for(const f of window.subscribers)f()})
   await f.page.getByRole('button',{name:'重新加入输入框'}).click();await expect.poll(()=>f.page.evaluate(()=>window.snapshot.marks[0].referenced)).toBe(true)

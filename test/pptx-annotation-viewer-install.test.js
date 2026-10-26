@@ -36,6 +36,17 @@ it('upgrades the installed v9 bubble to its delete action and preserves strict d
  expect(installed.includes("'pptxa-delete'")).toBe(true);expect(installed===fresh).toBe(true);expect(patchPptxEditor(installed)===installed).toBe(true);expect(stripPptxEditorPatch(installed)===base).toBe(true);expect(()=>new Script(installed)).not.toThrow()
  expect(()=>patchPptxEditor(installed.replace('function attachPptxAnnotationViewer(','function unknownAnnotationViewer('))).toThrow(/drifted/)
 })
+it('upgrades the exact v10 deletion notice resident to silent scoped undo without duplicate viewer layers',async()=>{
+ const viewer=execFileSync('git',['show','ab975271:scripts/lib/pptx-annotation-viewer.mjs'],{encoding:'utf8'})
+ let prior=execFileSync('git',['show','ab975271:scripts/lib/pptx-editor-ui.mjs'],{encoding:'utf8'})
+ for(const name of ['pptx-direct-editor','pptx-annotation-assets'])prior=prior.replace("'./"+name+".mjs'",JSON.stringify(pathToFileURL(process.cwd()+'/scripts/lib/'+name+'.mjs').href))
+ prior=prior.replace("'./pptx-annotation-viewer.mjs'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(viewer).toString('base64')))
+ const legacy=await import(/* @vite-ignore */'data:text/javascript;base64,'+Buffer.from(prior).toString('base64')),old=legacy.patchPptxEditor(base);expect(old).toContain("'pptxa-notice'")
+ const installed=patchPptxEditor(old),fresh=patchPptxEditor(base)
+ expect(installed.includes('sherlock:pptx-content-editor:v11')).toBe(true);expect(installed).not.toContain("node('div','pptxa-notice'");expect(installed).toBe(fresh);expect(patchPptxEditor(installed)).toBe(installed);expect(stripPptxEditorPatch(installed)).toBe(base);expect(()=>new Script(installed)).not.toThrow()
+ expect(()=>patchPptxEditor(installed.replace('function attachPptxAnnotationViewer(','function unknownAnnotationViewer('))).toThrow(/drifted/)
+ expect(()=>patchPptxEditor(installed+installed.slice(installed.indexOf('/* sherlock:pptx-content-editor:v11 */'),installed.indexOf('/* sherlock:pptx-content-editor:end */')))).toThrow(/drifted/)
+})
 it('ships exactly the ten original local SVG slots at their intrinsic 14/16/18/20/28px root dimensions',()=>{
  const files=readdirSync('src/preload/pptx-annotation-icons').sort()
  expect(files).toEqual(['close16.svg','mark16-normal.svg','mark16-selected.svg','pin18-normal.svg','pin18-selected.svg','pin20-selected.svg','pin28-normal.svg','pin28-selected.svg','point14-normal.svg','rect14-selected.svg'].sort())
