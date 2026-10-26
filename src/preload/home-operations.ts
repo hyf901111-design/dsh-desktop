@@ -465,11 +465,11 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     clearFeedback()
     const controller = new win.AbortController()
     actionController = controller; actionHandedOff=false; setActionBusy(true)
+    const bounds=exampleButton?.getBoundingClientRect()
     let restoreIntro: (()=>void)|undefined
     try {
       if(example)restoreIntro=await examplePrelude(controller)
       if(controller.signal.aborted)return
-      const bounds=exampleButton?.getBoundingClientRect()
       const context = { signal: controller.signal, ...(example&&bounds?{origin:{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}}:{}), revealComposer: () => revealComposer(controller.signal),handoff:()=>{if(actionController!==controller||controller.signal.aborted)throw Error('本次卡片操作已取消。');actionHandedOff=true} }
       if (example) await options.onExample!(card, context)
       else await options.onAction!(card, context)

@@ -1956,6 +1956,15 @@ it('shows a static complete demo notice with reduced motion and keeps the four s
   expect(await page.evaluate(()=>window.quickActions)).toEqual(['board','note','ppt','report']);expect(await page.evaluate(()=>window.examples)).toEqual(['board']);expect(await page.locator('[data-odyssey-operations-intro]').count()).toBe(0)
  }finally{await page.close()}
 },15000)
+it('keeps the actual Play click origin while its hover tilt settles during the streamed intro',async()=>{
+ const page=await fixture({reduced:false,clock:true});try{
+  await page.evaluate(()=>{window.exampleOrigin=null;window.homeOperations.onExample=async(_card,context)=>window.exampleOrigin=context.origin;window.homeOperations.dispose();window.homeOperations.mount();document.addEventListener('click',event=>{const button=event.target.closest?.('[data-odyssey-operations-open-example]');if(button){const r=button.getBoundingClientRect();window.clickedOrigin={x:r.left+r.width/2,y:r.top+r.height/2}}},true)})
+  await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
+  const button=page.locator('[data-odyssey-operations-open-example]'),box=await button.boundingBox();await page.mouse.move(box.x+box.width*.9,box.y+box.height*.1);await page.clock.runFor(32);await page.mouse.down();await page.mouse.up();await page.clock.runFor(2600)
+  const result=await page.evaluate(()=>{const r=document.querySelector('[data-odyssey-operations-open-example]').getBoundingClientRect();return{actual:window.clickedOrigin,origin:window.exampleOrigin,settled:{x:r.left+r.width/2,y:r.top+r.height/2}}})
+  expect(result.origin.x).toBeCloseTo(result.actual.x,4);expect(result.origin.y).toBeCloseTo(result.actual.y,4);expect(Math.hypot(result.settled.x-result.actual.x,result.settled.y-result.actual.y)).toBeGreaterThan(.5)
+ }finally{await page.close()}
+},15000)
 
 const wallpaperKeys = ['default','berber','vghodki','jarrick','lowfreez','accelbia','boz','shashidhar','haseeb','kirian','splines','antiquue','crt-warp','dither','koi-pond']
 const wallpaperNamesZh = ['静谧起航','星海航迹','碧海潮汐','星门微光','银河帆影','翡翠秘境','深空讯号','星云风暴','极光之境','远星尘光','虹光跃迁','日曜航线','时空回声','墨海流岚','锦鲤浮光']
