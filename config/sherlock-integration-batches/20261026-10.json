@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-10",
+  "branch": "codex/integration/20261026-10",
+  "baseMainCommit": "1e35ade5dffc7765c14ef14f05f202fd68b71529",
+  "expectedMainCommit": "1e35ade5dffc7765c14ef14f05f202fd68b71529",
+  "createdAt": "2026-10-26T13:19:43.632Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "删除PPT标记后不弹出撤销提示并保留安全键盘撤销",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "ab9752715530facfec4d34aed9b9cf6a67ad94b9",
+        "tipCommit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+        "commits": [
+          {
+            "commit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+            "parents": [
+              "ab9752715530facfec4d34aed9b9cf6a67ad94b9"
+            ],
+            "subject": "移除PPT标记删除提示并保留局部键盘撤销"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-viewer.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-viewer-install.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "python3",
+              "/tmp/check-home20-feature-evidence-20261026.py"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-20-final2-check-1-20261026.log",
+            "verifiedCommit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+            "completedAt": "2026-10-26T13:16:08.469618+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-20-final2-check-2-20261026.log",
+            "verifiedCommit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+            "completedAt": "2026-10-26T13:16:15.009029+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-20-final2-check-3-20261026.log",
+            "verifiedCommit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+            "completedAt": "2026-10-26T13:16:21.359666+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotation-browser.test.js",
+              "test/pptx-annotation-viewer-install.test.js",
+              "test/pptx-annotation-editor.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-20-final2-check-4-20261026.log",
+            "verifiedCommit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+            "completedAt": "2026-10-26T13:17:27.552518+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-20-final2-check-5-20261026.log",
+            "verifiedCommit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+            "completedAt": "2026-10-26T13:17:35.516646+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-20-final2-check-6-20261026.log",
+            "verifiedCommit": "15fd1d37a3784e8b57acc6aaf291a109d017df29",
+            "completedAt": "2026-10-26T13:17:35.538724+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "直接相关标记viewer和安装迁移聚焦夹具验证完成；此前17file自然滚动、两秒loading及延后命名在batch09已接受。待最终干净main本地正式身份构建后复验。"
+        },
+        "acceptanceCriteria": [
+          "PPT三种标记删除入口均不显示已删除标注/撤销成功浮层，实际持久删除及独立错误反馈保留。",
+          "仅本viewer自有焦点的非输入控件处理键盘标记撤销，删除结束不抢占用户已转移焦点；普通输入和编辑模式撤销不受影响。",
+          "严格v10到v11升级，无全局提示CSS屏蔽，其他组件正常反馈保留。",
+          "从干净本地main构建正式客户端，保留现有用户数据，不发布、不推送、不改版本。"
+        ],
+        "risks": [
+          "正式客户端新交互待构建后复验。",
+          "系统级概率鼠标冻结仍未稳定复现，fixed=false。"
+        ],
+        "generatedAt": "2026-10-26T13:19:42.143453+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "python3",
+        "/tmp/check-home20-integration-source-20261026.py"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/pptx-annotation-viewer-install.test.js",
+        "test/pptx-annotation-editor.test.ts",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
