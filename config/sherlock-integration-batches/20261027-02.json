@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261027-02",
+  "branch": "codex/integration/20261027-02",
+  "baseMainCommit": "2a564ea0de088cdcccd6905f8a99d3a15b127f85",
+  "expectedMainCommit": "2a564ea0de088cdcccd6905f8a99d3a15b127f85",
+  "createdAt": "2026-10-26T22:21:41.170Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "四类演示卡片提示固定为两行并对齐",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "2a564ea0de088cdcccd6905f8a99d3a15b127f85",
+        "tipCommit": "9135b442ed9d906547d48c94e9b5c6ab8be4bf03",
+        "commits": [
+          {
+            "commit": "9135b442ed9d906547d48c94e9b5c6ab8be4bf03",
+            "parents": [
+              "2a564ea0de088cdcccd6905f8a99d3a15b127f85"
+            ],
+            "subject": "将四类用例演示提示固定为对齐的两行文案"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_HOME_INTRO_EVIDENCE=/tmp/release140-intro-lines-20261027/verified-commit",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "demo notice|18px loading ring|pending card intro|actual Play click origin",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-intro-lines-20261027/verified-commit-focused.log: 18/18 targeted Chromium browser checks; 135 unrelated cases intentionally skipped",
+            "verifiedCommit": "9135b442ed9d906547d48c94e9b5c6ab8be4bf03",
+            "completedAt": "2026-10-26T22:10:43.546Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-intro-lines-20261027/verified-commit-typecheck.log: EXIT0",
+            "verifiedCommit": "9135b442ed9d906547d48c94e9b5c6ab8be4bf03",
+            "completedAt": "2026-10-26T22:10:43.546Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium/生产DOM及CSS：已查看宽窄/深浅/中英截图，两行同起点、各一行无溢出；18px环/26px缩进/完整后3000ms保持。这里只是浏览器fixture验证，未构建/操作正式共享客户端。截图位于/tmp/release140-intro-lines-20261027/verified-commit/"
+        },
+        "acceptanceCriteria": [
+          "中文第一行「即将进入实例演示，」第二行「演示过程不消耗费用」；英文对应两行自然句子。",
+          "四个用例共用同一渐进文案；第二行与第一行文字左对齐，加载环保持18px且位于左侧，沿原标题左边距及26px文本缩进。",
+          "完整显示后停留3秒，normal/reduced一致；保留owner/navigation/hidden/blur/typing/Escape/locale/dispose与草稿保护。",
+          "生产仅两个共享copy literal改变；不改主干、发布日志、版本、产物或用户数据。"
+        ],
+        "risks": [
+          "正式包验证、Plan A集成、签名打包及发布由Root后续执行；本功能分支没有构建共享客户端。"
+        ],
+        "generatedAt": "2026-10-26T22:10:43.546Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-operations-browser.test.js",
+        "-t",
+        "demo notice|18px loading ring|pending card intro|actual Play click origin",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
