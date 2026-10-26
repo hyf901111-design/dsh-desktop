@@ -8,7 +8,7 @@ import { createHomeThemeGallery, homeAppearanceIcon, type HomeThemeGallery } fro
 type Section = 'input' | 'operations'
 type Motion = 'idle' | 'settling'
 export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
-export type HomeOperationActionContext = { signal: AbortSignal; revealComposer(): Promise<void> }
+export type HomeOperationActionContext = { signal: AbortSignal; origin?: {x:number;y:number}; revealComposer(): Promise<void>; handoff?():void }
 type Card = HomeOperationCard
 type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: Card, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void> }
 const mounted = new WeakMap<Document, () => void>()
@@ -94,7 +94,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   let wheelTime = 0, wheelDirection = 0, wheelDistance = 0, wheelConsumed = false, wheelNavigated = false
   let geometry = { inputTop: 0, targetTop: 0, shift: 1, scale: 1, viewportHeight: 0 }
   let renderedLocale = '', renderedTheme = ''
-  let actionController: AbortController | null = null
+  let actionController: AbortController | null = null, actionHandedOff=false
   let feedback: HTMLElement | null = null, feedbackTimer = 0
   const quickCards: HTMLButtonElement[] = [], pages: HTMLButtonElement[] = []
   const pointerFrames = new Map<HTMLElement, number>()
@@ -413,7 +413,8 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     for (const card of [...quickCards, ...(exampleButton ? [exampleButton] : [])]) card.disabled = busy
   }
   const revealComposer = (signal: AbortSignal) => new Promise<void>((resolve, reject) => {
-    if (signal.aborted || !setSection('input')) { reject(Error('首页已变化，请重新点击卡片。')); return }
+    if (signal.aborted || !visible || !toggle) { reject(Error('首页已变化，请重新点击卡片。')); return }
+    if(intent!=='input')toggle.click()
     let pendingFrame = 0
     const started = win.performance.now()
     const cleanup = () => { if (pendingFrame) win.cancelAnimationFrame(pendingFrame); signal.removeEventListener('abort', abort) }
@@ -432,17 +433,18 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if ((example ? !options.onExample : !options.onAction) || actionController || !visible || motion !== 'idle' || state !== 'operations' || activeTab !== 'quick' || tabRunning) return
     clearFeedback()
     const controller = new win.AbortController()
-    actionController = controller; setActionBusy(true)
+    actionController = controller; actionHandedOff=false; setActionBusy(true)
     try {
-      const context = { signal: controller.signal, revealComposer: () => revealComposer(controller.signal) }
+      const bounds=exampleButton?.getBoundingClientRect()
+      const context = { signal: controller.signal, ...(example&&bounds?{origin:{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}}:{}), revealComposer: () => revealComposer(controller.signal),handoff:()=>{if(actionController!==controller||controller.signal.aborted)throw Error('本次卡片操作已取消。');actionHandedOff=true} }
       if (example) await options.onExample!(card, context)
       else await options.onAction!(card, context)
     }
     catch (error) {
-      if (controller.signal.aborted || disposed) return
+      if (controller.signal.aborted || disposed || error instanceof Error && error.name==='AbortError') return
       showFeedback(error)
     } finally {
-      if (actionController === controller) { actionController = null; setActionBusy(false) }
+      if (actionController === controller) { actionController = null; actionHandedOff=false; setActionBusy(false) }
     }
   }
   const preserveNativeWheel = (target: EventTarget | null) => {
@@ -673,7 +675,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   }
   const resize = new win.ResizeObserver(measure)
   const detach = (preserveAction = false) => {
-    if (!preserveAction) { actionController?.abort(); clearFeedback() }
+    if (!preserveAction) { if(!actionHandedOff)actionController?.abort(); clearFeedback() }
     clearAttention()
     cancelSettlement()
     carousel?.dispose(); carousel = null
@@ -754,7 +756,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   sync()
   const dispose = () => {
     if (disposed) return
-    disposed = true
+    disposed = true;actionController?.abort()
     changes.disconnect(); localeChanges.disconnect()
     doc.fonts?.removeEventListener('loadingdone', onFontsReady)
     if (frame) win.cancelAnimationFrame(frame)

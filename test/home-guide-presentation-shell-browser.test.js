@@ -1,4 +1,4 @@
-import {readFile,mkdir} from 'node:fs/promises'
+import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
 import {build} from 'esbuild'
@@ -9,7 +9,7 @@ import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 // Browser plugin not available. This headless fixture keeps the production
 // ConversationRoot, InputBar, session store and Figma styles; only external I/O
 // and the tutorial's content adapter are replaced.
-const evidence='/tmp/home-presentation-shell-20261024'
+const evidence='/tmp/home-guide-entry-native-20261026/shell'
 let browser,runtimeSource,conversationSource,entry,styles
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
@@ -29,7 +29,7 @@ beforeAll(async()=>{
  const view=store({view:'chat',draft:'',selection:null}),summary=store({byId:{'shell-demo':{id:'shell-demo',displayTitle:'公司风格演示示例',cwd:'/tmp/shell-demo',blank:window.shellCase.hero}}});
  const shell=new native.SessionInputShell({actx:{},defaultSink:async()=>{window.shellProbe.sent++}});shell.setDraft('根据 Vanguard 研报制作八页公司风格汇报。');
  const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),useSession=use({subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()}),useInput=use(shell.state),useStore=use(view),useSessions=use(summary);
- const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'}]},actions={setView:value=>view.update({view:value}),setDraft:draft=>view.update({draft}),select(){},setInspect(){},setResearchRightTab(){},setResearchConversationUnread(){}};
+ const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'},{id:'notes',label:'笔记'},{id:'research',label:'研究'}]},actions={setView:value=>view.update({view:value}),setDraft:draft=>view.update({draft}),select(){},setInspect(){},setResearchRightTab(){},setResearchConversationUnread(){}};
  const t=key=>({'hero.headline':'探索更远，洞见更深。','input.send':'发送消息','input.placeholder':'描述你的任务…','placeholder.hero':'描述你的任务…'})[key]??key;
  const shared={sessionId:'shell-demo',useSession,useSessions,useStore,actions,views,t},inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:()=>undefined,sessionId:'shell-demo',t};
  const renderSlot=(name,props={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={()=>null}/>:name==='conversation.view'?<article data-native-history>{Array.from({length:18},(_,i)=><p key={i} data-history-row={i}>研报观点 {i+1}：核对数据时点、情景假设与配置逻辑，逐页保留来源。</p>)}</article>:null;
@@ -37,8 +37,13 @@ beforeAll(async()=>{
  const root=createRoot(document.querySelector('#native-root'));root.render(<native.ConversationRoot {...shared} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'w',title:'示例工作区',sessionIds:['shell-demo']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/>);
  let guideStatus=()=>{};const adapter=async(_document,_host,options)=>{guideStatus=options.onStatus;return{runStep:async()=>{if(window.shellCase.failure)throw Error("输入区已变化，请重新打开示例。")},dispose(){}}},controller=mountHomeGuides(document,{mountNotes:adapter,mountPresentation:adapter});
  const disposeOperations=window.shellCase.operations?mountHomeOperations(document,{onExample:(kind,context)=>playHomeGuideFromOperations(controller,kind,context)}):()=>{};
- const receive=event=>{const request=event.detail;window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:request.requestId,ok:true,sessionId:'shell-demo',cwd:'/tmp/shell-demo',title:'公司风格演示示例',fresh:true}}))};window.addEventListener('sherlock:home-guide-session-request',receive);
- window.shellProbe={sent:0,shell,controller,status:text=>guideStatus(text),async start(){await controller.start('ppt');window.__testHomeGuideTimeline.pause()},async close(){await controller.reset(false)},async dispose(){disposeOperations();await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
+ const entryTrace={started:false,actions:[],frames:[]};let entryFrame;
+ const observeEntry=event=>{const target=event.target.closest('button');if(target?.matches('[data-odyssey-operations-open-example]')){entryTrace.started=true;const source=target.getBoundingClientRect();entryTrace.origin={x:source.left+source.width/2,y:source.top+source.height/2};const sample=()=>{const pointer=document.querySelector('[data-home-guide-pointer]'),tip=pointer?.querySelector('svg path'),p=tip?.getPointAtLength(0).matrixTransform(tip.getScreenCTM());entryTrace.frames.push({time:performance.now(),pointer:pointer?.dataset.homeGuidePointer,x:p?.x,y:p?.y,phase:pointer?.dataset.state,section:document.querySelector('.pI_x6G_centerCol').dataset.odysseyHomeOperationsState,inert:document.querySelector('.wSkVaW_composerHero')?.inert});entryFrame=requestAnimationFrame(sample)};sample()}if(!entryTrace.started)return;if(target?.matches('[data-odyssey-home-operations-toggle],[data-srb-tabs] button'))entryTrace.actions.push({type:target.matches('[data-odyssey-home-operations-toggle]')?'return':'tab:'+target.dataset.conversationViewId,phase:document.querySelector('[data-home-guide-pointer]')?.dataset.state,inert:document.querySelector('.wSkVaW_composerHero')?.inert})};document.addEventListener('click',observeEntry,true);
+ const receive=event=>{const request=event.detail;if(entryTrace.started)entryTrace.actions.push({type:request.command,selected:document.querySelector('[data-srb-tabs] [aria-selected=true]')?.dataset.conversationViewId});if(request.command==='prepare'&&window.shellCase.deferPrepare){window.shellProbe.releasePrepare=()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:request.requestId,ok:true,sessionId:'shell-demo',cwd:'/tmp/shell-demo',title:'公司风格演示示例',fresh:true}}));return}window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:request.requestId,ok:true,sessionId:'shell-demo',cwd:'/tmp/shell-demo',title:'公司风格演示示例',fresh:true}}))};window.addEventListener('sherlock:home-guide-session-request',receive);
+ // Only the tutorial content boundary is acknowledged here; Root/header/input
+ // and all entry pointer frames remain their actual production implementation.
+ const boardBoundary=event=>{const value=event.detail;if(window.shellCase.entryKind==='board')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:value.requestId,runId:value.runId,ok:true}}))};window.addEventListener('sherlock:home-guide-native-request',boardBoundary);
+ window.shellProbe={sent:0,shell,controller,entryTrace,status:text=>guideStatus(text),async start(){await controller.start('ppt');window.__testHomeGuideTimeline.pause()},async close(){await controller.reset(false)},async dispose(){cancelAnimationFrame(entryFrame);document.removeEventListener('click',observeEntry,true);window.removeEventListener('sherlock:home-guide-native-request',boardBoundary);disposeOperations();await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
  `},bundle:true,loader:{'.svg':'dataurl'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'},plugins:[homeGuidePlaybackFixture(),{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
  entry=output.outputFiles[0].text
  const mod=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href),pw=mod.default??mod
@@ -47,11 +52,11 @@ beforeAll(async()=>{
 },30000)
 afterAll(()=>browser?.close())
 
-async function fixture({width,height,hero,operations=false,failure=false}){
- const page=await browser.newPage({viewport:{width:1380,height},reducedMotion:'reduce'}),errors=[]
+async function fixture({width,height,hero,operations=false,failure=false,entryKind,deferPrepare=false,reducedMotion='reduce'}){
+ const page=await browser.newPage({viewport:{width:1380,height},reducedMotion}),errors=[]
  page.on('pageerror',error=>errors.push(error.message))
  await page.route('**/*',route=>route.fulfill({contentType:route.request().url().endsWith('/')?'text/html':'application/json',body:route.request().url().endsWith('/')?'<meta charset="utf-8"><title>PPT tutorial shell geometry</title><main class="pI_x6G_centerCol"><div id="native-root"></div></main><script>window.__ModuleLoader__={load:d=>window.descriptor=d}</script>':'{"plans":[]}'}))
- await page.goto('https://presentation-shell.local/');await page.evaluate(value=>window.shellCase=value,{width,height,hero,operations,failure})
+ await page.goto('https://presentation-shell.local/');await page.evaluate(value=>window.shellCase=value,{width,height,hero,operations,failure,entryKind,deferPrepare})
  await page.addScriptTag({content:runtimeSource});await page.evaluate(()=>window.runtimeDescriptor=window.descriptor)
  await page.addScriptTag({content:conversationSource});await page.evaluate(()=>window.conversationDescriptor=window.descriptor)
  await page.addStyleTag({content:styles+`\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;width:${width}px;height:100vh}#native-root{height:100%;min-height:0}[data-native-history]{padding:12px 24px;font-size:14px;line-height:24px}`})
@@ -63,6 +68,37 @@ async function geometry(page){return page.evaluate(()=>{
  const rect=node=>{const r=node.getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height}},resident=document.querySelector('.wSkVaW_root'),input=document.querySelector('textarea'),send=resident.querySelector('button.uV2eYG_primary'),footer=document.querySelector('.odyssey-home-guide-footer'),hit=node=>{const r=node.getBoundingClientRect(),top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return node===top||node.contains(top)},scroll=resident.querySelector('.wSkVaW_scrollBody')
  return{phase:resident.dataset.phase,input:rect(input),send:rect(send),footer:footer?rect(footer):null,sendHit:hit(send),inputHit:hit(input),sameInput:input===window.originalShellInput,heroVisible:!resident.querySelector('.wSkVaW_composerHero')||getComputedStyle(resident.querySelector('.wSkVaW_composerHero')).visibility==='visible',scroll:rect(scroll),scrollable:scroll.scrollHeight>scroll.clientHeight,resident:rect(resident)}
 })}
+
+for(const[kind,index,view]of [['board',0,'research'],['note',1,'notes'],['ppt',2,'chat'],['report',3,'chat']]){
+ it(`visibly returns through the real home button and ${view} Tab before starting the ${kind} example`,async()=>{
+  const f=await fixture({width:1000,height:900,hero:true,operations:true,entryKind:kind,reducedMotion:'no-preference'}),{page}=f,output='/tmp/home-guide-entry-native-20261026'
+  try{
+   await mkdir(output,{recursive:true});await page.getByRole('button',{name:'切换到快速开始',exact:true}).click();await expect.poll(()=>page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-motion')).toBe('idle')
+   await page.locator('button[data-case="'+index+'"]').click();await expect.poll(()=>page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(String(index))
+   const before=await page.locator('textarea').inputValue();await page.locator('[data-odyssey-operations-open-example]').click()
+   await expect.poll(()=>page.evaluate(()=>window.shellProbe.entryTrace.actions.some(value=>value.type==='return'))).toBe(true)
+   await page.screenshot({path:output+'/'+kind+'-return.png'})
+   await page.waitForSelector('[data-home-guide-kind="'+kind+'"]',{timeout:5500}).catch(async error=>{await writeFile(output+'/'+kind+'-diagnostic.json',JSON.stringify({errors:f.errors,state:await page.evaluate(()=>({trace:window.shellProbe.entryTrace,header:document.querySelector('[data-srb-session-header]')?.outerHTML,feedback:document.querySelector('[data-odyssey-operations-feedback]')?.textContent,transition:document.documentElement.dataset.homeGuideTransitionSession}))},null,2)+'\n');throw error});await page.evaluate(()=>window.__testHomeGuideTimeline?.pause())
+   const trace=await page.evaluate(()=>window.shellProbe.entryTrace);expect(trace.actions.slice(0,4).map(value=>value.type)).toEqual(['return','tab:'+view,'prepare','open']);expect(trace.actions[0]).toMatchObject({phase:'idle',inert:true});expect(trace.actions[1]).toMatchObject({phase:'idle',inert:false});expect(trace.actions[2].selected).toBe(view)
+   const frames=trace.frames.filter(value=>value.pointer);expect(frames.length).toBeGreaterThan(5);expect(frames[0].x).toBeCloseTo(trace.origin.x,0);expect(frames[0].y).toBeCloseTo(trace.origin.y,0)
+   expect(new Set(frames.map(value=>value.pointer)).size).toBe(1);expect(frames.some(value=>value.phase==='moving')).toBe(true);expect(frames.some(value=>value.phase==='pressed')).toBe(true);expect(frames.some(value=>value.inert===false)).toBe(true)
+   if(view==='chat')expect(await page.locator('textarea').inputValue()).toBe(before);expect(await page.evaluate(()=>window.shellProbe.shell.snapshot.draft)).toBe(before);expect(await page.evaluate(()=>window.shellProbe.sent)).toBe(0);expect(f.errors).toEqual([])
+   await page.screenshot({path:output+'/'+kind+'-entered.png'});await writeFile(output+'/'+kind+'-trace.json',JSON.stringify(trace,null,2)+'\n')
+  }finally{await f.close()}
+ },15000)
+}
+it('honors real typing in the original native composer while example preparation is delayed',async()=>{
+ const f=await fixture({width:1000,height:900,hero:true,operations:true,entryKind:'ppt',deferPrepare:true}),{page}=f
+ try{
+  await page.getByRole('button',{name:'切换到快速开始',exact:true}).click();await page.locator('button[data-case="2"]').click();await page.locator('[data-odyssey-operations-open-example]').click()
+  await expect.poll(()=>page.evaluate(()=>typeof window.shellProbe.releasePrepare)).toBe('function')
+  await page.locator('textarea').focus();await page.keyboard.press('End');await page.keyboard.type('保留用户接管后的新内容📈');const draft=await page.locator('textarea').inputValue()
+  await page.evaluate(()=>window.shellProbe.releasePrepare());await page.waitForTimeout(100)
+  expect(await page.evaluate(()=>window.shellProbe.entryTrace.actions.map(value=>value.type))).toEqual(['return','tab:chat','prepare']);expect(await page.locator('[data-home-guide]').count()).toBe(0)
+  expect(await page.locator('[data-home-guide-pointer]').count()).toBe(0);expect(await page.evaluate(()=>window.shellProbe.shell.snapshot.draft)).toBe(draft);expect(draft).toContain('保留用户接管后的新内容📈');expect(await page.locator('textarea').evaluate(node=>node===document.activeElement)).toBe(true);expect(f.errors).toEqual([])
+  expect(await page.locator('[data-odyssey-operations-feedback]').count()).toBe(0)
+ }finally{await f.close()}
+},10000)
 
 // The existing native hero and session deliberately survive prepare/open here.
 // This exercises the operations handover independently of backend navigation.
