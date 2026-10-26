@@ -11,6 +11,8 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
 import {apply as todo} from '@deepseek-ai/dsh-tool-todo'
+import {createApiProxy} from '@deepseek-ai/dsh-host-apiproxy'
+import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import {homeReportAssetsFixture} from './home-report-assets.js'
 import * as mod from '../../packages/dsh-research-task-runtime/home-report-runtime.js'
 import {createHomeReportBrief} from '../../packages/dsh-research-task-runtime/home-report-contract.js'
@@ -23,14 +25,17 @@ export async function reportRuntimeFixture(options={}){
  ctx.on('agent/error',event=>errors.push(event.error?.stack??event.error))
  new SessionStore(ctx);new AgentRegistry(ctx);new LlmRuntime(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx);new TokenMeter(ctx)
  new JsonlSessionPersistence(ctx,{root:join(root,'sessions'),compression:'none',packChunks:false,writeBatchMaxDelayMs:1})
- new AgentLoop(ctx,{agents:[],maxParallelToolCalls:1});todo(ctx,{allowParallelInProgress:false})
+ new AgentLoop(ctx,{agents:[],maxParallelToolCalls:1});new UserQuestionService(ctx);todo(ctx,{allowParallelInProgress:false})
  class Outside extends LlmAdapter{async resolveModel(provider,model){return{provider,id:model,name:model,context:{contextWindow:16000},defaultMaxTokens:512}}async *stream(request){outside.push(request);yield{type:'finish',reason:{kind:'stop'}}}}
  ctx.llm.registerAdapter(['outside'],new Outside())
  const create=async id=>(await ctx.agents.create({sessionId:id,meta:{cwd},agentOptions:{provider:'outside',model:'normal',maxTokens:512}})).agent
  const agent=await create('report-demo'),runtime=mod.createHomeReportRuntime(ctx,{env:{DSH_HOME:home},assetsDirectory:assets.directory})
+ const api=createApiProxy(ctx,{cwd:root,defaultModelSelection:()=>({provider:'outside',model:'normal'})})
+ let rpcId=0
+ const request=async(handler,payload)=>{const reply=await handler({rpcId:'report-fixture-'+(++rpcId),payload});if(!reply.result.ok)throw Error(reply.result.error.message);return reply.result.value}
  const dispose=async()=>{await runtime.dispose();await ctx.fiber.dispose();await Promise.all([rm(root,{recursive:true,force:true}),rm(assets.directory,{recursive:true,force:true})])}
  const input={sessionId:'report-demo',cwd,runId:'report-run',fresh:true}
  const wire='ework-skill-778d85796a6c426b'
  const message=()=>'/'+wire+' '+createHomeReportBrief(assets.metadata)
- return{...assets,ctx,agent,runtime,input,cwd,home,root,message,outside,errors,create,dispose}
+ return{...assets,ctx,agent,runtime,input,cwd,home,root,message,outside,errors,create,dispose,api,request}
 }

@@ -285,10 +285,31 @@ export function verifiedResearchDeliveryPaths(message) {
   return paths
 }
 
+/** A successful private demo publisher names its two literal filesystem outputs. */
+export function homeGuideDeliveryPaths(message, toolName) {
+  const expected = toolName === 'home_presentation_publish' ? ['pptx', 'pdf'] : toolName === 'home_report_publish' ? ['html', 'pdf'] : null
+  if (!expected || message?.source?.kind !== 'tool' || !Array.isArray(message.content) || message.content.length !== 1) return []
+  const block = message.content[0]
+  if (block?.type !== 'tool-result' || block.isError === true || block.toolCallId !== message.source.callId || !Array.isArray(block.content)) return []
+  for (const part of block.content) {
+    if (part?.type !== 'text' || typeof part.text !== 'string' || part.text.length > 32768) continue
+    let value
+    try { value = JSON.parse(part.text) } catch { continue }
+    if (value?.kind !== 'ework-home-guide-delivery' || value.version !== 1 || value.tool !== toolName || value.ok !== true || value.status !== 'completed' || !Array.isArray(value.files) || value.files.length !== 2) continue
+    const paths = value.files.map((file, index) => {
+      if (file?.format !== expected[index] || typeof file.path !== 'string' || !/^(?:\/|[A-Za-z]:[\\/])/.test(file.path) || /(?:^|[\\/])\.\.(?:[\\/]|$)/.test(file.path)) return undefined
+      const path = deliveryFilePath(file.path, undefined, false)
+      return path?.toLowerCase().endsWith('.' + expected[index]) ? path : undefined
+    })
+    if (paths.every(Boolean) && new Set(paths).size === 2) return paths
+  }
+  return []
+}
+
 /** Dependency-complete plain functions for injection into the upstream bundle. */
 export const deliveryModelSource = [
   deliveryLexicalPath, deliveryLocalPath, normaliseDeliveryPath, deliveryFilePath, deliveryWithoutFences,
   deliveryUnescapeMarkdown, deliveryReadDestination, deliveryReadTitle,
   deliveryPathsFromMarkdown, deliveryPathsFromFinalInlineCode, deliveryPathsFromFinalText,
-  mergeDeliveryPaths, verifiedResearchDeliveryPaths
+  mergeDeliveryPaths, verifiedResearchDeliveryPaths, homeGuideDeliveryPaths
 ].map(fn => fn.toString()).join('\n')

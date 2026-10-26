@@ -46,14 +46,27 @@ return true;\n                    },`)
         return sherlockBoardsPage.installHomeOperationsNavigation({sessions,workspaces,inputHub,composerBlocks});
       }, "Sherlock home operations navigation");`)
   }
-  const marker = '/* sherlock:integration-skill-composer:v1 */'
-  if (source.includes(marker)) return source
-  const anchor = 'const composerBlocks = new ComposerBlockRegistry();'
-  if (source.split(anchor).length !== 2) throw Error('Integration skill composer anchor missing or ambiguous')
-  return source.replace(anchor, `${anchor}
-      ${marker}
+  const marker = '/* sherlock:integration-skill-composer:v2 */'
+  const legacy = `/* sherlock:integration-skill-composer:v1 */
       ctx.effect(() => {
         if (window.top !== window) return;
         return sherlockBoardsPage.installSkillComposer({sessions,inputHub,composerBlocks,researchSidebar});
-      }, "Sherlock integration skill composer");`)
+      }, "Sherlock integration skill composer");`
+  const current = `${marker}
+      ctx.effect(() => {
+        if (window.top !== window) return;
+        return sherlockBoardsPage.installSkillComposer({sessions,inputHub,composerBlocks,researchSidebar,
+          activeInput:(sessionId,ordinary)=>document.body.dataset.workspaceSurface==='notes'?eworkActiveInput(sessionId,ordinary):ordinary});
+      }, "Sherlock integration skill composer");`
+  const installed = source.match(/\/\* sherlock:integration-skill-composer:v[^*]*\*\//g) ?? []
+  if (installed.length) {
+    if (installed.length !== 1 || source.split('"Sherlock integration skill composer"').length !== 2) throw Error('Integration skill composer duplicate or unknown installation')
+    const expected = installed[0] === marker ? current : installed[0] === '/* sherlock:integration-skill-composer:v1 */' ? legacy : null
+    if (!expected || source.split(expected).length !== 2) throw Error('Integration skill composer installed source drifted')
+    return expected === current ? source : source.replace(expected, current)
+  }
+  if (source.includes('Sherlock integration skill composer')) throw Error('Integration skill composer unmarked installation')
+  const anchor = 'const composerBlocks = new ComposerBlockRegistry();'
+  if (source.split(anchor).length !== 2) throw Error('Integration skill composer anchor missing or ambiguous')
+  return source.replace(anchor, `${anchor}\n      ${current}`)
 }

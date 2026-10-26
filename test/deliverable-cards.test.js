@@ -7,7 +7,7 @@ import {act} from 'react'
 import {readFileSync} from 'node:fs'
 import {patchDeliverableCards, patchDeliveryConversation} from '../scripts/lib/deliverable-cards.mjs'
 
-let plugin, selector, root, mount
+let plugin, selector, root, mount, definition
 let dom
 const previousGlobals=new Map()
 let copied=true
@@ -21,7 +21,7 @@ beforeAll(()=>{
  window.__ModuleLoader__={load:value=>descriptor=value}
  new Function('window','document',patchDeliverableCards(source()))(window,document)
  plugin=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id.includes('primitives')?new Proxy({writeClipboard},{get:(target,key)=>target[key]??(()=>React.createElement('svg',{'aria-hidden':true}))}):{isAppendSurfaceEvent:()=>true})
- const ctx={get:()=>({isLoopback:true,hostDescription:{},openPath:()=>{}}),conversationEvents:{register:()=>{}},locale:{register:()=>{},bind:()=>()=>''},effect:fn=>fn(),provide:()=>{},slots:{inject:(_key,fn)=>fn(),register:value=>{selector=value.select}}}
+ const ctx={get:()=>({isLoopback:true,hostDescription:{},openPath:()=>{}}),conversationEvents:{register:value=>{definition=value}},locale:{register:()=>{},bind:()=>()=>''},effect:fn=>fn(),provide:()=>{},slots:{inject:(_key,fn)=>fn(),register:value=>{selector=value.select}}}
  plugin.apply(ctx)
 })
 afterAll(()=>{dom?.window.close();for(const [key,value] of previousGlobals){if(value)Object.defineProperty(globalThis,key,value);else delete globalThis[key]}})
@@ -151,4 +151,27 @@ it('patches installed conversation anchors once and fails safely on source drift
  expect(patchDeliverableCards(patched)).toBe(patched)
  expect(()=>patchDeliverableCards('changed upstream')).toThrow(/anchor/i)
  new Function(patched);new Function(out)
+})
+
+it('keeps private demo files durable without a presenter and admits nothing before a successful result and closed turn',()=>{
+ const packet={kind:'ework-home-guide-delivery',version:1,tool:'home_report_publish',ok:true,status:'completed',files:[{format:'html',path:'/work/报告 (中文).html'},{format:'pdf',path:'/work/报告 (中文).pdf'}]}
+ const initial=()=>definition.start({}, {event:{type:'turn/start',data:{turn:1}}})
+ const call=(state,name='home_report_publish',view)=>definition.update({state},{event:{type:'tool/call',seq:1,data:{turn:1,callId:'publish',name}},view})
+ const finish=(state,error=false,status='completed')=>definition.update({state},{event:{type:'tool/result',seq:2,data:{message:{source:{kind:'tool',callId:'publish'},content:[{type:'tool-result',toolCallId:'publish',isError:error,content:[{type:'text',text:JSON.stringify({...packet,status})}]}]}}}})
+ const paths=(state,status='closed')=>selector({seq:3,text:'已保存研究报告。',cwd:'/work',turn:{status,data:new Map([['deliverables',{produced:state.produced}]])}})
+ const pending=call(initial());expect(paths(pending)).toBeNull()
+ expect(paths(finish(pending,true))).toBeNull()
+ const announced=call(initial(),'home_report_publish',{for:'call',view:{card:'generic',kind:'edit',locations:[{path:'/work/early.html'},{path:'/work/early.pdf'}]}})
+ expect(paths(finish(announced,false,'cancelled'))).toBeNull();expect(paths(finish(announced,false,'failed'))).toBeNull()
+ expect(paths(finish(pending),'open')).toBeNull()
+ expect(paths(finish(call(initial(),'ordinary_tool')))).toBeNull()
+ expect(paths(finish(pending))).toEqual(['/work/报告 (中文).html','/work/报告 (中文).pdf'])
+ const ordinary=call(initial(),'str_replace_editor',{for:'call',view:{card:'generic',kind:'edit',locations:[{path:'/work/ordinary.md'}]}})
+ expect(paths(finish(ordinary))).toEqual(['/work/ordinary.md'])
+})
+it('upgrades the exact legacy delivery accumulator once and rejects unknown or duplicate new hooks',()=>{
+ const patched=patchDeliverableCards(source()),marker='/* ework:home-guide-delivery-accumulator:v1 */'
+ expect(patched.split(marker)).toHaveLength(2);expect(patchDeliverableCards(patched)).toBe(patched)
+ expect(()=>patchDeliverableCards(patched.replace(marker,marker+marker))).toThrow(/drifted/)
+ expect(()=>patchDeliverableCards(patched.replace('name:match.event.data.name','name:"pretend-tool"'))).toThrow(/drifted/)
 })

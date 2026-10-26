@@ -17,6 +17,7 @@ type Dependencies = {
         subagentAddress(id: string): unknown
     }
     inputHub: { shell(id: string): InputShell }
+    activeInput?(id: string, ordinary: InputShell): InputShell
     composerBlocks: { storeFor(id: string): { getSnapshot(): unknown } }
     researchSidebar: {
         stores: Map<string, { getSnapshot(): { binding?: { active: boolean } | null } }>
@@ -26,7 +27,7 @@ type Dependencies = {
         } | null
     }
 }
-type Ticket = { sessionId: string; shell: InputShell; revision: number; expires: number; inserted: boolean; caret: number; selectionEnd: number; span: {start:number;end:number} }
+type Ticket = { sessionId: string; shell: InputShell; surface: 'conversation' | 'notes'; revision: number; expires: number; inserted: boolean; caret: number; selectionEnd: number; span: {start:number;end:number} }
 const REQUEST = 'sherlock:skill-compose-request'
 const REPLY = 'sherlock:skill-compose-reply'
 
@@ -70,11 +71,11 @@ export function installSkillComposer(deps: Dependencies): () => void {
     const tickets = new Map<string, Ticket>()
     const frames = new Map<number, { token: string; cancel(): void }>()
     let stopped = false
-    const reply = (requestId: string, ok: boolean, extra: { token?: string; message?: string } = {}) => {
+    const reply = (requestId: string, ok: boolean, extra: { token?: string; surface?: 'notes'; message?: string } = {}) => {
         if (!stopped) window.dispatchEvent(new window.CustomEvent(REPLY, { detail: { requestId, ok, ...extra } }))
     }
-    const inputs = (sessionId: string) => Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea[data-odyssey-file-reference-session]'))
-        .filter(element => element.dataset.odysseyFileReferenceSession === sessionId)
+    const inputs = (sessionId: string, notes = false) => Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea[data-odyssey-file-reference-session]'))
+        .filter(element => element.dataset.odysseyFileReferenceSession === sessionId && (!notes || element.closest<HTMLElement>('[data-ework-notes-composer-host]')?.dataset.eworkNotesComposerHost === sessionId))
     const current = (ticket?: Ticket) => {
         const id = deps.sessions.list.getSnapshot().current
         if (!id) throw Error('请先创建或选择一个对话，再使用技能。')
@@ -82,15 +83,17 @@ export function installSkillComposer(deps: Dependencies): () => void {
         const binding = deps.sessions.binding(id)
         if (!binding) throw Error('对话尚未就绪，请稍后重试。')
         if (deps.sessions.subagentAddress(id) || binding.session.getSnapshot().subagent) throw Error('请返回主对话使用技能，子代理输入暂不支持。')
-        const shell = deps.inputHub.shell(id), snapshot = shell.snapshot
-        if (shell.disposed || (ticket && shell !== ticket.shell) || binding.session.getSnapshot().removed) throw Error('对话已关闭，请重新选择对话。')
+        const ordinary = deps.inputHub.shell(id), shell = deps.activeInput?.(id, ordinary) ?? ordinary, snapshot = shell.snapshot
+        const notes = shell !== ordinary
+        if (notes && document.body.dataset.workspaceSurface !== 'notes') throw Error('笔记输入已关闭，请重新选择技能。')
+        if (shell.disposed || (ticket && (shell !== ticket.shell || (ticket.surface === 'notes') !== notes)) || binding.session.getSnapshot().removed) throw Error('对话已关闭，请重新选择对话。')
         if (snapshot.phase !== 'plain' || snapshot.researchContextPreparing || deps.composerBlocks.storeFor(id).getSnapshot() !== undefined)
             throw Error('对话输入暂不可编辑，请完成当前操作后再使用技能。')
         // A research composer can be resident in a hidden tab; the native disabled/readOnly
         // flags still carry workspace, approval and collaboration edit restrictions.
-        if (!inputs(id).some(element => !element.disabled && !element.readOnly)) throw Error('对话输入框暂不可编辑，请先打开可编辑的对话。')
+        if (!inputs(id, notes).some(element => !element.disabled && !element.readOnly)) throw Error('对话输入框暂不可编辑，请先打开可编辑的对话。')
         if (ticket && snapshot.draftRev !== ticket.revision) throw Error('对话草稿已变更，原输入已保留，请重新点击“立即使用”。')
-        return { id, shell, snapshot }
+        return { id, shell, snapshot, notes }
     }
     const focus = (requestId: string, token: string, ticket: Ticket) => {
         const origin = document.activeElement
@@ -103,12 +106,12 @@ export function installSkillComposer(deps: Dependencies): () => void {
         const tick = () => {
             try {
                 if (stopped) return
-                current(ticket)
-                const research = deps.researchSidebar.stores.get(ticket.sessionId)?.getSnapshot().binding?.active === true
+                const {notes} = current(ticket)
+                const research = !notes && deps.researchSidebar.stores.get(ticket.sessionId)?.getSnapshot().binding?.active === true
                 const toggle = document.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry="right"]')
                 // Compact desktop panes have their own native visibility state. Wait for
                 // the surface handoff, then use that pane's existing control once.
-                if (document.body.dataset.workspaceSurface || (research && toggle?.dataset.workspacePanel)) { retry(); return }
+                if ((!notes && document.body.dataset.workspaceSurface) || (research && toggle?.dataset.workspacePanel)) { retry(); return }
                 if (research && !openedPanel && toggle?.getAttribute('aria-expanded') === 'false' && !toggle.disabled) {
                     openedPanel = true
                     toggle.click()
@@ -118,7 +121,7 @@ export function installSkillComposer(deps: Dependencies): () => void {
                 // Native file chips project their placeholder glyph in the textarea. The
                 // newly inserted plain prefix remains identical and determines this caret.
                 const prefix = ticket.shell.snapshot.draft.slice(0, ticket.caret)
-                const input = inputs(ticket.sessionId).find(element => !element.disabled && !element.readOnly && !element.closest('[hidden],[aria-hidden="true"],[inert]') && element.checkVisibility() && matchesProjectedPrefix(element.value, prefix))
+                const input = inputs(ticket.sessionId, notes).find(element => !element.disabled && !element.readOnly && !element.closest('[hidden],[aria-hidden="true"],[inert]') && element.checkVisibility() && matchesProjectedPrefix(element.value, prefix))
                 if (!input) {
                     retry()
                     return
@@ -145,7 +148,7 @@ export function installSkillComposer(deps: Dependencies): () => void {
         for (const [token, ticket] of tickets) if (ticket.expires < Date.now()) tickets.delete(token)
         try {
             if (request.phase === 'prepare') {
-                const { id, shell, snapshot } = current()
+                const { id, shell, snapshot, notes } = current()
                 if (request.sessionId !== undefined && request.sessionId !== id) throw Error('当前对话已切换，请重新选择技能。')
                 if (request.expectedDraftRev !== undefined && (!Number.isSafeInteger(request.expectedDraftRev) || request.expectedDraftRev !== snapshot.draftRev))
                     throw Error('对话草稿已变更，原输入已保留，请重新点击快捷卡片。')
@@ -164,8 +167,8 @@ export function installSkillComposer(deps: Dependencies): () => void {
                 }
                 if (tickets.size >= 32) tickets.delete(tickets.keys().next().value!)
                 const token = window.crypto.randomUUID()
-                tickets.set(token, { sessionId: id, shell, revision: snapshot.draftRev, expires: Date.now() + 60_000, inserted: false, caret: 0, selectionEnd: 0, span })
-                reply(requestId, true, { token })
+                tickets.set(token, { sessionId: id, shell, surface: notes ? 'notes' : 'conversation', revision: snapshot.draftRev, expires: Date.now() + 60_000, inserted: false, caret: 0, selectionEnd: 0, span })
+                reply(requestId, true, { token, ...(notes ? { surface: 'notes' as const } : {}) })
                 return
             }
             const token = typeof request.token === 'string' ? request.token : ''
@@ -190,9 +193,9 @@ export function installSkillComposer(deps: Dependencies): () => void {
             }
             if (request.phase !== 'insert' || typeof request.invocationName !== 'string' || !/^ework-skill-[a-f0-9]{16}$/.test(request.invocationName))
                 throw Error('技能引用无效，请刷新技能后重试。')
-            const { shell, snapshot } = current(ticket)
+            const { shell, snapshot, notes } = current(ticket)
             if (ticket.inserted) throw Error('本次技能已加入草稿，请返回对话继续填写需求。')
-            const research = deps.researchSidebar.stores.get(ticket.sessionId)?.getSnapshot().binding?.active === true
+            const research = !notes && deps.researchSidebar.stores.get(ticket.sessionId)?.getSnapshot().binding?.active === true
             if (research && !deps.researchSidebar.service) throw Error('对话面板尚未就绪，请稍后重试。')
             const reference=request.reference===undefined?undefined:decodeSkillReference(JSON.stringify(request.reference))
             if(reference&&reference.invocationName!==request.invocationName)throw Error('技能引用无效，请重新选择技能。')

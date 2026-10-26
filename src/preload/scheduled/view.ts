@@ -24,7 +24,7 @@ const escape = (s: unknown) =>
       ]!,
   )
 const icon = (name: keyof typeof icons) =>
-  `<i class="st-icon" aria-hidden="true" style="--icon:url('${icons[name]}')"></i>`
+  `<i class="st-icon" aria-hidden="true" style="--icon:url('${escape(icons[name].replaceAll("'",'%27'))}')"></i>`
 const resizeIcon = () =>
   `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 15 5M10 15l5-5"/></svg>`
 const stateLabel = (t: ScheduledTask) =>
@@ -90,6 +90,7 @@ export class ScheduledTaskView {
     private bridge: ScheduledTaskBridge,
     private surfaceHost?: WorkspaceSurfaceHost,
     private integrationsBridge?: IntegrationBridge,
+    private sidebarActions?: {newNote:()=>Promise<void>},
   ) {}
   mount() {
     mountWorkspaceTopbarStyles(this.document)
@@ -116,6 +117,7 @@ export class ScheduledTaskView {
     this.document.addEventListener('click', this.navigateAway, true)
     this.document.addEventListener('sherlock:search-session-opened', () => this.close())
     this.document.defaultView?.addEventListener('resize', this.position)
+    this.document.defaultView?.addEventListener('sherlock:sidebar-new-note', () => void this.createNewNote())
     this.document.defaultView?.addEventListener('sherlock:scheduled-panel-toggle', ((event: CustomEvent<{open: boolean}>) => {
       if (!this.root && !this.componentMode) return
       this.detailOpen = event.detail.open
@@ -202,7 +204,11 @@ export class ScheduledTaskView {
     const group = this.document.querySelector('.hHd-Xa_newSessionGroup')
     if (!group) return
     const current = this.more?.closest<HTMLElement>('.st-more-zone')
-    if (current?.isConnected) { this.placeMore(group, current); return }
+    if (current?.isConnected) {
+      if(this.menuAnchor===this.more&&this.menu?.dataset.sidebarWide!==String(group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'))this.closeMenu()
+      this.placeMore(group, current); return
+    }
+    if(this.menuAnchor===this.more)this.closeMenu()
     const zone = this.document.createElement('span')
     zone.className = 'st-more-zone'
     const more = this.document.createElement('button')
@@ -212,25 +218,39 @@ export class ScheduledTaskView {
     more.setAttribute('aria-haspopup', 'menu')
     more.setAttribute('aria-expanded', 'false')
     more.innerHTML = icon('more')
-    more.onclick = () =>
-      this.menu
-        ? this.closeMenu()
-        : this.showMenu(more, [
+    more.onclick = () => {
+      if(this.menu){this.closeMenu();return}
+      const wide=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'
+      this.showMenu(more, [
+            ...(wide&&this.sidebarActions?[{label:'新笔记',icon:this.dark()?'noteDark' as const:'note' as const,disabled:this.newNoteBusy,run:()=>void this.createNewNote()}]:[]),
             ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
             } }] : []),
             { label: '定时任务', icon: 'clock', run: () => void this.open() },
           ])
+      const opened=this.menu as HTMLElement|undefined
+      if(opened){opened.dataset.sidebarMore='true';opened.dataset.sidebarWide=String(wide)}
+    }
     zone.append(more)
     this.placeMore(group, zone)
     this.more = more
   }
   private placeMore(group: Element, zone: HTMLElement) {
-    const sidebar = group.closest('[data-dsh-sidebar-root]')
-    const navigation = sidebar?.querySelector('[data-srb-navigation-scroll]')
-    if (sidebar?.getAttribute('data-dsh-sidebar-wide') === 'false' && navigation) {
-      if (navigation.nextElementSibling !== zone) navigation.after(zone)
-    } else if (zone.parentElement !== group) group.append(zone)
+    if(zone.parentElement!==group||group.lastElementChild!==zone)group.append(zone)
+  }
+  private newNoteBusy=false
+  private newNoteNotice?:HTMLElement
+  private newNoteTimer?:number
+  private async createNewNote(){
+    if(this.newNoteBusy||!this.sidebarActions)return
+    this.newNoteBusy=true;this.newNoteNotice?.remove()
+    try{await this.sidebarActions.newNote()}
+    catch(error){if(error instanceof Error&&error.name==='AbortError')return
+      const notice=this.document.createElement('div');notice.className='st-menu st-new-note-error';notice.dataset.dark=String(this.dark());notice.role='alert';notice.textContent=error instanceof Error?error.message:'新笔记未能创建。'
+      const rect=this.more?.getBoundingClientRect();notice.style.left=Math.max(8,Math.min((rect?.left??8),this.document.documentElement.clientWidth-248))+'px';notice.style.top=(rect?.bottom??40)+6+'px'
+      this.document.body.append(notice);this.newNoteNotice=notice
+      this.newNoteTimer=this.document.defaultView?.setTimeout(()=>notice.remove(),6000)
+    }finally{this.newNoteBusy=false}
   }
   private position = () => {
     if (!this.root && !this.componentMode) return
@@ -363,6 +383,7 @@ export class ScheduledTaskView {
     }
   }
   resetIntegrationIdentity() {
+    this.newNoteNotice?.remove();this.document.defaultView?.clearTimeout(this.newNoteTimer)
     this.close();this.capabilityRequest++;this.capabilities=[];this.capabilitiesLoaded=false;this.capabilitiesError='';
     this.draft=undefined;this.draftId=undefined;this.selected=undefined;this.tasks=[];this.error='';this.busy=false;this.pendingActions.clear();
   }

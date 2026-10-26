@@ -19,15 +19,13 @@ const date=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!N
 const aborted=()=>new DOMException('离线报告示例已停止。','AbortError')
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});promise.catch(()=>{});return{promise,resolve,reject}}
 
-/** Public conclusions and artifact links only; no source-session trace or private reasoning. */
+/** Public conclusions only; delivery files use the native tool/card protocol. */
 export function createHomeReportReplay(metadata){
- const names=metadata.schemaVersion===2?metadata.deliveryNames:{html:HOME_REPORT_HTML_FILE,pdf:HOME_REPORT_PDF_FILE}
- const href=name=>metadata.schemaVersion===2?'<./'+encodeURIComponent(name)+'>':'./'+name
  return{
   intro:`好的，我会以${metadata.researchAsOf}为研究时点，围绕${metadata.companyName}梳理投资逻辑、业绩和估值，并区分事实、判断与风险。`,
   structure:'报告按以下目录展开：\n\n'+metadata.chapters.map((chapter,index)=>`${index+1}. ${chapter.title}`).join('\n')+'\n\n关键图表：'+metadata.chartCatalog.map(chart=>chart.title).join('、')+'。数据和观点会标明来源与时点。',
   layout:'研究观点和图表已整理。接下来核对财务口径、估值假设与风险因素，统一目录和来源标注，保存可阅读的HTML全文与PDF。',
-  delivery:`已保存《${metadata.reportTitle}》。主要结论：\n\n`+metadata.keyFindings.map((finding,index)=>`${index+1}. ${finding}`).join('\n')+`\n\n[阅读全文](${href(names.html)})\n\n[打开${metadata.reportPages}页PDF报告](${href(names.pdf)})\n\n研究时点：${metadata.researchAsOf}。可在本会话继续讨论和修改。`,
+  delivery:`已保存《${metadata.reportTitle}》。主要结论：\n\n`+metadata.keyFindings.map((finding,index)=>`${index+1}. ${finding}`).join('\n')+`\n\n研究时点：${metadata.researchAsOf}。可在本会话继续讨论和修改。`,
   todos:['梳理研究框架，核对公开资料与研究时点','整理专业观点、财务数据和关键图表','保存HTML全文与PDF报告'],
  }
 }
@@ -169,7 +167,7 @@ export function createHomeReportRuntime(ctx,{env=process.env,assetsDirectory}={}
     runs.set(session.id,run)
     run.off.push(ctx.on('session/event',(active,event)=>{if(active!==session||event.type!=='turn/end')return;if(run.complete)return releaseRoute(run);if(event.data.reason?.kind!=='completed')for(const gate of run.milestones.values())gate.reject(Error(event.data.reason?.error?.message||'报告示例执行已停止。'))}))
     run.off.push(agent.ctx.on('agent/request',()=>{current(run);return{provider:PROVIDER,model:'v1',maxTokens:1024}},{prepend:true}))
-    run.off.push(agent.ctx.tools.register(defineTool({name:TOOL,description:'保存已经核验的内置公司研究报告HTML/PDF，不能指定路径或替换内容。',parameters:{},output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result}]},async execute(args,exec){
+    run.off.push(agent.ctx.tools.register(defineTool({name:TOOL,description:'保存已经核验的内置公司研究报告HTML/PDF，不能指定路径或替换内容。',parameters:{},output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result},{type:'text',text:JSON.stringify({kind:'ework-home-guide-delivery',version:1,tool:TOOL,ok:true,status:'completed',files:[{format:'html',path:run.prepared.htmlPath},{format:'pdf',path:run.prepared.pdfPath}]})}]},async execute(args,exec){
      current(run);exec.signal?.throwIfAborted();if(exec.agent!==agent||Object.keys(args).length)throw Error('报告示例交付上下文无效。')
      await publish(run,exec.signal);return'已保存 '+deliveryNames.html+' 和 '+deliveryNames.pdf+'；研究时点 '+metadata.researchAsOf+'。'
     }})))

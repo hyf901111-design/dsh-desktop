@@ -461,7 +461,7 @@ it('retains bindings when snapshot fails and prevents selecting a connection out
   view.close()
 })
 
-it('places the existing More control after workspace creation in the collapsed rail and restores it on expansion', async () => {
+it('keeps More last in the native session-action group after its rail/expanded reposition', async () => {
   const w = new Window(); windows.push(w)
   vi.stubGlobal('MutationObserver', w.MutationObserver); vi.stubGlobal('CustomEvent', w.CustomEvent)
   const doc = w.document as unknown as Document
@@ -470,9 +470,25 @@ it('places the existing More control after workspace creation in the collapsed r
   new ScheduledTaskView(doc, {list:vi.fn(async()=>[]),workspaces:vi.fn(async()=>[]),save:vi.fn(),action:vi.fn()}).mount()
   const zone = doc.querySelector('.st-more-zone')!, root = doc.querySelector('[data-dsh-sidebar-root]')!
   root.setAttribute('data-dsh-sidebar-wide','false')
-  await vi.waitFor(()=>expect(zone.previousElementSibling).toBe(doc.querySelector('[data-srb-navigation-scroll]')))
+  const group=doc.querySelector('.hHd-Xa_newSessionGroup')!,navigation=doc.querySelector('[data-srb-navigation-scroll]')!
+  navigation.after(group)
+  await vi.waitFor(()=>{expect(zone.parentElement).toBe(group);expect(group.previousElementSibling).toBe(navigation);expect(group.lastElementChild).toBe(zone)})
   doc.querySelector<HTMLButtonElement>('#add-workspace')!.click(); expect(add).toHaveBeenCalledOnce()
   root.setAttribute('data-dsh-sidebar-wide','true')
+  navigation.before(group)
   await vi.waitFor(()=>expect(zone.parentElement).toBe(doc.querySelector('.hHd-Xa_newSessionGroup')))
   expect(doc.querySelectorAll('.st-more')).toHaveLength(1)
+})
+
+it('puts the real new-note action first in the existing More menu and closes it before one native request',async()=>{
+ const w=new Window();windows.push(w);vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
+ const doc=w.document as unknown as Document;doc.body.innerHTML='<div data-dsh-sidebar-root><div class="hHd-Xa_newSessionGroup"><button class="hHd-Xa_newSession">新对话</button></div></div>'
+ let finish!:()=>void;const create=vi.fn(()=>new Promise<void>(resolve=>{finish=resolve}))
+ const view=new ScheduledTaskView(doc,{list:async()=>[],workspaces:async()=>[],save:vi.fn(),action:vi.fn()},undefined,undefined,{newNote:create});view.mount()
+ doc.querySelector<HTMLButtonElement>('.st-more')!.click()
+ const item=doc.querySelector<HTMLButtonElement>('[role=menuitem]')!
+ expect(item.textContent).toBe('新笔记');expect(item.querySelector('.st-icon')).not.toBeNull()
+ item.click();item.click();expect(doc.querySelector('.st-menu')).toBeNull();expect(create).toHaveBeenCalledTimes(1)
+ doc.querySelector<HTMLButtonElement>('.st-more')!.click();expect(doc.querySelector<HTMLButtonElement>('[role=menuitem]')!.disabled).toBe(true)
+ finish();await Promise.resolve();await Promise.resolve()
 })

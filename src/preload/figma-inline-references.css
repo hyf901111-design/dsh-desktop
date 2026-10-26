@@ -92,6 +92,15 @@ body .uV2eYG_root[data-odyssey-deliverable-preview] :is(.uV2eYG_input,.uV2eYG_mi
 body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_mirror { min-height:151px; }
 body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] .uV2eYG_row { min-height:48px; flex:0 0 48px; box-sizing:border-box; padding:8px 11px 8px 8px; }
 .odyssey-deliverable-preview { position:absolute; z-index:2; left:17px; top:15px; width:var(--odyssey-deliverable-slot); height:128px; pointer-events:none; user-select:none; }
+/* Figma 43B: the original 28px SVG surrounds a 20px circle; its anchor is
+   the cover's transformed top-right corner, outside the rotated artwork. */
+.odyssey-deliverable-close { position:absolute; left:calc(50% + 40.27203px); top:-5.99984px; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:transparent; pointer-events:auto; cursor:pointer; transform:none; }
+.odyssey-deliverable-preview[data-odyssey-deliverable-art=report] .odyssey-deliverable-close { left:calc(50% + 30.52251px); top:.97291px; }
+.odyssey-deliverable-close > img { position:absolute; inset:0; width:28px; height:28px; pointer-events:none; }
+.odyssey-deliverable-close-hover { opacity:0; }
+.odyssey-deliverable-close:is(:hover,:focus-visible):not(:disabled) > img:first-child { opacity:0; }
+.odyssey-deliverable-close:is(:hover,:focus-visible):not(:disabled) > .odyssey-deliverable-close-hover { opacity:1; }
+.odyssey-deliverable-close:disabled { opacity:1; cursor:default; }
 .odyssey-deliverable-artboard { position:absolute; left:50%; top:8px; transform:translateX(-50%); display:grid; place-items:center; }
 .odyssey-deliverable-preview[data-odyssey-deliverable-art=ppt] .odyssey-deliverable-artboard { width:122.185px; height:77.018px; }
 .odyssey-deliverable-preview[data-odyssey-deliverable-art=report] .odyssey-deliverable-artboard { width:89.045px; height:113.837px; }

@@ -1,12 +1,14 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
-import {readFile} from 'node:fs/promises'
+import {mkdir,readFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 
 let browser,script
+const shieldArtifacts='/tmp/notes-copilot-feedback-20261026/shield'
 const original='这项结论的成度较高。'
 const answer={version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'目前没有实际来源，无法核实这项判断。'}}
 beforeAll(async()=>{
+ await mkdir(shieldArtifacts,{recursive:true})
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountNotes}from'./src/preload/notes/mount';import{mountFloatingSurfaces}from'./src/preload/floating-surfaces';window.enableFloatingSurfaces=()=>mountFloatingSurfaces(document);import{YjsThreadStore}from'@blocknote/core/yjs';import{DefaultThreadStoreAuth}from'@blocknote/core/comments';import{findChallengeQuote}from'./src/preload/notes/challenge-anchors';import{CHALLENGE_KIND,CHALLENGE_USER}from'./src/preload/notes/challenge-controller';import{noteText}from'./src/shared/workspace-notes';import*as Y from'yjs';
  window.calls=[];window.jobs=[];window.saved={};window.drafts={};window.completed=0;
@@ -241,7 +243,7 @@ it('persists an optimization preview without editing and applies it only through
   // Wait for the new controller and the persisted thread, not the stale array.
   await expect.poll(()=>page.evaluate(id=>window.challenge!==window.previousChallenge&&window.challenge.threads.some(thread=>thread.id===id),id)).toBe(true)
   await page.evaluate(id=>window.challenge.select(id),id);await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(1)
-  await page.locator('.en-challenge-card').screenshot({path:'/tmp/notes-challenge-v16-replacement-preview.png'});await page.locator('.en-challenge-replace').click()
+  await page.locator('.en-challenge-card').screenshot({path:shieldArtifacts+'/notes-challenge-v16-replacement-preview.png'});await page.locator('.en-challenge-replace').click()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
   expect(await page.locator('.en-challenge-replace').count()).toBe(0);expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('resolved'),id)).toBe(true)
   expect(errors).toEqual([])
@@ -418,10 +420,10 @@ it('keeps the Copilot shield static while waiting, animates a real review, and s
   expect(await page.evaluate(()=>window.challenge.phase)).toBe('running')
   expect(await trigger.getAttribute('aria-label')).toBe(waitingLabel)
   expect(await icon.getAttribute('src')).not.toBe(staticSrc)
-  const firstFrame=await icon.screenshot({path:'/tmp/notes-challenge-v16-motion-frame-a.png'})
-  await expect.poll(async()=>firstFrame.equals(await icon.screenshot({path:'/tmp/notes-challenge-v16-motion-frame-b.png'}))).toBe(false)
+  const firstFrame=await icon.screenshot({path:shieldArtifacts+'/notes-challenge-v16-motion-frame-a.png'})
+  await expect.poll(async()=>firstFrame.equals(await icon.screenshot({path:shieldArtifacts+'/notes-challenge-v16-motion-frame-b.png'}))).toBe(false)
   expect(await bounds()).toEqual(waitingBounds)
-  await trigger.screenshot({path:'/tmp/notes-challenge-v16-motion-running.png'})
+  await trigger.screenshot({path:shieldArtifacts+'/notes-challenge-v16-motion-running.png'})
   await finish(page,{...answer,coveredBlockIds:['p']})
   await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false')
   expect(await icon.getAttribute('src')).toBe(staticSrc)
@@ -451,8 +453,8 @@ it.each([{dark:false,locale:'zh'},{dark:true,locale:'zh'},{dark:false,locale:'en
   const trigger=page.locator('.en-challenge-trigger'),icon=trigger.locator('img').first(),avatar=page.locator('.en-challenge-author img').first()
   await avatar.waitFor();await expect.poll(()=>avatar.evaluate(el=>el.complete&&el.naturalWidth>0)).toBe(true)
   expect(await avatar.getAttribute('src')).toBe(await icon.getAttribute('src'))
-  const silhouette=await icon.evaluate(el=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=160;const ctx=canvas.getContext('2d');ctx.drawImage(el,0,0,160,160);return[[8,1.5],[3,6],[13,6],[8,14.5],[1,8],[15,8],[8,12]].map(([x,y])=>ctx.getImageData(x*10,y*10,1,1).data[3])})
-  expect(silhouette).toEqual([255,255,255,255,0,0,0])
+  const silhouette=await icon.evaluate(el=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=160;const ctx=canvas.getContext('2d');ctx.drawImage(el,0,0,160,160);const data=ctx.getImageData(0,0,160,160).data;let left=160,right=0,top=160,bottom=0;for(let y=0;y<160;y++)for(let x=0;x<160;x++)if(data[(y*160+x)*4+3]>100){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}return{width:right-left+1,height:bottom-top+1}})
+  expect(silhouette.width/silhouette.height).toBeGreaterThan(1.04)
   expect(await page.locator('.en-challenge-author strong').first().textContent()).toBe(locale==='en'?'AI Commentator':'AI评论员')
   const metrics=await avatar.evaluate(el=>{const r=el.getBoundingClientRect();return{width:r.width,height:r.height,filter:getComputedStyle(el).filter,opacity:getComputedStyle(el).opacity}})
   expect(metrics).toMatchObject({width:16,height:16});expect(Number(metrics.opacity)).toBeGreaterThanOrEqual(.65)
@@ -463,13 +465,13 @@ it.each([{dark:false,locale:'zh'},{dark:true,locale:'zh'},{dark:false,locale:'en
   expect(await page.locator('.en-challenge-author strong').allTextContents()).toEqual([locale==='en'?'AI Commentator':'AI评论员',locale==='en'?'Me':'我'])
   expect(await page.locator('.en-challenge-author').nth(1).locator('img').count()).toBe(0)
   expect(await page.locator('.en-challenge-author img').count()).toBe(1)
-  await page.locator('.en-challenge-card').screenshot({path:'/tmp/notes-copilot-shield-'+locale+'-'+(dark?'dark':'light')+'.png'})
-  await trigger.screenshot({path:'/tmp/notes-copilot-shield-trigger-'+locale+'-'+(dark?'dark':'light')+'.png'})
+  await page.locator('.en-challenge-card').screenshot({path:shieldArtifacts+'/comment-'+locale+'-'+(dark?'dark':'light')+'.png'})
+  await trigger.screenshot({path:shieldArtifacts+'/trigger-'+locale+'-'+(dark?'dark':'light')+'.png'})
   expect(await page.evaluate(()=>JSON.stringify(window.editor.document))).toBe(originalText);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 
-it('keeps the shield silhouette fixed and only breathes its check while respecting reduced motion',async()=>{
+it('keeps the wider shield silhouette fixed and only breathes its four-point star while respecting reduced motion',async()=>{
  const originalSvg=await readFile('src/preload/notes/assets/challenge-shield.svg','utf8'),busySvg=await readFile('src/preload/notes/assets/challenge-shield-busy.svg','utf8')
  const context=await browser.newContext(),page=await context.newPage()
  try{
@@ -479,28 +481,30 @@ it('keeps the shield silhouette fixed and only breathes its check while respecti
    return svgs.map(svg=>({width:svg.getAttribute('width'),height:svg.getAttribute('height'),viewBox:svg.getAttribute('viewBox'),paths:paths(svg)}))
   })
   for(const animated of geometry.slice(1))expect(animated).toEqual(geometry[0])
+  const center=await page.evaluate(()=>[...document.querySelectorAll('svg')].map(svg=>{const star=svg.querySelector('.copilot-star');if(!star)return null;const box=star.getBBox();return{width:box.width,height:box.height,oldCheck:svg.querySelectorAll('.copilot-check').length}}))
+  for(const star of center){expect(star).not.toBeNull();expect(star.oldCheck).toBe(0);expect(star.width/star.height).toBeCloseTo(1,1)}
   const samples=await page.evaluate(()=>{
    const svgs=[...document.querySelectorAll('svg')].slice(1)
    return svgs.map((svg,index)=>{
     const animations=svg.getAnimations({subtree:true});for(const animation of animations){animation.pause();animation.currentTime=[0,900,1800][index]}
-    const shield=svg.querySelector('.copilot-shield'),check=svg.querySelector('.copilot-check')
-    return{shieldTransform:getComputedStyle(shield).transform,shieldOpacity:getComputedStyle(shield).opacity,checkOpacity:Number(getComputedStyle(check).opacity),animationCount:animations.length}
+    const shield=svg.querySelector('.copilot-shield'),star=svg.querySelector('.copilot-star')
+    return{shieldTransform:getComputedStyle(shield).transform,shieldOpacity:getComputedStyle(shield).opacity,starOpacity:Number(getComputedStyle(star).opacity),animationCount:animations.length}
    })
   })
   for(const sample of samples)expect(sample).toMatchObject({shieldTransform:'none',shieldOpacity:'1',animationCount:1})
-  expect(samples.map(s=>s.checkOpacity)).toEqual([1,.35,1])
-  await page.screenshot({path:'/tmp/notes-copilot-shield-motion-geometry.png'})
+  expect(samples.map(s=>s.starOpacity)).toEqual([1,.35,1])
+  await page.screenshot({path:shieldArtifacts+'/motion-geometry.png'})
   await page.emulateMedia({reducedMotion:'reduce'})
-  expect(await page.evaluate(()=>[...document.querySelectorAll('.copilot-check')].map(s=>getComputedStyle(s).opacity))).toEqual(Array(4).fill('1'))
+  expect(await page.evaluate(()=>[...document.querySelectorAll('.copilot-star')].map(s=>getComputedStyle(s).opacity))).toEqual(Array(4).fill('1'))
   expect(await page.evaluate(()=>document.getAnimations().length)).toBe(0)
-  await page.screenshot({path:'/tmp/notes-copilot-shield-motion-reduced.png'})
+  await page.screenshot({path:shieldArtifacts+'/motion-reduced.png'})
  }finally{await context.close()}
 },15000)
 
 it('keeps a reduced-motion mounted toolbar static throughout a real action with its accessible busy explanation',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.emulateMedia({reducedMotion:'reduce'})
-  const trigger=page.locator('.en-challenge-trigger'),icon=trigger.locator('img').first(),before=await icon.screenshot({path:'/tmp/notes-motion-reduced-static.png'})
+  const trigger=page.locator('.en-challenge-trigger'),icon=trigger.locator('img').first(),before=await icon.screenshot({path:shieldArtifacts+'/notes-motion-reduced-static.png'})
   await start(page,'optimize')
   expect(await trigger.getAttribute('aria-busy')).toBe('true');expect(await trigger.getAttribute('aria-description')).toContain('正在执行')
   await expect.poll(async()=>before.equals(await icon.screenshot())).toBe(true)
@@ -509,7 +513,7 @@ it('keeps a reduced-motion mounted toolbar static throughout a real action with 
   await expect.poll(async()=>before.equals(await icon.screenshot())).toBe(false)
   await page.emulateMedia({reducedMotion:'reduce'})
   await expect.poll(async()=>before.equals(await icon.screenshot())).toBe(true)
-  await trigger.screenshot({path:'/tmp/notes-challenge-v16-motion-reduced-toolbar.png'})
+  await trigger.screenshot({path:shieldArtifacts+'/notes-challenge-v16-motion-reduced-toolbar.png'})
   await finish(page);await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false')
   expect(before.equals(await icon.screenshot())).toBe(true);expect(errors).toEqual([])
  }finally{await context.close()}
@@ -737,7 +741,7 @@ it('shows an in-button optimization ring, keeps it on reopening, and clears it o
   await page.evaluate(id=>window.challenge.select(id),id);await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
   const button=page.getByRole('button',{name:'AI优化',exact:true}),ring=button.locator('[role="progressbar"]')
   await ring.waitFor();expect(await button.getAttribute('aria-busy')).toBe('true');expect(await button.isDisabled()).toBe(true)
-  await page.screenshot({path:'/tmp/notes-optimize-button-running-20261021.png'})
+  await page.screenshot({path:shieldArtifacts+'/notes-optimize-button-running-20261021.png'})
   expect(await ring.evaluate(el=>{const ring=el.getBoundingClientRect(),button=el.parentElement.getBoundingClientRect();return ring.width>0&&ring.left>=button.left&&ring.right<button.right&&getComputedStyle(el).borderRadius==='50%'})).toBe(true)
   await page.evaluate(id=>{window.challenge.close(id);window.challenge.select(id)},id);await ring.waitFor();expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(0)
   await page.emulateMedia({reducedMotion:'reduce'});expect(await ring.evaluate(el=>getComputedStyle(el).animationName)).toBe('none')
@@ -745,7 +749,7 @@ it('shows an in-button optimization ring, keeps it on reopening, and clears it o
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
   await page.evaluate(id=>window.challenge.select(id),id);await page.getByRole('button',{name:'AI优化',exact:true}).waitFor();expect(await ring.count()).toBe(0);expect(await button.isEnabled()).toBe(true)
   expect(await page.evaluate(()=>window.messages().at(-1))).toBe('没能完成，请重试');expect(errors).toEqual([])
-  await page.screenshot({path:'/tmp/notes-optimize-background-finished-20261021.png'})
+  await page.screenshot({path:shieldArtifacts+'/notes-optimize-background-finished-20261021.png'})
  }finally{await context.close()}
 },15000)
 
@@ -761,7 +765,7 @@ it('shows a flowing perimeter only during work, keeps picker geometry and clicks
    await expect.poll(async()=>(await perimeter()).angle).not.toBe(first.angle)
    expect(await trigger.boundingBox()).toEqual(before)
    await trigger.click();await page.getByRole('slider',{name:'随航强度'}).waitFor();await page.keyboard.press('Escape')
-   await trigger.screenshot({path:'/tmp/notes-challenge-orbit-'+(dark?'dark':'light')+'-20261022.png'})
+   await trigger.screenshot({path:shieldArtifacts+'/notes-challenge-orbit-'+(dark?'dark':'light')+'-20261022.png'})
   }
   await page.emulateMedia({reducedMotion:'reduce'});await expect.poll(async()=>(await perimeter()).animation).toBe('none');expect((await perimeter()).background).toContain('conic-gradient')
   await finish(page);await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false');expect((await perimeter()).animation).toBe('none')

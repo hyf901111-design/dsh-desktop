@@ -66,6 +66,7 @@ it('pauses between native steps and never overwrites an existing delivered file'
  const path=join(f.cwd,'人工智能周期与资产配置.pptx');await writeFile(path,'用户已保存的文件')
  await expect(f.runtime.checkpoint({...f.input,stage:'deliver'})).rejects.toThrow(/预置文件未能保存/)
  await f.agent.whenIdle();expect(await readFile(path,'utf8')).toBe('用户已保存的文件');expect(f.outside).toEqual([])
+ expect(JSON.stringify(f.agent.session.events.filter(e=>e.type==='tool/result'))).not.toContain('ework-home-guide-delivery')
 })
 it('does not prepare a nonempty native session',async()=>{
  const f=await fixture()
@@ -127,6 +128,7 @@ it('preserves a changed source attachment and refuses to publish a mismatched re
  const source=join(f.cwd,'Vanguard-2026经济与市场展望.pdf');await writeFile(source,'用户替换的研报')
  await expect(f.runtime.checkpoint({...f.input,stage:'deliver'})).rejects.toThrow(/预置文件未能保存/)
  await f.agent.whenIdle();expect(await readFile(source,'utf8')).toBe('用户替换的研报')
+ expect(JSON.stringify(f.agent.session.events.filter(e=>e.type==='tool/result'))).not.toContain('ework-home-guide-delivery')
  await expect(readFile(join(f.cwd,'人工智能周期与资产配置.pptx'))).rejects.toThrow()
  expect(f.outside).toEqual([])
 })
@@ -155,6 +157,7 @@ it.each([false,true])('accepts an immediate ordinary followup while tutorial can
  const stopping=f.runtime.disposeRun(f.input)
  f.agent.followup(createUserMessage({content:[{type:'text',text:'结束演示后立刻继续普通问题'}],source:{kind:'user'}}))
  await stopping;await f.agent.whenIdle()
+ expect(JSON.stringify(f.agent.session.events.filter(e=>e.type==='tool/result'))).not.toContain('ework-home-guide-delivery')
  expect(f.outside).toHaveLength(1);expect(f.errors).toEqual([])
  expect(f.agent.session.events.filter(e=>e.type==='user/message').at(-1).data.content[0].text).toBe('结束演示后立刻继续普通问题')
 })

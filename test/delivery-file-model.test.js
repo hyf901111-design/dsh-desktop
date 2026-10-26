@@ -5,6 +5,7 @@ import {
   deliveryPathsFromMarkdown,
   mergeDeliveryPaths,
   verifiedResearchDeliveryPaths,
+  homeGuideDeliveryPaths,
   deliveryModelSource
 } from '../scripts/lib/delivery-file-model.mjs'
 
@@ -221,6 +222,25 @@ describe('verified research tool result delivery', () => {
     for (const message of [null, {}, { source: { kind: 'tool' }, content: [{ type: 'tool-result', content: [{ type: 'text', text: '{bad json' }] }] }]) {
       expect(verifiedResearchDeliveryPaths(message)).toEqual([])
     }
+  })
+})
+
+describe('private home guide durable delivery', () => {
+  const message = (tool='home_presentation_publish', overrides={}, error=false) => ({source:{kind:'tool',callId:'publish-1'},content:[{type:'tool-result',toolCallId:'publish-1',isError:error,content:[{type:'text',text:JSON.stringify({kind:'ework-home-guide-delivery',version:1,tool,ok:true,status:'completed',files:tool==='home_presentation_publish'?[{format:'pptx',path:'/work/收益100% a%20b.pptx'},{format:'pdf',path:'/work/原始 (中文) 研报.pdf'}]:[{format:'html',path:'/work/研究 (中文) #1.html'},{format:'pdf',path:'/work/研究 (中文) #1.pdf'}],...overrides})}]}]})
+  it.each(['home_presentation_publish','home_report_publish'])('recognizes only the successful paired %s result after its presenter is gone',tool=>{
+    const result=homeGuideDeliveryPaths(message(tool),tool)
+    expect(result).toEqual(tool==='home_presentation_publish'?['/work/收益100% a%20b.pptx','/work/原始 (中文) 研报.pdf']:['/work/研究 (中文) #1.html','/work/研究 (中文) #1.pdf'])
+    expect(homeGuideDeliveryPaths(message(tool),'ordinary_tool')).toEqual([])
+    expect(homeGuideDeliveryPaths(message(tool),tool==='home_report_publish'?'home_presentation_publish':'home_report_publish')).toEqual([])
+  })
+  it.each([{ok:false},{version:2},{status:'failed'},{status:'cancelled'},{status:'pending'},{files:[]},{files:[{format:'pptx',path:'/work/a.pptx'}]},{files:[{format:'pptx',path:'https://example.com/a.pptx'},{format:'pdf',path:'/work/a.pdf'}]},{files:[{format:'pptx',path:'/work/../a.pptx'},{format:'pdf',path:'/work/a.pdf'}]},{files:[{format:'html',path:'/work/a.html'},{format:'pdf',path:'/work/a.pdf'}]}])('declines incomplete or unsafe demo output %j',overrides=>{
+    expect(homeGuideDeliveryPaths(message('home_presentation_publish',overrides),'home_presentation_publish')).toEqual([])
+  })
+  it('rejects failed, unpaired, assistant and naked JSON messages',()=>{
+    expect(homeGuideDeliveryPaths(message('home_presentation_publish',{},true),'home_presentation_publish')).toEqual([])
+    const wrong=message();wrong.content[0].toolCallId='different-call';expect(homeGuideDeliveryPaths(wrong,'home_presentation_publish')).toEqual([])
+    const assistant=message();assistant.source.kind='assistant';expect(homeGuideDeliveryPaths(assistant,'home_presentation_publish')).toEqual([])
+    expect(homeGuideDeliveryPaths({kind:'ework-home-guide-delivery',ok:true},'home_presentation_publish')).toEqual([])
   })
 })
 

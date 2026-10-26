@@ -100,6 +100,11 @@ it('uses actual native components and live bridge links, then unmounts only the 
  expect(f.doc.querySelector('[data-home-guide-native] [data-research-canvas]')).not.toBeNull()
  for(const command of ['board-library','board-watchlist','board-quote','board-news','board-arrange','board-link','board-add'])expect(await f.command(command)).toMatchObject({ok:true})
  expect(f.doc.querySelectorAll('[data-home-guide-native] [data-financial-widget]')).toHaveLength(3)
+ expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([])
+ // Native connections are intentionally shown for the user's selected endpoint.
+ const quote=f.workspace.getSnapshot().artifacts.find(node=>node.containerSpec.widget==='quote')
+ await React.act(async()=>f.workspace.updateSelection([quote.id],'replace'))
+ await pump(()=>!!f.doc.querySelector('[data-home-guide-native] [data-financial-link]'))
  expect(f.doc.querySelector('[data-home-guide-native] [data-financial-link]')).not.toBeNull()
  expect(f.doc.querySelectorAll('[data-home-guide-native] .ew-watch-row')).toHaveLength(5)
  expect(f.doc.querySelector('[data-home-guide-native]').textContent).toContain('行情桥测试服务')

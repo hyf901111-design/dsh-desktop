@@ -32,7 +32,7 @@ export function createHomePresentationReplay(metadata){
   intro:`好的，我先阅读附件，提炼适合内部交流的观点和关键数据，再整理成《${title}》${slides}页公司风格汇报。\n\n这份${metadata.sourcePages}页资料由 ${metadata.publisher??'Vanguard'} 于${metadata.publicationDate}发布。我会沿用报告当时的历史预测和数据口径，在开篇说明资料时点。`,
   structure,
   layout:'资料与章节已经梳理好，正在整理正文和图表。\n\n- 宏观与 AI 投入部分：用数据对照解释增长预期及资金能力，避免只罗列数字。\n- 估值与配置部分：把情景假设、回报预测和风险条件放在一起，便于比较。\n- 版式部分：统一公司封面、章节目录、字体与页脚，核对表头、图表标签、来源页码和正文对齐。\n\n接下来完成文件保存，再打开成稿检查阅读效果。',
-  delivery:`已完成并保存《${title}》${slides}页公司风格汇报${chapters.length?`，共${chapters.length}个章节`:''}，可编辑的 PPT 和原始研报已保存到当前工作区。\n\n**内容包括**\n\n- 报告要点与宏观预测，先交代结论、资料时点和阅读框架。\n- AI 投资、资本开支与生产率路径，用图表展示关键证据。\n- 估值情景、资产角色和风险观察，把判断与成立条件一起呈现。\n\n**文件说明**\n\n关键图表与来源标注已保留，PPT可继续编辑。已保留规范目录与章节导航；原报告的历史预测与本稿研读判断分开标注。建议先浏览目录和核心结论，再按章节检查图表与风险观察。\n\n[打开可编辑演示文稿](./${HOME_PRESENTATION_FILE})\n\n[查看原始研究报告](./${HOME_PRESENTATION_SOURCE_FILE})\n\n如果需要调整页内表达或补充内容，可以继续在当前对话提出修改要求。`,
+  delivery:`已完成并保存《${title}》${slides}页公司风格汇报${chapters.length?`，共${chapters.length}个章节`:''}，可编辑的 PPT 和原始研报已保存到当前工作区。\n\n**内容包括**\n\n- 报告要点与宏观预测，先交代结论、资料时点和阅读框架。\n- AI 投资、资本开支与生产率路径，用图表展示关键证据。\n- 估值情景、资产角色和风险观察，把判断与成立条件一起呈现。\n\n**文件说明**\n\n关键图表与来源标注已保留，PPT可继续编辑。已保留规范目录与章节导航；原报告的历史预测与本稿研读判断分开标注。建议先浏览目录和核心结论，再按章节检查图表与风险观察。\n\n如果需要调整页内表达或补充内容，可以继续在当前对话提出修改要求。`,
   todos:['研读报告，核对来源与数据时点',`按章节组织${slides}页汇报，统一品牌排版并检查图表`,'保存可编辑汇报与原始报告']
  }
 }
@@ -149,7 +149,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
     // The ordinary host installs its own outer model-selection waterfall.
     // This scoped preset must veto that route, including its post-next override.
     run.off.push(agent.ctx.on('agent/request',()=>{current(run);return{provider:PROVIDER,model:'v1',maxTokens:1024}},{prepend:true}))
-    run.off.push(agent.ctx.tools.register(defineTool({name:TOOL,description:`交付基于固定Vanguard研报预制的${metadata.presentationSlides}页公司风格PPT，不能接受路径或内容参数。`,parameters:{},output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result}]},async execute(args,exec){
+    run.off.push(agent.ctx.tools.register(defineTool({name:TOOL,description:`交付基于固定Vanguard研报预制的${metadata.presentationSlides}页公司风格PPT，不能接受路径或内容参数。`,parameters:{},output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result},{type:'text',text:JSON.stringify({kind:'ework-home-guide-delivery',version:1,tool:TOOL,ok:true,status:'completed',files:[{format:'pptx',path:run.prepared.presentationPath},{format:'pdf',path:run.sourcePath}]})}]},async execute(args,exec){
      current(run);exec.signal?.throwIfAborted();if(exec.agent!==agent||Object.keys(args).length||!run.playing||run.allowed!==3)throw Error('示例交付上下文已变化。')
      if(await realpath(run.cwd)!==run.root)throw Error('示例目录已变化。')
      const sourceInfo=await lstat(run.sourcePath);if(!sourceInfo.isFile()||sourceInfo.isSymbolicLink()||hash(await readFile(run.sourcePath))!==run.metadata.sourceSha256)throw Error('原始研报附件已变化，未交付演示文件。')

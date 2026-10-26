@@ -102,8 +102,8 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true,deferRegistration=false,smartMode='ready'}={}) {
-  const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion }), errors = [], external = []
+async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,deviceScaleFactor=1,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true,deferRegistration=false,smartMode='ready'}={}) {
+  const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, deviceScaleFactor, reducedMotion }), errors = [], external = []
   page.on('pageerror', error => errors.push(error.stack||error.message))
   const smartRequests=[];let releaseSmart;const smartGate=new Promise(resolve=>releaseSmart=resolve)
   await page.route('**/*', async route => {
@@ -148,25 +148,62 @@ async function preserved(page) {
   expect(await page.evaluate(() => window.guideProbe.shell.snapshot.draft)).toBe(draft)
   expect(await page.evaluate(() => { const {registry,memory}=window.guideProbe,nodes=registry.for('guide-browser-session').getSnapshot().artifacts; return !nodes.length||JSON.stringify(JSON.parse(memory.get('sherlock.research.canvas.artifacts.v1:guide-browser-session')).map(n=>n.id))===JSON.stringify(nodes.map(n=>n.id)) })).toBe(true)
 }
-it('keeps the four newly added financial cards at their real native default widths until Arrange',async()=>{
+it.each([{width:1380,height:900},{width:1900,height:1090}])('stages equal-height watch and quote with edge-filling feed rows before the visible Arrange action at $width × $height',async({width,height})=>{
+ const{page,errors}=await fixture({nativeLayout:true,width,height,guideTop:34,guideBottom:10})
+ const output='/tmp/home-board-staged-layout-20261026/'+width+'x'+height;await mkdir(output,{recursive:true})
+ try{
+  await page.evaluate(()=>{const host=document.getElementById('guide-host');host.style.left='0px';host.style.right='384px';document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  const snapshot=()=>page.evaluate(()=>{const workspace=window.guideProbe.registry.for('guide-browser-session'),nodes=workspace.getSnapshot().artifacts;return{nodes:Object.fromEntries(nodes.map(node=>[node.containerSpec.widget||'calendar',{...node,left:node.x-node.width/2,right:node.x+node.width/2,top:node.y-node.height/2,bottom:node.y+node.height/2}])),selection:workspace.getSnapshot().selection,viewport:workspace.getSnapshot().viewport}})
+  await succeeds(page,'mount-board');await succeeds(page,'board-indices');await succeeds(page,'board-watchlist')
+  const single=await snapshot();expect(single.nodes.watchlist.width).toBeLessThan(single.nodes.indices.width*.5)
+  await succeeds(page,'board-quote');const pair=await snapshot(),{watchlist:watch,quote,indices}=pair.nodes
+  expect(watch.height).toBe(quote.height);expect(watch.top).toBe(quote.top);expect(watch.width).toBeLessThan(quote.width);expect(Math.abs(watch.left-indices.left)).toBeLessThan(1);expect(Math.abs(quote.right-indices.right)).toBeLessThan(1);expect(quote.left-watch.right).toBeGreaterThan(0)
+  await page.screenshot({path:output+'/adding-pair.png'})
+  await succeeds(page,'board-news');const newsOnly=await snapshot();expect(newsOnly.nodes.news.width).toBeLessThan(indices.width*.55);expect(newsOnly.nodes.news.top).toBeGreaterThan(watch.bottom)
+  await succeeds(page,'board-announcements');await succeeds(page,'board-calendar');const adding=await snapshot(),{news,announcements,calendar}=adding.nodes
+  expect(news.top).toBe(announcements.top);expect(news.height).toBe(announcements.height);expect(Math.abs(news.left-indices.left)).toBeLessThan(1);expect(Math.abs(announcements.right-indices.right)).toBeLessThan(1);expect(announcements.left-news.right).toBeGreaterThan(0);expect(calendar.top).toBeGreaterThan(news.bottom)
+  expect(await command(page,'board-link')).toMatchObject({ok:false,message:'请先整理看板，再连接组件。'})
+  const geometry=()=>page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('#guide-host [data-financial-widget]')].filter(node=>['news','announcements'].includes(node.dataset.financialWidget)).map(node=>{const card=node.closest('[data-research-node-id]'),box=card.getBoundingClientRect(),header=card.querySelector('.ew-grid-header').getBoundingClientRect(),footer=node.querySelector('.ew-financial-footer').getBoundingClientRect();return[node.dataset.financialWidget,{top:box.top,bottom:box.bottom,height:box.height,header:header.toJSON(),footer:footer.toJSON()}]})))
+  await expect.poll(async()=>Math.abs((await geometry()).news.height-news.height)).toBeLessThan(1);const addingGeometry=await geometry()
+  await page.screenshot({path:output+'/adding-feeds.png'})
+  await succeeds(page,'board-arrange');const arranged=await snapshot();expect(arranged.nodes.news.height).toBeGreaterThan(news.height+20);expect(arranged.nodes.announcements.height).toBeGreaterThan(announcements.height+20);expect(arranged.nodes.quote.width/arranged.nodes.watchlist.width).toBeGreaterThan(1.4);expect(arranged.viewport.scale).toBe(1)
+  await expect.poll(async()=>Math.abs((await geometry()).news.height-arranged.nodes.news.height)).toBeLessThan(1);const arrangedGeometry=await geometry()
+  for(const kind of ['news','announcements']){expect(arrangedGeometry[kind].height).toBeGreaterThan(addingGeometry[kind].height+20);expect(arrangedGeometry[kind].header.top).toBeGreaterThanOrEqual(arrangedGeometry[kind].top-1);expect(arrangedGeometry[kind].footer.bottom).toBeLessThanOrEqual(arrangedGeometry[kind].bottom+1);expect(arrangedGeometry[kind].footer.height).toBeGreaterThanOrEqual(20)}
+  await page.screenshot({path:output+'/arranged.png'});await writeFile(output+'/stages.json',JSON.stringify({single,pair,adding,arranged,addingGeometry,arrangedGeometry},null,2));await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},30000)
+it('clears owned component selections after each added widget and after Arrange and connections',async()=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1380,height:900,guideTop:34,guideBottom:10})
+ try{
+  await page.evaluate(()=>{const host=document.getElementById('guide-host');host.style.left='0px';host.style.right='384px';document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange','board-link']){await succeeds(page,step);expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().selection.selectedNodeIds),step+' should leave no owned blue outline').toEqual([])}
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},30000)
+it('preserves a later same-value user re-selection while adding and disposing the demo',async()=>{
  const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000})
  try{
-  await succeeds(page,'mount-board');await succeeds(page,'board-indices')
-  for(const kind of ['watchlist','quote','news','announcements']){
-   const expected=await page.evaluate(kind=>{const actual=window.guideProbe.registry.for('guide-browser-session'),reference=window.guideProbe.registry.for('native-default-reference');reference.setCanvasSize(actual.getSnapshot().canvasSize);reference.setWorkbenchWidth(actual.getSnapshot().canvasSize.availableWidth);const node=reference.createFinancialWidget(kind);return node.width},kind)
-   await succeeds(page,'board-'+kind)
-   const actual=await page.evaluate(kind=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.find(node=>node.containerSpec?.widget===kind).width,kind)
-   expect(actual,kind+' native initial width').toBe(expected)
-  }
-  const defaults=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.filter(node=>node.containerSpec.widget!=='indices').map(({id,width,height})=>({id,width,height})))
-  await succeeds(page,'board-calendar')
-  expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.filter(node=>['watchlist','quote','news','announcements'].includes(node.containerSpec.widget)).map(({id,width,height})=>({id,width,height})))).toEqual(defaults)
-  expect(await command(page,'board-link')).toMatchObject({ok:false,message:'请先整理看板，再连接组件。'})
-  await mkdir('/tmp/home-board-default-frame-20261026',{recursive:true});await page.screenshot({path:'/tmp/home-board-default-frame-20261026/native-defaults.png'})
-  await succeeds(page,'board-arrange')
-  const sizes=await page.evaluate(()=>{const nodes=window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts;return Object.fromEntries(nodes.map(node=>[node.containerSpec?.widget,node.width]))})
-  expect(sizes.quote/sizes.watchlist).toBeGreaterThan(1.4);expect(sizes.quote/sizes.watchlist).toBeLessThan(1.7);expect(Math.abs(sizes.news-sizes.announcements)).toBeLessThan(1)
-  await preserved(page);expect(errors).toEqual([])
+  await succeeds(page,'mount-board')
+  await page.evaluate(()=>{const workspace=window.guideProbe.registry.for('guide-browser-session');const stop=workspace.subscribe(()=>{const node=workspace.getSnapshot().artifacts.find(node=>node.containerSpec.widget==='watchlist');if(!node||window.guideProbe.userPause)return;window.guideProbe.userPause=node.id;queueMicrotask(()=>{window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:false}}));stop()})})})
+  const pending=command(page,'board-watchlist');await expect.poll(()=>page.evaluate(()=>window.guideProbe.userPause),{timeout:6000}).toBeTruthy()
+  const before=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().selection)
+  await page.locator('[data-research-node-id] .ew-grid-header').click({position:{x:130,y:12}})
+  const after=await page.evaluate(()=>{const p=window.guideProbe,w=p.registry.for('guide-browser-session');p.userSelection=w.getSnapshot().selection;return p.userSelection});expect(after).toEqual(before)
+  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing:true}})))
+  expect(await pending).toMatchObject({ok:true});expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().selection)).toEqual(after)
+  await succeeds(page,'board-quote');expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().selection)).toEqual(after)
+  await succeeds(page,'dispose');expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().selection)).toEqual(after);expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
+it.each(['complete','cancelled'])('retains the user component selection during %s connection and subsequent disposal',async mode=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1380,height:900,guideTop:34,guideBottom:10})
+ try{
+  await page.evaluate(()=>{const host=document.getElementById('guide-host');host.style.left='0px';host.style.right='384px';document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange'])await succeeds(page,step)
+  await page.evaluate(()=>{const p=window.guideProbe,w=p.registry.for('guide-browser-session'),quote=w.getSnapshot().artifacts.find(node=>node.containerSpec.widget==='quote');w.updateSelection([quote.id],'replace');p.userSelection=w.getSnapshot().selection})
+  if(mode==='cancelled')await page.evaluate(()=>window.addEventListener('sherlock:home-guide-cue',event=>{if(event.detail.action==='drag')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-request',{detail:{runId:'guide-browser-run',requestId:'cancel-selection-lease',sessionId:'guide-browser-session',hostId:'guide-host',command:'dispose'}}))}))
+  expect(await command(page,'board-link')).toMatchObject({ok:mode==='complete'});expect(await page.evaluate(()=>{const p=window.guideProbe;return JSON.stringify(p.registry.for('guide-browser-session').getSnapshot().selection)===JSON.stringify(p.userSelection)})).toBe(true)
+  await succeeds(page,'dispose');expect(await page.evaluate(()=>{const p=window.guideProbe;return JSON.stringify(p.registry.for('guide-browser-session').getSnapshot().selection)===JSON.stringify(p.userSelection)})).toBe(true);expect(errors).toEqual([])
  }finally{await page.close()}
 },30000)
 it('smoothly frames all four arranged cards before connecting, retaining readable text and layout',async()=>{
@@ -181,10 +218,34 @@ it('smoothly frames all four arranged cards before connecting, retaining readabl
   expect(result.frames).toHaveLength(3)
   const first=result.frames[0];expect(first.cards).toHaveLength(4)
   for(const frame of result.frames)for(const card of frame.cards){expect(card.top).toBeGreaterThanOrEqual(frame.canvas.top-1);expect(card.bottom).toBeLessThanOrEqual(frame.canvas.bottom-20);expect(card.left).toBeGreaterThanOrEqual(frame.canvas.left-1);expect(card.right).toBeLessThanOrEqual(frame.canvas.right+1);expect(parseFloat(card.font)).toBeGreaterThanOrEqual(11)}
-  expect(new Set(first.scrolls.map(value=>Math.round(value))).size).toBeGreaterThan(5);expect(result.pause.after).toBe(result.pause.held);expect(result.cells).toEqual(before);expect(await page.locator('[data-financial-link]').count()).toBe(3)
+  expect(new Set(first.scrolls.map(value=>Math.round(value))).size).toBeGreaterThan(5);expect(result.pause.after).toBe(result.pause.held);expect(result.cells).toEqual(before);expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.filter(node=>node.containerSpec.linkedSourceId||node.containerSpec.linkedWatchlistId).length)).toBe(3)
   await mkdir('/tmp/home-board-default-frame-20261026',{recursive:true});await page.screenshot({path:'/tmp/home-board-default-frame-20261026/four-cards-linked.png'});await writeFile('/tmp/home-board-default-frame-20261026/framing.json',JSON.stringify(result,null,2));await preserved(page);expect(errors).toEqual([])
  }finally{await page.close()}
 },40000)
+it.each([{width:1255,height:818,deviceScaleFactor:1.1,right:348},{width:1380,height:900,deviceScaleFactor:1,right:384}])('keeps all four complete cards visible throughout real pointer connections at the formal16 native viewport $width × $height',async({width,height,deviceScaleFactor,right})=>{
+ const{page,errors}=await fixture({nativeLayout:true,width,height,deviceScaleFactor,guideTop:34,guideBottom:10,reducedMotion:'no-preference'})
+ const output='/tmp/home-board-formal16-frame-20261026/'+width+'x'+height;await mkdir(output,{recursive:true})
+ try{
+  await page.addStyleTag({content:await readFile('src/preload/home-guides.css','utf8')})
+  await page.evaluate(right=>{
+   const host=document.getElementById('guide-host');host.style.left='0px';host.style.right=right+'px';document.body.dataset.dsDarkTheme='';window.guideProbe.view.update({view:'research'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.formalFrames=[]
+   window.guideProbe.formalPointer=window.guideProbe.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})
+   window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(!d.requestId)return;const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));void window.guideProbe.formalPointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action,onFrame:frame=>{if(d.action!=='drag'||!['pressed','dragging','released'].includes(frame.phase))return;const canvas=host.querySelector('[data-research-canvas]'),box=canvas.getBoundingClientRect();window.guideProbe.formalFrames.push({phase:frame.phase,draftPath:document.querySelector('[data-home-guide-connection] path')?.getAttribute('d'),nativeLinks:host.querySelectorAll('[data-financial-link]').length,point:{x:frame.x,y:frame.y},canvas:{top:box.top,bottom:Math.min(innerHeight,box.bottom),left:box.left,right:box.right},cards:[...host.querySelectorAll('[data-financial-widget]')].filter(node=>['watchlist','quote','news','announcements'].includes(node.dataset.financialWidget)).map(node=>{const card=node.closest('[data-research-node-id]'),r=card.getBoundingClientRect();return{widget:node.dataset.financialWidget,top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height,font:getComputedStyle(node).fontSize,chartHeight:node.querySelector('[data-financial-chart]')?.getBoundingClientRect().height??null}})})}}).then(()=>reply(true),error=>reply(false,error.message))})
+  },right)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange'])await succeeds(page,step)
+  const before=await page.evaluate(()=>{const w=window.guideProbe.registry.for('guide-browser-session'),canvas=document.querySelector('#guide-host [data-research-canvas]');canvas.scrollTop=canvas.scrollHeight;return{cells:w.getWorkbenchCells(),canvas:{clientWidth:canvas.clientWidth,clientHeight:canvas.clientHeight,bounds:canvas.getBoundingClientRect().toJSON(),scrollPaddingBottom:getComputedStyle(canvas).scrollPaddingBottom},viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio}}})
+  expect(before.canvas.clientWidth).toBeGreaterThan(width===1255?790:880);expect(before.canvas.clientWidth).toBeLessThan(width===1255?850:930);expect(before.canvas.clientHeight).toBeGreaterThan(width===1255?690:770);expect(before.canvas.clientHeight).toBeLessThan(width===1255?720:810);expect(before.canvas.scrollPaddingBottom).toBe('80px')
+  await succeeds(page,'board-link')
+  const result=await page.evaluate(()=>({frames:window.guideProbe.formalFrames,cells:window.guideProbe.registry.for('guide-browser-session').getWorkbenchCells()}))
+  await expect.poll(()=>page.locator('#guide-host [data-financial-widget="quote"] [data-financial-chart]').count()).toBe(1)
+  const finalGeometry=await page.evaluate(()=>{const host=document.getElementById('guide-host'),canvas=host.querySelector('[data-research-canvas]'),toolbar=document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"]'),quote=host.querySelector('[data-financial-widget="quote"]'),chart=quote.querySelector('[data-financial-chart]'),card=quote.closest('[data-research-node-id]');return{canvas:canvas.getBoundingClientRect().toJSON(),toolbar:toolbar.getBoundingClientRect().toJSON(),quote:card.getBoundingClientRect().toJSON(),chart:chart.getBoundingClientRect().toJSON(),footers:[...host.querySelectorAll('[data-financial-widget]')].filter(node=>['watchlist','quote','news','announcements'].includes(node.dataset.financialWidget)).map(node=>node.querySelector('.ew-financial-footer').getBoundingClientRect().toJSON())}})
+  await page.screenshot({path:output+'/four-cards-linked.png'});await writeFile(output+'/framing.json',JSON.stringify({before,...result,finalGeometry},null,2))
+  expect(finalGeometry.chart.height).toBeGreaterThan(80);expect(finalGeometry.chart.top).toBeGreaterThan(finalGeometry.quote.top);expect(finalGeometry.chart.bottom).toBeLessThan(finalGeometry.quote.bottom);for(const footer of finalGeometry.footers)expect(footer.bottom).toBeLessThan(finalGeometry.toolbar.top-8)
+  expect(result.frames.length).toBeGreaterThan(20);expect(result.frames.some(frame=>frame.phase==='dragging')).toBe(true);expect(new Set(result.frames.filter(frame=>frame.phase==='dragging').map(frame=>frame.draftPath).filter(Boolean)).size).toBeGreaterThan(5)
+  for(const frame of result.frames){expect(frame.cards).toHaveLength(4);for(const card of frame.cards){expect(card.top,card.widget+' complete header during '+frame.phase).toBeGreaterThanOrEqual(frame.canvas.top-1);expect(card.bottom,card.widget+' complete footer during '+frame.phase).toBeLessThanOrEqual(frame.canvas.bottom-20);expect(card.left).toBeGreaterThanOrEqual(frame.canvas.left-1);expect(card.right).toBeLessThanOrEqual(frame.canvas.right+1);expect(parseFloat(card.font)).toBeGreaterThanOrEqual(11);if(card.widget==='quote'&&card.chartHeight!==null)expect(card.chartHeight).toBeGreaterThan(80)}}
+  expect(result.cells).toEqual(before.cells);expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.filter(node=>node.containerSpec.linkedSourceId||node.containerSpec.linkedWatchlistId).length)).toBe(3);await preserved(page);expect(errors).toEqual([])
+ }finally{await page.evaluate(()=>window.guideProbe.formalPointer?.dispose()).catch(()=>{});await page.close()}
+},45000)
 it.each(['user-layout','disposed'])('does not link or replace the current layout when %s interrupts the initial smooth scroll',async mode=>{
  const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000,reducedMotion:'no-preference'})
  try{
@@ -218,7 +279,7 @@ it.each([{width:1460,height:1000},{width:580,height:1000},{width:1080,height:640
   expect(state.requests.some(r=>r.action==='quotes'&&r.asset==='index')).toBe(true);expect(state.requests.some(r=>r.action==='announcements'&&r.symbols?.[0]?.code==='000858')).toBe(true)
   expect(state.calendar.some(r=>r.action==='list')).toBe(true);expect(state.calendar.some(r=>r.action==='save')).toBe(false)
   expect(state.nodes.filter(n=>n.containerSpec.type==='financial-widget').every(n=>n.containerSpec.refreshEnabled!==false)).toBe(true)
-  expect(state.disk.map(n=>n.id).sort()).toEqual(state.nodes.map(n=>n.id).sort());expect(await page.locator('[data-financial-link]').count()).toBe(3)
+  expect(state.disk.map(n=>n.id).sort()).toEqual(state.nodes.map(n=>n.id).sort());expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.filter(node=>node.containerSpec.linkedSourceId||node.containerSpec.linkedWatchlistId).length)).toBe(3)
   expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   expect(await page.locator('.ew-indices-grid').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true)
   await preserved(page);expect(errors).toEqual([]);expect(external).toEqual([])

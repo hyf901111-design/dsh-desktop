@@ -10,14 +10,15 @@ import {reportRuntimeFixture} from './fixtures/home-report-runtime.js'
 import {createUserMessage} from '@deepseek-ai/dsh-llm'
 import {HOME_REPORT_PATH,HOME_REPORT_SKILL_ID} from '../packages/dsh-research-task-runtime/home-report-contract.js'
 import {patchHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
-const evidence='/tmp/home-demo-output-input-20261026'
+import {patchDeliverableCards} from '../scripts/lib/deliverable-cards.mjs'
+const evidence=process.env.SHERLOCK_TEST_DEMO_OUTPUT_EVIDENCE||'/tmp/home-demo-output-input-20261026'
 let browser,entry,conversationSource,runtimeSource,commandsSource,triggersSource,deliverySource,fileDropSource
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  conversationSource=patchHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__Todo=TodoDock;exports.__User=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
  commandsSource=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__Popup=PopupSelectView;')
  triggersSource=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__Menu=MenuView;')
- deliverySource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8')
+ deliverySource=patchDeliverableCards(await readFile('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8'))
  fileDropSource=patchDshFileDropClientSource(await readFile('test/fixtures/dsh-file-drop-1.0.0-client.js','utf8'));if(!fileDropSource)throw Error('Actual file-drop fixture drifted')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{MarkdownText}from'@deepseek-ai/dsh-client-ui-primitives';import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomePresentationGuide}from'./src/preload/home-guide-presentation';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';import{installSkillComposer}from'./src/preload/integrations/skill-composer';import{createSkillUseBridge}from'./src/preload/integrations/skill-use';import{installSkillCommandBridge}from'./src/preload/integrations/skill-command-bridge';import{installSkillCommand}from'./src/preload/integrations/skill-command';
@@ -48,7 +49,7 @@ beforeAll(async()=>{
  const shared={sessionId:sessionId,useSession,useSessions,useStore,actions,views,t},inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,draftImages:ids=>conversation.draftImages(ids),useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection,sessionId:sessionId,t};
  const sidebarState={composerHost:null,conversationHost:null},sidebarStore={subscribe:()=>()=>{},getSnapshot:()=>sidebarState},sidebar={storeFor:()=>sidebarStore,publish(){},enter(){},leave(){},service:{async openFile(scope,path){window.probe.opened.push({scope,path});await window.nativeBackend({action:'verify-file',path});document.querySelector('#right').textContent=path.split('/').pop()+' · 原生文件路径已校验'}}};
  const openFile=path=>sidebar.service.openFile({sessionId:sessionId,cwd:window.cwd},path),renderSlot=(name,props={},scope={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={renderSlot}/>:name==='conversation.input.left'?React.createElement(filePickSlot,props):name==='conversation.input.dock'?<native.__Todo useSession={useSession} useProjection={useProjection} t={t}/>:name==='conversation.view'?<native.__Chat {...shared} {...props} renderSlot={renderSlot} openFile={openFile} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>[]}/>:name==='conversation.chat.node'&&scope.entryKey==='user'?<native.__User {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.__Assistant {...props} useTurnData={()=>null} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='turn-tail'?<native.__Tail {...props} sessionId={sessionId} useSession={useSession} renderSlot={renderSlot} renderSlotChain={renderSlotChain} t={t}/>:scope.fallback??null;
- window.probe={native,inputHub,conversation,shell,session,fileInsertions:[],serializations:[],drafts:[],stageTimings:[],requests:[],opened:[],cues:[],guide:null,events:[],refresh:async()=>{const data=await window.nativeBackend({action:'history'});window.probe.events=data.events;session.blankBit=!data.events.some(e=>e.type==='user/message');session.installWindow(data.events.map(event=>({event,view:event.type})),false);projections.update({todos:data.events.findLast(e=>e.type==='todo/write')?.data.todos??null})}};
+ window.probe={native,inputHub,conversation,shell,session,fileInsertions:[],serializations:[],drafts:[],stageTimings:[],requests:[],opened:[],cues:[],guide:null,events:[],refresh:async()=>{const data=await window.nativeBackend({action:'history'});window.probe.events=data.events.map(record=>record.event);session.blankBit=!window.probe.events.some(e=>e.type==='user/message');session.installWindow(data.events,false);projections.update({todos:window.probe.events.findLast(e=>e.type==='todo/write')?.data.todos??null})}};
  native.__bind({inputHub,researchSidebar:sidebar,getHomeGuideSession:id=>window.probe.registered===false?undefined:{kind:window.actorKind,sessionId:id,cwd:window.cwd}});
  const skill=window.actorKind==='report'?{id:'builtin:ework-equity-research',revision:1,label:'ework-equity-research',invocationName:'ework-skill-778d85796a6c426b',name:'公司研究报告助手',enabled:true,usable:true}:{id:'builtin:efund-ppt-maker',revision:1,label:'efund-ppt-maker',invocationName:'ework-skill-180a6a3f86f8942e',name:'PPT制作助手',enabled:true,usable:true};
  const request=async input=>{if(input.type==='snapshot'&&window.probe.deferSkills){window.probe.skillSnapshotPending=true;await new Promise(resolve=>{window.probe.releaseSkills=resolve})}return input.type==='snapshot'?{type:'snapshot',snapshot:{rows:[{...skill,invocationLabel:skill.label,kind:'skill',description:'公司规范'}]}}:{...skill,type:'skill-detail',invocationLabel:skill.label}};
@@ -84,7 +85,7 @@ async function fixture({operations=false,reducedMotion='reduce',kind='ppt',repor
  page.on('pageerror',e=>errors.push(e.stack??e.message))
  const sent=[],http=[];
  const backend=async input=>{
-  if(input.action==='history')return{events:f.agent.session.events}
+  if(input.action==='history')return f.request(f.api.sessions.history,{sessionId:f.agent.id,maxMessages:100})
   if(input.action==='send'){sent.push(input.text);if(kind==='report')f.agent.followup(createUserMessage({content:[{type:'text',text:input.text}],source:{kind:'user'}}));else await f.prompt(input.text);return{ok:true}}
   if(input.action==='verify-file'){expect(await readFile(input.path)).toEqual(kind==='report'?f.pdf:f.bytes);return{ok:true}}
   if(kind==='report'){const method={prepare:'prepare',playback:'playback',checkpoint:'checkpoint',dispose:'disposeRun'}[input.action];return{ok:true,...await f.runtime[method]({...f.input,...input})}}
@@ -407,6 +408,10 @@ it('types and sends through the resident native InputBar, renders persisted chat
   await page.waitForSelector('[data-testid="todo-panel"]',{timeout:3000}).catch(async error=>{throw Error(JSON.stringify({pageErrors:f.errors,body:await page.locator('body').innerText(),events:f.agent.session.events.map(e=>e.type)},null,2)+error.message)});expect(await page.locator('[data-status="in_progress"]').count()).toBe(1)
   await page.evaluate(()=>window.probe.step('layout'));await page.screenshot({path:evidence+'/02-native-plan.png'})
   await page.evaluate(()=>window.probe.step('deliver'));await f.agent.whenIdle();await page.evaluate(()=>window.probe.refresh())
+  expect(f.ctx.tools.get('home_presentation_publish',f.agent.ctx)).toBeUndefined()
+  const coldHistory=await f.request(f.api.sessions.history,{sessionId:f.agent.id,maxMessages:100});expect(coldHistory.events.find(row=>row.event.type==='tool/call'&&row.event.data.name==='home_presentation_publish').view).toBeUndefined()
+  await expect.poll(()=>page.locator('.ew-delivery-card[data-file-path]').evaluateAll(cards=>cards.map(card=>card.dataset.filePath))).toEqual([join(f.cwd,'人工智能周期与资产配置.pptx'),join(f.cwd,'Vanguard-2026经济与市场展望.pdf')])
+  expect(await page.locator('#native-root').innerText()).not.toMatch(/打开可编辑演示文稿|查看原始研究报告/u)
   expect(await page.locator('[data-status="completed"]').count()).toBe(3)
   expect(await page.locator('[data-chat-flow-kind="user"]').count()).toBe(1)
   expect(await page.locator('[data-chat-flow-kind="assistant-step"]').count()).toBeGreaterThan(0)
@@ -512,11 +517,14 @@ it('keeps schema2 report streams readable while retaining both original file car
   await page.evaluate(()=>window.probe.step('send'))
   for(const stage of ['plan','layout','deliver'])await page.evaluate(stage=>window.probe.step(stage),stage)
   await f.agent.whenIdle();await page.evaluate(()=>window.probe.refresh())
+  expect(f.ctx.tools.get('home_report_publish',f.agent.ctx)).toBeUndefined()
+  const coldHistory=await f.request(f.api.sessions.history,{sessionId:f.agent.id,maxMessages:100});expect(coldHistory.events.find(row=>row.event.type==='tool/call'&&row.event.data.name==='home_report_publish').view).toBeUndefined()
   const html=join(f.cwd,f.metadata.deliveryNames.html),pdf=join(f.cwd,f.metadata.deliveryNames.pdf)
   await expect.poll(()=>page.locator('.ew-delivery-card[data-file-path]').evaluateAll(nodes=>nodes.map(node=>node.dataset.filePath))).toEqual([html,pdf])
   const texts=await page.evaluate(()=>window.probe.visibleReports);expect(texts.length).toBeGreaterThan(1)
   for(const text of texts)expect(text).not.toMatch(/%[0-9A-F]{2}|\[阅读全文\]|\[打开\d+页PDF报告\]/u)
   expect(await page.locator('#native-root').innerText()).toContain(f.metadata.keyFindings[0])
+  expect(await page.locator('#native-root').innerText()).not.toMatch(/阅读全文|打开\d+页PDF报告/u)
   await page.screenshot({path:evidence+'/report-final-real-markdown.png'})
   await page.evaluate(()=>window.probe.step('open'));expect(await page.evaluate(()=>window.probe.opened.map(value=>value.path))).toEqual([pdf])
   expect(await page.locator('#right').innerText()).toContain(f.metadata.deliveryNames.pdf)

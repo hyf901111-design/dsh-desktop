@@ -1,3 +1,5 @@
+import {installSidebarNewNote,patchSidebarNewNoteShell} from '../scripts/lib/sidebar-new-note.mjs'
+import {createSidebarNewNoteAction} from '../src/preload/sidebar-new-note'
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
@@ -58,10 +60,13 @@ function fakeModule(): unknown {
 async function loadClientBundle(
   packageName: string,
   browserWindow?: Window,
-  expose: string[] = []
+  expose: string[] = [],
+  patch?: (source:string)=>string,
+  providers:Record<string,unknown>={}
 ): Promise<ClientBundle> {
   let source = await readFile(`node_modules/@deepseek-ai/${packageName}/lib/client.js`, 'utf8')
   if (packageName === 'dsh-client-ui-conversation') source = patchSessionViewPreferences(source)
+  if(patch)source=patch(source)
   if (expose.length > 0) {
     source = source.replace(
       '\t\texports.apply = apply;',
@@ -99,6 +104,7 @@ async function loadClientBundle(
   if (descriptor === undefined) throw new Error(`${packageName} did not register its client bundle`)
 
   return descriptor.factory((id) => {
+    if(providers[id])return providers[id]
     if (id === 'react') return react
     if (id === 'react/jsx-runtime') return jsxRuntime
     if (id === 'react-dom') return requireModule('react-dom')
@@ -154,6 +160,93 @@ async function researchRuntimeFixture(options: {
 }
 
 const flushResearchEffects = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+async function newNoteFixture(){
+ const w=new Window({url:'https://sherlock.local/'});installBrowserGlobals(w);vi.stubGlobal('CustomEvent',w.CustomEvent)
+ let sequence=0
+ const api:any={
+  sessions:{create:vi.fn(async(input:any)=>({result:{ok:true,value:{sessionId:input.sessionId??'new-note-'+(++sequence)}}}))},
+  workspace:{list:async()=>({result:{ok:true,value:{items:[{workspaceId:'active',path:'/active',sessionIds:['old']},{workspaceId:'recent',path:'/recent',sessionIds:[]}],archivedSessionIds:[]}}})}
+ }
+ const native=await loadClientBundle('dsh-client-runtime',w,[],undefined,{'@deepseek-ai/cordis':new Proxy({Context:{filter:Symbol('filter')}},{get:(target,key)=>Reflect.get(target,key)??fakeModule()})}),context:any={get:()=>undefined,reflect:{provide:()=>{}},effect:()=>{}}
+ context.plugin=()=>({ctx:{extend:()=>context},dispose:()=>{}})
+ const sessions=new (native.SessionRuntime as any)(context,api,{})
+ await sessions.create({sessionId:'old',cwd:'/active'});sessions.open('old')
+ const workspaces=new (native.WorkspaceRuntime as any)(context,api,sessions);await workspaces.refresh()
+ workspaces.list.update((state:any)=>{state.recentWorkspaceId='recent'})
+ const conversation=await loadClientBundle('dsh-client-ui-conversation',w,['createChatStore'],undefined,{'@deepseek-ai/dsh-client-runtime/client':native})
+ const chatStore=(conversation.__testcreateChatStore as any)()
+ const shell={snapshot:{draft:'原有完整要求😀',draftRev:4,imageIds:['existing-image'],occurrences:[{id:1,source:'skill',offset:2,ref:'original'}]}}
+ const stop=installSidebarNewNote({sessions,workspaces,chatStore,inputHub:{},getInput:()=>shell})
+ const action=createSidebarNewNoteAction(w.document as unknown as Document,async()=>{})
+ return{w,api,sessions,workspaces,chatStore,shell,action,stop:()=>{action.dispose();stop();w.happyDOM.close();vi.unstubAllGlobals()}}
+}
+
+describe('normal new Note workspace flow',()=>{
+ it('uses the real SDK fresh create/current workspace and persists Notes without consuming the old draft',async()=>{
+  const f=await newNoteFixture();try{
+   const before=JSON.stringify(f.shell.snapshot);expect(f.sessions.list.getSnapshot().current).toBe('old')
+   await f.action.create()
+   expect(f.api.sessions.create).toHaveBeenLastCalledWith({workspaceId:'active'})
+   const id=f.sessions.list.getSnapshot().current;expect(id).not.toBe('old');expect(f.chatStore.create(id).getSnapshot().view).toBe('notes')
+   expect(f.w.localStorage.getItem('ework.session.view.v1:'+id)).toBe('notes');expect(JSON.stringify(f.shell.snapshot)).toBe(before)
+  }finally{f.stop()}
+ })
+ it('waits for confirmed old Note saving, coalesces clicks, and cancels a changed owner before fresh create',async()=>{
+  const f=await newNoteFixture();try{
+   let release!:()=>void;const action=createSidebarNewNoteAction(f.w.document as unknown as Document,()=>new Promise<void>(resolve=>{release=resolve}));const count=f.api.sessions.create.mock.calls.length
+   const first=action.create();expect(action.create()).toBe(first);await flushResearchEffects();expect(f.api.sessions.create).toHaveBeenCalledTimes(count)
+   f.sessions.clear();release();await expect(first).rejects.toMatchObject({name:'AbortError'});expect(f.api.sessions.create).toHaveBeenCalledTimes(count)
+  }finally{f.stop()}
+ })
+ it('keeps a late created session unselected after user navigation or a newer draft',async()=>{
+  for(const change of ['navigation','draft']){const f=await newNoteFixture();try{
+   let release!:()=>void;f.api.sessions.create.mockImplementationOnce(async()=>{await new Promise<void>(resolve=>{release=resolve});return{result:{ok:true,value:{sessionId:'late-note'}}}})
+   const result=f.action.create();await flushResearchEffects();if(change==='navigation')f.sessions.clear();else{f.shell.snapshot.draft+='用户新输入';f.shell.snapshot.draftRev++}release()
+   await expect(result).rejects.toMatchObject({name:'AbortError'});expect(f.sessions.list.getSnapshot().current).not.toBe('late-note');expect(f.w.localStorage.getItem('ework.session.view.v1:late-note')).toBeNull()
+  }finally{f.stop()}}
+ })
+ it('does not steal a same-session Research navigation while fresh creation is pending',async()=>{
+  const f=await newNoteFixture();try{
+   let release!:()=>void;f.api.sessions.create.mockImplementationOnce(async()=>{await new Promise<void>(resolve=>{release=resolve});return{result:{ok:true,value:{sessionId:'late-note'}}}})
+   const result=f.action.create();await flushResearchEffects();f.chatStore.create('old').actions.setView('research');release()
+   await expect(result).rejects.toMatchObject({name:'AbortError'});expect(f.sessions.list.getSnapshot().current).toBe('old');expect(f.chatStore.create('old').getSnapshot().view).toBe('research')
+  }finally{f.stop()}
+ })
+ it.each(['unacknowledged-navigation','same-view-ack','tab-roundtrip','new-chat','account-control'])('respects the native effective view and navigation epoch: %s',async scenario=>{
+  const f=await newNoteFixture();try{
+   const key='ework.session.view.v1:old',disk=new Map([[key,'chat']]);Object.assign(f.w,{dshDesktop:{researchCanvasStorage:{getItem:(name:string)=>disk.get(name)??null,setItem:()=>false}}})
+   f.chatStore.create('old').actions.setView(scenario==='same-view-ack'?'research':'chat')
+   let release!:()=>void;f.api.sessions.create.mockImplementationOnce(async()=>{await new Promise<void>(resolve=>{release=resolve});return{result:{ok:true,value:{sessionId:'late-note'}}}})
+   const result=f.action.create();await flushResearchEffects()
+   if(scenario==='same-view-ack'){disk.set(key,'research');f.w.localStorage.removeItem(key+'.pending-native')}
+   else if(scenario==='unacknowledged-navigation')f.chatStore.create('old').actions.setView('research')
+   else{const tab=f.w.document.createElement('button');if(scenario==='tab-roundtrip')tab.dataset.conversationViewId='research';else tab.className=scenario==='new-chat'?'hHd-Xa_newSession':'VOzbGW_trigger';f.w.document.body.append(tab);tab.click()}
+   release();if(scenario==='same-view-ack'){await result;expect(f.sessions.list.getSnapshot().current).toBe('late-note')}else{await expect(result).rejects.toMatchObject({name:'AbortError'});expect(f.sessions.list.getSnapshot().current).toBe('old')}
+  }finally{f.stop()}
+ })
+ it('does not create after failed save and propagates the original host create error',async()=>{
+  const f=await newNoteFixture();try{
+   const failed=createSidebarNewNoteAction(f.w.document as unknown as Document,async()=>{throw Error('保存失败')});await expect(failed.create()).rejects.toThrow('保存失败');expect(f.api.sessions.create).toHaveBeenCalledTimes(1)
+   f.api.sessions.create.mockRejectedValueOnce(Error('host offline'));await expect(f.action.create()).rejects.toThrow('host offline');expect(f.sessions.list.getSnapshot().current).toBe('old')
+  }finally{f.stop()}
+ })
+ it('does not open a cancelled request when its Host creation later finishes',async()=>{
+  const f=await newNoteFixture();try{
+   let release!:()=>void;f.api.sessions.create.mockImplementationOnce(async()=>{await new Promise<void>(resolve=>{release=resolve});return{result:{ok:true,value:{sessionId:'cancelled-note'}}}})
+   const result=f.action.create();await flushResearchEffects();f.action.reset();await expect(result).rejects.toMatchObject({name:'AbortError'});release();await flushResearchEffects();expect(f.sessions.list.getSnapshot().current).toBe('old')
+  }finally{f.stop()}
+ })
+})
+
+it('renders the actual rail in Add Workspace → Chat → Research → Note → More order',async()=>{
+ const w=new Window({url:'https://sherlock.local/'});installBrowserGlobals(w)
+ const client=await loadClientBundle('dsh-client-ui-sidebar',w,['SidebarRoot'],process.env.SHERLOCK_NEW_NOTE_RED?undefined:patchSidebarNewNoteShell)
+ const root=createRoot(w.document.body as unknown as Element)
+ await act(async()=>root.render(createElement(client.__testSidebarRoot,{collapsed:true,width:240,t:(key:string)=>key,toggleSidebar:vi.fn(),startSession:vi.fn(),startResearchSession:vi.fn(),renderSlot:(name:string)=>name==='sidebar.workspaces'?createElement('button',{'data-test-folder':'',children:'Add workspace'}):null})))
+ const buttons=[...w.document.querySelectorAll('button')];expect(buttons.findIndex(node=>node.hasAttribute('data-test-folder'))).toBeLessThan(buttons.findIndex(node=>node.getAttribute('aria-label')==='session.new.label'));expect(buttons.at(-1)?.hasAttribute('data-sidebar-new-note')).toBe(true)
+ await act(async()=>root.unmount());w.happyDOM.close()
+})
 
 describe('Sherlock sidebar new-session actions', () => {
   it('renders distinct New Chat and New Research buttons and routes each action separately', async () => {

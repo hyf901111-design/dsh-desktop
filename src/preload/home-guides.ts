@@ -142,7 +142,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   let entryPointer:ReturnType<typeof createHomeGuidePointer>|undefined,mountedOptions:HomeGuideMountOptions|undefined,checkDraft:(()=>void)|undefined,clearEntry=()=>{},clearTakeover=()=>{}
   const id=win.crypto.randomUUID()
   const ensurePending=()=>{if(disposed||controller.signal.aborted||token!==generation)throw aborted();const current=selected();if(current!==pending.source&&current!==pending.target)throw aborted();checkDraft?.()}
-  let session:Session
+  let session:Session,prepared:Session|undefined,preflighted=false
   try{
    if(input.entry){
     const entry=input.entry,center=document.querySelector<HTMLElement>('.pI_x6G_centerCol'),resident=[...(center?.querySelectorAll<HTMLElement>('.wSkVaW_root')??[])].find(node=>!node.closest('[data-odyssey-subagent-panel]'))
@@ -158,7 +158,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     for(const name of ['beforeinput','input','compositionstart'])document.addEventListener(name,takeover,true)
     clearTakeover=()=>{for(const name of ['beforeinput','input','compositionstart'])document.removeEventListener(name,takeover,true);controller.signal.removeEventListener('abort',clearTakeover)}
     controller.signal.addEventListener('abort',clearTakeover,{once:true})
-    const gate=async()=>{ensurePending();while(document.hidden){await new Promise(resolve=>win.setTimeout(resolve,32));ensurePending()}}
+    const gate=async()=>{ensurePending();while(document.hidden||!document.hasFocus()){await new Promise(resolve=>win.setTimeout(resolve,32));ensurePending()}}
     const bounds=card.getBoundingClientRect(),origin=entry.origin??{x:Math.max(0,bounds.left)+Math.max(0,Math.min(win.innerWidth,bounds.right)-Math.max(0,bounds.left))/2,y:Math.max(0,bounds.top)+Math.max(0,Math.min(win.innerHeight,bounds.bottom)-Math.max(0,bounds.top))/2}
     if(!Number.isFinite(origin.x)||!Number.isFinite(origin.y)||origin.x<0||origin.y<0||origin.x>win.innerWidth||origin.y>win.innerHeight)throw aborted()
     entryPointer=createHomeGuidePointer(document,{runId:id,signal:controller.signal,initialPosition:origin,wait:ms=>mountedOptions?mountedOptions.wait(ms):new Promise(resolve=>win.setTimeout(resolve,ms)),waitUntilPlaying:()=>mountedOptions?mountedOptions.waitUntilPlaying():gate()})
@@ -167,20 +167,26 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     await entry.revealComposer();ensurePending()
     const view=kind==='board'?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+view+'"]')
     if(!tab)throw Error('示例入口尚未就绪，请重新打开首页。')
-    await entryPointer.perform({target:tab,action:'click'});ensurePending()
+    // Keep the real composer visible while native workspace/session preparation
+    // runs alongside the pointer. Never expose the old session's empty mode.
+    const preparation=exchangeSession(document,{kind,command:'prepare',replay:input.replay===true},controller.signal)
+    void preparation.catch(()=>{})
+    await entryPointer.perform({target:tab,action:'move'});ensurePending()
+    prepared=await preparation;ensurePending();pending.target=prepared.sessionId
+    await adapters.beforeOpen?.({...prepared,kind});await gate();ensurePending();preflighted=true
     if(!tab.isConnected||!resident.contains(tab)||tab.disabled||tab.getAttribute('aria-disabled')==='true')throw aborted()
+    await entryPointer.perform({target:tab,action:'click'});ensurePending()
     // The native mode click leaves the homepage. Transfer cancellation to this
     // controller before that expected detach; real navigation still aborts it.
     entry.handoff?.();clearEntry();ensurePending()
     transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;document.documentElement.dataset.homeGuideTransitionSession=pending.source
     ownedNavigation++;try{tab.click()}finally{ownedNavigation--}
-    ensurePending()
-    let stable=0,remaining=3000,last=win.performance.now()
-    while(stable<2){await gate();await new Promise(resolve=>win.setTimeout(resolve,32));ensurePending();const now=win.performance.now();if(!document.hidden)remaining-=Math.min(80,now-last);last=now;if(remaining<=0)throw Error('模式入口尚未就绪，请重试。');stable=tab.isConnected&&tab.getAttribute('aria-selected')==='true'?stable+1:0}
+    await Promise.resolve();ensurePending()
+    if(!tab.isConnected||tab.getAttribute('aria-selected')!=='true')throw Error('模式入口尚未就绪，请重试。')
    }
-   session=await exchangeSession(document,{kind,command:'prepare',replay:input.replay===true},controller.signal);ensurePending();pending.target=session.sessionId
+   session=prepared??await exchangeSession(document,{kind,command:'prepare',replay:input.replay===true},controller.signal);ensurePending();pending.target=session.sessionId
    transition||=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;if(!input.entry)document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
-   await adapters.beforeOpen?.({...session,kind});ensurePending();adapters.revealConversation?.();ensurePending()
+   if(!preflighted)await adapters.beforeOpen?.({...session,kind});ensurePending();adapters.revealConversation?.();ensurePending()
    let opening:Promise<Session>
    document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
    ownedNavigation++;try{opening=exchangeSession(document,{kind,command:'open',sessionId:session.sessionId},controller.signal)}finally{ownedNavigation--}

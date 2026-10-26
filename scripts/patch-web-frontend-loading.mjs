@@ -1,4 +1,5 @@
 import {patchHomeThemeAppearance} from './lib/home-theme-appearance.mjs'
+import {patchSidebarNewNoteConversation,patchSidebarNewNoteShell,stripSidebarNewNoteConversation,stripSidebarNewNoteShell} from './lib/sidebar-new-note.mjs'
 import {patchAssistantReveal} from './lib/assistant-reveal.mjs'
 import {patchConversationComponents} from './lib/conversation-components.mjs'
 import {patchConversationCompactionLifecycle} from './lib/conversation-compaction-lifecycle.mjs'
@@ -169,6 +170,10 @@ patchStyles(asset('.css'))
 
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
+// Unwind our outer action/restore records before lifecycle and grid refreshes.
+writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(readFileSync(gridConversationPath,'utf8')))
+const sidebarNewNotePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js')
+writeFileSync(sidebarNewNotePath,stripSidebarNewNoteShell(readFileSync(sidebarNewNotePath,'utf8')))
 writeFileSync(gridConversationPath,restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(readFileSync(gridConversationPath,'utf8')))))))
 await installResearchBoardClientPatches()
 
@@ -307,3 +312,6 @@ writeFileSync(conversationPath,patchConversationCompactionLifecycle(readFileSync
 writeFileSync(conversationPath,patchPptxAnnotationInput(readFileSync(conversationPath,'utf8')))
 // Sent messages project only Main-verified marks after the native renderers are final.
 writeFileSync(conversationPath,patchPptxAnnotationMessages(readFileSync(conversationPath,'utf8')))
+// Normal new-Note actions use the final native stores; the rail keeps DOM/AX order.
+writeFileSync(conversationPath,patchSidebarNewNoteConversation(readFileSync(conversationPath,'utf8')))
+writeFileSync(sidebarNewNotePath,patchSidebarNewNoteShell(readFileSync(sidebarNewNotePath,'utf8')))
