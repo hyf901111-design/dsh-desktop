@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261026-06",
+  "branch": "codex/integration/20261026-06",
+  "baseMainCommit": "3847bf99782b7cd5e190ec3071cf1ece545b7b76",
+  "expectedMainCommit": "3847bf99782b7cd5e190ec3071cf1ece545b7b76",
+  "createdAt": "2026-10-26T04:20:08.683Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "完整演绎用例入口、看板默认尺寸与连线视野及交付呈现",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c",
+        "tipCommit": "7df7168c9b12b3dd59692a951176141c057806f1",
+        "commits": [
+          {
+            "commit": "73f40159e26cab4119348abb592c40f230ce94a8",
+            "parents": [
+              "dbcde4cf0faa86485f134a2c63175b9f5b4d2e9c"
+            ],
+            "subject": "按参考缩小演示指针并对齐圆角灰色热点"
+          },
+          {
+            "commit": "60c477c845e7dd56be59ecd7bac0e69cf586e95c",
+            "parents": [
+              "73f40159e26cab4119348abb592c40f230ce94a8"
+            ],
+            "subject": "完善PPT预览工具栏气泡提示并统一定位图钉"
+          },
+          {
+            "commit": "4a1e6db9e577c64248c4ea08e849e9d794986c22",
+            "parents": [
+              "60c477c845e7dd56be59ecd7bac0e69cf586e95c"
+            ],
+            "subject": "确保演示指针显示在原生命令菜单上方"
+          },
+          {
+            "commit": "1ecd2aed659a6a3c1584680ce1ac3829f5d83e3b",
+            "parents": [
+              "4a1e6db9e577c64248c4ea08e849e9d794986c22"
+            ],
+            "subject": "去掉交付文件打开方式操作后的成功提示"
+          },
+          {
+            "commit": "9c47e68c58fba307c701390ccd97f02b7c8f8b04",
+            "parents": [
+              "1ecd2aed659a6a3c1584680ce1ac3829f5d83e3b"
+            ],
+            "subject": "优化首页演示的流式交付与PPT输入衔接"
+          },
+          {
+            "commit": "7d281ee0d88d551f23dae273e06759e8f699761c",
+            "parents": [
+              "9c47e68c58fba307c701390ccd97f02b7c8f8b04"
+            ],
+            "subject": "演示用例先返回输入区再点击原生模式入口"
+          },
+          {
+            "commit": "7df7168c9b12b3dd59692a951176141c057806f1",
+            "parents": [
+              "7d281ee0d88d551f23dae273e06759e8f699761c"
+            ],
+            "subject": "保留看板组件默认尺寸并优化整理后的连线视野"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-presentation-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/deliverable-cards.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-pptx-toolbar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-pointer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/pptx-annotation-icons/mark16-normal.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/pptx-annotation-icons/mark16-selected.svg"
+          },
+          {
+            "status": "M",
+            "path": "test/deliverable-cards.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-presentation-host.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-presentation-runtime.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/sidebar-pptx-tooltip-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-operations-entry.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-pointer-appearance.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-pointer-menu-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-presentation-replay.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-pptx-toolbar.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-pptx-tooltip-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-pptx-tooltip-install.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-final-check-1-20261026.log",
+            "verifiedCommit": "7df7168c9b12b3dd59692a951176141c057806f1",
+            "completedAt": "2026-10-26T04:08:49.930801+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-final-check-2-20261026.log",
+            "verifiedCommit": "7df7168c9b12b3dd59692a951176141c057806f1",
+            "completedAt": "2026-10-26T04:08:55.548932+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_SIDEBAR_SOURCE=/tmp/notes-selection-sync-20261026/sidebar-fixture-base.js",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-browser.test.js",
+              "test/home-guides.test.ts",
+              "test/home-guide-operations-entry.test.ts",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guide-pointer-appearance.test.ts",
+              "test/home-guide-pointer-menu-browser.test.js",
+              "test/home-guide-notes-native-editor.test.js",
+              "test/sidebar-pptx-toolbar.test.ts",
+              "test/sidebar-pptx-tooltip-browser.test.js",
+              "test/sidebar-pptx-tooltip-install.test.js",
+              "test/pptx-annotation-sidebar-source.test.js",
+              "test/deliverable-cards.test.js",
+              "test/home-presentation-replay.test.js",
+              "test/home-presentation-runtime.test.js",
+              "test/home-report-runtime.test.js",
+              "test/home-presentation-host.test.js",
+              "test/home-guide-presentation-patch.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-final-check-3-20261026.log",
+            "verifiedCommit": "7df7168c9b12b3dd59692a951176141c057806f1",
+            "completedAt": "2026-10-26T04:15:07.804664+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_SIDEBAR_SOURCE=/tmp/notes-selection-sync-20261026/sidebar-fixture-base.js",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-notes-browser.test.js",
+              "test/home-guide-presentation-browser.test.js",
+              "--testNamePattern",
+              "grows the actual editor selection|serializes the native report|moves the real PPT PDF ghost|types and sends through|keeps schema2 report",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-final-check-4-20261026.log",
+            "verifiedCommit": "7df7168c9b12b3dd59692a951176141c057806f1",
+            "completedAt": "2026-10-26T04:16:27.012806+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-final-check-5-20261026.log",
+            "verifiedCommit": "7df7168c9b12b3dd59692a951176141c057806f1",
+            "completedAt": "2026-10-26T04:16:35.845944+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/home-examples-16-final-check-6-20261026.log",
+            "verifiedCommit": "7df7168c9b12b3dd59692a951176141c057806f1",
+            "completedAt": "2026-10-26T04:16:35.888378+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "所有本次改动均完成真实production组件/输入壳/Markdown/菜单/图形的聚焦回归与独立审查。图标、原子输出、拖入居中、同行输入、四卡整理后平滑连线、完整真实入口与用户接管均已浏览器验证，正式16原生全程待clean main构建后复验。 当前feature19直接files276PASS＋5真实交叉PASS；集成仅在所有已测变更源码逐字一致时复用该证据，额外重复安装链与直接单元/类型校验，不重复耗时Browser全场。"
+        },
+        "acceptanceCriteria": [
+          "四用例从当前运营大卡区域起演绎真实返回输入区按钮和真实模式Tab，然后创建独立演示会话；同一虚拟指针贯穿且真人输入/导航取消不丢原稿。",
+          "四个金融面板按原生默认尺寸添加，只在正式整理动作后形成自选40/行情60与新闻公告双列，随后平滑呈现四卡再连线。",
+          "共享指针匹配参考轮廓、灰色与柔和阴影，尖端对准操作坐标；原生top-layer命令菜单不能覆盖指针且鼠标/键盘正常穿透。",
+          "PPT参考PDF拖到输入中部，提示词在技能与文件标签后自然同行；研报/PPT流式输出不暴露半截Markdown和编码URL，真实原名交付卡片与预览保留。",
+          "PPT顶栏四按钮悬停/焦点有原生气泡、标注用图钉，深浅中英正常；交付打开方式不再显示成功状态行，错误及复制反馈保留。",
+          "从clean main同一正式客户端构建核验，包含此前05的文字渐进选区、盾牌和任务管理头像。"
+        ],
+        "risks": [
+          "正式16本次原生验收待构建后完成。",
+          "系统级概率鼠标冻结仍未稳定复现，fixed=false。",
+          "极端短窄看板无法同时容纳四面板时保原可见端口安全边界，不伪称全场景全貌。",
+          "一个旧headless ghost截图被既有测试硬编码覆盖，已单独记录；原43 Native证据经hash核验零变化。"
+        ],
+        "generatedAt": "2026-10-26T04:20:06.607818+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "python3",
+        "/tmp/check-home16-integration-source-20261026.py"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guides.test.ts",
+        "test/home-guide-native.test.js",
+        "test/home-guide-pointer.test.ts",
+        "test/deliverable-cards.test.js",
+        "test/sidebar-pptx-toolbar.test.ts",
+        "test/home-presentation-replay.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
