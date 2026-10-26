@@ -6,7 +6,7 @@ import{join}from'node:path'
 import{tmpdir}from'node:os'
 const run=(name,source,operation='patch')=>execFileSync(process.execPath,['--input-type=module','-e',`import fs from'node:fs';import*as own from'./scripts/lib/sidebar-new-note.mjs';const source=fs.readFileSync(0,'utf8');process.stdout.write(own['${operation}SidebarNewNote${name}'](source))`],{input:source,encoding:'utf8',maxBuffer:64*1024*1024,stdio:['pipe','pipe','pipe']})
 it.each([['Shell','sidebar'],['Conversation','conversation']])('installs %s twice with exact strict strip and rejects partial, unknown, duplicate and drift',async(name,pkg)=>{
- const resident=await readFile('node_modules/@deepseek-ai/dsh-client-ui-'+pkg+'/lib/client.js','utf8'),raw=run(name,resident,'strip'),once=run(name,raw);expect(run(name,once)===once).toBe(true);expect(run(name,once,'strip')===raw).toBe(true);expect(()=>new Function(once)).not.toThrow()
+ const resident=await readFile('node_modules/@deepseek-ai/dsh-client-ui-'+pkg+'/lib/client.js','utf8'),raw=run(name,resident,'strip'),once=run(name,raw);expect(run(name,resident)===once).toBe(true);expect(run(name,once)===once).toBe(true);expect(run(name,once,'strip')===raw).toBe(true);expect(()=>new Function(once)).not.toThrow()
  const kind=name==='Shell'?'shell':'conversation',marker='/* sherlock:sidebar-new-note:'+kind+':v1 */',at=once.indexOf(marker)
  expect(()=>run(name,once.replace(marker,marker.replace('v1','v99')))).toThrow();expect(()=>run(name,once+once.slice(at))).toThrow()
  const tampered=name==='Shell'?once.replace('data-sidebar-new-note','data-sidebar-other-note'):once.replace('const tickets = new Map()', 'const tickets = new WeakMap()').replace('const tickets=new Map()', 'const tickets=new WeakMap()')

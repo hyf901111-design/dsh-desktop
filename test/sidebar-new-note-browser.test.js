@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process'
 import {pathToFileURL} from 'node:url'
 import {createServer} from 'node:http'
 let browser,server,origin,script,input,css
-const output='/tmp/sidebar-new-note-20261026',base='node_modules/@deepseek-ai/'
+const output=process.env.SHERLOCK_NEW_NOTE_ARTIFACTS||'/tmp/sidebar-new-note-20261026',base='node_modules/@deepseek-ai/'
 const nodePatch=(source)=>execFileSync(process.execPath,['--input-type=module','-e',`import fs from 'node:fs';import{patchSidebarNewNoteShell}from'./scripts/lib/sidebar-new-note.mjs';process.stdout.write(patchSidebarNewNoteShell(fs.readFileSync(0,'utf8')))`],{input:source,encoding:'utf8',maxBuffer:8*1024*1024})
 const expose=(source,names)=>source.replace('exports.apply = apply;',`exports.apply = apply;${names.map(name=>`exports.__test${name}=${name};`).join('')}`)
 beforeAll(async()=>{
@@ -33,3 +33,22 @@ it('keeps the Figma row/icon geometry and bilingual colors in both modes',async(
 it('refuses late same-session mode navigation and shows real host errors without losing the old draft',async()=>{const page=await fixture();try{
  await page.evaluate(()=>window.newNoteFixture.hold());await page.locator('.st-more').click();await page.getByRole('menuitem',{name:'新笔记',exact:true}).click();await page.waitForFunction(()=>window.newNoteFixture.events.filter(e=>e.type==='create').length===2);await page.evaluate(()=>{window.newNoteFixture.switch('research');window.newNoteFixture.release()});await page.waitForTimeout(60);expect((await page.evaluate(()=>window.newNoteFixture.current())).id).toBe('old');expect(await page.locator('[role=alert]').count()).toBe(0);await page.evaluate(()=>window.newNoteFixture.fail());await page.locator('.st-more').click();await page.getByRole('menuitem',{name:'新笔记',exact:true}).click();await page.waitForSelector('[role=alert]');expect(await page.locator('[role=alert]').textContent()).toContain('Host');expect(await page.evaluate(()=>window.newNoteFixture.shellFor('old').snapshot.draft)).toBe('原有对话草稿😀')
  }finally{await page.close()}},30000)
+it('shares the native 16px muted pseudo-icon family in the rail while keeping menu icons at 18px',async()=>{
+ const page=await fixture(),states=[];await mkdir(output+'/rail',{recursive:true})
+ try{
+  await page.addStyleTag({content:await readFile('src/preload/figma-final-shell.css','utf8')})
+  await page.evaluate(()=>window.newNoteFixture.setCollapsed(true));await page.waitForSelector('[data-dsh-sidebar-wide="false"]')
+  for(const dark of[false,true]){
+   await page.evaluate(dark=>window.newNoteFixture.setDark(dark),dark)
+   const state=await page.evaluate(()=>{
+    const buttons=[...document.querySelectorAll('[data-dsh-sidebar-root] .hHd-Xa_newSession')]
+    const glyph=button=>{const span=button.querySelector('.sherlock-sidebar-note-icon'),s=getComputedStyle(span||button,span?undefined:'::before');return{width:s.width,height:s.height,background:s.backgroundColor,display:s.display,span:!!span,mask:s.maskImage==='none'?0:s.maskImage.length}}
+    const folder=document.querySelector('[aria-label="添加工作区"] svg'),f=getComputedStyle(folder)
+    return{chat:glyph(buttons[0]),research:glyph(buttons[1]),note:glyph(buttons[2]),folder:{width:f.width,height:f.height,color:f.color},noteChildren:buttons[2].childElementCount}
+   });states.push({dark,...state});await page.locator('[data-dsh-sidebar-root]').screenshot({path:output+'/rail/'+(dark?'dark':'light')+'.png'})
+  }
+  await writeFile(output+'/rail/metrics.json',JSON.stringify(states,null,2))
+  for(const state of states){for(const name of['chat','research','note'])expect(state[name]).toMatchObject({width:'16px',height:'16px',background:state.chat.background,span:false});expect(state.noteChildren).toBe(0);expect(state.note.mask).toBeGreaterThan(0);expect(state.note.mask).not.toBe(state.chat.mask);expect(state.folder).toEqual({width:'16px',height:'16px',color:state.chat.background})}
+  await page.evaluate(()=>window.newNoteFixture.setCollapsed(false));await page.waitForSelector('[data-dsh-sidebar-wide="true"]');await page.locator('.st-more').click();const sizes=await page.getByRole('menuitem').evaluateAll(nodes=>nodes.map(n=>{const s=getComputedStyle(n.querySelector('.st-icon'));return{width:s.width,height:s.height,background:s.backgroundColor}}));expect(sizes).toHaveLength(3);expect(sizes.every(s=>s.width==='18px'&&s.height==='18px'&&s.background===sizes[0].background)).toBe(true)
+ }finally{await page.close()}
+},30000)
