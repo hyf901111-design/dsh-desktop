@@ -120,6 +120,8 @@ export function attachPptxAnnotationViewer(host,options){
   actions.replaceChildren()
   if(stale)action(reanchorId===mark.id?'请在幻灯片中重新定位':'重新定位',()=>{reanchorId=mark.id;closeBubble();setTool(mark.kind)},actions)
   else if(!mark.referenced)action('重新加入输入框',()=>void run(()=>handle.readd(mark.id)),actions)
+  const english=(doc.documentElement.dataset.odysseyLocale||doc.documentElement.lang).toLowerCase().startsWith('en')
+  const remove=action(english?'Delete mark':'删除标记',()=>void run(()=>handle.remove(mark.id)).then(ok=>{if(ok){lastDeleted=true;if(bubbleId===mark.id)closeBubble();render()}}),actions,'pptxa-delete');remove.disabled=snapshot().busy
   positionBubble()
  }
  const render=()=>{
@@ -164,6 +166,7 @@ export function attachPptxAnnotationViewer(host,options){
  const key=event=>{if(event.isComposing||event.defaultPrevented)return;if(event.key==='Escape'){const returnFocus=!list.hidden;closeBubble();cancelGesture();reanchorId=null;if(returnFocus)count.focus({preventScroll:true});return}if(event.target===count&&event.key==='ArrowDown'){event.preventDefault();if(list.hidden)toggleMarkList();else list.querySelector('button')?.focus({preventScroll:true});return}if(!list.hidden&&list.contains(event.target)&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const items=[...list.querySelectorAll('button')],index=items.indexOf(doc.activeElement),next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus({preventScroll:true});return}const pin=event.target.closest?.('[data-pptx-annotation-pin]');if(pin&&own(pin)&&['Delete','Backspace'].includes(event.key)){event.preventDefault();void run(()=>handle.remove(pin.dataset.pptxAnnotationPin)).then(ok=>{if(ok){lastDeleted=true;closeBubble();render()}})}}
  const observer=new win.MutationObserver(records=>{if(records.every(record=>own(record.target)||record.type==='childList'&&[...record.addedNodes,...record.removedNodes].every(own)))return;schedule()})
  observer.observe(host,{subtree:true,childList:true,attributes:true,attributeFilter:['style','data-mounted']})
+ observer.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale','lang']})
  const geometryChanged=()=>{cancelGesture();schedule()}
  const resize=typeof win.ResizeObserver==='function'?new win.ResizeObserver(geometryChanged):null;resize?.observe(host)
  const off=handle.subscribe(schedule)

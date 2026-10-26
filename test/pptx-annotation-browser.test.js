@@ -1,11 +1,17 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
-import {readFile,mkdir} from 'node:fs/promises'
+import {readFile,mkdir,mkdtemp,writeFile,rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import path from 'node:path'
+import {runInNewContext} from 'node:vm'
 import {pathToFileURL} from 'node:url'
 import {createRequire} from 'node:module'
 import {build} from 'esbuild'
 import {createHash} from 'node:crypto'
 import {readPptxScene} from '../src/main/pptx/scene'
+import {PptxAnnotationService} from '../src/main/pptx/annotations'
+import {createPptxAnnotationCoordinator} from '../scripts/lib/pptx-annotation-coordinator.mjs'
 const req=createRequire(import.meta.url)
+const artifactRoot=process.env.PPTX_ANNOTATION_VIEWER_ARTIFACTS||'output/ppt-markup-design-20261025'
 const {patchSherlockOfficePreviewClient}=req('../scripts/lib/patch-sherlock-office-preview.mjs')
 const {patchPptxResize,stripPptxResizePatch}=req('../scripts/lib/pptx-resize-settle.mjs')
 const {patchPptxEditor}=req('../scripts/lib/pptx-editor-ui.mjs')
@@ -14,7 +20,7 @@ beforeAll(async()=>{
  hostScript=(await build({stdin:{resolveDir:process.cwd(),contents:`
  import React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import{createRoot}from'react-dom/client';
  window.__ModuleLoader__={load:d=>window.office=d.factory(id=>({'react':React,'react/jsx-runtime':jsx,'react-dom':dom}[id]))};
- window.mount=()=>{window.root=createRoot(document.querySelector('#surface'));window.root.render(React.createElement(window.office.officePreviewService.Component,{kind:'pptx',sourceUrl:'sherlock-preview://annotation-fixture/',title:'标注回归.pptx',annotationSource:{sessionId:'source-owner',source:{kind:'workspace',relativePath:'review.pptx'}},onToolbarState:s=>window.toolbar=s,onToolbarControls:c=>window.controls=c}))};
+ window.mount=()=>{window.root=createRoot(document.querySelector('#surface'));window.root.render(React.createElement(window.office.officePreviewService.Component,{kind:'pptx',sourceUrl:'sherlock-preview://annotation-fixture/',title:'标注回归.pptx',annotationSource:window.annotationSource||{sessionId:'source-owner',source:{kind:'workspace',relativePath:'review.pptx'}},onToolbarState:s=>window.toolbar=s,onToolbarControls:c=>window.controls=c}))};
  `},bundle:true,platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'}})).outputFiles[0].text
  const raw=await readFile('build/sherlock-plugin-profile/vendor/@huanlin/dsh-plugin-better-sidebar-plugin-office/lib/client.js','utf8')
  officeScript=patchPptxEditor(patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(raw))))
@@ -25,7 +31,7 @@ beforeAll(async()=>{
  browser=await(imported.chromium||imported.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },20000)
 afterAll(async()=>browser?.close())
-async function fixture(width=620,dark=false){
+async function fixture(width=620,dark=false,backend){
  const context=await browser.newContext({viewport:{width:1100,height:820},deviceScaleFactor:1}),page=await context.newPage(),errors=[]
  page.on('pageerror',e=>errors.push(e.message))
  await page.route('http://127.0.0.1/annotations',r=>r.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><style>body{margin:0;background:${dark?'#222':'#f4f4f4'}}#surface{position:absolute;right:0;top:40px;width:${width}px;height:650px;display:flex;flex-direction:column;overflow:hidden}#outside{margin:20px}</style><button id=outside>中央其他控件</button><main id=surface></main>`}))
@@ -46,10 +52,71 @@ async function fixture(width=620,dark=false){
   window[Symbol.for('sherlock:pptx-annotation-input')]={open:async source=>{window.openCalls++;window.openSource=source;return window.handle}}
   const fetch=window.fetch;window.fetch=(url,options)=>{if(String(url).startsWith('sherlock-preview:')){window.pptFetches++;return fetch('/review.pptx',options)}return fetch(url,options)}
  },{model,dark,fileVersion})
+ if(backend){
+  await page.exposeFunction('annotationAction',async(method,args)=>{await backend.handle[method](...args);return backend.handle.getSnapshot()})
+  await page.evaluate(({source,snapshot})=>{
+   window.annotationSource=source;window.snapshot=snapshot
+   for(const method of ['add','select','updateComment','remove','readd','undo','reanchor'])window.handle[method]=async(...args)=>{const value=await window.annotationAction(method,args);window.snapshot=value;for(const fn of window.subscribers)fn()}
+  },{source:backend.source,snapshot:backend.handle.getSnapshot()})
+ }
  await page.addScriptTag({content:hostScript});await page.addScriptTag({content:officeScript});await page.evaluate(()=>window.mount())
  await page.locator('[data-pptx-paragraph]').first().waitFor({timeout:8000})
  return{context,page,errors,close:()=>context.close(),activate:async()=>{expect(await page.evaluate(()=>window.controls.setAnnotations(true))).toBe(true);await page.locator('[data-pptx-annotation-toolbar]').waitFor()}}
 }
+async function durableBackend(){
+ const root=await mkdtemp(path.join(tmpdir(),'pptxa-bubble-delete-')),workspace=path.join(root,'workspace');await mkdir(workspace);await writeFile(path.join(workspace,'review.pptx'),bytes)
+ let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
+ const load=async(name,deps={})=>{let descriptor;runInNewContext(await readFile('node_modules/@deepseek-ai/'+name+'/lib/client.js','utf8'),{window:{__ModuleLoader__:{load:value=>descriptor=value}},AbortController,AbortSignal,queueMicrotask,setTimeout,clearTimeout,console,crypto});return descriptor.factory(id=>deps[id]??fake)}
+ const runtime=await load('dsh-client-runtime'),native=await load('dsh-client-ui-conversation',{'@deepseek-ai/dsh-client-runtime/client':runtime})
+ const shell=new native.SessionInputShell({actx:{},defaultSink(){throw Error('Deleting a mark must never send a prompt')}})
+ shell.setDraft('整体要求📌与用户正文保持不变');shell.insertReference({source:'chat-file',ref:'foreign-file',label:'原附件',clipboardText:'原附件'},{start:0,end:0,draftRev:shell.snapshot.draftRev})
+ let allowed=true
+ const options={root:path.join(root,'state'),owner:()=> 'test-owner',resolveWorkspace:async id=>allowed&&id==='actual-session'?workspace:null,resolveAuthorizedSource:async()=>null,readHistory:async()=>({events:[],hasMore:false})}
+ const service=new PptxAnnotationService(options),source={sessionId:'actual-session',source:{kind:'workspace',relativePath:'review.pptx'}},identity={sessionId:'actual-session',shell,ordinary:true}
+ const coordinator=createPptxAnnotationCoordinator({bridge:service,resolveInput:async()=>identity,isCurrent:()=>true}),handle=await coordinator.open(source,{viewerKey:'actual-viewer'})
+ return{root,workspace,options,service,source,shell,coordinator,handle,deny(){allowed=false},async close(){coordinator.dispose();shell.dispose();await rm(root,{recursive:true,force:true})}}
+}
+for(const english of [false,true])it(`deletes only the open mark from the ${english?'English dark':'Chinese light'} bubble through durable Main and the real native input transaction`,async()=>{
+ const backend=await durableBackend(),f=await fixture(620,english,backend)
+ try{
+  await f.page.evaluate(english=>document.documentElement.dataset.odysseyLocale=english?'en':'zh',english);await f.activate();await point(f.page,.2,.3)
+  await f.page.getByRole('textbox',{name:'标注备注'}).fill('第一条独立意见📌')
+  await expect.poll(()=>backend.handle.getSnapshot().marks[0]?.comment).toBe('第一条独立意见📌')
+  await f.page.getByRole('button',{name:'关闭标注气泡'}).click();await f.page.getByRole('button',{name:'框选',exact:true}).click()
+  const r=await contentBox(f.page);await f.page.mouse.move(r.x+r.width*.55,r.y+r.height*.45);await f.page.mouse.down();await f.page.mouse.move(r.x+r.width*.8,r.y+r.height*.6,{steps:4});await f.page.mouse.up()
+  await f.page.getByRole('textbox',{name:'标注备注'}).fill('只删除这一处框选')
+  await expect.poll(()=>backend.handle.getSnapshot().marks[1]?.comment).toBe('只删除这一处框选')
+  await backend.coordinator.whenIdle()
+  const before=backend.handle.getSnapshot(),[first,second]=before.marks,nativeBefore=structuredClone(backend.shell.snapshot),reference={version:1,sessionId:'actual-session',documentId:before.basis.documentId,fileVersion:before.basis.fileVersion,markId:second.id}
+  const prepared=await backend.service.prepare({sendingSessionId:'actual-session',sendId:'frozen-before-delete',expectedDraftRev:nativeBefore.draftRev,references:[{...reference,expectedStateRevision:before.revision}]});expect(prepared.ok,JSON.stringify(prepared)).toBe(true)
+  const manifest=path.join(backend.workspace,prepared.value.manifestRelativePath),frozen=await readFile(manifest)
+  const button=f.page.getByRole('button',{name:english?'Delete mark':'删除标记',exact:true})
+  await button.waitFor({state:'visible',timeout:1500})
+  await f.page.evaluate(english=>document.documentElement.dataset.odysseyLocale=english?'zh':'en',english)
+  await f.page.getByRole('button',{name:english?'删除标记':'Delete mark',exact:true}).waitFor();expect(await f.page.getByRole('textbox',{name:'标注备注'}).inputValue()).toBe('只删除这一处框选')
+  await f.page.evaluate(english=>document.documentElement.dataset.odysseyLocale=english?'en':'zh',english);await button.waitFor()
+  const placement=await button.evaluate(el=>{const b=el.getBoundingClientRect(),p=el.closest('.pptxa-bubble').getBoundingClientRect();return{right:p.right-b.right,bottom:p.bottom-b.bottom}});expect(placement.right).toBeLessThan(16);expect(placement.bottom).toBeLessThan(16)
+  await mkdir('/tmp/ppt-annotation-bubble-delete-20261026',{recursive:true});await f.page.locator('.pptxa-bubble').screenshot({path:`/tmp/ppt-annotation-bubble-delete-20261026/${english?'dark-en':'light-zh'}.png`})
+  await button.click();await expect.poll(()=>backend.handle.getSnapshot().marks.map(mark=>mark.id)).toEqual([first.id])
+  await expect.poll(()=>f.page.locator('.pptxa-bubble:visible').count()).toBe(0)
+  expect(await f.page.locator(`[data-pptx-annotation-pin="${second.id}"]`).count()).toBe(0);expect(await f.page.locator(`[data-pptx-annotation-pin="${first.id}"]`).count()).toBe(1);expect(await f.page.locator('.pptxa-region:visible').count()).toBe(0)
+  const nativeAfter=backend.shell.snapshot;expect(nativeAfter.draft).toContain('整体要求📌与用户正文保持不变');expect(nativeAfter.draft).toContain('第一条独立意见📌');expect(nativeAfter.draft).not.toContain('只删除这一处框选');expect(nativeAfter.occurrences.filter(value=>value.source==='chat-file')).toEqual(nativeBefore.occurrences.filter(value=>value.source==='chat-file'));expect(nativeAfter.occurrences.filter(value=>value.source==='pptx-annotation').map(value=>JSON.parse(value.ref).markId)).toEqual([first.id])
+  const cold=await new PptxAnnotationService(backend.options).open(backend.source);expect(cold.ok).toBe(true);expect(cold.value.state.marks.map(mark=>mark.id)).toEqual([first.id]);expect(await backend.service.resolveReference({sendingSessionId:'actual-session',reference})).toMatchObject({ok:true,value:{status:'deleted'}})
+  expect(await readFile(manifest)).toEqual(frozen);expect(await readFile(path.join(backend.workspace,'review.pptx'))).toEqual(bytes)
+  await f.page.getByRole('button',{name:'撤销',exact:true}).click();await expect.poll(()=>backend.handle.getSnapshot().marks.map(mark=>mark.ordinal)).toEqual([1,2]);expect(backend.shell.snapshot.draft).toBe(nativeBefore.draft);expect(f.errors).toEqual([])
+  await f.page.locator(`[data-pptx-annotation-pin="${first.id}"]`).click();await expect.poll(()=>f.page.getByRole('textbox',{name:'标注备注'}).inputValue()).toBe('第一条独立意见📌')
+  await button.click();await expect.poll(()=>backend.handle.getSnapshot().marks.map(mark=>mark.id)).toEqual([second.id]);expect(await f.page.locator('.pptxa-region:visible').count()).toBe(1);expect(backend.shell.snapshot.draft).not.toContain('第一条独立意见📌');expect(backend.shell.snapshot.draft).toContain('只删除这一处框选')
+ }finally{await f.close();await backend.close()}
+},25000)
+it('keeps the bubble, mark and the native draft when Main rejects its delete',async()=>{
+ const backend=await durableBackend(),f=await fixture(620,false,backend)
+ try{
+  await f.activate();await point(f.page);await f.page.getByRole('textbox',{name:'标注备注'}).fill('不能丢失的修改意见')
+  await expect.poll(()=>backend.handle.getSnapshot().marks[0]?.comment).toBe('不能丢失的修改意见');await backend.coordinator.whenIdle();const before=structuredClone(backend.shell.snapshot),marks=backend.handle.getSnapshot().marks
+  backend.deny();await f.page.getByRole('button',{name:'删除标记',exact:true}).click({timeout:1500})
+  await expect.poll(()=>f.page.locator('.pptxa-error').innerText()).toContain('工作区');expect(await f.page.locator('.pptxa-bubble:visible').count()).toBe(1);expect(backend.handle.getSnapshot().marks).toEqual(marks);expect(backend.shell.snapshot.draft).toBe(before.draft);expect(backend.shell.snapshot.occurrences).toEqual(before.occurrences);expect(f.errors).toEqual([])
+ }finally{await f.close();await backend.close()}
+},20000)
 async function contentBox(page,index=0){
  return page.locator(`[data-slide-index="${index}"]>[data-mounted="1"]`).first().evaluate(e=>{const r=e.firstElementChild.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})
 }
@@ -110,8 +177,8 @@ for(const dark of [false,true])it(`renders local original pin assets and a conci
   await f.page.getByRole('textbox',{name:'标注备注'}).fill('请把这一处的标题改得更简洁。')
   const slots=await f.page.locator('.pptxa-pin img,.pptxa-bubble-pin img').evaluateAll(els=>els.map(e=>({width:e.width,height:e.height,naturalWidth:e.naturalWidth,src:e.src.startsWith('data:image/svg+xml;base64,')})))
   expect(slots.sort((a,b)=>a.width-b.width)).toEqual([{width:20,height:20,naturalWidth:20,src:true},{width:28,height:28,naturalWidth:28,src:true}])
-  expect(await f.page.locator('.pptxa-bubble button:visible').allTextContents()).toEqual([''])
-  await mkdir('output/ppt-markup-design-20261025/ui-validation',{recursive:true});await f.page.screenshot({path:`output/ppt-markup-design-20261025/ui-validation/viewer-${dark?'dark':'light'}.png`})
+  expect(await f.page.locator('.pptxa-bubble button:visible').allTextContents()).toEqual(['','删除标记'])
+  await mkdir(artifactRoot+'/ui-validation',{recursive:true});await f.page.screenshot({path:`${artifactRoot}/ui-validation/viewer-${dark?'dark':'light'}.png`})
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
@@ -167,7 +234,7 @@ it.each([false,true])('keeps the cold mark list keyboard accessible, bounded and
   await f.page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));expect(await list.getByRole('menuitem').nth(1).evaluate(el=>el===document.activeElement)).toBe(true)
   const geometry=await list.evaluate(el=>{const r=el.getBoundingClientRect(),host=document.querySelector('#surface').getBoundingClientRect();return{left:r.left,right:r.right,bottom:r.bottom,hostLeft:host.left,hostRight:host.right,windowBottom:innerHeight}})
   expect(geometry.left).toBeGreaterThanOrEqual(geometry.hostLeft);expect(geometry.right).toBeLessThanOrEqual(geometry.hostRight);expect(geometry.bottom).toBeLessThanOrEqual(geometry.windowBottom-8)
-  const directory='output/ppt-markup-design-20261025/cold-stale-validation';await mkdir(directory,{recursive:true});await f.page.screenshot({path:directory+'/mark-list-'+(dark?'dark':'light')+'.png'})
+  const directory=artifactRoot+'/cold-stale-validation';await mkdir(directory,{recursive:true});await f.page.screenshot({path:directory+'/mark-list-'+(dark?'dark':'light')+'.png'})
   await f.page.keyboard.press('Escape');expect(await list.count()).toBe(0);expect(await count.evaluate(el=>el===document.activeElement)).toBe(true)
   await count.click();await list.waitFor();await f.page.keyboard.press('End');await f.page.keyboard.press('Enter');await f.page.locator('.pptxa-bubble:visible').waitFor();expect(await f.page.evaluate(()=>window.snapshot.selectedId)).toBe('old-7')
   await count.click();await list.waitFor();await f.page.getByRole('button',{name:'中央其他控件',exact:true}).click();expect(await list.count()).toBe(0)

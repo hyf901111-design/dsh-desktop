@@ -25,6 +25,17 @@ it('upgrades the real v7 count-span viewer to the cold-mark list without leaving
  expect(upgraded).toBe(fresh);expect(upgraded).toContain("'aria-label','标注列表'");expect(patchPptxEditor(upgraded)).toBe(upgraded);expect(stripPptxEditorPatch(upgraded)).toBe(base)
  expect(()=>new Script(upgraded)).not.toThrow()
 })
+it('upgrades the installed v9 bubble to its delete action and preserves strict double installation and stripping',async()=>{
+ const oldViewer=execFileSync('git',['show','715c4582:scripts/lib/pptx-annotation-viewer.mjs'],{encoding:'utf8'}),oldStyle=execFileSync('git',['show','715c4582:src/preload/pptx-annotations.css'],{encoding:'utf8'})
+ const {pptxAnnotationAssets}=req('../scripts/lib/pptx-annotation-assets.mjs'),assetsUrl='data:text/javascript;base64,'+Buffer.from('export const pptxAnnotationAssets='+JSON.stringify(pptxAnnotationAssets)+';export const pptxAnnotationStyle='+JSON.stringify(oldStyle)+';').toString('base64')
+ let prior=execFileSync('git',['show','715c4582:scripts/lib/pptx-editor-ui.mjs'],{encoding:'utf8'})
+ prior=prior.replace("'./pptx-direct-editor.mjs'",JSON.stringify(pathToFileURL(process.cwd()+'/scripts/lib/pptx-direct-editor.mjs').href)).replace("'./pptx-annotation-assets.mjs'",JSON.stringify(assetsUrl)).replace("'./pptx-annotation-viewer.mjs'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(oldViewer).toString('base64')))
+ const legacy=await import(/* @vite-ignore */'data:text/javascript;base64,'+Buffer.from(prior).toString('base64')),old=legacy.patchPptxEditor(base)
+ expect(old).toContain('sherlock:pptx-content-editor:v9');expect(old).not.toContain("'pptxa-delete'")
+ const installed=patchPptxEditor(old),fresh=patchPptxEditor(base)
+ expect(installed.includes("'pptxa-delete'")).toBe(true);expect(installed===fresh).toBe(true);expect(patchPptxEditor(installed)===installed).toBe(true);expect(stripPptxEditorPatch(installed)===base).toBe(true);expect(()=>new Script(installed)).not.toThrow()
+ expect(()=>patchPptxEditor(installed.replace('function attachPptxAnnotationViewer(','function unknownAnnotationViewer('))).toThrow(/drifted/)
+})
 it('ships exactly the ten original local SVG slots at their intrinsic 14/16/18/20/28px root dimensions',()=>{
  const files=readdirSync('src/preload/pptx-annotation-icons').sort()
  expect(files).toEqual(['close16.svg','mark16-normal.svg','mark16-selected.svg','pin18-normal.svg','pin18-selected.svg','pin20-selected.svg','pin28-normal.svg','pin28-selected.svg','point14-normal.svg','rect14-selected.svg'].sort())
