@@ -1,11 +1,15 @@
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
+import {createRequire} from 'node:module'
 import {createSourceFile,ScriptTarget,ScriptKind,forEachChild,isVariableDeclaration,isVariableStatement,isFunctionDeclaration} from 'typescript'
 import {expect,it} from 'vitest'
 import {patchNotesComposer} from '../scripts/lib/notes-composer.mjs'
+const require=createRequire(import.meta.url)
 
 it('resolves command consumption and notices in the actual InputHub lexical scope for both chat and notes',()=>{
- const source=patchNotesComposer(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ let resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ for(const[file,strip]of [['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput'],['home-guide-presentation-native','stripHomeGuidePresentationNative'],['home-guide-native','stripHomeGuideNative']])resident=require('../scripts/lib/'+file+'.mjs')[strip](resident)
+ const source=patchNotesComposer(resident)
  const tree=createSourceFile('native.js',source,ScriptTarget.Latest,true,ScriptKind.JS)
  let declaration
  const find=node=>{if(isVariableDeclaration(node)&&node.name.getText(tree)==='InputHub')declaration=node;forEachChild(node,find)}
