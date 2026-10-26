@@ -13,6 +13,8 @@ const RESIDENT_V4 = '/* odyssey:home-guide-resident-isolation:v4 */'
 const RESIDENT = '/* odyssey:home-guide-resident-isolation:v5 */'
 const PERSISTENT = '/* odyssey:home-guide-persistent-board:v1 */'
 const CANVAS = '/* odyssey:home-guide-shared-workspace-canvas:v1 */'
+const COMPLETE_DRAFT = '/* odyssey:home-guide-complete-draft:v1 */\nuseHomeGuideNativeCompleteDraft(rootRef,sessionId,workspace,canvasToolRef,selectCanvasTool);'
+const SELECT_TOOL = '\n      const selectCanvasTool=tool=>{canvasToolRef.current=tool;setCanvasTool(tool);};'
 
 function homeGuideNativeBoardSymbols() {
   return [
@@ -57,6 +59,25 @@ function ResearchCanvas(props) {
   const resident = useHomeGuideNativeResident(props.sessionId)
   if (resident && !provider?.runId) return null
   return react.createElement(HomeGuideNativeOriginalResearchCanvas, props)
+}
+
+// The actor creates through the native workspace API, so finish its one-shot
+// tool with the same real state transition used by a completed canvas draw.
+function useHomeGuideNativeCompleteDraft(rootRef, sessionId, workspace, toolRef, selectTool) {
+  const provider = react.useContext(HomeGuideNativeFinancialContext)
+  const initial = react.useRef(null)
+  if (provider?.runId && initial.current?.workspace !== workspace) initial.current = { workspace, ids: new Set(workspace.getSnapshot().artifacts.map(node => node.id)) }
+  react.useLayoutEffect(() => {
+    const canvas = rootRef.current
+    if (!canvas || !provider?.runId) return
+    const finish = nodeId => {
+      const ticket = homeGuideNativeSharedResource?.owner, state = workspace.getSnapshot(), node = state.artifacts.find(node => node.id === nodeId)
+      if (!canvas.isConnected || ticket?.resource.id !== sessionId || ticket.resource.workspace !== workspace || ticket.provider !== provider || ticket.controller.signal.aborted || !ticket.playing || ticket.host.querySelector('[data-research-canvas]') !== canvas || ticket.nodes.smart !== nodeId || initial.current.ids.has(nodeId) || toolRef.current !== 'component' || node?.generationStatus !== 'draft' || node.containerSpec || state.selection.selectedNodeIds.length !== 1 || state.selection.selectedNodeIds[0] !== nodeId) return false
+      selectTool('select'); return true
+    }
+    canvas.__eworkCompleteContainerDraft = finish
+    return () => { if (canvas.__eworkCompleteContainerDraft === finish) delete canvas.__eworkCompleteContainerDraft }
+  }, [rootRef, sessionId, workspace, toolRef, selectTool, provider])
 }
 
 function FinancialWidget(props) {
@@ -547,13 +568,14 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           const calendar=workspace.getSnapshot().artifacts.find(node=>node.id===ticket.nodes.calendar),size=workspace.getSnapshot().canvasSize
           const node=workspace.createContainerDraft({x:(size.availableWidth||size.width)/2,y:calendar.y,width:485,height:420,sizeMode:'manual',preserveGenerationSize:true})
           if(!node)throw Error('智能容器暂时无法添加。')
-          ticket.nodes.smart=node.id;ticket.ownedSelectionEpoch=ticket.selectionEpoch;ticket.ownedSelection=JSON.stringify(workspace.getSnapshot().selection);clearOwnedSelection(ticket);layoutBoard()
+          ticket.nodes.smart=node.id
+          react_dom.flushSync(()=>{if(!ticket.host.querySelector('[data-research-canvas]')?.__eworkCompleteContainerDraft?.(node.id))throw changed()})
+          ticket.ownedSelectionEpoch=ticket.selectionEpoch;ticket.ownedSelection=JSON.stringify(workspace.getSnapshot().selection);clearOwnedSelection(ticket);layoutBoard()
         }
         await revealBoard(ticket,ticket.nodes.smart)
         await settle(ticket,()=>!!ticket.host.querySelector('[data-research-node-id="'+CSS.escape(ticket.nodes.smart)+'"]'))
         const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(ticket.nodes.smart)+'"]')
         await cue(ticket,card.querySelector('.ew-grid-header')||card,'查看新建的智能容器','move')
-        await click(ticket,toolbar()?.querySelector('[data-research-global-select]'),'切回选择工具')
         clearOwnedSelection(ticket);await save(ticket);return
       }
       if(detail.command==='board-smart-generate'){
@@ -779,7 +801,7 @@ function residentChanges(legacy = false, priorV2 = false, priorV3 = false, prior
 
 /** Restore the native anchors before older source patches run again. */
 export function stripHomeGuideNative(source) {
-  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'homeGuideNativeSmartPath', 'homeGuideNativeSmartPrompt', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident']
+  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'homeGuideNativeSmartPath', 'homeGuideNativeSmartPrompt', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident', 'odyssey:home-guide-complete-draft', 'useHomeGuideNativeCompleteDraft']
   if (!source.includes(START)) {
     if (owned.some(token => source.includes(token))) throw Error('Home guide native partial patch drifted')
     return source
@@ -796,6 +818,7 @@ export function stripHomeGuideNative(source) {
   ]) if (runtime.split(anchor).length !== 2) throw Error('Home guide native runtime anchor drifted: ' + anchor)
   if (runtime.includes('NativeHomeNotesGuidePortal') && runtime.split('function NativeHomeNotesGuidePortal(').length !== 2) throw Error('Home guide notes native anchor drifted')
   source = source.slice(0, start) + source.slice(end + END.length + 1)
+  if (source.includes(COMPLETE_DRAFT)) source = replaceOne(source, '\n' + COMPLETE_DRAFT, '')
   if (source.includes(RESIDENT) || source.includes(RESIDENT_V1) || source.includes(RESIDENT_V2) || source.includes(RESIDENT_V3) || source.includes(RESIDENT_V4)) for (const [native, patched] of residentChanges(source.includes(RESIDENT_V1), source.includes(RESIDENT_V2), source.includes(RESIDENT_V3), source.includes(RESIDENT_V4))) source = replaceOne(source, patched, native)
   source = replaceOne(source, 'function HomeGuideNativeOriginalConversationRoot({ subagentPanel=false,', 'function ConversationRoot({ subagentPanel=false,')
   if (source.includes(CANVAS)) source = replaceOne(source, CANVAS + '\nfunction HomeGuideNativeOriginalResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {', 'function ResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {')
@@ -829,7 +852,7 @@ export function stripHomeGuideNative(source) {
 /** Add an isolated native React portal without replacing any conversation child. */
 export function patchHomeGuideNative(source) {
   if (source.includes(START)) source = stripHomeGuideNative(source)
-  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
+  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, useHomeGuideNativeCompleteDraft, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
   if (source.includes(START)) {
     const first = source.indexOf(START), end = source.indexOf(END, first)
     if (end < 0 || source.indexOf(START, first + START.length) >= 0 || !source.includes('function HomeGuideNativeOriginalConversationRoot(')) throw Error('Home guide native refresh anchor drifted')
@@ -857,6 +880,7 @@ export function patchHomeGuideNative(source) {
   if (!source.includes(exportPortal)) source = replaceOne(source, 'exports.ConversationRoot = ConversationRoot;', 'exports.ConversationRoot = ConversationRoot;\n\t\t' + exportPortal)
   if (!source.includes(RESIDENT)) for (const [native, patched] of residentChanges()) source = replaceOne(source, native, patched)
   else for (const [, patched] of residentChanges()) if (source.split(patched).length !== 2) throw Error('Home guide resident isolation anchor drifted')
+  source = replaceOne(source, SELECT_TOOL, SELECT_TOOL + '\n' + COMPLETE_DRAFT)
   source = replaceOne(source, '\nfunction ResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {', '\n' + CANVAS + '\nfunction HomeGuideNativeOriginalResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {')
   source = replaceOne(source, 'function FinancialWidget({node,sessionId,visible,onSpecChange}){', PERSISTENT + '\nfunction HomeGuideNativeOriginalFinancialWidget({node,sessionId,visible,onSpecChange}){')
   source = replaceOne(source, 'function FinancialLibrary({rootRef,workspace,sessionId}){', 'function HomeGuideNativeOriginalFinancialLibrary({rootRef,workspace,sessionId}){')

@@ -41,7 +41,7 @@ test('extends the native-colored Board connection to every intermediate virtual 
  const f=financialFixture(),click=vi.fn();f.source.addEventListener('click',click);f.target.addEventListener('click',click)
  const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source})
  void action.catch(()=>{})
- await vi.advanceTimersByTimeAsync(450)
+ await vi.advanceTimersByTimeAsync(600)
  const svg=f.line();expect(svg).not.toBeNull();expect(svg?.getAttribute('aria-hidden')).toBe('true');expect(svg?.style.pointerEvents).toBe('none');expect(svg?.style.color).toBe('#249bfa')
  const path=svg!.querySelector('path')!,first=path.getAttribute('d')!,cursor=f.pointer.snapshot();expect(first.startsWith('M 90 110 C ')).toBe(true);expect(first.endsWith(` ${cursor.x} ${cursor.y}`)).toBe(true);expect(cursor.x).toBeGreaterThan(90);expect(cursor.x).toBeLessThan(360)
  await vi.advanceTimersByTimeAsync(160);expect(path.getAttribute('d')).not.toBe(first);expect(path.getAttribute('d')?.endsWith(` ${f.pointer.snapshot().x} ${f.pointer.snapshot().y}`)).toBe(true)
@@ -85,6 +85,29 @@ test('moves a DOM arrow then acknowledges its click without clicking or focusing
  const action=f.pointer.perform({target:f.target,action:'click'}).then(()=>{finished=true})
  await vi.advanceTimersByTimeAsync(80);expect(finished).toBe(false);expect(document.querySelector('[data-home-guide-pointer]')?.getAttribute('aria-hidden')).toBe('true');expect(document.activeElement).not.toBe(f.target)
  await vi.runAllTimersAsync();await action;expect(finished).toBe(true);expect(click).not.toHaveBeenCalled();expect(f.pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
+})
+test('paces a shared control approach and click about thirty percent slower without adding actor sleeps',async()=>{
+ const f=fixture(),started=Date.now(),phases=new Map<string,number>()
+ const action=f.pointer.perform({target:f.target,action:'click',onFrame:frame=>{if(!phases.has(frame.phase))phases.set(frame.phase,Date.now()-started)}})
+ await vi.runAllTimersAsync();await action
+ const moving=phases.get('pressed')!,pressed=phases.get('released')!-moving,released=phases.get('idle')!-phases.get('released')!
+ expect(moving).toBeGreaterThanOrEqual(330);expect(moving).toBeLessThanOrEqual(380)
+ expect(pressed).toBeGreaterThanOrEqual(100);expect(pressed).toBeLessThanOrEqual(110)
+ expect(released).toBeGreaterThanOrEqual(200);expect(released).toBeLessThanOrEqual(215)
+ expect(Date.now()-started).toBeGreaterThanOrEqual(650);expect(Date.now()-started).toBeLessThanOrEqual(710)
+})
+test('slows the whole precision drag on the same playing clock while keeping its exact endpoints',async()=>{
+ const f=fixture(),started=Date.now(),action=f.pointer.perform({target:f.target,fromTarget:f.source,action:'drag'})
+ await vi.runAllTimersAsync();await action
+ expect(Date.now()-started).toBeGreaterThanOrEqual(1660);expect(Date.now()-started).toBeLessThanOrEqual(1780)
+ expect(f.pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
+})
+test('retains an immediate reduced-motion acknowledgement instead of adding the slower visual clock',async()=>{
+ const f=fixture(),media=vi.spyOn(window,'matchMedia').mockReturnValue({matches:true} as MediaQueryList),started=Date.now()
+ try{
+  const action=f.pointer.perform({target:f.target,action:'click'});await vi.runAllTimersAsync();await action
+  expect(Date.now()-started).toBeLessThan(16);expect(f.pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
+ }finally{media.mockRestore()}
 })
 test('approaches controls along a small smooth arc with slower endpoints while keeping precision drags on their selected path',async()=>{
  const f=fixture(),first=f.pointer.perform({target:f.source,action:'move'});await vi.runAllTimersAsync();await first

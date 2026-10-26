@@ -44,6 +44,15 @@ it('restores the exact native source before earlier patches refresh and is a no-
  expect(guide.stripHomeGuideNative('const ordinary = 1;')).toBe('const ordinary = 1;')
  new Script(native)
 })
+it('upgrades the installed one-shot draft path and strictly removes or rejects its complete native hook',()=>{
+ const current=guide.patchHomeGuideNative(withoutPresentation(installed)),hook='/* odyssey:home-guide-complete-draft:v1 */\nuseHomeGuideNativeCompleteDraft(rootRef,sessionId,workspace,canvasToolRef,selectCanvasTool);'
+ expect(current.split(hook)).toHaveLength(2);expect(guide.patchHomeGuideNative(current)).toBe(current)
+ const native=guide.stripHomeGuideNative(current)
+ expect(native).not.toContain('useHomeGuideNativeCompleteDraft');expect(native).not.toContain('__eworkCompleteContainerDraft')
+ expect(guide.patchHomeGuideNative(native)).toBe(current)
+ for(const invalid of [current.replace(hook,hook+'\n'+hook),current.replace(hook,hook.replace('workspace,','otherWorkspace,')),current.replace('/* odyssey:home-guide-complete-draft:v1 */','/* odyssey:home-guide-complete-draft:v2 */')])expect(()=>guide.stripHomeGuideNative(invalid)).toThrow(/anchor|partial|drift/i)
+ new Script(current);new Script(native)
+})
 it.each([1,2,3,4])('upgrades resident v%s and still restores the native activation effect exactly',version=>{
  const current=guide.patchHomeGuideNative(withoutPresentation(installed))
  const legacyEffect='(0, react.useEffect)(() => {\n\t\t\t\tif (sessionId === void 0 || homeGuideResident) return;\n\t\t\t\tsetResearchActive(sessionId, research);\n\t\t\t\treturn () => {\n\t\t\t\t\tif (!homeGuideNativeResidentSession(sessionId,subagentPanel)) setResearchActive(sessionId, false);\n\t\t\t\t};\n\t\t\t}, [research, homeGuideResident, sessionId, setResearchActive]);'

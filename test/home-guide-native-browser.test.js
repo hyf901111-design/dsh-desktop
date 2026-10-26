@@ -360,8 +360,10 @@ it.each([{width:1460,height:1000},{width:580,height:1000},{width:1080,height:640
 it('creates a real native smart draft beside the calendar through the existing canvas tools',async()=>{
  const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000})
  try{
-  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.smartToolCues=[];window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return;const target=[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===d.targetToken);window.guideProbe.smartToolCues.push({container:target?.hasAttribute('data-research-global-container'),select:target?.hasAttribute('data-research-global-select')});window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.smartToolCues=[];window.guideProbe.selectToolClicks=0;document.addEventListener('click',event=>{if(event.target.closest?.('[data-research-global-select]'))window.guideProbe.selectToolClicks++},true);window.addEventListener('sherlock:home-guide-cue',event=>{const d=JSON.parse(JSON.stringify(event.detail));if(!d.requestId)return;const target=[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===d.targetToken);window.guideProbe.smartToolCues.push({container:target?.hasAttribute('data-research-global-container'),select:target?.hasAttribute('data-research-global-select'),input:target?.hasAttribute('data-research-container-prompt')});window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
   for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange','board-link','board-add'])await succeeds(page,step)
+  await page.locator('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"] [data-research-global-container]').click()
+  expect(await page.evaluate(()=>{const canvas=document.querySelector('#guide-host [data-research-canvas]'),old=window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts[0];return{unknown:canvas.__eworkCompleteContainerDraft('foreign-node'),existing:canvas.__eworkCompleteContainerDraft(old.id),tool:canvas.dataset.canvasTool}})).toEqual({unknown:false,existing:false,tool:'component'})
   await succeeds(page,'board-smart-container')
   const state=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
   expect(state).toHaveLength(7)
@@ -370,8 +372,19 @@ it('creates a real native smart draft beside the calendar through the existing c
   expect(smart.y).toBe(calendar.y);expect(calendar.x).toBeLessThan(smart.x);expect(smart.width).toBe(calendar.width)
   expect(await page.locator('#guide-host [data-research-container-prompt]').count()).toBe(1)
   expect(await page.locator('#guide-host [data-research-canvas]').getAttribute('data-canvas-tool')).toBe('select')
-  expect(await page.evaluate(()=>window.guideProbe.smartToolCues.some(cue=>cue.container))).toBe(true);expect(await page.evaluate(()=>window.guideProbe.smartToolCues.some(cue=>cue.select))).toBe(true)
+  expect(await page.evaluate(()=>window.guideProbe.smartToolCues.some(cue=>cue.container))).toBe(true);expect(await page.evaluate(()=>window.guideProbe.smartToolCues.some(cue=>cue.select))).toBe(false)
+  expect(await page.evaluate(()=>window.guideProbe.selectToolClicks)).toBe(0)
+  await page.evaluate(()=>{window.guideProbe.smartFocusModes=[];document.addEventListener('input',event=>{if(event.target.matches?.('[data-research-container-prompt]'))window.guideProbe.smartFocusModes.push({tool:event.target.closest('[data-research-canvas]').dataset.canvasTool,focused:document.activeElement===event.target})},true)})
+  await succeeds(page,'board-smart-generate')
+  expect(await page.evaluate(()=>window.guideProbe.smartToolCues.some(cue=>cue.input))).toBe(true)
+  expect(await page.evaluate(()=>window.guideProbe.smartFocusModes.length)).toBeGreaterThan(1)
+  expect(await page.evaluate(()=>window.guideProbe.smartFocusModes.every(state=>state.tool==='select'&&state.focused))).toBe(true)
+  expect(await page.evaluate(()=>window.guideProbe.selectToolClicks)).toBe(0)
+  expect(await page.locator('#guide-host [data-research-canvas]').getAttribute('data-canvas-tool')).toBe('select')
+  await page.evaluate(()=>{const canvas=document.querySelector('#guide-host [data-research-canvas]');window.guideProbe.completedDraftCanvas=canvas;window.guideProbe.completedDraftFinish=canvas.__eworkCompleteContainerDraft})
   await preserved(page);expect(errors).toEqual([])
+  await succeeds(page,'dispose')
+  expect(await page.evaluate(()=>({installed:typeof window.guideProbe.completedDraftCanvas.__eworkCompleteContainerDraft,late:window.guideProbe.completedDraftFinish('foreign-node')}))).toEqual({installed:'undefined',late:false})
  }finally{await page.close()}
 },30000)
 
