@@ -1,6 +1,51 @@
 const START='/* odyssey:home-guide-presentation:start:v1 */'
 const END='/* odyssey:home-guide-presentation:end:v1 */'
 
+/** Present only a request actually sent by the active native demo input. */
+function createHomePresentationSubmissionStore(){
+ const entries=new Map(),listeners=new Set();let revision=0
+ const notify=()=>{revision++;for(const listener of listeners)listener()}
+ const clear=entry=>{if(entries.get(entry.sessionId)===entry){entries.delete(entry.sessionId);notify()}}
+ return{
+  subscribe:listener=>{listeners.add(listener);return()=>listeners.delete(listener)},version:()=>revision,
+  read:sessionId=>{const entry=entries.get(sessionId);if(!entry)return null;try{entry.current();return entry}catch{return null}},
+  consume:clear,
+  watch({sessionId,session,signal,current}){
+   const api=session?.api
+   if(typeof api?.subscribeEnvelopes!=='function')return()=>{}
+   let closed=false,entry=null,off=()=>{},offState=()=>{}
+   const valid=()=>{if(closed||signal.aborted)return false;try{current();return true}catch{return false}}
+   const stop=()=>{if(closed)return;closed=true;signal.removeEventListener('abort',stop);off();offState();if(entry)clear(entry)}
+   off=api.subscribeEnvelopes(batch=>{
+    if(!valid()){stop();return}
+    for(const envelope of batch){
+     if(envelope.type==='client-request'&&envelope.method==='session.prompt'&&envelope.payload?.sessionId===sessionId){
+      const content=envelope.payload.content
+      if(entry||typeof envelope.rpcId!=='string'||!envelope.rpcId||!Array.isArray(content)||!content.length||content.some(part=>part?.type!=='text'||typeof part.text!=='string'))continue
+      entry={sessionId,rpcId:envelope.rpcId,content:structuredClone(content),current:()=>{if(!valid())throw Error('示例输入已变化。')}}
+      entries.set(sessionId,entry);notify()
+     }else if(entry&&envelope.type==='server-response'&&envelope.rpcId===entry.rpcId&&(envelope.result?.ok!==true||envelope.result.value?.accepted!==true))clear(entry)
+    }
+   })
+   if(closed){off();return stop}
+   offState=session.subscribe(()=>{if(!valid()){stop();return}if(entry&&session.getSnapshot().promptError?.op==='send')clear(entry)})
+   signal.addEventListener('abort',stop,{once:true});if(signal.aborted)stop()
+   return stop
+  }
+ }
+}
+
+function useHomePresentationSubmission(sessionId,order,nodeStore){
+ react.useSyncExternalStore(HomePresentationSubmissions.subscribe,HomePresentationSubmissions.version,HomePresentationSubmissions.version)
+ const entry=HomePresentationSubmissions.read(sessionId),received=!!entry&&order.some(key=>{const node=nodeStore.get(key);return node?.kind==='user'&&node.data?.source?.kind==='user'&&node.data.source.rpcId===entry.rpcId})
+ react.useLayoutEffect(()=>{if(entry&&received)HomePresentationSubmissions.consume(entry)},[entry,received])
+ return received?null:entry
+}
+
+function HomePresentationSubmittedUser({entry,loadImage,openFile,t}){
+ return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-home-guide-user-submission':entry.rpcId},react.createElement(UserStyleBubble,{content:entry.content,imageLoader:loadImage,openFile,t}))
+}
+
 function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
  react.useEffect(()=>{
   if(subagentPanel||!sessionId||window.top!==window)return
@@ -73,6 +118,7 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
     if(!shell||shell.disposed)throw Error('原生输入框尚未就绪。')
     const kind=detail.kind??'ppt',skillId=kind==='report'?'builtin:ework-equity-research':'builtin:efund-ppt-maker'
     const ticket={detail,kind,skillId,host,shell,controller:new window.AbortController(),stage:-1,busy:false,playing:false};owned=ticket
+    if(detail.fresh)HomePresentationSubmissions.watch({sessionId,session:deps.sessions?.binding?.(sessionId)?.session,signal:ticket.controller.signal,current:()=>check(ticket)})
     if(detail.fresh){if(shell.snapshot.draft.trim()||shell.snapshot.imageIds?.length||shell.snapshot.occurrences?.length)throw Error('示例会话中已有草稿，未替换。');ticket.prepared=await rpc(ticket,'prepare',{fresh:true,cwd:detail.cwd});if(typeof ticket.prepared.brief!=='string'||!ticket.prepared.brief||(kind==='report'?typeof ticket.prepared.htmlPath!=='string'||typeof ticket.prepared.pdfPath!=='string':typeof ticket.prepared.sourcePath!=='string'||typeof ticket.prepared.presentationPath!=='string'))throw Error('预制研究示例尚未就绪。')}
     await waitFor(ticket,()=>!!inputFor(ticket),false);return
    }
@@ -228,10 +274,12 @@ const PRESENTATION_BINDING='/* odyssey:home-presentation-binding:v1 */'
 const PRESENTATION_EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,researchSidebar,getHomeGuideSession:id=>sherlockBoardsAdapter?.getHomeGuideSession?.(id)};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
 const LEGACY_PAGE_EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,researchSidebar,getHomeGuideSession:id=>sherlockBoardsPage.getHomeGuideSession(id)};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
 const PRESENTATION_EXPORT='exports.NativeHomePresentationPortal = NativeHomePresentationPortal;'
+const SUBMISSION_HOOK='\n/* odyssey:home-presentation-submitted-user:v1 */\nconst homePresentationSubmission=useHomePresentationSubmission(sessionId,order,nodeStore);\n'
+const SUBMISSION_RENDER='homePresentationSubmission&&react.createElement(HomePresentationSubmittedUser,{entry:homePresentationSubmission,loadImage,openFile,t}),\n'
 
 /** Restore the prior (possibly board-wrapped) Root before exact legacy transforms. */
 export function stripHomeGuidePresentationNative(source){
- const ownedNames=['HomePresentationNativeDeps','HomePresentationOriginalConversationRoot','NativeHomePresentationContent','NativeHomePresentationPortal','NativePresentationConversationRoot','homePresentationSidebarSnapshot']
+ const ownedNames=['HomePresentationNativeDeps','HomePresentationOriginalConversationRoot','NativeHomePresentationContent','NativeHomePresentationPortal','NativePresentationConversationRoot','homePresentationSidebarSnapshot','createHomePresentationSubmissionStore','HomePresentationSubmissions','useHomePresentationSubmission','HomePresentationSubmittedUser','homePresentationSubmission','odyssey:home-presentation-submitted-user:']
  const traces=[START,END,PRESENTATION_BINDING,...ownedNames]
  const drift=()=>{throw Error('Home presentation native strip anchor drifted')}
  if(!source.includes(START)){if(traces.some(value=>source.includes(value)))drift();return source}
@@ -246,6 +294,12 @@ export function stripHomeGuidePresentationNative(source){
  const bindings=effects.map(effect=>'\n'+PRESENTATION_BINDING+'\n'+effect).filter(binding=>source.includes(binding))
  if(bindings.length!==1||source.split('const composerBlocks = new ComposerBlockRegistry();'+bindings[0]).length!==2||!source.includes('\n'+PRESENTATION_EXPORT))drift()
  let restored=source.slice(0,start)+source.slice(end+END.length+(source[end+END.length]==='\n'?1:0))
+ if(block.includes('createHomePresentationSubmissionStore')){
+  for(const name of ['createHomePresentationSubmissionStore','useHomePresentationSubmission','HomePresentationSubmittedUser'])if(block.split('function '+name+'(').length!==2)drift()
+  if(block.split('const HomePresentationSubmissions=createHomePresentationSubmissionStore();').length!==2)drift()
+  if(restored.split(SUBMISSION_HOOK).length!==2||restored.split(SUBMISSION_RENDER).length!==2)drift()
+  restored=restored.replace(SUBMISSION_HOOK,'').replace(SUBMISSION_RENDER,'')
+ }
  restored=restored.replace(bindings[0],'').replace('\n'+PRESENTATION_EXPORT,'')
  if(traces.some(value=>restored.includes(value)))drift()
  return restored
@@ -253,7 +307,11 @@ export function stripHomeGuidePresentationNative(source){
 
 export function patchHomeGuidePresentationNative(source){
  source=stripHomeGuidePresentationNative(source)
- const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ source=one(source,'const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);'+SUBMISSION_HOOK)
+ const flow=['conversationComponentFlow.flatMap((entry) => {','renderFlow.flatMap((entry) => {'].filter(anchor=>source.includes(anchor))
+ if(flow.length!==1)throw Error('Home presentation submitted-user flow anchor drifted')
+ source=one(source,flow[0],SUBMISSION_RENDER+flow[0])
  source=one(source,'exports.ConversationRoot = ConversationRoot;',definitions+'\nexports.ConversationRoot = ConversationRoot;')
  source=one(source,'const composerBlocks = new ComposerBlockRegistry();','const composerBlocks = new ComposerBlockRegistry();\n'+PRESENTATION_BINDING+'\n'+PRESENTATION_EFFECT)
  return one(source,'exports.ConversationRoot = ConversationRoot;','exports.ConversationRoot = ConversationRoot;\n'+PRESENTATION_EXPORT)
