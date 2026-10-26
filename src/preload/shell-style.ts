@@ -24,6 +24,9 @@ const desktopShellStyles = `
   }
   .ydkMvW_title { min-width: 0; flex: 1; }
   .ydkMvW_close { order: -1; }
+  /* Native Modal icon buttons must not inherit workbench form padding. */
+  body ._dialog_15u5s_22 ._close_15u5s_61 { padding: 0; }
+  body ._dialog_15u5s_22 ._close_15u5s_61 > svg { display: block; width: 14px; height: 14px; flex: none; }
 `
 
 export function mountDesktopShellStyles(document: Document): void {
