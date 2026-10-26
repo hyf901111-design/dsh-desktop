@@ -102,8 +102,8 @@ beforeAll(async () => {
 }, 30000)
 afterAll(() => browser?.close())
 
-async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true,deferRegistration=false,smartMode='ready'}={}) {
-  const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, reducedMotion }), errors = [], external = []
+async function fixture({nativeLayout=false,width=1460,height=960,guideTop=70,guideBottom=70,deviceScaleFactor=1,reducedMotion='reduce',diskEntries=[],workspaceItems,guideKind,accountOwner,initialDraft,seedGuideRegistration,guideSurface=true,deferRegistration=false,smartMode='ready'}={}) {
+  const page = await browser.newPage({ viewport: { width: 1460, height: 960 }, deviceScaleFactor, reducedMotion }), errors = [], external = []
   page.on('pageerror', error => errors.push(error.stack||error.message))
   const smartRequests=[];let releaseSmart;const smartGate=new Promise(resolve=>releaseSmart=resolve)
   await page.route('**/*', async route => {
@@ -185,6 +185,30 @@ it('smoothly frames all four arranged cards before connecting, retaining readabl
   await mkdir('/tmp/home-board-default-frame-20261026',{recursive:true});await page.screenshot({path:'/tmp/home-board-default-frame-20261026/four-cards-linked.png'});await writeFile('/tmp/home-board-default-frame-20261026/framing.json',JSON.stringify(result,null,2));await preserved(page);expect(errors).toEqual([])
  }finally{await page.close()}
 },40000)
+it.each([{width:1255,height:818,deviceScaleFactor:1.1,right:348},{width:1380,height:900,deviceScaleFactor:1,right:384}])('keeps all four complete cards visible throughout real pointer connections at the formal16 native viewport $width × $height',async({width,height,deviceScaleFactor,right})=>{
+ const{page,errors}=await fixture({nativeLayout:true,width,height,deviceScaleFactor,guideTop:34,guideBottom:10,reducedMotion:'no-preference'})
+ const output='/tmp/home-board-formal16-frame-20261026/'+width+'x'+height;await mkdir(output,{recursive:true})
+ try{
+  await page.addStyleTag({content:await readFile('src/preload/home-guides.css','utf8')})
+  await page.evaluate(right=>{
+   const host=document.getElementById('guide-host');host.style.left='0px';host.style.right=right+'px';document.body.dataset.dsDarkTheme='';window.guideProbe.view.update({view:'research'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.formalFrames=[]
+   window.guideProbe.formalPointer=window.guideProbe.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})
+   window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(!d.requestId)return;const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));void window.guideProbe.formalPointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action,onFrame:frame=>{if(d.action!=='drag'||!['pressed','dragging','released'].includes(frame.phase))return;const canvas=host.querySelector('[data-research-canvas]'),box=canvas.getBoundingClientRect();window.guideProbe.formalFrames.push({phase:frame.phase,point:{x:frame.x,y:frame.y},canvas:{top:box.top,bottom:Math.min(innerHeight,box.bottom),left:box.left,right:box.right},cards:[...host.querySelectorAll('[data-financial-widget]')].filter(node=>['watchlist','quote','news','announcements'].includes(node.dataset.financialWidget)).map(node=>{const card=node.closest('[data-research-node-id]'),r=card.getBoundingClientRect();return{widget:node.dataset.financialWidget,top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height,font:getComputedStyle(node).fontSize,chartHeight:node.querySelector('[data-financial-chart]')?.getBoundingClientRect().height??null}})})}}).then(()=>reply(true),error=>reply(false,error.message))})
+  },right)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange'])await succeeds(page,step)
+  const before=await page.evaluate(()=>{const w=window.guideProbe.registry.for('guide-browser-session'),canvas=document.querySelector('#guide-host [data-research-canvas]');canvas.scrollTop=canvas.scrollHeight;return{cells:w.getWorkbenchCells(),canvas:{clientWidth:canvas.clientWidth,clientHeight:canvas.clientHeight,bounds:canvas.getBoundingClientRect().toJSON(),scrollPaddingBottom:getComputedStyle(canvas).scrollPaddingBottom},viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio}}})
+  expect(before.canvas.clientWidth).toBeGreaterThan(width===1255?790:880);expect(before.canvas.clientWidth).toBeLessThan(width===1255?850:930);expect(before.canvas.clientHeight).toBeGreaterThan(width===1255?690:770);expect(before.canvas.clientHeight).toBeLessThan(width===1255?720:810);expect(before.canvas.scrollPaddingBottom).toBe('80px')
+  await succeeds(page,'board-link')
+  const result=await page.evaluate(()=>({frames:window.guideProbe.formalFrames,cells:window.guideProbe.registry.for('guide-browser-session').getWorkbenchCells()}))
+  await expect.poll(()=>page.locator('#guide-host [data-financial-widget="quote"] [data-financial-chart]').count()).toBe(1)
+  const finalGeometry=await page.evaluate(()=>{const host=document.getElementById('guide-host'),canvas=host.querySelector('[data-research-canvas]'),toolbar=document.querySelector('[data-ework-toolbar][data-ework-toolbar-owner="guide-browser-session"]'),quote=host.querySelector('[data-financial-widget="quote"]'),chart=quote.querySelector('[data-financial-chart]'),card=quote.closest('[data-research-node-id]');return{canvas:canvas.getBoundingClientRect().toJSON(),toolbar:toolbar.getBoundingClientRect().toJSON(),quote:card.getBoundingClientRect().toJSON(),chart:chart.getBoundingClientRect().toJSON(),footers:[...host.querySelectorAll('[data-financial-widget]')].filter(node=>['watchlist','quote','news','announcements'].includes(node.dataset.financialWidget)).map(node=>node.querySelector('.ew-financial-footer').getBoundingClientRect().toJSON())}})
+  await page.screenshot({path:output+'/four-cards-linked.png'});await writeFile(output+'/framing.json',JSON.stringify({before,...result,finalGeometry},null,2))
+  expect(finalGeometry.chart.height).toBeGreaterThan(80);expect(finalGeometry.chart.top).toBeGreaterThan(finalGeometry.quote.top);expect(finalGeometry.chart.bottom).toBeLessThan(finalGeometry.quote.bottom);for(const footer of finalGeometry.footers)expect(footer.bottom).toBeLessThan(finalGeometry.toolbar.top-8)
+  expect(result.frames.length).toBeGreaterThan(20);expect(result.frames.some(frame=>frame.phase==='dragging')).toBe(true)
+  for(const frame of result.frames){expect(frame.cards).toHaveLength(4);for(const card of frame.cards){expect(card.top,card.widget+' complete header during '+frame.phase).toBeGreaterThanOrEqual(frame.canvas.top-1);expect(card.bottom,card.widget+' complete footer during '+frame.phase).toBeLessThanOrEqual(frame.canvas.bottom-20);expect(card.left).toBeGreaterThanOrEqual(frame.canvas.left-1);expect(card.right).toBeLessThanOrEqual(frame.canvas.right+1);expect(parseFloat(card.font)).toBeGreaterThanOrEqual(11);if(card.widget==='quote'&&card.chartHeight!==null)expect(card.chartHeight).toBeGreaterThan(80)}}
+  expect(result.cells).toEqual(before.cells);expect(await page.locator('[data-financial-link]').count()).toBe(3);await preserved(page);expect(errors).toEqual([])
+ }finally{await page.evaluate(()=>window.guideProbe.formalPointer?.dispose()).catch(()=>{});await page.close()}
+},45000)
 it.each(['user-layout','disposed'])('does not link or replace the current layout when %s interrupts the initial smooth scroll',async mode=>{
  const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000,reducedMotion:'no-preference'})
  try{

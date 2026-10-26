@@ -200,6 +200,19 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       check(ticket)
       while (!ticket.playing) { await frame(ticket); check(ticket) }
     }
+    const boardFrame = (ticket, canvas) => {
+      const bounds = canvas.getBoundingClientRect(), scaleY = bounds.height / canvas.clientHeight || 1
+      let top = Math.max(0, bounds.top), bottom = Math.min(window.innerHeight, bounds.bottom)
+      for (let parent = canvas.parentElement; parent; parent = parent.parentElement) {
+        const style = window.getComputedStyle(parent)
+        if (/hidden|auto|scroll|clip/.test(style.overflowY || style.overflow)) {
+          const clip = parent.getBoundingClientRect(); top = Math.max(top, clip.top); bottom = Math.min(bottom, clip.bottom)
+        }
+      }
+      const toolbar = [...document.querySelectorAll('[data-ework-toolbar][data-ework-toolbar-owner]')].find(node=>node.dataset.eworkToolbarOwner===ticket.resource.id), tools = toolbar?.getBoundingClientRect()
+      if (tools?.width > 0 && tools.height > 0 && tools.right > bounds.left && tools.left < bounds.right && tools.top > top) bottom = Math.min(bottom, tools.top - 12 * scaleY)
+      return {top,bottom,scaleY,height:Math.max(0,(bottom-top)/scaleY)}
+    }
     const scrollBoard = async (ticket, canvas, top) => {
       await playing(ticket)
       const start = canvas.scrollTop, end = Math.max(0, Math.min(top, canvas.scrollHeight - canvas.clientHeight))
@@ -388,14 +401,22 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       }
       const layoutBoard = (reset = false) => {
         const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width), pair = metrics.minColumns <= 20, calendarPair=pair&&metrics.width>=800
-        const canvas = ticket.host.querySelector('[data-research-canvas]'), room = pair && canvas?.clientHeight >= 720 ? canvas.clientHeight - 96 : 0
+        const canvas = ticket.host.querySelector('[data-research-canvas]'), budget = canvas ? Math.floor((boardFrame(ticket,canvas).height-24)/metrics.rowStep) : 0
+        const minimumWatch = Math.ceil((340+metrics.gap)/metrics.rowStep), minimumFeed = Math.ceil((220+metrics.gap)/metrics.rowStep)
+        let watchRows = Math.ceil((470+metrics.gap)/metrics.rowStep), feedRows = Math.ceil((340+metrics.gap)/metrics.rowStep)
+        if (pair && budget >= minimumWatch+minimumFeed) {
+          const total = Math.min(budget,watchRows+feedRows)
+          watchRows = Math.max(minimumWatch,Math.min(watchRows,total-minimumFeed,Math.round(total*.58)))
+          feedRows = Math.min(feedRows,total-watchRows)
+        }
+        const readingRows = {watchlist:watchRows,quote:watchRows,news:feedRows,announcements:feedRows}
         const namesById = new Map(Object.entries(ticket.nodes).map(([name,nodeId])=>[nodeId,name]))
         workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar','smart'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:namesById.get(node.id)==='indices'||namesById.get(node.id)==='calendar'&&!ticket.nodes.smart,workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
         const rows = [['indices'], ...(pair ? [['watchlist','quote'],['news','announcements']] : [['watchlist'],['quote'],['news'],['announcements']]), ...(ticket.nodes.smart?(calendarPair?[['calendar','smart']]:[['calendar'],['smart']]):[['calendar']])]
-        const heights = {indices:(metrics.width-48<=520?420:340),watchlist:room?Math.min(470,room*.58):470,quote:room?Math.min(470,room*.58):470,news:room?Math.min(340,room*.42):340,announcements:room?Math.min(340,room*.42):340,calendar:420,smart:420}, fitted = new Map()
+        const heights = {indices:(metrics.width-48<=520?420:340),calendar:420,smart:420}, fitted = new Map()
         let top = 0
         for (const names of rows) {
-          const members = names.filter(name => ticket.nodes[name]), height = Math.ceil((Math.max(...members.map(name => heights[name]),0)+metrics.gap)/metrics.rowStep)
+          const members = names.filter(name => ticket.nodes[name]), height = Math.max(...members.map(name => readingRows[name] ?? Math.ceil((heights[name]+metrics.gap)/metrics.rowStep)),0)
           for (const [index,name] of members.entries()) {
             const split = members.length===2 && members[0]==='watchlist' && metrics.minColumns<=16
             fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:split?(index===0?0:16):index*(40/members.length),y:top,w:split?(index===0?16:24):40/members.length,h:height})
@@ -500,8 +521,13 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           if (canvas) {
             const cards = [watchlist,quote,news,announcements].filter(Boolean).map(nodeId => ticket.host.querySelector('[data-research-node-id="' + CSS.escape(nodeId) + '"]')).filter(Boolean)
             await settle(ticket)
-            const bounds = cards.map(card=>card.getBoundingClientRect()), viewport = canvas.getBoundingClientRect(), top = Math.min(...bounds.map(rect=>rect.top)), bottom = Math.max(...bounds.map(rect=>rect.bottom))
-            if (bounds.length && bottom-top <= canvas.clientHeight-24) { await scrollBoard(ticket, canvas, canvas.scrollTop+top-viewport.top-12); keepCanvasFrame = true }
+            const bounds = cards.map(card=>card.getBoundingClientRect()), viewport = boardFrame(ticket,canvas), top = Math.min(...bounds.map(rect=>rect.top)), bottom = Math.max(...bounds.map(rect=>rect.bottom))
+            if (bounds.length && bottom-top <= (viewport.height-24)*viewport.scaleY) {
+              await scrollBoard(ticket, canvas, canvas.scrollTop+(top-viewport.top)/viewport.scaleY-12)
+              const frame = boardFrame(ticket,canvas)
+              if (!cards.every(card=>{const box=card.getBoundingClientRect();return box.top>=frame.top-1&&box.bottom<=frame.bottom-12*frame.scaleY+1})) throw Error('四个组件尚未完整显示，请重新打开示例。')
+              keepCanvasFrame = true
+            }
           }
           for (const [sourceId, targetId, field, label] of [[watchlist, quote, 'linkedWatchlistId', '连接自选股与行情'], [quote, news, 'linkedSourceId', '连接行情与资讯'], ...(announcements ? [[quote, announcements, 'linkedSourceId', '连接行情与公告']] : [])]) {
             await playing(ticket)
