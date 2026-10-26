@@ -301,7 +301,7 @@ function renderPptxNode(t, n) {`],
  ['G.textContent = I + " ";','G.textContent = I + " "; G.dataset.pptxBullet="";'],
  ['const f = document.createElement("td");\n\t\t\t\t\tf.style.overflow', 'const f = document.createElement("td"); f.dataset.pptxRow=String(x); f.dataset.pptxColumn=String(u);\n\t\t\t\t\tf.style.overflow']
 ]
-const marker='/* sherlock:pptx-content-editor:v10 */'
+const marker='/* sherlock:pptx-content-editor:v11 */'
 const endMarker='/* sherlock:pptx-content-editor:end */\n'
 const viewerAttach='viewerRef.current = viewer;'
 const legacyAttached=viewerAttach+' props.onPptxViewer?.(viewer);'
