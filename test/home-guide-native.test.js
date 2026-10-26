@@ -98,7 +98,7 @@ it('uses actual native components and live bridge links, then unmounts only the 
  const f=await fixture(),input=f.doc.querySelector('textarea')
  await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
  expect(f.doc.querySelector('[data-home-guide-native] [data-research-canvas]')).not.toBeNull()
- for(const command of ['board-library','board-watchlist','board-quote','board-news','board-link','board-add','board-arrange'])expect(await f.command(command)).toMatchObject({ok:true})
+ for(const command of ['board-library','board-watchlist','board-quote','board-news','board-arrange','board-link','board-add'])expect(await f.command(command)).toMatchObject({ok:true})
  expect(f.doc.querySelectorAll('[data-home-guide-native] [data-financial-widget]')).toHaveLength(3)
  expect(f.doc.querySelector('[data-home-guide-native] [data-financial-link]')).not.toBeNull()
  expect(f.doc.querySelectorAll('[data-home-guide-native] .ew-watch-row')).toHaveLength(5)
@@ -261,7 +261,7 @@ it.each(['dispose','disabled','pointer-owner','detached','rejected'])('rejects a
  expect(button.getAttribute('data-home-guide-cue-target')).toBeNull()
 },10000)
 it('shows and commits each port connection separately and cancels the second without a late apply',async()=>{
- const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');const p=pointerFixture(f)
+ const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');await f.command('board-arrange');const p=pointerFixture(f)
  let reply;await React.act(async()=>{void f.send('board-link').then(value=>{reply=value})});await pump(()=>p.cues.length>0)
  expect(p.cues[0]).toMatchObject({action:'drag',requestId:expect.any(String)})
  expect(Object.keys(p.cues[0]).sort()).toEqual(['runId','requestId','label','action','targetToken','fromTargetToken'].sort())
@@ -280,7 +280,7 @@ it('shows and commits each port connection separately and cancels the second wit
  expect(f.doc.querySelectorAll('[data-home-guide-cue-target]')).toHaveLength(0)
 },10000)
 it('types the stock code character by character through actual search and keeps three linked widgets persisted',async()=>{
- const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');const p=pointerFixture(f,{automatic:true}),typed=[]
+ const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');await f.command('board-arrange');const p=pointerFixture(f,{automatic:true}),typed=[]
  f.doc.addEventListener('input',event=>{if(event.target.getAttribute?.('role')==='combobox')typed.push(event.target.value)},true)
  expect((await f.command('board-link')).ok).toBe(true);expect(p.cues.filter(cue=>cue.action==='drag')).toHaveLength(2)
  const added=await f.command('board-add');expect(added,JSON.stringify({added,typed:typeof typed==='undefined'?undefined:typed,nodes:f.workspace.getSnapshot().artifacts.map(n=>n.containerSpec)})).toMatchObject({ok:true})

@@ -200,6 +200,24 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       check(ticket)
       while (!ticket.playing) { await frame(ticket); check(ticket) }
     }
+    const scrollBoard = async (ticket, canvas, top) => {
+      await playing(ticket)
+      const start = canvas.scrollTop, end = Math.max(0, Math.min(top, canvas.scrollHeight - canvas.clientHeight))
+      if (Math.abs(start - end) < 1) return
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { canvas.scrollTop = end; await settle(ticket); return }
+      let elapsed = 0, previous = Date.now()
+      while (elapsed < 680) {
+        check(ticket); await frame(ticket); check(ticket)
+        const now = Date.now()
+        if (ticket.playing) {
+          elapsed += Math.min(80, now - previous)
+          const progress = Math.min(1, elapsed / 680), eased = (1 - Math.cos(Math.PI * progress)) / 2
+          canvas.scrollTop = start + (end - start) * eased
+        }
+        previous = now
+      }
+      await playing(ticket); canvas.scrollTop = end; await settle(ticket)
+    }
     const targetReady = (ticket, target, visible = false) => {
       check(ticket)
       if (!target?.isConnected || target.disabled === true || target.getAttribute('aria-disabled') === 'true' || target.closest('[inert],[data-odyssey-subagent-panel]')) throw Error('原生操作控件尚未就绪。')
@@ -208,7 +226,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       if (!ticket.host.contains(target) && owner?.dataset.eworkToolbarOwner !== ticket.resource.id && library?.dataset.homeGuideNativeLibrary !== ticket.detail.runId && !ownList) throw changed()
       if (visible) { const rect = target.getBoundingClientRect(); if (rect.width <= 0 || rect.height <= 0 || rect.right <= 0 || rect.bottom <= 0 || rect.left >= window.innerWidth || rect.top >= window.innerHeight) throw Error('原生操作控件已离开可见区域。') }
     }
-    const cue = async (ticket, target, label, action = 'move', fromTarget) => {
+    const cue = async (ticket, target, label, action = 'move', fromTarget, keepCanvasFrame = false) => {
       await playing(ticket); targetReady(ticket, target); if (fromTarget) targetReady(ticket, fromTarget)
       const marker = document.documentElement.dataset.homeGuidePointerRun
       if (marker && marker !== ticket.detail.runId) throw changed()
@@ -234,7 +252,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       // Native cards animate their real grid geometry. Frame the settled ports,
       // rather than scrolling to an intermediate position during that motion.
       await settle(ticket,positioned(false),2,2400,true)
-      target.scrollIntoView?.({ block:'nearest',inline:'nearest',behavior:'instant' });fromTarget?.scrollIntoView?.({ block:'nearest',inline:'nearest',behavior:'instant' })
+      if (!keepCanvasFrame) { target.scrollIntoView?.({ block:'nearest',inline:'nearest',behavior:'instant' });fromTarget?.scrollIntoView?.({ block:'nearest',inline:'nearest',behavior:'instant' }) }
       previous=undefined
       await settle(ticket,positioned(true),2,2400,true)
       if(document.documentElement.dataset.homeGuidePointerRun!==marker)throw changed()
@@ -370,18 +388,22 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       }
       const layoutBoard = (reset = false) => {
         const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width), pair = metrics.minColumns <= 20, calendarPair=pair&&metrics.width>=800
+        const canvas = ticket.host.querySelector('[data-research-canvas]'), room = pair && canvas?.clientHeight >= 720 ? canvas.clientHeight - 96 : 0
         const namesById = new Map(Object.entries(ticket.nodes).map(([name,nodeId])=>[nodeId,name]))
         workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar','smart'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:namesById.get(node.id)==='indices'||namesById.get(node.id)==='calendar'&&!ticket.nodes.smart,workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
         const rows = [['indices'], ...(pair ? [['watchlist','quote'],['news','announcements']] : [['watchlist'],['quote'],['news'],['announcements']]), ...(ticket.nodes.smart?(calendarPair?[['calendar','smart']]:[['calendar'],['smart']]):[['calendar']])]
-        const heights = {indices:(metrics.width-48<=520?420:340),watchlist:470,quote:470,news:340,announcements:340,calendar:420,smart:420}, fitted = new Map()
+        const heights = {indices:(metrics.width-48<=520?420:340),watchlist:room?Math.min(470,room*.58):470,quote:room?Math.min(470,room*.58):470,news:room?Math.min(340,room*.42):340,announcements:room?Math.min(340,room*.42):340,calendar:420,smart:420}, fitted = new Map()
         let top = 0
         for (const names of rows) {
           const members = names.filter(name => ticket.nodes[name]), height = Math.ceil((Math.max(...members.map(name => heights[name]),0)+metrics.gap)/metrics.rowStep)
-          for (const [index,name] of members.entries()) fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:index*(40/members.length),y:top,w:40/members.length,h:height})
+          for (const [index,name] of members.entries()) {
+            const split = members.length===2 && members[0]==='watchlist' && metrics.minColumns<=16
+            fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:split?(index===0?0:16):index*(40/members.length),y:top,w:split?(index===0?16:24):40/members.length,h:height})
+          }
           if (members.length) top += height
         }
         if (!workspace.applyWorkbenchCells(workspace.getWorkbenchCells().map(cell => fitted.get(cell.id) || cell), false)) throw Error('看板布局暂时无法调整。')
-        const canvas = ticket.host.querySelector('[data-research-canvas]'); if (reset && canvas) canvas.scrollTop = 0
+        if (reset && canvas) canvas.scrollTop = 0
       }
       const library = () => [...document.querySelectorAll('[data-home-guide-native-library]')].find(el => el.dataset.homeGuideNativeLibrary === detail.runId)
       if (detail.command === 'board-library') {
@@ -413,7 +435,9 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
           }
         }
-        await playing(ticket); layoutBoard()
+        // The library owns a new component's initial size and first-fit placement.
+        // The visible Arrange action is the only point that applies demo layout.
+        await playing(ticket); if (widget === 'indices' && Object.keys(ticket.nodes).length === 1) layoutBoard()
         await settle(ticket, () => !!ticket.host.querySelector(widget === 'calendar' ? '[data-calendar-tool]' : '[data-financial-widget="' + widget + '"]'))
         const canvas = ticket.host.querySelector('[data-research-canvas]'); if (canvas) revealWorkbenchNode(canvas, workspace, ticket.nodes[widget])
         await settle(ticket)
@@ -467,13 +491,21 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       const { watchlist, quote, news, announcements } = ticket.nodes
       if (!watchlist || !quote || !news) throw Error('请先创建自选、行情和新闻组件。')
       if (detail.command === 'board-link') {
+        if (!ticket.arranged) throw Error('请先整理看板，再连接组件。')
         const canvas = ticket.host.querySelector('[data-research-canvas]'), before = workspace.getWorkbenchCells().map(cell=>({...cell}))
         const signature = cells => JSON.stringify(cells.map(({id,x,y,w,h,arrangeColumns,freePosition})=>[id,x,y,w,h,arrangeColumns,freePosition]).sort((a,b)=>a[0].localeCompare(b[0])))
-        let focusSignature
+        const beforeSignature = signature(before)
+        let focusSignature, keepCanvasFrame = false
         try {
+          if (canvas) {
+            const cards = [watchlist,quote,news,announcements].filter(Boolean).map(nodeId => ticket.host.querySelector('[data-research-node-id="' + CSS.escape(nodeId) + '"]')).filter(Boolean)
+            await settle(ticket)
+            const bounds = cards.map(card=>card.getBoundingClientRect()), viewport = canvas.getBoundingClientRect(), top = Math.min(...bounds.map(rect=>rect.top)), bottom = Math.max(...bounds.map(rect=>rect.bottom))
+            if (bounds.length && bottom-top <= canvas.clientHeight-24) { await scrollBoard(ticket, canvas, canvas.scrollTop+top-viewport.top-12); keepCanvasFrame = true }
+          }
           for (const [sourceId, targetId, field, label] of [[watchlist, quote, 'linkedWatchlistId', '连接自选股与行情'], [quote, news, 'linkedSourceId', '连接行情与资讯'], ...(announcements ? [[quote, announcements, 'linkedSourceId', '连接行情与公告']] : [])]) {
             await playing(ticket)
-            if(focusSignature && signature(workspace.getWorkbenchCells())!==focusSignature)throw changed()
+            if(signature(workspace.getWorkbenchCells())!==(focusSignature||beforeSignature))throw changed()
             if (workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId) continue
             const port = (nodeId, side) => ticket.host.querySelector('[data-financial-port-node="' + CSS.escape(nodeId) + '"][data-financial-port="' + side + '"]')
             await settle(ticket, () => !!port(sourceId, 'output') && !!port(targetId, 'input'))
@@ -491,11 +523,11 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
               if(workspace.persist()!==true)throw Error('连接布局暂时无法保存。')
               await settle(ticket)
             }
-            await cue(ticket, target, label, 'drag', from)
-            if(focusSignature && signature(workspace.getWorkbenchCells())!==focusSignature)throw changed()
+            await cue(ticket, target, label, 'drag', from, keepCanvasFrame)
+            if(signature(workspace.getWorkbenchCells())!==(focusSignature||beforeSignature))throw changed()
             const state = await workspace.canvasAction('inspect', { ids: [sourceId, targetId] })
             await playing(ticket); targetReady(ticket, from, true); targetReady(ticket, target, true)
-            if(focusSignature && signature(workspace.getWorkbenchCells())!==focusSignature)throw changed()
+            if(signature(workspace.getWorkbenchCells())!==(focusSignature||beforeSignature))throw changed()
             const node = workspace.getSnapshot().artifacts.find(node => node.id === targetId)
             await workspace.canvasAction('apply', { requestId: detail.requestId + ':link:' + targetId, revision: state.revision, changes: [{ op: 'update', id: targetId, fields: { containerSpec: { ...node.containerSpec, [field]: sourceId, refreshEnabled: true } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
             await playing(ticket); react_dom.flushSync(() => workspace.updateSelection(Object.values(ticket.nodes), 'replace'))
@@ -545,6 +577,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         await settle(ticket, () => !canvas?.__eworkContentFit)
         await playing(ticket)
         layoutBoard(true)
+        ticket.arranged = true
         // Finish at the document start so native component headers stay visible.
         react_dom.flushSync(() => { workspace.setViewport({ x: 0, y: 0, scale: 1 }); workspace.updateSelection(Object.values(ticket.nodes), 'replace') })
         ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
