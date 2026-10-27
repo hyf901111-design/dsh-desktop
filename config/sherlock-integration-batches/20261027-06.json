@@ -435,6 +435,37 @@
           "Root后续需集成后真实签名candidate/缓存/重启升级验收；本13files126不替代真实老客户端升级。"
         ],
         "generatedAt": "2026-10-27T05:44:46.731Z"
+      },
+      "merged": {
+        "mergeCommit": "8b029f56429ee49fedca45822a1c090278ebba37",
+        "verificationCommit": "8b029f56429ee49fedca45822a1c090278ebba37",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8b029f56429ee49fedca45822a1c090278ebba37",
+            "completedAt": "2026-10-27T06:53:45.857Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "8b029f56429ee49fedca45822a1c090278ebba37",
+            "completedAt": "2026-10-27T06:53:45.857Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T06:53:45.857Z"
       }
     },
     {
