@@ -295,6 +295,21 @@ npm run release:cloudflare:prune-oldest -- \
 
 清理脚本只接受上传预演中标记为 `immutable` 且严格属于当前版本的 key；它逐个精确删除清单中最早版本的对象，并且仅在全部删除成功后更新仓库内的版本清单。若预演版本不符合预期、清单缺失或删除失败，停止清理并保留现场，不能改用模糊前缀或批量删除补救。
 
+## 5.1. Homebrew 软件源同步
+
+只有本次 Cloudflare 正式发布的全部适用公开验证通过后，才按 `docs/sherlock-homebrew.md` 同步 `awake-ai-lab/homebrew-tap`。使用最终签名、公证并 staple 后的 DMG：
+
+```bash
+node scripts/update-homebrew-cask.mjs \
+  --version 0.6.4 \
+  --dmg dist-release/sherlock-mac-arm64.dmg \
+  --tap "$(brew --repository awake-ai-lab/tap)"
+```
+
+将示例版本替换为真实发布版本。工具核对正式 feed 的版本、固定 DMG URL、SHA-512、大小以及远端 HEAD，拒绝降级和同版本换包。通过后审查 Cask，运行 Homebrew 的解析/风格检查，创建中文提交并推送独立 Tap；再从公开仓库及 `brew info` 核验版本。Cask 维护 `auto_updates true`，保留客户端内更新；显式使用 `brew upgrade --cask ework-odyssey` 升级。不得使用可变下载别名和 `sha256 :no_check`。
+
+Tap 更新失败时保留已经验证的 Cloudflare 发布，修复软件源步骤后重试；不得重新覆盖同版本 R2 对象。Cloudflare 回滚后禁止继续推进 Tap；若已推进则回退 Cask 提交并核验。滚动清理不得删除 Tap 当前版本所指向的安装包。
+
 ## 6. 源码同步
 
 线上验证成功后，检查是否产生发布清单等新的受跟踪改动；若有，只暂存这些发布相关文件并创建中文提交，例如 `发布：记录 Sherlock 0.6.4 正式发布结果`。推送到：
