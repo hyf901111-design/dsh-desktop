@@ -261,111 +261,28 @@
         "schemaVersion": 1,
         "featureName": "PPT实时标注连续编号并取消发送时自动添加技能",
         "branch": "codex/feat/ppt-annotation-live-numbering-20261027",
-        "baseCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
-        "tipCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+        "baseCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+        "tipCommit": "986fec9319979d52a01020c2a0555860dbcd815f",
         "commits": [
           {
-            "commit": "4701cb4d5adfc4caeb03c400c975ddaacc923e67",
+            "commit": "986fec9319979d52a01020c2a0555860dbcd815f",
             "parents": [
-              "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf"
+              "a107553d1b2194392f81d47b2054e4e6817258d6"
             ],
-            "subject": "取消PPT标注发送时自动添加技能"
-          },
-          {
-            "commit": "a107553d1b2194392f81d47b2054e4e6817258d6",
-            "parents": [
-              "4701cb4d5adfc4caeb03c400c975ddaacc923e67"
-            ],
-            "subject": "使PPT实时标注连续编号并保持发送定位与历史编号"
+            "subject": "修正标注编号浏览器夹具安装顺序并隔离验收证据"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/pptx-annotation-coordinator.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/pptx-annotation-message.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/pptx-annotation-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/pptx-annotation-input-browser.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pptx-annotation-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pptx-annotation-input-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pptx-annotation-install.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/pptx-annotation-live-numbering-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/pptx-annotation-live-numbering.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pptx-annotation-message.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npx",
-              "--no-install",
-              "vitest",
-              "run",
-              "test/pptx-annotation-live-numbering.test.js",
-              "test/pptx-annotation-live-numbering-browser.test.js",
-              "test/pptx-annotation-coordinator.test.js",
-              "test/pptx-annotation-native.test.js",
-              "test/pptx-annotation-install.test.js",
-              "test/pptx-annotation-input-browser.test.js",
-              "test/pptx-annotation-message.test.js",
-              "test/pptx-annotation-message-install.test.js",
-              "test/pptx-annotation-message-browser.test.js",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "/tmp/ppt-annotation-live-numbering-20261027/final-focused.log: nine directly affected files102/102 EXIT0 on frozen production. Subsequent test-only per-RAF ordinal/id strengthening passed separately in numbering-each-frame-green.log; no production change. No full suite.",
-            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
-            "completedAt": "2026-10-27T08:25:44.284766+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
               "env",
-              "PPTX_ANNOTATION_VIEWER_ARTIFACTS=/tmp/ppt-annotation-live-numbering-20261027/viewer",
-              "npx",
-              "--no-install",
-              "vitest",
-              "run",
-              "test/pptx-annotation-browser.test.js",
-              "-t",
-              "continuously numbered",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "/tmp/ppt-annotation-live-numbering-20261027/numbering-office-green.log: actual Office native renderer + actual Main/coordinator/native shell:1 passed19 skipped; continuous pins/bubble/draft and immutable PPT bytes.",
-            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
-            "completedAt": "2026-10-27T08:25:44.284766+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
+              "SHERLOCK_ANNOTATION_NUMBER_EVIDENCE=/tmp/ppt-annotation-live-numbering-loader-20261027/frontend",
               "npx",
               "--no-install",
               "vitest",
@@ -374,84 +291,26 @@
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "/tmp/ppt-annotation-live-numbering-20261027/numbering-each-frame-green.log: latest actual Root/InputHub/AgentLoop/Main, each conversation RAF exact display1+same markId while canonical wire/proof2;2700ms durable readonly delay;1/1 EXIT0.",
-            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
-            "completedAt": "2026-10-27T08:25:44.284766+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "/tmp/ppt-annotation-live-numbering-20261027/final-typecheck.log: fresh tsc actual EXIT0.",
-            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
-            "completedAt": "2026-10-27T08:25:44.284766+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ppt-annotation-live-numbering-20261027/verify-install.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "/tmp/ppt-annotation-live-numbering-20261027/native-install-final.json: six relevant installed conversation layers patched twice purely in memory: exact bytes/inverse/parse/tamper rejection and physical dependency SHA unchanged. Not whole global pipeline.",
-            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
-            "completedAt": "2026-10-27T08:25:44.284766+00:00",
+            "summary": "/tmp/ppt-annotation-live-numbering-loader-focused-20261027.log:1/1 actual private Native/Host/Main browser case EXIT0 with Progress applied before Submission; unchanged each-RAF ordinal/id/canonical-wire assertions. Feature branch has Csubv2; actual v3 integrated behavior is Root followup.",
+            "verifiedCommit": "986fec9319979d52a01020c2a0555860dbcd815f",
+            "completedAt": "2026-10-27T10:02:53.798845+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Private headless Chromium, actual Native Root/InputHub/SessionInputShell/InputTrigger/SessionRuntime and actual Office renderer; actual Main PptxAnnotationService and real private Host AgentLoop with local recording adapter only.102 directly affected cases plus1 distinct Office case (103 unique), strengthened one repeated per-RAF case. No installed-app UI acceptance or paid model."
+          "summary": "One directly affected existing private headless browser test, actual Native Root/InputHub/Host/Main. No native application or system mouse. No broader cases rerun."
         },
         "acceptanceCriteria": [
-          "删除首、中、尾或全部后，当前有效mark按稳定canonical ordinal顺序显示连续1..n；新建n+1；Main id/ordinal/nextOrdinal/locator/comment和原PPT bytes不变。",
-          "真实Office pin/备注气泡/标注列表与中央草稿使用同一live snapshot；同doc多个handle和持久重开一致，不重新写用户draft来编号。",
-          "实际发送wire/manifest继续使用Main canonical ordinal和相同markId；仅本次精确prepared/session/rpc/text/epoch且唯一ticket冻结live display，首次pending到真实durable接替每RAF不闪编号、不指向别的mark。",
-          "冷恢复无本地ticket的历史消息保留Main冻结原编号；不重写history/userSeq/manifest/Main权限，不从raw猜ordinal。",
-          "发送标记不再隐式选择PPT技能；真实菜单手动选择的PPT/其它技能、附件、全局文字和多标签保留；prepare前后草稿/IME/owner CAS保护保持。",
-          "安装仅追加两个已知完整旧definition SHA；严格双遍/原字节逆向/未知漂移和重复拒绝保持。"
+          "仅测试夹具将安装组合改为patchSubmission(patchProgress(...))，匹配已授权v3集成顺序且兼容本分支v2。",
+          "证据目录可通过SHERLOCK_ANNOTATION_NUMBER_EVIDENCE显式隔离，所有行为/逐帧/权限断言保持。",
+          "严格后继base为旧tip a107553d，原handoff字节/SHA保持；无产品module/pipeline/Main改变。"
         ],
         "risks": [
-          "No app launch/install/restart, native UI or OS mouse, shared build/profile/dependency write, remote push, or paid task. Root owns integration and actual EWork client acceptance.",
-          "Canonical serialized headings may retain ordinal2 while live pin shows1, deliberately preserving authority; exact Main markId and frozen display mapping prove target. Cold old histories may show their original frozen canonical numbers.",
-          "No changes to Root-owned conversation-submission.mjs, conversation-response-progress.mjs, patch-web pipeline, or Main/shared DTO."
+          "Existing original handoff remains at /tmp/ppt-annotation-live-numbering-20261027/handoff.json SHA b1ad409031e4da0cd1278cc9fb9e60d74e490be1d73903788d922f9dd82e83d2. This new card is a strict one-test successor based on its previous tip, for refresh of unaccepted batch20261027-07.",
+          "Only the isolated branch v2 fixture was rerun. Root owns actual v3 merged case and broader integration group. No build/profile/UI/main/push/paid task."
         ],
-        "generatedAt": "2026-10-27T08:25:44.284766+00:00"
-      },
-      "merged": {
-        "mergeCommit": "28f2259f050a62c49ad2d37bafcd3a731d68ff94",
-        "verificationCommit": "28f2259f050a62c49ad2d37bafcd3a731d68ff94",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "28f2259f050a62c49ad2d37bafcd3a731d68ff94",
-            "completedAt": "2026-10-27T09:43:08.239Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "28f2259f050a62c49ad2d37bafcd3a731d68ff94",
-            "completedAt": "2026-10-27T09:43:08.239Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-27T09:43:08.239Z"
+        "generatedAt": "2026-10-27T10:02:53.798845+00:00"
       }
     },
     {
