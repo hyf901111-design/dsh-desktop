@@ -557,6 +557,37 @@
           "Packaged-client acceptance and shared pipeline integration remain Root responsibility."
         ],
         "generatedAt": "2026-10-27T08:22:29.092Z"
+      },
+      "merged": {
+        "mergeCommit": "a44a99dd7b6bcb9a74f61f899e6480a634c528af",
+        "verificationCommit": "a44a99dd7b6bcb9a74f61f899e6480a634c528af",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a44a99dd7b6bcb9a74f61f899e6480a634c528af",
+            "completedAt": "2026-10-27T09:43:18.754Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "a44a99dd7b6bcb9a74f61f899e6480a634c528af",
+            "completedAt": "2026-10-27T09:43:18.754Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T09:43:18.754Z"
       }
     },
     {
