@@ -19,25 +19,15 @@ const native=win.conversationDescriptor.factory((id:string)=>id==='@deepseek-ai/
 const triggers=win.triggersDescriptor.factory((id:string)=>id==='@deepseek-ai/dsh-client-runtime/client'?rt:modules(id))
 const store=(initial:any)=>{let value=initial;const listeners=new Set<()=>void>();return{getSnapshot:()=>value,subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>listeners.delete(fn)},update:(patch:any)=>{value={...value,...patch};for(const fn of listeners)fn()}}}
 const list=store({current:'demo',byId:{demo:{id:'demo',cwd:win.cwd,displayTitle:'新会话',blank:true},ordinary:{id:'ordinary',cwd:win.cwd,displayTitle:'普通对话',blank:true}}})
-const envelopes=new Set<(batch:any[])=>void>()
 const observed:any[]=[]
-let envelopeBatch:any[]=[],flushScheduled=false
-const emit=(envelope:any)=>{
- observed.push(envelope)
- if(!envelopes.size)return
- envelopeBatch.push(envelope)
- if(flushScheduled)return
- flushScheduled=true
- queueMicrotask(()=>{flushScheduled=false;const batch=envelopeBatch;envelopeBatch=[];for(const fn of envelopes)try{fn(batch)}catch{}})
-}
 let rpcSequence=0
-const api={subscribeEnvelopes:(fn:(batch:any[])=>void)=>{envelopes.add(fn);return()=>envelopes.delete(fn)},sessions:{prompt:async(payload:any)=>{
- const request={type:'client-request',rpcId:'user-first-'+(++rpcSequence),method:'session.prompt',payload}
- emit(request)
- const reply=await win.userMessageBackend({action:'send',request})
- emit(reply)
- return reply
-},cancel:async(payload:any)=>{const request={type:'client-request',rpcId:'cancel-'+(++rpcSequence),method:'session.cancel',payload};emit(request);return win.userMessageBackend({action:'cancel',request})}}}
+const connection=win.connectionDescriptor.factory(modules)
+class PrivateApiClient extends connection.AbstractApiClient{
+ mintRpcId(){return 'user-first-'+(++rpcSequence)}
+ async doFetch(_url:any,init:any){const request=JSON.parse(init.body),reply=await win.userMessageBackend({action:request.method==='session.cancel'?'cancel':'send',request});return new Response(JSON.stringify({type:'server-response',...reply}),{status:200,headers:{'content-type':'application/json'}})}
+}
+const api=new PrivateApiClient()
+api.subscribeEnvelopes((batch:any[])=>observed.push(...batch))
 const cleanups:Array<()=>void>=[]
 const ctx:any={get:(name:string)=>name==='conversation'?conversation:name==='connection'?{api}:name==='sessions'?sessions:undefined,reflect:{provide(){}},effect:(start:()=>unknown)=>{const stop=start();if(typeof stop==='function')cleanups.push(stop as ()=>void);return()=>{}}}
 const events=new rt.ConversationEventRegistry(ctx),viewsRegistry=new rt.ConversationViewRegistry(ctx)
@@ -85,17 +75,18 @@ function App(){
  const actions={setView:(value:string)=>view.update({view:value}),setDraft:(draft:string)=>view.update({draft}),select(){},setResearchRightTab(){},setResearchConversationUnread(){}}
  const shared={sessionId:current,useSession,useSessions,useStore,actions,views,t}
  const inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,draftImages:(ids:string[])=>conversation.draftImages(ids),useNotices:(select:any)=>select(null),useLexicon:(select:any)=>select(new Map()),useMenuLauncher:(select:any)=>select(null),useProjection,sessionId:current,t}
- const renderSlot=(name:string,props:any={},scope:any={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={renderSlot}/>:name==='conversation.view'?<native.__Chat {...shared} {...props} renderSlot={renderSlot} openFile={async()=>{}} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>[]}/>:name==='conversation.chat.node'&&scope.entryKey==='user'?<native.__User {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.__Assistant {...props} useTurnData={()=>null} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='turn-tail'?<native.__Tail {...props} sessionId={current} useSession={useSession} renderSlot={renderSlot} renderSlotChain={()=>null} t={t}/>:scope.fallback??null
+ const renderSlot=(name:string,props:any={},scope:any={})=>name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={renderSlot}/>:name==='conversation.view'?<native.__Chat {...shared} {...props} renderSlot={renderSlot} openFile={async()=>{}} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>[]}/>:name==='conversation.chat.node'&&scope.entryKey==='user'?<native.__User {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='steering'?<native.__Steering {...props} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.__Assistant {...props} useTurnData={()=>null} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='turn-tail'?<native.__Tail {...props} sessionId={current} useSession={useSession} renderSlot={renderSlot} renderSlotChain={()=>null} t={t}/>:scope.fallback??null
  return <native.ConversationRoot {...shared} useProjection={useProjection} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name:any,_props:any,{fallback}:any)=>fallback} selectWorkspace={async()=>{throw Error('No new workspace in this send test')}} useWorkspaces={(select:any)=>select({phase:'ready',items:[{workspaceId:'w',title:'当前工作区',sessionIds:['demo','ordinary']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/>
 }
 root.render(<App/>)
-let refreshing=false,disposed=false,guide:any,frame=0,sampling=false
+let refreshing=false,historyPaused=false,disposed=false,guide:any,frame=0,sampling=false
 const frames:any[]=[]
 const refresh=async()=>{
- if(refreshing||disposed)return
+ if(refreshing||historyPaused||disposed)return
  refreshing=true
  try{
   const data=await win.userMessageBackend({action:'history'}),session=sessionsById.get('demo')
+  session.handleBlank(data.blank)
   session.handleRunning(data.running)
   session.installWindow(data.events,false)
   win.probe.history=data.events.map((row:any)=>row.event)
@@ -109,8 +100,11 @@ win.probe={observed,api,frames,copied:[],session:sessionsById.get('demo'),inputH
  async seedAnnotations(){window.dispatchEvent(new CustomEvent('sherlock:skill-presentation',{detail:{owner:'fixture-owner',skills:[skill],tools:[]}}));const shell=inputHub.shells.get('demo');shell.setDraft('整体要求📌保留原件。');if(win.annotationFile)shell.insertFilePaths([win.sourcePath]);annotationHandle=await annotationRuntime.open({sessionId:'demo',source:{kind:'workspace',relativePath:'annotation-source.pptx'}},{viewerKey:'first-message-annotation'});const slides=annotationHandle.getSnapshot().scene.slides;await annotationHandle.add({slideIndex:0,slidePart:slides[0].part,kind:'point',region:{x:.2,y:.3},nodeIds:[],comment:'标题改成真实意见📈'});await annotationHandle.add({slideIndex:2,slidePart:slides[2].part,kind:'rect',region:{x:.3,y:.4,width:.2,height:.2},nodeIds:[],comment:'框选处保留多行\n第二行中文😀'});shell.insertReference({source:SKILL_REFERENCE_SOURCE,ref:encodeSkillReference(skill),label:'/'+skill.label,clipboardText:'/'+skill.label},{start:shell.snapshot.draft.length,end:shell.snapshot.draft.length,draftRev:shell.snapshot.draftRev})},
  addImage(){const canvas=document.createElement('canvas');canvas.width=120;canvas.height=80;const context=canvas.getContext('2d')!;context.fillStyle='#37b9d8';context.fillRect(0,0,120,80);const data=canvas.toDataURL('image/png').split(',')[1],files=conversation.createDraftImages([new File([Uint8Array.from(atob(data),c=>c.charCodeAt(0))],'实际图像.png',{type:'image/png'})]);inputHub.shells.get('demo').addImages(files.map((file:any)=>file.id))},
  sample(){sampling=true;const tick=()=>{if(!sampling)return;const snapshot=win.probe.snapshot();frames.push({time:performance.now(),page:document.querySelector('[data-odyssey-page]')?.getAttribute('data-odyssey-page'),...snapshot});frame=requestAnimationFrame(tick)};frame=requestAnimationFrame(tick)},
- send(){inputHub.shells.get('demo').submit('queue')},
- snapshot(){const session=sessionsById.get(list.getSnapshot().current),rows=nativeRows(),thinking=document.querySelector('[data-chat-flow-kind="execution"]');return{phase:session.getSnapshot().composerPhase,running:session.getSnapshot().running,rows:rows.map(row=>({text:row.innerText,pins:row.querySelectorAll('[data-pptx-sent-reference]').length,chips:[...row.querySelectorAll('[data-ref-chip]')].map(chip=>chip.textContent),top:row.getBoundingClientRect().top,bottom:row.getBoundingClientRect().bottom})),thinking:thinking?{text:(thinking as HTMLElement).innerText,top:thinking.getBoundingClientRect().top}:null,images:rows.flatMap(row=>[...row.querySelectorAll('img')].map(img=>({src:img.getAttribute('src'),alt:img.getAttribute('alt')}))),historyHumans:win.probe.history.filter((event:any)=>event.type==='user/message'&&event.data.source?.kind==='user').length}},
+ send(mode='queue'){inputHub.shells.get('demo').submit(mode)},
+ snapshot(){const session=sessionsById.get(list.getSnapshot().current),rows=nativeRows(),thinking=document.querySelector('[data-chat-flow-kind="execution"][data-state="running"]');return{requestRpcs:observed.filter(frame=>frame.type==='client-request'&&frame.method==='session.prompt').map(frame=>frame.rpcId),phase:session.getSnapshot().composerPhase,running:session.getSnapshot().running,rows:rows.map(row=>({text:row.innerText,pins:row.querySelectorAll('[data-pptx-sent-reference]').length,chips:[...row.querySelectorAll('[data-ref-chip]')].map(chip=>chip.textContent),top:row.getBoundingClientRect().top,bottom:row.getBoundingClientRect().bottom})),thinking:thinking?{text:(thinking as HTMLElement).innerText,top:thinking.getBoundingClientRect().top}:null,images:rows.flatMap(row=>[...row.querySelectorAll('img')].map(img=>({src:img.getAttribute('src'),alt:img.getAttribute('alt')}))),historyHumans:win.probe.history.filter((event:any)=>event.type==='user/message'&&event.data.source?.kind==='user').length}},
+ mux(envelope:any){api.onEnvelope({type:'server-request',...envelope});if(envelope.payload?.sessionId==='demo'&&envelope.payload.type==='session/queue')sessionsById.get('demo').handleMuxEnvelope(envelope.rpcId,envelope.payload)},
+ hideView(){root.render(null)},showView(){root.render(<App/>)},
+ pauseHistory(value=true){historyPaused=value},status(status:string){sessionsById.get('demo').handleRunning(status==='running')},
  switchOwner(){inputHub.shells.get('ordinary').setDraft('普通会话的新草稿📌');list.update({current:'ordinary'});window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed'))},
  disposeGuide(){guide?.dispose()},
  unmount(){disposed=true;sampling=false;cancelAnimationFrame(frame);window.clearInterval(timer);guide?.dispose();root.unmount();for(const shell of inputHub.shells.values())shell.dispose();for(const stop of cleanups.reverse())stop()}

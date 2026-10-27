@@ -5,5 +5,5 @@ const {stripConversationSubmission}=require('../../scripts/lib/conversation-subm
 const {stripConversationResponseProgress}=require('../../scripts/lib/conversation-response-progress.mjs')
 const {stripPlainSlashInput}=require('../../scripts/lib/plain-slash-input.mjs')
 const {stripSidebarNewNoteConversation}=require('../../scripts/lib/sidebar-new-note.mjs')
-export const stripConversationTransientUi=source=>stripPlainSlashInput(stripConversationSubmission(stripConversationResponseProgress(source)))
+export const stripConversationTransientUi=source=>stripPlainSlashInput(stripConversationResponseProgress(stripConversationSubmission(source)))
 export const stripConversationOuterUi=source=>stripSidebarNewNoteConversation(stripConversationTransientUi(source))
