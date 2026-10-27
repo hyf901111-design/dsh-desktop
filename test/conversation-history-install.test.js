@@ -1,0 +1,6 @@
+import{readFileSync}from'node:fs'
+import{Script}from'node:vm'
+import{expect,it}from'vitest'
+import{patchConversationHistoryRuntime,stripConversationHistoryRuntime,patchConversationHistoryClient,stripConversationHistoryClient}from'../scripts/lib/conversation-history-page.mjs'
+const runtime=readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),conversation=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+it.each([[runtime,patchConversationHistoryRuntime,stripConversationHistoryRuntime,'runtime'],[conversation,patchConversationHistoryClient,stripConversationHistoryClient,'client']])('strictly patches and inverses each Native bundle without changing other definitions',(source,patch,strip)=>{const installed=patch(source);expect(patch(installed)).toBe(installed);expect(strip(installed)).toBe(source);expect(()=>new Script(installed)).not.toThrow();for(const invalid of [installed+'\n/* ework:conversation-history-extra:v2 */',installed.replace('history-', 'history-broken-'),installed.replace(/\/\* ework:conversation-history[^*]*\*\//g,'')])expect(()=>patch(invalid)).toThrow(/drift|traces|orphan/);expect(()=>patch(source.replace('loadOlder','unexpectedMethod'))).toThrow(/drift/)})
