@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261027-04",
+  "branch": "codex/integration/20261027-04",
+  "baseMainCommit": "d79aaa69f6396e6666559e5cd03297f71c0d62c5",
+  "expectedMainCommit": "d79aaa69f6396e6666559e5cd03297f71c0d62c5",
+  "createdAt": "2026-10-27T00:04:56.619Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "消除看板演示重复头栏留白并保留普通研究头栏保护",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "d79aaa69f6396e6666559e5cd03297f71c0d62c5",
+        "tipCommit": "078745b2a4dd1b044ca16753cc87b89a8db2db60",
+        "commits": [
+          {
+            "commit": "078745b2a4dd1b044ca16753cc87b89a8db2db60",
+            "parents": [
+              "d79aaa69f6396e6666559e5cd03297f71c0d62c5"
+            ],
+            "subject": "修复看板演示重复预留头栏遮挡画布"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-board-header-20261027/native-direct.log: 37/37 directly affected Native/strict install checks on frozen bytes identical to this commit.",
+            "verifiedCommit": "078745b2a4dd1b044ca16753cc87b89a8db2db60",
+            "completedAt": "2026-10-27T00:01:27.220298+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "reserves the real workspace header once|replays the four-component Board stage|protects the current scroll position|keeps an already open user research panel"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-board-header-20261027/browser-final.log: 8/8 targeted actual Native browser checks; 70 unrelated cases skipped. Both inset/overlay flows finish all 13 commands through real native prepared table hydration. Frozen bytes bound to commit by source-sha.json.",
+            "verifiedCommit": "078745b2a4dd1b044ca16753cc87b89a8db2db60",
+            "completedAt": "2026-10-27T00:01:27.220298+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-board-header-20261027/typecheck.log: fresh full typecheck EXIT0.",
+            "verifiedCommit": "078745b2a4dd1b044ca16753cc87b89a8db2db60",
+            "completedAt": "2026-10-27T00:01:27.220298+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/release140-board-header-20261027/native-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-board-header-20261027/native-install.json: actual installed module, in-memory native helper double patch byte equality/strip roundtrip/parse; physical file unchanged. Not a full global pipeline claim.",
+            "verifiedCommit": "078745b2a4dd1b044ca16753cc87b89a8db2db60",
+            "completedAt": "2026-10-27T00:01:27.220298+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Headless Chromium production Native ConversationRoot/ResearchCanvas/FinancialLibrary/WorkspaceRegistry/real shared pointer; dark/light header geometry and post-dispose ordinary Research margin/header44 verified. Actual app not controlled or built. Overlay right pane is an explicit controlled geometry boundary, not official Native sidebar acceptance. Viewed header-dark.png and formal-stage-replay-overlay.png."
+        },
+        "acceptanceCriteria": [
+          "Guide宿主已在真实header下方，内部真实网格不再重复留44px；深浅均canvas.top等于host.top、底边一致。",
+          "真实header保持44px；退出guide后的普通Research canvas仍44px预留，不改global grid/header/CSS、安全guard或错误。",
+          "同formal CSS1255×818/DPR1.1原生重放，内缩与全宽叠右栏两种布局均完成13步：6原生组件+智能补充、3真实links、5只自选、native table。",
+          "保原input/draft/Root身份与已有用户右栏宽度/active file，Arrange暂停、销毁和用户wheel保护仍通过。",
+          "已装旧guide source升级/重复安装/严格strip/parse可用，物理deps没有写入。"
+        ],
+        "risks": [
+          "原正式当次4-card新闻阶段的generic readiness timeout未在改前/改后的同尺寸browser重放复现；不将本布局修复冒称已证明那次超时根因。failed-session-storage.json/observation保存只读终态证据，候选分支未猜改。",
+          "Root明确将新包真实完整Board（6原生+智能补充/3links/5股/无黑带及ready错误）作为恢复发布前硬门禁。本feature不构建、控UI或上传。"
+        ],
+        "generatedAt": "2026-10-27T00:01:27.220298+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native.test.js",
+        "test/home-guide-native-strip.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/home-guide-native-browser.test.js",
+        "-t",
+        "reserves the real workspace header once|replays the four-component Board stage|protects the current scroll position|keeps an already open user research panel"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
