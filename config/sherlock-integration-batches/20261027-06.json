@@ -800,6 +800,37 @@
           "Prior response timer source and three test/fixture files are byte-identical to4fd; their12-case Native evidence is retained via unchanged-timer-evidence.json rather than rerun. New111 checks cover the directly changed submission/annotation boundaries."
         ],
         "generatedAt": "2026-10-27T06:28:33.696672+00:00"
+      },
+      "merged": {
+        "mergeCommit": "9fd0dbf4f54aec6fbace61335392f41f76fb7e12",
+        "verificationCommit": "9fd0dbf4f54aec6fbace61335392f41f76fb7e12",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9fd0dbf4f54aec6fbace61335392f41f76fb7e12",
+            "completedAt": "2026-10-27T06:54:05.390Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "9fd0dbf4f54aec6fbace61335392f41f76fb7e12",
+            "completedAt": "2026-10-27T06:54:05.390Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T06:54:05.390Z"
       }
     }
   ],
