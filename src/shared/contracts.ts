@@ -37,6 +37,12 @@ export interface UpdateStatus {
   transferredBytes?: number
   totalBytes?: number
   bytesPerSecond?: number
+  /** Transfer totals describe required network bytes, distinct from archive size. */
+  downloadKind?: 'differential' | 'full'
+  archiveBytes?: number
+  reusedBytes?: number
+  resumedBytes?: number
+  fallbackReason?: 'no-cache' | 'no-blockmap' | 'range-unsupported' | 'differential-disabled' | 'no-reusable-blocks'
   message?: string
   manual: boolean
 }

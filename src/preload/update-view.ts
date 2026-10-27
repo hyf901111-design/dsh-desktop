@@ -73,7 +73,8 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
       return zh ? `发现新版本${version}，可下载更新` : `Update${version} is available to download.`
     case 'downloading': {
       const percent = Math.round(status.percent ?? 0)
-      return zh ? `正在下载更新 ${percent}%` : `Downloading update ${percent}%`
+      const label = zh ? `正在下载更新 ${percent}%` : `Downloading update ${percent}%`
+      return status.downloadKind ? `${label} · ${updateTransferMessage(status, locale)}` : label
     }
     case 'installing':
       if (status.installStage) { const copy = updateInstallCopy(status, locale); return `${copy.title} · ${copy.description}` }
@@ -95,11 +96,19 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
   }
 }
 
-export function updateTransferMessage(status: UpdateStatus): string {
+export function updateTransferMessage(status: UpdateStatus, locale: UpdateLocale = 'zh'): string {
   const mb = (bytes: number) => (bytes / 1_000_000).toFixed(1).replace(/\.0$/, '')
   if (!Number.isFinite(status.transferredBytes) || !Number.isFinite(status.totalBytes) || (status.totalBytes ?? 0) <= 0) return ''
   let text = `${mb(status.transferredBytes!)} / ${mb(status.totalBytes!)} MB`
   if (Number.isFinite(status.bytesPerSecond) && status.bytesPerSecond! > 0) text += ` · ${mb(status.bytesPerSecond!)} MB/s`
+  if (status.downloadKind) {
+    const zh = locale === 'zh'
+    text = (zh ? status.downloadKind === 'differential' ? '差分下载 ' : '完整下载 ' : status.downloadKind === 'differential' ? 'Differential download ' : 'Full download ') + text
+    if ((status.reusedBytes ?? 0) > 0) text += zh ? ` · 复用 ${mb(status.reusedBytes!)} MB` : ` · ${mb(status.reusedBytes!)} MB reused`
+    if ((status.resumedBytes ?? 0) > 0) text += zh ? ` · 继续已下载 ${mb(status.resumedBytes!)} MB` : ` · ${mb(status.resumedBytes!)} MB resumed`
+    if (status.downloadKind === 'full' && status.fallbackReason === 'no-cache') text += zh ? ' · 无可复用更新缓存' : ' · no reusable update cache'
+    if (status.downloadKind === 'full' && status.fallbackReason === 'range-unsupported') text += zh ? ' · 服务器不支持差分范围' : ' · server does not support differential ranges'
+  }
   return text
 }
 

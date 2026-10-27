@@ -203,7 +203,7 @@ export class SidebarUpdateControl {
       progress.style.setProperty('--notice-progress', `${Math.max(0, Math.min(100, status.percent ?? 0))}%`)
       progress.append(doc.createElement('span'))
       children.push(progress)
-      description.textContent = updateTransferMessage(status)
+      description.textContent = updateTransferMessage(status, this.locale)
     } else description.textContent = ready ? updateMessage(status,this.locale) : checking ? installCopy.description
       : completed ? (zh ? '更新完成，当前已是最新版本。' : 'Update complete. You are up to date.')
       : status.phase === 'error' ? errorCopy.description
