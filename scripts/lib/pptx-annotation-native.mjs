@@ -51,18 +51,6 @@ export function createPptxAnnotationNativeRuntime(options){
  const coordinator=createPptxAnnotationCoordinator({bridge,resolveInput,isCurrent:valid,subscribeEnvelopes:notify=>options.api.subscribeEnvelopes(notify),
   getSelection:identity=>doc.activeElement===identity.input&&identity.input.value.length===identity.shell.snapshot.draft.length?{start:identity.input.selectionStart,end:identity.input.selectionEnd}:undefined,
   isComposing:identity=>composing.has(identity.input),
-  ensureSkill:async(identity,before)=>{
-   const current=()=>{if(!valid(identity))throw changed();if(composing.has(identity.input))throw Error('请先结束输入法编辑，再加入 PPT 技能。')}
-   const builtin=value=>{try{return value.source==='ework-managed-skill'&&JSON.parse(value.ref).id==='builtin:efund-ppt-maker'}catch{return false}}
-   if(before.occurrences.some(builtin))return before
-   const rows=await annotationSkillRequest(win,'list',{},current,controller.signal),skill=Array.isArray(rows)&&rows.find(row=>row.id==='builtin:efund-ppt-maker')
-   current();if(!annotationAdmissionCurrent(identity.shell,before))throw Error('草稿已变化，未自动加入技能。')
-   if(!skill)throw Error('请先启用 PPT 制作技能，再发送标注。')
-   await annotationSkillRequest(win,'use',{sessionId:identity.sessionId,skill,commandSegment:{via:'menu',span:{start:before.draft.length,end:before.draft.length,draftRev:before.draftRev}}},current,controller.signal)
-   current();const after=annotationAdmission(identity.shell.snapshot),added=after.occurrences.filter(value=>!before.occurrences.some(old=>old.occurrenceId===value.occurrenceId))
-   if(after.draft!==before.draft+'\ufffc '||after.draftRev!==before.draftRev+1||JSON.stringify(after.imageIds)!==JSON.stringify(before.imageIds)||added.length!==1||!builtin(added[0])||added[0].offset!==before.draft.length||before.occurrences.some(old=>!after.occurrences.some(value=>JSON.stringify(value)===JSON.stringify(old))))throw Error('技能加入期间草稿已变化，当前输入已保留。')
-   return after
-  },
   validateRetry:async(identity,before,parts)=>{for(const occurrence of before.occurrences)if(occurrence.source==='ework-managed-skill'){
    const check=()=>{if(!valid(identity))throw changed()},reference=JSON.parse(occurrence.ref),result=await annotationSkillRequest(win,'resolve',{reference},check,controller.signal)
    if('/'+result.invocationName!==parts.find(value=>value.offset===occurrence.offset)?.text)throw Error('原技能已变化，请重新确认修改请求。')
@@ -116,7 +104,7 @@ export function stripPptxAnnotationInput(source){
  if(!source.includes('sherlock:pptx-annotation-input:'))return source
  if(LEGACY_BLOCK===BLOCK||LEGACY_BLOCK.includes('submissionNotices'))throw Error('PPT annotation legacy notice adapter drifted')
  const start=source.indexOf('\n'+START),finish=source.indexOf(END,start),installed=start>=0&&finish>=0?source.slice(start,finish+END.length+1):''
- const knownPrior=['1449ab328137c2250b31a4dc36105cab365330a4a29d8187a95ade22d1d7a701','e29163c847d85ba75b4a41f079acf92ce7325323cd3640491739e40b6dbb1dcd','4aeef32cf0bb0c909e8a9d8a85c877211d5d1873b290c36781d2b9ae0b981a2b','8608bedd8a8e505c9bd7f54c89530e5aa75a91f2e09400172ed61d25f6c1540d'].includes(createHash('sha256').update(installed).digest('hex'))
+ const knownPrior=['1449ab328137c2250b31a4dc36105cab365330a4a29d8187a95ade22d1d7a701','e29163c847d85ba75b4a41f079acf92ce7325323cd3640491739e40b6dbb1dcd','4aeef32cf0bb0c909e8a9d8a85c877211d5d1873b290c36781d2b9ae0b981a2b','8608bedd8a8e505c9bd7f54c89530e5aa75a91f2e09400172ed61d25f6c1540d','5fb255a72243b72715a0d686c878e7236606cd41fa21e52b538b254de1e18cd7'].includes(createHash('sha256').update(installed).digest('hex'))
  const block=source.includes(BLOCK)?BLOCK:source.includes(LEGACY_BLOCK)?LEGACY_BLOCK:knownPrior?installed:null
  if(source.split(START).length!==2||source.split(END).length!==2||!block)throw Error('PPT annotation installed source drifted')
  let result=source.replace(block,'');for(const[from,to]of TRANSACTIONS)result=exactly(result,to,from)

@@ -21,6 +21,15 @@ async function fixture(options={}){
  for(const name of['runtime','connection','conversation']){await page.addScriptTag({content:sources[name]});await page.evaluate(name=>window[name+'Descriptor']=window.lastDescriptor,name)}
  await page.addScriptTag({content:script});try{await page.locator('.uV2eYG_root textarea').waitFor({state:'visible',timeout:4000});await page.evaluate(()=>window.probe.seed())}catch(reason){const info=await page.evaluate(()=>({views:probe.views,input:document.querySelector('.uV2eYG_root textarea')&&{disabled:document.querySelector('textarea').disabled,readOnly:document.querySelector('textarea').readOnly}}));throw Error(JSON.stringify({errors,info})+' '+reason.message)}return{page,errors,async close(){await page.evaluate(()=>window.probe.unmount());await page.close()}}
 }
+it.each([false,true])('sends only the explicitly chosen skill references for actual annotation input (manual PPT %s)',async manual=>{
+ const f=await fixture();try{const{page}=f;if(manual)await page.evaluate(()=>probe.usePptSkill())
+ await page.evaluate(async()=>{await probe.add('真实第一处修改📈');await probe.add('第二页独立意见',1)})
+ const before=await page.evaluate(()=>({state:probe.getState(),compose:probe.compose}));await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1)
+ const result=await page.evaluate(()=>({state:probe.getState(),compose:probe.compose,request:probe.requests.find(value=>value.method==='session.prompt'),prepare:probe.prepares[0]})),text=result.request.payload.content.find(part=>part.type==='text').text
+ expect(text.includes('/ework-skill-180a6a3f86f8942e')).toBe(manual);expect(text).toContain('/ework-skill-1111111111111111');expect(text).toContain('原附件：file.pdf');expect(text).toContain('整体要求📌保留');expect(text).toContain('真实第一处修改📈');expect(text).toContain('第二页独立意见')
+ expect(result.compose).toEqual(before.compose);expect(result.prepare.references).toHaveLength(2);expect(result.state.draft).toBe('');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
 it.each([{width:700,dark:false},{width:400,dark:true}])('paints each real InputHub pin beside its remark with consecutive native line spacing at $width px / dark=$dark',async options=>{
  const f=await fixture({...options,layout:true});try{const{page}=f;await page.evaluate(async()=>{await probe.add('标题改为长期价值📈');await probe.add('补充风险说明',1)})
  await expect.poll(()=>page.locator('[data-figma-inline-ready]').count()).toBe(1)
@@ -51,28 +60,28 @@ it('writes a new empty remark by clicking beside its actual inline pin without s
  await mkdir('/tmp/ppt-annotation-inline-20261026',{recursive:true});await writeFile('/tmp/ppt-annotation-inline-20261026/empty-comment-caret.json',JSON.stringify({initial,clicked,final:await page.evaluate(()=>probe.getState())},null,2));expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
-async function rejectSkillForChangedDraft(page){
- await page.evaluate(async()=>{await probe.add('保持图表');probe.deferSkillCatalog=true})
- await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.skillCatalogWaiting)).toBe(true)
+async function rejectPrepareForChangedDraft(page){
+ await page.evaluate(async()=>{await probe.add('保持图表');probe.deferPrepare=true})
+ await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.prepareWaiting)).toBe(true)
  await page.locator('.uV2eYG_root textarea').evaluate(el=>{el.focus();el.setSelectionRange(el.value.length,el.value.length)});await page.keyboard.insertText('用户后写的全局要求')
- await page.evaluate(()=>{probe.deferSkillCatalog=false;probe.releaseSkillCatalog()});await expect.poll(()=>page.evaluate(()=>probe.notice()?.text)).toBe('草稿已变化，未自动加入技能。')
- expect(await page.getByText('草稿已变化，未自动加入技能。',{exact:true}).isVisible()).toBe(true)
- expect(await page.evaluate(()=>({prepares:probe.prepares.length,requests:probe.requests.length}))).toEqual({prepares:0,requests:0})
+ await page.evaluate(()=>{probe.deferPrepare=false;probe.releasePrepare()});await expect.poll(()=>page.evaluate(()=>probe.notice()?.text)).toBe('发送草稿已变化，较新输入已保留。')
+ expect(await page.getByText('发送草稿已变化，较新输入已保留。',{exact:true}).isVisible()).toBe(true)
+ expect(await page.evaluate(()=>({prepares:probe.prepares.length,requests:probe.requests.length}))).toEqual({prepares:1,requests:0})
 }
-it('clears its old skill CAS notice only after a later explicit native send prepares successfully',async()=>{
- const f=await fixture();try{const{page}=f;await rejectSkillForChangedDraft(page);await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1)
- await expect.poll(()=>page.evaluate(()=>probe.notice())).toBeNull();expect(await page.getByText('草稿已变化，未自动加入技能。',{exact:true}).count()).toBe(0)
- const sent=await page.evaluate(()=>({requests:probe.requests,compose:probe.compose,state:probe.getState()}));expect(sent.requests).toHaveLength(1);expect(sent.requests[0].method).toBe('session.prompt');const text=sent.requests[0].payload.content.find(value=>value.type==='text').text;expect(text).toContain('用户后写的全局要求');expect(text).toContain('/ework-skill-180a6a3f86f8942e');expect(text).toContain('原附件：file.pdf');expect(sent.state.marks[0].comment).toBe('保持图表');expect(sent.state.draft).toBe('');expect(f.errors).toEqual([])
+it('clears its old prepare CAS notice only after a later explicit native send prepares successfully',async()=>{
+ const f=await fixture();try{const{page}=f;await rejectPrepareForChangedDraft(page);await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1)
+ await expect.poll(()=>page.evaluate(()=>probe.notice())).toBeNull();expect(await page.getByText('发送草稿已变化，较新输入已保留。',{exact:true}).count()).toBe(0)
+ const sent=await page.evaluate(()=>({requests:probe.requests,compose:probe.compose,state:probe.getState()}));expect(sent.requests).toHaveLength(1);expect(sent.requests[0].method).toBe('session.prompt');const text=sent.requests[0].payload.content.find(value=>value.type==='text').text;expect(text).toContain('用户后写的全局要求');expect(text).not.toContain('/ework-skill-180a6a3f86f8942e');expect(text).toContain('原附件：file.pdf');expect(sent.state.marks[0].comment).toBe('保持图表');expect(sent.state.draft).toBe('');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
 it('keeps a new prepare failure visible and clears it after an explicit send with the existing PPT skill succeeds',async()=>{
- const f=await fixture();try{const{page}=f;await rejectSkillForChangedDraft(page);await page.evaluate(()=>probe.prepareError='本轮标注快照准备失败。');await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.notice()?.text)).toBe('本轮标注快照准备失败。')
+ const f=await fixture();try{const{page}=f;await rejectPrepareForChangedDraft(page);await page.evaluate(()=>probe.usePptSkill());await page.evaluate(()=>probe.prepareError='本轮标注快照准备失败。');await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.notice()?.text)).toBe('本轮标注快照准备失败。')
  expect(await page.getByText('本轮标注快照准备失败。',{exact:true}).isVisible()).toBe(true);const rejected=await page.evaluate(()=>({state:probe.getState(),requests:probe.requests}));expect(rejected.requests).toEqual([]);expect(rejected.state.draft).toContain('用户后写的全局要求');expect(rejected.state.occurrences.filter(value=>value.source==='ework-managed-skill'&&JSON.parse(value.ref).id==='builtin:efund-ppt-maker')).toHaveLength(1)
  await page.evaluate(()=>probe.prepareError=null);await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1);await expect.poll(()=>page.evaluate(()=>probe.notice())).toBeNull();expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
 it('does not clear a newer unrelated native error when the pending annotation preparation succeeds',async()=>{
- const f=await fixture();try{const{page}=f;await rejectSkillForChangedDraft(page);await page.evaluate(()=>probe.deferPrepare=true);await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.prepareWaiting)).toBe(true)
+ const f=await fixture();try{const{page}=f;await rejectPrepareForChangedDraft(page);await page.evaluate(()=>probe.deferPrepare=true);await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.prepareWaiting)).toBe(true)
  await page.evaluate(()=>{probe.notify('error','当前附件已失效。');probe.releasePrepare()});await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1);expect(await page.evaluate(()=>probe.notice()?.text)).toBe('当前附件已失效。');expect(await page.getByText('当前附件已失效。',{exact:true}).isVisible()).toBe(true);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
@@ -85,8 +94,8 @@ it('tracks an initially empty remark through actual Chromium IME and persists on
  const f=await fixture();try{const{page}=f;await page.evaluate(()=>probe.add(''));await page.evaluate(()=>{const r=probe.ranges()[0],el=document.querySelector('.uV2eYG_root textarea');el.focus();el.setSelectionRange(r.start,r.end);probe.comments.length=0});const cdp=await page.context().newCDPSession(page);await cdp.send('Input.imeSetComposition',{text:'zhong',selectionStart:5,selectionEnd:5});expect(await page.evaluate(()=>probe.comments)).toEqual([]);await cdp.send('Input.insertText',{text:'中文📈'});await expect.poll(()=>page.evaluate(()=>probe.getState().marks[0].comment)).toBe('中文📈');expect(await page.evaluate(()=>probe.comments)).toEqual(['中文📈']);expect((await page.evaluate(()=>probe.getState())).draft).toContain('整体要求📌保留');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
-it('adds the actual managed PPT skill without replace and freezes all marks once before the real native API request',async()=>{
- const f=await fixture();try{const{page}=f;await page.evaluate(async()=>{await probe.add('保持图表');await probe.add('改第二页',1)});await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.requests.filter(value=>value.method==='session.prompt').length)).toBe(1);await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1);const result=await page.evaluate(()=>({prepares:probe.prepares,compose:probe.compose,request:probe.requests.find(value=>value.method==='session.prompt'),bind:probe.binds[0],envelopes:probe.envelopes.filter(value=>value.rpcId===probe.requests.find(value=>value.method==='session.prompt').rpcId)}));expect(result.prepares).toHaveLength(1);expect(result.prepares[0].references).toHaveLength(2);expect(result.compose.commandSegment.via).toBe('menu');expect(result.compose.commandSegment.span.start).toBe(result.compose.commandSegment.span.end);expect(result.compose.prefill).toBeUndefined();expect(result.request.payload.sessionId).toBe('central');const text=result.request.payload.content.find(value=>value.type==='text').text;expect(text).toContain('/ework-skill-180a6a3f86f8942e');expect(text).toContain('/ework-skill-1111111111111111');expect(text).toContain('整体要求📌保留');expect(text).toContain('原附件：file.pdf');expect(result.bind.submissionId).toBe(result.request.rpcId);expect(result.envelopes.map(value=>value.type)).toEqual(['client-request','server-response']);expect(f.errors).toEqual([])
+it('preserves the manually chosen managed PPT skill and freezes all marks once before the real native API request',async()=>{
+ const f=await fixture();try{const{page}=f;await page.evaluate(async()=>{await probe.usePptSkill();await probe.add('保持图表');await probe.add('改第二页',1)});await page.locator('button.uV2eYG_primary').click();await expect.poll(()=>page.evaluate(()=>probe.requests.filter(value=>value.method==='session.prompt').length)).toBe(1);await expect.poll(()=>page.evaluate(()=>probe.binds.length)).toBe(1);const result=await page.evaluate(()=>({prepares:probe.prepares,compose:probe.compose,request:probe.requests.find(value=>value.method==='session.prompt'),bind:probe.binds[0],envelopes:probe.envelopes.filter(value=>value.rpcId===probe.requests.find(value=>value.method==='session.prompt').rpcId)}));expect(result.prepares).toHaveLength(1);expect(result.prepares[0].references).toHaveLength(2);expect(result.compose.commandSegment.via).toBe('menu');expect(result.compose.commandSegment.span.start).toBe(result.compose.commandSegment.span.end);expect(result.compose.prefill).toBeUndefined();expect(result.request.payload.sessionId).toBe('central');const text=result.request.payload.content.find(value=>value.type==='text').text;expect(text).toContain('/ework-skill-180a6a3f86f8942e');expect(text).toContain('/ework-skill-1111111111111111');expect(text).toContain('整体要求📌保留');expect(text).toContain('原附件：file.pdf');expect(result.bind.submissionId).toBe(result.request.rpcId);expect(result.envelopes.map(value=>value.type)).toEqual(['client-request','server-response']);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
 it('preserves a real newer native draft when prepare finishes late and does not submit or clear it',async()=>{
