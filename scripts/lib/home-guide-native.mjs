@@ -763,7 +763,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
   }, [sessionId, subagentPanel, researchWorkspaces])
   if (!entry || entry.controller.signal.aborted || entry.detail.sessionId !== sessionId || subagentPanel) return null
   return react_dom.createPortal(react.createElement(HomeGuideNativeFinancialContext.Provider, { value: entry.provider },
-    react.createElement('div', { 'data-home-guide-native': entry.detail.runId, 'aria-label': '研究看板操作示例', style: { position: 'absolute', inset: 0, minWidth: 0, minHeight: 0, overflow: 'hidden' } },
+    react.createElement('div', { 'data-home-guide-native': entry.detail.runId, 'aria-label': '研究看板操作示例', style: { position: 'absolute', inset: 0, minWidth: 0, minHeight: 0, overflow: 'hidden', '--odyssey-workspace-header-height': '0px' } },
       react.createElement(ResearchCanvas, { sessionId: entry.resource.id, t: key => key, researchWorkspaces: entry.resource.registry, selectionGeneration: entry.selectionGeneration })
     )), entry.host)
 }
