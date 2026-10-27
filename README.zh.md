@@ -29,6 +29,18 @@ Sherlock 把 DeepSeek Harness 的本地 Web 体验封装为桌面应用：应用
 
 ## 下载安装
 
+Apple Silicon Mac（macOS 12 及以上）也可以通过 [Homebrew 软件源](https://github.com/awake-ai-lab/homebrew-tap)安装 EWork Odyssey：
+
+```bash
+brew tap awake-ai-lab/tap
+brew install --cask ework-odyssey
+# 升级前先退出客户端。
+brew update
+brew upgrade --cask ework-odyssey
+```
+
+客户端内更新仍可使用。接管已有安装及后续软件源维护，见 [Homebrew 分发说明](docs/sherlock-homebrew.md)。
+
 请前往 [Sherlock 官网](https://www.dshdesktop.com/#download)下载 macOS 和 Windows 安装包。
 
 macOS 首次安装时，请打开 DMG、把 Sherlock 拖入“应用程序”，然后在“应用程序”里右键或按住 Control 点击 **Sherlock.app**，选择 **打开**。由于本版本不使用 Apple 公证，这一步只需在首次启动时完成一次。

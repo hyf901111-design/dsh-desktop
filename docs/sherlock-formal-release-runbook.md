@@ -6,6 +6,8 @@
 
 正式发布若未指定版本，比较 `package.json` 与公开 `latest-mac.yml` 后，将较高正式版本的补丁号加一。Cloudflare 是正式更新主通道；GitHub Fork 是源码备份通道，不以当前上游 PR 是否可合并作为发布阻塞条件。
 
+每次正式发布也包含 `awake-ai-lab/homebrew-tap` 的版本同步、中文提交、推送和公开核验。此步骤在 Cloudflare 公开验证成功后执行，软件源尚未同步成功时不得宣称整次正式发布完成。用户只要求源码合并或本地测试时不触发此发布步骤。
+
 ## 不可破坏的发布约束
 
 1. 新版本必须高于线上版本，禁止覆盖已发布版本目录。
@@ -28,7 +30,7 @@
 
 ## 1. 发布前检查
 
-在 `/Users/heyafeng/Documents/ChatGPT/dsh` 中：
+在 `/Users/heyafeng/Documents/ChatGPT/sherlock-desktop` 的干净本地 `main` 中：
 
 ```bash
 git status --short --branch
@@ -276,7 +278,7 @@ hdiutil detach "$mount_point"
   sherlock-releases/notarized/latest/latest-mac.yml --remote
 ```
 
-全部适用的公开元数据、不可变资源、差分更新、签名及包完整性检查均成功后，才执行滚动清理。先预演并确认 `deletedVersion` 是服务器中最早的版本，`deleteKeys` 全部严格位于同一个 `releases/v<deletedVersion>/` 下；再执行正式清理：
+全部适用的公开元数据、不可变资源、差分更新、签名及包完整性检查均成功后，先完成下节 5.1 的 Homebrew 软件源同步，再执行滚动清理。先预演并确认 `deletedVersion` 是服务器中最早的版本，`deleteKeys` 全部严格位于同一个 `releases/v<deletedVersion>/` 下；再执行正式清理：
 
 ```bash
 npm run release:cloudflare:prune-oldest -- \
@@ -294,6 +296,21 @@ npm run release:cloudflare:prune-oldest -- \
 ```
 
 清理脚本只接受上传预演中标记为 `immutable` 且严格属于当前版本的 key；它逐个精确删除清单中最早版本的对象，并且仅在全部删除成功后更新仓库内的版本清单。若预演版本不符合预期、清单缺失或删除失败，停止清理并保留现场，不能改用模糊前缀或批量删除补救。
+
+## 5.1. Homebrew 软件源同步
+
+只有本次 Cloudflare 正式发布的全部适用公开验证通过后，才按 `docs/sherlock-homebrew.md` 同步 `awake-ai-lab/homebrew-tap`。使用最终签名、公证并 staple 后的 DMG：
+
+```bash
+node scripts/update-homebrew-cask.mjs \
+  --version 0.6.4 \
+  --dmg dist-release/sherlock-mac-arm64.dmg \
+  --tap "$(brew --repository awake-ai-lab/tap)"
+```
+
+将示例版本替换为真实发布版本。工具核对正式 feed 的版本、固定 DMG URL、SHA-512、大小以及远端 HEAD，拒绝降级和同版本换包。通过后审查 Cask，运行 Homebrew 的解析/风格检查，创建中文提交并推送独立 Tap；再从公开仓库及 `brew info` 核验版本。Cask 维护 `auto_updates true`，保留客户端内更新；显式使用 `brew upgrade --cask ework-odyssey` 升级。不得使用可变下载别名和 `sha256 :no_check`。
+
+Tap 更新失败时保留已经验证的 Cloudflare 发布，修复软件源步骤后重试；不得重新覆盖同版本 R2 对象。Cloudflare 回滚后禁止继续推进 Tap；若已推进则回退 Cask 提交并核验。滚动清理不得删除 Tap 当前版本所指向的安装包。
 
 ## 6. 源码同步
 
@@ -317,4 +334,4 @@ git push https://github.com/hyf901111-design/dsh-desktop.git \
 
 ## 完成标准
 
-最终汇报分别列出：版本与提交、聚焦测试和类型检查、应用/DMG 签名、Cloudflare 元数据与 Range/缓存验证、差分更新校验（不做全量升级测试）、R2 最早版本精确清理、GitHub Fork 推送。所有发布步骤成功且无待处理故障后才称为“正式版发布完成”。
+最终汇报分别列出：版本与提交、聚焦测试和类型检查、应用/DMG 签名、Cloudflare 元数据与 Range/缓存验证、差分更新校验（不做全量升级测试）、Homebrew Cask 版本/SHA-256、Tap 中文提交与推送及公开核验、R2 最早版本精确清理、GitHub Fork 推送。所有发布步骤成功且无待处理故障后才称为“正式版发布完成”。

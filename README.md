@@ -29,6 +29,18 @@ Sherlock packages the local DeepSeek Harness web experience as a desktop applica
 
 ## Download
 
+EWork Odyssey for Apple Silicon Macs (macOS 12+) is also available through our [Homebrew tap](https://github.com/awake-ai-lab/homebrew-tap):
+
+```bash
+brew tap awake-ai-lab/tap
+brew install --cask ework-odyssey
+# Quit the app before upgrading.
+brew update
+brew upgrade --cask ework-odyssey
+```
+
+In-app updates remain available. See the [Homebrew guide](docs/sherlock-homebrew.md) for migrating an existing installation and maintaining the cask.
+
 Download Sherlock for macOS and Windows from the [official website](https://www.dshdesktop.com/#download).
 
 On macOS, open the DMG and drag Sherlock into Applications. The Developer ID signature and stapled Apple notarization ticket allow Gatekeeper to verify the download normally.
