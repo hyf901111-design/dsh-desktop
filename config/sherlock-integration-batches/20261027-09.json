@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Figma看板页签组件与平滑跨页拖放",
+        "featureName": "Figma看板页签组件：原生拖动、溢出翻页与单实例提示",
         "branch": "codex/feat/board-tabs-20261027",
-        "baseCommit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
-        "tipCommit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
+        "baseCommit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
+        "tipCommit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
         "commits": [
           {
-            "commit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
+            "commit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
             "parents": [
-              "99bb90aaef3765f9a3827335ff69a29ba3f6ff03"
+              "69cdb174d66f26c349ec17dd3466b3e3e066d414"
             ],
-            "subject": "区分组件标题点击和真实拖动，消除误触回弹"
+            "subject": "恢复看板原生拖动并增加页签翻页和重复添加提示"
           }
         ],
         "files": [
@@ -29,7 +29,19 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-workspace.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs.css"
           },
           {
             "status": "M",
@@ -53,9 +65,9 @@
               "test/research-context-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "10个直接相关文件121项聚焦检查通过，含标题点击与真实拖动阈值",
-            "verifiedCommit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
-            "completedAt": "2026-10-27T15:56:29.214776+00:00",
+            "summary": "10个直接相关文件128项聚焦检查通过，含原生拖动对照、近区转换、翻页、两秒提示及并发保护",
+            "verifiedCommit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
+            "completedAt": "2026-10-27T22:22:13.103957+00:00",
             "timeoutMs": 120000
           },
           {
@@ -66,64 +78,29 @@
             ],
             "outcome": "passed",
             "summary": "主进程类型检查通过",
-            "verifiedCommit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
-            "completedAt": "2026-10-27T15:56:29.214776+00:00",
+            "verifiedCommit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
+            "completedAt": "2026-10-27T22:22:13.103957+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "首轮集成原生客户端已验证四主题、十二页签滚动设置、图表跨页、一次撤销和中文改名；本次修复DOM含真实截图调用、裁剪、异步恢复，更新构建后继续核验。不代表用户验收。"
+          "summary": "前版原生客户端使用已验证；本轮DOM128项相关检查通过并经独立复核，新的原生拖动、翻页、重复提示将在本地更新构建后实测；不代表用户接受"
         },
         "acceptanceCriteria": [
           "组件库可添加满宽34px页签，首次两页且现有内容归第一页",
           "设置改名增删排序、12项内部滚动、确认取消及撤销",
           "跨页移动保留组件身份内容尺寸连接，160ms缩略、220ms释放、180ms取消过渡",
-          "四主题和真实客户端操作核对，无公开发布"
+          "四主题和真实客户端操作核对，无公开发布",
+          "普通画布沿用原生拖动，仅在可见可接收标签附近缩略，离开恢复",
+          "页签溢出时显示右侧左右翻页按钮，宽度变化自动更新",
+          "每看板只允许一个页签组件，重复添加在工具栏上方提示2秒"
         ],
         "risks": [
-          "更新构建后继续核验本地截图拖影与空页上下文；用户验收与主干提升尚未执行",
+          "本轮本地更新构建后继续核验原生拖动、翻页和重复提示；尚未用户接受或提升主干",
           "干净npm安装存在既有交付补丁签名漂移；隔离依赖取自当前规范客户端已安装运行时"
         ],
-        "generatedAt": "2026-10-27T15:56:29.214776+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a9322d979bb2419582ac41155a689b0acedc3566",
-        "verificationCommit": "a9322d979bb2419582ac41155a689b0acedc3566",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/custom-component-library-client.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/research-canvas-storage.test.ts",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-board-document.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-contract.test.js test/custom-component-library-client.test.js test/research-canvas-clipboard.test.ts test/research-canvas-storage.test.ts test/research-canvas-actions-client.test.js test/research-board-document.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "a9322d979bb2419582ac41155a689b0acedc3566",
-            "completedAt": "2026-10-27T15:56:39.493Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a9322d979bb2419582ac41155a689b0acedc3566",
-            "completedAt": "2026-10-27T15:56:39.493Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-27T15:56:39.493Z"
+        "generatedAt": "2026-10-27T22:22:13.103957+00:00"
       }
     }
   ],
