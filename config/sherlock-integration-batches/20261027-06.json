@@ -1,0 +1,701 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261027-06",
+  "branch": "codex/integration/20261027-06",
+  "baseMainCommit": "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5",
+  "expectedMainCommit": "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5",
+  "createdAt": "2026-10-27T06:32:57.816Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "技能菜单置顶与配图、输入框文件拖入提示和首页禁用发送箭头",
+        "branch": "codex/feat/composer-menu-drop-20261027",
+        "baseCommit": "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5",
+        "tipCommit": "0cdc3d781db3fc6f31f4dd9ee644be55a8e8fa2d",
+        "commits": [
+          {
+            "commit": "0cdc3d781db3fc6f31f4dd9ee644be55a8e8fa2d",
+            "parents": [
+              "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5"
+            ],
+            "subject": "优先展示PPT与研报技能并收紧文件拖入提示范围"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-home.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-command-bridge.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/composer-menu-drop-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/composer-menu-drop-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-drop.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-skill-menu-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/skill-command-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/skill-command-patch.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_NOTES_SKILL_EVIDENCE=/tmp/composer-menu-drop-20261027/notes-regression",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/composer-menu-drop-browser.test.js",
+              "test/skill-command-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/notes-skill-menu-browser.test.js",
+              "test/dsh-file-drop-compat.test.ts",
+              "test/notes-native-drop.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/composer-menu-drop-20261027/focused.log: 6 directly affected files,53/53; no full suite.",
+            "verifiedCommit": "0cdc3d781db3fc6f31f4dd9ee644be55a8e8fa2d",
+            "completedAt": "2026-10-27T04:57:07.253Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/composer-menu-drop-20261027/typecheck-final.log: EXIT0.",
+            "verifiedCommit": "0cdc3d781db3fc6f31f4dd9ee644be55a8e8fa2d",
+            "completedAt": "2026-10-27T04:57:07.253Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/composer-menu-drop-20261027/verify-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/composer-menu-drop-20261027/installation.log: EXIT0.",
+            "verifiedCommit": "0cdc3d781db3fc6f31f4dd9ee644be55a8e8fa2d",
+            "completedAt": "2026-10-27T04:57:07.253Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Actual Native SessionInputShell/InputBar/ComposerSurface/PopupSelectController and the compatibility-patched dsh-file-drop DropZone run in private Chromium. Light/dark cover screenshots viewed; native search/multi-pick, exact card drop geometry+resize/outside drop/cleanup, disabled send vs enabled/stop/reading verified. No real app UI acceptance claimed."
+        },
+        "acceptanceCriteria": [
+          "PPT与研报仅按可信builtin id稳定排前两项，其余启用技能顺序与身份不变，搜索和连续多选保留。",
+          "两内置项复用首页composer现有PPT/研报cover renderer与原template/logo，小号对齐标题描述，无新生成图或工作台图。",
+          "全窗口接收文件行为不变；仅既有拖入提示边框/背景由CSS anchor精确跟随真实输入卡片，不包含首页标题或工作区行，resize/leave/drop后正确。",
+          "仅首页disabled发送箭头调淡，enabled发送、rect停止按钮和普通阅读输入外观不变。",
+          "生产Node two-pass字节一致，修改attribute/CSS/definition与duplicate marker均拒绝；依赖文件未写。"
+        ],
+        "risks": [
+          "Root仍需集成完整patch pipeline与实际打包客户端验收；本任务未build/操作Native UI或模型。",
+          "CSS anchor依赖当前正式Electron43支持；已在实际Chromium运行，与transform祖先及窄窗resize联测。",
+          "首次旧Notes测试曾覆盖单张既有headless截图，具体路径/当前SHA与修正见evidence.json；任何Native既有证据及用户文件均未改。"
+        ],
+        "generatedAt": "2026-10-27T04:57:07.253Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "项目长标题测量渐隐滚读与原生二级命令菜单玻璃材质修复",
+        "branch": "codex/feat/post140-sidebar-menus-20261027",
+        "baseCommit": "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5",
+        "tipCommit": "fcbfaf603f56903dba5ddc644aa0d92ffa1b9ca7",
+        "commits": [
+          {
+            "commit": "fcbfaf603f56903dba5ddc644aa0d92ffa1b9ca7",
+            "parents": [
+              "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5"
+            ],
+            "subject": "统一项目长标题滚读并修复二级命令菜单背景模糊"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/command-popup-surface.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-refinements-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/navigation-title-preview.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/command-popup-surface.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/sidebar-project-popup-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-project-popup-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/sidebar-project-popup-browser.test.js",
+              "test/command-popup-surface.test.js",
+              "test/figma-session-title.test.ts",
+              "test/figma-workspace-folder-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/slash-menu-expanded.test.js",
+              "test/menu-surface-theme.test.ts",
+              "test/menu-backdrop-pixels.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/post140-sidebar-menus-20261027/frozen-focused.log: 8 directly related files,53/53 EXIT0; no full suite. Committed bytes exactly match verified frozen source.",
+            "verifiedCommit": "fcbfaf603f56903dba5ddc644aa0d92ffa1b9ca7",
+            "completedAt": "2026-10-27T06:12:06.161Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/post140-sidebar-menus-20261027/frozen-typecheck.log: tsc EXIT0.",
+            "verifiedCommit": "fcbfaf603f56903dba5ddc644aa0d92ffa1b9ca7",
+            "completedAt": "2026-10-27T06:12:06.161Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/post140-sidebar-menus-20261027/verify-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/post140-sidebar-menus-20261027/installation.log: actual commands/workspace source,Node two-pass byte identity,exact strip/tamper rejection,parse,physical dependency SHA unchanged; EXIT0.",
+            "verifiedCommit": "fcbfaf603f56903dba5ddc644aa0d92ffa1b9ca7",
+            "completedAt": "2026-10-27T06:12:06.161Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Private headless Chromium runs actual ProjectRowItem and primitive Menu/HoverCard plus actual ComposerSurface/InputBar/PopupSelectController and production styles. Project height20px,measured fade/hover/reset/short/reduced/rename/menu/drag verified. Permission/model/plan light+dark actual raster blurs detail std28→0 while transmitting color,search not double blurred; search/scroll/focus/resize/Escape/outside/native skills owner verified. Screenshots viewed. No visible app/old Sherlock/install/restart or actual packaged-client acceptance."
+        },
+        "acceptanceCriteria": [
+          "项目原label仅包原生title spans，复用现有Session测量、hover滚读、移出归位和reduced-motion；短标题不动，原Project actions/hovercard/rename/drag保持。",
+          "Project列布局保原文本高度；Session仍保原393行专属flex，未将session横向flex错误套进Project纵向容器。",
+          "所有非skills原生PopupSelect card通过单独manual popover脱离composer祖先backdrop-root，保Native maxHeight、viewport滚动、搜索、焦点、controller/权限/模型/计划原事件。",
+          "skills保原expanded owner；子input/正文/dialog不加第二重blur，transparent backdrop不吃底层点击，resize/scroll/close清理恢复own styles。",
+          "字面量helper严格double-install/inverse/duplicate/orphan/drift拒绝，真实Node读依赖纯内存不写。"
+        ],
+        "risks": [
+          "Root仍需正式集成pipeline与真实EWork客户端验收；本任务未build/push/操作Native UI或旧客户端。",
+          "既有一级test/figma-command-menu-layout.test.js在HEAD基线CSS loader TypeError、0case执行，见legacy-main-layout-baseline.log。未修改该文件或把它算通过；实验loader校准已全撤回，未弱化旧断言。",
+          "skill-command-menu.mjs两return包装点与此前已确认0cdc3d78技能配图候选可能发生Git文本冲突；合并时需组合保留artwork包装及本次patchCommandPopupSurface，不能覆盖任一功能。",
+          "Manual popover依赖当前Electron/Chromium支持；无showPopover时保Native原菜单，不新增框架/IO/服务。",
+          "用户明确忽略的组件拖动层级未实施，本次top-layer仅属于二级popup玻璃修复。"
+        ],
+        "generatedAt": "2026-10-27T06:12:06.161Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "生产macOS更新差分优先、安全断点续传和真实传输量展示",
+        "branch": "codex/feat/mac-updater-resume-20261027",
+        "baseCommit": "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5",
+        "tipCommit": "347762c31b0a641d98304891957a7daa5f955302",
+        "commits": [
+          {
+            "commit": "347762c31b0a641d98304891957a7daa5f955302",
+            "parents": [
+              "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5"
+            ],
+            "subject": "为macOS更新加入差分优先与校验安全的断点续传"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "src/main/update/mac-download.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/update/resumable-transfer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-manager.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-state.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-update-control.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-notification-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/contracts.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/mac-update-download.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/mac-update-resume.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-manager.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/update-transfer-presentation.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/mac-update-resume.test.ts",
+              "test/mac-update-download.test.ts",
+              "test/update-transfer-presentation.test.ts",
+              "test/update-manager.test.ts",
+              "test/update-state.test.ts",
+              "test/update-ui.test.ts",
+              "test/update-notification-store.test.ts",
+              "test/sidebar-update-control.test.ts",
+              "test/update-background-flow.test.ts",
+              "test/update-check-error-routing.test.ts",
+              "test/update-differential.test.ts",
+              "test/local-update-download.test.ts",
+              "test/local-update-manager.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/mac-updater-resume-20261027/focused-final.log: 13 directly related files,126/126 EXIT0; committed bytes exactly match frozen verification; no full suite.",
+            "verifiedCommit": "347762c31b0a641d98304891957a7daa5f955302",
+            "completedAt": "2026-10-27T05:44:46.731Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/mac-updater-resume-20261027/typecheck-final.log: tsc EXIT0; frozen bytes unchanged through commit.",
+            "verifiedCommit": "347762c31b0a641d98304891957a7daa5f955302",
+            "completedAt": "2026-10-27T05:44:46.731Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "Task explicitly excludes actual app UI/install/restart. Real shipped electron-updater6.8.9 MacUpdater+AppUpdater+cache/provider exercised with actual small NodeHTTP Range/disconnect services and OS-only native boundary isolated; update store/view and original sidebar DOM tests passed. No actual signed ZIP/Squirrel signature or installed-old-client acceptance claimed."
+        },
+        "acceptanceCriteria": [
+          "仅production Darwin真实MacUpdater实例安装；LocalCheck/LocalDownload隔离验收行为和disableDifferentialDownload=true不变。",
+          "沿原executeDownload/cache/rename/done和Squirrel签名安装路径；只改ZIP任务传输，进原done前再核实际pending size/SHA512。",
+          "差分变更范围有限重试；gzip/JSON传输不完整耗尽直接失败，不因一次瞬断立即全包。确定缺base/map或明确Range不支持才安全full。",
+          "独立partial存储跨SDK pending清理保留；identity含版本/完整URL/size/SHA512，强ETag/If-Range、精确Content-Range、前缀SHA256、重建最终SHA512保护。",
+          "ETag改变/忽略Range不乱拼；取消保留已核prefix并释锁，并发写拒绝；新锁owner记录失败仅清本次inode，未知既有锁不删。",
+          "进度区分差分/完整、所需网络字节/复用/恢复，不用归档总size冒充差分下载量。",
+          "未改main/1.4.0版本/公开feeds/immutable artifacts，未构建、UI、收费模型或真实旧客户端安装。"
+        ],
+        "risks": [
+          "只在下一本地candidate及之后新升级器生效，不能retrofit已发布1.3.4/1.4.0本体；获取新逻辑前仍受旧客户端限制。",
+          "缺当次错误日志，不能给1.3.4那次失败的唯一历史归因。公开1.3.4→1.4.0的82.2/117.1MB是blockmap计划+各128B真实206证明，未做该路线完整重构或原生升级。",
+          "依赖已锁定electron-updater6.8.9内部executeDownload任务接口；未来依赖升级须重验。",
+          "无可用旧ZIP/确定缺图/明确拒Range仍需真实full；无强validator的未完成partial不能安全追加。全量持久partial和重建需要额外磁盘空间，签名/解压仍由原生Squirrel执行。",
+          "取消在原native task.done启动前检查；已进入原SDK copy/feed原生commit点后不强行撤销native链。autoInstallOnAppQuit=false和manager freshness/prepare abort保持。",
+          "Root后续需集成后真实签名candidate/缓存/重启升级验收；本13files126不替代真实老客户端升级。"
+        ],
+        "generatedAt": "2026-10-27T05:44:46.731Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "PPT制作助手1.1.2既有对齐与兼容门禁版本归档",
+        "branch": "codex/feat/ppt-skill-112-20261027",
+        "baseCommit": "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5",
+        "tipCommit": "3f3f637a8475703c6d462d9721ed5d821b41782d",
+        "commits": [
+          {
+            "commit": "3f3f637a8475703c6d462d9721ed5d821b41782d",
+            "parents": [
+              "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5"
+            ],
+            "subject": "技能：归档PPT制作助手1.1.2对齐与兼容门禁"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/references/delivery-112.md"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-ppt-skill.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "env",
+              "PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin:/Users/heyafeng/.bun/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Applications/VMware Fusion.app/Contents/Public:/Applications/ChatGPT.app/Contents/Resources/codex-cli/codex-path:/Users/heyafeng/.codex/tmp/arg0-macos/codex-arg0dwE3md:/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/heyafeng/.local/bin:/Users/heyafeng/miniconda3/bin:/Users/heyafeng/miniconda3/condabin:/Users/heyafeng/.bun/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS",
+              "PYTHONDONTWRITEBYTECODE=1",
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/efund-ppt-text-layout.test.js",
+              "test/efund-ppt-111.test.js",
+              "test/efund-ppt-package.test.js",
+              "test/efund-ppt-chart-label-position.test.js",
+              "test/efund-ppt-native-visit.test.js",
+              "test/efund-ppt-rendered-fit.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/integration-bundled-skill.test.js",
+              "--reporter=default",
+              "--reporter=json",
+              "--outputFile=/tmp/ework-ppt-skill-112-20261027/post-commit-tests.json"
+            ],
+            "outcome": "passed",
+            "summary": "8个与内置PPT技能直接相关文件、41项小PPTX/OOXML及实际发现/详情链检查通过",
+            "verifiedCommit": "3f3f637a8475703c6d462d9721ed5d821b41782d",
+            "completedAt": "2026-10-27T05:48:24.685867+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PYTHONPATH=/tmp/ework-ppt-skill-112-20261027/validator-deps",
+              "PYTHONDONTWRITEBYTECODE=1",
+              "/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+              "-B",
+              "/Users/heyafeng/.codex/skills/.system/skill-creator/scripts/quick_validate.py",
+              "skills/efund-ppt-maker"
+            ],
+            "outcome": "passed",
+            "summary": "官方skill-creator quick_validate通过；PyYAML仅置于/tmp隔离验证依赖目录",
+            "verifiedCommit": "3f3f637a8475703c6d462d9721ed5d821b41782d",
+            "completedAt": "2026-10-27T05:48:24.722642+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5",
+              "HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "仅本功能相对已发布基线的补丁无空白错误",
+            "verifiedCommit": "3f3f637a8475703c6d462d9721ed5d821b41782d",
+            "completedAt": "2026-10-27T05:48:24.744849+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅内置技能版本与规范归档，没有改客户端控件或渲染器；已用真实FileSystemSkillProvider与IntegrationService验证发现/详情投影。未构建共享客户端或控制UI。"
+        },
+        "acceptanceCriteria": [
+          "内置efund-ppt-maker版本和真实UI/runtime投影统一为v1.1.2",
+          "封面空格、表头/列padding和正文起排已有规则与门禁均经正反例复验；版本说明如实标明既有实现归档",
+          "图表/OOXML及逐页原生验收证据门禁继续通过正反例，不把fixture冒充无修复成稿",
+          "模板/字体/品牌资产、个人skills及发布版客户端不被修改"
+        ],
+        "risks": [
+          "本次没有生成付费20页成稿，也没有进行原生PowerPoint逐页访问；结构检查不保证任意未来输出无需修复。",
+          "当前共享客户端未替换；Root集成并构建后才会呈现新技能版本。"
+        ],
+        "generatedAt": "2026-10-27T05:48:24.785122+00:00"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "普通对话真实首条消息与PPT标注优先呈现、回复单总计时",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5",
+        "tipCommit": "5187dfacea48ccaea4b241201ba31e654e88ce08",
+        "commits": [
+          {
+            "commit": "aabf61f8a41f751e58a981cb9235e1454a86e1d6",
+            "parents": [
+              "5c725d6d93932d54c451c58f4ad9ddb99b4fc5a5"
+            ],
+            "subject": "统一回复总计时并按悬停与焦点显示过程详情按钮"
+          },
+          {
+            "commit": "4fd41562db607e662d217c67393945acc7a664de",
+            "parents": [
+              "aabf61f8a41f751e58a981cb9235e1454a86e1d6"
+            ],
+            "subject": "修复普通首页发送后真实用户消息先于思考显示"
+          },
+          {
+            "commit": "5187dfacea48ccaea4b241201ba31e654e88ce08",
+            "parents": [
+              "4fd41562db607e662d217c67393945acc7a664de"
+            ],
+            "subject": "修复首条PPT标注发送时协议正文闪现"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-response-progress.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-submission.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-coordinator.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-message.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-response-progress-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-response-progress.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-submission-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-submission.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/conversation-response-progress-browser.tsx"
+          },
+          {
+            "status": "C078",
+            "path": "test/fixtures/conversation-submission-browser.tsx",
+            "previousPath": "test/fixtures/home-guide-user-message-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-strip.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-user-message-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/input-deliverable-preview-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-coordinator.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-install.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-message-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-message-install.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-message.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/conversation-submission.test.js",
+              "test/conversation-submission-browser.test.js",
+              "test/pptx-annotation-coordinator.test.js",
+              "test/pptx-annotation-native.test.js",
+              "test/pptx-annotation-install.test.js",
+              "test/pptx-annotation-message.test.js",
+              "test/pptx-annotation-message-install.test.js",
+              "test/pptx-annotation-message-browser.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/post140-annotation-pending-20261027/final-focused.log: 8 directly affected files111/111, real EXIT0. Private actual Native Root/InputHub/SessionInputShell/InputTrigger/SessionRuntime, actual Main prepare and exact real AgentLoop user history; local recording model only. Includes long durable readonly receipt >2700ms, PDF/skill, explicit null/denial/owner boundaries, legacy strict upgrades. No full suite.",
+            "verifiedCommit": "5187dfacea48ccaea4b241201ba31e654e88ce08",
+            "completedAt": "2026-10-27T06:25:00.616369+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/post140-annotation-pending-20261027/final-typecheck.log: fresh tsc actual EXIT0; frozen source bytes identical to committed tip.",
+            "verifiedCommit": "5187dfacea48ccaea4b241201ba31e654e88ce08",
+            "completedAt": "2026-10-27T06:23:32.111831+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/post140-annotation-pending-20261027/verify-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/post140-annotation-pending-20261027/final-native-install.json: actual installed conversation refreshed through six relevant layers twice in memory: exact byte equality/inverse/parse/tamper rejection; physical dependency SHA unchanged. Not a whole global pipeline claim.",
+            "verifiedCommit": "5187dfacea48ccaea4b241201ba31e654e88ce08",
+            "completedAt": "2026-10-27T06:25:32.061099+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Actual Native frontend in private headless Chromium with real private Host AgentLoop pre-step gate and Main PptxAnnotationService/prepare. The actual outbound user RPC/historical row are compared byte-for-byte; per-RAF rows bridge pending and durable, including2700ms readonly delay and PDF/skill. Prior unchanged timer Native browser evidence is separately SHA-bound. External carrier/catalog and local recording model are fixture boundaries. No installed-client UI acceptance, app launch or paid task."
+        },
+        "acceptanceCriteria": [
+          "普通首页第一次真实session.prompt在退出hero首个conversation RAF就呈现实际发出的用户正文与已有原生技能/文件芯片、图片，思考在其下方；未合成/追加/重发消息，不改变模型协议或持久历史。",
+          "投影绑定当前session对象/具体shell/真实outgoing rpcId；实际同rpc user节点到达同次渲染接替，拒绝、transport错误、取消、切会话和lifecycle释放均撤回自己pending UI，保留较新原稿。",
+          "已存在的PPT/研报preset投影互斥、不重复；图片仅UI使用真实data URL及自然尺寸/有界加载占位，未改原始wire。",
+          "同一真实回复turn仅首个过程栏显示一个总计时，跨阶段连续，真实turn end停表；准备阶段已观察等待可在durable turn到来或同批completed时连续承接，失败重试/会话或owner更换不继承旧等待。",
+          "保留独立Notes/Canvas task的原生独立计时及SharedResearch任务身份；所有真实history/timeline/服务器时间metadata保持原样。",
+          "原详情按钮/summary/aria/点击与键盘交互保留；展开chevron只hover/focus-within可见并预留原空间，减动关闭过渡。",
+          "新增late UI层严格完整definition/hook逆序剥离，未知/重复/漂移/orphan严拒；共享test-only helper按Node原bytes剥新层与既有PlainSlash，4旧fixture仅归一不改断言。",
+          "空白首条PPT标注pending从真实Main prepare及准确admitted草稿冻结只读呈现，以session/具体shell/owner epoch/实际RPC/全文wire匹配；不编造userSeq、不追加或重发消息，不改变Main/Host/历史/权限。",
+          "点/框标签、整体要求、多行中文emoji、已有PDF附件与技能在首个conversation RAF和真正durable Main回执延迟超过2.5s期间连续；真实同RPC节点只一行接管。Main明确null/error仍按既有策略原文回退，较新draft/跨owner隔离保持。"
+        ],
+        "risks": [
+          "No macOS app was launched/installed/restarted, no shared build/profile/remote operation or paid model call. Root owns combined pipeline and actual EWork client acceptance.",
+          "Explicit denied/null/error readonly proofs continue to display original human history, preserving fail-closed behavior. Only a live exact prepared local proof may bridge an in-flight lookup; arbitrary authored transport-like prose is never treated as an annotation label.",
+          "Prior response timer source and three test/fixture files are byte-identical to4fd; their12-case Native evidence is retained via unchanged-timer-evidence.json rather than rerun. New111 checks cover the directly changed submission/annotation boundaries."
+        ],
+        "generatedAt": "2026-10-27T06:28:33.696672+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
