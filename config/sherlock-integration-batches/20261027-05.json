@@ -130,6 +130,56 @@
           "板区状态未ready/策略未安装时只是不复用既有scope，走原生fresh创建；不为复用旧板去改板区权限或状态。"
         ],
         "generatedAt": "2026-10-27T01:46:44.677753+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3e2e5077cc281a8e3c156dafaac2ed1300f05129",
+        "verificationCommit": "3e2e5077cc281a8e3c156dafaac2ed1300f05129",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/component-pptx-mode.test.ts",
+              "test/session-view-preferences.test.js",
+              "test/figma-workspace-folder-menu.test.ts",
+              "test/initial-research-session.test.ts",
+              "test/new-chat-view-browser.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/component-pptx-mode.test.ts test/session-view-preferences.test.js test/figma-workspace-folder-menu.test.ts test/initial-research-session.test.ts test/new-chat-view-browser.test.js --maxWorkers=1",
+            "verifiedCommit": "3e2e5077cc281a8e3c156dafaac2ed1300f05129",
+            "completedAt": "2026-10-27T01:55:03.934Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3e2e5077cc281a8e3c156dafaac2ed1300f05129",
+            "completedAt": "2026-10-27T01:55:03.934Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "3e2e5077cc281a8e3c156dafaac2ed1300f05129",
+            "completedAt": "2026-10-27T01:55:03.934Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T01:55:03.934Z"
       }
     }
   ],
