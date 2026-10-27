@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "Figma看板页签组件：原生拖动、溢出翻页与单实例提示",
         "branch": "codex/feat/board-tabs-20261027",
-        "baseCommit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
-        "tipCommit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
+        "baseCommit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
+        "tipCommit": "903142f39eb61d12cf11b65267b25f008d3a615c",
         "commits": [
           {
-            "commit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
+            "commit": "903142f39eb61d12cf11b65267b25f008d3a615c",
             "parents": [
-              "69cdb174d66f26c349ec17dd3466b3e3e066d414"
+              "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a"
             ],
-            "subject": "恢复看板原生拖动并增加页签翻页和重复添加提示"
+            "subject": "避免首排组件朝画布内拖动时误触页签缩略"
           }
         ],
         "files": [
@@ -29,19 +29,7 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/board-tabs-client.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/board-tabs-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/board-tabs-workspace.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/board-tabs.css"
           },
           {
             "status": "M",
@@ -65,9 +53,9 @@
               "test/research-context-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "10个直接相关文件128项聚焦检查通过，含原生拖动对照、近区转换、翻页、两秒提示及并发保护",
-            "verifiedCommit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
-            "completedAt": "2026-10-27T22:22:13.103957+00:00",
+            "summary": "10个相关测试文件129项通过，含首排向画布内拖动不误触缩略的回归",
+            "verifiedCommit": "903142f39eb61d12cf11b65267b25f008d3a615c",
+            "completedAt": "2026-10-27T22:28:34.251330+00:00",
             "timeoutMs": 120000
           },
           {
@@ -78,8 +66,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程类型检查通过",
-            "verifiedCommit": "56ad66e00aa1e0771f9d7d2a300ef04cb2f34f1a",
-            "completedAt": "2026-10-27T22:22:13.103957+00:00",
+            "verifiedCommit": "903142f39eb61d12cf11b65267b25f008d3a615c",
+            "completedAt": "2026-10-27T22:28:34.251330+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -100,45 +88,7 @@
           "本轮本地更新构建后继续核验原生拖动、翻页和重复提示；尚未用户接受或提升主干",
           "干净npm安装存在既有交付补丁签名漂移；隔离依赖取自当前规范客户端已安装运行时"
         ],
-        "generatedAt": "2026-10-27T22:22:13.103957+00:00"
-      },
-      "merged": {
-        "mergeCommit": "376f5dc9de4ccba2ce7150d0c53d6a8bee09db6e",
-        "verificationCommit": "376f5dc9de4ccba2ce7150d0c53d6a8bee09db6e",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/custom-component-library-client.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/research-canvas-storage.test.ts",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-board-document.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-contract.test.js test/custom-component-library-client.test.js test/research-canvas-clipboard.test.ts test/research-canvas-storage.test.ts test/research-canvas-actions-client.test.js test/research-board-document.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "376f5dc9de4ccba2ce7150d0c53d6a8bee09db6e",
-            "completedAt": "2026-10-27T22:24:43.937Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "376f5dc9de4ccba2ce7150d0c53d6a8bee09db6e",
-            "completedAt": "2026-10-27T22:24:43.937Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-27T22:24:43.937Z"
+        "generatedAt": "2026-10-27T22:28:34.251330+00:00"
       }
     }
   ],
