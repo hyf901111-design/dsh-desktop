@@ -115,19 +115,19 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
   // Never open a second native/web media session in a transient drag preview.
   for(const el of clone.querySelectorAll('iframe,video,audio,[data-research-native-web]')){const summary=doc.createElement('div');summary.textContent=snapshot.artifacts.find(n=>n.id===id)?.excerpt||'组件预览';summary.style.cssText='padding:20px;white-space:pre-wrap;font:12px/1.6 system-ui;overflow:hidden';el.replaceWith(summary)}
   preview.append(clone);position.append(preview,caption);tip.className='ew-board-tabs-drag-tip';tip.dataset.boardTabsTheme=theme;tip.hidden=true;doc.body.append(position,tip);card.setAttribute('data-board-tabs-drag-source','');root.setAttribute('data-grid-operation','move')
-  op={id,cell,cells:workspace.getWorkbenchCells(),visible:workspace.getWorkbenchVisibleCells(),source:workspace.getActiveBoardTab(),rect,position,preview,caption,tip,card,pointerId:e.pointerId,start:{x:e.clientX,y:e.clientY,scroll:root.scrollTop},small:false,target:null}
+  op={started:false,capturePending:false,id,cell,cells:workspace.getWorkbenchCells(),visible:workspace.getWorkbenchVisibleCells(),source:workspace.getActiveBoardTab(),rect,position,preview,caption,tip,card,pointerId:e.pointerId,start:{x:e.clientX,y:e.clientY,scroll:root.scrollTop},small:false,target:null}
+  position.style.visibility='hidden';card.removeAttribute('data-board-tabs-drag-source');root.removeAttribute('data-grid-operation');position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)';preview.style.transform='translate3d('+(rect.left-e.clientX)+'px,'+(rect.top-e.clientY)+'px,0) scale(1)'
   // The trusted host can snapshot sandboxed iframes/canvas without reloading
   // them. Capture once before fading the source; no screenshot leaves this app.
   const capture=view.dshDesktop?.researchLinkFrame?.captureCanvas,current=op
   if(capture&&card.querySelector('iframe,canvas,video,[data-research-native-web]')){
    const x=Math.max(0,rect.left),y=Math.max(0,rect.top),width=Math.min(view.innerWidth,rect.right)-x,height=Math.min(view.innerHeight,rect.bottom)-y
-   if(width>0&&height>0){position.style.visibility='hidden';card.removeAttribute('data-board-tabs-drag-source');Promise.resolve(capture({x,y,width,height,cssPixels:true})).then(url=>{if(op!==current||!preview.isConnected||typeof url!=='string'||!/^data:image\/(?:jpeg|png);base64,/.test(url))return;const image=doc.createElement('img');image.alt='';image.src=url;image.draggable=false;image.className='ew-board-tabs-captured-image';Object.assign(image.style,{left:x-rect.left+'px',top:y-rect.top+'px',width:width+'px',height:height+'px'});preview.replaceChildren(image)}).catch(()=>{}).finally(()=>{if(op===current){position.style.visibility='';card.setAttribute('data-board-tabs-drag-source','')}})}
+   if(width>0&&height>0){current.capturePending=true;Promise.resolve(capture({x,y,width,height,cssPixels:true})).then(url=>{if(op!==current||!preview.isConnected||typeof url!=='string'||!/^data:image\/(?:jpeg|png);base64,/.test(url))return;const image=doc.createElement('img');image.alt='';image.src=url;image.draggable=false;image.className='ew-board-tabs-captured-image';Object.assign(image.style,{left:x-rect.left+'px',top:y-rect.top+'px',width:width+'px',height:height+'px'});preview.replaceChildren(image)}).catch(()=>{}).finally(()=>{if(op===current){current.capturePending=false;if(current.started){position.style.visibility='';card.setAttribute('data-board-tabs-drag-source','')}}})}
   }
-  sample(e);frame=view.requestAnimationFrame(autoScroll)
  }
- const move=e=>{if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();sample(e)}
+ const move=e=>{if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();if(!op.started){if(Math.hypot(e.clientX-op.start.x,e.clientY-op.start.y)<4)return;op.preview.getBoundingClientRect();op.started=true;root.setAttribute('data-grid-operation','move');if(!op.capturePending){op.position.style.visibility='';op.card.setAttribute('data-board-tabs-drag-source','')}frame=view.requestAnimationFrame(autoScroll)}sample(e)}
  const up=e=>{
-  if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();sample(e);if(!op)return
+  if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();if(!op.started){cleanup();return}sample(e);if(!op)return
   const current=op,target=op.target,blocked=current.card.hasAttribute('data-research-geometry-blocked')||JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(current.cells);cleanup(true);if(blocked){settle(current,180);onNotice({message:'组件位置或占用状态已变化，移动已取消'});return}
   if(target&&inBoard(e)){
    if(workspace.moveToBoardTab([current.id],target.id)){const next=workspace.getSnapshot();onNotice({message:'已移至「'+target.name+'」',undo:true,signature:JSON.stringify([next.files,next.artifacts])});settle(current)}else{settle(current,180);onNotice({message:'目标页签已变化或无法容纳组件，移动已取消'})}
@@ -139,7 +139,7 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
    workspace.applyWorkbenchCells(next,false);workspace.persist();settle(current)
   }else settle(current,180)
  }
- const cancel=e=>{if(op&&(e?.pointerId===undefined||e.pointerId===op.pointerId)){const current=op;cleanup(true);settle(current,180)}},key=e=>{if(op&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();const current=op;cleanup(true);settle(current,180)}}
+ const cancel=e=>{if(op&&(e?.pointerId===undefined||e.pointerId===op.pointerId)){const current=op;cleanup(current.started);if(current.started)settle(current,180)}},key=e=>{if(op&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();const current=op;cleanup(current.started);if(current.started)settle(current,180)}}
  doc.addEventListener('pointerdown',down,true);view.addEventListener('pointermove',move,true);view.addEventListener('pointerup',up,true);view.addEventListener('pointercancel',cancel,true);view.addEventListener('keydown',key,true);view.addEventListener('blur',cancel)
  return()=>{cleanup();for(const stop of settling)stop();settling.clear();doc.removeEventListener('pointerdown',down,true);view.removeEventListener('pointermove',move,true);view.removeEventListener('pointerup',up,true);view.removeEventListener('pointercancel',cancel,true);view.removeEventListener('keydown',key,true);view.removeEventListener('blur',cancel)}
 }
