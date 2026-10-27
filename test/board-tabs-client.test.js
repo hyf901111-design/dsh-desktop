@@ -71,8 +71,9 @@ it('真实pointer拖动提供接收提示与缩略，悬停不切页，释放移
  await f.event('pointerdown',handle,{button:0,pointerId:1,clientX:150,clientY:130})
  expect(tabs[1].hasAttribute('data-tab-accept')).toBe(false)
  await f.event('pointermove',f.win,{pointerId:1,clientX:170,clientY:130})
- expect(tabs[1].hasAttribute('data-tab-accept')).toBe(true)
+ expect(tabs[1].hasAttribute('data-tab-accept')).toBe(false)
  await f.event('pointermove',f.win,{pointerId:1,clientX:100,clientY:28})
+ expect(tabs[1].hasAttribute('data-tab-accept')).toBe(true)
  expect(f.document.querySelector('.ew-board-tabs-drag-preview').hasAttribute('data-thumbnail')).toBe(true)
  expect(f.document.querySelector('.ew-board-tabs-drag-tip').textContent).toBe('松开移至「页签 2」')
  expect(f.workspace.getActiveBoardTab()).toBe(before.tabs[0].id)
@@ -87,6 +88,104 @@ it('真实pointer拖动提供接收提示与缩略，悬停不切页，释放移
  await f.event('keydown',f.win,{key:'Escape'})
  expect(nav(f.workspace).containerSpec.tabs[0].nodeIds).toEqual([a.id])
  await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull())
+})
+
+it('普通画布拖动保留原生实时布局、浮动卡片和落位占位，不创建独立拖影',async()=>{
+ const f=await fixture();let a,b;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');b=f.workspace.createFinancialWidget('watchlist');f.workspace.createBoardTabs()})
+ const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]'),before=f.workspace.getWorkbenchCells()
+ source.getBoundingClientRect=()=>({left:12,top:180,right:675,bottom:640,width:663,height:460})
+ await f.event('pointerdown',handle,{button:0,pointerId:61,clientX:150,clientY:190})
+ await f.event('pointermove',f.win,{pointerId:61,clientX:420,clientY:620})
+ await vi.waitFor(()=>expect(f.workspace.getWorkbenchCells()).not.toEqual(before))
+ expect(source.hasAttribute('data-grid-active')).toBe(true)
+ expect(f.canvas.querySelector('.ew-grid-placeholder').hidden).toBe(false)
+ expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull()
+ expect(source.hasAttribute('data-board-tabs-drag-source')).toBe(false)
+ await f.event('pointerup',f.win,{pointerId:61,clientX:420,clientY:620})
+ expect(f.document.querySelector('[data-release-animation]')).toBeNull()
+ await f.act(()=>f.workspace.undo());expect(f.workspace.getWorkbenchCells()).toEqual(before)
+})
+
+it('只在可接收标签附近缩略，离开后恢复原生拖动并按原生方式松手',async()=>{
+ const f=await fixture();let a;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');f.workspace.createBoardTabs()})
+ const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]'),tabs=f.document.querySelectorAll('[data-board-tab]'),first=nav(f.workspace).containerSpec.tabs[0].id
+ source.getBoundingClientRect=()=>({left:12,top:180,right:675,bottom:640,width:663,height:460})
+ f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
+ f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
+ tabs[0].getBoundingClientRect=()=>({left:16,top:16,right:80,bottom:42,width:64,height:26})
+ tabs[1].getBoundingClientRect=()=>({left:500,top:16,right:564,bottom:42,width:64,height:26})
+ await f.event('pointerdown',handle,{button:0,pointerId:62,clientX:150,clientY:190})
+ await f.event('pointermove',f.win,{pointerId:62,clientX:30,clientY:28});expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull()
+ await f.event('pointermove',f.win,{pointerId:62,clientX:970,clientY:28});expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull()
+ await f.event('pointermove',f.win,{pointerId:62,clientX:520,clientY:90});expect(f.document.querySelector('.ew-board-tabs-drag-preview')?.hasAttribute('data-thumbnail')).toBe(true)
+ expect(source.hasAttribute('data-board-tabs-drag-source')).toBe(true)
+ await f.event('pointermove',f.win,{pointerId:62,clientX:350,clientY:400})
+ expect(f.document.querySelector('.ew-board-tabs-drag-preview')?.hasAttribute('data-thumbnail')).toBe(false)
+ await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull())
+ expect(source.hasAttribute('data-board-tabs-drag-source')).toBe(false);expect(source.hasAttribute('data-grid-active')).toBe(true)
+ await f.event('pointerup',f.win,{pointerId:62,clientX:350,clientY:400})
+ expect(f.document.querySelector('[data-release-animation]')).toBeNull();expect(f.workspace.getActiveBoardTab()).toBe(first)
+})
+
+it('添加页签前后，同一普通拖动的布局结果与浮动位置保持一致',async()=>{
+ async function run(tabs){
+  const fixture=await financialClientFixture({}, {boardTabs:true});f=fixture;let a,b
+  await f.act(()=>{a=f.workspace.createFinancialWidget('indices');b=f.workspace.createFinancialWidget('watchlist');if(tabs)f.workspace.createBoardTabs()})
+  Object.defineProperty(f.canvas,'clientHeight',{configurable:true,value:900});f.canvas.getBoundingClientRect=()=>({left:0,top:0,right:1000,bottom:900,width:1000,height:900})
+  const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]'),offset=tabs?46:0
+  source.getBoundingClientRect=()=>({left:12,top:180+offset,right:675,bottom:640+offset,width:663,height:460})
+  await f.event('pointerdown',handle,{button:0,pointerId:63,clientX:150,clientY:190+offset})
+  await f.event('pointermove',f.win,{pointerId:63,clientX:420,clientY:620+offset})
+  const floating=parseFloat(source.style.getPropertyValue('--grid-float-top'))
+  await f.event('pointerup',f.win,{pointerId:63,clientX:420,clientY:620+offset})
+  const cells=[a.id,b.id].map(id=>{const {x,y,w,h}=f.workspace.getWorkbenchCells().find(c=>c.id===id);return {x,y,w,h}})
+  await f.dispose();f=null;return {floating,cells}
+ }
+ const baseline=await run(false),tabbed=await run(true)
+ expect(tabbed.cells).toEqual(baseline.cells);expect(tabbed.floating).toBe(baseline.floating+46)
+})
+
+it('合并的最后松手坐标仍能从普通拖动进入页签，或从缩略区恢复原生落位',async()=>{
+ const f=await fixture();let a,b;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');b=f.workspace.createFinancialWidget('watchlist');f.workspace.createBoardTabs()})
+ const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]'),spec=nav(f.workspace).containerSpec
+ source.getBoundingClientRect=()=>({left:12,top:180,right:675,bottom:640,width:663,height:460})
+ f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
+ f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
+ f.document.querySelectorAll('[data-board-tab]')[1].getBoundingClientRect=()=>({left:84,top:16,right:148,bottom:42,width:64,height:26})
+ await f.event('pointerdown',handle,{button:0,pointerId:64,clientX:150,clientY:190})
+ await f.event('pointerup',f.win,{pointerId:64,clientX:100,clientY:28})
+ expect(nav(f.workspace).containerSpec.tabs[1].nodeIds).toContain(a.id)
+ await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull())
+ await f.act(()=>f.workspace.undo());const before=f.workspace.getWorkbenchCells()
+ await f.event('pointerdown',handle,{button:0,pointerId:65,clientX:150,clientY:190})
+ await f.event('pointermove',f.win,{pointerId:65,clientX:100,clientY:28})
+ await f.event('pointerup',f.win,{pointerId:65,clientX:420,clientY:620})
+ expect(f.workspace.getActiveBoardTab()).toBe(spec.tabs[0].id)
+ expect(nav(f.workspace).containerSpec.tabs[1].nodeIds).toEqual([])
+ expect(f.workspace.getWorkbenchCells()).not.toEqual(before)
+ expect(f.document.querySelector('[data-release-animation]')).toBeNull()
+})
+
+it('缩略区收到新的布局后，松手或取消保留新布局并清理原生手势',async()=>{
+ for(const action of ['pointerup','Escape','blur','pointermove']){
+  f=await fixture();let a,b;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');b=f.workspace.createFinancialWidget('watchlist');f.workspace.createBoardTabs()})
+  const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]')
+  source.getBoundingClientRect=()=>({left:12,top:180,right:675,bottom:640,width:663,height:460})
+  f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
+  f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
+  f.document.querySelectorAll('[data-board-tab]')[1].getBoundingClientRect=()=>({left:84,top:16,right:148,bottom:42,width:64,height:26})
+  await f.event('pointerdown',handle,{button:0,pointerId:66,clientX:150,clientY:190})
+  await f.event('pointermove',f.win,{pointerId:66,clientX:100,clientY:28})
+  const changed=f.workspace.getWorkbenchCells().map(c=>c.id===b.id?{...c,y:c.y+30}:c)
+  await f.act(()=>f.workspace.applyWorkbenchCells(changed,false))
+  if(action==='Escape')await f.event('keydown',f.win,{key:'Escape'})
+  else await f.event(action,f.win,{pointerId:66,clientX:100,clientY:28})
+  expect(f.workspace.getWorkbenchCells()).toEqual(changed)
+  expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+  expect(nav(f.workspace).containerSpec.tabs[1].nodeIds).toEqual([])
+  await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull())
+  await f.dispose();f=null
+ }
 })
 it('设置草稿取消、校验、删除确认撤销，保存和看板撤销恢复组件身份与连接',async()=>{
  const f=await fixture();let a,b
@@ -225,15 +324,40 @@ it('页签横向滚动不驱动画布，后台组件更新不抢回滚动位置'
  await f.act(()=>f.workspace.createFinancialWidget('indices'));expect(list.scrollLeft).toBe(120)
 })
 
+it('页签溢出时显示右侧双向翻页按钮，宽度恢复后隐藏',async()=>{
+ const f=await fixture();await f.act(()=>f.workspace.createBoardTabs());const spec=nav(f.workspace).containerSpec
+ await f.act(()=>f.workspace.saveBoardTabs(spec.revision,[...spec.tabs,...Array.from({length:10},(_,i)=>({id:'paging-'+i,name:'翻页 '+i}))]))
+ const list=f.document.querySelector('.ew-board-tabs-list');let width=900
+ Object.defineProperties(list,{clientWidth:{configurable:true,get:()=>width},scrollWidth:{configurable:true,get:()=>812}})
+ list.scrollBy=({left})=>{list.scrollLeft=Math.max(0,Math.min(812-width,list.scrollLeft+left));list.dispatchEvent(new f.win.Event('scroll'))}
+ await f.event('resize',f.win);expect(f.document.querySelector('[data-board-tabs-paging]')).toBeNull()
+ width=300;await f.event('resize',f.win)
+ const left=f.document.querySelector('[aria-label="向左翻页"]'),right=f.document.querySelector('[aria-label="向右翻页"]')
+ expect(left?.disabled).toBe(true);expect(right?.disabled).toBe(false)
+ await f.event('click',right);expect(list.scrollLeft).toBeGreaterThan(0);expect(left.disabled).toBe(false)
+ await f.event('click',right);await f.event('click',right);expect(right.disabled).toBe(true)
+ await f.event('click',left);expect(right.disabled).toBe(false)
+ width=900;await f.event('resize',f.win);expect(f.document.querySelector('[data-board-tabs-paging]')).toBeNull()
+})
+
+it('重复添加只保留一个页签组件，工具栏上方提示两秒后消失',async()=>{
+ const f=await fixture();await f.act(()=>f.workspace.createBoardTabs());const first=nav(f.workspace).id
+ await f.act(()=>f.workspace.createBoardTabs())
+ expect(f.workspace.getSnapshot().artifacts.filter(n=>n.containerSpec?.type==='board-tabs').map(n=>n.id)).toEqual([first])
+ expect(f.document.querySelector('[data-board-tabs-notice]')?.textContent).toContain('每个看板只能添加一个页签组件')
+ await f.act(async()=>{await new Promise(resolve=>setTimeout(resolve,2100))})
+ expect(f.document.querySelector('[data-board-tabs-notice]')).toBeNull()
+})
+
 it('普通标题点击和微小抖动仅选择，不淡出源组件或播放释放动效',async()=>{
  const f=await fixture();let a;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');f.workspace.createBoardTabs()})
  const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]')
  source.getBoundingClientRect=()=>({left:12,top:120,right:675,bottom:580,width:663,height:460})
  await f.event('pointerdown',handle,{button:0,pointerId:51,clientX:150,clientY:130})
  await f.event('pointermove',f.win,{pointerId:51,clientX:151,clientY:131})
- expect(f.document.querySelector('.ew-board-tabs-drag-position').style.visibility).toBe('hidden')
+ expect(f.document.querySelector('.ew-board-tabs-drag-position')).toBeNull()
  expect(source.hasAttribute('data-board-tabs-drag-source')).toBe(false)
- expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ expect(f.canvas.getAttribute('data-grid-operation')).toBe('move')
  await f.event('pointerup',f.win,{pointerId:51,clientX:151,clientY:131})
  expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([a.id])
  expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull()
@@ -283,7 +407,11 @@ it('沙盒网页缩略图使用本地真实画面且只捕获一次',async()=>{
  const source=f.host.querySelector('[data-research-node-id="'+node.id+'"]');source.getBoundingClientRect=()=>({left:12,top:120,right:675,bottom:580,width:663,height:460})
  await f.event('pointerdown',source.querySelector('[data-workbench-drag-handle]'),{button:0,pointerId:41,clientX:150,clientY:130})
  expect(capture).toHaveBeenCalledWith({x:12,y:120,width:663,height:460,cssPixels:true})
+ expect(f.document.querySelector('.ew-board-tabs-captured-image')).toBeNull()
+ f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
+ f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
+ f.document.querySelectorAll('[data-board-tab]')[1].getBoundingClientRect=()=>({left:84,top:16,right:148,bottom:42,width:64,height:26})
+ await f.event('pointermove',f.win,{pointerId:41,clientX:100,clientY:28});expect(capture).toHaveBeenCalledTimes(1)
  expect(f.document.querySelector('.ew-board-tabs-captured-image')?.getAttribute('src')).toBe('data:image/jpeg;base64,/9j/2Q==')
- await f.event('pointermove',f.win,{pointerId:41,clientX:200,clientY:100});expect(capture).toHaveBeenCalledTimes(1)
  await f.event('keydown',f.win,{key:'Escape'});await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull())
 })

@@ -60,6 +60,26 @@ const htmlFitStates = new Map();`)
  // Resizing uses the page's unshifted grid coordinates.
  change('y:e.clientY-r.top+root.scrollTop}}','y:e.clientY-r.top+root.scrollTop-(workspace.getWorkbenchLayoutOffset?.()||0)}}')
  change("top:n.y-n.height/2+'px',width:n.width+'px'", "top:n.y-n.height/2+(workspace.getWorkbenchLayoutOffset?.()||0)+'px',width:n.width+'px'")
+ // Keep the existing canvas pointer engine. The optional controller only
+ // suspends it while a move is close to a visible, receivable page label.
+ const pointerStart=source.indexOf('function installWorkbenchPointer('),pointerEnd=source.indexOf('\nfunction ',pointerStart+10)
+ if(pointerStart<0||pointerEnd<0)throw Error('页签原生拖动接入点缺失')
+ const pointer=source.slice(pointerStart,pointerEnd)
+ let hooked=pointer
+ const hook=(before,after)=>{if(!hooked.includes(before))throw Error('页签拖动钩子缺失: '+before.slice(0,70));hooked=hooked.replace(before,after)}
+ hook('const finish=(commit,event)=>{','const finish=(commit,event,preserveLayout=false)=>{')
+ hook('else{workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry(', 'else{if(!preserveLayout)workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry(')
+ hook('workspace.applyWorkbenchCells(pending,false);const visible=', 'workspace.applyWorkbenchCells(pending,false);op.boardTabsPreviewCells=pending;const visible=')
+ hook('Math.max(12+origin.height/2,origin.y+p.y-op.start.y)', 'Math.max(12+origin.height/2,origin.y+p.y-op.start.y)+(workspace.getWorkbenchLayoutOffset?.()||0)')
+ hook("root.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e", "root.__ewBoardTabsDrag?.begin(e,op);\nroot.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e")
+ hook('autoFrame=0;if(!op||!lastPointer)return', 'autoFrame=0;if(!op||!lastPointer||root.__ewBoardTabsDrag?.active())return')
+ hook('lastPointer=e;update(e);if(!autoFrame)autoFrame=view.requestAnimationFrame(autoScroll)', 'lastPointer=e;const tabMove=root.__ewBoardTabsDrag?.move(e,op);if(tabMove){if(frame)view.cancelAnimationFrame(frame);frame=0;pending=null;preview.hidden=true;if(tabMove===\'cancel\')root.__ewBoardTabsDrag.cancel(e,op,preserve=>finish(false,e,preserve));return}update(e);root.__ewBoardTabsDrag?.afterMove(e);if(!autoFrame)autoFrame=view.requestAnimationFrame(autoScroll)')
+ hook('e.stopImmediatePropagation();finish(true,e)', 'e.stopImmediatePropagation();if(root.__ewBoardTabsDrag?.release(e,op,preserve=>finish(false,e,preserve)))return;if(op.boardTabsResume){update(e);op.boardTabsResume=false}finish(true,e);root.__ewBoardTabsDrag?.end()')
+ hook('e?.stopImmediatePropagation?.();finish(false,e)', 'e?.stopImmediatePropagation?.();if(!root.__ewBoardTabsDrag?.cancel(e,op,preserve=>finish(false,e,preserve)))finish(false,e)')
+ hook("e.preventDefault();finish(false)}}", "e.preventDefault();if(!root.__ewBoardTabsDrag?.cancel(e,op,preserve=>finish(false,undefined,preserve)))finish(false)}}")
+ hook('if(op)finish(false,e)}', 'if(op){if(!root.__ewBoardTabsDrag?.cancel(e,op,preserve=>finish(false,e,preserve)))finish(false,e)}else root.__ewBoardTabsDrag?.end()}')
+ hook('return()=>{finish(false);preview.remove();', 'return()=>{root.__ewBoardTabsDrag?.end();finish(false);preview.remove();')
+ change(pointer,hooked)
  // Keep asynchronous clipboard admission attached to its original page.
  change('const insertClipboardBatch = async (payload, point, active, epoch) => {','const insertClipboardBatch = async (payload, point, active, epoch, boardTabTarget) => {')
  change('else if (payload?.kind === "components") raw = payload.nodes;', 'else if (payload?.kind === "components") {raw = payload.nodes;if(raw?.some(n=>n.containerSpec?.type===\'board-tabs\'))throw Error(\'请从组件库添加页签组件。\');}')

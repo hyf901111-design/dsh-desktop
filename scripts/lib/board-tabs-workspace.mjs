@@ -1,5 +1,6 @@
 export function createBoardTabsWorkspace(adapter) {
  const read=adapter.read,grid=adapter.grid,retained=new Map()
+ let duplicateNotice=null,duplicateToken=0
  return {
   captureBoardTabTarget(){grid.sync(read());return {navId:boardTabsNode(read())?.id??null,tabId:grid.active()}},
   withBoardTabTarget(target,run){const nav=boardTabsNode(read());if(target?.navId&&(!nav||nav.id!==target.navId||!nav.containerSpec.tabs.some(t=>t.id===target.tabId)))throw Error('目标页签已删除，请重新放置生成结果。');return grid.withTarget(target,run)},
@@ -9,12 +10,14 @@ export function createBoardTabsWorkspace(adapter) {
   placeRetainedBoardTabPlans(){if(!adapter.canWrite())return false;const target=this.captureBoardTabTarget();let changed=false;for(const [id,{plan}] of [...retained])if(grid.withTarget(target,()=>this.applyWorkbench(plan))){retained.delete(id);changed=true}if(changed)adapter.publish({});return changed},
   getActiveBoardTab(){grid.sync(read());return grid.active()},
   isBoardPlanningVisible:id=>grid.isPlanningVisible(id),
+  getBoardTabsDuplicateNotice:()=>duplicateNotice,
+  dismissBoardTabsDuplicateNotice(token){if(duplicateNotice?.token===token)duplicateNotice=null},
   getVisibleBoardSnapshot(){const snapshot=read();grid.sync(snapshot);return boardTabsVisible(snapshot,grid.active())},
   isBoardNodeVisible(id){const s=this.getVisibleBoardSnapshot();return [...s.files,...s.artifacts].some(n=>n.id===id)},
   selectBoardTab(id){const snapshot=read(),viewport=grid.switch(id,snapshot);if(!viewport)return false;adapter.publish({viewport,selection:{selectedNodeIds:[],orderedFileIds:[]}});return true},
   createBoardTabs(){
    if(!adapter.canWrite())return null
-   const snapshot=read(),old=boardTabsNode(snapshot);if(old)return old
+   const snapshot=read(),old=boardTabsNode(snapshot);if(old){duplicateNotice={token:++duplicateToken,message:'每个看板只能添加一个页签组件'};adapter.publish({});return old}
    const id=adapter.createId(),spec=boardTabsInitial([...snapshot.files,...snapshot.artifacts].map(n=>n.id),adapter.createId)
    const node=adapter.canonical({id,messageId:id,kind:'generated-container',title:'页签',excerpt:'页签',containerPrompt:'看板页签导航',containerSpec:spec,generationStatus:'completed',generationLastSeq:0,refreshMinutes:0,sizeMode:'manual',x:500,y:29,width:976,height:34})
    if(!node)return null

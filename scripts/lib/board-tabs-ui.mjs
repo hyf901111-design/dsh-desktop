@@ -1,7 +1,9 @@
 export function BoardTabsIcon({name}) {return react_jsx_runtime.jsx('span',{className:'ew-board-tabs-icon','data-tabs-icon':name,'aria-hidden':true})}
 export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) {
- const {jsx,jsxs}=react_jsx_runtime,nav=boardTabsNode(snapshot),[host,setHost]=react.useState(null),[menu,setMenu]=react.useState(null),[settings,setSettings]=react.useState(false),[remove,setRemove]=react.useState(false),[notice,setNotice]=react.useState(null),[theme,setTheme]=react.useState('light'),trigger=react.useRef(null),list=react.useRef(null)
+ const {jsx,jsxs}=react_jsx_runtime,nav=boardTabsNode(snapshot),[host,setHost]=react.useState(null),[menu,setMenu]=react.useState(null),[settings,setSettings]=react.useState(false),[remove,setRemove]=react.useState(false),[notice,setNotice]=react.useState(null),[theme,setTheme]=react.useState('light'),[paging,setPaging]=react.useState({overflow:false,left:false,right:false}),trigger=react.useRef(null),list=react.useRef(null),pager=react.useRef(null)
  const active=workspace.getActiveBoardTab(),close=()=>{setSettings(false);setRemove(false);trigger.current?.focus({preventScroll:true})}
+ const duplicateNotice=workspace.getBoardTabsDuplicateNotice?.()
+ react.useEffect(()=>{if(duplicateNotice){workspace.dismissBoardTabsDuplicateNotice(duplicateNotice.token);setNotice({...duplicateNotice,duration:2000})}},[duplicateNotice,workspace])
  react.useEffect(()=>{
   const root=rootRef.current;if(!root)return
   setHost(root.querySelector('[data-research-content-layer]')||root)
@@ -16,16 +18,22 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
  react.useLayoutEffect(()=>{const selected=list.current?.querySelector('[aria-selected=true]');if(selected){const left=selected.offsetLeft,right=left+selected.offsetWidth;if(left<list.current.scrollLeft)list.current.scrollLeft=left;if(right>list.current.scrollLeft+list.current.clientWidth)list.current.scrollLeft=right-list.current.clientWidth}},[active,host,nav?.id,nav?.containerSpec.tabs.map(t=>t.id).join('|')])
  react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installBoardTabsDrag(root,workspace,readOnly,detail=>setNotice({...detail,token:Date.now()}))},[workspace,readOnly])
  react.useEffect(()=>{const element=list.current;if(!element)return;const wheel=e=>{e.preventDefault();e.stopPropagation();element.scrollLeft+=e.deltaX||e.deltaY};element.addEventListener('wheel',wheel,{passive:false});return()=>element.removeEventListener('wheel',wheel)},[host,nav?.id])
- react.useEffect(()=>{if(!notice)return;const timer=window.setTimeout(()=>setNotice(null),5000);return()=>window.clearTimeout(timer)},[notice])
+ react.useLayoutEffect(()=>{
+  const element=list.current;if(!element)return
+  const measure=()=>{const reserve=pager.current?(pager.current.getBoundingClientRect().width+(parseFloat(window.getComputedStyle(element.parentElement).columnGap)||4)):0,overflow=element.scrollWidth>element.clientWidth+reserve+1,max=Math.max(0,element.scrollWidth-element.clientWidth),next={overflow,left:element.scrollLeft>1,right:element.scrollLeft<max-1};setPaging(old=>Object.keys(next).every(key=>next[key]===old[key])?old:next)}
+  measure();const observer=new ResizeObserver(measure);observer.observe(element);element.addEventListener('scroll',measure);window.addEventListener('resize',measure);return()=>{observer.disconnect();element.removeEventListener('scroll',measure);window.removeEventListener('resize',measure)}
+ },[host,nav?.id,nav?.containerSpec.tabs.length,snapshot.canvasSize.availableWidth,paging.overflow])
+ react.useEffect(()=>{if(!notice)return;const timer=window.setTimeout(()=>setNotice(null),notice.duration??5000);return()=>window.clearTimeout(timer)},[notice])
  react.useEffect(()=>{if(!menu)return;const dismiss=e=>{if(!e.target.closest?.('[data-board-tabs-menu]')&&!trigger.current?.contains(e.target))setMenu(null)},key=e=>{if(e.key==='Escape'){e.preventDefault();setMenu(null);trigger.current?.focus()}};document.addEventListener('pointerdown',dismiss,true);document.addEventListener('keydown',key,true);return()=>{document.removeEventListener('pointerdown',dismiss,true);document.removeEventListener('keydown',key,true)}},[menu])
  const retained=workspace.retainedBoardTabPlanCount?.()||0
  const recovery=retained>0&&jsx(WorkbenchToolbar,{rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth,bottomOffset:126,role:'status','data-workbench-notice':'','data-board-tabs-recovery':'',children:[jsx('span',{children:'目标页签已删除，'+retained+' 组生成结果已保留'},'text'),jsx('button',{type:'button',disabled:readOnly,onClick:()=>workspace.placeRetainedBoardTabPlans(),children:nav?'放入当前页签':'放入当前看板'},'place')]})
  if(!nav||!host)return recovery||null
  const spec=nav.containerSpec
+ const page=direction=>{const element=list.current;if(!element)return;const left=direction*Math.max(64,element.clientWidth*.75);element.scrollBy({left,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
  const select=id=>{setMenu(null);workspace.selectBoardTab(id)}
  const keys=e=>{const buttons=[...list.current.querySelectorAll('[role=tab]')],index=buttons.indexOf(document.activeElement);let to;if(e.key==='ArrowRight')to=(index+1)%buttons.length;if(e.key==='ArrowLeft')to=(index-1+buttons.length)%buttons.length;if(e.key==='Home')to=0;if(e.key==='End')to=buttons.length-1;if(to!==undefined){e.preventDefault();e.stopPropagation();buttons[to].focus();buttons[to].scrollIntoView?.({block:'nearest',inline:'nearest'})}}
  const confirm=jsxs('div',{className:'ew-board-tabs-confirm',children:[jsx('p',{children:'移除页签组件后，所有页签中的组件将合回当前看板，内容和连接保留。'}),jsxs('footer',{children:[jsx('button',{type:'button',onClick:close,children:'取消'}),jsx('button',{type:'button',disabled:readOnly,onClick:()=>{if(workspace.removeBoardTabs())close()},children:'移除页签组件'})]})]})
- return jsxs(react.Fragment,{children:[react_dom.createPortal(jsxs('div',{'data-board-tabs-nav':'',className:'ew-board-tabs-nav','data-board-tabs-theme':theme,style:{width:Math.max(1,(snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000)-24)},onPointerDown:e=>e.stopPropagation(),children:[jsx('div',{ref:list,role:'tablist','aria-label':'看板页签',onKeyDown:keys,className:'ew-board-tabs-list',children:spec.tabs.map(t=>jsx('button',{type:'button',role:'tab',id:'board-tab-'+t.id,'aria-selected':t.id===active,tabIndex:t.id===active?0:-1,title:t.name,'aria-controls':'board-page-'+sessionId,'data-board-tab':t.id,onClick:()=>select(t.id),children:t.name},t.id))}),jsx('button',{ref:trigger,type:'button','data-board-tabs-more':'','aria-label':'页签更多操作','aria-haspopup':'menu','aria-expanded':Boolean(menu),onClick:e=>{const r=e.currentTarget.getBoundingClientRect();setMenu(menu?null:{left:Math.max(8,Math.min(window.innerWidth-214,r.right-206)),top:r.bottom+5})},children:jsx(BoardTabsIcon,{name:'tabs-more'})})]}),host),
+ return jsxs(react.Fragment,{children:[react_dom.createPortal(jsxs('div',{'data-board-tabs-nav':'',className:'ew-board-tabs-nav','data-board-tabs-theme':theme,style:{width:Math.max(1,(snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000)-24)},onPointerDown:e=>e.stopPropagation(),children:[jsx('div',{ref:list,role:'tablist','aria-label':'看板页签',onKeyDown:keys,className:'ew-board-tabs-list',children:spec.tabs.map(t=>jsx('button',{type:'button',role:'tab',id:'board-tab-'+t.id,'aria-selected':t.id===active,tabIndex:t.id===active?0:-1,title:t.name,'aria-controls':'board-page-'+sessionId,'data-board-tab':t.id,onClick:()=>select(t.id),children:t.name},t.id))}),paging.overflow&&jsxs('div',{ref:pager,className:'ew-board-tabs-paging','data-board-tabs-paging':'',children:[jsx('button',{type:'button','aria-label':'向左翻页',title:'向左翻页',disabled:!paging.left,onClick:()=>page(-1),children:jsx(BoardTabsPageIcon,{direction:'left'})}),jsx('button',{type:'button','aria-label':'向右翻页',title:'向右翻页',disabled:!paging.right,onClick:()=>page(1),children:jsx(BoardTabsPageIcon,{direction:'right'})})]}),jsx('button',{ref:trigger,type:'button','data-board-tabs-more':'','aria-label':'页签更多操作','aria-haspopup':'menu','aria-expanded':Boolean(menu),onClick:e=>{const r=e.currentTarget.getBoundingClientRect();setMenu(menu?null:{left:Math.max(8,Math.min(window.innerWidth-214,r.right-206)),top:r.bottom+5})},children:jsx(BoardTabsIcon,{name:'tabs-more'})})]}),host),
  menu&&react_dom.createPortal(jsxs('div',{role:'menu','aria-label':'页签更多操作','data-board-tabs-menu':'','data-board-tabs-theme':theme,className:'ew-grid-menu ew-board-tabs-menu',style:menu,onKeyDown:e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const items=[...e.currentTarget.querySelectorAll('button')],i=items.indexOf(document.activeElement);items[e.key==='End'?items.length-1:e.key==='Home'?0:(i+(e.key==='ArrowUp'?-1:1)+items.length)%items.length]?.focus()}},ref:el=>{if(el&&!el.contains(document.activeElement))el.querySelector('button')?.focus({preventScroll:true})},children:[jsxs('button',{type:'button',role:'menuitem',disabled:readOnly,onClick:()=>{setMenu(null);setSettings(true)},children:[jsx(WorkbenchIcon,{name:'settings'}),jsx('span',{children:'页签设置'})]}),jsxs('button',{type:'button',role:'menuitem',disabled:readOnly,onClick:()=>{setMenu(null);setRemove(true)},children:[jsx(WorkbenchIcon,{name:'remove'}),jsx('span',{children:'移除页签组件'})]})]}),document.body),
  settings&&jsx(BoardTabsSettings,{nav,workspace,readOnly,theme,onClose:close}),
  remove&&jsx(BoardTabsModal,{title:'移除页签组件',theme,onClose:close,children:confirm}),
@@ -68,80 +76,101 @@ export function boardTabsLibraryDrag(event,{workspace,rootRef,onPlaced,readOnly}
 }
 
 export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
- const doc=root.ownerDocument,view=doc.defaultView,grid=createResearchGrid()
- let op=null,frame=0,last=null
- const settling=new Set()
+ const doc=root.ownerDocument,view=doc.defaultView,settling=new Set()
+ let op=null,edgeFrame=0,exitTimer=null
  const clearTargets=()=>root.querySelectorAll('[data-board-tab]').forEach(el=>{el.removeAttribute('data-tab-accept');el.removeAttribute('data-tab-target')})
- const cleanup=(keepPreview=false)=>{if(!op)return;op.card.removeAttribute('data-board-tabs-drag-source');if(!keepPreview){op.position.remove();op.preview.remove();op.caption.remove()}op.tip.remove();clearTargets();root.removeAttribute('data-grid-operation');if(frame)view.cancelAnimationFrame(frame);frame=0;op=null;last=null}
- const settle=(current,duration=220)=>{const stop=animateBoardTabsDrop(current,root,workspace,duration,()=>settling.delete(stop));settling.add(stop)}
- const inBoard=e=>{const r=root.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom}
- const sample=e=>{
-  if(!op)return
-  const nav=boardTabsNode(workspace.getSnapshot());if(!nav||workspace.getActiveBoardTab()!==op.source){cleanup();return}
-  last=e;op.target=null
-  const bar=root.querySelector('[data-board-tabs-nav]'),r=bar?.getBoundingClientRect(),list=bar?.querySelector('[role=tablist]'),lr=list?.getBoundingClientRect(),rr=root.getBoundingClientRect(),distance=r?Math.max(r.left-e.clientX,e.clientX-r.right,r.top-e.clientY,e.clientY-r.bottom,0):Infinity
-  op.small=distance<=(op.small?96:64)
-  const scale=op.small?Math.min(1,240/op.rect.width):1,w=op.rect.width*scale,h=op.rect.height*scale
-  const left=op.small?Math.max(8,Math.min(view.innerWidth-w-8,e.clientX+16)):op.rect.left+e.clientX-op.start.x
-  const top=op.small?Math.max(8,Math.min(view.innerHeight-h-8,Math.max((r?.bottom??0)+12,e.clientY+16))):op.rect.top+e.clientY-op.start.y
-  // Pointer following and the morph have separate compositor transforms. The
-  // pointer never waits for the 160ms size/offset transition to catch up.
-  op.position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)'
-  op.preview.style.transform='translate3d('+(left-e.clientX)+'px,'+(top-e.clientY)+'px,0) scale('+scale+')'
-  Object.assign(op.caption.style,{transform:'translate3d('+(left-e.clientX+8)+'px,'+(top-e.clientY+4)+'px,0)',opacity:op.small?'1':'0'})
-  op.preview.toggleAttribute('data-thumbnail',op.small)
-  clearTargets()
-  for(const tab of root.querySelectorAll('[data-board-tab]')){
-   const target=nav.containerSpec.tabs.find(t=>t.id===tab.dataset.boardTab)
-   if(!target||target.id===op.source||readOnly)continue
-   tab.setAttribute('data-tab-accept','')
-   const bounds=tab.getBoundingClientRect(),left=Math.max(bounds.left,lr?.left??Infinity,r?.left??Infinity,rr.left),right=Math.min(bounds.right,lr?.right??-Infinity,r?.right??-Infinity,rr.right),top=Math.max(bounds.top,lr?.top??Infinity,r?.top??Infinity,rr.top),bottom=Math.min(bounds.bottom,lr?.bottom??-Infinity,r?.bottom??-Infinity,rr.bottom),stack=doc.elementsFromPoint?.(e.clientX,e.clientY)||[]
-   if(e.clientX>=left&&e.clientX<=right&&e.clientY>=top&&e.clientY<=bottom&&(!stack.length||stack[0].closest?.('[data-board-tab]')===tab)){op.target=target;tab.setAttribute('data-tab-target','')}
+ const inside=e=>{const r=root.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom}
+ const clear=(keepPreview=false)=>{
+  const current=op;op=null;if(edgeFrame)view.cancelAnimationFrame(edgeFrame);edgeFrame=0;view.clearTimeout(exitTimer);exitTimer=null;clearTargets()
+  if(!current)return null
+  current.card.removeAttribute('data-board-tabs-drag-source');current.tip?.remove()
+  if(!keepPreview){current.preview?.remove();current.caption?.remove();current.position?.remove()}
+  return current
+ }
+ const settle=(current,duration=220)=>{if(!current?.preview)return;const stop=animateBoardTabsDrop(current,root,workspace,duration,()=>settling.delete(stop));settling.add(stop)}
+ const targets=e=>{
+  const nav=boardTabsNode(workspace.getSnapshot()),bar=root.querySelector('[data-board-tabs-nav]'),list=bar?.querySelector('[role=tablist]'),br=bar?.getBoundingClientRect(),lr=list?.getBoundingClientRect(),rr=root.getBoundingClientRect(),receivers=[]
+  if(!nav||nav.id!==op?.navId||workspace.getActiveBoardTab()!==op.source||!br||!lr)return {distance:Infinity,target:null,receivers,bottom:0}
+  let distance=Infinity,target=null
+  for(const element of list.querySelectorAll('[data-board-tab]')){
+   const tab=nav.containerSpec.tabs.find(t=>t.id===element.dataset.boardTab);if(!tab||tab.id===op.source)continue
+   const r=element.getBoundingClientRect(),left=Math.max(r.left,lr.left,br.left,rr.left),right=Math.min(r.right,lr.right,br.right,rr.right),top=Math.max(r.top,lr.top,br.top,rr.top),bottom=Math.min(r.bottom,lr.bottom,br.bottom,rr.bottom)
+   if(right<=left||bottom<=top)continue
+   receivers.push(element);distance=Math.min(distance,Math.max(left-e.clientX,e.clientX-right,top-e.clientY,e.clientY-bottom,0))
+   const stack=doc.elementsFromPoint?.(e.clientX,e.clientY)||[]
+   if(e.clientX>=left&&e.clientX<=right&&e.clientY>=top&&e.clientY<=bottom&&(!stack.length||stack[0].closest?.('[data-board-tab]')===element))target=tab
   }
+  return {distance:inside(e)?distance:Infinity,target,receivers,bottom:br.bottom}
+ }
+ const useCapture=current=>{
+  if(!current.image||!current.preview)return
+  const image=doc.createElement('img');image.alt='';image.src=current.image.url;image.draggable=false;image.className='ew-board-tabs-captured-image';Object.assign(image.style,{left:current.image.x-current.rect.left+'px',top:current.image.y-current.rect.top+'px',width:current.image.width+'px',height:current.image.height+'px'});current.preview.replaceChildren(image)
+ }
+ const makePreview=e=>{
+  const current=op,from=current.card.getBoundingClientRect(),clone=current.card.cloneNode(true),theme=root.dataset.workbenchStyle||'light'
+  current.position=doc.createElement('div');current.preview=doc.createElement('div');current.caption=doc.createElement('div');current.tip=doc.createElement('div')
+  const {position,preview,caption,tip}=current
+  position.className='ew-board-tabs-drag-position';position.dataset.boardTabsTheme=theme
+  preview.className='ew-board-tabs-drag-preview';preview.dataset.eworkGrid='';preview.dataset.workbenchStyle=theme;preview.dataset.boardTabsTheme=theme;preview.setAttribute('aria-hidden','true');Object.assign(preview.style,{width:current.rect.width+'px',height:current.rect.height+'px'})
+  clone.removeAttribute('id');clone.removeAttribute('data-grid-active');clone.style.removeProperty('--grid-float-left');clone.style.removeProperty('--grid-float-top');for(const el of clone.querySelectorAll('[id]'))el.removeAttribute('id')
+  for(const el of clone.querySelectorAll('iframe,video,audio,[data-research-native-web]')){const summary=doc.createElement('div');summary.textContent=current.node.excerpt||'组件预览';summary.style.cssText='padding:20px;white-space:pre-wrap;font:12px/1.6 system-ui;overflow:hidden';el.replaceWith(summary)}
+  preview.append(clone);caption.className='ew-board-tabs-drag-caption';caption.textContent=current.node.title||'组件';tip.className='ew-board-tabs-drag-tip';tip.dataset.boardTabsTheme=theme;tip.hidden=true
+  position.append(preview,caption);doc.body.append(position,tip);useCapture(current)
+  position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)';preview.style.transform='translate3d('+(from.left-e.clientX)+'px,'+(from.top-e.clientY)+'px,0) scale('+(from.width/current.rect.width)+')';preview.getBoundingClientRect()
+ }
+ const paint=(e,hit)=>{
+  if(!op?.preview)return
+  const rect=op.card.getBoundingClientRect(),scale=op.small?Math.min(1,240/op.rect.width):rect.width/op.rect.width,w=op.rect.width*scale,h=op.rect.height*scale
+  const left=op.small?Math.max(8,Math.min(view.innerWidth-w-8,e.clientX+16)):rect.left,top=op.small?Math.max(8,Math.min(view.innerHeight-h-8,Math.max(hit.bottom+12,e.clientY+16))):rect.top
+  op.position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)';op.preview.style.transform='translate3d('+(left-e.clientX)+'px,'+(top-e.clientY)+'px,0) scale('+scale+')';op.preview.toggleAttribute('data-thumbnail',op.small)
+  Object.assign(op.caption.style,{transform:'translate3d('+(left-e.clientX+8)+'px,'+(top-e.clientY+4)+'px,0)',opacity:op.small?'1':'0'})
+  clearTargets();if(op.small)for(const tab of hit.receivers)tab.setAttribute('data-tab-accept','')
+  op.target=op.small?hit.target:null;if(op.target)root.querySelector('[data-board-tab="'+CSS.escape(op.target.id)+'"]')?.setAttribute('data-tab-target','')
   op.tip.hidden=!op.target
   if(op.target){op.tip.textContent='松开移至「'+op.target.name+'」';const tipWidth=op.tip.offsetWidth||180,beside=left+w+8+tipWidth<=view.innerWidth-8;Object.assign(op.tip.style,{left:(beside?left+w+8:Math.max(8,Math.min(view.innerWidth-tipWidth-8,left)))+'px',top:Math.max(8,Math.min(view.innerHeight-40,beside?top:top+h+8))+'px'})}
  }
- const autoScroll=()=>{frame=0;if(!op||!last)return;const r=root.getBoundingClientRect(),y=last.clientY-r.top,delta=y<48?-Math.ceil((48-y)/4):y>r.height-64?Math.ceil((y-r.height+64)/4):0;if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta));if(root.scrollTop!==before)sample(last)}const list=root.querySelector('.ew-board-tabs-list'),lr=list?.getBoundingClientRect();if(lr&&last.clientY>=lr.top-16&&last.clientY<=lr.bottom+16){const dx=last.clientX<lr.left+24?-8:last.clientX>lr.right-24?8:0;if(dx){list.scrollLeft+=dx;sample(last)}}if(op)frame=view.requestAnimationFrame(autoScroll)}
- const down=e=>{
-  if(op||readOnly||e.button!==0||e.shiftKey||e.metaKey||!boardTabsNode(workspace.getSnapshot())||!root.contains(e.target))return
-  const handle=e.target.closest?.('[data-workbench-drag-handle]');if(!handle||e.target.closest?.('button,input,textarea,a,select,[contenteditable=true]'))return
-  const card=handle.closest('[data-research-node-id]'),id=card?.getAttribute('data-research-node-id'),snapshot=workspace.getSnapshot(),cell=workspace.getWorkbenchCells().find(c=>c.id===id)
-  if(!card||!cell||card.hasAttribute('data-research-geometry-blocked')||card.hasAttribute('open'))return
-  e.preventDefault();e.stopImmediatePropagation();root.focus({preventScroll:true});workspace.updateSelection([id],'replace')
-  const rect=card.getBoundingClientRect(),position=doc.createElement('div'),preview=doc.createElement('div'),clone=card.cloneNode(true),tip=doc.createElement('div'),caption=doc.createElement('div'),theme=root.dataset.workbenchStyle||'light'
-  position.className='ew-board-tabs-drag-position';position.dataset.boardTabsTheme=theme;caption.className='ew-board-tabs-drag-caption';caption.textContent=card.querySelector('.ew-grid-title')?.textContent||snapshot.artifacts.find(n=>n.id===id)?.title||'组件'
-  preview.className='ew-board-tabs-drag-preview';preview.dataset.eworkGrid='';preview.dataset.workbenchStyle=theme;preview.dataset.boardTabsTheme=theme;preview.setAttribute('aria-hidden','true');Object.assign(preview.style,{width:rect.width+'px',height:rect.height+'px'})
-  clone.removeAttribute('id');clone.removeAttribute('data-grid-active');for(const el of clone.querySelectorAll('[id]'))el.removeAttribute('id')
-  // Never open a second native/web media session in a transient drag preview.
-  for(const el of clone.querySelectorAll('iframe,video,audio,[data-research-native-web]')){const summary=doc.createElement('div');summary.textContent=snapshot.artifacts.find(n=>n.id===id)?.excerpt||'组件预览';summary.style.cssText='padding:20px;white-space:pre-wrap;font:12px/1.6 system-ui;overflow:hidden';el.replaceWith(summary)}
-  preview.append(clone);position.append(preview,caption);tip.className='ew-board-tabs-drag-tip';tip.dataset.boardTabsTheme=theme;tip.hidden=true;doc.body.append(position,tip);card.setAttribute('data-board-tabs-drag-source','');root.setAttribute('data-grid-operation','move')
-  op={started:false,capturePending:false,id,cell,cells:workspace.getWorkbenchCells(),visible:workspace.getWorkbenchVisibleCells(),source:workspace.getActiveBoardTab(),rect,position,preview,caption,tip,card,pointerId:e.pointerId,start:{x:e.clientX,y:e.clientY,scroll:root.scrollTop},small:false,target:null}
-  position.style.visibility='hidden';card.removeAttribute('data-board-tabs-drag-source');root.removeAttribute('data-grid-operation');position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)';preview.style.transform='translate3d('+(rect.left-e.clientX)+'px,'+(rect.top-e.clientY)+'px,0) scale(1)'
-  // The trusted host can snapshot sandboxed iframes/canvas without reloading
-  // them. Capture once before fading the source; no screenshot leaves this app.
-  const capture=view.dshDesktop?.researchLinkFrame?.captureCanvas,current=op
-  if(capture&&card.querySelector('iframe,canvas,video,[data-research-native-web]')){
-   const x=Math.max(0,rect.left),y=Math.max(0,rect.top),width=Math.min(view.innerWidth,rect.right)-x,height=Math.min(view.innerHeight,rect.bottom)-y
-   if(width>0&&height>0){current.capturePending=true;Promise.resolve(capture({x,y,width,height,cssPixels:true})).then(url=>{if(op!==current||!preview.isConnected||typeof url!=='string'||!/^data:image\/(?:jpeg|png);base64,/.test(url))return;const image=doc.createElement('img');image.alt='';image.src=url;image.draggable=false;image.className='ew-board-tabs-captured-image';Object.assign(image.style,{left:x-rect.left+'px',top:y-rect.top+'px',width:width+'px',height:height+'px'});preview.replaceChildren(image)}).catch(()=>{}).finally(()=>{if(op===current){current.capturePending=false;if(current.started){position.style.visibility='';card.setAttribute('data-board-tabs-drag-source','')}}})}
-  }
+ const scrollEdge=()=>{
+  edgeFrame=0;if(!op?.small||!op.last)return
+  const list=root.querySelector('.ew-board-tabs-list'),r=list?.getBoundingClientRect(),e=op.last
+  if(r&&e.clientY>=r.top-16&&e.clientY<=r.bottom+16){const dx=e.clientX<r.left+24?-8:e.clientX>r.right-24?8:0;if(dx){list.scrollLeft+=dx;paint(e,targets(e))}}
+  edgeFrame=view.requestAnimationFrame(scrollEdge)
  }
- const move=e=>{if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();if(!op.started){if(Math.hypot(e.clientX-op.start.x,e.clientY-op.start.y)<4)return;op.preview.getBoundingClientRect();op.started=true;root.setAttribute('data-grid-operation','move');if(!op.capturePending){op.position.style.visibility='';op.card.setAttribute('data-board-tabs-drag-source','')}frame=view.requestAnimationFrame(autoScroll)}sample(e)}
- const up=e=>{
-  if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();if(!op.started){cleanup();return}sample(e);if(!op)return
-  const current=op,target=op.target,blocked=current.card.hasAttribute('data-research-geometry-blocked')||JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(current.cells);cleanup(true);if(blocked){settle(current,180);onNotice({message:'组件位置或占用状态已变化，移动已取消'});return}
-  if(target&&inBoard(e)){
-   if(workspace.moveToBoardTab([current.id],target.id)){const next=workspace.getSnapshot();onNotice({message:'已移至「'+target.name+'」',undo:true,signature:JSON.stringify([next.files,next.artifacts])});settle(current)}else{settle(current,180);onNotice({message:'目标页签已变化或无法容纳组件，移动已取消'})}
-  }else if(inBoard(e)){
-   const width=workspace.getSnapshot().canvasSize.availableWidth||root.clientWidth,m=grid.metrics(width),dx=(e.clientX-current.start.x)/m.step,dy=(e.clientY-current.start.y+root.scrollTop-current.start.scroll)/m.rowStep
-   if(Math.abs(dx)+Math.abs(dy)<.1){settle(current,180);return}
-   const cell=grid.bounded({...current.cell,x:current.cell.x+Math.round(dx),y:Math.max(0,current.cell.y+Math.round(dy))}),next=grid.move(current.cells,cell,current.visible,cell,cell.y)
-   if(next.some(cell=>{const previous=current.cells.find(c=>c.id===cell.id),card=root.querySelector('[data-research-node-id="'+CSS.escape(cell.id)+'"]');return previous&&card?.hasAttribute('data-research-geometry-blocked')&&['x','y','w','h'].some(key=>cell[key]!==previous[key])})){settle(current,180);onNotice({message:'其他组件正在编辑，移动已取消'});return}
-   workspace.applyWorkbenchCells(next,false);workspace.persist();settle(current)
-  }else settle(current,180)
+ const controller={
+  begin(e,native){
+   clear();for(const stop of settling)stop();settling.clear()
+   const snapshot=workspace.getSnapshot(),nav=boardTabsNode(snapshot),id=native.cell?.id,node=[...snapshot.files,...snapshot.artifacts].find(n=>n.id===id),card=root.querySelector('[data-research-node-id="'+CSS.escape(id||'')+'"]')
+   if(readOnly||native.kind!=='move'||!nav||!node||!card)return
+   const current=op={id,node,card,native,navId:nav.id,source:workspace.getActiveBoardTab(),rect:card.getBoundingClientRect(),cells:native.canonicalBefore,small:false,target:null,last:e}
+   // Prefetch pixels without changing the existing live canvas drag.
+   const capture=view.dshDesktop?.researchLinkFrame?.captureCanvas,r=current.rect
+   if(capture&&card.querySelector('iframe,canvas,video,[data-research-native-web]')){const x=Math.max(0,r.left),y=Math.max(0,r.top),width=Math.min(view.innerWidth,r.right)-x,height=Math.min(view.innerHeight,r.bottom)-y;if(width>0&&height>0)Promise.resolve(capture({x,y,width,height,cssPixels:true})).then(url=>{if(op!==current||typeof url!=='string'||!/^data:image\/(?:jpeg|png);base64,/.test(url))return;current.image={url,x,y,width,height};useCapture(current)}).catch(()=>{})}
+  },
+  move(e,native){
+   if(!op||op.native!==native)return false
+   if(JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(native.boardTabsPreviewCells??op.cells)){onNotice({message:'组件位置或占用状态已变化，移动已取消'});return 'cancel'}
+   op.last=e;const hit=targets(e),near=hit.distance<=(op.small?96:64)
+   if(!near){if(op.small){op.small=false;native.boardTabsResume=true;clearTargets();op.tip.hidden=true;if(edgeFrame)view.cancelAnimationFrame(edgeFrame);edgeFrame=0;exitTimer=view.setTimeout(()=>{if(op?.native===native){op.card.removeAttribute('data-board-tabs-drag-source');op.preview?.remove();op.caption?.remove();op.position?.remove();op.tip?.remove();op.preview=op.caption=op.position=op.tip=null}exitTimer=null},160)}return false}
+   view.clearTimeout(exitTimer);exitTimer=null
+   if(!op.preview)makePreview(e)
+   if(!op.small){op.small=true;workspace.applyWorkbenchCells(native.canonicalBefore,false);native.boardTabsPreviewCells=native.canonicalBefore;native.targetKey=null;native.target=null;native.resolved=native.canonicalBefore;const origin=createResearchGrid().project([{id:op.id}],[native.cell],native.width)[0];op.card.style.setProperty('--grid-float-left',origin.x+'px');op.card.style.setProperty('--grid-float-top',origin.y+(workspace.getWorkbenchLayoutOffset?.()||0)+'px');op.card.setAttribute('data-board-tabs-drag-source','')}
+   paint(e,hit);if(!edgeFrame)edgeFrame=view.requestAnimationFrame(scrollEdge);return true
+  },
+  afterMove(e){if(op){op.native.boardTabsResume=false;if(op.preview&&!op.small)paint(e,targets(e))}},
+  active:()=>Boolean(op?.small),
+  release(e,native,restore){
+   if(!op||op.native!==native)return false
+   if(controller.move(e,native)==='cancel')return controller.cancel(e,native,restore)
+   if(!op.small){clear();return false}
+   const hit=targets(e),current=op,blocked=current.card.hasAttribute('data-research-geometry-blocked')||JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(current.cells)
+   paint(e,hit);clear(true);restore()
+   if(!blocked&&hit.target&&inside(e)&&workspace.moveToBoardTab([current.id],hit.target.id)){const next=workspace.getSnapshot();onNotice({message:'已移至「'+hit.target.name+'」',undo:true,signature:JSON.stringify([next.files,next.artifacts])});settle(current)}else{settle(current,180);if(blocked||hit.target)onNotice({message:blocked?'组件位置或占用状态已变化，移动已取消':'目标页签已变化或无法容纳组件，移动已取消'})}
+   return true
+  },
+  cancel(e,native,restore){if(!op||op.native!==native)return false;const preserve=JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(native.boardTabsPreviewCells??op.cells),current=clear(Boolean(op.preview));if(!current.preview&&!preserve)return false;restore(preserve);settle(current,180);return true},
+  end:()=>clear()
  }
- const cancel=e=>{if(op&&(e?.pointerId===undefined||e.pointerId===op.pointerId)){const current=op;cleanup(current.started);if(current.started)settle(current,180)}},key=e=>{if(op&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();const current=op;cleanup(current.started);if(current.started)settle(current,180)}}
- doc.addEventListener('pointerdown',down,true);view.addEventListener('pointermove',move,true);view.addEventListener('pointerup',up,true);view.addEventListener('pointercancel',cancel,true);view.addEventListener('keydown',key,true);view.addEventListener('blur',cancel)
- return()=>{cleanup();for(const stop of settling)stop();settling.clear();doc.removeEventListener('pointerdown',down,true);view.removeEventListener('pointermove',move,true);view.removeEventListener('pointerup',up,true);view.removeEventListener('pointercancel',cancel,true);view.removeEventListener('keydown',key,true);view.removeEventListener('blur',cancel)}
+ root.__ewBoardTabsDrag=controller
+ return()=>{clear();for(const stop of settling)stop();settling.clear();if(root.__ewBoardTabsDrag===controller)delete root.__ewBoardTabsDrag}
 }
 
 export function animateBoardTabsDrop(current,root,workspace,duration,onDone) {
@@ -173,3 +202,5 @@ export function animateBoardTabsDrop(current,root,workspace,duration,onDone) {
  })
  return finish
 }
+
+export function BoardTabsPageIcon({direction}){return react_jsx_runtime.jsx('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,children:react_jsx_runtime.jsx('path',{d:direction==='left'?'M10 4 6 8l4 4':'M6 4l4 4-4 4'})})}

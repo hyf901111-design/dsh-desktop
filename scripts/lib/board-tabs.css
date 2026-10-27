@@ -11,6 +11,10 @@
 .ew-board-tabs-list>[role=tab][aria-selected=true]{background:var(--bt-selected);color:var(--bt-text);font-weight:500}
 .ew-board-tabs-list>[role=tab]:hover{background:var(--bt-selected)}
 .ew-board-tabs-nav>[data-board-tabs-more]{display:grid;place-items:center;width:20px;height:24px;color:var(--bt-muted)}
+.ew-board-tabs-paging{display:flex;align-items:center;gap:2px;flex:none}
+.ew-board-tabs-paging button{display:grid;place-items:center;width:24px;height:24px;color:var(--bt-muted)}
+.ew-board-tabs-paging button:hover:not(:disabled){background:var(--bt-selected);color:var(--bt-text)}
+.ew-board-tabs-paging button:disabled{opacity:.3;cursor:default}
 .ew-board-tabs-nav button:focus-visible,.ew-board-tabs-dialog :is(input,button):focus-visible{outline:2px solid var(--bt-accent);outline-offset:2px}
 .ew-board-tabs-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:#0005;padding:20px;box-sizing:border-box;font:400 14px/22.4px var(--dsw-font-family,system-ui);color:var(--bt-dialog-text)}
 .ew-board-tabs-overlay .ew-board-tabs-overlay{z-index:2147483601}
