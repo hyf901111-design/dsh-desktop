@@ -2,13 +2,13 @@ import {afterAll, beforeAll, expect, it} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
+import {execFileSync} from 'node:child_process'
 import {createSourceFile, ScriptTarget, ScriptKind, forEachChild, isCallExpression, isArrowFunction} from 'typescript'
-import {patchNotesComposer} from '../scripts/lib/notes-composer.mjs'
 
 let source, effect
 const windows=[]
 beforeAll(async()=>{
-  source=patchNotesComposer(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+  source=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripPlainSlashInput}from'./scripts/lib/plain-slash-input.mjs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';import{stripHomeGuideNative}from'./scripts/lib/home-guide-native.mjs';import{stripHomeGuidePresentationNative}from'./scripts/lib/home-guide-presentation-native.mjs';import{patchNotesComposer}from'./scripts/lib/notes-composer.mjs';let source=readFileSync(0,'utf8');for(const patch of [stripPlainSlashInput,stripSidebarNewNoteConversation,stripPptxAnnotationMessages,stripPptxAnnotationInput,stripHomeGuidePresentationNative,stripHomeGuideNative,patchNotesComposer])source=patch(source);process.stdout.write(source)"],{input:await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),encoding:'utf8',maxBuffer:64*1024*1024})
   const tree=createSourceFile('conversation.js',source,ScriptTarget.Latest,false,ScriptKind.JS)
   const visit=node=>{
     const callback=isCallExpression(node)&&node.arguments[0]
@@ -150,4 +150,7 @@ it('does not claim text drags and releases all listeners on effect cleanup',()=>
   expect(f.images).toEqual([])
 })
 
-it('keeps the native composer patch repeatable',()=>expect(patchNotesComposer(source)).toBe(source))
+it('keeps the native composer patch repeatable under the production Node serializer',()=>{
+ const result=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{patchNotesComposer}from'./scripts/lib/notes-composer.mjs';const source=readFileSync(0,'utf8');if(patchNotesComposer(source)!==source)throw Error('Native Notes second pass changed bytes');process.stdout.write('same')"],{input:source,encoding:'utf8',maxBuffer:64*1024*1024})
+ expect(result).toBe('same')
+})

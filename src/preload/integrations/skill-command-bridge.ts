@@ -29,7 +29,8 @@ export function installSkillCommandBridge(document:Document,bridge:Pick<Integrat
    }else if(data.action==='list'){
     const reply=await bridge.request({type:'snapshot'})
     if(reply.type!=='snapshot')throw Error('技能列表暂不可用，请重试。')
-    result=reply.snapshot.rows.filter(row=>row.kind==='skill' && row.enabled && row.status!=='已停用').map(row=>({id:row.id,label:display(row).name,detail:display(row).description,revision:row.revision}))
+    const priority=(id:string)=>id==='builtin:efund-ppt-maker'?0:id==='builtin:ework-equity-research'?1:2
+    result=reply.snapshot.rows.filter(row=>row.kind==='skill' && row.enabled && row.status!=='已停用').sort((a,b)=>priority(a.id)-priority(b.id)).map(row=>({id:row.id,label:display(row).name,detail:display(row).description,revision:row.revision}))
    } else if(data.action==='resolve'){
     const reference=decodeSkillReference(JSON.stringify(data.reference))
     const detail=await bridge.request({type:'skill-detail',id:reference.id,revision:reference.revision})
