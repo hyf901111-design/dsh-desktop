@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "Figma看板页签组件与平滑跨页拖放",
         "branch": "codex/feat/board-tabs-20261027",
-        "baseCommit": "671729c22660bc3c4b16b5870ceaf13d7eb64605",
-        "tipCommit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
+        "baseCommit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
+        "tipCommit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
         "commits": [
           {
-            "commit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
+            "commit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
             "parents": [
-              "671729c22660bc3c4b16b5870ceaf13d7eb64605"
+              "99bb90aaef3765f9a3827335ff69a29ba3f6ff03"
             ],
-            "subject": "完善页签真实缩略拖影、可见落点和异步结果恢复"
+            "subject": "区分组件标题点击和真实拖动，消除误触回弹"
           }
         ],
         "files": [
@@ -29,51 +29,11 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/board-tabs-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/board-tabs-grid.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/board-tabs-ui.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/board-tabs-workspace.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/board-tabs.css"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/canvas-use-web.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-context-bridge.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-link-frame.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/board-tabs-capture.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/board-tabs-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-context-bridge.test.ts"
           }
         ],
         "checks": [
@@ -93,9 +53,9 @@
               "test/research-context-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "10个直接相关文件120项聚焦检查通过",
-            "verifiedCommit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
-            "completedAt": "2026-10-27T15:52:44.284137+00:00",
+            "summary": "10个直接相关文件121项聚焦检查通过，含标题点击与真实拖动阈值",
+            "verifiedCommit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
+            "completedAt": "2026-10-27T15:56:29.214776+00:00",
             "timeoutMs": 120000
           },
           {
@@ -106,8 +66,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程类型检查通过",
-            "verifiedCommit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
-            "completedAt": "2026-10-27T15:52:44.284137+00:00",
+            "verifiedCommit": "69cdb174d66f26c349ec17dd3466b3e3e066d414",
+            "completedAt": "2026-10-27T15:56:29.214776+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -125,45 +85,7 @@
           "更新构建后继续核验本地截图拖影与空页上下文；用户验收与主干提升尚未执行",
           "干净npm安装存在既有交付补丁签名漂移；隔离依赖取自当前规范客户端已安装运行时"
         ],
-        "generatedAt": "2026-10-27T15:52:44.284137+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b7bd4bce4f2c1ae28c6d9e590d808903987bda13",
-        "verificationCommit": "b7bd4bce4f2c1ae28c6d9e590d808903987bda13",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/custom-component-library-client.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/research-canvas-storage.test.ts",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-board-document.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-contract.test.js test/custom-component-library-client.test.js test/research-canvas-clipboard.test.ts test/research-canvas-storage.test.ts test/research-canvas-actions-client.test.js test/research-board-document.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "b7bd4bce4f2c1ae28c6d9e590d808903987bda13",
-            "completedAt": "2026-10-27T15:53:06.662Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b7bd4bce4f2c1ae28c6d9e590d808903987bda13",
-            "completedAt": "2026-10-27T15:53:06.662Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-27T15:53:06.662Z"
+        "generatedAt": "2026-10-27T15:56:29.214776+00:00"
       }
     }
   ],
