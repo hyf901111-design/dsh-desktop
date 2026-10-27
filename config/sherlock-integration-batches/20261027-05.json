@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261027-05",
+  "branch": "codex/integration/20261027-05",
+  "baseMainCommit": "bba7f477d44e2c75b4d2628001d99ab5d64aa44f",
+  "expectedMainCommit": "bba7f477d44e2c75b4d2628001d99ab5d64aa44f",
+  "createdAt": "2026-10-27T01:54:42.712Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复新建对话模式与固定空看板复用并统一PPT组件底栏字号",
+        "branch": "codex/feat/conversation-components-20261024",
+        "baseCommit": "bba7f477d44e2c75b4d2628001d99ab5d64aa44f",
+        "tipCommit": "ae7ae0bdcc27f1f2cf72697ca7d114975a3cd012",
+        "commits": [
+          {
+            "commit": "4f27fbf9874fee2f874c00126d8a2e79fded1fdf",
+            "parents": [
+              "bba7f477d44e2c75b4d2628001d99ab5d64aa44f"
+            ],
+            "subject": "统一PPT组件底栏编辑按钮的文字与图标尺寸"
+          },
+          {
+            "commit": "ae7ae0bdcc27f1f2cf72697ca7d114975a3cd012",
+            "parents": [
+              "4f27fbf9874fee2f874c00126d8a2e79fded1fdf"
+            ],
+            "subject": "修复新建对话错误复用研究模式与专属空看板"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/component-pptx-mode.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-workspace-menus.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-view-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-pptx-mode.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-workspace-folder-menu.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/new-chat-view-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/new-chat-view-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/session-view-preferences.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_PPT_FOOTER_EVIDENCE=/tmp/release140-new-chat-view-20261027/combined-footer",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/component-pptx-mode.test.ts",
+              "test/new-chat-view-browser.test.js",
+              "test/session-view-preferences.test.js",
+              "test/figma-workspace-folder-menu.test.ts",
+              "test/sidebar-new-session-actions.test.ts",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-new-chat-view-20261027/combined-focused.log: clean combined committed tip 5 directly affected files111/111; Footer29 + NewChat browser13 + related Native/session69. No full suite.",
+            "verifiedCommit": "ae7ae0bdcc27f1f2cf72697ca7d114975a3cd012",
+            "completedAt": "2026-10-27T01:46:44.677753+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-new-chat-view-20261027/combined-typecheck.log: fresh EXIT0 on this clean combined commit.",
+            "verifiedCommit": "ae7ae0bdcc27f1f2cf72697ca7d114975a3cd012",
+            "completedAt": "2026-10-27T01:46:44.677753+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/release140-new-chat-view-20261027/verify-combined-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/release140-new-chat-view-20261027/combined-installation.json: actual installed runtime/conversation/sidebar/workspace two in-memory passes byte-identical+parse; NewNote shell strict inverse/reapply; Footer exact inverse/metadata preservation; physical dependencies unchanged. This is not an entire global pipeline claim.",
+            "verifiedCommit": "ae7ae0bdcc27f1f2cf72697ca7d114975a3cd012",
+            "completedAt": "2026-10-27T01:46:44.677753+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Actual production Native SidebarRoot/WorkspaceBrowser apply.inject + WorkspaceRuntime/SessionRuntime + retained SlotRegistry axis + Root/Header/Session/InputBar run in private headless Chromium with controlled external Host and panel-service boundaries. Both NewChat entry first-frame pages are Home, including cold/cached scopes. Viewed workspace-true.png and combined-footer/notes-dark-edit.png. Footer actual parent DOM/CSS measurements cover Notes/Research light/dark and preview/edit. No real app UI/build performed."
+        },
+        "acceptanceCriteria": [
+          "左上新建对话和工作区项目目录+新建对话均把实际目标scope首先绘制为对话首页，并在layout向真实cached instance提交，不受旧Research偏好或同IDinitial-research标记抢回。",
+          "只明确NewChat callback opt-in同步reuse predicate；专属空看板不被复用，也不修改其board-only/engaged/favorite/原稿；合法空Chat仍按原native规则复用，无合适候选时原SDK.create收到当前/显式workspaceId，fresh scope0nodes/空稿。",
+          "Predicate只接受同步true，异步真值不绕过过滤，异常走原native失败保护；默认connect/startup/NewResearch语义不变。显式目录工作区与当前Notes工作区相异仍定位正确，旧Notes与其它普通会话保存模式保持。",
+          "不改实际InputHub正文/技能/附件/选择或消息协议；目标和当前Unicode草稿保留，one-shot intent不再覆盖后续手工tab/普通重开。",
+          "PPT组件Footer统一11px文字/16px行高，编辑图标12px contain；文件名、菜单、预览/编辑busy及保存协议不改。",
+          "两独立中文提交按已接受scope精确合在同一clean feature tip；实际相关模块two-pass及strict reentry保持，无未知/重复/漂移hook容忍。"
+        ],
+        "risks": [
+          "本轮为源码/实际原生组件headless验证；Root仍需完整global pipeline、正式包及真实Native两个NewChat入口验收后发布。未构建、控制已运行客户端、修改主分支/版本、上传或改用户数据。",
+          "板区状态未ready/策略未安装时只是不复用既有scope，走原生fresh创建；不为复用旧板去改板区权限或状态。"
+        ],
+        "generatedAt": "2026-10-27T01:46:44.677753+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "test/component-pptx-mode.test.ts",
+        "test/session-view-preferences.test.js",
+        "test/figma-workspace-folder-menu.test.ts",
+        "test/initial-research-session.test.ts",
+        "test/new-chat-view-browser.test.js",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
