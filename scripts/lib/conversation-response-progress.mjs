@@ -1,9 +1,14 @@
-const START='/* ework:conversation-response-progress:v1 */',END='/* ework:conversation-response-progress:end */'
+import {createHash} from 'node:crypto'
+
+const START='/* ework:conversation-response-progress:v2 */',LEGACY='/* ework:conversation-response-progress:v1 */',END='/* ework:conversation-response-progress:end */'
 const OWNED=['eworkResponseProgressByTurn','eworkSharedResponseProgress','responseClockRunning','data-response-total-time']
-const CSS='[data-response-progress]>.Md3f7G_executionTrigger .Md3f7G_executionChevron,[data-response-progress] .dshExecutionDetailSummary>.dshExecutionDetailChevron{opacity:0;transition:opacity 120ms ease}'+
- '[data-response-progress]>.Md3f7G_executionTrigger:is(:hover,:focus-within) .Md3f7G_executionChevron,[data-response-progress] .dshExecutionDetailSummary:is(:hover,:focus-within)>.dshExecutionDetailChevron{opacity:1}'+
+const CSS='[data-response-progress="total"]>.Md3f7G_executionTrigger .Md3f7G_executionChevron{opacity:1}'+
+ 'body [data-response-progress="stage"].Md3f7G_executionGroup>.Md3f7G_executionTrigger{width:100%;display:flex;gap:8px;margin-inline:0;padding-inline:0;text-align:start}'+
+ 'body [data-response-progress="stage"]>.Md3f7G_executionTrigger>.Md3f7G_executionText{order:0;flex:1;min-width:0;text-align:start}'+
+ 'body [data-response-progress="stage"]>.Md3f7G_executionTrigger>.Md3f7G_executionLeading{order:2;flex:0 0 14px;width:14px;margin-inline: auto 0;opacity:0;transition:opacity 120ms ease}'+
+ 'body [data-response-progress="stage"]>.Md3f7G_executionTrigger:is(:hover,:focus-within):not(:disabled)>.Md3f7G_executionLeading{opacity:1}'+
  '[data-response-progress]>.Md3f7G_executionTrigger>.Md3f7G_executionMeta{font-variant-numeric:tabular-nums;white-space:nowrap}'+
- '@media(prefers-reduced-motion:reduce){[data-response-progress]>.Md3f7G_executionTrigger .Md3f7G_executionChevron,[data-response-progress] .dshExecutionDetailSummary>.dshExecutionDetailChevron{transition:none}}'
+ '@media(prefers-reduced-motion:reduce){body [data-response-progress="stage"]>.Md3f7G_executionTrigger>.Md3f7G_executionLeading{transition:none}}'
 
 /** The native timeline owns time; this projection only chooses one display per Turn. */
 export function conversationResponseProgress(flow,runningTurn) {
@@ -21,7 +26,9 @@ export function conversationResponseProgress(flow,runningTurn) {
 export function useConversationResponseProgress(flow,runningTurn,timeline,running,sessionId,owner) {
   const ref=react.useRef(null)
   if(!ref.current||ref.current.sessionId!==sessionId||ref.current.owner!==owner)ref.current={sessionId,owner,pending:null,carried:new Map()}
-  const lease=ref.current,identified=typeof runningTurn==='number'&&Number.isFinite(runningTurn)
+  const lease=ref.current,pendingEntry=(flow??[]).find(entry=>entry?.pendingSubmission===true&&entry.kind==='execution');
+  if(pendingEntry||running&&lease.pending?.knownTurnIds.has(runningTurn))runningTurn=null
+  const identified=typeof runningTurn==='number'&&Number.isFinite(runningTurn)
   const carry=turn=>{
     const start=timeline?.turns?.get(turn)?.start?.time,observed=lease.pending.observedAt
     if(!lease.carried.has(turn))lease.carried.set(turn,typeof start==='number'&&Number.isFinite(start)?Math.min(start,observed):observed)
@@ -36,7 +43,7 @@ export function useConversationResponseProgress(flow,runningTurn,timeline,runnin
     }
     lease.pending=null
   }else if(!identified){
-    if(lease.pending===null)lease.pending={observedAt:Date.now(),knownTurnIds:new Set(timeline?.turns?.keys?.()??[])}
+    if(lease.pending===null)lease.pending={observedAt:typeof pendingEntry?.observedAt==='number'&&Number.isFinite(pendingEntry.observedAt)?Math.min(Date.now(),pendingEntry.observedAt):Date.now(),knownTurnIds:new Set(timeline?.turns?.keys?.()??[])}
   }else if(lease.pending!==null){carry(runningTurn);lease.pending=null}
   const result=conversationResponseProgress(flow,runningTurn)
   for(const entry of flow??[]){
@@ -57,7 +64,7 @@ const executionChanges=[
  ['if (!entry.running) return;','if (!responseClockRunning) return;'],
  ['}, [entry.running]);\n\t\t\t(0, react.useEffect)(() => {\n\t\t\t\tif (wasRunning.current','}, [responseClockRunning, anchor]);\n\t\t\t(0, react.useEffect)(() => {\n\t\t\t\tif (wasRunning.current'],
  ['const showElapsed = entry.running ? elapsedMs >= 15e3 : elapsedMs >= 1e3;','const showElapsed = responseTiming ? responseTiming.visible : (entry.running ? elapsedMs >= 15e3 : elapsedMs >= 1e3);'],
- ['"data-chat-flow-kind": "execution",','"data-chat-flow-kind": "execution",\n"data-response-progress": "",'],
+ ['"data-chat-flow-kind": "execution",','"data-chat-flow-kind": "execution",\n"data-response-progress": responseTiming?.visible===false ? "stage" : "total",'],
  ['className: ChatView_module_css_default.executionMeta,','className: ChatView_module_css_default.executionMeta,\n"data-response-total-time": responseTiming?.visible ? "" : void 0,']
 ]
 const chatChanges=[
@@ -68,9 +75,9 @@ const sharedChanges=[
  ['const body=continued.filter(e=>!reports.includes(e)&&!tails.includes(e))','const body=continued.filter(e=>!reports.includes(e)&&!tails.includes(e))\n  const eworkSharedResponseProgress=useConversationResponseProgress(body,runningTurn,timeline,running,nativeProps.sessionId+":"+task?.taskId,nativeProps.useSession)'],
  ['activityNodes: entry.nodeKeys.map(key => nodeStore.get(key)).filter(Boolean),','activityNodes: entry.nodeKeys.map(key => nodeStore.get(key)).filter(Boolean), responseTiming:eworkSharedResponseProgress.get(entry.key),']
 ]
-function transform(source,inverse){
+function transform(source,inverse,legacy=false){
  const apply=pairs=>body=>{for(const [before,after]of inverse?[...pairs].reverse():pairs)body=exact(body,inverse?after:before,inverse?before:after);return body}
- source=scoped(source,'const ExecutionStatusGroup =',apply(executionChanges))
+ source=scoped(source,'const ExecutionStatusGroup =',apply(legacy?executionChanges.map(([before,after])=>[before,after.replace('\"data-response-progress\": responseTiming?.visible===false ? \"stage\" : \"total\",','\"data-response-progress\": \"\",')]):executionChanges))
  source=scoped(source,'function ChatView(',apply(chatChanges))
  if(source.includes('function SharedResearchRequest('))source=scoped(source,'function SharedResearchRequest(',apply(sharedChanges))
  return source
@@ -78,9 +85,11 @@ function transform(source,inverse){
 export function stripConversationResponseProgress(source){
  const at=source.indexOf('/* ework:conversation-response-progress:')
  if(at<0){if(OWNED.some(value=>source.includes(value)))throw Error('Orphan conversation response progress hook');return source}
- if(source.split(START).length!==2||source.split('/* ework:conversation-response-progress:').length!==3||source.split(END).length!==2)throw Error('Unknown/duplicate conversation response progress layer')
- const block=definition();if(source.slice(at,at+block.length)!==block)throw Error('Conversation response progress definition drifted')
- const restored=transform(source.slice(0,at)+source.slice(at+block.length),true)
+ const legacy=source.includes(LEGACY),marker=legacy?LEGACY:START
+ if(source.split(marker).length!==2||source.includes(legacy?START:LEGACY)||source.split('/* ework:conversation-response-progress:').length!==3||source.split(END).length!==2)throw Error('Unknown/duplicate conversation response progress layer')
+ const end=source.indexOf(END,at),block=source.slice(at,end+END.length+1)
+ if(legacy?createHash('sha256').update(block).digest('hex')!=='d7b8132fea7771f61b108a284eec34106af7b33191f1b847adb61eeb6aa25c43':block!==definition())throw Error('Conversation response progress definition drifted')
+ const restored=transform(source.slice(0,at)+source.slice(at+block.length),true,legacy)
  if(OWNED.some(value=>restored.includes(value)))throw Error('Orphan conversation response progress hook')
  return restored
 }

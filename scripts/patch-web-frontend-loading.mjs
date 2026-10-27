@@ -54,6 +54,7 @@ import { patchSkillCommandPopup, patchSkillCommandLabels } from './lib/skill-com
 import {patchPlainSlashInput,stripPlainSlashInput} from './lib/plain-slash-input.mjs'
 import {patchConversationSubmission,stripConversationSubmission} from './lib/conversation-submission.mjs'
 import {patchConversationResponseProgress,stripConversationResponseProgress} from './lib/conversation-response-progress.mjs'
+import {patchConversationHistoryRuntime,stripConversationHistoryRuntime,patchConversationHistoryClient,stripConversationHistoryClient} from './lib/conversation-history-page.mjs'
 import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
 import { patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
 import { patchFigmaWorkspaceMenus } from './lib/figma-workspace-menus.mjs'
@@ -81,6 +82,8 @@ const assetsDirectory = join(
   'dist',
   'assets'
 )
+const historyRuntimeBundlePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
+writeFileSync(historyRuntimeBundlePath,stripConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 const llmAdapterPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js')
 writeFileSync(llmAdapterPath, patchGlmReasoningCapabilities(readFileSync(llmAdapterPath, 'utf8')))
 const primitivesPath = join(
@@ -174,7 +177,7 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-const submittedConversationSource=stripConversationSubmission(stripConversationResponseProgress(readFileSync(gridConversationPath,'utf8')))
+const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(readFileSync(gridConversationPath,'utf8'))))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
 const sidebarNewNotePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js')
 writeFileSync(sidebarNewNotePath,stripSidebarNewNoteShell(readFileSync(sidebarNewNotePath,'utf8')))
@@ -324,4 +327,5 @@ writeFileSync(sidebarNewNotePath,patchSidebarNewNoteShell(readFileSync(sidebarNe
 writeFileSync(conversationPath,patchPlainSlashInput(readFileSync(conversationPath,'utf8')))
 
 // Read-only first-send projection and one native turn clock are the outermost layers.
-writeFileSync(conversationPath,patchConversationResponseProgress(patchConversationSubmission(readFileSync(conversationPath,'utf8'))))
+writeFileSync(conversationPath,patchConversationHistoryClient(patchConversationSubmission(patchConversationResponseProgress(readFileSync(conversationPath,'utf8')))))
+writeFileSync(historyRuntimeBundlePath,patchConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
