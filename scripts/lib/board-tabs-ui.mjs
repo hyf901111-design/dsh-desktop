@@ -84,7 +84,7 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
   const current=op;op=null;if(edgeFrame)view.cancelAnimationFrame(edgeFrame);edgeFrame=0;view.clearTimeout(exitTimer);exitTimer=null;clearTargets()
   if(!current)return null
   current.card.removeAttribute('data-board-tabs-drag-source');current.tip?.remove()
-  if(!keepPreview){current.preview?.remove();current.caption?.remove();current.position?.remove()}
+  if(current.preview)resetPreview(current,keepPreview);root.removeAttribute('data-board-tabs-transfer')
   return current
  }
  const settle=(current,duration=220)=>{if(!current?.preview)return;const stop=animateBoardTabsDrop(current,root,workspace,duration,()=>settling.delete(stop));settling.add(stop)}
@@ -103,32 +103,30 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
   }
   return {distance:inside(e)?distance:Infinity,target,receivers,bottom:br.bottom}
  }
- const useCapture=current=>{
-  if(!current.image||!current.preview)return
-  const image=doc.createElement('img');image.alt='';image.src=current.image.url;image.draggable=false;image.className='ew-board-tabs-captured-image';Object.assign(image.style,{left:current.image.x-current.rect.left+'px',top:current.image.y-current.rect.top+'px',width:current.image.width+'px',height:current.image.height+'px'});current.preview.replaceChildren(image)
+ const resetPreview=(current,keep=false)=>{
+  current.from=current.card.getBoundingClientRect();current.card.removeAttribute('data-board-tabs-live-preview');for(const key of ['--board-tabs-pointer-x','--board-tabs-pointer-y','--board-tabs-offset-x','--board-tabs-offset-y','--board-tabs-scale'])current.card.style.removeProperty(key)
+  if(!keep){current.card.classList.remove('ew-board-tabs-live-preview');current.card.removeAttribute('data-thumbnail');current.caption?.remove();current.position?.remove()}
  }
  const makePreview=e=>{
-  const current=op,from=current.card.getBoundingClientRect(),clone=current.card.cloneNode(true),theme=root.dataset.workbenchStyle||'light'
-  current.position=doc.createElement('div');current.preview=doc.createElement('div');current.caption=doc.createElement('div');current.tip=doc.createElement('div')
-  const {position,preview,caption,tip}=current
-  position.className='ew-board-tabs-drag-position';position.dataset.boardTabsTheme=theme
-  preview.className='ew-board-tabs-drag-preview';preview.dataset.eworkGrid='';preview.dataset.workbenchStyle=theme;preview.dataset.boardTabsTheme=theme;preview.setAttribute('aria-hidden','true');Object.assign(preview.style,{width:current.rect.width+'px',height:current.rect.height+'px'})
-  clone.removeAttribute('id');clone.removeAttribute('data-grid-active');clone.style.removeProperty('--grid-float-left');clone.style.removeProperty('--grid-float-top');for(const el of clone.querySelectorAll('[id]'))el.removeAttribute('id')
-  for(const el of clone.querySelectorAll('iframe,video,audio,[data-research-native-web]')){const summary=doc.createElement('div');summary.textContent=current.node.excerpt||'组件预览';summary.style.cssText='padding:20px;white-space:pre-wrap;font:12px/1.6 system-ui;overflow:hidden';el.replaceWith(summary)}
-  preview.append(clone);caption.className='ew-board-tabs-drag-caption';caption.textContent=current.node.title||'组件';tip.className='ew-board-tabs-drag-tip';tip.dataset.boardTabsTheme=theme;tip.hidden=true
-  position.append(preview,caption);doc.body.append(position,tip);useCapture(current)
-  position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)';preview.style.transform='translate3d('+(from.left-e.clientX)+'px,'+(from.top-e.clientY)+'px,0) scale('+(from.width/current.rect.width)+')';preview.getBoundingClientRect()
+  const current=op,from=current.card.getBoundingClientRect(),parent=current.card.offsetParent?.getBoundingClientRect()||root.getBoundingClientRect(),theme=root.dataset.workbenchStyle||'light'
+  current.position=doc.createElement('div');current.preview=current.card;current.caption=doc.createElement('div');current.tip=doc.createElement('div')
+  const {position,caption,tip}=current;position.className='ew-board-tabs-drag-position';position.dataset.boardTabsTheme=theme
+  caption.className='ew-board-tabs-drag-caption';caption.textContent=current.node.title||'组件';tip.className='ew-board-tabs-drag-tip';tip.dataset.boardTabsTheme=theme;tip.hidden=true
+  position.append(caption);doc.body.append(position,tip)
+  current.card.style.setProperty('--board-tabs-pointer-x',e.clientX-parent.left+'px');current.card.style.setProperty('--board-tabs-pointer-y',e.clientY-parent.top+'px');current.card.style.setProperty('--board-tabs-offset-x',from.left+from.width/2-e.clientX+'px');current.card.style.setProperty('--board-tabs-offset-y',from.top+from.height/2-e.clientY+'px');current.card.style.setProperty('--board-tabs-scale','1');current.card.setAttribute('data-board-tabs-live-preview','');current.card.classList.add('ew-board-tabs-live-preview');current.card.getBoundingClientRect()
  }
  const paint=(e,hit)=>{
   if(!op?.preview)return
-  const rect=op.card.getBoundingClientRect(),scale=op.small?Math.min(1,240/op.rect.width):rect.width/op.rect.width,w=op.rect.width*scale,h=op.rect.height*scale
-  const left=op.small?Math.max(8,Math.min(view.innerWidth-w-8,e.clientX+16)):rect.left,top=op.small?Math.max(8,Math.min(view.innerHeight-h-8,Math.max(hit.bottom+12,e.clientY+16))):rect.top
-  op.position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)';op.preview.style.transform='translate3d('+(left-e.clientX)+'px,'+(top-e.clientY)+'px,0) scale('+scale+')';op.preview.toggleAttribute('data-thumbnail',op.small)
-  Object.assign(op.caption.style,{transform:'translate3d('+(left-e.clientX+8)+'px,'+(top-e.clientY+4)+'px,0)',opacity:op.small?'1':'0'})
+  const bounds=root.getBoundingClientRect(),parent=op.card.offsetParent?.getBoundingClientRect()||bounds,availableHeight=Math.max(1,bounds.bottom-Math.max(bounds.top+8,hit.bottom+12)-8),scale=op.small?Math.min(1,240/op.rect.width,Math.max(1,bounds.width-16)/op.rect.width,availableHeight/op.rect.height):1,w=op.rect.width*scale,h=op.rect.height*scale
+  let left,top,cx,cy
+  if(op.small){left=Math.max(bounds.left+8,Math.min(bounds.right-w-8,e.clientX+16));top=Math.max(bounds.top+8,Math.min(bounds.bottom-h-8,Math.max(hit.bottom+12,e.clientY+16)));cx=left+w/2-parent.left;cy=top+h/2-parent.top}
+  else{cx=parseFloat(op.card.style.getPropertyValue('--grid-float-left'))||0;cy=parseFloat(op.card.style.getPropertyValue('--grid-float-top'))||0;left=parent.left+cx-w/2;top=parent.top+cy-h/2}
+  op.card.style.setProperty('--board-tabs-pointer-x',e.clientX-parent.left+'px');op.card.style.setProperty('--board-tabs-pointer-y',e.clientY-parent.top+'px');op.card.style.setProperty('--board-tabs-offset-x',cx-(e.clientX-parent.left)+'px');op.card.style.setProperty('--board-tabs-offset-y',cy-(e.clientY-parent.top)+'px');op.card.style.setProperty('--board-tabs-scale',String(scale));op.card.toggleAttribute('data-thumbnail',op.small);root.toggleAttribute('data-board-tabs-transfer',op.small)
+  op.position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)';Object.assign(op.caption.style,{transform:'translate3d('+(left-e.clientX+8)+'px,'+(top-e.clientY+4)+'px,0)',opacity:op.small?'1':'0',width:Math.max(0,w-16)+'px'})
   clearTargets();if(op.small)for(const tab of hit.receivers)tab.setAttribute('data-tab-accept','')
   op.target=op.small?hit.target:null;if(op.target)root.querySelector('[data-board-tab="'+CSS.escape(op.target.id)+'"]')?.setAttribute('data-tab-target','')
   op.tip.hidden=!op.target
-  if(op.target){op.tip.textContent='松开移至「'+op.target.name+'」';const tipWidth=op.tip.offsetWidth||180,beside=left+w+8+tipWidth<=view.innerWidth-8;Object.assign(op.tip.style,{left:(beside?left+w+8:Math.max(8,Math.min(view.innerWidth-tipWidth-8,left)))+'px',top:Math.max(8,Math.min(view.innerHeight-40,beside?top:top+h+8))+'px'})}
+  if(op.target){op.tip.textContent='松开移至「'+op.target.name+'」';const tipWidth=op.tip.offsetWidth||180,beside=left+w+8+tipWidth<=bounds.right-8;Object.assign(op.tip.style,{left:(beside?left+w+8:Math.max(bounds.left+8,Math.min(bounds.right-tipWidth-8,left)))+'px',top:Math.max(bounds.top+8,Math.min(bounds.bottom-40,beside?top:top+h+8))+'px'})}
  }
  const scrollEdge=()=>{
   edgeFrame=0;if(!op?.small||!op.last)return
@@ -143,16 +141,14 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
    if(readOnly||native.kind!=='move'||!nav||!node||!card)return
    const current=op={id,node,card,native,navId:nav.id,source:workspace.getActiveBoardTab(),rect:card.getBoundingClientRect(),cells:native.canonicalBefore,small:false,target:null,last:e,startY:e.clientY,approachArmed:false}
    current.approachArmed=targets(e).distance>64
-   // Prefetch pixels without changing the existing live canvas drag.
-   const capture=view.dshDesktop?.researchLinkFrame?.captureCanvas,r=current.rect
-   if(capture&&card.querySelector('iframe,canvas,video,[data-research-native-web]')){const x=Math.max(0,r.left),y=Math.max(0,r.top),width=Math.min(view.innerWidth,r.right)-x,height=Math.min(view.innerHeight,r.bottom)-y;if(width>0&&height>0)Promise.resolve(capture({x,y,width,height,cssPixels:true})).then(url=>{if(op!==current||typeof url!=='string'||!/^data:image\/(?:jpeg|png);base64,/.test(url))return;current.image={url,x,y,width,height};useCapture(current)}).catch(()=>{})}
+
   },
   move(e,native){
    if(!op||op.native!==native)return false
    op.last=e;const hit=targets(e);if(!op.approachArmed&&(hit.distance>64||hit.target||e.clientY<op.startY-4))op.approachArmed=true
    const near=op.approachArmed&&hit.distance<=(op.small?96:64)
    if((near||op.small)&&JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(native.boardTabsPreviewCells??op.cells)){onNotice({message:'组件位置或占用状态已变化，移动已取消'});return 'cancel'}
-   if(!near){if(op.small){op.small=false;native.boardTabsResume=true;clearTargets();op.tip.hidden=true;if(edgeFrame)view.cancelAnimationFrame(edgeFrame);edgeFrame=0;exitTimer=view.setTimeout(()=>{if(op?.native===native){op.card.removeAttribute('data-board-tabs-drag-source');op.preview?.remove();op.caption?.remove();op.position?.remove();op.tip?.remove();op.preview=op.caption=op.position=op.tip=null}exitTimer=null},160)}return false}
+   if(!near){if(op.small){op.small=false;native.boardTabsResume=true;clearTargets();op.tip.hidden=true;if(edgeFrame)view.cancelAnimationFrame(edgeFrame);edgeFrame=0;exitTimer=view.setTimeout(()=>{if(op?.native===native){op.card.removeAttribute('data-board-tabs-drag-source');resetPreview(op);op.tip?.remove();op.preview=op.caption=op.position=op.tip=null}exitTimer=null},160)}return false}
    view.clearTimeout(exitTimer);exitTimer=null
    if(!op.preview)makePreview(e)
    if(!op.small){op.small=true;workspace.applyWorkbenchCells(native.canonicalBefore,false);native.boardTabsPreviewCells=native.canonicalBefore;native.targetKey=null;native.target=null;native.resolved=native.canonicalBefore;const origin=createResearchGrid().project([{id:op.id}],[native.cell],native.width)[0];op.card.style.setProperty('--grid-float-left',origin.x+'px');op.card.style.setProperty('--grid-float-top',origin.y+(workspace.getWorkbenchLayoutOffset?.()||0)+'px');op.card.setAttribute('data-board-tabs-drag-source','')}
@@ -177,29 +173,21 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
 }
 
 export function animateBoardTabsDrop(current,root,workspace,duration,onDone) {
- const view=root.ownerDocument.defaultView,doc=root.ownerDocument,preview=current.preview,caption=current.caption,from=preview.getBoundingClientRect(),labelFrom=caption.getBoundingClientRect(),reduced=view.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+ const view=root.ownerDocument.defaultView,card=current.card,caption=current.caption,from=current.from||card.getBoundingClientRect(),labelFrom=caption.getBoundingClientRect(),reduced=view.matchMedia?.('(prefers-reduced-motion: reduce)').matches
  let animation=null,labelAnimation=null,timer=null,frame=null,done=false
- const finish=()=>{if(done)return;done=true;if(frame)view.cancelAnimationFrame(frame);view.clearTimeout(timer);animation?.cancel();labelAnimation?.cancel();current.card.removeAttribute('data-board-tabs-arriving');preview.remove();caption.remove();current.position.remove();onDone?.()}
- current.card.setAttribute('data-board-tabs-arriving','')
- // Freeze the exact displayed frame, including a morph interrupted by release.
- Object.assign(preview.style,{position:'fixed',left:from.left+'px',top:from.top+'px',transition:'none',transform:'scale('+(from.width/current.rect.width)+','+(from.height/current.rect.height)+')'})
- doc.body.append(preview)
- if(current.small){Object.assign(caption.style,{position:'fixed',left:labelFrom.left+'px',top:labelFrom.top+'px',transition:'none',transform:'none',opacity:'1'});doc.body.append(caption)}else caption.remove()
+ const finish=()=>{if(done)return;done=true;if(frame)view.cancelAnimationFrame(frame);view.clearTimeout(timer);animation?.cancel();labelAnimation?.cancel();card.removeAttribute('data-board-tabs-arriving');card.removeAttribute('data-release-animation');card.classList.remove('ew-board-tabs-live-preview');card.removeAttribute('data-thumbnail');caption.remove();current.position.remove();onDone?.()}
+ card.setAttribute('data-board-tabs-arriving','');card.setAttribute('data-release-animation','')
+ if(current.small){Object.assign(caption.style,{position:'fixed',left:labelFrom.left+'px',top:labelFrom.top+'px',transition:'none',transform:'none',opacity:'1'});root.ownerDocument.body.append(caption)}else caption.remove()
  current.position.remove()
  frame=view.requestAnimationFrame(()=>{
-  frame=null;if(!current.card.isConnected){finish();return}
+  frame=null;if(!card.isConnected){finish();return}
   const node=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts].find(n=>n.id===current.id)
-  if(node&&workspace.isBoardNodeVisible(current.id)){
-   const usable=root.clientHeight-86,top=node.y-node.height/2,bottom=node.y+node.height/2
-   if(top<root.scrollTop+12||bottom>root.scrollTop+usable){root.scrollTop=Math.max(0,top-58);workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
-  }
-  const target=current.card.getBoundingClientRect(),dx=target.left-from.left,dy=target.top-from.top,first='translate3d(0,0,0) scale('+from.width/current.rect.width+','+from.height/current.rect.height+')',last='translate3d('+dx+'px,'+dy+'px,0) scale('+target.width/current.rect.width+','+target.height/current.rect.height+')'
-  if(reduced){finish();return}
-  preview.dataset.releaseAnimation='';
-  if(typeof preview.animate==='function'){
-   animation=preview.animate([{transform:first,opacity:1},{transform:last,opacity:1}],{duration,easing:'cubic-bezier(.16,1,.3,1)',fill:'forwards'})
-   animation.finished?.then(finish,finish)
-   if(current.small){const title=current.card.querySelector('.ew-grid-title')?.getBoundingClientRect(),x=(title?.left??target.left+12)-labelFrom.left,y=(title?.top??target.top+8)-labelFrom.top;labelAnimation=caption.animate([{transform:'translate3d(0,0,0)',opacity:1},{transform:'translate3d('+x+'px,'+y+'px,0)',opacity:1}],{duration,easing:'cubic-bezier(.16,1,.3,1)',fill:'forwards'})}
+  if(node&&workspace.isBoardNodeVisible(current.id)){const usable=root.clientHeight-86,top=node.y-node.height/2,bottom=node.y+node.height/2;if(top<root.scrollTop+12||bottom>root.scrollTop+usable){root.scrollTop=Math.max(0,top-58);workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}}
+  const target=card.getBoundingClientRect(),dx=from.left+from.width/2-target.left-target.width/2,dy=from.top+from.height/2-target.top-target.height/2,first='translate(-50%,-50%) translate3d('+dx+'px,'+dy+'px,0) scale('+(from.width/target.width)+','+(from.height/target.height)+')'
+  card.removeAttribute('data-board-tabs-arriving');if(reduced){finish();return}
+  if(typeof card.animate==='function'){
+   animation=card.animate([{transform:first},{transform:'translate(-50%,-50%)'}],{duration,easing:'cubic-bezier(.16,1,.3,1)',fill:'forwards'});animation.finished?.then(finish,finish)
+   if(current.small){const title=card.querySelector('.ew-grid-title')?.getBoundingClientRect(),x=(title?.left??target.left+12)-labelFrom.left,y=(title?.top??target.top+8)-labelFrom.top;labelAnimation=caption.animate([{transform:'translate3d(0,0,0)',opacity:1},{transform:'translate3d('+x+'px,'+y+'px,0)',opacity:1}],{duration,easing:'cubic-bezier(.16,1,.3,1)',fill:'forwards'})}
   }
   timer=view.setTimeout(finish,duration+40)
  })
