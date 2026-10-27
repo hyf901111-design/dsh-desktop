@@ -843,6 +843,37 @@
           "No shared profile/node_modules write, build, model, remote or canonical main modification; old Sherlock not started."
         ],
         "generatedAt": "2026-10-27T09:35:46.452540+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c47167aa88c0b88087af11ec660fe59ae8340e03",
+        "verificationCommit": "c47167aa88c0b88087af11ec660fe59ae8340e03",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c47167aa88c0b88087af11ec660fe59ae8340e03",
+            "completedAt": "2026-10-27T09:43:39.119Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c47167aa88c0b88087af11ec660fe59ae8340e03",
+            "completedAt": "2026-10-27T09:43:39.119Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T09:43:39.119Z"
       }
     }
   ],
