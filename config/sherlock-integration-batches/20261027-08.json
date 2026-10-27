@@ -123,6 +123,49 @@
           "跨版本 Homebrew 升级未实测，仅验证同版升级命令 dry run"
         ],
         "generatedAt": "2026-10-27T10:08:04.211Z"
+      },
+      "merged": {
+        "mergeCommit": "0b4382e68b17e841a77738d287dda15001be1bef",
+        "verificationCommit": "0b4382e68b17e841a77738d287dda15001be1bef",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/homebrew-cask.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/homebrew-cask.test.js",
+            "verifiedCommit": "0b4382e68b17e841a77738d287dda15001be1bef",
+            "completedAt": "2026-10-27T10:56:37.880Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/update-homebrew-cask.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node --check scripts/update-homebrew-cask.mjs",
+            "verifiedCommit": "0b4382e68b17e841a77738d287dda15001be1bef",
+            "completedAt": "2026-10-27T10:56:37.880Z",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "0b4382e68b17e841a77738d287dda15001be1bef",
+            "completedAt": "2026-10-27T10:56:37.880Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-27T10:56:37.880Z"
       }
     }
   ],
