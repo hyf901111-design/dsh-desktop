@@ -102,6 +102,68 @@
           "Root明确将新包真实完整Board（6原生+智能补充/3links/5股/无黑带及ready错误）作为恢复发布前硬门禁。本feature不构建、控UI或上传。"
         ],
         "generatedAt": "2026-10-27T00:01:27.220298+00:00"
+      },
+      "merged": {
+        "mergeCommit": "18394b6e93995eb9233f9e325610af94c8154d82",
+        "verificationCommit": "18394b6e93995eb9233f9e325610af94c8154d82",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native.test.js test/home-guide-native-strip.test.js",
+            "verifiedCommit": "18394b6e93995eb9233f9e325610af94c8154d82",
+            "completedAt": "2026-10-27T00:05:15.891Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "reserves the real workspace header once|replays the four-component Board stage|protects the current scroll position|keeps an already open user research panel"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx --no-install vitest run test/home-guide-native-browser.test.js -t reserves the real workspace header once|replays the four-component Board stage|protects the current scroll position|keeps an already open user research panel",
+            "verifiedCommit": "18394b6e93995eb9233f9e325610af94c8154d82",
+            "completedAt": "2026-10-27T00:05:15.891Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "18394b6e93995eb9233f9e325610af94c8154d82",
+            "completedAt": "2026-10-27T00:05:15.891Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "18394b6e93995eb9233f9e325610af94c8154d82",
+            "completedAt": "2026-10-27T00:05:15.891Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T00:05:15.891Z"
       }
     }
   ],
