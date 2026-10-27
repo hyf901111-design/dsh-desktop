@@ -97,6 +97,44 @@
           "干净npm安装存在既有交付补丁签名漂移；隔离依赖取自当前规范客户端已安装运行时"
         ],
         "generatedAt": "2026-10-27T22:54:33.282206+00:00"
+      },
+      "merged": {
+        "mergeCommit": "75983bbde11983cae2c8dddac10af7a8f296dd18",
+        "verificationCommit": "75983bbde11983cae2c8dddac10af7a8f296dd18",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-contract.test.js",
+              "test/custom-component-library-client.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/research-canvas-actions-client.test.js",
+              "test/research-board-document.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-contract.test.js test/custom-component-library-client.test.js test/research-canvas-clipboard.test.ts test/research-canvas-storage.test.ts test/research-canvas-actions-client.test.js test/research-board-document.test.js test/financial-widget-contract.test.js",
+            "verifiedCommit": "75983bbde11983cae2c8dddac10af7a8f296dd18",
+            "completedAt": "2026-10-27T23:08:15.617Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "75983bbde11983cae2c8dddac10af7a8f296dd18",
+            "completedAt": "2026-10-27T23:08:15.617Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-27T23:08:15.617Z"
       }
     }
   ],
