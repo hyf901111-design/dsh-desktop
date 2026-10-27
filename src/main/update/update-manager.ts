@@ -6,6 +6,7 @@ import electronUpdater from 'electron-updater'
 import { validateLocalUpdateEnvironment, type LocalUpdateEnvironment } from './local-update-guard'
 import type { LocalDownloadUpdater } from './local-download-updater'
 import type { LocalCheckUpdater } from './local-check-updater'
+import { installMacUpdateTransfer, cancelMacUpdateTransfer, type MacTransferProgress } from './mac-download'
 import type { UpdateStatus } from '../../shared/contracts'
 import {
   shouldCheckAfterResume,
@@ -316,6 +317,7 @@ async function prepareAvailableUpdate(): Promise<UpdateStatus> {
 
 export function stopUpdateManager(): Promise<void> {
   stopped = true
+  if (updateAccess === 'production' && process.platform === 'darwin') cancelMacUpdateTransfer(autoUpdater)
   preparationController?.abort(Error('Update manager stopped.'))
   if (process.platform === 'darwin') disposeNativeMacPreparation(nativeUpdater)
   if (startupTimer) clearTimeout(startupTimer)
@@ -329,6 +331,7 @@ export function stopUpdateManager(): Promise<void> {
 }
 
 function configureUpdater(localCheckOnly = false): void {
+  if (!localCheckOnly && updateAccess === 'production' && process.platform === 'darwin') installMacUpdateTransfer(autoUpdater, { nativeUpdater })
   if (!localCheckOnly) autoUpdater.autoDownload = false
   // Do not hand an archive to Squirrel before the final freshness check.
   if (!localCheckOnly) autoUpdater.autoInstallOnAppQuit = false
@@ -347,9 +350,12 @@ function configureUpdater(localCheckOnly = false): void {
     latestVersion = info.version
     if (!preparing && !installing) transition({ type: preparedVersion === info.version ? 'downloaded' : 'available', version: info.version })
   })
-  autoUpdater.on('download-progress', (progress) =>
-    transition({ type: 'progress', percent: progress.percent, transferredBytes: progress.transferred, totalBytes: progress.total, bytesPerSecond: progress.bytesPerSecond })
-  )
+  autoUpdater.on('download-progress', (progress) => {
+    if (stopped) return
+    const transfer = progress as Partial<MacTransferProgress>
+    transition({ type: 'progress', percent: progress.percent, transferredBytes: progress.transferred, totalBytes: progress.total, bytesPerSecond: progress.bytesPerSecond,
+      downloadKind: transfer.downloadKind, archiveBytes: transfer.archiveBytes, reusedBytes: transfer.reusedBytes, resumedBytes: transfer.resumedBytes, fallbackReason: transfer.fallbackReason })
+  })
   autoUpdater.on('update-not-available', () => {
     latestVersion = undefined
     if (preparing || installing) return

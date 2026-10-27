@@ -18,7 +18,9 @@ export function normalizeUpdateNotification(value: unknown): UpdateStatus | unde
   if (typeof input.message === 'string') status.message = input.message.slice(0, 1200)
   if (input.phase === 'error' && ['check', 'download', 'install'].includes(String(input.errorStage))) status.errorStage = input.errorStage as UpdateStatus['errorStage']
   if (input.phase === 'installing' && ['preparing', 'saving', 'restarting'].includes(String(input.installStage))) status.installStage = input.installStage as UpdateStatus['installStage']
-  for (const key of ['percent', 'transferredBytes', 'totalBytes', 'bytesPerSecond'] as const) {
+  if (input.downloadKind === 'differential' || input.downloadKind === 'full') status.downloadKind = input.downloadKind
+  if (['no-cache','no-blockmap','range-unsupported','differential-disabled','no-reusable-blocks'].includes(String(input.fallbackReason))) status.fallbackReason = input.fallbackReason as UpdateStatus['fallbackReason']
+  for (const key of ['percent', 'transferredBytes', 'totalBytes', 'bytesPerSecond', 'archiveBytes', 'reusedBytes', 'resumedBytes'] as const) {
     const amount = input[key]
     if (typeof amount === 'number' && Number.isFinite(amount) && amount >= 0) status[key] = key === 'percent' ? Math.min(100, amount) : Math.floor(amount)
   }

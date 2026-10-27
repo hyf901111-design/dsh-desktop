@@ -9,6 +9,11 @@ export type UpdateStateEvent =
       transferredBytes?: number
       totalBytes?: number
       bytesPerSecond?: number
+      downloadKind?: UpdateStatus['downloadKind']
+      archiveBytes?: number
+      reusedBytes?: number
+      resumedBytes?: number
+      fallbackReason?: UpdateStatus['fallbackReason']
     }
   | { type: 'downloaded'; version: string }
   | { type: 'prepare'; version: string }
@@ -43,7 +48,8 @@ export function reduceUpdateStatus(
         percent: clampPercent(event.percent),
         transferredBytes: validBytes(event.transferredBytes),
         totalBytes: validBytes(event.totalBytes),
-        bytesPerSecond: validBytes(event.bytesPerSecond)
+        bytesPerSecond: validBytes(event.bytesPerSecond),
+        ...(event.downloadKind ? { downloadKind: event.downloadKind, archiveBytes: validBytes(event.archiveBytes), reusedBytes: validBytes(event.reusedBytes), resumedBytes: validBytes(event.resumedBytes), fallbackReason: event.fallbackReason } : {})
       }
     case 'downloaded':
       return { ...base, phase: 'downloaded', availableVersion: event.version }

@@ -119,8 +119,8 @@ describe('desktop update manager', () => {
     expect(quit).toHaveBeenCalledOnce()
   })
   it('forwards actual downloaded and total bytes from updater events', () => {
-    fakes.autoUpdater.emit('download-progress', {percent:44.4,transferred:44400000,total:100000000})
-    expect(getUpdateStatus()).toMatchObject({phase:'downloading',transferredBytes:44400000,totalBytes:100000000})
+    fakes.autoUpdater.emit('download-progress', {percent:44.4,transferred:44400000,total:100000000,downloadKind:'differential',archiveBytes:545000000,reusedBytes:445000000,resumedBytes:10000000})
+    expect(getUpdateStatus()).toMatchObject({phase:'downloading',transferredBytes:44400000,totalBytes:100000000,downloadKind:'differential',archiveBytes:545000000,reusedBytes:445000000,resumedBytes:10000000})
   })
 
   it('allows another install attempt after the native installer reports an error', async () => {
