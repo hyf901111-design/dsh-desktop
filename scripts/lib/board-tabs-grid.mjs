@@ -3,9 +3,10 @@
 export function createBoardTabsGridState(storage,sessionId) {
  const normal=createWorkbenchGridState(storage,sessionId),pages=new Map(),viewKey='ework.research.tabs.view.v1:'+sessionId
  let nav=null,activeId=null,width=0,saved=null,viewports={},override=null
- const plannedTargets=new Map()
+ const plannedTargets=new Map(),planTargets=new Map()
  try{saved=JSON.parse(storage?.getItem(viewKey)||'null');viewports=saved?.viewports??{}}catch{}
- const persistView=()=>{try{storage?.setItem(viewKey,JSON.stringify({navId:nav?.id,activeId,viewports}))}catch{}}
+  try{for(const [id,value] of saved?.plannedTargets??[])if(typeof id==='string'&&Number.isFinite(value?.startedAt)&&value?.target)plannedTargets.set(id,value);for(const [id,value] of saved?.planTargets??[])if(typeof id==='string'&&value)planTargets.set(id,value)}catch{}
+  const persistView=()=>{try{storage?.setItem(viewKey,JSON.stringify({navId:nav?.id,activeId,viewports,plannedTargets:[...plannedTargets].slice(-100),planTargets:[...planTargets].slice(-100)}))}catch{}}
  const page=id=>{const key=nav.id+':'+id;if(!pages.has(key)){const state=createWorkbenchGridState(storage,sessionId+':tabs:'+key);if(width)state.enable(width);pages.set(key,state)}return pages.get(key)}
  const sync=snapshot=>{
   const next=boardTabsNode(snapshot)
@@ -39,7 +40,9 @@ export function createBoardTabsGridState(storage,sessionId) {
   sync,
   offset:()=>nav?46:0,
   withTarget(target,run){const previous=override;override=target;try{return run()}finally{override=previous}},
-  targetForNode(node){return override??[...plannedTargets.values()].find(t=>t.startedAt===node.generationStartedAt)?.target??null},
+  targetForNode(node){return override??planTargets.get(node.workbenchId)??[...plannedTargets.values()].find(t=>t.startedAt===node.generationStartedAt)?.target??null},
+  isPlanningVisible(id){const target=plannedTargets.get(id)?.target;if(!target)return true;if(!nav)return !target.navId;return target.navId?target.navId===nav.id&&target.tabId===activeId:activeId===nav.containerSpec.tabs[0].id},
+  capturePlanTarget(plan,startedAt){const target=override??planTargets.get(plan.id)??[...plannedTargets.values()].find(t=>t.startedAt===startedAt)?.target??{navId:nav?.id??null,tabId:activeId};planTargets.set(plan.id,target);if(planTargets.size>100)planTargets.delete(planTargets.keys().next().value);persistView();return target},
   switch(id,snapshot){sync(snapshot);if(!nav?.containerSpec.tabs.some(t=>t.id===id))return null;viewports[activeId]=snapshot.viewport;activeId=id;persistView();return viewports[id]??{x:0,y:0,scale:1}},
   rememberViewport(value){if(nav){viewports[activeId]=value;persistView()}},
   history:()=>({activeId,normal:normal.get(),pages:[...pages].map(([id,state])=>[id,state.get()])}),
@@ -75,7 +78,7 @@ export function createBoardTabsGridState(storage,sessionId) {
   save(){persistView();return normal.save()&&[...pages.values()].every(state=>state.save())},
   contentHeight:(...args)=>current().contentHeight(...args),clearContentOverrides:()=>current().clearContentOverrides(),
   planningNodes:()=>current().planningNodes().map(n=>shift(n,nav?46:0)),
-  reservePlanning(intent,snapshot,position){sync(snapshot);if(!plannedTargets.has(intent.id)){plannedTargets.set(intent.id,{startedAt:intent.startedAt,target:{navId:nav?.id??null,tabId:activeId}});if(plannedTargets.size>100)plannedTargets.delete(plannedTargets.keys().next().value)}const target=plannedTargets.get(intent.id).target,state=nav&&target.navId===nav.id&&nav.containerSpec.tabs.some(t=>t.id===target.tabId)?page(target.tabId):current(),visible=nav?boardTabsVisible(snapshot,target.tabId):snapshot;return state.reservePlanning(intent,{...visible,files:visible.files.map(n=>shift(n,nav?-46:0)),artifacts:visible.artifacts.map(n=>shift(n,nav?-46:0))},{...position,y:position.y-(nav?46:0)})},
+  reservePlanning(intent,snapshot,position){sync(snapshot);if(!plannedTargets.has(intent.id)){plannedTargets.set(intent.id,{startedAt:intent.startedAt,target:{navId:nav?.id??null,tabId:activeId}});if(plannedTargets.size>100)plannedTargets.delete(plannedTargets.keys().next().value);persistView()}const target=plannedTargets.get(intent.id).target,state=nav&&target.navId===nav.id&&nav.containerSpec.tabs.some(t=>t.id===target.tabId)?page(target.tabId):current(),visible=nav?boardTabsVisible(snapshot,target.tabId):snapshot;return state.reservePlanning(intent,{...visible,files:visible.files.map(n=>shift(n,nav?-46:0)),artifacts:visible.artifacts.map(n=>shift(n,nav?-46:0))},{...position,y:position.y-(nav?46:0)})},
   releasePlanning(id){let released=normal.releasePlanning(id);for(const state of pages.values())released=state.releasePlanning(id)||released;return released}
  }
 }

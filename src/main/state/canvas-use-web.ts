@@ -23,8 +23,9 @@ export function registerCanvasUseWeb(options:{ipcMain:IpcMain;getMainWindow():Br
   })
   registerTrustedMainWindowHandler(options.ipcMain,'research:canvas-use:capture',options.getMainWindow,async(_event,value:any)=>{
     const win=options.getMainWindow();if(!win)throw Error('窗口不可用')
-    const r=value?.rect,size=win.getContentSize()
-    if(!r||!['x','y','width','height'].every(k=>Number.isFinite(r[k]))||r.x<0||r.y<0||r.width<1||r.height<1||r.x+r.width>(size[0]??0)||r.y+r.height>(size[1]??0))throw Error('画布截图区域无效。')
+    const input=value?.rect,zoom=input?.cssPixels===true?win.webContents.getZoomFactor():1
+    const r=input&&(['x','y','width','height'] as const).every(k=>Number.isFinite(input[k]))?{x:input.x*zoom,y:input.y*zoom,width:input.width*zoom,height:input.height*zoom}:null,size=win.getContentSize()
+    if(!r||!(['x','y','width','height'] as const).every(k=>Number.isFinite(r[k]))||r.x<0||r.y<0||r.width<1||r.height<1||r.x+r.width>(size[0]??0)||r.y+r.height>(size[1]??0))throw Error('画布截图区域无效。')
     const image=await win.webContents.capturePage({x:Math.round(r.x),y:Math.round(r.y),width:Math.floor(r.width),height:Math.floor(r.height)})
     const bounded=image.getSize().width>1600?image.resize({width:1600}):image
     return 'data:image/jpeg;base64,'+bounded.toJPEG(75).toString('base64')

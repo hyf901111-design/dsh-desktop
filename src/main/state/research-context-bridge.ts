@@ -98,6 +98,18 @@ export function readStoredResearchCanvas(storage: ResearchCanvasStorage, session
   return { files: read('files'), artifacts: read('artifacts') }
 }
 
+// Context follows the local user's active page. Schedulers and the component
+// library continue to read the complete durable board via readStoredResearchCanvas.
+export function readActiveResearchCanvas(storage: ResearchCanvasStorage, sessionId: string, canvas: Canvas): Canvas {
+  const nav = canvas.artifacts.find((value: any) => value?.containerSpec?.type === 'board-tabs') as any
+  if (!nav || !Array.isArray(nav.containerSpec?.tabs) || !nav.containerSpec.tabs.length) return canvas
+  let activeId: string | undefined
+  try { const view = JSON.parse(storage.getItem('ework.research.tabs.view.v1:' + sessionId) || 'null'); if (view?.navId === nav.id) activeId = view.activeId } catch {}
+  const tab = nav.containerSpec.tabs.find((value: any) => value.id === activeId) ?? nav.containerSpec.tabs[0]
+  const ids = new Set(Array.isArray(tab?.nodeIds) ? tab.nodeIds : [])
+  return { files: canvas.files.filter((value: any) => ids.has(value?.id)), artifacts: canvas.artifacts.filter((value: any) => value?.id !== nav.id && ids.has(value?.id)) }
+}
+
 export class ResearchContextBridge {
   private server?: Server
   private stopped = false

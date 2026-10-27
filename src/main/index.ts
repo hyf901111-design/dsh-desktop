@@ -143,7 +143,7 @@ import { NotesStore } from './notes/store'
 import { findNoteComponent } from './notes/component-library'
 import { NoteNativeMenu } from './notes/native-menu'
 import { NoteFiles, noteFileOwnerPrefix } from './notes/files'
-import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
+import { ResearchContextBridge, readStoredResearchCanvas, readActiveResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
 import { ResearchPdfRenderer } from './research/research-pdf'
 import {
   assertTrustedMainWindowEvent,
@@ -1327,9 +1327,9 @@ async function bootstrap(): Promise<void> {
     canvasAction: (value:any,signal) => value?.method==='data' ? componentDataService ? componentDataService.request(value.sessionId,value.args) : Promise.reject(Error('数据刷新服务不可用')) : canvasActions.execute(value,signal),
     isSharedSession:id=>researchBoardsService?.isSharedSession(id)===true,
     additionalSources:id=>researchBoardIntegration?.personalContext(id)??[],
-    readCanvas: (sessionId) => researchBoardsService?.isSharedSession(sessionId)
+    readCanvas: (sessionId) => readActiveResearchCanvas(researchCanvasStorage, sessionId, researchBoardsService?.isSharedSession(sessionId)
       ? researchBoardsService.readSharedCanvas(sessionId)
-      : readStoredResearchCanvas(researchCanvasStorage, sessionId),
+      : readStoredResearchCanvas(researchCanvasStorage, sessionId)),
     canReadSession: (sessionId) => {
       if (!researchBoardsService?.isSharedSession(sessionId)) return true
       try {

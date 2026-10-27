@@ -2,11 +2,20 @@ import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from '../src/main/state/research-context-bridge'
+import { ResearchContextBridge, readStoredResearchCanvas, readActiveResearchCanvas, registerResearchContextHandlers } from '../src/main/state/research-context-bridge'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
 import { FileResearchPreviewAuthorizationStorage, ResearchFilePreviewRegistry } from '../src/main/state/research-file-preview'
 
 const cleanups: Array<() => Promise<unknown>> = []
+it('上下文仅取本地当前页业务组件，完整看板仍供定时任务使用', async () => {
+  const f=await fixture(),original=readStoredResearchCanvas(f.storage,'parent'),tabs=[{id:'first',name:'市场面',nodeIds:['file','report']},{id:'second',name:'我司',nodeIds:[]}]
+  const canvas={...original,artifacts:[...original.artifacts,{id:'tabs',containerSpec:{version:1,type:'board-tabs',tabs}}]}
+  expect(readActiveResearchCanvas(f.storage,'parent',canvas)).toEqual({files:[original.files[0]],artifacts:[original.artifacts[0]]})
+  f.storage.setItem('ework.research.tabs.view.v1:parent',JSON.stringify({navId:'tabs',activeId:'second'}))
+  expect(readActiveResearchCanvas(f.storage,'parent',canvas)).toEqual({files:[],artifacts:[]})
+  expect(readStoredResearchCanvas(f.storage,'parent')).toEqual(original)
+  expect(readActiveResearchCanvas(f.storage,'parent',original)).toEqual(original)
+})
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup() })
 async function fixture(options = {}) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'research-context-')))

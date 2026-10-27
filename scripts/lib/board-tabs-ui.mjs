@@ -10,14 +10,17 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
  },[workspace])
  react.useLayoutEffect(()=>{
   const root=rootRef.current;if(!root)return
-  const visible=new Set([...workspace.getVisibleBoardSnapshot().files,...workspace.getVisibleBoardSnapshot().artifacts].map(n=>n.id))
+  const visible=new Set([...workspace.getVisibleBoardSnapshot().files,...workspace.getVisibleBoardSnapshot().artifacts,...workspace.getWorkbenchPlanningNodes()].map(n=>n.id))
   for(const card of root.querySelectorAll('[data-research-node-id]')){const hidden=Boolean(nav&&!visible.has(card.getAttribute('data-research-node-id')));card.toggleAttribute('data-board-tab-hidden',hidden);card.inert=hidden}
-  const selected=list.current?.querySelector('[aria-selected=true]');if(selected){const left=selected.offsetLeft,right=left+selected.offsetWidth;if(left<list.current.scrollLeft)list.current.scrollLeft=left;if(right>list.current.scrollLeft+list.current.clientWidth)list.current.scrollLeft=right-list.current.clientWidth}
  },[snapshot,active,host])
+ react.useLayoutEffect(()=>{const selected=list.current?.querySelector('[aria-selected=true]');if(selected){const left=selected.offsetLeft,right=left+selected.offsetWidth;if(left<list.current.scrollLeft)list.current.scrollLeft=left;if(right>list.current.scrollLeft+list.current.clientWidth)list.current.scrollLeft=right-list.current.clientWidth}},[active,host,nav?.id,nav?.containerSpec.tabs.map(t=>t.id).join('|')])
  react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installBoardTabsDrag(root,workspace,readOnly,detail=>setNotice({...detail,token:Date.now()}))},[workspace,readOnly])
+ react.useEffect(()=>{const element=list.current;if(!element)return;const wheel=e=>{e.preventDefault();e.stopPropagation();element.scrollLeft+=e.deltaX||e.deltaY};element.addEventListener('wheel',wheel,{passive:false});return()=>element.removeEventListener('wheel',wheel)},[host,nav?.id])
  react.useEffect(()=>{if(!notice)return;const timer=window.setTimeout(()=>setNotice(null),5000);return()=>window.clearTimeout(timer)},[notice])
  react.useEffect(()=>{if(!menu)return;const dismiss=e=>{if(!e.target.closest?.('[data-board-tabs-menu]')&&!trigger.current?.contains(e.target))setMenu(null)},key=e=>{if(e.key==='Escape'){e.preventDefault();setMenu(null);trigger.current?.focus()}};document.addEventListener('pointerdown',dismiss,true);document.addEventListener('keydown',key,true);return()=>{document.removeEventListener('pointerdown',dismiss,true);document.removeEventListener('keydown',key,true)}},[menu])
- if(!nav||!host)return null
+ const retained=workspace.retainedBoardTabPlanCount?.()||0
+ const recovery=retained>0&&jsx(WorkbenchToolbar,{rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth,bottomOffset:126,role:'status','data-workbench-notice':'','data-board-tabs-recovery':'',children:[jsx('span',{children:'目标页签已删除，'+retained+' 组生成结果已保留'},'text'),jsx('button',{type:'button',disabled:readOnly,onClick:()=>workspace.placeRetainedBoardTabPlans(),children:nav?'放入当前页签':'放入当前看板'},'place')]})
+ if(!nav||!host)return recovery||null
  const spec=nav.containerSpec
  const select=id=>{setMenu(null);workspace.selectBoardTab(id)}
  const keys=e=>{const buttons=[...list.current.querySelectorAll('[role=tab]')],index=buttons.indexOf(document.activeElement);let to;if(e.key==='ArrowRight')to=(index+1)%buttons.length;if(e.key==='ArrowLeft')to=(index-1+buttons.length)%buttons.length;if(e.key==='Home')to=0;if(e.key==='End')to=buttons.length-1;if(to!==undefined){e.preventDefault();e.stopPropagation();buttons[to].focus();buttons[to].scrollIntoView?.({block:'nearest',inline:'nearest'})}}
@@ -26,7 +29,7 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
  menu&&react_dom.createPortal(jsxs('div',{role:'menu','aria-label':'页签更多操作','data-board-tabs-menu':'','data-board-tabs-theme':theme,className:'ew-grid-menu ew-board-tabs-menu',style:menu,onKeyDown:e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const items=[...e.currentTarget.querySelectorAll('button')],i=items.indexOf(document.activeElement);items[e.key==='End'?items.length-1:e.key==='Home'?0:(i+(e.key==='ArrowUp'?-1:1)+items.length)%items.length]?.focus()}},ref:el=>{if(el&&!el.contains(document.activeElement))el.querySelector('button')?.focus({preventScroll:true})},children:[jsxs('button',{type:'button',role:'menuitem',disabled:readOnly,onClick:()=>{setMenu(null);setSettings(true)},children:[jsx(WorkbenchIcon,{name:'settings'}),jsx('span',{children:'页签设置'})]}),jsxs('button',{type:'button',role:'menuitem',disabled:readOnly,onClick:()=>{setMenu(null);setRemove(true)},children:[jsx(WorkbenchIcon,{name:'remove'}),jsx('span',{children:'移除页签组件'})]})]}),document.body),
  settings&&jsx(BoardTabsSettings,{nav,workspace,readOnly,theme,onClose:close}),
  remove&&jsx(BoardTabsModal,{title:'移除页签组件',theme,onClose:close,children:confirm}),
- notice&&jsx(WorkbenchToolbar,{rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth,bottomOffset:86,role:'status','data-workbench-notice':'','data-board-tabs-notice':'',children:[jsx('span',{children:notice.message},'text'),notice.undo&&jsx('button',{type:'button',onClick:()=>{const current=workspace.getSnapshot();if(JSON.stringify([current.files,current.artifacts])===notice.signature)workspace.undo();setNotice(null)},children:'撤销'},'undo')]})
+ recovery,notice&&jsx(WorkbenchToolbar,{rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth,bottomOffset:86,role:'status','data-workbench-notice':'','data-board-tabs-notice':'',children:[jsx('span',{children:notice.message},'text'),notice.undo&&jsx('button',{type:'button',onClick:()=>{const current=workspace.getSnapshot();if(JSON.stringify([current.files,current.artifacts])===notice.signature)workspace.undo();setNotice(null)},children:'撤销'},'undo')]})
  ]})
 }
 export function BoardTabsModal({title,theme,onClose,children}) {
@@ -76,7 +79,7 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
   if(!op)return
   const nav=boardTabsNode(workspace.getSnapshot());if(!nav||workspace.getActiveBoardTab()!==op.source){cleanup();return}
   last=e;op.target=null
-  const bar=root.querySelector('[data-board-tabs-nav]'),r=bar?.getBoundingClientRect(),distance=r?Math.max(r.left-e.clientX,e.clientX-r.right,r.top-e.clientY,e.clientY-r.bottom,0):Infinity
+  const bar=root.querySelector('[data-board-tabs-nav]'),r=bar?.getBoundingClientRect(),list=bar?.querySelector('[role=tablist]'),lr=list?.getBoundingClientRect(),rr=root.getBoundingClientRect(),distance=r?Math.max(r.left-e.clientX,e.clientX-r.right,r.top-e.clientY,e.clientY-r.bottom,0):Infinity
   op.small=distance<=(op.small?96:64)
   const scale=op.small?Math.min(1,240/op.rect.width):1,w=op.rect.width*scale,h=op.rect.height*scale
   const left=op.small?Math.max(8,Math.min(view.innerWidth-w-8,e.clientX+16)):op.rect.left+e.clientX-op.start.x
@@ -92,13 +95,13 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
    const target=nav.containerSpec.tabs.find(t=>t.id===tab.dataset.boardTab)
    if(!target||target.id===op.source||readOnly)continue
    tab.setAttribute('data-tab-accept','')
-   const bounds=tab.getBoundingClientRect()
-   if(e.clientX>=bounds.left&&e.clientX<=bounds.right&&e.clientY>=bounds.top&&e.clientY<=bounds.bottom){op.target=target;tab.setAttribute('data-tab-target','')}
+   const bounds=tab.getBoundingClientRect(),left=Math.max(bounds.left,lr?.left??Infinity,r?.left??Infinity,rr.left),right=Math.min(bounds.right,lr?.right??-Infinity,r?.right??-Infinity,rr.right),top=Math.max(bounds.top,lr?.top??Infinity,r?.top??Infinity,rr.top),bottom=Math.min(bounds.bottom,lr?.bottom??-Infinity,r?.bottom??-Infinity,rr.bottom),stack=doc.elementsFromPoint?.(e.clientX,e.clientY)||[]
+   if(e.clientX>=left&&e.clientX<=right&&e.clientY>=top&&e.clientY<=bottom&&(!stack.length||stack[0].closest?.('[data-board-tab]')===tab)){op.target=target;tab.setAttribute('data-tab-target','')}
   }
   op.tip.hidden=!op.target
   if(op.target){op.tip.textContent='松开移至「'+op.target.name+'」';const tipWidth=op.tip.offsetWidth||180,beside=left+w+8+tipWidth<=view.innerWidth-8;Object.assign(op.tip.style,{left:(beside?left+w+8:Math.max(8,Math.min(view.innerWidth-tipWidth-8,left)))+'px',top:Math.max(8,Math.min(view.innerHeight-40,beside?top:top+h+8))+'px'})}
  }
- const autoScroll=()=>{frame=0;if(!op||!last)return;const r=root.getBoundingClientRect(),y=last.clientY-r.top,delta=y<48?-Math.ceil((48-y)/4):y>r.height-64?Math.ceil((y-r.height+64)/4):0;if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta));if(root.scrollTop!==before)sample(last)}if(op)frame=view.requestAnimationFrame(autoScroll)}
+ const autoScroll=()=>{frame=0;if(!op||!last)return;const r=root.getBoundingClientRect(),y=last.clientY-r.top,delta=y<48?-Math.ceil((48-y)/4):y>r.height-64?Math.ceil((y-r.height+64)/4):0;if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta));if(root.scrollTop!==before)sample(last)}const list=root.querySelector('.ew-board-tabs-list'),lr=list?.getBoundingClientRect();if(lr&&last.clientY>=lr.top-16&&last.clientY<=lr.bottom+16){const dx=last.clientX<lr.left+24?-8:last.clientX>lr.right-24?8:0;if(dx){list.scrollLeft+=dx;sample(last)}}if(op)frame=view.requestAnimationFrame(autoScroll)}
  const down=e=>{
   if(op||readOnly||e.button!==0||e.shiftKey||e.metaKey||!boardTabsNode(workspace.getSnapshot())||!root.contains(e.target))return
   const handle=e.target.closest?.('[data-workbench-drag-handle]');if(!handle||e.target.closest?.('button,input,textarea,a,select,[contenteditable=true]'))return
@@ -113,13 +116,20 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
   for(const el of clone.querySelectorAll('iframe,video,audio,[data-research-native-web]')){const summary=doc.createElement('div');summary.textContent=snapshot.artifacts.find(n=>n.id===id)?.excerpt||'组件预览';summary.style.cssText='padding:20px;white-space:pre-wrap;font:12px/1.6 system-ui;overflow:hidden';el.replaceWith(summary)}
   preview.append(clone);position.append(preview,caption);tip.className='ew-board-tabs-drag-tip';tip.dataset.boardTabsTheme=theme;tip.hidden=true;doc.body.append(position,tip);card.setAttribute('data-board-tabs-drag-source','');root.setAttribute('data-grid-operation','move')
   op={id,cell,cells:workspace.getWorkbenchCells(),visible:workspace.getWorkbenchVisibleCells(),source:workspace.getActiveBoardTab(),rect,position,preview,caption,tip,card,pointerId:e.pointerId,start:{x:e.clientX,y:e.clientY,scroll:root.scrollTop},small:false,target:null}
+  // The trusted host can snapshot sandboxed iframes/canvas without reloading
+  // them. Capture once before fading the source; no screenshot leaves this app.
+  const capture=view.dshDesktop?.researchLinkFrame?.captureCanvas,current=op
+  if(capture&&card.querySelector('iframe,canvas,video,[data-research-native-web]')){
+   const x=Math.max(0,rect.left),y=Math.max(0,rect.top),width=Math.min(view.innerWidth,rect.right)-x,height=Math.min(view.innerHeight,rect.bottom)-y
+   if(width>0&&height>0){position.style.visibility='hidden';card.removeAttribute('data-board-tabs-drag-source');Promise.resolve(capture({x,y,width,height,cssPixels:true})).then(url=>{if(op!==current||!preview.isConnected||typeof url!=='string'||!/^data:image\/(?:jpeg|png);base64,/.test(url))return;const image=doc.createElement('img');image.alt='';image.src=url;image.draggable=false;image.className='ew-board-tabs-captured-image';Object.assign(image.style,{left:x-rect.left+'px',top:y-rect.top+'px',width:width+'px',height:height+'px'});preview.replaceChildren(image)}).catch(()=>{}).finally(()=>{if(op===current){position.style.visibility='';card.setAttribute('data-board-tabs-drag-source','')}})}
+  }
   sample(e);frame=view.requestAnimationFrame(autoScroll)
  }
  const move=e=>{if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();sample(e)}
  const up=e=>{
   if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();sample(e);if(!op)return
   const current=op,target=op.target,blocked=current.card.hasAttribute('data-research-geometry-blocked')||JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(current.cells);cleanup(true);if(blocked){settle(current,180);onNotice({message:'组件位置或占用状态已变化，移动已取消'});return}
-  if(target){
+  if(target&&inBoard(e)){
    if(workspace.moveToBoardTab([current.id],target.id)){const next=workspace.getSnapshot();onNotice({message:'已移至「'+target.name+'」',undo:true,signature:JSON.stringify([next.files,next.artifacts])});settle(current)}else{settle(current,180);onNotice({message:'目标页签已变化或无法容纳组件，移动已取消'})}
   }else if(inBoard(e)){
    const width=workspace.getSnapshot().canvasSize.availableWidth||root.clientWidth,m=grid.metrics(width),dx=(e.clientX-current.start.x)/m.step,dy=(e.clientY-current.start.y+root.scrollTop-current.start.scroll)/m.rowStep

@@ -1,9 +1,14 @@
 export function createBoardTabsWorkspace(adapter) {
- const read=adapter.read,grid=adapter.grid
+ const read=adapter.read,grid=adapter.grid,retained=new Map()
  return {
   captureBoardTabTarget(){grid.sync(read());return {navId:boardTabsNode(read())?.id??null,tabId:grid.active()}},
   withBoardTabTarget(target,run){const nav=boardTabsNode(read());if(target?.navId&&(!nav||nav.id!==target.navId||!nav.containerSpec.tabs.some(t=>t.id===target.tabId)))throw Error('目标页签已删除，请重新放置生成结果。');return grid.withTarget(target,run)},
+  canApplyBoardTabTarget(target){const nav=boardTabsNode(read());return !target?.navId||Boolean(nav&&nav.id===target.navId&&nav.containerSpec.tabs.some(t=>t.id===target.tabId))},
+  retainBoardTabPlan(plan){const fingerprint=JSON.stringify(plan);if(retained.get(plan.id)?.fingerprint===fingerprint)return;retained.set(plan.id,{plan,fingerprint});adapter.publish({})},
+  retainedBoardTabPlanCount(){return retained.size},
+  placeRetainedBoardTabPlans(){if(!adapter.canWrite())return false;const target=this.captureBoardTabTarget();let changed=false;for(const [id,{plan}] of [...retained])if(grid.withTarget(target,()=>this.applyWorkbench(plan))){retained.delete(id);changed=true}if(changed)adapter.publish({});return changed},
   getActiveBoardTab(){grid.sync(read());return grid.active()},
+  isBoardPlanningVisible:id=>grid.isPlanningVisible(id),
   getVisibleBoardSnapshot(){const snapshot=read();grid.sync(snapshot);return boardTabsVisible(snapshot,grid.active())},
   isBoardNodeVisible(id){const s=this.getVisibleBoardSnapshot();return [...s.files,...s.artifacts].some(n=>n.id===id)},
   selectBoardTab(id){const snapshot=read(),viewport=grid.switch(id,snapshot);if(!viewport)return false;adapter.publish({viewport,selection:{selectedNodeIds:[],orderedFileIds:[]}});return true},

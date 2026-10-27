@@ -2,7 +2,7 @@ import {afterEach,it,expect,vi} from 'vitest'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 let f
 afterEach(async()=>{await f?.dispose();f=null})
-const fixture=async()=>f=await financialClientFixture({}, {boardTabs:true})
+const fixture=async()=>f=await financialClientFixture({}, {boardTabs:true,sourceTransform:source=>source.replace('exports.ResearchCanvas = ResearchCanvas;',"exports.__setBoardTabsPlanningIntent=value=>odysseyCreationIntents.set('financial-test',value);exports.ResearchCanvas = ResearchCanvas;")})
 const nav=w=>w.getSnapshot().artifacts.find(n=>n.containerSpec?.type==='board-tabs')
 async function settings(f){await f.event('click',f.document.querySelector('[data-board-tabs-more]'));await f.event('click',[...f.document.querySelectorAll('[role=menuitem]')].find(n=>n.textContent==='页签设置'))}
 it('库中放置页签只作用于当前看板，重复放置复用；切页空白且新建归入当前页',async()=>{
@@ -66,6 +66,7 @@ it('真实pointer拖动提供接收提示与缩略，悬停不切页，释放移
  const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]'),tabs=[...f.document.querySelectorAll('[data-board-tab]')],before=nav(f.workspace).containerSpec
  source.getBoundingClientRect=()=>({left:12,top:120,right:675,bottom:580,width:663,height:460})
  f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
+ f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
  tabs.forEach((tab,i)=>tab.getBoundingClientRect=()=>({left:16+i*68,top:16,right:80+i*68,bottom:42,width:64,height:26}))
  await f.event('pointerdown',handle,{button:0,pointerId:1,clientX:150,clientY:130})
  expect(tabs[1].hasAttribute('data-tab-accept')).toBe(true)
@@ -146,7 +147,7 @@ it('异步粘贴与计划生成在切页后仍落到操作开始时的页签',as
  expect(nav(f.workspace).containerSpec.tabs[0].nodeIds).toEqual(pasted)
  expect(nav(f.workspace).containerSpec.tabs[1].nodeIds).toEqual([])
  expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([])
- await f.act(()=>{f.workspace.selectBoardTab(spec.tabs[0].id);f.workspace.reserveWorkbenchPlanning({id:'planning-test',startedAt:1000},{x:100,y:200});f.workspace.selectBoardTab(spec.tabs[1].id)})
+ await f.act(()=>{f.workspace.selectBoardTab(spec.tabs[0].id);f.bundle.__setBoardTabsPlanningIntent({id:'planning-test',kind:'workbench',state:'planning',startedAt:1000});f.workspace.reserveWorkbenchPlanning({id:'planning-test',startedAt:1000},{x:100,y:200});f.workspace.selectBoardTab(spec.tabs[1].id)})
  const plan={id:'background-plan',createdAt:1000,panels:[{nodeId:'background-panel',title:'后台完成的组件',prompt:'测试',x:0,y:0,width:400,height:280,preparedOutput:JSON.stringify({version:1,type:'markdown',title:'后台完成的组件',content:'真实结果'})}]}
  await f.act(()=>expect(f.workspace.applyWorkbench(plan)).toBe(true))
  expect(nav(f.workspace).containerSpec.tabs[0].nodeIds).toContain('background-panel')
@@ -196,4 +197,76 @@ it('启用页签后标题栏仍支持修饰键多选，被占用组件阻止受�
  await f.event('pointermove',f.win,{pointerId:22,clientX:200,clientY:680})
  await f.event('pointerup',f.win,{pointerId:22,clientX:200,clientY:680})
  expect(f.workspace.getWorkbenchCells()).toEqual(cells)
+})
+
+it('溢出并被裁剪的页签不接受板外释放',async()=>{
+ const f=await fixture();let a;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');f.workspace.createBoardTabs()})
+ const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]'),tabs=[...f.document.querySelectorAll('[data-board-tab]')],before=nav(f.workspace).containerSpec
+ source.getBoundingClientRect=()=>({left:12,top:120,right:675,bottom:580,width:663,height:460})
+ f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
+ f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
+ tabs[1].getBoundingClientRect=()=>({left:1090,top:16,right:1154,bottom:42,width:64,height:26})
+ await f.event('pointerdown',handle,{button:0,pointerId:31,clientX:150,clientY:130})
+ await f.event('pointermove',f.win,{pointerId:31,clientX:1100,clientY:28})
+ expect(tabs[1].hasAttribute('data-tab-target')).toBe(false)
+ await f.event('pointerup',f.win,{pointerId:31,clientX:1100,clientY:28})
+ expect(nav(f.workspace).containerSpec).toEqual(before)
+ await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull())
+})
+
+it('页签横向滚动不驱动画布，后台组件更新不抢回滚动位置',async()=>{
+ const f=await fixture();await f.act(()=>f.workspace.createBoardTabs());const spec=nav(f.workspace).containerSpec
+ await f.act(()=>f.workspace.saveBoardTabs(spec.revision,[...spec.tabs,...Array.from({length:10},(_,i)=>({id:'overflow-'+i,name:'更多 '+i}))]))
+ const list=f.document.querySelector('.ew-board-tabs-list'),before=f.canvas.scrollTop
+ await f.event('wheel',list,{deltaY:120,deltaX:0,deltaMode:0})
+ expect(list.scrollLeft).toBe(120);expect(f.canvas.scrollTop).toBe(before)
+ await f.act(()=>f.workspace.createFinancialWidget('indices'));expect(list.scrollLeft).toBe(120)
+})
+
+it('目标页删除后后台结果保留并明确提供重新放置，重载仍保留目标身份',async()=>{
+ const f=await fixture();await f.act(()=>f.workspace.createBoardTabs());const spec=nav(f.workspace).containerSpec
+ await f.act(()=>{f.bundle.__setBoardTabsPlanningIntent({id:'pending-deleted',kind:'workbench',state:'planning',startedAt:1000});f.workspace.reserveWorkbenchPlanning({id:'pending-deleted',startedAt:1000},{x:100,y:200});f.workspace.selectBoardTab(spec.tabs[1].id);f.workspace.saveBoardTabs(spec.revision,[spec.tabs[1]])})
+ const plan={id:'deleted-target-plan',createdAt:1000,panels:[{nodeId:'retained-panel',title:'保留的结果',prompt:'测试',x:0,y:0,width:400,height:280,preparedOutput:JSON.stringify({version:1,type:'markdown',title:'保留的结果',content:'真实结果'})}]}
+ await f.act(()=>expect(f.workspace.applyWorkbench(plan)).toBe(false))
+ expect(f.document.querySelector('[data-board-tabs-recovery]').textContent).toContain('生成结果已保留')
+ expect(f.workspace.getSnapshot().artifacts.some(n=>n.id==='retained-panel')).toBe(false)
+ const reloaded=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('financial-test');reloaded.setCanvasSize({width:1000,height:700,availableWidth:1000});reloaded.setWorkbenchWidth(1000)
+ expect(reloaded.applyWorkbench(plan)).toBe(false)
+ expect(reloaded.retainedBoardTabPlanCount()).toBe(1)
+ await f.event('click',f.document.querySelector('[data-board-tabs-recovery] button'))
+ expect(nav(f.workspace).containerSpec.tabs[0].nodeIds).toEqual(['retained-panel'])
+ expect(f.document.querySelector('[data-board-tabs-recovery]')).toBeNull()
+})
+
+it('无关联的新计划不复用旧规划目标，同一计划后续面板仍留在首次接收页',async()=>{
+ const f=await fixture();await f.act(()=>f.workspace.createBoardTabs());const spec=nav(f.workspace).containerSpec
+ await f.act(()=>{f.workspace.reserveWorkbenchPlanning({id:'old-intent',startedAt:1000},{x:100,y:200});f.workspace.releaseWorkbenchPlanning('old-intent');f.bundle.__setBoardTabsPlanningIntent({id:'old-intent',kind:'workbench',state:'failed',startedAt:1000});f.workspace.selectBoardTab(spec.tabs[1].id)})
+ const panel=id=>({nodeId:id,title:id,prompt:'测试',x:0,y:0,width:400,height:280,preparedOutput:JSON.stringify({version:1,type:'markdown',title:id,content:'独立计划'})})
+ await f.act(()=>f.workspace.applyWorkbench({id:'unrelated-plan',createdAt:5000,panels:[panel('new-a')]}))
+ expect(nav(f.workspace).containerSpec.tabs[0].nodeIds).toEqual([])
+ expect(nav(f.workspace).containerSpec.tabs[1].nodeIds).toEqual(['new-a'])
+ await f.act(()=>{f.workspace.selectBoardTab(spec.tabs[0].id);f.workspace.applyWorkbench({id:'unrelated-plan',createdAt:5000,panels:[panel('new-a'),panel('new-b')]})})
+ expect(nav(f.workspace).containerSpec.tabs[1].nodeIds).toEqual(['new-a','new-b'])
+})
+
+it('当前页规划进度卡保持可见，切页隐藏，返回恢复',async()=>{
+ f=await financialClientFixture({}, {boardTabs:true,sourceTransform:source=>source.replace('exports.ResearchCanvas = ResearchCanvas;',"exports.__startPlanning=()=>{odysseyCreationIntents.set('financial-test',{id:'planning-visible',kind:'workbench',state:'planning',startedAt:Date.now(),prompt:'测试规划'});odysseyCreationEmit('financial-test')};exports.ResearchCanvas = ResearchCanvas;")})
+ await f.act(()=>{f.workspace.createBoardTabs();f.bundle.__startPlanning()})
+ const card=f.host.querySelector('[data-research-node-id="planning-visible"]');expect(card).not.toBeNull()
+ expect(card.hasAttribute('data-board-tab-hidden')).toBe(false)
+ const spec=nav(f.workspace).containerSpec
+ await f.act(()=>f.workspace.selectBoardTab(spec.tabs[1].id));expect(card.hasAttribute('data-board-tab-hidden')).toBe(true)
+ await f.act(()=>f.workspace.selectBoardTab(spec.tabs[0].id));expect(card.hasAttribute('data-board-tab-hidden')).toBe(false)
+})
+
+it('沙盒网页缩略图使用本地真实画面且只捕获一次',async()=>{
+ const capture=vi.fn(async()=> 'data:image/jpeg;base64,/9j/2Q==')
+ f=await financialClientFixture({researchLinkFrame:{captureCanvas:capture}}, {boardTabs:true})
+ let node;await f.act(()=>{node=f.workspace.createContainerDraft();f.workspace.setArtifacts([{...node,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'图表',html:'<main>实际图表</main>'}}]);f.workspace.createBoardTabs()})
+ const source=f.host.querySelector('[data-research-node-id="'+node.id+'"]');source.getBoundingClientRect=()=>({left:12,top:120,right:675,bottom:580,width:663,height:460})
+ await f.event('pointerdown',source.querySelector('[data-workbench-drag-handle]'),{button:0,pointerId:41,clientX:150,clientY:130})
+ expect(capture).toHaveBeenCalledWith({x:12,y:120,width:663,height:460,cssPixels:true})
+ expect(f.document.querySelector('.ew-board-tabs-captured-image')?.getAttribute('src')).toBe('data:image/jpeg;base64,/9j/2Q==')
+ await f.event('pointermove',f.win,{pointerId:41,clientX:200,clientY:100});expect(capture).toHaveBeenCalledTimes(1)
+ await f.event('keydown',f.win,{key:'Escape'});await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull())
 })

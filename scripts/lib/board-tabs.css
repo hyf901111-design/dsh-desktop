@@ -50,9 +50,10 @@ body .ew-board-tabs-menu>button:disabled{opacity:.4}
 .ew-board-tabs-drag-position{position:fixed;left:0;top:0;z-index:2147483646;pointer-events:none;will-change:transform}
 .ew-board-tabs-drag-preview{position:fixed!important;left:0;top:0;z-index:2147483646!important;pointer-events:none!important;opacity:1!important;overflow:hidden;box-sizing:border-box;background:var(--bt-surface,#fff);color:var(--bt-text,#30363d);box-shadow:0 12px 32px #0005;border:1px solid var(--bt-border,#dfe0e2);border-radius:4px;transform-origin:0 0;transition:transform 160ms cubic-bezier(.2,.8,.2,1);will-change:transform}
 .ew-board-tabs-drag-preview>[data-research-node-id]{position:relative!important;left:0!important;top:0!important;transform:none!important;opacity:1!important;width:100%!important;height:100%!important}
+.ew-board-tabs-captured-image{position:absolute;max-width:none;object-fit:fill;pointer-events:none}
 .ew-board-tabs-drag-preview .ew-grid-resize-layer{display:none!important}
 .ew-board-tabs-drag-preview[data-thumbnail] .ew-grid-title{visibility:hidden}
-.ew-board-tabs-drag-caption{position:absolute;left:0;top:0;width:224px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none;z-index:2147483647;font:500 12px/18px var(--dsw-font-family,system-ui);color:var(--bt-text,#eee);opacity:0;transition:transform 160ms cubic-bezier(.2,.8,.2,1),opacity 100ms ease;will-change:transform}
+.ew-board-tabs-drag-caption{position:absolute;left:0;top:0;width:224px;box-sizing:border-box;padding:0 4px;border-radius:2px;background:var(--bt-surface);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none;z-index:2147483647;font:500 12px/18px var(--dsw-font-family,system-ui);color:var(--bt-text,#eee);opacity:0;transition:transform 160ms cubic-bezier(.2,.8,.2,1),opacity 100ms ease;will-change:transform}
 .ew-board-tabs-drag-tip{position:fixed;z-index:2147483647;pointer-events:none;padding:6px 10px;border-radius:6px;background:var(--bt-dialog,#242424);color:var(--bt-dialog-text,#eee);border:1px solid var(--bt-control-border,#8884);font:12px/18px system-ui;box-shadow:0 4px 16px #0004;white-space:nowrap}
 [data-board-tabs-drag-source]{opacity:.2!important}
 [data-board-tabs-arriving]{visibility:hidden!important}
