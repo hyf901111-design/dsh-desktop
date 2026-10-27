@@ -127,6 +127,23 @@ it('只在可接收标签附近缩略，离开后恢复原生拖动并按原生�
  expect(f.document.querySelector('[data-release-animation]')).toBeNull();expect(f.workspace.getActiveBoardTab()).toBe(first)
 })
 
+it('首排标题起手已靠近页签时，向画布内拖动仍保持原生，朝标签拖动才缩略',async()=>{
+ const f=await fixture();let a;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');f.workspace.createBoardTabs()})
+ const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]')
+ source.getBoundingClientRect=()=>({left:12,top:60,right:675,bottom:520,width:663,height:460})
+ f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
+ f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
+ f.document.querySelectorAll('[data-board-tab]')[1].getBoundingClientRect=()=>({left:84,top:16,right:148,bottom:42,width:64,height:26})
+ await f.event('pointerdown',handle,{button:0,pointerId:67,clientX:100,clientY:80})
+ await f.event('pointermove',f.win,{pointerId:67,clientX:100,clientY:100})
+ expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull()
+ await f.event('keydown',f.win,{key:'Escape'})
+ await f.event('pointerdown',handle,{button:0,pointerId:68,clientX:100,clientY:80})
+ await f.event('pointermove',f.win,{pointerId:68,clientX:100,clientY:70})
+ expect(f.document.querySelector('.ew-board-tabs-drag-preview')?.hasAttribute('data-thumbnail')).toBe(true)
+ await f.event('keydown',f.win,{key:'Escape'})
+})
+
 it('添加页签前后，同一普通拖动的布局结果与浮动位置保持一致',async()=>{
  async function run(tabs){
   const fixture=await financialClientFixture({}, {boardTabs:true});f=fixture;let a,b

@@ -91,6 +91,7 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
  const targets=e=>{
   const nav=boardTabsNode(workspace.getSnapshot()),bar=root.querySelector('[data-board-tabs-nav]'),list=bar?.querySelector('[role=tablist]'),br=bar?.getBoundingClientRect(),lr=list?.getBoundingClientRect(),rr=root.getBoundingClientRect(),receivers=[]
   if(!nav||nav.id!==op?.navId||workspace.getActiveBoardTab()!==op.source||!br||!lr)return {distance:Infinity,target:null,receivers,bottom:0}
+  if(Math.max(br.left-e.clientX,e.clientX-br.right,br.top-e.clientY,e.clientY-br.bottom,0)>96)return {distance:Infinity,target:null,receivers,bottom:br.bottom}
   let distance=Infinity,target=null
   for(const element of list.querySelectorAll('[data-board-tab]')){
    const tab=nav.containerSpec.tabs.find(t=>t.id===element.dataset.boardTab);if(!tab||tab.id===op.source)continue
@@ -140,15 +141,17 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
    clear();for(const stop of settling)stop();settling.clear()
    const snapshot=workspace.getSnapshot(),nav=boardTabsNode(snapshot),id=native.cell?.id,node=[...snapshot.files,...snapshot.artifacts].find(n=>n.id===id),card=root.querySelector('[data-research-node-id="'+CSS.escape(id||'')+'"]')
    if(readOnly||native.kind!=='move'||!nav||!node||!card)return
-   const current=op={id,node,card,native,navId:nav.id,source:workspace.getActiveBoardTab(),rect:card.getBoundingClientRect(),cells:native.canonicalBefore,small:false,target:null,last:e}
+   const current=op={id,node,card,native,navId:nav.id,source:workspace.getActiveBoardTab(),rect:card.getBoundingClientRect(),cells:native.canonicalBefore,small:false,target:null,last:e,startY:e.clientY,approachArmed:false}
+   current.approachArmed=targets(e).distance>64
    // Prefetch pixels without changing the existing live canvas drag.
    const capture=view.dshDesktop?.researchLinkFrame?.captureCanvas,r=current.rect
    if(capture&&card.querySelector('iframe,canvas,video,[data-research-native-web]')){const x=Math.max(0,r.left),y=Math.max(0,r.top),width=Math.min(view.innerWidth,r.right)-x,height=Math.min(view.innerHeight,r.bottom)-y;if(width>0&&height>0)Promise.resolve(capture({x,y,width,height,cssPixels:true})).then(url=>{if(op!==current||typeof url!=='string'||!/^data:image\/(?:jpeg|png);base64,/.test(url))return;current.image={url,x,y,width,height};useCapture(current)}).catch(()=>{})}
   },
   move(e,native){
    if(!op||op.native!==native)return false
-   if(JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(native.boardTabsPreviewCells??op.cells)){onNotice({message:'组件位置或占用状态已变化，移动已取消'});return 'cancel'}
-   op.last=e;const hit=targets(e),near=hit.distance<=(op.small?96:64)
+   op.last=e;const hit=targets(e);if(!op.approachArmed&&(hit.distance>64||hit.target||e.clientY<op.startY-4))op.approachArmed=true
+   const near=op.approachArmed&&hit.distance<=(op.small?96:64)
+   if((near||op.small)&&JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(native.boardTabsPreviewCells??op.cells)){onNotice({message:'组件位置或占用状态已变化，移动已取消'});return 'cancel'}
    if(!near){if(op.small){op.small=false;native.boardTabsResume=true;clearTargets();op.tip.hidden=true;if(edgeFrame)view.cancelAnimationFrame(edgeFrame);edgeFrame=0;exitTimer=view.setTimeout(()=>{if(op?.native===native){op.card.removeAttribute('data-board-tabs-drag-source');op.preview?.remove();op.caption?.remove();op.position?.remove();op.tip?.remove();op.preview=op.caption=op.position=op.tip=null}exitTimer=null},160)}return false}
    view.clearTimeout(exitTimer);exitTimer=null
    if(!op.preview)makePreview(e)
