@@ -578,6 +578,37 @@
           "当前共享客户端未替换；Root集成并构建后才会呈现新技能版本。"
         ],
         "generatedAt": "2026-10-27T05:48:24.785122+00:00"
+      },
+      "merged": {
+        "mergeCommit": "172d21b6086dc3fd826bccef905d214d17bb687f",
+        "verificationCommit": "172d21b6086dc3fd826bccef905d214d17bb687f",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "172d21b6086dc3fd826bccef905d214d17bb687f",
+            "completedAt": "2026-10-27T06:53:55.154Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "172d21b6086dc3fd826bccef905d214d17bb687f",
+            "completedAt": "2026-10-27T06:53:55.154Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T06:53:55.154Z"
       }
     },
     {
