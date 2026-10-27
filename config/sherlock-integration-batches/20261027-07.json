@@ -1,0 +1,713 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261027-07",
+  "branch": "codex/integration/20261027-07",
+  "baseMainCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+  "expectedMainCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+  "createdAt": "2026-10-27T09:39:19.344Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复原生二级命令菜单错位并跟随输入框布局",
+        "branch": "codex/feat/command-popup-position-20261027",
+        "baseCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+        "tipCommit": "79efbe99be42147a43f3d6232198c063ac940934",
+        "commits": [
+          {
+            "commit": "79efbe99be42147a43f3d6232198c063ac940934",
+            "parents": [
+              "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf"
+            ],
+            "subject": "修复原生槽位二级命令菜单定位及输入框增高跟随"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/command-popup-surface.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/command-popup-position-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/command-popup-position.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/command-popup-position-browser.tsx"
+          },
+          {
+            "status": "C060",
+            "path": "test/fixtures/command-popup-surface-v1.txt",
+            "previousPath": "scripts/lib/command-popup-surface.mjs"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/command-popup-position-browser.test.js",
+              "test/command-popup-position.test.js",
+              "test/command-popup-surface.test.js",
+              "test/sidebar-project-popup-browser.test.js",
+              "test/figma-session-title.test.ts",
+              "test/figma-workspace-folder-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/slash-menu-expanded.test.js",
+              "test/menu-surface-theme.test.ts",
+              "test/menu-backdrop-pixels.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/command-popup-position-20261027/final-focused.log; 10 directly related files69/69; 9 new actual SlotCore/SlotOutlet browser cases and6 strict migration cases. No full suite.; committed bytes match verified SHA.",
+            "verifiedCommit": "79efbe99be42147a43f3d6232198c063ac940934",
+            "completedAt": "2026-10-27T07:56:37.001Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/command-popup-position-20261027/final-typecheck.log; EXIT0; committed bytes match verified SHA.",
+            "verifiedCommit": "79efbe99be42147a43f3d6232198c063ac940934",
+            "completedAt": "2026-10-27T07:56:37.001Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/command-popup-position-20261027/verify-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/command-popup-position-20261027/installation.log; EXIT0; committed bytes match verified SHA.",
+            "verifiedCommit": "79efbe99be42147a43f3d6232198c063ac940934",
+            "completedAt": "2026-10-27T07:56:37.001Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Private headless Chromium actual SlotCore/SlotOutlet/ComposerSurface/InputBar/MenuView/PopupSelect; home/conversation at1380/680,search/filter/height/notice/resize/native selection/focus/Escape/dispose. Four real Native slot RED→GREEN,stable composer-height75px RED→GREEN. Real light/dark raster detail std0 with color transmission56/82. Fresh screenshots viewed. No native app/client or OS UI controlled."
+        },
+        "acceptanceCriteria": [
+          "同一原生composer内closest overlayAnchor定位，真实SlotOutlet display:contents不再作为anchor；合法height0保留，宽度及connected/归属严格核验。",
+          "首页及普通对话宽/窄屏与原生slot链一致，输入框增高和notice位置变化仍跟随；保权限/模型/计划Native controller、搜索、滚动、焦点、skills展开菜单。",
+          "真模糊和Native尺寸保持；搜索input不二次blur，菜单可真实选择且不发送/不修改无关草稿，Escape/dispose对称清理。",
+          "v2精确整块验证；仅已知完整v1 SHA可升级，重复/未知/篡改/orphan仍拒绝；实际installed源纯内存双装同字节、inverse与parse通过，物理依赖SHA不变。"
+        ],
+        "risks": [
+          "Private headless Chromium only. No native app or old Sherlock launched, installed, restarted or controlled.",
+          "No shared profile/node_modules write, build, model, remote operation or canonical main modification.",
+          "Actual packaged-client acceptance remains Root responsibility.",
+          "Known existing figma-command-menu-layout baseline loader failure not part of this unchanged direct set; not claimed passing."
+        ],
+        "generatedAt": "2026-10-27T07:56:37.001Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "插件管理页滚动时固定原位返回按钮",
+        "branch": "codex/feat/plugin-back-sticky-20261027",
+        "baseCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+        "tipCommit": "1d9801da0a7b4c813d85d10264a3300f85fabd8f",
+        "commits": [
+          {
+            "commit": "1d9801da0a7b4c813d85d10264a3300f85fabd8f",
+            "parents": [
+              "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf"
+            ],
+            "subject": "修复插件页滚动时返回按钮离开原位置"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/integrations/style.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/plugin-back-sticky-browser.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/plugin-back-sticky-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/integration-menu-layout.test.ts",
+              "test/integration-skill-detail.test.js",
+              "test/integration-view.test.ts",
+              "test/plugin-back-sticky-browser.test.js",
+              "test/scheduled-task-view.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/plugin-back-sticky-20261027/focused.log and focused.json:6 directly related files104/104 passed, including7 actual production IntegrationView/WorkspaceSurfaceHost headless browser cases; no full suite. Existing frozen bytes verified, not rerun during handoff takeover.",
+            "verifiedCommit": "1d9801da0a7b4c813d85d10264a3300f85fabd8f",
+            "completedAt": "2026-10-27T08:15:14.420052+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/plugin-back-sticky-20261027/transfer-typecheck.log: handoff takeover ran fresh tsc, actual process EXIT0.",
+            "verifiedCommit": "1d9801da0a7b4c813d85d10264a3300f85fabd8f",
+            "completedAt": "2026-10-27T08:36:35.902266+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Existing private headless Chromium actual production IntegrationView + WorkspaceSurfaceHost DOM,7 cases: dark/light and sidebar88/280, scroll700 and bottom, sidebar/right-pane resize, nested detail back, skill-document scroll, and scrolled list menus. Read screenshots independently; no installed EWork UI control."
+        },
+        "acceptanceCriteria": [
+          "左上返回按钮维持原28px尺寸与坐标，插件正文及标题仍随原ig-root滚动；不固定整个标题栏或改变内容padding。",
+          "深浅主题及展开/收起侧栏、右侧屏占宽和窄窗调整均保持返回按钮可点击，右侧屏按钮未遮挡。",
+          "嵌套插件/技能返回路径和技能文档独立滚动保留，退出时原对话草稿与原生inert恢复不变。",
+          "长列表底部原控件/更多菜单及导航可用；无新增协议/持久数据/人工输入拦截。"
+        ],
+        "risks": [
+          "No source edits were needed during takeover. Existing Chinese commit1d9801da already contains exactly3 scoped files and is clean; no duplicate or empty commit created.",
+          "No installed-client UI acceptance, old Sherlock launch/restart/install, shared build/profile write, push, or paid task. Root owns actual EWork acceptance and integration."
+        ],
+        "generatedAt": "2026-10-27T08:36:35.902266+00:00"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "PPT实时标注连续编号并取消发送时自动添加技能",
+        "branch": "codex/feat/ppt-annotation-live-numbering-20261027",
+        "baseCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+        "tipCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+        "commits": [
+          {
+            "commit": "4701cb4d5adfc4caeb03c400c975ddaacc923e67",
+            "parents": [
+              "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf"
+            ],
+            "subject": "取消PPT标注发送时自动添加技能"
+          },
+          {
+            "commit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+            "parents": [
+              "4701cb4d5adfc4caeb03c400c975ddaacc923e67"
+            ],
+            "subject": "使PPT实时标注连续编号并保持发送定位与历史编号"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-coordinator.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-message.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/pptx-annotation-input-browser.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-input-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-install.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-live-numbering-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-annotation-live-numbering.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-message.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotation-live-numbering.test.js",
+              "test/pptx-annotation-live-numbering-browser.test.js",
+              "test/pptx-annotation-coordinator.test.js",
+              "test/pptx-annotation-native.test.js",
+              "test/pptx-annotation-install.test.js",
+              "test/pptx-annotation-input-browser.test.js",
+              "test/pptx-annotation-message.test.js",
+              "test/pptx-annotation-message-install.test.js",
+              "test/pptx-annotation-message-browser.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-annotation-live-numbering-20261027/final-focused.log: nine directly affected files102/102 EXIT0 on frozen production. Subsequent test-only per-RAF ordinal/id strengthening passed separately in numbering-each-frame-green.log; no production change. No full suite.",
+            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+            "completedAt": "2026-10-27T08:25:44.284766+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "env",
+              "PPTX_ANNOTATION_VIEWER_ARTIFACTS=/tmp/ppt-annotation-live-numbering-20261027/viewer",
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotation-browser.test.js",
+              "-t",
+              "continuously numbered",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-annotation-live-numbering-20261027/numbering-office-green.log: actual Office native renderer + actual Main/coordinator/native shell:1 passed19 skipped; continuous pins/bubble/draft and immutable PPT bytes.",
+            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+            "completedAt": "2026-10-27T08:25:44.284766+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/pptx-annotation-live-numbering-browser.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-annotation-live-numbering-20261027/numbering-each-frame-green.log: latest actual Root/InputHub/AgentLoop/Main, each conversation RAF exact display1+same markId while canonical wire/proof2;2700ms durable readonly delay;1/1 EXIT0.",
+            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+            "completedAt": "2026-10-27T08:25:44.284766+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-annotation-live-numbering-20261027/final-typecheck.log: fresh tsc actual EXIT0.",
+            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+            "completedAt": "2026-10-27T08:25:44.284766+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/ppt-annotation-live-numbering-20261027/verify-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/ppt-annotation-live-numbering-20261027/native-install-final.json: six relevant installed conversation layers patched twice purely in memory: exact bytes/inverse/parse/tamper rejection and physical dependency SHA unchanged. Not whole global pipeline.",
+            "verifiedCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
+            "completedAt": "2026-10-27T08:25:44.284766+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Private headless Chromium, actual Native Root/InputHub/SessionInputShell/InputTrigger/SessionRuntime and actual Office renderer; actual Main PptxAnnotationService and real private Host AgentLoop with local recording adapter only.102 directly affected cases plus1 distinct Office case (103 unique), strengthened one repeated per-RAF case. No installed-app UI acceptance or paid model."
+        },
+        "acceptanceCriteria": [
+          "删除首、中、尾或全部后，当前有效mark按稳定canonical ordinal顺序显示连续1..n；新建n+1；Main id/ordinal/nextOrdinal/locator/comment和原PPT bytes不变。",
+          "真实Office pin/备注气泡/标注列表与中央草稿使用同一live snapshot；同doc多个handle和持久重开一致，不重新写用户draft来编号。",
+          "实际发送wire/manifest继续使用Main canonical ordinal和相同markId；仅本次精确prepared/session/rpc/text/epoch且唯一ticket冻结live display，首次pending到真实durable接替每RAF不闪编号、不指向别的mark。",
+          "冷恢复无本地ticket的历史消息保留Main冻结原编号；不重写history/userSeq/manifest/Main权限，不从raw猜ordinal。",
+          "发送标记不再隐式选择PPT技能；真实菜单手动选择的PPT/其它技能、附件、全局文字和多标签保留；prepare前后草稿/IME/owner CAS保护保持。",
+          "安装仅追加两个已知完整旧definition SHA；严格双遍/原字节逆向/未知漂移和重复拒绝保持。"
+        ],
+        "risks": [
+          "No app launch/install/restart, native UI or OS mouse, shared build/profile/dependency write, remote push, or paid task. Root owns integration and actual EWork client acceptance.",
+          "Canonical serialized headings may retain ordinal2 while live pin shows1, deliberately preserving authority; exact Main markId and frozen display mapping prove target. Cold old histories may show their original frozen canonical numbers.",
+          "No changes to Root-owned conversation-submission.mjs, conversation-response-progress.mjs, patch-web pipeline, or Main/shared DTO."
+        ],
+        "generatedAt": "2026-10-27T08:25:44.284766+00:00"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "有界批量加载较早对话并保持阅读锚点",
+        "branch": "codex/feat/conversation-history-page-20261027",
+        "baseCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+        "tipCommit": "32e5db9440dad647211c7ddd23262f265756a592",
+        "commits": [
+          {
+            "commit": "32e5db9440dad647211c7ddd23262f265756a592",
+            "parents": [
+              "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf"
+            ],
+            "subject": "按有效轮次批量加载较早对话并保留阅读锚点"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-history-page.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-history-install.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-history-page-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-history-page.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/conversation-history-log.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/conversation-history-page-browser.tsx"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/conversation-history-page.test.js",
+              "test/conversation-history-install.test.js",
+              "test/conversation-history-page-browser.test.js",
+              "test/conversation-compaction-lifecycle.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-history-page-20261027/final-focused.log; 4 directly related files21/21. Native SessionRuntime and original Host paginate,actual ChatView/User/Assistant/Tail and scoped controller; no full suite.; committed bytes match verified SHA.",
+            "verifiedCommit": "32e5db9440dad647211c7ddd23262f265756a592",
+            "completedAt": "2026-10-27T08:22:29.092Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-history-page-20261027/final-typecheck.log; EXIT0; committed bytes match verified SHA.",
+            "verifiedCommit": "32e5db9440dad647211c7ddd23262f265756a592",
+            "completedAt": "2026-10-27T08:22:29.092Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/conversation-history-page-20261027/verify-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-history-page-20261027/installation.log; EXIT0; committed bytes match verified SHA.",
+            "verifiedCommit": "32e5db9440dad647211c7ddd23262f265756a592",
+            "completedAt": "2026-10-27T08:22:29.092Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Private headless Chromium actual ChatView/User/Assistant/Tail+SessionRuntime+scoped controller+original Host paginate: single click3older human requests,anchor73→71.5px; switchB/late receipt cannot alter oldA or appear inB; real error button retries successfully. Screenshot viewed. Fixed local log and HTTP fixture only,no app/model/shared profile."
+        },
+        "acceptanceCriteria": [
+          "按原始Host消息边界分页，最多8×50 append user/assistant；新3真人请求或3个较早轮次结束即停，不把内部tool调用数量当可见消息。",
+          "保原Session连续事件/parallel views以及ConversationAssembler，重复/重叠/缺口/不推进拒绝本页；原始正文/顺序与live尾追加不丢。",
+          "跨await锁generation/address/open/removal/cursor，ChatView切owner/unmount abort并阻止后续页与晚回执；signal只走Native内部，不进Host payload。",
+          "复用原加载按钮与阅读锚点，整个batch保loading/anchor；真实错误可重试，不改模型、发送、草稿或历史。",
+          "Runtime/client两个严格literal patch，重复/漂移/孤儿拒绝、双装相同和exact inverse，实际依赖只内存读取。"
+        ],
+        "risks": [
+          "Extremely dense turns may hit8-page cap before3 landmarks;another click can continue. No unbounded event fetch and no promise of arbitrarily many complete turns.",
+          "Cancellation stops local batch and discards a late read;it does not cancel any agent/model or mutate server history.",
+          "No actual app/shared client/OS UI,model,push,build,profile or dependency writes. Private headless Chromium and fixed local history only.",
+          "Packaged-client acceptance and shared pipeline integration remain Root responsibility."
+        ],
+        "generatedAt": "2026-10-27T08:22:29.092Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "保障各轮真实用户气泡先于本轮思考并保原历史顺序",
+        "branch": "codex/feat/conversation-user-before-status-20261027",
+        "baseCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+        "tipCommit": "3ee07496c6736a1c07a62d7a1edb325d1dad374a",
+        "commits": [
+          {
+            "commit": "61b06ea27cd6ef26d869ac19950f9edb3b728735",
+            "parents": [
+              "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf"
+            ],
+            "subject": "保障各轮真实发送用户气泡先于本轮思考状态呈现"
+          },
+          {
+            "commit": "3ee07496c6736a1c07a62d7a1edb325d1dad374a",
+            "parents": [
+              "61b06ea27cd6ef26d869ac19950f9edb3b728735"
+            ],
+            "subject": "隔离发送排序验证证据并补充视图晚挂载验收"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-submission.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-submission-flow.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-submission-browser.tsx"
+          },
+          {
+            "status": "C061",
+            "path": "test/fixtures/conversation-submission-v2.txt",
+            "previousPath": "scripts/lib/conversation-submission.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/conversation-submission.test.js",
+              "test/conversation-submission-flow.test.js",
+              "test/conversation-submission-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-user-before-status-20261027/handoff50-focused.log; 3 directly related files50/50 including21 Native/actual AbstractApiClient/Host browser cases; default evidence isolated from prior accepted post140 files. No full suite.; source committed SHA matches frozen verification.",
+            "verifiedCommit": "3ee07496c6736a1c07a62d7a1edb325d1dad374a",
+            "completedAt": "2026-10-27T09:16:30.260Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-user-before-status-20261027/handoff-typecheck.log; EXIT0; source committed SHA matches frozen verification.",
+            "verifiedCommit": "3ee07496c6736a1c07a62d7a1edb325d1dad374a",
+            "completedAt": "2026-10-27T09:16:30.260Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/conversation-user-before-status-20261027/verify-install.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-user-before-status-20261027/final49-installation.log; EXIT0; source committed SHA matches frozen verification.",
+            "verifiedCommit": "3ee07496c6736a1c07a62d7a1edb325d1dad374a",
+            "completedAt": "2026-10-27T09:16:30.260Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Private headless actual Native ConversationRoot/InputHub/SessionInputShell/SessionRuntime+actual AbstractApiClient protocol and real local Host pre-step/status/mux/history.21 browser scenarios include first/later sends,actual truncated history,status before history,late view mount,queue/steer Native mirror reuse,images/annotations,exact RPC replacement,fail/cancel/newdraft/owner/preset. Every held later-round RAF with running status has the real pending user above it. Fresh screenshots viewed. No Native app/paid model/build."
+        },
+        "acceptanceCriteria": [
+          "观察真实session.prompt wire，去除blank-only限制；每当前session最多16 pending，近期256 RPC去重；session/shell/current owner仍严格。",
+          "原历史保持原位，用户置于本轮新execution前；无新turn时只UI冻结已知旧组、合法pending turn:null且无伪seq/turn/store写。",
+          "真实user/steering同RPC原子接替；Native pending-steering同item复用避免重复；真实前序turn在layout先到时也推进queued fence。",
+          "失败仅对应RPC/未确认项撤回，不清其它accepted，保持较新draft、实际附件与annotations/Native copy/模型请求。",
+          "released v1/v2仅完整已知块SHA升级，v3严格doublepatch/inverse/parse/unknown/重复拒绝，实际Node依赖不改。"
+        ],
+        "risks": [
+          "No native app/OS mouse,shared build/profile/main/remote or paid model operation. This is private headless functional acceptance.",
+          "Root owns current response-progress changes and shared pipeline;Node combined proof uses the1ea4 base Progress. Final combined new Progress/packaged-client acceptance remain Root responsibility.",
+          "Only the first16 current-session pending requests are projected locally;original Host queue and durable history stay authoritative for all requests.",
+          "No server/history rewrite:the pending execution has no invented seq/turn and old history content stays unchanged.",
+          "Shared fixture strip-conversation-transient-ui.mjs必须先Submission再Progress；Root共享pipeline也需此正逆序。",
+          "建议Root复验时为SHERLOCK_SUBMISSION_EVIDENCE指定独立integration目录；默认已改为本任务browser-default，不会触旧post140证据。"
+        ],
+        "generatedAt": "2026-10-27T09:16:30.260Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修正回复顶部与阶段控件并接入本次消息与历史优化",
+        "branch": "codex/feat/conversation-send-order-controls-20261027",
+        "baseCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+        "tipCommit": "62f5d49fc0eb73d1cd7fafc832e0a4deb7eac501",
+        "commits": [
+          {
+            "commit": "62f5d49fc0eb73d1cd7fafc832e0a4deb7eac501",
+            "parents": [
+              "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf"
+            ],
+            "subject": "修正回复总状态与阶段展开样式并接入消息时序与历史批量加载"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-response-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-response-progress-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-response-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-response-progress-browser.tsx"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "vitest",
+              "run",
+              "test/conversation-response-progress.test.js",
+              "test/conversation-response-progress-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-controls-20261027/final-focused.log; 2 files14/14, top/stage light-dark geometry plus pending previous-turn clock; actual Native private Chromium.",
+            "verifiedCommit": "62f5d49fc0eb73d1cd7fafc832e0a4deb7eac501",
+            "completedAt": "2026-10-27T09:35:46.452540+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-controls-20261027/final-typecheck.log; EXIT0.",
+            "verifiedCommit": "62f5d49fc0eb73d1cd7fafc832e0a4deb7eac501",
+            "completedAt": "2026-10-27T09:35:46.452540+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/conversation-controls-20261027/verify-combination.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/conversation-controls-20261027/combination.log; actual installed runtime/conversation in-memory composition with new Annotation, Progress, Submission, History; exact inverse/double pass/parse/tamper; physical inputs unchanged.",
+            "verifiedCommit": "62f5d49fc0eb73d1cd7fafc832e0a4deb7eac501",
+            "completedAt": "2026-10-27T09:35:46.452540+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Thin pipeline JavaScript syntax EXIT0; global execution deferred until dependent history and submission handoffs merge.",
+            "verifiedCommit": "62f5d49fc0eb73d1cd7fafc832e0a4deb7eac501",
+            "completedAt": "2026-10-27T09:35:46.452540+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Private actual Native ChatView/Shared/ExecutionStatusGroup headless Chromium only. Baseline2RED→14GREEN. Total arrow remains visible, stage hover/focus right arrow and prose-left alignment; clock frozen/carry, light/dark/reduced-motion. No Native app or model operation."
+        },
+        "acceptanceCriteria": [
+          "顶部总状态展开按钮常显，后续阶段无单独计时且右侧hover/focus显示，原详情/aria/键盘保留。",
+          "已知v1完整SHA升级、v2精确逆向/漂移拒绝；pending UI等待新turn冻结旧clock并接续当前clock。",
+          "pipeline按History/Submission/Progress逆序strip、Progress/Submission/History顺序apply；History runtime首strip末apply。"
+        ],
+        "risks": [
+          "Thin pipeline requires same batch history32e5db94 and submission3ee07496, plus annotationa107553d; full global pipeline must be verified on merged tree before build.",
+          "No shared profile/node_modules write, build, model, remote or canonical main modification; old Sherlock not started."
+        ],
+        "generatedAt": "2026-10-27T09:35:46.452540+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
