@@ -1,13 +1,15 @@
 import {createHash} from 'node:crypto'
 
-/** Ephemeral presentation of a real first prompt, until its authoritative row arrives. */
 export function createNativeConversationSubmissions(){
- const entries=new Map(),listeners=new Set();let revision=0,stopCurrent=null,annotationReader=()=>null
+ const entries=new Map(),seen=new Set(),listeners=new Set(),knownRejections=new WeakSet();let revision=0,stopCurrent=null,annotationReader=()=>null,sequence=0
  const notify=()=>{revision++;for(const listener of listeners)listener()}
- const clear=entry=>{if(entries.get(entry.sessionId)!==entry)return;entries.delete(entry.sessionId);entry.off?.();notify()}
+ const clear=entry=>{if(entries.get(entry.rpcId)!==entry)return;entries.delete(entry.rpcId);entry.off?.();notify()}
+ const all=sessionId=>[...entries.values()].filter(entry=>entry.sessionId===sessionId&&entry.current())
+ const turnOf=node=>{const turn=node?.location?.turn?.turn??node?.data?.turn;return Number.isSafeInteger(turn)?turn:null}
+ const settle=(entry,node)=>{if(entries.get(entry.rpcId)!==entry)return;const turn=turnOf(node);for(const other of entries.values())if(other.sessionId===entry.sessionId&&other.predecessors.includes(entry.rpcId)&&turn!==null)other.barrierTurn=Math.max(other.barrierTurn,turn);clear(entry)}
  return{
   subscribe:listener=>{listeners.add(listener);return()=>listeners.delete(listener)},version:()=>revision,
-  read(sessionId){const entry=entries.get(sessionId);return entry?.current()?entry:null},consume:clear,
+  read:sessionId=>all(sessionId)[0]??null,all,consume(entry,node){if(['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId===entry.rpcId)settle(entry,node);else clear(entry)},
   annotation(sessionId,rpcId,text){return annotationReader(sessionId,rpcId,text)},
   watch({api,sessions,inputHub}){
    stopCurrent?.()
@@ -29,20 +31,28 @@ export function createNativeConversationSubmissions(){
     for(const envelope of batch){
      if(envelope.type==='client-request'&&envelope.method==='session.prompt'){
       const sessionId=envelope.payload?.sessionId,rpcId=envelope.rpcId,content=envelope.payload?.content
-      if(typeof sessionId!=='string'||typeof rpcId!=='string'||!rpcId||entries.has(sessionId)||sessions.list.getSnapshot().current!==sessionId||sessions.subagentAddress?.(sessionId)||!Array.isArray(content)||!content.length)continue
-      let session,shell
-      try{session=sessions.binding(sessionId)?.session;shell=inputHub.shells.get(sessionId);if(!session||!shell||shell.disposed||session.getSnapshot().blank!==true)continue}catch{continue}
-      const entry={sessionId,rpcId,session,shell,content:structuredClone(content),current:()=>current(entry),off:null}
-      // This can only consume a local prepared ticket, never infer labels from transport prose.
+      if(typeof sessionId!=='string'||typeof rpcId!=='string'||!rpcId||entries.has(rpcId)||seen.has(rpcId)||all(sessionId).length>=16||!Array.isArray(content)||!content.length)continue
+      let session,shell,snapshot
+      try{if(sessions.list.getSnapshot().current!==sessionId||sessions.subagentAddress?.(sessionId))continue;session=sessions.binding(sessionId)?.session;shell=inputHub.shells.get(sessionId);if(!session||!shell||shell.disposed)continue;snapshot=session.getSnapshot()}catch{continue}
+      const turns=[...(snapshot.chat?.timeline?.turns?.keys()??[])].filter(Number.isSafeInteger),previous=all(sessionId)
+      const entry={sessionId,rpcId,session,shell,content:structuredClone(content),mode:envelope.payload.mode,observedAt:Date.now(),sequence:++sequence,wasRunning:snapshot.running===true,barrierTurn:Math.max(0,...turns),predecessors:previous.map(value=>value.rpcId),accepted:false,current:()=>current(entry),off:null,lastError:snapshot.promptError}
       entry.annotation=annotationReader(sessionId,rpcId,content.filter(part=>part?.type==='text'&&typeof part.text==='string').map(part=>part.text).join(''))
       if(!entry.current())continue
-      entries.set(sessionId,entry)
-      entry.off=session.subscribe(()=>{if(!entry.current()||session.getSnapshot().promptError?.op==='send')clear(entry)})
+      seen.add(rpcId);if(seen.size>256)seen.delete(seen.values().next().value)
+      entries.set(rpcId,entry)
+      entry.off=session.subscribe(()=>{
+       if(!entry.current()){clear(entry);return}
+       const state=session.getSnapshot(),node=state.chat?.order?.map(key=>state.chat.nodes.get(key)).find(node=>['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId===rpcId)
+       if(node){settle(entry,node);return}
+       if(state.promptError!==entry.lastError){entry.lastError=state.promptError;if(state.promptError?.op==='send'&&!knownRejections.has(state.promptError.error)&&!entry.accepted)clear(entry)}
+      })
       notify()
      }else if(envelope.type==='server-response'){
-      for(const entry of [...entries.values()])if(envelope.rpcId===entry.rpcId&&(envelope.result?.ok!==true||envelope.result.value?.accepted!==true))clear(entry)
+      const entry=entries.get(envelope.rpcId)
+      if(envelope.result?.ok!==true||envelope.result.value?.accepted!==true){if(envelope.result?.error&&typeof envelope.result.error==='object')knownRejections.add(envelope.result.error);if(entry)clear(entry)}
+      else if(entry)entry.accepted=true
      }else if(envelope.type==='client-request'&&envelope.method==='session.cancel'){
-      const entry=entries.get(envelope.payload?.sessionId);if(entry)clear(entry)
+      for(const entry of [...entries.values()])if(entry.sessionId===envelope.payload?.sessionId)clear(entry)
      }
     }
    })
@@ -51,14 +61,36 @@ export function createNativeConversationSubmissions(){
   }
  }
 }
-function useNativeConversationSubmission(sessionId,order,nodeStore){
- react.useSyncExternalStore(NativeConversationSubmissions.subscribe,NativeConversationSubmissions.version,NativeConversationSubmissions.version)
- const entry=NativeConversationSubmissions.read(sessionId)
- const received=!!entry&&order.some(key=>{const node=nodeStore.get(key);return node?.kind==='user'&&node.data?.source?.kind==='user'&&node.data.source.rpcId===entry.rpcId})
- // A live preset owns its existing projection. It is replaced atomically too.
- const preset=typeof HomePresentationSubmissions!=='undefined'&&!!HomePresentationSubmissions.read(sessionId)
- react.useLayoutEffect(()=>{if(entry&&(received||preset))NativeConversationSubmissions.consume(entry)},[entry,received,preset])
- return received||preset?null:entry
+function useNativeConversationSubmission(sessionId,order,nodeStore,useSession){
+ const revision=react.useSyncExternalStore(NativeConversationSubmissions.subscribe,NativeConversationSubmissions.version,NativeConversationSubmissions.version)
+ const snapshot=useSession(value=>value),preset=typeof HomePresentationSubmissions!=='undefined'&&!!HomePresentationSubmissions.read(sessionId)
+ const entries=NativeConversationSubmissions.all(sessionId),received=entries.filter(entry=>order.some(key=>{const node=nodeStore.get(key);return['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId===entry.rpcId}))
+ react.useLayoutEffect(()=>{for(const entry of entries)if(preset||received.includes(entry))NativeConversationSubmissions.consume(entry,preset?undefined:order.map(key=>nodeStore.get(key)).find(node=>['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId===entry.rpcId))},[revision,snapshot,preset])
+ return react.useMemo(()=>({snapshot,entries:preset?[]:entries.filter(entry=>!received.includes(entry))}),[revision,snapshot,preset])
+}
+export function projectNativeConversationSubmissions(flow,pending,nodeStore){
+ if(!pending?.entries?.length)return flow
+ const turnOf=entry=>{const node=entry.kind==='node'?nodeStore.get(entry.key):null,value=entry.kind==='execution'?entry.turn:node?.location?.turn?.turn??node?.data?.turn;return Number.isSafeInteger(value)?value:null}
+ const mirrors=new Map(),requests=new Map(pending.entries.map(entry=>[entry.rpcId,entry]));
+ let result=flow.filter(entry=>{const rpcId=entry.kind==='pending-steering'?entry.item?.source?.rpcId:null;if(rpcId&&requests.has(rpcId)){mirrors.set(rpcId,entry);return false}return true}),previousTarget=0,activePending=false
+ for(const submission of pending.entries){
+  let barrier=submission.barrierTurn
+  if(submission.mode!=='steer')barrier=Math.max(barrier,previousTarget)
+  // A different durable human already owns its turn; never attach this request to it.
+  for(const entry of result){const node=entry.kind==='node'?nodeStore.get(entry.key):null,turn=turnOf(entry);if(turn!==null&&turn>barrier&&['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId!==submission.rpcId)barrier=turn}
+  const index=submission.mode==='steer'&&submission.wasRunning?-1:result.findIndex(entry=>{const turn=turnOf(entry);return turn!==null&&turn>barrier})
+  const user=mirrors.get(submission.rpcId)??{kind:'native-submitted-user',key:'submitted:'+submission.rpcId,submission}
+  if(index>=0){previousTarget=turnOf(result[index])??barrier;result.splice(index,0,user);activePending=true;continue}
+  const latest=pending.snapshot?.chat?.timeline?.turns?.get(barrier),closed=latest?.status==='closed'||latest?.end!=null
+  const preTurn=pending.snapshot?.running&&!activePending&&((!submission.wasRunning&&!submission.predecessors.length&&barrier===submission.barrierTurn)||closed)
+  if(preTurn){
+   const reusable=result.find(entry=>entry.kind==='execution'&&entry.running&&entry.turn===null&&!entry.nodeKeys?.length)
+   if(reusable)result=result.filter(entry=>entry!==reusable)
+   result=result.map(entry=>entry.kind==='execution'&&entry.running&&turnOf(entry)!==null&&turnOf(entry)<=barrier?{...entry,running:false}:entry)
+   result.push(user,reusable?{...reusable,pendingSubmission:true,observedAt:submission.observedAt}:{kind:'execution',key:'submitted-execution:'+submission.rpcId,turn:null,nodeKeys:[],running:true,pendingSubmission:true,observedAt:submission.observedAt});activePending=true
+  }else result.push(user)
+ }
+ return result
 }
 function useNativeSubmittedAnnotation(text,identity,authoritative,provided){
  const retained=react.useRef(null),sessionId=identity?.source?.kind==='user'?identity.sessionId:null,rpcId=identity?.source?.rpcId,key=sessionId?JSON.stringify([sessionId,rpcId,text]):null
@@ -94,43 +126,54 @@ function NativeConversationSubmittedUser({entry,loadImage,openFile,t}){
   return{content,urls}
  },[entry,metadata])
  const imageLoader=react.useCallback(attachment=>projected.urls.has(attachment)?Promise.resolve(projected.urls.get(attachment)):loadImage(attachment),[projected,loadImage])
- return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-native-submitted-user':entry.rpcId},react.createElement(UserStyleBubble,{content:projected.content,imageLoader,openFile,t,nativeSubmittedAnnotation:entry.annotation}))
+ return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-anchor-key':'submitted:'+entry.rpcId,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-native-submitted-user':entry.rpcId},react.createElement(UserStyleBubble,{content:projected.content,imageLoader,openFile,t,nativeSubmittedAnnotation:entry.annotation}))
 }
-const START='/* sherlock:conversation-submission:v2 */',LEGACY='/* sherlock:conversation-submission:v1 */',END='/* sherlock:conversation-submission:end */'
-const definition=START+'\n'+[createNativeConversationSubmissions,useNativeConversationSubmission,useNativeSubmittedAnnotation,NativeConversationSubmittedUser].map(fn=>fn.toString()).join('\n')+'\nconst NativeConversationSubmissions=createNativeConversationSubmissions();\n'+END+'\n'
+const START='/* sherlock:conversation-submission:v3 */',END='/* sherlock:conversation-submission:end */'
+const definition=START+'\n'+[createNativeConversationSubmissions,useNativeConversationSubmission,projectNativeConversationSubmissions,useNativeSubmittedAnnotation,NativeConversationSubmittedUser].map(fn=>fn.toString()).join('\n')+'\nconst NativeConversationSubmissions=createNativeConversationSubmissions();\n'+END+'\n'
 const bind='\nctx.effect(()=>NativeConversationSubmissions.watch({api:ctx.get("connection").api,sessions,inputHub}),"Native first submitted user");'
-const hook='\nconst nativeConversationSubmission=useNativeConversationSubmission(sessionId,order,nodeStore);'
-const render='nativeConversationSubmission&&react.createElement(NativeConversationSubmittedUser,{entry:nativeConversationSubmission,loadImage,openFile,t}),\n'
+const oldHook='\nconst nativeConversationSubmission=useNativeConversationSubmission(sessionId,order,nodeStore);'
+const hook='\nconst nativeConversationSubmission=useNativeConversationSubmission(sessionId,order,nodeStore,useSession);'
+const oldRender='nativeConversationSubmission&&react.createElement(NativeConversationSubmittedUser,{entry:nativeConversationSubmission,loadImage,openFile,t}),\n'
+const flowNames=['conversationComponentFlow','renderFlow']
+const flowLine=name=>'const nativeSubmittedFlow=projectNativeConversationSubmissions('+name+',nativeConversationSubmission,nodeStore);\n'
+const render='nativeSubmittedFlow.flatMap((entry) => {if(entry.kind==="native-submitted-user")return react.createElement(NativeConversationSubmittedUser,{key:entry.key,entry:entry.submission,loadImage,openFile,t});'
 const annotationHooks=[
  ['const annotationPresentation=pptxAnnotationMessageRuntime.usePresentation(text,arguments[0].annotationIdentity,eventSeq);','const annotationPresentation=pptxAnnotationMessageRuntime.usePresentation(text,arguments[0].annotationIdentity,eventSeq);\nconst nativeSubmittedAnnotationParts=useNativeSubmittedAnnotation(text,arguments[0].annotationIdentity,annotationPresentation,arguments[0].nativeSubmittedAnnotation);'],
  ['pptxAnnotationMessageRuntime.render(annotationPresentation,text,originalResearch,research,openFile)','pptxAnnotationMessageRuntime.render(nativeSubmittedAnnotationParts,text,originalResearch,research,openFile)']
 ]
-const one=(source,before,after)=>{if(source.split(before).length!==2)throw Error('Native submitted user anchor drifted: '+before.slice(0,70));return source.replace(before,after)}
+const count=(source,value)=>source.split(value).length-1
+const one=(source,before,after)=>{if(count(source,before)!==1)throw Error('Native submitted user anchor drifted: '+before.slice(0,70));return source.replace(before,after)}
 const annotationSwap=(source,before,after)=>{
  const anchor='\nfunction UserStyleBubble(',start=source.indexOf(anchor),end=source.indexOf('\n\t\t}',start)
- if(source.split(anchor).length!==2||end<start)throw Error('Native submitted annotation bubble drifted')
+ if(count(source,anchor)!==1||end<start)throw Error('Native submitted annotation bubble drifted')
  const finish=end+4
  return source.slice(0,start)+one(source.slice(start,finish),before,after)+source.slice(finish)
 }
+const traces=['NativeConversationSubmissions','nativeConversationSubmission','NativeConversationSubmittedUser','useNativeConversationSubmission','nativeSubmittedAnnotationParts','useNativeSubmittedAnnotation','nativeSubmittedFlow','projectNativeConversationSubmissions','sherlock:conversation-submission:']
 export function stripConversationSubmission(source){
- if(!source.includes(START)&&!source.includes(LEGACY)){
-  if([END,'NativeConversationSubmissions','nativeConversationSubmission','NativeConversationSubmittedUser','useNativeConversationSubmission','nativeSubmittedAnnotationParts','useNativeSubmittedAnnotation'].some(value=>source.includes(value)))throw Error('Native submitted user orphan drifted')
-  return source
- }
- const legacy=source.includes(LEGACY),start=source.indexOf(legacy?LEGACY:START),end=source.indexOf(END,start),installed=end<0?'':source.slice(start,end+END.length+1)
- if(source.split(legacy?LEGACY:START).length!==2||source.includes(legacy?START:LEGACY)||(legacy?createHash('sha256').update(installed).digest('hex')!=='2f25f60df2b1aa7ed6f6e622f94c3d036a28e59ee8bd72c795d0402b63fe3a04':installed!==definition)||[END,bind,hook,render].some(value=>source.split(value).length!==2))throw Error('Native submitted user installation drifted')
- let restored=source.replace(installed,'').replace(bind,'').replace(hook,'').replace(render,'')
- if(!legacy&&restored.includes('\nconst pptxAnnotationMessageRuntime='))for(const [before,after]of annotationHooks)restored=annotationSwap(restored,after,before)
- if([START,LEGACY,END,'NativeConversationSubmissions','nativeConversationSubmission','NativeConversationSubmittedUser','useNativeConversationSubmission','nativeSubmittedAnnotationParts','useNativeSubmittedAnnotation'].some(value=>restored.includes(value)))throw Error('Native submitted user inverse drifted')
+ const markers=[...source.matchAll(/\/\* sherlock:conversation-submission:v(\d+) \*\//g)]
+ if(!markers.length){if(source.includes(END)||traces.some(value=>source.includes(value)))throw Error('Native submitted user orphan drifted');return source}
+ if(markers.length!==1||count(source,END)!==1)throw Error('Native submitted user installation drifted')
+ const version=Number(markers[0][1]),start=markers[0].index,end=source.indexOf(END,start),installed=source.slice(start,end+END.length+1),known={1:'2f25f60df2b1aa7ed6f6e622f94c3d036a28e59ee8bd72c795d0402b63fe3a04',2:'c823118b5dc585aae7171ea1d84cd5e234ccf7c32f768bd4f9703d69891887f2'}
+ if(version===3?installed!==definition:!known[version]||createHash('sha256').update(installed).digest('hex')!==known[version])throw Error('Native submitted user installation drifted')
+ let restored=one(source,installed,'');restored=one(restored,bind,'');restored=one(restored,version===3?hook:oldHook,'')
+ if(version===3){
+  const names=flowNames.filter(name=>restored.includes(flowLine(name)));if(names.length!==1)throw Error('Native submitted user flow inverse drifted')
+  const name=names[0];restored=one(restored,flowLine(name),'');restored=one(restored,render,name+'.flatMap((entry) => {')
+  const progress='useConversationResponseProgress(nativeSubmittedFlow,';if(count(restored,progress)>1)throw Error('Native submitted progress inverse drifted');if(restored.includes(progress))restored=one(restored,progress,'useConversationResponseProgress('+name+',')
+ }else restored=one(restored,oldRender,'')
+ if(version!==1&&restored.includes('\nconst pptxAnnotationMessageRuntime='))for(const [before,after]of annotationHooks)restored=annotationSwap(restored,after,before)
+ if(restored.includes(END)||traces.some(value=>restored.includes(value)))throw Error('Native submitted user inverse drifted')
  return restored
 }
 export function patchConversationSubmission(source){
  source=stripConversationSubmission(source)
  source=one(source,'const inputHub = new InputHub(ctx, t, researchWorkspaces);','const inputHub = new InputHub(ctx, t, researchWorkspaces);'+bind)
  source=one(source,'const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);'+hook)
- const anchors=['conversationComponentFlow.flatMap((entry) => {','renderFlow.flatMap((entry) => {'].filter(value=>source.includes(value))
- if(anchors.length!==1)throw Error('Native submitted user flow drifted')
- source=one(source,anchors[0],render+anchors[0])
+ const names=flowNames.filter(name=>source.includes(name+'.flatMap((entry) => {'));if(names.length!==1)throw Error('Native submitted user flow drifted')
+ const name=names[0],progress='const eworkResponseProgressByTurn=',anchor=source.includes(progress)?progress:'const seatProps = (0, react.useMemo)(() => ({'
+ source=one(source,anchor,flowLine(name)+anchor);source=one(source,name+'.flatMap((entry) => {',render)
+ const oldProgress='useConversationResponseProgress('+name+',';if(count(source,oldProgress)>1)throw Error('Native submitted progress anchor drifted');if(source.includes(oldProgress))source=one(source,oldProgress,'useConversationResponseProgress(nativeSubmittedFlow,')
  if(source.includes('\nconst pptxAnnotationMessageRuntime='))for(const [before,after]of annotationHooks)source=annotationSwap(source,before,after)
  return one(source,'exports.ConversationRoot = ConversationRoot;',definition+'exports.ConversationRoot = ConversationRoot;')
 }
