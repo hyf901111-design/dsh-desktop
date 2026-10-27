@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { afterEach, test } from 'node:test'
+import { afterEach, test } from 'vitest'
 import { prepareHomebrewCask, renderHomebrewCask, parseArguments } from '../scripts/update-homebrew-cask.mjs'
 
 const roots = []
