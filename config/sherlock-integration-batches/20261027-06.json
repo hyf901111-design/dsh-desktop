@@ -273,6 +273,37 @@
           "用户明确忽略的组件拖动层级未实施，本次top-layer仅属于二级popup玻璃修复。"
         ],
         "generatedAt": "2026-10-27T06:12:06.161Z"
+      },
+      "merged": {
+        "mergeCommit": "ab4363c6356f89fadd4e5936cb1e4e48c2eacebe",
+        "verificationCommit": "ab4363c6356f89fadd4e5936cb1e4e48c2eacebe",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ab4363c6356f89fadd4e5936cb1e4e48c2eacebe",
+            "completedAt": "2026-10-27T06:52:11.424Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ab4363c6356f89fadd4e5936cb1e4e48c2eacebe",
+            "completedAt": "2026-10-27T06:52:11.424Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T06:52:11.424Z"
       }
     },
     {
