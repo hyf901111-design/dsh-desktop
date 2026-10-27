@@ -124,6 +124,37 @@
           "首次旧Notes测试曾覆盖单张既有headless截图，具体路径/当前SHA与修正见evidence.json；任何Native既有证据及用户文件均未改。"
         ],
         "generatedAt": "2026-10-27T04:57:07.253Z"
+      },
+      "merged": {
+        "mergeCommit": "6b4e78952abaf3fb6db9ece197f36b598196faff",
+        "verificationCommit": "6b4e78952abaf3fb6db9ece197f36b598196faff",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6b4e78952abaf3fb6db9ece197f36b598196faff",
+            "completedAt": "2026-10-27T06:36:14.507Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "6b4e78952abaf3fb6db9ece197f36b598196faff",
+            "completedAt": "2026-10-27T06:36:14.507Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T06:36:14.507Z"
       }
     },
     {
