@@ -111,6 +111,37 @@
           "Known existing figma-command-menu-layout baseline loader failure not part of this unchanged direct set; not claimed passing."
         ],
         "generatedAt": "2026-10-27T07:56:37.001Z"
+      },
+      "merged": {
+        "mergeCommit": "2428296e2f97cb278f2c5a4c3128db5e149d6c9d",
+        "verificationCommit": "2428296e2f97cb278f2c5a4c3128db5e149d6c9d",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2428296e2f97cb278f2c5a4c3128db5e149d6c9d",
+            "completedAt": "2026-10-27T09:42:48.851Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2428296e2f97cb278f2c5a4c3128db5e149d6c9d",
+            "completedAt": "2026-10-27T09:42:48.851Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T09:42:48.851Z"
       }
     },
     {
