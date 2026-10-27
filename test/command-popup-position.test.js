@@ -1,0 +1,11 @@
+import{readFileSync}from'node:fs'
+import{createHash}from'node:crypto'
+import{Script}from'node:vm'
+import{expect,it}from'vitest'
+import{patchSkillCommandPopup}from'../scripts/lib/skill-command-menu.mjs'
+import{patchCommandPopupSurface,stripCommandPopupSurface}from'../scripts/lib/command-popup-surface.mjs'
+const input=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8'),base=stripCommandPopupSurface(patchSkillCommandPopup(input)),legacy=readFileSync('test/fixtures/command-popup-surface-v1.txt','utf8').slice(0,-1),anchor='useExpandedCommandMenu(cardRef,state,state.command === "skills");',call='useEWorkCommandPopupSurface(cardRef,state);'
+const installLegacy=()=>base.replace(anchor,anchor+'\n'+call).replace('function PopupSelectView(',legacy+'\nfunction PopupSelectView(')
+it('upgrades the complete exact accepted v1 native block and preserves all unrelated command bytes',()=>{expect(createHash('sha256').update(legacy).digest('hex')).toBe('30548462f40f7371b904fa9e81a72ab7f60698b5d23c46fe679e8f9ea94bfbd4');expect(stripCommandPopupSurface(installLegacy())).toBe(base);const next=patchSkillCommandPopup(installLegacy());expect(next).toBe(patchSkillCommandPopup(base));expect(next).toContain('/* ework:command-popup-surface:v2 */');expect(next).not.toContain('/* ework:command-popup-surface:v1 */');expect(patchSkillCommandPopup(next)).toBe(next);expect(stripCommandPopupSurface(next)).toBe(base);expect(()=>new Script(next)).not.toThrow()})
+for(const mutate of[source=>source.replace('anchor=element.parentElement','anchor=document.body'),source=>source+'\n/* ework:command-popup-surface:v1 */',source=>source.replace('/* ework:command-popup-surface:end */',''),source=>source.replace('/* ework:command-popup-surface:v1 */','/* ework:command-popup-surface:v9 */')])it('rejects changed, duplicate, incomplete and unknown legacy ownership rather than fuzzy-upgrading it',()=>{expect(()=>patchCommandPopupSurface(mutate(installLegacy()))).toThrow(/drift|duplic|orphan|placement/)})
+it('rejects tampered v2 anchor ownership and preserves its exact current-version inverse',()=>{const next=patchCommandPopupSurface(base);expect(()=>patchCommandPopupSurface(next.replace('anchor.closest("[data-composer-card]")!==composer','false'))).toThrow(/drift/);expect(patchCommandPopupSurface(stripCommandPopupSurface(next))).toBe(next)})
