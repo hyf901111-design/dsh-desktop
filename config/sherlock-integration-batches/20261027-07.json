@@ -706,6 +706,37 @@
           "建议Root复验时为SHERLOCK_SUBMISSION_EVIDENCE指定独立integration目录；默认已改为本任务browser-default，不会触旧post140证据。"
         ],
         "generatedAt": "2026-10-27T09:16:30.260Z"
+      },
+      "merged": {
+        "mergeCommit": "cc7b6913b3f7eb3504515cd9bbe198352ba8c172",
+        "verificationCommit": "cc7b6913b3f7eb3504515cd9bbe198352ba8c172",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "cc7b6913b3f7eb3504515cd9bbe198352ba8c172",
+            "completedAt": "2026-10-27T09:43:28.929Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "cc7b6913b3f7eb3504515cd9bbe198352ba8c172",
+            "completedAt": "2026-10-27T09:43:28.929Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T09:43:28.929Z"
       }
     },
     {
