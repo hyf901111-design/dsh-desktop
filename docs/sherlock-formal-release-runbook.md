@@ -6,6 +6,8 @@
 
 正式发布若未指定版本，比较 `package.json` 与公开 `latest-mac.yml` 后，将较高正式版本的补丁号加一。Cloudflare 是正式更新主通道；GitHub Fork 是源码备份通道，不以当前上游 PR 是否可合并作为发布阻塞条件。
 
+每次正式发布也包含 `awake-ai-lab/homebrew-tap` 的版本同步、中文提交、推送和公开核验。此步骤在 Cloudflare 公开验证成功后执行，软件源尚未同步成功时不得宣称整次正式发布完成。用户只要求源码合并或本地测试时不触发此发布步骤。
+
 ## 不可破坏的发布约束
 
 1. 新版本必须高于线上版本，禁止覆盖已发布版本目录。
@@ -28,7 +30,7 @@
 
 ## 1. 发布前检查
 
-在 `/Users/heyafeng/Documents/ChatGPT/dsh` 中：
+在 `/Users/heyafeng/Documents/ChatGPT/sherlock-desktop` 的干净本地 `main` 中：
 
 ```bash
 git status --short --branch
@@ -276,7 +278,7 @@ hdiutil detach "$mount_point"
   sherlock-releases/notarized/latest/latest-mac.yml --remote
 ```
 
-全部适用的公开元数据、不可变资源、差分更新、签名及包完整性检查均成功后，才执行滚动清理。先预演并确认 `deletedVersion` 是服务器中最早的版本，`deleteKeys` 全部严格位于同一个 `releases/v<deletedVersion>/` 下；再执行正式清理：
+全部适用的公开元数据、不可变资源、差分更新、签名及包完整性检查均成功后，先完成下节 5.1 的 Homebrew 软件源同步，再执行滚动清理。先预演并确认 `deletedVersion` 是服务器中最早的版本，`deleteKeys` 全部严格位于同一个 `releases/v<deletedVersion>/` 下；再执行正式清理：
 
 ```bash
 npm run release:cloudflare:prune-oldest -- \
@@ -332,4 +334,4 @@ git push https://github.com/hyf901111-design/dsh-desktop.git \
 
 ## 完成标准
 
-最终汇报分别列出：版本与提交、聚焦测试和类型检查、应用/DMG 签名、Cloudflare 元数据与 Range/缓存验证、差分更新校验（不做全量升级测试）、R2 最早版本精确清理、GitHub Fork 推送。所有发布步骤成功且无待处理故障后才称为“正式版发布完成”。
+最终汇报分别列出：版本与提交、聚焦测试和类型检查、应用/DMG 签名、Cloudflare 元数据与 Range/缓存验证、差分更新校验（不做全量升级测试）、Homebrew Cask 版本/SHA-256、Tap 中文提交与推送及公开核验、R2 最早版本精确清理、GitHub Fork 推送。所有发布步骤成功且无待处理故障后才称为“正式版发布完成”。
