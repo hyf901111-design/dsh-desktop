@@ -13,6 +13,13 @@ const previousGlobals=new Map()
 let copied=true
 const writeClipboard=vi.fn(async()=>copied)
 const source=()=>readFileSync('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8')
+it('交付尾部兼容已经提供 cwd 参数的干净依赖源码',()=>{
+ const input='function TurnTailNodeView({ node, sessionId, cwd, openFile, t }) {}\nconst tail = renderSlotChain("conversation.chat.turnTail", {\n\t\t\t\tturn, rest });'
+ const patched=patchDeliveryConversation(input)
+ expect(patched).toContain('ework:delivery-tail-owner:v1')
+ expect(patched).not.toContain('cwd, cwd,')
+ expect(patchDeliveryConversation(patched)).toBe(patched)
+})
 beforeAll(()=>{
  dom=new JSDOM('<!doctype html><html><head></head><body></body></html>',{url:'http://localhost/'})
  for(const key of ['window','document','navigator','MouseEvent','KeyboardEvent']){previousGlobals.set(key,Object.getOwnPropertyDescriptor(globalThis,key));Object.defineProperty(globalThis,key,{configurable:true,value:dom.window[key]})}
