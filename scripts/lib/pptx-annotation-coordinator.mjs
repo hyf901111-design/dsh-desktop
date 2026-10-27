@@ -113,6 +113,32 @@ export function createPptxAnnotationCoordinator(deps){
   }
  }
  const offEnvelopes=deps.subscribeEnvelopes?.(observe)??(()=>{})
+ // This is a local view of the admitted draft, not a durable message receipt.
+ const freezePresentation=ticket=>{
+  const replacements=[];let text='',cursor=0
+  for(const part of ticket.parts){
+   const occurrence=ticket.initial.occurrences.find(value=>value.offset===part.offset)
+   text+=ticket.initial.draft.slice(cursor,part.offset);const start=text.length;text+=part.text;cursor=part.offset+1
+   if(occurrence?.source==='pptx-annotation'){
+    const view=ticket.referenceViews.find(value=>annotationLocatorKey(value.reference)===annotationLocatorKey(occurrence.ref))
+    if(!view||!Number.isSafeInteger(view.ordinal)||view.ordinal<1)return null
+    replacements.push({kind:'pptx-annotation',start,end:text.length,...view,text:part.text})
+   }else if(occurrence?.source==='ework-managed-skill'){
+    try{const ref=JSON.parse(occurrence.ref);if(ref.id==='builtin:efund-ppt-maker'&&part.text==='/'+ref.invocationName&&typeof occurrence.label==='string'&&occurrence.label)replacements.push({kind:'skill',start,end:text.length,text:part.text,id:ref.id,label:occurrence.label})}catch{}
+   }
+  }
+  text+=ticket.initial.draft.slice(cursor)
+  if(text.trim()!==ticket.text)return null
+  const left=text.length-text.trimStart().length,parts=[];cursor=0
+  for(const item of replacements){
+   const start=item.start-left,end=item.end-left
+   if(start<cursor||end>ticket.text.length||ticket.text.slice(start,end)!==item.text)return null
+   if(start>cursor)parts.push({kind:'text',text:ticket.text.slice(cursor,start)})
+   parts.push({...item,start,end});cursor=end
+  }
+  if(cursor<ticket.text.length)parts.push({kind:'text',text:ticket.text.slice(cursor)})
+  return parts
+ }
  const submit=async(shell,mode='queue')=>{
   const identity=await deps.resolveInput({switchToChat:false});current(identity)
   if(identity.shell!==shell)throw Error('实际发送输入已变化。')
@@ -136,19 +162,19 @@ export function createPptxAnnotationCoordinator(deps){
     if(value.documentId!==record.documentId)throw Error('标注文件来源已变化。')
     record.state=value.state;if(record.basis.fileVersion!==value.version){record.basis={...record.basis,fileVersion:value.version};record.scene={slideSize:value.slideSize,slides:value.slides}}publish(record)
    }
-   const references=[],seen=new Set()
+   const references=[],seen=new Set(),referenceViews=[]
    for(const occurrence of initial.occurrences)if(occurrence.source==='pptx-annotation'){
     const reference=parsePptxAnnotationLocator(occurrence.ref),record=records.get(keyFor(reference));if(reference.sessionId!==identity.sessionId||!record)throw Error('请先重新打开该标注文件。')
     const mark=requireMark(record,reference.markId);if(mark.stale||mark.fileVersion!==reference.fileVersion||reference.fileVersion!==record.basis.fileVersion)throw Error('标注文件已变化，请先重新定位标记。')
-    const key=annotationLocatorKey(reference);if(!seen.has(key)){seen.add(key);references.push({...reference,expectedStateRevision:record.state.revision})}
+    const key=annotationLocatorKey(reference);if(!seen.has(key)){seen.add(key);references.push({...reference,expectedStateRevision:record.state.revision});const node=record.scene.slides.find(slide=>slide.index===mark.slideIndex)?.nodes?.find(node=>mark.nodeIds.includes(node.id)||mark.nodeIds.includes(node.nodeId)),name=mark.kind==='rect'?'框选区域':node?.name?.trim().slice(0,60)||'位置';referenceViews.push({reference,ordinal:mark.ordinal,label:'第'+(mark.slideIndex+1)+'页 · '+name})}
    }
    if(!references.length)throw Error('本次输入没有可发送的 PPT 标注。')
-   ticket.references=references;ticket.prepared=unwrap(await deps.bridge.prepare({sendingSessionId:identity.sessionId,sendId,expectedDraftRev:initial.draftRev,references}));writable(identity)
+   ticket.references=references;ticket.referenceViews=referenceViews;ticket.prepared=unwrap(await deps.bridge.prepare({sendingSessionId:identity.sessionId,sendId,expectedDraftRev:initial.draftRev,references}));writable(identity)
    if(!annotationAdmissionCurrent(shell,initial))throw Error('发送草稿已变化，较新输入已保留。')
    const parts=await Promise.all(initial.occurrences.map(async occurrence=>({offset:occurrence.offset,text:occurrence.source==='pptx-annotation'?ticket.prepared.serializedReferences.find(value=>annotationLocatorKey(value.reference)===annotationLocatorKey(occurrence.ref))?.text:await deps.serializeReference(occurrence.source,occurrence.ref,identity)})))
    writable(identity);if(!annotationAdmissionCurrent(shell,initial))throw Error('发送草稿已变化，较新输入已保留。')
    let text='',cursor=0;for(const part of parts){if(typeof part.text!=='string')throw Error('标注快照引用不完整。');text+=initial.draft.slice(cursor,part.offset)+part.text;cursor=part.offset+1}text+=initial.draft.slice(cursor)
-   ticket.parts=parts;ticket.status='sending';ticket.text=text.trim();publish();const sending=shell.deps.defaultSink(ticket.text,[...initial.imageIds],mode,{...initial,pptxAnnotation:true})
+   ticket.parts=parts;ticket.status='sending';ticket.text=text.trim();ticket.presentation=freezePresentation(ticket);publish();const sending=shell.deps.defaultSink(ticket.text,[...initial.imageIds],mode,{...initial,pptxAnnotation:true})
    if(sending?.then)watch(Promise.resolve(sending).catch(reason=>{ticket.status='submission-unconfirmed';ticket.error=error(reason).message;publish()}))
    resolveFlight(ticket.prepared);return ticket.prepared
   }catch(reason){ticket.status='failed';ticket.error=error(reason).message;if(ticket.prepared&&!ticket.rpcId)await deps.bridge.cancel({sessionId:identity.sessionId,sendId}).catch(()=>{});publish();rejectFlight(reason);throw reason}finally{if(flights.get(shell)===flight)flights.delete(shell)}
@@ -169,11 +195,11 @@ export function createPptxAnnotationCoordinator(deps){
    if(prior.initial.imageIds.some(value=>!identity.shell.snapshot.imageIds.includes(value)))throw Error('原图片附件已释放，请重新添加附件后发送；当前草稿已保留。')
    if(!prior.parts)throw Error('原修改快照未完整冻结，请重新核实提交。')
    await deps.validateRetry?.(identity,prior.initial,prior.parts);writable(identity)
-   ticket={sendId:id(),identity,mode:prior.mode,status:'preparing',initial:prior.initial,prepared:null,rpcId:null,references:prior.references};tickets.set(ticket.sendId,ticket)
+   ticket={sendId:id(),identity,mode:prior.mode,status:'preparing',initial:prior.initial,prepared:null,rpcId:null,references:prior.references,referenceViews:prior.referenceViews};tickets.set(ticket.sendId,ticket)
    ticket.prepared=unwrap(await deps.bridge.prepare({sendingSessionId:identity.sessionId,sendId:ticket.sendId,expectedDraftRev:prior.initial.draftRev,references:prior.references,retryOfPreparedId:preparedId}));writable(identity)
    const parts=prior.initial.occurrences.map(occurrence=>({offset:occurrence.offset,text:occurrence.source==='pptx-annotation'?ticket.prepared.serializedReferences.find(value=>annotationLocatorKey(value.reference)===annotationLocatorKey(occurrence.ref))?.text:prior.parts.find(value=>value.offset===occurrence.offset)?.text}));writable(identity)
    let text='',cursor=0;for(const part of parts){if(typeof part.text!=='string')throw Error('原修改快照引用不完整。');text+=prior.initial.draft.slice(cursor,part.offset)+part.text;cursor=part.offset+1}text+=prior.initial.draft.slice(cursor)
-   ticket.parts=parts;ticket.text=text.trim();ticket.status='sending';publish();const sending=identity.shell.deps.defaultSink(ticket.text,[...prior.initial.imageIds],prior.mode,{...prior.initial,pptxAnnotation:true})
+   ticket.parts=parts;ticket.text=text.trim();ticket.status='sending';ticket.presentation=freezePresentation(ticket);publish();const sending=identity.shell.deps.defaultSink(ticket.text,[...prior.initial.imageIds],prior.mode,{...prior.initial,pptxAnnotation:true})
    if(sending?.then)watch(Promise.resolve(sending).catch(reason=>{ticket.status='submission-unconfirmed';ticket.error=error(reason).message;publish()}))
    resolveFlight(ticket.prepared);return ticket.prepared
   }catch(reason){if(ticket){ticket.status='failed';ticket.error=error(reason).message;if(ticket.prepared&&!ticket.rpcId)await deps.bridge.cancel({sessionId:identity.sessionId,sendId:ticket.sendId}).catch(()=>{});publish()}rejectFlight(reason);throw reason}finally{if(flights.get(identity.shell)===flight)flights.delete(identity.shell)}
@@ -187,6 +213,14 @@ export function createPptxAnnotationCoordinator(deps){
   adoptInput(identity){current(identity);for(const record of records.values())if(record.identity.sessionId===identity.sessionId&&record.identity.shell===identity.shell&&record.identity.epoch===identity.epoch){const previous=record.identity;record.identity=identity;bindingFor(identity);if(record.error==='实际会话或输入已切换，请重新开启标注。')record.error=null;if(previous.input!==identity.input)publish(record)}},
   removeReference(shell,occurrenceId){const binding=bindings.get(shell),range=binding?.ranges().find(value=>value.occurrenceId===occurrenceId);if(!range)return undefined;const caret=range.blockStart;return binding.remove(range.key)?caret:undefined},
   submit,retry,
+  pendingMessagePresentation({sessionId,shell,submissionId,text}){
+   if(typeof submissionId!=='string'||!submissionId||typeof text!=='string')return null
+   const matches=[...tickets.values()].filter(ticket=>ticket.identity.sessionId===sessionId&&ticket.identity.shell===shell&&ticket.text===text&&ticket.presentation&&['sending','accepted','bound','queued','submission-unconfirmed'].includes(ticket.status)&&(!ticket.rpcId||ticket.rpcId===submissionId))
+   if(matches.length!==1)return null
+   const ticket=matches[0],identity=bindingIdentities.get(shell)??ticket.identity
+   try{current(identity);if(identity.epoch!==ticket.identity.epoch)return null}catch{return null}
+   return structuredClone({preparedId:ticket.prepared.preparedId,submissionId,text,parts:ticket.presentation})
+  },
   interceptSend(shell,draft,mode){
    if(!shell.snapshot.occurrences.some(value=>value.source==='pptx-annotation'))return false
    const previous=submissionNotices.get(shell)

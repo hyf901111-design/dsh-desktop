@@ -5,6 +5,7 @@ import {resolve} from 'node:path'
 import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {annotationMessageFixture} from './fixtures/pptx-annotation-message.js'
+import {stripConversationOuterUi} from './fixtures/strip-conversation-transient-ui.mjs'
 
 const req=createRequire(import.meta.url)
 // Before the feature exists, exercise the real resident renderer as the RED baseline.
@@ -14,7 +15,7 @@ let browser,client,runtime,bootstrap,nativeCss,extraCss
 const evidence='/tmp/pptx-annotation-message-browser-20261026'
 beforeAll(async()=>{
  runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- const source=install(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const source=install(stripConversationOuterUi(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  client=source.replace('exports.apply = apply;','exports.apply = apply;exports.__Chat=ChatView;exports.__User=UserMessageNodeView;exports.__register=registerConversationNodes;')
  nativeCss=[...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match=>JSON.parse(match[1])).filter(css=>css.includes('.gdEzaW_bubble')).join('\n')
  extraCss=await readFile('src/preload/figma-inline-references.css','utf8')

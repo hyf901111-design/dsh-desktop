@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
-import {spawnSync} from 'node:child_process'
+import {spawnSync,execFileSync} from 'node:child_process'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
 import {expect,it} from 'vitest'
@@ -17,7 +17,7 @@ it('strictly installs once, strips exactly and rejects native hook, definition, 
  expect(()=>patch(result.replaceAll('sherlock:pptx-annotation-input:start:v1','sherlock:pptx-annotation-input:start:v999'))).toThrow(/drifted/)
 })
 it('upgrades the complete installed multiline-remark runtime to inline spacing without accepting altered legacy source',()=>{
- const current=patch(source),legacy=current.replace(/function annotationBlock\(before,comment\)\{[\s\S]*?\n\}/,String.raw`function annotationBlock(before,comment){
+ const current=patch(source),previous=execFileSync('git',['show','4fd41562db607e662d217c67393945acc7a664de:scripts/lib/pptx-annotation-coordinator.mjs'],{encoding:'utf8'}),coordinator=previous.slice(previous.indexOf('export function createPptxAnnotationCoordinator')).replace('export ','').trimEnd(),prior=current.replace(/function createPptxAnnotationCoordinator\(deps\)\{[\s\S]*?\nfunction createPptxAnnotationRevealController/,coordinator+'\nfunction createPptxAnnotationRevealController'),legacy=prior.replace(/function annotationBlock\(before,comment\)\{[\s\S]*?\n\}/,String.raw`function annotationBlock(before,comment){
  if(typeof before!=='string'||typeof comment!=='string')throw Error('标注文本无效。')
  const prefix=before?(before.endsWith('\n')?'\n':'\n\n'):'',token='@pptx',tagOffset=prefix.length,start=tagOffset+2
  return {text:prefix+token+'\n'+comment+'\n\n',inserted:prefix+'\uFFFC\n'+comment+'\n\n',componentStart:tagOffset,componentEnd:tagOffset+token.length,tagOffset,start,end:start+comment.length}

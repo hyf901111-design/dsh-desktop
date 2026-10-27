@@ -63,5 +63,6 @@ it('refuses duplicate locators at different ranges and a skill range that claims
 it('uses a full known transport structure only to qualify a bounded neutral loading state',()=>{
  const value=annotationMessageFixture(),input=request(value)
  expect(api.pptxAnnotationMessageLoadingCandidate?.(input)).toBe(true)
+ expect(api.pptxAnnotationMessageLoadingCandidate?.({...input,text:input.text.replaceAll('保留原件。\n','保留原件。 同行备注📌\n')})).toBe(true)
  for(const text of ['这是文件位置：.ework/pptx-annotations/'+value.proof.preparedId+'/manifest.json',value.text.replaceAll('必须另存到：','用户自己写的正文：'),value.text.replaceAll('保留原件。','用户自行编写这句。')])expect(api.pptxAnnotationMessageLoadingCandidate?.({...input,text})).toBe(false)
 })

@@ -2,8 +2,9 @@ import {createRequire} from 'node:module'
 import {readFileSync} from 'node:fs'
 import {Script} from 'node:vm'
 import {expect,it} from 'vitest'
+import {stripConversationOuterUi} from './fixtures/strip-conversation-transient-ui.mjs'
 const req=createRequire(import.meta.url),{patchPptxAnnotationMessages,stripPptxAnnotationMessages}=req('../scripts/lib/pptx-annotation-message.mjs'),{patchSkillConversationPresentation}=req('../scripts/lib/skill-presentation.mjs')
-const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+const resident=stripConversationOuterUi(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
 it('installs the real resident once and restores the exact resident before older transforms run',()=>{
  const base=stripPptxAnnotationMessages(resident),installed=patchPptxAnnotationMessages(base)
  expect(()=>new Script(installed)).not.toThrow();expect(patchPptxAnnotationMessages(installed)).toBe(installed);expect(stripPptxAnnotationMessages(installed)).toBe(base)
