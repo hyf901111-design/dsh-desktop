@@ -165,6 +165,45 @@ async function recordScrollMotion(page,step) {
  await page.waitForTimeout(150)
  return page.evaluate(reply=>{const p=window.guideProbe;p.motionRecording=false;return{reply,frames:p.motionFrames,cues:p.motionCues}},reply)
 }
+it.each(['light','dark'])('reserves the real workspace header once in the native Board demo (%s)',async mode=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1255,height:818,deviceScaleFactor:1.1,guideTop:44,guideBottom:0})
+ const out='/tmp/release140-board-header-20261027';await mkdir(out,{recursive:true})
+ try{
+  await page.addStyleTag({content:(await Promise.all(['figma-final-shell','figma-panels','figma-refinements','home-guides'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')})
+  await page.evaluate(mode=>{if(mode==='dark')document.body.dataset.dsDarkTheme='';window.guideProbe.view.update({view:'research'});const host=document.getElementById('guide-host');Object.assign(host.style,{left:'0px',right:'348px',background:'#111214'})},mode)
+  await succeeds(page,'mount-board')
+  const geometry=await page.evaluate(()=>{const host=document.getElementById('guide-host'),canvas=host.querySelector('[data-research-canvas]'),header=document.querySelector('[data-srb-session-header]');return{host:host.getBoundingClientRect().toJSON(),canvas:canvas.getBoundingClientRect().toJSON(),header:header.getBoundingClientRect().toJSON(),margin:getComputedStyle(canvas).marginTop,headerHeight:getComputedStyle(header).height}})
+  await writeFile(out+'/header-'+mode+'.json',JSON.stringify(geometry,null,2));await page.screenshot({path:out+'/header-'+mode+'.png'})
+  expect(geometry.canvas.top-geometry.host.top,'the guide is already below the native header').toBeLessThan(1)
+  expect(Math.abs(geometry.canvas.bottom-geometry.host.bottom)).toBeLessThan(1)
+  expect(geometry.headerHeight).toBe('44px')
+  await succeeds(page,'dispose')
+  await page.evaluate(()=>{document.querySelector('[data-home-guide]').remove();delete document.querySelector('.pI_x6G_centerCol').dataset.homeGuideActive;delete document.querySelector('.wSkVaW_root').dataset.homeGuideResident})
+  await expect.poll(()=>page.locator('#native-root [data-research-canvas]').count()).toBe(1)
+  expect(await page.locator('#native-root [data-research-canvas]').evaluate(node=>getComputedStyle(node).marginTop)).toBe('44px')
+  expect(await page.locator('[data-srb-session-header]').evaluate(node=>getComputedStyle(node).height)).toBe('44px')
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
+it.each(['inset','overlay'])('replays the four-component Board stage and finishes real links with the %s right pane at formal 1.1 scale',async rightPane=>{
+ const{page,errors}=await fixture({nativeLayout:true,width:1255,height:818,deviceScaleFactor:1.1,guideTop:44,guideBottom:0,reducedMotion:'no-preference'})
+ const out='/tmp/release140-board-header-20261027';await mkdir(out,{recursive:true});const stages=[]
+ try{
+  await page.addStyleTag({content:(await Promise.all(['figma-final-shell','figma-panels','figma-refinements','home-guides'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')})
+  await page.evaluate(rightPane=>{
+   document.body.dataset.dsDarkTheme='';window.guideProbe.view.update({view:'research'});Object.assign(document.getElementById('guide-host').style,{left:'0px',right:rightPane==='overlay'?'0px':'348px'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
+   if(rightPane==='overlay'){const panel=document.createElement('aside');panel.className='t8lSSG_panel';panel.style.cssText='position:fixed;right:12px;top:22px;bottom:22px;width:348px;z-index:100';document.body.append(panel)}
+   const p=window.guideProbe;p.headerCues=[];p.headerPointer=p.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})
+   window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(!d.requestId)return;const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token);p.headerCues.push({label:d.label,action:d.action});const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));void p.headerPointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action}).then(()=>reply(true),error=>reply(false,error.message))})
+  },rightPane)
+  for(const step of ['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange','board-link','board-add','board-smart-container','board-smart-generate']){
+   const reply=await command(page,step,{},40000),stage=await page.evaluate(({step,reply})=>{const p=window.guideProbe,canvas=document.querySelector('#guide-host [data-research-canvas]');return{step,reply,canvas:canvas?.getBoundingClientRect().toJSON(),scroll:canvas?.scrollTop,maxScroll:canvas?canvas.scrollHeight-canvas.clientHeight:null,artifacts:p.registry.for('guide-browser-session').getSnapshot().artifacts.map(node=>({id:node.id,widget:node.containerSpec?.widget,linkedWatchlistId:node.containerSpec?.linkedWatchlistId,linkedSourceId:node.containerSpec?.linkedSourceId,width:node.width,height:node.height})),cues:p.headerCues}}, {step,reply});stages.push(stage);await writeFile(out+'/formal-stage-replay-'+rightPane+'.json',JSON.stringify(stages,null,2));expect(reply,step+': '+reply.message).toMatchObject({ok:true})
+  }
+  expect(stages.find(stage=>stage.step==='board-news').artifacts).toHaveLength(4)
+  const final=await page.evaluate(()=>{const nodes=window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts;return{symbols:nodes.find(node=>node.containerSpec.widget==='watchlist').containerSpec.symbols,links:nodes.filter(node=>node.containerSpec.linkedWatchlistId||node.containerSpec.linkedSourceId).length,count:nodes.length,smart:nodes.find(node=>node.workbenchIndex===6)?.containerSpec?.type}})
+  expect(final.symbols).toHaveLength(5);expect(final.links).toBe(3);expect(final.count).toBe(7);expect(final.smart).toBe('table');await page.screenshot({path:out+'/formal-stage-replay-'+rightPane+'.png'});await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},90000)
 it('naturally scrolls added components, Arrange and stock controls before issuing settled pointer cues',async()=>{
  const{page,errors}=await fixture({nativeLayout:true,width:1460,height:1000})
  const out='/tmp/home-board-natural-scroll-20261026';await mkdir(out,{recursive:true})
