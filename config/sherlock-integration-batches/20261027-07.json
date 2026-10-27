@@ -312,6 +312,37 @@
           "No build/profile dependency write/native UI/system mouse/remote/paid task. No full suite or unrelated checks. Original predecessor handoff SHA remains f27dccf3e1c05df4d4232876bf1c4741bee8b8b300fdd400450389fd5f2fa801."
         ],
         "generatedAt": "2026-10-27T10:28:24.731861+00:00"
+      },
+      "merged": {
+        "mergeCommit": "956b15bdcee09aae4395fd3617998645fbdb0043",
+        "verificationCommit": "956b15bdcee09aae4395fd3617998645fbdb0043",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "956b15bdcee09aae4395fd3617998645fbdb0043",
+            "completedAt": "2026-10-27T10:30:35.444Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "956b15bdcee09aae4395fd3617998645fbdb0043",
+            "completedAt": "2026-10-27T10:30:35.444Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T10:30:35.444Z"
       }
     },
     {
