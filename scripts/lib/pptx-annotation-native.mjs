@@ -104,7 +104,7 @@ export function stripPptxAnnotationInput(source){
  if(!source.includes('sherlock:pptx-annotation-input:'))return source
  if(LEGACY_BLOCK===BLOCK||LEGACY_BLOCK.includes('submissionNotices'))throw Error('PPT annotation legacy notice adapter drifted')
  const start=source.indexOf('\n'+START),finish=source.indexOf(END,start),installed=start>=0&&finish>=0?source.slice(start,finish+END.length+1):''
- const knownPrior=['1449ab328137c2250b31a4dc36105cab365330a4a29d8187a95ade22d1d7a701','e29163c847d85ba75b4a41f079acf92ce7325323cd3640491739e40b6dbb1dcd','4aeef32cf0bb0c909e8a9d8a85c877211d5d1873b290c36781d2b9ae0b981a2b','8608bedd8a8e505c9bd7f54c89530e5aa75a91f2e09400172ed61d25f6c1540d','5fb255a72243b72715a0d686c878e7236606cd41fa21e52b538b254de1e18cd7'].includes(createHash('sha256').update(installed).digest('hex'))
+ const knownPrior=['1449ab328137c2250b31a4dc36105cab365330a4a29d8187a95ade22d1d7a701','e29163c847d85ba75b4a41f079acf92ce7325323cd3640491739e40b6dbb1dcd','4aeef32cf0bb0c909e8a9d8a85c877211d5d1873b290c36781d2b9ae0b981a2b','8608bedd8a8e505c9bd7f54c89530e5aa75a91f2e09400172ed61d25f6c1540d','5fb255a72243b72715a0d686c878e7236606cd41fa21e52b538b254de1e18cd7','6cdea5bd6d2e13d65143f832a2ad9a62cc9eae948742e9af73778f9f74394adc'].includes(createHash('sha256').update(installed).digest('hex'))
  const block=source.includes(BLOCK)?BLOCK:source.includes(LEGACY_BLOCK)?LEGACY_BLOCK:knownPrior?installed:null
  if(source.split(START).length!==2||source.split(END).length!==2||!block)throw Error('PPT annotation installed source drifted')
  let result=source.replace(block,'');for(const[from,to]of TRANSACTIONS)result=exactly(result,to,from)

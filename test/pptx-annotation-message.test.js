@@ -1,12 +1,12 @@
 import {createRequire} from 'node:module'
 import {Window} from 'happy-dom'
-import {afterEach,expect,it} from 'vitest'
+import {afterEach,expect,it,vi} from 'vitest'
 import {annotationMessageFixture} from './fixtures/pptx-annotation-message.js'
 const req=createRequire(import.meta.url)
 let api={};try{api=req('../scripts/lib/pptx-annotation-message.mjs')}catch(error){if(error.code!=='MODULE_NOT_FOUND')throw error}
 const request=value=>api.pptxAnnotationMessageRequest?.(value.text,value.sessionId,{kind:'user',rpcId:value.rpcId},9)
 const project=(input,value)=>api.pptxAnnotationMessageSegments?.(input,value)
-const windows=[];afterEach(()=>windows.splice(0).forEach(w=>w.happyDOM.abort()))
+const windows=[];afterEach(()=>{windows.splice(0).forEach(w=>w.happyDOM.abort());vi.unstubAllGlobals()})
 it('requests only a unique prepared hint with actual durable native session, seq and human RPC',()=>{
  const value=annotationMessageFixture()
  expect(request(value)).toEqual({sendingSessionId:value.sessionId,preparedId:value.proof.preparedId,userSeq:9,submissionId:value.rpcId,text:value.text})
@@ -65,4 +65,14 @@ it('uses a full known transport structure only to qualify a bounded neutral load
  expect(api.pptxAnnotationMessageLoadingCandidate?.(input)).toBe(true)
  expect(api.pptxAnnotationMessageLoadingCandidate?.({...input,text:input.text.replaceAll('保留原件。\n','保留原件。 同行备注📌\n')})).toBe(true)
  for(const text of ['这是文件位置：.ework/pptx-annotations/'+value.proof.preparedId+'/manifest.json',value.text.replaceAll('必须另存到：','用户自己写的正文：'),value.text.replaceAll('保留原件。','用户自行编写这句。')])expect(api.pptxAnnotationMessageLoadingCandidate?.({...input,text})).toBe(false)
+})
+it('uses only the exact submitted display mapping after Main proves canonical ordinals and keeps old history frozen',()=>{
+ const value=annotationMessageFixture();value.text=value.text.replace('[PPT 标注 1','[PPT 标注 7').replace('[PPT 标注 2','[PPT 标注 9');value.proof.text=value.text
+ value.proof.spans.forEach((span,index)=>{span.ordinal=index?9:7;span.text=span.text.replace('[PPT 标注 '+(index+1),'[PPT 标注 '+span.ordinal)})
+ const input=request(value),original=JSON.stringify(value.proof),mapping={sessionId:input.sendingSessionId,preparedId:input.preparedId,submissionId:input.submissionId,text:input.text,marks:value.proof.spans.map((span,index)=>({reference:span.reference,canonicalOrdinal:span.ordinal,ordinal:index+1}))}
+ vi.stubGlobal('window',{[Symbol.for('sherlock:pptx-annotation-input')]:{messageDisplayOrdinals:query=>JSON.stringify(query)===JSON.stringify({sessionId:input.sendingSessionId,preparedId:input.preparedId,submissionId:input.submissionId,text:input.text})?mapping:null}})
+ expect(project(input,value.proof).filter(part=>part.kind==='pptx-annotation').map(part=>[part.ordinal,part.canonicalOrdinal])).toEqual([[1,7],[2,9]])
+ expect(JSON.stringify(value.proof)).toBe(original)
+ mapping.submissionId='another-rpc';expect(project(input,value.proof).filter(part=>part.kind==='pptx-annotation').map(part=>part.ordinal)).toEqual([7,9])
+ vi.unstubAllGlobals();expect(project(input,value.proof).filter(part=>part.kind==='pptx-annotation').map(part=>part.ordinal)).toEqual([7,9])
 })
