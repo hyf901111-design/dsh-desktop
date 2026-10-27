@@ -1,4 +1,5 @@
 import {patchHomeThemeAppearance} from './lib/home-theme-appearance.mjs'
+import {patchBoardTabsClient,stripBoardTabsClient} from './lib/board-tabs-client.mjs'
 import {patchSidebarNewNoteConversation,patchSidebarNewNoteShell,stripSidebarNewNoteConversation,stripSidebarNewNoteShell} from './lib/sidebar-new-note.mjs'
 import {patchAssistantReveal} from './lib/assistant-reveal.mjs'
 import {patchConversationComponents} from './lib/conversation-components.mjs'
@@ -177,7 +178,8 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(readFileSync(gridConversationPath,'utf8'))))
+const unTabbedConversationSource=stripBoardTabsClient(readFileSync(gridConversationPath,'utf8'))
+const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbedConversationSource)))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
 const sidebarNewNotePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js')
 writeFileSync(sidebarNewNotePath,stripSidebarNewNoteShell(readFileSync(sidebarNewNotePath,'utf8')))
@@ -329,3 +331,5 @@ writeFileSync(conversationPath,patchPlainSlashInput(readFileSync(conversationPat
 // Read-only first-send projection and one native turn clock are the outermost layers.
 writeFileSync(conversationPath,patchConversationHistoryClient(patchConversationSubmission(patchConversationResponseProgress(readFileSync(conversationPath,'utf8')))))
 writeFileSync(historyRuntimeBundlePath,patchConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
+// Board tabs wrap the final resident canvas and reverse before all earlier passes.
+writeFileSync(conversationPath,patchBoardTabsClient(readFileSync(conversationPath,'utf8')))
