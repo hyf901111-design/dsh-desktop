@@ -7,17 +7,22 @@ import {stripConversationTransientUi} from './fixtures/strip-conversation-transi
 import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {presentationHostFixture} from './fixtures/home-presentation-host.js'
+import {PptxAnnotationService} from '../src/main/pptx/annotations'
 const require=createRequire(import.meta.url)
 const {patchHomeGuidePresentationNative}=require('../scripts/lib/home-guide-presentation-native.mjs')
+const {patchPptxAnnotationInput}=require('../scripts/lib/pptx-annotation-native.mjs')
+const {patchPptxAnnotationMessages}=require('../scripts/lib/pptx-annotation-message.mjs')
 
 const evidence=process.env.SHERLOCK_SUBMISSION_EVIDENCE||'/tmp/post140-conversation-20261027/browser'
-let browser,bundle,runtimeSource,nativeSource,triggersSource
+let browser,bundle,runtimeSource,nativeSource,annotationSource,triggersSource
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  const normalized=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(readFileSync(0,'utf8')))))"],{input:stripConversationTransientUi(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),encoding:'utf8',maxBuffer:64*1024*1024})
  const patch=process.env.SHERLOCK_SUBMISSION_BASELINE==='1'?source=>patchHomeGuidePresentationNative(source):source=>patchConversationResponseProgress(patchConversationSubmission(patchHomeGuidePresentationNative(source)))
  let patchConversationSubmission,patchConversationResponseProgress;if(process.env.SHERLOCK_SUBMISSION_BASELINE!=='1'){({patchConversationSubmission}=require('../scripts/lib/conversation-submission.mjs'));({patchConversationResponseProgress}=require('../scripts/lib/conversation-response-progress.mjs'))}
- nativeSource=patch(normalized).replace('exports.apply = apply;','exports.apply = apply;exports.__watchSubmitted=typeof NativeConversationSubmissions==="undefined"?undefined:deps=>NativeConversationSubmissions.watch(deps);exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__User=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__userRowClass=MessageItem_module_css_default.userRow;exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
+ const expose=source=>source.replace('exports.apply = apply;','exports.apply = apply;exports.__watchSubmitted=typeof NativeConversationSubmissions==="undefined"?undefined:deps=>NativeConversationSubmissions.watch(deps);exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__User=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__userRowClass=MessageItem_module_css_default.userRow;exports.__startAnnotation=deps=>(PptxAnnotationNativeRuntime=createPptxAnnotationNativeRuntime({...deps,window,document}));exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
+ nativeSource=expose(patch(normalized))
+ annotationSource=expose(patchConversationResponseProgress(patchConversationSubmission(patchPptxAnnotationMessages(patchPptxAnnotationInput(patchHomeGuidePresentationNative(normalized))))))
  triggersSource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8')
  const result=await build({entryPoints:['test/fixtures/conversation-submission-browser.tsx'],bundle:true,platform:'browser',format:'iife',write:false,loader:{'.svg':'dataurl','.css':'empty'},define:{'process.env.NODE_ENV':'"development"'}})
  bundle=result.outputFiles[0].text
@@ -27,14 +32,20 @@ beforeAll(async()=>{
 },30000)
 afterAll(()=>browser?.close())
 
-async function fixture({kind='ppt',mount=false,rejected=false}={}){
+async function fixture({kind='ppt',mount=false,rejected=false,annotations=false,annotationFile=false}={}){
  const host=await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion:'reduce'}),errors=[],requests=[]
  const origin='http://127.0.0.1:'+host.ctx.get('webServer').port
  const sourcePath=join(host.cwd,'Vanguard-2026经济与市场展望.pdf'),brief='请基于当前资料梳理研究结论，保留来源与时点。中文与 emoji 📈 均应完整。',guidePath=kind==='report'?'/sherlock/home-guide/report':'/sherlock/home-guide/presentation'
  if(kind==='report')await writeFile(join(host.home,'research-board-directories.json'),JSON.stringify({example:{sessionId:'demo',path:host.cwd,title:'研究报告示例'}}))
  if(!mount)await writeFile(sourcePath,host.sourceBytes)
- let releaseStep,releaseReject,entered=false,prepared
- const held=new Promise(resolve=>releaseStep=resolve),rejectGate=new Promise(resolve=>releaseReject=resolve)
+ let releaseStep,releaseReject,releasePresentation,entered=false,prepared,annotationAllowed=true
+ const held=new Promise(resolve=>releaseStep=resolve),rejectGate=new Promise(resolve=>releaseReject=resolve),presentationGate=new Promise(resolve=>releasePresentation=resolve)
+ const annotationCalls=[]
+ if(annotations){
+  await writeFile(join(host.cwd,'annotation-source.pptx'),host.bytes)
+  const service=new PptxAnnotationService({root:join(host.home,'annotations'),owner:()=> 'fixture-owner',resolveWorkspace:async id=>annotationAllowed&&id==='demo'?host.cwd:null,resolveAuthorizedSource:async()=>null,readHistory:async()=>({events:(await host.request(host.api.sessions.history,{sessionId:host.agent.id,maxMessages:100})).events.map(row=>row.event??row),hasMore:false}),presentationSkill:async()=>({id:'builtin:efund-ppt-maker',invocationName:'ework-skill-180a6a3f86f8942e',label:'/efund-ppt-maker'})})
+  await page.exposeFunction('annotationBackend',async(method,input)=>{annotationCalls.push({method,input:structuredClone(input)});if(method==='messagePresentation')await presentationGate;return service[method](input)})
+ }
  const off=host.ctx.on('agent/pre-step',async(event,next)=>{if(event.messages.some(message=>message.source?.rpcId==='user-first-1')){entered=true;await held}return next()})
  page.on('pageerror',error=>errors.push(error.stack??error.message))
  await page.exposeFunction('userMessageBackend',async input=>{
@@ -59,18 +70,54 @@ async function fixture({kind='ppt',mount=false,rejected=false}={}){
   return route.fulfill({contentType:'text/html',body:'<html lang="zh"><meta charset="utf-8"><div class="pI_x6G_centerCol"><div id="native-root"></div><section data-home-guide="user-message-run"><div id="guide-host"></div></section></div><script>window.__ModuleLoader__={load:d=>window.descriptor=d}</script></html>'})
  })
  await page.goto('https://user-message.local/')
- await page.evaluate(value=>Object.assign(window,value),{actorKind:kind,cwd:host.cwd,sourcePath,brief,registered:mount})
- for(const [source,key] of [[runtimeSource,'runtimeDescriptor'],[nativeSource,'conversationDescriptor'],[triggersSource,'triggersDescriptor']]){await page.addScriptTag({content:source});await page.evaluate(key=>window[key]=window.descriptor,key)}
+ await page.evaluate(value=>Object.assign(window,value),{actorKind:kind,cwd:host.cwd,sourcePath,brief,registered:mount,annotationEnabled:annotations,annotationFile})
+ for(const [source,key] of [[runtimeSource,'runtimeDescriptor'],[annotations?annotationSource:nativeSource,'conversationDescriptor'],[triggersSource,'triggersDescriptor']]){await page.addScriptTag({content:source});await page.evaluate(key=>window[key]=window.descriptor,key)}
  const css=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-inline-references','figma-reading','figma-refinements','home-guides'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  await page.addStyleTag({content:css+'\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;height:900px;width:1000px}#native-root{height:100%}[data-home-guide]{position:absolute;inset:0;pointer-events:none}.wSkVaW_root{height:100%}'})
  await page.addScriptTag({content:bundle})
  await page.waitForSelector('textarea')
  if(mount)await page.evaluate(()=>window.probe.mount())
  if(prepared)await page.evaluate(value=>{window.brief=value.brief;if(value.sourcePath)window.sourcePath=value.sourcePath},prepared)
- await page.evaluate(()=>window.probe.seed())
+ await page.evaluate(()=>window.annotationEnabled?window.probe.seedAnnotations():window.probe.seed())
  const accepted=async()=>{const response=await fetch(origin+guidePath,{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({action:'checkpoint',sessionId:'demo',runId:'user-message-run',stage:'accepted'})});const value=await response.json();if(!response.ok||!value.ok)throw Error(value.message);return value}
- return{host,page,requests,errors,get sourcePath(){return prepared?.sourcePath??sourcePath},get brief(){return prepared?.brief??brief},get entered(){return entered},release:()=>releaseStep(),accepted,reject:()=>releaseReject(),close:async()=>{releaseStep();releaseReject();off();await page.evaluate(()=>window.probe.unmount()).catch(()=>{});await page.close();await host.dispose()}}
+ return{host,page,requests,errors,annotationCalls,get sourcePath(){return prepared?.sourcePath??sourcePath},get brief(){return prepared?.brief??brief},get entered(){return entered},release:()=>releaseStep(),releasePresentation:()=>releasePresentation(),denyAnnotation:()=>annotationAllowed=false,accepted,reject:()=>releaseReject(),close:async()=>{releaseStep();releaseReject();releasePresentation();off();await page.evaluate(()=>window.probe.unmount()).catch(()=>{});await page.close();await host.dispose()}}
 }
+
+it.each([false,true])('keeps a real first prepared annotation user message compact from pending through durable receipt (file %s)',async annotationFile=>{
+ const f=await fixture({annotations:true,annotationFile}),{page}=f
+ try{
+  await page.evaluate(()=>{window.probe.sample();document.querySelector('textarea').focus()})
+  await page.getByRole('button',{name:'发送消息',exact:true}).click()
+  await expect.poll(()=>f.entered).toBe(true);await page.evaluate(()=>window.probe.refresh())
+  const pending=await page.evaluate(()=>window.probe.snapshot()),raw=f.requests[0].payload.content
+  await writeFile(join(evidence,'annotation-pending-red-or-green.json'),JSON.stringify({pending,raw,calls:f.annotationCalls},null,2));await page.screenshot({path:join(evidence,'annotation-pending-red-or-green.png')})
+  expect(pending.historyHumans).toBe(0);expect(pending.rows).toHaveLength(1)
+  expect(await page.locator('[data-pptx-sent-reference]').count()).toBe(2)
+  for(const text of ['整体要求📌保留原件。','标题改成真实意见📈','框选处保留多行\n第二行中文😀'])expect(pending.rows[0].text).toContain(text)
+  for(const text of ['修改清单','输入副本','必须另存到','.ework/pptx-annotations/','/ework-skill-'])expect(pending.rows[0].text).not.toContain(text)
+  expect(await page.locator('[data-pptx-sent-skill]').innerText()).toBe('/efund-ppt-maker')
+  expect(pending.rows[0].chips.some(text=>text.includes('Vanguard-2026经济与市场展望.pdf'))).toBe(annotationFile)
+  expect(f.annotationCalls.filter(call=>call.method==='prepare')).toHaveLength(1)
+  expect(f.annotationCalls.filter(call=>call.method==='messagePresentation')).toHaveLength(0)
+  f.release();await f.host.agent.whenIdle();await page.evaluate(()=>window.probe.refresh())
+  await expect.poll(()=>f.annotationCalls.filter(call=>call.method==='messagePresentation').length).toBe(1)
+  expect(await page.locator('[data-native-submitted-user]').count()).toBe(0)
+  await writeFile(join(evidence,'annotation-durable-waiting.json'),JSON.stringify(await page.evaluate(()=>{const api=window[Symbol.for('sherlock:pptx-annotation-input')],request=window.probe.observed.find(value=>value.type==='client-request'&&value.method==='session.prompt');return{snapshot:window.probe.snapshot(),submissions:api.getSubmissions(),local:api.pendingMessagePresentation({sessionId:'demo',shell:window.probe.shell,submissionId:request.rpcId,text:request.payload.content.filter(part=>part.type==='text').map(part=>part.text).join('')}),active:document.activeElement?.outerHTML,inputs:[...document.querySelectorAll('textarea')].map(node=>({connected:node.isConnected,rect:node.getBoundingClientRect().toJSON()}))}}),null,2))
+  expect(await page.locator('[data-pptx-sent-reference]').count()).toBe(2)
+  await page.waitForTimeout(2700)
+  expect(await page.locator('[data-pptx-sent-reference]').count()).toBe(2)
+  f.releasePresentation();await expect.poll(()=>page.locator('[data-pptx-sent-loading]').count()).toBe(0)
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  const frames=await page.evaluate(()=>window.probe.frames),active=frames.filter(frame=>frame.page==='conversation')
+  for(const frame of active){expect(frame.rows).toHaveLength(1);expect(frame.rows[0].pins).toBe(2);expect(frame.rows[0].text).toContain('整体要求📌保留原件。');expect(frame.rows[0].text).not.toContain('.ework/pptx-annotations/')}
+  expect(active.some(frame=>frame.historyHumans===0)).toBe(true);expect(active.some(frame=>frame.historyHumans===1)).toBe(true)
+  await writeFile(join(evidence,'annotation-first-send-frames.json'),JSON.stringify(frames,null,2));await page.screenshot({path:join(evidence,'annotation-durable.png')})
+  const humans=f.host.agent.session.events.filter(event=>event.type==='user/message'&&event.data.source?.kind==='user');expect(humans).toHaveLength(1);expect(humans[0].data.content).toEqual(raw);expect(f.requests).toHaveLength(1)
+  // Keep the native copy contract: exact raw body, with its existing managed-skill label projection.
+  await page.getByRole('button',{name:'copy',exact:true}).click();expect(await page.evaluate(()=>window.probe.copied.at(-1))).toBe(raw.filter(part=>part.type==='text').map(part=>part.text).join('').replace('/ework-skill-180a6a3f86f8942e','/efund-ppt-maker'))
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},30000)
 
 
 it.each([false,true])('shows the actual ordinary first user message before Host preparation (skill/file %s)',async tagged=>{
@@ -104,8 +151,8 @@ it.each([false,true])('shows the actual ordinary first user message before Host 
  }finally{await f.close()}
 },30000)
 
-it.each(['server','transport'])('retracts a refused actual %s request while preserving newer user input',async rejected=>{
- const f=await fixture({rejected}),{page}=f
+it.each([['server',false],['transport',false],['server',true],['transport',true]])('retracts a refused actual %s request while preserving newer user input (annotation %s)',async(rejected,annotations)=>{
+ const f=await fixture({rejected,annotations}),{page}=f
  try{
   await page.evaluate(()=>window.probe.send());await expect.poll(()=>f.requests.length).toBe(1)
   await expect.poll(()=>page.locator('[data-native-submitted-user]').count()).toBe(1)
@@ -115,6 +162,21 @@ it.each(['server','transport'])('retracts a refused actual %s request while pres
   expect(await page.evaluate(()=>window.probe.session.getSnapshot().promptError?.op)).toBe('send')
   expect(f.host.agent.session.events.filter(event=>event.type==='user/message'&&event.data.source.kind==='user')).toHaveLength(0)
   expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},30000)
+
+it.each(['owner','denied'])('does not retain trusted pending pins after a durable %s boundary',async boundary=>{
+ const f=await fixture({annotations:true}),{page}=f
+ try{
+  await page.evaluate(()=>window.probe.send());await expect.poll(()=>f.entered).toBe(true)
+  f.release();await f.host.agent.whenIdle();await page.evaluate(()=>window.probe.refresh())
+  await expect.poll(()=>f.annotationCalls.filter(call=>call.method==='messagePresentation').length).toBe(1)
+  expect(await page.locator('[data-pptx-sent-reference]').count()).toBe(2)
+  if(boundary==='owner')await page.evaluate(()=>window.probe.switchOwner());else f.denyAnnotation()
+  f.releasePresentation();await expect.poll(()=>page.locator('[data-pptx-sent-reference]').count()).toBe(0)
+  if(boundary==='owner'){expect(await page.evaluate(()=>window.probe.snapshot().rows)).toHaveLength(0);expect(await page.evaluate(()=>window.probe.shell.snapshot.draft)).toBe('普通会话的新草稿📌')}
+  else expect((await page.evaluate(()=>window.probe.snapshot())).rows[0].text).toContain('.ework/pptx-annotations/')
+  expect(f.requests).toHaveLength(1);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
 

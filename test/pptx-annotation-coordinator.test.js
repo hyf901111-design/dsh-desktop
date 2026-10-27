@@ -105,6 +105,18 @@ it('prepares all references once with one current document revision and binds on
  expect(f.calls.find(call=>call[0]==='bind')[1]).toEqual({sendingSessionId:'central',preparedId:'prepared-1',submissionId:'real-rpc-1'})
  expect(ticket.preparedId).toBe('prepared-1');f.coordinator.dispose()
 })
+it('reads only the frozen visible draft for the exact real prepared submission without inventing a durable seq',async()=>{
+ const f=await fixture();f.deferResponse();const handle=await f.coordinator.open(f.source,{viewerKey:'viewer'});await handle.add({...f.location,comment:'冻结意见📈\n第二行'});await f.coordinator.submit(f.shell)
+ const input={sessionId:'central',shell:f.shell,submissionId:'real-rpc-1',text:f.sent[0].text}
+ const proof=f.coordinator.pendingMessagePresentation?.(input)
+ expect(proof?.parts.filter(part=>part.kind==='pptx-annotation').map(part=>[part.ordinal,part.label])).toEqual([[1,'第1页 · 位置']])
+ expect(proof.parts.filter(part=>part.kind==='text').map(part=>part.text).join('')).toBe('整体要求保留📌\n 冻结意见📈\n第二行')
+ expect(proof).not.toHaveProperty('userSeq');expect(proof.text).toBe(f.sent[0].text)
+ f.state().marks[0].ordinal=99;f.state().marks[0].comment='后来改变的意见';proof.parts[0].text='外部修改返回对象'
+ expect(f.coordinator.pendingMessagePresentation(input).parts.filter(part=>part.kind==='pptx-annotation')[0].ordinal).toBe(1)
+ for(const changed of [{sessionId:'other'},{shell:{}},{submissionId:'another-rpc'},{text:input.text+' changed'}])expect(f.coordinator.pendingMessagePresentation({...input,...changed})).toBeNull()
+ f.setCurrent('another-session');expect(f.coordinator.pendingMessagePresentation(input)).toBeNull();f.coordinator.dispose()
+})
 it('keeps the root-owned submission association after the viewer closes and ignores unrelated responses',async()=>{
  const f=await fixture();f.deferResponse();const handle=await f.coordinator.open(f.source,{viewerKey:'viewer'});await handle.add(f.location)
  await f.coordinator.submit(f.shell,'queue');handle.dispose()
