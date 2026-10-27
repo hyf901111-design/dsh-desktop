@@ -92,15 +92,15 @@ describe('client-owned bundled PPT skill integration', () => {
     await expect(updated.request({ type: 'skill-detail', id: builtinId, revision: f.row.revision })).rejects.toMatchObject({ code: 'VERSION_CONFLICT' })
   })
 
-  it('loads the actual shipped PPT metadata and previews its complete 1.1.1 source', async () => {
+  it('loads the actual shipped PPT metadata and previews its complete 1.1.2 source', async () => {
     const root = await mkdtemp(join(tmpdir(), 'ework-real-bundled-ppt-')), bundledSkillDirectory = resolve('skills')
     const service = await IntegrationService.open({ root, encryption, getOwnerId: () => 'account-one', bundledSkillDirectory })
     cleanups.push(async () => { await service.dispose(); await rm(root, { recursive: true, force: true }) })
     const row = (await service.request({ type: 'snapshot' })).snapshot.rows.find(item => item.id === builtinId)
-    expect(row).toMatchObject({ name: 'PPT制作助手', source: 'EWork 内置 · v1.1.1', enabled: true, toggleable: true })
+    expect(row).toMatchObject({ name: 'PPT制作助手', source: 'EWork 内置 · v1.1.2', enabled: true, toggleable: true })
     const reply = await service.request({ type: 'skill-detail', id: row.id, revision: row.revision })
     expect(reply.content).toBe(await readFile(join(bundledSkillDirectory, 'efund-ppt-maker/SKILL.md'), 'utf8'))
-    expect(reply.content).toContain('1.1.1 成品要求')
+    expect(reply.content).toContain('1.1.2 成品要求')
     expect(reply.content).toContain('assets/efund-template-v6.pptx')
   })
 
