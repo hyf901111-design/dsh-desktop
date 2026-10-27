@@ -311,6 +311,37 @@
           "Only the isolated branch v2 fixture was rerun. Root owns actual v3 merged case and broader integration group. No build/profile/UI/main/push/paid task."
         ],
         "generatedAt": "2026-10-27T10:02:53.798845+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e433704b13c43a888d7c5996e96fc9f95535b9ce",
+        "verificationCommit": "e433704b13c43a888d7c5996e96fc9f95535b9ce",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e433704b13c43a888d7c5996e96fc9f95535b9ce",
+            "completedAt": "2026-10-27T10:13:53.567Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "e433704b13c43a888d7c5996e96fc9f95535b9ce",
+            "completedAt": "2026-10-27T10:13:53.567Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T10:13:53.567Z"
       }
     },
     {
