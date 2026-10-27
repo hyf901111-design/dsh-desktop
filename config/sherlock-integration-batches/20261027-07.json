@@ -261,15 +261,15 @@
         "schemaVersion": 1,
         "featureName": "PPT实时标注连续编号并取消发送时自动添加技能",
         "branch": "codex/feat/ppt-annotation-live-numbering-20261027",
-        "baseCommit": "a107553d1b2194392f81d47b2054e4e6817258d6",
-        "tipCommit": "986fec9319979d52a01020c2a0555860dbcd815f",
+        "baseCommit": "986fec9319979d52a01020c2a0555860dbcd815f",
+        "tipCommit": "0abef3eb1e8804a05995b5361e22a48af9038250",
         "commits": [
           {
-            "commit": "986fec9319979d52a01020c2a0555860dbcd815f",
+            "commit": "0abef3eb1e8804a05995b5361e22a48af9038250",
             "parents": [
-              "a107553d1b2194392f81d47b2054e4e6817258d6"
+              "986fec9319979d52a01020c2a0555860dbcd815f"
             ],
-            "subject": "修正标注编号浏览器夹具安装顺序并隔离验收证据"
+            "subject": "补齐标注编号夹具真实连接与会话空态回执"
           }
         ],
         "files": [
@@ -282,7 +282,7 @@
           {
             "argv": [
               "env",
-              "SHERLOCK_ANNOTATION_NUMBER_EVIDENCE=/tmp/ppt-annotation-live-numbering-loader-20261027/frontend",
+              "SHERLOCK_ANNOTATION_NUMBER_EVIDENCE=/tmp/ppt-annotation-numbering-shared-fixture-20261027/feature/frontend",
               "npx",
               "--no-install",
               "vitest",
@@ -291,57 +291,27 @@
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "/tmp/ppt-annotation-live-numbering-loader-focused-20261027.log:1/1 actual private Native/Host/Main browser case EXIT0 with Progress applied before Submission; unchanged each-RAF ordinal/id/canonical-wire assertions. Feature branch has Csubv2; actual v3 integrated behavior is Root followup.",
-            "verifiedCommit": "986fec9319979d52a01020c2a0555860dbcd815f",
-            "completedAt": "2026-10-27T10:02:53.798845+00:00",
+            "summary": "/tmp/ppt-annotation-numbering-shared-fixture-feature-20261027.log: existing real Native/Host/Main single case1/1 EXIT0; exact ordinal/markId/canonical-wire and original message assertions unchanged.",
+            "verifiedCommit": "0abef3eb1e8804a05995b5361e22a48af9038250",
+            "completedAt": "2026-10-27T10:28:24.731861+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "One directly affected existing private headless browser test, actual Native Root/InputHub/Host/Main. No native application or system mouse. No broader cases rerun."
+          "summary": "Feature v2 fixture1/1 plus independently real integrated v3 shared fixture1/1 EXIT0 via private Vite readonly single-test transform. The latter loads current source at integration tip2b15, actual connection.AbstractApiClient and catalog blank. No Root tracked file changes; proof/config/log in integration-readonly-proof.json. No native app or paid model."
         },
         "acceptanceCriteria": [
-          "仅测试夹具将安装组合改为patchSubmission(patchProgress(...))，匹配已授权v3集成顺序且兼容本分支v2。",
-          "证据目录可通过SHERLOCK_ANNOTATION_NUMBER_EVIDENCE显式隔离，所有行为/逐帧/权限断言保持。",
-          "严格后继base为旧tip a107553d，原handoff字节/SHA保持；无产品module/pipeline/Main改变。"
+          "仅单test sources补真实dsh-client-connection模块，适配共享fixture依赖，不构造假连接API。",
+          "history返回真实Host sessions.list中实际session的blank，保原actual history/events/running数据。",
+          "全部每RAF显示1/同markId/真实canonical2/人类原文持久断言原样保留；v2本树和v3集成夹具均通过。",
+          "严格后继base986fec，旧handoff不改；无产品module/pipeline/sharedfixture/Main修改。"
         ],
         "risks": [
-          "Existing original handoff remains at /tmp/ppt-annotation-live-numbering-20261027/handoff.json SHA b1ad409031e4da0cd1278cc9fb9e60d74e490be1d73903788d922f9dd82e83d2. This new card is a strict one-test successor based on its previous tip, for refresh of unaccepted batch20261027-07.",
-          "Only the isolated branch v2 fixture was rerun. Root owns actual v3 merged case and broader integration group. No build/profile/UI/main/push/paid task."
+          "The v3 run used a private Vite transform to overlay only this test when reading integration2b15. It did not copy B shared fixture into this feature or edit Root tree. Root should refresh current unaccepted batch before final replay.",
+          "No build/profile dependency write/native UI/system mouse/remote/paid task. No full suite or unrelated checks. Original predecessor handoff SHA remains f27dccf3e1c05df4d4232876bf1c4741bee8b8b300fdd400450389fd5f2fa801."
         ],
-        "generatedAt": "2026-10-27T10:02:53.798845+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e433704b13c43a888d7c5996e96fc9f95535b9ce",
-        "verificationCommit": "e433704b13c43a888d7c5996e96fc9f95535b9ce",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e433704b13c43a888d7c5996e96fc9f95535b9ce",
-            "completedAt": "2026-10-27T10:13:53.567Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e433704b13c43a888d7c5996e96fc9f95535b9ce",
-            "completedAt": "2026-10-27T10:13:53.567Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-27T10:13:53.567Z"
+        "generatedAt": "2026-10-27T10:28:24.731861+00:00"
       }
     },
     {
