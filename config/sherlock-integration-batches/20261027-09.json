@@ -11,97 +11,69 @@
         "schemaVersion": 1,
         "featureName": "Figma看板页签组件与平滑跨页拖放",
         "branch": "codex/feat/board-tabs-20261027",
-        "baseCommit": "d5b69be7e9408d2d430d50482e7dfb6ab88c9b5e",
-        "tipCommit": "671729c22660bc3c4b16b5870ceaf13d7eb64605",
+        "baseCommit": "671729c22660bc3c4b16b5870ceaf13d7eb64605",
+        "tipCommit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
         "commits": [
           {
-            "commit": "1b1ffba0e3ef96aa8b2dcc437e020e3919414f08",
+            "commit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
             "parents": [
-              "d5b69be7e9408d2d430d50482e7dfb6ab88c9b5e"
+              "671729c22660bc3c4b16b5870ceaf13d7eb64605"
             ],
-            "subject": "修复：兼容交付尾部组件已有工作目录参数"
-          },
-          {
-            "commit": "947db35f17a2826e344fad29aa7f1f1004dba1db",
-            "parents": [
-              "1b1ffba0e3ef96aa8b2dcc437e020e3919414f08"
-            ],
-            "subject": "回退：撤销与页签实现无关的交付兼容改动"
-          },
-          {
-            "commit": "671729c22660bc3c4b16b5870ceaf13d7eb64605",
-            "parents": [
-              "947db35f17a2826e344fad29aa7f1f1004dba1db"
-            ],
-            "subject": "功能：按Figma实现看板页签组件与平滑跨页拖放"
+            "subject": "完善页签真实缩略拖影、可见落点和异步结果恢复"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "build/figma-component-library/board-tabs.svg"
-          },
-          {
-            "status": "C053",
-            "path": "build/figma-component-library/tabs-grip.svg",
-            "previousPath": "build/figma-workbench-icons/close.svg"
-          },
-          {
-            "status": "C087",
-            "path": "build/figma-component-library/tabs-more.svg",
-            "previousPath": "build/figma-workbench-icons/more.svg"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/plans/2026-10-27-board-tabs.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/board-tabs-contract.js"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/board-tabs-client.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/board-tabs-grid.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/board-tabs-ui.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/board-tabs-workspace.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/board-tabs.css"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
-            "path": "src/main/state/research-canvas-storage.ts"
+            "path": "src/main/state/canvas-use-web.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-context-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-link-frame.ts"
           },
           {
             "status": "A",
+            "path": "test/board-tabs-capture.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/board-tabs-client.test.js"
           },
           {
-            "status": "A",
-            "path": "test/board-tabs-contract.test.js"
-          },
-          {
             "status": "M",
-            "path": "test/helpers/financial-widget-client-fixture.js"
+            "path": "test/research-context-bridge.test.ts"
           }
         ],
         "checks": [
@@ -110,12 +82,20 @@
               "node_modules/.bin/vitest",
               "run",
               "test/board-tabs-client.test.js",
-              "test/board-tabs-contract.test.js"
+              "test/board-tabs-contract.test.js",
+              "test/board-tabs-capture.test.ts",
+              "test/custom-component-library-client.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/research-canvas-actions-client.test.js",
+              "test/research-board-document.test.js",
+              "test/financial-widget-contract.test.js",
+              "test/research-context-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "页签契约与实际DOM控件/指针流程14项通过",
-            "verifiedCommit": "671729c22660bc3c4b16b5870ceaf13d7eb64605",
-            "completedAt": "2026-10-27T15:24:45.399471+00:00",
+            "summary": "10个直接相关文件120项聚焦检查通过",
+            "verifiedCommit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
+            "completedAt": "2026-10-27T15:52:44.284137+00:00",
             "timeoutMs": 120000
           },
           {
@@ -126,14 +106,14 @@
             ],
             "outcome": "passed",
             "summary": "主进程类型检查通过",
-            "verifiedCommit": "671729c22660bc3c4b16b5870ceaf13d7eb64605",
-            "completedAt": "2026-10-27T15:24:45.399471+00:00",
+            "verifiedCommit": "99bb90aaef3765f9a3827335ff69a29ba3f6ff03",
+            "completedAt": "2026-10-27T15:52:44.284137+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生客户端序列化React组件的DOM使用测试通过：设置、指针拖入、释放/取消及撤销；真实共享客户端将在集成后核验，此项不代表用户原生验收。"
+          "summary": "首轮集成原生客户端已验证四主题、十二页签滚动设置、图表跨页、一次撤销和中文改名；本次修复DOM含真实截图调用、裁剪、异步恢复，更新构建后继续核验。不代表用户验收。"
         },
         "acceptanceCriteria": [
           "组件库可添加满宽34px页签，首次两页且现有内容归第一页",
@@ -142,48 +122,10 @@
           "四主题和真实客户端操作核对，无公开发布"
         ],
         "risks": [
-          "尚待集成来源的真实客户端视觉与动效核验",
+          "更新构建后继续核验本地截图拖影与空页上下文；用户验收与主干提升尚未执行",
           "干净npm安装存在既有交付补丁签名漂移；隔离依赖取自当前规范客户端已安装运行时"
         ],
-        "generatedAt": "2026-10-27T15:24:45.399471+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2c1c862c2dfefe791209e9580f7836dff26813d6",
-        "verificationCommit": "2c1c862c2dfefe791209e9580f7836dff26813d6",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/custom-component-library-client.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/research-canvas-storage.test.ts",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-board-document.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-contract.test.js test/custom-component-library-client.test.js test/research-canvas-clipboard.test.ts test/research-canvas-storage.test.ts test/research-canvas-actions-client.test.js test/research-board-document.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "2c1c862c2dfefe791209e9580f7836dff26813d6",
-            "completedAt": "2026-10-27T15:25:16.307Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2c1c862c2dfefe791209e9580f7836dff26813d6",
-            "completedAt": "2026-10-27T15:25:16.307Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-27T15:25:16.307Z"
+        "generatedAt": "2026-10-27T15:52:44.284137+00:00"
       }
     }
   ],
