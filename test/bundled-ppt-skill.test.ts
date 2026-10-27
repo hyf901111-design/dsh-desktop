@@ -49,10 +49,10 @@ describe('Sherlock bundled PowerPoint skill', () => {
       const loaded = await provider.get(candidate, {})
       expect(loaded?.content).toContain('assets/efund-template-v6.pptx')
       expect(loaded?.content).toContain('assets/efund-master-skeleton.pptx')
-      expect(loaded?.content).toContain('1.1.1 成品要求')
+      expect(loaded?.content).toContain('1.1.2 成品要求')
       expect(loaded?.content).toContain('scripts/check_efund_delivery.py')
       const metadata = JSON.parse(readFileSync(path.join(bundledSkillRoot, 'efund-ppt-maker/_meta.json'), 'utf8'))
-      expect(metadata.version).toBe('v1.1.1')
+      expect(metadata.version).toBe('v1.1.2')
       const packaging = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf8'))
       expect(packaging.build.extraResources).toContainEqual({from: 'skills', to: 'sherlock-skills'})
     } finally {
