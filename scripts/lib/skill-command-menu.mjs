@@ -1,6 +1,7 @@
 export const SKILL_COMMAND_MENU_CSS = '.mufS8W_card[data-ework-command=skills]{width:min(360px,100%)}.mufS8W_card[data-ework-command=skills] .mufS8W_row{flex-direction:column;align-items:stretch;gap:2px;padding:7px 9px}.mufS8W_card[data-ework-command=skills] .mufS8W_label{flex:none;line-height:20px}.mufS8W_card[data-ework-command=skills] .mufS8W_detail{display:block;min-width:0;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mufS8W_card[data-ework-command=skills] .mufS8W_viewport::-webkit-scrollbar{width:4px}'
 const SETTLEMENT_CSS='/* ework:skill-command-settlement:css */.mufS8W_card [data-ework-skill-applying]{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.mufS8W_card[data-ework-command=skills][aria-busy=true]{cursor:progress}.mufS8W_card[data-ework-command=skills][aria-busy=true] [aria-selected=true]{opacity:.55;pointer-events:none}'
 import {readFileSync} from 'node:fs'
+import {patchCommandPopupSurface} from './command-popup-surface.mjs'
 import {patchExpandedCommandMenu} from './expanded-command-menu.mjs'
 import {patchCommandMenuSelection} from './command-menu-selection.mjs'
 const replace=(source,anchor,next)=>{
@@ -9,7 +10,7 @@ const replace=(source,anchor,next)=>{
 }
 export function patchSkillCommandPopup(source){
  const marker='/* ework:skill-command-popup:v1 */'
- if(source.includes(marker))return patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source,'skills')))
+ if(source.includes(marker))return patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source,'skills'))))
  const open='this.popupFor(actx).open(name, ui, session, segment);'
  source=replace(source,open,`${marker}\nthis.popupFor(actx).open(name, ui, name === "skills" ? {...session, skillCommandSegment:segment} : session, segment);`)
  source=replace(source,'"aria-label": t("overlay.aria", { command: String(state.command) }),','"aria-label": t("overlay.aria", { command: String(state.command) }),\n"data-ework-command": state.command,')
@@ -17,7 +18,7 @@ export function patchSkillCommandPopup(source){
  source=replace(source,'className: PopupSelectView_module_css_default.detail,','className: PopupSelectView_module_css_default.detail,\ntitle: state.command === "skills" ? option.detail : undefined,')
  const match=/const css = ("[^\n]+");/u.exec(source)
  if(!match)throw Error('Skill command popup CSS anchor missing')
- return patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source.replace(match[0],'const css = '+JSON.stringify(JSON.parse(match[1])+SKILL_COMMAND_MENU_CSS)+';'),'skills')))
+ return patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source.replace(match[0],'const css = '+JSON.stringify(JSON.parse(match[1])+SKILL_COMMAND_MENU_CSS)+';'),'skills'))))
 }
 function patchSkillCommandArtwork(source){
  const start='/* ework:skill-command-artwork:v1 */',end='/* ework:skill-command-artwork:end */'

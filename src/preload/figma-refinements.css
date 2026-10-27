@@ -403,11 +403,11 @@ body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; 
 [data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within,.YDXeBa_menuOpen,[data-menu-open=true]) .YDXeBa_title { margin-right:30px; }
 
 /* Fade overflowing titles at rest too; preserve short titles and hover previews. */
-[data-dsh-sidebar-root] .YDXeBa_sessionRow .odyssey-nav-title { display:block; flex:1 1 0; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:clip; }
+[data-dsh-sidebar-root] :is(.YDXeBa_sessionRow,.YDXeBa_projectRow) .odyssey-nav-title { display:block; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:clip; }
 [data-dsh-sidebar-root] .odyssey-nav-title-text { display:inline-block; width:max-content; min-width:100%; white-space:nowrap; vertical-align:top; }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow .odyssey-nav-title[data-odyssey-title-overflow=true] { mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent); }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within) .odyssey-nav-title[data-odyssey-title-preview=moving] { mask-image:linear-gradient(to right,transparent,#000 12px,#000 calc(100% - 24px),transparent); }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within) .odyssey-nav-title[data-odyssey-title-preview=end] { mask-image:linear-gradient(to right,transparent,#000 12px); }
+[data-dsh-sidebar-root] :is(.YDXeBa_sessionRow,.YDXeBa_projectRow) .odyssey-nav-title[data-odyssey-title-overflow=true] { mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent); }
+[data-dsh-sidebar-root] :is(.YDXeBa_sessionRow,.YDXeBa_projectRow):is(:hover,:focus-within) .odyssey-nav-title[data-odyssey-title-preview=moving] { mask-image:linear-gradient(to right,transparent,#000 12px,#000 calc(100% - 24px),transparent); }
+[data-dsh-sidebar-root] :is(.YDXeBa_sessionRow,.YDXeBa_projectRow):is(:hover,:focus-within) .odyssey-nav-title[data-odyssey-title-preview=end] { mask-image:linear-gradient(to right,transparent,#000 12px); }
 
 /* 12E provider directory keeps long catalogs within the anchored menu. */
 body [role=menu]:has(.odyssey-provider-search) { width:320px; min-width:0; padding:5px; display:flex; flex-direction:column; max-height:min(309px,calc(100vh - 24px)); }
@@ -677,6 +677,8 @@ body :is([role=menu],.h8S2Va_menu,._3e4SsG_menu,.mufS8W_card,[data-ework-expande
   backdrop-filter:var(--odyssey-menu-blur)!important;
   -webkit-backdrop-filter:var(--odyssey-menu-blur)!important;
 }
+/* Manual secondary-command popovers share the existing single glass card. */
+body [data-ework-command-surface]::backdrop { background:transparent; pointer-events:none; }
 body :is(.sherlock-account-menu,.st-menu,.ig-menu) button:is(:hover,:focus-visible):not(:disabled) { background:var(--odyssey-menu-row)!important; }
 body .sherlock-account-menu-profile:after { background:var(--odyssey-menu-border); }
 body .srb-avatar-info>svg { fill:var(--odyssey-menu)!important; stroke:var(--odyssey-menu-border)!important; }
