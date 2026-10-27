@@ -19,3 +19,15 @@ it.each(['zh', 'en'] as const)('shows 1.4.0 before retained 1.3.5 history in %s'
  expect(current.releaseNotes.slice(1)).toEqual(previous.releaseNotes)
  expect(previous.releaseNotes.some(note => note.version === '1.4.0')).toBe(false)
 })
+
+it.each(['zh', 'en'] as const)('shows 1.4.1 before the complete retained 1.4.0 history in %s', locale => {
+ const current = buildSherlockAboutInfo('1.4.1', locale)
+ const previous = buildSherlockAboutInfo('1.4.0', locale)
+ expect(current.version).toBe('1.4.1')
+ expect(current.releaseNotes.slice(0, 2).map(note => note.version)).toEqual(['1.4.1', '1.4.0'])
+ expect(current.releaseNotes[0]!.date).toBe('2026-10-27')
+ expect(current.releaseNotes[0]!.items).toHaveLength(10)
+ expect(new Set(current.releaseNotes[0]!.items).size).toBe(10)
+ expect(current.releaseNotes.slice(1)).toEqual(previous.releaseNotes)
+ expect(previous.releaseNotes.some(note => note.version === '1.4.1')).toBe(false)
+})
