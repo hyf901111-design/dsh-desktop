@@ -12,6 +12,76 @@ export function hasSessionViewPreference(sessionId, view) {
   try { return isSessionViewId(localStorage.getItem(key)) } catch { return false }
 }
 
+// The workspace flow can reuse a blank scope which is not currently rendered.
+// Record the explicit intent before open; a component-local event alone loses it.
+export function installInitialChatViewIntent(chatStore, sessions) {
+  const key = Symbol.for('sherlock:initial-chat-reuse')
+  const policy = { canReuse: id => {
+    const page = sherlockBoardsAdapter
+    return sessions.list.getSnapshot().ids.includes(id) && page?.getState?.()?.account?.status === 'ready' &&
+      typeof page.isBoardOnly === 'function' && !page.isBoardOnly(id)
+  } }
+  window[key] = policy
+  const chat = event => {
+    const id = event.detail?.sessionId
+    if (typeof id !== 'string' || !id || id.length > 1_000 || !sessions.list.getSnapshot().ids.includes(id)) return
+    const binding = sessions.binding(id)
+    if (!binding || binding.state === 'removed' || binding.kind === 'subagent') return
+    if (sherlockBoardsAdapter?.isBoardOnly?.(id)) return
+    clearInitialResearchSession(id)
+    explicitHomeViewSessions.add(id)
+    explicitResearchViewSessions.add(id)
+    chatStore.create(id).actions.setView('chat')
+  }
+  const research = event => { explicitHomeViewSessions.delete(event.detail?.sessionId) }
+  window.addEventListener('sherlock:conversation-initial-chat', chat)
+  window.addEventListener('sherlock:conversation-initial-research', research)
+  return () => {
+    if (window[key] === policy) delete window[key]
+    window.removeEventListener('sherlock:conversation-initial-chat', chat)
+    window.removeEventListener('sherlock:conversation-initial-research', research)
+  }
+}
+
+// Only explicit New Chat callbacks attach this predicate. Workspace selection
+// and New Research retain their native reuse and per-session restoration paths.
+export function patchNewChatSessionRuntime(source) {
+  const changes = [
+    ['async connectWorkspace(workspaceId) {', 'async connectWorkspace(workspaceId, canReuse) { /* ework:new-chat-reuse-filter:v1 */'],
+    ['&& !researchSessionState(summary.id, false).engaged) return summary.id;', '&& !researchSessionState(summary.id, false).engaged && (typeof canReuse !== "function" || canReuse(summary.id) === true)) return summary.id;'],
+    ['this.connectWorkspace(target).then((sessionId) => {\n\t\t\t\t\tbeforeOpen?.(sessionId);', 'this.connectWorkspace(target, typeof beforeOpen?.canReuse === "function" ? beforeOpen.canReuse : void 0).then((sessionId) => {\n\t\t\t\t\tbeforeOpen?.(sessionId);']
+  ]
+  const marker='/* ework:new-chat-reuse-filter:'
+  if(source.includes(marker)) {
+    if(source.split(marker).length!==2 || changes.some(([,next])=>source.split(next).length!==2))throw Error('New Chat runtime reuse hook drifted')
+    return source
+  }
+  for(const [before,next] of changes){if(source.split(before).length!==2)throw Error('New Chat runtime reuse anchor drifted');source=source.replace(before,next)}
+  return source
+}
+
+export function patchNewChatSidebar(source) {
+  const before='ctx.workspaces.startSession(workspaceId, (sessionId) => {\n\t\t\t\t\t\twindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId } }));\n\t\t\t\t\t});'
+  const next='/* ework:sidebar-new-chat-reuse:v1 */\nctx.workspaces.startSession(workspaceId, Object.assign((sessionId) => {\nwindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId } }));\n}, { canReuse: id => window[Symbol.for("sherlock:initial-chat-reuse")]?.canReuse(id) === true }));'
+  if(source.includes('/* ework:sidebar-new-chat-reuse:')){
+    if(source.split('/* ework:sidebar-new-chat-reuse:').length!==2||source.split(next).length!==2)throw Error('New Chat sidebar reuse hook drifted')
+    return source
+  }
+  if(source.split(before).length!==2)throw Error('New Chat sidebar reuse anchor drifted')
+  return source.replace(before,next)
+}
+
+export function useInitialChatSessionView(sessionId, storedView, actions) {
+  const requested = explicitHomeViewSessions.has(sessionId)
+  react.useLayoutEffect(() => {
+    if (!requested || !explicitHomeViewSessions.has(sessionId) || typeof actions?.setView !== 'function') return
+    // Commit through this real retained slot instance, not a detached create().
+    actions.setView('chat')
+    explicitHomeViewSessions.delete(sessionId)
+  }, [sessionId, requested, actions])
+  return requested ? 'chat' : storedView
+}
+
 /** Keep the native per-session store/drafts; persist only the navigation preference. */
 export function withSessionViewPreferences(handle) {
   const pendingBySession = new Map()
@@ -80,7 +150,7 @@ export function withSessionViewPreferences(handle) {
 export function patchSessionViewPreferences(source) {
   const begin = '/* ework:session-view-preferences:v1 */'
   const end = '/* ework:session-view-preferences:end */'
-  const helpers = `${begin}\n${isSessionViewId.toString()}\n${hasSessionViewPreference.toString()}\n${withSessionViewPreferences.toString()}\nfunction createChatStore() { return withSessionViewPreferences(createNativeChatStore()); }\n${end}\n`
+  const helpers = `${begin}\n${isSessionViewId.toString()}\n${hasSessionViewPreference.toString()}\n${installInitialChatViewIntent.toString()}\n${useInitialChatSessionView.toString()}\n${withSessionViewPreferences.toString()}\nfunction createChatStore() { return withSessionViewPreferences(createNativeChatStore()); }\n${end}\n`
   if (source.includes(begin)) {
     const first = source.indexOf(begin), last = source.indexOf(end, first)
     if (last < 0) throw Error('Session view preference helper boundary missing')
@@ -99,5 +169,24 @@ export function patchSessionViewPreferences(source) {
     source = source.replaceAll(anchor, after)
   }
   if (source.split(after).length !== 3) throw Error('Session view recovery anchors missing')
+  const init = 'const chatStore = createChatStore();'
+  const installed = init + '\n/* ework:initial-chat-view-intent:v1 */\nctx.effect(() => installInitialChatViewIntent(chatStore, sessions), "ui-conversation: initial Chat view intent");'
+  if (source.includes('/* ework:initial-chat-view-intent:')) {
+    if (source.split(installed).length !== 2 || source.split('/* ework:initial-chat-view-intent:').length !== 2) throw Error('Initial Chat view intent hook drifted')
+  } else {
+    if (source.split(init).length !== 2) throw Error('Initial Chat view intent apply anchor drifted')
+    source = source.replace(init, installed)
+  }
+  const rootView = 'const directActiveView = useStore?.((s) => s.view ?? "chat");'
+  const rootNext = 'const directActiveView = useInitialChatSessionView(sessionId, useStore?.((s) => s.view ?? "chat"), actions);'
+  if (source.includes(rootView)) source = source.replace(rootView, rootNext)
+  if (source.split(rootNext).length !== 2) throw Error('Initial Chat root view anchor drifted')
+  const scopeView = 'const storedView = useStore((s) => s.view);'
+  const scopeNext = 'const storedView = useInitialChatSessionView(sessionId, useStore((s) => s.view), actions);'
+  if (source.includes(scopeView)) {
+    if (source.split(scopeView).length !== 3) throw Error('Initial Chat scoped view anchors drifted')
+    source = source.replaceAll(scopeView, scopeNext)
+  }
+  if (source.split(scopeNext).length !== 3) throw Error('Initial Chat scoped view anchors missing')
   return source
 }

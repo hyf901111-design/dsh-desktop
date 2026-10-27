@@ -1,5 +1,5 @@
 export function patchFigmaWorkspaceMenus(source) {
-  source = patchSessionEntryActions(patchWorkspaceFolderActions(source))
+  source = patchNewChatWorkspaceIntent(patchSessionEntryActions(patchWorkspaceFolderActions(source)))
   const marker = '/* odyssey:workspace-menu-search:20260912 */'
   if (source.includes(marker)) return source
   const exact = (before, after) => {
@@ -26,6 +26,18 @@ export function patchFigmaWorkspaceMenus(source) {
   exact('"groupBy.label": "分组方式",','"groupBy.label": "显示方式",')
   exact('"orderBy.label": "排序方式",','"orderBy.label": "排序",')
   return source
+}
+
+function patchNewChatWorkspaceIntent(source) {
+  const marker = '/* odyssey:workspace-new-chat-intent:v1 */'
+  const before = 'ctx.workspaces.startSession(workspaceId);'
+  const after = marker + '\nctx.workspaces.startSession(workspaceId, Object.assign((sessionId) => {\nwindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId } }));\n}, { canReuse: id => window[Symbol.for("sherlock:initial-chat-reuse")]?.canReuse(id) === true }));'
+  if (source.includes('/* odyssey:workspace-new-chat-intent:')) {
+    if (source.split(marker).length !== 2 || source.split(after).length !== 2) throw Error('Workspace New Chat intent hook drifted')
+    return source
+  }
+  if (source.split(before).length !== 2) throw Error('Workspace New Chat intent anchor drifted')
+  return source.replace(before, after)
 }
 
 function patchWorkspaceFolderActions(source) {
