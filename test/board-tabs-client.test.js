@@ -69,6 +69,8 @@ it('真实pointer拖动提供接收提示与缩略，悬停不切页，释放移
  f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
  tabs.forEach((tab,i)=>tab.getBoundingClientRect=()=>({left:16+i*68,top:16,right:80+i*68,bottom:42,width:64,height:26}))
  await f.event('pointerdown',handle,{button:0,pointerId:1,clientX:150,clientY:130})
+ expect(tabs[1].hasAttribute('data-tab-accept')).toBe(false)
+ await f.event('pointermove',f.win,{pointerId:1,clientX:170,clientY:130})
  expect(tabs[1].hasAttribute('data-tab-accept')).toBe(true)
  await f.event('pointermove',f.win,{pointerId:1,clientX:100,clientY:28})
  expect(f.document.querySelector('.ew-board-tabs-drag-preview').hasAttribute('data-thumbnail')).toBe(true)
@@ -221,6 +223,21 @@ it('页签横向滚动不驱动画布，后台组件更新不抢回滚动位置'
  await f.event('wheel',list,{deltaY:120,deltaX:0,deltaMode:0})
  expect(list.scrollLeft).toBe(120);expect(f.canvas.scrollTop).toBe(before)
  await f.act(()=>f.workspace.createFinancialWidget('indices'));expect(list.scrollLeft).toBe(120)
+})
+
+it('普通标题点击和微小抖动仅选择，不淡出源组件或播放释放动效',async()=>{
+ const f=await fixture();let a;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');f.workspace.createBoardTabs()})
+ const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]')
+ source.getBoundingClientRect=()=>({left:12,top:120,right:675,bottom:580,width:663,height:460})
+ await f.event('pointerdown',handle,{button:0,pointerId:51,clientX:150,clientY:130})
+ await f.event('pointermove',f.win,{pointerId:51,clientX:151,clientY:131})
+ expect(f.document.querySelector('.ew-board-tabs-drag-position').style.visibility).toBe('hidden')
+ expect(source.hasAttribute('data-board-tabs-drag-source')).toBe(false)
+ expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ await f.event('pointerup',f.win,{pointerId:51,clientX:151,clientY:131})
+ expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([a.id])
+ expect(f.document.querySelector('.ew-board-tabs-drag-preview')).toBeNull()
+ expect(source.hasAttribute('data-board-tabs-arriving')).toBe(false)
 })
 
 it('目标页删除后后台结果保留并明确提供重新放置，重载仍保留目标身份',async()=>{
