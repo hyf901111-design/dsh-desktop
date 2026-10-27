@@ -1,7 +1,8 @@
-import {readFileSync} from 'node:fs'
+import {readFileSync,readdirSync,mkdirSync,writeFileSync} from 'node:fs'
 import {execFileSync} from 'node:child_process'
 import {createRequire} from 'node:module'
 import {runInNewContext} from 'node:vm'
+import {pathToFileURL} from 'node:url'
 import {afterEach,expect,it,vi} from 'vitest'
 import {Window} from 'happy-dom'
 import React,{act} from 'react'
@@ -104,6 +105,40 @@ it('forwards native PPT mode controls to a right-aligned component footer',async
  expect(f.host.querySelector('[data-native-pptx-preview]')?.getAttribute('data-mode')).toBe('edit')
  expect(f.host.querySelector('[data-component-pptx-edit]')?.getAttribute('aria-label')).toBe('关闭编辑模式')
 })
+it.each(['research','notes'].flatMap(surface=>[false,true].map(dark=>({surface,dark}))))('matches the real $surface PPT footer text and icon sizes in Chromium (dark=$dark)',async({surface,dark})=>{
+ const f=await fixture(false,surface,true,true)
+ const module=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
+ const browser=await(module.chromium??module.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
+ const output=process.env.SHERLOCK_TEST_PPT_FOOTER_EVIDENCE||'/tmp/release140-ppt-footer-size-20261027'
+ mkdirSync(output,{recursive:true})
+ try{
+  const page=await browser.newPage({viewport:{width:900,height:500}}),assets='node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
+  await page.route('**/*',(route:any)=>route.abort())
+  const native=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+  const css=[...readdirSync(assets).filter(name=>/^index-.*\.css$/.test(name)).map(name=>readFileSync(assets+'/'+name,'utf8')),...native.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g),...native.matchAll(/(?:tag|style)\.textContent\s*\+?=\s*("(?:[^"\\]|\\.)*")/g)].map(item=>typeof item==='string'?item:JSON.parse(item[1]!)).join('\n')+'\n'+readFileSync('scripts/lib/research-grid-workbench.css','utf8')+'\n'+readFileSync('src/preload/notes/style.css','utf8')
+  const results=[]
+  for(const mode of ['preview','edit']){
+   if(mode==='edit')await act(async()=>{(f.host.querySelector('[data-component-pptx-edit]') as any).click()})
+   // These are the actual React Office/Note parent and central-editor DOMs,
+   // rendered by fixture(), with production CSS measured by Chromium.
+   await page.setContent('<style>'+css+'\nhtml,body{margin:0}.footer-fixture{width:700px;height:240px;margin:20px}body{background:'+(dark?'#202124':'#fff')+'}</style><main class="footer-fixture '+(surface==='notes'?'en-root':'')+'" data-dark="'+dark+'" '+(surface==='research'?'data-ework-grid="" data-workbench-style="'+(dark?'dark':'light')+'"':'')+'><section class="'+(surface==='notes'?'en-note-file':'rScV5Q_richNode')+'">'+f.win.document.body.innerHTML+'</section></main>')
+   if(dark)await page.evaluate(()=>document.body.setAttribute('data-ds-dark-theme',''))
+   const footer=page.locator('[data-component-pptx-footer]')
+   await footer.screenshot({path:output+'/'+surface+'-'+(dark?'dark':'light')+'-'+mode+'.png'})
+   const metrics=await footer.evaluate((el:HTMLElement)=>{const file=el.querySelector<HTMLElement>('[data-component-pptx-file-info]')!,button=el.querySelector<HTMLButtonElement>('[data-component-pptx-edit]')!,icon=button.querySelector<HTMLElement>('.ew-grid-icon')!,s=getComputedStyle(file),b=getComputedStyle(button),r=icon.getBoundingClientRect();return{label:button.textContent,fontSize:s.fontSize,fontFamily:s.fontFamily,lineHeight:s.lineHeight,buttonFontSize:b.fontSize,buttonFontFamily:b.fontFamily,buttonLineHeight:b.lineHeight,icon:{width:r.width,height:r.height},footerHeight:el.getBoundingClientRect().height}})
+   results.push({mode,...metrics})
+   writeFileSync(output+'/'+surface+'-'+(dark?'dark':'light')+'.json',JSON.stringify(results,null,2)+'\n')
+   expect(metrics.fontSize).toBe('11px');expect(metrics.buttonFontSize).toBe(metrics.fontSize);expect(metrics.buttonFontFamily).toBe(metrics.fontFamily);expect(metrics.lineHeight).toBe('16px');expect(metrics.buttonLineHeight).toBe(metrics.lineHeight)
+   expect(metrics.icon).toEqual({width:12,height:12});expect(metrics.footerHeight).toBeGreaterThanOrEqual(32);expect(metrics.label).toBe(mode==='edit'?'关闭编辑模式':'编辑')
+  }
+  await f.menu()
+  await page.evaluate((html:string)=>document.body.insertAdjacentHTML('beforeend',html),f.win.document.querySelector('[role="menu"]')!.outerHTML)
+  const menu=page.locator('[role="menu"] button').first()
+  expect(await menu.evaluate((el:HTMLElement)=>getComputedStyle(el).fontSize)).toBe('13px')
+  expect(await menu.locator('.ew-grid-icon').evaluate((el:HTMLElement)=>el.getBoundingClientRect().width)).toBe(16)
+  expect(f.bridge.open).toHaveBeenCalledTimes(1);expect(f.bridge.save).not.toHaveBeenCalled()
+ }finally{await browser.close()}
+},30000)
 it('keeps a readonly PPT preview without editable component controls',async()=>{
  const f=await fixture(true)
  expect(f.host.querySelector('[data-native-pptx-preview]')).not.toBeNull()
@@ -190,7 +225,10 @@ it('installs and strips the actual resident representation without changing grid
  const metadata=(text:string)=>text.slice(text.indexOf('/* EWORK_GRID_RESTORE '))
  expect(metadata(source)).toBe(metadata(resident))
  expect(metadata(patched)).toBe(metadata(source))
- const base=restoreResearchGridWorkbench(stripHomeGuideNative(source)),installed=patchResearchGridWorkbench(base)
+ // Inspect the final resident only after unwinding the same outer layers as
+ // the production installer; their trailing records are not grid metadata.
+ const ready=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripPlainSlashInput}from'./scripts/lib/plain-slash-input.mjs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';import{stripHomeGuidePresentationNative}from'./scripts/lib/home-guide-presentation-native.mjs';process.stdout.write([stripPlainSlashInput,stripSidebarNewNoteConversation,stripPptxAnnotationMessages,stripPptxAnnotationInput,stripHomeGuidePresentationNative].reduce((text,strip)=>strip(text),readFileSync(0,'utf8')));"],{input:source,encoding:'utf8',maxBuffer:64*1024*1024})
+ const base=restoreResearchGridWorkbench(stripHomeGuideNative(ready)),installed=patchResearchGridWorkbench(base)
  expect(restoreResearchGridWorkbench(installed).trim()).toBe(base.trim())
  expect(patchResearchGridWorkbench(installed)).toBe(installed)
  expect(()=>patchComponentPptxMode(patched.replace('Component: service.Component, readOnly:','Component: null, readOnly:'))).toThrow(/drifted/)
