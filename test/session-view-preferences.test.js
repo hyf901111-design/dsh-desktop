@@ -6,7 +6,7 @@ import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import { Window } from 'happy-dom'
 import { afterEach, expect, it, vi } from 'vitest'
-import { patchSessionViewPreferences } from '../scripts/lib/session-view-preferences.mjs'
+import { patchSessionViewPreferences, patchNewChatSessionRuntime, patchNewChatSidebar } from '../scripts/lib/session-view-preferences.mjs'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
 
 const require = createRequire(import.meta.url)
@@ -234,4 +234,23 @@ it('applies the production bundle patch idempotently and rejects missing recover
   const patched = patchSessionViewPreferences(source)
   expect(patchSessionViewPreferences(patched)).toBe(patched)
   expect(() => patchSessionViewPreferences('function createChatStore() {}')).toThrow('recovery anchors')
+})
+
+it('installs one lifecycle-owned Chat intent and strictly preserves each real scoped projection on reentry', async () => {
+  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchSessionViewPreferences(source)
+  expect(patchSessionViewPreferences(patched)).toBe(patched)
+  expect(patched.split('/* ework:initial-chat-view-intent:v1 */')).toHaveLength(2)
+  expect(patched.split('const storedView = useInitialChatSessionView(sessionId, useStore((s) => s.view), actions);')).toHaveLength(3)
+  expect(()=>patchSessionViewPreferences(patched+'\n/* ework:initial-chat-view-intent:v1 */')).toThrow(/intent hook drifted/)
+  expect(()=>patchSessionViewPreferences(patched.replace('installInitialChatViewIntent(chatStore, sessions), "ui-conversation:', 'installInitialChatViewIntent(chatStore, missing), "ui-conversation:'))).toThrow(/intent hook drifted/)
+})
+
+it('filters only explicit New Chat reuse in native entry/runtime installers and rejects partial reentry',async()=>{
+ const runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),sidebar=await readFile('node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js','utf8')
+ const r=patchNewChatSessionRuntime(runtime),s=patchNewChatSidebar(sidebar)
+ expect(patchNewChatSessionRuntime(r)).toBe(r);expect(patchNewChatSidebar(s)).toBe(s)
+ expect(()=>patchNewChatSessionRuntime(r+'\n/* ework:new-chat-reuse-filter:v1 */')).toThrow(/hook drifted/)
+ expect(()=>patchNewChatSessionRuntime(r.replace('typeof canReuse !== "function"','typeof missingReuse !== "function"'))).toThrow(/hook drifted/)
+ expect(()=>patchNewChatSidebar(s+'\n/* ework:sidebar-new-chat-reuse:v1 */')).toThrow(/hook drifted/)
+ expect(()=>patchNewChatSidebar(s.replace('canReuse(id) === true','canReuse(id) !== false'))).toThrow(/hook drifted/)
 })

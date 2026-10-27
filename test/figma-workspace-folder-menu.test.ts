@@ -6,6 +6,13 @@ import { patchFigmaWorkspaceMenus } from '../scripts/lib/figma-workspace-menus.m
 
 const raw = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js', 'utf8')
 const patched = patchFigmaWorkspaceMenus(raw)
+
+it('commits the explicit native Chat intent for directory New Chat and rejects a drifted or duplicated hook',()=>{
+ expect(patched).toContain('ctx.workspaces.startSession(workspaceId, Object.assign((sessionId) => {')
+ expect(patchFigmaWorkspaceMenus(patched)).toBe(patched)
+ expect(()=>patchFigmaWorkspaceMenus(patched+'\n/* odyssey:workspace-new-chat-intent:v1 */')).toThrow(/intent hook drifted/)
+ expect(()=>patchFigmaWorkspaceMenus(patched.replace('detail: { sessionId }','detail: { wrongId: sessionId }'))).toThrow(/intent hook drifted/)
+})
 function body(name: string) {
   const start = patched.indexOf(`function ${name}(`), end = patched.indexOf('\n\t\t}', start)
   return patched.slice(start, end + 5)

@@ -9,7 +9,7 @@ import {stripPptxAnnotationMessages,patchPptxAnnotationMessages} from './lib/ppt
 import {patchMemorySourceAnchors} from './lib/memory-source-anchors.mjs'
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
 import { patchNotesClient } from './lib/notes-client.mjs'
-import { patchSessionViewPreferences } from './lib/session-view-preferences.mjs'
+import { patchSessionViewPreferences, patchNewChatSessionRuntime, patchNewChatSidebar } from './lib/session-view-preferences.mjs'
 import { patchNotesComposer } from './lib/notes-composer.mjs'
 import {patchNoteFeedbackHost,patchNoteForkHost} from './lib/notes-reply-actions.mjs'
 import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
@@ -195,6 +195,7 @@ for (const [name, patch] of [
   ['dsh-client-ui-input-trigger', patchSkillCommandLabels],
   ['dsh-client-ui-permission-presets', source => patchFigmaPermissionMenu(source, true)],
   ['dsh-client-ui-workspace', source => patchWorkspaceDragFeedback(patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source)))],
+  ['dsh-client-ui-sidebar', patchNewChatSidebar],
   ['dsh-client-ui-conversation', source => patchDesktopResearchDefaults(patchFigmaEnterDescription(patchFigmaContainerMenu(patchFigmaCanvasContextMenu(patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source)))))))],
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', source => patchFigmaProviderMenu(patchFigmaSettingsModels(source))],
@@ -208,7 +209,7 @@ for (const [name, patch] of [
 }
 
 for (const [relative, patch] of [
-  ['dsh-client-runtime/lib/client.js', source=>patchSessionListStreamPerformance(patchSubagentPanelRuntime(source))],
+  ['dsh-client-runtime/lib/client.js', source=>patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source)))],
   ['dsh-client-web-react/lib/index.js', patchSubagentPanelRenderer],
   ['dsh-client-ui-conversation/lib/client.js', source => patchResearchResidentConversation(patchSubagentPanelConversation(source))],
   ['dsh-client-ui-subagent/lib/client.js', patchSubagentPanelEntry]
