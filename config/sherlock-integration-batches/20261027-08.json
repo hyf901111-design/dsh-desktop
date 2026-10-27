@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261027-08",
+  "branch": "codex/integration/20261027-08",
+  "baseMainCommit": "9a96e317763d5e03f0110393f6a29d366c6b3194",
+  "expectedMainCommit": "9a96e317763d5e03f0110393f6a29d366c6b3194",
+  "createdAt": "2026-10-27T10:56:34.271Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "Homebrew 分发与版本维护工具",
+        "branch": "codex/feat/homebrew-20261027",
+        "baseCommit": "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf",
+        "tipCommit": "d4f6baaaa4901ef0e3526b2fe365ea89bcf61c30",
+        "commits": [
+          {
+            "commit": "6a584d81b51cc2f939921abb9fb374cb420c2122",
+            "parents": [
+              "1ea4cf740d83271e1e15a5ee98fdf100a1128dcf"
+            ],
+            "subject": "功能：增加 Homebrew 分发配置生成与发布维护流程"
+          },
+          {
+            "commit": "7843a5a7eedea7fd75ce72f3ca1eddfa84a1ca6a",
+            "parents": [
+              "6a584d81b51cc2f939921abb9fb374cb420c2122"
+            ],
+            "subject": "验证：接入现有测试框架并记录 Homebrew 隔离安装结果"
+          },
+          {
+            "commit": "81302cf3681fc786686d882e77d32beb9d4cc9fc",
+            "parents": [
+              "7843a5a7eedea7fd75ce72f3ca1eddfa84a1ca6a"
+            ],
+            "subject": "文档：完成 Homebrew 分发验证与功能交接记录"
+          },
+          {
+            "commit": "d4f6baaaa4901ef0e3526b2fe365ea89bcf61c30",
+            "parents": [
+              "81302cf3681fc786686d882e77d32beb9d4cc9fc"
+            ],
+            "subject": "发布：将 Homebrew 软件源同步纳入每次正式发布流程"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "AGENTS.md"
+          },
+          {
+            "status": "M",
+            "path": "README.md"
+          },
+          {
+            "status": "M",
+            "path": "README.zh.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/sherlock-formal-release-runbook.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/sherlock-homebrew.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-27-homebrew.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-27-homebrew-design.md"
+          },
+          {
+            "status": "A",
+            "path": "scripts/update-homebrew-cask.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/homebrew-cask.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/homebrew-cask.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "12 项直接相关测试通过；未执行全功能测试",
+            "verifiedCommit": "d4f6baaaa4901ef0e3526b2fe365ea89bcf61c30",
+            "completedAt": "2026-10-27T10:08:04.211Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/update-homebrew-cask.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "发布工具语法检查通过",
+            "verifiedCommit": "d4f6baaaa4901ef0e3526b2fe365ea89bcf61c30",
+            "completedAt": "2026-10-27T10:08:04.211Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "未修改客户端 UI。Homebrew 在独立 appdir 成功安装 1.4.0，应用版本与签名已验证；未启动或替换共享客户端。"
+        },
+        "acceptanceCriteria": [
+          "公开 awake-ai-lab/homebrew-tap 可安装 EWork Odyssey 1.4.0",
+          "Cask 限定 arm64/macOS12+，保留客户端内更新和应用数据",
+          "更新工具在公开 feed 和包校验一致时生成固定版本 SHA-256 Cask",
+          "保护未发布、回滚、降级、同版本换包与网络失败路径",
+          "正式发布必须在 Cloudflare 公开验证后同步推送并核验 Homebrew 软件源"
+        ],
+        "risks": [
+          "Homebrew style/audit 因 Ruby 依赖准备长时间未完成而终止，未宣称通过",
+          "跨版本 Homebrew 升级未实测，仅验证同版升级命令 dry run"
+        ],
+        "generatedAt": "2026-10-27T10:08:04.211Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/homebrew-cask.test.js"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "scripts/update-homebrew-cask.mjs"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 10000
+    }
+  ],
+  "mainSynchronizations": []
+}
