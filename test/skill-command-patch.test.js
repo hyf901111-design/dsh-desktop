@@ -1,9 +1,20 @@
 import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
+import {execFileSync} from 'node:child_process'
 import {runInNewContext,Script} from 'node:vm'
 import {expect,it,vi} from 'vitest'
 import {patchSkillCommandPopup,patchSkillCommandLabels} from '../scripts/lib/skill-command-menu.mjs'
 const require=createRequire(import.meta.url)
+it('accepts the exact production Node artwork installation and rejects modified or duplicate artwork blocks',()=>{
+ const raw=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8')
+ const installed=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{patchSkillCommandPopup}from'./scripts/lib/skill-command-menu.mjs';const once=patchSkillCommandPopup(readFileSync(0,'utf8'));if(patchSkillCommandPopup(once)!==once)throw Error('Node two-pass changed bytes');process.stdout.write(once)"],{input:raw,encoding:'utf8',maxBuffer:8*1024*1024})
+ // The existing expanded-menu helper reserializes under Vite; the artwork's
+ // byte-exact definition and drift checks must still accept production Node.
+ expect(()=>patchSkillCommandPopup(installed)).not.toThrow()
+ expect(()=>patchSkillCommandPopup(installed.replace('"data-ework-skill-art": state.command','"data-ework-skill-art": "model"'))).toThrow('drifted')
+ expect(()=>patchSkillCommandPopup(installed.replace('function PopupSelectView(', '/* ework:skill-command-artwork:definitions */\nfunction PopupSelectView('))).toThrow()
+ expect(()=>new Script(installed)).not.toThrow()
+})
 function moduleOf(source){
  let descriptor
  runInNewContext(source,{window:{__ModuleLoader__:{load:value=>{descriptor=value}}},AbortController,console,setTimeout,clearTimeout})

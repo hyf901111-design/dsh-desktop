@@ -25,6 +25,21 @@ it('adds a native popup command and lists only enabled skills with a name and de
  expect(f.useSkill).toHaveBeenCalledWith(expect.objectContaining({id:f.skill.id,revision:2,sessionId:'current',commandSegment:{via:'enter',token:'/skills'}}))
  f.dispose();f.bridge.dispose()
 })
+it('prioritizes the two exact built-ins once while retaining the stable order and identity of every other enabled skill',async()=>{
+ const f=fixture()
+ const rows=[{...f.skill,id:'custom:first',name:'PPT制作助手'},{...f.skill,id:'builtin:other'},
+  {...f.skill,id:'builtin:ework-equity-research',name:'研报写作'},
+  {...f.skill,id:'custom:efund-ppt-maker'},
+  {...f.skill,id:'builtin:efund-ppt-maker',name:'PPT制作助手'},
+  {...f.skill,id:'custom:last'}]
+ f.request.mockResolvedValueOnce({type:'snapshot',snapshot:{revision:1,rows}} as any)
+ const options=await f.command.ui.options({sessionId:'current'},new AbortController().signal)
+ expect(options.map((row:any)=>row.id)).toEqual(['builtin:efund-ppt-maker','builtin:ework-equity-research','custom:first','builtin:other','custom:efund-ppt-maker','custom:last'])
+ expect(new Set(options.map((row:any)=>row.id)).size).toBe(rows.length)
+ await f.command.ui.onSelect(options[1],{sessionId:'current'})
+ expect(f.useSkill).toHaveBeenCalledWith(expect.objectContaining({id:'builtin:ework-equity-research',revision:2,sessionId:'current'}))
+ f.dispose();f.bridge.dispose()
+})
 it('shows the English built-in skill names in the slash popup while preserving custom skill names and identities',async()=>{
  const f=fixture();f.w.document.documentElement.dataset.odysseyLocale='en'
  const names=['PPT制作助手','工作台组件生成','基础数据源','基础金融分析逻辑']

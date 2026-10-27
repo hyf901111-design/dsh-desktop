@@ -203,5 +203,15 @@ body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"
 }
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_primary { width:30px; height:30px; transform:translateY(-1px); }
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_primary:disabled { background:#9fa0a1; opacity:1; }
+.wSkVaW_root[data-odyssey-page="home"] .uV2eYG_primary:disabled > svg:has(> path) { opacity:.45; }
 [data-ds-dark-theme] .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_primary:disabled { background:#5c5e62; }
 .wSkVaW_root[data-odyssey-page="home"] .FJxK0a_root { display:none; }
+/* The native dock still accepts files anywhere; only its feedback follows the card. */
+.wSkVaW_composerStack { anchor-scope:--odyssey-composer-file-drop; }
+.wSkVaW_composerStack .uV2eYG_card { anchor-name:--odyssey-composer-file-drop; }
+.wSkVaW_composerStack .dsh-drop-overlay {
+  position:fixed; position-anchor:--odyssey-composer-file-drop; inset:auto;
+  left:anchor(left); top:anchor(top); width:anchor-size(width); height:anchor-size(height);
+  box-sizing:border-box; border-radius:10.5px;
+}
+.wSkVaW_composerStack .dsh-drop-overlay-inner { padding:8px 14px; font-size:13px; }

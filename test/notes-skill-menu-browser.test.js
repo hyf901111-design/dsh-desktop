@@ -2,18 +2,17 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile,mkdir} from 'node:fs/promises'
 import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
+import {execFileSync} from 'node:child_process'
 import {createSourceFile,ScriptTarget,ScriptKind,isCallExpression,forEachChild} from 'typescript'
-import {notesComposerSource,patchNotesComposer} from '../scripts/lib/notes-composer.mjs'
-import {patchIntegrationSkillComposer} from '../scripts/lib/patch-integration-skill-composer.mjs'
-import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
-import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
+import {notesComposerSource} from '../scripts/lib/notes-composer.mjs'
 
-const artifacts='/tmp/notes-skill-owner-20261026'
+const artifacts=process.env.SHERLOCK_TEST_NOTES_SKILL_EVIDENCE||'/tmp/notes-skill-owner-20261026'
 let browser,script,css,sources
 function installer(source){const tree=createSourceFile('native.js',source,ScriptTarget.Latest,false,ScriptKind.JS),found=[];const visit=node=>{if(isCallExpression(node)&&node.expression.getText(tree)==='ctx.effect'&&node.arguments[1]?.text==='Sherlock integration skill composer')found.push(node.getText(tree));forEachChild(node,visit)};visit(tree);if(found.length!==1)throw Error('Actual composer install effect drifted');return found[0]+';'}
 beforeAll(async()=>{
  await mkdir(artifacts,{recursive:true})
- const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),native=patchIntegrationSkillComposer(patchNotesComposer(stripHomeGuideNative(stripHomeGuidePresentationNative(raw))))
+ // Match production's inverse order before testing the inner Notes adapter.
+ const native=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripPlainSlashInput}from'./scripts/lib/plain-slash-input.mjs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';import{stripHomeGuideNative}from'./scripts/lib/home-guide-native.mjs';import{stripHomeGuidePresentationNative}from'./scripts/lib/home-guide-presentation-native.mjs';import{patchNotesComposer}from'./scripts/lib/notes-composer.mjs';import{patchIntegrationSkillComposer}from'./scripts/lib/patch-integration-skill-composer.mjs';let source=readFileSync(0,'utf8');for(const patch of [stripPlainSlashInput,stripSidebarNewNoteConversation,stripPptxAnnotationMessages,stripPptxAnnotationInput,stripHomeGuidePresentationNative,stripHomeGuideNative,patchNotesComposer,patchIntegrationSkillComposer])source=patch(source);process.stdout.write(source)"],{input:await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),encoding:'utf8',maxBuffer:64*1024*1024})
  sources={runtime:await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),conversation:native.replace('exports.SessionInputShell = SessionInputShell;','exports.SessionInputShell = SessionInputShell;exports.__InputBar=InputBar;'),commands:(await readFile('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8')).replace('exports.apply = apply;','exports.__Popup=PopupSelectView;exports.apply = apply;'),triggers:(await readFile('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8')).replace('exports.apply = apply;','exports.__Menu=MenuView;exports.apply = apply;')}
  const fixture=await readFile('test/fixtures/notes-skill-menu-browser.tsx','utf8')
  const output=await build({stdin:{resolveDir:process.cwd()+'/test/fixtures',loader:'tsx',contents:fixture.replace('/* NOTES_SOURCE */',notesComposerSource).replace('/* INSTALL_COMPOSER_EFFECT */',installer(native))},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-real-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>{const source=await readFile(args.path,'utf8'),anchor='  const slashMenu = useMemo';if(source.split(anchor).length!==2)throw Error('Native Notes test exposure drift');return{contents:source.replace(anchor,'  window.noteEditor=editor; '+anchor),loader:'tsx'}})}}]})
