@@ -223,6 +223,37 @@
           "No installed-client UI acceptance, old Sherlock launch/restart/install, shared build/profile write, push, or paid task. Root owns actual EWork acceptance and integration."
         ],
         "generatedAt": "2026-10-27T08:36:35.902266+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2f35386b1d6484adb86fb299a717227ddbe3c63b",
+        "verificationCommit": "2f35386b1d6484adb86fb299a717227ddbe3c63b",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2f35386b1d6484adb86fb299a717227ddbe3c63b",
+            "completedAt": "2026-10-27T09:42:58.504Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2f35386b1d6484adb86fb299a717227ddbe3c63b",
+            "completedAt": "2026-10-27T09:42:58.504Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T09:42:58.504Z"
       }
     },
     {
