@@ -167,6 +167,6 @@ export function patchDeliverableCards(source){
 export function patchDeliveryConversation(source){
  const marker='/* ework:delivery-tail-owner:v1 */'
  if(source.includes(marker))return source
- if(!source.includes('function TurnTailNodeView({ node, sessionId, cwd, openFile,'))source=exact(source,'function TurnTailNodeView({ node, sessionId, openFile,','function TurnTailNodeView({ node, sessionId, cwd, openFile,')
+ source=exact(source,'function TurnTailNodeView({ node, sessionId, openFile,','function TurnTailNodeView({ node, sessionId, cwd, openFile,')
  return exact(source,'const tail = renderSlotChain("conversation.chat.turnTail", {\n\t\t\t\tturn,','const tail = renderSlotChain("conversation.chat.turnTail", {\n                '+marker+'\n                sessionId, cwd,\n                text: closing ? assistantText(closing.blocks) : "",\n\t\t\t\tturn,')
 }
