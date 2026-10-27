@@ -13,11 +13,13 @@ export function createPptxAnnotationCoordinator(deps){
  const locator=(record,mark)=>({version:1,sessionId:record.identity.sessionId,documentId:record.documentId,fileVersion:mark.fileVersion,markId:mark.id})
  const keyFor=reference=>reference.sessionId+':'+reference.documentId
  const sourceDraft=mark=>({id:mark.id,slideIndex:mark.slideIndex,slidePart:mark.slidePart,kind:mark.kind,region:{...mark.region},nodeIds:[...mark.nodeIds],comment:mark.comment})
- const reference=(record,mark)=>{const slide=record.scene.slides.find(value=>value.index===mark.slideIndex),target=slide?.nodes?.find(value=>mark.nodeIds.includes(value.id)),name=target?.name?.trim().slice(0,60)||(mark.kind==='rect'?'框选区域':'位置');return{source:'pptx-annotation',ref:annotationLocatorKey(locator(record,mark)),label:'第'+(mark.slideIndex+1)+'页 · '+name,clipboardText:record.basis.name+' · 标注 '+mark.ordinal+'（第'+(mark.slideIndex+1)+'页）'}}
+ const liveMarks=record=>[...record.state.marks].sort((a,b)=>a.ordinal-b.ordinal)
+ const liveOrdinal=(record,markId)=>liveMarks(record).findIndex(mark=>mark.id===markId)+1
+ const reference=(record,mark)=>{const slide=record.scene.slides.find(value=>value.index===mark.slideIndex),target=slide?.nodes?.find(value=>mark.nodeIds.includes(value.id)),name=target?.name?.trim().slice(0,60)||(mark.kind==='rect'?'框选区域':'位置');return{source:'pptx-annotation',ref:annotationLocatorKey(locator(record,mark)),label:'第'+(mark.slideIndex+1)+'页 · '+name,clipboardText:record.basis.name+' · 标注 '+liveOrdinal(record,mark.id)+'（第'+(mark.slideIndex+1)+'页）'}}
  const publish=record=>{
   if(record){
    const occurrences=record.identity.shell.snapshot.occurrences
-   record.snapshot={scene:record.scene,basis:record.basis,marks:record.state.marks.map(mark=>({...mark,comment:record.optimistic.get(mark.id)??mark.comment,referenced:occurrences.some(value=>{try{return value.source==='pptx-annotation'&&annotationLocatorKey(value.ref)===annotationLocatorKey(locator(record,mark))}catch{return false}})})),selectedId:record.selectedId,revealSeq:record.revealSeq,revision:record.state.revision,stale:record.state.marks.some(mark=>mark.stale||mark.fileVersion!==record.basis.fileVersion),active:deps.isCurrent?.(record.identity)!==false,busy:record.busy>0,error:record.error??null}
+   record.snapshot={scene:record.scene,basis:record.basis,marks:liveMarks(record).map((mark,index)=>({...mark,canonicalOrdinal:mark.ordinal,ordinal:index+1,comment:record.optimistic.get(mark.id)??mark.comment,referenced:occurrences.some(value=>{try{return value.source==='pptx-annotation'&&annotationLocatorKey(value.ref)===annotationLocatorKey(locator(record,mark))}catch{return false}})})),selectedId:record.selectedId,revealSeq:record.revealSeq,revision:record.state.revision,stale:record.state.marks.some(mark=>mark.stale||mark.fileVersion!==record.basis.fileVersion),active:deps.isCurrent?.(record.identity)!==false,busy:record.busy>0,error:record.error??null}
    for(const notify of [...record.listeners])try{notify()}catch{}
   }
   revision++;for(const notify of [...listeners])try{notify()}catch{}
@@ -166,7 +168,7 @@ export function createPptxAnnotationCoordinator(deps){
    for(const occurrence of initial.occurrences)if(occurrence.source==='pptx-annotation'){
     const reference=parsePptxAnnotationLocator(occurrence.ref),record=records.get(keyFor(reference));if(reference.sessionId!==identity.sessionId||!record)throw Error('请先重新打开该标注文件。')
     const mark=requireMark(record,reference.markId);if(mark.stale||mark.fileVersion!==reference.fileVersion||reference.fileVersion!==record.basis.fileVersion)throw Error('标注文件已变化，请先重新定位标记。')
-    const key=annotationLocatorKey(reference);if(!seen.has(key)){seen.add(key);references.push({...reference,expectedStateRevision:record.state.revision});const node=record.scene.slides.find(slide=>slide.index===mark.slideIndex)?.nodes?.find(node=>mark.nodeIds.includes(node.id)||mark.nodeIds.includes(node.nodeId)),name=mark.kind==='rect'?'框选区域':node?.name?.trim().slice(0,60)||'位置';referenceViews.push({reference,ordinal:mark.ordinal,label:'第'+(mark.slideIndex+1)+'页 · '+name})}
+    const key=annotationLocatorKey(reference);if(!seen.has(key)){seen.add(key);references.push({...reference,expectedStateRevision:record.state.revision});const node=record.scene.slides.find(slide=>slide.index===mark.slideIndex)?.nodes?.find(node=>mark.nodeIds.includes(node.id)||mark.nodeIds.includes(node.nodeId)),name=mark.kind==='rect'?'框选区域':node?.name?.trim().slice(0,60)||'位置';referenceViews.push({reference,canonicalOrdinal:mark.ordinal,ordinal:liveOrdinal(record,mark.id),label:'第'+(mark.slideIndex+1)+'页 · '+name})}
    }
    if(!references.length)throw Error('本次输入没有可发送的 PPT 标注。')
    ticket.references=references;ticket.referenceViews=referenceViews;ticket.prepared=unwrap(await deps.bridge.prepare({sendingSessionId:identity.sessionId,sendId,expectedDraftRev:initial.draftRev,references}));writable(identity)
@@ -213,9 +215,16 @@ export function createPptxAnnotationCoordinator(deps){
   adoptInput(identity){current(identity);for(const record of records.values())if(record.identity.sessionId===identity.sessionId&&record.identity.shell===identity.shell&&record.identity.epoch===identity.epoch){const previous=record.identity;record.identity=identity;bindingFor(identity);if(record.error==='实际会话或输入已切换，请重新开启标注。')record.error=null;if(previous.input!==identity.input)publish(record)}},
   removeReference(shell,occurrenceId){const binding=bindings.get(shell),range=binding?.ranges().find(value=>value.occurrenceId===occurrenceId);if(!range)return undefined;const caret=range.blockStart;return binding.remove(range.key)?caret:undefined},
   submit,retry,
+  messageDisplayOrdinals({sessionId,preparedId,submissionId,text}){
+   const matches=[...tickets.values()].filter(ticket=>ticket.identity.sessionId===sessionId&&ticket.prepared?.preparedId===preparedId&&ticket.rpcId===submissionId&&ticket.text===text&&ticket.presentation&&['sending','accepted','pending','bound','queued','submission-unconfirmed'].includes(ticket.status))
+   if(matches.length!==1)return null
+   const ticket=matches[0],identity=bindingIdentities.get(ticket.identity.shell)??ticket.identity
+   try{current(identity);if(identity.epoch!==ticket.identity.epoch)return null}catch{return null}
+   return structuredClone({sessionId,preparedId,submissionId,text,marks:ticket.referenceViews})
+  },
   pendingMessagePresentation({sessionId,shell,submissionId,text}){
    if(typeof submissionId!=='string'||!submissionId||typeof text!=='string')return null
-   const matches=[...tickets.values()].filter(ticket=>ticket.identity.sessionId===sessionId&&ticket.identity.shell===shell&&ticket.text===text&&ticket.presentation&&['sending','accepted','bound','queued','submission-unconfirmed'].includes(ticket.status)&&(!ticket.rpcId||ticket.rpcId===submissionId))
+   const matches=[...tickets.values()].filter(ticket=>ticket.identity.sessionId===sessionId&&ticket.identity.shell===shell&&ticket.text===text&&ticket.presentation&&['sending','accepted','pending','bound','queued','submission-unconfirmed'].includes(ticket.status)&&(!ticket.rpcId||ticket.rpcId===submissionId))
    if(matches.length!==1)return null
    const ticket=matches[0],identity=bindingIdentities.get(shell)??ticket.identity
    try{current(identity);if(identity.epoch!==ticket.identity.epoch)return null}catch{return null}

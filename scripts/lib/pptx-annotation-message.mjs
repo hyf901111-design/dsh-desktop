@@ -47,6 +47,13 @@ export function pptxAnnotationMessageSegments(input,value){
   parts.push(span);cursor=span.end
  }
  if(cursor<input.text.length)parts.push({kind:'text',text:input.text.slice(cursor)})
+ // Only a live, exact submitted ticket may retain its display numbers across admission.
+ // Cold historical messages keep the frozen Main ordinals; no history is rewritten.
+ let display;try{display=globalThis.window?.[Symbol.for('sherlock:pptx-annotation-input')]?.messageDisplayOrdinals?.({sessionId:input.sendingSessionId,preparedId:input.preparedId,submissionId:input.submissionId,text:input.text})}catch{}
+ if(display?.sessionId===input.sendingSessionId&&display.preparedId===input.preparedId&&display.submissionId===input.submissionId&&display.text===input.text&&Array.isArray(display.marks)){
+  const numbers=new Map();try{for(const mark of display.marks){const key=JSON.stringify(parsePptxAnnotationLocator(mark.reference));if(numbers.has(key)||!Number.isSafeInteger(mark.ordinal)||mark.ordinal<1)throw Error('Invalid display ordinal');numbers.set(key,mark)}}catch{return parts}
+  if(numbers.size===references.size&&parts.filter(part=>part.kind==='pptx-annotation').every(part=>numbers.get(JSON.stringify(part.reference))?.canonicalOrdinal===part.ordinal))return parts.map(part=>part.kind==='pptx-annotation'?{...part,canonicalOrdinal:part.ordinal,ordinal:numbers.get(JSON.stringify(part.reference)).ordinal}:part)
+ }
  return parts
 }
 
@@ -137,7 +144,7 @@ const runtime=()=>begin+'\nconst pptxAnnotationMessageRuntime=(()=>{\n'+[parsePp
 function priorMessageRuntime(source){
  const start=source.indexOf(begin),finish=source.indexOf(end,start);if(start<0||finish<0)return null
  const value=source.slice(start,finish+end.length+1)
- return ['0e37ceacc17787da54a64c0143820bafa75ae5ca13e72f7d8a3c8d293ad82f67','7dbc94c52c9517a1b035d35dc22dac3c62b619ce0e38ed9836f4d17c5bd8f5fe'].includes(createHash('sha256').update(value).digest('hex'))?value:null
+ return ['0e37ceacc17787da54a64c0143820bafa75ae5ca13e72f7d8a3c8d293ad82f67','7dbc94c52c9517a1b035d35dc22dac3c62b619ce0e38ed9836f4d17c5bd8f5fe','a304f6269b6d0e9f18ea2ea6d2b047b43801a48bef8792c04a8885f202839cd9'].includes(createHash('sha256').update(value).digest('hex'))?value:null
 }
 function once(source,before,after){if(source.split(before).length!==2)throw Error('PPT annotation message anchor drifted');return source.replace(before,after)}
 export function stripPptxAnnotationMessages(source){

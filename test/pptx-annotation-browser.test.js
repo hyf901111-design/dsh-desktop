@@ -121,6 +121,30 @@ async function contentBox(page,index=0){
  return page.locator(`[data-slide-index="${index}"]>[data-mounted="1"]`).first().evaluate(e=>{const r=e.firstElementChild.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})
 }
 async function point(page,x=.5,y=.45,index=0){const r=await contentBox(page,index);await page.getByRole('button',{name:'点选',exact:true}).click();await page.mouse.click(r.x+r.width*x,r.y+r.height*y)}
+it('keeps real Office pins, bubble and native draft continuously numbered after deleting the first live mark',async()=>{
+ const backend=await durableBackend(),f=await fixture(620,false,backend)
+ try{
+  await f.activate()
+  for(let index=0;index<3;index++){
+   if(index)await f.page.getByRole('button',{name:'关闭标注气泡'}).click()
+   await point(f.page,.2+index*.25,.3+index*.1)
+   await f.page.getByRole('textbox',{name:'标注备注'}).fill('独立备注'+(index+1)+'📈')
+   await expect.poll(()=>backend.handle.getSnapshot().marks[index]?.comment).toBe('独立备注'+(index+1)+'📈')
+  }
+  const original=backend.handle.getSnapshot().marks;await backend.coordinator.whenIdle()
+  await f.page.evaluate(id=>window.handle.remove(id),original[0].id)
+  await expect.poll(()=>f.page.locator('.pptxa-pin-number').allTextContents()).toEqual(['1','2'])
+  expect(await f.page.locator('[data-pptx-annotation-pin]').evaluateAll(nodes=>nodes.map(node=>node.dataset.pptxAnnotationPin))).toEqual(original.slice(1).map(mark=>mark.id))
+  await f.page.evaluate(id=>window.handle.select(id),original[2].id)
+  await expect.poll(()=>f.page.locator('.pptxa-bubble-pin').innerText()).toBe('2')
+  expect(await f.page.getByRole('textbox',{name:'标注备注'}).inputValue()).toBe(original[2].comment)
+  const refs=backend.shell.snapshot.occurrences.filter(ref=>ref.source==='pptx-annotation')
+  expect(refs.map(ref=>backend.coordinator.referenceInfo(ref.ref).ordinal)).toEqual([1,2])
+  expect((await backend.service.open(backend.source)).value.state.marks.map(mark=>[mark.id,mark.ordinal])).toEqual(original.slice(1).map(mark=>[mark.id,mark.ordinal]))
+  await mkdir(artifactRoot+'/live-numbering',{recursive:true});await f.page.screenshot({path:artifactRoot+'/live-numbering/office-pins-bubble.png'})
+  expect(await f.page.evaluate(()=>[window.editCalls,window.saveCalls])).toEqual([0,0]);expect(f.errors).toEqual([])
+ }finally{await f.close();await backend.close()}
+},25000)
 it('adds an object pin through the real native renderer without retargeting its node after DOM pointer capture',async()=>{
  const f=await fixture();try{
   expect(await f.page.evaluate(()=>[window.editCalls,window.openCalls,window.saveCalls,window.digestCalls,window.pptFetches])).toEqual([0,0,0,0,1]);await f.activate();expect(await f.page.evaluate(()=>[window.digestCalls,window.pptFetches])).toEqual([1,1])
