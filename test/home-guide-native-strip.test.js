@@ -1,3 +1,4 @@
+import {stripConversationTransientUi} from './fixtures/strip-conversation-transient-ui.mjs'
 import {readFileSync} from 'node:fs'
 import {execFileSync} from 'node:child_process'
 import {Script} from 'node:vm'
@@ -18,7 +19,7 @@ const stripOuterLayers=source=>execFileSync(process.execPath,['--input-type=modu
  import{stripPptxAnnotationMessages}from${JSON.stringify(new URL('../scripts/lib/pptx-annotation-message.mjs',import.meta.url).href)};
  import{stripPptxAnnotationInput}from${JSON.stringify(new URL('../scripts/lib/pptx-annotation-native.mjs',import.meta.url).href)};
  process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(readFileSync(0,'utf8')))));
-`],{input:source,encoding:'utf8',maxBuffer:64*1024*1024})
+`],{input:stripConversationTransientUi(source),encoding:'utf8',maxBuffer:64*1024*1024})
 const installed=stripOuterLayers(resident)
 
 it.each([false,true])('preserves the native PPT chat page for hero=%s and uses native board/note page styling',hero=>{

@@ -52,6 +52,8 @@ import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadi
 import { patchFigmaModelMenu } from './lib/figma-model-menu.mjs'
 import { patchSkillCommandPopup, patchSkillCommandLabels } from './lib/skill-command-menu.mjs'
 import {patchPlainSlashInput,stripPlainSlashInput} from './lib/plain-slash-input.mjs'
+import {patchConversationSubmission,stripConversationSubmission} from './lib/conversation-submission.mjs'
+import {patchConversationResponseProgress,stripConversationResponseProgress} from './lib/conversation-response-progress.mjs'
 import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
 import { patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
 import { patchFigmaWorkspaceMenus } from './lib/figma-workspace-menus.mjs'
@@ -172,7 +174,8 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(readFileSync(gridConversationPath,'utf8'))))
+const submittedConversationSource=stripConversationSubmission(stripConversationResponseProgress(readFileSync(gridConversationPath,'utf8')))
+writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
 const sidebarNewNotePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js')
 writeFileSync(sidebarNewNotePath,stripSidebarNewNoteShell(readFileSync(sidebarNewNotePath,'utf8')))
 writeFileSync(gridConversationPath,restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(readFileSync(gridConversationPath,'utf8')))))))
@@ -319,3 +322,6 @@ writeFileSync(conversationPath,patchSidebarNewNoteConversation(readFileSync(conv
 writeFileSync(sidebarNewNotePath,patchSidebarNewNoteShell(readFileSync(sidebarNewNotePath,'utf8')))
 // Plain-command caret outcomes wrap the final native class and projected InputBar.
 writeFileSync(conversationPath,patchPlainSlashInput(readFileSync(conversationPath,'utf8')))
+
+// Read-only first-send projection and one native turn clock are the outermost layers.
+writeFileSync(conversationPath,patchConversationResponseProgress(patchConversationSubmission(readFileSync(conversationPath,'utf8'))))
