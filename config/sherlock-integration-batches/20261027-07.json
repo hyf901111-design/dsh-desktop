@@ -421,6 +421,37 @@
           "No changes to Root-owned conversation-submission.mjs, conversation-response-progress.mjs, patch-web pipeline, or Main/shared DTO."
         ],
         "generatedAt": "2026-10-27T08:25:44.284766+00:00"
+      },
+      "merged": {
+        "mergeCommit": "28f2259f050a62c49ad2d37bafcd3a731d68ff94",
+        "verificationCommit": "28f2259f050a62c49ad2d37bafcd3a731d68ff94",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "28f2259f050a62c49ad2d37bafcd3a731d68ff94",
+            "completedAt": "2026-10-27T09:43:08.239Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "28f2259f050a62c49ad2d37bafcd3a731d68ff94",
+            "completedAt": "2026-10-27T09:43:08.239Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-27T09:43:08.239Z"
       }
     },
     {
