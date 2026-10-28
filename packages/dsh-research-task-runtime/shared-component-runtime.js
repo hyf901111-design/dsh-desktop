@@ -1,14 +1,15 @@
 // Serialized into the opaque generated HTML sandbox before its own scripts.
-export function sharedComponentRuntime() {
+export function sharedComponentRuntime(semantic) {
   let config, state, revision = 0, token = '', host = false, connected = false, readOnly = true, local = false
   let waiting = false, proposal, pending = [], lastTick = Date.now(), stopped = false
+  let localAck=false,localProposal,localSaved
   const uuid = () => typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : [...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,'0')).join('')
   const peerId = uuid(), listeners = new Set(), outgoing = new Map()
   let inputSequence = 0, lastResponse = Date.now()
   const clone = value => JSON.parse(JSON.stringify(value))
   const valid = (value, max = 65536) => { try { const text = JSON.stringify(value); return text !== undefined && new TextEncoder().encode(text).length <= max } catch { return false } }
   const post = message => parent.postMessage({ type: 'sherlock-component-send', message: { ...message, peerId } }, '*')
-  const status = () => ({ connected, readOnly, isHost: host, userId: identity, revision })
+  const status = () => ({ connected, readOnly, isHost: host, userId: identity, revision,...localAck?{saving:!!localProposal}:{} })
   let identity = ''
   function paint() {
     if (!config) return
@@ -46,8 +47,18 @@ export function sharedComponentRuntime() {
       return operationError('本次操作未完成，已保留之前的内容。可重试或重新生成组件。')
     }
     clearOperationError()
-    post({ op: 'localCommit', state: clone(state), revision })
+    if(localAck){
+      waiting=true;localProposal={commitId:uuid(),state:clone(state),revision,startedAt:Date.now()}
+      post({op:'localCommit',commitId:localProposal.commitId,state:clone(state),revision})
+    }else post({ op: 'localCommit', state: clone(state), revision })
     return true
+  }
+  function rejectLocal(){
+    if(!localProposal)return
+    state=clone(localSaved?localSaved.state:config.initialState);revision=localSaved?.revision??0
+    localProposal=undefined;waiting=false;pending=[]
+    try{paint()}catch{}
+    operationError('本次交互未保存，已恢复上次保存状态。请重试。')
   }
   function fail(message) {
     waiting = false; proposal = undefined; host = false; connected = false; pending = []
@@ -88,8 +99,10 @@ export function sharedComponentRuntime() {
     dispatch(action) {
       if (!connected || readOnly || stopped) return false
       if (!valid(action, 4096)) return false
+      if(semantic?.current)semantic.events.add(semantic.current)
+      if(local&&localAck&&waiting&&pending.length>=32)return operationError('交互保存繁忙，请等待当前操作保存后重试。')
       const inputId = uuid()
-      if (local) { pending.push({ id: inputId, payload: clone(action), userId: identity }); return run() === true }
+      if (local) { pending.push({ id: inputId, payload: clone(action), userId: identity }); return localAck&&waiting?true:run() === true }
       else {
         if (outgoing.size >= 32) return false
         const message = { op: 'input', inputId, sequence: ++inputSequence, payload: clone(action) }
@@ -118,10 +131,16 @@ export function sharedComponentRuntime() {
       identity = data.userId || 'local'
       readOnly = data.readOnly !== false
       if (!data.shared) {
+        localAck=data.localAck===true
+        if(semantic)semantic.notes=localAck
+        localSaved=data.saved&&Number.isSafeInteger(data.saved.revision)&&valid(data.saved.state)?data.saved:undefined
+        if(localAck&&readOnly&&localProposal)rejectLocal()
         const previous = state
-        const restoring = !local && data.saved && Number.isSafeInteger(data.saved.revision) && valid(data.saved.state)
+        const restoring = (!local||localAck&&!localProposal) && data.saved && Number.isSafeInteger(data.saved.revision) && valid(data.saved.state)
         if (restoring) { state=clone(data.saved.state);revision=data.saved.revision }
+        else if(localAck&&!localProposal&&local&&!data.saved){state=clone(config.initialState);revision=0}
         local = true; connected = true; host = !readOnly
+        if(localAck&&localProposal)return
         try { paint() } catch {
           state = previous
           try { paint() } catch {}
@@ -136,6 +155,11 @@ export function sharedComponentRuntime() {
     if (data?.type !== 'sherlock-component-receive') return
     const m = data.message
     if (m?.peerId !== peerId) return
+    if(localAck&&local&&m.kind==='local-commit'){
+      if(!localProposal||m.commitId!==localProposal.commitId)return
+      if(m.ok!==true||m.revision!==localProposal.revision||!valid(m.state)||JSON.stringify(m.state)!==JSON.stringify(localProposal.state)){rejectLocal();return}
+      localSaved={state:clone(m.state),revision:m.revision};localProposal=undefined;waiting=false;clearOperationError();paint();run();return
+    }
     lastResponse = Date.now()
     if (Number.isSafeInteger(m.accepted)) for (const seq of outgoing.keys()) if (seq <= m.accepted) outgoing.delete(seq)
     if (m.kind === 'receipt') return
@@ -159,7 +183,8 @@ export function sharedComponentRuntime() {
     }
   })
   const heartbeat = setInterval(() => {
-    if (!config || stopped || local) return
+    if (!config || stopped) return
+    if(local){if(localAck&&localProposal&&Date.now()-localProposal.startedAt>15000)rejectLocal();return}
     if (connected && Date.now()-lastResponse>15000) fail('连接中断，组件同步已暂停')
     // Resend the SAME revision after a lost acknowledgment, never advance it.
     if (waiting && proposal) post({ op: 'commit', token, ...proposal })

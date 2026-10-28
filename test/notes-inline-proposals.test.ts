@@ -54,3 +54,8 @@ it('restores adjacent blocks deleted by this request without trusting foreign re
 it('restores a whole self-deleted document only through the automatic blank created by its own Undo',()=>{
  const f=fixture(['A','B','C'].map(id=>paragraph(id,id)));f.start();f.ai.removeBlocks(['A','B','C']);f.ledger.finish('request');expect(f.ledger.undo('request').complete).toBe(true);expect(f.editor.document.map((block:any)=>block.id)).toEqual(['A','B','C'])
 })
+it('retains failed-slot identity evidence without counting failed-only records toward the result review quota',()=>{
+ const f=fixture([paragraph('anchor')]);for(let i=0;i<36;i++){f.ledger.begin('failed-'+i,'原需求',f.anchor);f.ai.insertBlocks([{id:'failed-'+i,type:'research',props:{payload:JSON.stringify({generationStatus:'failed',generationError:'模型未完成',notePrompt:'原需求'})}}],'anchor','after');f.ledger.finish('failed-'+i,true)}
+ expect(f.ledger.list()).toHaveLength(36);expect(f.ledger.canUndoBlock('failed-0','failed-0')).toBe(true);f.editor.updateBlock('failed-0',{props:{payload:JSON.stringify({generationStatus:'failed',notePrompt:'用户已修改需求'})}});expect(f.ledger.canUndoBlock('failed-0','failed-0')).toBe(false)
+ expect(()=>f.ledger.begin('next','新需求',f.anchor)).not.toThrow();expect(f.editor.document.some((block:any)=>block.id==='failed-0')).toBe(true)
+})

@@ -12,14 +12,38 @@ function path(node) {
   if (member(node)) return `${path(node.object)}.${key(node.property)}`
   return ''
 }
-function walk(node, visit) {
+function literalPath(node) {
+  if (node?.type === 'Identifier') return node.name
+  if (!member(node) || node.computed && node.property?.type !== 'StringLiteral') return ''
+  const object = literalPath(node.object), property = key(node.property)
+  return object && property ? object + '.' + property : ''
+}
+function walk(node, visit, parent) {
   if (!node || typeof node !== 'object') return
-  if (typeof node.type === 'string') visit(node)
+  if (typeof node.type === 'string') visit(node, parent)
   for (const [name, value] of Object.entries(node)) {
     if (['loc', 'comments', 'tokens', 'leadingComments', 'trailingComments', 'innerComments'].includes(name)) continue
-    if (Array.isArray(value)) value.forEach(item => walk(item, visit))
-    else if (value && typeof value === 'object') walk(value, visit)
+    if (Array.isArray(value)) value.forEach(item => walk(item, visit, node))
+    else if (value && typeof value === 'object') walk(value, visit, node)
   }
+}
+
+
+// Resolve only lexical identifiers; the gate never executes generated code.
+function bindingResolver(nodes, parents) {
+  const global = {}, slots = new WeakMap()
+  const isFunction = node => /^(?:FunctionDeclaration|FunctionExpression|ArrowFunctionExpression|ObjectMethod|ClassMethod|ClassPrivateMethod)$/.test(node?.type || '')
+  const isScope = node => node?.type === 'Program' || node?.type === 'BlockStatement' || node?.type === 'CatchClause' || isFunction(node)
+  const names = node => !node ? [] : node.type === 'Identifier' ? [node.name] : node.type === 'RestElement' ? names(node.argument) : node.type === 'AssignmentPattern' ? names(node.left) : node.type === 'ArrayPattern' ? node.elements.flatMap(names) : node.type === 'ObjectPattern' ? node.properties.flatMap(prop => names(prop.type === 'RestElement' ? prop.argument : prop.value)) : []
+  const owner = (node, variable = false) => { for (let p = parents.get(node); p; p = parents.get(p)) if (p.type === 'Program' || isFunction(p) || !variable && isScope(p)) return p.type === 'Program' ? global : p; return global }
+  const bind = (scope, name) => { if (!slots.has(scope)) slots.set(scope, new Map()); const entries = slots.get(scope); if (!entries.has(name)) entries.set(name, {}); return entries.get(name) }
+  for (const node of nodes) {
+    if (node.type === 'VariableDeclarator') for (const name of names(node.id)) bind(owner(node, parents.get(node)?.kind === 'var'), name)
+    if (node.type === 'FunctionDeclaration' || node.type === 'ClassDeclaration') if (node.id) bind(owner(node), node.id.name)
+    if (isFunction(node)) { for (const parameter of node.params || []) for (const name of names(parameter)) bind(node, name); if (node.type === 'FunctionExpression' && node.id) bind(node, node.id.name) }
+    if (node.type === 'CatchClause') for (const name of names(node.param)) bind(node, name)
+  }
+  return (name, node) => { for (let p = node; p; p = parents.get(p)) { const token = slots.get(p.type === 'Program' ? global : p)?.get(name); if (token) return token } }
 }
 
 // A generation acceptance gate, not a security boundary or proof of arbitrary
@@ -55,9 +79,10 @@ export function sharedComponentIssue(html, { required = false } = {}) {
     // a known repair hint, never the raw exception or generated source line.
     return `组件脚本语法无效，无法验证共享状态接入。${location}${stringHint}`
   }
-  const registrations = [], calls = [], assignments = [], bindings = new Map()
+  const registrations = [], calls = [], assignments = [], bindings = new Map(), parents = new WeakMap(), nodes = []
   let hasBusinessInteraction = hasInteractiveControl || inlineHandlers.length > 0
-  for (const program of programs) walk(program, node => {
+  for (const program of programs) walk(program, (node, parent) => {
+    nodes.push(node); if (parent) parents.set(node, parent)
     if (node.type === 'FunctionDeclaration' && node.id) bindings.set(node.id.name, node)
     if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier') bindings.set(node.id.name, node.init)
     if (node.type === 'AssignmentExpression' && node.operator === '=' && node.left.type === 'Identifier') assignments.push(node)
@@ -79,11 +104,21 @@ export function sharedComponentIssue(html, { required = false } = {}) {
   const props = new Map(config.properties.map(p => [key(p.key), p]))
   const fn = p => p?.type === 'ObjectMethod' || ['FunctionExpression','ArrowFunctionExpression','FunctionDeclaration'].includes(p?.value?.type) || (p?.value?.type === 'Identifier' && ['FunctionExpression','ArrowFunctionExpression','FunctionDeclaration'].includes(bindings.get(p.value.name)?.type))
   if (!props.has('initialState') || !fn(props.get('reduce')) || !fn(props.get('render'))) return '共享状态配置缺少可验证的 initialState、reduce 或 render。'
-  const handles = new Set([...bindings].filter(([,v]) => v === registrations[0]).map(([name]) => name))
-  // A guarded registration commonly declares the handle first and assigns it
-  // inside try. A later catch fallback must not erase that association.
-  for (const assignment of assignments) if (assignment.right === registrations[0]) handles.add(assignment.left.name)
-  const dispatched = calls.some(c => member(c.callee) && key(c.callee.property) === 'dispatch' && handles.has(path(c.callee.object)))
+  const resolve = bindingResolver(nodes, parents), registration = registrations[0]
+  const namespace = literalPath(registration.callee.object)
+  if (!namespace || literalPath(registration.callee) !== namespace + '.register') return '共享状态注册必须使用可验证的真实宿主接口。'
+  if (resolve(namespace.split('.')[0], registration)) return '共享状态注册必须使用真实宿主接口，不能由局部同名对象替代。'
+  const inert = value => !value || value.type === 'NullLiteral' || value.type === 'BooleanLiteral' && !value.value || value.type === 'Identifier' && value.name === 'undefined' && !resolve('undefined', value) || value.type === 'UnaryExpression' && value.operator === 'void' && value.argument?.type === 'NumericLiteral' && value.argument.value === 0
+  const guard = value => literalPath(value) === namespace
+  const returnsHandle = value => value === registration || value?.type === 'ConditionalExpression' && guard(value.test) && value.consequent === registration && inert(value.alternate) || value?.type === 'LogicalExpression' && value.operator === '&&' && guard(value.left) && value.right === registration
+  const handles = new Set()
+  for (const node of nodes) if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier' && returnsHandle(node.init)) handles.add(resolve(node.id.name, node))
+  // A catch may replace a guarded handle with null, but an unrelated object
+  // assignment must not establish (or retain) dispatch provenance.
+  for (const assignment of assignments) if (returnsHandle(assignment.right)) handles.add(resolve(assignment.left.name, assignment))
+  for (const assignment of assignments) if (!returnsHandle(assignment.right) && !inert(assignment.right)) handles.delete(resolve(assignment.left.name, assignment))
+  handles.delete(undefined)
+  const dispatched = calls.some(c => member(c.callee) && key(c.callee.property) === 'dispatch' && (!c.callee.computed || c.callee.property.type === 'StringLiteral') && c.callee.object.type === 'Identifier' && handles.has(resolve(c.callee.object.name, c)))
   if (!dispatched && !fn(props.get('tick'))) return '注册后没有通过共享句柄 dispatch 提交操作，也没有共享 tick，不能把空注册当作同步。'
   if (calls.some(c => ['setInterval','window.setInterval','globalThis.setInterval'].includes(path(c.callee)))) return '组件仍使用独立 setInterval；持续业务状态必须改由共享 tick 推进。'
   if (props.has('tick')) {

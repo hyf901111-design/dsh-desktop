@@ -252,21 +252,39 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const [inlineDraft,setInlineDraft]=useState<NoteInlineAiDraft>(),inlineDraftRef=useRef<NoteInlineAiDraft>(),inlinePrompt=useRef(''),inlineRequest=useRef<{requestId:string;anchor:NoteInsertionAnchor}>(),composing=useRef(false)
   inlineDraftRef.current=inlineDraft
-  const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>())
+  const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>()),capabilityReservations=useRef(new Map<string,string>())
   const [proposalVersion,setProposalVersion]=useState(0),proposalRestore=useRef(false),settlingProposal=useRef('')
   const proposals=useMemo(()=>createNoteInlineProposals({editor,doc,onChange:()=>setProposalVersion(value=>value+1)}),[editor,doc])
   const aiActionEditor=useMemo(()=>proposals.proxy(()=>!!inlineRequest.current&&inlineRequest.current.requestId===request.current),[proposals])
-  const componentOwned=(id:any)=>typeof id==='string'&&!!inlineRequest.current&&([...capabilityCards.current.values()].includes(id)||proposals.has(id))
+  const componentOwned=(id:any)=>typeof id==='string'&&!!inlineRequest.current&&[...capabilityCards.current.values()].includes(id)
   const aiComponentEditor=useMemo(()=>proposals.proxy((_method,args)=>componentOwned(typeof args[0]==='string'?args[0]:args[0]?.id)),[proposals])
+  const inlineComponentNode=(block:any)=>{try{return JSON.parse(block?.props?.payload)}catch{return {}}}
+  const unfinishedInlineComponent=(block:any)=>{if(block?.type!=='research')return false;const node=inlineComponentNode(block);return !node.containerSpec||!!node.noteDraft||['draft','queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus)}
+  const inlineProposalState=(value:NoteInlineProposal)=>{
+    const failed=value.changes.filter(change=>change.after?.type==='research'&&(unfinishedInlineComponent(change.after)||unfinishedInlineComponent(editor.getBlock(change.id))))
+    const failures=new Set(failed.map(change=>change.id)),changes=value.changes.filter(change=>!failures.has(change.id)),shown=changes.filter(change=>change.after),components=shown.filter(change=>change.after?.type==='research').length,text=shown.length-components
+    const error=value.error||failed.map(change=>inlineComponentNode(editor.getBlock(change.id)||change.after).generationError||inlineComponentNode(change.after).generationError).filter(Boolean).join('；').slice(0,1000)||t('组件生成未返回有效内容，请重试。')
+    const summary=failed.length?(shown.length?'已保留'+[text?text+'项内容':'',components?components+'个组件':''].filter(Boolean).join('、')+'，部分未完成':error):value.summary
+    return{failed,changes,shown,summary,error,onlyFailed:failed.length>0&&!shown.length}
+  }
+  const finishInlineProposal=(id:string,partial=false,summary='',kind?:string,error?:string)=>{
+    const current=proposals.list().find(value=>value.id===id),state=current&&inlineProposalState(current)
+    if(state?.failed.length){partial=true;summary=state.summary;error=error||state.error}
+    const value=proposals.finish(id,partial,summary,kind)
+    if(value&&error){proposals.setError(id,error);value.error=error}
+    return value
+  }
   const showProposal=(value:NoteInlineProposal,busy=false)=>{
-    const owned=new Set(value.changes.filter(change=>change.after).map(change=>change.id)),ids=editor.document.filter((block:any)=>owned.has(block.id)).map((block:any)=>block.id),anchor=ids[0]||[value.anchor?.blockId,...value.changes.flatMap(change=>[change.next,change.previous])].find(id=>id&&editor.getBlock(id))||editor.document[0]?.id
+    const state=inlineProposalState(value)
+    if(!busy&&value.state==='ready'&&state.onlyFailed){inlinePrompt.current=value.prompt;setInlineDraft(previous=>previous&&(previous.review?.id===value.id||inlineRequest.current?.requestId===value.id)?{...previous,prompt:value.prompt,review:undefined,error:state.error,reply:undefined}:{anchor:{...value.anchor,documentId:client.current},prompt:value.prompt,error:state.error});return}
+    const owned=new Set((busy?value.changes:state.changes).filter(change=>change.after).map(change=>change.id)),ids=editor.document.filter((block:any)=>owned.has(block.id)).map((block:any)=>block.id),anchor=ids[0]||[value.anchor?.blockId,...value.changes.flatMap(change=>[change.next,change.previous])].find(id=>id&&editor.getBlock(id))||editor.document[0]?.id
     if(!anchor)return
-    const review={id:value.id,summary:value.summary,blockIds:ids,anchorBlockId:anchor,anchorIsResult:!!ids[0],busy,canUndo:editor.isEditable&&proposals.canUndo(value.id)}
-    setInlineDraft(previous=>previous&&(previous.review?.id===value.id||inlineRequest.current?.requestId===value.id)?{...previous,review,error:value.error,reply:undefined}:{anchor:{...value.anchor,documentId:client.current},prompt:value.prompt,review,error:value.error})
+    const review={id:value.id,summary:state.summary,blockIds:ids,anchorBlockId:anchor,anchorIsResult:!!ids[0],busy,canUndo:editor.isEditable&&proposals.canUndo(value.id)},error=busy?undefined:state.failed.length?state.error:value.error
+    setInlineDraft(previous=>previous&&(previous.review?.id===value.id||inlineRequest.current?.requestId===value.id)?{...previous,review,error,reply:undefined}:{anchor:{...value.anchor,documentId:client.current},prompt:value.prompt,review,error})
   }
   useEffect(()=>{
     const values=proposals.list(),ready=values.filter(value=>value.state==='ready')
-    editor.getExtension(NoteInlineProposalHighlights)?.setProposals(ready.map(value=>({id:value.id,blockIds:value.changes.filter(change=>change.after).map(change=>change.id)})))
+    editor.getExtension(NoteInlineProposalHighlights)?.setProposals(ready.map(value=>({id:value.id,blockIds:inlineProposalState(value).shown.map(change=>change.id)})))
     if(!proposalRestore.current){proposalRestore.current=true;if(ready.length)showProposal(ready.at(-1)!)}
     const current=inlineDraftRef.current?.review,live=inlineRequest.current?.requestId,value=values.find(item=>item.id===(live||current?.id))
     if(value&&(value.state==='ready'||value.changes.some(change=>change.after)))showProposal(value,value.state==='running'||settlingProposal.current===value.id)
@@ -387,22 +405,34 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         if(!current())throw Error('笔记会话已变化。')
         const inline=inlineRequest.current?.requestId===request.current?inlineRequest.current:undefined
         if(inline)noteInlineAnchorBlock(editor,inline.anchor,client.current)
+        const retry=inline?proposals.list().flatMap(value=>{
+          if(value.id===inline.requestId||value.state!=='ready'||value.prompt.trim()!==lastRequest.current?.prompt.trim()||value.anchor?.blockId!==inline.anchor.blockId)return []
+          try{noteInlineAnchorBlock(editor,{...value.anchor,documentId:client.current},client.current)}catch{return []}
+          return inlineProposalState(value).failed.filter(change=>{const node=inlineComponentNode(editor.getBlock(change.id));return node.noteDraft==='smart'&&!node.containerSpec&&!capabilityReservations.current.has(change.id)&&![...capabilityCards.current.values()].includes(change.id)&&!inlineComponents.isGenerating(change.id)&&proposals.canUndoBlock(value.id,change.id)}).map(change=>({value,block:editor.getBlock(change.id)}))
+        })[0]:undefined
         const block={type:'research',props:{payload:JSON.stringify({
           id:'note-component-'+crypto.randomUUID(),kind:'generated-container',title:t('智能组件'),
           noteDraft:'smart',containerPrompt:args.prompt,generationStatus:'draft'
         })}}
-        const created=(inline?proposals.run(()=>insertNoteInlineBlocks(editor,inline.anchor,client.current,[block])):editor.insertBlocks([block],editor.document.at(-1),'after'))[0]
-        capabilityCards.current.set(requestId,created.id)
+        const created=retry?.block||(inline?proposals.run(()=>insertNoteInlineBlocks(editor,inline.anchor,client.current,[block])):editor.insertBlocks([block],editor.document.at(-1),'after'))[0]
+        capabilityReservations.current.set(created.id,requestId)
         try{
           await report({state:'placeholder',blockId:created.id})
           if(!current())return {status:'cancelled',blockId:created.id}
-          return await inlineComponents.startAndWait(created.id,args.prompt,args.requestContext,state=>report({state,blockId:created.id}),inline?()=>{if(!current()||inlineRequest.current!==inline)return false;try{noteInlineAnchorBlock(editor,inline.anchor,client.current);return true}catch{return false}}:undefined)
+          if(inline&&!proposals.canUndoBlock(retry?.value.id||inline.requestId,created.id))throw Error(t('组件已变化，较新内容已保留。'))
+          capabilityCards.current.set(requestId,created.id)
+          const checkpoint=retry&&proposals.list().find(value=>value.id===retry.value.id)
+          if(checkpoint){const changes=checkpoint.changes.filter(change=>change.id!==created.id);if(changes.length)proposals.restore({...checkpoint,changes});else proposals.confirm(checkpoint.id)}
+          const completion=inlineComponents.startAndWait(created.id,args.prompt,args.requestContext,state=>report({state,blockId:created.id}),inline?()=>{if(!current()||inlineRequest.current!==inline)return false;try{noteInlineAnchorBlock(editor,inline.anchor,client.current);return true}catch{return false}}:undefined)
+          if(checkpoint&&!inlineComponents.isGenerating(created.id)&&!proposals.has(created.id))proposals.restore(checkpoint)
+          return await completion
         }
-        finally{capabilityCards.current.delete(requestId)}
+        finally{capabilityCards.current.delete(requestId);if(capabilityReservations.current.get(created.id)===requestId)capabilityReservations.current.delete(created.id)}
       },
       cancelComponent:(requestId:string)=>{
         const blockId=capabilityCards.current.get(requestId)
         if(blockId)inlineComponents.stop(blockId)
+        for(const [id,owner]of capabilityReservations.current)if(owner===requestId)capabilityReservations.current.delete(id)
       },
       reportEffect:(requestId:string,effect:any)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect}),
       persist:persistConfirmed,
@@ -548,10 +578,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         if(inlineTarget)inlineCompletion={partial:false,summary:'',kind:'component'}
       }else if(inlineTarget){
         if(result.kind==='conversation'){
-          const changes=proposals.list().find(value=>value.id===requestId)?.changes.length||0
+          const proposal=proposals.list().find(value=>value.id===requestId),state=proposal&&inlineProposalState(proposal),changes=state?.changes.length||0
           const external=result.capabilityReceipts?.some(receipt=>receipt.status==='succeeded'&&(receipt.path||receipt.effect&&('path'in receipt.effect||'kind'in receipt.effect&&(receipt.effect.kind==='challenge'||receipt.effect.kind==='data'))||receipt.capability?.startsWith('ui.')))
-          const summary=changes?(result.requiresReply?'本次操作未完成，内容已保留':''):external?result.capabilitySummary?.split('\n').slice(0,2).join('；')||'':''
-          inlineCompletion={partial:!!result.requiresReply,summary,kind:result.kind,error:!changes&&!external?result.capabilitySummary||'尚未生成可插入内容，原需求已保留，可重试。':undefined}
+          const partial=!!result.requiresReply||!!state?.failed.length||!!result.capabilityReceipts?.some(receipt=>receipt.status!=='succeeded')
+          const summary=state?.failed.length?state.summary:changes?(partial?'本次操作未完成，内容已保留':''):external?result.capabilitySummary?.split('\n').slice(0,2).join('；')||'':''
+          inlineCompletion={partial,summary,kind:result.kind,error:state?.failed.length?state.error:!changes&&!external?result.capabilitySummary||'尚未生成可插入内容，原需求已保留，可重试。':undefined}
           publishTask(requestId,'replied',{result})
         }else{
           const blocks=result.kind==='component'?[{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}]:editor.tryParseMarkdownToBlocks(result.markdown)
@@ -588,19 +619,19 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           }
         }
       }
-      if(inlineTarget&&inlineCompletion&&!disposed.current&&epoch.current===attempt&&nativeCurrent()&&editorActive()&&inlineRequest.current?.requestId===requestId){const value=proposals.finish(requestId,inlineCompletion.partial,inlineCompletion.summary,inlineCompletion.kind);if(value)showProposal(value);else setInlineDraft(draft=>draft?{...draft,review:undefined,error:inlineCompletion!.error||'尚未生成可插入内容，原需求已保留，可重试。'}:draft);if(value)inlinePrompt.current='';changed()}
+      if(inlineTarget&&inlineCompletion&&!disposed.current&&epoch.current===attempt&&nativeCurrent()&&editorActive()&&inlineRequest.current?.requestId===requestId){const value=finishInlineProposal(requestId,inlineCompletion.partial,inlineCompletion.summary,inlineCompletion.kind,inlineCompletion.error);if(value)showProposal(value);else setInlineDraft(draft=>draft?{...draft,review:undefined,error:inlineCompletion!.error||'尚未生成可插入内容，原需求已保留，可重试。'}:draft);if(value&&!inlineProposalState(value).failed.length)inlinePrompt.current='';changed()}
       commitNativeDraft(admission)
     } catch (e) {
       if (!disposed.current && epoch.current === attempt) {
         const message = (e as Error).name === 'AbortError' ? t("生成已停止，可调整需求后重试。") : noteGenerationError(e)
         if (pending && currentGeneration()) editor.updateBlock(pending, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(pending).props.payload),generationStatus:'failed',generationError:message}) } })
-        rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); if(inlineTarget){const value=proposals.finish(requestId,true);if(value){proposals.setError(value.id,message);showProposal({...value,error:message});changed()}else setInlineDraft(draft=>draft?{...draft,review:undefined,error:message}:draft)}else setError(message)
+        rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); if(inlineTarget){const value=finishInlineProposal(requestId,true,'',undefined,message);if(value){showProposal(value);changed()}else setInlineDraft(draft=>draft?{...draft,review:undefined,error:message}:draft)}else setError(message)
       }
     } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); request.current = '';inlineRequest.current=undefined; publishComposer({running:false}); generatingBlock.current = '';activeGeneration.current=undefined;challengeScheduleSync.current?.() } }
   }
-  const stop = () => { for(const blockId of capabilityCards.current.values())inlineComponents.stop(blockId);inlineRequest.current=undefined;externalCapabilities.current?.revoke();epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。"));challengeScheduleSync.current?.() }
-  const stopInlineAi=()=>{const id=inlineRequest.current?.requestId;if(id){stop();const value=proposals.finish(id,true);if(value)showProposal(value)}setError('')}
-  const cancelInlineAi=()=>{const draft=inlineDraftRef.current;if(draft)inlinePrompt.current=draft.review?'':draft.prompt;if(inlineRequest.current)stopInlineAi();setInlineDraft(undefined);setError('');if(editorActive()&&draft&&editor.getBlock(draft.anchor.blockId)){editor.focus();editor.setTextCursorPosition(draft.anchor.blockId,'start')}}
+  const stop = () => { for(const blockId of capabilityCards.current.values())inlineComponents.stop(blockId);capabilityReservations.current.clear();inlineRequest.current=undefined;externalCapabilities.current?.revoke();epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。"));challengeScheduleSync.current?.() }
+  const stopInlineAi=()=>{const id=inlineRequest.current?.requestId;if(id){stop();const value=finishInlineProposal(id,true);if(value){showProposal(value);changed()}}setError('')}
+  const cancelInlineAi=()=>{const draft=inlineDraftRef.current;if(draft)inlinePrompt.current=draft.review&&!draft.error?'':draft.prompt;if(inlineRequest.current)stopInlineAi();setInlineDraft(undefined);setError('');if(editorActive()&&draft&&editor.getBlock(draft.anchor.blockId)){editor.focus();editor.setTextCursorPosition(draft.anchor.blockId,'start')}}
   const submitInlineAi=()=>{const draft=inlineDraftRef.current;if(!draft||draft.review||request.current||settlingProposal.current||externalCapabilities.current?.pending())return;inlinePrompt.current=draft.prompt;try{noteInlineAnchorBlock(editor,draft.anchor,client.current);void generate(draft.prompt,[],undefined,undefined,undefined,draft.anchor)}catch(error){setInlineDraft(value=>value?{...value,error:(error as Error).message}:value)}}
   const inlineCommands=useRef({cancel:cancelInlineAi});inlineCommands.current={cancel:cancelInlineAi}
   useEffect(()=>{if(props.active===false)inlineCommands.current.cancel()},[props.active])

@@ -60,7 +60,8 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
   return (...args:any[])=>['insertBlocks','updateBlock','removeBlocks','replaceBlocks','transact'].includes(String(key))&&owns(String(key),args)?run(()=>value.apply(target,args)):value.apply(target,args)
  }})
  const empty=(block:any)=>block?.type==='paragraph'&&!block.content?.length&&!block.children?.length
- const begin=(id:string,prompt:string,anchor:any)=>{for(const value of list())if(value.state==='ready'&&!value.changes.some(entry=>entry.after&&editor.getBlock(entry.id))&&value.changes.every(entry=>!entry.before||empty(entry.before)))records.delete(value.id);if(list().filter(value=>value.changes.some(entry=>entry.after&&editor.getBlock(entry.id))).length>=32)throw Error('请先确认或撤销已有的生成结果。');active=id;records.set(id,{id,prompt,anchor:clone(anchor),createdAt:Date.now(),state:'running',summary:'',changes:[]})}
+ const completedBlock=(block:any)=>{if(block?.type!=='research')return true;try{const node=JSON.parse(block.props.payload);return !!node.containerSpec&&!node.noteDraft&&!['draft','queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus)}catch{return false}}
+ const begin=(id:string,prompt:string,anchor:any)=>{for(const value of list())if(value.state==='ready'&&!value.changes.some(entry=>entry.after&&editor.getBlock(entry.id))&&value.changes.every(entry=>!entry.before||empty(entry.before)))records.delete(value.id);if(list().filter(value=>value.changes.some(entry=>entry.after&&completedBlock(entry.after)&&editor.getBlock(entry.id))).length>=32)throw Error('请先确认或撤销已有的生成结果。');active=id;records.set(id,{id,prompt,anchor:clone(anchor),createdAt:Date.now(),state:'running',summary:'',changes:[]})}
  const finish=(id:string,partial=false,summary='',resultKind?:string)=>{
   const raw=records.get(id);if(!valid(raw))return
   const value=clone(raw);if(active===id)active=undefined
@@ -108,7 +109,7 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
   publish();return{complete:!remaining.length,retained:remaining.length}
  }
  const confirm=(id:string)=>{if(!records.has(id))throw Error('本次生成记录已变化。');records.delete(id);publish()}
- return{list,begin,run,proxy,finish,undo,confirm,setError:(id:string,error:string)=>{const value=records.get(id);if(valid(value))records.set(id,{...value,error:error.slice(0,1000)})},restore:(value:NoteInlineProposal)=>{records.set(value.id,clone(value));inspect()},active:()=>active,has:(id:string)=>!!records.get(active||'')?.changes.some(entry=>entry.id===id),canUndo:(id:string)=>list().find(value=>value.id===id)?.changes.some((entry,_index,changes)=>canRevert(entry,changes))??false,dispose(){disposed=true;off();records.unobserve(publish)}}
+ return{list,begin,run,proxy,finish,undo,confirm,setError:(id:string,error:string)=>{const value=records.get(id);if(valid(value))records.set(id,{...value,error:error.slice(0,1000)})},restore:(value:NoteInlineProposal)=>{records.set(value.id,clone(value));inspect()},active:()=>active,has:(id:string)=>!!records.get(active||'')?.changes.some(entry=>entry.id===id),canUndoBlock:(id:string,blockId:string)=>{const value=list().find(item=>item.id===id),entry=value?.changes.find(item=>item.id===blockId);return !!value&&!!entry&&canRevert(entry,value.changes)},canUndo:(id:string)=>list().find(value=>value.id===id)?.changes.some((entry,_index,changes)=>canRevert(entry,changes))??false,dispose(){disposed=true;off();records.unobserve(publish)}}
 }
 
 const markKey=new PluginKey('note-inline-ai-proposal')

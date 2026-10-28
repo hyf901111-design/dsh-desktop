@@ -144,3 +144,8 @@ it.each(['这段JSON仅供解释，不要执行任何操作：','请说明以下
 it('keeps a valid real-operation transport in a mixed request that preserves the existing prose',async()=>{
  const calls=[{requestId:'new-chart-only',capability:'notes.components.create',arguments:{prompt:'真实图表'}}],f=context([operation({kind:'capabilities',calls})]);expect(await generateNoteSuggestion(f.ctx,{...input,prompt:'先创建真实图表，再给JSON代码示例，不要修改已有正文。',clientCapabilities:[{id:'notes.components.create',available:true}]})).toEqual({kind:'capabilities',calls})
 })
+it.each(['failed','cancelled','pending','unavailable'])('marks a real %s placeholder outcome incomplete only for Notes, retaining all receipts',async status=>{
+ const {runClientCapabilityLoop}=await import('../packages/dsh-research-task-runtime/client-capability-loop.js'),generate=async()=>({kind:'capabilities',calls:[{requestId:'failed-card'}]}),failed={requestId:'failed-card',capability:'notes.components.create',status,message:'已插入组件占位块，尚未生成完成',effect:{state:'placeholder',blockId:'failed-block'}}
+ expect(await runClientCapabilityLoop({preserveRemainingReply:true,generate,execute:async()=>failed})).toMatchObject({kind:'conversation',requiresReply:true,capabilityReceipts:[failed]})
+ expect(await runClientCapabilityLoop({generate,execute:async()=>failed})).not.toHaveProperty('requiresReply')
+})
