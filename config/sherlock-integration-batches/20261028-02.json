@@ -826,7 +826,7 @@
         "featureName": "输入框语音窗口失焦手势清理",
         "branch": "codex/feat/composer-voice-20261028",
         "baseCommit": "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97",
-        "tipCommit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
+        "tipCommit": "e9186ed825fe26a9d739a074a3679d3a0685ab97",
         "commits": [
           {
             "commit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
@@ -834,6 +834,13 @@
               "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97"
             ],
             "subject": "修复：窗口失焦清除语音组合键残留状态"
+          },
+          {
+            "commit": "e9186ed825fe26a9d739a074a3679d3a0685ab97",
+            "parents": [
+              "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1"
+            ],
+            "subject": "修复：兼容已安装的旧版输入框语音补丁升级"
           }
         ],
         "files": [
@@ -851,7 +858,15 @@
           },
           {
             "status": "M",
+            "path": "test/composer-submit-policy.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/composer-voice-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/composer-voice-patch.test.js"
           },
           {
             "status": "M",
@@ -871,9 +886,9 @@
               "test/composer-submit-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "5个直接相关文件83项通过：main所有权32、输入会话24、patch安装/真实entry重入2、真实InputBar浏览器20、原发送策略5。新增5项验证窗口blur丢失Meta/Control keyup后Enter正常、迟到caret撤销、授权不中断及卸载移除监听。",
-            "verifiedCommit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
-            "completedAt": "2026-10-28T07:12:36.601Z",
+            "summary": "5个直接相关文件86项通过：main32、输入会话24、安装/真实entry重入4、真实InputBar浏览器20、发送策略6。历史git8d17原安装器生成的旧运行时升级为新版，当前/旧版均经官方入口两次内存重放；结构/语法/hook漂移拒绝，voice闭包内发送策略正常。",
+            "verifiedCommit": "e9186ed825fe26a9d739a074a3679d3a0685ab97",
+            "completedAt": "2026-10-28T07:24:49.326Z",
             "timeoutMs": 120000
           },
           {
@@ -884,8 +899,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript类型检查通过。",
-            "verifiedCommit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
-            "completedAt": "2026-10-28T07:12:45.257Z",
+            "verifiedCommit": "e9186ed825fe26a9d739a074a3679d3a0685ab97",
+            "completedAt": "2026-10-28T07:24:57.408Z",
             "timeoutMs": 120000
           },
           {
@@ -896,24 +911,25 @@
             ],
             "outcome": "passed",
             "summary": "无空白错误。",
-            "verifiedCommit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
-            "completedAt": "2026-10-28T07:12:45.272Z",
+            "verifiedCommit": "e9186ed825fe26a9d739a074a3679d3a0685ab97",
+            "completedAt": "2026-10-28T07:24:57.423Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实InputBar隔离Chromium假桥验证：真实Meta/Control keydown中断录音，window blur后在window capture吞掉keyup，focus返回时textarea仍为activeElement，普通Enter可正常提交原转写；既有组合键防误发/Shift换行/IME及四输入区场景通过。未激活真实麦克风或构建共享客户端。"
+          "summary": "真实InputBar隔离Chromium假桥20项通过，含window blur丢失Meta/Control keyup后Enter恢复。另在真实integration源码和其旧安装entry上，仅以内存覆盖新voice模块，官方入口两次重放成功；实际依赖SHA256前后相同，dependencyWrites=0，语音runtime更新且受保护回复区与语法稳定。证据 real-integration-runtime-upgrade.json。未启动真实麦克风。"
         },
         "acceptanceCriteria": [
-          "window blur仅清除interruptedInput及待执行caret；系统丢失修饰键keyup后返回窗口，普通Enter不被旧手势拦截。",
-          "窗口监听不调用stop/cancel，不改变main权限面板授权宽限；编辑器DOM blur和其它录音终止行为保持。",
-          "输入会话dispose移除window blur监听；既有防误发、Shift换行、IME与受控草稿行为通过回归。"
+          "window blur仅清除interruptedInput/caret，丢失keyup后Enter恢复；不取消录音，不改变main权限宽限，卸载移除监听。",
+          "既有8d17 v1运行时可经官方patch入口升级并再次重入；自有区块仅按唯一有界标记、导出位置、已知声明及JS语法识别，外部hook保持精确锚点检查。",
+          "标记重复/缺失/未知版本、运行时损坏、导出移动、UI hook漂移均拒绝；升级后语音接线不重复，原发送策略保留，真实integration依赖不被写入。"
         ],
         "risks": [
-          "浏览器仅模拟窗口blur/focus及丢失keyup，未激活真实麦克风或OS权限面板，原生验收由父任务集成后执行。"
+          "未构建共享客户端，未启用真实麦克风或OS权限面板，原生验收待父任务集成。",
+          "官方完整entry两次结果并非全文件逐字相同；语音runtime和单次hook接线、受保护回复区域及语法稳定，未扩大其它补丁重入范围。"
         ],
-        "generatedAt": "2026-10-28T07:12:45.272Z"
+        "generatedAt": "2026-10-28T07:24:57.423Z"
       }
     }
   ],
