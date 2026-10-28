@@ -353,6 +353,58 @@
           "真实客户端顺序验收待更新集成候选。"
         ],
         "generatedAt": "2026-10-28T05:11:56.161Z"
+      },
+      "merged": {
+        "mergeCommit": "623ad436e726524e8b6b318341e2bf6b72f2f660",
+        "verificationCommit": "623ad436e726524e8b6b318341e2bf6b72f2f660",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
+            "verifiedCommit": "623ad436e726524e8b6b318341e2bf6b72f2f660",
+            "completedAt": "2026-10-28T05:12:09.436Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "623ad436e726524e8b6b318341e2bf6b72f2f660",
+            "completedAt": "2026-10-28T05:12:09.436Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/memory-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
+            "verifiedCommit": "623ad436e726524e8b6b318341e2bf6b72f2f660",
+            "completedAt": "2026-10-28T05:12:09.436Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-28T05:12:09.436Z"
       }
     }
   ],
