@@ -406,6 +406,107 @@
         ],
         "recordedAt": "2026-10-28T05:12:09.436Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "插件页复用对话细滚动条并压缩对齐顶栏",
+        "branch": "codex/feat/plugins-scrollbar-header-20261028",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "352c9d6c98d4cf1cee8343c0c1572614f197320a",
+        "commits": [
+          {
+            "commit": "352c9d6c98d4cf1cee8343c0c1572614f197320a",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "优化：统一插件页细滚动条并压缩对齐顶栏"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/figma-scrollbars.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/plugin-back-sticky-browser.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-menu-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/plugin-back-sticky-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/plugin-back-sticky-browser.test.js",
+              "test/integration-menu-layout.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/integration-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "5个直接相关测试文件85项通过；包含浅深色、侧栏/右栏、真实滚轮与thumb拖动、滚动边界与按钮对齐、刷新滚动保留、菜单和嵌套返回。",
+            "verifiedCommit": "352c9d6c98d4cf1cee8343c0c1572614f197320a",
+            "completedAt": "2026-10-28T05:36:21.037Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "tsc --noEmit -p tsconfig.node.json 通过。",
+            "verifiedCommit": "352c9d6c98d4cf1cee8343c0c1572614f197320a",
+            "completedAt": "2026-10-28T05:36:28.948Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "无空白错误。",
+            "verifiedCommit": "352c9d6c98d4cf1cee8343c0c1572614f197320a",
+            "completedAt": "2026-10-28T05:36:28.967Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium中运行生产IntegrationView、WorkspaceSurfaceHost和mountFigmaScrollbars；浅/深色×侧栏88/280、720窄窗及右栏变化通过。顶栏44px，返回/展开均y18、28px，4px thumb从y54开始；真实滚轮/拖动、菜单、返回和技能文档滚动正常。浏览器截图/几何证据：/Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/plugins-scrollbar-header/after；原生客户端验收待集成后进行。"
+        },
+        "acceptanceCriteria": [
+          "插件页滚动条复用对话面板共享细灰overlay样式、主题和交互。",
+          "滚动区域从44px顶栏下方开始，不覆盖返回/原生展开控件；两个28px控件水平对齐。",
+          "插件/应用/MCP/技能现有功能、菜单、详情返回、技能文档滚动、刷新时滚动保持和原生对话草稿保留。"
+        ],
+        "risks": [
+          "验证为隔离生产UI源码浏览器fixture，原生展开控件使用同尺寸位置的事件占位；未声称真实EWork客户端已验收。",
+          "未构建、签名或替换共享客户端，未推送或合并；需在父任务集成批次20261028-02中构建验收。"
+        ],
+        "generatedAt": "2026-10-28T05:36:28.967Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -439,6 +540,27 @@
         "run",
         "test/figma-auth-layout.test.ts",
         "test/memory-view.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/plugin-back-sticky-browser.test.js",
+        "test/integration-menu-layout.test.ts",
+        "test/workspace-surface-host.test.ts",
+        "test/figma-scrollbars.test.ts",
+        "test/integration-view.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
       ],
       "timeoutMs": 120000
     }
