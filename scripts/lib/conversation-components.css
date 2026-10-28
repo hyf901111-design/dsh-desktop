@@ -8,7 +8,7 @@
 .ew-conversation-component-header>button{display:grid;place-items:center;flex:none;width:24px;height:24px;padding:0;border:0;border-radius:4px;background:transparent;color:inherit;cursor:pointer}.ew-conversation-component-header>button:hover{background:var(--fw-control,#e9ebef)}
 .ew-conversation-component button:focus-visible,.ew-conversation-component .ew-grid-title:focus-visible{outline:1px solid var(--fw-accent,#249bfa);outline-offset:-1px}.ew-conversation-component button:disabled{opacity:.45;cursor:default}
 .ew-conversation-component-body{box-sizing:border-box;min-width:0;max-height:min(72vh,720px);overflow:auto;padding:12px 14px;overscroll-behavior:contain;border-radius:0 0 8px 8px;font-size:14px;line-height:1.65}
-.ew-conversation-component-body:has(>.ew-financial-widget){padding:0;min-height:300px;overflow:hidden}
+.ew-conversation-component-body:has(>.ew-financial-widget){padding:0;min-height:0;overflow:auto}
 .ew-conversation-component-body .rScV5Q_containerTableScroll{max-height:640px;overflow:auto}.ew-conversation-component-body .rScV5Q_containerMarkdown{min-width:0;overflow-wrap:anywhere}.ew-conversation-component-body:has(iframe){padding:0}
 .ew-conversation-component .ew-financial-widget :is(button,input,select){font:400 12px/16px Inter,'Noto Sans SC',system-ui;box-sizing:border-box;min-width:0;color:var(--fw-text);height:24px;min-height:24px;border-radius:4px}
 .ew-conversation-component .ew-financial-widget button{border:0;background:transparent;padding:3px 6px;cursor:pointer;color:var(--fw-muted)}
@@ -24,11 +24,16 @@
 
 /* Use the same theme and width-aware native body outside the research canvas. */
 body .ew-conversation-component .ew-conversation-component-body{display:block;min-width:0;font-size:14px;line-height:1.65}
-.ew-conversation-component-body>.odyssey-component-content{display:flex;flex-direction:column;min-width:0;min-height:0;height:100%}
+.ew-conversation-component-body>.odyssey-component-content{display:flex;flex-direction:column;min-width:0;min-height:0;height:auto}
+.ew-conversation-component-body[data-conversation-content=html]>.odyssey-component-content{height:100%}
 .ew-conversation-component-body .odyssey-component-primary{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
 .ew-conversation-component-body .odyssey-native-table-grid{max-width:100%;overflow-x:auto}
-body .ew-conversation-component .odyssey-native-chart{flex:1;height:100%;min-height:280px;justify-content:flex-start;padding:10px 6px 8px}
-body .ew-conversation-component .odyssey-native-chart>svg{flex:1;width:100%;min-height:180px;max-height:none}
+body .ew-conversation-component .odyssey-native-chart{flex:none;height:auto;min-height:0;justify-content:flex-start;padding:10px 6px 8px}
+body .ew-conversation-component .odyssey-native-chart>svg{display:block;flex:none;width:100%;height:auto;aspect-ratio:2.4;min-height:180px;max-height:320px}
+/* Let lists and controls contribute their real height; keep width queries.
+   The canvas retains its size container and explicit card dimensions. */
+body .ew-conversation-component .ew-financial-widget{height:auto;container-type:inline-size}
+body .ew-conversation-component .ew-price-chart{flex:none;height:auto;aspect-ratio:1.9;min-height:220px;max-height:360px}
 body .ew-conversation-component .rScV5Q_chartLegend{flex:none;padding:8px 0;justify-content:flex-start;gap:6px 14px}
 body .ew-conversation-component .rScV5Q_chartLegend button{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:var(--sherlock-muted);font:inherit;cursor:pointer}
 body .ew-conversation-component .rScV5Q_chartLegend button[aria-pressed=false]{opacity:.45}
