@@ -10,6 +10,8 @@
 
 窗口 blur 也清除修饰键手势状态与待执行光标更新，以处理系统吞掉 keyup 的情况；回到窗口后普通 Enter 可正常发送。该监听不取消录音、不改变主进程对权限面板的授权宽限，并在输入会话卸载时移除。
 
+安装器支持从既有 v1 运行时升级：按唯一成对标记、紧邻的原生导出、已知运行时声明顺序及有效 JavaScript 识别自有区块，不要求旧函数内容等于新实现；区块外各原生 UI hook 仍逐个严格撤销。缺标记、重复标记、未知版本、损坏语法、移动边界或 hook 漂移均拒绝。使用历史 8d17d49 原始安装器生成旧 entry，验证官方入口升级及双重重入，不清空安装目录。
+
 采用单一 ResearchVoiceController 的临时 composer owner 和独立受 trusted main-window 保护的 startComposer IPC。composer 不调用 setActive、不覆盖 research 注册；期间暂停 Fn，结束后基于当时 research 注册重新计算 Fn。保留窗口/主帧/前台校验、唯一 native request ID、单一 capture 和既有权限策略，不修改原生 Speech 引擎。系统权限对话的窗口失焦沿用 main 控制器既有授权宽限；编辑器 DOM 失焦仍立即停止。
 
 选择在 InputBar 内接入输入机器及生命周期，而不是 DOM 文本覆盖或新的录音引擎：前者可保留草稿、引用、笔记输入路由和发送仲裁；后两者会破坏受控状态或引入重复麦克风所有权。

@@ -1,4 +1,5 @@
 import {readFileSync} from 'node:fs'
+import {Script} from 'node:vm'
 
 /** One dictation owns one exact native input-machine revision; it never submits. */
 export function createComposerVoiceSession(options){
@@ -133,6 +134,7 @@ function renderComposerVoicePill(react,voice){
   react.createElement('button',{type:'button','aria-label':'停止语音输入',title:'停止语音输入',onPointerDown:event=>{event.preventDefault();event.stopPropagation()},onMouseDown:event=>event.preventDefault(),onClick:event=>{event.preventDefault();event.stopPropagation();voice.stop()}},react.createElement('svg',{viewBox:'0 0 16 16',width:14,height:14,'aria-hidden':true},react.createElement('rect',{x:3,y:3,width:10,height:10,rx:1,fill:'currentColor'}))))
 }
 const START='/* sherlock:composer-voice:v1 */',END='/* sherlock:composer-voice:end */'
+const exportAnchor='exports.ConversationRoot = ConversationRoot;'
 const css=readFileSync(new URL('./composer-voice.css',import.meta.url),'utf8')
 const definition=START+'\nconst composerVoiceCss='+JSON.stringify(css)+';\n'+[createComposerVoiceSession,useComposerVoice,composerVoiceIcon,renderComposerVoicePill].map(fn=>fn.toString()).join('\n')+'\n'+END+'\n'
 const hooks=[
@@ -147,7 +149,19 @@ const pillAnchor='(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitiv
 const one=(source,before,after)=>{if(source.split(before).length!==2)throw Error('Composer voice anchor drifted: '+before.slice(0,90));return source.replace(before,after)}
 export function stripComposerVoice(source){
  if(!source.includes(START)){if(source.includes('composerVoice.idle')||source.includes(END))throw Error('Composer voice orphan drifted');return source}
- source=one(source,definition,'')
+ // Runtime implementation evolves between installs. Own its unique, bounded
+ // region while keeping the export boundary and every external hook strict.
+ const start=source.indexOf(START),end=source.indexOf(END)
+ if(source.split(START).length!==2||source.split(END).length!==2||end<start||!source.slice(end+END.length).startsWith('\n'+exportAnchor))throw Error('Composer voice runtime boundary drifted')
+ const body=source.slice(start+START.length,end)
+ let previous=-1
+ for(const declaration of ['const composerVoiceCss=','function createComposerVoiceSession(','function useComposerVoice(','function composerVoiceIcon(','function renderComposerVoicePill(']){
+  const position=body.indexOf(declaration)
+  if(body.split(declaration).length!==2||position<=previous)throw Error('Composer voice runtime declaration drifted: '+declaration)
+  previous=position
+ }
+ try{new Script(body)}catch(cause){throw Error('Composer voice runtime syntax drifted',{cause})}
+ source=source.slice(0,start)+source.slice(end+END.length+1)
  source=one(source,'renderComposerVoicePill(react,composerVoice),'+pillAnchor,pillAnchor)
  for(const[before,after]of hooks)if(before!==after)source=one(source,after,before)
  return source
@@ -156,5 +170,5 @@ export function patchComposerVoice(source){
  source=stripComposerVoice(source)
  for(const[before,after]of hooks)if(before!==after)source=one(source,before,after)
  source=one(source,pillAnchor,'renderComposerVoicePill(react,composerVoice),'+pillAnchor)
- return one(source,'exports.ConversationRoot = ConversationRoot;',definition+'exports.ConversationRoot = ConversationRoot;')
+ return one(source,exportAnchor,definition+exportAnchor)
 }
