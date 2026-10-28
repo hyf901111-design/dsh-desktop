@@ -1,6 +1,7 @@
-import {expect,it} from 'vitest'
+import {expect,it,vi} from 'vitest'
 import * as Y from 'yjs'
 import {createNoteInlineProposals} from '../src/preload/notes/inline-ai-proposals'
+import {validateNoteContent} from '../src/main/notes/store'
 const paragraph=(id:string,text='')=>({id,type:'paragraph',props:{},content:text?[{type:'text',text,styles:{}}]:[],children:[]})
 const clone=(value:any)=>JSON.parse(JSON.stringify(value))
 function fixture(initial:any[],doc=new Y.Doc()){
@@ -58,4 +59,36 @@ it('retains failed-slot identity evidence without counting failed-only records t
  const f=fixture([paragraph('anchor')]);for(let i=0;i<36;i++){f.ledger.begin('failed-'+i,'原需求',f.anchor);f.ai.insertBlocks([{id:'failed-'+i,type:'research',props:{payload:JSON.stringify({generationStatus:'failed',generationError:'模型未完成',notePrompt:'原需求'})}}],'anchor','after');f.ledger.finish('failed-'+i,true)}
  expect(f.ledger.list()).toHaveLength(36);expect(f.ledger.canUndoBlock('failed-0','failed-0')).toBe(true);f.editor.updateBlock('failed-0',{props:{payload:JSON.stringify({generationStatus:'failed',notePrompt:'用户已修改需求'})}});expect(f.ledger.canUndoBlock('failed-0','failed-0')).toBe(false)
  expect(()=>f.ledger.begin('next','新需求',f.anchor)).not.toThrow();expect(f.editor.document.some((block:any)=>block.id==='failed-0')).toBe(true)
+})
+
+it.each(['undo','confirm','human-edit'])('retains every byte of a large before/after record across Yjs reopening and %s',action=>{
+ // This intentionally exercises ledger capacity independently of the existing
+ // whole-note 4 MiB save limit; a store may reject this document explicitly.
+ const original='a'.repeat(2100000),generated=original.slice(0,-1)+'b',f=fixture([paragraph('target',original),paragraph('anchor')]);f.start()
+ f.ai.updateBlock('target',{content:paragraph('target',generated).content})
+ const ready=f.ledger.finish('request',false,'','text');expect(ready).toBeDefined();expect(JSON.stringify(ready).length).toBeGreaterThan(4000000)
+ if(action==='confirm')f.doc.getMap('note-inline-proposals').set('request',clone(ready!))
+ const update=Y.encodeStateAsUpdate(f.doc),blocks=clone(f.editor.document);f.ledger.dispose();const doc=new Y.Doc();Y.applyUpdate(doc,update);const g=fixture(blocks,doc)
+ expect(()=>validateNoteContent({title:'容量边界',blocks,yjs:Buffer.from(update).toString('base64')})).toThrow('笔记超过4 MiB')
+ expect(g.ledger.list()).toHaveLength(1);expect(g.ledger.list()[0]!.changes[0]!.before!.content[0].text).toBe(original);expect(g.ledger.canUndo('request')).toBe(true)
+ if(action==='human-edit'){g.editor.updateBlock('target',{content:paragraph('target','人工新稿必须保留').content});expect(g.ledger.canUndo('request')).toBe(false);expect(g.ledger.undo('request').complete).toBe(false);expect(g.editor.getBlock('target').content[0].text).toBe('人工新稿必须保留')}
+ else if(action==='undo'){expect(g.ledger.undo('request')).toEqual({complete:true,retained:0});expect(g.editor.getBlock('target').content[0].text).toBe(original)}
+ else expect(g.editor.getBlock('target').content[0].text).toBe(generated)
+ g.ledger.confirm('request');expect(g.ledger.list()).toEqual([]);g.ledger.dispose();g.doc.destroy();f.doc.destroy()
+})
+
+it('preserves Unicode across bounded chunks and still reads an unchunked legacy record',()=>{
+ const value='😀'.repeat(50000),f=fixture([paragraph('anchor')]);f.start();f.ai.replaceBlocks(['anchor'],[paragraph('generated',value)]);const ready=f.ledger.finish('request')!
+ const raw=f.doc.getMap<any>('note-inline-proposals').get('request');expect(raw.changeEncoding.chunks.length).toBeGreaterThan(1)
+ expect(raw.changeEncoding.chunks.every((chunk:string)=>chunk.length<=65536)).toBe(true)
+ const doc=new Y.Doc();Y.applyUpdate(doc,Y.encodeStateAsUpdate(f.doc));const g=fixture(clone(f.editor.document),doc);expect(g.ledger.list()[0]!.changes.find(change=>change.id==='generated')!.after!.content[0].text).toBe(value)
+ // Old versions could already persist an oversized inline value before their
+ // reader hid it; the new reader must recover that complete historical record.
+ doc.getMap('note-inline-proposals').set('request',clone(ready));expect(g.ledger.canUndo('request')).toBe(true);expect(g.ledger.undo('request').complete).toBe(true)
+ g.ledger.dispose();g.doc.destroy();f.ledger.dispose();f.doc.destroy()
+})
+
+it('reports an unavailable journal before applying a document mutation',()=>{
+ const f=fixture([paragraph('anchor')]);f.start();const set=vi.spyOn(f.doc.getMap('note-inline-proposals'),'set').mockImplementation(()=>{throw Error('审阅存储不可用')})
+ expect(()=>f.ai.replaceBlocks(['anchor'],[paragraph('generated','不能先写正文')])).toThrow('审阅存储不可用');expect(f.editor.document).toEqual([paragraph('anchor')]);set.mockRestore();f.ledger.dispose();f.doc.destroy()
 })
