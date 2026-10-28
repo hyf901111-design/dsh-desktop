@@ -7,9 +7,9 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   preload: {
-    // Hooks, the renderer and editor extensions must share one runtime even when
-    // reused dependencies resolve through another worktree's physical packages.
-    resolve: { dedupe: ['react', 'react-dom', '@blocknote/core', '@blocknote/react', '@blocknote/mantine'] },
+    // Hooks, the renderer and collaborative document constructors must stay
+    // shared when reused dependencies resolve through another physical checkout.
+    resolve: { dedupe: ['react', 'react-dom', 'yjs', '@blocknote/core', '@blocknote/react', '@blocknote/mantine'] },
     plugins: [preloadCustomElementsPlugin(),
       { name: 'sandbox-dom-ready', renderChunk: code => ({ code: wrapSandboxPreload(code), map: null }) }],
     ssr: { noExternal: true, resolve: { conditions: ['browser'] } },
