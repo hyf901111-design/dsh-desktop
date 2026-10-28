@@ -11,72 +11,18 @@
         "schemaVersion": 1,
         "featureName": "页签四模式、完整标题与跨页连接及演示和更新反馈优化",
         "branch": "codex/feat/board-tabs-theme-demo-20261028",
-        "baseCommit": "2604680c1499f4424d2cb7d83b2be26ae5e2ba57",
-        "tipCommit": "ecc7de5dfe404c68989371bd0134463766ccc5ac",
+        "baseCommit": "ecc7de5dfe404c68989371bd0134463766ccc5ac",
+        "tipCommit": "5f878ec6d58721e0ce043e35498e766f9add346f",
         "commits": [
           {
-            "commit": "c27a3cf282922809d6260535713b0b96f03b7b5e",
+            "commit": "5f878ec6d58721e0ce043e35498e766f9add346f",
             "parents": [
-              "2604680c1499f4424d2cb7d83b2be26ae5e2ba57"
+              "ecc7de5dfe404c68989371bd0134463766ccc5ac"
             ],
-            "subject": "修复页签四模式样式、完整标题和缩略触发范围"
-          },
-          {
-            "commit": "49491d26a49787d2dc578d9783c6d43bfd717473",
-            "parents": [
-              "c27a3cf282922809d6260535713b0b96f03b7b5e"
-            ],
-            "subject": "简化下载更新文案并按点击展开详情气泡"
-          },
-          {
-            "commit": "1963d0ecde9b254c86403ea323d2439f0d82ddf9",
-            "parents": [
-              "49491d26a49787d2dc578d9783c6d43bfd717473"
-            ],
-            "subject": "优化看板演示的三行布局、生成动效与连线视野"
-          },
-          {
-            "commit": "0604a6f097086584a2037ced49fe659c341dcb57",
-            "parents": [
-              "1963d0ecde9b254c86403ea323d2439f0d82ddf9"
-            ],
-            "subject": "对齐看板生成测试的正式补丁卸载顺序"
-          },
-          {
-            "commit": "1ac20b74f07f9ba244fe94af9b04de7e4fbbd382",
-            "parents": [
-              "0604a6f097086584a2037ced49fe659c341dcb57"
-            ],
-            "subject": "将跨页组件连接投影到对应页签并保留真实关系"
-          },
-          {
-            "commit": "a221a95bfc89d4d3cc420f383781cb449fdf8b13",
-            "parents": [
-              "1ac20b74f07f9ba244fe94af9b04de7e4fbbd382"
-            ],
-            "subject": "保持自动下载完成后详情收起并补齐键盘关闭"
-          },
-          {
-            "commit": "ecc7de5dfe404c68989371bd0134463766ccc5ac",
-            "parents": [
-              "a221a95bfc89d4d3cc420f383781cb449fdf8b13"
-            ],
-            "subject": "补充看板补丁测试夹具的类型声明"
+            "subject": "优化跨页连接的圆角走线与页签同色描边"
           }
         ],
         "files": [
-          {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-10-28-board-tabs-theme-demo-update.md"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/board-tabs-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/board-tabs-ui.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/board-tabs.css"
@@ -86,72 +32,12 @@
             "path": "scripts/lib/financial-widget-link.mjs"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/home-guide-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-guides.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/sidebar-update-control.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/update-view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/board-tabs-client.test.js"
-          },
-          {
             "status": "A",
+            "path": "test/board-tabs-connection-browser.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/board-tabs-connection-client.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/board-tabs-theme-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/strip-conversation-transient-ui.d.mts"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/helpers/financial-widget-client-fixture.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-native-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-native-strip.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guides.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-generation-controls.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-update-control.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-background-ui.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-transfer-presentation.test.ts"
           }
         ],
         "checks": [
@@ -161,6 +47,7 @@
               "run",
               "test/board-tabs-client.test.js",
               "test/board-tabs-connection-client.test.js",
+              "test/board-tabs-connection-browser.test.js",
               "test/board-tabs-theme-browser.test.js",
               "test/financial-widget-link.test.js",
               "test/home-guides.test.ts",
@@ -171,9 +58,9 @@
               "test/update-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "181项直接相关检查通过：页签主题/标题/拖动/跨页连线、演示时序与补丁复贴、下载详情与完成态",
-            "verifiedCommit": "ecc7de5dfe404c68989371bd0134463766ccc5ac",
-            "completedAt": "2026-10-28T01:20:49.054Z",
+            "summary": "187项直接相关检查通过，新增跨页圆角走线、四模式描边同色及清理和真实翻页点击验证",
+            "verifiedCommit": "5f878ec6d58721e0ce043e35498e766f9add346f",
+            "completedAt": "2026-10-28T01:50:18.614524+00:00",
             "timeoutMs": 180000
           },
           {
@@ -184,20 +71,21 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过，补齐JS测试fixture精确声明，无屏蔽诊断",
-            "verifiedCommit": "ecc7de5dfe404c68989371bd0134463766ccc5ac",
-            "completedAt": "2026-10-28T01:20:49.054Z",
+            "verifiedCommit": "5f878ec6d58721e0ce043e35498e766f9add346f",
+            "completedAt": "2026-10-28T01:50:57.607202+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium六项演示检查覆盖3种视口连线可见正文、首帧第三行和动态网格/暂停/reduced-motion；CSS四模式与应用交叉检查通过。原生客户端待集成构建后使用核验，不代表用户接受。"
+          "summary": "实际客户端已核对四模式、完整长标题、左右翻页、深色应用浅色看板菜单反白；本地真实下载环77%未展开详情，完成后点击查看且外点收起。新圆角连线及四模式同色边框在真实Chromium验证；更新集成客户端后仍需原生核验新增走线。"
         },
         "acceptanceCriteria": [
           "四模式页签与Figma对照，More前景匹配普通组件；portal菜单遵循应用主题",
           "标题完整自然宽度，数量/改名/窗口变化驱动左右翻页",
           "缩略触发仅栏内及8px外沿，栏内右侧空白也提示，16px退出迟滞；空白松手不转移",
           "跨页关系指向对端页签或现有翻页箭头，保留数据/方向/拓扑与原生解除行为",
+          "跨页连线采用直段与相切圆角，关联页签或翻页箭头使用同源线色描边，切页及解除后清除",
           "演示三组件整理后新闻公告直接第三行，连线源行正文可读，智能生成原生网格活动并响应暂停",
           "自动下载及完成不自行展开详情，点击查看后显式重启；外点/失焦渐隐与Escape，去掉技术下载文案",
           "PlanA集成本地--verify使用验证，版本1.4.2不变、无公证及对外发布"
@@ -207,47 +95,7 @@
           "download-only隔离通路不自动检查/下载，生产自动触发链由manual=false回归覆盖，不宣称完成真实生产自动升级",
           "复用canonical现有安装依赖，未执行全新npm ci"
         ],
-        "generatedAt": "2026-10-28T01:20:49.054Z"
-      },
-      "merged": {
-        "mergeCommit": "e988ab041b04d8a6994a5dbf4be83a23abe32682",
-        "verificationCommit": "e988ab041b04d8a6994a5dbf4be83a23abe32682",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-theme-browser.test.js",
-              "test/financial-widget-link.test.js",
-              "test/home-guides.test.ts",
-              "test/home-guide-native-strip.test.js",
-              "test/sidebar-update-control.test.ts",
-              "test/update-background-ui.test.ts",
-              "test/update-transfer-presentation.test.ts",
-              "test/update-ui.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-theme-browser.test.js test/financial-widget-link.test.js test/home-guides.test.ts test/home-guide-native-strip.test.js test/sidebar-update-control.test.ts test/update-background-ui.test.ts test/update-transfer-presentation.test.ts test/update-ui.test.ts",
-            "verifiedCommit": "e988ab041b04d8a6994a5dbf4be83a23abe32682",
-            "completedAt": "2026-10-28T01:22:03.344Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e988ab041b04d8a6994a5dbf4be83a23abe32682",
-            "completedAt": "2026-10-28T01:22:03.344Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-28T01:22:03.344Z"
+        "generatedAt": "2026-10-28T01:51:54.217449+00:00"
       }
     }
   ],
