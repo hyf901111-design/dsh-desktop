@@ -636,10 +636,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记HTML真实交互保存确认与空白行AI焦点定位",
+        "featureName": "笔记自由输出与原位结果确认撤销、组件模式能力隔离",
         "branch": "codex/feat/notes-react-runtime-20261028",
         "baseCommit": "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c",
-        "tipCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
+        "tipCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
         "commits": [
           {
             "commit": "ff7b6f3f9d50321f4d08c8c83e6457712af718f6",
@@ -654,16 +654,176 @@
               "ff7b6f3f9d50321f4d08c8c83e6457712af718f6"
             ],
             "subject": "修复：为笔记 HTML 组件确认并保存真实交互状态"
+          },
+          {
+            "commit": "251993fb7a755ed424a118766519e4340487107d",
+            "parents": [
+              "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c"
+            ],
+            "subject": "修复：限定工作台恢复记录边界并同步笔记渲染元数据"
+          },
+          {
+            "commit": "9c36b949881cb13239cd90eef79c6245d061d7bd",
+            "parents": [
+              "251993fb7a755ed424a118766519e4340487107d"
+            ],
+            "subject": "修复：笔记原生组件复用研究模式外观并移除多余样式入口"
+          },
+          {
+            "commit": "53f7f45a77f8c3bc08923d635dae204995e97b37",
+            "parents": [
+              "9c36b949881cb13239cd90eef79c6245d061d7bd"
+            ],
+            "subject": "修复：准确创建原生行情面板并明确指数空数据状态"
+          },
+          {
+            "commit": "b6f1a6a41b43c8d31f84ce2db2a417dc14b9221f",
+            "parents": [
+              "53f7f45a77f8c3bc08923d635dae204995e97b37"
+            ],
+            "subject": "规范：统一对话研究与笔记组件样式并保留生成资料预算"
+          },
+          {
+            "commit": "de916e56abb74e0c68e671a818cfa49ff25032c0",
+            "parents": [
+              "b6f1a6a41b43c8d31f84ce2db2a417dc14b9221f"
+            ],
+            "subject": "修复：按模式隔离组件连接状态并隐藏不可用菜单"
+          },
+          {
+            "commit": "9092ea3120ea72a4963b4831255d93337dfbba0f",
+            "parents": [
+              "de916e56abb74e0c68e671a818cfa49ff25032c0"
+            ],
+            "subject": "修复笔记自由正文输出与混合任务回执协议"
+          },
+          {
+            "commit": "ad510396efef0d82671d077240d710d85ddecf6d",
+            "parents": [
+              "9092ea3120ea72a4963b4831255d93337dfbba0f"
+            ],
+            "subject": "新增笔记原位生成结果确认与安全撤销事务"
+          },
+          {
+            "commit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "parents": [
+              "ad510396efef0d82671d077240d710d85ddecf6d"
+            ],
+            "subject": "修复笔记刷新状态的独立来源与账号隔离"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "docs/design/research-workbench-design-contract.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/notes-ai-generation-rules.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/research-component-design-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/research-component-style.md"
+          },
           {
             "status": "A",
             "path": "docs/verification/2026-10-28-notes-html-interaction.md"
           },
           {
+            "status": "A",
+            "path": "docs/verification/2026-10-28-notes-native-financial-parity.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/verification/2026-10-28-notes-restore-boundary.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/verification/2026-10-29-notes-ai-output-and-result-review.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capability-loop.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capability-loop.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-skill.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
+          },
+          {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/html-artifact.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-component-generation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/notes-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-session.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-refresh.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-settings-panel.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-link.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
           },
           {
             "status": "M",
@@ -672,6 +832,58 @@
           {
             "status": "A",
             "path": "scripts/lib/notes-html-interaction.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-reply-actions.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/figma-21m.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/selection-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/component-data-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
@@ -686,8 +898,96 @@
             "path": "src/preload/notes/inline-ai-composer.tsx"
           },
           {
+            "status": "A",
+            "path": "src/preload/notes/inline-ai-proposals.ts"
+          },
+          {
             "status": "M",
             "path": "src/preload/notes/native-component-block.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/reference-context.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/workspace-notes.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-data-bridge.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-settings-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-surface-menu-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/component-surface-state.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-surface-style.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-renderer.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-widget-empty.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-link.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/conversation-component-fixture.js"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "A",
+            "path": "test/helpers/notes-resident-production-source.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "test/helpers/notes-resident-production-source.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-ai.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capability-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capability-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-component-layout.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-financial-content-browser.test.ts"
           },
           {
             "status": "A",
@@ -702,8 +1002,48 @@
             "path": "test/notes-html-interaction.test.ts"
           },
           {
+            "status": "A",
+            "path": "test/notes-html-restore-record.test.js"
+          },
+          {
             "status": "M",
             "path": "test/notes-inline-ai-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-inline-proposals-pm.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-inline-proposals.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-inline-result-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-chrome-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-output-compatibility.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-quote-selector.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-restore-metadata.test.js"
           }
         ],
         "checks": [
@@ -730,12 +1070,67 @@
               "test/notes-html-interaction.test.ts",
               "test/notes-html-interaction-bridge.test.js",
               "test/notes-html-interaction-browser.test.ts",
+              "test/workbench-restore-metadata.test.js",
+              "test/notes-html-restore-record.test.js",
+              "test/notes-reply-actions.test.js",
+              "test/notes-quote-selector.test.js",
+              "test/financial-widget-empty.test.js",
+              "test/notes-financial-content-browser.test.ts",
+              "test/notes-native-chrome-browser.test.ts",
+              "test/notes-component-layout.test.js",
+              "test/notes-native-components.test.js",
+              "test/notes-component-interaction.test.tsx",
+              "test/notes-component-presentation.test.ts",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-refresh.test.js",
+              "--fileParallelism=false",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "18文件366/366，含原组件/图表/inline范围、生产preload行内28、真实resident双层HTML4、Notes保存controller33与异步ACK bridge9。日志 /tmp/sherlock-notes-html-interaction-20261028/focused-final.log。",
-            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
-            "completedAt": "2026-10-28T11:49:00.785054Z",
+            "summary": "31文件491/491：原Space/稳定锚点/取消/组件子job、真实adapter、HTML ACK与持久化、Native header/选择器/indices、Notes真实status/list来源。完全串行且原timeout保留。日志/tmp/sherlock-notes-inline-final-20261029/notes-final-serial.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:14:17.285651+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/financial-widget-contract.test.js",
+              "test/notes-client-capability-service.test.ts",
+              "--reporter=dot",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "2文件40/40：金融契约与真实Notes service/capability/历史receipt链。日志/tmp/sherlock-notes-inline-final-20261029/route-contract-final.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:14:19.664317+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/component-data-bridge.test.ts",
+              "test/notes-output-compatibility.test.js",
+              "test/notes-client-capability-runtime.test.js",
+              "test/notes-session.test.js",
+              "test/client-capabilities.test.js",
+              "test/notes-reference-content.test.js",
+              "test/notes-inline-proposals.test.ts",
+              "test/notes-inline-proposals-pm.test.ts",
+              "test/notes-inline-result-browser.test.ts",
+              "test/notes-capability-receipt-locale.test.js",
+              "test/notes-recent-locale.test.js",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "11文件144/144：公开正文/Markdown/完整JSON与代码示例、统一当前wire运输标识、mixed多组件+剩余正文、只读查询、恢复不得新增/重放；真实service/session重开；ledger11、实际PM4和真实结果browser13（sole空白Undo重开、code/image/chart、人工并发、save失败、迟到binding）；Notes专属bridge同ID与owner迟到。日志/tmp/sherlock-notes-inline-final-20261029/output-proposals-final.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:15:14.345749+00:00",
             "timeoutMs": 180000
           },
           {
@@ -743,31 +1138,75 @@
               "npx",
               "vitest",
               "run",
-              "test/component-interaction-state.test.js",
-              "-t",
-              "^(?!.*patches the actual renderer)",
+              "test/component-surface-menu-browser.test.ts",
+              "test/component-surface-state.test.js",
+              "test/component-data-status.test.js",
+              "test/component-data-ui.test.js",
+              "test/component-data-settings-client.test.js",
+              "test/conversation-component-renderer.test.js",
+              "test/conversation-component-interaction.test.js",
+              "--fileParallelism=false",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "10/10，1条已用fa831精确复现的旧SDK metadata恢复fixture未选；不标含失败探索命令通过。日志 common-journal.log，基线证据baseline-metadata-restore.json。",
-            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
-            "completedAt": "2026-10-28T11:45:59.115895Z",
-            "timeoutMs": 90000
+            "summary": "7文件48/48：真实菜单5、Native/binding状态跨surface隔离、Research默认及真实支持的copy/save/reference/source/frequency/pause/manual。日志/tmp/sherlock-notes-inline-final-20261029/surface-menu-final.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:15:47.174325+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
               "npx",
               "vitest",
               "run",
-              "test/component-shared-state.test.js",
-              "test/component-shared-state-browser.test.js",
+              "test/financial-widget-link.test.js",
+              "test/financial-widget-client.test.js",
+              "--fileParallelism=false",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "原通用shared-state单元与真实sandbox浏览器11/11通过。日志 /tmp/sherlock-notes-html-interaction-20261028/shared-state.log。",
-            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
-            "completedAt": "2026-10-28T11:45:59.303802Z",
-            "timeoutMs": 90000
+            "summary": "2文件80/80：Research真实连接/断开与跨surface执行guard，Notes/Conversation无端口和独立本地数据。日志/tmp/sherlock-notes-inline-final-20261029/surface-link-final.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:16:12.748300+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/component-surface-style.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/component-generation-prompt-routing.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/research-design-policy.test.js",
+              "test/notes-component-generation.test.js",
+              "test/notes-quote-selector.test.js",
+              "--reporter=verbose",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "7文件335/335：实际父prompt与三profile单次样式规则、纯文本协议不受样式限制、Notes继承Research/无连接；类型指引、schema/事实/全部24来源及原5000/48000预算保持。日志/tmp/sherlock-notes-inline-final-20261029/rules-final.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:16:18.357459+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "same adaptive component style|semantic Figma controls|theme",
+              "--reporter=dot",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "仅原runtime样式5/5，256项未选，不称整文件通过。日志/tmp/sherlock-notes-inline-final-20261029/runtime-style-final.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:16:20.628464+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
@@ -776,10 +1215,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过。",
-            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
-            "completedAt": "2026-10-28T11:45:54.647850Z",
+            "summary": "最终fa609e24类型检查通过。日志/tmp/sherlock-notes-inline-final-20261029/typecheck-final.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:16:29.590661+00:00",
             "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-voice.test.ts",
+              "test/composer-voice.test.js",
+              "test/composer-voice-patch.test.js",
+              "test/composer-voice-browser.test.js",
+              "test/composer-submit-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "冻结integration3244e1b8实际APFS依赖+候选77文件路径只读投影，原5文件100/100；current/8d17各两次完整VM、原语法/protected/无依赖写入判定不变，两份SDK SHA不变。正式合入仍由父重跑。日志/tmp/sherlock-notes-inline-final-20261029/voice-final.log",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:17:05.510684+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -788,30 +1244,35 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "差异检查通过，两个中文提交后feature工作树干净；无依赖/共享客户端操作。",
-            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
-            "completedAt": "2026-10-28T11:52:01.613447Z",
+            "summary": "差异检查通过；feature clean fa609e24、integration clean3244e1b8，两份SDK未改。证据/tmp/sherlock-notes-inline-final-20261029/final-sdk-unchanged.json",
+            "verifiedCommit": "fa609e24e3ecc2c26f7dd3b3f0d45d7b8c612c4e",
+            "completedAt": "2026-10-28T17:17:05.529637+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实production preload resolver + NotesApp/BlockNote/Yjs + resident renderer，完整双层opaque sandbox与实际字体字节，HTML物理点击/输入→Notes save→重开、hold不提前ACK/不reload、失败拒绝恢复重试、readonly零写4条；初始滚跳与A→B直接换anchor各宽浅/窄深RED→GREEN，行内整文件28条。截图 notes-html-open.png/notes-html-save-failed.png及日志在 /tmp/sherlock-notes-html-interaction-20261028/；初始scroll证据 /tmp/sherlock-notes-scroll-focus-20261028/。无真实用户数据或模型调用，不代替新packaged验收。"
+          "summary": "当前production serializer+preload resolver+真实mountNotes/NativeComponentBlock隔离浏览器：原inline30、review结果13（含真实sole/default空白Undo保存重开、人工段落保护、明暗/窄屏、代码/加载图片/Native chart、Confirm/Esc/蓝标重开、save-failure/迟到binding）、Native chrome6、financial内容7、HTML4均在最终组通过。只使用明确合成I/O和模型输出fixture，无共享app操作或真实行情/模型成功冒称；真实packaged验收由父最终build后进行。截图与证据/tmp/sherlock-notes-inline-result-20261028、/tmp/sherlock-component-surfaces-20261028及本目录。"
         },
         "acceptanceCriteria": [
-          "Notes HTML通用journal进入专属异步context/sink，写本笔记既有node.config.interactionState，绝不调用或伪造canvas accepted；Research默认null context仍原同步路径，CSP与HTML验证不放宽。",
-          "当前编辑器/Native view/session/block/node/原HTML精确guard及只读验证；每编辑器串行、同ID事件幂等、最新config合并；updateBlock后必须原persistConfirmed成功并复查才ACK。持久化确认失败仅回滚仍exact的本次payload，不覆盖新编辑；已确认保存后失去view guard只拒绝ACK，不反向改写原已保存内容。",
-          "待保存node观察不提前确认iframe；失败后成功、乱序ACK、ACK-before-observe、字段顺序、pending期间Undo均回归。对应ACK观察匹配后支持真实后续Undo；journal更新不拆Native iframe。",
-          "补丁AST限定实际renderer/Note view函数，忽略已安装资产恢复metadata中的同名字串，保留HomeGuide等其它定义；生成helper同一实现、补丁幂等，无node_modules改动。",
-          "Space focus只在完整当前anchor的placement完成DOM提交后运行；长组件下Esc→Space或A未提交直接点远B再Space均保持当前scroll、textarea/锚点可视，普通IME/停止/错误焦点行为保留。",
-          "两个中文本地提交（焦点2文件、HTML保存其余），未全功能测试、未构建/操作共享客户端、未安装或删除依赖、未推送。"
+          "以已注册316为base包含严格中文后继：251恢复记录、9c36原生UI、53f7真实行情语义、b6f1样式规则、de916无端口/能力菜单、9092自由输出与回执、ad510待确认事务、fa609真实Notes状态来源。",
+          "完整自然语言意图保留；默认稳定anchor原位插入，显式其它编辑保持原scope/revision/selection/payload权限。正常公开文字/Markdown/代码经真实adapter落块，JSON业务字段不被拆丢。",
+          "全部公开component/capabilities操作统一当前宿主wire标识；示例不执行，不用词法关闭真实mixed操作。唯一无工具恢复不能新增或重放动作、变更原artifact目标/数据；完整receipts与剩余正文经service/loop/session重开保留。",
+          "inline直接给正文结果，模糊写作结合上下文合理完成，不在需求框追问主题。真实改动以蓝色decoration待确认，反馈为简短摘要与撤销/确认；持久化Map记录仅本请求真实before/after/节点身份。",
+          "撤销只反转仍匹配的本轮内容，保留人工/其它任务和物理同ID重建；真实PM sole/尾部连续删除/全删均恢复，外来邻居拒绝。保存失败保留checkpoint/修正草稿/error；Stop/Esc/换文档迟到不能覆盖新需求。",
+          "Notes真实状态来自独立note engine的owner-tagged push/list，既有canRead/input-owner和交付后owns复验；Research默认API保留，所有binding/native行按surface隔离、重置清Notes缓存。",
+          "Notes/Conversation不创建连接端口且执行链拒跨surface拖连；只显示实际callback可完成的菜单，真实查询/配置/刷新及source/频率/暂停/手刷保持。",
+          "裸库名行情面板使用真实quote选择器且未选证券不取数/不编造；空indices与空响应明确缺失/重试，保留旧有效数据；不重建用户已删卡、不改用户市场散文。",
+          "Native Notes复用Research34px header/4px圆角/共享控件，移除多余样式入口，保存尺寸/对齐/呈现；实际prompt/skill v1.39.5规则明确三surface与纯文字范围、事实/schema/预算保持。"
         ],
         "risks": [
-          "本轮UI证据为真实生产组件fixture；父已在旧2b2b原生包验证真实文字/精确10/20/15图表、唯一child及保存重开。新交互与焦点delta仍由父官方合入、正式树复跑并build --verify后完成原生物理点击/输入/保存重开验收。",
-          "旧component-interaction-state的actual renderer fixture在Notes代码调用前已于SDK metadata JSON.parse失败；git show fa831原restore实现在同一只读SDK资产精确复现，baseline-metadata-restore.json含源码相等与SHA证明。未改恢复函数/旧fixture/依赖掩盖，探索失败未列为通过。",
-          "本轮只补通HTML既有通用交互journal（如summary/input），未扩展新shared-component业务API。Memory/PPT annotation/ConversationRoot旧fixture基线记录沿用，未改、未列通过。"
+          "所有测试为直接范围，原runtime只选5项/256未选；未运行全功能套件，不把旧Memory等未选fixture冒充通过。",
+          "最终31组首轮489/1发现真正Notes状态来源回归，已保留notes-final-serial-status-red.log并修正；重跑491/491。其它先前fixture/合同/资源探索失败亦保留，未加测试timeout或删除语义断言。",
+          "旧2b2b QA失败没有保存公开raw final，不能声称还原该次具体输出；新公开诊断仅finish/字符数及各轮最多16k公开final，不采集隐藏reasoning。",
+          "Voice使用actual integration依赖与候选源只读映射，正式refresh/preflight/merge必要门禁及build --verify和真实native模型验收由父负责；未构建共享客户端、安装/清理依赖、改SDK、推送或操作用户内容。",
+          "UI撤销范围为本轮笔记内容；外部导出文件/窗口等已完成effect不伪称可删除。数据与生成fixture明确合成，真实价格/图片生成能力与模型满足度以最终native实际调用为准。"
         ],
-        "generatedAt": "2026-10-28T11:52:01.613044Z"
+        "generatedAt": "2026-10-28T17:21:59.118306+00:00"
       }
     },
     {
