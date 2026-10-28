@@ -6,7 +6,7 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const node = (tag, attributes = {}, children = []) => ({tag, attributes, children});
   const serialize = el => typeof el === 'string' ? esc(el) : `<${el.tag}${Object.entries(el.attributes).map(([k,v]) => ` ${k}="${esc(v)}"`).join('')}>${el.children.map(serialize).join('')}</${el.tag}>`;
-  const fmt = v => Number(v.toPrecision(5)).toLocaleString('en-US');
+  const fmt = v => Number(v.toPrecision(5)).toLocaleString('en-US',{maximumSignificantDigits:5});
   const color = i => `var(--sherlock-chart-${i % 8 + 1},var(--sherlock-chart-${i % 6 + 1}))`;
   const n = spec.labels.length, kind = spec.variant;
   const horizontal = ['horizontal','lollipop','dumbbell'].includes(kind);

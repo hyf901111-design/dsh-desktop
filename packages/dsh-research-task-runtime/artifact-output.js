@@ -1,3 +1,4 @@
+import {generatedChartGeometry} from './generated-chart-geometry.js';
 import {renderTimelineArtifact} from './timeline-artifact.js';
 import {renderKpiArtifact} from './kpi-artifact.js';
 import {renderNoteArtifact} from './note-artifact.js';
@@ -104,13 +105,14 @@ export function retainedTableData(spec) {
  const data=spec?.type==='html'?readTemplateModel(spec)?.data:undefined;
  return data?.type==='table'||data?.type==='market'&&data.variant==='table'?data:undefined;
 }
-export function acceptArtifactOutput(text) {
+export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
  const candidates=extractArtifactObjects(text);
  for(const original of candidates.reverse()) {
   // Retained JSON is data, not proof that model-supplied HTML displays it.
   // Rebuild tables with the same trusted renderer used for structured output.
   const tableData=retainedTableData(original)??original;
-  const candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(tableData)));
+  let candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(tableData)));
+  if(normalizeChartGeometry&&candidate?.type==='html'&&typeof candidate.html==='string'){const projected=generatedChartGeometry(candidate.html);if(projected.html!==candidate.html)candidate={...candidate,html:projected.html};}
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
   const chartWithNotes=renderAdvancedChart(candidate) ?? renderSpecialChart(candidate) ?? renderCartesianChart(candidate) ?? preserveLongChartCaption(candidate);

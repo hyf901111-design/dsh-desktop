@@ -241,3 +241,41 @@ it('repairs the actual offline interactive HTML in one child and accepts its gua
 it('does not promote the captured empty registration into a completed HTML component if repair is also empty',async()=>{
  const f=liveRepairContext(capturedOfflineHtml[0],capturedOfflineHtml[0]);await expect((await loadGenerate())(f.ctx,{...noteInput,prompt:offlineHtmlRequest,document:'',references:{scope:'none',components:[]}})).rejects.toThrow('空注册');expect(f.ctx.subagents.start).toHaveBeenCalledOnce();expect(f.repairPrompts).toHaveLength(1)
 })
+
+const latestOfflineHtml=JSON.parse(readFileSync(new URL('./fixtures/notes-real-third-offline-line-html.json',import.meta.url),'utf8'))
+it('projects the actual stale offline chart geometry from its declared data without losing custom input or spending another child',async()=>{
+ const f=liveRepairContext(latestOfflineHtml[0],latestOfflineHtml[1])
+ const result=await(await loadGenerate())(f.ctx,{...noteInput,prompt:offlineHtmlRequest,document:'',references:{scope:'none',components:[]}})
+ const html=result.node.containerSpec.html,points=html.match(/<polyline points="([^"]+)"/)[1].split(' ').map(p=>p.split(',').map(Number)),ys=points.map(p=>p[1])
+ expect(ys[0]-ys[2]).toBeCloseTo(ys[2]-ys[1]);expect(ys).toEqual([250,50,150])
+ expect(html).toContain('>9.5</text>');expect(html).toContain('>20.5</text>');expect(html).toContain('[10,20,15]')
+ expect(html.slice(html.indexOf('<script>'))).toBe(latestOfflineHtml[1].html.slice(latestOfflineHtml[1].html.indexOf('<script>')))
+ expect(html.slice(html.indexOf('<details>'),html.indexOf('<script>'))).toBe(latestOfflineHtml[1].html.slice(latestOfflineHtml[1].html.indexOf('<details>'),latestOfflineHtml[1].html.indexOf('<script>')))
+ expect(f.ctx.subagents.start).toHaveBeenCalledOnce();expect(f.repairPrompts).toHaveLength(1)
+})
+
+it('collects shared and chart problems before the sole child repair, then accepts the complete corrected HTML',async()=>{
+ const bad={...latestOfflineHtml[1],html:latestOfflineHtml[1].html.replace('shared.dispatch','missing.dispatch').replace('points="145,213.1578947368421','points="145,14')},f=liveRepairContext(bad,latestOfflineHtml[1])
+ const result=await(await loadGenerate())(f.ctx,{...noteInput,prompt:offlineHtmlRequest,document:'',references:{scope:'none',components:[]}})
+ expect(result.node.generationStatus).toBe('completed');expect(f.repairPrompts).toHaveLength(1);const repair=f.repairPrompts[0].content[0].text
+ expect(repair).toContain('共享状态');expect(repair).toContain('线与数据点不一致');expect(repair).toContain('无工具');expect(f.ctx.subagents.start).toHaveBeenCalledOnce()
+})
+it.each(['markdown','chart'])('does not use a %s downgrade or readable fallback after a proven HTML geometry repair error',async type=>{
+ const bad={...latestOfflineHtml[1],html:latestOfflineHtml[1].html.replace('points="145,213.1578947368421','points="145,14')},replacement=type==='markdown'?{version:1,type,title:'说明',content:'仅返回说明不能替代用户需要的图形和可输入备注。'}:{version:1,type,variant:'line',title:'线图',labels:['A','B'],series:[{name:'A',values:[10,20]}]},f=liveRepairContext(bad,replacement)
+ await expect((await loadGenerate())(f.ctx,{...noteInput,prompt:offlineHtmlRequest,document:'',references:{scope:'none',components:[]}})).rejects.toThrow(/图表几何修复必须保留/);expect(f.repairPrompts).toHaveLength(1);expect(f.ctx.subagents.start).toHaveBeenCalledOnce()
+})
+it.each(['drop-chart','change-values','drop-input','drop-details'])('does not accept %s as a complete HTML geometry repair',async change=>{
+ const bad={...latestOfflineHtml[1],html:latestOfflineHtml[1].html.replace('points="145,213.1578947368421','points="145,14')}
+ let html=latestOfflineHtml[1].html
+ if(change==='drop-chart')html=html.replace(/<svg[\s\S]*?<\/svg>/,'')
+ if(change==='change-values')html=html.replace('values:[10,20,15]','values:[10,99,15]')
+ if(change==='drop-input')html=html.replace(/<textarea[\s\S]*?<\/textarea>/,'')
+ if(change==='drop-details')html=html.replace(/<details>[\s\S]*?<\/details>/,'')
+ const f=liveRepairContext(bad,{...latestOfflineHtml[1],html})
+ await expect((await loadGenerate())(f.ctx,{...noteInput,prompt:offlineHtmlRequest,document:'',references:{scope:'none',components:[]}})).rejects.toThrow(/图表几何修复必须保留/);expect(f.repairPrompts).toHaveLength(1);expect(f.ctx.subagents.start).toHaveBeenCalledOnce()
+})
+
+it('does not change declared business values while repairing an independent shared-state failure',async()=>{
+ const bad={...latestOfflineHtml[1],html:latestOfflineHtml[1].html.replace('shared.dispatch','missing.dispatch')},changed={...latestOfflineHtml[1],html:latestOfflineHtml[1].html.replace('values:[10,20,15]','values:[10,99,15]').replace('演示数据：20','演示数据：99').replace('>20</td>','>99</td>')},f=liveRepairContext(bad,changed)
+ await expect((await loadGenerate())(f.ctx,{...noteInput,prompt:offlineHtmlRequest,document:'',references:{scope:'none',components:[]}})).rejects.toThrow(/图表几何修复必须保留/);expect(f.repairPrompts).toHaveLength(1)
+})

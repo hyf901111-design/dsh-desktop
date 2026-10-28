@@ -3371,3 +3371,14 @@ it('compacts identified article navigation before the source excerpt limit can c
  const event={type:'tool/result',data:{message:{content:[{type:'tool-result',toolCallId:'page',content:[{type:'text',text}]}]}}}
  expect(researchSearchEvidence(event,new Set(['page']),{pageUrl:url})).toContain('ACTUAL-ARTICLE-BODY-RETAINED')
 })
+it('preserves completed stale chart geometry and HTML version on restore rather than migrating stored content',async()=>{
+ const {ResearchTaskRuntime}=await runtimeModule(),artifact=JSON.parse(await readFile(new URL('./fixtures/notes-real-third-offline-line-html.json',import.meta.url),'utf8'))[1],finalOutput=JSON.stringify(artifact)
+ const storage=memoryTaskStorage({version:1,tasks:[{...containerRequest('legacy-chart'),taskId:'legacy-chart',state:'completed',createdAt:1,completedAt:2,lastSeq:3,finalOutput}]}),runtime=new ResearchTaskRuntime({adapter:{start:vi.fn(),dispose:async()=>{}},storage})
+ try{await runtime.restore();expect(runtime.inspect({parentSessionId:'parent-1',taskId:'legacy-chart'})).toMatchObject({state:'completed',finalOutput})}finally{await runtime.dispose()}
+})
+it('shared component generation collects shared and chart issues for its single repair without accepting a static downgrade',async()=>{
+ const {createSharedBoardExecutor}=await runtimeModule(),artifact=JSON.parse(await readFile(new URL('./fixtures/notes-real-third-offline-line-html.json',import.meta.url),'utf8'))[1],bad={...artifact,html:artifact.html.replace('shared.dispatch','missing.dispatch').replace('points="145,213.1578947368421','points="145,14')},parent={id:'shared-parent',session:{events:[]}},child={id:'child',session:{id:'child',events:[]}},run=text=>({id:'child',localAgent:child,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(text)}]}),dispose:vi.fn(async()=>{})}),ctx=sessionEventContext(parent,child,run(bad))
+ ctx.subagents.start.mockResolvedValueOnce(run(bad)).mockResolvedValueOnce(run({version:1,type:'markdown',title:'说明',content:'不能用文字说明替代带备注及明细的原图表。'}))
+ const executor=createSharedBoardExecutor(ctx)
+ try{await expect(executor.execute({sessionId:parent.id,kind:'container',prompt:'创建原样离线图表，保留备注和明细',files:[]},new AbortController().signal)).rejects.toMatchObject({code:'CHART_GEOMETRY_REQUIRED'});const repair=ctx.subagents.start.mock.calls[1][1];expect(repair.prompt[0].text).toContain('线与数据点不一致');expect(repair.prompt[0].text).toContain('共享状态');expect(repair.toolFilter.allow).toEqual([]);expect(ctx.subagents.start).toHaveBeenCalledTimes(2)}finally{await executor.dispose()}
+})

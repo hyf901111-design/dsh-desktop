@@ -1,1 +1,1 @@
-export function acceptArtifactOutput(value:string):string|undefined
+export function acceptArtifactOutput(value:string,options?:{normalizeChartGeometry?:boolean}):string|undefined
