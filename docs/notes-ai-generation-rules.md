@@ -12,6 +12,8 @@
 
 ## 输出与执行通道
 
+正文主生成使用发起请求时真实会话已选择的模型及reasoningEffort；格式恢复沿用同一快照，不重新取路由或跟随中途切换。缺省等级保持省略，继续使用既有适配器默认；组件子任务沿原有独立策略，不借此改档。
+
 - 正常完整结束的文字、Markdown、列表、表格和代码用现有 BlockNote Markdown adapter 转为真正的富文本块。
 - 只把完整、明确的传输 envelope 作为内部协议；不扫描 Markdown 内部 JSON。普通业务 JSON 的 id、金额0、来源和其它字段不得因为出现 text/content/markdown 等同名键而丢失。JSON 或代码示例即使与私有 envelope 同型，也须根据原始人类展示意图保留完整示例。
 - JSON/代码展示意图下，text/conversation/component/capabilities 四种私有形状都要消歧。component/capabilities 操作统一必须携带宿主本轮 wireToken 标识运输对象；不按 JSON/示例/保留原文等词法决定执行。展示样例没有本轮运输标识，不能执行；真实混合需求的有效标识操作仍沿原权限执行。标识只用于区分传输，不替代原权限校验。read/inspect 全成功但 final 为空时仍须整理真实查询数据为正文，不能当作已写入。
