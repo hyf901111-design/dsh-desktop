@@ -99,6 +99,129 @@
           "物理合盖和系统重启未自动验证；最终本地包的主界面及持续状态由父任务核对"
         ],
         "generatedAt": "2026-10-28T07:46:25.838819+00:00"
+      },
+      "merged": {
+        "mergeCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+        "verificationCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
+            "verifiedCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+            "completedAt": "2026-10-28T07:47:51.448Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+            "completedAt": "2026-10-28T07:47:51.448Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/memory-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
+            "verifiedCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+            "completedAt": "2026-10-28T07:47:51.448Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/plugin-back-sticky-browser.test.js",
+              "test/integration-menu-layout.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/integration-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
+            "verifiedCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+            "completedAt": "2026-10-28T07:47:51.448Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+            "completedAt": "2026-10-28T07:47:51.448Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/notes-preload-runtime.test.ts",
+              "test/preload-editor-singleton.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
+            "verifiedCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+            "completedAt": "2026-10-28T07:47:51.448Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+            "completedAt": "2026-10-28T07:47:51.448Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-voice.test.ts",
+              "test/composer-voice.test.js",
+              "test/composer-voice-patch.test.js",
+              "test/composer-voice-browser.test.js",
+              "test/composer-submit-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
+            "verifiedCommit": "9fe9bbba9fbca32dd47ff9789fdf2a574ec1129a",
+            "completedAt": "2026-10-28T07:47:51.448Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-28T07:47:51.448Z"
       }
     },
     {
