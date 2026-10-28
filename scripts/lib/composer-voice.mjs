@@ -71,11 +71,13 @@ export function createComposerVoiceSession(options){
  const keyup=event=>{if(modifier(event.key))interruptedInput=null}
  const blur=event=>{if(event.target===interruptedInput)interruptedInput=null;if(event.target===caret?.input)clearCaret();if(request&&event.target===request.input)stop()}
  const edit=event=>{if(event.target===interruptedInput)interruptedInput=null;if(event.target===caret?.input)clearCaret();if(request&&event.target===request.input)stop()}
- const pointer=()=>{interruptedInput=null;clearCaret()}
+ const clearInteraction=()=>{interruptedInput=null;clearCaret()}
  doc.addEventListener('keydown',key,true);doc.addEventListener('keyup',keyup,true);doc.addEventListener('blur',blur,true)
  doc.addEventListener('beforeinput',edit,true);doc.addEventListener('compositionstart',edit,true)
- doc.addEventListener('pointerdown',pointer,true)
- // BrowserWindow blur/permission-sheet grace belongs to the shared main controller.
+ doc.addEventListener('pointerdown',clearInteraction,true)
+ win.addEventListener('blur',clearInteraction)
+ // Window blur only clears transient input work. Recording and permission-sheet
+ // grace remain owned by the shared main controller.
  observer=new win.MutationObserver(reconcile)
  return{
   async start(){
@@ -97,7 +99,7 @@ export function createComposerVoiceSession(options){
    }catch(error){if(request===req){stop();onError('无法开始语音输入，请重试。')}}
   },
   stop,reconcile,
-  dispose(){if(disposed)return;stop();interruptedInput=null;disposed=true;unsubscribe();unsubscribeDraft();observer.disconnect();doc.removeEventListener('keydown',key,true);doc.removeEventListener('keyup',keyup,true);doc.removeEventListener('blur',blur,true);doc.removeEventListener('beforeinput',edit,true);doc.removeEventListener('compositionstart',edit,true);doc.removeEventListener('pointerdown',pointer,true)}
+  dispose(){if(disposed)return;stop();interruptedInput=null;disposed=true;unsubscribe();unsubscribeDraft();observer.disconnect();doc.removeEventListener('keydown',key,true);doc.removeEventListener('keyup',keyup,true);doc.removeEventListener('blur',blur,true);doc.removeEventListener('beforeinput',edit,true);doc.removeEventListener('compositionstart',edit,true);doc.removeEventListener('pointerdown',clearInteraction,true);win.removeEventListener('blur',clearInteraction)}
  }
 }
 

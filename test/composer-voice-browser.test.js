@@ -65,6 +65,16 @@ it.each(['Meta','Control'])('stops the complete %s+Enter gesture without sending
   await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1);expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('组合快捷键保留文字');expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
+it.each(['Meta','Control'])('restores native Enter on window focus after losing the %s keyup',async modifier=>{
+ const f=await fixture();try{
+  await f.start();await f.emit({type:'partial',text:'失焦返回保留正文'});await f.page.keyboard.down(modifier)
+  await f.page.evaluate(()=>{window.dispatchEvent(new Event('blur'));window.addEventListener('keyup',event=>{window.swallowedModifier=event.key;event.stopImmediatePropagation()},{capture:true,once:true})})
+  await f.page.keyboard.up(modifier);expect(await f.page.evaluate(()=>window.swallowedModifier)).toBe(modifier)
+  await f.page.evaluate(()=>window.dispatchEvent(new Event('focus')));expect(await f.input.evaluate(el=>document.activeElement===el)).toBe(true)
+  await f.page.keyboard.press('Enter');await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1)
+  expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('失焦返回保留正文');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})
 it.each(['key','blur','stop','hidden','foreign-write','dispose'])('freezes the visible transcript on %s and rejects delayed partial/final callbacks',async reason=>{
  const f=await fixture('notes');try{
   await f.start();await f.emit({type:'partial',text:'已识别的要求'})
