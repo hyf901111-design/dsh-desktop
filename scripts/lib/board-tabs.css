@@ -66,3 +66,8 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id][data-releas
 [data-board-tabs-arriving]{visibility:hidden!important}
 .ew-board-tabs-library-preview{position:fixed;z-index:2147483646;pointer-events:none;border:1px solid #8884;box-shadow:0 8px 32px #0003;background:#242424;color:#eee}
 @media(prefers-reduced-motion:reduce){body [data-research-canvas][data-ework-grid][data-grid-operation=move] [data-research-node-id][data-board-tabs-live-preview],.ew-board-tabs-drag-caption{transition:none!important}}
+
+/* Linked-page outlines use the same live palette as the connection SVG. The
+   reserved 1px button border keeps widths stable; drag receivers retain priority. */
+.ew-board-tabs-nav button[data-financial-connection-target]:not([data-tab-accept]):not([data-tab-target]){border-color:var(--fw-accent)}
+.ew-board-tabs-nav>[data-financial-connection-stem]{position:absolute;width:1.5px;transform:translateX(-50%);background:var(--fw-accent);pointer-events:none;z-index:1}
