@@ -636,87 +636,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记空白行空格唤起原位AI写作与组件生成",
+        "featureName": "笔记空格入口协作插件身份与组件输入误触修复",
         "branch": "codex/feat/notes-react-runtime-20261028",
-        "baseCommit": "8416133492d4809440d803b67cf938a67a2e9ede",
-        "tipCommit": "6d5ff0c2dfc002abf6157ad9b8a079fce413de60",
+        "baseCommit": "6d5ff0c2dfc002abf6157ad9b8a079fce413de60",
+        "tipCommit": "355a6b2c55607f01a80de63cd399c859a655a4e1",
         "commits": [
           {
-            "commit": "6d5ff0c2dfc002abf6157ad9b8a079fce413de60",
+            "commit": "355a6b2c55607f01a80de63cd399c859a655a4e1",
             "parents": [
-              "8416133492d4809440d803b67cf938a67a2e9ede"
+              "6d5ff0c2dfc002abf6157ad9b8a079fce413de60"
             ],
-            "subject": "功能：支持笔记空白行空格唤起原位 AI 写作与组件生成"
+            "subject": "修复：统一笔记协作插件身份并限制正文空格入口"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-10-28-notes-inline-ai.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/superpowers/specs/2026-10-28-notes-inline-ai-design.md"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "docs/verification/2026-10-28-notes-inline-ai.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-ai.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-locale.js"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/client-capability-actions.ts"
+            "path": "electron.vite.config.ts"
           },
           {
             "status": "M",
             "path": "src/preload/notes/editor.tsx"
           },
           {
-            "status": "A",
-            "path": "src/preload/notes/inline-ai-composer.tsx"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/notes/inline-ai.ts"
-          },
-          {
             "status": "M",
-            "path": "src/preload/notes/locale.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/use-inline-component-generation.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/workspace-notes.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-ai.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/notes-inline-ai-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-service.test.ts"
           }
         ],
         "checks": [
@@ -737,9 +685,9 @@
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "9文件95项聚焦全部通过，含13条真实生产preload浏览器测试、React/Yjs单例保存重开和主进程/runtime协议。日志 /tmp/sherlock-notes-inline-ai-20261028/final-95-tests.log",
-            "verifiedCommit": "6d5ff0c2dfc002abf6157ad9b8a079fce413de60",
-            "completedAt": "2026-10-28T08:53:42.330018Z",
+            "summary": "feature图9文件96/96通过；包含强制双物理y-prosemirror peer、实际binding与唯一key owner、14条真实行内UI及原React/Yjs保存重开。日志 /tmp/sherlock-notes-y-prosemirror-20261028/feature-96-tests.log。真实APFS integration图以只读拟合入config/editor/test投影亦96/96，日志integration-96-tests.log。",
+            "verifiedCommit": "355a6b2c55607f01a80de63cd399c859a655a4e1",
+            "completedAt": "2026-10-28T09:12:41.204824Z",
             "timeoutMs": 180000
           },
           {
@@ -749,9 +697,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript类型检查通过。",
-            "verifiedCommit": "6d5ff0c2dfc002abf6157ad9b8a079fce413de60",
-            "completedAt": "2026-10-28T08:53:42.330018Z",
+            "summary": "TypeScript检查通过。",
+            "verifiedCommit": "355a6b2c55607f01a80de63cd399c859a655a4e1",
+            "completedAt": "2026-10-28T09:12:41.204824Z",
             "timeoutMs": 120000
           },
           {
@@ -761,151 +709,27 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "无空白/冲突标记问题，feature工作树干净。",
-            "verifiedCommit": "6d5ff0c2dfc002abf6157ad9b8a079fce413de60",
-            "completedAt": "2026-10-28T08:53:42.330018Z",
+            "summary": "差异检查通过，feature干净。integration源码及APFS依赖未改。",
+            "verifiedCommit": "355a6b2c55607f01a80de63cd399c859a655a4e1",
+            "completedAt": "2026-10-28T09:12:41.204824Z",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离真实mountNotes/NotesApp和生产preload浏览器验证通过；宽屏浅色与620px深色截图位于 /tmp/sherlock-notes-inline-ai-20261028/。默认头像、同宽多行输入、发送/取消、既有processing、正文占位、资料授权、原位段落/组件、持久化重开均覆盖；共享客户端和实际模型调用留给父批次构建后验收。"
+          "summary": "实际APFS integration图原生probe RED为helper y-sync$1、installed y-sync$、binding缺失、Space pageerror；最小dedupe后同为y-sync$、binding有效、composer可见、pageerrors=[]。强制peer与14条真实UI全绿；现有smart/link组件textarea在PM仍停空白段落时Space正常且不误开AI。原始证据runtime-identity.json、green/runtime-identity.json，路径 /tmp/sherlock-notes-y-prosemirror-20261028/。未构建共享客户端。"
         },
         "acceptanceCriteria": [
-          "仅正文空白paragraph的起始折叠光标且非IME/只读时Space触发，普通空格与slash保留，Esc无正文副作用。",
-          "占位文字精确为：按 space（空格）以启用 AI，或按“/”启用命令；复用项目未登录avatar和笔记处理中样式。",
-          "复用generate→Notes service→客户端能力循环和组件生成器；请求绑定documentId+blockId+Yjs relative position，新增段落/富文本/组件在锚点插入。",
-          "保留异步期间编辑；删锚点/同ID重建、取消、切会话迟到结果无误写；子组件持有原锚点guard；处理中不覆盖另一个草稿。",
-          "错误/取消保留需求并可重试；当前笔记组件数据/附件授权不丢失；保存重开保持内容和React/Yjs单例。"
+          "仅在既有preload dedupe中增加y-prosemirror，统一协作PluginKey身份，保持React/Yjs/BlockNote既有单例、锚点与保存协议。",
+          "强制双peer回归稳定复现y-sync$1与y-sync$不一致，修复后业务helper取得真实binding，最终keys.js只一份；原始Space入口/段落组件插入/保存重开全部通过。",
+          "键盘事件必须来自可编辑正文且不在input/textarea/button/select或contenteditable=false中，现有smart/link输入框Space正常，不修改正文触发条件或timeout。",
+          "feature和实际APFS integration图的9文件96项聚焦通过，独立只读复核通过，无全功能单元测试。"
         ],
         "risks": [
-          "功能worktree未构建或替换共享客户端，未调用真实用户数据/真实模型；需集成构建后的共享客户端完成实际使用验收。",
-          "额外命名范围测试中的三个旧fixture失败已用841基线源码重现，未修无关源码也未标为通过：notes-english-ui Memory data.rows、notes-command-scope PPT annotation anchor、notes-composer ConversationRoot签名。详见docs/verification/2026-10-28-notes-inline-ai.md与/tmp/sherlock-notes-inline-ai-20261028/unrelated-baseline.log。"
+          "实际integration验证用临时Vitest loader只读投影拟合入的config/editor/test，其余生产源码为6874c876c98f341da1d4b99bdea93a92ea5ae6e9，APFS依赖保持原样；父批次合入后仍需以正式integration树再跑96并构建真实客户端验收。",
+          "前轮记录的Memory/PPT annotation/ConversationRoot三个旧fixture基线失败未变，未修无关源码，未列为passed checks；本轮未重跑这些不相关用例。"
         ],
-        "generatedAt": "2026-10-28T08:53:49.486968Z"
-      },
-      "merged": {
-        "mergeCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-        "verificationCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-            "completedAt": "2026-10-28T08:56:17.812Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-            "completedAt": "2026-10-28T08:56:17.812Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-            "completedAt": "2026-10-28T08:56:17.812Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-            "completedAt": "2026-10-28T08:56:17.812Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-            "completedAt": "2026-10-28T08:56:17.812Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-            "completedAt": "2026-10-28T08:56:17.812Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-            "completedAt": "2026-10-28T08:56:17.812Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "d66ba480b35d668a1c42e7a1f319937576b185a8",
-            "completedAt": "2026-10-28T08:56:17.812Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-28T08:56:17.812Z"
+        "generatedAt": "2026-10-28T09:12:41.204824Z"
       }
     },
     {
