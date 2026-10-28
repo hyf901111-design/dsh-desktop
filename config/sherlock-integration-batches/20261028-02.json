@@ -615,6 +615,96 @@
         ],
         "recordedAt": "2026-10-28T05:41:37.226Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复笔记预加载 React 运行时重复导致的空白",
+        "branch": "codex/feat/notes-react-runtime-20261028",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "9e8f31bcc33381882405fb6624616bf32985480e",
+        "commits": [
+          {
+            "commit": "9e8f31bcc33381882405fb6624616bf32985480e",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "修复：统一笔记预加载 React 运行时避免空白"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-28-notes-react-runtime.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-28-notes-react-runtime-design.md"
+          },
+          {
+            "status": "M",
+            "path": "electron.vite.config.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-preload-runtime.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/notes-preload-runtime.test.ts",
+              "test/preload-editor-singleton.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "4 tests passed: production CJS mount/edit/locale/save/reopen for blank/default/existing Yjs notes; one physical React under a second dependency root; existing editor registry and native transactions.",
+            "verifiedCommit": "9e8f31bcc33381882405fb6624616bf32985480e",
+            "completedAt": "2026-10-28T06:20:45.788Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "tsc --noEmit -p tsconfig.node.json passed.",
+            "verifiedCommit": "9e8f31bcc33381882405fb6624616bf32985480e",
+            "completedAt": "2026-10-28T06:20:45.788Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "No whitespace errors; git status --porcelain empty at the feature tip.",
+            "verifiedCommit": "9e8f31bcc33381882405fb6624616bf32985480e",
+            "completedAt": "2026-10-28T06:20:45.788Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Headless Chromium 1280x900 runs actual mountNotes/NotesApp CJS built by production electron-vite preload config, including sandbox/custom-elements plugins. Blank/default/existing fixtures render editable content, change locale without losing title/body, confirm saves, and reopen real Yjs snapshots; zero page errors. Screenshots in external evidence directory. Shared packaged EWork UI remains parent integration acceptance."
+        },
+        "acceptanceCriteria": [
+          "笔记 hooks、ReactDOM 与 BlockNote 共享同一 preload React 实例。",
+          "生产构建回归复现修复前 useReducer 空 dispatcher，并覆盖空白、默认与已有保存的 Yjs 笔记。",
+          "受控标题与正文可编辑，语言切换保留内容，确认保存并重开成功。",
+          "不清除或迁移用户笔记，不从功能 worktree 构建或替换共享客户端。"
+        ],
+        "risks": [
+          "共享客户端真实视图需父任务集成后重新构建验证，本功能 worktree 未构建或替换共享应用。",
+          "键盘 redo 的额外简化 fixture 探针未恢复文字，已告知父任务并留在最小渲染修复范围外；未改动历史逻辑，未将 redo 宣称为通过。"
+        ],
+        "generatedAt": "2026-10-28T06:20:45.788Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -671,6 +761,23 @@
         "--check"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/notes-preload-runtime.test.ts",
+        "test/preload-editor-singleton.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
     }
   ],
   "mainSynchronizations": []
