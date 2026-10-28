@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto'
 import {join} from 'node:path'
 import {setTimeout as delay} from 'node:timers/promises'
 
-export type PowerServiceStatus = {version: 1; servicePid: number; mode: 'idle'|'active'|'external'|'safety-stop'|'system-changed'|'error'; ownerPid: number; token: string|null}
+export type PowerServiceStatus = {version: 1; implementationVersion?: number; servicePid: number; mode: 'idle'|'active'|'external'|'safety-stop'|'system-changed'|'error'; ownerPid: number; token: string|null}
 export type PowerService = {readonly directory: string; isReady(): Promise<boolean>; install(): Promise<void>; status(): Promise<PowerServiceStatus>}
 export type PowerCommand = (file: string, args: string[], timeout?: number) => Promise<string>
 export const runPowerCommand: PowerCommand = (file, args, timeout = 5000) => new Promise((resolve, reject) => {
@@ -25,6 +25,7 @@ const modes = new Set(['idle', 'active', 'external', 'safety-stop', 'system-chan
 export function parsePowerServiceStatus(source: string): PowerServiceStatus {
   const value = JSON.parse(source)
   if (!value || value.version !== 1 || !Number.isSafeInteger(value.servicePid) || value.servicePid < 2 || !Number.isSafeInteger(value.ownerPid) || value.ownerPid < 0 || !modes.has(value.mode) || (value.token !== null && (typeof value.token !== 'string' || !/^[a-f0-9]{32}$/u.test(value.token)))) throw Error('helper-unavailable')
+  if (value.implementationVersion !== undefined && (!Number.isSafeInteger(value.implementationVersion) || value.implementationVersion < 1)) throw Error('helper-unavailable')
   return value as PowerServiceStatus
 }
 
@@ -64,9 +65,12 @@ export class MacOSPowerService implements PowerService {
     try {
       if (!rootOwned(HELPER) || !rootOwned(this.plist)) return false
       const status = await this.status()
+      // The shared file can be replaced while another UID still runs an older
+      // daemon. Its own root-written status must identify the fixed build too.
+      if (status.implementationVersion !== 2) return false
       // A stale lease rejection does not prevent a fresh client handshake.
       await this.run('/usr/bin/codesign', ['--verify', '--strict', '-R', REQUIREMENT, HELPER])
-      if ((await this.run(HELPER, ['--version'])).trim() !== '1') return false
+      if ((await this.run(HELPER, ['--version'])).trim() !== '2') return false
       const job = await this.run('/bin/launchctl', ['print', `system/${this.label}`])
       return /\bstate = running\b/u.test(job) && new RegExp(`\\bpid = ${status.servicePid}\\b`, 'u').test(job)
     } catch {return false}
@@ -100,7 +104,7 @@ trap '/bin/rm -rf "$stage"' EXIT HUP INT TERM
 actual=$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LC_ALL=C /usr/bin/shasum -a 256 "$stage/helper" | /usr/bin/awk '{print $1}')
 [ "$actual" = ${quote(digest)} ] || exit 1
 /usr/bin/codesign --verify --strict -R ${quote(REQUIREMENT)} "$stage/helper"
-[ "$("$stage/helper" --version)" = 1 ] || exit 1
+[ "$("$stage/helper" --version)" = 2 ] || exit 1
 legacy='/Library/LaunchDaemons/com.evanarts.sherlock.sleep-guard.plist'
 if [ -e "$legacy" ] || [ -L "$legacy" ]; then
   [ -f "$legacy" ] && [ ! -L "$legacy" ] && [ "$(/usr/bin/stat -f %u "$legacy")" = 0 ] || exit 1

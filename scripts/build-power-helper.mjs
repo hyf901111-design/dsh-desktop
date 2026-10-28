@@ -17,8 +17,8 @@ if (process.platform === 'darwin') {
 <plist version="1.0"><dict>
 <key>CFBundleIdentifier</key><string>com.evanarts.sherlock.power-helper</string>
 <key>CFBundleName</key><string>EWork Odyssey Power Helper</string>
-<key>CFBundleVersion</key><string>1</string>
-<key>CFBundleShortVersionString</key><string>1</string>
+<key>CFBundleVersion</key><string>2</string>
+<key>CFBundleShortVersionString</key><string>2</string>
 </dict></plist>
 `)
     execFileSync('/usr/bin/xcrun', ['clang++', '-std=c++17', '-O2', '-Wall', '-Wextra', '-Werror',

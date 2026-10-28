@@ -115,6 +115,17 @@ describe('persistent closed-lid service lease', () => {
     await expect(guard.active()).resolves.toBe(true)
     await guard.stop()
   })
+  it('retains its request when the service still reports active before publishing a restored power state', async () => {
+    const f = fixture(); f.installed(); let restored = false
+    const guard = new MacOSLidGuard({service: f.service, run: (file,args) => restored && file === '/usr/bin/pmset' ? Promise.resolve('SleepDisabled 0\n') : f.run(file,args)})
+    await guard.start(false)
+    restored = true
+    await expect(guard.active()).rejects.toThrow('restore-failed')
+    expect(JSON.parse(readFileSync(f.leasePath, 'utf8')).release).toBeUndefined()
+    f.mode('system-changed')
+    await expect(guard.active()).rejects.toThrow('system-changed')
+    await guard.stop()
+  })
   it('waits for its release nonce acknowledgement when acquisition was cancelled before active status', async () => {
     const f = fixture(); f.installed()
     const guard = new MacOSLidGuard({service: f.service, run: f.run})

@@ -131,7 +131,7 @@ try {
     if (driverVersion !== 'cua-driver 0.28.2') throw new Error(`Unexpected computer driver: ${driverVersion}`)
     if (!existsSync(path.join(resourcesPath, 'native', 'cua-driver-MIT.txt'))) throw new Error('Computer driver license is missing')
     const powerHelper = path.join(resourcesPath, 'native', 'sherlock-power-helper')
-    if (!existsSync(powerHelper) || execFileSync(powerHelper, ['--version'], {encoding: 'utf8'}).trim() !== '1') throw new Error('Power helper is missing or incompatible')
+    if (!existsSync(powerHelper) || execFileSync(powerHelper, ['--version'], {encoding: 'utf8'}).trim() !== '2') throw new Error('Power helper is missing or incompatible')
     if (!skipSignature) execFileSync('/usr/bin/codesign', ['--verify', '--strict', '-R', '=identifier "com.evanarts.sherlock.power-helper" and anchor apple generic and certificate leaf[subject.OU] = "FAV8TLDK73"', powerHelper], {stdio: 'inherit'})
     const bundledSkills = verifyClientBundledSkillsParity({
       sourceSkillRoot: path.resolve('skills'),
