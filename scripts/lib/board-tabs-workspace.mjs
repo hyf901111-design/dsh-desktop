@@ -39,7 +39,8 @@ export function createBoardTabsWorkspace(adapter) {
    const spec=boardTabsMove(nav.containerSpec,ids,target);if(!spec)return false
    const width=snapshot.canvasSize.availableWidth||snapshot.canvasSize.width
    if([...snapshot.files,...snapshot.artifacts].some(n=>ids.includes(n.id)&&n.width>width-24))return false
-   return adapter.transact({artifacts:snapshot.artifacts.map(n=>n.id===nav.id?{...n,containerSpec:spec}:n),selection:{selectedNodeIds:ids,orderedFileIds:snapshot.files.filter(n=>ids.includes(n.id)).map(n=>n.id)},viewport:{x:0,y:0,scale:1}},()=>{if(!grid.move(ids,target,snapshot))throw Error('目标页签已不可用');grid.switch(target,snapshot)})
+   // Moving changes ownership and layout; navigating to that page is explicit.
+   return adapter.transact({artifacts:snapshot.artifacts.map(n=>n.id===nav.id?{...n,containerSpec:spec}:n),selection:{selectedNodeIds:snapshot.selection.selectedNodeIds.filter(id=>!ids.includes(id)),orderedFileIds:snapshot.selection.orderedFileIds.filter(id=>!ids.includes(id))}},()=>{if(!grid.move(ids,target,snapshot))throw Error('目标页签已不可用')})
   },
   removeBoardTabs(){const snapshot=read(),nav=boardTabsNode(snapshot);if(!nav||!adapter.canWrite())return false;return adapter.transact({artifacts:snapshot.artifacts.filter(n=>n.id!==nav.id),selection:{selectedNodeIds:[],orderedFileIds:[]}},()=>grid.flatten(snapshot))}
  }

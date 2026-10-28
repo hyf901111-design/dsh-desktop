@@ -182,7 +182,8 @@ export function animateBoardTabsDrop(current,root,workspace,duration,onDone) {
  if(current.small){Object.assign(caption.style,{position:'fixed',left:labelFrom.left+'px',top:labelFrom.top+'px',transition:'none',transform:'none',opacity:'1'});root.ownerDocument.body.append(caption)}else caption.remove()
  current.position.remove()
  frame=view.requestAnimationFrame(()=>{
-  frame=null;if(!card.isConnected){finish();return}
+  // A successful transfer leaves the card hidden on its destination page.
+  frame=null;if(!card.isConnected||!workspace.isBoardNodeVisible(current.id)){finish();return}
   const node=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts].find(n=>n.id===current.id)
   if(node&&workspace.isBoardNodeVisible(current.id)){const usable=root.clientHeight-86,top=node.y-node.height/2,bottom=node.y+node.height/2;if(top<root.scrollTop+12||bottom>root.scrollTop+usable){root.scrollTop=Math.max(0,top-58);workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}}
   const target=card.getBoundingClientRect(),dx=from.left+from.width/2-target.left-target.width/2,dy=from.top+from.height/2-target.top-target.height/2,first='translate(-50%,-50%) translate3d('+dx+'px,'+dy+'px,0) scale('+(from.width/target.width)+','+(from.height/target.height)+')'
