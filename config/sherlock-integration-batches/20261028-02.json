@@ -208,6 +208,45 @@
           "未从功能 worktree 构建或替换共享客户端；真实客户端验收待集成后进行。"
         ],
         "generatedAt": "2026-10-28T03:37:21.178Z"
+      },
+      "merged": {
+        "mergeCommit": "ef85ec35dccd24d38f2b4a9017457574a57ce53a",
+        "verificationCommit": "ef85ec35dccd24d38f2b4a9017457574a57ce53a",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
+            "verifiedCommit": "ef85ec35dccd24d38f2b4a9017457574a57ce53a",
+            "completedAt": "2026-10-28T03:43:11.852Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ef85ec35dccd24d38f2b4a9017457574a57ce53a",
+            "completedAt": "2026-10-28T03:43:11.852Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-28T03:43:11.852Z"
       }
     }
   ],
