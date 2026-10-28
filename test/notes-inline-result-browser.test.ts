@@ -52,6 +52,35 @@ async function capabilityReceipt(page:any,id:string){
  return page.evaluate((id:string)=>({requestId:id,capability:'notes.components.create',...(window as any).replies.find((reply:any)=>reply.requestId===id&&reply.result).result}),id)
 }
 const resultTable={id:'retry-table',kind:'generated-container',noteLibrary:true,title:'合成重试表',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'合成重试表',columns:['项目','值'],rows:[['甲',0],['乙',-2]]}}
+it.each([{count:1000,characters:4,action:'undo'},{count:1200,characters:81,action:'confirm'}])('keeps complete long review for $count paragraphs through save/reopen and $action',async({count,characters,action})=>{
+ const f=await open();try{
+  const markdown=Array.from({length:count},(_,i)=>'文'.repeat(characters-String(i).length)+i).join('\n\n');expect(markdown.length).toBeLessThanOrEqual(100000)
+  await generate(f.page,{kind:'text',markdown},'逐段生成并保留全部 '+count+' 项内容')
+  const confirm=f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true});await confirm.waitFor({timeout:10000})
+  expect(await f.page.locator('.en-inline-ai-pending').count()).toBe(count)
+  await f.page.evaluate(()=>(window as any).fixture.flush())
+  const saved=await f.page.evaluate(()=>{const w=window as any,value=[...w.noteDoc.getMap('note-inline-proposals').values()][0] as any;return{blocks:w.saved.blocks.length,bytes:new TextEncoder().encode(JSON.stringify({title:w.saved.title,blocks:w.saved.blocks,yjs:w.saved.yjs})).length,chunks:value.changeEncoding?.chunks.length}})
+  expect(saved.blocks).toBe(count+2);expect(saved.bytes).toBeLessThanOrEqual(4*1024*1024);expect(saved.chunks).toBeGreaterThan(1)
+  if(action==='undo'){
+   await f.page.evaluate(()=>(window as any).failSaves=true);await confirm.click()
+   await expect.poll(()=>f.page.locator('.en-space-ai [role="alert"]').textContent()).toContain('保存')
+   expect(await f.page.evaluate(()=>(window as any).proposalDraft()[0]?.changeEncoding.chunks.length)).toBeGreaterThan(1)
+   await f.page.evaluate(()=>(window as any).failSaves=false)
+  }
+  await f.page.evaluate(()=>(window as any).fixture.reopen());await confirm.waitFor({timeout:10000})
+  expect(await f.page.locator('.en-inline-ai-pending').count()).toBe(count)
+  if(action==='undo'){
+   await f.page.evaluate(()=>{const e=(window as any).editor,block=e.document[Math.floor(e.document.length/2)];e.updateBlock(block.id,{content:'人工修改长结果必须保留'})})
+   await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click()
+   await expect.poll(()=>f.page.locator('.bn-block-outer[data-id]').count()).toBe(3)
+   expect(await f.page.locator('.bn-editor').textContent()).toContain('人工修改长结果必须保留');await confirm.click()
+  }else await confirm.click()
+  await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0);await f.page.evaluate(()=>(window as any).fixture.flush());await f.page.evaluate(()=>(window as any).fixture.reopen())
+  await expect.poll(()=>f.page.locator('.bn-block-outer[data-id]').count()).toBe(action==='undo'?3:count+2)
+  expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(await f.page.locator('.en-inline-ai-pending').count()).toBe(0);expect(f.errors).toEqual([])
+  if(evidence)writeFileSync(resolve(evidence,'long-review-'+count+'.json'),JSON.stringify({markdownLength:markdown.length,...saved},null,2))
+ }finally{await f.context.close()}
+},40000)
 it('undoes only this generated result and preserves the user market paragraph and subsequent edits',async()=>{
  const f=await open();try{
   await generate(f.page,{kind:'text',markdown:'本次生成的新正文。'})

@@ -80,7 +80,17 @@ export function createConversationComponentService(options: Options): Conversati
             if (!allowed()) throw Error('对话组件回执恢复的账户身份已变化。');
             return saved;
         },
-        async read(input) { target(input); const l = lease(input.sessionId); return options.store.read(l.owner, input); },
+        async read(input) { target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input); return visible(input.sessionId).readOnly === true ? {...view, readOnly: true} : view; },
+        async commitHtmlInteraction(input) {
+            const kind = (input as any)?.kind;
+            target(input, kind === 'journal' ? ['expectedRevision', 'htmlVersion', 'kind', 'event'] : kind === 'shared' ? ['expectedRevision', 'htmlVersion', 'kind', 'revision', 'state'] : ['invalid-kind']);
+            revision(input.expectedRevision);
+            const sessionId = input.sessionId, captured = {...visible(sessionId)}, writable = () => { try { const now = visible(sessionId); return now.ownerAccountId === captured.ownerAccountId && now.generation === captured.generation && now.mode === 'conversation' && now.readOnly !== true; } catch { return false; } };
+            if (captured.mode !== 'conversation' || captured.readOnly === true || !writable()) throw Error('当前对话组件不可编辑或宿主身份已变化。');
+            const saved = await options.store.commitHtmlInteraction(captured.ownerAccountId, input, writable);
+            if (!writable()) throw Error('对话组件宿主会话已变化，保存确认已取消。');
+            return saved;
+        },
         async updateNativeSpec(input) { target(input, ['expectedRevision', 'spec']); revision(input.expectedRevision); const l = lease(input.sessionId); return options.store.updateNativeSpec(l.owner, input, l.current); },
         async queryNative(input) {
             target(input, ['expectedRevision', 'query']);
