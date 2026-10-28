@@ -206,3 +206,33 @@ it.each([false,true])('keeps the real paragraph color submenu and formatting too
   await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.en-document-scroll').evaluate((element:HTMLElement)=>element.scrollTop=60);await colors('color-menu-scrolled');expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe('保留行内需求');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
+it.each([{width:1280,dark:false},{width:620,dark:true}])('keeps the visible blank paragraph below long content and a tall component in view across repeated Space and Escape at $width px',async({width,dark})=>{
+ const f=await open(width,dark);try{
+  await f.page.evaluate(()=>{const e=(window as any).editor;e.replaceBlocks(e.document,[...Array.from({length:24},(_,i)=>({id:'long-'+i,type:'paragraph',content:'长笔记第'+(i+1)+'段：保留原有正文内容与阅读位置。'})),{id:'tall-chart',type:'research',props:{payload:JSON.stringify({id:'note-component-tall',kind:'generated-container',title:'长图表',noteLibrary:true,noteSize:{height:1400},containerSpec:{version:1,type:'chart',variant:'line',title:'长图表',labels:['一','二','三'],series:[{name:'演示',values:[10,20,15]}]}})}},{id:'deep-anchor',type:'paragraph'},{id:'deep-after',type:'paragraph',content:'保留图表下方后段'}])})
+  await cursor(f.page,'deep-anchor');await f.page.locator('.en-document-scroll').evaluate((root:HTMLElement)=>{const block=root.querySelector<HTMLElement>('[data-id="deep-anchor"] .bn-block-content')!;root.scrollTop+=block.getBoundingClientRect().top-root.getBoundingClientRect().top-380})
+  const snapshot=()=>f.page.evaluate(()=>{const root=document.querySelector<HTMLElement>('.en-document-scroll')!,block=root.querySelector<HTMLElement>('[data-id="deep-anchor"] .bn-block-content')!,box=document.querySelector<HTMLElement>('.en-space-ai'),input=box?.querySelector('textarea'),rect=(element:HTMLElement)=>{const r=element.getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right}};return{scrollTop:root.scrollTop,viewport:rect(root),anchor:rect(block),box:box?rect(box):null,input:input?rect(input):null,focused:input===document.activeElement}})
+  await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const before=await snapshot();expect(before.scrollTop).toBeGreaterThan(1200)
+  const captures:any[]=[]
+  for(let cycle=0;cycle<3;cycle++){
+   await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).waitFor();await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const opened=await snapshot();captures.push({cycle,opened});if(evidence){writeFileSync(resolve(evidence,`scroll-focus-${width}.json`),JSON.stringify({before,captures},null,2));await f.page.screenshot({path:resolve(evidence,`scroll-focus-${width}.png`)})}
+   expect.soft(Math.abs(opened.scrollTop-before.scrollTop),JSON.stringify({before,opened})).toBeLessThan(3);expect.soft(opened.box!.top).toBeGreaterThanOrEqual(opened.viewport.top);expect.soft(opened.box!.bottom).toBeLessThanOrEqual(opened.viewport.bottom);expect(opened.focused).toBe(true)
+   await f.page.keyboard.press('Escape');expect(await f.page.locator('.en-space-ai').count()).toBe(0)
+  }
+  expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it.each([{width:1280,dark:false},{width:620,dark:true}])('keeps a distant second blank paragraph in view when retargeting an unsubmitted inline draft without Escape at $width px',async({width,dark})=>{
+ const f=await open(width,dark);try{
+  await f.page.evaluate(()=>{const e=(window as any).editor;e.replaceBlocks(e.document,[{id:'first-anchor',type:'paragraph'},...Array.from({length:40},(_,i)=>({id:'between-'+i,type:'paragraph',content:'两处空白行之间的长笔记第'+(i+1)+'段：保留正文与阅读位置。'})),{id:'second-anchor',type:'paragraph'},{id:'second-tail',type:'paragraph',content:'保留第二处空白行后的正文'}])})
+  await cursor(f.page,'first-anchor');await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).fill('尚未提交的需求')
+  // A physical click moves the existing draft's caret to a distant paragraph.
+  // The same composer remains mounted when Space retargets it to this line.
+  await f.page.locator('.bn-block-outer[data-id="second-anchor"] .bn-inline-content').click()
+  await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  const before=await f.page.locator('.en-document-scroll').evaluate((root:HTMLElement)=>root.scrollTop);expect(before).toBeGreaterThan(1000)
+  await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).waitFor();await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  const after=await f.page.evaluate(()=>{const root=document.querySelector<HTMLElement>('.en-document-scroll')!,popup=document.querySelector<HTMLElement>('.en-space-ai')!,anchor=root.querySelector<HTMLElement>('[data-id="second-anchor"] .bn-block-content')!,input=popup.querySelector('textarea')!,viewport=root.getBoundingClientRect(),box=popup.getBoundingClientRect();return{scrollTop:root.scrollTop,viewport:{top:viewport.top,bottom:viewport.bottom},box:{top:box.top,bottom:box.bottom},anchorTop:anchor.getBoundingClientRect().top,focused:input===document.activeElement}})
+  expect.soft(Math.abs(after.scrollTop-before),JSON.stringify({before,after})).toBeLessThan(3);expect.soft(after.box.top).toBeGreaterThanOrEqual(after.viewport.top);expect.soft(after.box.bottom).toBeLessThanOrEqual(after.viewport.bottom);expect.soft(Math.abs(after.box.top-after.anchorTop)).toBeLessThan(2);expect(after.focused).toBe(true)
+  expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe('尚未提交的需求');expect(await f.page.evaluate(()=>Object.keys((window as any).jobs).length)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})

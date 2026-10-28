@@ -9,19 +9,24 @@ export function NoteAiProcessing({stop,label='正在生成内容…'}:{stop():vo
 }
 export type NoteInlineAiDraft={anchor:NoteInsertionAnchor;prompt:string;error?:string;reply?:string}
 export function NoteInlineAiComposer({draft,editor,scroll,running,disabled,onChange,onSubmit,onCancel,onStop}:{draft:NoteInlineAiDraft;editor:any;scroll:React.RefObject<HTMLElement>;running:boolean;disabled:boolean;onChange(value:string):void;onSubmit():void;onCancel():void;onStop():void}){
- const shell=useRef<HTMLElement>(null),input=useRef<HTMLTextAreaElement>(null),composition=useRef(false),wasRunning=useRef(false),[position,setPosition]=useState({top:0,left:0,width:0}),[reservation,setReservation]=useState(0)
+ const shell=useRef<HTMLElement>(null),input=useRef<HTMLTextAreaElement>(null),composition=useRef(false),wasRunning=useRef(false),[placement,setPlacement]=useState({anchor:undefined as NoteInsertionAnchor|undefined,top:0,left:0,width:0}),[reservation,setReservation]=useState(0)
+ const {anchor:positionAnchor,...position}=placement
  useLayoutEffect(()=>{
   const root=scroll.current,document=root?.querySelector<HTMLElement>('.en-document')
   if(!root||!document)return
-  const measure=()=>{const block=root.querySelector<HTMLElement>('[data-id="'+CSS.escape(draft.anchor.blockId)+'"] .bn-block-content');if(!block){setReservation(0);return}const rect=block.getBoundingClientRect(),base=document.getBoundingClientRect();setReservation(Math.max(0,(shell.current?.offsetHeight||0)-rect.height+8));setPosition({top:rect.top-base.top,left:rect.left-base.left,width:rect.width})}
+  const measure=()=>{const block=root.querySelector<HTMLElement>('[data-id="'+CSS.escape(draft.anchor.blockId)+'"] .bn-block-content');if(!block){setReservation(0);return}const rect=block.getBoundingClientRect(),base=document.getBoundingClientRect();setReservation(Math.max(0,(shell.current?.offsetHeight||0)-rect.height+8));setPlacement({anchor:draft.anchor,top:rect.top-base.top,left:rect.left-base.left,width:rect.width})}
   measure();const observer=new ResizeObserver(measure);observer.observe(document);if(shell.current)observer.observe(shell.current);const off=editor.onChange(measure);window.addEventListener('resize',measure)
   return()=>{observer.disconnect();off();window.removeEventListener('resize',measure)}
- },[editor,scroll,draft.anchor.blockId])
+ },[editor,scroll,draft.anchor])
+ const positioned=positionAnchor===draft.anchor&&position.width>0
  useLayoutEffect(()=>{
+  // The measuring effect queues position state; its DOM commit must precede
+  // scrollIntoView, including when an existing draft moves to a new anchor.
+  if(!positioned)return
   if(running){composition.current=false;shell.current?.focus({preventScroll:true})}
   else if(!wasRunning.current||shell.current?.contains(document.activeElement)){input.current?.focus({preventScroll:true});input.current?.scrollIntoView({block:'nearest'})}
   wasRunning.current=running
- },[draft.anchor.blockId,running])
+ },[draft.anchor,running,positioned])
  useLayoutEffect(()=>{const element=input.current;if(element){element.style.height='0';element.style.height=Math.min(180,Math.max(28,element.scrollHeight))+'px'}},[draft.prompt,position.width,running])
  const anchorSelector='.en-document[data-note-document-id="'+CSS.escape(draft.anchor.documentId)+'"] .bn-block-outer[data-id="'+CSS.escape(draft.anchor.blockId)+'"]'
  return <section ref={shell} tabIndex={-1} className="en-space-ai" data-running={running||undefined} style={position} aria-label={t('行内 AI')} onKeyDown={event=>{event.stopPropagation();if(event.key==='Escape'&&!composition.current&&!event.nativeEvent.isComposing){event.preventDefault();onCancel()}}}>
