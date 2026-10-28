@@ -99,7 +99,9 @@ describe('Figma sidebar update states', () => {
 it('keeps automatic discovery quiet and offers a restart only after preparation',()=>{
   const {document,control,callbacks}=fixture();control.render({...available,manual:false})
   expect(document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.hidden).toBe(true);expect(panel(document).hidden).toBe(true)
-  control.render({...available,phase:'downloaded',manual:false});expect(panel(document).hidden).toBe(false)
+  control.render({...available,phase:'downloaded',manual:false});expect(panel(document).hidden).toBe(true)
+  document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.click()
+  expect(panel(document).hidden).toBe(false);expect(callbacks.install).not.toHaveBeenCalled()
   panel(document).querySelector<HTMLButtonElement>('[data-update-install]')!.click()
   expect(callbacks.install).toHaveBeenCalledOnce();expect(callbacks.download).not.toHaveBeenCalled()
 })
@@ -147,6 +149,62 @@ it.each([false,true])('shows an advancing download ring without opening details 
   expect(document.activeElement).toBe(button)
   expect(callbacks.download).not.toHaveBeenCalled()
   expect(callbacks.install).not.toHaveBeenCalled()
+})
+
+it.each([
+  ['never opened',false],
+  ['explicitly opened',true],
+  ['dismissed outside',false]
+] as const)('keeps automatic transfer details %s through preparation and completion', async (interaction,open) => {
+  const {document,control,callbacks}=fixture()
+  control.render({...available,manual:false})
+  control.render({...available,phase:'downloading',manual:false,percent:25})
+  const ring=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  const settings=document.querySelector<HTMLButtonElement>('#settings')!
+  settings.focus()
+  if(interaction!=='never opened')ring.click()
+  if(interaction==='dismissed outside'){
+    settings.dispatchEvent(new document.defaultView!.PointerEvent('pointerdown',{bubbles:true}))
+    await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+  }
+  for(const phase of ['preparing','downloaded'] as const){
+    control.render({...available,phase,manual:false})
+    expect(panel(document).hidden,`${interaction}: ${phase}`).toBe(!open)
+    expect(ring.hidden).toBe(false)
+    expect(ring.getAttribute('aria-expanded')).toBe(String(open))
+    expect(document.activeElement).toBe(settings)
+  }
+  expect(panel(document).querySelector('[data-update-install]')?.textContent).toBe('重启更新')
+  expect(callbacks.download).not.toHaveBeenCalled()
+  expect(callbacks.install).not.toHaveBeenCalled()
+})
+
+it('opens a dismissed ready update for review before the explicit restart action',async()=>{
+  const {document,control,callbacks}=fixture()
+  control.render({...available,phase:'downloaded'})
+  const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  button.focus();button.dispatchEvent(new document.defaultView!.KeyboardEvent('keydown',{key:'Escape',bubbles:true}))
+  await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+  button.click()
+  expect(callbacks.install).not.toHaveBeenCalled()
+  expect(panel(document).hidden).toBe(false)
+  panel(document).querySelector<HTMLButtonElement>('[data-update-install]')!.click()
+  expect(callbacks.install).toHaveBeenCalledOnce()
+})
+
+it('dismisses expanded details with Escape after keyboard focus moves outside without stealing that focus',async()=>{
+  const {document,control}=fixture()
+  control.render({...available,phase:'downloading',manual:false,percent:40})
+  document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.click()
+  const input=document.createElement('input');input.value='正在编辑';document.body.append(input);input.focus()
+  expect(panel(document).hidden).toBe(false)
+  const escape=new document.defaultView!.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})
+  input.dispatchEvent(escape)
+  expect(panel(document).dataset.closing).toBe('true')
+  expect(document.activeElement).toBe(input);expect(input.value).toBe('正在编辑')
+  await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+  control.render({...available,phase:'downloading',manual:false,percent:50})
+  expect(panel(document).hidden).toBe(true)
 })
 
 it('fades details on outside pointerdown while the external action and its focus continue normally', async () => {

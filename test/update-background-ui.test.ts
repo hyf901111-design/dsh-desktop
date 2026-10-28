@@ -13,7 +13,8 @@ function fixture(locale:'en'|'zh'='en'){
 it('keeps automatic details quiet while exposing progress and only offers an explicit restart when prepared',()=>{
  const f=fixture()
  for(const phase of ['available','downloading','preparing'] as const){f.control.render({...base,phase,percent:45});expect(f.panel().hidden).toBe(true);expect(f.button().hidden).toBe(phase==='available')}
- f.control.render({...base,phase:'downloaded'});expect(f.panel().hidden).toBe(false)
+ f.control.render({...base,phase:'downloaded'});expect(f.panel().hidden).toBe(true)
+ f.button().click();expect(f.panel().hidden).toBe(false);expect(f.callbacks.install).not.toHaveBeenCalled()
  const install=f.panel().querySelector<HTMLButtonElement>('[data-update-install]')!
  expect(install?.textContent).toBe('Restart and update');expect(install.disabled).toBe(false);expect(f.panel().textContent).not.toContain('automatically')
  install.click();install.click();expect(f.callbacks.install).toHaveBeenCalledOnce();expect(f.callbacks.download).not.toHaveBeenCalled()
@@ -29,7 +30,7 @@ it.each(['downloading','preparing','downloaded'] as const)('keeps manual %s insi
  if(phase==='downloaded')expect(f.panel().querySelector('[data-update-install]')?.textContent).toBe('重启更新')
 })
 it('hides an already open body notice when the full settings page removes the sidebar footer',()=>{
- const f=fixture();f.control.render({...base,phase:'downloaded'});f.doc.querySelector('aside[data-dsh-sidebar-root]')!.remove();f.control.mount()
+ const f=fixture();f.control.render({...base,phase:'downloaded'});f.button().click();f.doc.querySelector('aside[data-dsh-sidebar-root]')!.remove();f.control.mount()
  expect(f.panel().hidden).toBe(true)
  f.control.render({...base,phase:'downloaded'});expect(f.panel().hidden).toBe(true)
  f.doc.body.insertAdjacentHTML('beforeend','<aside data-dsh-sidebar-root><footer data-dsh-sidebar-footer></footer></aside>');f.control.mount()

@@ -114,7 +114,6 @@ export class SidebarUpdateControl {
       this.detailsPreference = true
       this.cancelDismissal()
       if (this.status?.phase === 'available') void this.startDownload()
-      else if (this.status?.phase === 'downloaded') void this.startInstall()
       else if (this.status?.phase === 'error') void this.retryUpdate()
       else if (this.status) this.render(this.status)
     })
@@ -156,7 +155,6 @@ export class SidebarUpdateControl {
       }, { capture: true })
       this.document.addEventListener('keydown', event => {
         if (event.key !== 'Escape' || this.panel?.hidden || this.panel?.dataset.closing === 'true') return
-        if (!this.panel?.contains(event.target as Node) && !this.button?.contains(event.target as Node)) return
         event.preventDefault()
         event.stopPropagation()
         this.dismissDetails(true)
@@ -196,7 +194,7 @@ export class SidebarUpdateControl {
     panel.dataset.collapsed = String(collapsed)
     // Download state controls the ring; only an explicit interaction opens its
     // details. Keep that choice across progress ticks and preparation phases.
-    const defaultOpen = !quiet && !['downloading', 'preparing'].includes(status.phase)
+    const defaultOpen = !quiet && !['downloading', 'preparing'].includes(status.phase) && (status.phase !== 'downloaded' || status.manual === true)
     const open = (this.detailsPreference ?? defaultOpen) && action.kind !== 'hidden' && this.dismissed !== key && this.aboutChecks === 0
     if (open) this.cancelDismissal()
     panel.hidden = !open && (panel.dataset.closing !== 'true' || action.kind === 'hidden' || this.aboutChecks > 0)
