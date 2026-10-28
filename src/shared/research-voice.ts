@@ -26,6 +26,7 @@ export type ResearchVoiceEvent =
 export type ResearchVoiceApi = {
   setActive(value: ResearchVoiceActiveRequest): Promise<ResearchVoiceResult>
   start(value: ResearchVoiceRequest): Promise<ResearchVoiceResult>
+  startComposer(value: ResearchVoiceRequest): Promise<ResearchVoiceResult>
   stop(value: ResearchVoiceRequest): Promise<ResearchVoiceResult>
   cancel(value: ResearchVoiceRequest): Promise<ResearchVoiceResult>
   subscribe(listener: (event: ResearchVoiceEvent) => void): () => void

@@ -53,6 +53,7 @@ import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadi
 import { patchFigmaModelMenu } from './lib/figma-model-menu.mjs'
 import { patchSkillCommandPopup, patchSkillCommandLabels } from './lib/skill-command-menu.mjs'
 import {patchPlainSlashInput,stripPlainSlashInput} from './lib/plain-slash-input.mjs'
+import {patchComposerVoice,stripComposerVoice} from './lib/composer-voice.mjs'
 import {patchConversationSubmission,stripConversationSubmission} from './lib/conversation-submission.mjs'
 import {patchConversationResponseProgress,stripConversationResponseProgress} from './lib/conversation-response-progress.mjs'
 import {patchConversationHistoryRuntime,stripConversationHistoryRuntime,patchConversationHistoryClient,stripConversationHistoryClient} from './lib/conversation-history-page.mjs'
@@ -178,7 +179,7 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-const unTabbedConversationSource=stripBoardTabsClient(readFileSync(gridConversationPath,'utf8'))
+const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(readFileSync(gridConversationPath,'utf8')))
 const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbedConversationSource)))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
 const sidebarNewNotePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js')
@@ -333,3 +334,5 @@ writeFileSync(conversationPath,patchConversationHistoryClient(patchConversationS
 writeFileSync(historyRuntimeBundlePath,patchConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 // Board tabs wrap the final resident canvas and reverse before all earlier passes.
 writeFileSync(conversationPath,patchBoardTabsClient(readFileSync(conversationPath,'utf8')))
+// Dictation wraps the final shared controlled InputBar and unwinds before all refreshes.
+writeFileSync(conversationPath,patchComposerVoice(readFileSync(conversationPath,'utf8')))

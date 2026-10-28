@@ -77,6 +77,7 @@ export class ResearchVoiceController {
   private nativeFailure?: string
   private disposed = false
   private active?: ActiveResearch
+  private composer?: ActiveResearch
   private capture?: Capture
   private attachedWindow?: ResearchVoiceWindow
   private detachWindow?: () => void
@@ -120,14 +121,14 @@ export class ResearchVoiceController {
     if (!requestPayload(value, true) || this.disposed) return invalid()
     if (!value.active) {
       // A previous renderer's cleanup must not deactivate its replacement session.
-      if (this.active?.sessionId === value.sessionId) this.revokeActive()
+      if (this.active?.sessionId === value.sessionId) this.revokeResearch()
       return { ok: true }
     }
     const window = this.options.getMainWindow()
     if (!window || window.isDestroyed()) return invalid()
     this.attachWindow(window)
     if (this.active?.sessionId !== value.sessionId || !this.currentActive(this.active)) {
-      this.revokeActive()
+      this.revokeResearch()
       const frame = window.webContents.mainFrame
       this.active = { sessionId: value.sessionId, window, frame: { processId: frame.processId, routingId: frame.routingId } }
     }
@@ -142,6 +143,25 @@ export class ResearchVoiceController {
     if (this.nativeFailure) return unavailable(this.nativeFailure)
     const active = this.active
     if (!this.currentActive(active, true) || active.sessionId !== value.sessionId || this.capture) return invalid()
+    return this.beginCapture(value, active)
+  }
+
+  /** Temporary input dictation never replaces the research/Fn registration. */
+  startComposer(value: unknown): ResearchVoiceResult {
+    if (!requestPayload(value) || this.disposed) return invalid()
+    if ((this.options.platform ?? process.platform) !== 'darwin') return unavailable()
+    if (this.nativeFailure) return unavailable(this.nativeFailure)
+    const window = this.options.getMainWindow()
+    if (!window || window.isDestroyed() || window.webContents.isDestroyed() || !window.isFocused() || this.capture) return invalid()
+    this.attachWindow(window)
+    if (!this.ensureNative()) return unavailable(this.nativeFailure)
+    const frame = window.webContents.mainFrame
+    this.composer = { sessionId: value.sessionId, window, frame: { processId: frame.processId, routingId: frame.routingId } }
+    this.updateShortcut()
+    return this.beginCapture(value, this.composer)
+  }
+
+  private beginCapture(value: ResearchVoiceRequest, active: ActiveResearch): ResearchVoiceResult {
     const native = this.ensureNative()
     if (!native) return unavailable(this.nativeFailure)
     // A private native ID prevents late callbacks from matching a reused renderer ID.
@@ -153,8 +173,8 @@ export class ResearchVoiceController {
       return { ok: true }
     } catch {
       if (this.capture === capture) {
-        this.cancelCapture(false)
         this.send(active, { ...value, type: 'error', code: 'start-failed', message: '无法开始语音识别，请检查麦克风和语音识别权限后重试。' })
+        this.cancelCapture(false)
       }
       return { ok: false, error: '无法开始语音识别，请检查麦克风和语音识别权限后重试。' }
     }
@@ -214,7 +234,7 @@ export class ResearchVoiceController {
   }
 
   private currentActive(active: ActiveResearch | undefined, focused = false): active is ActiveResearch {
-    if (!active || this.disposed || this.active !== active || this.options.getMainWindow() !== active.window) return false
+    if (!active || this.disposed || this.active !== active && this.composer !== active || this.options.getMainWindow() !== active.window) return false
     const window = active.window
     if (window.isDestroyed() || window.webContents.isDestroyed()) return false
     const frame = window.webContents.mainFrame
@@ -228,6 +248,7 @@ export class ResearchVoiceController {
   private receive(event: ResearchVoiceNativeEvent): void {
     if (!event || this.disposed) return
     if (event.type === 'toggle' || event.type === 'hold-start' || event.type === 'finish') {
+      if (this.composer) return
       if (this.currentActive(this.active, true)) this.send(this.active, { type: event.type, sessionId: this.active.sessionId })
       return
     }
@@ -250,18 +271,21 @@ export class ResearchVoiceController {
       this.clearBlurTimer()
       if (!this.currentActive(capture.active, true)) {
         this.send(capture.active, { ...identity, type: 'cancelled' })
+        this.releaseComposer(capture.active)
         return
       }
       const text = event.text.trim().slice(0, 12_000)
       this.send(capture.active, text
         ? { ...identity, type: 'final', text }
         : { ...identity, type: 'error', code: 'empty-input', message: '没有识别到语音，请再试一次。' })
+      this.releaseComposer(capture.active)
     } else if (event.type === 'error' || event.type === 'cancelled') {
       this.capture = undefined
       this.clearBlurTimer()
       this.send(capture.active, event.type === 'cancelled'
         ? { ...identity, type: 'cancelled' }
         : { ...identity, type: 'error', code: String(event.code || 'recognition-failed').slice(0, 80), message: String(event.message || '语音识别失败，请重试。').slice(0, 512) })
+      this.releaseComposer(capture.active)
     }
   }
 
@@ -278,16 +302,30 @@ export class ResearchVoiceController {
     // Revoke first: native cancellation can synchronously emit a terminal callback.
     try { this.native?.cancel(capture.nativeRequestId) } catch { /* Ownership is already revoked. */ }
     if (notify) this.send(capture.active, { type: 'cancelled', sessionId: capture.sessionId, requestId: capture.requestId })
+    this.releaseComposer(capture.active)
+  }
+
+  private releaseComposer(active: ActiveResearch): void {
+    if (this.composer !== active) return
+    this.composer = undefined
+    this.updateShortcut()
+  }
+
+  private revokeResearch(): void {
+    if (this.capture?.active === this.active) this.cancelCapture()
+    this.active = undefined
+    this.updateShortcut()
   }
 
   private revokeActive(): void {
     this.cancelCapture()
     this.active = undefined
+    this.composer = undefined
     this.updateShortcut()
   }
 
   private updateShortcut(): void {
-    try { this.native?.setEnabled(this.currentActive(this.active, true)) } catch { this.cancelCapture() }
+    try { this.native?.setEnabled(!this.composer && this.currentActive(this.active, true)) } catch { this.cancelCapture() }
   }
 
   private clearBlurTimer(): void {
@@ -315,7 +353,7 @@ export function registerResearchVoiceHandlers(options: {
   getMainWindow(): TrustedWindow | undefined
   controller: ResearchVoiceController
 }): () => void {
-  const actions = { 'set-active': 'setActive', start: 'start', stop: 'stop', cancel: 'cancel' } as const
+  const actions = { 'set-active': 'setActive', start: 'start', 'start-composer': 'startComposer', stop: 'stop', cancel: 'cancel' } as const
   const channels = Object.entries(actions).map(([action, method]) => {
     const channel = `research:voice:${action}`
     options.ipcMain.removeHandler(channel)

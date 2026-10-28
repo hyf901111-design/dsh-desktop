@@ -1,0 +1,10 @@
+body [data-composer-voice-trigger=true]{background:#fff!important;color:#171717!important;opacity:1!important;border:1px solid #0000000a;cursor:pointer}
+body [data-composer-voice-trigger=true]:hover{background:#f0f0f0!important}
+body [data-composer-voice-trigger=true]>svg{display:block;flex:none}
+[data-composer-voice-pill]{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:7px;flex:none;width:82px;height:30px;padding:5px 7px;border:1px solid color-mix(in srgb,var(--dsw-alias-label-primary,#333) 12%,transparent);border-radius:20px;color:var(--dsw-alias-label-primary,#333);background:transparent}
+[data-composer-voice-wave]{display:flex;align-items:center;justify-content:center;gap:2px;height:18px;flex:1;min-width:0;overflow:hidden}
+[data-composer-voice-wave]>i{display:block;flex:none;width:2px;border-radius:2px;background:currentColor;transition:height 75ms linear,opacity 75ms linear}
+body [data-composer-voice-pill]>button{display:grid;place-items:center;flex:none;box-sizing:border-box;width:18px;height:18px;padding:0;border:0;border-radius:4px;background:transparent;color:inherit;cursor:pointer}
+body [data-composer-voice-pill]>button:hover{background:var(--dsw-alias-interactive-bg-hover,#0000000a)}
+body [data-composer-voice-pill]>button:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary,#999);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){[data-composer-voice-wave]>i{transition:none}}

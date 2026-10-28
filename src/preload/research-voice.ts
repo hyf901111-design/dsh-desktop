@@ -10,6 +10,7 @@ export function createResearchVoiceBridge(ipcRenderer: ResearchVoiceIpcRenderer)
   return Object.freeze({
     setActive: (value) => ipcRenderer.invoke('research:voice:set-active', value) as Promise<ResearchVoiceResult>,
     start: (value) => ipcRenderer.invoke('research:voice:start', value) as Promise<ResearchVoiceResult>,
+    startComposer: (value) => ipcRenderer.invoke('research:voice:start-composer', value) as Promise<ResearchVoiceResult>,
     stop: (value) => ipcRenderer.invoke('research:voice:stop', value) as Promise<ResearchVoiceResult>,
     cancel: (value) => ipcRenderer.invoke('research:voice:cancel', value) as Promise<ResearchVoiceResult>,
     subscribe(listener) {
