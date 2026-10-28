@@ -575,9 +575,9 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       const mark = icon('memory')
       mark.classList.add('VOzbGW_navIcon')
       nav.append(mark, node('span', t("记忆"), 'VOzbGW_navLabel'))
-      const account = list.querySelector('[data-account-nav]')
-      if (account) account.after(nav)
-      else list.prepend(nav)
+      const previous = list.querySelector('[data-settings-section-id="models"]') ?? list.querySelector('[data-account-nav]')
+      if (previous) previous.after(nav)
+      else list.append(nav)
       navs.add(nav)
     }
     if (root?.hasAttribute('data-account-active')) hide()
