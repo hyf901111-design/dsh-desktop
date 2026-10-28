@@ -139,6 +139,45 @@
           "合盖开关每次应用运行需重新开启授权，普通防自动睡眠偏好会记住"
         ],
         "generatedAt": "2026-10-28T03:42:40.214Z"
+      },
+      "merged": {
+        "mergeCommit": "18c2048c1c892e15f579356933769df304fb2568",
+        "verificationCommit": "18c2048c1c892e15f579356933769df304fb2568",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
+            "verifiedCommit": "18c2048c1c892e15f579356933769df304fb2568",
+            "completedAt": "2026-10-28T03:43:38.079Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "18c2048c1c892e15f579356933769df304fb2568",
+            "completedAt": "2026-10-28T03:43:38.079Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-28T03:43:38.079Z"
       }
     },
     {
