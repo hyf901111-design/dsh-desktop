@@ -94,7 +94,7 @@ export class PowerSettingsController {
           if (!await this.options.guard.active()) {
             await this.options.guard.stop()
             this.state.keepAwakeWhenLidClosed = false; this.state.lidMode = 'off'; this.state.error = 'system-changed'
-          }
+          } else if (this.state.error === 'restore-failed') this.state.error = null
         } catch (error) {
           if (error instanceof Error && (error.message === 'safety-stop' || error.message === 'system-changed')) {
             try {await this.options.guard.stop(); this.state.keepAwakeWhenLidClosed = false; this.state.lidMode = 'off'; this.state.error = error.message}

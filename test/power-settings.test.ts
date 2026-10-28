@@ -74,6 +74,18 @@ describe('power preference lifecycle', () => {
     expect(await f.controller.refresh()).toMatchObject({keepAwakeWhenLidClosed: false, preventAutoSleep: true, error: 'system-changed'})
     f.controller.dispose()
   })
+  it('keeps the lease through a temporary service failure and clears its warning after confirmed recovery', async () => {
+    const f = fixture(); let stops = 0
+    await f.controller.set('keepAwakeWhenLidClosed', true)
+    f.guard.stop = async () => {stops++}
+    f.guard.active = async () => {throw Error('restore-failed')}
+    expect(await f.controller.refresh()).toMatchObject({keepAwakeWhenLidClosed: true, error: 'restore-failed'})
+    expect(stops).toBe(0)
+    expect(f.store.getLid()).toBe(true)
+    f.guard.active = async () => true
+    expect(await f.controller.refresh()).toMatchObject({keepAwakeWhenLidClosed: true, error: null})
+    f.controller.dispose()
+  })
   it('does not claim a failed restoration succeeded and lets the user retry', async () => {
     const f = fixture()
     await f.controller.set('keepAwakeWhenLidClosed', true)
