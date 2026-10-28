@@ -9,7 +9,7 @@ import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 
 let browser,server,origin,script,sidebar,catalog,styles
-const artifact='/tmp/subagent-task-tree-avatars-20261026'
+const artifact='/tmp/subagent-task-tree-avatars-rotation-20261028'
 const local='build/sherlock-plugin-profile/vendor/dsh-better-sidebar',canonical='/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/'+local
 const packageRoot=process.env.SHERLOCK_TEST_SIDEBAR_ROOT??(existsSync(local)?local:existsSync(canonical)?canonical:join(homedir(),'Library/Application Support/sherlock-desktop/harness/profiles/web/node_modules/dsh-better-sidebar'))
 function patchNode(source,file,name){return execFileSync(process.execPath,['--input-type=module','-e','import{'+name+' as patch}from '+JSON.stringify(pathToFileURL(resolve('scripts/lib/'+file)).href)+';import{readFileSync}from"node:fs";process.stdout.write(patch(readFileSync(0,"utf8")))'],{input:source,encoding:'utf8',timeout:10000,maxBuffer:8*1024*1024})}
@@ -55,14 +55,21 @@ it('uses the actual Tasks tab descriptor for nested avatars, narrow titles, nati
  await writeFile(join(artifact,'task-tree-geometry.json'),JSON.stringify(geometry,null,2));expect(errors).toEqual([]);await page.close()
 },20000)
 
-it('keeps hydration and reload identities, quiet idle status and the same Figma running motion',async()=>{
+it('keeps hydration and reload identities while the running arc turns and idle stays quiet',async()=>{
  const page=await browser.newPage({viewport:{width:820,height:730}});await page.goto(origin);await expect.poll(()=>childRows(page).count()).toBe(3)
  const before=await roleMap(page),ids=await page.evaluate(()=>window.taskAvatarFixture.ids)
  await page.evaluate(()=>window.taskAvatarFixture.loading());await expect.poll(()=>childRows(page).count()).toBe(2)
  expect(await roleMap(page)).toEqual({[ids[0]]:before[ids[0]],[ids[1]]:before[ids[1]]});expect(await childRows(page).evaluateAll(rows=>rows.every(row=>row.getAttribute('aria-disabled')==='true'))).toBe(true)
  await page.screenshot({path:join(artifact,'task-tree-loading.png')});await page.evaluate(()=>window.taskAvatarFixture.ready())
  const arc=page.locator('.task-pane .odyssey-subagent-avatar-arc')
- expect(await arc.evaluate(node=>{const animation=node.getAnimations()[0];return{frames:animation.effect.getKeyframes().map(frame=>frame.opacity),duration:animation.effect.getTiming().duration,direction:animation.effect.getTiming().direction,color:getComputedStyle(node).backgroundColor,imageTransform:getComputedStyle(node.closest('.odyssey-subagent-avatar-art').querySelector('img')).transform}})).toEqual({frames:['0.45','1'],duration:900,direction:'alternate',color:'rgb(65, 106, 204)',imageTransform:'none'})
+ const motion=await arc.evaluate(async node=>{
+  const samples=[]
+  for(let i=0;i<3;i++){await new Promise(resolve=>setTimeout(resolve,120));samples.push(getComputedStyle(node).transform)}
+  const rotation=samples.map(value=>{const matrix=new DOMMatrixReadOnly(value);return{angle:Math.atan2(matrix.b,matrix.a)*180/Math.PI,scaleX:Math.hypot(matrix.a,matrix.b),scaleY:Math.hypot(matrix.c,matrix.d),x:matrix.e,y:matrix.f}})
+  const animation=node.getAnimations()[0];return{samples,rotation,duration:animation.effect.getTiming().duration,easing:getComputedStyle(node).animationTimingFunction,direction:animation.effect.getTiming().direction,color:getComputedStyle(node).backgroundColor,imageTransform:getComputedStyle(node.closest('.odyssey-subagent-avatar-art').querySelector('img')).transform,trackTransform:getComputedStyle(node.previousElementSibling).transform}
+ })
+ expect(new Set(motion.rotation.map(sample=>sample.angle)).size).toBe(3);for(const sample of motion.rotation){expect(sample.scaleX).toBeCloseTo(1,4);expect(sample.scaleY).toBeCloseTo(1,4);expect(sample.x).toBe(0);expect(sample.y).toBe(0)}expect({...motion,samples:undefined,rotation:undefined}).toEqual({samples:undefined,rotation:undefined,duration:900,easing:'linear',direction:'normal',color:'rgb(65, 106, 204)',imageTransform:'none',trackTransform:'none'})
+ await writeFile(join(artifact,'task-tree-motion.json'),JSON.stringify(motion,null,2))
  await page.evaluate(()=>document.body.setAttribute('data-ds-dark-theme',''));expect(await arc.evaluate(node=>getComputedStyle(node).backgroundColor)).toBe('rgb(141, 172, 255)')
  await page.evaluate(()=>window.taskAvatarFixture.hide());expect(await arc.evaluate(node=>getComputedStyle(node).animationPlayState)).toBe('paused');await page.evaluate(()=>window.taskAvatarFixture.show())
  await page.emulateMedia({reducedMotion:'reduce'});expect(await arc.evaluate(node=>({name:getComputedStyle(node).animationName,opacity:getComputedStyle(node).opacity}))).toEqual({name:'none',opacity:'1'})

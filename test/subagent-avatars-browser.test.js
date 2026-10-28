@@ -5,17 +5,30 @@ import {join} from 'node:path'
 import {createServer} from 'node:http'
 import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
+import {execFileSync} from 'node:child_process'
 import {patchFigmaRefinementSubagent} from '../scripts/lib/figma-refinements-client.mjs'
-import {patchSubagentPanelConversation} from '../scripts/lib/figma-subagent-panel.mjs'
-import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
-import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 let browser,server,origin,script,styles,catalog,detail,runtime,temporary
-const artifact='/tmp/subagent-avatars-20261026'
+const artifact='/tmp/subagent-avatars-rotation-20261028'
+function nativeConversation(source){
+ // Restore installed outer layers in production order before repatching the
+ // actual child header. Keep Node's literal installer bytes out of transforms.
+ return execFileSync(process.execPath,['--input-type=module','-e',`
+ import{readFileSync}from'node:fs';
+ import{stripConversationGridOverlays}from'./test/fixtures/strip-conversation-transient-ui.mjs';
+ import{stripHomeGuideNative}from'./scripts/lib/home-guide-native.mjs';
+ import{stripHomeGuidePresentationNative}from'./scripts/lib/home-guide-presentation-native.mjs';
+ import{patchSubagentPanelConversation}from'./scripts/lib/figma-subagent-panel.mjs';
+ let source=readFileSync(0,'utf8');
+ if(source.includes('sherlock:composer-voice:'))source=(await import('./scripts/lib/composer-voice.mjs')).stripComposerVoice(source);
+ for(const patch of [stripConversationGridOverlays,stripHomeGuidePresentationNative,stripHomeGuideNative,patchSubagentPanelConversation])source=patch(source);
+ process.stdout.write(source);
+ `],{input:source,encoding:'utf8',timeout:10000,maxBuffer:32*1024*1024})
+}
 beforeAll(async()=>{
  temporary=await mkdtemp(join(tmpdir(),'subagent-avatar-native-'));await mkdir(artifact,{recursive:true})
  catalog=patchFigmaRefinementSubagent(await readFile('node_modules/@deepseek-ai/dsh-client-ui-subagent/lib/client.js','utf8'))
  runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- const native=patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+ const native=nativeConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const start=native.indexOf('function OdysseySubagentPanelHeader('),end=native.indexOf('\nclass ResearchSidebarCoordinator',start),definition=native.indexOf('/* sherlock:subagent-avatars:definition:v1 */')
  detail=native.slice(definition>=0?definition:start,end)
  script=(await build({entryPoints:['test/fixtures/subagent-avatars-browser.tsx'],bundle:true,write:false,format:'iife',platform:'browser',logLevel:'silent'})).outputFiles[0].text
@@ -49,10 +62,16 @@ it('centers both actual entry sizes on the first title line and preserves native
  const row=page.locator('[role=treeitem]').filter({has:page.locator('[data-odyssey-subagent-avatar]')}).first();await row.focus();await row.press('Enter');expect(await page.evaluate(()=>window.avatarFixture.events.filter(e=>e.type==='open').at(-1).address)).toEqual({parentSessionId:'parent',childSessionId:'session-1b68c91d-e219-4675-bcf1-a043f520df51',mode:'one-shot'})
  await page.getByRole('button',{name:/子代理/}).click();await page.evaluate(()=>window.avatarFixture.diagnostic());const broken=page.getByRole('treeitem',{name:/broken/});expect(await broken.getAttribute('aria-disabled')).toBe('true');expect(await broken.locator('[data-odyssey-subagent-avatar]').count()).toBe(0);await page.close()
 },20000)
-it('uses the Figma opacity-only arc in both themes and stops it for reduced motion',async()=>{
+it('rotates only the running arc in the catalog and child header and respects reduced motion',async()=>{
  const page=await browser.newPage({viewport:{width:1000,height:720}});await page.goto(origin);await page.evaluate(()=>document.fonts.ready);await page.getByRole('button',{name:/子代理/}).click()
- const motion=await page.locator('.h8S2Va_menu .odyssey-subagent-avatar-arc').evaluate(n=>{const a=n.getAnimations()[0];return{frames:a.effect.getKeyframes().map(x=>x.opacity),duration:a.effect.getTiming().duration,easing:getComputedStyle(n).animationTimingFunction,direction:a.effect.getTiming().direction,imageTransform:getComputedStyle(n.closest('.odyssey-subagent-avatar-art').querySelector('img')).transform,color:getComputedStyle(n).backgroundColor,trackOpacity:getComputedStyle(n.previousElementSibling).opacity}})
- expect(motion.frames).toEqual(['0.45','1']);expect(motion.duration).toBe(900);expect(motion.easing).toBe('ease-in-out');expect(motion.direction).toBe('alternate');expect(motion.imageTransform).toBe('none');expect(motion.trackOpacity).toBe('1');expect(motion.color).toBe('rgb(65, 106, 204)')
+ const motion=await page.locator('.odyssey-subagent-avatar-arc').evaluateAll(async nodes=>{
+  const samples=nodes.map(()=>[])
+  for(let i=0;i<3;i++){await new Promise(resolve=>setTimeout(resolve,120));nodes.forEach((node,index)=>samples[index].push(getComputedStyle(node).transform))}
+  return nodes.map((node,index)=>({samples:samples[index],rotation:samples[index].map(value=>{const matrix=new DOMMatrixReadOnly(value);return{angle:Math.atan2(matrix.b,matrix.a)*180/Math.PI,scaleX:Math.hypot(matrix.a,matrix.b),scaleY:Math.hypot(matrix.c,matrix.d),x:matrix.e,y:matrix.f}}),duration:node.getAnimations()[0].effect.getTiming().duration,easing:getComputedStyle(node).animationTimingFunction,direction:node.getAnimations()[0].effect.getTiming().direction,imageTransform:getComputedStyle(node.closest('.odyssey-subagent-avatar-art').querySelector('img')).transform,trackTransform:getComputedStyle(node.previousElementSibling).transform,color:getComputedStyle(node).backgroundColor,trackOpacity:getComputedStyle(node.previousElementSibling).opacity}))
+ })
+ expect(motion).toHaveLength(2)
+ for(const item of motion){expect(new Set(item.rotation.map(sample=>sample.angle)).size).toBe(3);for(const sample of item.rotation){expect(sample.scaleX).toBeCloseTo(1,4);expect(sample.scaleY).toBeCloseTo(1,4);expect(sample.x).toBe(0);expect(sample.y).toBe(0)}expect(item.duration).toBe(900);expect(item.easing).toBe('linear');expect(item.direction).toBe('normal');expect(item.imageTransform).toBe('none');expect(item.trackTransform).toBe('none');expect(item.trackOpacity).toBe('1');expect(item.color).toBe('rgb(65, 106, 204)')}
+ await writeFile(join(artifact,'catalog-header-motion.json'),JSON.stringify(motion,null,2))
  await page.evaluate(()=>document.body.setAttribute('data-ds-dark-theme',''));expect(await page.locator('.h8S2Va_menu .odyssey-subagent-avatar-arc').evaluate(n=>getComputedStyle(n).backgroundColor)).toBe('rgb(141, 172, 255)');await page.screenshot({path:join(artifact,'dark.png')})
  await page.emulateMedia({reducedMotion:'reduce'});expect(await page.locator('.h8S2Va_menu .odyssey-subagent-avatar-arc').evaluate(n=>({name:getComputedStyle(n).animationName,opacity:getComputedStyle(n).opacity}))).toEqual({name:'none',opacity:'1'});await page.close()
 },20000)
