@@ -60,13 +60,13 @@ it('接收组件移到别页后，从当前来源的真实输出端口连到对�
  expect(f.host.querySelector(`[data-research-node-id="${s.quote.id}"]`).hasAttribute('data-board-tab-hidden')).toBe(true)
  await f.event('click',f.host.querySelector('[data-stock-code="000858"]'))
  expect(s.spec(s.quote.id).symbols).toEqual([second])
- await s.page(s.page2);await s.move(s.quote.id,s.page1);await s.select(s.watch.id);await s.refresh()
+ await s.page(s.page2);await s.move(s.quote.id,s.page1);await s.page(s.page1);await s.select(s.watch.id);await s.refresh()
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 388 403 /)
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/468 403$/)
 },15000)
 
 it('切到接收组件所在页后，从来源所属页签连入真实输入端口，解除关系后移除图形',async()=>{
- const s=await setup();await s.move(s.quote.id,s.page2);await s.select(s.quote.id);await s.refresh()
+ const s=await setup();await s.move(s.quote.id,s.page2);await s.page(s.page2);await s.select(s.quote.id);await s.refresh()
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 64 39 /)
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/468 403$/)
  const hit=f.host.querySelector(`[data-financial-link="${s.quote.id}"] [role=button]`)
@@ -208,7 +208,7 @@ it('组件输出到页签使用正交直线与相切圆弧，保留真实端点�
  expect(JSON.stringify(f.workspace.getSnapshot().artifacts)).toBe(before)
 },15000)
 it('页签输入到组件同样使用正交直线与相切圆弧',async()=>{
- const s=await setup();await s.move(s.quote.id,s.page2);await s.select(s.quote.id);await s.refresh()
+ const s=await setup();await s.move(s.quote.id,s.page2);await s.page(s.page2);await s.select(s.quote.id);await s.refresh()
  const d=s.line(s.quote.id).getAttribute('d');expectRoundedOrthogonal(d)
  expect(d).toMatch(/^M 64 39 /);expect(d).toMatch(/468 403$/)
 })
@@ -221,7 +221,7 @@ it('关联描边和可视末端随选择、切页、回移、断开、删除及�
  expect(marked()).toHaveLength(0);expect(stems()).toHaveLength(0);expect(target().hasAttribute('data-tab-accept')).toBe(true)
  await s.select(s.watch.id);await s.page(s.page2);await s.select(s.quote.id);await s.refresh()
  expect(f.document.querySelector(`[data-board-tab="${s.page1}"]`).hasAttribute('data-financial-connection-target')).toBe(true)
- await s.move(s.quote.id,s.page1);await s.select(s.watch.id);await s.refresh();expect(marked()).toHaveLength(0);expect(stems()).toHaveLength(0)
+ await s.move(s.quote.id,s.page1);await s.page(s.page1);await s.select(s.watch.id);await s.refresh();expect(marked()).toHaveLength(0);expect(stems()).toHaveLength(0)
  await s.move(s.quote.id,s.page2);await s.page(s.page1);await s.select(s.watch.id);await s.refresh()
  const hit=f.host.querySelector(`[data-financial-link="${s.quote.id}"] [role=button]`);await f.event('contextmenu',hit)
  expect(marked()).toHaveLength(0);expect(stems()).toHaveLength(0)
