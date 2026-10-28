@@ -37,6 +37,25 @@ it('keeps Shift+Enter available for a normal newline while stopping recognition'
  expect(f.event('Enter',{shiftKey:true}).defaultPrevented).toBe(false)
  expect(f.states.at(-1).active).toBe(false)
 })
+it.each(['Meta','Control','Alt'])('guards only the interrupted %s gesture through Enter or its release',async modifier=>{
+ const f=fixture();await f.voice.start();f.emit({type:'partial',text:'保留正文'})
+ expect(f.event(modifier).defaultPrevented).toBe(false);expect(f.states.at(-1).active).toBe(false)
+ expect(f.event('Enter',{[modifier==='Meta'?'metaKey':modifier==='Control'?'ctrlKey':'altKey']:true}).defaultPrevented).toBe(true)
+ expect(f.event('Enter').defaultPrevented).toBe(false)
+ f.keyboard.setDraft('');await f.voice.start();f.event(modifier)
+ f.input.dispatchEvent(new f.win.KeyboardEvent('keyup',{key:modifier,bubbles:true}));expect(f.event('Enter').defaultPrevented).toBe(false)
+ f.keyboard.setDraft('');await f.voice.start();f.event(modifier);expect(f.event('ArrowLeft').defaultPrevented).toBe(false);expect(f.event('Enter').defaultPrevented).toBe(false)
+})
+it('keeps Shift newlines and IME commits after modifier cancellation, and clears interrupted gestures on restart, blur and disposal',async()=>{
+ const f=fixture()
+ for(const action of ['shift','ime','restart','blur','dispose']){
+  f.keyboard.setDraft('');await f.voice.start();f.event('Meta')
+  if(action==='restart'){await f.voice.start();f.voice.stop()}
+  if(action==='blur'){f.doc.querySelector('button').focus();f.input.focus()}
+  if(action==='dispose')f.voice.dispose()
+  expect(f.event('Enter',action==='shift'?{shiftKey:true}:action==='ime'?{isComposing:true,keyCode:229}:{}).defaultPrevented).toBe(false)
+ }
+})
 it.each(['blur','blocked','foreign-write','hidden','removed','dispose'])('revokes on %s before late callbacks can change the draft',async reason=>{
  const f=fixture();await f.voice.start();const id=f.request();f.emit({type:'partial',text:'保留转写'})
  if(reason==='blur')f.doc.querySelector('button').focus()

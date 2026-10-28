@@ -47,9 +47,11 @@
 ### Task 3: 审查与交接
 
 - [x] 独立阅读 diff、spec 和全部竞态路径（父任务禁止继续派生子代理）。
-- [ ] 按精确 tip 重跑聚焦命令并保存证据，保持 worktree 干净。
-- [ ] 生成 Plan A handoff；明确浏览器假桥验证和原生验收限制。
+- [x] 按精确 tip 重跑聚焦命令并保存证据，保持 worktree 干净。
+- [x] 生成 Plan A handoff；明确浏览器假桥验证和原生验收限制。
 
 执行记录：main 新入口、输入会话、浏览器交互及生产 patch 双次重入均完成 RED→GREEN。浏览器发现 caret 留在开头，已加精确 draftRev/焦点保护的选区恢复并验证。DOM 观察仅在录音期启用。作者完成独立审查，按父任务指令未派生其他代理。提交后的精确 tip 日志与交接结果保存在外部 composer-voice 证据目录。
 
 基线说明：既有 notes-composer.test.js 的“installs the native portal and adapter idempotently…”在本功能与干净 canonical main3542 均报“笔记原生组件签名缺失：ConversationRoot”；该无关重入测试未修改，真实 Notes 输入框语音场景通过。隔离浏览器沿用的既有 DshChipCell 内联字体有 ERR_INVALID_URL 资源警告，单独记录，语音代码无控制台错误。
+
+父任务审查追加：真实 InputBar 中 `page.keyboard.press('Meta+Enter')` 与 `Control+Enter` 均复现修饰键先停止、随后 Enter 误提交转写（RED）。增加仅属于被中断录音手势的编辑器状态；keyup、首个非修饰键、失焦、鼠标、新录音和卸载清除，保留 Shift 换行与 IME。新增浏览器验证同一组合键首次不发送、释放后下次按原行为发送，单元验证 Alt 和清理路径；针对性 9 项 GREEN。新提交后的完整聚焦结果及更新交接卡仍保存于外部证据目录。

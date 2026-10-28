@@ -56,6 +56,15 @@ it('keeps native Shift+Enter newline editing while stopping capture',async()=>{
   await f.input.press('Shift+Enter');expect(await f.input.inputValue()).toBe('正文\n');expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
+it.each(['Meta','Control'])('stops the complete %s+Enter gesture without sending, then restores the ordinary shortcut',async modifier=>{
+ const f=await fixture();try{
+  await f.start();await f.emit({type:'partial',text:'组合快捷键保留文字'})
+  await f.page.keyboard.press(modifier+'+Enter')
+  expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.input.inputValue()).toBe('组合快捷键保留文字')
+  await f.emit({type:'final',text:'迟到覆盖'});await f.page.keyboard.press(modifier+'+Enter')
+  await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1);expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('组合快捷键保留文字');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})
 it.each(['key','blur','stop','hidden','foreign-write','dispose'])('freezes the visible transcript on %s and rejects delayed partial/final callbacks',async reason=>{
  const f=await fixture('notes');try{
   await f.start();await f.emit({type:'partial',text:'已识别的要求'})

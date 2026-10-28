@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 /** One dictation owns one exact native input-machine revision; it never submits. */
 export function createComposerVoiceSession(options){
  const {bridge,keyboard,document:doc,onChange=()=>{},onError=()=>{}}=options,win=doc.defaultView
- let request=null,disposed=false,writing=false,caret=null,caretFrame=0,observer,state={active:false,state:null,levels:Array(12).fill(0)}
+ let request=null,disposed=false,writing=false,caret=null,caretFrame=0,interruptedInput=null,observer,state={active:false,state:null,levels:Array(12).fill(0)}
  const publish=patch=>{state={...state,...patch};onChange(state)}
  const clearCaret=()=>{caret=null;win.cancelAnimationFrame(caretFrame);caretFrame=0}
  const queueCaret=req=>{
@@ -54,18 +54,27 @@ export function createComposerVoiceSession(options){
  }
  const unsubscribe=bridge?.subscribe?.(receive)||(()=>{})
  const unsubscribeDraft=keyboard?.state?.subscribe?.(()=>{if(!writing)reconcile()})||(()=>{})
+ const modifier=key=>['Meta','Control','Alt','Shift'].includes(key)
  const key=event=>{
   clearCaret()
-  if(!request)return
-  stop()
-  // Let an IME consume its commit. The first ordinary Enter only stops dictation.
+  if(request){
+   const input=request.input;stop();interruptedInput=modifier(event.key)?input:null
+  }else{
+   if(!interruptedInput||modifier(event.key))return
+   const input=interruptedInput;interruptedInput=null
+   if(event.target!==input||doc.activeElement!==input||!visible(input))return
+  }
+  // A chord starts with its modifier keydown. Guard its first Enter after capture
+  // stops, while preserving Shift newlines, IME commits and all later shortcuts.
   if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229&&!options.composing?.()){event.preventDefault();event.stopPropagation()}
  }
- const blur=event=>{if(event.target===caret?.input)clearCaret();if(request&&event.target===request.input)stop()}
- const edit=event=>{if(event.target===caret?.input)clearCaret();if(request&&event.target===request.input)stop()}
- doc.addEventListener('keydown',key,true);doc.addEventListener('blur',blur,true)
+ const keyup=event=>{if(modifier(event.key))interruptedInput=null}
+ const blur=event=>{if(event.target===interruptedInput)interruptedInput=null;if(event.target===caret?.input)clearCaret();if(request&&event.target===request.input)stop()}
+ const edit=event=>{if(event.target===interruptedInput)interruptedInput=null;if(event.target===caret?.input)clearCaret();if(request&&event.target===request.input)stop()}
+ const pointer=()=>{interruptedInput=null;clearCaret()}
+ doc.addEventListener('keydown',key,true);doc.addEventListener('keyup',keyup,true);doc.addEventListener('blur',blur,true)
  doc.addEventListener('beforeinput',edit,true);doc.addEventListener('compositionstart',edit,true)
- doc.addEventListener('pointerdown',clearCaret,true)
+ doc.addEventListener('pointerdown',pointer,true)
  // BrowserWindow blur/permission-sheet grace belongs to the shared main controller.
  observer=new win.MutationObserver(reconcile)
  return{
@@ -75,7 +84,7 @@ export function createComposerVoiceSession(options){
    if(!visible(input)||current?.phase!=='plain'||current.draft.trim()||current.imageIds?.length)return
    if(typeof bridge?.startComposer!=='function'){onError('当前客户端暂不支持语音输入，请使用 macOS 本地客户端。');return}
    input.focus({preventScroll:true});if(doc.activeElement!==input)return
-   clearCaret()
+   clearCaret();interruptedInput=null
    const identity={sessionId:'composer-'+win.crypto.randomUUID(),requestId:'dictation-'+win.crypto.randomUUID()}
    const req={identity,input,text:current.draft,revision:current.draftRev,started:true};request=req
    observer.observe(doc.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','inert','aria-hidden','data-workspace-surface','data-research-active','class','style']})
@@ -88,7 +97,7 @@ export function createComposerVoiceSession(options){
    }catch(error){if(request===req){stop();onError('无法开始语音输入，请重试。')}}
   },
   stop,reconcile,
-  dispose(){if(disposed)return;stop();disposed=true;unsubscribe();unsubscribeDraft();observer.disconnect();doc.removeEventListener('keydown',key,true);doc.removeEventListener('blur',blur,true);doc.removeEventListener('beforeinput',edit,true);doc.removeEventListener('compositionstart',edit,true);doc.removeEventListener('pointerdown',clearCaret,true)}
+  dispose(){if(disposed)return;stop();interruptedInput=null;disposed=true;unsubscribe();unsubscribeDraft();observer.disconnect();doc.removeEventListener('keydown',key,true);doc.removeEventListener('keyup',keyup,true);doc.removeEventListener('blur',blur,true);doc.removeEventListener('beforeinput',edit,true);doc.removeEventListener('compositionstart',edit,true);doc.removeEventListener('pointerdown',pointer,true)}
  }
 }
 
