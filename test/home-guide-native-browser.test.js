@@ -18,17 +18,25 @@ const requireNative=createRequire(import.meta.url)
 const {patchComposerDeliverablePreview}=requireNative('../scripts/lib/figma-composer-deliverable-preview.mjs')
 const {stripPlainSlashInput}=requireNative('../scripts/lib/plain-slash-input.mjs')
 const {patchNotesSidebar}=requireNative('../scripts/lib/notes-sidebar.mjs')
+const {patchBoardTabsClient,stripBoardTabsClient}=requireNative('../scripts/lib/board-tabs-client.mjs')
+const {stripConversationHistoryClient}=requireNative('../scripts/lib/conversation-history-page.mjs')
+const {stripConversationSubmission}=requireNative('../scripts/lib/conversation-submission.mjs')
+const {stripConversationResponseProgress}=requireNative('../scripts/lib/conversation-response-progress.mjs')
 const {stripHomeGuidePresentationNative}=requireNative('../scripts/lib/home-guide-presentation-native.mjs')
-const {patchHomeGuideNative,stripHomeGuideNative}=requireNative('../scripts/lib/home-guide-native.mjs')
-const {stripSidebarNewNoteConversation}=requireNative('../scripts/lib/sidebar-new-note.mjs')
 const {stripPptxAnnotationMessages}=requireNative('../scripts/lib/pptx-annotation-message.mjs')
 const {stripPptxAnnotationInput}=requireNative('../scripts/lib/pptx-annotation-native.mjs')
+const {patchHomeGuideNative,stripHomeGuideNative}=requireNative('../scripts/lib/home-guide-native.mjs')
+const {stripSidebarNewNoteConversation}=requireNative('../scripts/lib/sidebar-new-note.mjs')
 let browser, runtimeSource, conversationSource, entry, styles
 
 beforeAll(async () => {
   runtimeSource = patchNoteSessionRuntime(await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js', 'utf8'))
-  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))))))
-  conversationSource = patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native)))
+  // Board tabs own the outer restore records, matching the production unwind
+  // order before refreshing native guide and annotation renderer anchors.
+  const unTabbed = stripBoardTabsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const submitted = stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbed)))
+  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(submitted))))))
+  conversationSource = patchBoardTabsClient(patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native))))
     .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};exports.__page=sherlockBoardsPage;')
   const workspaceSource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'),pickerStart=workspaceSource.indexOf('function WorkspacePickFlow('),pickerEnd=workspaceSource.indexOf('\n\t\t/**',pickerStart),workspacePicker=workspaceSource.slice(pickerStart,pickerEnd)
   const selectStart=conversationSource.indexOf('selectWorkspace: async (workspaceId) => {'),workspaceSelect=conversationSource.slice(selectStart,conversationSource.indexOf('\n\t\t\t\t})',selectStart))
@@ -341,11 +349,11 @@ it.each([{width:1255,height:818,deviceScaleFactor:1.1,right:348},{width:1380,hei
   await page.evaluate(right=>{
    const host=document.getElementById('guide-host');host.style.left='0px';host.style.right=right+'px';document.body.dataset.dsDarkTheme='';window.guideProbe.view.update({view:'research'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.formalFrames=[]
    window.guideProbe.formalPointer=window.guideProbe.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})
-   window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(!d.requestId)return;const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));void window.guideProbe.formalPointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action,onFrame:frame=>{if(d.action!=='drag'||!['pressed','dragging','released'].includes(frame.phase))return;const canvas=host.querySelector('[data-research-canvas]'),box=canvas.getBoundingClientRect();window.guideProbe.formalFrames.push({phase:frame.phase,selected:[...window.guideProbe.registry.for('guide-browser-session').getSnapshot().selection.selectedNodeIds],source:find(d.fromTargetToken).dataset.financialPortNode,target:find(d.targetToken).dataset.financialPortNode,ports:[find(d.fromTargetToken),find(d.targetToken)].map(port=>port.getBoundingClientRect().toJSON()),draftPath:document.querySelector('[data-home-guide-connection] path')?.getAttribute('d'),nativeLinks:host.querySelectorAll('[data-financial-link]').length,point:{x:frame.x,y:frame.y},canvas:{top:box.top,bottom:Math.min(innerHeight,box.bottom),left:box.left,right:box.right},cards:[...host.querySelectorAll('[data-financial-widget]')].filter(node=>['watchlist','quote','news','announcements'].includes(node.dataset.financialWidget)).map(node=>{const card=node.closest('[data-research-node-id]'),r=card.getBoundingClientRect();return{widget:node.dataset.financialWidget,top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height,font:getComputedStyle(node).fontSize,chartHeight:node.querySelector('[data-financial-chart]')?.getBoundingClientRect().height??null}})})}}).then(()=>reply(true),error=>reply(false,error.message))})
+   window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(!d.requestId)return;const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));void window.guideProbe.formalPointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action,onFrame:frame=>{if(d.action!=='drag'||!['pressed','dragging','released'].includes(frame.phase))return;const canvas=host.querySelector('[data-research-canvas]'),box=canvas.getBoundingClientRect();window.guideProbe.formalFrames.push({phase:frame.phase,selected:[...window.guideProbe.registry.for('guide-browser-session').getSnapshot().selection.selectedNodeIds],source:find(d.fromTargetToken).dataset.financialPortNode,target:find(d.targetToken).dataset.financialPortNode,ports:[find(d.fromTargetToken),find(d.targetToken)].map(port=>port.getBoundingClientRect().toJSON()),draftPath:document.querySelector('[data-home-guide-connection] path')?.getAttribute('d'),nativeLinks:host.querySelectorAll('[data-financial-link]').length,point:{x:frame.x,y:frame.y},canvas:{top:box.top,bottom:Math.min(innerHeight,box.bottom),left:box.left,right:box.right},cards:[...host.querySelectorAll('[data-financial-widget]')].filter(node=>['watchlist','quote','news','announcements'].includes(node.dataset.financialWidget)).map(node=>{const card=node.closest('[data-research-node-id]'),r=card.getBoundingClientRect();return{id:card.dataset.researchNodeId,widget:node.dataset.financialWidget,top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height,font:getComputedStyle(node).fontSize,chartHeight:node.querySelector('[data-financial-chart]')?.getBoundingClientRect().height??null}})})}}).then(()=>reply(true),error=>reply(false,error.message))})
   },right)
   for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar','board-arrange'])await succeeds(page,step)
-  const before=await page.evaluate(()=>{const w=window.guideProbe.registry.for('guide-browser-session'),canvas=document.querySelector('#guide-host [data-research-canvas]');canvas.scrollTop=canvas.scrollHeight;return{cells:w.getWorkbenchCells(),canvas:{clientWidth:canvas.clientWidth,clientHeight:canvas.clientHeight,bounds:canvas.getBoundingClientRect().toJSON(),scrollPaddingBottom:getComputedStyle(canvas).scrollPaddingBottom},viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio}}})
-  expect(before.canvas.clientWidth).toBeGreaterThan(width===1900?1400:width===1255?790:880);expect(before.canvas.clientWidth).toBeLessThan(width===1900?1460:width===1255?850:930);expect(before.canvas.clientHeight).toBeGreaterThan(width===1900?1250:width===1255?690:770);expect(before.canvas.clientHeight).toBeLessThan(width===1900?1320:width===1255?720:810);expect(before.canvas.scrollPaddingBottom).toBe('80px')
+  const before=await page.evaluate(()=>{const w=window.guideProbe.registry.for('guide-browser-session'),canvas=document.querySelector('#guide-host [data-research-canvas]');canvas.scrollTop=canvas.scrollHeight;return{cells:w.getWorkbenchCells(),host:document.getElementById('guide-host').getBoundingClientRect().toJSON(),canvas:{clientWidth:canvas.clientWidth,clientHeight:canvas.clientHeight,bounds:canvas.getBoundingClientRect().toJSON(),scrollPaddingBottom:getComputedStyle(canvas).scrollPaddingBottom},viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio}}})
+  expect(before.canvas.clientWidth).toBeGreaterThan(width===1900?1400:width===1255?790:880);expect(before.canvas.clientWidth).toBeLessThan(width===1900?1460:width===1255?850:930);expect(Math.abs(before.canvas.clientHeight-before.host.height),'native guide uses its actual host height without a second header reservation').toBeLessThan(2);expect(before.canvas.scrollPaddingBottom).toBe('80px')
   await succeeds(page,'board-link')
   const result=await page.evaluate(()=>({frames:window.guideProbe.formalFrames,cells:window.guideProbe.registry.for('guide-browser-session').getWorkbenchCells()}))
   await expect.poll(()=>page.locator('#guide-host [data-financial-widget="quote"] [data-financial-chart]').count()).toBe(1)
@@ -354,6 +362,11 @@ it.each([{width:1255,height:818,deviceScaleFactor:1.1,right:348},{width:1380,hei
   expect(finalGeometry.chart.height).toBeGreaterThan(80);expect(finalGeometry.chart.top).toBeGreaterThan(finalGeometry.quote.top);expect(finalGeometry.chart.bottom).toBeLessThan(finalGeometry.quote.bottom);
   expect(result.frames.length).toBeGreaterThan(20);expect(result.frames.some(frame=>frame.phase==='dragging')).toBe(true);expect(new Set(result.frames.filter(frame=>frame.phase==='dragging').map(frame=>frame.draftPath).filter(Boolean)).size).toBeGreaterThan(5)
   for(const frame of result.frames){expect(frame.cards).toHaveLength(4);expect(frame.selected).toEqual([frame.source]);expect(frame.selected).not.toContain(frame.target);const available=frame.canvas.bottom-frame.canvas.top-24,span=Math.max(...frame.cards.map(card=>card.bottom))-Math.min(...frame.cards.map(card=>card.top));for(const port of frame.ports){expect(port.top).toBeGreaterThanOrEqual(frame.canvas.top-1);expect(port.bottom).toBeLessThanOrEqual(frame.canvas.bottom-12)}for(const card of frame.cards){if(span<=available){expect(card.top,card.widget+' complete header when four normal cards fit').toBeGreaterThanOrEqual(frame.canvas.top-1);expect(card.bottom).toBeLessThanOrEqual(frame.canvas.bottom-12)}expect(card.left).toBeGreaterThanOrEqual(frame.canvas.left-1);expect(card.right).toBeLessThanOrEqual(frame.canvas.right+1);expect(parseFloat(card.font)).toBeGreaterThanOrEqual(11);expect(card.height).toBeGreaterThanOrEqual(['watchlist','quote'].includes(card.widget)?600:340);if(card.widget==='quote'&&card.chartHeight!==null)expect(card.chartHeight).toBeGreaterThan(80)}}
+  for(const frame of result.frames.filter(frame=>frame.phase==='dragging')){
+   const source=frame.cards.find(card=>card.id===frame.source)
+   const visible=Math.max(0,Math.min(source.bottom,frame.canvas.bottom-12)-Math.max(source.top,frame.canvas.top+12))
+   expect(visible,'connection keeps a readable source body above its footer').toBeGreaterThan(Math.min(source.height*.35,240))
+  }
   expect(result.cells).toEqual(before.cells);expect(await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts.filter(node=>node.containerSpec.linkedSourceId||node.containerSpec.linkedWatchlistId).length)).toBe(3);await preserved(page);expect(errors).toEqual([])
  }finally{await page.evaluate(()=>window.guideProbe.formalPointer?.dispose()).catch(()=>{});await page.close()}
 },45000)
@@ -449,6 +462,51 @@ it.each([{width:1460,height:1000},{width:1080,height:900,compact:true}])('genera
   await preserved(page);expect(errors).toEqual([])
  }finally{await page.evaluate(()=>window.guideProbe.smartPointer?.dispose()).catch(()=>{});await page.close()}
 },45000)
+
+it.each(['no-preference','reduce'])('uses native running grid motion and pause/resume for the smart demo with %s',async reducedMotion=>{
+ const{page,errors,smartRequests,releaseSmart}=await fixture({nativeLayout:true,reducedMotion,smartMode:'deferred'})
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(d.requestId)window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))})})
+  for(const step of ['mount-board','board-calendar','board-smart-container'])await succeeds(page,step)
+  const pending=command(page,'board-smart-generate',{},30000);pending.catch(()=>{})
+  await expect.poll(()=>smartRequests.length,{timeout:10000}).toBe(1)
+  const sample=()=>page.evaluate(()=>{const w=window.guideProbe.registry.for('guide-browser-session'),node=w.getSnapshot().artifacts.find(n=>n.workbenchIndex===6),grid=document.querySelector('#guide-host [data-research-generation-grid]');return{status:node?.generationStatus,phase:grid?.dataset.gridPhase,moving:grid?.dataset.gridMoving}})
+  expect((await sample()).status).toBe('running')
+  await expect.poll(async()=>String((await sample()).moving)).toBe(reducedMotion==='reduce'?'false':'true')
+  const before=await sample();await page.waitForTimeout(180);const during=await sample()
+  await page.screenshot({path:evidence+'/board-smart-running-'+reducedMotion+'.png'})
+  if(reducedMotion==='reduce')expect(during.phase).toBe(before.phase);else expect(during.phase).not.toBe(before.phase)
+  const playback=playing=>page.evaluate(playing=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-playback',{detail:{runId:'guide-browser-run',sessionId:'guide-browser-session',playing}})),playing)
+  await playback(false);await expect.poll(async()=>(await sample()).moving).toBe('false')
+  const paused=await sample();expect(paused.status).toBe('queued');await page.waitForTimeout(180);expect((await sample()).phase).toBe(paused.phase)
+  await playback(true);await expect.poll(async()=>(await sample()).status).toBe('running')
+  const resumed=await sample();await page.waitForTimeout(180)
+  const afterResume=await sample()
+  if(reducedMotion==='reduce')expect(afterResume.phase).toBe(resumed.phase);else expect(afterResume.phase).not.toBe(resumed.phase)
+  await writeFile(evidence+'/board-smart-motion-'+reducedMotion+'.json',JSON.stringify({before,during,paused,resumed,afterResume},null,2))
+  releaseSmart();expect(await pending).toMatchObject({ok:true});expect(errors).toEqual([])
+ }finally{releaseSmart();await page.close()}
+},25000)
+it('arranges the first three components natively and paints new feeds directly in their third row',async()=>{
+ const{page,errors}=await fixture({nativeLayout:true,reducedMotion:'no-preference'})
+ try{
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='guide-browser-run';window.guideProbe.foundationCues=[];window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(d.requestId){window.guideProbe.foundationCues.push(d.label);window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok:true}}))}})})
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote','board-arrange-foundation'])await succeeds(page,step)
+  const before=await page.evaluate(()=>window.guideProbe.registry.for('guide-browser-session').getSnapshot().artifacts)
+  const indices=before.find(n=>n.containerSpec?.widget==='indices'),watch=before.find(n=>n.containerSpec?.widget==='watchlist'),quote=before.find(n=>n.containerSpec?.widget==='quote')
+  expect(indices.y+indices.height/2).toBeLessThan(watch.y-watch.height/2);expect(watch.y).toBe(quote.y);expect(watch.x).toBeLessThan(quote.x)
+  expect(await page.evaluate(()=>window.guideProbe.foundationCues)).toContain('整理市场指数、自选与行情面板')
+  await page.evaluate(()=>{window.guideProbe.feedFrames=[];window.guideProbe.recordFeeds=true;const sample=()=>{const canvas=document.querySelector('#guide-host [data-research-canvas]'),read=widget=>{const card=canvas.querySelector('[data-financial-widget="'+widget+'"]')?.closest('[data-research-node-id]');return card?.getBoundingClientRect().toJSON()};const frame={watch:read('watchlist'),quote:read('quote'),news:read('news'),announcements:read('announcements')};if(frame.news||frame.announcements)window.guideProbe.feedFrames.push(frame);if(window.guideProbe.recordFeeds)requestAnimationFrame(sample)};requestAnimationFrame(sample)})
+  for(const step of ['board-news','board-announcements'])await succeeds(page,step)
+  const frames=await page.evaluate(()=>{window.guideProbe.recordFeeds=false;return window.guideProbe.feedFrames})
+  expect(frames.length).toBeGreaterThan(4)
+  for(const frame of frames)for(const widget of ['news','announcements'])if(frame[widget])expect(frame[widget].top,widget+' must start in the third row on every painted frame').toBeGreaterThanOrEqual(Math.max(frame.watch.bottom,frame.quote.bottom)-1)
+  expect(frames.find(frame=>frame.announcements).announcements.top).toBe(frames.find(frame=>frame.announcements).news.top)
+  await writeFile(evidence+'/board-feed-first-paints.json',JSON.stringify({before,frames},null,2))
+  await page.screenshot({path:evidence+'/board-feeds-third-row.png'})
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
 
 it.each(['paused','deleted','moved','disposed'])('guards a native prepared smart response when %s during the request',async outcome=>{
  const{page,errors,smartRequests,releaseSmart}=await fixture({nativeLayout:true,smartMode:'deferred'})

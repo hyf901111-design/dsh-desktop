@@ -1,7 +1,7 @@
 export function BoardTabsIcon({name}) {return react_jsx_runtime.jsx('span',{className:'ew-board-tabs-icon','data-tabs-icon':name,'aria-hidden':true})}
 export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) {
  const {jsx,jsxs}=react_jsx_runtime,nav=boardTabsNode(snapshot),[host,setHost]=react.useState(null),[menu,setMenu]=react.useState(null),[settings,setSettings]=react.useState(false),[remove,setRemove]=react.useState(false),[notice,setNotice]=react.useState(null),[theme,setTheme]=react.useState('light'),[paging,setPaging]=react.useState({overflow:false,left:false,right:false}),trigger=react.useRef(null),list=react.useRef(null),pager=react.useRef(null)
- const active=workspace.getActiveBoardTab(),close=()=>{setSettings(false);setRemove(false);trigger.current?.focus({preventScroll:true})}
+ const active=workspace.getActiveBoardTab(),tabNamesKey=JSON.stringify(nav?.containerSpec.tabs.map(t=>[t.id,t.name])||[]),close=()=>{setSettings(false);setRemove(false);trigger.current?.focus({preventScroll:true})}
  const duplicateNotice=workspace.getBoardTabsDuplicateNotice?.()
  react.useEffect(()=>{if(duplicateNotice){workspace.dismissBoardTabsDuplicateNotice(duplicateNotice.token);setNotice({...duplicateNotice,duration:2000})}},[duplicateNotice,workspace])
  react.useEffect(()=>{
@@ -15,14 +15,14 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
   const visible=new Set([...workspace.getVisibleBoardSnapshot().files,...workspace.getVisibleBoardSnapshot().artifacts,...workspace.getWorkbenchPlanningNodes()].map(n=>n.id))
   for(const card of root.querySelectorAll('[data-research-node-id]')){const hidden=Boolean(nav&&!visible.has(card.getAttribute('data-research-node-id')));card.toggleAttribute('data-board-tab-hidden',hidden);card.inert=hidden}
  },[snapshot,active,host])
- react.useLayoutEffect(()=>{const selected=list.current?.querySelector('[aria-selected=true]');if(selected){const left=selected.offsetLeft,right=left+selected.offsetWidth;if(left<list.current.scrollLeft)list.current.scrollLeft=left;if(right>list.current.scrollLeft+list.current.clientWidth)list.current.scrollLeft=right-list.current.clientWidth}},[active,host,nav?.id,nav?.containerSpec.tabs.map(t=>t.id).join('|')])
+ react.useLayoutEffect(()=>{const selected=list.current?.querySelector('[aria-selected=true]');if(selected){const left=selected.offsetLeft,right=left+selected.offsetWidth;if(left<list.current.scrollLeft)list.current.scrollLeft=left;if(right>list.current.scrollLeft+list.current.clientWidth)list.current.scrollLeft=right-list.current.clientWidth}},[active,host,nav?.id,tabNamesKey])
  react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installBoardTabsDrag(root,workspace,readOnly,detail=>setNotice({...detail,token:Date.now()}))},[workspace,readOnly])
  react.useEffect(()=>{const element=list.current;if(!element)return;const wheel=e=>{e.preventDefault();e.stopPropagation();element.scrollLeft+=e.deltaX||e.deltaY};element.addEventListener('wheel',wheel,{passive:false});return()=>element.removeEventListener('wheel',wheel)},[host,nav?.id])
  react.useLayoutEffect(()=>{
   const element=list.current;if(!element)return
   const measure=()=>{const reserve=pager.current?(pager.current.getBoundingClientRect().width+(parseFloat(window.getComputedStyle(element.parentElement).columnGap)||4)):0,overflow=element.scrollWidth>element.clientWidth+reserve+1,max=Math.max(0,element.scrollWidth-element.clientWidth),next={overflow,left:element.scrollLeft>1,right:element.scrollLeft<max-1};setPaging(old=>Object.keys(next).every(key=>next[key]===old[key])?old:next)}
-  measure();const observer=new ResizeObserver(measure);observer.observe(element);element.addEventListener('scroll',measure);window.addEventListener('resize',measure);return()=>{observer.disconnect();element.removeEventListener('scroll',measure);window.removeEventListener('resize',measure)}
- },[host,nav?.id,nav?.containerSpec.tabs.length,snapshot.canvasSize.availableWidth,paging.overflow])
+  measure();const observer=new ResizeObserver(measure);observer.observe(element);for(const tab of element.children)observer.observe(tab);element.addEventListener('scroll',measure);window.addEventListener('resize',measure);return()=>{observer.disconnect();element.removeEventListener('scroll',measure);window.removeEventListener('resize',measure)}
+ },[host,nav?.id,tabNamesKey,active,snapshot.canvasSize.availableWidth,paging.overflow])
  react.useEffect(()=>{if(!notice)return;const timer=window.setTimeout(()=>setNotice(null),notice.duration??5000);return()=>window.clearTimeout(timer)},[notice])
  react.useEffect(()=>{if(!menu)return;const dismiss=e=>{if(!e.target.closest?.('[data-board-tabs-menu]')&&!trigger.current?.contains(e.target))setMenu(null)},key=e=>{if(e.key==='Escape'){e.preventDefault();setMenu(null);trigger.current?.focus()}};document.addEventListener('pointerdown',dismiss,true);document.addEventListener('keydown',key,true);return()=>{document.removeEventListener('pointerdown',dismiss,true);document.removeEventListener('keydown',key,true)}},[menu])
  const retained=workspace.retainedBoardTabPlanCount?.()||0
@@ -77,6 +77,7 @@ export function boardTabsLibraryDrag(event,{workspace,rootRef,onPlaced,readOnly}
 
 export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
  const doc=root.ownerDocument,view=doc.defaultView,settling=new Set()
+ const enterDistance=8,exitDistance=16
  let op=null,edgeFrame=0,exitTimer=null
  const clearTargets=()=>root.querySelectorAll('[data-board-tab]').forEach(el=>{el.removeAttribute('data-tab-accept');el.removeAttribute('data-tab-target')})
  const inside=e=>{const r=root.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom}
@@ -90,14 +91,15 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
  const settle=(current,duration=220)=>{if(!current?.preview)return;const stop=animateBoardTabsDrop(current,root,workspace,duration,()=>settling.delete(stop));settling.add(stop)}
  const targets=e=>{
   const nav=boardTabsNode(workspace.getSnapshot()),bar=root.querySelector('[data-board-tabs-nav]'),list=bar?.querySelector('[role=tablist]'),br=bar?.getBoundingClientRect(),lr=list?.getBoundingClientRect(),rr=root.getBoundingClientRect(),receivers=[]
-  if(!nav||nav.id!==op?.navId||workspace.getActiveBoardTab()!==op.source||!br||!lr)return {distance:Infinity,target:null,receivers,bottom:0}
-  if(Math.max(br.left-e.clientX,e.clientX-br.right,br.top-e.clientY,e.clientY-br.bottom,0)>96)return {distance:Infinity,target:null,receivers,bottom:br.bottom}
-  let distance=Infinity,target=null
+  if(!nav||nav.id!==op?.navId||workspace.getActiveBoardTab()!==op.source||!br||!lr||nav.containerSpec.tabs.length<2)return {distance:Infinity,target:null,receivers,bottom:0}
+  const barLeft=Math.max(br.left,rr.left),barRight=Math.min(br.right,rr.right),barTop=Math.max(br.top,rr.top),barBottom=Math.min(br.bottom,rr.bottom),distance=Math.max(barLeft-e.clientX,e.clientX-barRight,barTop-e.clientY,e.clientY-barBottom,0)
+  if(barRight<=barLeft||barBottom<=barTop||distance>exitDistance)return {distance:Infinity,target:null,receivers,bottom:br.bottom}
+  let target=null
   for(const element of list.querySelectorAll('[data-board-tab]')){
    const tab=nav.containerSpec.tabs.find(t=>t.id===element.dataset.boardTab);if(!tab||tab.id===op.source)continue
    const r=element.getBoundingClientRect(),left=Math.max(r.left,lr.left,br.left,rr.left),right=Math.min(r.right,lr.right,br.right,rr.right),top=Math.max(r.top,lr.top,br.top,rr.top),bottom=Math.min(r.bottom,lr.bottom,br.bottom,rr.bottom)
    if(right<=left||bottom<=top)continue
-   receivers.push(element);distance=Math.min(distance,Math.max(left-e.clientX,e.clientX-right,top-e.clientY,e.clientY-bottom,0))
+   receivers.push(element)
    const stack=doc.elementsFromPoint?.(e.clientX,e.clientY)||[]
    if(e.clientX>=left&&e.clientX<=right&&e.clientY>=top&&e.clientY<=bottom&&(!stack.length||stack[0].closest?.('[data-board-tab]')===element))target=tab
   }
@@ -140,13 +142,13 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
    const snapshot=workspace.getSnapshot(),nav=boardTabsNode(snapshot),id=native.cell?.id,node=[...snapshot.files,...snapshot.artifacts].find(n=>n.id===id),card=root.querySelector('[data-research-node-id="'+CSS.escape(id||'')+'"]')
    if(readOnly||native.kind!=='move'||!nav||!node||!card)return
    const current=op={id,node,card,native,navId:nav.id,source:workspace.getActiveBoardTab(),rect:card.getBoundingClientRect(),cells:native.canonicalBefore,small:false,target:null,last:e,startY:e.clientY,approachArmed:false}
-   current.approachArmed=targets(e).distance>64
+   current.approachArmed=targets(e).distance>enterDistance
 
   },
   move(e,native){
    if(!op||op.native!==native)return false
-   op.last=e;const hit=targets(e);if(!op.approachArmed&&(hit.distance>64||hit.target||e.clientY<op.startY-4))op.approachArmed=true
-   const near=op.approachArmed&&hit.distance<=(op.small?96:64)
+   op.last=e;const hit=targets(e);if(!op.approachArmed&&(hit.distance>enterDistance||hit.distance===0||e.clientY<op.startY-4))op.approachArmed=true
+   const near=op.approachArmed&&hit.distance<=(op.small?exitDistance:enterDistance)
    if((near||op.small)&&JSON.stringify(workspace.getWorkbenchCells())!==JSON.stringify(native.boardTabsPreviewCells??op.cells)){onNotice({message:'组件位置或占用状态已变化，移动已取消'});return 'cancel'}
    if(!near){if(op.small){op.small=false;native.boardTabsResume=true;clearTargets();op.tip.hidden=true;if(edgeFrame)view.cancelAnimationFrame(edgeFrame);edgeFrame=0;exitTimer=view.setTimeout(()=>{if(op?.native===native){op.card.removeAttribute('data-board-tabs-drag-source');resetPreview(op);op.tip?.remove();op.preview=op.caption=op.position=op.tip=null}exitTimer=null},160)}return false}
    view.clearTimeout(exitTimer);exitTimer=null

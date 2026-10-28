@@ -1,6 +1,5 @@
-import {stripConversationTransientUi} from './fixtures/strip-conversation-transient-ui.mjs'
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import {readFileSync} from 'node:fs'
-import {execFileSync} from 'node:child_process'
 import {Script} from 'node:vm'
 import {expect,it} from 'vitest'
 import * as guide from '../scripts/lib/home-guide-native.mjs'
@@ -13,13 +12,7 @@ const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversatio
 const withoutPresentation=source=>presentation.stripHomeGuidePresentationNative(source)
 // Installed definitions are serialized by Node. Use that same production loader
 // for their strict inverse; Vitest's function.toString() formatting is different.
-const stripOuterLayers=source=>execFileSync(process.execPath,['--input-type=module','-e',`
- import{readFileSync}from'node:fs';
- import{stripSidebarNewNoteConversation}from${JSON.stringify(new URL('../scripts/lib/sidebar-new-note.mjs',import.meta.url).href)};
- import{stripPptxAnnotationMessages}from${JSON.stringify(new URL('../scripts/lib/pptx-annotation-message.mjs',import.meta.url).href)};
- import{stripPptxAnnotationInput}from${JSON.stringify(new URL('../scripts/lib/pptx-annotation-native.mjs',import.meta.url).href)};
- process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(readFileSync(0,'utf8')))));
-`],{input:stripConversationTransientUi(source),encoding:'utf8',maxBuffer:64*1024*1024})
+const stripOuterLayers=stripConversationGridOverlays
 const installed=stripOuterLayers(resident)
 
 it.each([false,true])('preserves the native PPT chat page for hero=%s and uses native board/note page styling',hero=>{

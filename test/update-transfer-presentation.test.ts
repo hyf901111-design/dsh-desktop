@@ -7,11 +7,13 @@ it('preserves planned network, reused and resumed byte counts from the updater w
  const state=reduceUpdateStatus({...initialUpdateStatus('1.3.4'),availableVersion:'1.4.1'},progress)
  expect(state).toMatchObject({totalBytes:82_000_000,archiveBytes:545_000_000,reusedBytes:463_000_000,resumedBytes:10_000_000,downloadKind:'differential'})
  expect(normalizeUpdateNotification(state)).toMatchObject({totalBytes:82_000_000,archiveBytes:545_000_000,reusedBytes:463_000_000,resumedBytes:10_000_000,downloadKind:'differential'})
- expect(updateTransferMessage(state,'zh')).toContain('差分');expect(updateTransferMessage(state,'zh')).toContain('41 / 82 MB');expect(updateTransferMessage(state,'zh')).toContain('463 MB');expect(updateTransferMessage(state,'zh')).toContain('10 MB')
- expect(updateMessage(state,'en')).toContain('41 / 82 MB');expect(updateTransferMessage(state,'en')).toContain('Differential');expect(updateTransferMessage(state,'en')).toContain('resumed')
+ expect(updateTransferMessage(state,'zh')).toBe('41 / 82 MB · 1 MB/s')
+ expect(updateTransferMessage(state,'en')).toBe('41 / 82 MB · 1 MB/s')
+ expect(updateMessage(state,'zh')).toBe('正在下载更新 50% · 41 / 82 MB · 1 MB/s')
+ expect(updateMessage(state,'en')).toBe('Downloading update 50% · 41 / 82 MB · 1 MB/s')
 })
-it('clearly distinguishes a necessary full download without a reusable old archive from differential network size',()=>{
+it('shows the actual full transfer size and speed without exposing cache implementation details',()=>{
  const state=reduceUpdateStatus({...initialUpdateStatus('1.3.4'),availableVersion:'1.4.1'},{...progress,downloadKind:'full',fallbackReason:'no-cache',totalBytes:545_000_000,reusedBytes:0,resumedBytes:0})
- expect(updateTransferMessage(state,'zh')).toContain('完整');expect(updateTransferMessage(state,'zh')).toContain('/ 545 MB');expect(updateTransferMessage(state,'zh')).toContain('缓存')
- expect(updateTransferMessage(state,'en')).toContain('Full');expect(updateTransferMessage(state,'en')).toContain('cache')
+ expect(updateTransferMessage(state,'zh')).toBe('41 / 545 MB · 1 MB/s')
+ expect(updateTransferMessage(state,'en')).toBe('41 / 545 MB · 1 MB/s')
 })

@@ -5,11 +5,14 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { patchFigmaFinalCanvas, canvasCss } from '../scripts/lib/figma-canvas-client.mjs'
 // @ts-expect-error Runtime bundle patcher is a JavaScript build script.
 import { patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
+import { stripConversationGridOverlays } from './fixtures/strip-conversation-transient-ui.mjs'
 
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 
 const require=createRequire(import.meta.url), React=require('react'),{createRoot}=require('react-dom/client')
-const source=patchResearchCreationProgress(patchFigmaFinalCanvas(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+const {stripHomeGuideNative}=require('../scripts/lib/home-guide-native.mjs'),{stripHomeGuidePresentationNative}=require('../scripts/lib/home-guide-presentation-native.mjs')
+const native=stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+const source=patchResearchCreationProgress(patchFigmaFinalCanvas(restoreResearchGridWorkbench(native)))
 const start=source.indexOf('function researchGenerationPresentation('),end=source.indexOf('function isResearchWechatArticleUrl(',start)
 const derivedStart=source.indexOf('function researchIsDerivedNode('),derivedEnd=source.indexOf('function researchDerivedTitle(',derivedStart)
 const Process=new Function('react','react_jsx_runtime',source.slice(derivedStart,derivedEnd)+source.slice(start,end)+'\nreturn ResearchGenerationProcess')(React,require('react/jsx-runtime'))
