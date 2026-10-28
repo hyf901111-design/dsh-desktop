@@ -2117,6 +2117,405 @@
         ],
         "recordedAt": "2026-10-28T10:17:35.333Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "第五个首页用例：自由搭建真实研究工作台",
+        "branch": "codex/feat/workbench-case-replay-20261029",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
+        "commits": [
+          {
+            "commit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "新增自由搭建工作台演示及真实研究组件联动"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-29-workbench-case-replay-implementation.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-29-workbench-case-replay.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-workbench/README.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-workbench/professional-copy.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-workbench/research-data.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/assets/home-workbench/research-expansion.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-workbench-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-workbench-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-workbench-runtime.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-workbench-study-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-workbench-study-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-link.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-session-catalog.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-guide-workbench-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-workbench-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-workbench-study.css"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/home-workbench-study.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-guide-workbench.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-assets.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-carousel.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-pptx-mode.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-continuable-composer.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-panel-destination.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-panel.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-connection-row-routing.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-workbench-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/strip-workbench-replay.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-handoff-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-portal.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-operations-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-workbench.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-actor.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-contract.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-native.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-saved-provider.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-study-contract.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-study-integration.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-study-render.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-workbench-workspace.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/input-deliverable-preview-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-command-scope.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-drop.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-send-preview.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-skill-menu-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-profile-install.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-creation-progress.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-grid-arrange-tabs.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/subagent-avatars-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/subagent-avatars.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "完整前端补丁可重复应用",
+            "verifiedCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
+            "completedAt": "2026-10-28T23:16:33.363Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "test/home-workbench-client.test.js",
+              "test/home-workbench-contract.test.js",
+              "test/home-workbench-runtime.test.js",
+              "test/home-workbench-native.test.js",
+              "test/home-workbench-workspace.test.js",
+              "test/home-workbench-actor.test.js",
+              "test/home-workbench-study-contract.test.js",
+              "test/home-workbench-study-render.test.js",
+              "test/home-workbench-study-integration.test.js",
+              "test/home-workbench-saved-provider.test.js",
+              "test/home-guide-workbench.test.ts",
+              "test/research-grid-arrange-tabs.test.js",
+              "test/financial-connection-row-routing.test.js",
+              "test/home-workbench-browser.test.js",
+              "test/home-guide-operations-entry.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "新工作台及直接相关入口、依赖、布局、历史数据和真实浏览器路径通过",
+            "verifiedCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
+            "completedAt": "2026-10-28T23:17:36.176Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "项目声明的类型检查通过",
+            "verifiedCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
+            "completedAt": "2026-10-28T23:17:44.342Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实 Chromium 完整25阶段、原生输入、动画暂停、三页签切换、四主题、报告/参数更新与保存恢复通过；相邻跨行连线各3000点无穿卡。截图 /tmp/home-workbench-browser-20261029/。"
+        },
+        "acceptanceCriteria": [
+          "首页第五张自由搭建卡自动演绎，保留原四快捷入口",
+          "原生输入与规划、拆分、逐组件生成完成后保存3页签15实例",
+          "自选、估值输入和资料目录对子组件产生真实选择影响",
+          "四模式沿用客户端样式，历史快照结束和重开后不回退实时接口"
+        ],
+        "risks": [
+          "固定2026-04-30历史快照，只覆盖贵州茅台、五粮液、泸州老窖；未提供分时和复权数据。",
+          "旧board教程1080×640高度门禁回归项仍拒绝过矮研究区；该分支与canonical main字节相同，未在本次改动。其余旧夹具22文件298项及原生浏览器8项通过。",
+          "共享客户端尚待本次集成构建后的可见验收；用户接受前不晋升main。"
+        ],
+        "generatedAt": "2026-10-28T23:17:44.342Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -2247,6 +2646,47 @@
         "--reporter=dot"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "test/home-workbench-client.test.js",
+        "test/home-workbench-contract.test.js",
+        "test/home-workbench-runtime.test.js",
+        "test/home-workbench-native.test.js",
+        "test/home-workbench-workspace.test.js",
+        "test/home-workbench-actor.test.js",
+        "test/home-workbench-study-contract.test.js",
+        "test/home-workbench-study-render.test.js",
+        "test/home-workbench-study-integration.test.js",
+        "test/home-workbench-saved-provider.test.js",
+        "test/home-guide-workbench.test.ts",
+        "test/research-grid-arrange-tabs.test.js",
+        "test/financial-connection-row-routing.test.js",
+        "test/home-workbench-browser.test.js",
+        "test/home-guide-operations-entry.test.ts"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
