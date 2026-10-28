@@ -103,6 +103,18 @@ describe('persistent closed-lid service lease', () => {
     f.service.status = original
     await expect(guard.stop()).resolves.toBeUndefined()
   })
+  it('retains its lease when a temporary global service error has no token', async () => {
+    const f = fixture(); f.installed()
+    const guard = new MacOSLidGuard({service: f.service, run: f.run})
+    await guard.start(false)
+    const original = f.service.status
+    f.service.status = async () => ({version: 1, servicePid: 20, mode: 'error', ownerPid: 0, token: null})
+    await expect(guard.active()).rejects.toThrow('restore-failed')
+    expect(JSON.parse(readFileSync(f.leasePath, 'utf8')).release).toBeUndefined()
+    f.service.status = original
+    await expect(guard.active()).resolves.toBe(true)
+    await guard.stop()
+  })
   it('waits for its release nonce acknowledgement when acquisition was cancelled before active status', async () => {
     const f = fixture(); f.installed()
     const guard = new MacOSLidGuard({service: f.service, run: f.run})

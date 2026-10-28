@@ -79,9 +79,11 @@ export class MacOSLidGuard implements LidGuard {
   async active(): Promise<boolean> {
     if (!this.token || !this.ownsLease()) return false
     const status = await this.service.status()
+    // Global errors omit the lease token. Preserve the request for recovery
+    // instead of treating that temporary outcome as another owner's state.
+    if (status.mode === 'error') throw Error('restore-failed')
     if (!this.matches(status)) return false
     if (status.mode === 'safety-stop' || status.mode === 'system-changed') throw Error(status.mode)
-    if (status.mode === 'error') throw Error('restore-failed')
     return (status.mode === 'active' || status.mode === 'external') && parseSleepDisabled(await this.run('/usr/bin/pmset', ['-g']))
   }
   cancel(): void {
