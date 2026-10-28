@@ -712,6 +712,112 @@
           "本次未修改历史实现；先前额外简化 redo 探针未验证通过，未纳入本次修复的通过声明。"
         ],
         "generatedAt": "2026-10-28T06:41:45.609Z"
+      },
+      "merged": {
+        "mergeCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+        "verificationCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
+            "verifiedCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+            "completedAt": "2026-10-28T06:43:21.609Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+            "completedAt": "2026-10-28T06:43:21.609Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/memory-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
+            "verifiedCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+            "completedAt": "2026-10-28T06:43:21.609Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/plugin-back-sticky-browser.test.js",
+              "test/integration-menu-layout.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/integration-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
+            "verifiedCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+            "completedAt": "2026-10-28T06:43:21.609Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+            "completedAt": "2026-10-28T06:43:21.609Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/notes-preload-runtime.test.ts",
+              "test/preload-editor-singleton.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
+            "verifiedCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+            "completedAt": "2026-10-28T06:43:21.609Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "92d946b7ef536afcb73b004fa0231117cb2c1d11",
+            "completedAt": "2026-10-28T06:43:21.609Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-10-28T06:43:21.609Z"
       }
     }
   ],
