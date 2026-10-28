@@ -25,6 +25,55 @@ async function fixture(mode='conversation',dark=false,width=1050){
  await page.addScriptTag({content:script});await page.locator('textarea').waitFor().catch(async error=>{throw Error(JSON.stringify({errors,body:await page.locator('body').innerText()})+' '+error.message)})
  return{page,errors,assetWarnings,input:page.locator('textarea'),start:()=>page.getByRole('button',{name:'语音输入',exact:true}).click(),emit:event=>page.evaluate(event=>probe.emit(event),event),close:async()=>{await page.evaluate(()=>window.probe.dispose());await page.close()}}
 }
+async function captureMotionFrame(page,entering){
+ await page.evaluate(entering=>{
+  window.motionFrame=new Promise(resolve=>{
+   const observer=new MutationObserver(()=>{
+    const pill=document.querySelector('[data-composer-voice-pill]')
+    if(!pill||pill.dataset.open!==String(entering))return
+    observer.disconnect();requestAnimationFrame(()=>{
+     pill.getBoundingClientRect();const animations=pill.getAnimations();window.motionAnimations=animations
+     for(const animation of animations){animation.pause();animation.currentTime=90}
+     const box=pill.getBoundingClientRect(),style=getComputedStyle(pill)
+     resolve({width:box.width,opacity:Number(style.opacity),sendX:document.querySelector('.uV2eYG_primary').getBoundingClientRect().x,hidden:pill.getAttribute('aria-hidden'),label:pill.getAttribute('aria-label'),disabled:pill.querySelector('button').disabled,pointerEvents:style.pointerEvents,transitions:animations.map(animation=>({property:animation.transitionProperty,duration:animation.effect.getTiming().duration,easing:animation.effect.getTiming().easing}))})
+    })
+   });observer.observe(document.querySelector('#composer'),{childList:true,subtree:true,attributes:true,attributeFilter:['data-open']})
+  })
+ },entering)
+}
+it('expands the voice pill leftwards at 240ms ease-out without moving send or replaying on audio levels, then closes inertly',async()=>{
+ const f=await fixture();try{
+  const sendX=await f.page.locator('.uV2eYG_primary').evaluate(el=>el.getBoundingClientRect().x)
+  await captureMotionFrame(f.page,true);await f.start();const entry=await f.page.evaluate(()=>window.motionFrame)
+  expect(entry.width).toBeGreaterThan(0);expect(entry.width).toBeLessThan(82);expect(entry.opacity).toBeGreaterThan(0);expect(entry.opacity).toBeLessThan(1);expect(entry.sendX).toBeCloseTo(sendX,1)
+  expect(entry.transitions).toContainEqual({property:'width',duration:240,easing:'ease-out'})
+  await f.emit({type:'level',level:.8});await f.emit({type:'state',state:'listening'})
+  expect(await f.page.evaluate(()=>document.querySelector('[data-composer-voice-pill]').getAnimations().every(animation=>window.motionAnimations.includes(animation)))).toBe(true)
+  expect(await f.page.locator('[data-composer-voice-pill]').evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(entry.width,1)
+  expect(await f.page.locator('[data-composer-voice-wave]').getAttribute('data-level')).toBe('0.8');expect(await f.page.evaluate(()=>probe.requests.length)).toBe(1)
+  await f.page.screenshot({path:evidence+'/motion-enter-middle.png'});await f.page.evaluate(()=>window.motionAnimations.forEach(animation=>animation.finish()))
+  await captureMotionFrame(f.page,false);await f.page.getByRole('button',{name:'停止语音输入',exact:true}).click();const exit=await f.page.evaluate(()=>window.motionFrame)
+  expect(exit.width).toBeGreaterThan(0);expect(exit.width).toBeLessThan(82);expect(exit.sendX).toBeCloseTo(sendX,1);expect(exit.hidden).toBe('true');expect(exit.label).toBe(null);expect(exit.disabled).toBe(true);expect(exit.pointerEvents).toBe('none')
+  await expect.poll(()=>f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.requests.length)).toBe(1);expect(f.errors).toEqual([])
+  await writeFile(evidence+'/motion-middle-frames.json',JSON.stringify({entry,exit,sendX},null,2))
+ }finally{await f.close()}
+})
+it('uses immediate voice pill presence when reduced motion is requested',async()=>{
+ const f=await fixture();try{
+  await f.page.emulateMedia({reducedMotion:'reduce'});await f.start()
+  expect(await f.page.locator('[data-composer-voice-pill]').evaluate(el=>({width:el.getBoundingClientRect().width,duration:getComputedStyle(el).transitionDuration}))).toEqual({width:82,duration:'0s'})
+  await f.page.getByRole('button',{name:'停止语音输入',exact:true}).click();expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})
+it('cancels the exit timer on rapid voice restart and disposal without recapturing on presence changes',async()=>{
+ const f=await fixture();try{
+  await f.page.evaluate(()=>{const schedule=window.setTimeout.bind(window),cancel=window.clearTimeout.bind(window);window.motionTimers=new Set();window.setTimeout=(fn,delay,...args)=>{let id;id=schedule(()=>{window.motionTimers.delete(id);fn(...args)},delay);if(delay===240)window.motionTimers.add(id);return id};window.clearTimeout=id=>{window.motionTimers.delete(id);cancel(id)}})
+  await f.start();await f.page.getByRole('button',{name:'停止语音输入',exact:true}).click();expect(await f.page.evaluate(()=>window.motionTimers.size)).toBe(1)
+  await f.start();expect(await f.page.evaluate(()=>window.motionTimers.size)).toBe(0);expect(await f.page.evaluate(()=>probe.requests.length)).toBe(2)
+  await f.page.getByRole('button',{name:'停止语音输入',exact:true}).click();expect(await f.page.evaluate(()=>window.motionTimers.size)).toBe(1)
+  await f.page.evaluate(()=>probe.dispose());expect(await f.page.evaluate(()=>window.motionTimers.size)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.page.close()}
+})
 for(const mode of ['home','conversation','research','notes'])it(`dictates into the actual controlled ${mode} editor with cumulative replacements, no auto-send and an audio-driven adjacent pill`,async()=>{
  const f=await fixture(mode,true);try{
   expect(await f.page.title()).toBe('原生输入框语音验证');const other=await f.page.evaluate(()=>probe.other.snapshot)
@@ -35,17 +84,18 @@ for(const mode of ['home','conversation','research','notes'])it(`dictates into t
   expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.page.evaluate(()=>probe.other.snapshot)).toEqual(other)
   const silent=await f.page.locator('[data-composer-voice-wave] i').last().evaluate(el=>el.getBoundingClientRect().height)
   for(const level of [.15,.4,.75,.3,.8,.5,.2,.65,.4,.85])await f.emit({type:'level',level});await expect.poll(()=>f.page.locator('[data-composer-voice-wave] i').last().evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThan(12)
+  await expect.poll(()=>f.page.locator('[data-composer-voice-pill]').evaluate(el=>el.getBoundingClientRect().width)).toBe(82)
   const geometry=await f.page.evaluate(()=>{const pill=document.querySelector('[data-composer-voice-pill]').getBoundingClientRect(),send=document.querySelector('button[aria-label="发送"]').getBoundingClientRect();return{pill:{x:pill.x,y:pill.y,width:pill.width,height:pill.height,right:pill.right},send:{x:send.x,y:send.y,width:send.width,height:send.height}}})
   expect(geometry.pill.right).toBeLessThanOrEqual(geometry.send.x);expect(Math.abs(geometry.pill.y+geometry.pill.height/2-geometry.send.y-geometry.send.height/2)).toBeLessThanOrEqual(3)
   await f.page.screenshot({path:evidence+'/'+mode+'-active-dark.png'});await writeFile(evidence+'/'+mode+'-geometry.json',JSON.stringify(geometry,null,2))
-  await f.emit({type:'final',text:'研究市场并保留来源'});await expect.poll(()=>f.input.inputValue()).toBe('研究市场并保留来源');expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([])
+  await f.emit({type:'final',text:'研究市场并保留来源'});await expect.poll(()=>f.input.inputValue()).toBe('研究市场并保留来源');expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([])
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 it('stops on the first Enter without submitting, keeps normal editing and only submits on the next Enter',async()=>{
  const f=await fixture();try{
   await f.start();await f.emit({type:'partial',text:'保留文字'});await f.input.press('Enter')
-  expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.input.inputValue()).toBe('保留文字')
+  expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.input.inputValue()).toBe('保留文字')
   await f.emit({type:'final',text:'迟到覆盖'});await f.input.press('Meta+ArrowRight');await f.input.press('x');expect(await f.input.inputValue()).toBe('保留文字x')
   await f.input.press('Enter');await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1);expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('保留文字x');expect(f.errors).toEqual([])
  }finally{await f.close()}
@@ -53,14 +103,14 @@ it('stops on the first Enter without submitting, keeps normal editing and only s
 it('keeps native Shift+Enter newline editing while stopping capture',async()=>{
  const f=await fixture();try{
   await f.start();await f.emit({type:'partial',text:'正文'});await expect.poll(()=>f.input.evaluate(el=>el.selectionEnd)).toBe(2)
-  await f.input.press('Shift+Enter');expect(await f.input.inputValue()).toBe('正文\n');expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
+  await f.input.press('Shift+Enter');expect(await f.input.inputValue()).toBe('正文\n');expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
 it.each(['Meta','Control'])('stops the complete %s+Enter gesture without sending, then restores the ordinary shortcut',async modifier=>{
  const f=await fixture();try{
   await f.start();await f.emit({type:'partial',text:'组合快捷键保留文字'})
   await f.page.keyboard.press(modifier+'+Enter')
-  expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.input.inputValue()).toBe('组合快捷键保留文字')
+  expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.input.inputValue()).toBe('组合快捷键保留文字')
   await f.emit({type:'final',text:'迟到覆盖'});await f.page.keyboard.press(modifier+'+Enter')
   await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1);expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('组合快捷键保留文字');expect(f.errors).toEqual([])
  }finally{await f.close()}
@@ -92,7 +142,7 @@ it('does not consume IME commit and lets typing replace recognition without late
  const f=await fixture();try{
   await f.start();await f.emit({type:'partial',text:'组合前文'})
   const result=await f.input.evaluate(el=>{el.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));const e=new KeyboardEvent('keydown',{key:'Enter',isComposing:true,keyCode:229,bubbles:true,cancelable:true});el.dispatchEvent(e);return e.defaultPrevented})
-  expect(result).toBe(false);expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
+  expect(result).toBe(false);expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
 it('cleans up delayed starts and keeps attachment-only send and running-task stop actions',async()=>{
@@ -105,6 +155,7 @@ it('cleans up delayed starts and keeps attachment-only send and running-task sto
 for(const dark of [false,true])it(`fits a narrow composer in ${dark?'dark':'light'} appearance without clipping the pill or stealing pointer focus`,async()=>{
  const f=await fixture('home',dark,360);try{
   await f.page.screenshot({path:evidence+'/narrow-'+(dark?'dark':'light')+'-idle.png'});await f.start();await f.emit({type:'state',state:'listening'});await f.emit({type:'level',level:.5})
+  await expect.poll(()=>f.page.locator('[data-composer-voice-pill]').evaluate(el=>el.getBoundingClientRect().width)).toBe(82)
   const box=await f.page.locator('[data-composer-voice-pill]').boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(360);expect(await f.input.evaluate(el=>document.activeElement===el)).toBe(true)
   await f.page.screenshot({path:evidence+'/narrow-'+(dark?'dark':'light')+'-active.png'});expect(f.errors).toEqual([])
  }finally{await f.close()}

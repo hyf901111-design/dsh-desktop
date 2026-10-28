@@ -106,15 +106,23 @@ export function createComposerVoiceSession(options){
 
 function useComposerVoice(react,options){
  const latest=react.useRef(options);latest.current=options
- const controller=react.useRef(null),[state,setState]=react.useState({active:false,state:null,levels:Array(12).fill(0)})
+ const controller=react.useRef(null),[state,setState]=react.useState({active:false,present:false,state:null,levels:Array(12).fill(0)})
  const bridge=window.dshDesktop?.researchVoice
  react.useLayoutEffect(()=>{
-  const {keyboard,sessionId}=options;let mounted=true
+  const {keyboard,sessionId}=options;let mounted=true,exitTimer=0
+  const change=value=>{
+   if(!mounted)return
+   window.clearTimeout(exitTimer);exitTimer=0
+   if(value.active){setState({...value,present:true});return}
+   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches
+   setState(previous=>({...value,present:!reduced&&previous.present,levels:previous.levels}))
+   if(!reduced)exitTimer=window.setTimeout(()=>{exitTimer=0;if(mounted)setState(previous=>previous.active?previous:{...previous,present:false})},240)
+  }
   const owned=createComposerVoiceSession({bridge,keyboard,document:document,input:()=>latest.current.inputRef.current,
    blocked:()=>latest.current.blocked||latest.current.keyboard!==keyboard||latest.current.sessionId!==sessionId,
-   composing:()=>latest.current.composingRef.current,onChange:value=>{if(mounted)setState(value)},onError:text=>latest.current.showToast(text)})
-  controller.current=owned;setState({active:false,state:null,levels:Array(12).fill(0)})
-  return()=>{mounted=false;owned.dispose();if(controller.current===owned)controller.current=null}
+   composing:()=>latest.current.composingRef.current,onChange:change,onError:text=>latest.current.showToast(text)})
+  controller.current=owned;setState({active:false,present:false,state:null,levels:Array(12).fill(0)})
+  return()=>{mounted=false;window.clearTimeout(exitTimer);owned.dispose();if(controller.current===owned)controller.current=null}
  },[bridge,options.keyboard,options.sessionId])
  react.useLayoutEffect(()=>{controller.current?.reconcile()},[options.blocked,options.draftRev])
  react.useEffect(()=>{
@@ -127,11 +135,12 @@ function composerVoiceIcon(react){
  return react.createElement('svg',{viewBox:'0 0 18 18',width:18,height:18,'aria-hidden':true},react.createElement('path',{d:'M3 7v4M6 4v10M9 6v6M12 3v12M15 7v4',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'}))
 }
 function renderComposerVoicePill(react,voice){
- if(!voice.active)return null
+ if(!voice.present)return null
  const label=voice.state==='authorizing'?'等待麦克风权限':voice.state==='transcribing'?'正在识别':'正在聆听'
- return react.createElement('div',{'data-composer-voice-pill':'',role:'group','aria-label':label},
+ return react.createElement('div',{'data-composer-voice-pill':'','data-open':String(voice.active),role:voice.active?'group':undefined,'aria-label':voice.active?label:undefined,'aria-hidden':!voice.active||undefined},
+  react.createElement('div',{'data-composer-voice-content':''},
   react.createElement('span',{'data-composer-voice-wave':'','data-level':voice.levels.at(-1),'aria-hidden':true},voice.levels.map((level,index)=>react.createElement('i',{key:index,style:{height:2+level*14+'px',opacity:.3+level*.7}}))),
-  react.createElement('button',{type:'button','aria-label':'停止语音输入',title:'停止语音输入',onPointerDown:event=>{event.preventDefault();event.stopPropagation()},onMouseDown:event=>event.preventDefault(),onClick:event=>{event.preventDefault();event.stopPropagation();voice.stop()}},react.createElement('svg',{viewBox:'0 0 16 16',width:14,height:14,'aria-hidden':true},react.createElement('rect',{x:3,y:3,width:10,height:10,rx:1,fill:'currentColor'}))))
+  react.createElement('button',{type:'button',disabled:!voice.active,tabIndex:voice.active?undefined:-1,'aria-label':voice.active?'停止语音输入':undefined,title:voice.active?'停止语音输入':undefined,onPointerDown:voice.active?event=>{event.preventDefault();event.stopPropagation()}:undefined,onMouseDown:voice.active?event=>event.preventDefault():undefined,onClick:voice.active?event=>{event.preventDefault();event.stopPropagation();voice.stop()}:undefined},react.createElement('svg',{viewBox:'0 0 16 16',width:14,height:14,'aria-hidden':true},react.createElement('rect',{x:3,y:3,width:10,height:10,rx:1,fill:'currentColor'})))))
 }
 const START='/* sherlock:composer-voice:v1 */',END='/* sherlock:composer-voice:end */'
 const exportAnchor='exports.ConversationRoot = ConversationRoot;'
