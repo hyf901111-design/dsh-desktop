@@ -1,5 +1,6 @@
 import {it,expect} from 'vitest'
-import {readFileSync} from 'node:fs'
+import {notesResidentProductionSource} from './helpers/notes-resident-production-source.mjs'
+const residentSource=notesResidentProductionSource({conversation:true})
 import {conversationComponentReceiptManifests,conversationComponentReceiptAnchors,conversationComponentRenderFlow,patchConversationComponents,stripConversationComponents} from '../scripts/lib/conversation-components.mjs'
 const manifest=(id='component-a',turnId='7')=>({version:1,kind:'conversation-component',componentId:id,sessionId:'session-a',turnId,requestId:'request-'+id,status:'ready'})
 const receipt=(id='component-a',patch={})=>({requestId:'request-'+id,capability:'conversation.components.create',status:'succeeded',effect:{kind:'conversation-component',state:'saved',componentId:id},data:{renderManifest:manifest(id)},...patch})
@@ -20,7 +21,7 @@ it('anchors cards to their actual saved tool nodes across duplicate receipts, st
  expect([...conversationComponentReceiptAnchors(flow,nodes,'other',readTurn)]).toEqual([])
 })
 it('installs one real ChatView stream and fails closed if its native anchors disappear',()=>{
- const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),source=stripConversationComponents(resident),patched=patchConversationComponents(source)
+ const source=stripConversationComponents(residentSource),patched=patchConversationComponents(source)
  expect(patchConversationComponents(patched)).toBe(patched)
  expect(stripConversationComponents(patched)).toBe(source)
  expect(()=>new Function(patched)).not.toThrow()

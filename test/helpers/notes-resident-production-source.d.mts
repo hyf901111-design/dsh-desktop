@@ -1,1 +1,1 @@
-export function notesResidentProductionSource(options?:{activity?:boolean}):string
+export function notesResidentProductionSource(options?:{activity?:boolean;conversation?:boolean}):string

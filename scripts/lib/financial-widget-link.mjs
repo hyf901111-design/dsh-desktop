@@ -1,13 +1,15 @@
-export function FinancialConnectionPort({node,side,readOnly}){
+export function FinancialConnectionPort({node,side,readOnly,surface}){
+ if(surface!=='research')return null
  const connected=side==='input'&&Boolean(financialLinkSourceId(node.containerSpec)),feed=['news','announcements'].includes(node.containerSpec.widget)
  return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port','data-financial-port':side,'data-financial-port-node':node.id,'data-connected':connected||undefined,disabled:readOnly,'aria-label':side==='output'?'输出选中个股':node.containerSpec.widget==='announcements'?'接收个股相关公告':feed?'接收个股相关新闻':'接收自选个股',title:side==='output'?'拖到左侧节点连接 · 拖到空白处断开':connected?'拖到右侧节点改接 · 拖到空白处断开':'拖到右侧节点连接',children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
 }
 
 // Both sides are measured separately: a quote is a receiver and a broadcaster.
 // The overlay shares the scrollable canvas coordinates with the actual footer.
-export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readOnly}){
+export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readOnly,surface='research'}){
  const {jsx,jsxs}=react_jsx_runtime,[draft,setDraft]=react.useState(null),draftRef=react.useRef(null),[geometry,setGeometry]=react.useState({width:0,height:0,ports:{},tabs:{}}),[feedback,setFeedback]=react.useState(null),previousLinks=react.useRef({sessionId,links:new Map()})
  const portKey=(id,side)=>id+':'+side
+ const active=()=>surface==='research'&&rootRef.current?.isConnected&&rootRef.current.matches('[data-research-canvas]')
  const page=workspace.getVisibleBoardSnapshot?.()??snapshot,visible=new Set([...page.files,...page.artifacts].map(n=>n.id)),tabs=snapshot.artifacts.find(n=>n.containerSpec?.type==='board-tabs')?.containerSpec.tabs||[],tabByNode=new Map(tabs.flatMap(t=>t.nodeIds.map(id=>[id,t])))
  // Drag direction is independent of data direction: output always feeds input.
  const connection=(side,id,otherSide,otherId,all)=>{
@@ -17,9 +19,9 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   return workbenchCanCreateFrom(source,target,all)||financialCanLink(source?.containerSpec,target?.containerSpec)?{sourceId,targetId}:null
  }
  const clear=()=>{draftRef.current=null;setDraft(null)}
- const commit=(sourceId,targetId,previousTargetId=null)=>{const target=workspace.getSnapshot().artifacts.find(n=>n.id===targetId),ok=workbenchSmartCreateTarget(target)?workspace.connectSmartCreateSource(targetId,sourceId):financialLinkSinks.get(sessionId)?.(sourceId,targetId,previousTargetId);clear();return ok}
+ const commit=(sourceId,targetId,previousTargetId=null)=>{if(!active()||readOnly)return false;const target=workspace.getSnapshot().artifacts.find(n=>n.id===targetId),ok=workbenchSmartCreateTarget(target)?workspace.connectSmartCreateSource(targetId,sourceId):financialLinkSinks.get(sessionId)?.(sourceId,targetId,previousTargetId);clear();return ok}
  react.useLayoutEffect(()=>{
-  const root=rootRef.current;if(!root)return
+  const root=rootRef.current;if(!active())return
   const observed=new Set();let observer
   const watch=element=>{if(element&&!observed.has(element)){observed.add(element);observer.observe(element)}}
   const measure=()=>{
@@ -57,9 +59,9 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   // scroll as well as the canvas scroll without moving either viewport.
   root.addEventListener('scroll',measure,true);window.addEventListener('resize',schedule)
   return()=>{observer.disconnect();mutations.disconnect();if(frame)window.cancelAnimationFrame(frame);root.removeEventListener('scroll',measure,true);window.removeEventListener('resize',schedule)}
- },[rootRef,snapshot.artifacts,snapshot.viewport])
+ },[rootRef,snapshot.artifacts,snapshot.viewport,surface])
  react.useLayoutEffect(()=>{
-  const root=rootRef.current;if(!root)return
+  const root=rootRef.current;if(!active())return
   root.toggleAttribute('data-financial-connecting',Boolean(draft))
   const sources=new Set([...snapshot.artifacts.map(n=>financialLinkSourceId(n.containerSpec)).filter(Boolean),...snapshot.artifacts.filter(n=>workbenchSmartCreateTarget(n)&&n.creationMode==='selection').flatMap(n=>n.sourceNodeIds||[])])
   for(const port of root.querySelectorAll('[data-financial-port]')){
@@ -71,20 +73,20 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
    port.toggleAttribute('data-drop-invalid',Boolean(draft&&draft.invalidId===id&&draft.invalidSide===port.dataset.financialPort))
   }
   return()=>{root.removeAttribute('data-financial-connecting');for(const port of root.querySelectorAll('[data-financial-port]'))for(const attr of ['data-drop-eligible','data-drop-target','data-drop-invalid'])port.removeAttribute(attr)}
- },[draft,snapshot.artifacts])
+ },[draft,snapshot.artifacts,surface])
  react.useEffect(()=>{
-  const previous=previousLinks.current,next=new Map(),ids=[]
+  if(!active())return;const previous=previousLinks.current,next=new Map(),ids=[]
   for(const node of snapshot.artifacts.filter(n=>['quote','news','announcements'].includes(n.containerSpec?.widget))){
    const spec=node.containerSpec,sourceId=financialLinkSourceId(spec),signature=JSON.stringify([sourceId,spec.symbols.map(s=>[s.market,s.code])]);next.set(node.id,signature)
    if(previous.sessionId===sessionId&&sourceId&&previous.links.has(node.id)&&previous.links.get(node.id)!==signature)ids.push(node.id)
   }
   previousLinks.current={sessionId,links:next}
   if(ids.length)setFeedback({ids,stamp:Date.now()});else if(previous.sessionId!==sessionId)setFeedback(null)
- },[snapshot.artifacts,sessionId])
+ },[snapshot.artifacts,sessionId,surface])
  react.useEffect(()=>{if(!feedback)return;const timer=window.setTimeout(()=>setFeedback(null),1400);return()=>window.clearTimeout(timer)},[feedback])
  react.useEffect(()=>{
-  clear();const root=rootRef.current;if(!root)return
-  const portAt=target=>{const p=target?.closest?.('[data-financial-port]');return p&&root.contains(p)?p:null}
+  clear();const root=rootRef.current;if(!active())return
+  const portAt=target=>{const p=target?.closest?.('[data-financial-port]'),view=p?.closest('[data-financial-surface]');return p&&active()&&root.contains(p)&&!p.closest('.en-root,.ew-conversation-component')&&(!view||view.dataset.financialSurface==='research')?p:null}
   const nodes=()=>workspace.getSnapshot().artifacts
   const compatible=(start,port)=>{
    if(!port||port.disabled)return null
@@ -99,14 +101,14 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
    dragging={nodeId:port.dataset.financialPortNode,side:port.dataset.financialPort,pointerId:e.pointerId,x:e.clientX,y:e.clientY,moved:false}
   }
   const move=e=>{
-   if(!dragging||e.pointerId!==dragging.pointerId)return
+   if(!active()||!dragging||e.pointerId!==dragging.pointerId)return
    if(!dragging.moved&&Math.hypot(e.clientX-dragging.x,e.clientY-dragging.y)<4)return
    if(!dragging.moved)workspace.updateSelection([dragging.nodeId],'replace')
    dragging.moved=true;e.preventDefault()
    const r=root.getBoundingClientRect(),target=portAt(document.elementFromPoint(e.clientX,e.clientY)),valid=compatible(dragging,target),value={nodeId:dragging.nodeId,side:dragging.side,sourceId:valid?.sourceId??(dragging.side==='output'?dragging.nodeId:null),targetId:valid?.targetId??(dragging.side==='input'?dragging.nodeId:null),previousTargetId:dragging.side==='input'?dragging.nodeId:null,x:e.clientX-r.left-root.clientLeft+root.scrollLeft,y:e.clientY-r.top-root.clientTop+root.scrollTop,dropId:valid?target.dataset.financialPortNode:null,invalidId:target&&!valid?target.dataset.financialPortNode:null,invalidSide:target&&!valid?target.dataset.financialPort:null};draftRef.current=value;setDraft(value)
   }
   const up=e=>{
-   if(!dragging||e.pointerId!==dragging.pointerId)return
+   if(!active()||!dragging||e.pointerId!==dragging.pointerId)return
    const own=dragging;dragging=null;if(!own.moved)return
    const hit=document.elementFromPoint(e.clientX,e.clientY),target=portAt(hit),valid=compatible(own,target);suppressClick=true
    if(valid)commit(valid.sourceId,valid.targetId)
@@ -122,7 +124,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   const key=e=>{if(e.key==='Escape'&&(draftRef.current||dragging)){e.preventDefault();e.stopPropagation();cancel()}}
   root.addEventListener('click',click,true);document.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',cancel);document.addEventListener('keydown',key,true);window.addEventListener('blur',cancel)
   return()=>{draftRef.current=null;root.removeEventListener('click',click,true);document.removeEventListener('pointerdown',down,true);document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',cancel);document.removeEventListener('keydown',key,true);window.removeEventListener('blur',cancel)}
- },[workspace,sessionId,readOnly])
+ },[workspace,sessionId,readOnly,surface])
  react.useEffect(()=>{if(draft&&!snapshot.artifacts.some(n=>n.id===draft.nodeId))clear()},[snapshot.artifacts,draft])
  // Round each orthogonal corner with a tangent circular arc. Short gaps use
  // a smaller radius, preserving both real endpoints and the canvas edge clamps.
@@ -161,7 +163,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
  const remoteAnchors=new Map()
  for(const {node,sourceId} of links){const from=output(sourceId),to=input(node.id),remote=from.tabId?from:to.tabId?to:null;if(remote)remoteAnchors.set(remote.overflow?'overflow:'+remote.overflow:remote.tabId,remote)}
  react.useLayoutEffect(()=>{
-  const nav=rootRef.current?.querySelector('[data-board-tabs-nav]');if(!nav)return
+  const nav=active()&&rootRef.current?.querySelector('[data-board-tabs-nav]');if(!nav)return
   const marked=[],stems=[]
   for(const anchor of remoteAnchors.values()){
    const target=anchor.overflow?nav.querySelectorAll('[data-board-tabs-paging] button')[anchor.overflow==='left'?0:1]:[...nav.querySelectorAll('[data-board-tab]')].find(el=>el.dataset.boardTab===anchor.tabId)
@@ -172,8 +174,8 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
    const stem=document.createElement('span');stem.setAttribute('data-financial-connection-stem','');stem.setAttribute('aria-hidden','true');stem.style.left=anchor.stemLeft+'px';stem.style.top=anchor.stemTop+'px';stem.style.height=anchor.stemHeight+'px';nav.append(stem);stems.push(stem)
   }
   return()=>{for(const el of marked)el.removeAttribute('data-financial-connection-target');for(const stem of stems)stem.remove()}
- },[rootRef,geometry,snapshot.artifacts,snapshot.selection,draft,sessionId])
- return rootRef.current&&react_dom.createPortal(jsxs('svg',{className:'ew-financial-connections',width:geometry.width,height:geometry.height,'aria-label':'个股数据联动',children:[...links.map(({node:n,sourceId,creation})=>{
+ },[rootRef,geometry,snapshot.artifacts,snapshot.selection,draft,sessionId,surface])
+ return active()&&react_dom.createPortal(jsxs('svg',{className:'ew-financial-connections',width:geometry.width,height:geometry.height,'aria-label':'个股数据联动',children:[...links.map(({node:n,sourceId,creation})=>{
   const from=output(sourceId),to=input(n.id),d=path(from,to),hit=path(from.tabId?from:{...from,x:from.right+1},to.tabId?to:{...to,x:to.left-1}),editable=!readOnly&&(!creation||workbenchSmartCreateTarget(n)),remote=from.tabId?from:to.tabId?to:null,tab=remote&&tabs.find(t=>t.id===remote.tabId),relation=tab?(to.tabId?'输出连接至':'输入连接来自')+'「'+tab.name+'」页签'+(remote.overflow?'（向'+(remote.overflow==='left'?'左':'右')+'翻页）':''):'',action=creation?workbenchText('断开创建基准连接'):'断开组件数据连接'
   return jsxs('g',{[creation?'data-workbench-create-link':'data-financial-link']:n.id,'data-connection-source':sourceId,children:[jsx('path',{d,className:'ew-financial-connection-line'+(feedback?.ids.includes(n.id)?' ew-financial-connection-success':'')}),jsx('path',{d:hit,className:'ew-financial-connection-hit',role:'button',tabIndex:editable?0:-1,'aria-label':relation?relation+' · '+action:action,onPointerDown:e=>e.stopPropagation(),onContextMenu:e=>{e.preventDefault();e.stopPropagation();if(editable)commit(null,n.id)},onKeyDown:e=>{if(editable&&['Delete','Backspace','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();commit(null,n.id)}},children:jsx('title',{children:(relation?relation+' · ':'')+(editable?'右键断开连接':workbenchText('创建基准'))})})]},n.id+':'+sourceId)
  }),...(feedback?.ids||[]).filter(id=>visible.has(id)&&input(id)&&snapshot.artifacts.some(n=>n.id===id&&financialLinkSourceId(n.containerSpec))).map(id=>{const p=input(id);return jsx('rect',{'data-financial-feedback':id,className:'ew-financial-connection-frame',x:p.left+1,y:p.top+1,width:Math.max(0,p.right-p.left-2),height:Math.max(0,p.bottom-p.top-2),rx:5,pathLength:100,'aria-hidden':true},id+'-'+feedback.stamp)}),draft&&geometry.ports[portKey(draft.nodeId,draft.side)]&&(()=>{const anchor=geometry.ports[portKey(draft.nodeId,draft.side)],from=output(draft.sourceId),to=input(draft.targetId),bend=Math.max(40,Math.min(160,Math.abs(draft.x-anchor.x)/2))*(draft.side==='input'?-1:1);return jsx('path',{className:'ew-financial-connection-line ew-financial-connection-draft',d:from&&to?path(from,to):`M ${anchor.x} ${anchor.y} C ${anchor.x+bend} ${anchor.y} ${draft.x-bend} ${draft.y} ${draft.x} ${draft.y}`})})()]}),rootRef.current)

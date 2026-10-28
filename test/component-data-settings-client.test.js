@@ -1,5 +1,6 @@
 import {afterEach,it,expect,vi} from 'vitest'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
+import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 
 let f
 afterEach(async()=>{if(f)await f.dispose();f=null;vi.useRealTimers()})
@@ -16,7 +17,7 @@ const spec=()=>f.workspace.getSnapshot().artifacts[0].containerSpec
 
 it('opens the owning quote settings from its source, switches provider and persists interval without refetching on timer edits',async()=>{
  const {card,bridge}=await setup(),dialog=await open(card)
- expect(dialog.textContent).toContain('个股行情');expect(f.document.querySelectorAll('.odyssey-data-settings')).toHaveLength(1)
+ expect(dialog.querySelector('header p').textContent).toBe(financialWidgetDefaults('quote').title);expect(f.document.querySelectorAll('.odyssey-data-settings')).toHaveLength(1)
  expect(dialog.querySelector('dl').textContent).toContain('2026/10/19')
  const source=dialog.querySelector('select[aria-label="数据源"]'),frequency=dialog.querySelector('select[aria-label="更新频率"]')
  expect([...source.options].map(o=>o.value)).toEqual(['default','backup'])

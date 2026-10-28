@@ -8,6 +8,7 @@ import {FINANCIAL_WIDGET_GUIDANCE} from '../packages/dsh-research-task-runtime/f
 const heading='【组件宿主样式规则】'
 function assertSurfaceRules(prompt){
  expect(prompt).toContain(heading)
+ expect(prompt).toContain('不改变纯文字任务或Notes输出协议')
  expect(prompt.split(heading)).toHaveLength(2)
  for(const rule of ['对话模式','研究与笔记模式','34px','4px','8px','1px','600','700','--sherlock-','分节标题','真实请求','获取时间'])expect(prompt).toContain(rule)
  expect(prompt).not.toContain('客户端统一提供 48px 可拖动标题区')

@@ -1,12 +1,19 @@
 import {createRequire} from 'node:module'
 import {vi} from 'vitest'
 import {financialClientFixture} from './financial-widget-client-fixture.js'
+import {notesResidentProductionSource} from './notes-resident-production-source.mjs'
 const require=createRequire(import.meta.url),React=require('react'),{createRoot}=require('react-dom/client')
+// Build the immutable resident source once; each fixture still owns a fresh
+// DOM, bridge, workspace and React root. Production projection is not a UI step.
+const residentSource=notesResidentProductionSource({conversation:true})
 export async function conversationComponentFixture(initialView,overrides={},options={}){
  let view=structuredClone(initialView)
  const bridge={read:vi.fn(async()=>structuredClone(view)),updateNativeSpec:vi.fn(async input=>{if(input.expectedRevision!==view.revision)throw Error('配置已变化');view={...view,revision:view.revision+1,node:{...view.node,containerSpec:input.spec}};return structuredClone(view)}),queryNative:vi.fn(async input=>({quotes:(input.query.symbols??[]).map(s=>({...s,price:12.34,changePercent:1,quotedAt:'2026-10-24T01:30:00Z'})),bars:[],source:'模拟数据源',receivedAt:'2026-10-24T01:30:01Z'})),copy:vi.fn(async()=>({ok:true})),saveLibrary:vi.fn(async()=>({id:'library-a',name:view.node.title})),reference:vi.fn(async()=>({version:1,kind:'conversation-component',componentId:view.id,sessionId:view.sessionId,revision:view.revision,title:view.node.title})),resolveReference:vi.fn(async()=>({title:view.node.title,text:'模拟当前内容 12.34'})),...overrides}
- const f=await financialClientFixture({conversationComponents:bridge,financialWidget:{request:vi.fn(async()=>({error:'must not use default native query'}))}},{sourceTransform:source=>{const financial=require('../../scripts/lib/financial-widget-client.mjs');const widgetName=source.includes('function HomeGuideNativeOriginalFinancialWidget(')?'HomeGuideNativeOriginalFinancialWidget':'FinancialWidget';source=source.replace(new RegExp('function '+widgetName+'\\([\\s\\S]*?(?=function FinancialSparkline\\()'),financial.FinancialWidget.toString().replace('function FinancialWidget(', 'function '+widgetName+'(')+'\n');const c=require('../../scripts/lib/conversation-components.mjs');return c.patchConversationComponents(source).replace('exports.ResearchCanvas = ResearchCanvas;','exports.ConversationComponentCard=ConversationComponentCard;exports.__setConversationComponentInputs=v=>conversationComponentInputs=v;exports.__setConversationOwnerAdapter=v=>sherlockBoardsAdapter=v;exports.ResearchCanvas = ResearchCanvas;')}})
+ const f=await financialClientFixture({conversationComponents:bridge,financialWidget:{request:vi.fn(async()=>({error:'must not use default native query'}))}},{sourceTransform:()=>residentSource.replace('exports.ResearchCanvas = ResearchCanvas;','exports.ConversationComponentCard=ConversationComponentCard;exports.__setConversationComponentInputs=v=>conversationComponentInputs=v;exports.__setConversationOwnerAdapter=v=>sherlockBoardsAdapter=v;exports.ResearchCanvas = ResearchCanvas;')})
  if(options.ownerAdapter)f.bundle.__setConversationOwnerAdapter(options.ownerAdapter)
+ // This fixture represents a complete resident host. Individual capability
+ // omissions are exercised by the real-browser partial-bridge fixture.
+ f.bundle.__setConversationComponentInputs({sessions:{list:{getSnapshot:()=>({current:view.sessionId})}},inputHub:{shell:()=>({snapshot:{draft:'',draftRev:0,imageIds:[]},insertReference:vi.fn(()=>true)})}})
  const componentHost=f.document.createElement('main');f.document.body.append(componentHost);const componentRoot=createRoot(componentHost)
  const manifest={version:1,kind:'conversation-component',componentId:view.id,sessionId:view.sessionId,turnId:'7',requestId:'request-a',status:'ready'}
  const render=async(sessionId=view.sessionId)=>f.act(async()=>componentRoot.render(React.createElement(f.bundle.ConversationComponentCard,{sessionId,manifest})))

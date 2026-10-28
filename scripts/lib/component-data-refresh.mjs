@@ -1,9 +1,13 @@
 import {ComponentDataSettingsPanel,componentDataSettingsCss} from './component-data-settings-panel.mjs';
 import {componentDataStatusDefinitions,componentDataStatusCss,patchComponentDataStatus} from './component-data-status.mjs';
 const begin='/* ODYSSEY_COMPONENT_DATA_START */',end='/* ODYSSEY_COMPONENT_DATA_END */';
-export function openComponentData(sessionId,node,action='settings',trigger=null) {
-  const owner=trigger||document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');
-  window.dispatchEvent(new CustomEvent('sherlock:component-data-open',{detail:{sessionId,nodeId:node.id,title:node.title||node.containerSpec?.title||'组件',action,kind:node.containerSpec?.type,trigger,theme:owner?.closest?.('[data-ework-grid]')?.dataset.workbenchStyle||owner?.closest?.('[data-financial-theme]')?.dataset.financialTheme}}));
+export function openComponentData(sessionId,node,action='settings',trigger=null,surface='research') {
+  if(!['research','notes','conversation'].includes(surface)||!['settings','refresh'].includes(action))return false;
+  const selector='[data-research-node-id="'+CSS.escape(node.id)+'"]',scope=surface==='notes'?'.en-root ':surface==='conversation'?'.ew-conversation-component':'[data-research-canvas] ';
+  const owner=trigger?.closest?.(selector)||document.querySelector(scope+selector),native=owner?.querySelector?.('[data-financial-surface]');
+  if(!owner||native&&native.dataset.financialSurface!==surface||trigger&&!owner.contains(trigger))return false;
+  window.dispatchEvent(new CustomEvent('sherlock:component-data-open',{detail:{sessionId,nodeId:node.id,title:node.title||node.containerSpec?.title||'组件',surface,owner,action,kind:node.containerSpec?.type,trigger,theme:owner?.closest?.('[data-ework-grid]')?.dataset.workbenchStyle||owner?.closest?.('[data-financial-theme]')?.dataset.financialTheme}}));
+  return true;
 }
 function ComponentDataSettings({sessionId,canvasRoot}) {
  const [target,setTarget]=react.useState(null),[binding,setBinding]=react.useState(null),[error,setError]=react.useState(''),[busy,setBusy]=react.useState(false),[loading,setLoading]=react.useState(false);
@@ -18,17 +22,18 @@ function ComponentDataSettings({sessionId,canvasRoot}) {
   observer?.observe(root);document.addEventListener('visibilitychange',send);window.addEventListener('sherlock:component-data-changed',send);
   return()=>{monitor.dispose();observer?.disconnect();document.removeEventListener('visibilitychange',send);window.removeEventListener('sherlock:component-data-changed',send);};
  },[sessionId,canvasRoot]);
- react.useEffect(()=>{const open=e=>{if(e.detail?.sessionId!==sessionId||e.detail.kind==='financial-widget')return;current.current=e.detail;setTarget(e.detail);setError('');setBusy(false);setBinding(null);setLoading(true)};window.addEventListener('sherlock:component-data-open',open);return()=>window.removeEventListener('sherlock:component-data-open',open)},[sessionId]);
+ const owns=value=>{const root=canvasRoot?.current,owner=value?.owner;return value?.sessionId===sessionId&&root?.isConnected&&owner?.nodeType===1&&owner.isConnected&&root.contains(owner)&&owner.dataset.researchNodeId===value.nodeId&&(!value.trigger||value.trigger.closest?.('[data-research-node-id]')===owner)&&!sherlockShared(sessionId)};
+ react.useEffect(()=>{const open=e=>{const value=e.detail,root=canvasRoot?.current;if(value?.sessionId!==sessionId||(value.surface??'research')!=='research'||value.kind==='financial-widget'||!['settings','refresh'].includes(value.action)||typeof value.nodeId!=='string')return;const owner=value.owner||value.trigger?.closest?.('[data-research-node-id]')||root?.querySelector('[data-research-node-id="'+CSS.escape(value.nodeId)+'"]'),next={...value,owner};if(!owns(next))return;current.current=next;setTarget(next);setError('');setBusy(false);setBinding(null);setLoading(true)};window.addEventListener('sherlock:component-data-open',open);return()=>{current.current=null;window.removeEventListener('sherlock:component-data-open',open)}},[sessionId,canvasRoot]);
  react.useEffect(()=>{
-  if(!target)return;let active=true;
-  const call=(action,extra={})=>window.dshDesktop.componentData.request(target.sessionId,{action,nodeId:target.nodeId,...extra});
+  if(!target||!owns(target))return;let active=true;
+  const call=(action,extra={})=>{if(!active||current.current!==target||!owns(target))throw Error('组件已关闭或宿主已变化');return window.dshDesktop.componentData.request(target.sessionId,{action,nodeId:target.nodeId,...extra})};
   const refresh=async()=>{try{const rows=await call('list');if(active)setBinding(rows.find(b=>b.nodeId===target.nodeId)||null)}catch(e){if(active)setError(e.message)}finally{if(active)setLoading(false)}};
   if(target.action==='refresh'){setBusy(true);call('refresh').then(refresh).catch(e=>active&&setError(e.message)).finally(()=>active&&setBusy(false));}else void refresh();
   const timer=setInterval(refresh,5000);return()=>{active=false;clearInterval(timer)};
  },[target]);
- if(!target)return null;
+ if(!target||!owns(target))return null;
  const close=()=>{current.current=null;setTarget(null)};
- const update=async(action,extra={})=>{setBusy(true);setError('');try{const next=await window.dshDesktop.componentData.request(target.sessionId,{action,nodeId:target.nodeId,...extra});if(current.current!==target)return false;setBinding(next);return true}catch(e){if(current.current===target)setError(e.message);return false}finally{if(current.current===target)setBusy(false);window.dispatchEvent(new Event('sherlock:component-data-changed'))}};
+ const update=async(action,extra={})=>{if(current.current!==target||!owns(target))return false;setBusy(true);setError('');try{const next=await window.dshDesktop.componentData.request(target.sessionId,{action,nodeId:target.nodeId,...extra});if(current.current!==target||!owns(target))return false;setBinding(next);return true}catch(e){if(current.current===target)setError(e.message);return false}finally{if(current.current===target)setBusy(false);window.dispatchEvent(new Event('sherlock:component-data-changed'))}};
  const change=async settings=>{if(await update('configure',{settings})&&settings.sourceId!==undefined)await update('refresh')};
  return react_jsx_runtime.jsx(ComponentDataSettingsPanel,{title:target.title,binding,error,busy,loading,onChange:change,onRefresh:()=>update('refresh'),onClose:close,trigger:target.trigger,theme:target.theme},target.nodeId);
 }
