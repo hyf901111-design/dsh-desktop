@@ -66,7 +66,7 @@ export function synchronizeFinancialLinks(artifacts){
 // Rows leave 4px above and below the name/code pair. A short list does not reserve
 // twelve empty rows; the header, controls, column header and source strip stay.
 export function financialWidgetDimensions(spec,initial=false){
- if(spec?.widget==='watchlist')return {width:320,height:initial?560:130+36*Math.min(12,Math.max(2,spec.symbols?.length||0))}
+ if(spec?.widget==='watchlist')return {width:320,height:initial?600:130+36*Math.min(12,Math.max(2,spec.symbols?.length||0))}
  if(spec?.widget==='indices')return {width:980,height:Math.min(600,200+124*Math.max(0,Math.ceil((spec.symbols?.length||6)/6)-1))}
  return ({quote:{width:716,height:600},indices:{width:980,height:200},news:{width:620,height:340},announcements:{width:620,height:340}})[spec?.widget]
 }
