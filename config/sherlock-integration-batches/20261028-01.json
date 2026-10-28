@@ -208,6 +208,46 @@
           "复用canonical现有安装依赖，未执行全新npm ci"
         ],
         "generatedAt": "2026-10-28T01:20:49.054Z"
+      },
+      "merged": {
+        "mergeCommit": "e988ab041b04d8a6994a5dbf4be83a23abe32682",
+        "verificationCommit": "e988ab041b04d8a6994a5dbf4be83a23abe32682",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/financial-widget-link.test.js",
+              "test/home-guides.test.ts",
+              "test/home-guide-native-strip.test.js",
+              "test/sidebar-update-control.test.ts",
+              "test/update-background-ui.test.ts",
+              "test/update-transfer-presentation.test.ts",
+              "test/update-ui.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-theme-browser.test.js test/financial-widget-link.test.js test/home-guides.test.ts test/home-guide-native-strip.test.js test/sidebar-update-control.test.ts test/update-background-ui.test.ts test/update-transfer-presentation.test.ts test/update-ui.test.ts",
+            "verifiedCommit": "e988ab041b04d8a6994a5dbf4be83a23abe32682",
+            "completedAt": "2026-10-28T01:22:03.344Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e988ab041b04d8a6994a5dbf4be83a23abe32682",
+            "completedAt": "2026-10-28T01:22:03.344Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-28T01:22:03.344Z"
       }
     }
   ],
