@@ -44,6 +44,15 @@ async function open(width=1280,dark=false,newDocument=false){
 async function cursor(page:any,id='anchor',end=false){await page.evaluate(({id,end}:any)=>{const editor=(window as any).editor;editor.focus();editor.setTextCursorPosition(id,end?'end':'start')},{id,end})}
 async function launch(page:any,prompt='写一段关于核验来源的正文'){await cursor(page);await page.keyboard.press('Space');await page.getByRole('textbox',{name:'行内 AI 需求'}).fill(prompt);await page.keyboard.press('Enter');await expect.poll(()=>page.evaluate(()=>Object.keys((window as any).jobs).length)).toBe(1)}
 async function finish(page:any,result:any){await page.evaluate((result:any)=>(Object.values((window as any).jobs)[0] as any).resolve(result),result)}
+async function inlineMenuLayer(page:any,selector:string){
+ await page.locator(selector).waitFor()
+ await expect.poll(()=>page.locator(selector).evaluate((element:HTMLElement)=>{for(let current:HTMLElement|null=element;current;current=current.parentElement)if(Number(getComputedStyle(current).opacity)<1)return false;return true})).toBe(true)
+ return page.evaluate((selector:string)=>{
+  const menu=document.querySelector<HTMLElement>(selector)!,popup=document.querySelector<HTMLElement>('.en-space-ai')!,a=menu.getBoundingClientRect(),b=popup.getBoundingClientRect(),left=Math.max(a.left,b.left),right=Math.min(a.right,b.right),top=Math.max(a.top,b.top),bottom=Math.min(a.bottom,b.bottom),x=(left+right)/2,y=(top+bottom)/2,hit=document.elementFromPoint(x,y)
+  const chain=(element:HTMLElement)=>{const result:any[]=[];for(let current:HTMLElement|null=element;current;current=current.parentElement){const style=getComputedStyle(current);result.push({tag:current.tagName,class:current.className,z:style.zIndex,position:style.position,overflow:style.overflow,transform:style.transform})}return result}
+  return{overlap:{width:right-left,height:bottom-top,x,y},menuTop:!!hit&&menu.contains(hit),hit:hit?.outerHTML.slice(0,300),menu:chain(menu),popup:chain(popup)}
+ },selector)
+}
 
 it('opens only at a blank paragraph start without changing the document; Escape restores its cursor and slash remains usable',async()=>{
  const f=await open();try{
@@ -184,5 +193,16 @@ it('replaces a submitted multiline draft with one compact processing row and ret
  const f=await open();try{
   const prompt=Array.from({length:12},(_,i)=>'第'+(i+1)+'行需求').join('\n');await cursor(f.page);await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).fill(prompt);await f.page.getByRole('button',{name:'发送行内 AI 需求'}).click();await f.page.locator('.en-space-ai .en-ai-loading .en-ai-spinner').waitFor();expect(await f.page.locator('.en-space-ai textarea').count()).toBe(0);expect(await f.page.locator('.en-space-ai footer').count()).toBe(0);expect((await f.page.locator('.en-space-ai').boundingBox()).height).toBeLessThan(70);expect(await f.page.getByRole('button',{name:'停止',exact:true}).isVisible()).toBe(true);expect(await f.page.locator('.en-space-ai-avatar,.en-space-ai-send').count()).toBe(0);expect(await f.page.locator('.en-space-ai .en-ai-loading').textContent()).toContain('正在工作…');expect(await f.page.locator('.bn-block-outer[data-id="anchor"] .bn-inline-content').evaluate((el:Element)=>getComputedStyle(el).caretColor)).toBe('rgba(0, 0, 0, 0)');if(evidence)await f.page.screenshot({path:resolve(evidence,'compact-working.png')})
   await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).reject(Error('临时失败')));await expect.poll(()=>f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe(prompt);expect(await f.page.locator('.en-space-ai .en-ai-loading').count()).toBe(0);await f.page.getByRole('button',{name:'发送行内 AI 需求'}).click();await f.page.getByRole('button',{name:'停止',exact:true}).click();expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe(prompt);expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).evaluate((el:Element)=>el===document.activeElement)).toBe(true);expect(await f.page.locator('.en-space-ai .en-ai-loading').count()).toBe(0);await f.page.keyboard.press('Escape');expect(await f.page.locator('.en-space-ai').count()).toBe(0);await cursor(f.page);await f.page.keyboard.press('Space');expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe(prompt);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it.each([false,true])('keeps the real paragraph color submenu and formatting toolbar above inline AI in dark=%s',async dark=>{
+ const f=await open(1280,dark);try{
+  await cursor(f.page);await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).fill('保留行内需求')
+  const inspect=async(selector:string,name:string)=>{const layer=await inlineMenuLayer(f.page,selector);if(evidence){writeFileSync(resolve(evidence,`${name}-${dark?'dark':'light'}.json`),JSON.stringify(layer,null,2));await f.page.screenshot({path:resolve(evidence,`${name}-${dark?'dark':'light'}.png`)})}expect(layer.overlap.width).toBeGreaterThan(20);expect(layer.overlap.height).toBeGreaterThan(5);expect.soft(layer.menuTop,JSON.stringify(layer)).toBe(true)}
+  const colors=async(name='color-menu')=>{await f.page.locator('.bn-block-outer[data-id="before"]').hover();await f.page.getByRole('button',{name:'打开菜单',exact:true}).click();await f.page.getByRole('menuitem',{name:'颜色',exact:true}).hover();await inspect('.bn-color-picker-dropdown',name)}
+  await colors()
+  await f.page.locator('.bn-block-outer[data-id="after"] .bn-inline-content').click();await cursor(f.page,'after');await f.page.keyboard.press('Shift+End');await inspect('.bn-formatting-toolbar','format-toolbar')
+  await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.bn-block-outer[data-id="before"]').hover();await f.page.getByRole('button',{name:'段落操作',exact:true}).click();await inspect('.en-block-menu','paragraph-menu')
+  await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.en-document-scroll').evaluate((element:HTMLElement)=>element.scrollTop=60);await colors('color-menu-scrolled');expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe('保留行内需求');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
