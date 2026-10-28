@@ -287,6 +287,73 @@
         ],
         "recordedAt": "2026-10-28T03:43:11.852Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "设置菜单按通用账户模型记忆关于排列",
+        "branch": "codex/feat/settings-menu-order-20261028",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "9d3d08c293227d57ce65b27a1395091fe9da1daa",
+        "commits": [
+          {
+            "commit": "9d3d08c293227d57ce65b27a1395091fe9da1daa",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "调整：按通用账户模型记忆关于排列设置菜单"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/view.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/memory-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "两个直接相关测试文件32项通过，覆盖账户/模型入口及记忆与其他设置切换；日志 /Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/settings-menu-order/focused-tests.log",
+            "verifiedCommit": "9d3d08c293227d57ce65b27a1395091fe9da1daa",
+            "completedAt": "2026-10-28T05:11:56.161Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "9d3d08c293227d57ce65b27a1395091fe9da1daa",
+            "completedAt": "2026-10-28T05:11:56.161Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能worktree不构建共享客户端，合入当前未验收集成候选后核对原生设置菜单。"
+        },
+        "acceptanceCriteria": [
+          "可见菜单依次为通用设置、账户信息、模型、记忆、关于",
+          "保留账户直接入口、模型入口与记忆切换行为"
+        ],
+        "risks": [
+          "真实客户端顺序验收待更新集成候选。"
+        ],
+        "generatedAt": "2026-10-28T05:11:56.161Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -311,6 +378,15 @@
         "npm",
         "run",
         "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/figma-auth-layout.test.ts",
+        "test/memory-view.test.ts"
       ],
       "timeoutMs": 120000
     }
