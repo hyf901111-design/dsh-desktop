@@ -636,94 +636,74 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记真实图表合同恢复、单子会话格式修复与菜单层级",
+        "featureName": "笔记HTML真实交互保存确认与空白行AI焦点定位",
         "branch": "codex/feat/notes-react-runtime-20261028",
-        "baseCommit": "31d70798b39a9119f24714df7b325fd016a119b5",
-        "tipCommit": "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c",
+        "baseCommit": "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c",
+        "tipCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
         "commits": [
           {
-            "commit": "64c2e1f0a991223c9e65c76c1e79321eab27d135",
+            "commit": "ff7b6f3f9d50321f4d08c8c83e6457712af718f6",
             "parents": [
-              "31d70798b39a9119f24714df7b325fd016a119b5"
+              "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c"
             ],
-            "subject": "修复：让笔记颜色与段落菜单位于行内 AI 上方"
+            "subject": "修复：按当前空白行锚点定位后再聚焦行内 AI"
           },
           {
-            "commit": "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c",
+            "commit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
             "parents": [
-              "64c2e1f0a991223c9e65c76c1e79321eab27d135"
+              "ff7b6f3f9d50321f4d08c8c83e6457712af718f6"
             ],
-            "subject": "修复：按宿主图表合同交付组件并复用格式恢复子会话"
+            "subject": "修复：为笔记 HTML 组件确认并保存真实交互状态"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "docs/verification/2026-10-28-notes-component-contract.md"
+            "path": "docs/verification/2026-10-28-notes-html-interaction.md"
           },
           {
             "status": "M",
-            "path": "package-lock.json"
+            "path": "packages/dsh-research-task-runtime/html-artifact.d.ts"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "scripts/lib/notes-components.mjs"
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/note-component-repair.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/package.json"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/creation-block.tsx"
+            "path": "scripts/lib/notes-html-interaction.mjs"
           },
           {
             "status": "M",
             "path": "src/preload/notes/editor.tsx"
           },
           {
-            "status": "M",
-            "path": "src/preload/notes/style.css"
+            "status": "A",
+            "path": "src/preload/notes/html-interaction.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/notes/use-inline-component-generation.ts"
+            "path": "src/preload/notes/inline-ai-composer.tsx"
           },
           {
             "status": "M",
-            "path": "src/shared/workspace-notes.ts"
+            "path": "src/preload/notes/native-component-block.tsx"
           },
           {
             "status": "A",
-            "path": "test/fixtures/notes-real-chart-missing-variant.json"
+            "path": "test/notes-html-interaction-bridge.test.js"
           },
           {
             "status": "A",
-            "path": "test/note-chart-contract-recovery.test.js"
+            "path": "test/notes-html-interaction-browser.test.ts"
           },
           {
             "status": "A",
-            "path": "test/note-component-repair.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-component-generation.test.js"
+            "path": "test/notes-html-interaction.test.ts"
           },
           {
             "status": "M",
             "path": "test/notes-inline-ai-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-inline-component-generation.test.ts"
           }
         ],
         "checks": [
@@ -747,12 +727,15 @@
               "test/component-generation-real-shapes.test.js",
               "test/component-generation-prompt-routing.test.js",
               "test/cartesian-chart-template.test.js",
+              "test/notes-html-interaction.test.ts",
+              "test/notes-html-interaction-bridge.test.js",
+              "test/notes-html-interaction-browser.test.ts",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "15文件316/316，含原Notes104范围、新菜单明暗2、组件失败receipt清理、4份真实公开终稿、实际第3→第4终稿两turn同child回放、SDK取消/身份/后缀/超时/工具限制27，以及直接组件/图表/prompt路径。日志 /tmp/sherlock-notes-real-component-20261028/focused-final.log。",
-            "verifiedCommit": "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c",
-            "completedAt": "2026-10-28T10:34:57.796402Z",
+            "summary": "18文件366/366，含原组件/图表/inline范围、生产preload行内28、真实resident双层HTML4、Notes保存controller33与异步ACK bridge9。日志 /tmp/sherlock-notes-html-interaction-20261028/focused-final.log。",
+            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
+            "completedAt": "2026-10-28T11:49:00.785054Z",
             "timeoutMs": 180000
           },
           {
@@ -760,16 +743,31 @@
               "npx",
               "vitest",
               "run",
-              "test/research-task-runtime.test.js",
+              "test/component-interaction-state.test.js",
               "-t",
-              "repair|cancel|synthesis|malformed|truncated|output",
+              "^(?!.*patches the actual renderer)",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "直接影响的运行时恢复/取消/输出范围62/62，199未选；未全套。日志 /tmp/sherlock-notes-real-component-20261028/runtime-repair.log。",
-            "verifiedCommit": "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c",
-            "completedAt": "2026-10-28T10:26:04.298230Z",
-            "timeoutMs": 180000
+            "summary": "10/10，1条已用fa831精确复现的旧SDK metadata恢复fixture未选；不标含失败探索命令通过。日志 common-journal.log，基线证据baseline-metadata-restore.json。",
+            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
+            "completedAt": "2026-10-28T11:45:59.115895Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/component-shared-state.test.js",
+              "test/component-shared-state-browser.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "原通用shared-state单元与真实sandbox浏览器11/11通过。日志 /tmp/sherlock-notes-html-interaction-20261028/shared-state.log。",
+            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
+            "completedAt": "2026-10-28T11:45:59.303802Z",
+            "timeoutMs": 90000
           },
           {
             "argv": [
@@ -779,8 +777,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c",
-            "completedAt": "2026-10-28T10:26:00.534957Z",
+            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
+            "completedAt": "2026-10-28T11:45:54.647850Z",
             "timeoutMs": 120000
           },
           {
@@ -790,214 +788,30 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "差异检查通过，提交后feature工作树干净；未构建/操作共享应用、未装删依赖、未推送。",
-            "verifiedCommit": "fa83107f0bc9c10f8f1d07dae2b3a96536543d2c",
-            "completedAt": "2026-10-28T10:37:00.690173Z",
+            "summary": "差异检查通过，两个中文提交后feature工作树干净；无依赖/共享客户端操作。",
+            "verifiedCommit": "31635642e5ddbb395d1ce4aea5ad7da5eab32a3c",
+            "completedAt": "2026-10-28T11:52:01.613447Z",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实生产preload NotesApp/BlockNote/Yjs浏览器24项通过。新增明暗菜单先RED复现颜色z300被SideMenu ancestor20困住、AI80实际取点遮挡；AI降至10后颜色子菜单、FormattingToolbar、段落菜单及滚动菜单相交取点均命中菜单，保留需求。证据 /tmp/sherlock-notes-menu-layer-20261028。仅fixture UI验收；新packaged的真实模型生成/保存重开由父集成构建后执行。"
+          "summary": "真实production preload resolver + NotesApp/BlockNote/Yjs + resident renderer，完整双层opaque sandbox与实际字体字节，HTML物理点击/输入→Notes save→重开、hold不提前ACK/不reload、失败拒绝恢复重试、readonly零写4条；初始滚跳与A→B直接换anchor各宽浅/窄深RED→GREEN，行内整文件28条。截图 notes-html-open.png/notes-html-save-failed.png及日志在 /tmp/sherlock-notes-html-interaction-20261028/；初始scroll证据 /tmp/sherlock-notes-scroll-focus-20261028/。无真实用户数据或模型调用，不代替新packaged验收。"
         },
         "acceptanceCriteria": [
-          "只从现有workbenchPanelPrompt生成的同一唯一宿主chart结构化合同补回不存在variant，完整chartDataIssue及原artifact/来源/HTML验收保持；不从新自然语言regex猜值、不设generic默认、不改业务字段。",
-          "显式null/空串/未知/冲突variant、模糊合同、多对象、坏/缺数值、额外字段、unit空串不被静默修改；3个合法真实raw原字段完全保留，另一无效raw仍需修复。",
-          "本地Notes格式恢复使用同一live Agent/session的followup+whenIdle，仅读当前turn事件后缀；一次start同child两turn真实SDK事件fixture交付有效结果，保留原始公开终稿与attempt历史，不隐藏或去重真实ID。",
-          "格式恢复临时allow=[]，90s合成预算仅扣新增模型排队；父abort立即取消该child，same-ID替换拒绝；超时/取消未idle时工具限制不早释。最终原run.dispose、来源记录偏移与既有锚点/换会话/迟到保护保持。",
-          "行内/组件生成与旧失败组件展示仅清除已知notes:request IPC包装，保留真正失败、需求与重试；其他IPC与普通内容保留。原包装证据和公开raw保存在授权QA诊断目录。",
-          "局部行内AI降至z10，菜单/toolbar位于上方，其他全局浮层值不变；真实明暗/滚动相交取点回归通过。",
-          "菜单与backend各自中文本地提交；manifest/lock只声明已存在rc7 SDK public依赖，无install/node_modules变更；未运行全功能测试、未构建共享客户端、未推送。"
+          "Notes HTML通用journal进入专属异步context/sink，写本笔记既有node.config.interactionState，绝不调用或伪造canvas accepted；Research默认null context仍原同步路径，CSP与HTML验证不放宽。",
+          "当前编辑器/Native view/session/block/node/原HTML精确guard及只读验证；每编辑器串行、同ID事件幂等、最新config合并；updateBlock后必须原persistConfirmed成功并复查才ACK。持久化确认失败仅回滚仍exact的本次payload，不覆盖新编辑；已确认保存后失去view guard只拒绝ACK，不反向改写原已保存内容。",
+          "待保存node观察不提前确认iframe；失败后成功、乱序ACK、ACK-before-observe、字段顺序、pending期间Undo均回归。对应ACK观察匹配后支持真实后续Undo；journal更新不拆Native iframe。",
+          "补丁AST限定实际renderer/Note view函数，忽略已安装资产恢复metadata中的同名字串，保留HomeGuide等其它定义；生成helper同一实现、补丁幂等，无node_modules改动。",
+          "Space focus只在完整当前anchor的placement完成DOM提交后运行；长组件下Esc→Space或A未提交直接点远B再Space均保持当前scroll、textarea/锚点可视，普通IME/停止/错误焦点行为保留。",
+          "两个中文本地提交（焦点2文件、HTML保存其余），未全功能测试、未构建/操作共享客户端、未安装或删除依赖、未推送。"
         ],
         "risks": [
-          "真实故障源为父fd4b原生QA四个唯一子会话公开终稿，SDK均completed且缺variant；本轮回放修复证明不等于新packaged的真实模型成功。父合入后正式树复跑聚焦并构建，以新合成QA验证演示折线图、child数量、锚点上下正文、停止重试、保存重开。",
-          "可选同child repair只用于Notes本地SDK无工具格式恢复；其它Research适配器、需要恢复检索或transport重启的原路径保持。旧4个真实子会话原记录不删改。",
-          "旧Memory/PPT annotation/ConversationRoot无关fixture基线记录沿用前轮，未改、未重跑，也未列为通过。"
+          "本轮UI证据为真实生产组件fixture；父已在旧2b2b原生包验证真实文字/精确10/20/15图表、唯一child及保存重开。新交互与焦点delta仍由父官方合入、正式树复跑并build --verify后完成原生物理点击/输入/保存重开验收。",
+          "旧component-interaction-state的actual renderer fixture在Notes代码调用前已于SDK metadata JSON.parse失败；git show fa831原restore实现在同一只读SDK资产精确复现，baseline-metadata-restore.json含源码相等与SHA证明。未改恢复函数/旧fixture/依赖掩盖，探索失败未列为通过。",
+          "本轮只补通HTML既有通用交互journal（如summary/input），未扩展新shared-component业务API。Memory/PPT annotation/ConversationRoot旧fixture基线记录沿用，未改、未列通过。"
         ],
-        "generatedAt": "2026-10-28T10:37:00.689688Z"
-      },
-      "merged": {
-        "mergeCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-        "verificationCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "4ecc0f578266cce2c60570bc6cecdb7b1b92d5dc",
-            "completedAt": "2026-10-28T10:42:21.877Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-28T10:42:21.877Z"
+        "generatedAt": "2026-10-28T11:52:01.613044Z"
       }
     },
     {
