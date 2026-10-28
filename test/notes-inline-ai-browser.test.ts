@@ -1,27 +1,42 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
-import {resolve} from 'node:path'
-import {writeFileSync} from 'node:fs'
+import {dirname,resolve} from 'node:path'
+import {cpSync,existsSync,mkdirSync,mkdtempSync,readFileSync,rmSync,symlinkSync,writeFileSync} from 'node:fs'
+import {createRequire} from 'node:module'
+import {tmpdir} from 'node:os'
 import {pathToFileURL} from 'node:url'
 import {build,type Plugin} from 'vite'
 import {resolveConfig} from 'electron-vite'
-let browser:any,script=''
-const entry='\0notes-inline-ai-fixture',evidence=process.env.SHERLOCK_NOTES_INLINE_EVIDENCE
+let browser:any,script='',syncOwners:string[]=[]
+const entry='\0notes-inline-ai-fixture',evidence=process.env.SHERLOCK_NOTES_INLINE_EVIDENCE,peerRoot=mkdtempSync(resolve(tmpdir(),'notes-y-prosemirror-peer-'))
+function packageRoot(name:string){
+ let path=dirname(createRequire(import.meta.url).resolve(name==='y-protocols'?'y-protocols/awareness':name))
+ while(!existsSync(resolve(path,'package.json'))||JSON.parse(readFileSync(resolve(path,'package.json'),'utf8')).name!==name){const parent=dirname(path);if(parent===path)throw Error('Package root not found: '+name);path=parent}
+ return path
+}
 beforeAll(async()=>{
+ // Reused BlockNote peers can own a second physical y-prosemirror even with a
+ // flat install. Force the same import boundary that broke the APFS integration.
+ mkdirSync(resolve(peerRoot,'node_modules'),{recursive:true})
+ cpSync(packageRoot('y-prosemirror'),resolve(peerRoot,'node_modules/y-prosemirror'),{recursive:true})
+ for(const name of ['yjs','lib0','y-protocols','prosemirror-state','prosemirror-model','prosemirror-view'])symlinkSync(packageRoot(name),resolve(peerRoot,'node_modules',name))
+ const peer=resolve(peerRoot,'peer.mjs')
+ writeFileSync(peer,"export {absolutePositionToRelativePosition,relativePositionToAbsolutePosition,ySyncPluginKey} from 'y-prosemirror';\n")
  const config=(await resolveConfig({configFile:resolve('electron.vite.config.ts'),logLevel:'silent'},'build','production')).config!.preload!
  const fixture:Plugin={name:'notes-inline-ai-fixture',resolveId:id=>id===entry?entry:undefined,load:id=>id===entry?`
  import {mountNotes} from ${JSON.stringify(resolve('src/preload/notes/mount.tsx'))};import {WorkspaceSurfaceHost} from ${JSON.stringify(resolve('src/preload/workspace-surface-host.ts'))};
  window.calls=[];window.jobs={};window.replies=[];
  const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{owner:'fixture-owner',saved:window.saved};if(method==='save'){window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}}if(method==='generate')return new Promise((resolve,reject)=>{window.jobs[input.requestId]={input,resolve,reject}});if(method==='library-list')return[];if(method==='capability-reply')window.replies.push(input);return{}},draft:async input=>window.draft=input};
  const host=new WorkspaceSurfaceHost(document);let mounted=mountNotes(document,bridge,host);window.fixture={flush:()=>mounted.flushCurrent(),reopen:()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)}};
- `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor; const slashMenu = useMemo')}}
+ `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor; const slashMenu = useMemo');if(id.endsWith('/preload/notes/inline-ai.ts'))return code.replace(/from (['"])y-prosemirror\1/gu,'from '+JSON.stringify(peer))+`\nwindow.inlineBindingDiagnostics=()=>{const state=window.editor._tiptapEditor.state;return{importedKey:ySyncPluginKey.key,importedState:!!ySyncPluginKey.getState(state)?.binding,installed:state.plugins.filter(p=>/^y-sync\\$/u.test(p.key.replace(/\\d+$/u,''))).map(p=>({key:p.key,binding:!!p.getState(state)?.binding}))}};`},generateBundle(_options,bundle){syncOwners=[...new Set(Object.values(bundle).flatMap(chunk=>chunk.type==='chunk'?Object.keys(chunk.modules).filter(id=>/\/y-prosemirror\/src\/plugins\/keys\.js$/u.test(id)):[]))]}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
  const chunks=(Array.isArray(output)?output:[output]).flatMap(item=>'output'in item?item.output:[]);script=chunks.filter(chunk=>chunk.type==='chunk').map(chunk=>chunk.code).join('\n')
+ if(evidence)writeFileSync(resolve(evidence,'inline-module-owners.json'),JSON.stringify({root:resolve('.'),syncOwners},null,2))
  const {chromium}=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },90000)
-afterAll(async()=>browser?.close())
+afterAll(async()=>{await browser?.close();rmSync(peerRoot,{recursive:true,force:true})})
 async function open(width=1280,dark=false){
- const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors:string[]=[];page.setDefaultTimeout(4000);page.on('pageerror',(e:Error)=>errors.push(e.message))
+ const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors:string[]=[];page.setDefaultTimeout(4000);page.on('pageerror',(e:Error)=>{errors.push(e.message);if(evidence)writeFileSync(resolve(evidence,'inline-pageerrors.json'),JSON.stringify(errors,null,2))})
  await page.route('http://127.0.0.1/notes-inline', (route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body><header data-ework-notes-session="inline-note"></header><div data-ework-note-view="inline-note"></div></body></html>'}));await page.goto('http://127.0.0.1/notes-inline')
  await page.evaluate((dark:boolean)=>{(window as any).saved={title:'行内 AI 验证',blocks:[{id:'before',type:'paragraph',content:'原有前段'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'原有后段'}],yjs:'',revision:0};if(dark)document.body.dataset.dsDarkTheme='true'},dark)
  await page.addScriptTag({content:`var exports={};\n${script}`});await page.locator('.en-title').waitFor();await page.evaluate(()=>{const w=window as any;w.editor.replaceBlocks(w.editor.document,w.saved.blocks)});return{context,page,errors}
@@ -32,6 +47,7 @@ async function finish(page:any,result:any){await page.evaluate((result:any)=>(Ob
 
 it('opens only at a blank paragraph start without changing the document; Escape restores its cursor and slash remains usable',async()=>{
  const f=await open();try{
+  const binding=await f.page.evaluate(()=>(window as any).inlineBindingDiagnostics());if(evidence)writeFileSync(resolve(evidence,'inline-binding-identity.json'),JSON.stringify(binding,null,2));expect(binding.importedState,JSON.stringify({binding,syncOwners})).toBe(true);expect(syncOwners).toHaveLength(1)
   await cursor(f.page);expect(await f.page.locator('.bn-block-outer[data-id="anchor"] .bn-block-content').evaluate((el:Element)=>getComputedStyle(el,':after').content)).toBe('"按 space（空格）以启用 AI，或按“/”启用命令"');const original=await f.page.evaluate(()=>JSON.stringify((window as any).editor.document));await f.page.keyboard.press('Space')
   await f.page.getByRole('textbox',{name:'行内 AI 需求'}).waitFor();expect(await f.page.evaluate(()=>JSON.stringify((window as any).editor.document))).toBe(original)
   expect(await f.page.locator('.en-space-ai-avatar svg').count()).toBe(1)
@@ -123,5 +139,15 @@ it('keeps referenced component data and authorized attachment identity in the re
  const f=await open();try{
   await f.page.evaluate(()=>{const e=(window as any).editor;e.insertBlocks([{id:'source-table',type:'research',props:{payload:JSON.stringify({id:'note-component-source',kind:'generated-container',title:'证据表',containerSpec:{version:1,type:'table',title:'证据表',columns:['收入'],rows:[[123]]}})}},{id:'source-file',type:'attachment',props:{payload:JSON.stringify({id:'note-file-fixture',name:'证据.txt',authorizationId:'fixture-grant',importStatus:'ready'})}}],'after','after')});await launch(f.page,'根据笔记中的数据和附件写总结');const input=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input)
   expect(JSON.parse(input.context.components.find((c:any)=>c.blockId==='source-table').content).spec.rows).toEqual([[123]]);expect(input.context.components.find((c:any)=>c.blockId==='source-file').file).toEqual({nodeId:'note-file-fixture',authorizationId:'fixture-grant'});expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it('keeps Space in existing smart and link component inputs even when ProseMirror retains an empty paragraph selection',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>{const e=(window as any).editor;e.insertBlocks(['smart','link'].map(id=>({id:'draft-'+id,type:'research',props:{payload:JSON.stringify({id:'note-component-'+id,kind:'generated-container',title:id,noteDraft:id,containerPrompt:'已有需求',generationStatus:'draft'})}})),'after','after')})
+  for(const id of ['smart','link']){
+   await cursor(f.page);const input=f.page.locator('.bn-block-outer[data-id="draft-'+id+'"] textarea');await input.click();expect(await f.page.evaluate(()=>{const s=(window as any).editor._tiptapEditor.state.selection;return s.empty&&s.$from.parent.type.name==='paragraph'&&s.$from.parent.content.size===0})).toBe(true)
+   await f.page.keyboard.press('End');await f.page.keyboard.press('Space');expect(await input.inputValue()).toBe('已有需求 ');expect(await f.page.locator('.en-space-ai').count()).toBe(0)
+  }
+  expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
