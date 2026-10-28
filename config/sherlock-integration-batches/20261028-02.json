@@ -9,74 +9,101 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "通用设置增加合盖运行与阻止自动睡眠",
+        "featureName": "合盖运行偏好持久化与一次授权电源服务",
         "branch": "codex/feat/power-sleep-settings-20261028",
-        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
-        "tipCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
+        "baseCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
+        "tipCommit": "5e5c0a120badc959ea5b332fa351ae91b094994f",
         "commits": [
           {
-            "commit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
+            "commit": "23cfc5c0bb2c94dac30eeb44b5b014b61fd3cddc",
             "parents": [
-              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+              "547f133ffa484bcc28b1cffe5a964eeb8df5b967"
             ],
-            "subject": "功能：在通用设置增加合盖运行与防自动睡眠开关"
+            "subject": "修复：记住合盖运行设置并通过一次授权服务自动恢复"
+          },
+          {
+            "commit": "5e5c0a120badc959ea5b332fa351ae91b094994f",
+            "parents": [
+              "23cfc5c0bb2c94dac30eeb44b5b014b61fd3cddc"
+            ],
+            "subject": "文案：简化合盖运行与阻止自动睡眠的设置说明"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "docs/superpowers/plans/2026-10-28-power-sleep-settings.md"
+            "path": "docs/superpowers/plans/2026-10-28-persistent-lid-power.md"
           },
           {
             "status": "A",
-            "path": "docs/superpowers/specs/2026-10-28-power-sleep-settings-design.md"
+            "path": "docs/superpowers/specs/2026-10-28-persistent-lid-power-design.md"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "A",
+            "path": "scripts/build-power-helper.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/macos/power-guard-policy.hpp"
+          },
+          {
+            "status": "A",
+            "path": "scripts/macos/sherlock-power-helper.mm"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-packaged-macos.mjs"
           },
           {
             "status": "M",
             "path": "src/main/index.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/main/power/controller.ts"
           },
           {
-            "status": "A",
-            "path": "src/main/power/ipc.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "src/main/power/macos-lid-guard.ts"
           },
           {
-            "status": "M",
-            "path": "src/preload/figma-settings.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
             "status": "A",
+            "path": "src/main/power/macos-power-service.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/power-settings.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/shared/power-settings.ts"
           },
           {
             "status": "A",
+            "path": "test/fixtures/power-helper-native.mm"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/power-helper-policy.cpp"
+          },
+          {
+            "status": "A",
+            "path": "test/power-helper-native.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/power-lid-guard.test.ts"
           },
           {
             "status": "A",
-            "path": "test/power-settings-ipc.test.ts"
+            "path": "test/power-service.test.ts"
           },
           {
-            "status": "A",
-            "path": "test/power-settings-ui.test.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "test/power-settings.test.ts"
           }
         ],
@@ -86,16 +113,19 @@
               "node_modules/.bin/vitest",
               "run",
               "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
               "test/power-lid-guard.test.ts",
+              "test/power-service.test.ts",
+              "test/power-helper-native.test.ts",
+              "test/power-settings-ui.test.ts",
               "test/power-settings-ipc.test.ts",
               "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts"
+              "test/figma-settings-layout.test.ts",
+              "test/macos-package-runtime.test.ts"
             ],
             "outcome": "passed",
-            "summary": "6个直接相关文件30项通过；真实生成shell在隔离命令环境验证租约、PID、过期和中断安装恢复，并编译AppleScript；日志 /Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/power-settings/focused-tests.log",
-            "verifiedCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
-            "completedAt": "2026-10-28T03:42:40.214Z",
+            "summary": "9个直接相关文件67项通过，含29项原生策略与文件/进程/签名/释放协议检查；仅无特权隔离命令，日志 /Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/persistent-power/focused.log",
+            "verifiedCommit": "5e5c0a120badc959ea5b332fa351ae91b094994f",
+            "completedAt": "2026-10-28T05:40:48.603701Z",
             "timeoutMs": 120000
           },
           {
@@ -105,79 +135,29 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；日志 /Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/power-settings/typecheck.log",
-            "verifiedCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
-            "completedAt": "2026-10-28T03:42:40.214Z",
+            "summary": "类型检查通过；日志 /Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/persistent-power/typecheck.log",
+            "verifiedCommit": "5e5c0a120badc959ea5b332fa351ae91b094994f",
+            "completedAt": "2026-10-28T05:40:48.603701Z",
             "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "空白检查通过",
-            "verifiedCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
-            "completedAt": "2026-10-28T03:42:40.214Z",
-            "timeoutMs": 10000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端；Happy DOM验证真实挂载函数的设置重开、中英切换、授权中禁用及错误状态。真实管理员授权与物理合盖验收待集成客户端。"
+          "summary": "功能worktree不构建共享客户端；真实挂载函数UI聚焦检查通过；首次系统管理员授权与物理合盖仍待集成客户端手动验证。"
         },
         "acceptanceCriteria": [
-          "通用设置内两个独立默认关闭的电源开关，状态来自可信主进程",
-          "合盖使用管理员授权的pmset设置，仅本次运行生效；关闭或退出恢复；已有外部策略保留",
-          "普通防自动睡眠允许熄屏、持久化偏好、退出释放断言",
-          "取消授权、系统漂移及恢复失败明确反馈，不报告虚假成功"
+          "首次安装授权后保存合盖偏好，正常客户端重启自动恢复且不再次弹出管理员授权",
+          "自动启动缺少辅助服务时不弹出授权，保留偏好并反馈实际错误",
+          "关闭及退出通过精确nonce释放回执恢复自有睡眠覆盖；外部策略保持不变",
+          "崩溃与重启恢复日志先恢复覆盖，过热低电量暂停不清空偏好",
+          "两条设置说明按用户提供的短句显示"
         ],
         "risks": [
-          "尚未执行真实管理员授权、物理合盖、真实进程崩溃或重启验收",
-          "pmset disablesleep是全局系统策略，会同时阻止普通系统睡眠；UI已说明",
-          "合盖开关每次应用运行需重新开启授权，普通防自动睡眠偏好会记住"
+          "真实首次授权、物理合盖和系统重启尚未验收；首次授权需要用户手动完成",
+          "全局disablesleep会阻止系统睡眠；只支持当前用户的连续保活，不承诺多个同时登录用户的保活引用计数",
+          "系统移除或禁用辅助服务时需要重新安装修复，自动启动不会弹出授权"
         ],
-        "generatedAt": "2026-10-28T03:42:40.214Z"
-      },
-      "merged": {
-        "mergeCommit": "18c2048c1c892e15f579356933769df304fb2568",
-        "verificationCommit": "18c2048c1c892e15f579356933769df304fb2568",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "18c2048c1c892e15f579356933769df304fb2568",
-            "completedAt": "2026-10-28T03:43:38.079Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "18c2048c1c892e15f579356933769df304fb2568",
-            "completedAt": "2026-10-28T03:43:38.079Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-28T03:43:38.079Z"
+        "generatedAt": "2026-10-28T05:40:48.603701Z"
       }
     },
     {
