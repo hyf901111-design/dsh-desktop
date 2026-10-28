@@ -36,15 +36,15 @@ body [data-ework-grid] [data-research-node-id] :is(.rScV5Q_containerDraft,.rScV5
 body [data-ework-grid] .rScV5Q_containerDraft textarea{flex:1;min-height:48px!important;width:100%;box-sizing:border-box;font-size:13px!important;resize:none!important}
 body [data-ework-grid] .rScV5Q_containerDraftFooter{flex:none}
 body [data-ework-grid] .ew-grid-chrome-host{position:absolute;inset:0;pointer-events:none;z-index:55}
-body :is([data-ework-grid],.en-note-file) .ew-grid-header{display:flex;align-items:center;gap:6px;box-sizing:border-box;height:34px;padding:0 10px;pointer-events:auto;cursor:grab;user-select:none;touch-action:none;background:var(--grid-card);color:var(--grid-text);font:600 12px/16px Inter,"Noto Sans SC",system-ui,sans-serif;border-radius:4px 4px 0 0}
-body :is([data-ework-grid],.en-note-file) .ew-grid-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:clip}
-body :is([data-ework-grid],.en-note-file) .ew-grid-title[data-overflow=true]{mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent)}
-body :is([data-ework-grid],.en-note-file) .ew-grid-title-copy{display:inline-block;white-space:nowrap;width:max-content;max-width:none}
-body :is([data-ework-grid],.en-note-file) .ew-grid-title:focus-visible{outline:1px solid var(--grid-accent);outline-offset:-1px;border-radius:3px}
-body :is([data-ework-grid],.en-note-file) .ew-grid-header button{position:relative;display:grid;place-items:center;flex:0 0 20px;width:20px;height:24px;padding:0!important;border:0;border-radius:3px;background:none;color:inherit;cursor:pointer}
-body :is([data-ework-grid],.en-note-file) .ew-grid-header button:hover{background:#8c8d9b22}
-body :is([data-ework-grid],.en-note-file) .ew-grid-header button:focus-visible{outline:1px solid #249bfa}
-body :is([data-ework-grid],.en-note-file) .ew-grid-header button:disabled{opacity:.4;cursor:default}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-header{display:flex;align-items:center;gap:6px;box-sizing:border-box;height:34px;padding:0 10px;pointer-events:auto;cursor:grab;user-select:none;touch-action:none;background:var(--grid-card);color:var(--grid-text);font:600 12px/16px Inter,"Noto Sans SC",system-ui,sans-serif;border-radius:4px 4px 0 0}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:clip}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-title[data-overflow=true]{mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent)}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-title-copy{display:inline-block;white-space:nowrap;width:max-content;max-width:none}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-title:focus-visible{outline:1px solid var(--grid-accent);outline-offset:-1px;border-radius:3px}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-header button{position:relative;display:grid;place-items:center;flex:0 0 20px;width:20px;height:24px;padding:0!important;border:0;border-radius:3px;background:none;color:inherit;cursor:pointer}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-header button:hover{background:#8c8d9b22}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-header button:focus-visible{outline:1px solid #249bfa}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-header button:disabled{opacity:.4;cursor:default}
 body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh{display:flex;position:relative;flex:0 0 20px;min-width:20px;align-items:center;justify-content:center}
 .ew-grid-icon{display:block;flex:none;width:16px;height:16px;background:currentColor;mask-position:center;mask-repeat:no-repeat}
 /* Creation ports share the financial connection gestures without owning data. */
