@@ -70,7 +70,7 @@ function requestPayload(value: unknown, active = false): boolean {
     validId(record.sessionId) && (active ? typeof record.active === 'boolean' : validId(record.requestId))
 }
 
-/** Owns one foreground research capture; no audio or transcription is written to disk. */
+/** Owns one capture; explicit input dictation survives focus changes without writing audio to disk. */
 export class ResearchVoiceController {
   private native?: ResearchVoiceNative
   private unavailable = false
@@ -96,6 +96,7 @@ export class ResearchVoiceController {
     const focus = () => { this.clearBlurTimer(); this.updateShortcut() }
     const blur = () => {
       this.updateShortcut()
+      if (this.capture?.active === this.composer && this.composer) return
       if (this.capture?.state === 'authorizing') this.cancelAfterBlur(60_000)
       else this.cancelCapture()
     }
@@ -182,7 +183,7 @@ export class ResearchVoiceController {
 
   stop(value: unknown): ResearchVoiceResult {
     if (!requestPayload(value) || !this.matchesCapture(value)) return invalid()
-    if (!this.currentActive(this.capture!.active, true)) { this.cancelCapture(); return invalid() }
+    if (!this.currentActive(this.capture!.active, this.capture!.active !== this.composer)) { this.cancelCapture(); return invalid() }
     try {
       this.native!.stop(this.capture!.nativeRequestId)
       return { ok: true }
@@ -260,7 +261,7 @@ export class ResearchVoiceController {
       const wasAuthorizing = capture.state === 'authorizing'
       capture.state = event.state
       // The permission sheet may release focus just before its completion callback.
-      if (wasAuthorizing && event.state !== 'authorizing' && !capture.active.window.isFocused()) this.cancelAfterBlur(1_000)
+      if (wasAuthorizing && event.state !== 'authorizing' && capture.active !== this.composer && !capture.active.window.isFocused()) this.cancelAfterBlur(1_000)
       this.send(capture.active, { ...identity, type: 'state', state: event.state })
     } else if (event.type === 'partial' && typeof event.text === 'string') {
       this.send(capture.active, { ...identity, type: 'partial', text: event.text.slice(0, 12_000) })
@@ -269,7 +270,7 @@ export class ResearchVoiceController {
     } else if (event.type === 'final' && typeof event.text === 'string') {
       this.capture = undefined
       this.clearBlurTimer()
-      if (!this.currentActive(capture.active, true)) {
+      if (!this.currentActive(capture.active, capture.active !== this.composer)) {
         this.send(capture.active, { ...identity, type: 'cancelled' })
         this.releaseComposer(capture.active)
         return
@@ -337,7 +338,7 @@ export class ResearchVoiceController {
     this.clearBlurTimer()
     this.blurTimer = setTimeout(() => {
       this.blurTimer = undefined
-      if (this.capture && !this.capture.active.window.isFocused()) this.cancelCapture()
+      if (this.capture && this.capture.active !== this.composer && !this.capture.active.window.isFocused()) this.cancelCapture()
     }, delay)
     this.blurTimer.unref?.()
   }

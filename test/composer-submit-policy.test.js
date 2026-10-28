@@ -23,6 +23,10 @@ describe('发送按钮与回车的提交策略一致',()=>{
     const d=primary(patchComposerSubmitPolicy(patchComposerVoice(installed)))
     expect(d.resolveSubmitMode).toHaveBeenCalledWith(true,'enter',true);expect(d.keyboard.submit).toHaveBeenCalledWith('steer')
   })
+  it('ignores primary clicks while dictating and leaves capture running',()=>{
+    const stop=vi.fn(),d=primary(patchComposerSubmitPolicy(patchComposerVoice(installed)),{composerVoice:{idle:false,active:true,stop}})
+    expect(stop).not.toHaveBeenCalled();expect(d.keyboard.submit).not.toHaveBeenCalled();expect(d.inputActions.submit).not.toHaveBeenCalled()
+  })
   it('uses the configured steering policy during a running parent turn',()=>{
     const d=primary(patchComposerSubmitPolicy(installed))
     expect(d.resolveSubmitMode).toHaveBeenCalledWith(true,'enter',true)
