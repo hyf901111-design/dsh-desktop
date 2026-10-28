@@ -151,3 +151,11 @@ it('routes a clarification as a durable conversation reply instead of a document
  expect(sharedNoteConversationContext(session)[0]).toMatchObject({reply:'你想写什么主题？大约多少字？'})
  await expect(generateNoteSuggestion(context('{"kind":"conversation","markdown":""}'),input)).rejects.toThrow('格式')
 })
+it('keeps inline writing bound to the provided insertion anchor and refuses malformed or different-document positions',async()=>{
+ const ctx=context('{"kind":"text","markdown":"原位新增段落"}'),insertionAnchor={documentId:'opened-doc',blockId:'blank-paragraph',position:{type:{client:1,clock:2},assoc:0}}
+ const request={...input,entryPoint:'inline',insertionAnchor,clientContext:{documentId:'opened-doc'}}
+ expect(await generateNoteSuggestion(ctx,request)).toEqual({kind:'text',markdown:'原位新增段落'})
+ const sent=JSON.parse(ctx.options().messages[0].content[0].text);expect(sent.insertionAnchor).toEqual(insertionAnchor);expect(sent.instruction).toBe('改写为简洁文字')
+ await expect(generateNoteSuggestion(ctx,{...request,clientContext:{documentId:'other-doc'}})).rejects.toThrow('插入位置')
+ await expect(generateNoteSuggestion(ctx,{...request,insertionAnchor:{...insertionAnchor,position:null}})).rejects.toThrow('插入位置')
+})

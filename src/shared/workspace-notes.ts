@@ -23,6 +23,7 @@ export function canApplySuggestion(captured: { documentId: string; fingerprint: 
 type NoteCapabilityResult = {capabilitySummary?:string;capabilityReceipts?:CapabilityReceipt[]}
 export type NoteDocumentResult = ({ kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & NoteCapabilityResult
 export type NoteAiResult = NoteDocumentResult | ({ kind: 'conversation'; markdown: string } & NoteCapabilityResult)
+export type NoteInsertionAnchor = {documentId:string;blockId:string;position:Record<string,any>}
 
 /** Only an affirmative creation clause reserves a component in the document. */
 export function noteComponentRequest(prompt:string):boolean {
