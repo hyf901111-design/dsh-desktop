@@ -32,7 +32,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
     const r=port.getBoundingClientRect(),card=port.closest('[data-research-node-id]')?.getBoundingClientRect()
     ports[portKey(port.dataset.financialPortNode,port.dataset.financialPort)]={x:r.left+r.width/2-originX+root.scrollLeft,y:r.top+r.height/2-originY+root.scrollTop,left:(card?.left??r.left)-originX+root.scrollLeft,right:(card?.right??r.right)-originX+root.scrollLeft,top:(card?.top??r.top)-originY+root.scrollTop,bottom:(card?.bottom??r.bottom)-originY+root.scrollTop}
    }
-   const nav=root.querySelector('[data-board-tabs-nav]'),list=nav?.querySelector('[role=tablist]'),clip=list?.getBoundingClientRect()
+   const nav=root.querySelector('[data-board-tabs-nav]'),list=nav?.querySelector('[role=tablist]'),clip=list?.getBoundingClientRect(),navRect=nav?.getBoundingClientRect()
    watch(nav);watch(list)
    for(const tab of nav?.querySelectorAll('[data-board-tab]')||[]){
     watch(tab);const r=tab.getBoundingClientRect();if(!clip||clip.width<=0||clip.height<=0||r.width<=0||r.height<=0)continue
@@ -42,7 +42,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
     // A clipped title uses its visible portion; an off-list title uses the
     // existing paging control, never another tab or the hidden card's (0,0).
     const x=overflow?(usable?ar.left+ar.width/2:overflow==='left'?clip.left:clip.right):(left+right)/2,y=overflow&&usable?ar.bottom:r.bottom
-    tabAnchors[tab.dataset.boardTab]={x:x-originX+root.scrollLeft,y:y-originY+root.scrollTop,tabId:tab.dataset.boardTab,overflow}
+    tabAnchors[tab.dataset.boardTab]={x:x-originX+root.scrollLeft,y:y-originY+root.scrollTop,tabId:tab.dataset.boardTab,overflow,stemLeft:x-navRect.left,stemTop:y-navRect.top-.75,stemHeight:Math.max(0,navRect.bottom-y)+1.5}
    }
    const content=root.querySelector('[data-research-content-layer]')
    const next={width:root.clientWidth,height:Math.max(root.clientHeight,content?.scrollHeight||content?.getBoundingClientRect().height||0),ports,tabs:tabAnchors}
@@ -124,14 +124,25 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   return()=>{draftRef.current=null;root.removeEventListener('click',click,true);document.removeEventListener('pointerdown',down,true);document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',cancel);document.removeEventListener('keydown',key,true);window.removeEventListener('blur',cancel)}
  },[workspace,sessionId,readOnly])
  react.useEffect(()=>{if(draft&&!snapshot.artifacts.some(n=>n.id===draft.nodeId))clear()},[snapshot.artifacts,draft])
+ // Round each orthogonal corner with a tangent circular arc. Short gaps use
+ // a smaller radius, preserving both real endpoints and the canvas edge clamps.
+ const orthogonal=raw=>{
+  const points=raw.filter((p,i)=>!i||p[0]!==raw[i-1][0]||p[1]!==raw[i-1][1]);let d=`M ${points[0][0]} ${points[0][1]}`
+  for(let i=1;i<points.length-1;i++){
+   const [x,y]=points[i],[px,py]=points[i-1],[nx,ny]=points[i+1],before=Math.hypot(x-px,y-py),after=Math.hypot(nx-x,ny-y),ux=(x-px)/before,uy=(y-py)/before,vx=(nx-x)/after,vy=(ny-y)/after,cross=ux*vy-uy*vx,r=Math.min(12,before/2,after/2)
+   if(!cross||!r){d+=` L ${x} ${y}`;continue}
+   d+=` L ${x-ux*r} ${y-uy*r} A ${r} ${r} 0 0 ${cross>0?1:0} ${x+vx*r} ${y+vy*r}`
+  }
+  const last=points[points.length-1];return d+` L ${last[0]} ${last[1]}`
+ }
  const path=(from,to)=>{
   if(to.tabId){
    const exit=Math.min(geometry.width-2,from.right+12),lane=Math.min(from.top-12,to.y+24)
-   return `M ${from.x} ${from.y} C ${exit} ${from.y} ${exit} ${from.y} ${exit} ${from.y-12} C ${exit} ${from.y-12} ${exit} ${lane} ${exit} ${lane} C ${exit} ${lane} ${to.x} ${lane} ${to.x} ${to.y}`
+   return orthogonal([[from.x,from.y],[exit,from.y],[exit,lane],[to.x,lane],[to.x,to.y]])
   }
   if(from.tabId){
    const entry=Math.max(2,to.left-12),lane=Math.min(to.top-12,from.y+24)
-   return `M ${from.x} ${from.y} C ${from.x} ${lane} ${entry} ${lane} ${entry} ${lane} C ${entry} ${lane} ${entry} ${to.y-12} ${entry} ${to.y-12} C ${entry} ${to.y} ${entry} ${to.y} ${to.x} ${to.y}`
+   return orthogonal([[from.x,from.y],[from.x,lane],[entry,lane],[entry,to.y],[to.x,to.y]])
   }
   if(to.left>=from.right){
    if(to.left-from.right>=40){const bend=Math.max(24,(to.x-from.x)/2);return `M ${from.x} ${from.y} C ${from.x+bend} ${from.y} ${to.x-bend} ${to.y} ${to.x} ${to.y}`}
@@ -147,6 +158,21 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   const creation=workbenchSmartCreateTarget(n)&&n.creationMode==='selection',sources=creation?n.sourceNodeIds||[]:[financialLinkSourceId(n.containerSpec)]
   return sources.filter(source=>source&&n.id!==draft?.previousTargetId&&(visible.has(n.id)||visible.has(source))&&(selected.has(n.id)||selected.has(source))&&input(n.id)&&output(source)).map(sourceId=>({node:n,sourceId,creation}))
  })
+ const remoteAnchors=new Map()
+ for(const {node,sourceId} of links){const from=output(sourceId),to=input(node.id),remote=from.tabId?from:to.tabId?to:null;if(remote)remoteAnchors.set(remote.overflow?'overflow:'+remote.overflow:remote.tabId,remote)}
+ react.useLayoutEffect(()=>{
+  const nav=rootRef.current?.querySelector('[data-board-tabs-nav]');if(!nav)return
+  const marked=[],stems=[]
+  for(const anchor of remoteAnchors.values()){
+   const target=anchor.overflow?nav.querySelectorAll('[data-board-tabs-paging] button')[anchor.overflow==='left'?0:1]:[...nav.querySelectorAll('[data-board-tab]')].find(el=>el.dataset.boardTab===anchor.tabId)
+   if(!target)continue
+   target.setAttribute('data-financial-connection-target','');marked.push(target)
+   // The nav paints above the SVG. A non-interactive stem inside the nav
+   // bridges its bottom padding without moving the hit path over page buttons.
+   const stem=document.createElement('span');stem.setAttribute('data-financial-connection-stem','');stem.setAttribute('aria-hidden','true');stem.style.left=anchor.stemLeft+'px';stem.style.top=anchor.stemTop+'px';stem.style.height=anchor.stemHeight+'px';nav.append(stem);stems.push(stem)
+  }
+  return()=>{for(const el of marked)el.removeAttribute('data-financial-connection-target');for(const stem of stems)stem.remove()}
+ },[rootRef,geometry,snapshot.artifacts,snapshot.selection,draft,sessionId])
  return rootRef.current&&react_dom.createPortal(jsxs('svg',{className:'ew-financial-connections',width:geometry.width,height:geometry.height,'aria-label':'个股数据联动',children:[...links.map(({node:n,sourceId,creation})=>{
   const from=output(sourceId),to=input(n.id),d=path(from,to),hit=path(from.tabId?from:{...from,x:from.right+1},to.tabId?to:{...to,x:to.left-1}),editable=!readOnly&&(!creation||workbenchSmartCreateTarget(n)),remote=from.tabId?from:to.tabId?to:null,tab=remote&&tabs.find(t=>t.id===remote.tabId),relation=tab?(to.tabId?'输出连接至':'输入连接来自')+'「'+tab.name+'」页签'+(remote.overflow?'（向'+(remote.overflow==='left'?'左':'右')+'翻页）':''):'',action=creation?workbenchText('断开创建基准连接'):'断开组件数据连接'
   return jsxs('g',{[creation?'data-workbench-create-link':'data-financial-link']:n.id,'data-connection-source':sourceId,children:[jsx('path',{d,className:'ew-financial-connection-line'+(feedback?.ids.includes(n.id)?' ew-financial-connection-success':'')}),jsx('path',{d:hit,className:'ew-financial-connection-hit',role:'button',tabIndex:editable?0:-1,'aria-label':relation?relation+' · '+action:action,onPointerDown:e=>e.stopPropagation(),onContextMenu:e=>{e.preventDefault();e.stopPropagation();if(editable)commit(null,n.id)},onKeyDown:e=>{if(editable&&['Delete','Backspace','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();commit(null,n.id)}},children:jsx('title',{children:(relation?relation+' · ':'')+(editable?'右键断开连接':workbenchText('创建基准'))})})]},n.id+':'+sourceId)

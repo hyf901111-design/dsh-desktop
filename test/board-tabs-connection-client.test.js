@@ -55,19 +55,19 @@ async function setup(){
 it('接收组件移到别页后，从当前来源的真实输出端口连到对端页签，联动仍传递且回移恢复组件端点',async()=>{
  const s=await setup();await s.move(s.quote.id,s.page2);await s.page(s.page1);await s.select(s.watch.id);await s.refresh()
  expect(s.spec(s.quote.id).linkedWatchlistId).toBe(s.watch.id)
- expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 388 403 C/)
+ expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 388 403 /)
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/178 39$/)
  expect(f.host.querySelector(`[data-research-node-id="${s.quote.id}"]`).hasAttribute('data-board-tab-hidden')).toBe(true)
  await f.event('click',f.host.querySelector('[data-stock-code="000858"]'))
  expect(s.spec(s.quote.id).symbols).toEqual([second])
  await s.page(s.page2);await s.move(s.quote.id,s.page1);await s.select(s.watch.id);await s.refresh()
- expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 388 403 C/)
+ expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 388 403 /)
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/468 403$/)
 },15000)
 
 it('切到接收组件所在页后，从来源所属页签连入真实输入端口，解除关系后移除图形',async()=>{
  const s=await setup();await s.move(s.quote.id,s.page2);await s.select(s.quote.id);await s.refresh()
- expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 64 39 C/)
+ expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 64 39 /)
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/468 403$/)
  const hit=f.host.querySelector(`[data-financial-link="${s.quote.id}"] [role=button]`)
  expect(hit?.getAttribute('aria-label')).toContain('市场行情')
@@ -78,7 +78,7 @@ it('切到接收组件所在页后，从来源所属页签连入真实输入端�
 
 it('来源移页仍保留输出到当前输入的方向，双端都不在当前页时没有无关线',async()=>{
  const s=await setup();await s.move(s.watch.id,s.page2);await s.page(s.page1);await s.select(s.quote.id);await s.refresh()
- expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 178 39 C/)
+ expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 178 39 /)
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/468 403$/)
  await s.move(s.quote.id,s.page2);await s.page(s.page1);await s.refresh()
  expect(s.line(s.quote.id)).toBeNull()
@@ -121,10 +121,13 @@ it('目标横向溢出时连到正确翻页箭头并标明目标，不拦截翻�
  await vi.waitFor(()=>expect(f.document.querySelector('[data-board-tabs-paging]')).not.toBeNull())
  s.layout.tab2Left=1100;await s.select(s.watch.id);await s.refresh()
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/756 39$/)
+ expect(f.document.querySelector('[data-board-tabs-paging] button:last-child').hasAttribute('data-financial-connection-target')).toBe(true)
  const hit=()=>f.host.querySelector(`[data-financial-link="${s.quote.id}"] [role=button]`)
  expect(hit()?.getAttribute('aria-label')).toContain('新闻公告');expect(hit()?.querySelector('title')?.textContent).toContain('向右翻页')
  s.layout.tab2Left=-200;await s.scroll(list)
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/730 39$/)
+ expect(f.document.querySelector('[data-board-tabs-paging] button:first-child').hasAttribute('data-financial-connection-target')).toBe(true)
+ expect(f.document.querySelector('[data-board-tabs-paging] button:last-child').hasAttribute('data-financial-connection-target')).toBe(false)
  expect(hit()?.querySelector('title')?.textContent).toContain('向左翻页')
  await s.page(s.page2)
  expect(f.workspace.getActiveBoardTab()).toBe(s.page2)
@@ -135,7 +138,7 @@ it('跨页创建基准关系也使用页签端点，隐藏卡片的零坐标不�
  await f.act(()=>{draft=f.workspace.beginSelectedCreateDraft([s.quote.id]);f.workspace.updateSelectedCreateDraft(draft.id,'研究当前标的')})
  await s.move(draft.id,s.page2);await s.page(s.page1);await s.select(s.quote.id);await s.refresh()
  const line=f.host.querySelector(`[data-workbench-create-link="${draft.id}"] .ew-financial-connection-line`)
- expect(line?.getAttribute('d')).toMatch(/^M 828 403 C/)
+ expect(line?.getAttribute('d')).toMatch(/^M 828 403 /)
  expect(line?.getAttribute('d')).toMatch(/178 39$/)
  expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id).sourceNodeIds).toEqual([s.quote.id])
 })
@@ -147,17 +150,18 @@ it('导航竖向滚出视窗后仍使用真实内容坐标，不改动用户视�
  const before=f.canvas.scrollTop
  expect(before).toBeGreaterThan(92);expect(s.line(s.quote.id)).toBeNull()
  await s.select(s.watch.id);await s.scroll(f.canvas)
- expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 388 403 C/)
+ expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/^M 388 403 /)
  expect(s.line(s.quote.id)?.getAttribute('d')).toMatch(/178 39$/)
  expect(f.canvas.scrollTop).toBe(before);expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([s.watch.id])
 })
 
-const pathXs=d=>d.match(/-?\d+(?:\.\d+)?/g).map(Number).filter((_,i)=>i%2===0)
+const pathCommands=d=>[...d.matchAll(/([MLCQA])\s*([^MLCQA]+)/g)].map(([,type,args])=>({type,v:args.trim().split(/[ ,]+/).map(Number)}))
+const pathXs=d=>pathCommands(d).flatMap(({type,v})=>type==='A'?[v[5]]:v.filter((_,i)=>i%2===0))
 it('靠右12像素边距的来源连到异页标签时，真实输出端点和整条线路均留在SVG边界内',async()=>{
  const s=await setup();await s.move(s.quote.id,s.page2);await s.page(s.page1);await s.select(s.watch.id)
  s.layout.watchLeft=114;s.layout.watchWidth=976;await s.refresh()
  const d=s.line(s.quote.id).getAttribute('d')
- expect(d).toMatch(/^M 966 403 C/);expect(d).toMatch(/178 39$/)
+ expect(d).toMatch(/^M 966 403 /);expect(d).toMatch(/178 39$/)
  expect(Math.max(...pathXs(d))).toBe(998);expect(Math.min(...pathXs(d))).toBeGreaterThanOrEqual(2)
  const hit=f.host.querySelector(`[data-financial-link="${s.quote.id}"] .ew-financial-connection-hit`).getAttribute('d')
  expect(Math.max(...pathXs(hit))).toBe(998)
@@ -167,8 +171,80 @@ it('异页标签连到靠左12像素边距的接收组件时，真实输入端�
  const s=await setup();await s.move(s.watch.id,s.page2);await s.page(s.page1);await s.select(s.quote.id)
  s.layout.quoteLeft=114;await s.refresh()
  const d=s.line(s.quote.id).getAttribute('d')
- expect(d).toMatch(/^M 178 39 C/);expect(d).toMatch(/30 403$/)
+ expect(d).toMatch(/^M 178 39 /);expect(d).toMatch(/30 403$/)
  expect(Math.min(...pathXs(d))).toBe(2);expect(Math.max(...pathXs(d))).toBeLessThanOrEqual(998)
  const hit=f.host.querySelector(`[data-financial-link="${s.quote.id}"] .ew-financial-connection-hit`).getAttribute('d')
  expect(Math.min(...pathXs(hit))).toBe(2)
 },15000)
+
+function expectRoundedOrthogonal(d){
+ const commands=pathCommands(d)
+ expect(commands[0].type).toBe('M');expect(commands.filter(c=>c.type==='A')).toHaveLength(3)
+ expect(commands.every(c=>['M','L','A'].includes(c.type))).toBe(true)
+ let current=commands[0].v,previous=null
+ for(let i=1;i<commands.length;i++){
+  const {type,v}=commands[i]
+  if(type==='L'){
+   expect(current[0]===v[0]||current[1]===v[1]).toBe(true)
+   previous=[v[0]-current[0],v[1]-current[1]];current=v
+  }else{
+   const [rx,ry,rotation,large,sweep,x,y]=v
+   expect(rx).toBeGreaterThan(0);expect(ry).toBe(rx);expect(rotation).toBe(0);expect(large).toBe(0)
+   expect(Math.abs(x-current[0])).toBe(rx);expect(Math.abs(y-current[1])).toBe(ry)
+   const ux=Math.sign(previous[0]),uy=Math.sign(previous[1]),turn=sweep?1:-1,normal=[-uy*turn,ux*turn],center=[current[0]+normal[0]*rx,current[1]+normal[1]*ry]
+   // The real circular arc meets its incoming and outgoing straight segments
+   // tangentially; round stroke caps cannot hide a sharp path junction here.
+   expect(Math.hypot(x-center[0],y-center[1])).toBeCloseTo(rx)
+   const next=commands[i+1];expect(next.type).toBe('L')
+   expect([Math.sign(next.v[0]-x),Math.sign(next.v[1]-y)]).toEqual(normal.map(v=>v||0))
+   current=[x,y]
+  }
+ }
+}
+it('组件输出到页签使用正交直线与相切圆弧，保留真实端点和数据关系',async()=>{
+ const s=await setup();await s.move(s.quote.id,s.page2);await s.page(s.page1);await s.select(s.watch.id);await s.refresh()
+ const before=JSON.stringify(f.workspace.getSnapshot().artifacts),d=s.line(s.quote.id).getAttribute('d')
+ expectRoundedOrthogonal(d);expect(d).toMatch(/^M 388 403 /);expect(d).toMatch(/178 39$/)
+ expect(JSON.stringify(f.workspace.getSnapshot().artifacts)).toBe(before)
+},15000)
+it('页签输入到组件同样使用正交直线与相切圆弧',async()=>{
+ const s=await setup();await s.move(s.quote.id,s.page2);await s.select(s.quote.id);await s.refresh()
+ const d=s.line(s.quote.id).getAttribute('d');expectRoundedOrthogonal(d)
+ expect(d).toMatch(/^M 64 39 /);expect(d).toMatch(/468 403$/)
+})
+it('关联描边和可视末端随选择、切页、回移、断开、删除及卸载清理，保留原有拖入状态',async()=>{
+ const s=await setup(),target=()=>f.document.querySelector(`[data-board-tab="${s.page2}"]`),marked=()=>f.document.querySelectorAll('[data-financial-connection-target]'),stems=()=>f.document.querySelectorAll('[data-financial-connection-stem]')
+ await s.move(s.quote.id,s.page2);await s.page(s.page1);await s.select(s.watch.id);await s.refresh()
+ expect(target().hasAttribute('data-financial-connection-target')).toBe(true);expect(stems()).toHaveLength(1)
+ target().setAttribute('data-tab-accept','')
+ await f.act(()=>f.workspace.updateSelection([],'replace'))
+ expect(marked()).toHaveLength(0);expect(stems()).toHaveLength(0);expect(target().hasAttribute('data-tab-accept')).toBe(true)
+ await s.select(s.watch.id);await s.page(s.page2);await s.select(s.quote.id);await s.refresh()
+ expect(f.document.querySelector(`[data-board-tab="${s.page1}"]`).hasAttribute('data-financial-connection-target')).toBe(true)
+ await s.move(s.quote.id,s.page1);await s.select(s.watch.id);await s.refresh();expect(marked()).toHaveLength(0);expect(stems()).toHaveLength(0)
+ await s.move(s.quote.id,s.page2);await s.page(s.page1);await s.select(s.watch.id);await s.refresh()
+ const hit=f.host.querySelector(`[data-financial-link="${s.quote.id}"] [role=button]`);await f.event('contextmenu',hit)
+ expect(marked()).toHaveLength(0);expect(stems()).toHaveLength(0)
+ await f.act(()=>f.workspace.undo());await s.select(s.watch.id);await s.refresh();expect(marked()).toHaveLength(1)
+ const nav=f.workspace.getSnapshot().artifacts.find(n=>n.id===s.nav.id)
+ await f.act(()=>f.workspace.saveBoardTabs(nav.containerSpec.revision,s.tabs().filter(t=>t.id!==s.page2)))
+ expect(marked()).toHaveLength(0);expect(stems()).toHaveLength(0)
+ await f.act(()=>f.workspace.undo());await s.select(s.watch.id);await s.refresh()
+ const held=target(),stem=stems()[0];expect(held.hasAttribute('data-financial-connection-target')).toBe(true)
+ await f.dispose();f=null
+ expect(held.hasAttribute('data-financial-connection-target')).toBe(false);expect(stem.isConnected).toBe(false)
+})
+it('多个远端组件共享页签时只画一份关联状态，分到不同页签后分别标记且断开一个不移除另一个',async()=>{
+ const s=await setup();let news
+ await f.act(()=>{news=f.workspace.createFinancialWidget('news')});await s.connect(s.watch.id,news.id)
+ await s.move(s.quote.id,s.page2);await s.page(s.page1);await s.move(news.id,s.page2);await s.page(s.page1);await s.select(s.watch.id);await s.refresh()
+ const marked=()=>[...f.document.querySelectorAll('[data-financial-connection-target]')].map(el=>el.dataset.boardTab)
+ expect(marked()).toEqual([s.page2]);expect(f.document.querySelectorAll('[data-financial-connection-stem]')).toHaveLength(1)
+ expect(f.host.querySelectorAll('[data-financial-link]')).toHaveLength(2)
+ const nav=f.workspace.getSnapshot().artifacts.find(n=>n.id===s.nav.id)
+ await f.act(()=>f.workspace.saveBoardTabs(nav.containerSpec.revision,[...s.tabs(),{id:'third-related-page',name:'公告',nodeIds:[]}]))
+ await s.page(s.page2);await s.move(news.id,'third-related-page');await s.page(s.page1);await s.select(s.watch.id);await s.refresh()
+ expect(marked().sort()).toEqual([s.page2,'third-related-page'].sort());expect(f.document.querySelectorAll('[data-financial-connection-stem]')).toHaveLength(2)
+ await f.event('contextmenu',f.host.querySelector(`[data-financial-link="${s.quote.id}"] [role=button]`))
+ expect(marked()).toEqual(['third-related-page']);expect(s.line(news.id)).not.toBeNull();expect(s.spec(news.id).linkedSourceId).toBe(s.watch.id)
+})
