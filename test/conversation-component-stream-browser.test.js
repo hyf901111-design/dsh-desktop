@@ -3,9 +3,9 @@ import {pathToFileURL} from 'node:url'
 import {createRequire} from 'node:module'
 import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
+import {notesResidentProductionSource} from './helpers/notes-resident-production-source.mjs'
 // The installer embeds function.toString(); load the actual Node module rather
 // than Vite's SSR-rewritten functions so browser execution matches production.
-const {patchConversationComponents}=createRequire(import.meta.url)('../scripts/lib/conversation-components.mjs')
 const {patchDeliverableCards}=createRequire(import.meta.url)('../scripts/lib/deliverable-cards.mjs')
 const {patchConversationCompactionLifecycle,stripConversationCompactionLifecycle}=createRequire(import.meta.url)('../scripts/lib/conversation-compaction-lifecycle.mjs')
 
@@ -14,8 +14,10 @@ beforeAll(async()=>{
  runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  deliverables=patchDeliverableCards(await readFile('node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js','utf8'))
  expect(patchDeliverableCards(deliverables)).toBe(deliverables)
- const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),resident=process.env.SHERLOCK_COMPACTION_RAW==='1'?stripConversationCompactionLifecycle(raw):process.env.SHERLOCK_COMPONENT_STREAM_RESIDENT==='1'?raw:patchConversationCompactionLifecycle(raw)
- client=(process.env.SHERLOCK_COMPONENT_STREAM_RESIDENT==='1'?resident:patchConversationComponents(resident)).replace('exports.apply = apply;','exports.apply = apply;exports.__Chat=ChatView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;')
+ // Rebuild owned serializers through the same native Node unwind used by
+ // production fixtures before applying this fixture's compaction variant.
+ const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),projected=notesResidentProductionSource({conversation:true}),resident=process.env.SHERLOCK_COMPACTION_RAW==='1'?stripConversationCompactionLifecycle(projected):process.env.SHERLOCK_COMPONENT_STREAM_RESIDENT==='1'?raw:patchConversationCompactionLifecycle(projected)
+ client=resident.replace('exports.apply = apply;','exports.apply = apply;exports.__Chat=ChatView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__SetInputs=value=>conversationComponentInputs=value;')
  bootstrap=(await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),empty=()=>null;
@@ -41,8 +43,9 @@ beforeAll(async()=>{
  window.probe.fileStep=(step,text,close=false)=>{add('step/end',{turn:1,step:step-1});add('step/start',{turn:1,step});message(step,text);if(close){add('step/end',{turn:1,step});add('turn/end',{turn:1,reason:{kind:'completed'}})}project()};
  window.probe.compactionStart=()=>{add('compaction/start',{turn:1,compactionId:'native-compact'});project()};
  window.probe.compactionEnd=checkpoint=>{if(checkpoint){const intro=history.find(e=>e.type==='assistant/message').seq;add('compaction/summary',{turn:1,compactionId:'native-compact',summary:[{type:'text',text:'预置演示上下文摘要。'}],shadowedSeqs:[intro],shadowedTokenCount:200});add('user/message',{id:'checkpoint',role:'user',source:{kind:'plugin',plugin:'compact',compactionId:'native-compact'},content:[{type:'text',text:'预置演示上下文摘要。'}]},{surfaceOp:{op:'replace',start:intro,end:intro}})}add('compaction/end',{turn:1,compactionId:'native-compact',...checkpoint?{}:{error:'summary is not smaller'}});project()};
- window.dshDesktop={conversationComponents:{read:async input=>{window.probe.read.push(input.componentId);return structuredClone(views.get(input.componentId))},copy:async input=>{window.probe.copied.push(input.componentId);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input.componentId);return{id:'saved-'+input.componentId}},reference:async()=>{throw Error('not exercised')}}};
+ window.dshDesktop={conversationComponents:{read:async input=>{window.probe.read.push(input.componentId);return structuredClone(views.get(input.componentId))},copy:async input=>{window.probe.copied.push(input.componentId);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input.componentId);return{id:'saved-'+input.componentId}},reference:async input=>({version:1,kind:"conversation-component",sessionId:input.sessionId,componentId:input.componentId,revision:views.get(input.componentId).revision,title:views.get(input.componentId).node.title})}};
  const useSession=select=>select(React.useSyncExternalStore(fn=>session.subscribe(fn),()=>session.getSnapshot(),()=>session.getSnapshot())),t=key=>key;
+ window.probe.referenced=[];native.__SetInputs({sessions:{list:{getSnapshot:()=>({current:"stream"})}},inputHub:{shell:()=>({snapshot:{draft:"",draftRev:0,imageIds:[]},insertReference:chip=>{window.probe.referenced.push(chip);return true}})}});
  const renderSlotChain=(name,owner)=>{if(name!=='conversation.chat.turnTail')return null;const matched=deliverySlot.select(owner);return matched===null?null:<deliverySlot.Component {...owner} {...deliverySlot.inject()} matched={matched} useHostDescription={select=>select({canOpenPath:true})}/>};
  const renderSlot=(name,props={},scope={})=>name==='conversation.chat.node'&&scope.entryKey==='assistant-step'?<native.AssistantNodeView {...props} useTurnData={key=>useSession(snapshot=>snapshot.chat.nodes.get(scope.hookContext)?.location?.turn?.data.get(key))} t={t}/>:name==='conversation.chat.node'&&scope.entryKey==='turn-tail'?<native.__Tail {...props} sessionId="stream" useSession={useSession} renderSlot={renderSlot} renderSlotChain={renderSlotChain} t={t}/>:name==='conversation.chat.node'?null:scope.fallback??null;
  const root=createRoot(document.querySelector('#root'));root.render(<native.__Chat sessionId="stream" useSession={useSession} useSessions={select=>select({byId:{stream:{cwd:'/tmp/component-stream'}}})} useStore={select=>select({selection:null,view:'chat'})} renderSlot={renderSlot} openFile={path=>window.probe.opened.push(path)} loadOlder={async()=>{}} loadImage={async()=>null} inspectCall={()=>{}} chatScroll={{read:()=>null,save(){}}} forkAt={()=>{}} fileMentions={()=>({resolve:()=>undefined})} t={t}/>);
@@ -83,6 +86,7 @@ it.each(['reduce','no-preference'])('renders real ready cards between native pub
   expect(await f.page.evaluate(()=>window.probe.read)).toEqual(['a','b'])
   expect(await f.page.locator('[data-chat-flow]').innerText()).not.toContain('private internal plan');expect(await f.page.locator('[data-chat-flow]').innerText()).not.toContain('private second plan')
   const card=f.page.locator('[data-conversation-component-id="a"]');expect(await card.locator('header button').first().getAttribute('data-conversation-action')).toBe('reference')
+  await card.getByRole('button',{name:'引用到对话',exact:true}).click();expect(await f.page.evaluate(()=>JSON.parse(window.probe.referenced[0].ref).componentId)).toBe('a')
   await card.getByRole('button',{name:'组件更多操作',exact:true}).click();await card.getByRole('menuitem',{name:'复制',exact:true}).click();expect(await f.page.evaluate(()=>window.probe.copied)).toEqual(['a'])
   await f.page.evaluate(()=>window.probe.dispose());await f.page.reload();await f.boot();await f.page.locator('[data-conversation-component-id="b"]').waitFor()
   expect(await presentation(f)).toEqual(expected);expect(await f.page.locator('[data-conversation-component-id]').count()).toBe(2);expect(f.errors).toEqual([])

@@ -10,7 +10,7 @@ export function installConversationComponentHandlers(options: {
     getWindow(): TrustedWindow | undefined;
     service: ConversationComponentUiService;
 }): () => void {
-    const methods = ['read', 'updateNativeSpec', 'queryNative', 'readNativeSnapshot', 'copy', 'saveLibrary', 'reference', 'resolveReference'] as const;
+    const methods = ['read', 'commitHtmlInteraction', 'updateNativeSpec', 'queryNative', 'readNativeSnapshot', 'copy', 'saveLibrary', 'reference', 'resolveReference'] as const;
     for (const method of methods) {
         const channel = `conversation-components:${method}`;
         options.ipcMain.removeHandler(channel);

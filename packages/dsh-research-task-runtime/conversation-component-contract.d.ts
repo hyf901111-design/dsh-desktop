@@ -34,6 +34,7 @@ export type NormalizedConversationArtifact = {
 };
 
 export type ConversationComponentView = {
+  readOnly?:boolean;                    // 仅当前宿主权限，不写入组件存储
   id: string;
   sessionId: string;
   revision: number;                     // 配置/内容revision；observation更新不递增
@@ -57,6 +58,9 @@ export type ConversationComponentTarget = {sessionId:string; componentId:string}
 export type ConversationNativeSpecUpdate = ConversationComponentTarget & {
   expectedRevision:number; spec:JsonObject;
 };
+export type ConversationHtmlInteractionUpdate = ConversationComponentTarget & {
+  expectedRevision:number; htmlVersion:string;
+} & ({kind:'journal'; event:JsonObject} | {kind:'shared'; revision:number; state:JsonValue});
 /** A previously persisted native observation, never evidence that a new refresh succeeded. */
 export type ConversationNativeSnapshot = {
   specRevision:number; receivedAt:number; querySignature:string; result:JsonObject;
@@ -88,10 +92,13 @@ export type ResolveConversationComponentReferenceInput = {
 export type ConversationComponentVisibleContext = {
   ownerAccountId:string; sessionId:string;
   mode:'conversation'|'research'|'notes'; generation:string;
+  readOnly?:boolean;
 };
 
 export interface ConversationComponentsBridge {
   read(target:ConversationComponentTarget): Promise<ConversationComponentView>;
+  /** Acknowledges only a persisted HTML interaction in the current host lease. */
+  commitHtmlInteraction?(input:ConversationHtmlInteractionUpdate): Promise<ConversationComponentView>;
   updateNativeSpec(input:ConversationNativeSpecUpdate): Promise<ConversationComponentView>;
   queryNative(input:ConversationComponentTarget & {expectedRevision:number; query:JsonObject}): Promise<JsonObject>;
   readNativeSnapshot?(input:ConversationComponentTarget & {expectedRevision:number; query:JsonObject}): Promise<ConversationNativeSnapshot|null>;

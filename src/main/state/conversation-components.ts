@@ -2,14 +2,23 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { canonicalConversationComponentInput, normalizeConversationComponentArtifact } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
-import type { ConversationComponentCreateArguments, ConversationComponentCreateReceipt, ConversationComponentExecutionIdentity, ConversationComponentProvenance, ConversationComponentTarget, ConversationComponentView, ConversationNativeSpecUpdate, ConversationNativeSnapshot, JsonObject } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
+import type { ConversationComponentCreateArguments, ConversationComponentCreateReceipt, ConversationComponentExecutionIdentity, ConversationComponentProvenance, ConversationComponentTarget, ConversationComponentView, ConversationHtmlInteractionUpdate, ConversationNativeSpecUpdate, ConversationNativeSnapshot, JsonObject } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
 import { financialWidgetSpec } from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js';
 import { parseResearchContainerSpec } from '../../../packages/dsh-research-task-runtime/artifact-validator.js';
+import {researchInteractionVersion,validResearchInteractionEvent,validResearchInteractionState} from '../../../packages/dsh-research-task-runtime/html-artifact.js';
+import {componentData} from '../../../packages/dsh-research-collaboration/component-state.js';
 const MAX_STORE = 64 * 1024 * 1024, MAX_OBSERVATION = 1024 * 1024;
 const clone = <T>(value: T): T => structuredClone(value);
 const id = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0 && value.length <= 256 && !/[\u0000-\u001f]/.test(value);
 const object = (value: unknown): value is Record<string, any> => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 const timestamp = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
+const stableJson = (value: unknown) => JSON.stringify(value, (_key, item) => object(item) ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
+function validHtmlConfig(node: Record<string, any>): boolean {
+    if (node.config === undefined) return true;
+    if (node.containerSpec?.type !== 'html' || !object(node.config) || Object.keys(node.config).some(key => !['interactionState', 'sharedComponentState'].includes(key))) return false;
+    const version = researchInteractionVersion(node.containerSpec.html), journal = node.config.interactionState, shared = node.config.sharedComponentState;
+    return (journal === undefined || validResearchInteractionState(journal) && journal.version === version) && (shared === undefined || object(shared) && Object.keys(shared).length === 3 && ['version', 'revision', 'state'].every(key => Object.hasOwn(shared, key)) && shared.version === version && Number.isSafeInteger(shared.revision) && shared.revision >= 1 && componentData(shared.state));
+}
 export type ConversationNativeObservation = {
     specRevision: number;
     querySignature: string;
@@ -96,7 +105,7 @@ export class ConversationComponentStore {
                 if (!object(value) || Object.keys(value).some(k => !['id', 'ownerAccountId', 'sessionId', 'turnId', 'requestId', 'fingerprint', 'windowGeneration', 'authorityId', 'authoritySeq', 'revision', 'node', 'readableText', 'provenance', 'createdAt', 'updatedAt', 'observations'].includes(k)) || !['id', 'ownerAccountId', 'sessionId', 'turnId', 'requestId', 'windowGeneration'].every(k => id(value[k])) || typeof value.fingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(value.fingerprint) || !Number.isSafeInteger(value.revision) || value.revision < 1 || !timestamp(value.createdAt) || !timestamp(value.updatedAt) || value.authorityId !== undefined && !id(value.authorityId) || value.authoritySeq !== undefined && (!Number.isSafeInteger(value.authoritySeq) || value.authoritySeq < 0) || typeof value.readableText !== 'string' || Buffer.byteLength(value.readableText) > 1024 * 1024 || !validProvenance(value.provenance) || !object(value.node) || value.node.id !== value.id || value.node.kind !== 'generated-container' || value.node.x !== 0 || value.node.y !== 0 || value.node.generationStatus !== 'completed' || !parseResearchContainerSpec(value.node.containerSpec) || !object(value.observations))
                     throw Error('对话组件条目无效');
                 const nodeType = value.node.containerSpec.type;
-                if (Object.keys(value.node).some(k => !['id', 'kind', 'x', 'y', 'width', 'height', 'title', 'containerSpec', 'generationStatus', 'refreshMinutes'].includes(k)) || ![value.node.width, value.node.height].every(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= 1e6) || typeof value.node.title !== 'string' || !value.node.title.trim() || value.node.title.length > 120 || value.node.refreshMinutes !== 0)
+                if (Object.keys(value.node).some(k => !['id', 'kind', 'x', 'y', 'width', 'height', 'title', 'containerSpec', 'generationStatus', 'refreshMinutes', 'config'].includes(k)) || !validHtmlConfig(value.node) || ![value.node.width, value.node.height].every(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= 1e6) || typeof value.node.title !== 'string' || !value.node.title.trim() || value.node.title.length > 120 || value.node.refreshMinutes !== 0)
                     throw Error('对话组件节点结构无效');
                 if (!['financial-widget', 'chart', 'table', 'kpi', 'markdown', 'html', 'mind-map', 'summary'].includes(nodeType))
                     throw Error('对话组件类型无效');
@@ -125,6 +134,37 @@ export class ConversationComponentStore {
     private find(owner: string, target: ConversationComponentTarget, items = this.items): Item { this.ready(); const item = items.find(i => i.ownerAccountId === owner && i.sessionId === target.sessionId && i.id === target.componentId); if (!item)
         throw Error('对话组件不存在或无权访问。'); return item; }
     read(owner: string, target: ConversationComponentTarget): ConversationComponentView { return publicView(this.find(owner, target)); }
+    async commitHtmlInteraction(owner: string, input: ConversationHtmlInteractionUpdate, guard: Guard = noGuard): Promise<ConversationComponentView> {
+        const common = ['sessionId', 'componentId', 'expectedRevision', 'htmlVersion', 'kind'], fields = input?.kind === 'journal' ? [...common, 'event'] : input?.kind === 'shared' ? [...common, 'revision', 'state'] : [];
+        if (!id(owner) || !object(input) || !fields.length || fields.some(key => !Object.hasOwn(input, key)) || Object.keys(input).some(key => !fields.includes(key)) || !id(input.sessionId) || !id(input.componentId) || !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1 || typeof input.htmlVersion !== 'string' || !input.htmlVersion || input.htmlVersion.length > 80 || (input.kind === 'journal' ? !validResearchInteractionEvent(input.event) : !Number.isSafeInteger(input.revision) || input.revision < 1 || !componentData(input.state))) throw Error('对话组件交互参数无效。');
+        const captured = clone(input);
+        return this.mutate(items => {
+            const item = this.find(owner, captured, items), spec = item.node.containerSpec as Record<string, any>;
+            if (!object(spec) || spec.type !== 'html' || typeof spec.html !== 'string' || captured.htmlVersion !== researchInteractionVersion(spec.html)) throw Error('对话组件 HTML 已变化，本次交互未保存。');
+            if (item.revision !== captured.expectedRevision) throw Error('对话组件版本已变化，请重新读取。');
+            if (!validHtmlConfig(item.node)) throw Error('对话组件交互记录无效，原内容已保留。');
+            const config: Record<string, any> = object(item.node.config) ? item.node.config as Record<string, any> : {}, version = captured.htmlVersion;
+            let field: 'interactionState' | 'sharedComponentState', next: Record<string, any>;
+            if (captured.kind === 'journal') {
+                field = 'interactionState';
+                const saved = object(config.interactionState) ? config.interactionState : undefined, events = object(saved?.events) ? saved.events : {}, existing = Object.hasOwn(events, String(captured.event.id)) ? events[String(captured.event.id)] : undefined;
+                if (existing) { if (stableJson(existing) !== stableJson(captured.event)) throw Error('对话组件交互标识冲突，请重试。'); return publicView(item); }
+                next = {version, events: {...events, [String(captured.event.id)]: captured.event}};
+                if (!validResearchInteractionState(next)) throw Error('对话组件交互记录已满，本次操作未保存。');
+            } else {
+                field = 'sharedComponentState';
+                const saved = object(config.sharedComponentState) ? config.sharedComponentState : undefined;
+                if (saved) {
+                    if (saved.revision > captured.revision || saved.revision === captured.revision && stableJson(saved.state) !== stableJson(captured.state)) throw Error('对话组件状态已有较新修改，本次操作未保存。');
+                    if (saved.revision === captured.revision) return publicView(item);
+                }
+                next = {version, revision: captured.revision, state: captured.state};
+            }
+            item.node = {...item.node, config: {...config, [field]: next}};
+            item.revision++; item.updatedAt = Date.now();
+            return publicView(item);
+        }, guard);
+    }
     details(owner: string, target: ConversationComponentTarget): Readonly<Item> { return clone(this.find(owner, target)); }
     readNativeSnapshot(owner: string, target: ConversationComponentTarget, revision: number, query: JsonObject): ConversationNativeSnapshot | null {
         const item = this.find(owner, target);

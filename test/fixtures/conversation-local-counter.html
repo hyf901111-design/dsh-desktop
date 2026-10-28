@@ -1,0 +1,5 @@
+<article><p>计数：<output id="count">0</output></p><button id="increment" type="button">增加计数</button><details><summary>查看说明</summary><p>离线演示；备注和计数保存到当前对话组件。</p></details><label>备注<input id="memo" aria-label="备注"></label></article><script>
+const count=document.getElementById('count'),increment=document.getElementById('increment'),memo=document.getElementById('memo');
+const shared=window.sherlockShared?window.sherlockShared.register({initialState:{count:0,memo:''},reduce:(state,action)=>action.type==='increment'?{...state,count:state.count+1}:action.type==='memo'?{...state,memo:action.value}:state,render:(state,context)=>{count.textContent=String(state.count);if(memo.value!==state.memo)memo.value=state.memo;increment.disabled=context.readOnly||!context.connected;memo.disabled=context.readOnly||!context.connected;}}):null;
+increment.onclick=()=>shared?.dispatch({type:'increment'});memo.oninput=()=>shared?.dispatch({type:'memo',value:memo.value});
+</script>

@@ -1,8 +1,9 @@
-import {acceptArtifactOutput} from './artifact-output.js'
+import {acceptArtifactOutput,retainedTableData} from './artifact-output.js'
 import {parseResearchContainerSpec} from './artifact-validator.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
 import {financialWidgetSpec,financialWidgetDimensions,financialNewsQuery} from './financial-widget-contract.js'
 import {researchHtmlText} from './html-artifact.js'
+import {validateConversationHtml} from './conversation-html-validation.js'
 
 const MAX_INPUT_BYTES=1024*1024
 const allowedTypes=new Set(['financial-widget','chart','table','kpi','markdown','html','mind-map','summary'])
@@ -51,6 +52,14 @@ export function normalizeConversationComponentArtifact(args){
  if(!plain(input)||Object.keys(input).some(key=>!['artifact','title'].includes(key))||!plain(input.artifact))throw Error('对话组件只接受完整 artifact 和可选 title，不能指定身份、prompt 或 recipe。')
  if(input.title!==undefined&&(typeof input.title!=='string'||!input.title.trim()||input.title.trim().length>120))throw Error('对话组件标题需为 1–120 个字符。')
  const artifact=input.artifact
+ if(!Object.hasOwn(artifact,'version'))throw Error('对话组件缺少 artifact.version。请提交 version:1、type、title 及对应类型的完整字段。')
+ if(artifact.version!==1)throw Error('对话组件 artifact.version 必须为 1，不能修改版本或绕过现有组件格式。')
+ if(typeof artifact.type!=='string'||!artifact.type.trim())throw Error('对话组件缺少有效的 artifact.type，例如 html、table、chart 或 financial-widget。')
+ if(!Object.hasOwn(artifact,'title')){
+  if(input.title===undefined)throw Error('对话组件缺少 artifact.title。把标题放入 artifact：{version:1,type:"html",title:"组件标题",html:"完整HTML"}；仅缺少该字段时也可提供顶层 title。')
+  artifact.title=input.title.trim()
+ }
+ if(typeof artifact.title!=='string'||!artifact.title.trim()||artifact.title.length>256)throw Error('对话组件 artifact.title 需为有效的非空字符串；不会覆盖显式提供的错误 title。')
  const forbidden=['owner','ownerAccountId','sessionId','turnId','mode','identity','authorityId','authoritySeq','windowGeneration','prompt','recipe','path','paths','authorization','headers','ipc','channel']
  if(Object.keys(artifact).some(key=>forbidden.includes(key)))throw Error('对话组件 artifact 包含未授权字段。')
  if(['files','gallery','calendar-tool','web','iframe','audio','youtube'].includes(artifact.type))throw Error('该类型尚未适配对话组件授权。')
@@ -59,7 +68,14 @@ export function normalizeConversationComponentArtifact(args){
  if(!output)throw Error('对话组件 artifact 无效，请提交已完成的现有组件结构。')
  const parsed=parseResearchContainerSpec(JSON.parse(output))
  if(!parsed||!allowedTypes.has(parsed.type))throw Error('规范化后的类型不支持对话组件。')
- const containerSpec=detachedSpec(parsed)
+ let containerSpec=detachedSpec(parsed)
+ // Structured/native artifacts have trusted host renderers. New raw HTML is
+ // held to the same executable/shared/style gates as Notes and Research.
+ if(artifact.type==='html'&&!retainedTableData(artifact)){
+  const finalSpec=parseResearchContainerSpec({...containerSpec,html:validateConversationHtml(containerSpec.html,input.title??containerSpec.title)})
+  if(!finalSpec)throw Error('对话组件归一化后超出现有格式或长度上限，未保存。请在当前对话保留全部业务内容、精简样式实现后用新 requestId 重试。')
+  containerSpec=finalSpec
+ }
  const title=(input.title??containerSpec.title).trim()
  if(!title||title.length>120)throw Error('对话组件标题需为 1–120 个字符。')
  const model=readTemplateModel(containerSpec)?.data??containerSpec
