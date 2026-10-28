@@ -823,93 +823,39 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "共享输入框语音转写及音量停止胶囊",
+        "featureName": "输入框语音窗口失焦手势清理",
         "branch": "codex/feat/composer-voice-20261028",
-        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
-        "tipCommit": "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97",
+        "baseCommit": "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97",
+        "tipCommit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
         "commits": [
           {
-            "commit": "ef21130efe96b826da76f83c7c687705d2e381dd",
+            "commit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
             "parents": [
-              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+              "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97"
             ],
-            "subject": "功能：为输入框语音增加独立临时录音所有权"
-          },
-          {
-            "commit": "ee2475dc0443ad885f5c19be654b8d5226f48b4b",
-            "parents": [
-              "ef21130efe96b826da76f83c7c687705d2e381dd"
-            ],
-            "subject": "功能：接入输入框语音转写与音量停止胶囊"
-          },
-          {
-            "commit": "4b04f4fec175bc2ad75fedb076d6660fd0834880",
-            "parents": [
-              "ee2475dc0443ad885f5c19be654b8d5226f48b4b"
-            ],
-            "subject": "修复：语音停止时保留组合回车的换行行为"
-          },
-          {
-            "commit": "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97",
-            "parents": [
-              "4b04f4fec175bc2ad75fedb076d6660fd0834880"
-            ],
-            "subject": "修复：阻止停止语音的组合回车误发送"
+            "subject": "修复：窗口失焦清除语音组合键残留状态"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/plans/2026-10-28-composer-voice.md"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/specs/2026-10-28-composer-voice-design.md"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/composer-voice.css"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/composer-voice.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-voice.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-voice.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/research-voice.ts"
-          },
-          {
-            "status": "A",
             "path": "test/composer-voice-browser.test.js"
           },
           {
-            "status": "A",
-            "path": "test/composer-voice-patch.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/composer-voice.test.js"
-          },
-          {
-            "status": "C059",
-            "path": "test/fixtures/composer-voice-browser.tsx",
-            "previousPath": "test/fixtures/plain-slash-input-browser.tsx"
-          },
-          {
             "status": "M",
-            "path": "test/research-voice.test.ts"
+            "path": "test/composer-voice.test.js"
           }
         ],
         "checks": [
@@ -925,9 +871,9 @@
               "test/composer-submit-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "5个直接相关文件78项通过：main所有权32、输入会话21、patch安装/真实entry重入2、真实InputBar浏览器18、原发送策略5；真实Meta+Enter及Control+Enter首个手势不误发，释放后恢复普通快捷键，Shift换行及IME保留。",
-            "verifiedCommit": "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97",
-            "completedAt": "2026-10-28T06:45:07.474Z",
+            "summary": "5个直接相关文件83项通过：main所有权32、输入会话24、patch安装/真实entry重入2、真实InputBar浏览器20、原发送策略5。新增5项验证窗口blur丢失Meta/Control keyup后Enter正常、迟到caret撤销、授权不中断及卸载移除监听。",
+            "verifiedCommit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
+            "completedAt": "2026-10-28T07:12:36.601Z",
             "timeoutMs": 120000
           },
           {
@@ -938,8 +884,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript类型检查通过。",
-            "verifiedCommit": "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97",
-            "completedAt": "2026-10-28T06:45:16.431Z",
+            "verifiedCommit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
+            "completedAt": "2026-10-28T07:12:45.257Z",
             "timeoutMs": 120000
           },
           {
@@ -950,150 +896,24 @@
             ],
             "outcome": "passed",
             "summary": "无空白错误。",
-            "verifiedCommit": "8d17d49ae7e3cf08e038d8fa1be68d3a5d6cff97",
-            "completedAt": "2026-10-28T06:45:16.448Z",
+            "verifiedCommit": "02166dee4f82cebe3afe3eedc9a2b215e66bf2b1",
+            "completedAt": "2026-10-28T07:12:45.272Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实InputBar/SessionInputShell及Notes adapter的隔离Chromium假桥验证通过，覆盖四种输入区、累计转写/原生level契约、按键/IME/失焦/stop/隐藏/卸载/改稿/迟到结果、附件发送/运行停止、浅深色及360窄窗。截图和几何：/Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/composer-voice；未激活真实麦克风，原生客户端验收待集成。 真实Cmd/Ctrl+Enter双keydown已完成RED→GREEN回归，修饰键释放后原生快捷键恢复。"
+          "summary": "真实InputBar隔离Chromium假桥验证：真实Meta/Control keydown中断录音，window blur后在window capture吞掉keyup，focus返回时textarea仍为activeElement，普通Enter可正常提交原转写；既有组合键防误发/Shift换行/IME及四输入区场景通过。未激活真实麦克风或构建共享客户端。"
         },
         "acceptanceCriteria": [
-          "空闲无文字/引用/附件时显示白色波形按钮；运行停止及附件发送保持原语义。",
-          "临时composer录音不覆盖research/Fn注册；单一capture，trusted主帧/前台/窗口生命周期检查；结束后只按当前注册恢复Fn。",
-          "受控草稿接收累计partial/final，不重复追加、不自动发送；真实level事件驱动左侧波形停止胶囊。",
-          "按键、编辑器失焦、鼠标停止、隐藏或卸载立即撤销结果并保留文字；首次非IME Enter不误发，IME和其它键维持原行为；快速开始/取消/晚回调不能覆盖后续输入。"
+          "window blur仅清除interruptedInput及待执行caret；系统丢失修饰键keyup后返回窗口，普通Enter不被旧手势拦截。",
+          "窗口监听不调用stop/cancel，不改变main权限面板授权宽限；编辑器DOM blur和其它录音终止行为保持。",
+          "输入会话dispose移除window blur监听；既有防误发、Shift换行、IME与受控草稿行为通过回归。"
         ],
         "risks": [
-          "未激活真实麦克风、未验证OS首次权限提示/设备端识别，未构建或替换共享客户端；需父任务集成构建与真实客户端验收。",
-          "既有notes-composer安装重入测试在canonical main3542及feature均报ConversationRoot签名缺失；同名基线失败已保存known-notes-baseline.log，未混入Notes生产修改。",
-          "隔离fixture中既有DshChipCell内联TTF资源警告单独记录；实际模型/权限插件控制器未在该聚焦fixture运行。"
+          "浏览器仅模拟窗口blur/focus及丢失keyup，未激活真实麦克风或OS权限面板，原生验收由父任务集成后执行。"
         ],
-        "generatedAt": "2026-10-28T06:45:16.448Z"
-      },
-      "merged": {
-        "mergeCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-        "verificationCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-            "completedAt": "2026-10-28T06:46:38.239Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-            "completedAt": "2026-10-28T06:46:38.239Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-            "completedAt": "2026-10-28T06:46:38.239Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-            "completedAt": "2026-10-28T06:46:38.239Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-            "completedAt": "2026-10-28T06:46:38.239Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-            "completedAt": "2026-10-28T06:46:38.239Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-            "completedAt": "2026-10-28T06:46:38.239Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "f6b6c003d1db94805b3963fa1f0e176af2ba309e",
-            "completedAt": "2026-10-28T06:46:38.239Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-28T06:46:38.239Z"
+        "generatedAt": "2026-10-28T07:12:45.272Z"
       }
     }
   ],
