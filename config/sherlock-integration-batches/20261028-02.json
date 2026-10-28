@@ -158,6 +158,87 @@
           "系统移除或禁用辅助服务时需要重新安装修复，自动启动不会弹出授权"
         ],
         "generatedAt": "2026-10-28T05:40:48.603701Z"
+      },
+      "merged": {
+        "mergeCommit": "9116de39301a9be9351144361b4fcfc805a9e5d9",
+        "verificationCommit": "9116de39301a9be9351144361b4fcfc805a9e5d9",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
+            "verifiedCommit": "9116de39301a9be9351144361b4fcfc805a9e5d9",
+            "completedAt": "2026-10-28T05:41:04.084Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9116de39301a9be9351144361b4fcfc805a9e5d9",
+            "completedAt": "2026-10-28T05:41:04.084Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/memory-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
+            "verifiedCommit": "9116de39301a9be9351144361b4fcfc805a9e5d9",
+            "completedAt": "2026-10-28T05:41:04.084Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/plugin-back-sticky-browser.test.js",
+              "test/integration-menu-layout.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/integration-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
+            "verifiedCommit": "9116de39301a9be9351144361b4fcfc805a9e5d9",
+            "completedAt": "2026-10-28T05:41:04.084Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "9116de39301a9be9351144361b4fcfc805a9e5d9",
+            "completedAt": "2026-10-28T05:41:04.084Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-28T05:41:04.084Z"
       }
     },
     {
