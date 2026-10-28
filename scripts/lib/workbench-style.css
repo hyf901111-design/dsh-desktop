@@ -23,10 +23,11 @@ body [data-ework-grid] .odyssey-generation-surface[data-workbench-drag-handle]{c
 body [data-ework-grid][data-grid-operation=move] [data-grid-active] .odyssey-generation-surface{cursor:grabbing}
 /* The current theme is one compact picker; its menu shares Arrange's rows/material. */
 body [data-ework-toolbar]:has(.ew-workbench-mode-slot){width:max-content!important}
-.ew-workbench-mode-slot{display:flex;align-items:center;gap:6px;box-sizing:border-box;flex:0 0 62px;width:62px;height:34px;padding-left:5px}
+.ew-workbench-mode-slot{display:flex;align-items:center;gap:6px;box-sizing:border-box;flex:0 0 70px;width:70px;height:34px;padding-left:5px}
 .ew-workbench-mode-divider{flex:none;width:1px;height:22px;background:#0000001f}
-body .ew-workbench-mode-slot>[data-workbench-theme-toggle]{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;flex:none;width:44px;height:34px;padding:0;border:0;border-radius:7px;background:transparent;color:#747780;cursor:pointer}
-body .ew-workbench-mode-slot>[data-workbench-theme-toggle]:is(:hover,[aria-expanded=true]){background:#8882}
+body .ew-workbench-mode-slot>[data-workbench-theme-toggle]{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;flex:none;box-sizing:border-box;width:56px;height:34px;padding:0 10px;border:0;border-radius:8px;background:transparent!important;color:#747780;cursor:pointer}
+body .ew-workbench-mode-slot>[data-workbench-theme-toggle]>svg{width:10px;height:10px;flex:none}
+body .ew-workbench-mode-slot>[data-workbench-theme-toggle]:hover{background:#8882!important}
 body .ew-workbench-mode-slot>[data-workbench-theme-toggle]:focus-visible{outline:2px solid #139dff;outline-offset:-2px}
 body .ew-workbench-mode-icon{display:block;flex:none;width:20px;height:20px;background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
 /* The shared menu grows its second span; here that span is the fixed icon column. */
@@ -86,13 +87,7 @@ body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] 
 
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] :is(.ew-youtube-preset,.ew-iframe-preset){--youtube-control:var(--grid-control)!important;--iframe-control:var(--grid-control)!important}
 
-/* OpenTerminal keeps board controls dark; portal menus use the shared app material. */
-body:has([data-research-canvas][data-workbench-style=openterminal]) [data-ework-toolbar][data-research-global-toolbar]{background:#242424!important;border-color:#404040!important}
-body:has([data-research-canvas][data-workbench-style=openterminal]) :is([data-ework-toolbar]>button,[data-ework-toolbar]>.rScV5Q_globalToolSlot>button,[data-ework-toolbar]>.ew-arrange-tool>button){color:#f1f1f3!important}
-body:has([data-research-canvas][data-workbench-style=openterminal]) :is([data-ework-toolbar]>button img,[data-ework-toolbar]>.rScV5Q_globalToolSlot>button img){filter:brightness(0) invert(1)!important}
-body:has([data-research-canvas][data-workbench-style=openterminal]) .ew-workbench-mode-slot>[data-workbench-theme-toggle]{color:#ddd!important}
-body:has([data-research-canvas][data-workbench-style=openterminal]) .ew-workbench-mode-divider{background:#ffffff26!important}
-body:has([data-research-canvas][data-workbench-style=openterminal]) [data-workbench-notice]{background:#292a2d!important;color:#f0f0f2!important;border-color:#ffffff22!important}
+/* OpenTerminal styles the board; global toolbar and portal menus retain the app appearance. */
 body [data-research-canvas][data-workbench-style=openterminal] :is(.odyssey-creation-planning-card,.odyssey-generation-surface){--generation-bg:#131315!important;--generation-title:#f5f5f5!important;--generation-phase:#dbdbdb!important;--generation-detail:#b0b0b0!important;--generation-icon:#bdbdbd!important;--generation-time:#b3bcc4!important;--generation-button:#242428!important;--generation-border:#696969!important;--generation-action-icon:#ccc!important}
 body [data-research-canvas][data-workbench-style=openterminal] [data-research-node-id][data-research-generation-state]:not([data-research-generation-state=completed]):not([data-research-generation-state=draft]):is([data-research-generation-empty],:has(.odyssey-generation-surface)){border-width:0!important;border-radius:8px!important}
 
