@@ -18,7 +18,7 @@ beforeAll(async()=>{
  const factories=new Map();window.__ModuleLoader__={load:d=>factories.set(d.id,d.factory)};new Function(${JSON.stringify(source)})();class Service{};const noop=()=>null,primitives=new Proxy({},{get:()=>noop});
  const library=factories.get('@deepseek-ai/dsh-client-ui-conversation')(id=>id==='react'?React:id==='react/jsx-runtime'?JSX:id==='react-dom'?DOM:id==='@deepseek-ai/cordis'?{Service}:primitives);
  createRoot(document.querySelector('#portals')).render(React.createElement(library.__NoteViews,{sessionId:'inline-result',active:true}));
- window.calls=[];window.jobs={};window.replies=[];const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{owner:'result-fixture',saved:window.saved,draft:window.pendingDraft};if(method==='save'){if(window.failSaves)throw Error('合成保存确认失败');window.pendingDraft=undefined;window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}}if(method==='component-data'&&input.action==='bind-generated'&&window.holdBinding)return new Promise(resolve=>window.finishBinding=resolve);if(method==='generate')return new Promise((resolve,reject)=>window.jobs[input.requestId]={input,resolve,reject});if(method==='library-list')return[];if(method==='capability-reply')window.replies.push(input);return{}},draft:async input=>{window.pendingDraft={...input.content,baseRevision:input.revision,clientId:input.clientId,updatedAt:Date.now()}}};window.proposalDraft=()=>{if(!window.pendingDraft)return[];const doc=new Y.Doc;Y.applyUpdate(doc,Uint8Array.from(atob(window.pendingDraft.yjs),c=>c.charCodeAt(0)));return [...doc.getMap('note-inline-proposals').values()]};
+ window.calls=[];window.jobs={};window.replies=[];const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{owner:'result-fixture',saved:window.saved,draft:window.pendingDraft};if(method==='save'){if(window.failSaves)throw Error('合成保存确认失败');window.pendingDraft=undefined;window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}}if(method==='component-data'&&input.action==='bind-generated'&&window.holdBinding)return new Promise(resolve=>window.finishBinding=resolve);if(method==='generate')return new Promise((resolve,reject)=>window.jobs[input.requestId]={input,resolve,reject});if(method==='library-list')return[];if(method==='capability-reply'){window.replies.push(input);if(window.holdPlaceholder&&input.effect?.state==='placeholder')return new Promise(resolve=>window.releasePlaceholder=resolve)}return{}},draft:async input=>{window.pendingDraft={...input.content,baseRevision:input.revision,clientId:input.clientId,updatedAt:Date.now()}}};window.proposalDraft=()=>{if(!window.pendingDraft)return[];const doc=new Y.Doc;Y.applyUpdate(doc,Uint8Array.from(atob(window.pendingDraft.yjs),c=>c.charCodeAt(0)));return [...doc.getMap('note-inline-proposals').values()]};
  const host=new WorkspaceSurfaceHost(document);let mounted=mountNotes(document,bridge,host);window.fixture={flush:()=>mounted.flushCurrent(),reopen:()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)}};
  `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor;window.noteDoc=doc; const slashMenu = useMemo')}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
@@ -41,6 +41,17 @@ async function generate(page:any,result:any,prompt='写一段市场分析文字'
  await launch(page,prompt)
  await page.evaluate((result:any)=>{const w=window as any;w.editor.updateBlock('after',{content:'用户后来补写的市场观察，必须保留'});(Object.values(w.jobs)[0] as any).resolve(result)},result)
 }
+async function childCapability(page:any,parent:any,id:string,prompt:string){
+ const previous=await page.evaluate(()=>Object.keys((window as any).jobs))
+ await page.evaluate(({parent,id,prompt}:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{sessionId:'inline-result',generationId:parent.requestId,requestId:id,context:{documentId:parent.insertionAnchor.documentId},action:'notes.components.create',args:{prompt}}})),{parent,id,prompt})
+ await expect.poll(()=>page.evaluate((previous:string[])=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='component'&&!previous.includes(job.input.requestId)).length,previous)).toBe(1)
+ return page.evaluate((previous:string[])=>(Object.values((window as any).jobs).find((job:any)=>job.input.entryPoint==='component'&&!previous.includes(job.input.requestId)) as any).input,previous)
+}
+async function capabilityReceipt(page:any,id:string){
+ await expect.poll(()=>page.evaluate((id:string)=>(window as any).replies.some((reply:any)=>reply.requestId===id&&reply.result),id)).toBe(true)
+ return page.evaluate((id:string)=>({requestId:id,capability:'notes.components.create',...(window as any).replies.find((reply:any)=>reply.requestId===id&&reply.result).result}),id)
+}
+const resultTable={id:'retry-table',kind:'generated-container',noteLibrary:true,title:'合成重试表',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'合成重试表',columns:['项目','值'],rows:[['甲',0],['乙',-2]]}}
 it('undoes only this generated result and preserves the user market paragraph and subsequent edits',async()=>{
  const f=await open();try{
   await generate(f.page,{kind:'text',markdown:'本次生成的新正文。'})
@@ -165,3 +176,106 @@ it('keeps the original prompt and a truthful error when all capabilities fail wi
   await expect.poll(()=>f.page.locator('.en-space-ai-message').innerText()).toContain('目标组件已删除');expect(await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).inputValue()).toBe('在这里续写市场观察');expect(await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).count()).toBe(0);expect(await f.page.locator('.en-inline-ai-pending').count()).toBe(0);expect(await f.page.locator('.en-document').innerText()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
+
+it('keeps a real failed child as an error and retries its unchanged slot without duplicating a placeholder',async()=>{
+ const f=await open();try{
+  const prior={id:'prior-chart',kind:'generated-container',noteLibrary:true,title:'已有图表',containerSpec:{version:1,type:'chart',variant:'bar',title:'已有图表',labels:['原值'],series:[{name:'已有',values:[5]}]}}
+  await f.page.evaluate((prior:any)=>(window as any).editor.insertBlocks([{id:'prior-chart-block',type:'research',props:{payload:JSON.stringify(prior)}}],'before','after'),prior)
+  const prompt='创建表格，甲为0，乙为-2';await launch(f.page,prompt);const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input)
+  const child=await childCapability(f.page,parent,'failed-child','创建一个用户数据表格，甲=0、乙=-2')
+  const slot=await f.page.evaluate(()=>{const w=window as any;w.editor.updateBlock('after',{content:'用户生成期间补写的市场段落'});const block=w.editor.getBlock('prior-chart-block'),node=JSON.parse(block.props.payload);w.editor.updateBlock(block.id,{props:{payload:JSON.stringify({...node,title:'用户手动修改的已有图表'})}});return w.editor.document.find((b:any)=>b.type==='research'&&b.id!=='prior-chart-block').id})
+  await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('合成子任务失败：图表契约无效')),child.requestId);const failed=await capabilityReceipt(f.page,'failed-child');expect(failed.status).toBe('failed')
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'已完成组件生成',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt:failed})
+  await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).waitFor();expect(await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).inputValue()).toBe(prompt);expect(await f.page.locator('.en-space-ai-message').innerText()).toContain('图表契约无效');expect(await f.page.locator('.en-space-ai-result-actions,.en-inline-ai-pending').count()).toBe(0)
+  expect(await f.page.evaluate((id:string)=>JSON.parse((window as any).editor.getBlock(id).props.payload).generationStatus,slot)).toBe('failed')
+  await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter');await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').length)).toBe(2)
+  const retry=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').at(-1) as any).input),retryChild=await childCapability(f.page,retry,'retry-child','重新创建表格，使用甲0乙-2的原始数据')
+  expect(await f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='research').map((b:any)=>b.id))).toEqual(['prior-chart-block',slot])
+  await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:retryChild.requestId,node:resultTable});const success=await capabilityReceipt(f.page,'retry-child');expect(success.status).toBe('succeeded')
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'表格已完成',capabilityReceipts:[receipt]}),{id:retry.requestId,receipt:success});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click()
+  expect(await f.page.evaluate((id:string)=>JSON.parse((window as any).editor.getBlock(id).props.payload).containerSpec.rows,slot)).toEqual([['甲',0],['乙',-2]])
+  const recovered=await f.page.evaluate((id:string)=>JSON.parse((window as any).editor.getBlock(id).props.payload),slot);expect(recovered.generationStatus).toBe('completed');expect(recovered.generationError).toBeUndefined();expect(recovered.noteDraft).toBeUndefined()
+  expect(await f.page.evaluate(()=>JSON.parse((window as any).editor.getBlock('prior-chart-block').props.payload).title)).toBe('用户手动修改的已有图表');expect(await f.page.locator('.bn-editor').innerText()).toContain('用户生成期间补写的市场段落');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+
+it('counts only the real successful artifact in mixed child outcomes and preserves it during failed-slot retry',async()=>{
+ const f=await open();try{
+  const prompt='创建两张用户数据表';await launch(f.page,prompt);const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input),first=await childCapability(f.page,parent,'mixed-success','创建第一张表')
+  await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:first.requestId,node:{...resultTable,title:'第一张已完成表'}});const success=await capabilityReceipt(f.page,'mixed-success')
+  const second=await childCapability(f.page,parent,'mixed-failure','创建第二张表');await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('合成第二张表失败')),second.requestId);const failed=await capabilityReceipt(f.page,'mixed-failure')
+  const slots=await f.page.evaluate(()=>{const w=window as any;w.editor.updateBlock('after',{content:'用户保留的混合结果后段'});return w.editor.document.filter((b:any)=>b.type==='research').map((b:any)=>({id:b.id,status:JSON.parse(b.props.payload).generationStatus}))})
+  await f.page.evaluate(({id,receipts}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'两张表已生成',capabilityReceipts:receipts}),{id:parent.requestId,receipts:[success,failed]})
+  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();expect(await f.page.locator('.en-space-ai-summary').innerText()).toContain('1个组件');expect(await f.page.locator('.en-space-ai-summary').innerText()).not.toContain('2个组件');expect(await f.page.locator('.en-space-ai-summary').innerText()).toMatch(/未完成|失败/)
+  const completed=slots.find((slot:any)=>slot.status==='completed').id,bad=slots.find((slot:any)=>slot.status==='failed').id
+  expect(await f.page.locator('.bn-block-outer.en-inline-ai-pending:has(.en-research)').count()).toBe(1);expect(await f.page.locator('.bn-block-outer[data-id="'+bad+'"].en-inline-ai-pending').count()).toBe(0)
+  await f.page.locator('.en-space-ai').press('Escape');await f.page.evaluate(()=>{const e=(window as any).editor;e.focus();e.setTextCursorPosition('anchor','start')});await f.page.keyboard.press('Space');expect(await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).inputValue()).toBe(prompt)
+  await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter');await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').length)).toBe(2)
+  const retry=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').at(-1) as any).input),child=await childCapability(f.page,retry,'mixed-retry','重试第二张未完成表')
+  expect(await f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='research').length)).toBe(2)
+  await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:child.requestId,node:resultTable});const retried=await capabilityReceipt(f.page,'mixed-retry');await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'缺少的表已完成',capabilityReceipts:[receipt]}),{id:retry.requestId,receipt:retried});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click()
+  await f.page.locator('.bn-block-outer[data-id="'+completed+'"] .bn-block-content').click();await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0)
+  expect(await f.page.evaluate((id:string)=>!!(window as any).editor.getBlock(id),completed)).toBe(false);expect(await f.page.evaluate((id:string)=>JSON.parse((window as any).editor.getBlock(id).props.payload).containerSpec.rows,bad)).toEqual([['甲',0],['乙',-2]]);expect(await f.page.locator('.bn-editor').innerText()).toContain('用户保留的混合结果后段');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+
+it('restores a persisted old false-ready proposal as the actual failed input without clearing its history or card',async()=>{
+ const f=await open();try{
+  const prompt='创建这张失败后仍可重试的图';await launch(f.page,prompt);const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input),child=await childCapability(f.page,parent,'persisted-failure','创建原始图表')
+  await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('合成持久化失败：未返回有效图表')),child.requestId);const failed=await capabilityReceipt(f.page,'persisted-failure')
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'图表已完成',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt:failed});await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).waitFor()
+  const before=await f.page.evaluate(async()=>{const w=window as any,map=w.noteDoc.getMap('note-inline-proposals'),value=[...map.values()][0] as any;map.set(value.id,{...value,state:'ready',summary:'已生成1个组件',error:undefined});await w.fixture.flush();return{id:value.id,blocks:JSON.stringify(w.editor.document)}})
+  await f.page.evaluate(()=>{const w=window as any;w.oldEditor=w.editor;w.fixture.reopen()});await expect.poll(()=>f.page.evaluate(()=>{const w=window as any;return w.editor!==w.oldEditor})).toBe(true)
+  expect(await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).inputValue()).toBe(prompt);expect(await f.page.locator('.en-space-ai-message').innerText()).toContain('未返回有效图表');expect(await f.page.locator('.en-space-ai-result-actions,.en-inline-ai-pending').count()).toBe(0)
+  expect(await f.page.evaluate(()=>JSON.stringify((window as any).editor.document))).toBe(before.blocks);expect(await f.page.evaluate((id:string)=>(window as any).noteDoc.getMap('note-inline-proposals').has(id),before.id)).toBe(true)
+  const originalSlot=await f.page.evaluate(()=>(window as any).editor.document.find((b:any)=>b.type==='research').id);await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter');await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').length)).toBe(2)
+  const retry=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').at(-1) as any).input),retryChild=await childCapability(f.page,retry,'persisted-retry','重新创建原始有效图表')
+  expect(await f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='research').map((b:any)=>b.id))).toEqual([originalSlot])
+  await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:retryChild.requestId,node:resultTable});const success=await capabilityReceipt(f.page,'persisted-retry');await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'有效结果已完成',capabilityReceipts:[receipt]}),{id:retry.requestId,receipt:success});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click()
+  const recovered=await f.page.evaluate((id:string)=>JSON.parse((window as any).editor.getBlock(id).props.payload),originalSlot);expect(recovered.generationStatus).toBe('completed');expect(recovered.generationError).toBeUndefined();expect(recovered.noteDraft).toBeUndefined();expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+
+it('does not reuse or overwrite a failed slot that the user independently edited',async()=>{
+ const f=await open();try{
+  const prompt='创建表格并保留人工改过的失败卡';await launch(f.page,prompt);const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input),child=await childCapability(f.page,parent,'edited-failure','创建表格')
+  await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('合成人工修改保护失败')),child.requestId);const failed=await capabilityReceipt(f.page,'edited-failure');await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'已处理',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt:failed});await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).waitFor()
+  const old=await f.page.evaluate(()=>{const w=window as any,block=w.editor.document.find((b:any)=>b.type==='research'),node=JSON.parse(block.props.payload),payload=JSON.stringify({...node,title:'人工保留的独立失败卡',containerPrompt:'用户自己的新需求'});w.editor.updateBlock(block.id,{props:{payload}});w.editor.updateBlock('after',{content:'用户独立保留的正文'});return{id:block.id,payload}})
+  await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter');await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').length)).toBe(2)
+  const retry=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').at(-1) as any).input),retried=await childCapability(f.page,retry,'edited-retry','新建一次表格')
+  expect(await f.page.evaluate((id:string)=>(window as any).editor.getBlock(id).props.payload,old.id)).toBe(old.payload);expect(await f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='research').length)).toBe(2)
+  await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:retried.requestId,node:resultTable});const receipt=await capabilityReceipt(f.page,'edited-retry');await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'本次新表已完成',capabilityReceipts:[receipt]}),{id:retry.requestId,receipt})
+  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();expect(await f.page.evaluate((id:string)=>(window as any).editor.getBlock(id).props.payload,old.id)).toBe(old.payload);expect(await f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='research').length)).toBe(1);expect(await f.page.locator('.bn-editor').innerText()).toContain('用户独立保留的正文');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+
+it('rechecks failed-slot ownership after the real asynchronous placeholder report before starting retry',async()=>{
+ const f=await open();try{
+  await launch(f.page,'重试时保护原位卡片');const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input),child=await childCapability(f.page,parent,'race-failure','创建表格')
+  await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('合成可重试失败')),child.requestId);const failed=await capabilityReceipt(f.page,'race-failure');await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'已处理',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt:failed});await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).waitFor()
+  await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter');await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').length)).toBe(2)
+  const retry=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').at(-1) as any).input)
+  await f.page.evaluate((parent:any)=>{const w=window as any;w.holdPlaceholder=true;document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{sessionId:'inline-result',generationId:parent.requestId,requestId:'race-retry',context:{documentId:parent.insertionAnchor.documentId},action:'notes.components.create',args:{prompt:'继续创建表格'}}}))},retry)
+  await expect.poll(()=>f.page.evaluate(()=>typeof(window as any).releasePlaceholder)).toBe('function')
+  const changed=await f.page.evaluate(()=>{const w=window as any,block=w.editor.document.find((b:any)=>b.type==='research'),node=JSON.parse(block.props.payload),payload=JSON.stringify({...node,title:'等待报告时用户改过的卡片',containerPrompt:'用户自己的新内容'});w.editor.updateBlock(block.id,{props:{payload}});w.releasePlaceholder();return{id:block.id,payload}})
+  const receipt=await capabilityReceipt(f.page,'race-retry');expect(receipt.status).toBe('failed');expect(receipt.message).toContain('较新内容已保留');expect(await f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='component').length)).toBe(1)
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',requiresReply:true,capabilitySummary:receipt.message,capabilityReceipts:[receipt]}),{id:retry.requestId,receipt})
+  await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).waitFor();expect(await f.page.evaluate((id:string)=>(window as any).editor.getBlock(id).props.payload,changed.id)).toBe(changed.payload);expect(await f.page.locator('.en-space-ai-result-actions,.en-inline-ai-pending').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+
+it('does not attribute a native card retry to an inline request still waiting to claim the failed slot',async()=>{
+ const f=await open();try{
+  await launch(f.page,'保留用户自己启动的卡片任务');const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input),child=await childCapability(f.page,parent,'native-race-failure','创建表格')
+  await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('合成可通过卡片重试的失败')),child.requestId);const failed=await capabilityReceipt(f.page,'native-race-failure');await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'已处理',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt:failed});await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).waitFor()
+  await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter');await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').length)).toBe(2)
+  const retry=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').at(-1) as any).input)
+  await f.page.evaluate((parent:any)=>{const w=window as any;w.holdPlaceholder=true;document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{sessionId:'inline-result',generationId:parent.requestId,requestId:'native-race-inline',context:{documentId:parent.insertionAnchor.documentId},action:'notes.components.create',args:{prompt:'由行内框重试表格'}}}))},retry)
+  await expect.poll(()=>f.page.evaluate(()=>typeof(window as any).releasePlaceholder)).toBe('function');await f.page.locator('.en-creation-draft').getByRole('button',{name:'创建',exact:true}).click()
+  await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='component').length)).toBe(2);const native=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='component').at(-1) as any).input)
+  await f.page.evaluate(()=>(window as any).releasePlaceholder());const declined=await capabilityReceipt(f.page,'native-race-inline');expect(declined.status).toBe('failed')
+  await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:native.requestId,node:resultTable});await expect.poll(()=>f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return JSON.parse(block.props.payload).containerSpec?.rows})).toEqual([['甲',0],['乙',-2]])
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',requiresReply:true,capabilitySummary:receipt.message,capabilityReceipts:[receipt]}),{id:retry.requestId,receipt:declined})
+  await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).waitFor();expect(await f.page.locator('.en-space-ai-result-actions,.en-inline-ai-pending').count()).toBe(0);expect(await f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='research').length)).toBe(1);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
