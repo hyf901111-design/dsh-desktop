@@ -50,7 +50,9 @@ export function patchNoteAssistantDestination(source) {
  source=source.slice(0,start)+next+source.slice(end)
  const restoreTag='/* EWORK_GRID_RESTORE ',restoreStart=source.indexOf(restoreTag)
  if(restoreStart>=0){
-  const restoreEnd=source.lastIndexOf(' */'),changes=JSON.parse(source.slice(restoreStart+restoreTag.length,restoreEnd))
+  const restoreEnd=source.indexOf(' */',restoreStart+restoreTag.length)
+  if(restoreEnd<0)throw Error('工作台恢复记录不完整。')
+  const changes=JSON.parse(source.slice(restoreStart+restoreTag.length,restoreEnd))
   const entries=changes.filter(([,replacement])=>replacement===old.trimEnd())
   if(entries.length!==1)throw Error('无法同步助手回复的工作台恢复记录。')
   entries[0][0]=noteAssistantDestinationFunction(entries[0][0]).trimEnd();entries[0][1]=next.trimEnd()
