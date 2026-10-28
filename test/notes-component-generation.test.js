@@ -1,3 +1,5 @@
+import {createAssistantMessage} from '@deepseek-ai/dsh-llm'
+import {readFileSync} from 'node:fs'
 import {expect,it,vi} from 'vitest'
 import {createSubagentAdapter,ResearchTaskRuntime,buildResearchTaskPrompt} from '../packages/dsh-research-task-runtime/index.js'
 import {noteKrakenQuoteGuidance} from '../packages/dsh-research-task-runtime/notes-kraken-source.js'
@@ -185,4 +187,44 @@ it('propagates cancellation to the actual child and never returns a late compone
  const generate=await loadGenerate(),pending=generate(ctx,{...noteInput,document:'',references:{scope:'none',components:[]}},controller.signal)
  await vi.waitFor(()=>expect(ctx.subagents.start).toHaveBeenCalledOnce());controller.abort()
  await expect(pending).rejects.toMatchObject({name:'AbortError'});expect(ctx.run.dispose).toHaveBeenCalledOnce()
+})
+
+const capturedCharts=JSON.parse(readFileSync(new URL('./fixtures/notes-real-chart-missing-variant.json',import.meta.url),'utf8'))
+const chartRequest='请在当前插入位置创建一个折线图组件，标题“原位图表验收”。仅用演示数据10月1日10、10月2日20、10月3日15，注明演示，不查行情，保留上下段落。'
+it('accepts captured native chart finals only by the exact host declared contract, preserving all business data',async()=>{
+ for(const index of [0,1,3]){
+  const raw=capturedCharts[index],ctx=context(raw),result=await(await loadGenerate())(ctx,{...noteInput,prompt:chartRequest,document:'',references:{scope:'none',components:[]}})
+  const data=readTemplateModel(result.node.containerSpec)?.data??result.node.containerSpec
+  expect(data).toEqual({...raw,variant:'line'});expect(ctx.subagents.start).toHaveBeenCalledOnce();expect(ctx.llm.stream).not.toHaveBeenCalled()
+  expect(ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('"variant":"line"')
+ }
+})
+it('does not erase the invalid empty unit in the captured native chart while recovering its discriminator',async()=>{
+ const ctx=context(capturedCharts[2])
+ await expect((await loadGenerate())(ctx,{...noteInput,prompt:chartRequest,document:'',references:{scope:'none',components:[]}})).rejects.toThrow('生成内容格式无效')
+ expect(capturedCharts[2].unit).toBe('')
+})
+
+function liveRepairContext(first,repaired){
+ const ctx=context(first),parent=ctx.agents.get('note-session'),child=ctx.run.localAgent,repairPrompts=[];let allowed=['web_search']
+ ctx.agents.get=id=>id===parent.id?parent:id===child.id?child:undefined
+ const append=(type,data)=>{const event={type,seq:child.session.events.length,time:Date.now(),data};child.session.events.push(event);ctx.emit(event)}
+ const message=value=>createAssistantMessage({content:[{type:'text',text:JSON.stringify(value)}],source:{provider:'fixture',model:'fixture'}})
+ append('turn/start',{turn:1});append('step/start',{turn:1,step:0});append('assistant/message',{turn:1,step:0,message:message(first)});append('step/end',{turn:1,step:0});append('turn/end',{turn:1,reason:{kind:'completed'}})
+ child.ctx={tools:{restrict(filter){const previous=allowed;allowed=filter.allow;return()=>{allowed=previous}}}}
+ child.whenIdle=()=>Promise.resolve();child.cancel=vi.fn()
+ child.followup=prompt=>{
+  if(allowed.length)throw Error('Repair unexpectedly has tools')
+  repairPrompts.push(prompt);append('turn/start',{turn:2});append('step/start',{turn:2,step:0});append('assistant/message',{turn:2,step:0,message:message(repaired)});append('step/end',{turn:2,step:0});append('turn/end',{turn:2,reason:{kind:'completed'}})
+ }
+ return {ctx,child,repairPrompts}
+}
+it('repairs the captured invalid-unit response in a second native turn of one child, keeping its validated result',async()=>{
+ const repaired=capturedCharts[3],final={...repaired,variant:'line'},f=liveRepairContext(capturedCharts[2],repaired),states=[]
+ const result=await(await loadGenerate())(f.ctx,{...noteInput,prompt:chartRequest,document:'',references:{scope:'none',components:[]}},undefined,state=>states.push(state))
+ expect(readTemplateModel(result.node.containerSpec)?.data??result.node.containerSpec).toEqual(final)
+ expect(f.ctx.subagents.start).toHaveBeenCalledOnce();expect(f.repairPrompts).toHaveLength(1)
+ expect(f.child.session.events.filter(event=>event.type==='turn/end').map(event=>event.data.turn)).toEqual([1,2])
+ expect(new Set(states.map(state=>state.componentTask?.childSessionId).filter(Boolean))).toEqual(new Set([f.child.id]))
+ expect(f.repairPrompts[0].content[0].text).toContain('本轮是无工具的内容修复阶段');expect(f.ctx.run.dispose).toHaveBeenCalledOnce()
 })

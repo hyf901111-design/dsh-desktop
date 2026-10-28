@@ -5,6 +5,7 @@ import {normalizeResearchWebUrl} from '../../../packages/dsh-research-task-runti
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import {useNoteComponentInteraction} from './component-interaction'
 import {NoteMenuIcon} from './menu-icon'
+import {noteGenerationError} from '../../shared/workspace-notes'
 
 /** A draft occupies the same note block throughout creation, retry and loading. */
 export function NoteCreationBlock({block,node,context}:any){
@@ -27,7 +28,7 @@ export function NoteCreationBlock({block,node,context}:any){
   <header className="en-research-header" draggable={editable&&!running}><NoteMenuIcon kind={link?'link':'sparkles'}/><strong>{link?t("添加链接"):t("智能组件")}</strong><button className="en-component-close" aria-label={t("移除笔记中的组件")} disabled={!editable} onClick={()=>{if(running)context.stopGeneration(block.id);context.editor.removeBlocks([block.id])}}><NoteMenuIcon kind="close"/></button></header>
   <div className="en-creation-draft rScV5Q_containerDraft" style={{height:size.height}} data-research-template-draft={link?'link':'smart'}>
    <textarea aria-label={link?t("输入链接"):t("描述要创建的组件内容")} placeholder={link?t("粘贴网页或文章链接…"):t("描述想创建的内容，例如：交互活动页、专业用户体验地图、月度趋势图或对比表格…")} inputMode={link?'url':'text'} maxLength={link?8192:8000} value={node.containerPrompt||''} disabled={!editable||running} onChange={event=>update(event.currentTarget.value)} onKeyDown={event=>{event.stopPropagation();if(event.key==='Enter'&&!event.shiftKey&&!event.altKey&&!event.nativeEvent.isComposing&&event.keyCode!==229){event.preventDefault();submit()}}}/>
-   {error||node.generationError||interrupted?<div className="en-component-error" role="alert">{t(error||node.generationError)||t("上次创建已中断，可调整需求后重试。")}</div>:null}
+   {error||node.generationError||interrupted?<div className="en-component-error" role="alert">{t(noteGenerationError(error||node.generationError))||t("上次创建已中断，可调整需求后重试。")}</div>:null}
    {node.generationDetail&&!running?<div className="en-creation-feedback" role="status">{node.generationDetail}</div>:null}
    <div className="rScV5Q_containerDraftFooter"><span>{running?t("正在创建组件…"):link?t("支持网页与文章链接"):t("Enter 创建 · Shift Enter 换行")}</span>{running?<button onClick={()=>context.stopGeneration(block.id)}>{t("停止")}</button>:<button onClick={submit} disabled={!editable||!node.containerPrompt?.trim()}>{link?t("添加链接"):t("创建")}</button>}</div>
   </div>

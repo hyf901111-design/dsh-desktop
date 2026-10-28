@@ -1,3 +1,4 @@
+import {noteGenerationError} from '../../shared/workspace-notes'
 import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import {capabilityReceiptText} from '../../../packages/dsh-research-task-runtime/client-capability-receipts.js'
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
@@ -515,7 +516,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           publishTask(requestId,'replied',{result})
           const completed=result.capabilityReceipts?.some(receipt=>receipt.capability==='notes.components.create'&&receipt.status==='succeeded')
           if(completed){setInlineDraft(undefined);inlinePrompt.current=''}
-          else setInlineDraft(value=>value?{...value,reply:result.markdown}:value)
+          else setInlineDraft(value=>value?{...value,reply:noteGenerationError(result.markdown)}:value)
         }else{
           if(result.kind==='component'&&result.targetBlockId)throw Error('行内 AI 不能替换其他组件，请选择组件后修改。')
           const blocks=result.kind==='component'?[{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}]:editor.tryParseMarkdownToBlocks(result.markdown)
@@ -566,7 +567,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       commitNativeDraft(admission)
     } catch (e) {
       if (!disposed.current && epoch.current === attempt) {
-        const message = (e as Error).name === 'AbortError' ? t("生成已停止，可调整需求后重试。") : (e as Error).message
+        const message = (e as Error).name === 'AbortError' ? t("生成已停止，可调整需求后重试。") : noteGenerationError(e)
         if (pending && currentGeneration()) editor.updateBlock(pending, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(pending).props.payload),generationStatus:'failed',generationError:message}) } })
         rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); if(inlineTarget)setInlineDraft(value=>value?{...value,error:message}:value);else setError(message)
       }

@@ -78,3 +78,11 @@ it('retains the host human source instruction for a retry and replaces it when t
  const changed='不要联网，仅使用我给的数据10'
  f.manager.start('a',changed);expect(f.calls.filter(call=>call.method==='generate')[2].input.sourceInstruction).toBe(changed)
 })
+
+it('returns a clean generation failure receipt while preserving the prompt and retry draft',async()=>{
+ const f=fixture(),done=f.manager.startAndWait('a','Create a'),request=f.calls.find(call=>call.method==='generate')
+ f.pending.get(request.input.requestId)!.reject(Error("Error invoking remote method 'notes:request': Error: 生成内容格式无效，自动恢复未完成。"))
+ const receipt=await done;expect(receipt).toMatchObject({status:'failed',message:'生成内容格式无效，自动恢复未完成。'})
+ expect(f.node('a')).toMatchObject({noteDraft:'smart',containerPrompt:'Create a',generationStatus:'failed',generationError:'生成内容格式无效，自动恢复未完成。'})
+ expect(f.manager.start('a','Create a')).toMatchObject({ok:true})
+})
