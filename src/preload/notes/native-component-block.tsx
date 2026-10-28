@@ -1,11 +1,9 @@
 import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React, {useEffect, useRef, useState} from 'react'
 import {financialWidgetSpec} from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js'
-import {NoteMenuIcon} from './menu-icon'
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import {useNoteComponentInteraction} from './component-interaction'
 import {useNotePresentation} from './component-presentation'
-import {NotePresentationControls} from './component-presentation-controls'
 
 /** Native research components are portalled here by the resident conversation renderer. */
 export function NativeComponentBlock({block,node,context,mode='component'}:any){
@@ -13,11 +11,15 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
  const host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),interaction=useNoteComponentInteraction(),{root,selected}=interaction
  useNotePresentation(root,node,context.dark)
  const [ready,setReady]=useState(false),[error,setError]=useState(''),[refresh,setRefresh]=useState(0)
- const [height,setHeight]=useState(Math.max(160,Math.min(2400,generation?220:(node.height||362)-42)))
- const size=useNoteComponentSize({block,node,editor:context.editor,root,naturalHeight:height}),renderKey=JSON.stringify({...node,noteSize:undefined,...node.kind==='web-link'?{sourceText:undefined}:{}})
+ const [height,setHeight]=useState(Math.max(160,Math.min(2400,generation?220:(node.height||362)-34)))
+ const size=useNoteComponentSize({block,node,editor:context.editor,root,naturalHeight:height})
+ const {interactionState:journal,...renderConfig}=node.config||{},renderKey=JSON.stringify({...node,config:Object.keys(renderConfig).length?renderConfig:undefined,noteSize:undefined,...node.kind==='web-link'?{sourceText:undefined}:{}})
+ const latestView=useRef({node,context,refresh,generation});latestView.current={node,context,refresh,generation}
+ const publishView=()=>{const current=latestView.current;document.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:instance.current,hostId:host.current?.id,headerId:instance.current+'-title',sessionId:current.context.sessionId,node:current.node,dark:current.context.dark,refresh:current.refresh,mode:current.generation?'generation':'component',readOnly:!current.context.editor?.isEditable}}))}
+ useEffect(()=>{if(ready)publishView()},[node,ready])
  useEffect(()=>{
   let attempts=0,live=true,timer:ReturnType<typeof setTimeout>|undefined;setReady(false);setError('')
-  const publish=()=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:instance.current,hostId:host.current?.id,headerId:instance.current+'-title',sessionId:context.sessionId,node,dark:context.dark,refresh,mode:generation?'generation':'component',readOnly:!context.editor?.isEditable}}))
+  const publish=publishView
   const load=async()=>{try{
    if(!generation&&node.kind!=='web-link')await context.bridge.request(node.noteReply?'reply-render':'component-render',{sessionId:context.sessionId,...node.noteReply?{text:node.excerpt}:{spec:node.containerSpec}})
    if(!live)return
@@ -62,6 +64,15 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
     if(JSON.stringify(previous)!==JSON.stringify(next))context.editor.updateBlock(block.id,{props:{payload:JSON.stringify(next)}})
    }
    if(value.action==='size'&&Number.isFinite(value.height))setHeight(Math.max(160,Math.min(2400,value.height)))
+   if(value.action==='interaction'){
+    const reply=(ok:boolean,message?:string,state?:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:instance.current,sessionId:context.sessionId,requestId:value.requestId,ok,message,state}}))
+    try{
+     if(!context.commitHtmlInteraction)throw Error(t('笔记交互保存不可用。'))
+     const state=await context.commitHtmlInteraction({blockId:block.id,nodeId:value.nodeId,html:value.html,version:value.version,event:value.event},()=>live)
+     if(live)reply(true,undefined,state)
+    }catch(error){if(live)reply(false,(error as Error).message)}
+    return
+   }
    if(value.action==='spec'){
     const reply=(ok:boolean,message?:string)=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:instance.current,sessionId:context.sessionId,requestId:value.requestId,ok,message}}))
     try{
@@ -88,13 +99,13 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
   <div id={instance.current+'-title'} hidden/>
   <div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>
   {!ready&&error?<div className="en-component-error" role="alert">{t(error)}</div>:null}
-  {selected&&context.editor?.isEditable?<><NotePresentationControls editor={context.editor} block={block} node={node}/><NoteComponentResizeHandles size={size}/></>:null}
+  {selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
  </section>
  return <section className="en-research en-native-component" ref={root} style={size.style} contentEditable={false} data-note-research-block={block.id} data-research-node-id={node.id} data-selected={selected||undefined} data-resizing={size.resizing||undefined} data-financial-theme={context.dark?'dark':'light'}>
-  <header className="en-research-header" draggable={!!context.editor?.isEditable}><div className="en-native-component-title" id={instance.current+'-title'}><strong>{node.title}</strong></div><button className="en-component-close" aria-label={t("移除笔记中的组件")} disabled={!context.editor?.isEditable} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button></header>
+  <header className="en-research-header ew-grid-header" draggable={!!context.editor?.isEditable}><div className="en-native-component-title" id={instance.current+'-title'}><strong>{node.title}</strong></div><button className="en-component-close" aria-label={t("移除笔记中的组件")} disabled={!context.editor?.isEditable} onClick={()=>context.editor.removeBlocks([block.id])}><span className="ew-grid-icon ew-grid-icon-close" aria-hidden="true"/></button></header>
   <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>{!ready?<div className="en-component-empty" role="status">{t(error)||t("正在读取组件…")}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label={t("选中组件并操作内容")} onClick={interaction.select}/>:null}</div>
   {error&&ready?<div className="en-component-error" role="alert">{t(error)}</div>:null}
-  {selected&&context.editor?.isEditable?<><NotePresentationControls editor={context.editor} block={block} node={node}/><NoteComponentResizeHandles size={size}/></>:null}
+  {selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
  </section>
 }
 

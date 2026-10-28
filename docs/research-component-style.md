@@ -1,5 +1,7 @@
 # 研究组件默认样式
 
+> 历史记录（2026-09-08）：本页保留下述旧客户端64px标题区等演进背景。当前对话/Research/笔记的外框、标题栏、控件、主题与状态以[研究看板组件实现合同](research-component-design-contract.md#当前模式与宿主外观)及实际宿主renderer为准；生成器不得继续把本页历史尺寸作为当前默认。
+
 按 2026-09-08 用户确认的参考图采用 [shadcn/ui Card](https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/card.tsx) 与 [Area Chart](https://ui.shadcn.com/charts/area) 的视觉规则：白色或 #171717 表面、细灰边框、圆角、清楚的标题与说明层次、24px 左右内边距、柔和蓝色主系列和约 0.4 透明度的面积填充。按数据选择图表类型，保留其他可辨识系列颜色。该规则替代此前的 Bklit 灰阶直角默认样式。
 
 HTML 与原生组件共用 `html-artifact.js` 的主题变量。将开源样例的视觉规则适配到现有离线 SVG、CSS、Canvas 渲染方式，不向沙盒引入联网 React/Recharts 依赖。金融蜡烛图与成交量等额外类型可参考 [Lightweight Charts](https://github.com/tradingview/lightweight-charts)，目前没有新增该依赖。

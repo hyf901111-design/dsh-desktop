@@ -22,7 +22,7 @@ export function canApplySuggestion(captured: { documentId: string; fingerprint: 
 }
 type NoteCapabilityResult = {capabilitySummary?:string;capabilityReceipts?:CapabilityReceipt[]}
 export type NoteDocumentResult = ({ kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & NoteCapabilityResult
-export type NoteAiResult = NoteDocumentResult | ({ kind: 'conversation'; markdown: string } & NoteCapabilityResult)
+export type NoteAiResult = NoteDocumentResult | ({ kind: 'conversation'; markdown: string;requiresReply?:boolean } & NoteCapabilityResult)
 export type NoteInsertionAnchor = {documentId:string;blockId:string;position:Record<string,any>}
 
 /** Electron's Notes transport wrapper is diagnostic detail, not a user error. */

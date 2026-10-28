@@ -144,3 +144,7 @@ it('forwards an inline insertion anchor through the existing capability loop and
   await expect(s.call('generate',{...input,requestId:'bad-position',insertionAnchor:{...insertionAnchor,position:null}})).rejects.toThrow('插入位置');expect(sent).toHaveLength(1)
  }finally{s.dispose()}
 })
+it('reads binding statuses from the Notes engine under read permission without routing to the Research engine',async()=>{
+ const rows=[{nodeId:'note-node',status:'error'}],request=vi.fn(async()=>rows),s=service(undefined,{canWrite:()=>false,componentData:{request}})
+ try{expect(await s.call('component-data-status')).toEqual({owner:'alice',rows});expect(request).toHaveBeenCalledWith('session',{action:'list'});s.deny();await expect(s.call('component-data-status')).rejects.toThrow();expect(request).toHaveBeenCalledOnce()}finally{s.dispose()}
+})

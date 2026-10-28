@@ -1,5 +1,12 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+  "已撤销本次生成，正在保存": "This AI result was undone. Saving…",
+  "已撤销可安全回退的内容；较新编辑已保留": "Safe changes were undone; newer edits were kept.",
+  "已停止，已保留本次生成内容": "Stopped. Generated content was kept.",
+  "生成已停止": "Generation stopped",
+  "撤销本次 AI 生成": "Undo this AI result",
+  "确认本次 AI 生成": "Accept this AI result",
+  "本次操作未完成，内容已保留": "This action is incomplete. Your content has been kept.",
   "正在工作…": "Working…",
   "行内 AI": "Inline AI",
   "行内 AI 需求": "Inline AI request",
@@ -599,7 +606,7 @@ export const NOTE_ENGLISH = {
 }
 export function noteUiText(value, locale = globalThis.document?.documentElement?.dataset?.odysseyLocale) {
  if(typeof value!=='string')return value
- if(locale==='en')return NOTE_ENGLISH[value]??value
+ if(locale==='en'){const pending=/^(已生成|已保留)(?:(\d+)项内容)?(?:、?(\d+)个组件)?(，部分未完成)?$/u.exec(value);if(pending&&(pending[2]||pending[3]))return(pending[1]==='已生成'?'Generated ':'Kept ')+[pending[2]?pending[2]+' content blocks':'',pending[3]?pending[3]+' components':''].filter(Boolean).join(' and ')+(pending[4]?'; some work is incomplete':'');return NOTE_ENGLISH[value]??value}
  // Exact presentation aliases keep saved checks and serialized UI keys
  // compatible. Never replace a substring in note text or an author's name.
  return {

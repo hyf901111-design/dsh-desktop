@@ -36,7 +36,9 @@ const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbe
 export function restoreResearchGridWorkbench(source){
   source=stripComponentPptxMode(source)
   const start=source.indexOf(begin);if(start<0)return source
-  const finish=source.indexOf(end,start),a=source.indexOf(meta,finish),b=source.lastIndexOf(' */')
+  // The writer escapes comment terminators inside JSON; stop at this record's
+  // own delimiter so later independent restore records remain intact.
+  const finish=source.indexOf(end,start),a=source.indexOf(meta,finish),b=source.indexOf(' */',a+meta.length)
   if(finish<0||a<0||b<0)throw Error('Incomplete workbench patch')
   const changes=JSON.parse(source.slice(a+meta.length,b))
   source=source.slice(0,a-1)+source.slice(b+3)

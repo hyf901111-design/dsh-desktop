@@ -1,4 +1,5 @@
 import {canvasHumanRequest} from './canvas-task-routing.js'
+import {COMPONENT_SURFACE_STYLE_RULES} from './design-policy.js'
 
 // Prompt assembly runs before the first claimed message is committed as
 // user/message. Include the authored inbox entry so the first model call sees
@@ -159,7 +160,7 @@ export function latestClientModeForAuthority(session){
  }
  return mode
 }
-export const CONVERSATION_COMPONENT_GUIDANCE='【对话内原生组件】主智能体可按用户问题判断组件是否更清楚；普通解释不强制建卡。用户明确要组件时直接交付已完成的完整 artifact 或原生 financial-widget spec。除非用户另有明确格式要求，先用简短自然的公开文字引出组件，再在对应的信息位置立即创建；保存成功后继续解释该组件或展开后续正文。多个组件按论述顺序逐个交付，各自的说明紧接在对应组件之后，不要等整篇回答结束后再集中创建；不要以占位符代替真实组件。面向用户的正文不展示工具名、requestId、manifest或协议标签；只依据真实成功回执说明已交付，创建失败时如实说明未完成。先顺序读取 client_capabilities 确认真实 mode 和 available 状态，不能把目录和依赖它的创建放在同一个并行工具批次。conversation 模式调用 client_action({requestId,capability:"conversation.components.create",arguments:{artifact,title?}})，仅由宿主校验保存，再依据真实 saved effect 与 ready manifest 说明完成。不默认启动子智能体，不接受 prompt/recipe 代生成，不创建隐藏画布。股票/ETF单标的行情与K线优先 financial-widget.quote，仅提交已由用户或实际工具确认的 symbols/code/market/name 和周期配置，不填价格或OHLC数组；未知代码先通过实际来源解析。场外基金必须走 financial_query 的 fund 能力，使用 fund/table/chart 等现有模板，保留净值日、报告期和来源，不能伪装为股票 quote。真实数据先实际取数，保留来源、单位、原始时点与缺失状态，不把保存时间写成获取时间。研究模式沿原研究画布流程；notes 模式沿 notes.components.create 等现有笔记能力，不能偷换创建目标。'
+export const CONVERSATION_COMPONENT_GUIDANCE=COMPONENT_SURFACE_STYLE_RULES+"\n"+'【对话内原生组件】主智能体可按用户问题判断组件是否更清楚；普通解释不强制建卡。用户明确要组件时直接交付已完成的完整 artifact 或原生 financial-widget spec。除非用户另有明确格式要求，先用简短自然的公开文字引出组件，再在对应的信息位置立即创建；保存成功后继续解释该组件或展开后续正文。多个组件按论述顺序逐个交付，各自的说明紧接在对应组件之后，不要等整篇回答结束后再集中创建；不要以占位符代替真实组件。面向用户的正文不展示工具名、requestId、manifest或协议标签；只依据真实成功回执说明已交付，创建失败时如实说明未完成。先顺序读取 client_capabilities 确认真实 mode 和 available 状态，不能把目录和依赖它的创建放在同一个并行工具批次。conversation 模式调用 client_action({requestId,capability:"conversation.components.create",arguments:{artifact,title?}})，仅由宿主校验保存，再依据真实 saved effect 与 ready manifest 说明完成。不默认启动子智能体，不接受 prompt/recipe 代生成，不创建隐藏画布。股票/ETF单标的行情与K线优先 financial-widget.quote，仅提交已由用户或实际工具确认的 symbols/code/market/name 和周期配置，不填价格或OHLC数组；未知代码先通过实际来源解析。场外基金必须走 financial_query 的 fund 能力，使用 fund/table/chart 等现有模板，保留净值日、报告期和来源，不能伪装为股票 quote。真实数据先实际取数，保留来源、单位、原始时点与缺失状态，不把保存时间写成获取时间。研究模式沿原研究画布流程；notes 模式沿 notes.components.create 等现有笔记能力，不能偷换创建目标。'
 const CATALOG_FIRST='裸组件请求尚无本轮真实模式：请先顺序调用 client_capabilities，再按实际模式提交完整组件；不能直接调用 research_workbench_create 创建隐藏画布。'
 export function registerConversationComponentsPolicy(ctx){
  const disposePrompt=ctx.systemPrompt.context({name:'sherlock:conversation-components',order:151,text:({agent})=>{

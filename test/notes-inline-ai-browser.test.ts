@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os'
 import {pathToFileURL} from 'node:url'
 import {build,type Plugin} from 'vite'
 import {resolveConfig} from 'electron-vite'
+const {generateNoteSuggestion}=createRequire(import.meta.url)('../packages/dsh-research-task-runtime/notes-ai.js')
 let browser:any,script='',syncOwners:string[]=[]
 const entry='\0notes-inline-ai-fixture',evidence=process.env.SHERLOCK_NOTES_INLINE_EVIDENCE,peerRoot=mkdtempSync(resolve(tmpdir(),'notes-y-prosemirror-peer-'))
 function packageRoot(name:string){
@@ -80,7 +81,7 @@ it('sends through the real generation bridge with a stable document/block anchor
   expect(input).toMatchObject({sessionId:'inline-note',entryPoint:'inline',mode:'write',insertionAnchor:{blockId:'anchor'},capabilityContext:{documentId:input.insertionAnchor.documentId}})
   await f.page.evaluate(()=>{const e=(window as any).editor;e.updateBlock('after',{content:'用户更新后段'});e.setTextCursorPosition('after','end')})
   await finish(f.page,{kind:'text',markdown:'### 来源核验\n\n保留**证据**与时间。'})
-  await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).not.toContain('anchor');await expect.poll(()=>f.page.locator('.bn-editor').evaluate((el:Element)=>el===document.activeElement)).toBe(true)
+  await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).not.toContain('anchor');await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();expect(await f.page.locator('.en-inline-ai-pending').count()).toBeGreaterThan(0)
   expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>[b.type,b.content?.map((s:any)=>s.text||'').join('')]))).toEqual([['paragraph','原有前段'],['heading','来源核验'],['paragraph','保留证据与时间。'],['paragraph','用户更新后段']])
   await f.page.evaluate(()=>(window as any).fixture.flush());await f.page.evaluate(()=>(window as any).fixture.reopen());await expect.poll(()=>f.page.locator('.bn-editor').textContent()).toContain('保留证据与时间。');expect(await f.page.locator('.bn-editor').textContent()).toContain('用户更新后段');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
@@ -180,7 +181,7 @@ it('creates a real component capability at the new note’s first paragraph and 
  const f=await open(1280,false,true);try{
   const id=await f.page.evaluate(()=>(window as any).editor.document[0].id);await cursor(f.page,id);await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).fill('插入一个行情组件');await f.page.keyboard.press('Enter');await expect.poll(()=>f.page.evaluate(()=>Object.keys((window as any).jobs).length)).toBe(1);const request=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input)
   await f.page.evaluate((request:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{sessionId:'inline-note',generationId:request.requestId,requestId:'new-note-component',context:{documentId:request.insertionAnchor.documentId},action:'notes.components.create',args:{prompt:'创建用户提供的行情表 A=2'}}})),request);await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).some((j:any)=>j.input.entryPoint==='component'))).toBe(true)
-  await f.page.evaluate(()=>(Object.values((window as any).jobs).find((j:any)=>j.input.entryPoint==='component') as any).resolve({kind:'component',node:{id:'fixture-first-component',kind:'generated-container',title:'用户行情',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'用户行情',columns:['项目','值'],rows:[['A',2]]}}}));await expect.poll(()=>f.page.evaluate(()=>(window as any).replies.find((r:any)=>r.requestId==='new-note-component'&&r.result)?.result.status)).toBe('succeeded');await finish(f.page,{kind:'conversation',markdown:'已创建。',capabilityReceipts:[{requestId:'new-note-component',capability:'notes.components.create',status:'succeeded'}]});await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0);await f.page.evaluate(()=>(window as any).fixture.flush());await f.page.evaluate(()=>(window as any).fixture.reopen());await expect.poll(()=>f.page.evaluate(()=>JSON.parse((window as any).editor.document.find((b:any)=>b.type==='research').props.payload).containerSpec.rows)).toEqual([['A',2]]);expect(f.errors).toEqual([])
+  await f.page.evaluate(()=>(Object.values((window as any).jobs).find((j:any)=>j.input.entryPoint==='component') as any).resolve({kind:'component',node:{id:'fixture-first-component',kind:'generated-container',title:'用户行情',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'用户行情',columns:['项目','值'],rows:[['A',2]]}}}));await expect.poll(()=>f.page.evaluate(()=>(window as any).replies.find((r:any)=>r.requestId==='new-note-component'&&r.result)?.result.status)).toBe('succeeded');await finish(f.page,{kind:'conversation',markdown:'已创建。',capabilityReceipts:[{requestId:'new-note-component',capability:'notes.components.create',status:'succeeded'}]});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0);await f.page.evaluate(()=>(window as any).fixture.flush());await f.page.evaluate(()=>(window as any).fixture.reopen());await expect.poll(()=>f.page.evaluate(()=>JSON.parse((window as any).editor.document.find((b:any)=>b.type==='research').props.payload).containerSpec.rows)).toEqual([['A',2]]);expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
 it('keeps new-note materialization out of undo and still rejects deletion followed by reuse of the initial block ID',async()=>{
@@ -204,5 +205,60 @@ it.each([false,true])('keeps the real paragraph color submenu and formatting too
   await f.page.locator('.bn-block-outer[data-id="after"] .bn-inline-content').click();await cursor(f.page,'after');await f.page.keyboard.press('Shift+End');await inspect('.bn-formatting-toolbar','format-toolbar')
   await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.bn-block-outer[data-id="before"]').hover();await f.page.getByRole('button',{name:'段落操作',exact:true}).click();await inspect('.en-block-menu','paragraph-menu')
   await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.en-document-scroll').evaluate((element:HTMLElement)=>element.scrollTop=60);await colors('color-menu-scrolled');expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe('保留行内需求');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it.each([{width:1280,dark:false},{width:620,dark:true}])('keeps the visible blank paragraph below long content and a tall component in view across repeated Space and Escape at $width px',async({width,dark})=>{
+ const f=await open(width,dark);try{
+  await f.page.evaluate(()=>{const e=(window as any).editor;e.replaceBlocks(e.document,[...Array.from({length:24},(_,i)=>({id:'long-'+i,type:'paragraph',content:'长笔记第'+(i+1)+'段：保留原有正文内容与阅读位置。'})),{id:'tall-chart',type:'research',props:{payload:JSON.stringify({id:'note-component-tall',kind:'generated-container',title:'长图表',noteLibrary:true,noteSize:{height:1400},containerSpec:{version:1,type:'chart',variant:'line',title:'长图表',labels:['一','二','三'],series:[{name:'演示',values:[10,20,15]}]}})}},{id:'deep-anchor',type:'paragraph'},{id:'deep-after',type:'paragraph',content:'保留图表下方后段'}])})
+  await cursor(f.page,'deep-anchor');await f.page.locator('.en-document-scroll').evaluate((root:HTMLElement)=>{const block=root.querySelector<HTMLElement>('[data-id="deep-anchor"] .bn-block-content')!;root.scrollTop+=block.getBoundingClientRect().top-root.getBoundingClientRect().top-380})
+  const snapshot=()=>f.page.evaluate(()=>{const root=document.querySelector<HTMLElement>('.en-document-scroll')!,block=root.querySelector<HTMLElement>('[data-id="deep-anchor"] .bn-block-content')!,box=document.querySelector<HTMLElement>('.en-space-ai'),input=box?.querySelector('textarea'),rect=(element:HTMLElement)=>{const r=element.getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right}};return{scrollTop:root.scrollTop,viewport:rect(root),anchor:rect(block),box:box?rect(box):null,input:input?rect(input):null,focused:input===document.activeElement}})
+  await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const before=await snapshot();expect(before.scrollTop).toBeGreaterThan(1200)
+  const captures:any[]=[]
+  for(let cycle=0;cycle<3;cycle++){
+   await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).waitFor();await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const opened=await snapshot();captures.push({cycle,opened});if(evidence){writeFileSync(resolve(evidence,`scroll-focus-${width}.json`),JSON.stringify({before,captures},null,2));await f.page.screenshot({path:resolve(evidence,`scroll-focus-${width}.png`)})}
+   expect.soft(Math.abs(opened.scrollTop-before.scrollTop),JSON.stringify({before,opened})).toBeLessThan(3);expect.soft(opened.box!.top).toBeGreaterThanOrEqual(opened.viewport.top);expect.soft(opened.box!.bottom).toBeLessThanOrEqual(opened.viewport.bottom);expect(opened.focused).toBe(true)
+   await f.page.keyboard.press('Escape');expect(await f.page.locator('.en-space-ai').count()).toBe(0)
+  }
+  expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it.each([{width:1280,dark:false},{width:620,dark:true}])('keeps a distant second blank paragraph in view when retargeting an unsubmitted inline draft without Escape at $width px',async({width,dark})=>{
+ const f=await open(width,dark);try{
+  await f.page.evaluate(()=>{const e=(window as any).editor;e.replaceBlocks(e.document,[{id:'first-anchor',type:'paragraph'},...Array.from({length:40},(_,i)=>({id:'between-'+i,type:'paragraph',content:'两处空白行之间的长笔记第'+(i+1)+'段：保留正文与阅读位置。'})),{id:'second-anchor',type:'paragraph'},{id:'second-tail',type:'paragraph',content:'保留第二处空白行后的正文'}])})
+  await cursor(f.page,'first-anchor');await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).fill('尚未提交的需求')
+  // A physical click moves the existing draft's caret to a distant paragraph.
+  // The same composer remains mounted when Space retargets it to this line.
+  await f.page.locator('.bn-block-outer[data-id="second-anchor"] .bn-inline-content').click()
+  await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  const before=await f.page.locator('.en-document-scroll').evaluate((root:HTMLElement)=>root.scrollTop);expect(before).toBeGreaterThan(1000)
+  await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).waitFor();await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  const after=await f.page.evaluate(()=>{const root=document.querySelector<HTMLElement>('.en-document-scroll')!,popup=document.querySelector<HTMLElement>('.en-space-ai')!,anchor=root.querySelector<HTMLElement>('[data-id="second-anchor"] .bn-block-content')!,input=popup.querySelector('textarea')!,viewport=root.getBoundingClientRect(),box=popup.getBoundingClientRect();return{scrollTop:root.scrollTop,viewport:{top:viewport.top,bottom:viewport.bottom},box:{top:box.top,bottom:box.bottom},anchorTop:anchor.getBoundingClientRect().top,focused:input===document.activeElement}})
+  expect.soft(Math.abs(after.scrollTop-before),JSON.stringify({before,after})).toBeLessThan(3);expect.soft(after.box.top).toBeGreaterThanOrEqual(after.viewport.top);expect.soft(after.box.bottom).toBeLessThanOrEqual(after.viewport.bottom);expect.soft(Math.abs(after.box.top-after.anchorTop)).toBeLessThan(2);expect(after.focused).toBe(true)
+  expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe('尚未提交的需求');expect(await f.page.evaluate(()=>Object.keys((window as any).jobs).length)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it('converts an ordinary public Markdown final through the real Notes parser, inserts rich blocks at the blank anchor, and reopens it',async()=>{
+ const f=await open();try{
+  await launch(f.page,'写一段文字');const input=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input)
+  const markdown='### 一点记录\n\n把今天的想法写下来，再迈出**下一步**。\n\n- 保留观察\n- 继续行动'
+  const ctx={apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'fixture',model:'fixture'},routable:true}}})}},llm:{stream:async function*(){yield{type:'text-delta',text:markdown};yield{type:'finish',reason:{kind:'stop'}}}}}
+  const result=await generateNoteSuggestion(ctx,{...input,clientContext:{documentId:input.insertionAnchor.documentId}})
+  await finish(f.page,result);await expect.poll(()=>f.page.locator('.bn-editor').textContent()).toContain('把今天的想法写下来')
+  expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.type))).toEqual(['paragraph','heading','paragraph','bulletListItem','bulletListItem','paragraph'])
+  expect(await f.page.locator('.bn-editor').textContent()).toContain('原有前段');expect(await f.page.locator('.bn-editor').textContent()).toContain('原有后段')
+  await f.page.evaluate(()=>(window as any).fixture.flush());await f.page.evaluate(()=>(window as any).fixture.reopen());await expect.poll(()=>f.page.locator('.bn-editor').textContent()).toContain('继续行动');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it('allows an inline request to update its explicitly referenced component under the original selection and payload guards',async()=>{
+ const f=await open();try{
+  const node={id:'note-component-existing',kind:'generated-container',title:'原表',containerSpec:{version:1,type:'table',title:'原表',columns:['值'],rows:[[1]]},noteSize:{width:320,height:200},generationStatus:'completed'}
+  await f.page.evaluate((node:any)=>{const w=window as any;w.editor.insertBlocks([{id:'selected-component',type:'research',props:{payload:JSON.stringify(node)}}],'after','before')},node)
+  await cursor(f.page,'anchor');await f.page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-reference-component',{detail:{sessionId:'inline-note',blockId:'selected-component'}})))
+  await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).fill('修改引用的表格，把值改为2，保留其余段落');await f.page.keyboard.press('Enter')
+  const request=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input);expect(request.context).toMatchObject({scope:'selection',components:[{blockId:'selected-component'}]})
+  await finish(f.page,{kind:'component',targetBlockId:'selected-component',node:{...node,id:'model-replacement-id',title:'调整后',containerSpec:{...node.containerSpec,title:'调整后',rows:[[2]]}}})
+  await expect.poll(()=>f.page.evaluate(()=>JSON.parse((window as any).editor.getBlock('selected-component').props.payload).containerSpec.rows)).toEqual([[2]])
+  const saved=await f.page.evaluate(()=>JSON.parse((window as any).editor.getBlock('selected-component').props.payload));expect(saved.id).toBe(node.id);expect(saved.noteSize).toEqual(node.noteSize)
+  expect(await f.page.evaluate(()=>(window as any).editor.getBlock('anchor').content)).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })

@@ -1,5 +1,7 @@
 # 研究画板组件视觉合同（第一阶段）
 
+> 本页记录第一阶段源模板及其Figma实例尺寸；包括表中的48px标题区，均不是当前所有模式的宿主chrome规则。当前对话、Research及笔记的外框/标题栏/正文与状态规则以[研究看板组件实现合同](../research-component-design-contract.md#当前模式与宿主外观)为准，原稿实测值保留。
+
 源文件为 Figma `Jkyr5rMvgM8GNH6E68xnqd` 的 `21M 工作台组件设计规范`。图片仅用于定位；属性以源节点为准。运行时合同版本为 `21m-20260923-v1`，实现位于 `workbench-design-contract.js`、`market-artifact.js`、`bento-layout.js`。本阶段使用模拟行情验证，不依赖远程市场数据。
 
 ## 职责边界

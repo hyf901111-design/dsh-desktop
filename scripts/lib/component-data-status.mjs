@@ -28,21 +28,24 @@ export function createComponentDataStatusStore(){
   for(const [k,row]of nativeRows)if(k===key(sessionId,row.nodeId))rows.set(row.nodeId,row)
   publishSummary(sessionId,{ready:session?.ready===true,observed:session?.ready===true||previous.observed,complete:session?true:previous.complete,rows:[...rows.values()]})
  }
- const key=(sessionId,nodeId)=>JSON.stringify([sessionId,nodeId])
- const notify=(sessionId,nodeId)=>listeners.get(key(sessionId,nodeId))?.forEach(fn=>fn())
+ const bindingKey=(sessionId,surface='research')=>surface==='research'?sessionId:JSON.stringify([sessionId,surface])
+ const validSurface=surface=>['research','notes','conversation'].includes(surface)
+ const key=(sessionId,nodeId,surface='research')=>JSON.stringify([sessionId,nodeId,surface])
+ const notify=(sessionId,nodeId,surface='research')=>listeners.get(key(sessionId,nodeId,surface))?.forEach(fn=>fn())
  const lastFailed=(row,old)=>['success','unchanged'].includes(row.status)?false:Boolean(row.status==='error'||row.failures>0||old?.lastRefreshFailed)
  return {
   snapshotSession:sessionId=>summaries.get(sessionId)??empty,
   subscribeSession(sessionId,fn){if(!sessionListeners.has(sessionId))sessionListeners.set(sessionId,new Set());sessionListeners.get(sessionId).add(fn);return()=>{const set=sessionListeners.get(sessionId);set?.delete(fn);if(!set?.size)sessionListeners.delete(sessionId)}},
-  read:(sessionId,nodeId)=>nativeRows.get(key(sessionId,nodeId))||sessions.get(sessionId)?.rows.get(nodeId)||null,
+  read:(sessionId,nodeId,surface='research')=>validSurface(surface)?nativeRows.get(key(sessionId,nodeId,surface))||sessions.get(bindingKey(sessionId,surface))?.rows.get(nodeId)||null:null,
   // Builtin widgets own their live source/scheduler. Host binding polls must
   // not erase those outcomes, and unmounting a widget releases its own row.
-  publishNative(sessionId,nodeId,row){const k=key(sessionId,nodeId),old=nativeRows.get(k),next={...row,nodeId,native:true,lastRefreshFailed:lastFailed(row,old)};if(JSON.stringify(old)!==JSON.stringify(next)){nativeRows.set(k,next);notify(sessionId,nodeId);summarize(sessionId)}},
-  clearNative(sessionId,nodeId){const old=nativeRows.get(key(sessionId,nodeId));if(nativeRows.delete(key(sessionId,nodeId))){notify(sessionId,nodeId);summarize(sessionId,old)}},
-  subscribe(sessionId,nodeId,fn){const k=key(sessionId,nodeId);if(!listeners.has(k))listeners.set(k,new Set());listeners.get(k).add(fn);return()=>{const set=listeners.get(k);set?.delete(fn);if(!set?.size)listeners.delete(k)}},
-  suspend(sessionId){const session=sessions.get(sessionId);if(session)session.ready=false;summarize(sessionId)},
-  publish(sessionId,rows){
-   const previous=sessions.get(sessionId)||{rows:new Map(),ready:false},next=new Map()
+  publishNative(sessionId,nodeId,row,surface='research'){if(!validSurface(surface))return;const k=key(sessionId,nodeId,surface),old=nativeRows.get(k),next={...row,nodeId,native:true,lastRefreshFailed:lastFailed(row,old)};if(JSON.stringify(old)!==JSON.stringify(next)){nativeRows.set(k,next);notify(sessionId,nodeId,surface);if(surface==='research')summarize(sessionId)}},
+  clearNative(sessionId,nodeId,surface='research'){if(!validSurface(surface))return;const k=key(sessionId,nodeId,surface),old=nativeRows.get(k);if(nativeRows.delete(k)){notify(sessionId,nodeId,surface);if(surface==='research')summarize(sessionId,old)}},
+  subscribe(sessionId,nodeId,fn,surface='research'){if(!validSurface(surface))return()=>{};const k=key(sessionId,nodeId,surface);if(!listeners.has(k))listeners.set(k,new Set());listeners.get(k).add(fn);return()=>{const set=listeners.get(k);set?.delete(fn);if(!set?.size)listeners.delete(k)}},
+  suspend(sessionId,surface='research'){if(!validSurface(surface))return;const session=sessions.get(bindingKey(sessionId,surface));if(session)session.ready=false;if(surface==='research')summarize(sessionId)},
+  publish(sessionId,rows,surface='research'){
+   if(!validSurface(surface))return
+   const id=bindingKey(sessionId,surface),previous=sessions.get(id)||{rows:new Map(),ready:false},next=new Map()
    for(const row of rows){
     const old=previous.rows.get(row.nodeId)
     const advanced=Number.isInteger(row.successSequence)?row.successSequence>(old?.successSequence||0):row.lastSuccess>old?.lastSuccess
@@ -51,10 +54,10 @@ export function createComponentDataStatusStore(){
      completionSequence:(old?.completionSequence||0)+(previous.ready&&old&&advanced&&['success','unchanged'].includes(row.status)?1:0)}
     next.set(row.nodeId,JSON.stringify(old)===JSON.stringify(snapshot)?old:snapshot)
    }
-   sessions.set(sessionId,{rows:next,ready:true});summarize(sessionId)
-   for(const nodeId of new Set([...previous.rows.keys(),...next.keys()]))if(previous.rows.get(nodeId)!==next.get(nodeId))notify(sessionId,nodeId)
+   sessions.set(id,{rows:next,ready:true});if(surface==='research')summarize(sessionId)
+   for(const nodeId of new Set([...previous.rows.keys(),...next.keys()]))if(previous.rows.get(nodeId)!==next.get(nodeId))notify(sessionId,nodeId,surface)
   },
-  clear(sessionId){const previous=sessions.get(sessionId);sessions.delete(sessionId);previous?.rows.forEach((_,nodeId)=>notify(sessionId,nodeId));summarize(sessionId)}
+  clear(sessionId,surface='research'){if(!validSurface(surface))return;const id=bindingKey(sessionId,surface),previous=sessions.get(id);sessions.delete(id);previous?.rows.forEach((_,nodeId)=>notify(sessionId,nodeId,surface));if(surface==='research')summarize(sessionId)}
  }
 }
 

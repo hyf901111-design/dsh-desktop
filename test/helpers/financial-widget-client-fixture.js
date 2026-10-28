@@ -5,6 +5,7 @@ import {Window} from 'happy-dom'
 import {vi} from 'vitest'
 import {EWorkNoteComponentView,EWorkNoteComponentViews} from '../../scripts/lib/notes-components.mjs'
 import {patchResearchNativeWeb} from '../../scripts/lib/research-native-web-client.mjs'
+import {notesResidentProductionSource} from './notes-resident-production-source.mjs'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 // Serializing the resident bundle is independent of each isolated DOM/store.
 // Reuse only its immutable source; every fixture still runs a fresh VM factory.
@@ -15,9 +16,9 @@ export async function financialClientFixture(desktop={},options={}){
  const sourceKey=JSON.stringify([!!options.generationProgress,!!options.refreshState,!!options.creation,!!options.notes]);
  let source=preparedSources.get(sourceKey)
  if(!source){
- source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
+ source=options.notes?notesResidentProductionSource():await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
  if(options.generationProgress)source=require('../../scripts/lib/generation-progress-persistence.mjs').patchGenerationProgressPersistence(source)
- if(options.refreshState||options.notes){
+ if(options.refreshState&&!options.notes){
   // Match the production unwind order before replacing serialized grid functions.
   for(const [file,strip] of [['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput'],['home-guide-presentation-native','stripHomeGuidePresentationNative']])source=require('../../scripts/lib/'+file+'.mjs')[strip](source)
   // Exercise the production serializers without Vite's SSR import rewrites in toString().

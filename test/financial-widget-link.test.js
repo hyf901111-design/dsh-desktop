@@ -201,6 +201,14 @@ it('点击两个节点不会连接，必须拖拽至接收节点后松开',async
  expect(f.host.querySelector('.ew-financial-connection-draft')).toBeNull()
  await f.connect();expect(f.spec(f.quote.id).linkedWatchlistId).toBe(f.watch.id)
 })
+it.each(['notes','conversation'])('同session和node的%s端口标记不能借Research协调器建立连接',async surface=>{
+ const f=await setup(),before=structuredClone(f.workspace.getSnapshot().artifacts)
+ const other=f.document.createElement('section');other.className=surface==='notes'?'en-root':'ew-conversation-component';other.dataset.financialSurface=surface
+ const fake=f.document.createElement('button');fake.dataset.financialPort='input';fake.dataset.financialPortNode=f.quote.id;other.append(fake);f.canvas.append(other)
+ const state=structuredClone(f.workspace.getSnapshot());await f.dragPort(fake,f.output());expect(f.workspace.getSnapshot()).toEqual(state)
+ await f.dragPort(f.output(),fake)
+ expect(f.workspace.getSnapshot().artifacts).toEqual(before);expect(f.spec(f.quote.id).linkedWatchlistId).toBeUndefined();expect(f.host.querySelector('.ew-financial-connection-draft')).toBeNull()
+})
 it('只有选中任一端点组件才显示已保存的连线，取消选中不解除联动',async()=>{
  const f=await setup();await f.connect()
  await f.act(async()=>f.workspace.updateSelection([],'replace'))

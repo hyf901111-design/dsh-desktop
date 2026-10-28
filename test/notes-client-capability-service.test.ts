@@ -2,6 +2,7 @@ import {afterEach,expect,it,vi} from 'vitest'
 import {mkdtempSync,rmSync,readFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
+import {createRequire} from 'node:module'
 import {installNotesService} from '../src/main/notes/service'
 import {createNoteCapabilityActions} from '../src/preload/notes/client-capability-actions'
 import {exportNoteWithSnapshots} from '../src/preload/notes/component-snapshots'
@@ -180,5 +181,20 @@ it('routes AI challenge configuration through the actual host catalog and render
   expect(JSON.stringify(h.content.blocks)).toBe(before);expect((await h.call('load')).saved.blocks).toEqual(h.content.blocks)
   expect(h.history.find(row=>row.action==='conversation-capabilities').receipts[0].effect.kind).toBe('challenge')
   expect(await h.generate('把AI挑战切到严格，并展开评论')).toEqual(result);expect(h.actions).toHaveLength(1)
+ }finally{h.dispose()}
+})
+it.each(['create','inspect'])('preserves a remaining reply through the actual service, receipt route and session reload after %s',async operation=>{
+ const {Session}=await import('@deepseek-ai/dsh-session'),{recordNoteConversation,registerNoteSessions,noteConversationRows}=createRequire(import.meta.url)('../packages/dsh-research-task-runtime/notes-session.js'),{capabilityReceiptText}=await import('../packages/dsh-research-task-runtime/client-capabilities.js')
+ const h=harness({selected:['r']}),remaining='还需要开始日期，已保存内容保持不变。'
+ h.wire(body=>body.clientReceipts.length?{kind:'conversation',markdown:capabilityReceiptText(body.clientReceipts)+'\n\n'+remaining,requiresReply:true}:{kind:'capabilities',calls:[operation==='create'?{requestId:'created-once',capability:'notes.components.create',arguments:{prompt:'创建演示表格'}}:{requestId:'inspected-once',capability:'notes.components.inspect',arguments:{}}]})
+ try{
+  const result=await h.generate(operation==='create'?'创建表格并按开始日期继续说明':'读取所选组件并说明');expect(result.requiresReply).toBe(true);expect(result.markdown).toContain(remaining)
+  expect(h.actions.filter(action=>action.action===(operation==='create'?'notes.components.create':'notes.components.inspect'))).toHaveLength(1)
+  const sync=h.history.find(value=>value.action==='conversation-capabilities');expect(sync.remainingReply).toEqual({markdown:result.markdown})
+  const session=Session.create('note' as any);recordNoteConversation(session,{requestId:'job',phase:'preparing',prompt:'保留原始需求'})
+  let route:any;const dispose=registerNoteSessions({sessions:{get:()=>session},webServer:{register:(value:any)=>{route=value.handler;return()=>{}}}},{isTrustedRequest:()=>true,readJsonBody:async(req:any)=>req.body})
+  try{let status;await route({method:'POST',body:sync},{writeHead:(value:any)=>{status=value},end:()=>{}});expect(status).toBe(200)}finally{dispose()}
+  const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header)),row=noteConversationRows(replay)[0]
+  expect(row).toMatchObject({prompt:'保留原始需求',phase:'replied',result:{kind:'conversation',requiresReply:true,markdown:result.markdown}});expect(row.result.capabilityReceipts).toHaveLength(1)
  }finally{h.dispose()}
 })

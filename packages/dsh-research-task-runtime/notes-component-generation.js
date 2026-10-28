@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto'
 import {ResearchTaskRuntime,createSubagentAdapter,publicEventFromSessionEvent} from './index.js'
 import {COMPONENT_BOUND_DATA_PROMPT} from './component-source-binding.js'
-import {FINANCIAL_WIDGET_GUIDANCE,financialWidgetDimensions} from './financial-widget-contract.js'
+import {FINANCIAL_WIDGET_GUIDANCE,financialWidgetDefaults,financialWidgetDimensions} from './financial-widget-contract.js'
 import {readTemplateModel} from './component-template-registry.js'
 import {noteKrakenQuotePlan,noteKrakenQuoteGuidance,noteSourceIsOffline} from './notes-kraken-source.js'
 
@@ -13,6 +13,15 @@ export async function generateNoteComponent(ctx,input,requestedSignal,progress=(
  const references=input.references??{scope:'none',components:[]}
  if(input.targetBlockId!==undefined&&(typeof input.targetBlockId!=='string'||references.scope!=='selection'||!references.components.some(item=>item.blockId===input.targetBlockId&&item.type==='research')))throw Error('组件不在当前引用范围内。')
  const sourceInstruction=typeof input.sourceInstruction==='string'&&input.sourceInstruction.length<=8000?input.sourceInstruction:input.prompt
+ // A bare library name selects its existing native component, not a model's
+ // substitute category. Extra securities, source or feature requirements still
+ // use the normal worker; an unconfigured quote never invents a security.
+ const quote=financialWidgetDefaults('quote'),libraryRequest=String(sourceInstruction??'').replace(/\s/gu,'')
+ const quoteRequest=new RegExp('^(?:请(?:你)?(?:帮我)?|麻烦(?:你)?(?:帮我)?|帮我|给我|能否(?:帮我)?|可以(?:帮我)?)?(?:创建|新建|生成|添加|插入)(?:一(?:个|张))?(?:组件库(?:中|里)?的|内置的?|标准的?)?'+quote.title+'(?:组件|卡片)?(?:一下|吧|一下吧)?(?:[，,]?(?:谢谢|多谢))?[。.!！?？]*$','u')
+ if(input.targetBlockId===undefined&&quoteRequest.test(libraryRequest)){
+  signal.throwIfAborted()
+  return {kind:'component',node:{id:'note-component-'+randomUUID(),kind:'generated-container',title:quote.title,containerSpec:quote,noteLibrary:true,generationStatus:'completed',generationDetail:'行情面板已创建，请在标题栏选择证券后载入行情。',refreshMinutes:0,sourceText:'内置行情组件 · 请选择证券，尚未获取行情',createdAt:Date.now(),...financialWidgetDimensions(quote)}}
+ }
  const sourcePlan=noteKrakenQuotePlan(sourceInstruction)
  const componentPrompt=sourcePlan?sourceInstruction:noteSourceIsOffline(sourceInstruction)?sourceInstruction+'\n本组件呈现要求（不得改变以上禁止联网约束）：'+input.prompt:input.prompt
  const adapter=createSubagentAdapter(ctx,{surface:'note',noteSourceGuidance:schemas=>noteKrakenQuoteGuidance(sourceInstruction,schemas)}),taskId='note-component-'+randomUUID(),parentSessionId=input.sessionId
