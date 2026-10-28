@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261028-02",
+  "branch": "codex/integration/20261028-02",
+  "baseMainCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+  "expectedMainCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+  "createdAt": "2026-10-28T03:42:48.660Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "通用设置增加合盖运行与阻止自动睡眠",
+        "branch": "codex/feat/power-sleep-settings-20261028",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
+        "commits": [
+          {
+            "commit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "功能：在通用设置增加合盖运行与防自动睡眠开关"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-28-power-sleep-settings.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-28-power-sleep-settings-design.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/power/controller.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/power/ipc.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/power/macos-lid-guard.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/power-settings.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/power-settings.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/power-lid-guard.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/power-settings-ipc.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/power-settings-ui.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/power-settings.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "6个直接相关文件30项通过；真实生成shell在隔离命令环境验证租约、PID、过期和中断安装恢复，并编译AppleScript；日志 /Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/power-settings/focused-tests.log",
+            "verifiedCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
+            "completedAt": "2026-10-28T03:42:40.214Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过；日志 /Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/power-settings/typecheck.log",
+            "verifiedCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
+            "completedAt": "2026-10-28T03:42:40.214Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "空白检查通过",
+            "verifiedCommit": "547f133ffa484bcc28b1cffe5a964eeb8df5b967",
+            "completedAt": "2026-10-28T03:42:40.214Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能worktree不构建共享客户端；Happy DOM验证真实挂载函数的设置重开、中英切换、授权中禁用及错误状态。真实管理员授权与物理合盖验收待集成客户端。"
+        },
+        "acceptanceCriteria": [
+          "通用设置内两个独立默认关闭的电源开关，状态来自可信主进程",
+          "合盖使用管理员授权的pmset设置，仅本次运行生效；关闭或退出恢复；已有外部策略保留",
+          "普通防自动睡眠允许熄屏、持久化偏好、退出释放断言",
+          "取消授权、系统漂移及恢复失败明确反馈，不报告虚假成功"
+        ],
+        "risks": [
+          "尚未执行真实管理员授权、物理合盖、真实进程崩溃或重启验收",
+          "pmset disablesleep是全局系统策略，会同时阻止普通系统睡眠；UI已说明",
+          "合盖开关每次应用运行需重新开启授权，普通防自动睡眠偏好会记住"
+        ],
+        "generatedAt": "2026-10-28T03:42:40.214Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一新建自选与行情面板的默认高度",
+        "branch": "codex/feat/watchlist-height-20261028",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "5050c7b1ea96e7468f18b28cfabf18a4e9b4f624",
+        "commits": [
+          {
+            "commit": "5050c7b1ea96e7468f18b28cfabf18a4e9b4f624",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "修复：统一新建自选与行情面板的默认高度"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-additions.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "3 个直接相关测试文件，17 项通过；包含新建自选/行情网格高度一致、旧几何保留和按内容整理尺寸验证。完整输出：/Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/watchlist-height/focused-tests.log",
+            "verifiedCommit": "5050c7b1ea96e7468f18b28cfabf18a4e9b4f624",
+            "completedAt": "2026-10-28T03:37:21.178Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "无空白错误。",
+            "verifiedCommit": "5050c7b1ea96e7468f18b28cfabf18a4e9b4f624",
+            "completedAt": "2026-10-28T03:37:21.178Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按项目约定不构建共享客户端；现有 React/DOM fixture 验证实际工作区创建后两类面板等高。真实 Sherlock 客户端验收留给集成批次。"
+        },
+        "acceptanceCriteria": [
+          "组件库新建自选面板的初始高度由560调整为600，与行情面板600相同。",
+          "已有持久化/手动调整的尺寸不被迁移或重置；按内容整理逻辑保持不变。"
+        ],
+        "risks": [
+          "未从功能 worktree 构建或替换共享客户端；真实客户端验收待集成后进行。"
+        ],
+        "generatedAt": "2026-10-28T03:37:21.178Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/power-settings.test.ts",
+        "test/power-settings-ui.test.ts",
+        "test/power-lid-guard.test.ts",
+        "test/power-settings-ipc.test.ts",
+        "test/ipc-trust.test.ts",
+        "test/figma-settings-layout.test.ts",
+        "test/research-grid-additions.test.js",
+        "test/financial-widget-layout.test.js",
+        "test/financial-widget-contract.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
