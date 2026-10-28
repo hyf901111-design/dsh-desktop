@@ -788,7 +788,7 @@ export function validResearchInteractionState(s) {
     s.events && typeof s.events==='object' && !Array.isArray(s.events) && Object.keys(s.events).length<=2048 &&
     Object.entries(s.events).every(([id,e])=>validResearchInteractionEvent(e)&&e.id===id) && JSON.stringify(s).length<=256*1024;
 }
-const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractionRuntime(authorizedEvents = new WeakSet()) {
+export const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractionRuntime(authorizedEvents = new WeakSet(),semantic) {
   let initialized=false, replaying=false, readOnly=true, clock=0;
   let applied=[];
   const pending=new Set();
@@ -829,7 +829,7 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
   }
   addEventListener('message',event=>{
     if(event.source!==parent || event.data?.type!=='sherlock-interaction-state')return;
-    if(document.documentElement.hasAttribute('data-sherlock-shared-state'))return;
+    if(document.documentElement.hasAttribute('data-sherlock-shared-state')&&!semantic?.notes)return;
     const data=event.data; readOnly=data.readOnly!==false;
     const events=Object.values(data.state?.events||{}).sort((a,b)=>a.clock-b.clock||a.id.localeCompare(b.id));
     if(pending.has(data.rejectedEventId)){post('sherlock-interaction-reload');return;}
@@ -842,7 +842,8 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     try {for(const e of events.slice(applied.length)){apply(e);applied.push(e.id);clock=Math.max(clock,e.clock);}} finally {document.documentElement.removeAttribute('data-sherlock-interaction-replaying');replaying=false;initialized=true;}
   });
   for(const type of ['click','input','change','keydown']) document.addEventListener(type,event=>{
-    if((!event.isTrusted && !authorizedEvents.has(event)) || replaying || document.documentElement.hasAttribute('data-sherlock-shared-state'))return;
+    if((!event.isTrusted && !authorizedEvents.has(event)) || replaying || document.documentElement.hasAttribute('data-sherlock-shared-state')&&!semantic?.notes)return;
+    if(semantic?.notes){semantic.current=event;setTimeout(()=>{if(semantic.current===event)semantic.current=undefined},0);}
     if(!initialized||readOnly){event.preventDefault();event.stopImmediatePropagation();return;}
     let el=event.target;
     if(!(el instanceof Element))return;
@@ -864,7 +865,8 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     if(type==='input'||type==='change'){if('value'in el)e.value=String(el.value).slice(0,8192);if('checked'in el)e.checked=el.checked;}
     if(type==='click'){const r=el.getBoundingClientRect();if(r.width>0&&r.height>0){e.x=Math.max(0,Math.min(1,(event.clientX-r.left)/r.width));e.y=Math.max(0,Math.min(1,(event.clientY-r.top)/r.height));}}
     if(type==='keydown')e.key=event.key;
-    applied.push(e.id);pending.add(e.id);post('sherlock-interaction-event',{event:e});
+    const submit=()=>{if(semantic?.notes&&semantic.events.has(event))return;applied.push(e.id);pending.add(e.id);post('sherlock-interaction-event',{event:e});};
+    if(semantic?.notes)setTimeout(submit,0);else submit();
   },true);
   addEventListener('DOMContentLoaded',()=>post('sherlock-interaction-ready'),{once:true});
 }`;
@@ -1023,7 +1025,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
-  const lockedRuntime = `<script>${options.workbench ? validWorkbenchStyleMessage.toString()+';('+installWorkbenchStyleMessages.toString()+')();'+validWorkbenchLocaleMessage.toString()+';('+installWorkbenchLocaleMessages.toString()+')('+JSON.stringify(WORKBENCH_ENGLISH).replace(/</g,'\\u003c')+');' : ''}for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)},${options.workbench === true});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}${options.workbench ? `${installWorkbenchTableColumns.toString()};${installWorkbenchNaturalCharts.toString()};document.addEventListener('DOMContentLoaded',()=>{installWorkbenchNaturalCharts(document.documentElement);installWorkbenchTableColumns(document.documentElement)},{once:true});${installWorkbenchChartMotion.toString()};addEventListener('DOMContentLoaded',()=>installWorkbenchChartMotion(document.documentElement),{once:true});${isWorkbenchScrollbarMessage.toString()};addEventListener('DOMContentLoaded',()=>{(${installWorkbenchScrollbars.toString()})(document.documentElement,()=>document.scrollingElement,()=>document.documentElement.dataset.workbenchSelected==='true',()=>[document.scrollingElement,...document.body.querySelectorAll('*')]);},{once:true});(${installWorkbenchExport.toString()})(${serializeWorkbenchContent.toString()});(${installWorkbenchRefresh.toString()})(${createWorkbenchRefreshSurface.toString()},${isWorkbenchViewState.toString()},${JSON.stringify(workbenchContentRevision(html))});` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
+  const lockedRuntime = `<script>${options.workbench ? validWorkbenchStyleMessage.toString()+';('+installWorkbenchStyleMessages.toString()+')();'+validWorkbenchLocaleMessage.toString()+';('+installWorkbenchLocaleMessages.toString()+')('+JSON.stringify(WORKBENCH_ENGLISH).replace(/</g,'\\u003c')+');' : ''}for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)},${options.workbench === true});(()=>{const authorizedEvents=new WeakSet(),semantic={events:new WeakSet()};${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents,semantic);` : ''}${options.workbench ? `${installWorkbenchTableColumns.toString()};${installWorkbenchNaturalCharts.toString()};document.addEventListener('DOMContentLoaded',()=>{installWorkbenchNaturalCharts(document.documentElement);installWorkbenchTableColumns(document.documentElement)},{once:true});${installWorkbenchChartMotion.toString()};addEventListener('DOMContentLoaded',()=>installWorkbenchChartMotion(document.documentElement),{once:true});${isWorkbenchScrollbarMessage.toString()};addEventListener('DOMContentLoaded',()=>{(${installWorkbenchScrollbars.toString()})(document.documentElement,()=>document.scrollingElement,()=>document.documentElement.dataset.workbenchSelected==='true',()=>[document.scrollingElement,...document.body.querySelectorAll('*')]);},{once:true});(${installWorkbenchExport.toString()})(${serializeWorkbenchContent.toString()});(${installWorkbenchRefresh.toString()})(${createWorkbenchRefreshSurface.toString()},${isWorkbenchViewState.toString()},${JSON.stringify(workbenchContentRevision(html))});` : ''}(${sharedComponentRuntime.toString()})(semantic);(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.

@@ -1,4 +1,27 @@
 import {parse} from '@babel/parser'
+import {sharedComponentRuntime} from '../../packages/dsh-research-task-runtime/shared-component-runtime.js'
+import {RESEARCH_HTML_INTERACTION_RUNTIME} from '../../packages/dsh-research-task-runtime/html-artifact.js'
+/** State snapshots are published only after the Notes persister acknowledges. */
+export function createNoteHtmlSharedStateBridge(initial,request){
+ let snapshot=initial,observed=initial,confirmed=initial,pending=0,closed=false,sequence=0,lastAck=0,awaiting=false
+ const listeners=new Set(),rejected=new Set(),key=value=>JSON.stringify(value)
+ const publish=value=>{if(key(snapshot)===key(value))return;snapshot=value;for(const listener of listeners)listener()}
+ const reconcile=()=>{if(!closed&&!pending&&!awaiting)publish(rejected.has(key(observed))?confirmed:observed)}
+ return {subscribe:listener=>{listeners.add(listener);return()=>listeners.delete(listener)},snapshot:()=>snapshot,
+  observe(value){observed=value;if(awaiting&&key(value)===key(confirmed))awaiting=false;reconcile()},
+  async commit(version,revision,state){
+   if(closed||typeof version!=='string'||!Number.isSafeInteger(revision)||revision<1)return
+   const attempt=++sequence;pending++
+   try{
+    const saved=await request(version,revision,state)
+    if(closed||saved?.version!==version||saved.revision!==revision||key(saved.state)!==key(state))throw Error('笔记交互未确认保存。')
+    rejected.delete(key(saved))
+    if(attempt>lastAck){lastAck=attempt;confirmed=saved;awaiting=key(observed)!==key(saved);publish(saved)}
+    return saved
+   }catch{rejected.add(key({version,revision,state}));return}
+   finally{pending--;reconcile()}
+  },dispose(){closed=true;listeners.clear()}}
+}
 /** Only confirmed Notes saves become iframe acknowledgements. */
 export function createNoteHtmlInteractionBridge(initial,request){
  let snapshot=initial,observed=initial,confirmed=initial,pending=0,closed=false,sequence=0,lastAck=0,awaitingObservation=false
@@ -38,8 +61,8 @@ export function createNoteHtmlInteractionBridge(initial,request){
 }
 
 function patchNoteHtmlRenderer(renderer){
- if(renderer.includes('const noteHtmlInteraction=react.useContext(eworkNoteHtmlInteractionContext);'))return renderer
  const once=(a,b)=>{if(renderer.split(a).length!==2)throw Error('Notes HTML interaction anchor missing or ambiguous: '+a.slice(0,100));renderer=renderer.replace(a,b)}
+ if(!renderer.includes('const noteHtmlInteraction=react.useContext(eworkNoteHtmlInteractionContext);')){
  once('const interactionReadOnly=sherlockShared(interactionSessionId)&&sherlockBoardsAdapter?.getView(interactionSessionId)?.permissions.edit!==true;',`const noteHtmlInteraction=react.useContext(eworkNoteHtmlInteractionContext);
     const interactionReadOnly=noteHtmlInteraction?noteHtmlInteraction.readOnly:sherlockShared(interactionSessionId)&&sherlockBoardsAdapter?.getView(interactionSessionId)?.permissions.edit!==true;`)
  once('interactionRef.current={node,readOnly:interactionReadOnly,sessionId:interactionSessionId};','interactionRef.current={node,readOnly:interactionReadOnly,sessionId:interactionSessionId,noteHtmlInteraction};')
@@ -54,6 +77,18 @@ function patchNoteHtmlRenderer(renderer){
         void bridge.commit(researchInteractionVersion(html),data.event).then(ok=>{if(ok!==true)reject()}).catch(reject);
         return;
       }`)
+ }
+ if(!renderer.includes('localAck:true')){
+  once('const c=interactionRef.current, v=sherlockBoardsAdapter?.getView(c.sessionId);',`const c=interactionRef.current, v=sherlockBoardsAdapter?.getView(c.sessionId);
+      if(c.noteHtmlInteraction)return {type:'sherlock-component-context',shared:false,online:false,localAck:true,readOnly:c.readOnly,saved:c.noteHtmlInteraction.sharedState?.version===researchInteractionVersion(c.node.containerSpec.html)?c.noteHtmlInteraction.sharedState:undefined};`)
+  once("if(m.op==='localCommit'){",`if(m.op==='localCommit'){
+        if(c.noteHtmlInteraction){
+          const bridge=c.noteHtmlInteraction.sharedBridge,windowRef=frameRef.current?.contentWindow,html=c.node.containerSpec.html;
+          const reply=saved=>{if(frameRef.current?.contentWindow===windowRef&&interactionRef.current.noteHtmlInteraction?.sharedBridge===bridge&&interactionRef.current.node.containerSpec.html===html)windowRef?.postMessage({type:'sherlock-component-receive',message:{peerId:m.peerId,kind:'local-commit',commitId:m.commitId,ok:!!saved,...(saved?{state:saved.state,revision:saved.revision}:{})}},'*');};
+          if(c.readOnly||typeof m.peerId!=='string'||m.peerId.length>128||typeof m.commitId!=='string'||m.commitId.length>128){reply();return;}
+          void bridge.commit(researchInteractionVersion(html),m.revision,m.state).then(reply).catch(()=>reply());return;
+        }`)
+ }
  return renderer
 }
 
@@ -67,6 +102,20 @@ export function patchNotesHtmlInteraction(source,noteViewSource){
  if(renderers.length!==1)throw Error('Notes HTML renderer missing or ambiguous')
  const target=renderers[0],previousRenderer=source.slice(target.start,target.end),renderer=patchNoteHtmlRenderer(previousRenderer)
  const edits=[{start:target.start,end:target.end,text:renderer}]
+ const runtimes=[];const collectRuntime=node=>{if(!node||typeof node!=='object')return;if(node.type==='FunctionDeclaration'&&node.id?.name==='sharedComponentRuntime')runtimes.push(node);for(const[key,value]of Object.entries(node)){if(['loc','extra','comments','leadingComments','trailingComments','innerComments'].includes(key))continue;if(Array.isArray(value))value.forEach(collectRuntime);else if(value&&typeof value==='object')collectRuntime(value)}}
+ collectRuntime(parse(source,{sourceType:'unambiguous'}));if(runtimes.length!==1)throw Error('Notes shared runtime missing or ambiguous')
+ edits.push({start:runtimes[0].start,end:runtimes[0].end,text:sharedComponentRuntime.toString()})
+ const serialized=[];const collectSerialized=node=>{if(!node||typeof node!=='object')return;if(node.type==='VariableDeclarator'&&node.id?.name==='RESEARCH_HTML_INTERACTION_RUNTIME')serialized.push({start:node.init.start,end:node.init.end,text:JSON.stringify(RESEARCH_HTML_INTERACTION_RUNTIME)});if(node.type==='FunctionDeclaration'&&node.id?.name==='buildResearchHtmlPreview'){
+  let text=source.slice(node.start,node.end)
+  if(!text.includes('semantic={events:new WeakSet()}')){
+   const replace=(before,after)=>{if(text.split(before).length!==2)throw Error('Notes sandbox runtime anchor missing or ambiguous');text=text.replace(before,after)}
+   replace('const authorizedEvents=new WeakSet();','const authorizedEvents=new WeakSet(),semantic={events:new WeakSet()};')
+   replace('${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);','${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents,semantic);')
+   replace('${sharedComponentRuntime.toString()})();','${sharedComponentRuntime.toString()})(semantic);')
+  }
+  serialized.push({start:node.start,end:node.end,text})
+ }for(const[key,value]of Object.entries(node)){if(['loc','extra','comments','leadingComments','trailingComments','innerComments'].includes(key))continue;if(Array.isArray(value))value.forEach(collectSerialized);else if(value&&typeof value==='object')collectSerialized(value)}}
+ collectSerialized(parse(source,{sourceType:'unambiguous'}));if(serialized.length!==2)throw Error('Notes sandbox runtime missing or ambiguous');edits.push(...serialized)
  const tag='/* EWORK_GRID_RESTORE ',recordStart=source.indexOf(tag,target.end)
  if(recordStart>=0){
   const recordEnd=source.indexOf(' */',recordStart+tag.length)
@@ -84,7 +133,15 @@ export function patchNotesHtmlInteraction(source,noteViewSource){
  if(!functions.some(node=>node.id.name==='createNoteHtmlInteractionBridge')){
   const views=functions.filter(node=>node.id.name==='EWorkNoteComponentView')
   if(views.length!==1||typeof noteViewSource!=='string')throw Error('Notes HTML view missing or ambiguous')
-  edits.push({start:views[0].start,end:views[0].end,text:'const eworkNoteHtmlInteractionContext=react.createContext(null);\n'+createNoteHtmlInteractionBridge.toString()+'\nconst eworkCreateNoteHtmlInteraction=createNoteHtmlInteractionBridge;\n'+noteViewSource})
+  edits.push({start:views[0].start,end:views[0].end,text:'const eworkNoteHtmlInteractionContext=react.createContext(null);\n'+createNoteHtmlInteractionBridge.toString()+'\n'+createNoteHtmlSharedStateBridge.toString()+'\nconst eworkCreateNoteHtmlInteraction=createNoteHtmlInteractionBridge;const eworkCreateNoteHtmlSharedState=createNoteHtmlSharedStateBridge;\n'+noteViewSource})
+ }else{
+  const views=functions.filter(node=>node.id.name==='EWorkNoteComponentView')
+  if(views.length!==1||typeof noteViewSource!=='string')throw Error('Notes HTML view missing or ambiguous')
+  const shared=[];const collectShared=node=>{if(!node||typeof node!=='object')return;if(node.type==='FunctionDeclaration'&&node.id?.name==='createNoteHtmlSharedStateBridge')shared.push(node);for(const[key,value]of Object.entries(node)){if(['loc','extra','comments','leadingComments','trailingComments','innerComments'].includes(key))continue;if(Array.isArray(value))value.forEach(collectShared);else if(value&&typeof value==='object')collectShared(value)}}
+  collectShared(parse(source,{sourceType:'unambiguous'}));if(shared.length>1)throw Error('Notes shared bridge ambiguous')
+  const prefix=shared.length?'':createNoteHtmlSharedStateBridge.toString()+'\nconst eworkCreateNoteHtmlSharedState=createNoteHtmlSharedStateBridge;\n'
+  edits.push({start:views[0].start,end:views[0].end,text:prefix+noteViewSource})
+  if(shared.length)edits.push({start:shared[0].start,end:shared[0].end,text:createNoteHtmlSharedStateBridge.toString()})
  }
  for(const edit of edits.sort((a,b)=>b.start-a.start))source=source.slice(0,edit.start)+edit.text+source.slice(edit.end)
  return source+(installed?'':'\n'+marker)
