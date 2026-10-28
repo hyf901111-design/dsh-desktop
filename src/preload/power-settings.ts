@@ -22,8 +22,8 @@ export function mountPowerSettings(doc: Document, bridge: PowerSettingsBridge): 
       button.setAttribute('aria-checked', String(state?.[key] === true))
       button.disabled = !available || inFlight || state?.busy === true
       descriptions.get(key)!.textContent = lid
-        ? (zh ? '记住此选择，随客户端启动自动恢复。首次安装辅助服务需管理员授权，之后无需重复输入密码；关闭或退出后恢复睡眠。' : 'Remembers your choice and resumes when the app starts. Administrator approval is needed once to install the helper; later launches need no password. Sleep resumes when disabled or the app exits.')
-        : (zh ? '应用运行时防止电脑因闲置自动睡眠，屏幕仍可熄灭。记住此选择；合盖和手动睡眠不受此项控制。' : 'Prevents idle sleep while the app runs and allows the display to turn off. Remembers your choice; lid close and manual sleep are separate.')
+        ? (zh ? '开启后合上笔记本上盖任务仍将继续运行。' : 'Keep tasks running after closing the laptop lid.')
+        : (zh ? '开启后将防止电脑因闲置而进入自动休眠。' : 'Prevent the computer from automatically sleeping while idle.')
     }
     const errors = {
       'authorization-cancelled': zh ? '已取消管理员授权，合盖继续运行未开启。' : 'Administrator approval was cancelled. Closed-lid operation is off.',
