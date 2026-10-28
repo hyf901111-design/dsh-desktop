@@ -95,9 +95,32 @@ export function useWorkbenchStyle({rootRef,workspace}) {
  },[rootRef,workspace])
 }
 export function WorkbenchStylePicker({workspace}) {
- const snapshot=react.useSyncExternalStore(workspace.subscribe,workspace.getSnapshot)
- const [globalDark,setGlobalDark]=react.useState(()=>document.body.hasAttribute('data-ds-dark-theme'))
+ react.useSyncExternalStore(workspace.subscribe,workspace.getSnapshot)
+ const [globalDark,setGlobalDark]=react.useState(()=>document.body.hasAttribute('data-ds-dark-theme')),[open,setOpen]=react.useState(false)
+ const groupRef=react.useRef(null),triggerRef=react.useRef(null),menuRef=react.useRef(null)
  react.useEffect(()=>{const observer=new MutationObserver(()=>setGlobalDark(document.body.hasAttribute('data-ds-dark-theme')));observer.observe(document.body,{attributes:true,attributeFilter:['data-ds-dark-theme']});return()=>observer.disconnect()},[])
+ react.useEffect(()=>setOpen(false),[workspace])
  const current=workspace.getWorkbenchStyle?.()||(globalDark?'dark':'light'),order=['light','dark','openterminal','enterprise'],labels={light:'浅色模式',dark:'深色模式',openterminal:'彭博模式',enterprise:'易方达模式'}
- return react_jsx_runtime.jsxs('div',{className:'ew-workbench-mode-slot',children:[react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-divider','aria-hidden':true}),react_jsx_runtime.jsx('div',{className:'ew-workbench-modes',role:'radiogroup','aria-label':workbenchText('看板样式'),children:order.map(mode=>react_jsx_runtime.jsx('button',{type:'button',role:'radio','aria-checked':current===mode,'aria-label':workbenchText(labels[mode]),'data-workbench-style-option':mode,'data-tool-tooltip':workbenchText(labels[mode]),tabIndex:current===mode?0:-1,onClick:()=>workspace.setWorkbenchStyle(mode),onKeyDown:e=>{const i=order.indexOf(mode),next=e.key==='Home'?0:e.key==='End'?order.length-1:e.key==='ArrowRight'||e.key==='ArrowDown'?(i+1)%order.length:e.key==='ArrowLeft'||e.key==='ArrowUp'?(i+order.length-1)%order.length:null;if(next!==null){e.preventDefault();workspace.setWorkbenchStyle(order[next]);e.currentTarget.parentElement.querySelector('[data-workbench-style-option="'+order[next]+'"]')?.focus()}},children:react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-icon ew-workbench-mode-'+mode,'aria-hidden':true})},mode))})]})
+ react.useLayoutEffect(()=>{
+  if(!open)return
+  const doc=groupRef.current.ownerDocument,view=doc.defaultView,menu=menuRef.current
+  const place=()=>{const r=triggerRef.current.getBoundingClientRect(),size=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(r.left,view.innerWidth-size.width-8))+'px';menu.style.top=Math.max(8,r.top-size.height-8)+'px'}
+  const outside=e=>{if(!groupRef.current?.contains(e.target)&&!menu.contains(e.target))setOpen(false)}
+  place();menu.querySelector('[aria-checked="true"]')?.focus({preventScroll:true})
+  doc.addEventListener('pointerdown',outside,true);view.addEventListener('resize',place);doc.addEventListener('scroll',place,true)
+  return()=>{doc.removeEventListener('pointerdown',outside,true);view.removeEventListener('resize',place);doc.removeEventListener('scroll',place,true)}
+ },[open,workspace])
+ const close=()=>{setOpen(false);triggerRef.current?.focus({preventScroll:true})}
+ const keyDown=e=>{
+  const buttons=[...menuRef.current.querySelectorAll('[role=menuitemradio]')],index=buttons.indexOf(e.currentTarget.ownerDocument.activeElement)
+  if(e.key==='Escape'||e.key==='Tab'){if(e.key==='Escape')e.preventDefault();e.stopPropagation();close();return}
+  const next=e.key==='Home'?0:e.key==='End'?buttons.length-1:['ArrowDown','ArrowRight'].includes(e.key)?(index+1)%buttons.length:['ArrowUp','ArrowLeft'].includes(e.key)?(index+buttons.length-1)%buttons.length:null
+  if(next!==null){e.preventDefault();e.stopPropagation();buttons[next].focus({preventScroll:true})}
+ }
+ const owner=groupRef.current?.closest('[data-ework-toolbar-owner]')?.getAttribute('data-ework-toolbar-owner')
+ return react_jsx_runtime.jsxs('div',{ref:groupRef,className:'ew-workbench-mode-slot',children:[
+  react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-divider','aria-hidden':true}),
+  react_jsx_runtime.jsxs('button',{ref:triggerRef,type:'button','data-workbench-theme-toggle':'','data-current-workbench-style':current,'data-tool-tooltip':workbenchText('看板样式')+' · '+workbenchText(labels[current]),'aria-label':workbenchText('看板样式')+' · '+workbenchText(labels[current]),'aria-haspopup':'menu','aria-expanded':open,onClick:()=>setOpen(!open),onKeyDown:e=>{if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();e.stopPropagation();setOpen(true)}},children:[react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-icon ew-workbench-mode-'+current,'aria-hidden':true}),react_jsx_runtime.jsx('svg',{'aria-hidden':true,width:10,height:10,viewBox:'0 0 10 10',fill:'none',stroke:'currentColor',strokeWidth:.9,strokeLinecap:'round',strokeLinejoin:'round',children:react_jsx_runtime.jsx('path',{d:'m3.25 4.125 1.75 1.75 1.75-1.75'})})]}),
+  !open?null:react_dom.createPortal(react_jsx_runtime.jsx('div',{ref:menuRef,role:'menu','aria-label':workbenchText('看板样式'),className:'ew-grid-menu ew-arrange-menu','data-workbench-theme-menu':'','data-ework-toolbar-owner':owner,onKeyDown:keyDown,children:order.map(mode=>react_jsx_runtime.jsxs('button',{type:'button',role:'menuitemradio','aria-checked':current===mode,'aria-label':workbenchText(labels[mode]),'data-workbench-style-option':mode,onClick:()=>{workspace.setWorkbenchStyle(mode);close()},children:[react_jsx_runtime.jsx('svg',{'aria-hidden':true,className:'ew-arrange-check',width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,children:react_jsx_runtime.jsx('path',{d:'m3 8 3 3 7-7'})}),react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-icon ew-workbench-mode-'+mode,'aria-hidden':true}),react_jsx_runtime.jsx('span',{children:workbenchText(labels[mode])})]},mode))}),groupRef.current.ownerDocument.body)
+ ]})
 }
