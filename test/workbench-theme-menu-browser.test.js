@@ -103,6 +103,10 @@ for(const dark of [false,true])for(const width of [1000,380])it(`matches the Arr
   for(const key of ['background','color','border','borderRadius','shadow','padding','gap','font'])expect(theme[key],key).toBe(arrange[key])
   const row=await menu.locator('[aria-checked=true]').evaluate(el=>{el.blur();const s=getComputedStyle(el);return {background:s.backgroundColor,padding:s.padding,gap:s.gap,height:el.getBoundingClientRect().height}})
   expect(row).toEqual(arrangeRow)
+  const columns=await menu.getByRole('menuitemradio').evaluateAll(buttons=>buttons.map(button=>{const icon=button.querySelector('.ew-workbench-mode-icon'),label=button.lastElementChild,r=icon.getBoundingClientRect(),s=getComputedStyle(icon);return {iconX:r.x,iconWidth:r.width,labelX:label.getBoundingClientRect().x,flexGrow:s.flexGrow,flexShrink:s.flexShrink}}))
+  expect(new Set(columns.map(item=>item.iconX)).size).toBe(1)
+  expect(new Set(columns.map(item=>item.labelX)).size).toBe(1)
+  for(const item of columns){expect(item.iconWidth).toBe(16);expect(item.flexGrow).toBe('0');expect(item.flexShrink).toBe('0')}
   const rect=await menu.boundingBox(),button=await trigger.boundingBox()
   const toolbar=await page.locator('[data-ework-toolbar]').boundingBox()
   const slot=await page.locator('.ew-workbench-mode-slot').boundingBox()
@@ -110,7 +114,7 @@ for(const dark of [false,true])for(const width of [1000,380])it(`matches the Arr
   expect(rect.x).toBeGreaterThanOrEqual(8);expect(rect.x+rect.width).toBeLessThanOrEqual(width-8)
   expect(rect.y+rect.height).toBeLessThanOrEqual(button.y-7)
   expect(await page.locator('[data-ework-toolbar]').evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1)
-  if(evidence){await mkdir(evidence,{recursive:true});await page.screenshot({path:join(evidence,`theme-menu-${width}-${dark?'dark':'light'}.png`)});await writeFile(join(evidence,`theme-menu-${width}-${dark?'dark':'light'}.json`),JSON.stringify({arrange,theme,row,rect,button,toolbar,errors},null,2)+'\n')}
+  if(evidence){await mkdir(evidence,{recursive:true});await page.screenshot({path:join(evidence,`theme-menu-${width}-${dark?'dark':'light'}.png`)});await writeFile(join(evidence,`theme-menu-${width}-${dark?'dark':'light'}.json`),JSON.stringify({arrange,theme,row,columns,rect,button,toolbar,errors},null,2)+'\n')}
   expect(errors).toEqual([])
  }finally{await page.close()}
 })

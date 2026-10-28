@@ -29,7 +29,8 @@ body .ew-workbench-mode-slot>[data-workbench-theme-toggle]{position:relative;dis
 body .ew-workbench-mode-slot>[data-workbench-theme-toggle]:is(:hover,[aria-expanded=true]){background:#8882}
 body .ew-workbench-mode-slot>[data-workbench-theme-toggle]:focus-visible{outline:2px solid #139dff;outline-offset:-2px}
 body .ew-workbench-mode-icon{display:block;flex:none;width:20px;height:20px;background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
-body [data-workbench-theme-menu] .ew-workbench-mode-icon{width:16px;height:16px}
+/* The shared menu grows its second span; here that span is the fixed icon column. */
+body [data-workbench-theme-menu].ew-arrange-menu>button>.ew-workbench-mode-icon{width:16px;height:16px;flex:none}
 body[data-ds-dark-theme] .ew-workbench-mode-divider{background:#ffffff26}
 body[data-ds-dark-theme] .ew-workbench-mode-slot>[data-workbench-theme-toggle]{color:#ddd}
 body .ew-workbench-mode-slot>[data-workbench-theme-toggle][data-tool-tooltip]:is(:hover,:focus-visible)::after{content:attr(data-tool-tooltip);position:absolute;bottom:calc(100% + 12px);right:0;padding:6px 9px;border-radius:6px;background:#202124;color:#fff;font:12px/18px Inter,"Noto Sans SC",system-ui;white-space:nowrap;pointer-events:none}
