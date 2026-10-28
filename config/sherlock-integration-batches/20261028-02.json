@@ -619,10 +619,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复笔记预加载 React 运行时重复导致的空白",
+        "featureName": "修复笔记 React 与 Yjs 运行时身份冲突",
         "branch": "codex/feat/notes-react-runtime-20261028",
         "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
-        "tipCommit": "9e8f31bcc33381882405fb6624616bf32985480e",
+        "tipCommit": "8416133492d4809440d803b67cf938a67a2e9ede",
         "commits": [
           {
             "commit": "9e8f31bcc33381882405fb6624616bf32985480e",
@@ -630,6 +630,13 @@
               "3542b6a2c3594ecef42f084cebfb920524c53fdc"
             ],
             "subject": "修复：统一笔记预加载 React 运行时避免空白"
+          },
+          {
+            "commit": "8416133492d4809440d803b67cf938a67a2e9ede",
+            "parents": [
+              "9e8f31bcc33381882405fb6624616bf32985480e"
+            ],
+            "subject": "修复：统一笔记 Yjs 身份并验证保存正文完整性"
           }
         ],
         "files": [
@@ -659,9 +666,9 @@
               "test/preload-editor-singleton.test.ts"
             ],
             "outcome": "passed",
-            "summary": "4 tests passed: production CJS mount/edit/locale/save/reopen for blank/default/existing Yjs notes; one physical React under a second dependency root; existing editor registry and native transactions.",
-            "verifiedCommit": "9e8f31bcc33381882405fb6624616bf32985480e",
-            "completedAt": "2026-10-28T06:20:45.788Z",
+            "summary": "4/4 passed at this exact tip with an APFS clone of integration node_modules, then again after restoring original shared dependencies. Forced second physical React/Yjs peers resolve to one owner each; actual draft/saved note XML retains edited text across locale, save and reopen; no Yjs identity warnings or page errors.",
+            "verifiedCommit": "8416133492d4809440d803b67cf938a67a2e9ede",
+            "completedAt": "2026-10-28T06:41:45.609Z",
             "timeoutMs": 120000
           },
           {
@@ -671,9 +678,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "tsc --noEmit -p tsconfig.node.json passed.",
-            "verifiedCommit": "9e8f31bcc33381882405fb6624616bf32985480e",
-            "completedAt": "2026-10-28T06:20:45.788Z",
+            "summary": "Exact-tip typecheck passed with the independent integration dependency clone.",
+            "verifiedCommit": "8416133492d4809440d803b67cf938a67a2e9ede",
+            "completedAt": "2026-10-28T06:41:45.609Z",
             "timeoutMs": 120000
           },
           {
@@ -683,27 +690,28 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "No whitespace errors; git status --porcelain empty at the feature tip.",
-            "verifiedCommit": "9e8f31bcc33381882405fb6624616bf32985480e",
-            "completedAt": "2026-10-28T06:20:45.788Z",
+            "summary": "No whitespace errors and git status --porcelain empty; original feature dependency layout restored.",
+            "verifiedCommit": "8416133492d4809440d803b67cf938a67a2e9ede",
+            "completedAt": "2026-10-28T06:41:45.609Z",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Headless Chromium 1280x900 runs actual mountNotes/NotesApp CJS built by production electron-vite preload config, including sandbox/custom-elements plugins. Blank/default/existing fixtures render editable content, change locale without losing title/body, confirm saves, and reopen real Yjs snapshots; zero page errors. Screenshots in external evidence directory. Shared packaged EWork UI remains parent integration acceptance."
+          "summary": "Production-config CJS mountNotes/NotesApp in Chromium 1280x900: blank/default/existing saved Yjs documents mount, accept title/body edits, switch locale without loss, confirm save and reopen. Tests retain original DOM/readiness assertions and additionally decode actual draft/saved XML before and after transitions. Integration-deps-green.log and restored-deps-green.log each show 4/4; screenshots remain in this evidence directory. Shared packaged client awaits parent integration."
         },
         "acceptanceCriteria": [
-          "笔记 hooks、ReactDOM 与 BlockNote 共享同一 preload React 实例。",
-          "生产构建回归复现修复前 useReducer 空 dispatcher，并覆盖空白、默认与已有保存的 Yjs 笔记。",
-          "受控标题与正文可编辑，语言切换保留内容，确认保存并重开成功。",
-          "不清除或迁移用户笔记，不从功能 worktree 构建或替换共享客户端。"
+          "预加载 React、ReactDOM 与 Yjs 各共享单一运行时和构造器身份。",
+          "独立 APFS 集成依赖克隆中复现并修复 Yjs 构造器冲突，不通过延长超时或删除断言规避。",
+          "强制第二 React/Yjs peer 后仍只有一个模块所有者，且无 Yjs 重复导入或 Not same Y.Doc 警告。",
+          "实际解码的草稿与保存 note fragment 包含正文，语言切换及重开后正文和标题保留。",
+          "不改写或迁移用户笔记，不从功能 worktree 构建、替换共享客户端。"
         ],
         "risks": [
-          "共享客户端真实视图需父任务集成后重新构建验证，本功能 worktree 未构建或替换共享应用。",
-          "键盘 redo 的额外简化 fixture 探针未恢复文字，已告知父任务并留在最小渲染修复范围外；未改动历史逻辑，未将 redo 宣称为通过。"
+          "父任务仍需在刷新交接卡并合并后构建共享客户端，验证真实会话的笔记入口。",
+          "本次未修改历史实现；先前额外简化 redo 探针未验证通过，未纳入本次修复的通过声明。"
         ],
-        "generatedAt": "2026-10-28T06:20:45.788Z"
+        "generatedAt": "2026-10-28T06:41:45.609Z"
       }
     }
   ],
