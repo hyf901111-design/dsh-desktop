@@ -106,7 +106,7 @@ it('普通画布拖动保留原生实时布局、浮动卡片和落位占位，�
  await f.act(()=>f.workspace.undo());expect(f.workspace.getWorkbenchCells()).toEqual(before)
 })
 
-it('只在可接收标签附近缩略，离开后恢复原生拖动并按原生方式松手',async()=>{
+it('缩略只在页签栏的窄外沿或栏内触发，右侧空白和当前页上方也提示可接收页签',async()=>{
  const f=await fixture();let a;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');f.workspace.createBoardTabs()})
  const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]'),tabs=f.document.querySelectorAll('[data-board-tab]'),first=nav(f.workspace).containerSpec.tabs[0].id
  source.getBoundingClientRect=()=>({left:12,top:180,right:675,bottom:640,width:663,height:460})
@@ -115,9 +115,18 @@ it('只在可接收标签附近缩略，离开后恢复原生拖动并按原生�
  tabs[0].getBoundingClientRect=()=>({left:16,top:16,right:80,bottom:42,width:64,height:26})
  tabs[1].getBoundingClientRect=()=>({left:500,top:16,right:564,bottom:42,width:64,height:26})
  await f.event('pointerdown',handle,{button:0,pointerId:62,clientX:150,clientY:190})
- await f.event('pointermove',f.win,{pointerId:62,clientX:30,clientY:28});expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull()
- await f.event('pointermove',f.win,{pointerId:62,clientX:970,clientY:28});expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull()
- await f.event('pointermove',f.win,{pointerId:62,clientX:520,clientY:90});expect(f.document.querySelector('.ew-board-tabs-live-preview')?.hasAttribute('data-thumbnail')).toBe(true)
+ await f.event('pointermove',f.win,{pointerId:62,clientX:520,clientY:90});expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull()
+ await f.event('pointermove',f.win,{pointerId:62,clientX:520,clientY:60});expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull()
+ await f.event('pointermove',f.win,{pointerId:62,clientX:900,clientY:52});expect(f.document.querySelector('.ew-board-tabs-live-preview')?.hasAttribute('data-thumbnail')).toBe(true)
+ for(const clientX of [900,30,978]){
+  await f.event('pointermove',f.win,{pointerId:62,clientX,clientY:28})
+  expect(f.document.querySelector('.ew-board-tabs-live-preview')?.hasAttribute('data-thumbnail')).toBe(true)
+  expect(tabs[1].hasAttribute('data-tab-accept')).toBe(true)
+  expect(tabs[0].hasAttribute('data-tab-accept')).toBe(false)
+  expect(f.document.querySelector('[data-tab-target]')).toBeNull()
+ }
+ await f.event('pointermove',f.win,{pointerId:62,clientX:900,clientY:60});expect(f.document.querySelector('.ew-board-tabs-live-preview')?.hasAttribute('data-thumbnail')).toBe(true)
+ await f.event('pointermove',f.win,{pointerId:62,clientX:900,clientY:64});expect(f.document.querySelector('.ew-board-tabs-live-preview')?.hasAttribute('data-thumbnail')).toBe(false)
  expect(source.hasAttribute('data-board-tabs-drag-source')).toBe(true)
  await f.event('pointermove',f.win,{pointerId:62,clientX:350,clientY:400})
  expect(f.document.querySelector('.ew-board-tabs-live-preview')?.hasAttribute('data-thumbnail')).toBe(false)
@@ -140,6 +149,8 @@ it('首排标题起手已靠近页签时，向画布内拖动仍保持原生，�
  await f.event('keydown',f.win,{key:'Escape'})
  await f.event('pointerdown',handle,{button:0,pointerId:68,clientX:100,clientY:80})
  await f.event('pointermove',f.win,{pointerId:68,clientX:100,clientY:70})
+ expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull()
+ await f.event('pointermove',f.win,{pointerId:68,clientX:100,clientY:50})
  expect(f.document.querySelector('.ew-board-tabs-live-preview')?.hasAttribute('data-thumbnail')).toBe(true)
  await f.event('keydown',f.win,{key:'Escape'})
 })
@@ -346,6 +357,40 @@ it('溢出并被裁剪的页签不接受板外释放',async()=>{
  await f.event('pointerup',f.win,{pointerId:31,clientX:1100,clientY:28})
  expect(nav(f.workspace).containerSpec).toEqual(before)
  await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull())
+})
+
+it('进入页签栏右侧空区缩略但空区松手不改变组件归属或布局',async()=>{
+ const f=await fixture();let a;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');f.workspace.createBoardTabs()})
+ const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]'),before=nav(f.workspace).containerSpec,cells=f.workspace.getWorkbenchCells()
+ source.getBoundingClientRect=()=>({left:12,top:180,right:675,bottom:640,width:663,height:460})
+ f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
+ f.document.querySelector('.ew-board-tabs-list').getBoundingClientRect=()=>({left:16,top:16,right:960,bottom:42,width:944,height:26})
+ f.document.querySelectorAll('[data-board-tab]')[1].getBoundingClientRect=()=>({left:84,top:16,right:148,bottom:42,width:64,height:26})
+ await f.event('pointerdown',handle,{button:0,pointerId:69,clientX:150,clientY:190})
+ await f.event('pointermove',f.win,{pointerId:69,clientX:900,clientY:28})
+ expect(f.document.querySelector('.ew-board-tabs-live-preview')?.hasAttribute('data-thumbnail')).toBe(true)
+ expect(f.document.querySelectorAll('[data-tab-accept]')).toHaveLength(1)
+ expect(f.document.querySelector('[data-tab-target]')).toBeNull()
+ await f.event('pointerup',f.win,{pointerId:69,clientX:900,clientY:28})
+ expect(nav(f.workspace).containerSpec).toEqual(before)
+ expect(f.workspace.getWorkbenchCells()).toEqual(cells)
+ expect(source.hasAttribute('data-grid-active')).toBe(false)
+ await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull())
+})
+
+it('页签同数量改成长标题后立即显示翻页，名称缩短后恢复',async()=>{
+ const f=await fixture();await f.act(()=>f.workspace.createBoardTabs())
+ const list=f.document.querySelector('.ew-board-tabs-list');let contentWidth=136
+ Object.defineProperties(list,{clientWidth:{configurable:true,get:()=>300},scrollWidth:{configurable:true,get:()=>contentWidth}})
+ await f.event('resize',f.win)
+ expect(f.document.querySelector('[data-board-tabs-paging]')).toBeNull()
+ let spec=nav(f.workspace).containerSpec;contentWidth=600
+ await f.act(()=>f.workspace.saveBoardTabs(spec.revision,spec.tabs.map((tab,i)=>({...tab,name:i?'新闻公告与每日市场事件跟踪':'我的自选跨市场重点股票研究'}))))
+ expect(f.document.querySelector('[data-board-tabs-paging]')).not.toBeNull()
+ expect([...list.querySelectorAll('[role=tab]')].map(el=>el.textContent)).toEqual(['我的自选跨市场重点股票研究','新闻公告与每日市场事件跟踪'])
+ spec=nav(f.workspace).containerSpec;contentWidth=136
+ await f.act(()=>f.workspace.saveBoardTabs(spec.revision,spec.tabs.map((tab,i)=>({...tab,name:'页签 '+(i+1)}))))
+ expect(f.document.querySelector('[data-board-tabs-paging]')).toBeNull()
 })
 
 it('页签横向滚动不驱动画布，后台组件更新不抢回滚动位置',async()=>{
