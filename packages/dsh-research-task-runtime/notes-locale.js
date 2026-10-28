@@ -1,5 +1,6 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+  "正在工作…": "Working…",
   "行内 AI": "Inline AI",
   "行内 AI 需求": "Inline AI request",
   "发送行内 AI 需求": "Send inline AI request",

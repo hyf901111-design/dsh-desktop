@@ -1,6 +1,6 @@
 import type {NoteInsertionAnchor} from '../../shared/workspace-notes'
 import * as Y from 'yjs'
-import {absolutePositionToRelativePosition,relativePositionToAbsolutePosition,ySyncPluginKey} from 'y-prosemirror'
+import {absolutePositionToRelativePosition,relativePositionToAbsolutePosition,prosemirrorToYXmlFragment,ySyncPluginKey} from 'y-prosemirror'
 
 /** Space is an AI shortcut only for a truly empty paragraph, never whitespace. */
 export function noteInlineAiTrigger(editor:any,event:Pick<KeyboardEvent,'key'|'isComposing'|'keyCode'|'metaKey'|'ctrlKey'|'altKey'|'shiftKey'>):string|undefined{
@@ -12,8 +12,21 @@ export function noteInlineAiTrigger(editor:any,event:Pick<KeyboardEvent,'key'|'i
 }
 
 export function captureNoteInlineAnchor(editor:any,documentId:string,blockId:string):NoteInsertionAnchor{
- const state=editor._tiptapEditor.state,binding=ySyncPluginKey.getState(state)?.binding
+ let state=editor._tiptapEditor.state,binding=ySyncPluginKey.getState(state)?.binding
  if(!binding)throw Error('笔记插入位置尚未就绪，请稍后重试。')
+ // y-prosemirror intentionally leaves createAndFill's sole empty paragraph out
+ // of an empty Y fragment. Give that existing paragraph a durable identity;
+ // a root-boundary relative position cannot prove that it survived deletion.
+ if(binding.type.length===0){
+  const blocks=editor.document,block=blocks[0]
+  if(blocks.length!==1||block?.id!==blockId||block.type!=='paragraph'||block.content?.length||block.children?.length)throw Error('笔记插入位置尚未就绪，请稍后重试。')
+  binding.type.doc.transact((transaction:Y.Transaction)=>{
+   transaction.meta.set('addToHistory',false)
+   prosemirrorToYXmlFragment(state.doc,binding.type)
+  })
+  state=editor._tiptapEditor.state;binding=ySyncPluginKey.getState(state)?.binding
+  if(!binding||binding.type.length===0)throw Error('笔记插入位置尚未就绪，请稍后重试。')
+ }
  return {documentId,blockId,position:Y.relativePositionToJSON(absolutePositionToRelativePosition(state.selection.from,binding.type,binding.mapping))}
 }
 
