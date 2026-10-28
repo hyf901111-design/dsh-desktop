@@ -99,7 +99,7 @@ const htmlFitStates = new Map();`)
  change('persistClipboardBatch({ ...snapshot, artifacts, selection });', 'const tabbed=boardTabsReconcile({ ...snapshot, artifacts, selection },workbenchGrid.active(),workbenchGrid.active(),n=>workbenchGrid.targetForNode(n));persistClipboardBatch(tabbed);')
  change('commitUpdate({ artifacts, selection, ...(preparedViewport ? {viewport:preparedViewport} : {}) }, false);','commitUpdate({ artifacts:tabbed.artifacts, selection, ...(preparedViewport&&!boardTabsNode(snapshot)?{viewport:preparedViewport}:{}) }, false);')
  change('async copySelectedNodes() {',"async copySelectedNodes() {\nif(snapshot.selection.selectedNodeIds.some(id=>id===boardTabsNode(snapshot)?.id))throw Error('请复制页签中的业务组件。');")
- // Ports on another page keep their dependency but do not draw a line here.
+ // Measure only visible component ports; FinancialConnections projects hidden endpoints onto their owning page tabs.
  const connectionStart=source.indexOf('function FinancialConnections('),connectionEnd=source.indexOf('\nfunction ',connectionStart+10)
  if(connectionStart<0||connectionEnd<0)throw Error('页签连线可见性锚点缺失')
  const connections=source.slice(connectionStart,connectionEnd)
