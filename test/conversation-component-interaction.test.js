@@ -10,9 +10,9 @@ it('renders a static reply card with source and data date, no close, refresh, po
 })
 it('copy and save menu actions call only their Host methods and show visible feedback',async()=>{
  const f=await fixture();await f.event('click',f.componentHost.querySelector('[data-conversation-action=more]'))
- const copy=f.componentHost.querySelector('[data-conversation-action=copy]');expect(copy).not.toBeNull();await f.event('click',copy)
+ const copy=f.document.querySelector('[data-component-menu-surface=conversation] [data-component-menu-action=copy]');expect(copy).not.toBeNull();await f.event('click',copy)
  expect(f.bridge.copy).toHaveBeenCalledWith({sessionId:'session-a',componentId:'component-a'});expect(f.bridge.saveLibrary).not.toHaveBeenCalled();expect(f.componentHost.textContent).toContain('已复制')
- await f.event('click',f.componentHost.querySelector('[data-conversation-action=more]'));await f.event('click',f.componentHost.querySelector('[data-conversation-action=save]'))
+ await f.event('click',f.componentHost.querySelector('[data-conversation-action=more]'));await f.event('click',f.document.querySelector('[data-component-menu-surface=conversation] [data-component-menu-action=library]'))
  expect(f.bridge.saveLibrary).toHaveBeenCalledWith({sessionId:'session-a',componentId:'component-a'});expect(f.componentHost.textContent).toContain('已添加至组件库');expect(f.workspace.getSnapshot().artifacts).toEqual([])
 })
 it('Cmd+C copies a focused selected frame once while text selections and editors retain native copy',async()=>{
@@ -27,7 +27,7 @@ it('Cmd+C copies a focused selected frame once while text selections and editors
 it('menu errors remain visible and reference inserts into the resident input without submitting',async()=>{
  const f=await fixture({copy:vi.fn(async()=>({ok:false,error:'模拟剪贴板失败'}))}),shell={snapshot:{draft:'保留草稿',draftRev:1,imageIds:['img']},insertReference:vi.fn(()=>true),submit:vi.fn()}
  f.setInputs({sessions:{list:{getSnapshot:()=>({current:'session-a'})}},inputHub:{shell:()=>shell}})
- await f.event('click',f.componentHost.querySelector('[data-conversation-action=more]'));await f.event('click',f.componentHost.querySelector('[data-conversation-action=copy]'));expect(f.componentHost.querySelector('[role=alert]').textContent).toContain('模拟剪贴板失败')
+ await f.event('click',f.componentHost.querySelector('[data-conversation-action=more]'));await f.event('click',f.document.querySelector('[data-component-menu-surface=conversation] [data-component-menu-action=copy]'));expect(f.componentHost.querySelector('[role=alert]').textContent).toContain('模拟剪贴板失败')
  await f.event('click',f.componentHost.querySelector('[data-conversation-action=reference]'));expect(shell.insertReference).toHaveBeenCalled();expect(shell.snapshot.draft).toBe('保留草稿');expect(shell.submit).not.toHaveBeenCalled()
 })
 it('native cards use the instance provider, omit both ports, persist controls by revision CAS and preserve old state on failure',async()=>{

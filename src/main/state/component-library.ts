@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { sanitizeResearchClipboardNode, type ClipboardNode } from './research-canvas-clipboard';
 import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-trust';
@@ -96,11 +96,21 @@ export class ComponentLibraryStore {
         recipe?: Recipe;
     } { const e = this.entries.find(e => e.id === id); if (!e)
         throw Error('组件库条目不存在'); return structuredClone({ node: { ...e.node, title: e.name, displayName: e.name }, ...(e.recipe && e.owner === owner ? { recipe: e.recipe } : {}) }); }
-    private mutate<T>(change: (items: Entry[]) => T): Promise<T> { const run = this.queue.catch(() => { }).then(async () => { const items = structuredClone(this.entries), result = change(items), text = JSON.stringify({ version: 1, items }); if (Buffer.byteLength(text) > 24 * 1024 * 1024)
-        throw Error('组件库容量已满，请删除部分条目'); await mkdir(dirname(this.file), { recursive: true }); const tmp = this.file + '.tmp'; await writeFile(tmp, text + '\n', { encoding: 'utf8', mode: 0o600 }); await rename(tmp, this.file); this.entries = items; return structuredClone(result); }); this.queue = run; return run; }
-    add(value: unknown, binding?: unknown, owner?: string) { return this.mutate(items => { const node = snapshot(value), data = recipe(binding), fingerprint = createHash('sha256').update(JSON.stringify({ node, recipe: data, owner })).digest('hex'), old = items.find(e => e.fingerprint === fingerprint); if (old)
+    private mutate<T>(change: (items: Entry[]) => T, guard:()=>boolean=()=>true): Promise<T> {
+        const check=()=>{if(!guard())throw Error('组件操作已取消，宿主身份或权限已变化。');};
+        const run=this.queue.catch(()=>{}).then(async()=>{
+            check();const items=structuredClone(this.entries),result=change(items),text=JSON.stringify({version:1,items});
+            if(Buffer.byteLength(text)>24*1024*1024)throw Error('组件库容量已满，请删除部分条目');
+            await mkdir(dirname(this.file),{recursive:true});const tmp=this.file+'.tmp';
+            try{
+                check();await writeFile(tmp,text+'\n',{encoding:'utf8',mode:0o600});check();await rename(tmp,this.file);
+                this.entries=items;return structuredClone(result);
+            }finally{await rm(tmp,{force:true}).catch(()=>{});}
+        });this.queue=run;return run;
+    }
+    add(value: unknown, binding?: unknown, owner?: string, guard:()=>boolean=()=>true) { return this.mutate(items => { const node = snapshot(value), data = recipe(binding), fingerprint = createHash('sha256').update(JSON.stringify({ node, recipe: data, owner })).digest('hex'), old = items.find(e => e.fingerprint === fingerprint); if (old)
         return { id: old.id, name: old.name }; if (items.length >= 100)
-        throw Error('自定义组件最多保存 100 项'); const e: Entry = { id: randomUUID(), name: label(String(node.displayName || node.title || '组件').slice(0,120)), fingerprint, node, recipe: data, owner }; items.push(e); return { id: e.id, name: e.name }; }); }
+        throw Error('自定义组件最多保存 100 项'); const e: Entry = { id: randomUUID(), name: label(String(node.displayName || node.title || '组件').slice(0,120)), fingerprint, node, recipe: data, owner }; items.push(e); return { id: e.id, name: e.name }; },guard); }
     rename(id: string, name: unknown) { return this.mutate(items => { const e = items.find(e => e.id === id); if (!e)
         throw Error('组件库条目不存在'); e.name = label(name); return { id: e.id, name: e.name }; }); }
     remove(id: string) { return this.mutate(items => { const at = items.findIndex(e => e.id === id); if (at < 0)

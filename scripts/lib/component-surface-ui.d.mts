@@ -1,0 +1,1 @@
+export function createComponentSurfaceUi(runtime:{React:any;createPortal:any;Icon:any;css:string}):{Menu:any;Rename:any;Data:any;useReading(rootRef:any):{reading:boolean;toggle():void;close():void;control:any}}

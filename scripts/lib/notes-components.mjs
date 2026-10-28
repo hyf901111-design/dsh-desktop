@@ -1,4 +1,5 @@
 import {createNoteHtmlInteractionBridge,createNoteHtmlSharedStateBridge,patchNotesHtmlInteraction} from './notes-html-interaction.mjs'
+import {patchComponentSurfaceMenu} from './component-surface-menu.mjs'
 export function createNoteComponentViewStore(doc){
  const entries=new Map(),listeners=new Set();let snapshot=[]
  const notify=()=>{snapshot=[...entries.values()];for(const listener of listeners)listener()}
@@ -17,6 +18,7 @@ export function EWorkNoteComponentView({entry,officePreview}){
  const action=(name,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action:name,...value}}))
  const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(entry.sessionId,node.id,fn,'notes'),[entry.sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(entry.sessionId,node.id,'notes'),[entry.sessionId,node.id]))
  const [refreshBusy,setRefreshBusy]=react.useState(false),[refreshError,setRefreshError]=react.useState('')
+ const [dataSettings,setDataSettings]=react.useState(false),[dataRecord,setDataRecord]=react.useState(null),[dataBusy,setDataBusy]=react.useState(false),[dataError,setDataError]=react.useState('')
  react.useEffect(()=>{if(['success','unchanged'].includes(binding?.status))setRefreshError('')},[binding?.status,binding?.lastSuccess,binding?.successSequence])
  const refreshState=workbenchRefreshState(node,binding,{rss:componentRssStatusView(node),error:refreshError}),refreshing=refreshBusy||binding?.status==='refreshing'
  react.useEffect(()=>{
@@ -33,11 +35,18 @@ export function EWorkNoteComponentView({entry,officePreview}){
   const requestId=entry.instanceId+':'+(++sequence.current);setError('');pending.current.set(requestId,setTimeout(()=>{pending.current.delete(requestId);setError('组件配置尚未保存，请重试')},6000));action('spec',{expected,next:parsed,requestId});return true
  }
  react.useEffect(()=>{setError('')},[node.generationTaskId,node.generationStatus])
- const generationAction=name=>new Promise((resolve,reject)=>{
+ const generationAction=(name,value={})=>new Promise((resolve,reject)=>{
   setError('')
   const requestId=entry.instanceId+':generation:'+(++sequence.current),timer=setTimeout(()=>{generationPending.current.delete(requestId);reject(Error('组件任务操作尚未确认，请重试。'))},6000)
-  generationPending.current.set(requestId,{resolve,reject,timer});action(name,{requestId,nodeId:node.id,taskId:node.generationTaskId})
+  generationPending.current.set(requestId,{resolve,reject,timer});action(name,{...value,requestId,nodeId:node.id,taskId:node.generationTaskId})
  })
+ const dataAction=async(name,value={})=>{setDataBusy(true);setDataError('');try{const result=await generationAction(name,value);setDataRecord(result.state??null);return result}catch(error){setDataError(error.message);throw error}finally{setDataBusy(false)}}
+ react.useLayoutEffect(()=>{
+  const root=rootRef.current;if(!root)return
+  const adapter={instanceId:entry.instanceId,spec:JSON.stringify(node.containerSpec),openIndices:()=>setIndices(true),exportContent:(format,save)=>exportWorkbenchContent(root,node,format,{body:entry.host.querySelector('.en-native-component-body')||entry.host,save}),openData:()=>{if(!node.noteDataBound)return false;setDataSettings(true);void dataAction('data-read').catch(()=>{});return true}}
+  root.__eworkNoteMenu=adapter
+  return()=>{if(root.__eworkNoteMenu===adapter)delete root.__eworkNoteMenu}
+ },[entry.instanceId,entry.host,node,entry.readOnly])
  const interactionBridge=react.useMemo(()=>eworkCreateNoteHtmlInteraction(node.config?.interactionState,async(version,event)=>{
   const result=await new Promise((resolve,reject)=>{
    const requestId=entry.instanceId+':interaction:'+(++sequence.current),timer=setTimeout(()=>{generationPending.current.delete(requestId);reject(Error('笔记交互保存未确认，请重试。'))},6000)
@@ -61,8 +70,9 @@ export function EWorkNoteComponentView({entry,officePreview}){
  const body=node.kind==='web-link'?react.createElement(ResearchCanvasWebFrame,{node,sessionId:entry.sessionId,visible:true,onInspection:(url,inspection)=>action('web-inspection',{url,inspection})}):node.noteReply?react.createElement(ResearchDerivedSummary,{node,onUpgradeSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}}):spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,surface:'notes',hostReadOnly:!!entry.readOnly,onSpecChange:save}):react.createElement(ResearchContainerBody,{node:entry.readOnly?{...node,readOnly:true}:node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}})
  const title=['quote','announcements'].includes(spec.widget)?react.createElement(react.Fragment,null,react.createElement(WorkbenchTitle,{title:node.displayName||node.title||node.name||workbenchText('组件'),systemTitle:!node.displayName&&node.title===financialWidgetDefaults(spec.widget)?.title}),react.createElement(FinancialQuoteSelector,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save})):spec.widget==='news'?react.createElement(FinancialNewsSearch,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save,surface:'notes'}):react.createElement('strong',null,node.title)
  return react.createElement(react.Fragment,null,
-  react_dom.createPortal(react.createElement('div',{className:'en-native-component-heading'},refreshState&&react.createElement('span',{className:'ew-grid-refresh'},react.createElement('button',{type:'button',className:'en-component-refresh','aria-label':workbenchText('刷新组件'),disabled:entry.readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,'data-refresh-state':refreshState.state,'data-busy':refreshing||undefined,onPointerDown:e=>e.stopPropagation(),onClick:refresh},react.createElement(WorkbenchIcon,{name:refreshState.icon}))),title,spec.widget==='indices'&&react.createElement('button',{'data-workbench-more':'','aria-label':'配置指数',onClick:()=>setIndices(true)},react.createElement(FinancialLibraryIcon,{name:'dots'}))),entry.header),
-  react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:!!entry.readOnly}},body),indices&&react.createElement(FinancialIndicesSettings,{node,sessionId:entry.sessionId,rootRef,readOnly:false,onClose:()=>setIndices(false),onChange:save})),entry.host,entry.instanceId)
+  dataSettings&&react.createElement(ComponentDataSettingsPanel,{title:node.displayName||node.title,binding:dataRecord,error:dataError,busy:dataBusy,loading:dataBusy&&!dataRecord,onChange:entry.readOnly?undefined:settings=>dataAction('data-configure',{settings}),onRefresh:entry.readOnly?undefined:()=>dataAction('data-refresh'),onClose:()=>setDataSettings(false),theme:entry.dark?'dark':'light',readOnly:!!entry.readOnly,surface:'notes'}),
+  react_dom.createPortal(react.createElement('div',{className:'en-native-component-heading'},refreshState&&react.createElement('span',{className:'ew-grid-refresh'},react.createElement('button',{type:'button',className:'en-component-refresh','aria-label':workbenchText('刷新组件'),disabled:entry.readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,'data-refresh-state':refreshState.state,'data-busy':refreshing||undefined,onPointerDown:e=>e.stopPropagation(),onClick:refresh},react.createElement(WorkbenchIcon,{name:refreshState.icon}))),title),entry.header),
+  react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:!!entry.readOnly}},body),indices&&react.createElement(FinancialIndicesSettings,{node,sessionId:entry.sessionId,rootRef,readOnly:!!entry.readOnly,onClose:()=>setIndices(false),onChange:save})),entry.host,entry.instanceId)
  )
 }
 export function EWorkNoteComponentViews({sessionId,active}){
@@ -86,5 +96,5 @@ export function patchNotesComponents(source){
   if(source.split(anchor).length!==2)throw Error('无法定位笔记原生组件预览。')
   source=source.replace(anchor,anchor+marker+" react.createElement(EWorkNoteComponentViews,{sessionId,active:activeView==='notes'}), ")
  }
- return patchNotesHtmlInteraction(source,EWorkNoteComponentView.toString())
+ return patchComponentSurfaceMenu(patchNotesHtmlInteraction(source,EWorkNoteComponentView.toString()))
 }
