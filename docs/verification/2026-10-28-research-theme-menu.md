@@ -32,3 +32,7 @@
 - 页签导航单独渲染，原先没有普通组件的外层边框。仅彭博模式增加 `1px solid var(--grid-border,#303030)`，与普通组件四边颜色、线宽和直角一致；其余三模式保持原样。
 - 真实 Chromium 逐一比较页签和普通组件四边的计算样式；旧实现为 0px、普通组件为 1px，断言先失败，修复后应用明暗主题与四种看板模式全部通过，导航仍高 34px。
 - `test/board-tabs-theme-browser.test.js`、`test/board-tabs-client.test.js` 串行执行，2 文件 32 项通过；`git diff --check` 通过。日志：`/tmp/sherlock-board-tabs-border-{red,green}-20261028.log`。未构建或替换共享客户端。
+
+## 后续：与组件宿主隔离规则整合
+
+旧主题继承用例只创建 `data-ework-grid`，没有真实画布的 `data-research-canvas` 标记；新的宿主作用域校验正确拒绝该非画布节点。仅补齐测试 DOM 标记，继续验证无触发器时继承所属彭博画布主题，不改产品侧守卫。主题五文件 37 项通过，并直接调用候选 Notes `fa609e24` 的真实 `openComponentData`，确认 owner、research surface 和 openterminal 主题均正确。日志：`/tmp/sherlock-theme-surface-fixture-20261029.log`、`/tmp/sherlock-theme-surface-candidate-probe-20261029.log`。

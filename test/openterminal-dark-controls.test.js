@@ -21,7 +21,7 @@ it('OpenTerminal的数据弹窗在全局浅色下从载入到完成均使用现�
  }
 })
 it('未传触发器的生成组件设置仍从所属画布获取主题',()=>{
- const doc=setup();doc.body.innerHTML='<main data-ework-grid data-workbench-style="openterminal"><article data-research-node-id="card"></article></main>'
+ const doc=setup();doc.body.innerHTML='<main data-research-canvas data-ework-grid data-workbench-style="openterminal"><article data-research-node-id="card"></article></main>'
  let detail;win.addEventListener('sherlock:component-data-open',e=>{detail=e.detail})
  expect(typeof dataRefresh.openComponentData).toBe('function');dataRefresh.openComponentData('session',{id:'card',title:'模拟数据'})
  expect(detail.theme).toBe('openterminal')
