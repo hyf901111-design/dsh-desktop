@@ -1644,6 +1644,86 @@
         ],
         "recordedAt": "2026-10-28T10:04:54.340Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "运行中的子代理头像圆环旋转",
+        "branch": "codex/feat/subagent-loading-20261028",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "11ae4e1288947b9796c50d3c7733ea9c789535a8",
+        "commits": [
+          {
+            "commit": "11ae4e1288947b9796c50d3c7733ea9c789535a8",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "修复：让运行中的子代理头像圆环持续旋转"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/verification/2026-10-28-subagent-running-rotation.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "test/subagent-avatars-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/subagent-task-tree-avatars-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/subagent-avatars-browser.test.js",
+              "test/subagent-task-tree-avatars-browser.test.js",
+              "test/subagent-task-tree-avatars.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "精确提交11ae4e12：3文件11项通过，含6项真实Chromium组件交互；popover/header/任务树三帧角度持续变化、单位缩放、零位移，头像和track静止，暗浅/idle/隐藏/reduced motion均通过。",
+            "verifiedCommit": "11ae4e1288947b9796c50d3c7733ea9c789535a8",
+            "completedAt": "2026-10-28T10:15:10.268357Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确提交11ae4e12 TypeScript检查通过。",
+            "verifiedCommit": "11ae4e1288947b9796c50d3c7733ea9c789535a8",
+            "completedAt": "2026-10-28T10:15:10.268357Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "独立真实production catalog注册、详情header和Tasks tab渲染，在自然时间120ms间隔采样三帧DOMMatrix确认角度改变且头像不动。暗浅截图和原有资产/布局/身份重载/键盘导航验证通过；共享原生客户端待集成owner核验，未从feature构建/操作它。"
+        },
+        "acceptanceCriteria": [
+          "子代理运行中，顶部目录与任务树头像圆环持续旋转。",
+          "头像图片与淡色track保持静止，24/20px环尺寸及角色身份不变。",
+          "空闲/已结束移除运行环；hidden/inert/aria-hidden暂停，系统减少动态效果时静态呈现。",
+          "不凭同名隐藏、合并或删除真实child历史，不修改backend或count语义。"
+        ],
+        "risks": [
+          "组件自动修复产生额外真实子代理的源头协议由Notes独立分支处理，本分支不掩盖历史或虚改数量。",
+          "需在集成分支最终共享客户端验证实际模型运行态；功能worktree未构建共享应用。"
+        ],
+        "generatedAt": "2026-10-28T10:15:20.299638Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -1760,6 +1840,17 @@
         "test/board-tabs-connection-client.test.js",
         "test/board-tabs-contract.test.js",
         "test/board-tabs-drop-focus-browser.test.js",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/subagent-avatars-browser.test.js",
+        "test/subagent-task-tree-avatars-browser.test.js",
+        "test/subagent-task-tree-avatars.test.js",
         "--reporter=dot"
       ],
       "timeoutMs": 180000
