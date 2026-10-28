@@ -1088,6 +1088,109 @@
         ],
         "recordedAt": "2026-10-28T08:39:56.108Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究看板主题切换菜单",
+        "branch": "codex/feat/research-theme-menu-20261028",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "5e451e8ca293597e4885ae44bb35f9f996283c2d",
+        "commits": [
+          {
+            "commit": "c01337e4418afb1981c21d64bdef9a7147863639",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "功能：将研究看板主题切换收为统一菜单"
+          },
+          {
+            "commit": "5e451e8ca293597e4885ae44bb35f9f996283c2d",
+            "parents": [
+              "c01337e4418afb1981c21d64bdef9a7147863639"
+            ],
+            "subject": "修复：对齐主题菜单图标与文字列"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/verification/2026-10-28-research-theme-menu.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/openterminal-dark-controls.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-theme-menu-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/workbench-theme-menu-browser.test.js",
+              "test/openterminal-dark-controls.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/research-arrange-modes.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "提交5e451e8c：5文件35项通过，含7项真实production ResearchCanvas Chromium交互；完整安装器升级后通过。 四行图标与文字X列对齐断言覆盖暗浅/窄宽矩阵。",
+            "verifiedCommit": "5e451e8ca293597e4885ae44bb35f9f996283c2d",
+            "completedAt": "2026-10-28T09:45:45Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "提交5e451e8c的TypeScript检查通过。",
+            "verifiedCommit": "5e451e8ca293597e4885ae44bb35f9f996283c2d",
+            "completedAt": "2026-10-28T09:45:45Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "独立Chromium production ResearchCanvas验证四模式选择与刷新恢复、键盘及关闭焦点、跨session、英文、暗浅/380/1000矩阵；菜单材料、spacing、勾选行与整理菜单计算样式一致。共享原生客户端待集成owner核验；feature worktree未构建或启动它。 修复第二span继承伸展，四组真实计算断言确认每行图标/文字起始X一致、图标16px且flex grow/shrink均为0。"
+        },
+        "acceptanceCriteria": [
+          "默认仅显示当前主题图标与箭头，点击上方展开四主题菜单。",
+          "菜单样式、勾选列、行高、间距复用整理画布菜单。",
+          "选择模式调用原主题setter并持久化，刷新恢复，不改画布内容。",
+          "支持方向键、Home/End、Enter/空格、Esc归还焦点及外侧关闭；切换工作区收起旧菜单。",
+          "英文、浅深色、380px窄屏表现正确，工具栏无多余尾部空白或横向溢出。",
+          "四主题行的图标和文字分别处于相同X列，不随标签长度偏移。"
+        ],
+        "risks": [
+          "保留现有彭博全局试用范围及看板偏好的存储语义，没有新存储格式。",
+          "正式共享客户端需由集成owner从集成分支构建并核验；本分支未替换共享客户端。"
+        ],
+        "generatedAt": "2026-10-28T09:45:45Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -1174,6 +1277,27 @@
         "test/composer-submit-policy.test.js"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/workbench-theme-menu-browser.test.js",
+        "test/openterminal-dark-controls.test.js",
+        "test/workbench-style.test.js",
+        "test/workbench-openterminal.test.js",
+        "test/research-arrange-modes.test.js",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
