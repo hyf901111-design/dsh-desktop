@@ -47,6 +47,31 @@ async function fixture({width=1000,dark=false,english=false}={}){
 const labels=['浅色模式','深色模式','彭博模式','易方达模式']
 const modes=['light','dark','openterminal','enterprise']
 
+for(const dark of [false,true])it('keeps toolbar appearance on the app theme with hover-only padded theme control in '+(dark?'dark':'light'),async()=>{
+ const {page,trigger,menu,errors}=await fixture({dark})
+ const toolbar=page.locator('[data-ework-toolbar]'),link=toolbar.getByRole('button',{name:'链接',exact:true})
+ const appearance=async()=>toolbar.evaluate(el=>{const s=getComputedStyle(el),toggle=el.querySelector('[data-workbench-theme-toggle]'),divider=el.querySelector('.ew-workbench-mode-divider'),other=el.querySelector('button[aria-label="链接"]');return {background:s.backgroundColor,border:s.borderColor,otherColor:getComputedStyle(other).color,toggleColor:getComputedStyle(toggle).color,divider:getComputedStyle(divider).backgroundColor}})
+ try{
+  await page.mouse.move(1,1)
+  const original=await appearance()
+  for(const [index,mode] of modes.entries()){
+   await trigger.click();await menu.getByRole('menuitemradio',{name:labels[index],exact:true}).click();await page.mouse.move(1,1)
+   expect(await page.locator('[data-ework-grid]').getAttribute('data-workbench-style')).toBe(mode)
+   expect(await appearance()).toEqual(original)
+   expect(await trigger.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+   const padding=await trigger.evaluate(el=>{const r=el.getBoundingClientRect(),icon=el.querySelector('.ew-workbench-mode-icon').getBoundingClientRect(),arrow=el.querySelector('svg').getBoundingClientRect();return {left:icon.left-r.left,right:r.right-arrow.right}})
+   expect(padding.left).toBeGreaterThanOrEqual(8);expect(padding.right).toBeGreaterThanOrEqual(8)
+   await link.hover();const hover=await link.evaluate(el=>getComputedStyle(el).backgroundColor)
+   await trigger.hover();expect(await trigger.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(hover)
+   await trigger.click();await menu.waitFor();await page.mouse.move(1,1)
+   expect(await trigger.getAttribute('aria-expanded')).toBe('true')
+   expect(await trigger.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+   await page.keyboard.press('Escape')
+  }
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
 it('opens the four production theme modes from one compact trigger and persists the chosen mode across reload',async()=>{
  const {page,trigger,menu,errors}=await fixture()
  try{
