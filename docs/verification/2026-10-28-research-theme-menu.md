@@ -26,3 +26,9 @@
 - 按钮宽 56px，图标与下箭头分别保留 10px 左右安全距离；主题槽宽 70px。380px 窄屏原有无溢出断言继续通过。
 - 新增两组真实 production ResearchCanvas 浏览器回归，覆盖客户端浅色／深色下依次选择四个看板模式，检查底栏背景、边框、按钮颜色和分隔线不随看板模式变化；检查普通、悬停、菜单展开的背景及真实图标间距。旧代码分别在 1px 左边距和深色下常驻背景处失败，修复后通过。
 - 最终聚焦检查：上述五个测试文件串行执行，37 项通过；`npm run typecheck`、`git diff --check` 通过。日志为 `/tmp/sherlock-toolbar-focused-20261028.log`、`/tmp/sherlock-toolbar-typecheck-20261028.log`。共享原生客户端仍由集成流程构建后验收。
+
+## 后续：彭博页签组件边框
+
+- 页签导航单独渲染，原先没有普通组件的外层边框。仅彭博模式增加 `1px solid var(--grid-border,#303030)`，与普通组件四边颜色、线宽和直角一致；其余三模式保持原样。
+- 真实 Chromium 逐一比较页签和普通组件四边的计算样式；旧实现为 0px、普通组件为 1px，断言先失败，修复后应用明暗主题与四种看板模式全部通过，导航仍高 34px。
+- `test/board-tabs-theme-browser.test.js`、`test/board-tabs-client.test.js` 串行执行，2 文件 32 项通过；`git diff --check` 通过。日志：`/tmp/sherlock-board-tabs-border-{red,green}-20261028.log`。未构建或替换共享客户端。

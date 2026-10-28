@@ -47,6 +47,11 @@ it('四模式选中态还原设计颜色，更多图标沿用同模式原生组�
    expect(paint,JSON.stringify({appDark,board})).toEqual(want)
    expect(await page.locator('[data-board-tabs-more]').evaluate(el=>getComputedStyle(el).color)).toBe(await page.locator('[data-native-more]').evaluate(el=>getComputedStyle(el).color))
    expect(await page.locator('[data-board-tabs-nav]').evaluate(el=>el.getBoundingClientRect().height)).toBe(34)
+   const borders=await page.locator('[data-board-tabs-nav],[data-research-node-id="native"]').evaluateAll(els=>els.map(el=>{const s=getComputedStyle(el);return ['Top','Right','Bottom','Left'].map(side=>({width:s['border'+side+'Width'],style:s['border'+side+'Style'],color:s['border'+side+'Color']}))}))
+   if(board==='openterminal'){
+    expect(borders[0]).toEqual(borders[1])
+    expect(borders[0].every(side=>side.width==='1px'&&side.style==='solid'&&side.color==='rgb(48, 48, 48)')).toBe(true)
+   }else expect(borders[0].every(side=>side.width==='0px')).toBe(true)
   }
  }finally{await page.close()}
 })
