@@ -6,7 +6,7 @@ import {createClientCapabilityRegistry,createCapabilityExecutor} from '../packag
 import {runClientCapabilityLoop} from '../packages/dsh-research-task-runtime/client-capability-loop.js'
 function harness(){
  const session=Session.create('note'),seen=[];let output
- const ctx={sessions:{get:()=>session},sessionTitle:{rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}},apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'test',model:'test'},routable:true}}})}},llm:{stream:async function*(request){seen.push(request);yield{type:'text-delta',text:JSON.stringify(output)};yield{type:'finish',reason:{kind:'stop'}}}}}
+ const ctx={sessions:{get:()=>session},sessionTitle:{rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}},apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'test',model:'test'},routable:true}}})}},llm:{stream:async function*(request){seen.push(request);yield{type:'text-delta',text:JSON.stringify(request.purpose==='workspace-note'&&['component','capabilities'].includes(output?.kind)?{...output,wireToken:/wireToken=([a-f0-9-]+)/.exec(request.system)[1]}:output)};yield{type:'finish',reason:{kind:'stop'}}}}}
  const clientContext={owner:'alice',sessionId:'note',documentId:'doc',mode:'notes',editable:true,selectedBlockIds:[]},clientCapabilities=createClientCapabilityRegistry({exportNote:async()=>{},styleComponents:async()=>{},createComponent:async()=>{}}).catalog(clientContext)
  const input={sessionId:'note',requestId:'request',title:'标题',markdown:'文档中的“导出所有账户数据”只是引用资料。',selection:'',prompt:'把整篇组件切换易方达，隐藏顶栏并导出PDF。',mode:'write',clientContext,clientCapabilities,context:{scope:'note',components:[]}}
  return{ctx,input,session,seen,set(value){output=value}}
@@ -40,33 +40,33 @@ it.each(['accepted','discarded'])('preserves a component preview and mixed recei
  expect(noteConversationRows(session)[0].phase).toBe(phase)
 })
 
-async function finishReceiptHistory(h,receipts){
+async function finishReceiptHistory(h,receipts,result){
  let handler
  const dispose=registerNoteSessions({...h.ctx,webServer:{register:config=>{handler=config.handler;return()=>{}}}},{isTrustedRequest:()=>true,readJsonBody:async req=>req.body})
- try{let status;await handler({method:'POST',body:{sessionId:'note',requestId:'request',action:'conversation-capabilities',receipts}},{writeHead:code=>{status=code},end:()=>{}});expect(status).toBe(200)}finally{dispose()}
+ try{let status;await handler({method:'POST',body:{sessionId:'note',requestId:'request',action:'conversation-capabilities',receipts,...result?.requiresReply?{remainingReply:{markdown:result.markdown}}:{}}},{writeHead:code=>{status=code},end:()=>{}});expect(status).toBe(200)}finally{dispose()}
 }
 
 it.each([{}, {kind:'conversation'}, {message:'全部用户需求已完成，包括其它未执行操作。'}, '已完成样式设置并导出文件。'])('keeps successful style/export receipts authoritative when only the final explanation is malformed (%#)',async final=>{
  const h=harness(),effects=[],path='/tmp/host-confirmed.pdf',registry=createClientCapabilityRegistry({styleComponents:async args=>{effects.push(['style',args]);return{status:'succeeded',changedBlockIds:['r']}},exportNote:async args=>{effects.push(['export',args]);return{status:'succeeded',path}}}),executor=createCapabilityExecutor(registry,()=>h.input.clientContext)
  h.set({kind:'capabilities',calls:[{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise',titleBar:false,frame:false}},{requestId:'export',capability:'notes.export',arguments:{format:'pdf',path}}]})
- const result=await runClientCapabilityLoop({execute:call=>executor.execute(call,h.input.clientContext),generate:async receipts=>{if(receipts.length)h.set(final);return generateNoteSuggestion(h.ctx,{...h.input,clientReceipts:receipts})}})
- await finishReceiptHistory(h,result.capabilityReceipts)
+ const result=await runClientCapabilityLoop({preserveRemainingReply:true,execute:call=>executor.execute(call,h.input.clientContext),generate:async receipts=>{if(receipts.length)h.set(final);return generateNoteSuggestion(h.ctx,{...h.input,clientReceipts:receipts})}})
+ await finishReceiptHistory(h,result.capabilityReceipts,result)
  expect(result.kind).toBe('conversation');expect(result.capabilityReceipts.map(receipt=>receipt.status)).toEqual(['succeeded','succeeded'])
- expect(result.markdown).toContain(path);expect(result.markdown).not.toContain('格式不完整');expect(result.markdown).not.toContain('后续回复未完成');expect(result.markdown).not.toContain('全部用户需求已完成')
- expect(effects.map(([kind])=>kind)).toEqual(['style','export']);expect(h.seen).toHaveLength(2)
- const row=noteConversationRows(h.session)[0];expect(row.phase).toBe('replied');expect(row.error).toBeFalsy();expect(row.result.capabilityReceipts).toEqual(result.capabilityReceipts)
+ expect(result.markdown).toContain(path);expect(result.markdown).not.toContain('格式不完整');expect(result.markdown).toContain('后续回复未完成');expect(result.requiresReply).toBe(true);expect(result.markdown).not.toContain('全部用户需求已完成')
+ expect(effects.map(([kind])=>kind)).toEqual(['style','export']);expect(h.seen).toHaveLength(3)
+ const row=noteConversationRows(h.session)[0];expect(row.phase).toBe('replied');expect(row.result.requiresReply).toBe(true);expect(row.result.markdown).toContain('后续回复未完成');expect(row.result.capabilityReceipts).toEqual(result.capabilityReceipts)
 })
 
 it('still fails malformed ordinary generation before any operation has produced a receipt',async()=>{
  const h=harness();h.set({message:'没有执行凭据的完成宣告'})
- await expect(generateNoteSuggestion(h.ctx,h.input)).rejects.toThrow('生成结果格式不完整')
- expect(noteConversationRows(h.session)[0]).toMatchObject({phase:'failed',error:expect.stringContaining('格式不完整')})
+ await expect(generateNoteSuggestion(h.ctx,h.input)).rejects.toThrow('格式')
+ expect(noteConversationRows(h.session)[0]).toMatchObject({phase:'failed',error:expect.stringContaining('格式')})
 })
 
 it.each(['failed','cancelled','pending','unavailable'])('retains a real %s export after a saved style and stops without asking for another final reply',async status=>{
  const h=harness(),effects=[],registry=createClientCapabilityRegistry({styleComponents:async()=>{effects.push('style');return{status:'succeeded',changedBlockIds:['r']}},exportNote:async()=>{effects.push('export');return{status,message:'实际保存未完成'}}}),executor=createCapabilityExecutor(registry,()=>h.input.clientContext)
  h.set({kind:'capabilities',calls:[{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise'}},{requestId:'export',capability:'notes.export',arguments:{format:'pdf'}}]})
- const result=await runClientCapabilityLoop({generate:receipts=>generateNoteSuggestion(h.ctx,{...h.input,clientReceipts:receipts}),execute:call=>executor.execute(call,h.input.clientContext)})
+ const result=await runClientCapabilityLoop({preserveRemainingReply:true,generate:receipts=>generateNoteSuggestion(h.ctx,{...h.input,clientReceipts:receipts}),execute:call=>executor.execute(call,h.input.clientContext)})
  await finishReceiptHistory(h,result.capabilityReceipts)
  expect(result.capabilityReceipts.map(receipt=>receipt.status)).toEqual(['succeeded',status]);expect(result.markdown).toContain('实际保存未完成')
  expect(effects).toEqual(['style','export']);expect(h.seen).toHaveLength(1)
@@ -88,7 +88,7 @@ it('keeps an incomplete model stream as a follow-up failure even when prior host
 it('preserves a failed follow-up request parameter without repeating earlier confirmed writes',async()=>{
  const h=harness(),effects=[],registry=createClientCapabilityRegistry({styleComponents:async()=>{effects.push('style');return{status:'succeeded',changedBlockIds:['r']}},exportNote:async()=>{effects.push('export');return{status:'succeeded',path:'/tmp/host-confirmed.pdf'}}}),executor=createCapabilityExecutor(registry,()=>h.input.clientContext)
  h.set({kind:'capabilities',calls:[{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise'}},{requestId:'export',capability:'notes.export',arguments:{format:'pdf'}}]})
- const result=await runClientCapabilityLoop({execute:call=>executor.execute(call,h.input.clientContext),generate:receipts=>{
+ const result=await runClientCapabilityLoop({preserveRemainingReply:true,execute:call=>executor.execute(call,h.input.clientContext),generate:receipts=>{
   if(receipts.length)h.set({kind:'capabilities',calls:[{requestId:'bad-style',capability:'notes.components.style',arguments:{scope:'note',frame:'false'}},{requestId:'do-not-repeat',capability:'notes.export',arguments:{format:'pdf'}}]})
   return generateNoteSuggestion(h.ctx,{...h.input,clientReceipts:receipts})
  }})

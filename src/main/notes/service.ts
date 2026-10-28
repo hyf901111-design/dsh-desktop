@@ -166,7 +166,7 @@ export function installNotesService(options: {
             ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
           }})
           const {registry,executor}=host,receipts:CapabilityReceipt[]=[]
-          const result=await runClientCapabilityLoop({signal,execute:call=>executor.execute(call,clientContext!,signal),onReceipts:items=>{
+          const result=await runClientCapabilityLoop({signal,preserveRemainingReply:true,execute:call=>executor.execute(call,clientContext!,signal),onReceipts:items=>{
             receipts.push(...items)
             // Only validated host receipts may become visible action progress.
             // Read results stay in the model context, outside the conversation UI.
@@ -186,7 +186,7 @@ export function installNotesService(options: {
             capabilityResults.set(cacheKey,{fingerprint,result})
             if(options.owner()===owner&&options.canRead(session)){
               const receiptUrl=new URL('/sherlock/notes/session',base)
-              const recorded=await fetch(receiptUrl,{method:'POST',headers:{'content-type':'application/json',origin:receiptUrl.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities',requestId:input.requestId,receipts})}).catch(()=>undefined)
+              const recorded=await fetch(receiptUrl,{method:'POST',headers:{'content-type':'application/json',origin:receiptUrl.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities',requestId:input.requestId,...result?.kind==='conversation'&&result.requiresReply===true?{remainingReply:{markdown:result.markdown}}:{},receipts})}).catch(()=>undefined)
               if(!recorded?.ok)result.markdown=result.kind==='conversation'?result.markdown+'\n操作回执暂未写入会话历史。':result.markdown
             }
           }

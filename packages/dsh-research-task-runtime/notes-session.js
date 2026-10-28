@@ -88,7 +88,8 @@ export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
         if(!session||!noteConversationRows(session).some(row=>row.requestId===input.requestId)||!Array.isArray(receipts)||!receipts.length||receipts.length>16||JSON.stringify(receipts).length>300000||receipts.some(r=>!['succeeded','failed','cancelled','pending','unavailable'].includes(r?.status)||typeof r.capability!=='string'))throw Error('客户端操作回执无效。')
         const previous=noteConversationRows(session).find(row=>row.requestId===input.requestId)
         const documentResult=['text','component'].includes(previous?.result?.kind)
-        const result=documentResult?{...previous.result,capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}:{kind:'conversation',markdown:capabilityReceiptText(receipts),capabilityReceipts:receipts}
+        const remaining=input.remainingReply,reply=remaining&&typeof remaining.markdown==='string'&&remaining.markdown.trim()&&remaining.markdown.length<=100000?{kind:'conversation',markdown:remaining.markdown,requiresReply:true}:previous?.result?.kind==='conversation'&&previous.result.requiresReply===true?previous.result:undefined
+        const result=documentResult?{...previous.result,capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}:reply?{...reply,capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}:{kind:'conversation',markdown:capabilityReceiptText(receipts),capabilityReceipts:receipts}
         const phase=documentResult?['accepted','discarded'].includes(previous.phase)?previous.phase:'ready':'replied'
         recordNoteConversation(session,{requestId:input.requestId,phase,result,finishedAt:Date.now()});setNoteCapabilityRunning(session,input.requestId,false)
         return send(200,{ok:true})
