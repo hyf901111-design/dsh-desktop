@@ -228,3 +228,16 @@ it('repairs the captured invalid-unit response in a second native turn of one ch
  expect(new Set(states.map(state=>state.componentTask?.childSessionId).filter(Boolean))).toEqual(new Set([f.child.id]))
  expect(f.repairPrompts[0].content[0].text).toContain('本轮是无工具的内容修复阶段');expect(f.ctx.run.dispose).toHaveBeenCalledOnce()
 })
+
+const capturedOfflineHtml=JSON.parse(readFileSync(new URL('./fixtures/notes-real-offline-line-html.json',import.meta.url),'utf8'))
+const offlineHtmlRequest='在这个位置新建另一个可交互的离线 HTML 折线图组件，标题“原位图表验收二”。仅用demo10/1=10,10/2=20,10/3=15，明确demo，默认折叠「查看全部数据」明细+可填写备注input，用于save/reopen，不查询外部数据，保留旧chart和上下段落。'
+it('repairs the actual offline interactive HTML in one child and accepts its guarded real dispatch without dropping the chart or input',async()=>{
+ const f=liveRepairContext(capturedOfflineHtml[0],capturedOfflineHtml[1]),states=[]
+ const result=await(await loadGenerate())(f.ctx,{...noteInput,prompt:offlineHtmlRequest,document:'',references:{scope:'none',components:[]}},undefined,state=>states.push(state))
+ expect(result.node).toMatchObject({generationStatus:'completed',noteLibrary:true,containerSpec:{type:'html',title:'原位图表验收二'}})
+ const html=result.node.containerSpec.html;expect(html).toContain('[10,20,15]');expect(html).toContain('查看全部数据');expect(html).toContain('id="accept-note"');expect(html).toContain('shared.dispatch')
+ expect(f.ctx.subagents.start).toHaveBeenCalledOnce();expect(f.repairPrompts).toHaveLength(1);expect(f.child.session.events.filter(event=>event.type==='turn/end').map(event=>event.data.turn)).toEqual([1,2]);expect(new Set(states.map(state=>state.componentTask?.childSessionId).filter(Boolean))).toEqual(new Set([f.child.id]));expect(f.repairPrompts[0].content[0].text).toContain('无工具');expect(f.ctx.run.dispose).toHaveBeenCalledOnce()
+})
+it('does not promote the captured empty registration into a completed HTML component if repair is also empty',async()=>{
+ const f=liveRepairContext(capturedOfflineHtml[0],capturedOfflineHtml[0]);await expect((await loadGenerate())(f.ctx,{...noteInput,prompt:offlineHtmlRequest,document:'',references:{scope:'none',components:[]}})).rejects.toThrow('空注册');expect(f.ctx.subagents.start).toHaveBeenCalledOnce();expect(f.repairPrompts).toHaveLength(1)
+})

@@ -55,3 +55,24 @@ describe('generated shared-state acceptance', () => {
    expect(sharedComponentIssue('<canvas></canvas><script>document.addEventListener("keydown",()=>{});</script>')).toBeTruthy()
  });
 })
+
+it('accepts an API-presence guarded registration handle with real dispatch, without accepting empty or foreign handles',()=>{
+ const guarded=valid.replace('const shared=window.sherlockShared.register(', 'const shared=window.sherlockShared?window.sherlockShared.register(').replace('});document.querySelector', '}):null;document.querySelector')
+ expect(sharedComponentIssue(page(guarded),{required:true})).toBeUndefined()
+ expect(sharedComponentIssue(page(guarded.replace('shared.dispatch','other.dispatch')),{required:true})).toContain('空注册')
+ expect(sharedComponentIssue(page(guarded.replace(/;document.querySelector\('button'\).*$/,'')),{required:true})).toContain('空注册')
+ expect(sharedComponentIssue(page(guarded.replace('window.sherlockShared?','false?')),{required:true})).toContain('空注册')
+})
+it('keeps lexical dispatch provenance when a guarded handle is shadowed, replaced, or guarded by another object',()=>{
+ const guarded=valid.replace('const shared=window.sherlockShared.register(', 'const shared=window.sherlockShared?window.sherlockShared.register(').replace('});document.querySelector', '}):null;document.querySelector')
+ expect(sharedComponentIssue(page(guarded.replace("()=>shared.dispatch", "function(shared){return shared.dispatch").replace("({type:'increment'});", "({type:'increment'});}")),{required:true})).toBeTruthy()
+ expect(sharedComponentIssue(page(guarded.replace('window.sherlockShared?','window.otherAPI?')),{required:true})).toContain('空注册')
+ expect(sharedComponentIssue(page(guarded.replace("const shared=", "let shared=").replace(";document.querySelector", ";shared=other;document.querySelector")),{required:true})).toContain('空注册')
+ expect(sharedComponentIssue(page('(function(window){'+guarded+'})({});'),{required:true})).toContain('真实宿主接口')
+})
+it('never treats a dynamically computed API guard or dispatch property as a literal host path',()=>{
+ const guarded=valid.replace('const shared=window.sherlockShared.register(', 'const shared=window.sherlockShared?window.sherlockShared.register(').replace('});document.querySelector', '}):null;document.querySelector')
+ expect(sharedComponentIssue(page("const sherlockShared='missing';"+guarded.replace('window.sherlockShared?','window[sherlockShared]?')),{required:true})).toContain('空注册')
+ expect(sharedComponentIssue(page(guarded.replaceAll('window.sherlockShared',"window['sherlockShared']").replace('shared.dispatch',"shared['dispatch']")),{required:true})).toBeUndefined()
+ expect(sharedComponentIssue(page("const dispatch='missing';"+guarded.replace('shared.dispatch','shared[dispatch]')),{required:true})).toContain('空注册')
+})
