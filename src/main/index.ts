@@ -74,6 +74,8 @@ import {
   Menu,
   nativeTheme,
   Notification,
+  powerMonitor,
+  powerSaveBlocker,
   systemPreferences,
   safeStorage,
   net,
@@ -135,6 +137,9 @@ import {
 } from './search/local-search-runtime'
 import { ResearchCanvasStorage } from './state/research-canvas-storage'
 import { registerHomeThemePreferences } from './home-theme-preferences'
+import {PowerPreferenceStore, PowerSettingsController} from './power/controller'
+import {MacOSLidGuard} from './power/macos-lid-guard'
+import {registerPowerSettingsIpc} from './power/ipc'
 import { ResearchVoiceController, registerResearchVoiceHandlers } from './state/research-voice'
 import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
 import { CanvasActionBridge, registerCanvasActionHandlers } from './state/canvas-action-bridge'
@@ -1229,6 +1234,18 @@ function installMenu(): void {
 
 async function bootstrap(): Promise<void> {
   if (process.platform === 'darwin') app.dock?.setIcon(desktopIconPath())
+  if (process.platform === 'darwin') {
+    const powerSettings = new PowerSettingsController({store: new PowerPreferenceStore(app.getPath('userData')), blocker: powerSaveBlocker, guard: new MacOSLidGuard(), canPreventSleep: () => !['serious', 'critical'].includes(powerMonitor.getCurrentThermalState())})
+    registerPowerSettingsIpc(ipcMain, () => mainWindow, powerSettings)
+    const thermalChanged = ({state}: {state: string}) => {
+      if (state === 'serious' || state === 'critical') void powerSettings.safetyStop()
+    }
+    powerMonitor.on('thermal-state-change', thermalChanged)
+    thermalChanged({state: powerMonitor.getCurrentThermalState()})
+    const powerPoll = setInterval(() => {void powerSettings.refresh().catch(error => console.warn('[power-settings]', error))}, 5000)
+    powerPoll.unref()
+    app.once('before-quit', () => {clearInterval(powerPoll); powerMonitor.removeListener('thermal-state-change', thermalChanged); powerSettings.dispose()})
+  }
   launchDirectory = await ensureLaunchRoot(app.getPath('userData'))
   const acceptanceOrigin = localAcceptanceOrigin({
     origin: app.commandLine.getSwitchValue('sherlock-local-acceptance-origin'),

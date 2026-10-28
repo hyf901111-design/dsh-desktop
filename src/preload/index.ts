@@ -37,6 +37,7 @@ import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
 import { mountHomeThemes, getHomeThemeController } from './home-themes'
 import {toggleHomeAppearance} from './home-theme-controls'
+import {mountPowerSettings} from './power-settings'
 import { mountHomeOperations } from './home-operations'
 import { mountHomeGuides, playHomeGuideFromOperations } from './home-guides'
 import { mountHomeNotesGuide } from './home-guide-notes'
@@ -205,6 +206,10 @@ function initializeUi(): void {
   if (process.platform === 'win32') {
     mountWindowsTitlebar({ document, ipcRenderer, locale })
   } else if (process.platform === 'darwin') {
+    window.addEventListener('unload', mountPowerSettings(document, {
+      get: () => ipcRenderer.invoke('desktop-power:get'),
+      set: (key, value) => ipcRenderer.invoke('desktop-power:set', key, value)
+    }), {once: true})
     mountNativeThemeSync({ document, ipcRenderer })
     mountDesktopShellStyles(document)
     window.addEventListener('unload', mountFigmaMotionController(document), { once: true })
