@@ -152,7 +152,7 @@ export class ResearchVoiceController {
     if ((this.options.platform ?? process.platform) !== 'darwin') return unavailable()
     if (this.nativeFailure) return unavailable(this.nativeFailure)
     const window = this.options.getMainWindow()
-    if (!window || window.isDestroyed() || !window.isFocused() || this.capture) return invalid()
+    if (!window || window.isDestroyed() || window.webContents.isDestroyed() || !window.isFocused() || this.capture) return invalid()
     this.attachWindow(window)
     if (!this.ensureNative()) return unavailable(this.nativeFailure)
     const frame = window.webContents.mainFrame

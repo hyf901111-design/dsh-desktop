@@ -103,6 +103,11 @@ describe('temporary composer voice ownership', () => {
     f.emit({ type: 'final', text: '迟到导航结果' })
     expect(f.window.delivered.filter(event => event.type === 'final')).toEqual([])
   })
+  it('rejects a destroyed renderer even while the native window still reports foreground', () => {
+    const f = setup(); f.window.webContents.isDestroyed = () => true
+    expect(f.invoke('start-composer', composer)).toMatchObject({ ok: false })
+    expect(f.calls.filter(([name]) => name === 'start')).toEqual([])
+  })
   it.each(['cancel', 'error', 'blur'] as const)('releases composer ownership on %s and discards late native replies', reason => {
     const f = setup(); f.invoke('set-active', active); f.invoke('start-composer', composer)
     const oldId = f.request(); f.emit({ type: 'state', state: 'listening' })

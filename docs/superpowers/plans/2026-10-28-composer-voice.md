@@ -38,14 +38,18 @@
 **Files:** scripts/lib/composer-voice.mjs, scripts/lib/composer-voice.css, scripts/patch-web-frontend-loading.mjs, test/composer-voice.test.js, test/composer-voice-browser.test.js, test/fixtures/composer-voice-browser.tsx.
 **Interfaces:** createComposerVoiceSession({bridge,keyboard,input,blocked,composing,onChange,onError,document})；start/stop/reconcile/dispose；InputBar 通过 useComposerVoice 和共享渲染函数接入。
 
-- [ ] 写失败用例：累计转写替换、real level、key/blur/stop 保留、迟到结果、外部 draftRev、延迟 start/retry、dispose。
-- [ ] 运行 `npm test -- test/composer-voice.test.js`，确认 RED。
-- [ ] 实现会话和可逆 patch；pipeline 在最外层应用、最先撤销，保持原生发送/任务停止逻辑。
-- [ ] 在隔离真实 InputBar/SessionInputShell 中覆盖首页/对话/研究/笔记，验证受控草稿、首次 Enter、IME、mouse stop、音量、附件、运行停止与布局。
-- [ ] 运行直接相关新测试、既有输入/语音检查、typecheck、diff check；保留外部截图和日志，中文提交。
+- [x] 写失败用例：累计转写替换、real level、key/blur/stop 保留、迟到结果、外部 draftRev、延迟 start/retry、dispose。
+- [x] 运行 `npm test -- test/composer-voice.test.js`，确认 RED。
+- [x] 实现会话和可逆 patch；pipeline 在最外层应用、最先撤销，保持原生发送/任务停止逻辑。
+- [x] 在隔离真实 InputBar/SessionInputShell 中覆盖首页/对话/研究/笔记，验证受控草稿、首次 Enter、IME、mouse stop、音量、附件、运行停止与布局。
+- [x] 运行直接相关新测试、既有输入/语音检查、typecheck、diff check；保留外部截图和日志，中文提交。
 
 ### Task 3: 审查与交接
 
-- [ ] 独立阅读 diff、spec 和全部竞态路径（父任务禁止继续派生子代理）。
+- [x] 独立阅读 diff、spec 和全部竞态路径（父任务禁止继续派生子代理）。
 - [ ] 按精确 tip 重跑聚焦命令并保存证据，保持 worktree 干净。
 - [ ] 生成 Plan A handoff；明确浏览器假桥验证和原生验收限制。
+
+执行记录：main 新入口、输入会话、浏览器交互及生产 patch 双次重入均完成 RED→GREEN。浏览器发现 caret 留在开头，已加精确 draftRev/焦点保护的选区恢复并验证。DOM 观察仅在录音期启用。作者完成独立审查，按父任务指令未派生其他代理。提交后的精确 tip 日志与交接结果保存在外部 composer-voice 证据目录。
+
+基线说明：既有 notes-composer.test.js 的“installs the native portal and adapter idempotently…”在本功能与干净 canonical main3542 均报“笔记原生组件签名缺失：ConversationRoot”；该无关重入测试未修改，真实 Notes 输入框语音场景通过。隔离浏览器沿用的既有 DshChipCell 内联字体有 ERR_INVALID_URL 资源警告，单独记录，语音代码无控制台错误。
