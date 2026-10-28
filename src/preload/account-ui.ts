@@ -703,7 +703,10 @@ export function mountAccountUi(
     label.className = 'VOzbGW_navLabel'
     label.textContent = '账户信息'
     account.append(document.importNode(icon, true), label)
-    nav.querySelector('.VOzbGW_navList')?.prepend(account)
+    const list = nav.querySelector('.VOzbGW_navList')
+    const general = list?.querySelector('[data-settings-section-id="general"]')
+    if (general) general.after(account)
+    else list?.prepend(account)
     nav.addEventListener('click', (event) => {
       if ((event.target as Element).closest('[data-settings-section-id]'))
         showSettings(root)
