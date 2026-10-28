@@ -1,10 +1,8 @@
-import {readFileSync} from 'node:fs'
-import {runInNewContext} from 'node:vm'
 import {expect,it} from 'vitest'
 import {createResearchGrid} from '../packages/dsh-research-task-runtime/research-grid.js'
 import {financialWidgetDefaults,financialWidgetDimensions} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
-import {patchFinancialWidgetClient} from '../scripts/lib/financial-widget-client.mjs'
 import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
+import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 
 it('fills the remaining row width before creating a new row without moving existing cards',()=>{
  const grid=createResearchGrid(),before=[{id:'watch',x:0,y:0,w:14,h:23}],saved=structuredClone(before)
@@ -42,11 +40,13 @@ it('reserves the visible minimum frame of a saved narrow card before filling its
  expect(snapshot.artifacts.find(c=>c.id==='old')).toEqual(existing)
  expect(state.get().find(c=>c.id==='new')).toMatchObject({x:0,y:0,w:occupiedLeft})
 })
-it('gives a newly inserted watchlist the reference height while retaining content-based Arrange sizing',()=>{
- const source=patchFinancialWidgetClient(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
- const body=source.match(/createFinancialWidget\(widget\)\{([\s\S]*?)\n \},/)[1]
- const snapshot={artifacts:[],canvasSize:{availableWidth:1000}}
- const create=runInNewContext('(function(widget){'+body+'})',{snapshot,financialWidgetDefaults,financialWidgetDimensions,collaborationCanWrite:()=>true,createResearchCanvasArtifactId:()=> 'watch',researchCanvasViewportPlacement:()=>({x:200,y:200}),canonicalResearchCanvasArtifactNode:n=>n,boundedResearchCanvasArtifactNodes:n=>n,commitUpdate:patch=>Object.assign(snapshot,patch)})
- expect(create('watchlist').height).toBe(560)
- expect(financialWidgetDimensions(financialWidgetDefaults('watchlist')).height).toBe(202)
+it('gives a newly inserted watchlist the quote panel height while retaining content-based Arrange sizing',async()=>{
+ const f=await financialClientFixture({financialWidget:{request:async()=>({quotes:[]})}},{refreshState:true})
+ try{
+  let watch,quote
+  await f.act(async()=>{watch=f.workspace.createFinancialWidget('watchlist');quote=f.workspace.createFinancialWidget('quote')})
+  expect(watch.height).toBe(quote.height)
+  expect(financialWidgetDimensions(financialWidgetDefaults('watchlist'),true).height).toBe(600)
+  expect(financialWidgetDimensions(financialWidgetDefaults('watchlist')).height).toBe(202)
+ }finally{await f.dispose()}
 })
