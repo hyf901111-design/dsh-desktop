@@ -56,6 +56,65 @@ function setup(platform: NodeJS.Platform = 'darwin') {
 }
 const active = { sessionId: 'research-a', active: true }
 const request = { sessionId: 'research-a', requestId: 'recording-a' }
+const composer = { sessionId: 'composer-a', requestId: 'dictation-a' }
+
+describe('temporary composer voice ownership', () => {
+  it('starts without research registration and relays terminal text before releasing its temporary owner', () => {
+    const f = setup()
+    expect(typeof f.handlers.get('research:voice:start-composer')).toBe('function')
+    expect(f.invoke('start-composer', composer)).toEqual({ ok: true })
+    f.emit({ type: 'partial', text: '输入文字' }); f.emit({ type: 'final', text: '输入文字完成' })
+    expect(f.window.delivered.at(-1)).toEqual({ ...composer, type: 'final', text: '输入文字完成' })
+    expect(f.calls.filter(([name]) => name === 'enabled').at(-1)).toEqual(['enabled', false])
+    expect(f.invoke('start-composer', { ...composer, requestId: 'next' })).toEqual({ ok: true })
+  })
+  it('temporarily pauses Fn without replacing research ownership and restores the current registration', () => {
+    const f = setup(); f.invoke('set-active', active)
+    expect(f.invoke('start-composer', composer)).toEqual({ ok: true })
+    expect(f.calls.filter(([name]) => name === 'enabled').at(-1)).toEqual(['enabled', false])
+    f.emit({ type: 'toggle' })
+    expect(f.window.delivered.filter(event => event.type === 'toggle')).toEqual([])
+    expect(f.invoke('start', request)).toMatchObject({ ok: false })
+    f.invoke('set-active', { sessionId: 'research-b', active: true })
+    f.emit({ type: 'final', text: '当前输入' })
+    expect(f.window.delivered.at(-1)).toMatchObject({ ...composer, type: 'final' })
+    expect(f.calls.filter(([name]) => name === 'enabled').at(-1)).toEqual(['enabled', true])
+    f.emit({ type: 'toggle' })
+    expect(f.window.delivered.at(-1)).toEqual({ type: 'toggle', sessionId: 'research-b' })
+  })
+  it('retains composer capture through research cleanup and never revives that expired registration', () => {
+    const f = setup(); f.invoke('set-active', active); f.invoke('start-composer', composer)
+    f.invoke('set-active', { ...active, active: false })
+    expect(f.calls.filter(([name]) => name === 'cancel')).toEqual([])
+    f.emit({ type: 'final', text: '保留文字' })
+    expect(f.window.delivered.at(-1)).toMatchObject({ ...composer, type: 'final' })
+    expect(f.calls.filter(([name]) => name === 'enabled').at(-1)).toEqual(['enabled', false])
+  })
+  it('refuses stealing a research recording and guards composer requests with main-frame and foreground trust', () => {
+    const f = setup(); f.invoke('set-active', active); f.invoke('start', request)
+    expect(f.invoke('start-composer', composer)).toMatchObject({ ok: false })
+    expect(f.calls.filter(([name]) => name === 'cancel')).toEqual([])
+    f.invoke('cancel', request)
+    expect(() => f.invoke('start-composer', composer, { processId: 1, routingId: 3 })).toThrow()
+    for (const invalid of [null, { ...composer, sessionId: '' }, { ...composer, active: true }]) expect(f.invoke('start-composer', invalid)).toMatchObject({ ok: false })
+    f.window.blur(); expect(f.invoke('start-composer', composer)).toMatchObject({ ok: false })
+    f.window.focus(); expect(f.invoke('start-composer', composer)).toEqual({ ok: true })
+    f.window.webContents.emit('did-start-navigation', {}, 'https://new.test', false, true)
+    f.emit({ type: 'final', text: '迟到导航结果' })
+    expect(f.window.delivered.filter(event => event.type === 'final')).toEqual([])
+  })
+  it.each(['cancel', 'error', 'blur'] as const)('releases composer ownership on %s and discards late native replies', reason => {
+    const f = setup(); f.invoke('set-active', active); f.invoke('start-composer', composer)
+    const oldId = f.request(); f.emit({ type: 'state', state: 'listening' })
+    if (reason === 'cancel') { f.native.cancel = () => f.emit({ type: 'final', text: '同步取消回调' }); f.invoke('cancel', composer) }
+    if (reason === 'error') f.emit({ type: 'error', code: 'permission-denied', message: '请允许麦克风' })
+    if (reason === 'blur') f.window.blur()
+    expect(f.calls.filter(([name]) => name === 'enabled').at(-1)).toEqual(['enabled', reason !== 'blur'])
+    f.window.focus(); expect(f.invoke('start', request)).toEqual({ ok: true })
+    f.emit({ type: 'final', requestId: oldId, text: '过期输入' }); f.emit({ type: 'final', text: '研究结果' })
+    expect(f.window.delivered.filter(event => event.type === 'final')).toEqual([{ ...request, type: 'final', text: '研究结果' }])
+  })
+})
 
 describe('research voice permission and ownership boundaries', () => {
   it('arms Fn without starting recording, and accepts recording only in the focused research session', () => {
