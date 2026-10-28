@@ -56,6 +56,23 @@ it('keeps Shift newlines and IME commits after modifier cancellation, and clears
   expect(f.event('Enter',action==='shift'?{shiftKey:true}:action==='ime'?{isComposing:true,keyCode:229}:{}).defaultPrevented).toBe(false)
  }
 })
+it.each(['Meta','Control'])('restores Enter after window blur swallows the interrupted %s keyup',async modifier=>{
+ const f=fixture();await f.voice.start();f.emit({type:'partial',text:'返回窗口继续发送'});f.event(modifier)
+ f.win.dispatchEvent(new f.win.Event('blur'));f.win.dispatchEvent(new f.win.Event('focus'))
+ expect(f.doc.activeElement).toBe(f.input);expect(f.event('Enter').defaultPrevented).toBe(false)
+ expect(f.snapshot().draft).toBe('返回窗口继续发送');expect(f.bridge.cancel).toHaveBeenCalledTimes(1)
+})
+it('clears pending caret work on window blur without cancelling authorization, and removes the listener on disposal',async()=>{
+ const f=fixture();let frame
+ vi.spyOn(f.win,'requestAnimationFrame').mockImplementation(callback=>{frame=callback;return 42})
+ const cancelFrame=vi.spyOn(f.win,'cancelAnimationFrame'),selection=vi.spyOn(f.input,'setSelectionRange')
+ await f.voice.start();f.win.dispatchEvent(new f.win.Event('blur'))
+ expect(f.states.at(-1)).toMatchObject({active:true,state:'authorizing'});expect(f.bridge.cancel).not.toHaveBeenCalled()
+ f.emit({type:'partial',text:'保留转写'});f.input.value=f.snapshot().draft
+ f.win.dispatchEvent(new f.win.Event('blur'));frame()
+ expect(selection).not.toHaveBeenCalled();expect(f.bridge.cancel).not.toHaveBeenCalled();expect(f.states.at(-1).active).toBe(true)
+ f.voice.dispose();cancelFrame.mockClear();f.win.dispatchEvent(new f.win.Event('blur'));expect(cancelFrame).not.toHaveBeenCalled()
+})
 it.each(['blur','blocked','foreign-write','hidden','removed','dispose'])('revokes on %s before late callbacks can change the draft',async reason=>{
  const f=fixture();await f.voice.start();const id=f.request();f.emit({type:'partial',text:'保留转写'})
  if(reason==='blur')f.doc.querySelector('button').focus()

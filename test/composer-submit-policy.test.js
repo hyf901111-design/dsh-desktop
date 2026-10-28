@@ -1,8 +1,10 @@
 import {readFile} from 'node:fs/promises'
 import {describe,it,expect,vi} from 'vitest'
+import {createRequire} from 'node:module'
 import {createSourceFile,ScriptTarget,ScriptKind,forEachChild,isVariableDeclaration} from 'typescript'
 import {patchComposerSubmitPolicy} from '../scripts/lib/composer-submit-policy.mjs'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
+const{patchComposerVoice}=createRequire(import.meta.url)('../scripts/lib/composer-voice.mjs')
 
 const installed = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
 function primary(source, overrides={}) {
@@ -10,13 +12,17 @@ function primary(source, overrides={}) {
   let declaration
   const visit=node=>{if(!declaration&&isVariableDeclaration(node)&&node.name.getText(tree)==='onPrimary')declaration=node;forEachChild(node,visit)}
   visit(tree)
-  const deps={primaryStops:false,stop:vi.fn(),inputActions:{submit:vi.fn()},empty:false,disabled:false,machineBusy:false,eworkNotes:false,
+  const deps={composerVoice:{idle:false,active:false},primaryStops:false,stop:vi.fn(),inputActions:{submit:vi.fn()},empty:false,disabled:false,machineBusy:false,eworkNotes:false,
     odysseyCreationAnnounce:vi.fn(),sessionId:'session',draft:'继续核对数据',subagentPanel:false,running:true,canvasRunning:false,researchCanvasWorkspace:undefined,
     keyboard:{submit:vi.fn()},resolveSubmitMode:vi.fn((running,_gesture,available)=>running&&available?'steer':'queue'),subagent:null,...overrides}
   new Function(...Object.keys(deps),`return (${declaration.initializer.getText(tree)})();`)(...Object.values(deps))
   return deps
 }
 describe('发送按钮与回车的提交策略一致',()=>{
+  it('keeps the send policy inside the installed voice wrapper scope',()=>{
+    const d=primary(patchComposerSubmitPolicy(patchComposerVoice(installed)))
+    expect(d.resolveSubmitMode).toHaveBeenCalledWith(true,'enter',true);expect(d.keyboard.submit).toHaveBeenCalledWith('steer')
+  })
   it('uses the configured steering policy during a running parent turn',()=>{
     const d=primary(patchComposerSubmitPolicy(installed))
     expect(d.resolveSubmitMode).toHaveBeenCalledWith(true,'enter',true)

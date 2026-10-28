@@ -55,3 +55,7 @@
 基线说明：既有 notes-composer.test.js 的“installs the native portal and adapter idempotently…”在本功能与干净 canonical main3542 均报“笔记原生组件签名缺失：ConversationRoot”；该无关重入测试未修改，真实 Notes 输入框语音场景通过。隔离浏览器沿用的既有 DshChipCell 内联字体有 ERR_INVALID_URL 资源警告，单独记录，语音代码无控制台错误。
 
 父任务审查追加：真实 InputBar 中 `page.keyboard.press('Meta+Enter')` 与 `Control+Enter` 均复现修饰键先停止、随后 Enter 误提交转写（RED）。增加仅属于被中断录音手势的编辑器状态；keyup、首个非修饰键、失焦、鼠标、新录音和卸载清除，保留 Shift 换行与 IME。新增浏览器验证同一组合键首次不发送、释放后下次按原行为发送，单元验证 Alt 和清理路径；针对性 9 项 GREEN。新提交后的完整聚焦结果及更新交接卡仍保存于外部证据目录。
+
+集成后复核追加：窗口 blur 可能吞掉 Meta/Control keyup 而保留 textarea 焦点，导致返回窗口后的 Enter 被残留手势状态拦截。新增窗口监听仅清理此状态和待执行 caret，不取消录音；卸载移除监听。两个修饰键的真实 InputBar 回归主动截断 keyup 到 document 的传播，单元同时验证授权不中断、迟到 caret 不执行及卸载无监听泄漏；5 项先 RED，修复后验证，按已集成的 8d17d49 生成独立增量交接卡。
+
+集成检查追加：旧安装的 v1 序列化函数与新函数不同，原 strip 精确比较整块定义导致升级失败。历史 8d17 原模块→新模块以及官方入口旧版→新版两项先 RED；改为校验唯一有界标记、导出位置、运行时声明与语法，保留严格 UI hook 校验。当前版和历史旧版均经官方入口两次内存重放，依赖零写入。发送策略单独提取 onPrimary 的测试补齐实际 voice 闭包上下文，并增加完整 voice wrapper 下原发送策略回归。
