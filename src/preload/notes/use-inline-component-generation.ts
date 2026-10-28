@@ -4,14 +4,14 @@ import type {NoteAiResult,NotesBridge} from '../../shared/workspace-notes'
 type Options={sessionId:string;bridge:Pick<NotesBridge,'request'>;editor:any;current():boolean;persist():Promise<unknown>;changed?():void;update?(blockId:string,node:Record<string,any>):void;notify?():void}
 type GenerationContext={images?:any[];context?:any;title?:string;markdown?:string;selection?:string;sourceInstruction?:string}
 type GenerationEffect=(state:'applied'|'saved')=>Promise<void>
-type Job={onEffect?:GenerationEffect;blockId:string;requestId:string;expected:string;controller:AbortController;timer:ReturnType<typeof setTimeout>;phase:'generating'|'binding'}
+type Job={guard?:()=>boolean;onEffect?:GenerationEffect;blockId:string;requestId:string;expected:string;controller:AbortController;timer:ReturnType<typeof setTimeout>;phase:'generating'|'binding'}
 const withoutSize=(node:any)=>JSON.stringify({...node,noteSize:undefined})
 const stopped='生成已停止，可调整需求后重试。'
 
 /** Card jobs own only their block; conversation and composer state stay outside this controller. */
 export function createInlineComponentGeneration(options:Options){
  const jobs=new Map<string,Job>(),waiters=new Map<string,(receipt:any)=>void>();let disposed=false
- const active=(job:Job)=>!disposed&&!job.controller.signal.aborted&&jobs.get(job.blockId)===job&&options.current()
+ const active=(job:Job)=>!disposed&&!job.controller.signal.aborted&&jobs.get(job.blockId)===job&&options.current()&&(!job.guard||job.guard())
  const current=(job:Job)=>{
   if(!active(job))return
   const block=options.editor.getBlock(job.blockId);if(!block)return
@@ -62,13 +62,13 @@ export function createInlineComponentGeneration(options:Options){
   }finally{finish(job)}
  }
  const api={
-  startAndWait:async(blockId:string,prompt:string,source?:GenerationContext,onEffect?:GenerationEffect):Promise<any>=>{
+  startAndWait:async(blockId:string,prompt:string,source?:GenerationContext,onEffect?:GenerationEffect,guard?:()=>boolean):Promise<any>=>{
    if(jobs.has(blockId)||waiters.has(blockId))return {status:'failed',message:'此组件正在生成。'}
    let done!:(value:any)=>void;const completion=new Promise(resolve=>{done=resolve});waiters.set(blockId,done)
-   const started=api.start(blockId,prompt,source,onEffect);if(!started.ok){waiters.delete(blockId);return {status:'failed',message:started.error}}return completion
+   const started=api.start(blockId,prompt,source,onEffect,guard);if(!started.ok){waiters.delete(blockId);return {status:'failed',message:started.error}}return completion
   },
   activate:()=>{disposed=false},
-  start:(blockId:string,prompt:string,source?:GenerationContext,onEffect?:GenerationEffect):{ok:boolean;error?:string}=>{
+  start:(blockId:string,prompt:string,source?:GenerationContext,onEffect?:GenerationEffect,guard?:()=>boolean):{ok:boolean;error?:string}=>{
    if(disposed||!options.current()||!options.editor.isEditable)return {ok:false,error:'笔记当前不可编辑。'}
    // Deleted or independently replaced cards must not occupy a concurrency slot.
    for(const job of [...jobs.values()])if(!current(job))cancel(job)
@@ -78,13 +78,14 @@ export function createInlineComponentGeneration(options:Options){
    try{node=JSON.parse(block.props.payload)}catch{return {ok:false,error:'组件已移除或记录已变化。'}}
    if(node.noteDraft!=='smart'||!prompt.trim())return {ok:false,error:'请先描述要创建的组件。'}
    const sourceInstruction=source?.sourceInstruction??(node.containerSourcePrompt===prompt.trim()&&typeof node.containerSourceInstruction==='string'?node.containerSourceInstruction:prompt.trim())
-   const requestId=crypto.randomUUID(),job:Job={blockId,requestId,onEffect,expected:block.props.payload,controller:new AbortController(),phase:'generating',timer:setTimeout(()=>cancel(job,'failed','组件创建超时，可调整需求后重试。'),240000)}
+   const requestId=crypto.randomUUID(),job:Job={blockId,requestId,onEffect,guard,expected:block.props.payload,controller:new AbortController(),phase:'generating',timer:setTimeout(()=>cancel(job,'failed','组件创建超时，可调整需求后重试。'),240000)}
    jobs.set(blockId,job)
    if(!write(job,{...node,containerPrompt:prompt.trim(),containerSourcePrompt:prompt.trim(),containerSourceInstruction:sourceInstruction,generationStatus:'running',generationError:undefined,generationDetail:undefined,generationTaskId:requestId,generationChildSessionId:undefined,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:''})){finish(job);return {ok:false,error:'组件已变化，较新内容已保留。'}}
    options.notify?.();void run(job,prompt.trim(),{...source,sourceInstruction});return {ok:true}
   },
   stop:(blockId:string)=>{const job=jobs.get(blockId);if(!job)return {ok:false};cancel(job,'interrupted');return {ok:true}},
   isGenerating:(blockId:string)=>{const job=jobs.get(blockId);return !!job&&!!current(job)},
+  reconcile:()=>{for(const job of [...jobs.values()])if(!current(job))cancel(job)},
   progress:(value:any)=>{
    if(value?.sessionId!==options.sessionId||!value.componentTask)return
    const job=[...jobs.values()].find(candidate=>candidate.requestId===value.requestId)
@@ -103,9 +104,9 @@ export function useInlineComponentGeneration(options:Options){
  const [version,setVersion]=useState(0)
  const controller=useMemo(()=>createInlineComponentGeneration({...options,current:()=>latest.current.sessionId===options.sessionId&&latest.current.current(),persist:()=>latest.current.persist(),changed:()=>latest.current.changed?.(),update:(id,node)=>{const value=latest.current;if(value.update)value.update(id,node);else value.editor.updateBlock(id,{props:{payload:JSON.stringify(node)}})},notify:()=>setVersion(value=>value+1)}),[options.sessionId,options.bridge,options.editor])
  useEffect(()=>{
-  controller.activate();const progress=(event:Event)=>controller.progress((event as CustomEvent).detail),reset=()=>controller.dispose()
+  controller.activate();const progress=(event:Event)=>controller.progress((event as CustomEvent).detail),reset=()=>controller.dispose(),off=options.editor.onChange?.(controller.reconcile)
   document.addEventListener('sherlock:notes-generation-progress',progress);document.addEventListener('sherlock:notes-reset',reset)
-  return()=>{document.removeEventListener('sherlock:notes-generation-progress',progress);document.removeEventListener('sherlock:notes-reset',reset);controller.dispose()}
+  return()=>{off?.();document.removeEventListener('sherlock:notes-generation-progress',progress);document.removeEventListener('sherlock:notes-reset',reset);controller.dispose()}
  },[controller])
  return {start:controller.start,startAndWait:controller.startAndWait,stop:controller.stop,isGenerating:controller.isGenerating,version}
 }

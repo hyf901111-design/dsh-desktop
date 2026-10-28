@@ -10,5 +10,5 @@ export function notePlaceholderCss(locale:string|undefined){
  return Object.entries(dictionary.placeholders).map(([type,value])=>{
   const selector=type==='default'?'[data-is-empty-and-focused]':type==='emptyDocument'?'[data-is-only-empty-block]':'[data-content-type="'+type+'"]'
   return '.en-root .bn-block-content'+selector+':has(.ProseMirror-trailingBreak:only-child):after{content:'+JSON.stringify(value)+'!important}'
- }).join('\n')
+ }).join('\n')+'\n.en-root .bn-block-content[data-content-type="paragraph"]:is([data-is-empty-and-focused],[data-is-only-empty-block]):has(.ProseMirror-trailingBreak:only-child):after{content:'+JSON.stringify(locale==='en'?'Press space to use AI, or “/” for commands':'按 space（空格）以启用 AI，或按“/”启用命令')+'!important}'
 }

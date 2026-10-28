@@ -1,5 +1,17 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+  "行内 AI": "Inline AI",
+  "行内 AI 需求": "Inline AI request",
+  "发送行内 AI 需求": "Send inline AI request",
+  "取消行内 AI": "Cancel inline AI",
+  "让 AI 在此处写作、创建组件或图表…": "Ask AI to write here, create a component or chart…",
+  "Enter 发送 · Shift+Enter 换行": "Enter to send · Shift+Enter for a new line",
+  "笔记文档已变化，原需求已保留。": "The note document changed. Your request has been kept.",
+  "原插入位置已删除或变化，请在空白行重新启用 AI。": "The insertion position was removed or changed. Reopen AI on a blank line.",
+  "笔记插入位置尚未就绪，请稍后重试。": "The insertion position is not ready. Try again shortly.",
+  "笔记插入位置无效，请在空白行重新启用 AI。": "The insertion position is invalid. Reopen AI on a blank line.",
+  "生成未返回可插入内容，请重试。": "No insertable content was returned. Try again.",
+  "行内 AI 不能替换其他组件，请选择组件后修改。": "Select the component before asking AI to change it.",
   "AI随航": "AI Copilot",
   "AI评论员": "AI Commentator",
 "客户端请求已被较新用户输入替代，请重新读取能力目录。":"A newer user request superseded this action. Read the capability catalog again.",

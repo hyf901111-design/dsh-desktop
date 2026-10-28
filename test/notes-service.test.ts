@@ -133,3 +133,14 @@ it('admits three card-local jobs plus one ordinary job and scopes each stop to i
   s.changeOwner();await s.call('stop',{requestId:'card-2'});expect(jobs.get('card-2')!.signal.aborted).toBe(false)
  }finally{for(const job of jobs.values())job.finish();await Promise.all(pending);s.dispose()}
 })
+it('forwards an inline insertion anchor through the existing capability loop and refuses malformed or cross-document anchors',async()=>{
+ const s=service('http://127.0.0.1:9999'),sent:any[]=[]
+ vi.stubGlobal('fetch',async(url:any,options:any)=>{if(String(url).includes('/notes/generate'))sent.push(JSON.parse(options.body));return new Response(JSON.stringify({type:'result',result:{kind:'text',markdown:'新增段落'}})+'\n')})
+ const insertionAnchor={documentId:'opened-doc',blockId:'blank-paragraph',position:{type:{client:1,clock:2},assoc:0}}
+ const input={requestId:'inline-forward',mode:'write',entryPoint:'inline',prompt:'在这里写一段',markdown:'原文',selection:'',context:{scope:'note',components:[]},capabilityContext:{documentId:'opened-doc',selectedBlockIds:[],selectedParagraphIds:[]},insertionAnchor}
+ try{
+  expect(await s.call('generate',input)).toMatchObject({kind:'text',markdown:'新增段落'});expect(sent[0]).toMatchObject({insertionAnchor,entryPoint:'inline',clientContext:{documentId:'opened-doc'},clientCapabilities:expect.any(Array)})
+  await expect(s.call('generate',{...input,requestId:'wrong-doc',insertionAnchor:{...insertionAnchor,documentId:'other-doc'}})).rejects.toThrow('插入位置')
+  await expect(s.call('generate',{...input,requestId:'bad-position',insertionAnchor:{...insertionAnchor,position:null}})).rejects.toThrow('插入位置');expect(sent).toHaveLength(1)
+ }finally{s.dispose()}
+})

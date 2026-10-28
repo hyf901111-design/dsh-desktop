@@ -16,7 +16,7 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];componentWidth?(blockId:string):number;dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;anchoredCreate?(generationId:string):boolean;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];componentWidth?(blockId:string):number;dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>(),activeData=new Set<string>()
  const advanceFingerprint=(next:string)=>{options.refreshGuard?.advanceOwn(generation,fingerprint,next);fingerprint=next}
@@ -32,7 +32,8 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
   assertCurrent()
   if(generation!==input.generationId){generation=input.generationId;fingerprint=options.initialFingerprint?.()||noteCapabilityFingerprint(options.snapshot())}
   const dataCurrent=()=>noteCapabilityFingerprint(options.snapshot())===(options.refreshGuard?options.refreshGuard.expected(input.generationId):fingerprint)
-  if(input.action==='notes.components.data'?!dataCurrent():noteCapabilityFingerprint(options.snapshot())!==fingerprint)throw Error(t('笔记内容已变化，请重新发送请求，较新修改已保留。'))
+  const anchored=(input.action==='context'||input.action==='notes.components.create')&&options.anchoredCreate?.(input.generationId)===true
+  if(!anchored&&(input.action==='notes.components.data'?!dataCurrent():noteCapabilityFingerprint(options.snapshot())!==fingerprint))throw Error(t('笔记内容已变化，请重新发送请求，较新修改已保留。'))
   if(input.action==='context')return {status:'succeeded'}
   if(input.action==='notes.components.data'){
    if(!options.dataCapability)throw Error('组件数据刷新服务暂不可用。')
