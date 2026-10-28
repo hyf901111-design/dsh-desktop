@@ -64,7 +64,7 @@ export function useNoteReferenceContext(editor:any,sessionId:string,root:React.R
    if(!noteEditorVisible(root.current))return
    const target=event.target as HTMLElement
    if(target.closest?.('[data-ework-notes-composer-host]')){if(state.current.range)editor.getExtension(NoteAiSelection)?.highlight(state.current.range);return}
-   if(!root.current?.contains(target)||target.closest('.en-inline-assistant,.en-research,.bn-side-menu'))return
+   if(!root.current?.contains(target)||target.closest('.en-inline-assistant,.en-space-ai,.en-research,.bn-side-menu'))return
    clear();publishRef.current()
   }
   const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'&&root.current?.contains(event.target as Node)){clear();publishRef.current()}}
@@ -73,5 +73,5 @@ export function useNoteReferenceContext(editor:any,sessionId:string,root:React.R
   publishRef.current()
   return()=>{offSelection();offChange();document.removeEventListener('sherlock:notes-reference-component',component);document.removeEventListener('sherlock:notes-reference-action',action);document.removeEventListener('sherlock:notes-reference-request',requested);document.removeEventListener('pointerdown',down,true);document.removeEventListener('keydown',escape)}
  },[editor,sessionId,readOnly])
- return {capture,clear:()=>{state.current.ids=[];state.current.range=undefined;editor.getExtension(NoteAiSelection)?.highlight();publishRef.current()}}
+ return {capture,clear:(preserveComponents=false)=>{if(!preserveComponents)state.current.ids=[];state.current.range=undefined;editor.getExtension(NoteAiSelection)?.highlight();publishRef.current()}}
 }

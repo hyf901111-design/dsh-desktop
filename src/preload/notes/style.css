@@ -242,3 +242,18 @@ body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu::before{content:
 .en-component-presentation-controls select{background:var(--sherlock-control-bg);color:var(--sherlock-control-text);border:1px solid var(--sherlock-control-border);border-radius:4px}
 
 .en-capability-receipts{white-space:pre-wrap;font-size:12px;line-height:1.6;padding:8px 12px;border-bottom:1px solid var(--en-border);color:var(--en-muted)}
+
+/* Result review uses the same shell and blue replacement marks as the editor. */
+.en-space-ai[data-review]{padding:10px 12px}
+.en-space-ai-result{display:flex;align-items:center;gap:10px;min-width:0;min-height:26px}
+.en-space-ai-result .en-space-ai-avatar{width:24px;height:24px;margin:0}
+.en-space-ai-summary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:22px}
+.en-space-ai-result-actions{display:flex;align-items:center;gap:4px;flex:none}
+.en-space-ai-result-actions>button{display:grid;place-items:center;width:26px;height:26px;padding:0;border:0;border-radius:4px;background:transparent;color:var(--en-muted);cursor:pointer}
+.en-space-ai-result-actions>button:hover:not(:disabled){background:var(--en-control);color:var(--en-ink)}
+.en-space-ai-result-actions>button:disabled{opacity:.35;cursor:default}
+.en-space-ai-result-actions>button:focus-visible{outline:1px solid var(--en-muted);outline-offset:1px}
+.en-space-ai[data-review] .en-space-ai-message{margin:8px 0 0}
+.en-root .bn-block-outer.en-replacement-mark.en-inline-ai-pending{background-clip:content-box!important}
+.en-root .bn-block-outer.en-inline-ai-pending .bn-block-content:is(pre,:has(.en-research,img,pre,table)){outline:1px solid #6ba5d4;outline-offset:1px;border-radius:2px}
+.en-root[data-dark=true] .bn-block-outer.en-inline-ai-pending .bn-block-content:is(pre,:has(.en-research,img,pre,table)){outline-color:#6cb0d9}
