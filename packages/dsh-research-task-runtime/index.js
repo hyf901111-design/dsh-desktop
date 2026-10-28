@@ -2300,8 +2300,10 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance } = {})
       const bindingRequested = componentBindingRequested(sourceRequest)
       // Compact the initial typed task, but retain a recovery's concrete error,
       // prior response and evidence instead of restarting the original request.
+      // A single exact host chart schema may supply only an absent variant.
+      // Research and Notes use the same discriminator gate below.
       let declaredChartContract
-      if(surface==='note'&&kind==='container')workbenchPanelPrompt(query,bindingRequested,contract=>{declaredChartContract=contract})
+      if(kind==='container')workbenchPanelPrompt(query,bindingRequested,contract=>{declaredChartContract=contract})
       let effectivePrompt = applyBundledSkillPreferences(boundTemplate && !preservePrompt ? workbenchPanelPrompt(query, bindingRequested) : prompt, bundledSkills)
       const noteGuidance=surface==='note'&&permitsTools&&typeof noteSourceGuidance==='function'?noteSourceGuidance(scopedSchemas)||'':''
       if(kind==='container'&&permitsTools){
