@@ -3,6 +3,12 @@ import postcss from 'postcss'
 import { parse as parseScript } from '@babel/parser'
 
 export const DESIGN_POLICY_ERROR = 'COMPONENT_DESIGN_POLICY_REQUIRED'
+// The same host contract reaches every bundled profile and conversation parent.
+export const COMPONENT_SURFACE_STYLE_RULES = `【组件宿主样式规则】
+真实mode决定宿主。对话模式：1px框/8px圆角；标题min34px、padding5px 10px、600 12px/16px；普通正文14px/1.65、padding12px 14px。
+研究与笔记模式：完成卡4px圆角、无默认边框，标题栏34px、左右10px、gap6px；普通600、financial700 12px/16px。笔记继承Research，保留已存尺寸/对齐/主题，无独立样式入口；标题操作20×24px，金融控件24px，不套HTML业务控件28px。
+外框、标题栏、图标与动作由宿主提供，不重画或添假按钮。只交数据或必要HTML内容，不重复JSON title题名/卡壳；保留分节标题、筛选、用户业务布局。字体/主题/中性控件用--sherlock-*，不重定义token；业务色保留语义，窄列按renderer/profile重排或滚动，不缩字裁数据。
+生成/加载/停止/失败跟真实请求，保留需求/有效内容；未配置提供真实选择，无记录显空态，行情缺失/失败可重试，不造进度/成功。来源、原数据时点、获取时间、保存时间分开；创建不等于取数。原稿实例尺寸不覆盖宿主。`
 export const PANEL_COLOR_INSTRUCTION = '宿主实际颜色变量：正文 --sherlock-text，辅助 --sherlock-muted，背景 --sherlock-bg / --sherlock-surface / --sherlock-surface-muted，边框 --sherlock-border，链接 --sherlock-link。控件用 --sherlock-control-bg / -border / -text / -muted / -primary / -on-primary（均写完整名称）。状态用 --sherlock-status-success-bg/fg、-warning-bg/fg、-danger-bg/fg、-info-bg/fg；仅用于非控件业务标记。直接 var(--sherlock-角色) 引用，不添加 #hex、rgb 或固定颜色备用值，不发明 text-primary、text-secondary、status-*-text 等变量。'
 export const DESIGN_POLICY_REPAIR = '组件设计规范验收未通过。保留原始数据、来源、交互、共享状态和用户框选尺寸，只修复视觉实现，不得降级为静态说明。使用语义 button/input/select 等控件和宿主 --sherlock-control-* 黑白灰变量；主按钮使用 .research-primary 或 data-sherlock-variant="primary"，搭配 control-primary/control-on-primary。业务图表用 chart-*，状态用 status-*-bg/fg，不能把业务色用于控件及其子元素。若业务状态徽章位于按钮或 summary 内，把徽章移到控件旁的独立非控件元素；保留文字与语义颜色，按钮仅承载展开等操作，不删除徽章或交互。删除宿主 --sherlock-* 变量重定义及自造字体，继承宿主 DIN Pro / Noto Sans SC 字体或使用 --sherlock-font-sans。直接返回原 v1 schema 的完整 JSON。' + PANEL_COLOR_INSTRUCTION
 

@@ -456,8 +456,8 @@ describe('Research task contract and prompt', () => {
   it('specifies semantic Figma controls and chart roles without importing a preview shell or online dependencies', async () => {
     const { buildResearchTaskPrompt } = await runtimeModule()
     const prompt = buildResearchTaskPrompt({ ...containerRequest(), prompt: '将一月至三月的收入 12、18、16 和成本 8、11、10 绘制成图表' })
-    expect(prompt).toContain('单层圆角细框')
-    expect(prompt).toContain('客户端统一提供 48px 可拖动标题区')
+    expect(prompt).toContain('外框、标题栏')
+    expect(prompt).toContain('研究与笔记模式：完成卡4px圆角、无默认边框，标题栏34px')
     expect(prompt).toContain('Noto Sans SC')
     expect(prompt).toContain('DIN Pro')
     expect(prompt).toContain('.research-primary')

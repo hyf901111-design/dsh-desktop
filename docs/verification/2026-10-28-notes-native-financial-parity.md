@@ -31,4 +31,12 @@ Notes NativeComponentBlock 使用 Research 已有 header、标题、控件与 Cl
 npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js
 ```
 
+## 追加：三模式组件样式规则
+
+共享规则进入实际 conversation 父 system prompt、组件 child 的 full/panel/selection skill 三种入口及金融生成指导；内部 skill 升至 v1.39.4。项目权威说明为 `docs/research-component-design-contract.md` 的“当前模式与宿主外观”。历史 Figma48/旧客户端64记录保留并明确不能覆盖当前宿主。
+
+规则区分对话消息卡与 Research/Notes 宿主，固定外框、34px标题、控件、主题和真实状态职责；模型保留业务分节、筛选、布局和数据，不重复外层卡壳或自造无能力按钮。Notes 继承 Research，来源时点、获取时间与保存时间分开。原始资料、schema、校验器和长度限额未变。
+
+TDD先9项真实入口 RED，后增加类型专属 profile 回归。直接范围7文件335/335；原 runtime 样式选择检查5/5（256项未选，不称全文件通过）；typecheck/diffcheck通过。日志 `/tmp/sherlock-component-style-rules-20261028/`。新增规则曾触发资料预算门禁，现只压缩共同规范并在已有明确类型的 panel 去掉其它类型目录与无关金融布局；full/selection/无类型保留原目录。共同头511字符/1130bytes，table panel4892<5000、24来源47694<48000且全部24记录保留。两独立只读复核均未发现阻塞。
+
 首次把两组重型检查同时运行时，Notes 出现5秒超时后 fixture 异步清理连锁失败，Voice 也有一个5秒超时。失败日志 `notes-focused.log`、`integration-voice-gate.log` 保留，未列为通过。相同冻结源码分开运行、Notes 限制两个 worker 后上述结果全绿。feature 与 integration 两份 SDK 的 SHA256 前后相同，证明见 `before.json` / `after.json`；integration 源码保持干净。

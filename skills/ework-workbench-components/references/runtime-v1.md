@@ -2,6 +2,8 @@
 
 开发或设计验收时先读目标 checkout 的 `packages/dsh-research-task-runtime/index.js`、`interactive-artifact.js`、`html-artifact.js` 及校验器，确认版本与支持类型。客户端生成子任务已由宿主提供当前 schema，不需要再查源码。本摘录来自 21M 的 11–15 板；运行代码与当前宿主 schema 优先于旧摘录。
 
+外框/标题栏/图标/动作由真实模式的宿主负责，笔记继承Research同款；遵守本轮loader强制注入的组件宿主样式规则，不把来源实例的48px等尺寸复制成HTML外壳。JSON title只供宿主题名，HTML可保留业务分节标题与筛选。主题、语义控件、空态/错误和来源时间按宿主契约，创建成功不表示已获取数据。
+
 - 最终组件是一个严格 v1 JSON 对象。`chart` 支持 `line|area|stackedArea|step|combo|bar|groupedBar|stackedBar|percentBar|horizontal|lollipop|dumbbell`，1–366 标签、1–12 系列且总数据点≤600，等长有限数值；容量不是固定色卡。字段为 `version:1,type:"chart",title,variant,labels,series:[{name,values}],unit,asOf`，可加 subtitle/note。combo 可加每组 kind:"bar"/"line" 且同轴同单位；percentBar 只交非负原值，unit 保留原始金额/数量单位（如百万元），不要改成 % 或说明文字；dumbbell 恰好两组。自定义模拟图表必须在工作台调用中提交这些明确虚构数据，不用行业样例代替用户指定的分类。`table` ≤12列/100行；`kpi` 1–12项；`markdown/mind-map` 内容 ≤32000 字符。缺失数值不伪造为 0 或未支持的 `null`。
 - 构成与分布图同属 `type:chart`，公共字段 version/type/title/variant/unit/asOf，可选 subtitle/note。`pie/donut` 用 items:[{label,value}]，1–20项非负原值；`treemap/sunburst` 用 root:{name,children} 树，父节点只带 children、叶节点只带 value，最多5层150节点。`radar` 用3–8个labels与1–4个series，数值0–100，normalization说明同向评分口径。`histogram` 用1–600个 samples 与4–40的 binCount，或 bins:[{lower,upper,count}] 连续不重叠分箱；非等宽自动显示频数密度。`box` 用 groups:[{name,samples}]，宿主计算线性插值四分位及1.5×IQR须线；或 groups:[{name,low,q1,median,q3,high,outliers,count}] 加 whiskerMethod说明，不能混用。`bullet` 用 min/max、rows:[{label,value,target}]、bands:[{to,label}] 递增区间直至max。`gauge` 用 min/max/value 和可选target，数值均在固定范围内。以上数据在工作台模拟路径同样一次提交 artifact。
 - 当前客户端还支持 `news/reports/calendar/dashboard` 等结构化类型；具体字段和容量按同轮宿主提示词执行。新闻、报告和日历保留真实条目、日期与可核查来源；dashboard 是有时点的数据快照，不把搜索失败说明当成指标。
