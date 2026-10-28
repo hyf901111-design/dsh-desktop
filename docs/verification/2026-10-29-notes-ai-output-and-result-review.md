@@ -11,6 +11,10 @@
 - 真实 BlockNote 的唯一块删除会产生临时 id:null，旧撤销抛错。整篇仅有本轮安全新建结果且原删除链完整时，原子替换回原 before 链；其它删除恢复只接受原邻居身份或本次 Undo 明确插回且快照一致的 PM 邻居，不能文末兜底。
 - 确认/撤销保存失败恢复修正后的草稿与错误；迟到绑定在 Stop/Esc、新请求或换文档后不能重开旧反馈、改写新草稿。零改动且无真实外部 effect 的失败仅保留原需求和错误。
 
+## Notes 状态专属来源
+
+最终31文件门禁抓到旧Notes监控一直读取Research组件引擎的真实回归（489绿/1红），保留于 `notes-final-serial-status-red.log`。修复为独立Notes引擎push与只读list，沿NotesBridge现有owner/canRead；preload按实际频道与surface隔离，初始list带owner并在交付后复验，reset/卸载清Notes缓存。原刷新状态/手动错误断言保留，同ID/换号迟到list新增轻量回归。
+
 ## 聚焦证据
 
 - `/tmp/sherlock-notes-output-compat-20261028/red.log`：先有正常正文/混合结果反例；fixture setup 失败单独保留，不充作 RED。

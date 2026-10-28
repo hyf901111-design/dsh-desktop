@@ -1,3 +1,4 @@
+import {createComponentDataBridge} from './component-data-bridge'
 import {createClientCapabilitiesBridge} from './client-capabilities'
 import {createConversationComponentsBridge} from './conversation-components'
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
@@ -50,6 +51,7 @@ import { mountNavigationTitlePreview } from './navigation-title-preview'
 import { SidebarUpdateControl } from './sidebar-update-control'
 import { requestUpdatePagePreparation } from './update-preparation'
 import { mountNativeThemeSync, mountWindowsTitlebar } from './windows-titlebar'
+
 import {
   createResearchPreviewBridge,
   safePathForFile
@@ -64,6 +66,8 @@ import { createResearchCanvasExportBridge } from './research-canvas-export'
 import { createResearchClipboardBridge } from './research-canvas-clipboard'
 
 if (process.isMainFrame) {
+let notesComponentDataAccess:{request:(method:string,input:any)=>Promise<any>;owns:(sessionId:string,owner:string)=>boolean}|undefined
+
 const DEVELOPER_MODE_STYLE_ID = 'sherlock-developer-mode-style'
 const DEVELOPER_MODE_NOTICE_ID = 'sherlock-developer-mode-notice'
 const locale = navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
@@ -249,6 +253,7 @@ function initializeUi(): void {
     },
     draft: async input => {try{await ipcRenderer.invoke('notes:request', 'draft', { ...input, owner: noteOwners.get(input.sessionId) })}catch(error){if(error instanceof Error){const message=noteUiError(error.message);if(message!==error.message)error.message=message}throw error}}
   }
+  notesComponentDataAccess={request:notesBridge.request,owns:(sessionId,owner)=>owner===noteOwners.get(sessionId)}
   const notes = mountNotes(document, notesBridge, workspaceSurfaceHost)
   const sidebarNewNote=createSidebarNewNoteAction(document,()=>notes.flushCurrent())
   const integrationBridge = { request: (command: import('../shared/integration-ui').IntegrationCommand) => ipcRenderer.invoke('integrations:request', command) }
@@ -354,7 +359,7 @@ contextBridge.exposeInMainWorld(
     researchVoice: createResearchVoiceBridge(ipcRenderer),
     researchCanvasWheel: createResearchCanvasWheelBridge(ipcRenderer),
     scheduledTasks: Object.freeze({list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list')}),
-    componentData: Object.freeze({subscribe:(callback:(value:unknown)=>void)=>{const listener=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on('component-data:status',listener);return()=>ipcRenderer.removeListener('component-data:status',listener)},request:(sessionId:string,args:unknown)=>ipcRenderer.invoke('component-data:request',sessionId,args),setVisible:(sessionId:string,active:boolean)=>ipcRenderer.invoke('component-data:visibility',sessionId,active)}),
+    componentData: createComponentDataBridge(ipcRenderer,(method,input)=>notesComponentDataAccess?.request(method,input)??Promise.reject(Error('笔记状态接口尚未就绪。')),(sessionId,owner)=>notesComponentDataAccess?.owns(sessionId,owner)??false),
     researchCanvasActions: createCanvasActionsBridge(ipcRenderer),
     clientCapabilities:createClientCapabilitiesBridge(ipcRenderer),
     conversationComponents:createConversationComponentsBridge((channel,...args)=>ipcRenderer.invoke(channel,...args)),

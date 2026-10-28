@@ -57,15 +57,16 @@ export function EWorkNoteComponentView({entry,officePreview}){
  )
 }
 export function EWorkNoteComponentViews({sessionId,active}){
- const entries=react.useSyncExternalStore(eworkNoteComponentViews.subscribe,eworkNoteComponentViews.snapshot),officePreview=react.useSyncExternalStore(eworkNoteOfficePreview.subscribe,eworkNoteOfficePreview.getSnapshot)
+ const entries=react.useSyncExternalStore(eworkNoteComponentViews.subscribe,eworkNoteComponentViews.snapshot),instances=entries.filter(entry=>entry.sessionId===sessionId&&entry.host.isConnected).map(entry=>entry.instanceId).sort().join(','),officePreview=react.useSyncExternalStore(eworkNoteOfficePreview.subscribe,eworkNoteOfficePreview.getSnapshot)
  react.useEffect(()=>{if(active)document.dispatchEvent(new CustomEvent('sherlock:notes-components-sync-request',{detail:{sessionId}}))},[sessionId,active])
  react.useEffect(()=>{
   const bridge=window.dshDesktop?.componentData;if(!active||typeof bridge?.request!=='function')return
-  let live=true,pushed=false;const publish=event=>{if(live&&event?.sessionId===sessionId&&Array.isArray(event.rows)){pushed=true;componentDataStatusStore.publish(sessionId,event.rows)}}
-  const off=bridge.subscribe?.(publish)
-  Promise.resolve(bridge.request(sessionId,{action:'list'})).then(rows=>{if(live&&!pushed&&Array.isArray(rows))componentDataStatusStore.publish(sessionId,rows)}).catch(()=>{})
-  return()=>{live=false;off?.()}
- },[sessionId,active])
+  let live=true,pushed=false;const publish=event=>{if(live&&event?.sessionId===sessionId&&Array.isArray(event.rows)){pushed=true;componentDataStatusStore.publish(sessionId,event.rows,'notes')}}
+  const reset=()=>componentDataStatusStore.clear(sessionId,'notes');document.addEventListener('sherlock:notes-reset',reset)
+  const off=bridge.subscribe?.(publish,'notes')
+  Promise.resolve(bridge.request(sessionId,{action:'list',surface:'notes'})).then(rows=>{if(live&&!pushed&&Array.isArray(rows))componentDataStatusStore.publish(sessionId,rows,'notes')}).catch(()=>{})
+  return()=>{live=false;off?.();document.removeEventListener('sherlock:notes-reset',reset);reset()}
+ },[sessionId,active,instances])
  return active?react.createElement(react.Fragment,null,entries.filter(entry=>entry.sessionId===sessionId&&entry.host.isConnected).map(entry=>react.createElement(EWorkNoteComponentView,{key:entry.instanceId,entry,officePreview}))):null
 }
 export function noteComponentClientHelpers(){return 'const eworkNoteHtmlInteractionContext=react.createContext(null);\n'+createNoteHtmlInteractionBridge.toString()+'\nconst eworkCreateNoteHtmlInteraction=createNoteHtmlInteractionBridge;\n'+[createNoteComponentViewStore,EWorkNoteComponentView,EWorkNoteComponentViews].map(fn=>fn.toString()).join('\n')+"\nconst eworkNoteComponentViews=createNoteComponentViewStore(typeof document==='undefined'?undefined:document);\n"}

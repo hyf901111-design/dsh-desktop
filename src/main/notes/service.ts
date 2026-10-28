@@ -80,6 +80,10 @@ export function installNotesService(options: {
         try{return await options.componentData.request(session,{action:input.action,nodeId:node.id,...input.revision===undefined?{}:{revision:input.revision},...input.settings===undefined?{}:{settings:input.settings}},{signal:AbortSignal.any([execution.signal,controller.signal,AbortSignal.timeout(90000)]),guardId:input.executionId})}
         finally{if(dataJobs.get(input.executionId)===job)dataJobs.delete(input.executionId)}
       }
+      case 'component-data-status': {
+        if(!options.componentData)throw Error('组件数据刷新服务暂不可用。')
+        return {owner,rows:await options.componentData.request(session,{action:'list'})}
+      }
       case 'component-data': {
         if(!options.componentData)throw Error('组件数据刷新服务暂不可用。')
         const node=findNoteComponent(store.load(owner,session).saved.blocks,input.nodeId)

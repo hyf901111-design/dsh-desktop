@@ -27,3 +27,11 @@ it('never falls back to a canvas binding or publishes foreign native status into
  store.clearNative('same','node','notes');expect(store.read('same','node','notes')).toBeNull()
  store.publishNative('same','node',{status:'error'},'unknown');expect(store.read('same','node','unknown')).toBeNull()
 })
+
+it('isolates real backend binding rows by surface and preserves native priority without changing the canvas summary',()=>{
+ const store=createComponentDataStatusStore(),notes=vi.fn(),research=vi.fn();store.subscribe('same','node',research);store.subscribe('same','node',notes,'notes')
+ store.publish('same',[{nodeId:'node',status:'success',lastSuccess:1}]);const summary=store.snapshotSession('same')
+ store.publish('same',[{nodeId:'node',status:'error',lastSuccess:2}],'notes');expect(store.read('same','node','notes').status).toBe('error');expect(store.read('same','node').status).toBe('success');expect(store.snapshotSession('same')).toBe(summary);expect(notes).toHaveBeenCalledOnce();expect(research).toHaveBeenCalledOnce()
+ store.publishNative('same','node',{status:'refreshing'},'notes');expect(store.read('same','node','notes').status).toBe('refreshing');store.clearNative('same','node','notes');expect(store.read('same','node','notes').status).toBe('error')
+ store.suspend('same','notes');store.clear('same','notes');expect(store.read('same','node','notes')).toBeNull();expect(store.read('same','node').status).toBe('success');expect(store.snapshotSession('same')).toBe(summary)
+})
