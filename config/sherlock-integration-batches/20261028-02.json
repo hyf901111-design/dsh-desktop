@@ -1385,6 +1385,97 @@
         ],
         "recordedAt": "2026-10-28T09:46:36.404Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件跨页拖放保留当前页签",
+        "branch": "codex/feat/research-tab-move-focus-20261028",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "07324bdfe4517c17d8364318233a46bfdf3b92aa",
+        "commits": [
+          {
+            "commit": "07324bdfe4517c17d8364318233a46bfdf3b92aa",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "修复：组件跨页拖放后保留当前页签"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/verification/2026-10-28-research-tab-move-focus.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-workspace.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-connection-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/board-tabs-contract.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "4文件51项通过，含4项真实production ResearchCanvas Chromium鼠标拖放/刷新/手动导航验收；通过后仅创建Git提交，受测代码未再修改。",
+            "verifiedCommit": "07324bdfe4517c17d8364318233a46bfdf3b92aa",
+            "completedAt": "2026-10-28T09:58:39.191319Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript检查通过；同一受测源码树。",
+            "verifiedCommit": "07324bdfe4517c17d8364318233a46bfdf3b92aa",
+            "completedAt": "2026-10-28T09:58:05.990924Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "独立Chromium真实production ResearchCanvas：拖入目标仍选中源页、归属/内容保持，刷新恢复源页与归属，手动切换显示，连续移动/撤销、Esc/无效落点、键盘导航和拖影清理通过。共享原生客户端待集成owner核验；本feature未构建或操作它。"
+        },
+        "acceptanceCriteria": [
+          "组件拖入另一页签后保留原活动页，查看目标页必须手动选择。",
+          "归属与目标布局正常更新，不丢组件内容、身份、源页布局和跨页数据连接。",
+          "不强制重置当前页视口；清除已移走组件选择并保留其他选中项。",
+          "刷新恢复源页活动状态及目标归属；连续拖放和撤销保持正确。",
+          "Esc取消和非接收标签松手不切页、不移组件；手动点击和键盘导航仍正常。",
+          "隐藏组件的收尾不做零尺寸动画，清理拖影及交互装饰。"
+        ],
+        "risks": [
+          "沿用现有原子事务和存储格式；当前UI唯一生产移动入口为拖放，未新增菜单或改动单独导航API。",
+          "共享原生客户端由集成owner从集成分支构建并实际验收；本worktree未替换客户端。"
+        ],
+        "generatedAt": "2026-10-28T10:00:34.090895Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -1490,6 +1581,18 @@
         "npm",
         "run",
         "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "test/board-tabs-contract.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "--reporter=dot"
       ],
       "timeoutMs": 180000
     }
