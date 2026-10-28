@@ -4,7 +4,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   if (!win?.ResizeObserver) return () => {}
   type Bar = { port: HTMLElement; track: HTMLDivElement; thumb: HTMLDivElement; until: number; dragging: boolean; show: () => void; update: () => void; remove: () => void }
   const bars = new Map<HTMLElement, Bar>()
-  const scope = '[data-dsh-sidebar-root], .t8lSSG_panelBody, .en-root'
+  const scope = '[data-dsh-sidebar-root], .t8lSSG_panelBody, .en-root, .ig-root'
   // The conversation has 16 px content padding; its thumb belongs to the
   // panel edge, not that inset text column. Nested previews retain their own edge.
   const rightEdge = (port: HTMLElement) => {
@@ -39,9 +39,11 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     if (bars.has(port) || port.closest('.odyssey-scroll-track') || /^(TEXTAREA|INPUT)$/.test(port.tagName)) return
     const style = win.getComputedStyle(port)
     if (!/auto|scroll/.test(style.overflowY)) return
-    const track = doc.createElement('div'), thumb = doc.createElement('div')
+    const track = doc.createElement('div'), thumb = doc.createElement('div'), surface = port.closest<HTMLElement>('.ig-root')
     track.className = 'odyssey-scroll-track'; track.setAttribute('aria-hidden', 'true')
-    thumb.className = 'odyssey-scroll-thumb'; track.append(thumb); doc.body.append(track)
+    // Plugin menus and dialogs must stay above their scrollbar inside the surface stack.
+    if(surface){track.dataset.workspaceSurface='integrations';track.style.position='absolute';track.style.zIndex='1'}
+    thumb.className = 'odyssey-scroll-thumb'; track.append(thumb); (surface || doc.body).append(track)
     port.dataset.odysseyScrollport = ''
     let startY = 0, startScroll = 0, ratio = 1, timer = 0
     const bar: Bar = { port, track, thumb, until: 0, dragging: false, show, update, remove }
@@ -52,7 +54,8 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
       if (!visible) return
       const height = Math.max(32, r.height * port.clientHeight / port.scrollHeight)
       ratio = max / Math.max(1, r.height - height)
-      track.style.left = `${rightEdge(port) - 12}px`; track.style.top = `${r.top}px`; track.style.height = `${r.height}px`
+      const origin=surface?.getBoundingClientRect()
+      track.style.left = `${rightEdge(port) - 12 - (origin?.left || 0)}px`; track.style.top = `${r.top - (origin?.top || 0)}px`; track.style.height = `${r.height}px`
       thumb.style.height = `${height}px`; thumb.style.top = `${Math.max(0,Math.min(max,port.scrollTop)) / ratio}px`
       track.dataset.visible = String(alwaysShow || bar.dragging || track.matches(':hover') || (keyboardMode && port.contains(doc.activeElement)) || Date.now() < bar.until)
     }

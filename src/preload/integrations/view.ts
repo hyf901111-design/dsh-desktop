@@ -87,7 +87,7 @@ export class IntegrationView {
         this.root.addEventListener('dragover',this.onSkillDragOver,true);
         this.root.addEventListener('dragleave',this.onSkillDragLeave,true);
         this.root.addEventListener('drop',this.onSkillDrop,true);
-        this.root.addEventListener('scroll', this.onMenuLayoutChanged, {passive:true});
+        this.root.addEventListener('scroll', this.onMenuLayoutChanged, {passive:true,capture:true});
         this.document.defaultView?.addEventListener('resize',this.onMenuLayoutChanged);
         this.document.defaultView?.addEventListener('sherlock:workspace-panel-state',this.onMenuLayoutChanged);
         this.root.addEventListener('submit', event => event.preventDefault());
@@ -156,7 +156,8 @@ export class IntegrationView {
     }>; }
     private showError(error: unknown) { this.message='';let message = (error instanceof Error ? error.message : String(error)).replace(/^Error invoking remote method ['"][^'"]+['"]:\s*/,'').replace(/^(?:IntegrationError|Error):\s*/,''); if (this.draft.secret)
         message = message.split(this.draft.secret).join('••••••'); this.error = message; this.renderFeedback(); }
-    private navigate(route: IntegrationRoute) { this.clearSkillDetail(); this.closeMenu(); this.closeDialog(); this.history.push(route); this.clearToolGrantDraft();this.dependenciesExpanded=false;this.epoch++; this.loading = false; this.error = ''; this.message = ''; this.query = ''; this.render(); if(this.root)this.root.scrollTop=0; if (route.page === 'market')
+    private scrollToTop() { const scroll=this.root?.querySelector<HTMLElement>('.ig-scroll');if(scroll)scroll.scrollTop=0; }
+    private navigate(route: IntegrationRoute) { this.clearSkillDetail(); this.closeMenu(); this.closeDialog(); this.history.push(route); this.clearToolGrantDraft();this.dependenciesExpanded=false;this.epoch++; this.loading = false; this.error = ''; this.message = ''; this.query = ''; this.render(); this.scrollToTop(); if (route.page === 'market')
         void this.loadMarket(); }
     private back() { this.clearSkillDetail(); if(this.toolsExpanded){this.clearToolGrantDraft();this.render();return;} this.closeMenu(); this.closeDialog(); this.epoch++; this.loading = false; this.error = ''; if (this.history.length > 1) {
         this.history.pop();
@@ -305,12 +306,14 @@ export class IntegrationView {
         const skillPage=route.page==='detail' && currentRow?.kind==='skill';
         const previousDocument=this.root.querySelector<HTMLElement>('[data-skill-detail]');
         const previewScroll=skillPage && previousDocument?.dataset.skillId===currentRow.id && previousDocument.dataset.skillRevision===String(currentRow.revision) ? previousDocument.scrollTop : 0;
+        const pageScroll=this.root.querySelector<HTMLElement>('.ig-scroll')?.scrollTop || 0;
         this.root.classList.toggle('ig-skill-detail-page',skillPage);
         this.ensureSkillDetail(currentRow);
         const subtitle = route.page === 'list' ? subtitles[route.tab] : route.page === 'market' ? '为研究、写作与日常协作添加能力' : route.page === 'detail' ? (currentRow?.kind === 'connection' ? '管理这条连接的使用范围、凭据和工具' : currentRow?.description || '') : route.page === 'market-detail' ? '了解能力与权限，选择适合你的工作方式' : route.page === 'connection' ? this.connectionEditor.subtitle(this.draft) : route.page === 'skill-import' ? '把已有的工作方法添加到 EWork' : route.page === 'create-plugin' ? '将技能与连接组合成一套可复用的能力' : route.page === 'add-source' ? '从团队或组织维护的目录中发现插件' : '';
         const actions = route.page === 'list' ? `${button('market', marketNames[marketKinds[route.tab]])}${addMenuButton()}` : route.page === 'market' ? button('add-source','添加来源') : '';
-        this.root.innerHTML = `<div class="ig-chrome">${workspaceBackButton()}</div><div class="ig-content"><header class="ig-heading"><div><h1 ${route.page==='detail' && currentRow?.kind!=='plugin'?'data-ui-preserve':''}>${esc(this.title())}</h1>${subtitle ? `<p class="ig-subtitle" ${route.page==='detail' && currentRow?.kind!=='connection'?'data-ui-preserve':''}>${esc(subtitle)}</p>` : ''}</div><div class="ig-actions">${actions}</div></header><div class="ig-error" role="alert"></div><div class="ig-live" role="status" aria-live="polite" aria-atomic="true"></div><div class="ig-page">${this.content()}</div></div>`;
-        if(skillPage){this.root.scrollTop=0;const preview=this.root.querySelector<HTMLElement>('[data-skill-detail]');if(preview)preview.scrollTop=previewScroll;}
+        this.root.innerHTML = `<div class="ig-chrome">${workspaceBackButton()}</div><div class="ig-scroll"><div class="ig-content"><header class="ig-heading"><div><h1 ${route.page==='detail' && currentRow?.kind!=='plugin'?'data-ui-preserve':''}>${esc(this.title())}</h1>${subtitle ? `<p class="ig-subtitle" ${route.page==='detail' && currentRow?.kind!=='connection'?'data-ui-preserve':''}>${esc(subtitle)}</p>` : ''}</div><div class="ig-actions">${actions}</div></header><div class="ig-error" role="alert"></div><div class="ig-live" role="status" aria-live="polite" aria-atomic="true"></div><div class="ig-page">${this.content()}</div></div></div>`;
+        this.root.querySelector<HTMLElement>('.ig-scroll')!.scrollTop=skillPage?0:pageScroll;
+        if(skillPage){const preview=this.root.querySelector<HTMLElement>('[data-skill-detail]');if(preview)preview.scrollTop=previewScroll;}
         this.renderFeedback();
         this.updateBusy();
     }
@@ -546,7 +549,7 @@ export class IntegrationView {
     private async performAction(action: string) {
         if(this.route.page==='connection') {
             const result=this.connectionEditor.action(action,this.draft);
-            if(result.handled){this.draftVersion++;this.error=result.error||'';this.message='';this.render();if(this.root && ['form-next','form-previous','form-manual','form-manual-cancel','form-manual-save'].includes(action))this.root.scrollTop=0;return;}
+            if(result.handled){this.draftVersion++;this.error=result.error||'';this.message='';this.render();if(['form-next','form-previous','form-manual','form-manual-cancel','form-manual-save'].includes(action))this.scrollToTop();return;}
         }
         const route = this.route, row = this.snapshot.rows.find(r => r.id === this.routeId());
         switch (action) {
@@ -693,7 +696,7 @@ export class IntegrationView {
                 break;
             case 'manage-tools':
                 const expand=!this.toolsExpanded;this.clearToolGrantDraft();this.toolsExpanded=expand;this.render();
-                if(this.root)this.root.scrollTop=0;
+                this.scrollToTop();
                 break;
             case 'toggle-all-tools':
                 if(row?.kind==='connection' && !row.toolsReadonly && this.toolsExpanded && row.tools?.length){

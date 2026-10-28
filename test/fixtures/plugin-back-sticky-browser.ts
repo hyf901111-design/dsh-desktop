@@ -1,5 +1,6 @@
 import { IntegrationView } from '../../src/preload/integrations/view'
 import { WorkspaceSurfaceHost } from '../../src/preload/workspace-surface-host'
+import { mountFigmaScrollbars } from '../../src/preload/figma-scrollbars'
 import type { IntegrationBridge, IntegrationSnapshot } from '../../src/preload/integrations/bridge'
 
 const host = new WorkspaceSurfaceHost(document)
@@ -21,17 +22,18 @@ const bridge: IntegrationBridge = {
   }
 }
 const view = new IntegrationView(document, bridge, host)
+let disposeScrollbars = () => {}
 const nativePane = document.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry=right]')!
 let paneClicks = 0
 nativePane.addEventListener('click', () => { paneClicks++ })
 
 const fixture = {
   host, view,
-  async open() { await view.open('integrations/plugins') },
+  async open() { await view.open('integrations/plugins'); disposeScrollbars = mountFigmaScrollbars(document, true) },
   setSidebar(width: number) { document.querySelector<HTMLElement>('[data-dsh-sidebar-root]')!.style.width = `${width}px` },
   setRight(width: number) { document.documentElement.style.setProperty('--odyssey-right-occupancy', `${width}px`); window.dispatchEvent(new Event('resize')) },
   get paneClicks() { return paneClicks },
-  dispose() { view.dispose(); host.dispose() }
+  dispose() { disposeScrollbars(); view.dispose(); host.dispose() }
 }
 Object.assign(window, { pluginBackFixture: fixture })
 void fixture.open()

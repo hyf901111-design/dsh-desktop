@@ -86,7 +86,7 @@ it.each(['scroll', 'resize', 'panel'] as const)('dismisses the menu when %s chan
     const anchor = f.element<HTMLButtonElement>('[data-more=plugin]');
     anchor.click();
     expect(f.document.querySelector('[role=menu]')).not.toBeNull();
-    if (kind === 'scroll') f.element('.ig-root').dispatchEvent(new f.window.Event('scroll') as unknown as Event);
+    if (kind === 'scroll') f.element('.ig-scroll').dispatchEvent(new f.window.Event('scroll') as unknown as Event);
     else if (kind === 'resize') f.window.dispatchEvent(new f.window.Event('resize'));
     else f.window.dispatchEvent(new f.window.CustomEvent('sherlock:workspace-panel-state', { detail: { surface: 'integrations', open: true } }));
     expect(f.document.querySelector('[role=menu]')).toBeNull();
