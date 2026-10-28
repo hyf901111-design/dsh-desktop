@@ -29,8 +29,8 @@
     "predev": "node scripts/ensure-local-dependencies.mjs",
     "prebuild": "node scripts/ensure-local-dependencies.mjs",
     "preprepare:bundled-plugin-profile": "node scripts/ensure-local-dependencies.mjs",
-    "dev": "npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && electron-vite dev",
-    "build": "npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
+    "dev": "npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && npm run build:native:power && electron-vite dev",
+    "build": "npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && npm run build:native:power && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json",
@@ -63,6 +63,7 @@
     "sync:plugins:to-formal": "node scripts/sync-plugin-profile.mjs dev-to-formal",
     "build:native:voice": "node scripts/build-research-voice.mjs",
     "build:native:youtube": "node scripts/build-youtube-player.mjs",
+    "build:native:power": "node scripts/build-power-helper.mjs",
     "fund-service:capabilities": "node scripts/check-fund-research-capabilities.mjs",
     "build:native:computer": "node scripts/prepare-computer-driver.mjs && node scripts/build-computer-stroke.mjs"
   },
@@ -210,6 +211,7 @@
           "computer-stroke.node",
           "computer-capture.node",
           "youtube-player.node",
+          "sherlock-power-helper",
           "cua-driver",
           "cua-driver-version.json",
           "cua-driver-MIT.txt"

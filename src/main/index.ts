@@ -1235,8 +1235,9 @@ function installMenu(): void {
 async function bootstrap(): Promise<void> {
   if (process.platform === 'darwin') app.dock?.setIcon(desktopIconPath())
   if (process.platform === 'darwin') {
-    const powerSettings = new PowerSettingsController({store: new PowerPreferenceStore(app.getPath('userData')), blocker: powerSaveBlocker, guard: new MacOSLidGuard(), canPreventSleep: () => !['serious', 'critical'].includes(powerMonitor.getCurrentThermalState())})
+    const powerSettings = new PowerSettingsController({store: new PowerPreferenceStore(app.getPath('userData')), blocker: powerSaveBlocker, guard: new MacOSLidGuard({helperSource: app.isPackaged ? join(process.resourcesPath, 'native', 'sherlock-power-helper') : join(app.getAppPath(), 'build/native/sherlock-power-helper')}), canPreventSleep: () => !['serious', 'critical'].includes(powerMonitor.getCurrentThermalState())})
     registerPowerSettingsIpc(ipcMain, () => mainWindow, powerSettings)
+    void powerSettings.initialize().catch(error => console.warn('[power-settings] unable to restore saved preference', error))
     const thermalChanged = ({state}: {state: string}) => {
       if (state === 'serious' || state === 'critical') void powerSettings.safetyStop()
     }

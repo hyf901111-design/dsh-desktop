@@ -1,111 +1,120 @@
-import {execFile, spawn} from 'node:child_process'
-import {mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync, utimesSync} from 'node:fs'
+import {mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync, statSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-import {promisify} from 'node:util'
-import {afterEach, describe, expect, it, vi} from 'vitest'
-import {buildLidGuardScript, parseSleepDisabled, MacOSLidGuard} from '../src/main/power/macos-lid-guard'
+import {afterEach, describe, expect, it} from 'vitest'
+import {MacOSLidGuard, parseSleepDisabled} from '../src/main/power/macos-lid-guard'
+import type {PowerService, PowerServiceStatus} from '../src/main/power/macos-power-service'
 
-const run = promisify(execFile)
 const roots: string[] = []
-afterEach(() => {for (const root of roots.splice(0)) rmSync(root, {recursive: true, force: true})})
-function root() {const path = mkdtempSync(join(tmpdir(), 'lid-guard-test-')); roots.push(path); return path}
+afterEach(() => {for (const path of roots.splice(0)) rmSync(path, {recursive: true, force: true})})
+function fixture() {
+  const directory = mkdtempSync(join(tmpdir(), 'ew-power-service-')); roots.push(directory)
+  let ready = false, installs = 0, mode: PowerServiceStatus['mode'] = 'active'
+  const leasePath = join(directory, 'session.json')
+  const service: PowerService = {directory,
+    isReady: async () => ready,
+    install: async () => {ready = true; installs++},
+    status: async () => {
+      if (!existsSync(leasePath)) return {version: 1, servicePid: 20, mode: 'idle', ownerPid: 0, token: null}
+      const lease = JSON.parse(readFileSync(leasePath, 'utf8'))
+      if (lease.release) return {version: 1, servicePid: 20, mode: 'idle', ownerPid: lease.pid, token: lease.token}
+      return {version: 1, servicePid: 20, mode, ownerPid: lease.pid, token: lease.token}
+    }
+  }
+  const run = async (file: string, args: string[]) => {
+    if (file === '/bin/ps') return 'Wed Oct 28 10:00:00 2026\n'
+    if (file === '/usr/bin/pmset') return args.length === 1 ? ` SleepDisabled ${existsSync(leasePath) && !JSON.parse(readFileSync(leasePath, 'utf8')).release ? 1 : 0}\n` : '80%; AC attached; not charging'
+    throw Error('Unexpected command: ' + file)
+  }
+  return {directory, leasePath, service, run, installs: () => installs, installed: () => {ready = true}, mode: (value: PowerServiceStatus['mode']) => {mode = value}}
+}
 
-describe('macOS closed-lid guard', () => {
-  it('only accepts an explicit system-wide SleepDisabled state', () => {
-    expect(parseSleepDisabled('System-wide power settings:\n SleepDisabled\t\t0\nCurrently in use:\n sleep 0')).toBe(false)
+describe('persistent closed-lid service lease', () => {
+  it('accepts only explicit system-wide SleepDisabled values', () => {
+    expect(parseSleepDisabled(' SleepDisabled\t0\n')).toBe(false)
     expect(parseSleepDisabled(' SleepDisabled 1\n')).toBe(true)
     expect(() => parseSleepDisabled('sleep 0')).toThrow()
     expect(() => parseSleepDisabled('SleepDisabled 7')).toThrow()
   })
-  it('preserves an externally disabled sleep policy without administrator access or restoring it to zero', async () => {
-    const commands: string[] = []
-    const guard = new MacOSLidGuard({run: async (file) => {commands.push(file); if (file !== '/usr/bin/pmset') throw Error('must not elevate'); return ' SleepDisabled 1\n'}})
-    expect(await guard.start()).toBe('external')
-    expect(await guard.active()).toBe(true)
-    await guard.stop()
-    expect(commands.every(command => command === '/usr/bin/pmset')).toBe(true)
+  it('installs once, releases its lease on quit, and reacquires on a new launch without authorization', async () => {
+    const f = fixture(), first = new MacOSLidGuard({service: f.service, run: f.run})
+    expect(await first.start(true)).toBe('active')
+    expect(f.installs()).toBe(1)
+    expect(statSync(f.leasePath).mode & 0o777).toBe(0o600)
+    const firstLease = JSON.parse(readFileSync(f.leasePath, 'utf8'))
+    expect(firstLease).toMatchObject({version: 1, pid: process.pid, started: 'Wed Oct 28 10:00:00 2026'})
+    expect(firstLease.token).toMatch(/^[a-f0-9]{32}$/u)
+    first.cancel()
+    expect(JSON.parse(readFileSync(f.leasePath, 'utf8')).release).toBe(true)
+    await first.stop()
+    expect(existsSync(f.leasePath)).toBe(false)
+    const next = new MacOSLidGuard({service: f.service, run: f.run})
+    expect(await next.start(false)).toBe('active')
+    expect(JSON.parse(readFileSync(f.leasePath, 'utf8')).token).not.toBe(firstLease.token)
+    expect(f.installs()).toBe(1)
+    await next.stop()
+    expect(existsSync(f.leasePath)).toBe(false)
   })
-  it('cancelling authorization removes the private lease and exposes a cancellation code', async () => {
-    const guard = new MacOSLidGuard({run: async (file) => {
-      if (file === '/usr/bin/pmset') return ' SleepDisabled 0\n'
-      if (file === '/bin/ps') return 'Wed Oct 28 10:00:00 2026\n'
-      throw Object.assign(Error('User canceled. (-128)'), {stderr: 'User canceled. (-128)'})
-    }})
-    await expect(guard.start()).rejects.toThrow('authorization-cancelled')
+  it('fails silently at automatic startup when the helper is missing and leaves no lease', async () => {
+    const f = fixture(), guard = new MacOSLidGuard({service: f.service, run: f.run})
+    await expect(guard.start(false)).rejects.toThrow('helper-unavailable')
+    expect(f.installs()).toBe(0)
+    expect(existsSync(f.leasePath)).toBe(false)
+  })
+  it('cancelling first installation creates neither an active lease nor a false enabled state', async () => {
+    const f = fixture()
+    f.service.install = async () => {throw Error('authorization-cancelled')}
+    const guard = new MacOSLidGuard({service: f.service, run: f.run})
+    await expect(guard.start(true)).rejects.toThrow('authorization-cancelled')
     expect(await guard.active()).toBe(false)
+    expect(existsSync(f.leasePath)).toBe(false)
+  })
+  it('does not let an old client remove a newer client lease', async () => {
+    const f = fixture(); f.installed()
+    const old = new MacOSLidGuard({service: f.service, run: f.run})
+    await old.start(false)
+    const replacement = {...JSON.parse(readFileSync(f.leasePath, 'utf8')), token: 'a'.repeat(32)}
+    writeFileSync(f.leasePath, JSON.stringify(replacement), {mode: 0o600})
+    old.cancel()
+    expect(JSON.parse(readFileSync(f.leasePath, 'utf8')).token).toBe(replacement.token)
+  })
+  it('preserves an external sleep policy when releasing its borrowed lease', async () => {
+    const f = fixture(); f.installed(); f.mode('external')
+    const guard = new MacOSLidGuard({service: f.service, run: f.run})
+    expect(await guard.start(false)).toBe('external')
+    await guard.stop()
+    expect(existsSync(f.leasePath)).toBe(false)
+  })
+  it('reports safety stops and stops touching a lease that belongs to another launch', async () => {
+    const f = fixture(); f.installed()
+    const guard = new MacOSLidGuard({service: f.service, run: f.run})
+    await guard.start(false)
+    f.mode('safety-stop')
+    await expect(guard.active()).rejects.toThrow('safety-stop')
     await guard.stop()
   })
-  it('compiles the real administrator AppleScript and shell without executing privileged commands', async () => {
-    let source = ''
-    const guard = new MacOSLidGuard({run: async (file, args) => {
-      if (file === '/usr/bin/pmset') return args.length === 1 ? ' SleepDisabled 0\n' : 'Now drawing from AC Power\n80%; AC attached; not charging'
-      if (file === '/bin/ps') return 'Wed Oct 28 10:00:00 2026\n'
-      source = args[1] ?? ''; throw Error('stop before executing')
-    }})
-    await expect(guard.start()).rejects.toThrow('lid-unavailable')
-    const path = root()
-    await run('/usr/bin/osacompile', ['-o', join(path, 'approval.scpt'), '-e', source])
-    const shell = JSON.parse(/^do shell script ("(?:[^"\\]|\\.)*") with administrator/su.exec(source)![1]!)
-    await run('/bin/sh', ['-n', '-c', shell])
+  it('does not mistake a root recovery error with no token for successful restoration', async () => {
+    const f = fixture(); f.installed()
+    const guard = new MacOSLidGuard({service: f.service, run: f.run})
+    await guard.start(false)
+    const original = f.service.status
+    f.service.status = async () => ({version: 1, servicePid: 20, mode: 'error', ownerPid: 0, token: null})
+    await expect(guard.stop()).rejects.toThrow('restore-failed')
+    f.service.status = original
+    await expect(guard.stop()).resolves.toBeUndefined()
   })
-  it('refuses to disable sleep on a nearly empty discharging battery', async () => {
-    const guard = new MacOSLidGuard({run: async (file, args) => {
-      expect(file).toBe('/usr/bin/pmset')
-      return args.length === 1 ? ' SleepDisabled 0\n' : ' -InternalBattery-0 3%; discharging; 0:10 remaining'
-    }})
-    await expect(guard.start()).rejects.toThrow('safety-stop')
-    expect(await guard.active()).toBe(false)
-  })
-  it('recovers its inactive root plist after an interrupted installation so the next authorization can retry', async () => {
-    let source = ''
-    const guard = new MacOSLidGuard({run: async (file, args) => {
-      if (file === '/usr/bin/pmset') return args.length === 1 ? ' SleepDisabled 0\n' : '80%; AC attached; not charging'
-      if (file === '/bin/ps') return 'Wed Oct 28 10:00:00 2026\n'
-      source = args[1] ?? ''; throw Error('capture')
-    }})
-    await expect(guard.start()).rejects.toThrow()
-    const path = root(), plist = join(path, 'stale.plist'), lease = join(path, 'active'), pmset = join(path, 'pmset'), stat = join(path, 'stat'), launchctl = join(path, 'launchctl')
-    writeFileSync(plist, '<partial from interrupted installation>'); writeFileSync(lease, '')
-    writeFileSync(pmset, '#!/bin/sh\nprintf " SleepDisabled 0\\n"\n', {mode: 0o700})
-    writeFileSync(stat, '#!/bin/sh\nprintf "0\\n"\n', {mode: 0o700})
-    writeFileSync(launchctl, '#!/bin/sh\n[ "$1" = print ] && exit 1\nexit 0\n', {mode: 0o700})
-    const shell: string = JSON.parse(/^do shell script ("(?:[^"\\]|\\.)*") with administrator/su.exec(source)![1]!)
-    const sandboxed = shell.replaceAll('/Library/LaunchDaemons/com.evanarts.sherlock.sleep-guard.plist', plist)
-      .replaceAll('/usr/bin/pmset', pmset).replaceAll('/usr/bin/stat', stat).replaceAll('/bin/launchctl', launchctl)
-      .replace(/\[ -f '[^']*\/active' \]/u, `[ -f '${lease}' ]`)
-    expect((await run('/bin/sh', ['-c', sandboxed])).stdout).toBe('active')
-    expect(readFileSync(plist, 'utf8')).toContain('<key>ProgramArguments</key>')
-  })
-  it.each(['removed', 'expired', 'wrong-process'] as const)('restores sleep when the lease is %s using the actual generated guard', async reason => {
-    const path = root(), lease = join(path, 'lease'), plist = join(path, 'job.plist'), log = join(path, 'commands')
-    writeFileSync(lease, ''); writeFileSync(plist, '')
-    const started = (await run('/bin/ps', ['-p', String(process.pid), '-o', 'lstart='])).stdout.trim()
-    const pmset = join(path, 'pmset'), launchctl = join(path, 'launchctl')
-    writeFileSync(pmset, '#!/bin/sh\nprintf "%s\\n" "$*" >> "$POWER_TEST_LOG"\n', {mode: 0o700})
-    writeFileSync(launchctl, '#!/bin/sh\nexit 0\n', {mode: 0o700})
-    let script = buildLidGuardScript({lease, pid: process.pid, started: reason === 'wrong-process' ? 'previous launch' : started, plist})
-    script = script.replaceAll('/usr/bin/pmset', pmset).replaceAll('/bin/launchctl', launchctl).replaceAll('/bin/sleep 1', '/bin/sleep 0.02')
-    const child = spawn('/bin/sh', ['-c', script], {env: {...process.env, POWER_TEST_LOG: log}, stdio: 'pipe'})
-    const completion = new Promise<number|null>((resolve, reject) => {child.once('error', reject); child.once('exit', resolve)})
-    try {
-      if (reason !== 'wrong-process') {
-        await vi.waitFor(() => expect(existsSync(log) && readFileSync(log, 'utf8')).toContain('-a disablesleep 1'))
-        if (reason === 'removed') rmSync(lease)
-        else utimesSync(lease, new Date(0), new Date(0))
-      }
-      expect(await completion).toBe(0)
-      const lines = readFileSync(log, 'utf8').trim().split('\n')
-      expect(lines.at(-1)).toBe('-a disablesleep 0')
-      if (reason === 'wrong-process') expect(lines).toEqual(['-a disablesleep 0'])
-      expect(existsSync(plist)).toBe(false)
-    } finally {child.kill('SIGKILL')}
-  })
-  it('quotes lease paths as data so shell metacharacters cannot execute', async () => {
-    const path = root(), injected = join(path, 'injected')
-    const script = buildLidGuardScript({lease: `${path}/'$(touch ${injected})`, pid: process.pid, started: 'missing', plist: join(path, 'absent')})
-      .replaceAll('/usr/bin/pmset', '/usr/bin/true').replaceAll('/bin/launchctl', '/usr/bin/true')
-    await run('/bin/sh', ['-c', script])
-    expect(existsSync(injected)).toBe(false)
+  it('waits for its release nonce acknowledgement when acquisition was cancelled before active status', async () => {
+    const f = fixture(); f.installed()
+    const guard = new MacOSLidGuard({service: f.service, run: f.run})
+    let releaseReads = 0
+    f.service.status = async () => {
+      const lease = JSON.parse(readFileSync(f.leasePath, 'utf8'))
+      if (!lease.release) guard.cancel()
+      else if (++releaseReads > 1) return {version: 1, servicePid: 20, mode: 'idle', ownerPid: lease.pid, token: lease.token}
+      return {version: 1, servicePid: 20, mode: 'idle', ownerPid: 0, token: null}
+    }
+    await expect(guard.start(false)).rejects.toThrow('lid-unavailable')
+    expect(releaseReads).toBe(2)
+    expect(existsSync(f.leasePath)).toBe(false)
   })
 })
