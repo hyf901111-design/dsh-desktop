@@ -638,15 +638,29 @@
         "schemaVersion": 1,
         "featureName": "笔记自由输出与原位结果确认撤销、组件模式能力隔离",
         "branch": "codex/feat/notes-react-runtime-20261028",
-        "baseCommit": "2ecba9b7e7fd63ce7e2d9572a4ee1e8ca8473447",
-        "tipCommit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
+        "baseCommit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
+        "tipCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
         "commits": [
           {
-            "commit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
+            "commit": "2c35369ea73171d3c4dc4af70d29a204409d5977",
             "parents": [
-              "2ecba9b7e7fd63ce7e2d9572a4ee1e8ca8473447"
+              "e49d193c7300fad908e42f474a7631d9b2d0a4da"
             ],
-            "subject": "用宿主标准数据统一笔记图表几何并保留自定义交互"
+            "subject": "让研究模式复用严格的图表变体缺失恢复"
+          },
+          {
+            "commit": "b43e8826bef8c7c3d747606cb8d5f6434f42a241",
+            "parents": [
+              "2c35369ea73171d3c4dc4af70d29a204409d5977"
+            ],
+            "subject": "完整保存笔记长结果的待确认记录并保留安全撤销"
+          },
+          {
+            "commit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "parents": [
+              "b43e8826bef8c7c3d747606cb8d5f6434f42a241"
+            ],
+            "subject": "补齐对话组件的独立交互保存与真实生成验收"
           }
         ],
         "files": [
@@ -655,68 +669,143 @@
             "path": "docs/notes-ai-generation-rules.md"
           },
           {
-            "status": "A",
-            "path": "docs/verification/2026-10-29-notes-standard-chart-geometry.md"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+            "path": "docs/research-component-design-contract.md"
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/generated-chart-geometry.js"
+            "path": "docs/verification/2026-10-29-conversation-html-state.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/verification/2026-10-29-research-chart-contract-recovery.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/conversation-html-validation.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
-            "status": "A",
-            "path": "test/fixtures/notes-real-third-offline-line-html.json"
+            "status": "M",
+            "path": "scripts/lib/conversation-components.mjs"
           },
           {
             "status": "A",
-            "path": "test/generated-chart-geometry.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-chart-geometry-browser.test.ts"
+            "path": "scripts/lib/conversation-html-interaction.mjs"
           },
           {
             "status": "M",
-            "path": "test/notes-component-generation.test.js"
+            "path": "src/main/conversation-components/ipc.ts"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "src/main/conversation-components/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/conversation-components.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/conversation-components.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/inline-ai-proposals.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-html-state.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-html-validation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-ipc.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-stream-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-html-interaction.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-html-state-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/conversation-local-counter.html"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-inline-proposals-pm.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-inline-proposals.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-inline-result-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-chart-contract-recovery.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npx",
-              "vitest",
+              "node_modules/.bin/vitest",
               "run",
-              "test/generated-chart-geometry.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/notes-component-generation.test.js",
-              "test/shared-component-validation.test.js",
-              "test/research-design-policy.test.js",
+              "test/research-chart-contract-recovery.test.js",
               "--fileParallelism=false",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "5文件280/280；真实公开HTML→同child一次修复/几何投影；零/负/常量/多组/稀疏分类/合法自定义domain；静态来源、alias/计算mutator skip；数据和可用控件/default保留；无降级/静态fallback。 日志/tmp/sherlock-notes-chart-geometry-20261029/geometry-final.log",
-            "verifiedCommit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
-            "completedAt": "2026-10-28T20:22:55.844667+00:00",
+            "summary": "Root16/16：真实公开缺variant终稿两例完整Research runtime从原失败2child恢复为成功1child；显式字段/其它schema/HTML/来源证据守卫保持。作者另5文件101已绿，证据/tmp/sherlock-research-chart-contract-20261029。",
+            "verifiedCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "completedAt": "2026-10-28T21:27:11.776220+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/notes-inline-proposals.test.ts",
+              "test/notes-inline-proposals-pm.test.ts",
+              "test/notes-inline-result-browser.test.ts",
+              "--maxWorkers=1",
+              "--no-file-parallelism"
+            ],
+            "outcome": "passed",
+            "summary": "3files45/45，Root另独立unit+PM24/24；1000段与99598字1200段完整review/Yjs重开/Undo/Confirm，人工编辑、同ID、旧记录与超4MiB真实保存拒绝保持。证据/tmp/sherlock-notes-long-review-20261029/final-focused.log。",
+            "verifiedCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "completedAt": "2026-10-28T21:27:11.776220+00:00",
             "timeoutMs": 180000
           },
           {
@@ -724,30 +813,68 @@
               "npx",
               "vitest",
               "run",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "shared component generation|shared-state generation gate|component design policy generation gate|completed stale chart geometry|personal shared-state",
-              "--fileParallelism=false",
+              "test/conversation-component-html-state.test.ts",
+              "test/conversation-component-store.test.ts",
+              "test/conversation-component-service.test.ts",
+              "test/conversation-component-ipc.test.ts",
+              "test/conversation-component-renderer.test.js",
+              "test/conversation-component-interaction.test.js",
+              "test/conversation-component-offline.test.js",
+              "test/conversation-component-receipt-recovery.test.js",
+              "test/conversation-component-reference.test.js",
+              "test/conversation-html-interaction.test.js",
+              "test/conversation-component-html-validation.test.js",
+              "test/conversation-component-contract.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/client-capabilities.test.js",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "相关27/27，236未选：两条恢复路径、shared/design/geometry一次收集、保存任务恢复不迁移旧HTML、fallback限制。没有运行全部runtime测试。 日志/tmp/sherlock-notes-chart-geometry-20261029/runtime-final.log",
-            "verifiedCommit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
-            "completedAt": "2026-10-28T20:22:58.174387+00:00",
-            "timeoutMs": 120000
+            "summary": "321 passed；精确19路径源码SHA与冻结验证一致，随后仅文档及中文提交。/tmp/sherlock-conversation-html-20261029/conversation-html-final-focused.log",
+            "verifiedCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "completedAt": "2026-10-28T21:27:11.776220+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
-              "node_modules/.bin/vitest",
+              "npx",
+              "vitest",
               "run",
-              "test/notes-chart-geometry-browser.test.ts",
-              "--maxWorkers=1",
-              "--no-file-parallelism"
+              "test/conversation-html-state-browser.test.ts",
+              "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "production Notes 3/3：1100浅/480深数据→axis/point一致，cursor键鼠/图例；memo/details真实ACK保存重开；raw已存卡原HTML/原几何不迁移。仅设置SHERLOCK_NOTES_CHART_GEOMETRY_EVIDENCE输出证据，无产品行为变化。最后alias/control快照分支加强不改变该已测输入的输出，不重复已绿组。 日志/tmp/sherlock-notes-chart-geometry-20261029/browser-final.log",
-            "verifiedCommit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
-            "completedAt": "2026-10-28T20:17:03.093815+00:00",
+            "summary": "5 passed；精确19路径源码SHA与冻结验证一致，随后仅文档及中文提交。/tmp/sherlock-conversation-html-20261029/conversation-html-final-browser.log",
+            "verifiedCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "completedAt": "2026-10-28T21:27:11.776220+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/conversation-component-stream-browser.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "17 passed；精确19路径源码SHA与冻结验证一致，随后仅文档及中文提交。/tmp/sherlock-conversation-html-20261029/conversation-html-stream-final-v2.log",
+            "verifiedCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "completedAt": "2026-10-28T21:27:11.776220+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/component-surface-menu-browser.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "5 passed；精确19路径源码SHA与冻结验证一致，随后仅文档及中文提交。/tmp/sherlock-conversation-html-20261029/conversation-html-final-menu-browser.log",
+            "verifiedCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "completedAt": "2026-10-28T21:27:11.776220+00:00",
             "timeoutMs": 180000
           },
           {
@@ -757,26 +884,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "最后源快照typecheck exit0；随后仅文档/中文提交。 日志/tmp/sherlock-notes-chart-geometry-20261029/typecheck-final.log",
-            "verifiedCommit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
-            "completedAt": "2026-10-28T20:22:58.326649+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "pack",
-              "--dry-run",
-              "--json",
-              "--ignore-scripts",
-              "--cache",
-              "/tmp/sherlock-notes-chart-geometry-20261029/npm-cache",
-              "./packages/dsh-research-task-runtime"
-            ],
-            "outcome": "passed",
-            "summary": "本地file包只读dry-run清单包括新generated-chart-geometry.js（17970bytes），版本仍0.1.0，不安装/打包/发布；正式profile从projectRoot/packages递归复制，Root最终核对app+profile源SHA。 日志/tmp/sherlock-notes-chart-geometry-20261029/package-dry-run.json",
-            "verifiedCommit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
-            "completedAt": "2026-10-28T20:23:46.554462+00:00",
+            "summary": "Root最终源快照typecheck exit0，随后仅文档/中文提交。",
+            "verifiedCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "completedAt": "2026-10-28T21:27:11.776220+00:00",
             "timeoutMs": 120000
           },
           {
@@ -784,217 +894,34 @@
               "git",
               "diff",
               "--check",
-              "2ecba9b7e7fd63ce7e2d9572a4ee1e8ca8473447",
+              "e49d193c7300fad908e42f474a7631d9b2d0a4da",
               "HEAD"
             ],
             "outcome": "passed",
-            "summary": "精确单个中文后继，范围差异检查通过，feature source clean。 日志/tmp/sherlock-notes-chart-geometry-20261029/diffcheck-final.log",
-            "verifiedCommit": "e49d193c7300fad908e42f474a7631d9b2d0a4da",
-            "completedAt": "2026-10-28T20:24:51.857768+00:00",
+            "summary": "3项独立中文本地后继；精确范围检查通过。",
+            "verifiedCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
+            "completedAt": "2026-10-28T21:27:11.776220+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际Notes production fixture宽浅/窄深3项GREEN，基线2ec只读overlay同浏览器RED明确tick11.3..18.8错误。新稿axis9.5/12.25/15/17.75/20.5，点250/50/150，与10/20/15同一domain；备注/details保存重开、cursor/legend正常，原业务DOM与脚本保留，旧卡不迁移。截图/JSON在/tmp/sherlock-notes-chart-geometry-20261029/green。未操作共享客户端或真实用户数据，最终新签名包模型验收由Root执行。"
+          "summary": "Production Notes长结果与Conversation opaque iframe真实service/store/bridge browser通过；Root重跑Conversation browser5/5。旧5d真实counter基线因内部title缺失转源码检查，4m53s终止且无卡，绝不记成功；最终新签名包同原需求、状态保存重开仍待Root验收。"
         },
         "acceptanceCriteria": [
-          "只在新artifact接收，对唯一静态literal模型及可证明对应的既有标准line/bar布局，用既有cartesianChartSvg重算几何；不手算QA坐标、不改值或其余HTML/script。",
-          "合法自定义domain原样保留；未知/多图/复杂绘图/动态或别名/计算修改不猜不重写；无whole-template标记冒充。",
-          "几何、共享、设计问题先同时收集，最多一次既有内容修复；保持原数据、可用控件及关键默认值与业务文本，禁止丢chart/备注/details、静态downgrade或fallback。",
-          "不修改已保存卡的HTML、hash或交互状态，旧任务restore显式optout；Root已成功保存的memo/details不被本轮源码升级迁移。",
-          "新增runtime文件packages/dsh-research-task-runtime/generated-chart-geometry.js SHA256=7fb7b4b97de612ddac18b6807d31813da0a377af82a443f45eab1d829eb7a88c；本地file包dry-run列出该文件，正式profile递归复制包含；版本号、依赖、权限、共享合同、用户需求不变。",
-          "单中文后继e49d193c7300fad908e42f474a7631d9b2d0a4da，base为previous已merged的2ecba9b7e；聚焦验证、不构建客户端/合main/推送。"
+          "Research仅补唯一明确合同下缺失的variant，完整原validator/来源/授权不变，不改现有显式值，两个公开终稿一次原child完成。",
+          "Notes完整保留合法长结果review，64Ki字符分片与metadata同Y.Map原子值，Unicode与legacy兼容；人工编辑、Yidentity与安全撤销不放松，整篇4MiB/10000块门禁不变。",
+          "新Conversation原HTML语法/共享/样式/几何验收后再次完整parse，未通过不写completed；结构化/native和已存卡原恢复路径保持。",
+          "Conversation HTML独立store持久化queue，owner/session/generation/readOnly/HTML version/expectedRevision前后核验，真正落盘才ACK，不落Canvas、不重放成功，不伪造保存。",
+          "目录和具体错误公开真实元数据结构，仅缺失artifact.title时复用已验证top-level title，显式无效值不覆盖，版本/类型/权限不放松。",
+          "本地版本保持1.4.3，不发布、不推送、不accept/promote；最终签名包模型/交互/重开验收由Root执行。"
         ],
         "risks": [
-          "识别只针对可证明的标准静态line/bar布局，不声称验证任意自写HTML/JavaScript数学正确性；自由复杂/动态HTML不被猜测替换。",
-          "最终新包仍需Root在已准备的干净QA用相同原始需求真实生成、验轴/点与memo/details保存重开；本卡不把隔离fixture冒称新包真实模型成功。",
-          "原有已确认卡与Root自己的原始成功图表保留，程序不删除/迁移或手改已有坏图。"
+          "本卡隔离browser不冒充最终签名客户端真实模型成功，旧counter基线仍保存为失败证据。",
+          "整篇笔记原容量超限仍真实失败并保留草稿；分片不宣称无限存储。",
+          "HTML静态验收不能证明任意脚本数学正确性；旧卡不迁移或擅删。"
         ],
-        "generatedAt": "2026-10-28T20:24:51.857768+00:00"
-      },
-      "merged": {
-        "mergeCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-        "verificationCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "5d67c2110f92033c843447696a1a816a92a3f590",
-            "completedAt": "2026-10-28T20:28:23.604Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-28T20:28:23.604Z"
+        "generatedAt": "2026-10-28T21:27:31.506189+00:00"
       }
     },
     {
