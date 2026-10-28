@@ -49,3 +49,17 @@ git diff --check
 最终相关回归增为 **9 文件 96 项**，其中 14 条真实行内浏览器用例。功能图和真实 APFS integration 图均通过；后者通过临时测试 loader 读取拟合入的 config/editor 与新回归，所有其它 production source、实际依赖和 integration Git 状态保持原样，未重装依赖、未修改 timeout 或放宽断言。类型检查和 diff check 同时通过。
 
 身份和红绿证据：`/tmp/sherlock-notes-y-prosemirror-20261028/`。`runtime-identity.json` 为原始 integration RED，`inline-binding-identity-red.json` 与 `inline-module-owners-red.json` 为稳定强制 peer RED；`green/runtime-identity.json` 为实际 integration 加最小 config 修复后的原生探针（同为 `y-sync$`、binding 有效、composer 可见、pageerrors 为空），`integration-green.config.mjs` 保存无源码变更的实际依赖图测试投影方式。
+
+## 新笔记默认空段落与紧凑输入/运行态
+
+用户在真实 `fd4b4f4254ac54cfe66f8842c058b060e214883c` 客户端反馈：新建无标题笔记只有一个空白正文段落，Space 能展开，但“插入一个行情组件”提交前立即被判原位置已删除。新增与实际生命周期相同的真实生产 bundle 回归，在 pristine、展开后保存、保存重开三种场景先稳定失败；已经物化到 Yjs 的单个空段落不失败。
+
+捕获到的新文档证据：PM 光标为 3，默认段落 ID 为 `initialBlockId`；Y fragment 长度为 0。y-prosemirror 为默认 createAndFill 文档跳过初次 Yjs 写入，因此相对位置是根边界 `{tname:"note",assoc:-1}`，反解为 0，仅有 doc 祖先，严格校验合理地拒绝，但根因并非用户删除。
+
+修复仅在 **Y fragment 仍为空且 PM 仅有当前唯一空白 paragraph** 时，以公开 `prosemirrorToYXmlFragment` 初次物化同一个空段落，再重读 state/binding 捕获其实际 Y 节点身份。非空 Y fragment 不导入、不重建，位置校验不增加任何 position=0 或同 ID 兜底。初始化外层 Y 事务设置 `addToHistory=false`：新增回归先发现一次无效 undo 项，再修到文档 JSON、初始 block ID、undo/redo 栈均不变。物化后相对位置指向 paragraph 自身 Y type，反解为 3；初始段落删除后同 ID 重建仍被拒绝，需求保留；首段真实 components.create、子任务完成和保存重开均通过。
+
+按用户反馈和父任务实际 Notion Space AI 体验，输入态移除整个底部 footer，仅保留默认头像、自动增高输入和发送；发送后移除这三者，原处仅显示同宽约 48px 的既有 NoteAiProcessing（spinner、“正在工作…”、停止小按钮）。Esc、Enter、Shift+Enter、IME 保护继续工作。错误恢复全部多行需求，停止直接恢复完整需求继续编辑，Esc 收起后重开仍保留；不在原输入下追加 loading。运行态使用无文本光标的临时焦点，成功只在用户仍持有此框焦点时恢复正文焦点，异步期间用户已到其它段落编辑则不抢焦点。
+
+输入与运行态的临时样式只隐藏锚点段落的原生 caret 和相关 gap cursor，AI textarea 和其它段落不受影响；关闭/取消/完成时样式随框移除，正文 caret 恢复。真实浏览器 computed caret 与截图覆盖，无永久 readonly 或全编辑器禁用。
+
+本次相关回归增为 **9 文件 104 项**（22 条行内真实浏览器用例），保持原 96 项，包括删除/同 ID 重建、取消、换会话、组件子 job 和 React/Yjs/y-prosemirror 单例。功能图与冻结 fd4b APFS 依赖图的只读拟合入源码投影均验证；未修改集成源码/依赖，也未启动或替换共享客户端。证据目录 `/tmp/sherlock-notes-new-empty-20261028/` 包含 `new-note-pristine.json` 等初始/物化身份、`compact-inline-caret.png`、`compact-working.png` 和测试日志；`integration-green.config.mjs` 记录投影范围。真实模型及最终 packaged 验收由父批次继续。
