@@ -6,6 +6,7 @@ const BUTTON_ID = 'sherlock-sidebar-update-button'
 const PANEL_ID = 'sherlock-sidebar-update-panel'
 const FOOTER_SELECTOR = '[data-dsh-sidebar-footer]'
 const SETTINGS_SLOT_SELECTOR = '[data-dsh-sidebar-root] [data-slot="sidebar.settings"]'
+const DISMISS_DURATION = 180
 
 const phaseKey = (status: UpdateStatus) => `${status.availableVersion ?? status.currentVersion}:${status.phase}:${status.phase === 'error' ? updateErrorStage(status) : ''}`
 const isCheckNotice = (status: UpdateStatus) => ['checking', 'available', 'up-to-date'].includes(status.phase) || status.phase === 'error' && updateErrorStage(status) === 'check'
@@ -47,6 +48,8 @@ export class SidebarUpdateControl {
   private observed = false
   private aboutChecks = 0
   private settingsVisible = false
+  private detailsPreference?: boolean
+  private dismissTimer?: number
 
   constructor(private readonly document: Document, private readonly fallbackLocale: UpdateLocale, private readonly callbacks: SidebarUpdateCallbacks) {}
 
@@ -57,6 +60,8 @@ export class SidebarUpdateControl {
 
   async checkFromAbout(check: () => Promise<UpdateStatus>): Promise<UpdateStatus> {
     this.dismissed = ''
+    this.detailsPreference = undefined
+    this.cancelDismissal()
     this.aboutChecks++
     // Settings replaces the sidebar footer; hide the existing body-level
     // notice before render attempts to find that temporarily absent footer.
@@ -94,6 +99,7 @@ export class SidebarUpdateControl {
       return true
     }
     this.button?.remove()
+    this.cancelDismissal()
     this.panel?.remove()
     this.settingsVisible = false
     installSidebarNoticeStyles(this.document)
@@ -105,6 +111,8 @@ export class SidebarUpdateControl {
     button.hidden = true
     button.addEventListener('click', () => {
       this.dismissed = ''
+      this.detailsPreference = true
+      this.cancelDismissal()
       if (this.status?.phase === 'available') void this.startDownload()
       else if (this.status?.phase === 'downloaded') void this.startInstall()
       else if (this.status?.phase === 'error') void this.retryUpdate()
@@ -124,6 +132,7 @@ export class SidebarUpdateControl {
       const style = this.document.createElement('style')
       style.id = 'sherlock-sidebar-update-style'
       style.textContent = `[data-sherlock-update-footer]{display:flex;align-items:center;gap:4px}[data-sidebar-collapsed=true] [data-sherlock-update-footer]{flex-direction:column-reverse}#${BUTTON_ID}{flex:none;appearance:none;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}#${BUTTON_ID}[hidden]{display:none!important}#${BUTTON_ID}:hover{background:var(--dsw-alias-interactive-bg-hover)}#${BUTTON_ID}:focus-visible{outline:none}[data-sherlock-update-footer]:has(#${BUTTON_ID}:not([hidden])) .srb-account-controls{width:calc(100% - 32px)}[data-sidebar-collapsed=true] .srb-account-controls .srb-bell{order:0}[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button{order:1}#${PANEL_ID}[data-collapsed=true]{z-index:1502}body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=preparing]):not([data-phase=downloaded]):not([data-phase=installing]){visibility:hidden}body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=preparing],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice{visibility:hidden}`
+      style.textContent += `#${BUTTON_ID}:focus-visible{outline:1.5px solid var(--dsw-alias-interactive-accent,#3671d9);outline-offset:2px}#${PANEL_ID}{opacity:1;transition:opacity ${DISMISS_DURATION}ms ease}#${PANEL_ID}[data-closing=true]{opacity:0;pointer-events:none}@media(prefers-reduced-motion:reduce){#${PANEL_ID}{transition:none}}`
       this.document.head.append(style)
     }
     if (!this.observed) {
@@ -131,12 +140,26 @@ export class SidebarUpdateControl {
       const win = this.document.defaultView!
       new win.MutationObserver(() => { if (this.status) this.render(this.status) }).observe(this.document.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
       win.addEventListener('resize', () => { if (this.panel) positionSidebarNotice(this.document, this.panel) })
+      // Clicks inside iframe documents and native child views do not enter the
+      // host pointer event tree; dismiss when that surface takes window focus.
+      win.addEventListener('blur', () => this.dismissDetails())
       this.document.addEventListener('ework-update-action', (event) => {
         const action = (event as CustomEvent).detail
         if (action === 'download') void this.startDownload()
         else if (action === 'install') void this.startInstall()
         else if (action === 'retry') void this.retryUpdate()
-        else if (action === 'show') { this.dismissed = ''; if (this.status) this.render(this.status) }
+        else if (action === 'show') { this.dismissed = ''; this.detailsPreference = true; this.cancelDismissal(); if (this.status) this.render(this.status) }
+      })
+      this.document.addEventListener('pointerdown', event => {
+        if (this.panel?.hidden || this.panel?.contains(event.target as Node) || this.button?.contains(event.target as Node)) return
+        this.dismissDetails()
+      }, { capture: true })
+      this.document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape' || this.panel?.hidden || this.panel?.dataset.closing === 'true') return
+        if (!this.panel?.contains(event.target as Node) && !this.button?.contains(event.target as Node)) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.dismissDetails(true)
       })
     }
     if (this.status) this.render(this.status)
@@ -146,14 +169,19 @@ export class SidebarUpdateControl {
   render(status: UpdateStatus): void {
     if (this.downloadRequested && ['available', 'checking'].includes(status.phase)) status = { ...status, phase: 'downloading', percent: 0 }
     // A later, independent check may announce its result again.
-    if (!this.aboutChecks && status.phase === 'checking' && this.status?.phase !== 'checking') this.dismissed = ''
+    if ((!this.aboutChecks && status.phase === 'checking' && this.status?.phase !== 'checking') ||
+      this.status && (status.availableVersion ?? status.currentVersion) !== (this.status.availableVersion ?? this.status.currentVersion)) {
+      this.dismissed = ''
+      this.detailsPreference = undefined
+      this.cancelDismissal()
+    }
     this.status = status
     if (!this.mount() || !this.button || !this.panel) return
     const doc = this.document, panel = this.panel, button = this.button
     const action = updateAction(status), zh = this.locale === 'zh'
     const key = phaseKey(status)
     const active = ['downloading', 'preparing', 'installing'].includes(status.phase)
-    const quiet = !status.manual && ['available','downloading','preparing'].includes(status.phase)
+    const quiet = !status.manual && status.phase === 'available'
     button.dataset.action = action.kind
     button.replaceChildren(status.phase === 'downloading'
       ? progressRing(doc, status.percent ?? 0, zh ? '下载进度' : 'Download progress')
@@ -166,8 +194,15 @@ export class SidebarUpdateControl {
     panel.dataset.phase = status.phase
     panel.dataset.installStage = status.installStage ?? ''
     panel.dataset.collapsed = String(collapsed)
-    panel.hidden = quiet || action.kind === 'hidden' || this.dismissed === key || this.aboutChecks > 0
-    button.setAttribute('aria-expanded', String(!panel.hidden))
+    // Download state controls the ring; only an explicit interaction opens its
+    // details. Keep that choice across progress ticks and preparation phases.
+    const defaultOpen = !quiet && !['downloading', 'preparing'].includes(status.phase)
+    const open = (this.detailsPreference ?? defaultOpen) && action.kind !== 'hidden' && this.dismissed !== key && this.aboutChecks === 0
+    if (open) this.cancelDismissal()
+    panel.hidden = !open && (panel.dataset.closing !== 'true' || action.kind === 'hidden' || this.aboutChecks > 0)
+    panel.inert = !open
+    panel.setAttribute('aria-hidden', String(!open))
+    button.setAttribute('aria-expanded', String(open))
     if (action.kind === 'hidden') { this.broadcast(status); return }
     const header = doc.createElement('header')
     const title = doc.createElement('strong')
@@ -182,13 +217,6 @@ export class SidebarUpdateControl {
       : status.phase === 'downloading' ? (zh ? `正在下载更新 · ${Math.round(status.percent ?? 0)}%` : `Downloading update · ${Math.round(status.percent ?? 0)}%`)
       : status.phase === 'error' ? errorCopy.title
       : (zh ? `发现新版本 ${status.availableVersion}` : `Version ${status.availableVersion} is available`)
-    if (!checking) {
-      const close = this.action('', () => { this.dismissed = key; this.render(status) })
-      close.className = 'ework-notice-close'
-      close.setAttribute('aria-label', zh ? '关闭更新提醒' : 'Dismiss update notice')
-      close.append(noticeIcon(doc, 'close'))
-      header.append(close)
-    }
     const description = doc.createElement('p')
     description.className = 'ework-notice-description'
     const children: Node[] = [header]
@@ -238,6 +266,35 @@ export class SidebarUpdateControl {
     this.broadcast(status)
   }
 
+  private cancelDismissal(): void {
+    if (this.dismissTimer !== undefined) this.document.defaultView!.clearTimeout(this.dismissTimer)
+    this.dismissTimer = undefined
+    this.panel?.removeAttribute('data-closing')
+  }
+
+  private dismissDetails(restoreFocus = false): void {
+    const panel = this.panel
+    if (!panel || panel.hidden || panel.dataset.closing === 'true' || !this.status) return
+    const focusInside = panel.contains(this.document.activeElement)
+    this.detailsPreference = false
+    this.dismissed = phaseKey(this.status)
+    panel.dataset.closing = 'true'
+    panel.inert = true
+    panel.setAttribute('aria-hidden', 'true')
+    this.button?.setAttribute('aria-expanded', 'false')
+    // Outside pointer events retain their normal focus and click behavior.
+    if (restoreFocus && focusInside && !this.button?.hidden) this.button?.focus({ preventScroll: true })
+    const finish = () => {
+      this.dismissTimer = undefined
+      if (this.panel !== panel) return
+      panel.hidden = true
+      panel.removeAttribute('data-closing')
+      positionSidebarNotice(this.document, panel)
+    }
+    if (this.document.defaultView!.matchMedia('(prefers-reduced-motion: reduce)').matches) finish()
+    else this.dismissTimer = this.document.defaultView!.setTimeout(finish, DISMISS_DURATION)
+  }
+
   private action(label: string, callback: () => unknown): HTMLButtonElement {
     const button = this.document.createElement('button')
     button.type = 'button'
@@ -257,6 +314,8 @@ export class SidebarUpdateControl {
     if (this.pending || this.downloadRequested || !this.status) return
     this.downloadRequested = true
     this.dismissed = ''
+    this.detailsPreference = true
+    this.cancelDismissal()
     this.render({ ...this.status, phase: 'downloading', percent: 0 })
     try { await this.invoke(this.callbacks.download, () => 'download') }
     finally { this.downloadRequested = false }

@@ -55,11 +55,13 @@ describe('Figma sidebar update states', () => {
     expect(callbacks.download).toHaveBeenCalledOnce()
     expect(callbacks.install).not.toHaveBeenCalled()
   })
-  it('dismisses a version notice and restores it via the compact control', () => {
+  it('dismisses a version notice with Escape and restores it via the compact control', async () => {
     const {document,control}=fixture();control.render(available)
-    panel(document).querySelector<HTMLButtonElement>('.ework-notice-close')!.click()
-    expect(panel(document).hidden).toBe(true)
-    document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.click()
+    const button = document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+    button.focus()
+    button.dispatchEvent(new document.defaultView!.KeyboardEvent('keydown', {key:'Escape',bubbles:true}))
+    await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+    button.click()
     expect(panel(document).hidden).toBe(false)
   })
   it('uses actual percentage, bytes and transfer speed for the downloading state', () => {
@@ -73,6 +75,7 @@ describe('Figma sidebar update states', () => {
   })
   it.each(['preparing','installing'] as const)('shows preparation or restart progress for %s without a premature action',phase=>{
     const {document,control,callbacks}=fixture();control.render({...available,phase,...(phase==='installing'?{installStage:'saving' as const}:{})})
+    if (phase === 'preparing') document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.click()
     expect(panel(document).hidden).toBe(false);expect(panel(document).textContent).toContain(phase==='preparing'?'正在校验并解压更新文件':'正在保存研究状态')
     expect(panel(document).querySelector('[data-notice-icon=loading]')).not.toBeNull();expect(panel(document).querySelector('button')).toBeNull()
     expect(callbacks.install).not.toHaveBeenCalled()
@@ -101,19 +104,151 @@ it('keeps automatic discovery quiet and offers a restart only after preparation'
   expect(callbacks.install).toHaveBeenCalledOnce();expect(callbacks.download).not.toHaveBeenCalled()
 })
 
-it('keeps a dismissed download bubble closed across progress ticks while the ring advances', () => {
+it('keeps a dismissed download bubble closed across progress ticks while the ring advances', async () => {
   const {document,control}=fixture()
   control.render({...available,phase:'downloading',percent:25})
-  panel(document).querySelector<HTMLButtonElement>('.ework-notice-close')!.click()
-  control.render({...available,phase:'downloading',percent:64})
   const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  button.click()
+  document.querySelector('#settings')!.dispatchEvent(new document.defaultView!.PointerEvent('pointerdown',{bubbles:true}))
+  control.render({...available,phase:'downloading',percent:64})
   expect(button.hidden).toBe(false)
   expect(button.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('64')
   expect(button.querySelector('circle[data-progress]')?.getAttribute('stroke-dashoffset')).toBe('36')
+  await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+  control.render({...available,phase:'downloading',percent:64})
   expect(panel(document).hidden).toBe(true)
   button.click()
   expect(panel(document).hidden).toBe(false)
   expect(panel(document).textContent).toContain('64%')
+})
+
+it.each([false,true])('shows an advancing download ring without opening details or moving focus (manual=%s)', manual => {
+  const {document,control,callbacks}=fixture()
+  const settings=document.querySelector<HTMLButtonElement>('#settings')!
+  settings.focus()
+  control.render({...available,manual})
+  control.render({...available,manual,phase:'downloading',percent:25})
+  const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  expect(button.hidden).toBe(false)
+  expect(button.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('25')
+  expect(panel(document).hidden).toBe(true)
+  expect(button.getAttribute('aria-expanded')).toBe('false')
+  control.render({...available,manual,phase:'downloading',percent:64})
+  expect(panel(document).hidden).toBe(true)
+  expect(button.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('64')
+  expect(document.activeElement).toBe(settings)
+  button.focus();button.click()
+  expect(panel(document).hidden).toBe(false)
+  expect(button.getAttribute('aria-expanded')).toBe('true')
+  expect(panel(document).textContent).toContain('64%')
+  expect(panel(document).querySelector('.ework-notice-close')).toBeNull()
+  control.render({...available,manual,phase:'downloading',percent:70})
+  expect(panel(document).hidden).toBe(false)
+  expect(document.activeElement).toBe(button)
+  expect(callbacks.download).not.toHaveBeenCalled()
+  expect(callbacks.install).not.toHaveBeenCalled()
+})
+
+it('fades details on outside pointerdown while the external action and its focus continue normally', async () => {
+  const {document,control}=fixture()
+  control.render({...available,phase:'downloading',percent:25,manual:false})
+  const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  button.click()
+  const inside=new document.defaultView!.PointerEvent('pointerdown',{bubbles:true,cancelable:true})
+  panel(document).querySelector('strong')!.dispatchEvent(inside)
+  expect(panel(document).hidden).toBe(false)
+  expect(panel(document).dataset.closing).not.toBe('true')
+  const outside=document.querySelector<HTMLButtonElement>('#settings')!
+  const click=vi.fn();outside.addEventListener('click',click)
+  const pointer=new document.defaultView!.PointerEvent('pointerdown',{bubbles:true,cancelable:true})
+  expect(outside.dispatchEvent(pointer)).toBe(true)
+  outside.focus();outside.click()
+  expect(pointer.defaultPrevented).toBe(false)
+  expect(click).toHaveBeenCalledOnce()
+  expect(document.activeElement).toBe(outside)
+  expect(panel(document).hidden).toBe(false)
+  expect(document.defaultView!.getComputedStyle(panel(document)).opacity).toBe('0')
+  expect(document.defaultView!.getComputedStyle(panel(document)).pointerEvents).toBe('none')
+  expect(panel(document).getAttribute('aria-hidden')).toBe('true')
+  expect(button.getAttribute('aria-expanded')).toBe('false')
+  control.render({...available,phase:'downloading',percent:55,manual:true})
+  await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+  control.render({...available,phase:'preparing',manual:true})
+  control.render({...available,phase:'downloaded',manual:true})
+  expect(panel(document).hidden).toBe(true)
+  expect(document.activeElement).toBe(outside)
+})
+
+it('returns keyboard focus to the ring on Escape without allowing progress to reopen details', async () => {
+  const {document,control}=fixture()
+  control.render({...available,phase:'downloaded'})
+  const action=panel(document).querySelector<HTMLButtonElement>('[data-update-install]')!
+  action.focus()
+  const escape=new document.defaultView!.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})
+  action.dispatchEvent(escape)
+  expect(escape.defaultPrevented).toBe(true)
+  expect(document.activeElement).toBe(document.querySelector('#sherlock-sidebar-update-button'))
+  await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+  control.render({...available,phase:'downloaded'})
+  expect(panel(document).hidden).toBe(true)
+})
+
+it('cancels a pending fade when the ring is clicked again', async () => {
+  const {document,control}=fixture()
+  control.render({...available,phase:'downloading',percent:25})
+  const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  button.click()
+  document.querySelector('#settings')!.dispatchEvent(new document.defaultView!.PointerEvent('pointerdown',{bubbles:true}))
+  button.click()
+  await new Promise(resolve=>document.defaultView!.setTimeout(resolve,220))
+  expect(panel(document).hidden).toBe(false)
+  expect(panel(document).getAttribute('aria-hidden')).toBe('false')
+  expect(button.getAttribute('aria-expanded')).toBe('true')
+})
+
+it('dismisses details when an outside control stops pointerdown propagation', async () => {
+  const {document,control}=fixture()
+  control.render({...available,phase:'downloading',percent:25})
+  document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.click()
+  const outside=document.querySelector('#settings')!
+  outside.addEventListener('pointerdown',event=>event.stopPropagation())
+  outside.dispatchEvent(new document.defaultView!.PointerEvent('pointerdown',{bubbles:true}))
+  await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+})
+
+it.each(['iframe','native child view'] as const)('dismisses on host focus loss into an external %s without intercepting its input', async surface => {
+  const {document,control}=fixture()
+  control.render({...available,phase:'downloading',percent:25,manual:false})
+  const ring=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  ring.click()
+  const native=surface==='native child view'?new Window({url:'https://component.local'}):undefined
+  const frame=surface==='iframe'?document.createElement('iframe'):undefined
+  if(frame){frame.src='about:blank';document.body.append(frame)}
+  const child=frame?.contentDocument ?? native!.document as unknown as Document
+  try{
+    child.body.innerHTML='<input value="原有草稿"><button>组件操作</button>'
+    const input=child.querySelector('input')!,action=child.querySelector('button')!
+    action.addEventListener('click',()=>{input.value='组件操作已生效'})
+    input.focus()
+    // A child document's pointer events never reach the host document. The
+    // host renderer instead loses window focus to that browsing surface.
+    action.dispatchEvent(new child.defaultView!.PointerEvent('pointerdown',{bubbles:true,cancelable:true}))
+    action.click()
+    expect(panel(document).hidden).toBe(false)
+    expect(panel(document).dataset.closing).not.toBe('true')
+    const blur=new document.defaultView!.FocusEvent('blur',{cancelable:true})
+    document.defaultView!.dispatchEvent(blur)
+    expect(blur.defaultPrevented).toBe(false)
+    expect(input.value).toBe('组件操作已生效')
+    expect(child.activeElement).toBe(input)
+    expect(ring.getAttribute('aria-expanded')).toBe('false')
+    await vi.waitFor(()=>expect(panel(document).hidden).toBe(true))
+    control.render({...available,phase:'downloading',percent:64,manual:false})
+    document.defaultView!.dispatchEvent(new document.defaultView!.FocusEvent('focus'))
+    expect(panel(document).hidden).toBe(true)
+    expect(child.activeElement).toBe(input)
+    expect(input.value).toBe('组件操作已生效')
+  }finally{await native?.happyDOM.close()}
 })
 
 it('starts a download from the footer immediately and shows progress before IPC resolves', async () => {
