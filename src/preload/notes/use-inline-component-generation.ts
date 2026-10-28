@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useRef,useState} from 'react'
 import type {NoteAiResult,NotesBridge} from '../../shared/workspace-notes'
+import {noteGenerationError} from '../../shared/workspace-notes'
 
 type Options={sessionId:string;bridge:Pick<NotesBridge,'request'>;editor:any;current():boolean;persist():Promise<unknown>;changed?():void;update?(blockId:string,node:Record<string,any>):void;notify?():void}
 type GenerationContext={images?:any[];context?:any;title?:string;markdown?:string;selection?:string;sourceInstruction?:string}
@@ -54,11 +55,11 @@ export function createInlineComponentGeneration(options:Options){
      await options.persist();await job.onEffect?.('saved');const saved=current(job);if(!saved)return
      const binding=await options.bridge.request('component-data',{sessionId:options.sessionId,action:'bind-generated',nodeId:saved.node.id,recipe:result.sourceResult.recipe,initialSpec:saved.node.containerSpec})
      const bound=current(job);if(bound)write(job,{...bound.node,noteDataBound:true,sourceText:binding.enabled===false?'已绑定数据源 · 手动刷新':'已绑定数据源 · 可见时自动刷新'},true)
-    }catch(error){const saved=current(job);if(saved)write(job,{...saved.node,noteDataBound:false,sourceText:'已验证数据来源 · 当前为快照，自动刷新未启用',generationError:(error as Error).message},true)}
+    }catch(error){const saved=current(job);if(saved)write(job,{...saved.node,noteDataBound:false,sourceText:'已验证数据来源 · 当前为快照，自动刷新未启用',generationError:noteGenerationError(error)},true)}
    }
   }catch(error){
    const latest=current(job)
-   if(latest)write(job,{...latest.node,generationStatus:'failed',generationError:(error as Error).name==='AbortError'?stopped:(error as Error).message})
+   if(latest)write(job,{...latest.node,generationStatus:'failed',generationError:(error as Error).name==='AbortError'?stopped:noteGenerationError(error)})
   }finally{finish(job)}
  }
  const api={

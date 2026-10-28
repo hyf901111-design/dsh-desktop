@@ -25,6 +25,12 @@ export type NoteDocumentResult = ({ kind: 'text'; markdown: string } | { kind: '
 export type NoteAiResult = NoteDocumentResult | ({ kind: 'conversation'; markdown: string } & NoteCapabilityResult)
 export type NoteInsertionAnchor = {documentId:string;blockId:string;position:Record<string,any>}
 
+/** Electron's Notes transport wrapper is diagnostic detail, not a user error. */
+export function noteGenerationError(error:unknown):string {
+  const message=typeof error==='string'?error:typeof (error as Error)?.message==='string'?(error as Error).message:String(error??'')
+  return message.replace(/^Error invoking remote method (['"])notes:request\1:\s*(?:Error:\s*)?/u,'')
+}
+
 /** Only an affirmative creation clause reserves a component in the document. */
 export function noteComponentRequest(prompt:string):boolean {
   return prompt.split(/[，,。；;\n]/u).some(clause=>

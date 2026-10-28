@@ -8,7 +8,7 @@ import {renderAdvancedChart} from './advanced-chart-artifact.js';
 import {renderSpecialChart} from './special-chart-artifact.js';
 import { renderCartesianChart } from './cartesian-chart-artifact.js';
 import { normalizeIndexedTableRows, templateDataIssue } from './template-data-contract.js';
-import { normalizeChartMetadata } from './chart-template-contract.js';
+import { CHART_VARIANTS, chartDataIssue, normalizeChartMetadata } from './chart-template-contract.js';
 import {retainTemplateModel,readTemplateModel} from './component-template-registry.js';
 import { renderMarketArtifact } from './market-artifact.js';
 import { requiredMarketVariant } from './workbench-design-contract.js';
@@ -83,6 +83,21 @@ export function restoreDeclaredArtifactType(text,type) {
  if(!accepted)return;
  const spec=JSON.parse(accepted),model=readTemplateModel(spec)?.data??spec;
  if(model.type!==type&&!(type==='table'&&model.type==='market'&&model.variant==='table'))return;
+ return encoded;
+}
+// The host's exact template contract can supply an omitted discriminator only.
+// Never infer one from model data, replace an explicit value, or repair data.
+export function restoreDeclaredChartVariant(text,contract) {
+ if(contract?.version!==1||contract.type!=='chart'||!CHART_VARIANTS.includes(contract.variant))return;
+ const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null;
+ if(!data||data.version!==1||data.type!=='chart'||Object.hasOwn(data,'variant'))return;
+ const declared={...data,variant:contract.variant};
+ if(chartDataIssue(declared))return;
+ const encoded=JSON.stringify(declared);
+ let accepted;try{accepted=acceptArtifactOutput(encoded)}catch{return}
+ if(!accepted)return;
+ const spec=JSON.parse(accepted),model=readTemplateModel(spec)?.data??spec;
+ if(model.type!=='chart'||model.variant!==contract.variant)return;
  return encoded;
 }
 export function retainedTableData(spec) {
