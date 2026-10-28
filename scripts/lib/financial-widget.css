@@ -1,6 +1,6 @@
 /* Figma 24C / 24E. These controls share the native layer so presentation rules
    for generated HTML cannot turn them into a second, unrelated control family. */
-body [data-ework-toolbar]:has([data-financial-library]):has(.ew-workbench-mode-slot){width:375px!important;max-width:var(--ework-toolbar-available-width,calc(100vw - 16px))!important}
+body [data-ework-toolbar]:has([data-financial-library]):has(.ew-workbench-mode-slot){width:max-content!important;max-width:var(--ework-toolbar-available-width,calc(100vw - 16px))!important}
 :is([data-ework-grid],[data-financial-theme]){--fw-card:#fff;--fw-text:#252a33;--fw-muted:#667085;--fw-border:#ced2da;--fw-row:#f3f4f7;--fw-alternate:#fff;--fw-heading:#e8e9ee;--fw-control:#e9ebef;--fw-menu:#f8f8fa;--fw-grid:#e8e9ee;--fw-volume-up:#ffa3ab;--fw-volume-down:#80cfbf}
 body[data-ds-dark-theme] [data-ework-grid], [data-ework-grid][data-workbench-style=dark], [data-financial-theme=dark]{--fw-card:#151518;--fw-text:#fff;--fw-muted:#9da5b2;--fw-border:#41414c;--fw-row:#202024;--fw-alternate:#28282f;--fw-heading:#35363f;--fw-control:#28282f;--fw-menu:#1c1b20;--fw-grid:#303036;--fw-volume-up:#a32838;--fw-volume-down:#00836f}
 body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]{--fw-card:#fff;--fw-text:#252a33;--fw-muted:#667085;--fw-border:#ced2da;--fw-row:#f3f4f7;--fw-alternate:#fff;--fw-heading:#e8e9ee;--fw-control:#e9ebef;--fw-menu:#f8f8fa;--fw-grid:#e8e9ee;--fw-volume-up:#ffa3ab;--fw-volume-down:#80cfbf}

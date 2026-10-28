@@ -185,7 +185,6 @@ body[data-ds-dark-theme] [data-workbench-notice] { border-color:#ffffff22; backg
 body[data-ds-dark-theme] [data-workbench-notice] [data-canvas-action-undo] { color:#8ab8ff; }
 body[data-ds-dark-theme] [data-workbench-notice] button:is(:hover,:focus-visible) { background:#ffffff14; }
 /* Split Arrange action and upward menu follow the floating tool picker. */
-body [data-ework-toolbar]:has(.ew-arrange-tool):has(.ew-workbench-mode-slot){width:336px!important}
 body [data-ework-toolbar]>.ew-arrange-tool{display:flex;align-items:center;flex:0 0 52px;width:52px;height:34px;border-radius:8px;overflow:visible;background:transparent!important}
 body [data-ework-toolbar]>.ew-arrange-tool>button{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:34px;height:34px;flex:none;padding:0;border:0;border-radius:8px 0 0 8px;background:transparent!important;color:#242424;cursor:pointer}
 body[data-ds-dark-theme] [data-ework-toolbar]>.ew-arrange-tool>button{color:#f1f1f3}
@@ -203,7 +202,7 @@ body [data-ework-toolbar]>.ew-arrange-tool:has([aria-expanded=true])>button::aft
 body .ew-arrange-menu,body[data-ds-dark-theme] .ew-arrange-menu{display:flex;flex-direction:column;gap:4px;width:max-content;padding:8px;border:1px solid #ffffff14;border-radius:12px;background:#202124;color:#fff;box-shadow:0 5px 18px #0005;font:12px/18px Inter,"Noto Sans SC",system-ui}
 /* Arrange uses its checkmark alone for selection, overriding the shell's
    shared radio-menu selected background without changing other menus. */
-body [data-workbench-arrange-menu].ew-arrange-menu>button[role=menuitemradio][data-arrange-mode]{gap:8px;min-height:31px;padding:6px;border-radius:6px;white-space:nowrap;background:transparent!important}
-body [data-workbench-arrange-menu].ew-arrange-menu>button[role=menuitemradio][data-arrange-mode]:is(:hover,:focus-visible){background:#139dff!important;color:#fff!important;outline:0}
+body :is([data-workbench-arrange-menu],[data-workbench-theme-menu]).ew-arrange-menu>button[role=menuitemradio]:is([data-arrange-mode],[data-workbench-style-option]){gap:8px;min-height:31px;padding:6px;border-radius:6px;white-space:nowrap;background:transparent!important}
+body :is([data-workbench-arrange-menu],[data-workbench-theme-menu]).ew-arrange-menu>button[role=menuitemradio]:is([data-arrange-mode],[data-workbench-style-option]):is(:hover,:focus-visible){background:#139dff!important;color:#fff!important;outline:0}
 body .ew-arrange-menu .ew-arrange-check{flex:none;opacity:0}
 body .ew-arrange-menu [aria-checked=true] .ew-arrange-check{opacity:1}
