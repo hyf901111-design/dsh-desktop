@@ -730,6 +730,129 @@
           "前轮记录的Memory/PPT annotation/ConversationRoot三个旧fixture基线失败未变，未修无关源码，未列为passed checks；本轮未重跑这些不相关用例。"
         ],
         "generatedAt": "2026-10-28T09:12:41.204824Z"
+      },
+      "merged": {
+        "mergeCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+        "verificationCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
+            "verifiedCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+            "completedAt": "2026-10-28T09:14:04.594Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+            "completedAt": "2026-10-28T09:14:04.594Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/memory-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
+            "verifiedCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+            "completedAt": "2026-10-28T09:14:04.594Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/plugin-back-sticky-browser.test.js",
+              "test/integration-menu-layout.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/integration-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
+            "verifiedCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+            "completedAt": "2026-10-28T09:14:04.594Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+            "completedAt": "2026-10-28T09:14:04.594Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/notes-preload-runtime.test.ts",
+              "test/preload-editor-singleton.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
+            "verifiedCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+            "completedAt": "2026-10-28T09:14:04.594Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+            "completedAt": "2026-10-28T09:14:04.594Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-voice.test.ts",
+              "test/composer-voice.test.js",
+              "test/composer-voice-patch.test.js",
+              "test/composer-voice-browser.test.js",
+              "test/composer-submit-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
+            "verifiedCommit": "d05809456cac5d18285831cfbb3d55963ae0f58a",
+            "completedAt": "2026-10-28T09:14:04.594Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-28T09:14:04.594Z"
       }
     },
     {
