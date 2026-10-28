@@ -9,20 +9,36 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "电源服务临时错误保留租约及恢复提示",
+        "featureName": "修复电源心跳及状态读取竞态并升级辅助服务",
         "branch": "codex/feat/power-sleep-settings-20261028",
-        "baseCommit": "5e5c0a120badc959ea5b332fa351ae91b094994f",
-        "tipCommit": "cd21fcd04751574480bec5f8dbe3b728ddf5eb7a",
+        "baseCommit": "cd21fcd04751574480bec5f8dbe3b728ddf5eb7a",
+        "tipCommit": "77cbb124651b1a6ee6c1a64cb8f9fde49b387237",
         "commits": [
           {
-            "commit": "cd21fcd04751574480bec5f8dbe3b728ddf5eb7a",
+            "commit": "77cbb124651b1a6ee6c1a64cb8f9fde49b387237",
             "parents": [
-              "5e5c0a120badc959ea5b332fa351ae91b094994f"
+              "cd21fcd04751574480bec5f8dbe3b728ddf5eb7a"
             ],
-            "subject": "修复：保留电源服务临时错误期间的租约并恢复状态反馈"
+            "subject": "修复：稳定电源心跳读取并校验运行服务版本"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "scripts/build-power-helper.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/macos/sherlock-power-helper.mm"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-packaged-macos.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
           {
             "status": "M",
             "path": "src/main/power/controller.ts"
@@ -33,7 +49,23 @@
           },
           {
             "status": "M",
+            "path": "src/main/power/macos-power-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/power-helper-native.mm"
+          },
+          {
+            "status": "M",
+            "path": "test/power-helper-native.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/power-lid-guard.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/power-service-readiness.test.ts"
           },
           {
             "status": "M",
@@ -48,15 +80,18 @@
               "test/power-settings.test.ts",
               "test/power-lid-guard.test.ts",
               "test/power-service.test.ts",
+              "test/power-service-readiness.test.ts",
+              "test/power-helper-native.test.ts",
               "test/power-settings-ui.test.ts",
               "test/power-settings-ipc.test.ts",
               "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts"
+              "test/figma-settings-layout.test.ts",
+              "test/macos-package-runtime.test.ts"
             ],
             "outcome": "passed",
-            "summary": "7个直接相关文件38项通过，含两个先红后绿的临时服务错误保留租约/确认恢复后清除警告回归；独立审查26项通过。",
-            "verifiedCommit": "cd21fcd04751574480bec5f8dbe3b728ddf5eb7a",
-            "completedAt": "2026-10-28T06:01:12.972175Z",
+            "summary": "10个直接相关文件80项通过，含实际reader心跳/原子替换竞态、运行中服务版本、混合状态快照、限制诊断字段；日志 /Users/heyafeng/.codex/visualizations/2026/10/28/01a1808d-9f9a-7a83-b437-2ec57239994a/persistent-power/helper-v2/focused.log",
+            "verifiedCommit": "77cbb124651b1a6ee6c1a64cb8f9fde49b387237",
+            "completedAt": "2026-10-28T06:30:43.912036Z",
             "timeoutMs": 120000
           },
           {
@@ -67,106 +102,28 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "cd21fcd04751574480bec5f8dbe3b728ddf5eb7a",
-            "completedAt": "2026-10-28T06:01:12.972175Z",
+            "verifiedCommit": "77cbb124651b1a6ee6c1a64cb8f9fde49b387237",
+            "completedAt": "2026-10-28T06:30:43.912036Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；原本集成候选已验证首次安装后一次无授权重开自动激活，最终代码待集成后重做。"
+          "summary": "原生无权限fixture验证actualreader及status serializer，客户端回归先红后绿。功能worktree不构建共享客户端，辅助程序2首次更新需用户手动授权。"
         },
         "acceptanceCriteria": [
-          "全局无token错误不得误判为租约关闭并主动释放；真正漂移和安全停止仍释放",
-          "服务确认匹配当前租约且pmset1后清除恢复警告，其他错误保留",
-          "既有一次安装授权与客户端退出/重开自动恢复仍生效，无原生协议和权限变更"
+          "合法心跳或原子替换导致一次不稳定快照时最多重读3次，不误撤销仍有效的租约；不可信文件和journal仍严格拒绝",
+          "旧active配新pmset0保留请求等待明确native结果；真正漂移和安全停止仍生效",
+          "同时验证磁盘二进制及运行服务的implementationVersion2，租约/status文件协议仍1",
+          "故障诊断仅32条白名单元数据，不记录token或用户内容，失败不影响电源控制",
+          "更新辅助服务后正常退出/重开自动恢复且不重复授权"
         ],
         "risks": [
-          "首次安装后曾观察到一次保活停止，原始诊断状态未捕获，不能证明本补丁就是该次停止的唯一原因；记录该实机观察，不作已定位根因的声明",
-          "已有原生服务不需重装；物理合盖和系统重启仍未实测"
+          "用户已安装辅助服务1，本次替换受保护服务为2需要一次系统更新授权；之后普通重开不弹窗",
+          "两处竞态独立重现并修复；此前实机停止的原始状态未捕获，不能断言它们是唯一原因",
+          "物理合盖与系统重启仍待本机人工验证"
         ],
-        "generatedAt": "2026-10-28T06:01:12.972175Z"
-      },
-      "merged": {
-        "mergeCommit": "f52fdab406874f74e5aef75f4c0797175cc21950",
-        "verificationCommit": "f52fdab406874f74e5aef75f4c0797175cc21950",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "f52fdab406874f74e5aef75f4c0797175cc21950",
-            "completedAt": "2026-10-28T06:01:41.098Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f52fdab406874f74e5aef75f4c0797175cc21950",
-            "completedAt": "2026-10-28T06:01:41.098Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "f52fdab406874f74e5aef75f4c0797175cc21950",
-            "completedAt": "2026-10-28T06:01:41.098Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "f52fdab406874f74e5aef75f4c0797175cc21950",
-            "completedAt": "2026-10-28T06:01:41.098Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "f52fdab406874f74e5aef75f4c0797175cc21950",
-            "completedAt": "2026-10-28T06:01:41.098Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-28T06:01:41.098Z"
+        "generatedAt": "2026-10-28T06:30:43.912036Z"
       }
     },
     {
