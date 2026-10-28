@@ -4,7 +4,7 @@
 
 **Goal:** 在共享输入框提供无重复、不误发、可安全中止的语音转写和紧邻发送按钮的真实音量反馈。
 
-**Architecture:** ResearchVoiceController 维护持久 research 注册及独立临时 composer owner，只允许一个 capture。可逆 composer-voice patch 在原生 InputBar 内通过 keyboard.setDraft 写入，用精确请求、编辑器、draftRev 及焦点身份防护迟到结果。
+**Architecture:** ResearchVoiceController 维护持久 research 注册及独立临时 composer owner，只允许一个 capture。可逆 composer-voice patch 在原生 InputBar 内通过 keyboard.setDraft 写入，用精确请求、编辑器、draftRev 及生命周期身份防护迟到结果；composer 激活后允许失焦，受控语音片段锚点保护手动编辑。
 
 **Tech Stack:** Electron trusted IPC、TypeScript、现有 macOS Speech、React、原生 SessionInputShell、Vitest/Playwright。
 
@@ -19,7 +19,7 @@
 
 - 取消期间原生同步 final 和 IPC 延迟开始：先撤销身份，随后只取消同一请求。
 - 录音期间 research setActive 或视图导航：不得恢复陈旧研究注册。
-- 按键和 IME：首个非 IME Enter 仅停止，普通编辑/组合输入继续。
+- 按键和 IME：只有 Esc/停止按钮手动结束；普通 Enter/组合 Enter 防误发不中断；普通编辑、Shift 换行及 IME 继续。
 - 笔记与普通输入共存：只写当前原生 shell，不污染另一路草稿。
 - 隐藏/卸载、只附件及运行任务：没有遗留麦克风；原停止/发送语义保留。
 
@@ -61,3 +61,5 @@
 集成检查追加：旧安装的 v1 序列化函数与新函数不同，原 strip 精确比较整块定义导致升级失败。历史 8d17 原模块→新模块以及官方入口旧版→新版两项先 RED；改为校验唯一有界标记、导出位置、运行时声明与语法，保留严格 UI hook 校验。当前版和历史旧版均经官方入口两次内存重放，依赖零写入。发送策略单独提取 onPrimary 的测试补齐实际 voice 闭包上下文，并增加完整 voice wrapper 下原发送策略回归。
 
 已授权动效追加：仅在既有 useComposerVoice 生命周期管理展示保留和退出 timer；CSS 240ms ease-out 向左展开/收起，发送按钮固定，音频事件不重播动画；关闭立即移除可访问状态与交互，reduced-motion 即时。三个真实浏览器回归覆盖 90ms 实际 CSS 中间帧、音量与动画对象稳定性、退出语义、reduced-motion、快速重开/卸载 timer；两项先 RED，修复后针对性检查 GREEN。按原五文件及 typecheck 验证并生成 e918 后继增量卡；不改 Main/Power 或实机焦点策略，不构建共享客户端。
+
+已授权显式停止行为修正：取消普通按键、打字和编辑器/窗口失焦的停止语义；保留卸载、隐藏、会话切换、不可信输入、附件及任务生命周期清理。录音期间发送箭头禁用并给出先停止的提示，普通/加速 Enter 不发送、不停止，Esc 消费并停止。可信 input 事件按同一实际 value 认领受控变更，记录语音所有权锚点；用户在片段内删改后用旧累计稳定末尾只识别新尾部，歧义改写冻结而不恢复旧词。IME 暂存到原生提交及稳定期后再合并 final；新 pending 不被旧 pending 回退。实际 React 输入事件先于 onChange 的 microtask 检查点由 task 级短期编辑票据处理；单元和真实 Chromium CDP IME、原生键盘、光标/失焦、生命周期及旧安装升级用例进行聚焦验证。240ms 动效和 reduced-motion 规则保持。

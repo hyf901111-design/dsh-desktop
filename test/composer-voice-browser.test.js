@@ -78,72 +78,90 @@ for(const mode of ['home','conversation','research','notes'])it(`dictates into t
  const f=await fixture(mode,true);try{
   expect(await f.page.title()).toBe('原生输入框语音验证');const other=await f.page.evaluate(()=>probe.other.snapshot)
   await f.start();expect(await f.input.evaluate(el=>document.activeElement===el)).toBe(true)
-  expect(await f.page.getByRole('button',{name:'发送',exact:true}).isDisabled()).toBe(true)
+  expect(await f.page.getByRole('button',{name:'请先停止语音输入再发送',exact:true}).isDisabled()).toBe(true)
   await f.emit({type:'state',state:'listening'});await f.emit({type:'partial',text:'研究'});await f.emit({type:'partial',text:'研究市场'});await f.emit({type:'partial',text:'研究市场'})
   await expect.poll(()=>f.input.inputValue()).toBe('研究市场');expect(await f.page.evaluate(()=>probe.shell.snapshot.draft)).toBe('研究市场');await expect.poll(()=>f.input.evaluate(el=>el.selectionEnd)).toBe(4)
   expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.page.evaluate(()=>probe.other.snapshot)).toEqual(other)
   const silent=await f.page.locator('[data-composer-voice-wave] i').last().evaluate(el=>el.getBoundingClientRect().height)
   for(const level of [.15,.4,.75,.3,.8,.5,.2,.65,.4,.85])await f.emit({type:'level',level});await expect.poll(()=>f.page.locator('[data-composer-voice-wave] i').last().evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThan(12)
   await expect.poll(()=>f.page.locator('[data-composer-voice-pill]').evaluate(el=>el.getBoundingClientRect().width)).toBe(82)
-  const geometry=await f.page.evaluate(()=>{const pill=document.querySelector('[data-composer-voice-pill]').getBoundingClientRect(),send=document.querySelector('button[aria-label="发送"]').getBoundingClientRect();return{pill:{x:pill.x,y:pill.y,width:pill.width,height:pill.height,right:pill.right},send:{x:send.x,y:send.y,width:send.width,height:send.height}}})
+  const geometry=await f.page.evaluate(()=>{const pill=document.querySelector('[data-composer-voice-pill]').getBoundingClientRect(),send=document.querySelector('.uV2eYG_primary').getBoundingClientRect();return{pill:{x:pill.x,y:pill.y,width:pill.width,height:pill.height,right:pill.right},send:{x:send.x,y:send.y,width:send.width,height:send.height}}})
   expect(geometry.pill.right).toBeLessThanOrEqual(geometry.send.x);expect(Math.abs(geometry.pill.y+geometry.pill.height/2-geometry.send.y-geometry.send.height/2)).toBeLessThanOrEqual(3)
   await f.page.screenshot({path:evidence+'/'+mode+'-active-dark.png'});await writeFile(evidence+'/'+mode+'-geometry.json',JSON.stringify(geometry,null,2))
   await f.emit({type:'final',text:'研究市场并保留来源'});await expect.poll(()=>f.input.inputValue()).toBe('研究市场并保留来源');expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([])
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
-it('stops on the first Enter without submitting, keeps normal editing and only submits on the next Enter',async()=>{
+it('keeps capture through Enter and typing, then sends only after explicit Escape',async()=>{
  const f=await fixture();try{
-  await f.start();await f.emit({type:'partial',text:'保留文字'});await f.input.press('Enter')
-  expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.input.inputValue()).toBe('保留文字')
-  await f.emit({type:'final',text:'迟到覆盖'});await f.input.press('Meta+ArrowRight');await f.input.press('x');expect(await f.input.inputValue()).toBe('保留文字x')
-  await f.input.press('Enter');await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1);expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('保留文字x');expect(f.errors).toEqual([])
+  await f.start();await f.emit({type:'partial',text:'保留文字'});await f.input.press('Enter');await f.input.press('Enter')
+  expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(1);expect(await f.page.evaluate(()=>probe.submits)).toEqual([])
+  expect(await f.page.getByRole('button',{name:'请先停止语音输入再发送',exact:true}).isDisabled()).toBe(true)
+  await f.input.press('Meta+ArrowRight');await f.input.press('x');await f.emit({type:'partial',text:'保留文字继续'});expect(await f.input.inputValue()).toBe('保留文字继续x')
+  await f.input.press('Escape');await f.emit({type:'final',text:'迟到覆盖'});await f.input.press('Enter');await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1)
+  expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('保留文字继续x');expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
-it('keeps native Shift+Enter newline editing while stopping capture',async()=>{
+it('keeps native Shift+Enter editing and appends speech without overwriting the newline',async()=>{
  const f=await fixture();try{
   await f.start();await f.emit({type:'partial',text:'正文'});await expect.poll(()=>f.input.evaluate(el=>el.selectionEnd)).toBe(2)
-  await f.input.press('Shift+Enter');expect(await f.input.inputValue()).toBe('正文\n');expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
+  await f.input.press('Shift+Enter');expect(await f.input.inputValue()).toBe('正文\n');await f.emit({type:'partial',text:'正文继续'})
+  expect(await f.input.inputValue()).toBe('正文继续\n');expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(1);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
-it.each(['Meta','Control'])('stops the complete %s+Enter gesture without sending, then restores the ordinary shortcut',async modifier=>{
+it.each(['Meta','Control'])('keeps the complete %s+Enter gesture from sending or stopping capture',async modifier=>{
  const f=await fixture();try{
-  await f.start();await f.emit({type:'partial',text:'组合快捷键保留文字'})
-  await f.page.keyboard.press(modifier+'+Enter')
-  expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(await f.input.inputValue()).toBe('组合快捷键保留文字')
-  await f.emit({type:'final',text:'迟到覆盖'});await f.page.keyboard.press(modifier+'+Enter')
+  await f.start();await f.emit({type:'partial',text:'组合快捷键保留文字'});await f.page.keyboard.press(modifier+'+Enter');await f.page.keyboard.press(modifier+'+Enter')
+  expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(1);expect(await f.page.evaluate(()=>probe.submits)).toEqual([])
+  await f.page.getByRole('button',{name:'停止语音输入',exact:true}).click();await f.page.keyboard.press(modifier+'+Enter')
   await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1);expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('组合快捷键保留文字');expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
-it.each(['Meta','Control'])('restores native Enter on window focus after losing the %s keyup',async modifier=>{
- const f=await fixture();try{
-  await f.start();await f.emit({type:'partial',text:'失焦返回保留正文'});await f.page.keyboard.down(modifier)
-  await f.page.evaluate(()=>{window.dispatchEvent(new Event('blur'));window.addEventListener('keyup',event=>{window.swallowedModifier=event.key;event.stopImmediatePropagation()},{capture:true,once:true})})
-  await f.page.keyboard.up(modifier);expect(await f.page.evaluate(()=>window.swallowedModifier)).toBe(modifier)
-  await f.page.evaluate(()=>window.dispatchEvent(new Event('focus')));expect(await f.input.evaluate(el=>document.activeElement===el)).toBe(true)
-  await f.page.keyboard.press('Enter');await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1)
-  expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('失焦返回保留正文');expect(f.errors).toEqual([])
+it('dictates into the original editor through blur and never takes focus from another control',async()=>{
+ const f=await fixture('notes');try{
+  await f.start();await f.emit({type:'partial',text:'已识别'});await f.page.locator('#outside').click();await f.page.evaluate(()=>window.dispatchEvent(new Event('blur')))
+  await f.emit({type:'partial',text:'已识别继续'});await expect.poll(()=>f.input.inputValue()).toBe('已识别继续')
+  expect(await f.page.locator('#outside').evaluate(el=>document.activeElement===el)).toBe(true);expect(await f.page.evaluate(()=>probe.cancels)).toEqual([])
+  await f.page.keyboard.press('Escape');expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
-it.each(['key','blur','stop','hidden','foreign-write','dispose'])('freezes the visible transcript on %s and rejects delayed partial/final callbacks',async reason=>{
+it('preserves typed prefixes, suffixes and a deliberately moved caret through later partials',async()=>{
+ const f=await fixture();try{
+  await f.start();await f.emit({type:'partial',text:'你好世界'});await expect.poll(()=>f.input.evaluate(el=>el.selectionEnd)).toBe(4)
+  await f.input.press('Meta+ArrowLeft');await f.page.keyboard.type('prefix');await f.input.press('Meta+ArrowRight');await f.page.keyboard.type('suffix');await f.input.press('Meta+ArrowLeft');await f.input.press('ArrowRight')
+  expect(await f.input.evaluate(el=>el.selectionStart)).toBe(1);await f.emit({type:'partial',text:'你好世界和平'})
+  await expect.poll(()=>f.input.inputValue()).toBe('prefix你好世界和平suffix');await expect.poll(()=>f.input.evaluate(el=>[el.selectionStart,el.selectionEnd])).toEqual([1,1]);expect(await f.page.evaluate(()=>probe.cancels)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})
+it('does not restore user-deleted speech or repeat cumulative partials after internal edits',async()=>{
+ const f=await fixture();try{
+  await f.start();await f.emit({type:'partial',text:'你好世界'});await expect.poll(()=>f.input.evaluate(el=>el.selectionEnd)).toBe(4)
+  await f.input.press('Backspace');await f.input.press('Backspace');expect(await f.input.inputValue()).toBe('你好')
+  await f.emit({type:'partial',text:'你好世界和平'});await f.emit({type:'partial',text:'你好世界和平'});expect(await f.input.inputValue()).toBe('你好和平')
+  await f.emit({type:'final',text:'你好世界和平'});expect(await f.input.inputValue()).toBe('你好和平');expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})
+it.each(['stop','hidden','foreign-write','untrusted-input','dispose'])('freezes the visible transcript on %s and rejects delayed partial/final callbacks',async reason=>{
  const f=await fixture('notes');try{
   await f.start();await f.emit({type:'partial',text:'已识别的要求'})
-  if(reason==='key')await f.input.press('ArrowLeft')
-  if(reason==='blur')await f.page.locator('#outside').click()
   if(reason==='stop'){await f.page.getByRole('button',{name:'停止语音输入',exact:true}).click();expect(await f.input.evaluate(el=>document.activeElement===el)).toBe(true)}
   if(reason==='hidden')await f.page.locator('#composer').evaluate(el=>el.hidden=true)
   if(reason==='foreign-write')await f.page.evaluate(()=>probe.shell.setDraft('新手动草稿'))
+  if(reason==='untrusted-input')await f.input.evaluate(el=>el.dispatchEvent(new InputEvent('input',{bubbles:true})))
   if(reason==='dispose')await f.page.evaluate(()=>probe.dispose())
   await expect.poll(()=>f.page.evaluate(()=>probe.cancels.length)).toBeGreaterThan(0);await f.emit({type:'partial',text:'迟到部分'});await f.emit({type:'final',text:'迟到结束'})
   expect(await f.page.evaluate(()=>probe.shell.snapshot.draft)).toBe(reason==='foreign-write'?'新手动草稿':'已识别的要求');expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
  }finally{if(reason==='dispose')await f.page.close();else await f.close()}
 })
-it('does not consume IME commit and lets typing replace recognition without later overwrites',async()=>{
- const f=await fixture();try{
-  await f.start();await f.emit({type:'partial',text:'组合前文'})
-  const result=await f.input.evaluate(el=>{el.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));const e=new KeyboardEvent('keydown',{key:'Enter',isComposing:true,keyCode:229,bubbles:true,cancelable:true});el.dispatchEvent(e);return e.defaultPrevented})
-  expect(result).toBe(false);expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
- }finally{await f.close()}
+it('preserves actual Chromium IME edits and defers ASR final until composition commit',async()=>{
+ const f=await fixture();let cdp;try{
+  await f.start();await f.emit({type:'partial',text:'组合前文'});await expect.poll(()=>f.input.evaluate(el=>el.selectionEnd)).toBe(4)
+  cdp=await f.page.context().newCDPSession(f.page);await cdp.send('Input.imeSetComposition',{text:'中文',selectionStart:2,selectionEnd:2})
+  await expect.poll(()=>f.input.inputValue()).toBe('组合前文中文');await f.emit({type:'partial',text:'组合前文继续'});await f.emit({type:'final',text:'组合前文继续完成'})
+  expect(await f.input.inputValue()).toBe('组合前文中文');expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(1)
+  await cdp.send('Input.insertText',{text:'中文'});await expect.poll(()=>f.input.inputValue()).toBe('组合前文继续完成中文')
+  expect(await f.page.locator('[data-composer-voice-pill][data-open=true]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await cdp?.detach();await f.close()}
 })
 it('cleans up delayed starts and keeps attachment-only send and running-task stop actions',async()=>{
  const f=await fixture();try{
