@@ -1,3 +1,4 @@
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import { expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition, patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
@@ -6,7 +7,7 @@ import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workben
 import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
 import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 import {Window} from 'happy-dom'
-const currentClient=()=>restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+const currentClient=()=>restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))))
 
 function paintAckFixture(painted = false) {
   const installed = currentClient()

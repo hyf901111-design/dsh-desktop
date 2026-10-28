@@ -31,7 +31,11 @@ it.each(['current','8d17'])('replays the production frontend patch entry over %s
  const entry=await readFile('scripts/verify-frontend-patch-reentry.mjs','utf8')
  const base=strip(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),expected=runtime(patch(base))
  const checks=`\nfor(const source of [first,second]){for(const hook of ['/* sherlock:composer-voice:v1 */','const composerVoice=useComposerVoice(react,','renderComposerVoicePill(react,composerVoice),'])if(source.split(hook).length!==2)throw Error('Composer voice hook missing or duplicated: '+hook);if(!source.includes(${JSON.stringify(expected)}))throw Error('Composer voice runtime did not upgrade')}\n`
- let script=entry.replace('const second=overlay.get(conversation)','const second=overlay.get(conversation)'+checks)
+ // The isolated VM linker must treat research snapshots as JSON modules, not JavaScript.
+ const fileModuleAnchor="  if(url.startsWith('file:')){\n"
+ expect(entry.split(fileModuleAnchor)).toHaveLength(2)
+ const jsonModule=`   if(new URL(url).pathname.endsWith('.json')){const value=JSON.parse(actualRead(new URL(url),'utf8'));const module=new SyntheticModule(['default'],function(){this.setExport('default',value)},{context,identifier:url});cache.set(url,module);return module}\n`
+ let script=entry.replace(fileModuleAnchor,fileModuleAnchor+jsonModule).replace('const second=overlay.get(conversation)','const second=overlay.get(conversation)'+checks)
  const directory=await mkdtemp(join(tmpdir(),'composer-voice-reentry-')),file=join(directory,'verify.mjs')
  if(version==='8d17'){
   const old=(await legacyModule()).patchComposerVoice(base),seed=join(directory,'installed-8d17.js');expect(runtime(old)===expected).toBe(false);await writeFile(seed,old)

@@ -1,3 +1,4 @@
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import {expect,it} from 'vitest'
 import {readFile,mkdtemp,readdir,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
@@ -13,7 +14,7 @@ import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presen
 
 const marker='/* sherlock:subagent-avatars:definition:v1 */',endMarker='/* sherlock:subagent-avatars:definition:end */'
 const catalog=await readFile('node_modules/@deepseek-ai/dsh-client-ui-subagent/lib/client.js','utf8')
-const detail=stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+const detail=stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
 function runtime(source){const start=source.indexOf(marker),end=source.indexOf(endMarker,start);expect(start).toBeGreaterThan(-1);expect(end).toBeGreaterThan(start);return new Function('react_jsx_runtime',source.slice(start,end)+';return {role:odysseySubagentRole,Avatar:OdysseySubagentAvatar}')({jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})})}
 it('installs one identical shared presenter at the real catalog and child header hooks',()=>{
  const a=patchFigmaRefinementSubagent(catalog),b=patchSubagentPanelConversation(detail)

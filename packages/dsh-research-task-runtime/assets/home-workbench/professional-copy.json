@@ -1,0 +1,484 @@
+{
+  "schema": "research-professional-copy-patch-v8",
+  "scope": "只供父任务修订图稿与交付说明；本文件未修改Figma、数据文件、manifest或源脚本。",
+  "asOf": "2026-04-30日终（含盘后披露）",
+  "verifiedAt": "2026-10-28",
+  "dataPolicy": "所有数值基于冻结时点官方已披露报告；不引入冻结时点以后的实施结果或经营数据。",
+  "sourceCorrection": {
+    "companyId": "600519",
+    "field": "annual",
+    "from": "https://www.moutai.com.cn/mtgf/articleFileDir/2026-04/17/1b9fae59825c41bf9a776892a00565f7.pdf",
+    "to": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF",
+    "oldDocumentPages": 7,
+    "newDocumentPages": 143,
+    "replaceBaseUrlIncludingFragments": true,
+    "keepFragmentPageNumbers": true,
+    "fragments": [
+      {
+        "from": "https://www.moutai.com.cn/mtgf/articleFileDir/2026-04/17/1b9fae59825c41bf9a776892a00565f7.pdf#page=2",
+        "to": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF#page=2",
+        "purpose": "年度分红预案"
+      },
+      {
+        "from": "https://www.moutai.com.cn/mtgf/articleFileDir/2026-04/17/1b9fae59825c41bf9a776892a00565f7.pdf#page=6",
+        "to": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF#page=6",
+        "purpose": "财务摘要"
+      },
+      {
+        "from": "https://www.moutai.com.cn/mtgf/articleFileDir/2026-04/17/1b9fae59825c41bf9a776892a00565f7.pdf#page=9",
+        "to": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF#page=9",
+        "purpose": "销售费用与现金流分析"
+      },
+      {
+        "from": "https://www.moutai.com.cn/mtgf/articleFileDir/2026-04/17/1b9fae59825c41bf9a776892a00565f7.pdf#page=10",
+        "to": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF#page=10",
+        "purpose": "产品及渠道结构"
+      }
+    ],
+    "targets": [
+      "公司annual链接",
+      "PDF阅读按钮",
+      "研究定位页码链接",
+      "来源清单",
+      "新闻中的2025年报链接"
+    ],
+    "proof": "巨潮资讯正式披露PDF在线解析为143页；P6财务指标、P9销售费用、P10产品渠道与本地全文一致。"
+  },
+  "dividends": {
+    "600519": {
+      "name": "贵州茅台",
+      "labels": {
+        "headlineDps": "2025年度分配/股",
+        "headlineDpsDetail": "中期已付＋年度预案，税前",
+        "annualDistributionOverPrice": "年度分配/快照价",
+        "pendingProposalOverPrice": "年度预案/快照价",
+        "payout": "派息率（每股测算）",
+        "interim": "中期分红 · 已实施",
+        "annualFinal": "年度分红 · 预案"
+      },
+      "interimDps": 23.957,
+      "annualProposalDps": 27.993,
+      "annualCombinedDps": 51.95,
+      "basicEpsFY2025": 65.66,
+      "snapshotClose": 1384.79,
+      "display": {
+        "annualCombinedDps": "51.950元",
+        "annualDistributionOverPrice": "3.75%",
+        "pendingProposalOverPrice": "2.02%",
+        "payoutPerShare": "79.12%"
+      },
+      "raw": {
+        "annualDistributionOverPricePercent": 3.7514713422251753,
+        "pendingProposalOverPricePercent": 2.021461737880834,
+        "payoutPerSharePercent": 79.11970758452635
+      },
+      "sources": [
+        {
+          "url": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF",
+          "pages": [
+            33
+          ],
+          "local_file": "sources/moutai-2025-full.pdf"
+        }
+      ],
+      "documentInterpretationAction": "保留现有分红状态、分配强度与收益拆分三行，只统一上述标签与测算注记，不增加新的分红事实。"
+    },
+    "000858": {
+      "name": "五粮液",
+      "labels": {
+        "headlineDps": "2025年度分配/股",
+        "headlineDpsDetail": "中期已付＋年度预案，税前",
+        "annualDistributionOverPrice": "年度分配/快照价",
+        "pendingProposalOverPrice": "年度预案/快照价",
+        "payout": "派息率（每股测算）",
+        "interim": "中期分红 · 已实施",
+        "annualFinal": "年度分红 · 预案"
+      },
+      "interimDps": 2.578,
+      "annualProposalDps": 2.578,
+      "annualCombinedDps": 5.156,
+      "basicEpsFY2025": 2.3068,
+      "snapshotClose": 97.08,
+      "display": {
+        "annualCombinedDps": "5.156元",
+        "annualDistributionOverPrice": "5.31%",
+        "pendingProposalOverPrice": "2.66%",
+        "payoutPerShare": "223.51%"
+      },
+      "raw": {
+        "annualDistributionOverPricePercent": 5.311083642356819,
+        "pendingProposalOverPricePercent": 2.6555418211784096,
+        "payoutPerSharePercent": 223.51309172880178
+      },
+      "sources": [
+        {
+          "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225273091.PDF",
+          "pages": [
+            32,
+            33
+          ],
+          "local_file": "sources/wuliangye-2025.pdf"
+        }
+      ],
+      "documentInterpretationAction": "保留现有分红状态、分配强度与收益拆分三行，只统一上述标签与测算注记，不增加新的分红事实。"
+    },
+    "000568": {
+      "name": "泸州老窖",
+      "labels": {
+        "headlineDps": "2025年度分配/股",
+        "headlineDpsDetail": "中期已付＋年度预案，税前",
+        "annualDistributionOverPrice": "年度分配/快照价",
+        "pendingProposalOverPrice": "年度预案/快照价",
+        "payout": "派息率（每股测算）",
+        "interim": "中期分红 · 已实施",
+        "annualFinal": "年度分红 · 预案"
+      },
+      "interimDps": 1.358,
+      "annualProposalDps": 4.417,
+      "annualCombinedDps": 5.775,
+      "basicEpsFY2025": 7.36,
+      "snapshotClose": 100.1,
+      "display": {
+        "annualCombinedDps": "5.775元",
+        "annualDistributionOverPrice": "5.77%",
+        "pendingProposalOverPrice": "4.41%",
+        "payoutPerShare": "78.46%"
+      },
+      "raw": {
+        "annualDistributionOverPricePercent": 5.76923076923077,
+        "pendingProposalOverPricePercent": 4.4125874125874125,
+        "payoutPerSharePercent": 78.46467391304348
+      },
+      "sources": [
+        {
+          "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-29/ec33c00d-0078-4493-9e53-d42011a8f93d.PDF",
+          "pages": [
+            43,
+            172,
+            173
+          ],
+          "local_file": "sources/luzhou-2025.pdf"
+        }
+      ],
+      "documentInterpretationAction": "保留现有分红状态、分配强度与收益拆分三行，只统一上述标签与测算注记，不增加新的分红事实。",
+      "officialTotalAmountPayoutReference": {
+        "percent": 78.48,
+        "source": {
+          "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-29/ec33c00d-0078-4493-9e53-d42011a8f93d.PDF",
+          "pages": [
+            43,
+            173
+          ],
+          "local_file": "sources/luzhou-2025.pdf"
+        },
+        "note": "官方累计现金分红总额/归母净利润为78.48%，与每股测算78.46%有基数及EPS精度差异。"
+      }
+    }
+  },
+  "dividendSharedFootnotes": [
+    "年度分配/快照价＝（2025中期已付DPS＋年度预案DPS）/2026-04-30不复权收盘价；税前历史参考。",
+    "已付中期分红不代表快照日买入后可取得的分红；年度预案尚未实施。",
+    "年度预案/快照价仅量化尚未实施预案，并非承诺回报；实际权益以股权登记日及实施公告为准。",
+    "派息率按年度分配DPS/2025基本EPS测算，不替代官方分红总额/归母净利润；回购及股本基数、EPS取整会带来差异。"
+  ],
+  "financialInterpretation": {
+    "600519": {
+      "annual": [
+        {
+          "dimension": "增长差异",
+          "fact": "营收−1.21%；归母−4.53%。",
+          "researchMeaning": "归母增速较营收低3.33pct，按原值计算。",
+          "source": {
+            "url": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF",
+            "pages": [
+              6
+            ],
+            "local_file": "sources/moutai-2025-full.pdf"
+          }
+        },
+        {
+          "dimension": "现金转化",
+          "fact": "经营净现金615.22亿；归母823.20亿。",
+          "researchMeaning": "经营现金/归母0.75×；受财务公司存款变动影响。",
+          "source": {
+            "url": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF",
+            "pages": [
+              6,
+              10
+            ],
+            "local_file": "sources/moutai-2025-full.pdf"
+          }
+        },
+        {
+          "dimension": "销售费用",
+          "fact": "销售费用72.53亿，同比+28.62%。",
+          "researchMeaning": "销售费率约4.30%，较上年增加约1.00pct。",
+          "source": {
+            "url": "https://static.cninfo.com.cn/finalpage/2026-04-17/1225114741.PDF",
+            "pages": [
+              9,
+              10
+            ],
+            "local_file": "sources/moutai-2025-full.pdf"
+          }
+        }
+      ],
+      "quarter": [
+        {
+          "dimension": "增长差异",
+          "fact": "2026Q1营收+6.54%；归母+1.47%。",
+          "researchMeaning": "归母增速较营收低5.07pct，按原值计算。",
+          "source": {
+            "url": "https://www.moutai.com.cn/mtgf/articleFileDir/2026-04/27/caf6cef38da94e9e9e71949ad0064f77.pdf",
+            "pages": [
+              1
+            ],
+            "local_file": "sources/moutai-2026q1.pdf"
+          }
+        },
+        {
+          "dimension": "现金转化",
+          "fact": "经营净现金269.10亿；归母272.43亿。",
+          "researchMeaning": "经营现金/归母0.99×；同业存款变动影响增幅。",
+          "source": {
+            "url": "https://www.moutai.com.cn/mtgf/articleFileDir/2026-04/27/caf6cef38da94e9e9e71949ad0064f77.pdf",
+            "pages": [
+              1,
+              2
+            ],
+            "local_file": "sources/moutai-2026q1.pdf"
+          }
+        },
+        {
+          "dimension": "渠道结构",
+          "fact": "直销295.04亿；批发代理243.82亿。",
+          "researchMeaning": "直销占列示酒类收入54.75%，跟踪渠道迁移。",
+          "source": {
+            "url": "https://www.moutai.com.cn/mtgf/articleFileDir/2026-04/27/caf6cef38da94e9e9e71949ad0064f77.pdf",
+            "pages": [
+              3
+            ],
+            "local_file": "sources/moutai-2026q1.pdf"
+          }
+        }
+      ],
+      "periodNotes": {
+        "annual": "2025全年，已审计；经营现金含财务公司，现金/归母为跨口径参考。",
+        "quarter": "2026Q1，未经审计；同比2025Q1，现金变动含财务公司影响。"
+      }
+    },
+    "000858": {
+      "annual": [
+        {
+          "dimension": "增长差异",
+          "fact": "营收−54.55%；归母−71.89%。",
+          "researchMeaning": "归母增速低17.34pct；按年报披露口径。",
+          "source": {
+            "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225273091.PDF",
+            "pages": [
+              7,
+              8
+            ],
+            "local_file": "sources/wuliangye-2025.pdf"
+          }
+        },
+        {
+          "dimension": "现金转化",
+          "fact": "经营净现金297.06亿；归母89.54亿。",
+          "researchMeaning": "经营现金/归母3.32×；结合票据与营运资金观察。",
+          "source": {
+            "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225273091.PDF",
+            "pages": [
+              7
+            ],
+            "local_file": "sources/wuliangye-2025.pdf"
+          }
+        },
+        {
+          "dimension": "核心产品",
+          "fact": "五粮液产品收入279.36亿，同比−58.84%。",
+          "researchMeaning": "收入确认曾调整，不能仅据收入降幅判断销量。",
+          "source": {
+            "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225273091.PDF",
+            "pages": [
+              8,
+              13
+            ],
+            "local_file": "sources/wuliangye-2025.pdf"
+          }
+        }
+      ],
+      "quarter": [
+        {
+          "dimension": "增长差异",
+          "fact": "2026Q1营收+33.67%；归母+82.57%。",
+          "researchMeaning": "同比基于会计差错更正后上期，非原披露数。",
+          "source": {
+            "url": "https://disc.static.szse.cn/download/disc/disk03/finalpage/2026-04-30/3d25f352-b303-4c39-8890-d5864ad5221a.PDF",
+            "pages": [
+              1,
+              2
+            ],
+            "local_file": "sources/wuliangye-2026q1.pdf"
+          }
+        },
+        {
+          "dimension": "现金转化",
+          "fact": "经营净现金−25.35亿；归母80.63亿。",
+          "researchMeaning": "经营现金/归母−0.31×；收取票据较多影响现金。",
+          "source": {
+            "url": "https://disc.static.szse.cn/download/disc/disk03/finalpage/2026-04-30/3d25f352-b303-4c39-8890-d5864ad5221a.PDF",
+            "pages": [
+              1,
+              2
+            ],
+            "local_file": "sources/wuliangye-2026q1.pdf"
+          }
+        },
+        {
+          "dimension": "票据回款",
+          "fact": "应收款项融资207.06亿，年初94.02亿。",
+          "researchMeaning": "票据增加须跟踪到期回款，不能视为现金回款。",
+          "source": {
+            "url": "https://disc.static.szse.cn/download/disc/disk03/finalpage/2026-04-30/3d25f352-b303-4c39-8890-d5864ad5221a.PDF",
+            "pages": [
+              4
+            ],
+            "local_file": "sources/wuliangye-2026q1.pdf"
+          }
+        }
+      ],
+      "periodNotes": {
+        "annual": "2025全年，已审计；2025分季度数据更正，2024年度未重述。",
+        "quarter": "2026Q1，未经审计；同比采用会计差错更正后的2025Q1。"
+      }
+    },
+    "000568": {
+      "annual": [
+        {
+          "dimension": "增长差异",
+          "fact": "营收−17.52%；归母−19.61%。",
+          "researchMeaning": "归母增速较营收低2.09pct，按原值计算。",
+          "source": {
+            "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-29/ec33c00d-0078-4493-9e53-d42011a8f93d.PDF",
+            "pages": [
+              7
+            ],
+            "local_file": "sources/luzhou-2025.pdf"
+          }
+        },
+        {
+          "dimension": "现金转化",
+          "fact": "经营净现金71.23亿；归母108.31亿。",
+          "researchMeaning": "经营现金/归母0.66×，较上年1.42×回落。",
+          "source": {
+            "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-29/ec33c00d-0078-4493-9e53-d42011a8f93d.PDF",
+            "pages": [
+              7
+            ],
+            "local_file": "sources/luzhou-2025.pdf"
+          }
+        },
+        {
+          "dimension": "核心产品",
+          "fact": "中高档酒收入229.68亿，同比−16.74%。",
+          "researchMeaning": "中高档贡献全年收入89.26%，需跟踪核心产品动销。",
+          "source": {
+            "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-29/ec33c00d-0078-4493-9e53-d42011a8f93d.PDF",
+            "pages": [
+              16
+            ],
+            "local_file": "sources/luzhou-2025.pdf"
+          }
+        }
+      ],
+      "quarter": [
+        {
+          "dimension": "增长差异",
+          "fact": "2026Q1营收−14.19%；归母−19.25%。",
+          "researchMeaning": "归母增速较营收低5.07pct，按原值计算。",
+          "source": {
+            "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-29/c29b6875-da2b-4d57-a40a-4e268d5adbe4.PDF",
+            "pages": [
+              2
+            ],
+            "local_file": "sources/luzhou-2026q1.pdf"
+          }
+        },
+        {
+          "dimension": "现金转化",
+          "fact": "经营净现金45.43亿；归母37.08亿。",
+          "researchMeaning": "经营现金/归母1.23×；现金同比增加37.35%。",
+          "source": {
+            "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-29/c29b6875-da2b-4d57-a40a-4e268d5adbe4.PDF",
+            "pages": [
+              2
+            ],
+            "local_file": "sources/luzhou-2026q1.pdf"
+          }
+        },
+        {
+          "dimension": "预收与融资",
+          "fact": "合同负债27.94亿，较年初−17.04%；短借新增30亿。",
+          "researchMeaning": "预收与融资分开观察，不据单季环比判断经营拐点。",
+          "source": {
+            "url": "https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-29/c29b6875-da2b-4d57-a40a-4e268d5adbe4.PDF",
+            "pages": [
+              3,
+              6
+            ],
+            "local_file": "sources/luzhou-2026q1.pdf"
+          }
+        }
+      ],
+      "periodNotes": {
+        "annual": "2025全年，已审计；现金/归母为跨口径参考，非同主体现金转化率。",
+        "quarter": "2026Q1，未经审计；同比2025Q1，季节性使跨季比较受限。"
+      }
+    }
+  },
+  "interpretationSharedFootnotes": [
+    "经营现金/归母＝合并经营活动现金净额/归母净利润，主体口径不完全一致，仅作分析参考。",
+    "增速差按未四舍五入原值计算，可能与展示百分数相减存在0.01pct差异。",
+    "研究含义是基于公开事实的分析或跟踪方向；不将收入变化、费用变化与净利润变化作未经拆解的完全因果归因。"
+  ],
+  "wuliangyeRestatement": {
+    "label": "会计差错更正",
+    "quarterYoyBadge": "同比基于差错更正后上期",
+    "compactFootnote": "2026Q1同比按会计差错更正后的2025Q1计算。",
+    "detail": "2025Q1营收由原披露369.40亿更正为170.86亿，归母由148.60亿更正为44.16亿。2026Q1营收228.38亿、归母80.63亿，对更正后上期同比+33.67%/+82.57%。",
+    "rawPrior": {
+      "revenueOriginal": 36940356116.35,
+      "revenueRestated": 17085765657.95,
+      "profitOriginal": 14860265752.48,
+      "profitRestated": 4416313048.41
+    },
+    "peerComparisonWording": {
+      "replace": "严格同口径经营比较",
+      "with": "2025年度 · 官方披露口径"
+    },
+    "source": {
+      "url": "https://disc.static.szse.cn/download/disc/disk03/finalpage/2026-04-30/3d25f352-b303-4c39-8890-d5864ad5221a.PDF",
+      "pages": [
+        1,
+        2
+      ],
+      "local_file": "sources/wuliangye-2026q1.pdf"
+    },
+    "annualCaveat": "2025年报7页勾选无需调整以前年度数据；8页说明2025分季度数与此前季报存在重大差异，不能将季度更正误称为2024年度数字亦已重述。"
+  },
+  "quoteEventTiming": {
+    "companyId": "000858",
+    "suggestedChartEventLabel": "年报 · 盘后披露",
+    "suggestedDetail": "2026-04-30收盘后披露；当前日K尚未包含披露后的市场反应。",
+    "reason": "冻结快照为04-30收盘价并包含当日盘后披露，财报事件与该日日K共存时应显式区分信息时间。",
+    "severity": "P2; 事件标记提示，不改真实K线或行情数据"
+  },
+  "verifiedNoChangeNeeded": [
+    "三家公司2025年度营收、归母、经营现金、基本EPS、加权ROE与本地官方报告一致。",
+    "2025四个单季的营收/归母之和与2025全年精确勾稽。",
+    "ROE应继续标加权ROE，不能改为摊薄ROE。",
+    "年度PE=快照收盘价/2025基本EPS，当前计算正确；继续区别于TTM。",
+    "五粮液2025大幅下滑与2026Q1重述后同比均为官方数据，不应改成更平滑的模拟数据。"
+  ]
+}

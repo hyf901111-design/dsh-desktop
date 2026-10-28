@@ -5,6 +5,7 @@ import {join} from 'node:path'
 import {build} from 'esbuild'
 import {createRequire} from 'node:module'
 import {canvasCss} from '../scripts/lib/figma-canvas-client.mjs'
+import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 
 let browser,script
 const evidence=process.env.SHERLOCK_TEST_EVIDENCE_DIR
@@ -14,7 +15,7 @@ beforeAll(async()=>{
  // Unwind the resident install in production order, then serialize native Node functions.
  // A parallel composer feature may wrap the same resident bundle in integration.
  if(source.includes('/* sherlock:composer-voice:v1 */'))source=require('../scripts/lib/composer-voice.mjs').stripComposerVoice(source)
- for(const [file,strip] of [['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput'],['home-guide-presentation-native','stripHomeGuidePresentationNative'],['home-guide-native','stripHomeGuideNative']])source=require('../scripts/lib/'+file+'.mjs')[strip](source)
+ for(const [file,strip] of [['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput'],['home-guide-presentation-native','stripHomeGuidePresentationNative'],['home-guide-native','stripHomeGuideNative']]){if(file==='home-guide-presentation-native')source=stripWorkbenchReplay(source);source=require('../scripts/lib/'+file+'.mjs')[strip](source)}
  const grid=require('../scripts/lib/research-grid-workbench.mjs')
  source=grid.patchResearchGridWorkbench(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))
  expect(grid.patchResearchGridWorkbench(source)).toBe(source)

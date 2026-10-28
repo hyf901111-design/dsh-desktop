@@ -38,10 +38,10 @@ function homeGuideNativeSampleProvider() {
 // Reuse the real registered workspace; the cache owns no private storage.
 function homeGuideNativeResource(sessionId, researchWorkspaces) {
   const entry = sherlockBoardsAdapter?.getHomeGuideSession?.(sessionId)
-  if (entry?.kind !== 'board' || !researchWorkspaces?.for) throw Error('请先准备独立的示例看板。')
+  if (!['board','workbench'].includes(entry?.kind) || !researchWorkspaces?.for) throw Error('请先准备独立的示例看板。')
   if (homeGuideNativeSharedResource?.id === sessionId && homeGuideNativeSharedResource.registry === researchWorkspaces) return homeGuideNativeSharedResource
   if (homeGuideNativeSharedResource?.owner) throw Error('另一个教程仍在使用研究画布。')
-  homeGuideNativeSharedResource = { id: sessionId, registry: researchWorkspaces, workspace: researchWorkspaces.for(sessionId), provider: homeGuideNativeSampleProvider(), owner: null }
+  homeGuideNativeSharedResource = { id: sessionId, registry: researchWorkspaces, workspace: researchWorkspaces.for(sessionId), provider: entry.kind==='workbench' ? homeWorkbenchSnapshotProvider() : homeGuideNativeSampleProvider(), owner: null }
   return homeGuideNativeSharedResource
 }
 
@@ -49,16 +49,17 @@ function useHomeGuideNativeFinancialProvider(sessionId) {
   const inherited = react.useContext(HomeGuideNativeFinancialContext)
   const page = sherlockBoardsAdapter
   react.useSyncExternalStore(page?.subscribe ?? (() => () => {}), page?.version ?? (() => 0), () => 0)
-  return { provider: inherited?.runId ? inherited : null, ready: Boolean(inherited?.runId) || page?.homeGuideSessionsReady?.() !== false }
+  const saved = react.useMemo(() => page?.getHomeGuideSession?.(sessionId)?.kind === 'workbench' && typeof homeWorkbenchSnapshotProvider === 'function' ? homeWorkbenchSnapshotProvider() : null, [sessionId,page?.getHomeGuideSession?.(sessionId)?.kind]);
+  return { provider: inherited?.runId ? inherited : saved, ready: Boolean(inherited?.runId) || page?.homeGuideSessionsReady?.() !== false }
 }
 
 // Only one mounted canvas may measure a real workspace at a time. The
 // resident Root and InputBar stay mounted while its tutorial borrows the view.
 function ResearchCanvas(props) {
-  const provider = react.useContext(HomeGuideNativeFinancialContext)
+  const {provider,ready} = useHomeGuideNativeFinancialProvider(props.sessionId)
   const resident = useHomeGuideNativeResident(props.sessionId)
-  if (resident && !provider?.runId) return null
-  return react.createElement(HomeGuideNativeOriginalResearchCanvas, props)
+  if (!ready || resident && !provider?.runId) return null
+  return react.createElement(HomeGuideNativeFinancialContext.Provider,{value:provider},react.createElement(HomeGuideNativeOriginalResearchCanvas, props))
 }
 
 // The actor creates through the native workspace API, so finish its one-shot
@@ -72,7 +73,7 @@ function useHomeGuideNativeCompleteDraft(rootRef, sessionId, workspace, toolRef,
     if (!canvas || !provider?.runId) return
     const finish = nodeId => {
       const ticket = homeGuideNativeSharedResource?.owner, state = workspace.getSnapshot(), node = state.artifacts.find(node => node.id === nodeId)
-      if (!canvas.isConnected || ticket?.resource.id !== sessionId || ticket.resource.workspace !== workspace || ticket.provider !== provider || ticket.controller.signal.aborted || !ticket.playing || ticket.host.querySelector('[data-research-canvas]') !== canvas || ticket.nodes.smart !== nodeId || initial.current.ids.has(nodeId) || toolRef.current !== 'component' || node?.generationStatus !== 'draft' || node.containerSpec || state.selection.selectedNodeIds.length !== 1 || state.selection.selectedNodeIds[0] !== nodeId) return false
+      if (!canvas.isConnected || ticket?.resource.id !== sessionId || ticket.resource.workspace !== workspace || ticket.provider !== provider || ticket.controller.signal.aborted || !ticket.playing || ticket.host.querySelector('[data-research-canvas]') !== canvas || ticket.nodes?.smart !== nodeId || initial.current.ids.has(nodeId) || toolRef.current !== 'component' || node?.generationStatus !== 'draft' || node.containerSpec || state.selection.selectedNodeIds.length !== 1 || state.selection.selectedNodeIds[0] !== nodeId) return false
       selectTool('select'); return true
     }
     canvas.__eworkCompleteContainerDraft = finish
@@ -102,7 +103,7 @@ function homeGuideNativeResidentSession(sessionId, subagentPanel = false) {
     if (header?.dataset.eworkNotesSession !== sessionId) continue
     const runId = center.dataset.homeGuideActive
     const guide = [...center.querySelectorAll('[data-home-guide]')].find(node => node.dataset.homeGuide === runId)
-    if (runId && root.dataset.homeGuideResident === runId && ['board', 'note', 'ppt'].includes(guide?.dataset.kind)) return true
+    if (runId && root.dataset.homeGuideResident === runId && ['board', 'note', 'ppt', 'workbench'].includes(guide?.dataset.kind)) return true
     const html = document.documentElement
     if (html.dataset.homeGuideTransition && html.dataset.homeGuideTransitionSession === sessionId) return true
   }
@@ -113,7 +114,7 @@ function homeGuideNativeSidebarSession(sessionId) {
   if (!homeGuideNativeResidentSession(sessionId)) return false
   return [...document.querySelectorAll('.pI_x6G_centerCol')].some(center => {
     const root = center.querySelector('.wSkVaW_root'), run = center.dataset.homeGuideActive
-    return root?.querySelector('[data-ework-notes-session]')?.dataset.eworkNotesSession === sessionId && [...center.querySelectorAll('[data-home-guide]')].some(guide => guide.dataset.homeGuide === run && ['board','note'].includes(guide.dataset.kind))
+    return root?.querySelector('[data-ework-notes-session]')?.dataset.eworkNotesSession === sessionId && [...center.querySelectorAll('[data-home-guide]')].some(guide => guide.dataset.homeGuide === run && ['board','note','workbench'].includes(guide.dataset.kind))
   })
 }
 

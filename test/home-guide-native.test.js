@@ -3,9 +3,10 @@ import {createRequire} from 'node:module'
 import {runInNewContext,Script} from 'node:vm'
 import {Window} from 'happy-dom'
 import {homeGuideFinancialBridgeFixture} from './fixtures/home-guide-financial-bridge.js'
+import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 import {afterEach,beforeAll,expect,it} from 'vitest'
 const require=createRequire(import.meta.url),React=require('react'),{createRoot}=require('react-dom/client')
-const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+const source=stripWorkbenchReplay(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
 let patchHomeGuideNative
 beforeAll(async()=>{({patchHomeGuideNative}=await import('../scripts/lib/home-guide-native.mjs'))})
 const cleanup=[];afterEach(async()=>{for(const f of cleanup.splice(0))await f()})

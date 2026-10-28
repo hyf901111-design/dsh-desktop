@@ -1,9 +1,10 @@
 import styles from './home-guides.css?raw'
+import { HOME_WORKBENCH_STEPS } from '../../packages/dsh-research-task-runtime/home-workbench-contract.js'
 import { createHomeGuideTimeline, type GuideTimeline } from './home-guide-timeline'
 import {createHomeGuidePointer, type HomeGuidePointerAction} from './home-guide-pointer'
 import type {HomeOperationActionContext} from './home-operations'
 
-export type HomeGuideKind = 'board' | 'note' | 'ppt' | 'report'
+export type HomeGuideKind = 'board' | 'note' | 'ppt' | 'report' | 'workbench'
 export type HomeGuideAdapter = { runStep(step: any): Promise<void>; flush?(): Promise<void>; dispose(): void }
 export type HomeGuideMountOptions = { kind?:HomeGuideKind; signal: AbortSignal; runId: string; sessionId: string; cwd: string; fresh: boolean; wait(ms: number, signal?: AbortSignal): Promise<void>; waitUntilPlaying(): Promise<void>; onStatus(text: string): void }
 type Adapters = {
@@ -11,11 +12,13 @@ type Adapters = {
  prepareHandoff?(session: Session & {kind:HomeGuideKind},signal:AbortSignal): void | (()=>void) | Promise<void | (()=>void)>
  revealConversation?():void
  mountNotes(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
+ mountWorkbench?(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
  mountPresentation(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
 }
 type Session = {sessionId: string; cwd: string; title: string; fresh?: boolean}
 type Scene = readonly [id: string, title: string, result: string, hold: number]
 const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;steps:readonly Scene[]}> = {
+ workbench:{title:'白酒龙头研究工作台',view:'研究',intro:'从右侧提交研究需求，规划三个页签并逐步生成可联动的研究组件。',steps:HOME_WORKBENCH_STEPS.map(step=>[step.id,step.title,step.result,step.hold] as const)},
  board:{title:'自选行情看板',view:'研究',intro:'搭建六组件研究看板，再用智能容器补充一份自选股研究观察清单。',steps:[
   ['board-library','打开组件库','组件库已打开，先加入市场概览，再展开个股跟踪。',900],
   ['board-indices','加入市场指数','指数概览已加入，先看主要市场的表现。',1400],
@@ -166,7 +169,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     await entryPointer.perform({target:back,action:'click'});ensurePending()
     if(!back.isConnected||!center.contains(back))throw aborted()
     await entry.revealComposer();ensurePending()
-    const view=kind==='board'?'research':kind==='note'?'notes':undefined,tab=view?resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+view+'"]'):null
+    const view=(kind==='board'||kind==='workbench')?'research':kind==='note'?'notes':undefined,tab=view?resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+view+'"]'):null
     if(view&&!tab)throw Error('示例入口尚未就绪，请重新打开首页。')
     // Keep the real composer visible while native workspace/session preparation
     // runs alongside the pointer. Never expose the old session's empty mode.
@@ -213,27 +216,31 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const fault=(message:string)=>{root.dataset.phase='error';notice.hidden=false;status.textContent=message}
   const blocked=new Map<HTMLElement,boolean>()
   const run:Run={id,kind,sessionId:session.sessionId,abort:controller,root,resident,center,content,status,cleanup:()=>{}}
-  active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt'||kind==='report')resident.dataset.homeGuideLive='true'
-  const blockResident=()=>{if(kind==='ppt'||kind==='report')return;const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');for(const child of resident.children){if(!(child instanceof win.HTMLElement)||child===chrome||child.contains(chrome))continue;if(!blocked.has(child))blocked.set(child,child.inert);child.inert=true}}
+  active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt'||kind==='report'||kind==='workbench')resident.dataset.homeGuideLive='true'
+  const blockResident=()=>{if(kind==='ppt'||kind==='report'||kind==='workbench')return;const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');for(const child of resident.children){if(!(child instanceof win.HTMLElement)||child===chrome||child.contains(chrome))continue;if(!blocked.has(child))blocked.set(child,child.inert);child.inert=true}}
   blockResident();center.append(root);releaseTransition();playback(run,false)
   const position=()=>{if(!root.isConnected)return;const bounds=center.getBoundingClientRect(),chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header')?.getBoundingClientRect(),top=Math.max(bounds.top,chrome?.bottom??bounds.top+44);root.style.left=bounds.left+'px';root.style.top=top+'px';root.style.width=bounds.width+'px';root.style.height=Math.max(1,bounds.bottom-top)+'px'}
   const resize=new win.ResizeObserver(position);resize.observe(center);const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');if(chrome)resize.observe(chrome);win.addEventListener('resize',position);position()
   const context=new win.MutationObserver(()=>{if(active!==run)return;if(selected()!==run.sessionId||!resident.isConnected||document.querySelector('.VOzbGW_overlay')||document.body.hasAttribute('data-workspace-surface'))void close(false);else blockResident()})
   context.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ework-notes-session','data-workspace-surface']})
   run.cleanup=()=>{resize.disconnect();context.disconnect();win.removeEventListener('resize',position);for(const[body,inert]of blocked)body.inert=inert}
-  const guideTab=kind==='board'?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+guideTab+'"]')
+  const guideTab=(kind==='board'||kind==='workbench')?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+guideTab+'"]')
   ownedNavigation++;try{if(tab?.getAttribute('aria-selected')!=='true')tab?.click()}finally{ownedNavigation--}
   const ensure=()=>{if(active!==run||controller.signal.aborted||selected()!==run.sessionId)throw aborted()}
   const options:HomeGuideMountOptions={kind,signal:controller.signal,sessionId:run.sessionId,cwd:session.cwd,runId:id,fresh:session.fresh!==false,waitUntilPlaying:()=>run.timeline?run.timeline.waitUntilPlaying():Promise.resolve(),wait:(ms,signal)=>run.timeline?run.timeline.wait(ms,signal):new Promise((resolve,reject)=>{const signals=[controller.signal,...(signal?[signal]:[])];if(signals.some(item=>item.aborted)){reject(aborted());return}const clean=()=>{win.clearTimeout(timer);for(const item of signals)item.removeEventListener('abort',stop)},stop=()=>{clean();reject(aborted())},timer=win.setTimeout(()=>{clean();resolve()},ms);for(const item of signals)item.addEventListener('abort',stop,{once:true})}),onStatus:text=>{if(active===run)status.textContent=text}}
   mountedOptions=options;run.pointer=entryPointer??createHomeGuidePointer(document,options);document.documentElement.dataset.homeGuidePointerRun=id
   try{
-   const adapter=await(kind==='board'?mountBoard(document,content,options):kind==='note'?adapters.mountNotes(document,content,options):adapters.mountPresentation(document,content,options))
+   // Saved workbenches already hydrate through the ordinary native canvas.
+   // The generation actor only accepts a new, empty session.
+   if(kind==='workbench'&&session.fresh===false){await close(false,true);return}
+   const adapter=await(kind==='board'?mountBoard(document,content,options):kind==='note'?adapters.mountNotes(document,content,options):kind==='workbench'?adapters.mountWorkbench?.(document,content,options):adapters.mountPresentation(document,content,options))
+   if(!adapter)throw Error('工作台演示尚未就绪，请重试。')
    if(active!==run||controller.signal.aborted){adapter.dispose();throw aborted()}run.adapter=adapter;ensure()
    if(session.fresh===false){await close(false,true);return}
    const scenes:readonly Scene[]=definition.steps
    run.timeline=createHomeGuideTimeline({steps:scenes.map(([id,,,hold])=>({id,hold})),run:async step=>{
     ensure();await adapter.runStep(step);ensure()
-    if(kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
+    if(kind==='workbench'&&step==='wb-03'||kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
      await options.waitUntilPlaying();ensure()
      await exchangeSession(document,{kind,command:'activate-title',sessionId:run.sessionId},controller.signal);ensure()
     }
@@ -252,7 +259,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  const escape=(event:KeyboardEvent)=>{if((active||preparing)&&event.key==='Escape'){event.preventDefault();if(preparing){generation++;preparing.controller.abort();preparing=undefined;releaseTransition()}void close()}}
  // The native note reviewer also pauses on window blur. Its actor must share
  // that gate so background time cannot consume a foreground review budget.
- const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden||run.kind==='note'&&!document.hasFocus()){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.timeline.play()}}
+ const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden||(run.kind==='note'||run.kind==='workbench')&&!document.hasFocus()){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.timeline.play()}}
  const cueTarget=(value:any,key:'target'|'fromTarget')=>{
   const token=value?.[key+'Token']
   if(token===undefined)return value?.[key]

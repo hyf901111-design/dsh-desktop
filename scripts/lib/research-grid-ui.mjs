@@ -637,17 +637,25 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   if(options.focus!==false)root.focus({preventScroll:true})
   root.__eworkContentFit?.finish()
   const before=workspace.getSnapshot(),oldNodes=[...before.files,...before.artifacts],oldCache=new Map(root.__eworkContentMeasurements),view=root.ownerDocument.defaultView
+  const activeTab=workspace.getActiveBoardTab?.()
+  // The grid belongs to the active page, while the snapshot also contains
+  // navigation and every other page. Include offscreen cards and planning
+  // reservations in this grid, but never refit or preview another page.
+  const currentGridNodes=()=>{
+    const snapshot=workspace.getSnapshot(),ids=new Set(workspace.getWorkbenchCells().map(c=>c.id))
+    return [...snapshot.files,...snapshot.artifacts,...(workspace.getWorkbenchPlanningNodes?.()??[])].filter(n=>ids.has(n.id))
+  }
   measured.__workbenchDeferred=true
   if(!workspace.organizeCanvas(measured,mode))return false
   const grid=createResearchGrid(),width=before.canvasSize.availableWidth||before.canvasSize.width||800,m=grid.metrics(width)
-  const arranged=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]
+  const arranged=currentGridNodes()
   const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html'&&!researchCandleTemplate(n)&&!root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] [data-sherlock-market-native]')).map(n=>{
     const old=oldNodes.find(o=>o.id===n.id),cache=oldCache.get(n.id),frame=root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] iframe[data-research-html-artifact]')
     const inset=cache?Math.max(0,old.width-cache.width):Math.max(0,n.width-(frame?.clientWidth||n.width))
     return [n.id,{html:n.containerSpec.html,width:Math.round(n.width-inset)}]
   }))
   let cells=workspace.getWorkbenchCells(),encoded=JSON.stringify(cells),done=false,nativeReady=false,settle,deadline,nativeTimer
-  const unchanged=()=>JSON.stringify(workspace.getWorkbenchCells())===encoded&&expected.size===[...workspace.getSnapshot().artifacts].filter(n=>expected.has(n.id)&&n.containerSpec?.html===expected.get(n.id).html).length
+  const unchanged=()=>workspace.getActiveBoardTab?.()===activeTab&&JSON.stringify(workspace.getWorkbenchCells())===encoded&&expected.size===[...workspace.getSnapshot().artifacts].filter(n=>expected.has(n.id)&&n.containerSpec?.html===expected.get(n.id).html).length
   const finish=()=>{
     if(done)return;done=true;view.clearTimeout(settle);view.clearTimeout(deadline);view.clearTimeout(nativeTimer)
     root.removeEventListener('pointerdown',finish,true);view.removeEventListener('keydown',finish,true)
@@ -659,9 +667,9 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   const refit=(native=false)=>{
     if(done)return
     if(!unchanged()){finish();return}
-    const natural=native||nativeReady?measureWorkbenchContents(root,[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]):new Map()
+    const currentNodes=currentGridNodes()
+    const natural=native||nativeReady?measureWorkbenchContents(root,currentNodes):new Map()
     let complete=true
-    const currentNodes=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]
     const next=cells.map(c=>{
       const target=expected.get(c.id),cache=root.__eworkContentMeasurements?.get(c.id)
       const node=currentNodes.find(n=>n.id===c.id)

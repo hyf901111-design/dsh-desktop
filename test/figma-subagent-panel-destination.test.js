@@ -1,3 +1,4 @@
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 // @vitest-environment happy-dom
 import { readFile } from 'node:fs/promises'
 import * as react from 'react'
@@ -8,7 +9,9 @@ import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/shim/w
 import { SlotOwnershipError, StaleAuthorizationError } from '@deepseek-ai/dsh-client-ui-slots'
 import { afterEach, expect, it, vi } from 'vitest'
 import { patchSubagentPanelConversation, patchSubagentPanelRenderer } from '../scripts/lib/figma-subagent-panel.mjs'
-import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
+import {createRequire} from 'node:module'
+// Keep source guards byte-identical to the installer, without Vite's function rewriting.
+const {patchBetterSidebarClient}=createRequire(import.meta.url)('../scripts/lib/patch-sherlock-better-sidebar.mjs')
 import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
 import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 import {existsSync} from 'node:fs'
@@ -17,7 +20,7 @@ import {join} from 'node:path'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); document.body.replaceChildren() })
-const conversation = patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+const conversation = patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))))
 function loadConversation() {
   const start = conversation.indexOf('function createResearchSidebarStore(')
   const end = conversation.indexOf('const defaultResearchSidebar =', start)

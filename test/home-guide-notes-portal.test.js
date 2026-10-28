@@ -6,6 +6,7 @@ import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
 import {afterEach,expect,it,vi} from 'vitest'
 import {patchHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 import {notesComposerSource} from '../scripts/lib/notes-composer.mjs'
 import {HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT} from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 const require=createRequire(import.meta.url),releases=[]
@@ -19,7 +20,7 @@ function fixture(){
  const scope={window:win,document:doc,navigator:win.navigator,localStorage:win.localStorage,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLInputElement:win.HTMLInputElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,DOMException:win.DOMException,AbortController:win.AbortController,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),setTimeout:win.setTimeout.bind(win),clearTimeout:win.clearTimeout.bind(win),setInterval:win.setInterval.bind(win),clearInterval:win.clearInterval.bind(win),performance:win.performance,crypto:win.crypto,innerWidth:1024,innerHeight:768,TextDecoder,TextEncoder,structuredClone,queueMicrotask,console}
  const load=path=>{let descriptor;win.__ModuleLoader__={load:value=>{descriptor=value}};runInNewContext(readFileSync(path,'utf8'),scope);return descriptor}
  const runtime=load('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js').factory(modules)
- const actualClientPath=process.env.SHERLOCK_TEST_NATIVE_CONVERSATION||'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',actualClient=patchHomeGuideNative(readFileSync(actualClientPath,'utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__notesInputs=eworkNotesInputs;exports.__defaultSidebar=defaultResearchSidebar;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};')
+ const actualClientPath=process.env.SHERLOCK_TEST_NATIVE_CONVERSATION||'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',actualClient=patchHomeGuideNative(stripWorkbenchReplay(readFileSync(actualClientPath,'utf8'))).replace('exports.apply = apply;','exports.apply = apply;exports.__notesInputs=eworkNotesInputs;exports.__defaultSidebar=defaultResearchSidebar;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};')
  let descriptor;win.__ModuleLoader__={load:value=>{descriptor=value}};runInNewContext(actualClient,scope)
  const native=descriptor.factory(id=>id==='react'?portalReact:id==='@deepseek-ai/dsh-client-runtime/client'?runtime:modules(id))
  const ordinary=new native.SessionInputShell({actx:{effect:fn=>{const off=fn();if(off)cleanups.push(off)}},defaultSink:async()=>{throw Error('Must not submit through ordinary chat')}})

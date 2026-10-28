@@ -5,21 +5,26 @@ import {tmpdir} from 'node:os'
 import path from 'node:path'
 import {createRequire} from 'node:module'
 import {Script} from 'node:vm'
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 
 // The production loader keeps the Function.toString byte identity used by strict inverses.
 const require=createRequire(import.meta.url),{parse}=require('@babel/parser')
 const annotation=require('../scripts/lib/pptx-annotation-native.mjs'),home=require('../scripts/lib/home-guide-native.mjs'),presentation=require('../scripts/lib/home-guide-presentation-native.mjs'),grid=require('../scripts/lib/research-grid-workbench.mjs'),components=require('../scripts/lib/conversation-components.mjs'),compaction=require('../scripts/lib/conversation-compaction-lifecycle.mjs')
+const annotationMessages=require('../scripts/lib/pptx-annotation-message.mjs'),workbench=require('../scripts/lib/home-guide-workbench-native.mjs'),study=require('../scripts/lib/home-workbench-client.mjs')
 const dirs=[]
 afterEach(async()=>{await Promise.all(dirs.splice(0).map(dir=>rm(dir,{recursive:true,force:true})))})
-it('executes the actual first and last conversation installer statements only on an isolated raw bundle and remains byte-idempotent',async()=>{
+it('executes the actual grid inverse and annotation installer statements only on an isolated raw bundle and remains byte-idempotent',async()=>{
  const root=await mkdtemp(path.join(tmpdir(),'annotation-profile-entry-'));dirs.push(root);const target=path.join(root,'client.js'),source=readFileSync('scripts/patch-web-frontend-loading.mjs','utf8'),ast=parse(source,{sourceType:'module'})
  const writes=ast.program.body.filter(node=>node.type==='ExpressionStatement'&&node.expression.type==='CallExpression'&&node.expression.callee.name==='writeFileSync'&&['gridConversationPath','conversationPath','notesConversationPath'].includes(node.expression.arguments[0]?.name))
- const first=source.slice(writes[0].start,writes[0].end),last=source.slice(writes.at(-1).start,writes.at(-1).end),trace=[]
- const operations={restoreResearchGridWorkbench:value=>{trace.push('grid');return grid.restoreResearchGridWorkbench(value)},stripHomeGuideNative:value=>{trace.push('home');return home.stripHomeGuideNative(value)},stripHomeGuidePresentationNative:value=>{trace.push('presentation');return presentation.stripHomeGuidePresentationNative(value)},stripPptxAnnotationInput:value=>{trace.push('annotation');return annotation.stripPptxAnnotationInput(value)},patchPptxAnnotationInput:annotation.patchPptxAnnotationInput}
+ const gridRestore=writes.find(node=>source.slice(node.start,node.end).includes('restoreResearchGridWorkbench(')),annotationInstall=writes.find(node=>source.slice(node.start,node.end).includes('patchPptxAnnotationInput('))
+ expect(gridRestore).toBeTruthy()
+ expect(annotationInstall).toBeTruthy()
+ const first=source.slice(gridRestore.start,gridRestore.end),last=source.slice(annotationInstall.start,annotationInstall.end),trace=[]
+ const operations={restoreResearchGridWorkbench:value=>{trace.push('grid');return grid.restoreResearchGridWorkbench(value)},stripHomeGuideNative:value=>{trace.push('home');return home.stripHomeGuideNative(value)},stripHomeGuidePresentationNative:value=>{trace.push('presentation');return presentation.stripHomeGuidePresentationNative(value)},stripHomeWorkbenchClient:value=>{trace.push('study');return study.stripHomeWorkbenchClient(value)},stripHomeGuideWorkbenchNative:value=>{trace.push('workbench');return workbench.stripHomeGuideWorkbenchNative(value)},stripPptxAnnotationInput:value=>{trace.push('annotation');return annotation.stripPptxAnnotationInput(value)},stripPptxAnnotationMessages:value=>{trace.push('annotation-messages');return annotationMessages.stripPptxAnnotationMessages(value)},patchPptxAnnotationInput:annotation.patchPptxAnnotationInput}
  const run=code=>new Function('readFileSync','writeFileSync','gridConversationPath','conversationPath',...Object.keys(operations),code)(readFileSync,writeFileSync,target,target,...Object.values(operations))
  let middle
- const round=raw=>{writeFileSync(target,raw);trace.length=0;run(first);expect(trace).toEqual(['annotation','presentation','home','grid']);middle=[grid.patchResearchGridWorkbench,home.patchHomeGuideNative,presentation.patchHomeGuidePresentationNative,components.patchConversationComponents,compaction.patchConversationCompactionLifecycle].reduce((value,apply)=>apply(value),readFileSync(target,'utf8'));writeFileSync(target,middle);run(last);const output=readFileSync(target,'utf8');expect(annotation.stripPptxAnnotationInput(output)).toBe(middle);expect(output.split('function createPptxAnnotationNativeRuntime(')).toHaveLength(2);new Script(output);return output}
- const raw=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),once=round(annotation.patchPptxAnnotationInput(raw)),twice=round(once)
+ const round=raw=>{writeFileSync(target,raw);trace.length=0;run(first);expect(trace).toEqual(['annotation-messages','annotation','workbench','study','presentation','home','grid']);middle=[grid.patchResearchGridWorkbench,home.patchHomeGuideNative,presentation.patchHomeGuidePresentationNative,components.patchConversationComponents,compaction.patchConversationCompactionLifecycle].reduce((value,apply)=>apply(value),readFileSync(target,'utf8'));writeFileSync(target,middle);run(last);const output=readFileSync(target,'utf8');expect(annotation.stripPptxAnnotationInput(output)).toBe(middle);expect(output.split('function createPptxAnnotationNativeRuntime(')).toHaveLength(2);new Script(output);return output}
+ const raw=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),once=round(annotation.patchPptxAnnotationInput(stripConversationGridOverlays(raw))),twice=round(once)
  expect(twice).toBe(once);expect(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).toBe(raw)
  expect(()=>annotation.stripPptxAnnotationInput(once.replace('function createPptxAnnotationNativeRuntime(','function changedNativeRuntime('))).toThrow(/drifted/)
 },20000)
