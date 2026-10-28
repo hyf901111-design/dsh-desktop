@@ -1051,17 +1051,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究看板主题入口透明悬停与全局底栏外观",
+        "featureName": "统一彭博模式页签组件边框",
         "branch": "codex/feat/research-theme-menu-20261028",
-        "baseCommit": "5e451e8ca293597e4885ae44bb35f9f996283c2d",
-        "tipCommit": "0f5472b69a1613c0ae946e3751fd63321af45f5c",
+        "baseCommit": "0f5472b69a1613c0ae946e3751fd63321af45f5c",
+        "tipCommit": "5ae39a0052acae76ac247943568e2ddfcb6798a9",
         "commits": [
           {
-            "commit": "0f5472b69a1613c0ae946e3751fd63321af45f5c",
+            "commit": "5ae39a0052acae76ac247943568e2ddfcb6798a9",
             "parents": [
-              "5e451e8ca293597e4885ae44bb35f9f996283c2d"
+              "0f5472b69a1613c0ae946e3751fd63321af45f5c"
             ],
-            "subject": "修复：统一看板底栏外观并调整主题按钮留白"
+            "subject": "修复：统一彭博模式页签组件边框"
           }
         ],
         "files": [
@@ -1071,11 +1071,11 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/workbench-style.css"
+            "path": "scripts/lib/board-tabs.css"
           },
           {
             "status": "M",
-            "path": "test/workbench-theme-menu-browser.test.js"
+            "path": "test/board-tabs-theme-browser.test.js"
           }
         ],
         "checks": [
@@ -1083,231 +1083,43 @@
             "argv": [
               "node_modules/.bin/vitest",
               "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-client.test.js",
               "--fileParallelism=false",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "5文件37项通过，含9个真实production ResearchCanvas Chromium用例；新2例先RED确认常驻背景和1px边距，再覆盖全局浅深色×四个画布模式、hover与菜单展开及10px安全距离。日志 /tmp/sherlock-toolbar-app-theme-20261028/focused.log。",
-            "verifiedCommit": "0f5472b69a1613c0ae946e3751fd63321af45f5c",
-            "completedAt": "2026-10-28T14:52:27.490143Z",
+            "summary": "2文件32项通过。真实Chromium比较彭博页签与普通组件四边，先RED0px/1px，修复后应用明暗×四看板模式及34px高度通过；其余页签交互回归通过。日志/tmp/sherlock-board-tabs-border-20261028/green.log。",
+            "verifiedCommit": "5ae39a0052acae76ac247943568e2ddfcb6798a9",
+            "completedAt": "2026-10-28T15:27:46.415279Z",
             "timeoutMs": 180000
           },
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
+              "git",
+              "diff",
+              "--check"
             ],
             "outcome": "passed",
-            "summary": "TypeScript检查通过；git diff --check通过，仅3个本次相关文件。",
-            "verifiedCommit": "0f5472b69a1613c0ae946e3751fd63321af45f5c",
-            "completedAt": "2026-10-28T14:52:27.490143Z",
-            "timeoutMs": 180000
+            "summary": "3文件本次边框差异，diff检查通过，功能worktree干净。",
+            "verifiedCommit": "5ae39a0052acae76ac247943568e2ddfcb6798a9",
+            "completedAt": "2026-10-28T15:27:46.415279Z",
+            "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium验证全局浅深色×四个看板模式底栏外观不变、主题入口非hover和menu-open透明、hover与链接按钮一致、图标/箭头左右各10px；原380/1000宽度菜单和工具栏无溢出矩阵通过。独立只读复审无阻塞。尚未替换共享客户端，原生验收留给集成构建。"
+          "summary": "真实Chromium检查彭博页签四边与普通组件均为1px solid rgb(48,48,48)，直角、高34px；应用明暗主题一致，其他三种看板主题仍无新增边框。此功能分支未构建/替换共享客户端，原生验收随最终集成构建。"
         },
         "acceptanceCriteria": [
-          "彭博模式只改变画布，底栏和弹出菜单跟随客户端外观。",
-          "主题入口非hover透明，包括菜单展开且鼠标移开；hover与相邻按钮背景相同。",
-          "图标与下箭头左右至少8px安全距离，原有窄屏菜单与工具栏不溢出。",
-          "保留四模式选择、持久化、键盘焦点及整理菜单样式。"
+          "彭博页签外边框与普通组件同为1px深灰实线直角。",
+          "其他主题、页签34px高度及交互保持原状。"
         ],
         "risks": [
-          "仅调整工具栏样式，不改变看板偏好或画布数据。",
-          "共享原生客户端待集成owner构建与验收；未构建、发布或替换共享客户端。"
+          "仅一条以页签彭博主题为条件的CSS，未改变画布或页签数据。",
+          "共享原生客户端待集成owner统一构建与验收。"
         ],
-        "generatedAt": "2026-10-28T14:52:27.490143Z"
-      },
-      "merged": {
-        "mergeCommit": "bf08083d27d34079224920e617c5553c49719d88",
-        "verificationCommit": "bf08083d27d34079224920e617c5553c49719d88",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "bf08083d27d34079224920e617c5553c49719d88",
-            "completedAt": "2026-10-28T14:57:12.821Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-28T14:57:12.821Z"
+        "generatedAt": "2026-10-28T15:27:46.415279Z"
       }
     },
     {
