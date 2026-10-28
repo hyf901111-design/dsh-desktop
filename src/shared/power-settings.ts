@@ -1,6 +1,6 @@
 export type PowerSettingKey = 'preventAutoSleep' | 'keepAwakeWhenLidClosed'
 export type LidMode = 'off' | 'active' | 'external'
-export type PowerSettingsError = 'authorization-cancelled' | 'lid-unavailable' | 'restore-failed' | 'save-failed' | 'power-unavailable' | 'system-changed' | 'safety-stop'
+export type PowerSettingsError = 'authorization-cancelled' | 'helper-unavailable' | 'lid-unavailable' | 'restore-failed' | 'save-failed' | 'power-unavailable' | 'system-changed' | 'safety-stop'
 export type PowerSettingsState = {
   preventAutoSleep: boolean
   keepAwakeWhenLidClosed: boolean

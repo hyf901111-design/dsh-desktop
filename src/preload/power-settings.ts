@@ -22,11 +22,12 @@ export function mountPowerSettings(doc: Document, bridge: PowerSettingsBridge): 
       button.setAttribute('aria-checked', String(state?.[key] === true))
       button.disabled = !available || inFlight || state?.busy === true
       descriptions.get(key)!.textContent = lid
-        ? (zh ? '本次运行有效，开启需管理员授权；合盖后任务继续。会阻止系统睡眠，关闭或退出后恢复。' : 'For this app run; requires administrator approval. Tasks continue with the lid closed. Blocks system sleep until disabled or the app exits.')
+        ? (zh ? '记住此选择，随客户端启动自动恢复。首次安装辅助服务需管理员授权，之后无需重复输入密码；关闭或退出后恢复睡眠。' : 'Remembers your choice and resumes when the app starts. Administrator approval is needed once to install the helper; later launches need no password. Sleep resumes when disabled or the app exits.')
         : (zh ? '应用运行时防止电脑因闲置自动睡眠，屏幕仍可熄灭。记住此选择；合盖和手动睡眠不受此项控制。' : 'Prevents idle sleep while the app runs and allows the display to turn off. Remembers your choice; lid close and manual sleep are separate.')
     }
     const errors = {
       'authorization-cancelled': zh ? '已取消管理员授权，合盖继续运行未开启。' : 'Administrator approval was cancelled. Closed-lid operation is off.',
+      'helper-unavailable': zh ? '电源辅助服务尚未就绪。请手动开启此开关以安装或修复；启动时不会自动弹出授权。' : 'The power helper is unavailable. Turn this switch on to install or repair it; startup never opens an approval dialog.',
       'lid-unavailable': zh ? '无法开启合盖继续运行。请检查管理员授权，或稍后重试。' : 'Closed-lid operation is unavailable. Check administrator approval and try again.',
       'restore-failed': zh ? '尚未确认系统睡眠已恢复，请再次关闭此开关。' : 'Sleep restoration is not confirmed. Turn this switch off again to retry.',
       'save-failed': zh ? '设置保存失败，本次变更未生效。' : 'Could not save this setting. The change was not applied.',
