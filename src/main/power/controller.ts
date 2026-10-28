@@ -10,6 +10,8 @@ export interface LidGuard {
   cancel(): void
 }
 
+export type PowerDiagnostic = {event: string; code?: string; mode?: string; ownerPid?: number; servicePid?: number; leaseInode?: number; leaseModifiedMs?: number; leaseOwned?: boolean; statusMatches?: boolean}
+
 export class PowerPreferenceStore {
   private readonly file: string
   constructor(private readonly root: string) {this.file = join(root, 'power-settings.json')}
@@ -24,6 +26,23 @@ export class PowerPreferenceStore {
   }
   get(): boolean {return this.read().preventAutoSleep}
   getLid(): boolean {return this.read().keepAwakeWhenLidClosed}
+  recordDiagnostic(value: PowerDiagnostic): void {
+    const file = join(this.root, 'power-diagnostics.json'), temporary = `${file}.${process.pid}.tmp`
+    try {
+      mkdirSync(this.root, {recursive: true, mode: 0o700})
+      let history: unknown[] = []
+      try {if (statSync(file).size < 65536) {const previous = JSON.parse(readFileSync(file, 'utf8')); if (Array.isArray(previous)) history = previous.slice(-31)}} catch {}
+      const record: Record<string, string|number|boolean> = {at: new Date().toISOString(), uptimeMs: Math.round(process.uptime()*1000)}
+      for (const key of ['event','code','mode','ownerPid','servicePid','leaseInode','leaseModifiedMs','leaseOwned','statusMatches'] as const) {
+        const field = value[key]
+        if (typeof field === 'string') record[key] = field.slice(0, 80)
+        else if (typeof field === 'boolean' || typeof field === 'number' && Number.isFinite(field)) record[key] = field
+      }
+      history.push(record)
+      writeFileSync(temporary, JSON.stringify(history) + '\n', {mode: 0o600})
+      renameSync(temporary, file)
+    } catch {} finally {try {rmSync(temporary, {force: true})} catch {}}
+  }
   set(preventAutoSleep: boolean): void {this.write({...this.read(), preventAutoSleep})}
   setLid(keepAwakeWhenLidClosed: boolean): void {this.write({...this.read(), keepAwakeWhenLidClosed})}
   private write(preferences: {preventAutoSleep: boolean; keepAwakeWhenLidClosed: boolean}): void {
@@ -119,6 +138,7 @@ export class PowerSettingsController {
   }
 
   dispose(): void {
+    this.options.store.recordDiagnostic({event: 'app-dispose', mode: this.state.lidMode})
     this.disposed = true
     this.options.guard.cancel()
     if (this.blockerId !== undefined) this.options.blocker.stop(this.blockerId)

@@ -18,6 +18,15 @@ function fixture() {
 afterEach(() => {for (const root of roots.splice(0)) rmSync(root, {recursive: true, force: true})})
 
 describe('power preference lifecycle', () => {
+  it('keeps bounded power diagnostics without storing request tokens or transcript content', () => {
+    const f = fixture()
+    for (let index = 0; index < 40; index++) f.store.recordDiagnostic({event: 'sleep-unconfirmed', servicePid: index, token: 'private-token', text: 'private-text'} as any)
+    const source = readFileSync(join(f.root, 'power-diagnostics.json'), 'utf8'), rows = JSON.parse(source)
+    expect(rows).toHaveLength(32)
+    expect(rows.at(-1)).toMatchObject({event: 'sleep-unconfirmed', servicePid: 39})
+    expect(source).not.toContain('private-')
+    expect(f.store.getLid()).toBe(false)
+  })
   it('defaults off, persists idle prevention across launch, and releases its own assertion on exit', async () => {
     const f = fixture()
     expect(f.controller.get().preventAutoSleep).toBe(false)

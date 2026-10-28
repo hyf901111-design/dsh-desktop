@@ -2,7 +2,7 @@ import {randomBytes} from 'node:crypto'
 import {lstatSync, openSync, fstatSync, futimesSync, closeSync, constants, readFileSync, renameSync, rmSync, writeFileSync} from 'node:fs'
 import {join} from 'node:path'
 import {setTimeout as delay} from 'node:timers/promises'
-import type {LidGuard} from './controller'
+import type {LidGuard, PowerDiagnostic} from './controller'
 import {MacOSPowerService, runPowerCommand, type PowerCommand, type PowerService, type PowerServiceStatus} from './macos-power-service'
 
 type Lease = {version: 1; pid: number; started: string; token: string; release?: boolean}
@@ -18,15 +18,17 @@ export class MacOSLidGuard implements LidGuard {
   private readonly service: PowerService
   private readonly run: PowerCommand
   private readonly file: string
+  private readonly onDiagnostic: (value: PowerDiagnostic) => void
   private token: string | undefined
   private lease: Lease | undefined
   private retiring: Lease | undefined
   private heartbeat: ReturnType<typeof setInterval> | undefined
   private generation = 0
-  constructor(options: {service?: PowerService; run?: PowerCommand; helperSource?: string} = {}) {
+  constructor(options: {service?: PowerService; run?: PowerCommand; helperSource?: string; onDiagnostic?: (value: PowerDiagnostic) => void} = {}) {
     this.service = options.service ?? new MacOSPowerService({helperSource: options.helperSource, run: options.run})
     this.run = options.run ?? runPowerCommand
     this.file = join(this.service.directory, 'session.json')
+    this.onDiagnostic = options.onDiagnostic ?? (() => {})
   }
   async start(allowAuthorization = true): Promise<'active'|'external'> {
     if (this.retiring) await this.stop()
@@ -52,8 +54,8 @@ export class MacOSLidGuard implements LidGuard {
           const descriptor = openSync(this.file, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
           try {if (fstatSync(descriptor).uid !== process.getuid?.()) throw Error('Invalid lease'); const now = new Date(); futimesSync(descriptor, now, now)}
           finally {closeSync(descriptor)}
-        } else this.cancel()
-      } catch {this.cancel()}}, 5000)
+        } else {this.report('lease-lost'); this.cancel()}
+      } catch (error) {this.report('heartbeat-failed', undefined, (error as NodeJS.ErrnoException).code ?? 'unknown'); this.cancel()}}, 5000)
       this.heartbeat.unref()
       for (let attempt = 0; attempt < 40; attempt++) {
         if (generation !== this.generation || this.token !== token) throw Error('lid-unavailable')
@@ -77,21 +79,34 @@ export class MacOSLidGuard implements LidGuard {
     finally {rmSync(temporary, {force: true})}
   }
   async active(): Promise<boolean> {
-    if (!this.token || !this.ownsLease()) return false
+    if (!this.token || !this.ownsLease()) {this.report('lease-lost'); return false}
     const status = await this.service.status()
     // Global errors omit the lease token. Preserve the request for recovery
     // instead of treating that temporary outcome as another owner's state.
-    if (status.mode === 'error') throw Error('restore-failed')
-    if (!this.matches(status)) return false
-    if (status.mode === 'safety-stop' || status.mode === 'system-changed') throw Error(status.mode)
-    return (status.mode === 'active' || status.mode === 'external') && parseSleepDisabled(await this.run('/usr/bin/pmset', ['-g']))
+    if (status.mode === 'error') {this.report('service-error', status); throw Error('restore-failed')}
+    if (!this.matches(status)) {this.report('status-mismatch', status); return false}
+    if (status.mode === 'safety-stop' || status.mode === 'system-changed') {this.report(status.mode, status); throw Error(status.mode)}
+    if (status.mode !== 'active' && status.mode !== 'external') {this.report('status-mismatch', status); return false}
+    // Native publishes the status only after its power write/readback. A zero
+    // paired with the previous active snapshot is unconfirmed until the next
+    // explicit native drift/safety/error result, and must not revoke the lease.
+    if (!parseSleepDisabled(await this.run('/usr/bin/pmset', ['-g']))) {this.report('sleep-unconfirmed', status); throw Error('restore-failed')}
+    return true
+  }
+  private report(event: string, status?: PowerServiceStatus, code?: string): void {
+    try {
+      let stat: {ino: number; mtimeMs: number} | undefined
+      try {stat = lstatSync(this.file)} catch {}
+      this.onDiagnostic({event, code, mode: status?.mode, ownerPid: status?.ownerPid, servicePid: status?.servicePid, leaseInode: stat?.ino, leaseModifiedMs: stat?.mtimeMs, leaseOwned: this.ownsLease(), statusMatches: status ? this.matches(status) : undefined})
+    } catch {}
   }
   cancel(): void {
+    if (this.token) this.report('cancel-request')
     this.generation++
     if (this.heartbeat) clearInterval(this.heartbeat)
     this.heartbeat = undefined
     if (this.token && this.lease) this.retiring = this.lease
-    try {this.publishRelease()} catch {try {if (this.ownsLease()) rmSync(this.file, {force: true})} catch {}}
+    try {this.publishRelease()} catch (error) {this.report('release-publish-failed', undefined, (error as NodeJS.ErrnoException).code ?? 'unknown'); try {if (this.ownsLease()) rmSync(this.file, {force: true})} catch {}}
     this.token = undefined
   }
   private publishRelease(): void {

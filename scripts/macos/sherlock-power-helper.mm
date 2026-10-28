@@ -98,7 +98,12 @@ struct FileData {
   struct stat metadata{};
 };
 
-FileData readFile(int parent, const char *name, uid_t owner, mode_t permissions) {
+struct FileReadComplete { void operator()(int) const {} };
+
+// The private template seam lets native tests mutate metadata at the precise
+// read/fstat boundary. Production instantiates only the empty inlined callback.
+template <typename AfterRead = FileReadComplete>
+FileData readFile(int parent, const char *name, uid_t owner, mode_t permissions, AfterRead afterRead = {}) {
   FileData result;
   Descriptor file(openat(parent, name, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC));
   if (!file) {
@@ -114,6 +119,7 @@ FileData readFile(int parent, const char *name, uid_t owner, mode_t permissions)
     if (amount == 0) break;
     count += static_cast<size_t>(amount);
   }
+  afterRead(file.value);
   struct stat after{}, named{};
   if (count != static_cast<size_t>(result.metadata.st_size) ||
       fstat(file.value, &after) != 0 || !fileAllowed(after, owner, permissions) ||
@@ -123,6 +129,16 @@ FileData readFile(int parent, const char *name, uid_t owner, mode_t permissions)
       named.st_dev != after.st_dev || named.st_ino != after.st_ino) return result;
   result.bytes = [NSData dataWithBytes:bytes length:count];
   result.state = FileData::State::Valid;
+  return result;
+}
+
+template <typename Reader>
+FileData readStableLeaseFile(Reader reader) {
+  FileData result;
+  for (unsigned int attempt = 0; attempt < 3; ++attempt) {
+    result = reader();
+    if (result.state != FileData::State::Invalid) break;
+  }
   return result;
 }
 
@@ -267,7 +283,9 @@ Input readLease(int base, uid_t uid, std::optional<Lease> &verified) {
   Input result;
   auto directory = openDirectory(base, "leases", uid, 0700);
   if (!directory) { result.invalidLease = true; return result; }
-  const auto file = readFile(directory.value, "session.json", uid, 0600);
+  // Heartbeat futimes or atomic renewal may cross a strict metadata snapshot.
+  // Retry only failed reads, reopening each time; a missing lease stays missing.
+  const auto file = readStableLeaseFile([&] { return readFile(directory.value, "session.json", uid, 0600); });
   if (file.state == FileData::State::Missing) return result;
   result.invalidLease = true;
   if (file.state != FileData::State::Valid) return result;
@@ -318,10 +336,14 @@ bool unsafePowerState() {
   return unsafe;
 }
 
-bool writeStatus(int base, const Status &status) {
+NSDictionary *statusJSON(const Status &status) {
   id token = status.token ? [NSString stringWithUTF8String:status.token->c_str()] : [NSNull null];
-  return atomicJSON(base, "status.json", @{@"version": @1, @"servicePid": @(getpid()),
-    @"mode": [NSString stringWithUTF8String:modeName(status.mode)], @"ownerPid": @(status.ownerPid), @"token": token}, 0644, false);
+  return @{@"version": @1, @"implementationVersion": @2, @"servicePid": @(getpid()),
+    @"mode": [NSString stringWithUTF8String:modeName(status.mode)], @"ownerPid": @(status.ownerPid), @"token": token};
+}
+
+bool writeStatus(int base, const Status &status) {
+  return atomicJSON(base, "status.json", statusJSON(status), 0644, false);
 }
 
 bool sameStatus(const Status &left, const Status &right) {
@@ -339,7 +361,7 @@ std::optional<uid_t> parseUID(const char *text) {
 } // namespace
 
 int main(int argc, char **argv) {
-  if (argc == 2 && strcmp(argv[1], "--version") == 0) { puts("1"); return 0; }
+  if (argc == 2 && strcmp(argv[1], "--version") == 0) { puts("2"); return 0; }
   const auto uid = argc == 3 && strcmp(argv[1], "--uid") == 0 ? parseUID(argv[2]) : std::nullopt;
   if (!uid) { fputs("usage: sherlock-power-helper --uid <non-root-uid> | --version\n", stderr); return 64; }
   if (geteuid() != 0 || getuid() != 0) { fputs("power helper requires root\n", stderr); return 77; }

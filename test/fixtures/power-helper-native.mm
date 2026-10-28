@@ -21,6 +21,12 @@ void nativeScenario(const std::string &scenario, int parentPID, const char *star
     for (id invalid in @[@1, @0, @"true", [NSNull null], @[], @{}]) {
       requireNative(!parseReleaseFlag(@{@"release": invalid}).has_value(), "nonboolean release must invalidate the lease");
     }
+  } else if (scenario == "status-shape") {
+    NSDictionary *object = statusJSON({Mode::Active, 123, "0123456789abcdef0123456789abcdef"});
+    requireNative([object[@"version"] isEqual:@1], "status file protocol must remain version 1");
+    requireNative([object[@"implementationVersion"] isEqual:@2], "running daemon must advertise implementation version 2");
+    requireNative([object[@"servicePid"] isEqual:@(getpid())] && [object[@"ownerPid"] isEqual:@123] &&
+      [object[@"mode"] isEqual:@"active"] && [object[@"token"] isEqual:@"0123456789abcdef0123456789abcdef"], "status must preserve daemon and lease identity");
   } else if (scenario == "process-identity") {
     Lease parent{parentPID, started, "0123456789abcdef0123456789abcdef"};
     requireNative(processMatches(parent, getuid()), "native process time must agree with C-locale ps");
@@ -47,6 +53,60 @@ void nativeScenario(const std::string &scenario, int parentPID, const char *star
       requireNative(unlinkat(directory.value, ".transition.lock", 0) == 0, "lock fixture must remove");
     }
     requireNative(rmdir(temporary) == 0, "lock fixture directory must remove");
+  } else if (scenario.rfind("lease-", 0) == 0) {
+    char pattern[] = "/tmp/sherlock-power-lease-XXXXXX";
+    const char *temporary = mkdtemp(pattern);
+    requireNative(temporary != nullptr, "lease fixture directory must exist");
+    @try {
+      Descriptor directory(open(temporary, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC));
+      Descriptor file(openat(directory.value, "session.json", O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600));
+      NSData *content = [@"{\"version\":1}" dataUsingEncoding:NSUTF8StringEncoding];
+      requireNative(writeAll(file.value, content), "lease fixture must write");
+      const auto touch = [](int descriptor) {
+        struct stat before{};
+        requireNative(fstat(descriptor, &before) == 0, "heartbeat must inspect descriptor");
+        struct timespec times[2] = {before.st_atimespec, before.st_mtimespec};
+        ++times[1].tv_sec;
+        requireNative(futimens(descriptor, times) == 0, "heartbeat must change mtime between reader fstats");
+      };
+      unsigned int attempts = 0;
+      if (scenario == "lease-heartbeat-retry") {
+        requireNative(readFile(directory.value, "session.json", getuid(), 0600, touch).state == FileData::State::Invalid,
+          "single-attempt reader must still reject changed metadata");
+        const auto stable = readStableLeaseFile([&] {
+          ++attempts;
+          return readFile(directory.value, "session.json", getuid(), 0600, [&](int descriptor) { if (attempts == 1) touch(descriptor); });
+        });
+        requireNative(stable.state == FileData::State::Valid && attempts == 2, "one concurrent heartbeat must succeed on a fresh stable descriptor");
+        requireNative([stable.bytes isEqualToData:content], "stable retry must retain actual lease bytes");
+      } else if (scenario == "lease-rename-retry") {
+        const auto stable = readStableLeaseFile([&] {
+          ++attempts;
+          return readFile(directory.value, "session.json", getuid(), 0600, [&](int) {
+            if (attempts != 1) return;
+            Descriptor replacement(openat(directory.value, "replacement", O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600));
+            requireNative(writeAll(replacement.value, content), "atomic replacement must write");
+            requireNative(renameat(directory.value, "replacement", directory.value, "session.json") == 0, "atomic lease replacement must rename");
+          });
+        });
+        requireNative(stable.state == FileData::State::Valid && attempts == 2, "atomic replacement must retry from the new file descriptor");
+      } else if (scenario == "lease-churn-bounded") {
+        const auto stable = readStableLeaseFile([&] {
+          ++attempts;
+          return readFile(directory.value, "session.json", getuid(), 0600, touch);
+        });
+        requireNative(stable.state == FileData::State::Invalid && attempts == 3, "continuously changing metadata must fail after exactly three attempts");
+      } else if (scenario == "lease-untrusted-bounded") {
+        requireNative(fchmod(file.value, 0644) == 0, "untrusted lease permissions fixture must set");
+        const auto stable = readStableLeaseFile([&] { ++attempts; return readFile(directory.value, "session.json", getuid(), 0600); });
+        requireNative(stable.state == FileData::State::Invalid && attempts == 3, "retry must never accept persistent untrusted permissions");
+      } else if (scenario == "lease-missing-once") {
+        const auto missing = readStableLeaseFile([&] { ++attempts; return readFile(directory.value, "missing.json", getuid(), 0600); });
+        requireNative(missing.state == FileData::State::Missing && attempts == 1, "a clean missing lease must not retry");
+      } else throw std::runtime_error("unknown lease scenario");
+    } @finally {
+      [[NSFileManager defaultManager] removeItemAtPath:[NSString stringWithUTF8String:temporary] error:nil];
+    }
   } else if (scenario == "file-validation") {
     char pattern[] = "/tmp/sherlock-power-files-XXXXXX";
     const char *temporary = mkdtemp(pattern);
