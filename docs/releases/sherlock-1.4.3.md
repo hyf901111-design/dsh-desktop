@@ -1,0 +1,36 @@
+# EWork Odyssey 1.4.3
+
+发布日期：2026-10-28。平台：macOS Apple Silicon。按用户要求签名发布，不进行 Apple 公证。
+
+## 更新内容
+
+- 修复深色客户端中浅色看板菜单的文字对比度，统一页签与其他组件的更多图标，并优化四种看板模式的页签样式。
+- 页签名称按完整内容显示，长名称、页签增多或窗口变窄时可通过左右翻页查看。
+- 缩小组件拖入页签时的缩略预览触发范围；进入页签栏及右侧空白区域后提示可接收页签，保留原有看板拖动方式。
+- 跨页连接自动指向关联组件所在页签，采用直线与圆角转弯，并为对应页签或翻页按钮显示同色描边。
+- 优化看板演示：市场指数独占首行，自选与行情位于第二行，新闻与公告直接添加在第三行；连线时保留更多行情内容，智能生成卡片使用动态网格背景。
+- 更新下载期间仅显示进度圆环，点击后展开详情，点击其他位置渐隐收起；精简下载文案并移除气泡关闭按钮，下载完成后可点击查看重启更新操作。
+
+## Release notes
+
+- Fix menu text contrast on light boards in the dark app theme, align tab and component More icons, and refine tabs across all four board styles.
+- Show full tab names and use left and right paging controls when long names, more tabs or narrower windows exceed the available width.
+- Narrow the area that activates component thumbnails during a tab drop. Highlight receiving tabs inside the bar, including its empty right side, while preserving normal board dragging.
+- Point cross-page connections to the tab containing the linked component, route straight segments through rounded bends, and outline the destination tab or paging control in the connection color.
+- Refine the board demo: indices occupy the first row, watchlist and quotes the second, and news and announcements appear directly in the third. Keep more quote content visible while connecting and animate the smart-generation grid.
+- Show only the progress ring during update downloads. Click it to open details and click elsewhere to fade them out. Simplify download text, remove the popup close button, and let users review the restart action after completion.
+
+## 发布验证
+
+- 正式构建来源：`c0d040bc8564767720d1bc74c43282a22ca65ce3`（干净的本地 main）。
+- 验收代码已通过 185 项集成聚焦检查；本次 11 个文件、101 项发布检查及类型检查通过。
+- Developer ID App 与 DMG 签名、包内运行时代码一致性及两套 ZIP CRC 校验通过。兼容桥外层为 `io.dsh.desktop`，内嵌 App 为 `com.evanarts.sherlock`，旧证书及 Squirrel/ShipIt、Mantle、ReactiveObjC 依赖校验通过。按用户要求跳过 Apple 公证。
+- 两条公开更新源均为 1.4.3，中英文更新日志各 6 项；26 项公开元数据、缓存、单段 Range 和 blockmap 检查通过。
+- 标准通道 1.4.2 → 1.4.3：实际下载 43,347,007 字节，复用 502,840,862 字节，82 次单段 Range 请求；合成 ZIP 的 SHA-512 与发布包完全一致。
+- 兼容通道 1.4.2 → 1.4.3：实际下载 76,679,745 字节，复用 525,362,436 字节，178 次单段 Range 请求；合成 ZIP 的 SHA-512 与发布包完全一致。未进行旧客户端全量下载、安装或重启升级测试。
+- 实际签名 App 使用隔离配置启动，主界面与应用内关于页已确认 1.4.3、6 条当前中文日志及保留的旧版历史。默认目录隔离迁移验证通过：旧数据复制、目标已有值保留、旧目录不被改写、完成标记正常。
+- Homebrew 软件源提交：`f4e43a4a00b7864113c788cac6b45dfea0b25dc5`；语法、风格、Cask 审查、公开文件逐字节比对及 brew info 核验通过。
+- Homebrew DMG SHA-256：`f77451352d2c4733b673f57fe7331b7a8ed29493be6c3238458f6e6b1a51c01d`。
+- 仅清理最旧 1.3.4 目录内 5 个不可变对象；保留 5 个版本的 25 个资源，两条当前更新源及 Homebrew 均指向 1.4.3。临时上传 Worker 已删除。
+
+完整证据目录：`release-cloudflare/1.4.3/`。

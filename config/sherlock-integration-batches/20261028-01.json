@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261028-01",
+  "branch": "codex/integration/20261028-01",
+  "baseMainCommit": "2604680c1499f4424d2cb7d83b2be26ae5e2ba57",
+  "expectedMainCommit": "2604680c1499f4424d2cb7d83b2be26ae5e2ba57",
+  "createdAt": "2026-10-28T01:21:42.777Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "页签四模式、完整标题与跨页连接及演示和更新反馈优化",
+        "branch": "codex/feat/board-tabs-theme-demo-20261028",
+        "baseCommit": "ecc7de5dfe404c68989371bd0134463766ccc5ac",
+        "tipCommit": "5f878ec6d58721e0ce043e35498e766f9add346f",
+        "commits": [
+          {
+            "commit": "5f878ec6d58721e0ce043e35498e766f9add346f",
+            "parents": [
+              "ecc7de5dfe404c68989371bd0134463766ccc5ac"
+            ],
+            "subject": "优化跨页连接的圆角走线与页签同色描边"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-link.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/board-tabs-connection-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-connection-client.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/financial-widget-link.test.js",
+              "test/home-guides.test.ts",
+              "test/home-guide-native-strip.test.js",
+              "test/sidebar-update-control.test.ts",
+              "test/update-background-ui.test.ts",
+              "test/update-transfer-presentation.test.ts",
+              "test/update-ui.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "187项直接相关检查通过，新增跨页圆角走线、四模式描边同色及清理和真实翻页点击验证",
+            "verifiedCommit": "5f878ec6d58721e0ce043e35498e766f9add346f",
+            "completedAt": "2026-10-28T01:50:18.614524+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过，补齐JS测试fixture精确声明，无屏蔽诊断",
+            "verifiedCommit": "5f878ec6d58721e0ce043e35498e766f9add346f",
+            "completedAt": "2026-10-28T01:50:57.607202+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际客户端已核对四模式、完整长标题、左右翻页、深色应用浅色看板菜单反白；本地真实下载环77%未展开详情，完成后点击查看且外点收起。新圆角连线及四模式同色边框在真实Chromium验证；更新集成客户端后仍需原生核验新增走线。"
+        },
+        "acceptanceCriteria": [
+          "四模式页签与Figma对照，More前景匹配普通组件；portal菜单遵循应用主题",
+          "标题完整自然宽度，数量/改名/窗口变化驱动左右翻页",
+          "缩略触发仅栏内及8px外沿，栏内右侧空白也提示，16px退出迟滞；空白松手不转移",
+          "跨页关系指向对端页签或现有翻页箭头，保留数据/方向/拓扑与原生解除行为",
+          "跨页连线采用直段与相切圆角，关联页签或翻页箭头使用同源线色描边，切页及解除后清除",
+          "演示三组件整理后新闻公告直接第三行，连线源行正文可读，智能生成原生网格活动并响应暂停",
+          "自动下载及完成不自行展开详情，点击查看后显式重启；外点/失焦渐隐与Escape，去掉技术下载文案",
+          "PlanA集成本地--verify使用验证，版本1.4.2不变、无公证及对外发布"
+        ],
+        "risks": [
+          "真实共享客户端的连续手感和child view焦点需集成后核验",
+          "download-only隔离通路不自动检查/下载，生产自动触发链由manual=false回归覆盖，不宣称完成真实生产自动升级",
+          "复用canonical现有安装依赖，未执行全新npm ci"
+        ],
+        "generatedAt": "2026-10-28T01:51:54.217449+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3f00b1095f800c5826c8b33b8792433daf905957",
+        "verificationCommit": "3f00b1095f800c5826c8b33b8792433daf905957",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/financial-widget-link.test.js",
+              "test/home-guides.test.ts",
+              "test/home-guide-native-strip.test.js",
+              "test/sidebar-update-control.test.ts",
+              "test/update-background-ui.test.ts",
+              "test/update-transfer-presentation.test.ts",
+              "test/update-ui.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-theme-browser.test.js test/financial-widget-link.test.js test/home-guides.test.ts test/home-guide-native-strip.test.js test/sidebar-update-control.test.ts test/update-background-ui.test.ts test/update-transfer-presentation.test.ts test/update-ui.test.ts",
+            "verifiedCommit": "3f00b1095f800c5826c8b33b8792433daf905957",
+            "completedAt": "2026-10-28T01:52:10.899Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3f00b1095f800c5826c8b33b8792433daf905957",
+            "completedAt": "2026-10-28T01:52:10.899Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-28T01:52:10.899Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/financial-widget-link.test.js",
+        "test/home-guides.test.ts",
+        "test/home-guide-native-strip.test.js",
+        "test/sidebar-update-control.test.ts",
+        "test/update-background-ui.test.ts",
+        "test/update-transfer-presentation.test.ts",
+        "test/update-ui.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}

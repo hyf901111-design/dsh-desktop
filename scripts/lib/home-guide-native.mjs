@@ -362,7 +362,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
       ticket.ownedSelectionEpoch = ticket.selectionEpoch
     }
-    const click = async (ticket, target, label) => {
+    const click = async (ticket, target, label, afterClick) => {
       await cue(ticket, target, label, 'click')
       await playing(ticket); targetReady(ticket, target, true)
       const before = ticket.resource.workspace.getSnapshot().selection
@@ -370,7 +370,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         ticket.originalSelection = structuredClone(before); ticket.selectionBaselineEpoch = ticket.selectionEpoch
       }
       const canvas=ticket.host.querySelector('[data-research-canvas]'),pendingReveal=canvas?.__eworkReveal
-      react_dom.flushSync(() => target.click())
+      react_dom.flushSync(() => { target.click(); afterClick?.() })
       // Cancel only this native click's queued reveal; the actor awaits its own
       // pause-aware scroll after the final grid geometry has settled.
       if(canvas?.__eworkReveal && canvas.__eworkReveal!==pendingReveal)delete canvas.__eworkReveal
@@ -384,12 +384,24 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       await playing(ticket)
       if (ticket.resource.workspace.persist() !== true) throw Error('示例看板保存失败，当前内容仍保留，请重试。')
     }
+    const syncSmartPlayback = ticket => {
+      const pending = ticket.smartPending, workspace = ticket.resource.workspace
+      if (!pending) return
+      const current = workspace.getSnapshot(), node = current.artifacts.find(node => node.id === pending.nodeId)
+      // This lease covers only the actor's prepared task, before a real task ID
+      // is returned. User edits still revoke it through the complete revision.
+      if (!node || node.generationTaskId || node.containerPrompt !== pending.prompt || !['queued','running'].includes(node.generationStatus) || JSON.stringify(node) !== pending.revision) return
+      const status = ticket.playing ? 'running' : 'queued'
+      if (node.generationStatus === status) return
+      workspace.setArtifacts(current.artifacts.map(value => value.id === node.id ? {...value, generationStatus: status} : value))
+      pending.revision = JSON.stringify(workspace.getSnapshot().artifacts.find(value => value.id === node.id))
+    }
     const release = ticket => {
       ticket.controller.abort()
       if (ticket.resource.owner !== ticket) return
       const workspace = ticket.resource.workspace
       const pending=ticket.smartPending,node=pending&&workspace.getSnapshot().artifacts.find(node=>node.id===pending.nodeId)
-      if(node?.generationStatus==='queued'&&!node.generationTaskId&&node.containerPrompt===pending.prompt)workspace.failGeneration(node.id,'示例已结束，生成已取消。')
+      if(node&&['queued','running'].includes(node.generationStatus)&&!node.generationTaskId&&node.containerPrompt===pending.prompt)workspace.failGeneration(node.id,'示例已结束，生成已取消。')
       ticket.resource.owner = null
       if (ticket.ownedSelection && ticket.selectionEpoch === ticket.ownedSelectionEpoch && JSON.stringify(workspace.getSnapshot().selection) === ticket.ownedSelection) {
         workspace.setSelection(ticket.selectionRestore?.input === ticket.selectionEpoch ? ticket.selectionRestore.selection : ticket.originalSelection)
@@ -408,7 +420,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         if (owned.current && owned.current.detail.runId !== detail.runId) throw changed()
         dispose(); return
       }
-      const allowed = ['mount-board', 'board-library', 'board-indices', 'board-watchlist', 'board-quote', 'board-news', 'board-announcements', 'board-calendar', 'board-link', 'board-add', 'board-arrange', 'board-smart-container', 'board-smart-generate']
+      const allowed = ['mount-board', 'board-library', 'board-indices', 'board-watchlist', 'board-quote', 'board-news', 'board-announcements', 'board-calendar', 'board-link', 'board-add', 'board-arrange-foundation', 'board-arrange', 'board-smart-container', 'board-smart-generate']
       if (!allowed.includes(detail.command)) throw Error('不支持的教程操作。')
       if (detail.command === 'mount-board') {
         const host = mainHost(detail)
@@ -431,23 +443,29 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           inspect:inspectResearchTask,cancel:cancelResearchTask,
           async generate(request){
             const workspace=resource.workspace
-            const queued=()=>{
+            const pendingNode=()=>{
               check(ticket)
               const node=workspace.getSnapshot().artifacts.find(node=>node.id===request.targetNodeId)
-              if(request.sessionId!==resource.id||request.kind!=='container'||request.targetNodeId!==ticket.nodes.smart||request.prompt!==homeGuideNativeSmartPrompt||sherlockBoardsAdapter?.getHomeGuideSession?.(resource.id)?.kind!=='board'||node?.generationStatus!=='queued'||node.generationTaskId||node.containerPrompt!==request.prompt)throw changed()
+              if(request.sessionId!==resource.id||request.kind!=='container'||request.targetNodeId!==ticket.nodes.smart||request.prompt!==homeGuideNativeSmartPrompt||sherlockBoardsAdapter?.getHomeGuideSession?.(resource.id)?.kind!=='board'||(!['queued','running'].includes(node?.generationStatus)||node.generationStatus==='running'&&ticket.smartPending?.nodeId!==node.id)||node.generationTaskId||node.containerPrompt!==request.prompt)throw changed()
               return node
             }
-            const node=queued(),pending={nodeId:node.id,prompt:request.prompt,revision:JSON.stringify(node)};ticket.smartPending=pending
+            const node=pendingNode(),pending={nodeId:node.id,prompt:request.prompt,revision:JSON.stringify(node)};ticket.smartPending=pending
+            syncSmartPlayback(ticket)
             try{
               await delay(ticket,1800);await playing(ticket)
-              if(JSON.stringify(queued())!==pending.revision)throw changed()
+              if(JSON.stringify(pendingNode())!==pending.revision)throw changed()
               const response=await window.fetch(homeGuideNativeSmartPath,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:resource.id,runId:detail.runId,canvasNodeId:node.id,prompt:request.prompt}),signal:ticket.controller.signal})
               const task=await response.json()
               if(!response.ok)throw Error(typeof task?.error==='string'?task.error:'示例组件未能生成。')
               await playing(ticket)
-              if(JSON.stringify(queued())!==pending.revision)throw changed()
+              if(JSON.stringify(pendingNode())!==pending.revision)throw changed()
               if(task?.canvasNodeId!==node.id||task.state!=='completed'||typeof task.taskId!=='string'||!task.taskId.trim()||typeof task.finalOutput!=='string'||parseResearchContainerSpec(task.finalOutput)?.type!=='table')throw Error('示例组件结果尚未就绪。')
-              if(!workspace.applyWorkbench({id:'home-guide:'+resource.id,createdAt:task.createdAt,panels:[{nodeId:node.id,taskId:task.taskId,preparedOutput:task.finalOutput}]}))throw Error('示例组件未能应用。')
+              // Native prepared hydration binds queued nodes, then applies the
+              // returned task inspection. Keep both commits in the same paint.
+              react_dom.flushSync(() => {
+                workspace.setArtifacts(workspace.getSnapshot().artifacts.map(value => value.id === node.id ? {...value,generationStatus:'queued'} : value))
+                if(!workspace.applyWorkbench({id:'home-guide:'+resource.id,createdAt:task.createdAt,panels:[{nodeId:node.id,taskId:task.taskId,preparedOutput:task.finalOutput}]}))throw Error('示例组件未能应用。')
+              })
               const completed=workspace.getSnapshot().artifacts.find(current=>current.id===node.id)
               if(completed?.generationStatus!=='completed'||completed.generationTaskId!==task.taskId||completed.containerSpec?.type!=='table')throw Error('示例组件结果尚未就绪。')
               return{ok:true,taskId:task.taskId}
@@ -521,6 +539,27 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         }
         if (!workspace.applyWorkbenchCells(workspace.getWorkbenchCells().map(cell => fitted.get(cell.id) || cell), false)) throw Error('看板布局暂时无法调整。')
       }
+      const arrangeBoard = async label => {
+        const canvas = ticket.host.querySelector('[data-research-canvas]')
+        // Move before the native Arrange changes content height, so the browser
+        // never clamps a bottom viewport to a newly shortened document.
+        if (canvas) await scrollBoard(ticket,canvas,0)
+        const button = toolbar()?.querySelector('[data-research-global-arrange]')
+        await click(ticket, button, label)
+        await settle(ticket, () => !canvas?.__eworkContentFit)
+        await playing(ticket)
+        layoutBoard()
+        ticket.arranged = true
+        clearOwnedSelection(ticket)
+        await settle(ticket, () => {
+          if (!canvas) return false
+          const origin = canvas.getBoundingClientRect()
+          return workspace.getSnapshot().artifacts.every(node => {
+            const card = canvas.querySelector('[data-research-node-id="' + CSS.escape(node.id) + '"]'), box = card?.getBoundingClientRect()
+            return box && Math.abs(box.left - origin.left - node.x + node.width / 2) < 2 && Math.abs(box.top - origin.top - node.y + node.height / 2) < 2 && Math.abs(box.width - node.width) < 2 && Math.abs(box.height - node.height) < 2
+          })
+        })
+      }
       const library = () => [...document.querySelectorAll('[data-home-guide-native-library]')].find(el => el.dataset.homeGuideNativeLibrary === detail.runId)
       if (detail.command === 'board-library') {
         const button = await libraryButton()
@@ -536,11 +575,21 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           const button = await libraryButton()
           if (button?.getAttribute('aria-expanded') !== 'true') await click(ticket, button, '打开组件库')
           await settle(ticket, () => !!library()?.querySelector('[data-financial-place="' + widget + '"]'))
-          await click(ticket, library().querySelector('[data-financial-place="' + widget + '"]'), { indices: '加入市场指数', watchlist: '加入自选列表', quote: '加入行情面板', news: '加入资讯列表', announcements: '加入公告列表', calendar: '加入日历' }[widget])
+          await click(ticket, library().querySelector('[data-financial-place="' + widget + '"]'), { indices: '加入市场指数', watchlist: '加入自选列表', quote: '加入行情面板', news: '加入资讯列表', announcements: '加入公告列表', calendar: '加入日历' }[widget], () => {
+            // The library creates the real node. Commit its tutorial row before
+            // React paints that insertion, so no transient native gap is shown.
+            const node = workspace.getSnapshot().artifacts.find(n => !before.has(n.id) && (widget === 'calendar' ? n.containerSpec?.type === 'calendar-tool' : n.containerSpec?.widget === widget))
+            if (!node) throw Error('组件暂时无法加入看板。')
+            ticket.nodes[widget] = node.id
+            layoutBoard(!ticket.arranged)
+          })
           await settle(ticket, () => workspace.getSnapshot().artifacts.some(n => !before.has(n.id) && (widget === 'calendar' ? n.containerSpec?.type === 'calendar-tool' : n.containerSpec?.widget === widget)))
           const node = workspace.getSnapshot().artifacts.find(n => !before.has(n.id) && (widget === 'calendar' ? n.containerSpec?.type === 'calendar-tool' : n.containerSpec?.widget === widget))
           ticket.nodes[widget] = node.id
           clearOwnedSelection(ticket)
+          // Layout cells form a native history transaction. Finish this owned
+          // insertion before the following native inspect/apply seed operation.
+          await save(ticket)
           if (widget === 'indices') {
             const state = await workspace.canvasAction('inspect', { ids: [node.id] }); await playing(ticket)
             const symbols = [...node.containerSpec.symbols, ...[['^GSPC','标普500'],['^IXIC','纳斯达克综合指数'],['^NDX','纳斯达克100'],['^RUT','罗素2000']].map(([code,name])=>({market:'INDEX',code,name}))]
@@ -606,6 +655,11 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         await cue(ticket,card?.querySelector('.ew-grid-header')||card,'阅读五只自选股的研究观察清单','move')
         await save(ticket);return
       }
+      if (detail.command === 'board-arrange-foundation') {
+        if (!['indices','watchlist','quote'].every(name => ticket.nodes[name])) throw Error('请先创建市场指数、自选和行情组件。')
+        await arrangeBoard('整理市场指数、自选与行情面板')
+        await save(ticket); return
+      }
       const { watchlist, quote, news, announcements } = ticket.nodes
       if (!watchlist || !quote || !news) throw Error('请先创建自选、行情和新闻组件。')
       if (detail.command === 'board-link') {
@@ -642,10 +696,13 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             if (canvas && !keepPairFrame) {
               const view = boardFrame(ticket,canvas), room = (view.height-24)*view.scaleY
               const sourceCard = from.closest('[data-research-node-id]').getBoundingClientRect(), targetCard = target.closest('[data-research-node-id]').getBoundingClientRect()
-              const choices = [[Math.min(sourceCard.top,targetCard.top),Math.max(sourceCard.bottom,targetCard.bottom)],[Math.min(a.top,targetCard.top),Math.max(a.bottom,targetCard.bottom)],[Math.min(a.top,b.top),Math.max(a.bottom,b.bottom)]]
-              const fit = choices.find(([top,bottom])=>bottom-top<=room)
-              if (!fit) throw Error('当前研究区高度不足以同时显示连接端点，请增大窗口后重试。')
-              await scrollBoard(ticket,canvas,canvas.scrollTop+(fit[0]-view.top)/view.scaleY-12)
+              const portsTop = Math.min(a.top,b.top), portsBottom = Math.max(a.bottom,b.bottom)
+              if (portsBottom-portsTop>room) throw Error('当前研究区高度不足以同时显示连接端点，请增大窗口后重试。')
+              // Prefer complete cards. Otherwise use the earliest viewport that
+              // contains both ports, retaining as much of the source row as the
+              // real available height permits instead of starting at its footer.
+              const top = Math.max(Math.min(sourceCard.top,targetCard.top),portsBottom-room)
+              await scrollBoard(ticket,canvas,canvas.scrollTop+(top-view.top)/view.scaleY-12)
               if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
               const framed = boardFrame(ticket,canvas)
               if (![from,target].every(port=>{const box=port.getBoundingClientRect();return box.top>=framed.top-1&&box.bottom<=framed.bottom-12*framed.scaleY+1})) throw Error('连接端点尚未完整显示，请增大研究区后重试。')
@@ -702,25 +759,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           await settle(ticket)
         }
       } else {
-        const canvas = ticket.host.querySelector('[data-research-canvas]')
-        // Move before the native Arrange changes content height, so the browser
-        // never clamps a bottom viewport to a newly shortened document.
-        if (canvas) await scrollBoard(ticket,canvas,0)
-        const button = toolbar()?.querySelector('[data-research-global-arrange]')
-        if (button && !button.disabled) await click(ticket, button, '整理六个组件，保留完整阅读空间')
-        await settle(ticket, () => !canvas?.__eworkContentFit)
-        await playing(ticket)
-        layoutBoard()
-        ticket.arranged = true
-        clearOwnedSelection(ticket)
-        await settle(ticket, () => {
-          if (!canvas) return false
-          const origin = canvas.getBoundingClientRect()
-          return workspace.getSnapshot().artifacts.every(node => {
-            const card = canvas.querySelector('[data-research-node-id="' + CSS.escape(node.id) + '"]'), box = card?.getBoundingClientRect()
-            return box && Math.abs(box.left - origin.left - node.x + node.width / 2) < 2 && Math.abs(box.top - origin.top - node.y + node.height / 2) < 2 && Math.abs(box.width - node.width) < 2 && Math.abs(box.height - node.height) < 2
-          })
-        })
+        await arrangeBoard('整理六个组件，保留完整阅读空间')
       }
       await save(ticket)
     }
@@ -740,7 +779,11 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       const value = event.detail
       if (!value || value.sessionId !== sessionId || typeof value.runId !== 'string' || typeof value.playing !== 'boolean') return
       playback = value
-      if (owned.current?.detail.runId === value.runId) owned.current.playing = value.playing
+      const ticket = owned.current
+      if (ticket?.detail.runId === value.runId) {
+        ticket.playing = value.playing
+        react_dom.flushSync(() => syncSmartPlayback(ticket))
+      }
     }
     const reset = () => dispose(false)
     const disconnected = new MutationObserver(() => { if (owned.current && !owned.current.host.isConnected) dispose() })

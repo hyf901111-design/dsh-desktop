@@ -226,7 +226,7 @@ test('a board action can remain paused for more than its active timeout budget',
 
 test('builds all six board components after native readiness, with reading time after each completed action',async()=>{
  vi.useFakeTimers();const f=fixture(),commands:string[]=[];let mount:any,library:any
- const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-arrange',3000],['board-link',2200],['board-add',2200],['board-smart-container',1000],['board-smart-generate',3000]]
+ const scenes:[string,number][]=[['board-library',900],['board-indices',1400],['board-watchlist',1100],['board-quote',1100],['board-arrange-foundation',1800],['board-news',1100],['board-announcements',1200],['board-calendar',1000],['board-arrange',3000],['board-link',2200],['board-add',2200],['board-smart-container',1000],['board-smart-generate',3000]]
  const reply=(detail:any)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))
  const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;commands.push(detail.command);if(detail.command==='mount-board')mount=detail;else if(detail.command==='board-library')library=detail;else if(detail.command!=='dispose')reply(detail)}
  window.addEventListener('sherlock:home-guide-native-request',receive)
@@ -241,7 +241,7 @@ test('builds all six board components after native readiness, with reading time 
   for(let index=0;index<scenes.length;index++){
    expect(commands).toEqual(['mount-board',...scenes.slice(0,index+1).map(scene=>scene[0])])
    const hold=scenes[index]![1]
-   if(index===6){
+   if(index===7){
     await vi.advanceTimersByTimeAsync(300);visibility(true)
     await vi.advanceTimersByTimeAsync(5000);expect(commands.at(-1)).toBe('board-calendar')
     visibility(false);await vi.advanceTimersByTimeAsync(hold-301)
@@ -259,7 +259,7 @@ test('stops the board on a failed calendar action before linking, selecting stoc
  window.addEventListener('sherlock:home-guide-native-request',receive)
  try{
   await f.controller.start('board');await vi.advanceTimersByTimeAsync(50000)
-  expect(commands).toEqual(['mount-board','board-library','board-indices','board-watchlist','board-quote','board-news','board-announcements','board-calendar'])
+  expect(commands).toEqual(['mount-board','board-library','board-indices','board-watchlist','board-quote','board-arrange-foundation','board-news','board-announcements','board-calendar'])
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('error')
   expect(document.querySelector('.odyssey-home-guide-status')?.textContent).toBe('日历工具未能打开')
   expect(document.querySelector('.odyssey-home-guide-fault')?.hasAttribute('hidden')).toBe(false)
@@ -271,7 +271,7 @@ test('keeps the stock search budget at ninety active seconds while excluding pau
  const receive=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail.command==='board-add'){adding=true;return}if(detail.command!=='dispose')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,ok:true}}))}
  window.addEventListener('sherlock:home-guide-native-request',receive)
  try{
-  await f.controller.start('board');await vi.advanceTimersByTimeAsync(13000);expect(adding).toBe(true)
+  await f.controller.start('board');await vi.advanceTimersByTimeAsync(14800);expect(adding).toBe(true)
   await vi.advanceTimersByTimeAsync(35000);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing')
   visibility(true);await vi.advanceTimersByTimeAsync(120000)
   expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused')
