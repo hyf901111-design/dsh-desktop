@@ -15,7 +15,7 @@ const evidence=artifactRoot+'/shell'
 let browser,runtimeSource,conversationSource,entry,styles
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- conversationSource=patchHomeGuideNative(execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(readFileSync(0,'utf8')))))"],{input:await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),encoding:'utf8',maxBuffer:64*1024*1024})).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;')
+ conversationSource=patchHomeGuideNative(execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripConversationGridOverlays}from'./test/fixtures/strip-conversation-transient-ui.mjs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripConversationGridOverlays(readFileSync(0,'utf8'))))))"],{input:await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),encoding:'utf8',maxBuffer:64*1024*1024})).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;')
  styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';
@@ -92,8 +92,9 @@ for(const[kind,index,view]of [['board',0,'research'],['note',1,'notes'],['ppt',2
 it('honors real typing in the original native composer while example preparation is delayed',async()=>{
  const f=await fixture({width:1000,height:900,hero:true,operations:true,entryKind:'ppt',deferPrepare:true}),{page}=f
  try{
-  await page.getByRole('button',{name:'切换到快速开始',exact:true}).click();await page.locator('button[data-case="2"]').click();await page.locator('[data-odyssey-operations-open-example]').click()
-  await expect.poll(()=>page.evaluate(()=>typeof window.shellProbe.releasePrepare)).toBe('function')
+  await page.getByRole('button',{name:'切换到快速开始',exact:true}).click();await expect.poll(()=>page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-motion')).toBe('idle')
+  await page.locator('button[data-case="2"]').click();await expect.poll(()=>page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('2');await page.locator('[data-odyssey-operations-open-example]').click()
+  await expect.poll(()=>page.evaluate(()=>typeof window.shellProbe.releasePrepare),{timeout:6500}).toBe('function')
   await page.locator('textarea').focus();await page.keyboard.press('End');await page.keyboard.type('保留用户接管后的新内容📈');const draft=await page.locator('textarea').inputValue()
   await page.evaluate(()=>window.shellProbe.releasePrepare());await page.waitForTimeout(100)
   expect(await page.evaluate(()=>window.shellProbe.entryTrace.actions.map(value=>value.type))).toEqual(['return','prepare']);expect(await page.locator('[data-home-guide]').count()).toBe(0)

@@ -1,3 +1,4 @@
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import { readFile } from 'node:fs/promises'
 import { expect, it, vi } from 'vitest'
 import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPanelConversation, patchSubagentPanelEntry } from '../scripts/lib/figma-subagent-panel.mjs'
@@ -6,7 +7,7 @@ import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presen
 import {existsSync} from 'node:fs'
 import {homedir} from 'node:os'
 import {join} from 'node:path'
-const conversationFixture=async()=>stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+const conversationFixture=async()=>stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
 const raw=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
 const source=process.env.EWORK_TEST_ORIGINAL?raw:patchSubagentPanelRuntime(raw)
 function method(name,next) {

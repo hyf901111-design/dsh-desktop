@@ -1,5 +1,6 @@
 // Use production Node bytes for exact function-toString installation records.
 import {createRequire} from 'node:module'
+import {stripWorkbenchReplay} from './strip-workbench-replay.mjs'
 const require=createRequire(import.meta.url)
 const {stripConversationSubmission}=require('../../scripts/lib/conversation-submission.mjs')
 const {stripConversationResponseProgress}=require('../../scripts/lib/conversation-response-progress.mjs')
@@ -12,5 +13,5 @@ export const stripConversationOuterUi=source=>stripSidebarNewNoteConversation(st
 // grid refreshes, in the same order as patch-web-frontend-loading.mjs.
 export function stripConversationGridOverlays(source){
  for(const [file,strip] of [['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput']])source=require('../../scripts/lib/'+file+'.mjs')[strip](source)
- return source
+ return stripWorkbenchReplay(source)
 }

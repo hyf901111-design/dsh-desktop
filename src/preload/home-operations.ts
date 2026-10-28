@@ -8,9 +8,10 @@ import { createHomeThemeGallery, homeAppearanceIcon, type HomeThemeGallery } fro
 type Section = 'input' | 'operations'
 type Motion = 'idle' | 'settling'
 export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
+export type HomeOperationExample = HomeOperationCard | 'workbench'
 export type HomeOperationActionContext = { signal: AbortSignal; origin?: {x:number;y:number}; revealComposer(): Promise<void>; handoff?():void }
 type Card = HomeOperationCard
-type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: Card, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void> }
+type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: HomeOperationExample, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void> }
 const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
 const DESIGN_WIDTH = 780
@@ -21,6 +22,7 @@ const smootherStep = (value: number) => {
   return t * t * t * (t * (t * 6 - 15) + 10)
 }
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
+const EXAMPLE_KINDS: HomeOperationExample[] = [...CARDS, 'workbench']
 const COPY = {
   zh: {
     demoIntro: '即将进入实例演示，\n演示过程不消耗费用',
@@ -30,7 +32,8 @@ const COPY = {
       ['研究看板', '快速创建行情看板', '通过研究模式，快速创建自选行情看板，以了解研究看板基础功能。'],
       ['笔记随航', '体验有AI护航的文档', '打开示例笔记，体验 AI 追问观点、\n核查事实，发现研究中的盲点。'],
       ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。'],
-      ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。']
+      ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。'],
+      ['自由搭建', '生成专属研究工作台', '描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。']
     ]
   },
   en: {
@@ -41,7 +44,8 @@ const COPY = {
       ['Research board', 'Quickly create a market dashboard', 'Create a watchlist dashboard in Research to explore the basics of research boards.'],
       ['Notes Copilot', 'Explore AI-assisted documents', 'Open an example note to see AI question ideas,\ncheck facts and uncover blind spots.'],
       ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.'],
-      ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.']
+      ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.'],
+      ['Build freely', 'Generate your research workbench', 'Describe your research needs and watch AI assemble\nan interactive research workbench.']
     ]
   }
 } as const
@@ -475,7 +479,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     signal.addEventListener('abort', abort, { once: true })
     check()
   })
-  const runAction = async (card: Card, example = false) => {
+  const runAction = async (card: HomeOperationExample, example = false) => {
     if ((example ? !options.onExample : !options.onAction) || actionController || !visible || motion !== 'idle' || state !== 'operations' || activeTab !== 'quick' || tabRunning) return
     clearFeedback()
     const controller = new win.AbortController()
@@ -487,7 +491,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       if(controller.signal.aborted)return
       const context = { signal: controller.signal, ...(example&&bounds?{origin:{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}}:{}), revealComposer: () => revealComposer(controller.signal),handoff:()=>{if(actionController!==controller||controller.signal.aborted)throw Error('本次卡片操作已取消。');actionHandedOff=true} }
       if (example) await options.onExample!(card, context)
-      else await options.onAction!(card, context)
+      else if (card !== 'workbench') await options.onAction!(card, context)
     }
     catch (error) {
       if (controller.signal.aborted || disposed || error instanceof Error && error.name==='AbortError') return
@@ -660,7 +664,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     quickPanel = grid; grid.id = 'odyssey-home-quick-panel'; grid.setAttribute('role', 'tabpanel'); grid.setAttribute('aria-labelledby', quickTab.id)
     usecase = doc.createElement('article'); usecase.className = 'odyssey-operations-usecase'
     exampleButton = doc.createElement('button'); exampleButton.type = 'button'; exampleButton.className = 'odyssey-operations-example-open'; exampleButton.dataset.odysseyOperationsOpenExample = ''; exampleButton.tabIndex = -1
-    exampleButton.addEventListener('click', () => { void runAction(CARDS[caseIndex]!, true) })
+    exampleButton.addEventListener('click', () => { void runAction(EXAMPLE_KINDS[caseIndex]!, true) })
     usecase.append(exampleButton)
     const createCaseLayer = (index: number) => {
       const layer = doc.createElement('div')

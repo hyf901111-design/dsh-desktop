@@ -1,3 +1,4 @@
+import {parseHomeWorkbenchStudySpec} from './home-workbench-study-contract.js';
 import {financialWidgetSpec} from './financial-widget-contract.js';
 import {boardTabsSpec} from './board-tabs-contract.js';
 import {parseAttachmentSpec} from './attachment-template-contract.js';
@@ -8,7 +9,7 @@ import {parseIframeSpec} from './iframe-template-contract.js';
 // Host-side acceptance uses the same schema as the canvas parser. Covered by parity tests.
 import { MAX_RESEARCH_HTML_BYTES } from "./html-artifact.js";
 const RESEARCH_CONTAINER_MAX_MARKDOWN = 32e3;
-const RESEARCH_CONTAINER_TYPES = new Set(["board-tabs","financial-widget","files","gallery","audio","summary","youtube","iframe","web","chart","table","kpi","markdown","mind-map","html"]);
+const RESEARCH_CONTAINER_TYPES = new Set(["research-study","board-tabs","financial-widget","files","gallery","audio","summary","youtube","iframe","web","chart","table","kpi","markdown","mind-map","html"]);
 		function normalizeResearchWebUrl(value) {
 			if (typeof value !== "string") return null;
 			const source = value.trim().replace(/^(https?:\/\/)(?:(?:%0[9a-d])|%20|[\u0009-\u000d\u0020])+/i, "$1");
@@ -55,6 +56,7 @@ const RESEARCH_CONTAINER_TYPES = new Set(["board-tabs","financial-widget","files
 			if (typeof value !== "object" || value === null || Array.isArray(value) || value.version !== 1 || !RESEARCH_CONTAINER_TYPES.has(value.type)) return null;
 			const title = researchContainerText(value.title, 256);
 			if (title === null) return null;
+			if (value.type === "research-study") return parseHomeWorkbenchStudySpec(value);
 			if (value.type === "financial-widget") return financialWidgetSpec(value);
 			if (value.type === "board-tabs") return boardTabsSpec(value);
 			if (value.type === "html") {

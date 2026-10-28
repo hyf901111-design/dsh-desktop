@@ -1,3 +1,4 @@
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
@@ -7,7 +8,7 @@ import {classifyResearchCreationRequest,patchResearchCreationProgress} from '../
 import {restoreResearchGridWorkbench,patchResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
 import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
-const currentClient=()=>restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+const currentClient=()=>restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))))
 const model=(text='private reasoning')=>({key:'m',kind:'assistant-step',data:{blocks:[{kind:'reasoning',text}]}})
 it('projects actual response metadata without retaining private reasoning or tool payloads',()=>{
  const meta=planningResponseMetadata([model(),{key:'t',kind:'tool-call',data:{root:{name:'read',argsRaw:'private/path'}}}])

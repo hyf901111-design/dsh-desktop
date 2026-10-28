@@ -155,3 +155,17 @@ it('keeps a registered same-owner example when its current directory is selected
  await expect(f.page.associateProject(note.sessionId,'::board-directory')).rejects.toThrow()
  f.setOwner('other');await expect(f.page.associateProject(ppt.sessionId,'::board-directory')).rejects.toThrow()
 })
+
+it('registers the workbench replay as an independent persistent research board',async()=>{
+ const f=await fixture(),first=await f.reply(f.send('workbench','prepare',{replay:true}))
+ expect(first).toMatchObject({ok:true,title:'白酒龙头研究工作台（演示案例）',fresh:true})
+ expect(f.sessions.list.getSnapshot().byId[first.sessionId].title).toBe('新研究')
+ expect(f.requests.filter(item=>item[0]==='favorite.add')).toEqual([['favorite.add',expect.objectContaining({dedicated:true,identity:expect.objectContaining({sessionId:first.sessionId,title:first.title})})]])
+ expect((await f.reply(f.send('workbench','open',{sessionId:first.sessionId}))).ok).toBe(true)
+ expect(f.opened).toEqual([first.sessionId])
+ const next=await f.reply(f.send('workbench','prepare',{replay:true}))
+ expect(next.sessionId).not.toBe(first.sessionId);expect(next.cwd).not.toBe(first.cwd)
+ const reopened=await fixture({disk:f.disk,byId:f.sessions.list.getSnapshot().byId})
+ expect(await reopened.reply(reopened.send('workbench'))).toMatchObject({ok:true,sessionId:next.sessionId,fresh:false})
+ reopened.setOwner('different');expect((await reopened.reply(reopened.send('workbench','open',{sessionId:next.sessionId}))).ok).toBe(false)
+})

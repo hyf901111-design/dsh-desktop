@@ -1,6 +1,7 @@
 export function FinancialConnectionPort({node,side,readOnly}){
+ const study=node.containerSpec.type==='research-study',role=node.containerSpec.role,description=study?(side==='output'?role==='directory'?'输出选中报告':'输出估值参数':role==='matrix'?'接收估值参数':['reader','analysis'].includes(role)?'接收选中报告':'接收选中个股'):null;
  const connected=side==='input'&&Boolean(financialLinkSourceId(node.containerSpec)),feed=['news','announcements'].includes(node.containerSpec.widget)
- return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port','data-financial-port':side,'data-financial-port-node':node.id,'data-connected':connected||undefined,disabled:readOnly,'aria-label':side==='output'?'输出选中个股':node.containerSpec.widget==='announcements'?'接收个股相关公告':feed?'接收个股相关新闻':'接收自选个股',title:side==='output'?'拖到左侧节点连接 · 拖到空白处断开':connected?'拖到右侧节点改接 · 拖到空白处断开':'拖到右侧节点连接',children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
+ return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port','data-financial-port':side,'data-financial-port-node':node.id,'data-connected':connected||undefined,disabled:readOnly,'aria-label':description||(side==='output'?'输出选中个股':node.containerSpec.widget==='announcements'?'接收个股相关公告':feed?'接收个股相关新闻':'接收自选个股'),title:side==='output'?'拖到左侧节点连接 · 拖到空白处断开':connected?'拖到右侧节点改接 · 拖到空白处断开':'拖到右侧节点连接',children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
 }
 
 // Both sides are measured separately: a quote is a receiver and a broadcaster.
@@ -25,7 +26,13 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   const measure=()=>{
    // The SVG starts inside the scroll viewport's border, while DOMRects include
    // that border. Use the same padding-box origin for circles and pointer paths.
-   const base=root.getBoundingClientRect(),originX=base.left+root.clientLeft,originY=base.top+root.clientTop,ports={},tabAnchors={}
+   const base=root.getBoundingClientRect(),originX=base.left+root.clientLeft,originY=base.top+root.clientTop,ports={},tabAnchors={},cards=[]
+   // Independent cards have no ports, but their edges still bound routing gutters.
+   for(const node of root.querySelectorAll('[data-research-node-id]')){
+    if(workspace.isBoardNodeVisible?.(node.dataset.researchNodeId)===false)continue
+    const r=node.getBoundingClientRect();if(r.width<=0||r.height<=0)continue;watch(node)
+    cards.push({left:r.left-originX+root.scrollLeft,right:r.right-originX+root.scrollLeft,top:r.top-originY+root.scrollTop,bottom:r.bottom-originY+root.scrollTop})
+   }
    for(const port of root.querySelectorAll('[data-financial-port]')){
     if(workspace.isBoardNodeVisible?.(port.dataset.financialPortNode)===false)continue
     watch(port);watch(port.closest('[data-research-node-id]'))
@@ -45,7 +52,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
     tabAnchors[tab.dataset.boardTab]={x:x-originX+root.scrollLeft,y:y-originY+root.scrollTop,tabId:tab.dataset.boardTab,overflow,stemLeft:x-navRect.left,stemTop:y-navRect.top-.75,stemHeight:Math.max(0,navRect.bottom-y)+1.5}
    }
    const content=root.querySelector('[data-research-content-layer]')
-   const next={width:root.clientWidth,height:Math.max(root.clientHeight,content?.scrollHeight||content?.getBoundingClientRect().height||0),ports,tabs:tabAnchors}
+   const next={width:root.clientWidth,height:Math.max(root.clientHeight,content?.scrollHeight||content?.getBoundingClientRect().height||0),ports,cards,tabs:tabAnchors}
    setGeometry(old=>JSON.stringify(old)===JSON.stringify(next)?old:next)
   }
   let frame=0,until=0
@@ -126,10 +133,10 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
  react.useEffect(()=>{if(draft&&!snapshot.artifacts.some(n=>n.id===draft.nodeId))clear()},[snapshot.artifacts,draft])
  // Round each orthogonal corner with a tangent circular arc. Short gaps use
  // a smaller radius, preserving both real endpoints and the canvas edge clamps.
- const orthogonal=raw=>{
+ const orthogonal=(raw,maxRadius=12)=>{
   const points=raw.filter((p,i)=>!i||p[0]!==raw[i-1][0]||p[1]!==raw[i-1][1]);let d=`M ${points[0][0]} ${points[0][1]}`
   for(let i=1;i<points.length-1;i++){
-   const [x,y]=points[i],[px,py]=points[i-1],[nx,ny]=points[i+1],before=Math.hypot(x-px,y-py),after=Math.hypot(nx-x,ny-y),ux=(x-px)/before,uy=(y-py)/before,vx=(nx-x)/after,vy=(ny-y)/after,cross=ux*vy-uy*vx,r=Math.min(12,before/2,after/2)
+   const [x,y]=points[i],[px,py]=points[i-1],[nx,ny]=points[i+1],before=Math.hypot(x-px,y-py),after=Math.hypot(nx-x,ny-y),ux=(x-px)/before,uy=(y-py)/before,vx=(nx-x)/after,vy=(ny-y)/after,cross=ux*vy-uy*vx,r=Math.min(maxRadius,before/2,after/2)
    if(!cross||!r){d+=` L ${x} ${y}`;continue}
    d+=` L ${x-ux*r} ${y-uy*r} A ${r} ${r} 0 0 ${cross>0?1:0} ${x+vx*r} ${y+vy*r}`
   }
@@ -143,6 +150,16 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   if(from.tabId){
    const entry=Math.max(2,to.left-12),lane=Math.min(to.top-12,from.y+24)
    return orthogonal([[from.x,from.y],[from.x,lane],[entry,lane],[entry,to.y],[to.x,to.y]])
+  }
+  if(to.top>from.bottom){
+   const cards=geometry.cards||[],nextRow=Math.min(to.top,...cards.filter(c=>c.top>=from.bottom).map(c=>c.top)),rowBottom=Math.max(from.bottom,...cards.filter(c=>c.top<from.bottom&&c.bottom>from.top).map(c=>c.bottom))
+   if(nextRow===to.top&&rowBottom<to.top){
+    const right=Math.min(Infinity,...cards.filter(c=>c.left>=from.right&&c.top<from.bottom&&c.bottom>from.top).map(c=>c.left)),left=Math.max(-Infinity,...cards.filter(c=>c.right<=to.left&&c.top<to.bottom&&c.bottom>to.top).map(c=>c.right))
+    const exit=Number.isFinite(right)?(from.right+right)/2:Math.min(geometry.width-2,from.right+12),entry=Number.isFinite(left)?(left+to.left)/2:Math.max(2,to.left-12),lane=(rowBottom+to.top)/2
+    // A cross-row link travels through actual column and row gutters, never
+    // diagonally through an unrelated component. Tight gutters reduce the radius.
+    return orthogonal([[from.x,from.y],[exit,from.y],[exit,lane],[entry,lane],[entry,to.y],[to.x,to.y]],Math.max(0,Math.min(12,exit-from.right,to.left-entry,(to.top-rowBottom)/2)))
+   }
   }
   if(to.left>=from.right){
    if(to.left-from.right>=40){const bend=Math.max(24,(to.x-from.x)/2);return `M ${from.x} ${from.y} C ${from.x+bend} ${from.y} ${to.x-bend} ${to.y} ${to.x} ${to.y}`}

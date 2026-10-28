@@ -388,23 +388,24 @@ it('updates all four illustrations when appearance changes without replacing the
   } finally { await page.close() }
 })
 
-it('pages through four use cases and keeps quick-card clicks local to the homepage preview', async () => {
+it('pages through five use cases and keeps quick-card clicks local to the homepage preview', async () => {
   const page = await fixture()
   try {
     await toggle(page).click()
     await waitState(page, 'operations')
     const dots = page.locator('.odyssey-operations-pagination button')
-    expect(await dots.count()).toBe(4)
+    expect(await dots.count()).toBe(5)
     const titles = []
-    for (let index = 0; index < 4; index++) {
+    for (let index = 0; index < 5; index++) {
       await dots.nth(index).click()
       expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(String(index))
       expect(await page.locator('.odyssey-operations-pagination [aria-pressed="true"]').count()).toBe(1)
       expect(await dots.nth(index).getAttribute('aria-pressed')).toBe('true')
       titles.push(await page.locator('.odyssey-operations-usecase .odyssey-operations-title').textContent())
     }
-    expect(new Set(titles).size).toBe(4)
+    expect(new Set(titles).size).toBe(5)
     expect(titles.every(Boolean)).toBe(true)
+    expect(titles[4]).toContain('自由搭建')
     const originalUrl = page.url()
     const cards = page.locator('.odyssey-operations-quick-card')
     expect(await cards.count()).toBe(4)
@@ -417,7 +418,7 @@ it('pages through four use cases and keeps quick-card clicks local to the homepa
   } finally { await page.close() }
 }, 15000)
 
-it('fills the active case track and automatically loops the four examples on the browser clock', async () => {
+it('fills the active case track and automatically loops the five examples on the browser clock', async () => {
   const page = await fixture({ reduced: false, clock: true })
   try {
     await toggle(page).click()
@@ -430,7 +431,7 @@ it('fills the active case track and automatically loops the four examples on the
     const track = await page.locator('.odyssey-operations-pagination [aria-pressed="true"] i').evaluate(track => parseFloat(getComputedStyle(track, '::before').width) / track.clientWidth)
     expect(track).toBeGreaterThan(.4)
     expect(track).toBeLessThan(.6)
-    for (const nextCase of ['1', '2', '3', '0']) {
+    for (const nextCase of ['1', '2', '3', '4', '0']) {
       const elapsed = await page.locator('.odyssey-operations-usecase').evaluate(card => parseFloat(getComputedStyle(card).getPropertyValue('--odyssey-operations-case-progress')))
       await page.clock.runFor((1 - elapsed) * 6000 + 500)
       expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(nextCase)
@@ -1915,7 +1916,7 @@ it('starts only the visible large-card example by click or keyboard, never by it
   await page.close()
 },15000)
 
-it.each([{index:0,kind:'board',en:false},{index:1,kind:'note',en:true},{index:2,kind:'ppt',en:false},{index:3,kind:'report',en:true}])('streams the $kind demo notice in the original description before handing off its unchanged entry',async({index,kind,en})=>{
+it.each([{index:0,kind:'board',en:false},{index:1,kind:'note',en:true},{index:2,kind:'ppt',en:false},{index:3,kind:'report',en:true},{index:4,kind:'workbench',en:false}])('streams the $kind demo notice in the original description before handing off its unchanged entry',async({index,kind,en})=>{
  const page=await fixture({reduced:false,clock:true});try{
   await page.evaluate(en=>{document.documentElement.dataset.odysseyLocale=en?'en':'zh';window.examples=[];window.homeOperations.onExample=async(card,context)=>window.examples.push({card,description:document.querySelector('[data-odyssey-operations-case-layer][aria-hidden="false"] .odyssey-operations-description').textContent,origin:context.origin});window.homeOperations.dispose();window.homeOperations.mount()},en)
   await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
@@ -2389,12 +2390,12 @@ it.each([{id:'haseeb',tone:'current-aurora'},{id:'default',tone:'white'},{id:'vg
   }finally{await page.close()}
 },30000)
 
-it('offers the fourth report example with exact copy, four keyboard tracks and a distinct large-card entry',async()=>{
+it('offers the fourth report example with exact copy, five keyboard tracks and a distinct large-card entry',async()=>{
  const page=await fixture();try{
   await page.evaluate(()=>{window.examples=[];window.quickActions=[];window.homeOperations.onExample=async kind=>window.examples.push(kind);window.homeOperations.onAction=async kind=>window.quickActions.push(kind);window.homeOperations.dispose();window.homeOperations.mount()})
   await toggle(page).click();await waitState(page,'operations');const tracks=page.locator('.odyssey-operations-pagination button')
-  expect(await tracks.count()).toBe(4)
-  await tracks.first().focus();await page.keyboard.press('End');await waitCase(page,3)
+  expect(await tracks.count()).toBe(5)
+  await tracks.first().focus();await page.keyboard.press('End');await waitCase(page,4);await page.keyboard.press('ArrowLeft');await waitCase(page,3)
   expect(await tracks.nth(3).evaluate(el=>el===document.activeElement)).toBe(true)
   expect(await page.locator('.odyssey-operations-title strong').textContent()).toBe('研究报告')
   expect(await page.locator('.odyssey-operations-subtitle').textContent()).toBe('从问题到研报')
@@ -2403,7 +2404,7 @@ it('offers the fourth report example with exact copy, four keyboard tracks and a
   expect(await page.locator('[data-odyssey-operations-case-layer] img').getAttribute('class')).toBe('odyssey-operations-trend')
   await page.locator('[data-odyssey-operations-open-example]').focus();await page.keyboard.press('Enter');await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['report'])
   await page.locator('.odyssey-operations-quick-card[data-card="report"]').click();await expect.poll(()=>page.evaluate(()=>window.quickActions)).toEqual(['report']);expect(await page.evaluate(()=>window.examples)).toEqual(['report'])
-  await tracks.nth(3).focus();await page.keyboard.press('ArrowRight');await waitCase(page,0);await page.keyboard.press('ArrowLeft');await waitCase(page,3);await page.keyboard.press('Home');await waitCase(page,0)
+  await tracks.nth(3).focus();await page.keyboard.press('ArrowRight');await waitCase(page,4);await page.keyboard.press('ArrowRight');await waitCase(page,0);await page.keyboard.press('ArrowLeft');await waitCase(page,4);await page.keyboard.press('Home');await waitCase(page,0)
   expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
  }finally{await page.close()}
 },15000)
@@ -2429,7 +2430,7 @@ it.each([
   const label=`report-${options.dark?'dark':'light'}-${options.locale}-window${options.width}x${options.height}`;await mkdir('output/ppt-markup-design-20261025/report-card-validation',{recursive:true});await writeFile(`output/ppt-markup-design-20261025/report-card-validation/${label}.json`,JSON.stringify(geometry,null,2));await region(page).screenshot({path:`output/ppt-markup-design-20261025/report-card-validation/${label}.png`})
  }finally{await page.close()}
 },20000)
-it('retargets smoothly through the fourth report pane while preserving four-track clock and reduced motion semantics',async()=>{
+it('retargets smoothly through the fourth report pane while preserving five-track clock and reduced motion semantics',async()=>{
  const page=await fixture({reduced:false,clock:true});try{
   await toggle(page).click();await waitState(page,'operations');await page.mouse.move(1,1);await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+100))
   for(const index of[3,1,3]){
@@ -2492,5 +2493,22 @@ it('decodes the fourth report Figma assets locally at their native slots without
   await toggle(page).click();await waitState(page,'operations');await page.locator('.odyssey-operations-pagination [data-case="3"]').click();await waitCase(page,3)
   const backgrounds=await page.locator('[data-odyssey-operations-case-layer][data-case="3"] .glow').evaluateAll(async els=>Promise.all(els.map(async el=>{const url=JSON.parse(getComputedStyle(el).backgroundImage.slice(4,-1)),image=new Image();image.src=url;await image.decode();return{width:image.naturalWidth,height:image.naturalHeight,slot:el.getBoundingClientRect().width}})))
   expect(backgrounds.every(image=>image.width>0&&image.height>0&&image.slot>0)).toBe(true)
+ }finally{await page.close()}
+},15000)
+
+it.each([{dark:false,width:1380,height:900},{dark:true,width:680,height:480}])('opens the fifth workbench example with exact copy and keeps its compact card readable %j',async options=>{
+ const page=await fixture({...options,themes:true});try{
+  await page.evaluate(()=>{window.examples=[];window.homeOperations.onExample=async kind=>window.examples.push(kind);window.homeOperations.dispose();window.homeOperations.mount()})
+  await toggle(page).click();await waitState(page,'operations');await page.locator('.odyssey-operations-pagination button').first().focus();await page.keyboard.press('End');await waitCase(page,4)
+  const layer=page.locator('[data-odyssey-operations-case-layer][data-case="4"]')
+  expect(await layer.locator('.odyssey-operations-title strong').textContent()).toBe('自由搭建')
+  expect(await layer.locator('.odyssey-operations-subtitle').textContent()).toBe('生成专属研究工作台')
+  expect(await layer.locator('.odyssey-operations-description').textContent()).toBe('描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。')
+  const bounds=await page.locator('.odyssey-operations-usecase').boundingBox(),description=await layer.locator('.odyssey-operations-description').boundingBox(),tracks=await page.locator('.odyssey-operations-pagination').boundingBox()
+  expect(description.y+description.height).toBeLessThanOrEqual(tracks.y);expect(description.x+description.width).toBeLessThanOrEqual(bounds.x+bounds.width)
+  expect(await page.locator('.odyssey-operations-quick-card').count()).toBe(4)
+  await mkdir('output/home-workbench-entry',{recursive:true});await page.locator('.odyssey-operations-usecase').screenshot({path:`output/home-workbench-entry/${options.dark?'dark-small':'light-wide'}.png`})
+  await page.locator('[data-odyssey-operations-open-example]').focus();await page.keyboard.press('Enter');await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['workbench'])
+  expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
  }finally{await page.close()}
 },15000)

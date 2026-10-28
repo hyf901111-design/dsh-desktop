@@ -41,6 +41,7 @@ import { mountHomeOperations } from './home-operations'
 import { mountHomeGuides, playHomeGuideFromOperations } from './home-guides'
 import { mountHomeNotesGuide } from './home-guide-notes'
 import { mountHomePresentationGuide } from './home-guide-presentation'
+import { mountHomeWorkbenchGuide } from './home-guide-workbench'
 import { createHomeOperationsActions } from './home-operations-actions'
 import { mountFigmaResizeFeedback } from './figma-resize-feedback'
 import { mountFigmaScrollbars } from './figma-scrollbars'
@@ -256,7 +257,8 @@ function initializeUi(): void {
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
-  const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuide(session.sessionId), prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide })
+  const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuide(session.sessionId), prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide,
+    mountWorkbench: mountHomeWorkbenchGuide })
   const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { themeController: getHomeThemeController(document), onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample: (kind, context) => playHomeGuideFromOperations(homeGuides,kind,context) }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {

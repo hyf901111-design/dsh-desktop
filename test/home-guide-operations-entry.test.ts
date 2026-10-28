@@ -2,7 +2,7 @@
 import {expect,test,vi} from 'vitest'
 import {playHomeGuideFromOperations,type HomeGuideKind} from '../src/preload/home-guides'
 
-test.each<HomeGuideKind>(['board','note','ppt','report'])('hands the intact %s entry to the controller before any independent navigation',async kind=>{
+test.each<HomeGuideKind>(['board','note','ppt','report','workbench'])('hands the intact %s entry to the controller before any independent navigation',async kind=>{
  const start=vi.fn(async()=>{}),context={signal:new AbortController().signal,revealComposer:vi.fn(async()=>{}),handoff:vi.fn(),origin:{x:240,y:320}}
  await playHomeGuideFromOperations({start},kind,context)
  expect(start).toHaveBeenCalledExactlyOnceWith(kind,{replay:true,entry:context})

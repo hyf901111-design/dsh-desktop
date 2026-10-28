@@ -6,6 +6,7 @@ import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDec
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { patchNoteSessionRuntime } from '../scripts/lib/notes-session.mjs'
 import { HOME_BOARD_SMART_PATH, HOME_BOARD_SMART_PROMPT, HOME_BOARD_SMART_ARTIFACT } from '../packages/dsh-research-task-runtime/home-board-smart-contract.js'
+import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 
 // Browser plugin not available. Use the existing Playwright/Chromium runtime;
 // this fixture mounts production native components and blocks all live providers.
@@ -35,7 +36,7 @@ beforeAll(async () => {
   // order before refreshing native guide and annotation renderer anchors.
   const unTabbed = stripBoardTabsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
   const submitted = stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbed)))
-  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(submitted))))))
+  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripWorkbenchReplay(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(submitted)))))))
   conversationSource = patchBoardTabsClient(patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native))))
     .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};exports.__page=sherlockBoardsPage;')
   const workspaceSource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'),pickerStart=workspaceSource.indexOf('function WorkspacePickFlow('),pickerEnd=workspaceSource.indexOf('\n\t\t/**',pickerStart),workspacePicker=workspaceSource.slice(pickerStart,pickerEnd)
@@ -698,7 +699,9 @@ it.each([{width:1380,height:900},{width:1080,height:640}])('uses acknowledged re
   for(const cue of drags)for(const box of [cue.fromRect,cue.targetRect]){expect(box.width).toBeGreaterThan(0);expect(box.y).toBeGreaterThanOrEqual(cue.canvas.y-1);expect(box.bottom).toBeLessThanOrEqual(cue.canvas.bottom+1)}
   expect(result.typed).toEqual(['000858','000425'].flatMap(code=>Array.from({length:code.length},(_,index)=>code.slice(0,index+1))));expect(watch.spec.symbols).toHaveLength(5);expect(quote.spec.symbols[0].code).toBe('000858');expect(quote.spec.linkedWatchlistId).toBe(watch.id);expect(news.spec.linkedSourceId).toBe(quote.id)
   expect(result.stored.map(node=>node.id).sort()).toEqual(result.nodes.map(node=>node.id).sort())
-  expect(await page.locator('#guide-host .ew-financial-connection-line').count()).toBe(2)
+  // Native connections are shown for a selected endpoint; the guide releases its owned selection.
+  await page.locator('#guide-host [data-research-node-id]:has([data-financial-widget="quote"]) .ew-grid-header').click({position:{x:130,y:12}})
+  await expect.poll(()=>page.locator('#guide-host .ew-financial-connection-line').count()).toBe(2)
   expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   await preserved(page);expect(errors).toEqual([]);expect(external).toEqual([])
  }finally{await page.close()}
@@ -748,7 +751,15 @@ it('runs the live-bridge board tutorial on the real native canvas and retains th
     expect(await page.locator('#guide-host [data-home-guide-sample-label]').count()).toBe(0)
     await succeeds(page, 'board-arrange')
     await succeeds(page, 'board-link')
-    await expect.poll(() => page.locator('#guide-host .ew-financial-connection-line').count()).toBeGreaterThanOrEqual(2)
+    const linked=await page.evaluate(()=>{const snapshot=window.guideProbe.registry.for('guide-browser-session').getSnapshot();return{selected:snapshot.selection.selectedNodeIds,nodes:snapshot.artifacts.map(n=>({id:n.id,spec:n.containerSpec})),ports:[...document.querySelectorAll('#guide-host [data-financial-port]')].map(n=>({id:n.dataset.financialPortNode,side:n.dataset.financialPort})),visibleLinks:document.querySelectorAll('#guide-host .ew-financial-connection-line').length}})
+    const source=linked.nodes.find(n=>n.spec.widget==='watchlist'),quote=linked.nodes.find(n=>n.spec.widget==='quote'),news=linked.nodes.find(n=>n.spec.widget==='news')
+    expect(quote.spec.linkedWatchlistId).toBe(source.id);expect(news.spec.linkedSourceId).toBe(quote.id)
+    expect(linked.selected).toEqual([]);expect(linked.visibleLinks).toBe(0)
+    expect(linked.ports).toEqual(expect.arrayContaining([{id:source.id,side:'output'},{id:quote.id,side:'input'},{id:quote.id,side:'output'},{id:news.id,side:'input'}]))
+    // Select the middle component through its real header to reveal both native relationships.
+    await page.locator('#guide-host [data-research-node-id]:has([data-financial-widget="quote"]) .ew-grid-header').click({position:{x:130,y:12}})
+    await expect.poll(() => page.locator('#guide-host .ew-financial-connection-line').count()).toBe(2)
+    await writeFile(evidence+'/board-link-selection-evidence.json',JSON.stringify({before:linked,after:await page.evaluate(()=>({selected:window.guideProbe.registry.for('guide-browser-session').getSnapshot().selection.selectedNodeIds,visibleLinks:document.querySelectorAll('#guide-host .ew-financial-connection-line').length}))},null,2))
     await expect.poll(() => widget(page, 'quote').locator('[data-financial-chart]').count()).toBe(1)
     await expect.poll(() => widget(page, 'news').locator('.ew-news-list').textContent()).toMatch(/行情桥测试新闻/)
     expect(await widget(page,'news').locator('.ew-financial-footer').innerText()).toContain('行情桥测试服务')

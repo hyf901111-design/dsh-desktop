@@ -21,6 +21,8 @@ import { patchStandardModeClient, patchStandardModeRuntime } from './lib/standar
 import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
 import {patchHomeGuideNative,stripHomeGuideNative} from './lib/home-guide-native.mjs'
 import {patchHomeGuidePresentationNative,stripHomeGuidePresentationNative} from './lib/home-guide-presentation-native.mjs'
+import {patchHomeWorkbenchClient,stripHomeWorkbenchClient} from './lib/home-workbench-client.mjs'
+import {patchHomeGuideWorkbenchNative,stripHomeGuideWorkbenchNative} from './lib/home-guide-workbench-native.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
 import {patchAudioClient} from './lib/audio-client.mjs'
@@ -183,7 +185,7 @@ const submittedConversationSource=stripConversationResponseProgress(stripConvers
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
 const sidebarNewNotePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js')
 writeFileSync(sidebarNewNotePath,stripSidebarNewNoteShell(readFileSync(sidebarNewNotePath,'utf8')))
-writeFileSync(gridConversationPath,restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(readFileSync(gridConversationPath,'utf8')))))))
+writeFileSync(gridConversationPath,restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripHomeWorkbenchClient(stripHomeGuideWorkbenchNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(readFileSync(gridConversationPath,'utf8')))))))))
 await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
@@ -313,7 +315,7 @@ for (const runtime of ['lib/index.js', 'lib/types/index.js']) {
 writeFileSync(conversationPath, patchComposerDeliverablePreview(readFileSync(conversationPath, 'utf8')))
 
 // Tutorial portals use the final resident components, after all source refreshes.
-writeFileSync(conversationPath, patchHomeGuidePresentationNative(patchHomeGuideNative(readFileSync(conversationPath, 'utf8'))))
+writeFileSync(conversationPath, patchHomeGuideWorkbenchNative(patchHomeWorkbenchClient(patchHomeGuidePresentationNative(patchHomeGuideNative(readFileSync(conversationPath, 'utf8'))))))
 // Reply components consume the final native renderers and input/reference helpers.
 writeFileSync(conversationPath,patchConversationComponents(readFileSync(conversationPath,'utf8')))
 // A completed compaction keeps its published key, even when no checkpoint was produced.

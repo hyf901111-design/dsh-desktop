@@ -1,3 +1,4 @@
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
 import { createRequire } from 'node:module'
@@ -8,7 +9,7 @@ import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
 import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 
 const raw = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-const patched = patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(raw)))
+const patched = patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(raw))))
 const jsx = (type, props) => ({ type, props })
 
 it('keeps native send, stop and attachment callbacks reachable, with Escape and outside dismissal', () => {

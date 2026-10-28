@@ -5,13 +5,14 @@ import {tmpdir} from 'node:os'
 import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
 import {patchHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 import {NotesStore} from '../src/main/notes/store'
 import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 let browser,script,css,runtime,conversation,theme
 const output='/tmp/home-guide-entry-handoff-20261026'
 beforeAll(async()=>{
  runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- conversation=patchHomeGuideNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;exports.__createChatStore=createChatStore;')
+ conversation=patchHomeGuideNative(stripWorkbenchReplay(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;exports.__createChatStore=createChatStore;')
  theme=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  const result=await build({entryPoints:['test/fixtures/home-guide-entry-handoff-browser.tsx'],bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.svg':'dataurl','.woff':'dataurl','.woff2':'dataurl'},plugins:[homeGuidePlaybackFixture(),{name:'inline-css',setup(b){b.onResolve({filter:/\.css\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/, ''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>{const source=await readFile(args.path,'utf8');if(!source.includes('@import'))return{contents:source,loader:'text'};const bundled=await build({entryPoints:[args.path],bundle:true,conditions:['browser','import','style'],write:false,outfile:'note.css',logLevel:'silent',loader:{'.svg':'dataurl','.woff':'dataurl','.woff2':'dataurl'}});return{contents:bundled.outputFiles.find(file=>file.path.endsWith('.css')).text,loader:'text'}})}}]})
  script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css=result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||''

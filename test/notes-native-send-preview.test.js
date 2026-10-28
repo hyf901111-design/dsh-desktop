@@ -1,3 +1,4 @@
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
@@ -10,7 +11,7 @@ const {patchNotesActivity}=require('./scripts/lib/notes-activity.mjs')
 let browser,script,css
 beforeAll(async()=>{
  const runtime=await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- const native=patchNotesActivity(patchNotesComposer(stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))).replace('exports.SessionInputShell = SessionInputShell;','exports.SessionInputShell = SessionInputShell; exports.__InputBar=InputBar; exports.__NoteHistory=EWorkNotesActivity;')
+ const native=patchNotesActivity(patchNotesComposer(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))))).replace('exports.SessionInputShell = SessionInputShell;','exports.SessionInputShell = SessionInputShell; exports.__InputBar=InputBar; exports.__NoteHistory=EWorkNotesActivity;')
 const output=await build({stdin:{resolveDir:repo,loader:'tsx',contents:`
 import React from 'react';import * as jsxRuntime from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';
 import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';

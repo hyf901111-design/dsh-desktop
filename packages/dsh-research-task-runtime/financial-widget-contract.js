@@ -41,9 +41,11 @@ export function financialSelectedSymbol(spec){
  return spec.symbols.find(s=>s.market+':'+s.code===spec.selectedSymbol)??spec.symbols[0]??null
 }
 export function financialLinkSourceId(spec){
+ if(spec?.type==='research-study')return spec.linkedSourceId;
  return spec?.widget==='quote'?spec.linkedWatchlistId:['news','announcements'].includes(spec?.widget)?spec.linkedSourceId:undefined
 }
 export function financialCanLink(source,target){
+ if(target?.type==='research-study'){if(['peers','news'].includes(target.role))return false;if(['reader','analysis'].includes(target.role))return source?.type==='research-study'&&source.role==='directory';if(target.role==='matrix')return source?.type==='research-study'&&source.role==='valuation';return source?.type==='financial-widget'&&source.widget==='watchlist'}
  return source?.type==='financial-widget'&&target?.type==='financial-widget'&&(source.widget==='watchlist'&&['quote','news','announcements'].includes(target.widget)||source.widget==='quote'&&['news','announcements'].includes(target.widget))
 }
 export function financialNewsQuery(spec){

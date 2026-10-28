@@ -21,7 +21,7 @@ function fixture(fresh = true) {
  }
  window.addEventListener('sherlock:home-guide-session-request',listener);off=()=>window.removeEventListener('sherlock:home-guide-session-request',listener)
  const runStep=vi.fn(async(_step:string)=>{}),release=vi.fn(),flush=vi.fn(async()=>{})
- const adapters={prepareHandoff:vi.fn(async(_session:any,_signal:AbortSignal):Promise<void|(()=>void)>=>{}),mountNotes:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountPresentation:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush}))}
+ const adapters={mountWorkbench:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),prepareHandoff:vi.fn(async(_session:any,_signal:AbortSignal):Promise<void|(()=>void)>=>{}),mountNotes:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountPresentation:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush}))}
  const controller=mountHomeGuides(document,adapters);dispose=controller.dispose
  return{controller,adapters,runStep,release,flush,text,header,requests,setOpen:(fn:(detail:any,reply:(value:any)=>void)=>void)=>{open=fn},setPrepare:(fn:(detail:any)=>void)=>{prepare=fn}}
 }
@@ -357,4 +357,38 @@ test('preserves a note review readiness budget across window blur and resumes th
  focus(true);await vi.advanceTimersByTimeAsync(9499);expect(reviewed).toBe(false);await vi.advanceTimersByTimeAsync(1);expect(reviewed).toBe(true)
  expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing');expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review'])
  await f.controller.reset(false);focus(false);focus(true);await vi.advanceTimersByTimeAsync(35000);expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull()
+})
+
+test('plays the workbench in research mode with the real composer alive and hands off the same session',async()=>{
+ vi.useFakeTimers();const f=fixture();await f.controller.start('workbench',{replay:true});await vi.advanceTimersByTimeAsync(0)
+ expect(f.adapters.mountWorkbench).toHaveBeenCalledOnce()
+ expect(f.header.querySelector('[data-conversation-view-id="research"]')?.getAttribute('aria-selected')).toBe('true')
+ expect(f.text.closest('.wSkVaW_root')?.getAttribute('data-home-guide-live')).toBe('true')
+ expect(f.text.parentElement?.inert).not.toBe(true)
+ expect(f.runStep).toHaveBeenCalledWith('wb-00')
+ expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(0)
+ await vi.advanceTimersByTimeAsync(10000)
+ expect(f.requests.filter(row=>row.command==='activate-title')).toEqual([expect.objectContaining({kind:'workbench',sessionId:'example-workbench-new'})])
+ await vi.advanceTimersByTimeAsync(90000)
+ expect(f.runStep.mock.calls.map(row=>row[0])).toEqual(Array.from({length:25},(_,i)=>'wb-'+String(i).padStart(2,'0')))
+ expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
+ expect(document.querySelector('[data-home-guide]')).toBeNull();expect(f.header.dataset.eworkNotesSession).toBe('example-workbench-new')
+})
+
+test('pauses the workbench when the native window loses focus and resumes at the same stage',async()=>{
+ vi.useFakeTimers();const f=fixture();await f.controller.start('workbench');await vi.advanceTimersByTimeAsync(0)
+ focus(false);const count=f.runStep.mock.calls.length;await vi.advanceTimersByTimeAsync(60000);expect(f.runStep).toHaveBeenCalledTimes(count)
+ focus(true);await vi.advanceTimersByTimeAsync(10000);expect(f.runStep.mock.calls.length).toBeGreaterThan(count)
+ await f.controller.reset(false);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
+})
+
+test('opens a saved workbench directly without mounting a fresh-only actor or replaying over edits',async()=>{
+ const f=fixture(false);f.adapters.mountWorkbench.mockRejectedValue(Error('请使用独立的空白研究示例。'))
+ await f.controller.start('workbench')
+ expect(f.adapters.mountWorkbench).not.toHaveBeenCalled();expect(f.runStep).not.toHaveBeenCalled()
+ expect(f.header.dataset.eworkNotesSession).toBe('example-workbench')
+ expect(f.header.querySelector('[data-conversation-view-id="research"]')?.getAttribute('aria-selected')).toBe('true')
+ expect(f.text.value).toBe('原有草稿');expect(document.querySelector('[data-home-guide]')).toBeNull()
+ expect(f.header.parentElement?.hasAttribute('data-home-guide-resident')).toBe(false)
+ expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(0)
 })

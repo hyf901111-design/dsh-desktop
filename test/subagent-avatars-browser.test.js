@@ -1,3 +1,4 @@
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile,mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
@@ -15,7 +16,7 @@ beforeAll(async()=>{
  temporary=await mkdtemp(join(tmpdir(),'subagent-avatar-native-'));await mkdir(artifact,{recursive:true})
  catalog=patchFigmaRefinementSubagent(await readFile('node_modules/@deepseek-ai/dsh-client-ui-subagent/lib/client.js','utf8'))
  runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- const native=patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+ const native=patchSubagentPanelConversation(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))))
  const start=native.indexOf('function OdysseySubagentPanelHeader('),end=native.indexOf('\nclass ResearchSidebarCoordinator',start),definition=native.indexOf('/* sherlock:subagent-avatars:definition:v1 */')
  detail=native.slice(definition>=0?definition:start,end)
  script=(await build({entryPoints:['test/fixtures/subagent-avatars-browser.tsx'],bundle:true,write:false,format:'iife',platform:'browser',logLevel:'silent'})).outputFiles[0].text
