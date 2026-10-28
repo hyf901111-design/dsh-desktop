@@ -50,6 +50,12 @@ it('stops on the first Enter without submitting, keeps normal editing and only s
   await f.input.press('Enter');await expect.poll(()=>f.page.evaluate(()=>probe.submits.length)).toBe(1);expect(await f.page.evaluate(()=>probe.submits[0].draft)).toBe('保留文字x');expect(f.errors).toEqual([])
  }finally{await f.close()}
 })
+it('keeps native Shift+Enter newline editing while stopping capture',async()=>{
+ const f=await fixture();try{
+  await f.start();await f.emit({type:'partial',text:'正文'});await expect.poll(()=>f.input.evaluate(el=>el.selectionEnd)).toBe(2)
+  await f.input.press('Shift+Enter');expect(await f.input.inputValue()).toBe('正文\n');expect(await f.page.locator('[data-composer-voice-pill]').count()).toBe(0);expect(await f.page.evaluate(()=>probe.submits)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})
 it.each(['key','blur','stop','hidden','foreign-write','dispose'])('freezes the visible transcript on %s and rejects delayed partial/final callbacks',async reason=>{
  const f=await fixture('notes');try{
   await f.start();await f.emit({type:'partial',text:'已识别的要求'})

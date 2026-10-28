@@ -59,7 +59,7 @@ export function createComposerVoiceSession(options){
   if(!request)return
   stop()
   // Let an IME consume its commit. The first ordinary Enter only stops dictation.
-  if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229&&!options.composing?.()){event.preventDefault();event.stopPropagation()}
+  if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229&&!options.composing?.()){event.preventDefault();event.stopPropagation()}
  }
  const blur=event=>{if(event.target===caret?.input)clearCaret();if(request&&event.target===request.input)stop()}
  const edit=event=>{if(event.target===caret?.input)clearCaret();if(request&&event.target===request.input)stop()}

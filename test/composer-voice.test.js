@@ -32,6 +32,11 @@ it('consumes only the first non-IME Enter and lets composition commit normally',
  const f=fixture();await f.voice.start();f.emit({type:'partial',text:'不要误发'});expect(f.event('Enter').defaultPrevented).toBe(true);expect(f.event('Enter').defaultPrevented).toBe(false)
  f.keyboard.setDraft('');await f.voice.start();f.compose();expect(f.event('Enter',{isComposing:true,keyCode:229}).defaultPrevented).toBe(false);expect(f.states.at(-1).active).toBe(false)
 })
+it('keeps Shift+Enter available for a normal newline while stopping recognition',async()=>{
+ const f=fixture();await f.voice.start();f.emit({type:'partial',text:'正文'})
+ expect(f.event('Enter',{shiftKey:true}).defaultPrevented).toBe(false)
+ expect(f.states.at(-1).active).toBe(false)
+})
 it.each(['blur','blocked','foreign-write','hidden','removed','dispose'])('revokes on %s before late callbacks can change the draft',async reason=>{
  const f=fixture();await f.voice.start();const id=f.request();f.emit({type:'partial',text:'保留转写'})
  if(reason==='blur')f.doc.querySelector('button').focus()
