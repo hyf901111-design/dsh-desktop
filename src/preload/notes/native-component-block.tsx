@@ -14,10 +14,14 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
  useNotePresentation(root,node,context.dark)
  const [ready,setReady]=useState(false),[error,setError]=useState(''),[refresh,setRefresh]=useState(0)
  const [height,setHeight]=useState(Math.max(160,Math.min(2400,generation?220:(node.height||362)-42)))
- const size=useNoteComponentSize({block,node,editor:context.editor,root,naturalHeight:height}),renderKey=JSON.stringify({...node,noteSize:undefined,...node.kind==='web-link'?{sourceText:undefined}:{}})
+ const size=useNoteComponentSize({block,node,editor:context.editor,root,naturalHeight:height})
+ const {interactionState:journal,...renderConfig}=node.config||{},renderKey=JSON.stringify({...node,config:Object.keys(renderConfig).length?renderConfig:undefined,noteSize:undefined,...node.kind==='web-link'?{sourceText:undefined}:{}})
+ const latestView=useRef({node,context,refresh,generation});latestView.current={node,context,refresh,generation}
+ const publishView=()=>{const current=latestView.current;document.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:instance.current,hostId:host.current?.id,headerId:instance.current+'-title',sessionId:current.context.sessionId,node:current.node,dark:current.context.dark,refresh:current.refresh,mode:current.generation?'generation':'component',readOnly:!current.context.editor?.isEditable}}))}
+ useEffect(()=>{if(ready)publishView()},[node,ready])
  useEffect(()=>{
   let attempts=0,live=true,timer:ReturnType<typeof setTimeout>|undefined;setReady(false);setError('')
-  const publish=()=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:instance.current,hostId:host.current?.id,headerId:instance.current+'-title',sessionId:context.sessionId,node,dark:context.dark,refresh,mode:generation?'generation':'component',readOnly:!context.editor?.isEditable}}))
+  const publish=publishView
   const load=async()=>{try{
    if(!generation&&node.kind!=='web-link')await context.bridge.request(node.noteReply?'reply-render':'component-render',{sessionId:context.sessionId,...node.noteReply?{text:node.excerpt}:{spec:node.containerSpec}})
    if(!live)return
@@ -62,6 +66,15 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
     if(JSON.stringify(previous)!==JSON.stringify(next))context.editor.updateBlock(block.id,{props:{payload:JSON.stringify(next)}})
    }
    if(value.action==='size'&&Number.isFinite(value.height))setHeight(Math.max(160,Math.min(2400,value.height)))
+   if(value.action==='interaction'){
+    const reply=(ok:boolean,message?:string,state?:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:instance.current,sessionId:context.sessionId,requestId:value.requestId,ok,message,state}}))
+    try{
+     if(!context.commitHtmlInteraction)throw Error(t('笔记交互保存不可用。'))
+     const state=await context.commitHtmlInteraction({blockId:block.id,nodeId:value.nodeId,html:value.html,version:value.version,event:value.event},()=>live)
+     if(live)reply(true,undefined,state)
+    }catch(error){if(live)reply(false,(error as Error).message)}
+    return
+   }
    if(value.action==='spec'){
     const reply=(ok:boolean,message?:string)=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:instance.current,sessionId:context.sessionId,requestId:value.requestId,ok,message}}))
     try{

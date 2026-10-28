@@ -1,3 +1,4 @@
+import {createNoteHtmlInteraction} from './html-interaction'
 import {noteGenerationError} from '../../shared/workspace-notes'
 import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import {capabilityReceiptText} from '../../../packages/dsh-research-task-runtime/client-capability-receipts.js'
@@ -304,6 +305,9 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const flush=()=>persistConfirmed();props.saveBinding.ready(flush)
     return()=>props.saveBinding?.dispose?.(flush)
   },[props.saveBinding])
+  const htmlAccess=useRef<{active():boolean;persist():Promise<void>}>({active:()=>false,persist:async()=>{}})
+  htmlAccess.current={active:()=>!disposed.current&&!props.recovery&&editorActive(),persist:persistConfirmed}
+  const htmlInteractions=useMemo(()=>createNoteHtmlInteraction({editor,current:()=>htmlAccess.current.active(),persist:()=>htmlAccess.current.persist()}),[editor])
   const systemMutation=useRef(false)
   const updateSystemComponent=(blockId:string,node:Record<string,any>,value?:any)=>{
     const ticket=value?.method==='apply'?dataRefreshGuard.current.before(snapshot(),blockId,node.id):undefined
@@ -629,7 +633,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     catch(e){if(!disposed.current)setError((e as Error).message)}
     finally{exportPending.current=false;if(!disposed.current)setExporting(false)}
   }
-  const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,importing:importing.current,isGeneratingComponent:(id:string)=>inlineComponents.isGenerating(id)||generatingBlock.current===id&&!!currentGeneration(),generateComponent:inlineComponents.start,stopGeneration:(id:string)=>{const local=inlineComponents.stop(id);if(local.ok)return local;if(generatingBlock.current!==id)return {ok:false};commands.current.stop();return {ok:true}} }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing,inlineComponents.version])
+  const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,commitHtmlInteraction:htmlInteractions.commit,importing:importing.current,isGeneratingComponent:(id:string)=>inlineComponents.isGenerating(id)||generatingBlock.current===id&&!!currentGeneration(),generateComponent:inlineComponents.start,stopGeneration:(id:string)=>{const local=inlineComponents.stop(id);if(local.ok)return local;if(generatingBlock.current!==id)return {ok:false};commands.current.stop();return {ok:true}} }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing,inlineComponents.version])
   const slashItems = useMemo(()=>async (query:string)=>{
     const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
     const pick=async(kind:string)=>{
