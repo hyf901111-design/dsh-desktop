@@ -51,7 +51,7 @@ import {noteEditorVisible} from './editor-visibility'
 import {beginNoteGuideSelection,type NoteGuideSelection} from './guide-selection'
 import {ChallengeToolbar,ChallengeComments,ManualNoteThreads} from './challenge-ui'
 import {NoteReplacementPopover,NoteReplacementHighlights} from './replacement-review'
-import {noteInlineAiTrigger,captureNoteInlineAnchor,noteInlineAnchorBlock,insertNoteInlineBlocks} from './inline-ai'
+import {noteInlineAiTrigger,captureNoteInlineAnchor,noteInlineAnchorBlock,noteInlineBlockIdentity,insertNoteInlineBlocks} from './inline-ai'
 import {NoteInlineAiComposer,NoteAiProcessing,type NoteInlineAiDraft} from './inline-ai-composer'
 import {noteEditFingerprint,noteEditTimestamp,noteHasSavedContent,noteEditDate} from './edit-date'
 
@@ -253,6 +253,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const [inlineDraft,setInlineDraft]=useState<NoteInlineAiDraft>(),inlineDraftRef=useRef<NoteInlineAiDraft>(),inlinePrompt=useRef(''),inlineRequest=useRef<{requestId:string;anchor:NoteInsertionAnchor}>(),composing=useRef(false)
   inlineDraftRef.current=inlineDraft
   const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>()),capabilityReservations=useRef(new Map<string,string>())
+  const inlineCreations=useRef(new Map<string,{blockId:string;identity:string}>())
   const [proposalVersion,setProposalVersion]=useState(0),proposalRestore=useRef(false),settlingProposal=useRef('')
   const proposals=useMemo(()=>createNoteInlineProposals({editor,doc,onChange:()=>setProposalVersion(value=>value+1)}),[editor,doc])
   const aiActionEditor=useMemo(()=>proposals.proxy(()=>!!inlineRequest.current&&inlineRequest.current.requestId===request.current),[proposals])
@@ -415,6 +416,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           noteDraft:'smart',containerPrompt:args.prompt,generationStatus:'draft'
         })}}
         const created=retry?.block||(inline?proposals.run(()=>insertNoteInlineBlocks(editor,inline.anchor,client.current,[block])):editor.insertBlocks([block],editor.document.at(-1),'after'))[0]
+        if(inline){const identity=noteInlineBlockIdentity(editor,created.id);if(!identity)throw Error(t('本次组件位置尚未就绪，原需求已保留。'));inlineCreations.current.set(requestId,{blockId:created.id,identity})}
         capabilityReservations.current.set(created.id,requestId)
         try{
           await report({state:'placeholder',blockId:created.id})
@@ -536,7 +538,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     lastRequest.current={prompt,images,admission,captured,fingerprint,context,draftBlockId}
     publishTask(requestId,'preparing',{prompt,references:noteMessageReferences(context,captured.text),operation:component?'component':captured.text?'rewrite':'write'})
     if(!component&&captured.text)paintSelection(captured)
-    if(inlineTarget){inlineRequest.current={requestId,anchor:inlineTarget};setInlineDraft(value=>value?{...value,error:undefined,reply:undefined}:value)}
+    if(inlineTarget){inlineCreations.current.clear();inlineRequest.current={requestId,anchor:inlineTarget};setInlineDraft(value=>value?{...value,error:undefined,reply:undefined}:value)}
     request.current = requestId;setWriting(true); publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
     try {
@@ -586,7 +588,24 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           publishTask(requestId,'replied',{result})
         }else{
           const blocks=result.kind==='component'?[{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}]:editor.tryParseMarkdownToBlocks(result.markdown)
-          const inserted=proposals.run(()=>insertNoteInlineBlocks(editor,inlineTarget,client.current,blocks,true))
+          let before:{blockId:string;identity:string}|undefined
+          if(result.kind==='text'&&result.inlineOrder){
+            const receipts=result.capabilityReceipts?.filter(receipt=>receipt.capability==='notes.components.create'&&receipt.status==='succeeded')||[]
+            if(receipts.length){
+              const proposal=proposals.list().find(value=>value.id===requestId),contains=(block:any,id:string):boolean=>!!block&&(block.id===id||block.children?.some((child:any)=>contains(child,id)))
+              const owned=receipts.map(receipt=>{
+                const position=inlineCreations.current.get(receipt.requestId||''),effect=receipt.effect,blockId=effect&&'blockId'in effect?effect.blockId:undefined
+                const change=position&&proposal?.changes.find(change=>contains(change.after,position.blockId))
+                if(!position||position.blockId!==blockId||!effect||!['applied','saved'].includes(effect.state)||noteInlineBlockIdentity(editor,position.blockId)!==position.identity||!change||!proposals.canUndoBlock(requestId,change.id)||unfinishedInlineComponent(editor.getBlock(position.blockId)))throw Error(t('本次组件已变化，原需求已保留，请重新生成正文。'))
+                return position
+              })
+              if(result.inlineOrder==='before-components'){
+                before=noteResearchBlocks(editor.document).map(block=>owned.find(position=>position.blockId===block.id)).find(Boolean)
+                if(!before)throw Error(t('本次组件位置已变化，原需求已保留。'))
+              }
+            }
+          }
+          const inserted=proposals.run(()=>insertNoteInlineBlocks(editor,inlineTarget,client.current,blocks,true,before))
           if(result.kind==='component')completedBlock=inserted[0]?.id||''
           publishTask(requestId,'ready',{result});inlineCompletion={partial:false,summary:'',kind:result.kind};changed()
         }
@@ -629,7 +648,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       }
     } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); request.current = '';inlineRequest.current=undefined; publishComposer({running:false}); generatingBlock.current = '';activeGeneration.current=undefined;challengeScheduleSync.current?.() } }
   }
-  const stop = () => { for(const blockId of capabilityCards.current.values())inlineComponents.stop(blockId);capabilityReservations.current.clear();inlineRequest.current=undefined;externalCapabilities.current?.revoke();epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。"));challengeScheduleSync.current?.() }
+  const stop = () => { for(const blockId of capabilityCards.current.values())inlineComponents.stop(blockId);capabilityReservations.current.clear();inlineCreations.current.clear();inlineRequest.current=undefined;externalCapabilities.current?.revoke();epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。"));challengeScheduleSync.current?.() }
   const stopInlineAi=()=>{const id=inlineRequest.current?.requestId;if(id){stop();const value=finishInlineProposal(id,true);if(value){showProposal(value);changed()}}setError('')}
   const cancelInlineAi=()=>{const draft=inlineDraftRef.current;if(draft)inlinePrompt.current=draft.review&&!draft.error?'':draft.prompt;if(inlineRequest.current)stopInlineAi();setInlineDraft(undefined);setError('');if(editorActive()&&draft&&editor.getBlock(draft.anchor.blockId)){editor.focus();editor.setTextCursorPosition(draft.anchor.blockId,'start')}}
   const submitInlineAi=()=>{const draft=inlineDraftRef.current;if(!draft||draft.review||request.current||settlingProposal.current||externalCapabilities.current?.pending())return;inlinePrompt.current=draft.prompt;try{noteInlineAnchorBlock(editor,draft.anchor,client.current);void generate(draft.prompt,[],undefined,undefined,undefined,draft.anchor)}catch(error){setInlineDraft(value=>value?{...value,error:(error as Error).message}:value)}}
@@ -696,7 +715,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     catch(e){if(!disposed.current)setError((e as Error).message)}
     finally{exportPending.current=false;if(!disposed.current)setExporting(false)}
   }
-  const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,commitHtmlInteraction:htmlInteractions.commit,importing:importing.current,isGeneratingComponent:(id:string)=>inlineComponents.isGenerating(id)||generatingBlock.current===id&&!!currentGeneration(),generateComponent:inlineComponents.start,stopGeneration:(id:string)=>{const local=inlineComponents.stop(id);if(local.ok)return local;if(generatingBlock.current!==id)return {ok:false};commands.current.stop();return {ok:true}} }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing,inlineComponents.version])
+  const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,persistComponentActions:()=>persistConfirmed(),commitHtmlInteraction:htmlInteractions.commit,importing:importing.current,isGeneratingComponent:(id:string)=>inlineComponents.isGenerating(id)||generatingBlock.current===id&&!!currentGeneration(),generateComponent:inlineComponents.start,stopGeneration:(id:string)=>{const local=inlineComponents.stop(id);if(local.ok)return local;if(generatingBlock.current!==id)return {ok:false};commands.current.stop();return {ok:true}} }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing,inlineComponents.version])
   const slashItems = useMemo(()=>async (query:string)=>{
     const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
     const pick=async(kind:string)=>{
