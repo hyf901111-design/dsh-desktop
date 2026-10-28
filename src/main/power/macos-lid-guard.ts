@@ -1,5 +1,5 @@
 import {randomBytes} from 'node:crypto'
-import {lstatSync, openSync, fstatSync, futimesSync, closeSync, constants, readFileSync, renameSync, rmSync, writeFileSync} from 'node:fs'
+import {lstatSync, openSync, fstatSync, futimesSync, closeSync, constants, readFileSync, linkSync, renameSync, rmSync, writeFileSync} from 'node:fs'
 import {join} from 'node:path'
 import {setTimeout as delay} from 'node:timers/promises'
 import type {LidGuard, PowerDiagnostic} from './controller'
@@ -30,7 +30,7 @@ export class MacOSLidGuard implements LidGuard {
     this.file = join(this.service.directory, 'session.json')
     this.onDiagnostic = options.onDiagnostic ?? (() => {})
   }
-  async start(allowAuthorization = true): Promise<'active'|'external'> {
+  async start(allowAuthorization = true, preserveExistingLease = false): Promise<'active'|'external'> {
     if (this.retiring) await this.stop()
     if (this.token) {if (await this.active()) return (await this.service.status()).mode as 'active'|'external'; await this.stop()}
     const generation = ++this.generation
@@ -43,12 +43,20 @@ export class MacOSLidGuard implements LidGuard {
     if (!directory.isDirectory() || directory.uid !== process.getuid?.() || (directory.mode & 0o077) !== 0) throw Error('helper-unavailable')
     const started = (await this.run('/bin/ps', ['-p', String(process.pid), '-o', 'lstart='])).trim()
     if (!started || generation !== this.generation) throw Error('lid-unavailable')
-    const token = this.token = randomBytes(16).toString('hex')
-    this.lease = {version: 1, pid: process.pid, started, token}
+    const token = randomBytes(16).toString('hex')
+    const lease: Lease = {version: 1, pid: process.pid, started, token}
     const temporary = join(this.service.directory, `session.${token}.tmp`)
+    let published = false
     try {
-      writeFileSync(temporary, JSON.stringify(this.lease) + '\n', {mode: 0o600, flush: true, flag: 'wx'})
-      renameSync(temporary, this.file)
+      writeFileSync(temporary, JSON.stringify(lease) + '\n', {mode: 0o600, flush: true, flag: 'wx'})
+      if (preserveExistingLease) {
+        // Publishing the complete file is atomic and cannot replace a lease
+        // acquired after our old nonce was retired, even between awaits.
+        try {linkSync(temporary, this.file)}
+        catch (error) {if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw Error('lease-transferred'); throw error}
+      } else renameSync(temporary, this.file)
+      published = true; this.token = token; this.lease = lease
+      if (preserveExistingLease) rmSync(temporary, {force: true})
       this.heartbeat = setInterval(() => {try {
         if (this.ownsLease()) {
           const descriptor = openSync(this.file, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
@@ -71,6 +79,9 @@ export class MacOSLidGuard implements LidGuard {
       }
       throw Error('lid-unavailable')
     } catch (error) {
+      // A conflicting publication never owned a nonce, so has no release ACK
+      // to await and must leave the existing client's file untouched.
+      if (!published) throw error
       this.cancel()
       try {await this.stop()} catch {throw Error('restore-failed')}
       if (error instanceof Error && error.message === 'restore-failed') throw Error('lid-unavailable')
