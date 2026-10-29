@@ -26,7 +26,7 @@ beforeAll(async()=>{
  const fixture:Plugin={name:'notes-inline-ai-fixture',resolveId:id=>id===entry?entry:undefined,load:id=>id===entry?`
  import {mountNotes} from ${JSON.stringify(resolve('src/preload/notes/mount.tsx'))};import {WorkspaceSurfaceHost} from ${JSON.stringify(resolve('src/preload/workspace-surface-host.ts'))};
  window.calls=[];window.jobs={};window.replies=[];
- const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{owner:'fixture-owner',saved:window.saved};if(method==='save'){window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}}if(method==='generate')return new Promise((resolve,reject)=>{window.jobs[input.requestId]={input,resolve,reject}});if(method==='library-list')return[];if(method==='capability-reply')window.replies.push(input);return{}},draft:async input=>window.draft=input};
+ const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{owner:'fixture-owner',saved:window.saved};if(method==='save'){if(window.holdSaves)await new Promise(resolve=>(window.saveWaiters??=[]).push(resolve));window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}}if(method==='generate')return new Promise((resolve,reject)=>{window.jobs[input.requestId]={input,resolve,reject}});if(method==='library-list')return[];if(method==='capability-reply')window.replies.push(input);return{}},draft:async input=>window.draft=input};
  const host=new WorkspaceSurfaceHost(document);let mounted=mountNotes(document,bridge,host);window.fixture={flush:()=>mounted.flushCurrent(),reopen:()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)}};
  `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor; const slashMenu = useMemo');if(id.endsWith('/preload/notes/inline-ai.ts'))return code.replace(/from (['"])y-prosemirror\1/gu,'from '+JSON.stringify(peer)).replace(/return\s*\{\s*documentId,\s*blockId,\s*position:/u,'return window.lastInlineAnchor={documentId,blockId,position:')+`\nwindow.inlineAnchorDiagnostics=()=>{const e=window.editor,state=e._tiptapEditor.state,b=ySyncPluginKey.getState(state)?.binding,a=window.lastInlineAnchor;if(!b)return{missing:true};const relative=a?.position||Y.relativePositionToJSON(absolutePositionToRelativePosition(state.selection.from,b.type,b.mapping)),position=relativePositionToAbsolutePosition(b.type.doc,b.type,Y.createRelativePositionFromJSON(relative),b.mapping),ancestors=[];if(position!==null){const p=state.doc.resolve(position);for(let d=p.depth;d>=0;d--)ancestors.push({type:p.node(d).type.name,id:p.node(d).attrs.id})}return{block:e.getTextCursorPosition().block,selection:state.selection.toJSON(),fragmentLength:b.type.length,fragment:b.type.toString(),relative,position,ancestors,anchor:a}};window.inlineBindingDiagnostics=()=>{const state=window.editor._tiptapEditor.state;return{importedKey:ySyncPluginKey.key,importedState:!!ySyncPluginKey.getState(state)?.binding,installed:state.plugins.filter(p=>/^y-sync\\$/u.test(p.key.replace(/\\d+$/u,''))).map(p=>({key:p.key,binding:!!p.getState(state)?.binding}))}};`},generateBundle(_options,bundle){syncOwners=[...new Set(Object.values(bundle).flatMap(chunk=>chunk.type==='chunk'?Object.keys(chunk.modules).filter(id=>/\/y-prosemirror\/src\/plugins\/keys\.js$/u.test(id)):[]))]}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
@@ -73,6 +73,39 @@ it('keeps ordinary spaces in nonempty paragraphs, headings, code, selected text,
   await cursor(f.page);await f.page.locator('.bn-editor').dispatchEvent('keydown',{key:' ',code:'Space',isComposing:true});expect(await f.page.locator('.en-space-ai').count()).toBe(0)
   await cursor(f.page,'before');await f.page.keyboard.press('Shift+ArrowRight');await f.page.keyboard.press('Space');expect(await f.page.locator('.en-space-ai').count()).toBe(0)
   await f.page.evaluate(()=>{(window as any).editor.isEditable=false});await cursor(f.page);await f.page.keyboard.press('Space');expect(await f.page.locator('.en-space-ai').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it.each(['confirm','undo'])('does not inherit an unmounted inline textarea composition after %s',async action=>{
+ const f=await open();try{
+  await cursor(f.page);await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求'});await input.waitFor();await input.click()
+  await f.page.evaluate(()=>{(window as any).compositionTrace=[];for(const type of ['compositionstart','compositionend'])document.addEventListener(type,(event:any)=>{if(event.target.closest?.('.en-space-ai'))(window as any).compositionTrace.push({type:event.type,trusted:event.isTrusted})},true)})
+  const cdp=await f.context.newCDPSession(f.page);await cdp.send('Input.imeSetComposition',{text:'写一段文字',selectionStart:5,selectionEnd:5})
+  // Accessibility/default-action submission can replace a value and click
+  // without the mousedown that would normally commit the old composition.
+  await input.evaluate((element:HTMLTextAreaElement)=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value')!.set!.call(element,'写一段正文');element.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertReplacementText',data:'写一段正文'}))})
+  await f.page.getByRole('button',{name:'发送行内 AI 需求'}).evaluate((button:HTMLButtonElement)=>button.click())
+  await expect.poll(()=>f.page.evaluate(()=>Object.keys((window as any).jobs).length)).toBe(1)
+  await finish(f.page,{kind:'text',markdown:'本轮生成的完整正文。'});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor()
+  await f.page.evaluate(()=>(window as any).holdSaves=true);await f.page.getByRole('button',{name:action==='undo'?'撤销本次 AI 生成':'确认本次 AI 生成',exact:true}).click()
+  await expect.poll(()=>f.page.evaluate(()=>(window as any).saveWaiters?.length||0)).toBeGreaterThan(0)
+  expect(await f.page.locator('.en-space-ai[data-review]').count()).toBe(1)
+  await f.page.evaluate(()=>{const w=window as any;w.holdSaves=false;(w.saveWaiters||[]).splice(0).forEach((resolve:any)=>resolve())})
+  await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0)
+  await cursor(f.page,'after',true);await f.page.keyboard.press('Enter')
+  const emptyId=await f.page.evaluate(()=>(window as any).editor.getTextCursorPosition().block.id);await f.page.locator('.bn-block-outer[data-id="'+emptyId+'"] .bn-inline-content').click()
+  const before=await f.page.evaluate(()=>{const e=(window as any).editor,s=e._tiptapEditor.state.selection;return{document:JSON.stringify(e.document),empty:s.empty,offset:s.$from.parentOffset,size:s.$from.parent.content.size,trace:(window as any).compositionTrace}})
+  expect(before).toMatchObject({empty:true,offset:0,size:0});expect(before.trace).toContainEqual({type:'compositionstart',trusted:true});expect(before.trace.some((event:any)=>event.type==='compositionend')).toBe(false)
+  if(evidence)writeFileSync(resolve(evidence,'composition-unmount-'+action+'.json'),JSON.stringify(before,null,2))
+  await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).waitFor();expect(await f.page.evaluate(()=>JSON.stringify((window as any).editor.document))).toBe(before.document)
+  expect(await f.page.locator('.bn-editor').textContent()).toContain('原有前段');expect(await f.page.locator('.bn-editor').textContent()).toContain('原有后段');expect((await f.page.locator('.bn-editor').textContent())!.includes('本轮生成的完整正文。')).toBe(action==='confirm');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it('keeps real body IME composition and nonempty paragraphs outside the Space shortcut',async()=>{
+ const f=await open();try{
+  await cursor(f.page);const cdp=await f.context.newCDPSession(f.page);await cdp.send('Input.imeSetComposition',{text:'中文',selectionStart:2,selectionEnd:2})
+  await f.page.keyboard.press('Space');expect(await f.page.locator('.en-space-ai').count()).toBe(0)
+  await cdp.send('Input.imeSetComposition',{text:'',selectionStart:0,selectionEnd:0});await expect.poll(()=>f.page.evaluate(()=>(window as any).editor._tiptapEditor.view.composing)).toBe(false)
+  await cursor(f.page,'before',true);await f.page.keyboard.press('Space');expect(await f.page.locator('.en-space-ai').count()).toBe(0);expect(await f.page.locator('.bn-editor').textContent()).toContain('原有前段');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
 it('sends through the real generation bridge with a stable document/block anchor and inserts rich paragraphs there after unrelated edits, then saves and reopens',async()=>{
