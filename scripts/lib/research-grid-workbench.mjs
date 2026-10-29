@@ -1,3 +1,5 @@
+import {serializeWorkbenchRestore,parseWorkbenchRestore} from './workbench-restore-codec.mjs'
+import {createResearchPreviewModeState,useResearchPreviewSession,installResearchPreviewMode} from './research-preview-mode.mjs'
 import {financialRecordsActionPayload,financialRecordsCsv} from '../../packages/dsh-research-task-runtime/financial-records.js'
 import {codeTemplatePayload} from '../../packages/dsh-research-task-runtime/input-template-contract.js'
 import {installWorkbenchChartMotion} from '../../packages/dsh-research-task-runtime/workbench-chart-motion.js'
@@ -40,9 +42,10 @@ export function restoreResearchGridWorkbench(source){
   // own delimiter so later independent restore records remain intact.
   const finish=source.indexOf(end,start),a=source.indexOf(meta,finish),b=source.indexOf(' */',a+meta.length)
   if(finish<0||a<0||b<0)throw Error('Incomplete workbench patch')
-  const changes=JSON.parse(source.slice(a+meta.length,b))
+  const changes=parseWorkbenchRestore(source.slice(a+meta.length,b))
   source=source.slice(0,a-1)+source.slice(b+3)
-  for(const [original,replacement] of changes.reverse()){
+  for(const [original,replacement,count=1] of changes.reverse()){
+    if(count>1){if(!Number.isSafeInteger(count)||source.split(replacement).length!==count+1)throw Error("Workbench repeated restore count changed");source=source.replaceAll(replacement,original);continue}
     if(!source.includes(replacement)){
       // Older restore records predate the owned Notes destination transform.
       // Match that complete transform exactly, then preserve it on both sides.
@@ -232,7 +235,9 @@ export function patchResearchGridWorkbench(source){
   change("workspace.createContainerDraft({x:((current.canvasSize.availableWidth||current.canvasSize.width||rootRef.current?.getBoundingClientRect().width||800)/2-vp.x)/vp.scale,y:((current.canvasSize.height||rootRef.current?.getBoundingClientRect().height||600)/2-vp.y)/vp.scale,width:485,height:400,sizeMode:'manual'},'link');", "const node=workspace.createContainerDraft({x:((current.canvasSize.availableWidth||current.canvasSize.width||rootRef.current?.getBoundingClientRect().width||800)/2-vp.x)/vp.scale,y:((current.canvasSize.height||rootRef.current?.getBoundingClientRect().height||600)/2-vp.y)/vp.scale,width:485,height:400,sizeMode:'manual'},'link');revealWorkbenchNode(rootRef.current,workspace,node?.id);")
   change('...(draftKind === "link" ? {title:"添加链接"} : {}),','...(draftKind === "link" ? {title:"添加链接"} : draftKind === "voice" ? {title:"语音组件"} : {}),')
   source=patchWorkbenchSelectedCreate(source,change)
-  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[financialRecordsActionPayload,financialRecordsCsv,codeTemplatePayload,workbenchText,useWorkbenchLocale,createResearchGrid,createWorkbenchGridState,workbenchScrollExtent,createWorkbenchAutoArrangeState,installWorkbenchAutoArrange,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,installWorkbenchChartMotion,installWorkbenchTableColumns,createWorkbenchTableColumnState,isWorkbenchScrollbarMessage,installWorkbenchScrollbars,workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,...Object.values(ui),...Object.values(workbenchStyle)].map(fn=>fn.toString()).join('\n')
+  const changeAll=(from,to)=>{const count=source.split(from).length-1;if(!count)throw Error('Workbench repeated anchor missing: '+from);changes.push([from,to,count]);source=source.replaceAll(from,to)}
+  installResearchPreviewMode(change,changeAll,()=>source)
+  const definitions='const researchPreviewWorkspaces=new Map();const researchPreviewArrangeToken=Symbol("research-preview-arrange"),researchPreviewDataRefreshToken=Symbol("research-preview-data-refresh");\n'+createResearchPreviewModeState.toString()+'\n'+useResearchPreviewSession.toString()+'\n'+'const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[financialRecordsActionPayload,financialRecordsCsv,codeTemplatePayload,workbenchText,useWorkbenchLocale,createResearchGrid,createWorkbenchGridState,workbenchScrollExtent,createWorkbenchAutoArrangeState,installWorkbenchAutoArrange,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,installWorkbenchChartMotion,installWorkbenchTableColumns,createWorkbenchTableColumnState,isWorkbenchScrollbarMessage,installWorkbenchScrollbars,workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,...Object.values(ui),...Object.values(workbenchStyle)].map(fn=>fn.toString()).join('\n')
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\nconst WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   change('d: "M3 3.5h10v9H3z"','d: "M9.5 2.25h-6a1.25 1.25 0 0 0-1.25 1.25v9a1.25 1.25 0 0 0 1.25 1.25H7M13.75 6.5v-3a1.25 1.25 0 0 0-1.25-1.25h-3"')
   change('d: "M8 5.5v5M5.5 8h5"','d: "M11.25 8v6.5M8 11.25h6.5"')
@@ -240,5 +245,5 @@ export function patchResearchGridWorkbench(source){
     const localized=name==='ResearchCanvasFrameMenu'?after.replace('workbenchText("从画布移除")','workbenchText(node.noteDocument?"从笔记移除":"从画布移除")'):name==='ResearchAssistantCanvasAction'&&before.includes('/* ework:note-assistant-destination:v1 */')?after.replaceAll('(notes?"添加到笔记":workbenchText("添加到画布"))','workbenchText(notes?"添加到笔记":"添加到画布")'):after
     change(before,localized)
   }
-  return patchComponentPptxMode(source+'\n'+meta+JSON.stringify(changes).replaceAll('*/','*\\/')+' */')
+  return patchComponentPptxMode(source+'\n'+meta+serializeWorkbenchRestore(changes)+' */')
 }

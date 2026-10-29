@@ -21,6 +21,7 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'ework.research.grid.v1:',
   'ework.research.tabs.view.v1:',
   'ework.research.presentation.v1:',
+  'ework.research.preview.v1:',
   'ework.research.table-columns.v1:',
   'sherlock.research.canvas.preview-revocations.v1:',
   'sherlock.research.session-engaged.v1:',
@@ -96,6 +97,7 @@ export class ResearchCanvasStorage {
     if (key.startsWith(HOME_GUIDE_SESSION_PREFIX) && !validHomeGuideRegistry(key, value)) return false
     if (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(value)) return false
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
+    if (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(value)) return false
     if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(value)) return false
     if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
     if (key.startsWith('ework.research.presentation.v1:')) {
@@ -140,6 +142,7 @@ export class ResearchCanvasStorage {
           (key.startsWith(HOME_GUIDE_SESSION_PREFIX) && !validHomeGuideRegistry(key, record.value)) ||
           (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(record.value)) ||
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
+          (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(record.value)) ||
           (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(record.value)) ||
           (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value))) return null
       return record.value

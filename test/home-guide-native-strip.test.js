@@ -89,3 +89,14 @@ it('supports repeated strip, original subagent/grid refresh and tutorial reapply
   expect(source).toContain('const bridge=homeGuideProvider??window.dshDesktop?.financialWidget;')
  }
 },30000)
+
+
+it('strips and reapplies the native owner bridge beside a real managed preview grid without weakening declaration drift',async()=>{
+ const {workbenchPreviewProductionSource}=await import('./fixtures/workbench-preview-production-source.mjs')
+ const source=withoutPresentation(stripConversationGridOverlays(workbenchPreviewProductionSource())),current=guide.patchHomeGuideNative(source),stripped=guide.stripHomeGuideNative(current)
+ expect(stripped).toContain('typeof homeGuideNativePreviewOwner');expect(stripped).toContain('typeof subscribeHomeGuideNativePreviewOwner');expect(guide.stripHomeGuideNative(stripped)).toBe(stripped);expect(guide.patchHomeGuideNative(stripped)).toBe(current);expect(guide.patchHomeGuideNative(current)).toBe(current)
+ for(const anchor of ['function homeGuideNativePreviewOwner(','function subscribeHomeGuideNativePreviewOwner(','function createHomeGuideNativeOwnedResource(','const homeGuideNativePreviewOwnerListeners = new WeakMap();']){
+  expect(current.split(anchor)).toHaveLength(2);expect(()=>guide.stripHomeGuideNative(current.replace(anchor,anchor+'/* drift */'+anchor))).toThrow(/anchor|drift/i)
+ }
+ expect(()=>guide.stripHomeGuideNative(stripped+'\nfunction homeGuideNativePreviewOwner(){}')).toThrow(/partial|drift/i);new Script(stripped)
+},30000)

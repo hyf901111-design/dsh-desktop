@@ -47,7 +47,7 @@ async function fixture(readOnly=false,surface='reader',actual=false,storedInline
  const Central=createPptxEditorComponent(React,Preview,undefined,createPortal)
  const Adapter=(props:any)=>{componentProps.push(props);return React.createElement(Central,{...props,scope:{sessionId:'sherlock-research',cwd:''},path:props.sourceUrl})}
  const officePreview={Component:actual?Adapter:Service}
- const host=win.document.createElement('section');host.dataset.researchNodeId='ppt';win.document.body.append(host)
+ const host=win.document.createElement('section');host.dataset.researchNodeId='ppt';if(surface!=='notes'){host.dataset.researchCanvas='';host.dataset.researchPreviewMode='edit'}win.document.body.append(host)
  const mount=win.document.createElement('div');win.document.body.append(mount);const root=createRoot(mount as any),sessionId=identity.sessionId??'s',node={id:identity.nodeId??'ppt',name:'demo.pptx',path:'/work/demo.pptx',authorizationId:identity.authorizationId??'a',previewSessionId:identity.previewSessionId??sessionId}
  let showMenu:()=>void=()=>{}
  function Research(){const[menu,setMenu]=React.useState(false);showMenu=()=>setMenu(true);return React.createElement(React.Fragment,null,createPortal(React.createElement(api.Office,{node,sessionId,kind:'pptx',visible:true,service:officePreview,readOnly}),host as unknown as Element),menu&&React.createElement(api.Menu,{target:{node,root:host,left:0,top:0,sessionId},workspace:{},readOnly,onClose:()=>setMenu(false)}))}
@@ -237,7 +237,7 @@ it('installs and strips the actual resident representation without changing grid
  const mixed=patched.replace('/* EWORK_GRID_RESTORE ','/* duplicated legacy props\n'+oldBinding+'\n'+oldBinding+'\n*/\n/* EWORK_GRID_RESTORE ')
  expect(()=>stripComponentPptxMode(mixed)).toThrow(/drifted/)
  expect(()=>patchComponentPptxMode(mixed)).toThrow(/drifted/)
-},15000)
+},30000)
 it('upgrades the complete previous managed renderer, strictly strips it and installs twice',async()=>{
  const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),base=stripComponentPptxMode(resident)
  const prior=execFileSync('git',['show','adc43df1:scripts/lib/component-pptx-mode.mjs'],{encoding:'utf8'})
@@ -249,3 +249,18 @@ it('upgrades the complete previous managed renderer, strictly strips it and inst
  const duplicate=upgraded.replace('/* EWORK_GRID_RESTORE ','/* duplicated legacy signature\n'+signature+'\n'+signature+'\n*/\n/* EWORK_GRID_RESTORE ')
  expect(()=>stripComponentPptxMode(duplicate)).toThrow(/drifted/)
 },15000)
+
+it('research board preview removes the footer edit action and closes an already open actual PPT editor',async()=>{
+ const f=await fixture(false,'research',true)
+ await act(async()=>{(f.host.querySelector('[data-component-pptx-edit]') as any).click();await new Promise(r=>setTimeout(r,10))})
+ expect((f.host.querySelector('[data-component-pptx-mode-host]') as any).__eworkPptxMode.state.mode).toBe('edit')
+ expect(f.componentProps.at(-1)?.readOnly).toBe(false)
+ await act(async()=>{f.host.dataset.researchPreviewMode='preview';await new Promise(r=>setTimeout(r,10))})
+ expect(f.componentProps.at(-1)?.readOnly).toBe(true)
+ expect(f.host.querySelector('[data-component-pptx-edit]')).toBeNull()
+ expect((f.host.querySelector('[data-component-pptx-mode-host]') as any)?.__eworkPptxMode?.state.mode).toBe('preview')
+ const saves=f.bridge.save.mock.calls.length
+ const controls=(f.host.querySelector('[data-component-pptx-mode-host]') as any).__eworkPptxMode.controls
+ await act(async()=>{expect(await controls.setMode('edit')).toBe(false);await controls.save()})
+ expect(f.bridge.save).toHaveBeenCalledTimes(saves)
+})

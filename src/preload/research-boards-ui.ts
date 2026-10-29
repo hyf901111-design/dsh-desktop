@@ -1539,6 +1539,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     version: () => revision,
     getState: () => state,
     getView: view,
+    workspaceFor: (id: string) => deps.researchWorkspaces.for(id),
     identity,
     subscribeActivity(id: string, listener: () => void) {
       const offList = deps.sessions.list.subscribe(listener)
@@ -1800,6 +1801,26 @@ function currentBoard(page: ResearchBoardsPage, id: string) {
 function boardIcon(_kind: 'people' | 'boards') {
   return h('span', { className: 'srb-people-icon', 'aria-hidden': true })
 }
+function ResearchBoardPreviewToggle({page,sessionId}:{page:ResearchBoardsPage;sessionId:string}) {
+  const workspace=page.workspaceFor?.(sessionId)
+  const subscribe=React.useCallback((listener:()=>void)=>workspace?.subscribePreviewMode?.(listener)??(()=>{}),[workspace])
+  const read=React.useCallback(()=>workspace?.getPreviewMode?.()===true,[workspace])
+  const preview=React.useSyncExternalStore(subscribe,read,read)
+  const subscribeLock=React.useCallback((listener:()=>void)=>workspace?.subscribePreviewModeLock?.(listener)??(()=>{}),[workspace])
+  const readLock=React.useCallback(()=>workspace?.getPreviewModeLocked?.()===true,[workspace])
+  const locked=React.useSyncExternalStore(subscribeLock,readLock,readLock)
+  if(!workspace?.getPreviewMode||!workspace?.setPreviewMode)return null
+  return h('button',{
+    type:'button',className:'srb-preview-toggle','data-research-preview-toggle':'',
+    'aria-label':preview?'切换到编辑模式':'切换到预览模式','aria-pressed':preview,
+    title:locked?'工作台演示进行中，结束后可切换模式':preview?'预览模式':'编辑模式',disabled:locked,
+    onClick:()=>{try{workspace.setPreviewMode(!workspace.getPreviewMode())}catch(error){page.showError(error)}}
+  },h('svg',{'aria-hidden':true,'data-research-preview-icon':preview?'edit':'preview',width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.6,strokeLinecap:'round',strokeLinejoin:'round'},
+    preview
+      ?h('path',{d:'m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15l-1 6z'})
+      :h(React.Fragment,null,h('path',{d:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z'}),h('circle',{cx:12,cy:12,r:3}))
+  ))
+}
 export function ResearchBoardHeader({
   page,
   sessionId,
@@ -1822,6 +1843,7 @@ export function ResearchBoardHeader({
   return h(
     'div',
     { className: 'srb-actions', 'data-srb-board-bound': !!(v || f) },
+    h(ResearchBoardPreviewToggle,{page,sessionId}),
     v && !dedicatedBoard
       ? h(
           React.Fragment,

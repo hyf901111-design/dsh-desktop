@@ -200,6 +200,8 @@ export function patchCalendarToolClient(source){
  if(!source.match(types)?.[0].includes('"calendar-tool"'))source=source.replace(types,s=>s.replace('new Set([','new Set(["calendar-tool",'))
  once('if(value.type==="financial-widget")return financialWidgetSpec(value);','if(value.type==="calendar-tool")return calendarToolSpec(value);\nif(value.type==="financial-widget")return financialWidgetSpec(value);')
  once("if(spec.type==='financial-widget')return [spec.title", "if(spec.type==='calendar-tool')return spec.title;\nif(spec.type==='financial-widget')return [spec.title")
+ const calendarBody="if(node.containerSpec.type==='calendar-tool')return react_jsx_runtime.jsx(CalendarTool,{node,sessionId});"
+ source=source.replaceAll(calendarBody+'\n','').replaceAll(calendarBody,'')
  once("if(node.containerSpec.type==='financial-widget')return react_jsx_runtime.jsx(FinancialWidget", "if(node.containerSpec.type==='calendar-tool')return react_jsx_runtime.jsx(CalendarTool,{node,sessionId});\nif(node.containerSpec.type==='financial-widget')return react_jsx_runtime.jsx(FinancialWidget")
  source=source.replace('if(!collaborationCanWrite()||sherlockShared(sessionId))return null;','if(!collaborationCanWrite())return null;').replace("containerPrompt:'个人日历工具'","containerPrompt:sherlockShared(sessionId)?'协作看板日历':'个人日历工具'")
  once('createFinancialWidget(widget){',`createCalendarTool(){

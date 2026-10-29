@@ -35,13 +35,47 @@ function homeGuideNativeSampleProvider() {
   } }
 }
 
+// The owner remains the single run fact; subscribers are keyed by the stable
+// workspace preview getter, so another registry with the same id is unrelated.
+export function homeGuideNativePreviewOwner(sessionId,readPreview) {
+  const resource=homeGuideNativeSharedResource
+  return resource?.id===sessionId&&resource.workspace?.getPreviewMode===readPreview?resource.owner:null
+}
+export function subscribeHomeGuideNativePreviewOwner(sessionId,readPreview,listener) {
+  if(typeof readPreview!=='function')return()=>{}
+  let listeners=homeGuideNativePreviewOwnerListeners.get(readPreview)
+  if(!listeners)homeGuideNativePreviewOwnerListeners.set(readPreview,listeners=new Set())
+  listeners.add(listener)
+  return()=>{listeners.delete(listener);if(!listeners.size)homeGuideNativePreviewOwnerListeners.delete(readPreview)}
+}
+export function createHomeGuideNativeOwnedResource(fields) {
+  const resource={...fields};let owner=fields.owner??null,preparingRelease=false
+  const notify=(next,phase)=>{
+    const readPreview=resource.workspace?.getPreviewMode
+    if(typeof readPreview!=='function')return
+    for(const listener of [...homeGuideNativePreviewOwnerListeners.get(readPreview)||[]])try{listener(next,phase)}catch(error){console.error('Home guide owner listener failed',error)}
+  }
+  Object.defineProperty(resource,'owner',{enumerable:true,get:()=>owner,set:next=>{
+    if(next===owner||preparingRelease&&next==null)return
+    const previous=owner
+    if(previous&&next==null){
+      // Gesture rollback must still see the owned edit workspace. Only after
+      // that synchronous boundary may the original preview preference resume.
+      preparingRelease=true;try{notify(next,'before-release')}finally{preparingRelease=false}
+      if(owner!==previous)return
+    }
+    owner=next;notify(next,'change')
+  }})
+  return resource
+}
+
 // Reuse the real registered workspace; the cache owns no private storage.
 function homeGuideNativeResource(sessionId, researchWorkspaces) {
   const entry = sherlockBoardsAdapter?.getHomeGuideSession?.(sessionId)
   if (!['board','workbench'].includes(entry?.kind) || !researchWorkspaces?.for) throw Error('请先准备独立的示例看板。')
   if (homeGuideNativeSharedResource?.id === sessionId && homeGuideNativeSharedResource.registry === researchWorkspaces) return homeGuideNativeSharedResource
   if (homeGuideNativeSharedResource?.owner) throw Error('另一个教程仍在使用研究画布。')
-  homeGuideNativeSharedResource = { id: sessionId, registry: researchWorkspaces, workspace: researchWorkspaces.for(sessionId), provider: entry.kind==='workbench' ? homeWorkbenchSnapshotProvider() : homeGuideNativeSampleProvider(), owner: null }
+  homeGuideNativeSharedResource = createHomeGuideNativeOwnedResource({ id: sessionId, registry: researchWorkspaces, workspace: researchWorkspaces.for(sessionId), provider: entry.kind==='workbench' ? homeWorkbenchSnapshotProvider() : homeGuideNativeSampleProvider(), owner: null })
   return homeGuideNativeSharedResource
 }
 
@@ -845,7 +879,7 @@ function residentChanges(legacy = false, priorV2 = false, priorV3 = false, prior
 
 /** Restore the native anchors before older source patches run again. */
 export function stripHomeGuideNative(source) {
-  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'homeGuideNativeSmartPath', 'homeGuideNativeSmartPrompt', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident', 'odyssey:home-guide-complete-draft', 'useHomeGuideNativeCompleteDraft']
+  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'homeGuideNativeSmartPath', 'homeGuideNativeSmartPrompt', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident', 'odyssey:home-guide-complete-draft', 'useHomeGuideNativeCompleteDraft','function homeGuideNativePreviewOwner(','function subscribeHomeGuideNativePreviewOwner(','createHomeGuideNativeOwnedResource','homeGuideNativePreviewOwnerListeners']
   if (!source.includes(START)) {
     if (owned.some(token => source.includes(token))) throw Error('Home guide native partial patch drifted')
     return source
@@ -860,6 +894,8 @@ export function stripHomeGuideNative(source) {
     'function homeGuideNativeSampleProvider(', 'function homeGuideNativeResource(',
     'function NativeHomeGuidePortal(', 'function ConversationRoot(props)'
   ]) if (runtime.split(anchor).length !== 2) throw Error('Home guide native runtime anchor drifted: ' + anchor)
+  const previewOwned=['homeGuideNativePreviewOwner','subscribeHomeGuideNativePreviewOwner','createHomeGuideNativeOwnedResource','homeGuideNativePreviewOwnerListeners']
+  if(previewOwned.some(token=>runtime.includes(token)))for(const anchor of ['const homeGuideNativePreviewOwnerListeners = new WeakMap();','function homeGuideNativePreviewOwner(','function subscribeHomeGuideNativePreviewOwner(','function createHomeGuideNativeOwnedResource('])if(runtime.split(anchor).length!==2)throw Error('Home guide native preview owner anchor drifted: '+anchor)
   if (runtime.includes('NativeHomeNotesGuidePortal') && runtime.split('function NativeHomeNotesGuidePortal(').length !== 2) throw Error('Home guide notes native anchor drifted')
   source = source.slice(0, start) + source.slice(end + END.length + 1)
   if (source.includes(COMPLETE_DRAFT)) source = replaceOne(source, '\n' + COMPLETE_DRAFT, '')
@@ -896,7 +932,7 @@ export function stripHomeGuideNative(source) {
 /** Add an isolated native React portal without replacing any conversation child. */
 export function patchHomeGuideNative(source) {
   if (source.includes(START)) source = stripHomeGuideNative(source)
-  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\n' + [homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, useHomeGuideNativeCompleteDraft, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
+  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\nconst homeGuideNativePreviewOwnerListeners = new WeakMap();\n' + [homeGuideNativePreviewOwner,subscribeHomeGuideNativePreviewOwner,createHomeGuideNativeOwnedResource,homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, useHomeGuideNativeCompleteDraft, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
   if (source.includes(START)) {
     const first = source.indexOf(START), end = source.indexOf(END, first)
     if (end < 0 || source.indexOf(START, first + START.length) >= 0 || !source.includes('function HomeGuideNativeOriginalConversationRoot(')) throw Error('Home guide native refresh anchor drifted')
