@@ -10,9 +10,7 @@ const require=createRequire(import.meta.url),React=require('react'),{act,createE
 // Serializing the resident bundle is independent of each isolated DOM/store.
 // Reuse only its immutable source; every fixture still runs a fresh VM factory.
 const preparedSources=new Map()
-export async function financialClientFixture(desktop={},options={}){
- const win=new Window({url:'https://ework.local'}),document=win.document,keys=['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'],original=keys.map(k=>Object.getOwnPropertyDescriptor(globalThis,k));keys.forEach((k,i)=>Object.defineProperty(globalThis,k,{configurable:true,value:[win,document,win.navigator,true][i]}));let descriptor
- win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
+export async function prepareFinancialClientSource(options={}){
  const sourceKey=JSON.stringify([!!options.generationProgress,!!options.refreshState,!!options.creation,!!options.notes]);
  let source=preparedSources.get(sourceKey)
  if(!source){
@@ -29,6 +27,12 @@ export async function financialClientFixture(desktop={},options={}){
  if(options.notes){const start=source.indexOf('function EWorkNoteComponentView('),end=source.indexOf('function EWorkNoteComponentViews(',start);source=source.slice(0,start)+EWorkNoteComponentView.toString()+'\n'+source.slice(end);const viewsStart=source.indexOf('function EWorkNoteComponentViews('),viewsEnd=source.indexOf('const eworkNoteComponentViews=',viewsStart);source=source.slice(0,viewsStart)+EWorkNoteComponentViews.toString()+'\n'+source.slice(viewsEnd);source=patchResearchNativeWeb(source)};if(options.notes)source=source.replace('exports.ResearchCanvas = ResearchCanvas;','exports.EWorkNoteComponentViews=EWorkNoteComponentViews;exports.ResearchCanvas = ResearchCanvas;')
  preparedSources.set(sourceKey,source)
  }
+ return source
+}
+export async function financialClientFixture(desktop={},options={}){
+ const win=new Window({url:'https://ework.local'}),document=win.document,keys=['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'],original=keys.map(k=>Object.getOwnPropertyDescriptor(globalThis,k));keys.forEach((k,i)=>Object.defineProperty(globalThis,k,{configurable:true,value:[win,document,win.navigator,true][i]}));let descriptor
+ win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
+ let source=await prepareFinancialClientSource(options)
  if(options.boardTabs)source=require('../../scripts/lib/board-tabs-client.mjs').patchBoardTabsClient(source)
  if(options.sourceTransform)source=options.sourceTransform(source)
  if(options.boardView)source=source.replace('exports.ResearchCanvas = ResearchCanvas;','exports.__setBoardsAdapter=value=>{sherlockBoardsAdapter=value;};exports.ResearchCanvas = ResearchCanvas;')
