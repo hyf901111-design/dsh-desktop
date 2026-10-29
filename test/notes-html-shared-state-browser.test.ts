@@ -19,13 +19,13 @@ beforeAll(async()=>{
  const factories=new Map();window.__ModuleLoader__={load:d=>factories.set(d.id,d.factory)};new Function(${JSON.stringify(native)})();class Service{};const noop=()=>null,primitives=new Proxy({},{get:()=>noop});
  const nativeExports=factories.get('@deepseek-ai/dsh-client-ui-conversation')(id=>id==='react'?React:id==='react/jsx-runtime'?jsxRuntime:id==='react-dom'?ReactDOM:id==='@deepseek-ai/cordis'?{Service}:primitives);
  const spec={version:1,type:'html',title:'原位图表验收二',html:${JSON.stringify(readFileSync(resolve('test/fixtures/notes-offline-shared-chart.html'),'utf8'))}};
- window.noteSaved={title:'HTML交互保存验收',blocks:[{id:'upper',type:'paragraph',content:'上文保留'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'note-html',title:spec.title,kind:'generated-container',noteLibrary:true,containerSpec:spec,noteSize:{width:656,height:430}})}},{id:'tail',type:'paragraph',content:'下文保留'}],yjs:'',revision:0,updatedAt:0};
+ window.noteSaved={title:'HTML交互保存验收',blocks:[{id:'upper',type:'paragraph',content:'上文保留'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'note-html',title:spec.title,kind:'generated-container',noteLibrary:true,...(window.fixtureTheme?{notePresentation:{theme:window.fixtureTheme}}:{}),containerSpec:spec,noteSize:{width:656,height:430}})}},{id:'tail',type:'paragraph',content:'下文保留'}],yjs:'',revision:0,updatedAt:0};
  window.noteRequests=[];window.noteAcks=[];window.noteActions=[];window.saveMode='ok';window.saveWaiters=[];window.frameLoads=0;
  document.addEventListener('sherlock:notes-component-ack',e=>window.noteAcks.push(e.detail));document.addEventListener('sherlock:notes-component-action',e=>window.noteActions.push(e.detail));
  document.addEventListener('load',e=>{if(e.target?.matches?.('iframe[data-research-html-artifact]'))window.frameLoads++},true);
  const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});if(method==='load')return {saved:window.noteSaved};if(method==='save'){const mode=window.saveMode;if(mode==='fail')throw Error('演示保存失败');if(mode==='hold'){await new Promise(resolve=>window.saveWaiters.push(resolve));if(window.saveMode==='fail')throw Error('演示保存失败')}window.noteSaved={...input.content,revision:input.revision+1};return {status:'saved',saved:window.noteSaved}}return {ok:true}},draft:async()=>{}};
  let flush=async()=>{};const saveBinding={ready:value=>{flush=value},dispose:value=>{if(flush===value)flush=async()=>{}}};window.flushNote=()=>flush();
- window.createNoteRoot=()=>{const root=createRoot(document.querySelector('#notes'));root.render(React.createElement(NotesApp,{sessionId:'html-test',bridge,dark:false,active:!window.fixtureReadOnly,saveBinding,navigate:()=>{}}));return root};window.notesRoot=window.createNoteRoot();
+ window.createNoteRoot=()=>{const root=createRoot(document.querySelector('#notes'));root.render(React.createElement(NotesApp,{sessionId:'html-test',bridge,dark:!!window.fixtureGlobalDark,active:!window.fixtureReadOnly,saveBinding,navigate:()=>{}}));return root};window.notesRoot=window.createNoteRoot();
  const NoteViews=nativeExports.__NoteViews;createRoot(document.querySelector('#views')).render(React.createElement(NoteViews,{sessionId:'html-test',active:true}));
  `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo')}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
@@ -34,12 +34,13 @@ beforeAll(async()=>{
  browser=await (playwright.default||playwright).chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },90000)
 afterAll(async()=>{await browser?.close()})
-async function fixture(readOnly=false){
+async function fixture(readOnly=false,{componentTheme='',globalDark=false,slowFrames=false}={}){
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage(),errors:string[]=[]
  page.setDefaultTimeout(4000);page.on('pageerror',(error:Error)=>errors.push(error.message));page.on('console',(message:any)=>{if(message.type()==='error')errors.push(message.text())})
- await page.route('http://127.0.0.1/note-html-fixture',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body><section class="en-root" data-dark="false" style="position:fixed;inset:0"><div id="notes" class="en-editor-host"></div></section><div id="views"></div></body></html>'}))
+ if(slowFrames)await context.addInitScript(()=>{if(window!==parent){const end=performance.now()+80;while(performance.now()<end){/* Delay actual iframe parsing in this fixture. */}}})
+ await page.route('http://127.0.0.1/note-html-fixture',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body'+(globalDark?' data-ds-dark-theme':'')+'><section class="en-root" data-dark="'+String(globalDark)+'" style="position:fixed;inset:0"><div id="notes" class="en-editor-host"></div></section><div id="views"></div></body></html>'}))
  await page.route('http://127.0.0.1/fonts/NotoSansSC.woff2',(route:any)=>route.fulfill({contentType:'font/woff2',path:resolve('build/fonts/NotoSansSC.woff2')}))
- await page.goto('http://127.0.0.1/note-html-fixture');await page.evaluate((value:boolean)=>{(window as any).fixtureReadOnly=value},readOnly)
+ await page.goto('http://127.0.0.1/note-html-fixture');await page.evaluate(({readOnly,componentTheme,globalDark}:any)=>Object.assign(window,{fixtureReadOnly:readOnly,fixtureTheme:componentTheme,fixtureGlobalDark:globalDark}),{readOnly,componentTheme,globalDark})
  await page.addScriptTag({content:`var exports={};\n${script}`})
  const frame=page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview')
  try{
@@ -63,6 +64,29 @@ async function opened(frame:any):Promise<boolean>{return frame.locator('details'
 async function interactionAcks(page:any):Promise<any[]>{return page.evaluate(()=>(window as any).noteAcks.filter((entry:any)=>entry.requestId?.includes(':interaction:')))}
 
 async function semanticState(page:any):Promise<any>{return page.evaluate(()=>JSON.parse((window as any).noteSaved.blocks.find((block:any)=>block.id==='chart').props.payload).config?.sharedComponentState)}
+it('restores saved local Notes Light through dark cold mount, delayed iframe load and global broadcasts without resetting journal or memo',async()=>{
+ const f=await fixture(false,{componentTheme:'light',globalDark:true,slowFrames:true});try{
+  await select(f.page)
+  const check=async()=>{await expect.poll(()=>f.frame.locator('html').getAttribute('data-workbench-style')).toBe('light');await expect.poll(()=>f.frame.locator('html').getAttribute('data-workbench-control-theme')).toBe('light');expect(await f.frame.locator('html').getAttribute('data-sherlock-theme')).toBe('light');await expect.poll(()=>f.frame.locator('body').evaluate((body:HTMLElement)=>getComputedStyle(body).backgroundColor)).toBe('rgb(255, 255, 255)')}
+  await check();await f.frame.getByText('查看全部数据',{exact:true}).click();await f.frame.locator('#accept-note').fill('Notes冷重开保留的完整备注')
+  await expect.poll(async()=>(await semanticState(f.page))?.state?.note).toBe('Notes冷重开保留的完整备注')
+  const journal=await savedEvents(f.page)
+  for(const reopened of [false,true]){
+   if(reopened){await f.page.evaluate(async()=>{const w=window as any;await w.flushNote();w.notesRoot.unmount();w.notesRoot=w.createNoteRoot()});await expect.poll(()=>f.frame.locator('#accept-note').inputValue()).toBe('Notes冷重开保留的完整备注');await check()}
+   await f.frame.locator('body').evaluate((body:HTMLElement)=>body.dataset.themeIdentity='same-live-note-frame')
+   const outer=await(await f.page.locator('iframe[data-research-html-artifact]').elementHandle()).contentFrame()
+   await outer.evaluate(()=>{(window as any).themeMessages=[];addEventListener('message',event=>{if(event.source===parent&&event.data?.type==='sherlock-workbench-style')(window as any).themeMessages.push(event.data)})})
+   for(const dark of [false,true,false,true]){
+    const before=await outer.evaluate(()=>(window as any).themeMessages.length)
+    await f.page.evaluate((value:boolean)=>document.body.toggleAttribute('data-ds-dark-theme',value),dark)
+    await expect.poll(()=>outer.evaluate(()=>(window as any).themeMessages.length)).toBeGreaterThan(before)
+    expect(await outer.evaluate(()=>(window as any).themeMessages.at(-1))).toMatchObject({mode:'light',controlTheme:'light'})
+    await check();expect(await f.frame.locator('body').getAttribute('data-theme-identity')).toBe('same-live-note-frame');expect(await f.frame.locator('#accept-note').inputValue()).toBe('Notes冷重开保留的完整备注');expect(await opened(f.frame)).toBe(true)
+   }
+  }
+  expect(await savedEvents(f.page)).toEqual(journal);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},35000)
 it('switches four Notes component modes without remounting the iframe, changing its neighbor or losing the saved memo on reopen',async()=>{
  const f=await fixture();try{
   await select(f.page)

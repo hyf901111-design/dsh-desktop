@@ -36,8 +36,9 @@ export function createWorkbenchStyleState(storage,sessionId) {
 }
 
 export function workbenchFramePresentation(frame) {
- const root=frame?.closest('[data-note-presentation],[data-ework-grid]'),globalTheme=frame?.ownerDocument?.body?.hasAttribute('data-ds-dark-theme')?'dark':'light'
- const mode=root?.dataset.workbenchStyle||globalTheme,controlTheme=mode==='openterminal'?'dark':globalTheme
+ const root=frame?.closest('[data-note-presentation],[data-conversation-component-id][data-workbench-style],[data-ework-grid]'),globalTheme=frame?.ownerDocument?.body?.hasAttribute('data-ds-dark-theme')?'dark':'light'
+ // Component modes own their legacy control theme too; canvas chrome keeps its existing global preference.
+ const mode=root?.dataset.workbenchStyle||globalTheme,local=root?.matches('[data-note-presentation],[data-conversation-component-id]'),controlTheme=mode==='openterminal'||(local?mode==='dark':globalTheme==='dark')?'dark':'light'
  return {type:'sherlock-workbench-style',mode,controlTheme}
 }
 export function sendWorkbenchFramePresentation(frame) {
