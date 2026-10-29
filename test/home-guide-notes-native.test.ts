@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import {afterEach,expect,test} from 'vitest'
 import {createHomeNotesNativeBridge} from '../src/preload/home-guide-notes-native'
+import {createHomeNotesGuideBridge} from '../src/preload/home-guide-notes-data'
 const releases:Array<()=>void>=[]
 afterEach(()=>{for(const off of releases.splice(0))off();document.body.innerHTML=''})
 function fixture(){
@@ -36,4 +37,16 @@ test('cancels a pending native command without accepting a late reply or dispatc
  expect(await typing).toBe('AbortError');f.reply(pending,{})
  await expect(bridge.type('selection')).rejects.toMatchObject({name:'AbortError'})
  expect(f.requests.map(value=>value.command)).toEqual(['mount','type','dispose'])
+})
+test('settles an own Stop when synchronous disposal cancels its actual native acknowledgement',async()=>{
+ const f=fixture(),native=await createHomeNotesNativeBridge(document,f.host,f.options);releases.push(native.dispose)
+ const storage={request:async()=>({saved:{title:'',blocks:[],yjs:'',revision:0,updatedAt:0}}),draft:async()=>{}}
+ const bridge=createHomeNotesGuideBridge('note-session',f.scope.signal,undefined,{bridge:storage,fresh:true},undefined,native);releases.push(bridge.dispose);await bridge.request('load',{sessionId:'note-session'})
+ let pending:any;f.setAnswer(detail=>{pending=detail})
+ const stopped=bridge.request('stop',{sessionId:'note-session',requestId:'own-summary'})
+ expect(pending).toMatchObject({command:'stop',generationRequestId:'own-summary'})
+ native.dispose();await expect(stopped).resolves.toEqual({ok:true});f.reply(pending,{})
+ expect(f.requests.filter(value=>value.command==='stop')).toHaveLength(1)
+ const failed=createHomeNotesGuideBridge('note-session',new AbortController().signal,undefined,undefined,undefined,{generate:async()=>({kind:'text',markdown:''}),stop:async()=>{throw Error('真实停止失败')}})
+ await expect(failed.request('stop',{sessionId:'note-session',requestId:'own-summary'})).rejects.toThrow('真实停止失败');failed.dispose()
 })

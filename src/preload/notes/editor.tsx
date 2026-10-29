@@ -746,7 +746,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!nativeCurrent()||!editorActive()||detail?.sessionId!==props.sessionId||props.recovery||request.current||externalCapabilities.current?.pending()||(!detail.prompt?.trim()&&!detail.images?.length))return;document.dispatchEvent(new CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:props.sessionId,submissionId:detail.submissionId}}));void commands.current.generate(detail.prompt,detail.images,detail.admission)}
     const exportRequested=(event:Event)=>{if(editorActive()&&(event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.exportNote((event as CustomEvent).detail.format)}
     document.addEventListener('sherlock:notes-export',exportRequested)
-    const cancel=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.stop()}
+    const cancel=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId===props.sessionId&&(detail.requestId===undefined||!!request.current&&detail.requestId===request.current))commands.current.stop()}
     const sessionError=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)setError((event as CustomEvent).detail.message)}
     const state=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)publishComposer({})}
     document.addEventListener('sherlock:notes-submit',submit);document.addEventListener('sherlock:notes-stop',cancel);document.addEventListener('sherlock:notes-session-error',sessionError);document.addEventListener('sherlock:notes-composer-request-state',state);publishComposer({running:false})

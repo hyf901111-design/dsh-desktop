@@ -11,8 +11,8 @@ import {notesComposerSource} from '../scripts/lib/notes-composer.mjs'
 import {HOME_NOTES_CHART_PROMPT,HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_TASK_RESULT} from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 const require=createRequire(import.meta.url),releases=[]
 afterEach(async()=>{for(const off of releases.splice(0))await off()})
-function fixture({foreignPopup=false}={}){
- const win=new Window({url:'http://localhost:43210'}),doc=win.document,cleanups=[],fetches=[],cues=[],submissions=[];let foreignClicks=0
+function fixture({foreignPopup=false,deferSummary=false}={}){
+ const win=new Window({url:'http://localhost:43210'}),doc=win.document,cleanups=[],fetches=[],cues=[],submissions=[];let foreignClicks=0,summaryRead,summaryReads=0,summaryAborts=0
  doc.body.innerHTML='<main class="pI_x6G_centerCol"><header data-srb-session-header data-ework-notes-session="note-session"></header><section data-home-guide="note-run" data-kind="note"><div id="guide-host"></div></section><div data-ework-notes-composer-host="note-session"><div class="uV2eYG_root"><textarea></textarea><button class="uV2eYG_primary">发送</button></div></div></main>'
  doc.documentElement.dataset.homeGuidePointerRun='note-run'
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),modules=id=>['react','react/jsx-runtime','react-dom'].includes(id)?require(id):id==='@deepseek-ai/cordis'?{Service:class{}}:fake
@@ -29,17 +29,17 @@ function fixture({foreignPopup=false}={}){
  const make=runInNewContext(helpers+';eworkNotesInput',scope),conversation={serializeImages:async()=>[],draftImages:()=>[],releaseDraftImage(){}}
  const record=make('note-session',ordinary,conversation);record.active=true;record.ready=true
  native.__setGuidePage({getHomeGuideSession:id=>id==='note-session'?{kind:'note',cwd:'/tmp/note-example'}:undefined})
- scope.fetch=async(_url,options)=>{const body=JSON.parse(options.body);fetches.push(body);let done=false;const result=body.input?.prompt===HOME_NOTES_TASK_PROMPT?{kind:'conversation',markdown:HOME_NOTES_TASK_RESULT}:{kind:'component',node:{id:'home-note-chart-note-run',containerSpec:{version:1,type:'html',html:'<p>Chart service fixture</p>'}}};return{ok:true,json:async()=>({ok:true,prompts:{chart:HOME_NOTES_CHART_PROMPT,note:HOME_NOTES_TASK_PROMPT,selection:HOME_NOTES_REWRITE_PROMPT}}),body:{getReader:()=>({read:async()=>done?{done:true}:(done=true,{value:new TextEncoder().encode(JSON.stringify({type:'result',result})+'\n'),done:false})})}}}
+ scope.fetch=async(_url,options)=>{const body=JSON.parse(options.body);fetches.push(body);let done=false;const isSummary=body.input?.prompt===HOME_NOTES_TASK_PROMPT,result=isSummary?{kind:'conversation',markdown:HOME_NOTES_TASK_RESULT}:{kind:'component',node:{id:'home-note-chart-note-run',containerSpec:{version:1,type:'html',html:'<p>Chart service fixture</p>'}}};return{ok:true,json:async()=>({ok:true,prompts:{chart:HOME_NOTES_CHART_PROMPT,note:HOME_NOTES_TASK_PROMPT,selection:HOME_NOTES_REWRITE_PROMPT}}),body:{getReader:()=>({read:async()=>{if(done)return{done:true};if(isSummary&&deferSummary)await new Promise((resolve,reject)=>{summaryReads++;const clean=()=>options.signal.removeEventListener('abort',stop),stop=()=>{clean();summaryAborts++;reject(new win.DOMException('summary cancelled','AbortError'))};summaryRead=error=>{clean();error?reject(error):resolve()};options.signal.addEventListener('abort',stop,{once:true});if(options.signal.aborted)stop()});done=true;return{value:new TextEncoder().encode(JSON.stringify({type:'result',result})+'\n'),done:false}}})}}}
  const input=doc.querySelector('textarea'),button=doc.querySelector('button')
  for(let element=input.parentElement;element;element=element.parentElement)element.getBoundingClientRect=()=>({x:0,y:0,left:0,top:0,right:1024,bottom:768,width:1024,height:768})
  for(const element of [input,button])element.getBoundingClientRect=()=>({x:20,y:40,left:20,top:40,right:320,bottom:90,width:300,height:50})
  button.addEventListener('click',()=>record.shell.submit('queue'))
- doc.addEventListener('sherlock:notes-submit',event=>{submissions.push(event.detail.prompt);doc.dispatchEvent(new win.CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:'note-session',submissionId:event.detail.submissionId}}))})
+ doc.addEventListener('sherlock:notes-submit',event=>{submissions.push(event.detail.prompt);doc.dispatchEvent(new win.CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:'note-session',submissionId:event.detail.submissionId}}));doc.dispatchEvent(new win.CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'note-session',requestId:event.detail.prompt===HOME_NOTES_TASK_PROMPT?'summary-semantic':'selection-semantic',phase:'preparing',prompt:event.detail.prompt}}))})
  let autoAck=true
  win.addEventListener('sherlock:home-guide-cue',event=>{const value=JSON.parse(JSON.stringify(event.detail));cues.push(value);if(autoAck)ack(value)})
  const ack=value=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:value.runId,requestId:value.requestId,ok:true}}))
  const command=(command,extra={})=>new Promise(resolve=>{const requestId=win.crypto.randomUUID(),receive=event=>{if(event.detail?.requestId!==requestId)return;win.removeEventListener('sherlock:home-guide-notes-native-reply',receive);resolve(event.detail)};win.addEventListener('sherlock:home-guide-notes-native-reply',receive);win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-notes-native-request',{detail:{requestId,runId:'note-run',sessionId:'note-session',hostId:'guide-host',command,...extra}}))})
- const mount=async(prime=true)=>{expect(await command('mount',{cwd:'/tmp/note-example',fresh:true})).toMatchObject({ok:true});win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'note-session',runId:'note-run',playing:true}}));if(prime){expect(await command('generate',{input:{sessionId:'note-session',requestId:'chart-task',prompt:HOME_NOTES_CHART_PROMPT}})).toMatchObject({ok:true});if(foreignPopup){const foreign=doc.createElement('div');foreign.id='foreign-symbol-popup';foreign.setAttribute('role','listbox');foreign.setAttribute('aria-label','匹配标的');foreign.innerHTML='<button role="option"><small>SZ</small><strong>中际旭创</strong><small>300308</small></button>';foreign.querySelector('button').addEventListener('click',()=>foreignClicks++);doc.body.prepend(foreign)}const owner=doc.createElement('div');owner.dataset.researchNodeId='quote-fixture';owner.innerHTML='<input role="combobox" aria-label="搜索个股代码或名字"><section data-financial-widget="quote"></section>';doc.querySelector('#guide-host').append(owner);const search=owner.querySelector('input'),section=owner.querySelector('section');for(const node of [owner,search,section])node.getBoundingClientRect=()=>({left:20,top:40,right:320,bottom:90,width:300,height:50});search.addEventListener('input',()=>{if(search.value!=='300308')return;const choices=doc.createElement('div');choices.id='owned-symbol-popup';search.setAttribute('aria-controls',choices.id);choices.setAttribute('role','listbox');choices.setAttribute('aria-label','匹配标的');choices.innerHTML='<button role="option"><small>SZ</small><strong>中际旭创</strong><small>300308</small></button>';const option=choices.querySelector('button');option.getBoundingClientRect=search.getBoundingClientRect;option.addEventListener('click',()=>{choices.remove();section.innerHTML='<div>中际旭创</div><div class="ew-quote-price-line"><strong>112.30</strong></div><div data-financial-chart><svg></svg></div><footer class="ew-financial-footer"><span class="ew-financial-source-time">合成行情测试来源 · 2026-10-28</span><button class="ew-financial-provenance" title="最近获取：2026-10-28"></button></footer>'});doc.body.append(choices)});expect(await command('configure-quote')).toMatchObject({ok:true});cues.length=0}}
+ const mount=async(prime=true)=>{expect(await command('mount',{cwd:'/tmp/note-example',fresh:true})).toMatchObject({ok:true});win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'note-session',runId:'note-run',playing:true}}));if(prime){expect(await command('generate',{input:{sessionId:'note-session',requestId:'chart-task',prompt:HOME_NOTES_CHART_PROMPT}})).toMatchObject({ok:true});doc.dispatchEvent(new win.CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'note-session',requestId:'chart-task',phase:'accepted'}}));if(foreignPopup){const foreign=doc.createElement('div');foreign.id='foreign-symbol-popup';foreign.setAttribute('role','listbox');foreign.setAttribute('aria-label','匹配标的');foreign.innerHTML='<button role="option"><small>SZ</small><strong>中际旭创</strong><small>300308</small></button>';foreign.querySelector('button').addEventListener('click',()=>foreignClicks++);doc.body.prepend(foreign)}const owner=doc.createElement('div');owner.dataset.researchNodeId='quote-fixture';owner.innerHTML='<input role="combobox" aria-label="搜索个股代码或名字"><section data-financial-widget="quote"></section>';doc.querySelector('#guide-host').append(owner);const search=owner.querySelector('input'),section=owner.querySelector('section');for(const node of [owner,search,section])node.getBoundingClientRect=()=>({left:20,top:40,right:320,bottom:90,width:300,height:50});search.addEventListener('input',()=>{if(search.value!=='300308')return;const choices=doc.createElement('div');choices.id='owned-symbol-popup';search.setAttribute('aria-controls',choices.id);choices.setAttribute('role','listbox');choices.setAttribute('aria-label','匹配标的');choices.innerHTML='<button role="option"><small>SZ</small><strong>中际旭创</strong><small>300308</small></button>';const option=choices.querySelector('button');option.getBoundingClientRect=search.getBoundingClientRect;option.addEventListener('click',()=>{choices.remove();section.innerHTML='<div>中际旭创</div><div class="ew-quote-price-line"><strong>112.30</strong></div><div data-financial-chart><svg></svg></div><footer class="ew-financial-footer"><span class="ew-financial-source-time">合成行情测试来源 · 2026-10-28</span><button class="ew-financial-provenance" title="最近获取：2026-10-28"></button></footer>'});doc.body.append(choices)});expect(await command('configure-quote')).toMatchObject({ok:true});cues.length=0}}
  releases.push(async()=>{for(const off of cleanups.reverse())off();ordinary.dispose();await win.happyDOM.close()})
  const builtSidebar='build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js',sidebarSource=readFileSync(process.env.SHERLOCK_TEST_SIDEBAR_SOURCE||(existsSync(builtSidebar)?builtSidebar:join(homedir(),'Library/Application Support/sherlock-desktop/harness/profiles/web/node_modules/dsh-better-sidebar/lib/client.js')),'utf8'),sidebarStart=sidebarSource.indexOf('const SIDEBAR_PREFS_DEFAULTS ='),sidebarEnd=sidebarSource.indexOf('//#region src/client/chunk-loader.ts',sidebarStart)
  if(sidebarStart<0||sidebarEnd<0)throw Error('Native sidebar store fixture source drifted')
@@ -54,7 +54,7 @@ function fixture({foreignPopup=false}={}){
  const paintNativeHost=()=>{const {sessionId:current,state}=sidebar.getSnapshot(),leaf=leaves(state.splits).find(node=>node.id===state.activePane)||leaves(state.splits)[0];input.closest('[data-ework-notes-composer-host]').style.display=current==='note-session'&&state.panelOpen&&leaf?.active==='sherlock-research-conversation'?'':'none'}
  releases.push(sidebar.subscribeState(paintNativeHost));paintNativeHost()
  const openEvidence=()=>sidebar.openTab({id:'notes-challenge:note-session',type:'sherlock-notes-challenge',title:'AI随航'},{sessionId:'note-session'})
- return{win,doc,record,foreignClicks:()=>foreignClicks,fetches,cues,submissions,command,mount,ack,sidebar,sidebarStore,openEvidence,coordinator,defaultSidebar:native.__defaultSidebar,setAutoAck:value=>{autoAck=value}}
+ return{win,doc,record,foreignClicks:()=>foreignClicks,summaryReads:()=>summaryReads,summaryAborts:()=>summaryAborts,releaseSummary:error=>summaryRead?.(error),fetches,cues,submissions,command,mount,ack,sidebar,sidebarStore,openEvidence,coordinator,defaultSidebar:native.__defaultSidebar,setAutoAck:value=>{autoAck=value}}
 }
 it('types into the real Notes SessionInputShell and submits through its ordinary note admission',async()=>{
  const f=fixture();await f.mount();expect(await f.command('type',{stage:'selection'})).toMatchObject({ok:true})
@@ -109,18 +109,64 @@ it('uses only the quote input aria-controls popup despite another matching symbo
  expect(await f.command('configure-quote')).toMatchObject({ok:false})
  expect(f.foreignClicks()).toBe(0)
 },15000)
-async function summaryFixture(){
- const f=fixture();await f.mount()
+async function summaryFixture({deferSummary=false}={}){
+ const f=fixture({deferSummary});await f.mount()
  expect(await f.command('type',{stage:'note'})).toMatchObject({ok:false})
  expect(await f.command('type',{stage:'selection'})).toMatchObject({ok:true})
+ f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'note-session',requestId:'selection-semantic',phase:'accepted'}}))
  f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:'note-session',active:true,ready:true,running:false,preparing:false}}))
  expect(await f.command('type',{stage:'note'})).toMatchObject({ok:true})
- expect(await f.command('generate',{input:{sessionId:'note-session',requestId:'summary-semantic',prompt:HOME_NOTES_TASK_PROMPT}})).toMatchObject({ok:true})
+ const generation=f.command('generate',{input:{sessionId:'note-session',requestId:'summary-semantic',prompt:HOME_NOTES_TASK_PROMPT}})
  const panel=f.doc.createElement('section');panel.dataset.researchConversationPanel='';panel.dataset.researchActive='true';panel.innerHTML='<div data-conversation-scroll><div class="sRp_messages" data-research-conversation-host></div><div data-research-composer-host></div></div>';const messages=panel.querySelector('.sRp_messages'),composer=panel.querySelector('[data-research-composer-host]');messages.getBoundingClientRect=()=>({left:0,top:20,right:600,bottom:600,width:600,height:580});composer.getBoundingClientRect=()=>({left:0,top:610,right:600,bottom:760,width:600,height:150});composer.append(f.doc.querySelector('[data-ework-notes-composer-host]'));f.doc.body.append(panel);const article=f.doc.createElement('article');article.dataset.noteTask='summary-semantic';article.dataset.phase='replied';article.textContent=HOME_NOTES_TASK_RESULT;const button=f.doc.createElement('button');button.setAttribute('aria-label','添加到笔记');button.getBoundingClientRect=()=>({left:20,top:40,right:320,bottom:90,width:300,height:50});article.append(button);messages.append(article)
  let clicks=0;button.addEventListener('click',()=>{const actionId=f.win.crypto.randomUUID();f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:notes-add-reply',{detail:{sessionId:'note-session',messageId:'ework-note:summary-semantic',text:HOME_NOTES_TASK_RESULT,actionId}}));if(!f.rejectAck)clicks++;f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:notes-add-reply-ack',{detail:{sessionId:'note-session',actionId,ok:!f.rejectAck,message:f.rejectAck?'保存被拒绝':undefined}}))})
+ article.dataset.phase='thinking';article.textContent='正在思考';
+ f.generation=generation.then(result=>{if(result.ok){article.dataset.phase='replied';article.textContent=HOME_NOTES_TASK_RESULT;article.append(button)}return result})
+ if(!deferSummary)expect(await f.generation).toMatchObject({ok:true})
  const approve=event=>{const value=event.detail;f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-notes-tail-reply',{detail:{...value,ok:true}}))}
  f.approve=()=>{f.win.addEventListener('sherlock:home-guide-notes-tail-check',approve);releases.push(()=>f.win.removeEventListener('sherlock:home-guide-notes-tail-check',approve))};f.clicks=()=>clicks;return f
 }
+it('waits in the actual native portal for its pending summary stream before reading the real reply',async()=>{
+ const f=await summaryFixture({deferSummary:true});await vi.waitFor(()=>expect(f.summaryReads()).toBe(1))
+ let settled=false;const review=f.command('review-summary').then(result=>{settled=true;return result})
+ await new Promise(resolve=>setTimeout(resolve,60));expect(settled).toBe(false)
+ expect(f.doc.querySelector('[data-note-task]').dataset.phase).toBe('thinking');expect(f.clicks()).toBe(0)
+ f.releaseSummary();expect(await f.generation).toMatchObject({ok:true})
+ expect(await review).toMatchObject({ok:true,result:{requestId:'summary-semantic'}});expect(f.clicks()).toBe(0)
+ f.approve();expect(await f.command('append-summary')).toMatchObject({ok:true});expect(f.clicks()).toBe(1)
+},25000)
+it('keeps summary review paused and rejects a different semantic request while the admitted stream is pending',async()=>{
+ const f=await summaryFixture({deferSummary:true});await vi.waitFor(()=>expect(f.summaryReads()).toBe(1))
+ let settled=false;const review=f.command('review-summary').then(result=>{settled=true;return result})
+ expect(await f.command('generate',{input:{sessionId:'note-session',requestId:'foreign-summary',prompt:HOME_NOTES_TASK_PROMPT}})).toMatchObject({ok:false})
+ f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'note-session',runId:'note-run',playing:false}}))
+ f.releaseSummary();expect(await f.generation).toMatchObject({ok:true});await new Promise(resolve=>setTimeout(resolve,80));expect(settled).toBe(false)
+ f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'note-session',runId:'note-run',playing:true}}))
+ expect(await review).toMatchObject({ok:true,result:{requestId:'summary-semantic'}});expect(f.clicks()).toBe(0)
+},25000)
+it('stops only its own pending editor request before the guide token is released and aborts its real stream',async()=>{
+ const f=await summaryFixture({deferSummary:true});await vi.waitFor(()=>expect(f.summaryReads()).toBe(1));const stopped=[]
+ f.doc.addEventListener('sherlock:notes-stop',event=>stopped.push({requestId:event.detail.requestId,token:f.doc.documentElement.dataset.homeGuidePointerRun}))
+ const review=f.command('review-summary')
+ f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'note-session',runId:'note-run',playing:false,ending:true}}))
+ expect(stopped).toEqual([{requestId:'summary-semantic',token:'note-run'}])
+ expect(await review).toMatchObject({ok:false});expect(await f.generation).toMatchObject({ok:false});expect(f.summaryAborts()).toBe(1)
+ expect(stopped).toEqual([{requestId:'summary-semantic',token:'note-run'}]);expect(f.clicks()).toBe(0)
+ expect(f.fetches.filter(row=>row.action==='dispose')).toHaveLength(1)
+},25000)
+it('rejects a failed summary stream and a replaced session without ever appending its stale reply',async()=>{
+ const f=await summaryFixture({deferSummary:true});await vi.waitFor(()=>expect(f.summaryReads()).toBe(1));const review=f.command('review-summary')
+ f.releaseSummary(Error('总结流失败（测试）'));expect(await f.generation).toMatchObject({ok:false,message:'总结流失败（测试）'})
+ expect(await review).toMatchObject({ok:false,message:'总结流失败（测试）'});expect(f.clicks()).toBe(0)
+ f.doc.querySelector('[data-srb-session-header]').dataset.eworkNotesSession='different-session';await new Promise(resolve=>setTimeout(resolve,30));f.doc.querySelector('[data-srb-session-header]').dataset.eworkNotesSession='note-session'
+ expect(await f.command('append-summary')).toMatchObject({ok:false});expect(f.clicks()).toBe(0)
+},25000)
+it('rejects a pending summary after an A-B-A session reset without stopping a new request or revealing the old result',async()=>{
+ const f=await summaryFixture({deferSummary:true});await vi.waitFor(()=>expect(f.summaryReads()).toBe(1));const review=f.command('review-summary'),stopped=[]
+ f.doc.addEventListener('sherlock:notes-stop',event=>stopped.push(event.detail.requestId))
+ const header=f.doc.querySelector('[data-srb-session-header]');header.dataset.eworkNotesSession='different-session';f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-action-context-changed'));header.dataset.eworkNotesSession='note-session'
+ expect(await review).toMatchObject({ok:false});expect(await f.generation).toMatchObject({ok:false});expect(f.summaryAborts()).toBe(1)
+ expect(stopped).toEqual(['summary-semantic']);f.releaseSummary();expect(await f.command('append-summary')).toMatchObject({ok:false});expect(f.clicks()).toBe(0)
+},25000)
 it('checks the tail lease after its final cue and uses the original public reply acknowledgement exactly once',async()=>{
  const f=await summaryFixture();expect(await f.command('review-summary')).toMatchObject({ok:true,result:{requestId:'summary-semantic'}})
  expect(await f.command('append-summary')).toMatchObject({ok:false});expect(f.clicks()).toBe(0)

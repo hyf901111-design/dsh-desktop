@@ -89,6 +89,24 @@ it('uses the real paragraph selection and AI rewrite control before replacing on
   expect(await page.locator('[data-id="logic"] .bn-inline-content').innerText()).toBe('订单增长为收入扩张提供线索，利润兑现仍取决于价格、毛利率与回款质量。');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+it('matches a targeted stop to the current semantic request while preserving the ordinary Stop action',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.evaluate(()=>{window.noteApi.prepareNative();window.submitNative()});await expect.poll(()=>page.evaluate(()=>window.results.length)).toBe(1)
+  const first=await page.evaluate(()=>window.results[0].input.requestId)
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId:'native-note-session',requestId:'other-request'}})))
+  expect(await page.evaluate(()=>window.requests.filter(row=>row.method==='stop').length)).toBe(0)
+  await page.evaluate(requestId=>document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId:'native-note-session',requestId}})),first)
+  await expect.poll(()=>page.evaluate(()=>window.requests.filter(row=>row.method==='stop').length)).toBe(1)
+  await page.evaluate(()=>window.submitNative('新的笔记需求'));await expect.poll(()=>page.evaluate(()=>window.results.length)).toBe(2)
+  await page.evaluate(requestId=>document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId:'native-note-session',requestId}})),first)
+  expect(await page.evaluate(()=>window.requests.filter(row=>row.method==='stop').length)).toBe(1)
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId:'native-note-session'}})))
+  await expect.poll(()=>page.evaluate(()=>window.requests.filter(row=>row.method==='stop').length)).toBe(2)
+  expect(await page.evaluate(()=>window.events.filter(row=>row.name==='notes-task-state'&&row.detail.phase==='stopped').map(row=>row.detail.requestId))).toEqual(await page.evaluate(()=>window.results.map(row=>row.input.requestId)))
+  await page.evaluate(()=>window.results.forEach(row=>row.resolve({kind:'text',markdown:'取消后的旧结果不得写入'})));await page.waitForTimeout(50)
+  expect(await page.locator('.bn-editor').innerText()).not.toContain('取消后的旧结果');expect(errors).toEqual([])
+ }finally{await context.close()}
+},12000)
 it('rejects stale paragraph text and a replaced run without moving or editing its document',async()=>{
  const{context,page,errors}=await fixture();try{
   const before=await page.evaluate(()=>JSON.stringify(window.noteApi.snapshot().blocks))
