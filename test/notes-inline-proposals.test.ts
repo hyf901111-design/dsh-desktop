@@ -1,7 +1,12 @@
+// @vitest-environment happy-dom
 import {expect,it,vi} from 'vitest'
+import {readFileSync} from 'node:fs'
+import {resolve} from 'node:path'
 import * as Y from 'yjs'
 import {createNoteInlineProposals} from '../src/preload/notes/inline-ai-proposals'
 import {validateNoteContent} from '../src/main/notes/store'
+import {createNoteHtmlInteraction} from '../src/preload/notes/html-interaction'
+import {researchInteractionVersion} from '../packages/dsh-research-task-runtime/html-artifact.js'
 const paragraph=(id:string,text='')=>({id,type:'paragraph',props:{},content:text?[{type:'text',text,styles:{}}]:[],children:[]})
 const clone=(value:any)=>JSON.parse(JSON.stringify(value))
 function fixture(initial:any[],doc=new Y.Doc()){
@@ -91,4 +96,60 @@ it('preserves Unicode across bounded chunks and still reads an unchunked legacy 
 it('reports an unavailable journal before applying a document mutation',()=>{
  const f=fixture([paragraph('anchor')]);f.start();const set=vi.spyOn(f.doc.getMap('note-inline-proposals'),'set').mockImplementation(()=>{throw Error('审阅存储不可用')})
  expect(()=>f.ai.replaceBlocks(['anchor'],[paragraph('generated','不能先写正文')])).toThrow('审阅存储不可用');expect(f.editor.document).toEqual([paragraph('anchor')]);set.mockRestore();f.ledger.dispose();f.doc.destroy()
+})
+
+const navigationHtml=readFileSync(resolve('test/fixtures/notes-native-chart-navigation.html'),'utf8')
+const navigationEvent=(id='view-one',clock=1)=>({id,clock,targetRoute:[1,0],tag:'SVG',type:'keydown',key:'ArrowRight'})
+function chartReview(persist:()=>Promise<unknown>=async()=>{}){
+ const f=fixture([paragraph('before','用户旧文'),paragraph('anchor'),paragraph('after','用户尾段')])
+ f.start();f.ai.replaceBlocks(['anchor'],[{id:'chart',type:'research',props:{payload:JSON.stringify({id:'node-chart',title:'原位图',containerSpec:{version:1,type:'html',title:'原位图',html:navigationHtml}})},content:undefined,children:[]}]);f.ledger.finish('request')
+ const controller=createNoteHtmlInteraction({editor:f.editor,current:()=>true,persist,captureWrite:f.ledger.captureHtmlInteraction})
+ const packet=(event=navigationEvent())=>({blockId:'chart',nodeId:'node-chart',html:navigationHtml,version:researchInteractionVersion(navigationHtml),event})
+ return{...f,controller,packet,payload:()=>f.editor.getBlock('chart').props.payload,node:()=>JSON.parse(f.editor.getBlock('chart').props.payload)}
+}
+it('rebases only trusted chart navigation, persists its exact journal and preserves real Undo after Yjs reopen',async()=>{
+ const f=chartReview();await f.controller.commit(f.packet());await f.controller.commit(f.packet(navigationEvent('view-two',2)))
+ expect(f.ledger.canUndo('request')).toBe(true);expect(f.ledger.list()[0]!.changes.find(change=>change.id==='chart')).toMatchObject({after:f.editor.getBlock('chart')})
+ const update=Y.encodeStateAsUpdate(f.doc),blocks=clone(f.editor.document);f.ledger.dispose();const doc=new Y.Doc();Y.applyUpdate(doc,update);const reopened=fixture(blocks,doc)
+ expect(reopened.ledger.canUndo('request')).toBe(true);expect(reopened.ledger.undo('request')).toEqual({complete:true,retained:0});expect(reopened.editor.document.map((b:any)=>b.id)).toEqual(['before','anchor','after'])
+})
+it('reverses an exact unsaved navigation without making the ready proposal dirty',async()=>{
+ let reject!:(error:Error)=>void,entered!:()=>void;const waiting=new Promise<void>((_,no)=>reject=no),started=new Promise<void>(yes=>entered=yes),f=chartReview(async()=>{entered();await waiting}),before=f.payload(),pending=f.controller.commit(f.packet()),failure=expect(pending).rejects.toThrow('保存失败')
+ await started;expect(f.ledger.canUndo('request')).toBe(true);reject(Error('保存失败'));await failure
+ expect(f.payload()).toBe(before);expect(f.ledger.canUndo('request')).toBe(true);expect(f.ledger.list()[0]!.changes.find(change=>change.id==='chart')?.dirty).not.toBe(true)
+})
+it.each(['human-edit','same-id-rebuilt'])('does not rebase or rollback over %s while navigation persistence is pending',async reason=>{
+ let reject!:(error:Error)=>void,entered!:()=>void;const waiting=new Promise<void>((_,no)=>reject=no),started=new Promise<void>(yes=>entered=yes),f=chartReview(async()=>{entered();await waiting}),pending=f.controller.commit(f.packet()),failure=expect(pending).rejects.toThrow('保存失败')
+ await started
+ if(reason==='human-edit')f.editor.updateBlock('chart',{props:{payload:JSON.stringify({...f.node(),title:'用户新标题'})}})
+ else f.editor.replaceBlocks(['chart'],[clone(f.editor.getBlock('chart'))])
+ const latest=f.payload();reject(Error('保存失败'));await failure;expect(f.payload()).toBe(latest);expect(f.ledger.canUndo('request')).toBe(false)
+})
+it.each(['memo','chart-data','title','size','config','shared-state','old-journal','mixed-event'])('keeps %s edits dirty instead of treating them as browsing',reason=>{
+ const f=chartReview(),input=f.packet(),previous=f.payload(),node=f.node(),next={...node,config:{interactionState:{version:input.version,events:{[input.event.id]:input.event}}}}
+ if(reason==='memo'){input.event={...input.event,tag:'TEXTAREA',type:'input',key:undefined,value:'人工备注'} as any;next.config.interactionState.events[input.event.id]=input.event}
+ if(reason==='chart-data')next.containerSpec={...node.containerSpec,html:navigationHtml.replace('values":[10,20,15]','values":[10,21,15]')}
+ if(reason==='title')next.title='人工改名'
+ if(reason==='size')(next as any).noteSize={width:720,height:440}
+ if(reason==='config')(next.config as any).personalChartView={series:[false]}
+ if(reason==='shared-state')(next.config as any).sharedComponentState={version:input.version,revision:1,state:{note:'人工备注'}}
+ if(reason==='old-journal'){
+  const old=navigationEvent('older',1),nodeWithJournal={...node,config:{interactionState:{version:input.version,events:{older:old}}}};f.editor.updateBlock('chart',{props:{payload:JSON.stringify(nodeWithJournal)}})
+  // Even restoring the payload exactly cannot clear a previously dirty entry.
+  f.editor.updateBlock('chart',{props:{payload:previous}})
+ }
+ if(reason==='mixed-event')(next.config.interactionState.events as any).other={...navigationEvent('other',2),type:'click',tag:'BUTTON',key:undefined}
+ f.ledger.captureHtmlInteraction(input)(previous,JSON.stringify(next));expect(f.ledger.canUndo('request')).toBe(false);expect(f.ledger.list()[0]!.changes.find(change=>change.id==='chart')?.dirty).toBe(true)
+})
+it('does not rebase a replaced same-ID Y node, a running record or another request',async()=>{
+ const f=chartReview();f.editor.replaceBlocks(['chart'],[clone(f.editor.getBlock('chart'))]);await f.controller.commit(f.packet());expect(f.ledger.canUndo('request')).toBe(false)
+ const running=chartReview();const record=running.ledger.list()[0]!;running.ledger.restore({...record,state:'running'});await running.controller.commit(running.packet());expect(running.ledger.canUndo('request')).toBe(false)
+ const other=chartReview();other.ledger.begin('other-request','用户另一次生成',other.anchor);other.ledger.proxy().insertBlocks([paragraph('other-result','独立结果')],'after','after');other.ledger.finish('other-request');const before=other.ledger.list().find(record=>record.id==='other-request')
+ await other.controller.commit(other.packet());expect(other.ledger.list().find(record=>record.id==='other-request')).toEqual(before);expect(other.ledger.canUndo('request')).toBe(true);expect(other.ledger.canUndo('other-request')).toBe(true)
+})
+it('does not attribute a queued old-request navigation to a newer owner of the same Y node',async()=>{
+ let release!:()=>void,entered!:()=>void,calls=0;const waiting=new Promise<void>(yes=>release=yes),started=new Promise<void>(yes=>entered=yes),f=chartReview(async()=>{if(!calls++){entered();await waiting}})
+ const first=f.controller.commit(f.packet());await started;const second=f.controller.commit(f.packet(navigationEvent('queued-old-request',2)))
+ f.ledger.confirm('request');f.ledger.begin('new-request','新一轮修改当前组件',f.anchor);f.ledger.proxy().updateBlock('chart',{props:{payload:JSON.stringify({...f.node(),title:'新请求的结果'})}});f.ledger.finish('new-request')
+ release();await first;await second;expect(f.ledger.canUndo('new-request')).toBe(false);expect(f.node().title).toBe('新请求的结果')
 })

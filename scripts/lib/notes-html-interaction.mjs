@@ -61,7 +61,7 @@ export function createNoteHtmlInteractionBridge(initial,request){
  }
 }
 
-function patchNoteHtmlRenderer(renderer){
+function patchNoteHtmlRenderer(renderer,normalizeFrame=true){
  const once=(a,b)=>{if(renderer.split(a).length!==2)throw Error('Notes HTML interaction anchor missing or ambiguous: '+a.slice(0,100));renderer=renderer.replace(a,b)}
  if(!renderer.includes('const noteHtmlInteraction=react.useContext(eworkNoteHtmlInteractionContext);')){
  once('const interactionReadOnly=sherlockShared(interactionSessionId)&&sherlockBoardsAdapter?.getView(interactionSessionId)?.permissions.edit!==true;',`const noteHtmlInteraction=react.useContext(eworkNoteHtmlInteractionContext);
@@ -89,6 +89,11 @@ function patchNoteHtmlRenderer(renderer){
           if(c.readOnly||typeof m.peerId!=='string'||m.peerId.length>128||typeof m.commitId!=='string'||m.commitId.length>128){reply();return;}
           void bridge.commit(researchInteractionVersion(html),m.revision,m.state).then(reply).catch(()=>reply());return;
         }`)
+ }
+ if(normalizeFrame){
+  const before='srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0 }',after="srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0, border: 0, display: 'block', boxSizing: 'border-box', background: 'transparent' }"
+  if(renderer.split(before).length+renderer.split(after).length!==3)throw Error('Notes HTML frame style anchor missing or ambiguous')
+  if(renderer.includes(before))once(before,after)
  }
  return renderer
 }
@@ -125,8 +130,8 @@ export function patchNotesHtmlInteraction(source,noteViewSource){
   const entries=changes.filter(([before,after])=>before.trimStart().startsWith('function ResearchHtmlArtifact(')&&after.trimStart().startsWith('function ResearchHtmlArtifact('))
   if(entries.length!==1)throw Error('Notes HTML restore record missing or ambiguous')
   if((entries[0][2]??1)!==1)throw Error('Notes HTML restore renderer must be unique')
-  const entry=entries[0],nextAfter=patchNoteHtmlRenderer(entry[1])
-  if(previousRenderer.trimEnd()!==entry[1].trimEnd()&&previousRenderer.trimEnd()!==nextAfter.trimEnd())throw Error('Notes HTML restore record changed')
+  const entry=entries[0],knownAfter=patchNoteHtmlRenderer(entry[1],false),nextAfter=patchNoteHtmlRenderer(entry[1])
+  if(previousRenderer.trimEnd()!==entry[1].trimEnd()&&previousRenderer.trimEnd()!==knownAfter.trimEnd()&&previousRenderer.trimEnd()!==nextAfter.trimEnd())throw Error('Notes HTML restore record changed')
   entry[0]=patchNoteHtmlRenderer(entry[0]);entry[1]=nextAfter
   // Preserve legacy records for older independent restore consumers.
   edits.push({start:recordStart+tag.length,end:recordEnd,text:record.trimStart().startsWith('[')?JSON.stringify(changes).replaceAll('*/','*\\/'):serializeWorkbenchRestore(changes)})

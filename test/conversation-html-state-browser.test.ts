@@ -47,6 +47,20 @@ async function fixture({readOnly=false,noCommit=false}={}){
  return{page,frame,errors,requests,view:()=>store.read('owner',target),mode:(value:string)=>{mode=value},release:()=>{for(const next of releases.splice(0))next()},changeOwner:()=>{owner='other';generation='window-b'},reopen:async()=>{store=new ConversationComponentStore(file);await store.load();service=makeService();await page.evaluate(()=>{const w=window as any;w.cardRoot.unmount();w.cardRoot=w.mountCard()})},close:async()=>{await context.close();await rm(directory,{recursive:true,force:true})}}
 }
 const config=(f:any)=>f.view().node.config as any
+it('keeps the common Conversation iframe borderless without Research CSS and preserves live counter, memo and focus',async()=>{
+ const f=await fixture();try{
+  for(let i=0;i<3;i++)await f.frame.getByRole('button',{name:'增加计数',exact:true}).click()
+  await expect.poll(()=>config(f)?.sharedComponentState?.state?.count).toBe(3)
+  const input=f.frame.getByRole('textbox',{name:'备注',exact:true});await input.fill('外框保存的备注');await expect.poll(()=>config(f)?.sharedComponentState?.state?.memo).toBe('外框保存的备注')
+  await f.frame.locator('body').evaluate((element:HTMLElement)=>element.dataset.frameIdentity='original');await input.focus()
+  const original=await f.page.evaluate(()=>{const frame=document.querySelector('iframe[data-research-html-artifact]')!;(window as any).originalBorderFrame=frame;return{srcdoc:frame.getAttribute('srcdoc'),sandbox:frame.getAttribute('sandbox')}})
+  const removed=await f.page.evaluate(()=>{const names:string[]=[];for(const style of document.querySelectorAll('style'))if(style.getAttribute('data-plugin-css')?.includes('ResearchCanvas.module.css')){names.push(style.getAttribute('data-plugin-css')!);style.remove()}return names});expect(removed.length).toBeGreaterThan(0)
+  const geometry=await f.page.locator('iframe[data-research-html-artifact]').evaluate((element:HTMLIFrameElement)=>{const style=getComputedStyle(element);return{widths:[style.borderTopWidth,style.borderRightWidth,style.borderBottomWidth,style.borderLeftWidth],styles:[style.borderTopStyle,style.borderRightStyle,style.borderBottomStyle,style.borderLeftStyle],delta:element.getBoundingClientRect().width-element.clientWidth,same:element===(window as any).originalBorderFrame,srcdoc:element.getAttribute('srcdoc'),sandbox:element.getAttribute('sandbox'),inline:element.style.border}})
+  expect(geometry.widths).toEqual(['0px','0px','0px','0px']);expect(geometry.styles).toEqual(['none','none','none','none']);expect(geometry.delta).toBe(0);expect(geometry.inline).toBe('0px');expect(geometry.same).toBe(true);expect(geometry.srcdoc).toBe(original.srcdoc);expect(geometry.sandbox).toBe(original.sandbox)
+  expect(await f.frame.locator('body').getAttribute('data-frame-identity')).toBe('original');expect(await input.evaluate((element:HTMLInputElement)=>element.ownerDocument.activeElement===element)).toBe(true)
+  expect(config(f)?.sharedComponentState?.state).toMatchObject({count:3,memo:'外框保存的备注'});await f.reopen();await expect.poll(()=>f.frame.locator('#count').textContent()).toBe('3');expect(await f.frame.getByRole('textbox',{name:'备注',exact:true}).inputValue()).toBe('外框保存的备注');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},30000)
 it('persists real Conversation shared state and native disclosure through the actual service/store and restores after reopen without Canvas writes',async()=>{
  const f=await fixture();try{
   f.mode('hold');await f.frame.getByRole('button',{name:'增加计数',exact:true}).click();await expect.poll(()=>f.requests.filter(value=>value.method==='commitHtmlInteraction').length).toBe(1)

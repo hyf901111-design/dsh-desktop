@@ -27,6 +27,12 @@ it('refuses unknown renderer mutations instead of rewriting the exact restoratio
  const mutated=source().replace(after,after.slice(0,offset)+'\nconst unknownMutation=true;'+after.slice(offset))
  expect(()=>patchSource(mutated)).toThrow(/restore record changed/)
 })
+it('normalizes the common frame in both restore sides without changing persisted journals across reentry',()=>{
+ const saved='const savedNode='+JSON.stringify({id:'saved-html',containerSpec:{version:1,type:'html',title:'保留组件',html:'<button>保留内容</button>'},config:{interactionState:{version:'v1',events:{event:{id:'event',clock:1,targetRoute:[0],tag:'BUTTON',type:'click'}}},sharedComponentState:{version:'v1',revision:4,state:{count:3,memo:'用户备注😀'}}}})+';'
+ const patched=patchSource(source()+'\n'+saved),rows=readRecord(patched),style="srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0, border: 0, display: 'block', boxSizing: 'border-box', background: 'transparent' }"
+ expect(rows[0][0]).toContain(style);expect(rows[0][1]).toContain(style);expect(patched).toContain(saved)
+ expect(patchSource(patched)).toBe(patched);expect(restoreResearchGridWorkbench(patched)).toContain(saved)
+})
 
 const compressed=rows=>JSON.stringify({version:1,encoding:'deflate-base64',data:deflateRawSync(Buffer.from(JSON.stringify(rows),'utf8')).toString('base64')})
 const withRecord=(payload,later=tail)=>source().replace(metadata()+tail,tag+payload.replaceAll('*/','*\\/')+' */'+later)

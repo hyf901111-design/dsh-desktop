@@ -1,7 +1,8 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {resolve} from 'node:path'
 import {pathToFileURL} from 'node:url'
-import {writeFileSync} from 'node:fs'
+import {readFileSync,writeFileSync} from 'node:fs'
+import {execFileSync} from 'node:child_process'
 import {build,type Plugin} from 'vite'
 import {resolveConfig} from 'electron-vite'
 import {notesResidentProductionSource} from './helpers/notes-resident-production-source.mjs'
@@ -16,6 +17,7 @@ beforeAll(async()=>{
  const fixture:Plugin={name:'notes-inline-result-fixture',resolveId:id=>id===entry?entry:undefined,load:id=>id===entry?`
  import * as Y from 'yjs';import React from 'react';import * as JSX from 'react/jsx-runtime';import * as DOM from 'react-dom';import {createRoot} from 'react-dom/client';
  import {mountNotes} from ${JSON.stringify(resolve('src/preload/notes/mount.tsx'))};import {WorkspaceSurfaceHost} from ${JSON.stringify(resolve('src/preload/workspace-surface-host.ts'))};
+ import {noteChartNavigationAllowed} from ${JSON.stringify(resolve('src/preload/notes/chart-navigation.ts'))};window.navigationAllowed=noteChartNavigationAllowed;
  const factories=new Map();window.__ModuleLoader__={load:d=>factories.set(d.id,d.factory)};new Function(${JSON.stringify(source)})();class Service{};const noop=()=>null,primitives=new Proxy({},{get:()=>noop});
  const library=factories.get('@deepseek-ai/dsh-client-ui-conversation')(id=>id==='react'?React:id==='react/jsx-runtime'?JSX:id==='react-dom'?DOM:id==='@deepseek-ai/cordis'?{Service}:primitives);
  createRoot(document.querySelector('#portals')).render(React.createElement(library.__NoteViews,{sessionId:'inline-result',active:true}));
@@ -24,6 +26,7 @@ beforeAll(async()=>{
  `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor;window.noteDoc=doc; const slashMenu = useMemo')}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
  script=(Array.isArray(output)?output:[output]).flatMap(item=>'output'in item?item.output:[]).filter(chunk=>chunk.type==='chunk').map(chunk=>chunk.code).join('\n')
+ if(evidence){const modules=(Array.isArray(output)?output:[output]).flatMap(item=>'output'in item?item.output:[]).filter(chunk=>chunk.type==='chunk').flatMap((chunk:any)=>Object.entries(chunk.modules??{}).map(([id,value]:any)=>({id,renderedLength:value.renderedLength})));writeFileSync(resolve(evidence,'bundle-modules.json'),JSON.stringify({bytes:new TextEncoder().encode(script).length,parserModules:modules.filter(row=>row.id.includes('@babel/parser')),parse5Modules:modules.filter(row=>row.id.includes('parse5')),navigationModules:modules.filter(row=>/chart-navigation|fixed-chart-runtime|cartesian-chart-artifact\.js\?raw/.test(row.id))},null,2))}
  const {chromium}=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },90000)
@@ -66,6 +69,49 @@ async function capabilityReceipt(page:any,id:string){
 const resultTable={id:'retry-table',kind:'generated-container',noteLibrary:true,title:'合成重试表',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'合成重试表',columns:['项目','值'],rows:[['甲',0],['乙',-2]]}}
 const mixedProse='本次仅核对用户提供的三条演示数据。\n\n这些演示值不代表真实行情。'
 const interactiveMixedNode={id:'mixed-chart',kind:'generated-container',noteLibrary:true,title:'用户提供的交互演示图',generationStatus:'completed',containerSpec:JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'line',title:'用户提供的交互演示图',unit:'演示值',asOf:'仅用户提供演示数据，无真实行情',labels:['10月1日','10月2日','10月3日'],series:[{name:'演示值',values:[10,20,15]}]}))!)}
+const capturedNavigationNode={...interactiveMixedNode,title:'原位图表验收',containerSpec:{version:1,type:'html',title:'原位图表验收',html:readFileSync(resolve('test/fixtures/notes-native-chart-navigation.html'),'utf8')}}
+const canonicalNavigationNode={...interactiveMixedNode,containerSpec:JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{acceptArtifactOutput}from'./packages/dsh-research-task-runtime/artifact-output.js';process.stdout.write(acceptArtifactOutput(readFileSync(0,'utf8')))"],{input:JSON.stringify({version:1,type:'chart',variant:'line',title:'用户提供的交互演示图',unit:'演示值',asOf:'仅用户提供演示数据，无真实行情',labels:['10月1日','10月2日','10月3日'],series:[{name:'演示值',values:[10,20,15]}]}),encoding:'utf8'}))}
+it.each([{name:'captured-native',node:capturedNavigationNode},{name:'canonical',node:canonicalNavigationNode}])('keeps pending HTML chart review undoable after trusted point navigation and reopen ($name)',async({node})=>{
+ const f=await open();try{
+  await generate(f.page,{kind:'component',node},'仅插入用户提供的三条演示数据交互折线图')
+  const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview')
+  await undo.waitFor();await chart.locator('svg').waitFor();await f.page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click()
+  await chart.locator('svg').press('ArrowRight');await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月2日')
+  await expect.poll(()=>f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return Object.values(JSON.parse(block.props.payload).config?.interactionState?.events??{}).filter((event:any)=>event.tag==='SVG'&&event.key==='ArrowRight').length})).toBe(1)
+  if(evidence)writeFileSync(resolve(evidence,'navigation-diagnostic-'+node.title+'.json'),JSON.stringify(await f.page.evaluate(()=>{const w=window as any,block=w.editor.document.find((b:any)=>b.type==='research'),node=JSON.parse(block.props.payload),event=Object.values(node.config.interactionState.events)[0],record=[...w.noteDoc.getMap('note-inline-proposals').values()][0],entry=record.changes.find((c:any)=>c.id===block.id);return{allowed:w.navigationAllowed(node.containerSpec.html,event),event,dirty:entry.dirty,expected:entry.after,actual:block}}),null,2))
+  await expect.poll(()=>undo.isEnabled()).toBe(true)
+  await f.page.evaluate(()=>(window as any).fixture.flush());await f.page.evaluate(()=>(window as any).fixture.reopen())
+  await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月2日');await expect.poll(()=>undo.isEnabled()).toBe(true)
+  await undo.click();await expect.poll(()=>f.page.locator('.en-native-component').count()).toBe(0)
+  expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['before','anchor','after'])
+  expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},25000)
+it('keeps a real HTML memo edit protected instead of rebasing it as chart navigation',async()=>{
+ const f=await open();try{
+  const node={...capturedNavigationNode,containerSpec:{...capturedNavigationNode.containerSpec,html:capturedNavigationNode.containerSpec.html+'<label>备注<textarea aria-label="人工备注"></textarea></label>'}}
+  await generate(f.page,{kind:'component',node});const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview');await undo.waitFor()
+  await f.page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await chart.getByRole('textbox',{name:'人工备注',exact:true}).fill('用户实际输入的备注')
+  await expect.poll(()=>f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return Object.values(JSON.parse(block.props.payload).config?.interactionState?.events??{}).some((event:any)=>event.value==='用户实际输入的备注')})).toBe(true)
+  await expect.poll(()=>undo.isEnabled()).toBe(false);expect(await f.page.locator('.en-native-component').count()).toBe(1);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+it('restores the exact pending review after a trusted chart navigation save fails',async()=>{
+ const f=await open();try{
+  await generate(f.page,{kind:'component',node:capturedNavigationNode});const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview');await undo.waitFor();await f.page.evaluate(()=>(window as any).fixture.flush())
+  await f.page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await f.page.evaluate(()=>{const w=window as any;w.chartAcks=[];w.failSaves=true;document.addEventListener('sherlock:notes-component-ack',(event:any)=>w.chartAcks.push(event.detail))})
+  await chart.locator('svg').press('ArrowRight');await expect.poll(()=>f.page.evaluate(()=>(window as any).chartAcks.some((ack:any)=>ack.requestId.includes(':interaction:')&&ack.ok===false))).toBe(true)
+  await expect.poll(()=>undo.isEnabled()).toBe(true);expect(await f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return JSON.parse(block.props.payload).config?.interactionState})).toBeUndefined()
+  await f.page.evaluate(async()=>{const w=window as any;w.failSaves=false;await w.fixture.flush()});await undo.click();await expect.poll(()=>f.page.locator('.en-native-component').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+it('does not rebase chart navigation after an identical block ID is rebuilt with a new Y node',async()=>{
+ const f=await open();try{
+  await generate(f.page,{kind:'component',node:capturedNavigationNode});const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview');await undo.waitFor()
+  const identities=await f.page.evaluate(()=>{const w=window as any,e=w.editor,block=e.document.find((b:any)=>b.type==='research'),identity=()=>{let found:string|undefined;const visit=(node:any)=>{if(node.getAttribute?.('id')===block.id)found=node._item.id.client+':'+node._item.id.clock;for(const child of node.toArray?.()??[])visit(child)};visit(w.noteDoc.getXmlFragment('note'));return found},before=identity();e.removeBlocks([block.id]);e.insertBlocks([block],'after','before');return{before,after:identity()}});expect(identities.after).not.toBe(identities.before);await chart.locator('svg').waitFor();await f.page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click()
+  await chart.locator('svg').press('ArrowRight');await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月2日');await expect.poll(()=>undo.isEnabled()).toBe(false);expect(await f.page.locator('.en-native-component').count()).toBe(1);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
 async function mixedChild(page:any,parent:any,id='mixed-chart-call',node:any=interactiveMixedNode){
  const child=await childCapability(page,parent,id,'仅用用户提供的10月1日10、10月2日20、10月3日15创建可交互演示组件，不修改旧内容')
  await page.evaluate(({requestId,node}:any)=>(window as any).jobs[requestId].resolve({kind:'component',node}),{requestId:child.requestId,node})

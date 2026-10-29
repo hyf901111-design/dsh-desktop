@@ -1015,9 +1015,10 @@ const escapeAttribute = (value) => String(value).replace(/&/g, '&amp;').replace(
 // The trusted outer document's frame-src policy also constrains navigation of
 // the untrusted inner srcdoc. Each iframe has its own opaque sandbox origin.
 // The same wrapper is exported, never a bare executable artifact document.
+export function researchHtmlDisplayHtml(html,workbench=false){return workbench?applyWorkbenchPresentation(compactHostDashboardHtml(html)):applyTerminalPresentation(compactHostDashboardHtml(html))}
 export function buildResearchHtmlPreview(html, title = '交互网页', initialTheme = 'light', options = {}) {
   if (parseResearchHtmlArtifact({ version: 1, type: 'html', title, html }) === null) return '<!doctype html><meta charset="utf-8"><p>HTML 页面格式无效，请重试。</p>'
-  const displayHtml = options.workbench ? applyWorkbenchPresentation(compactHostDashboardHtml(html)) : applyTerminalPresentation(compactHostDashboardHtml(html))
+  const displayHtml = researchHtmlDisplayHtml(html,options.workbench===true)
   const theme = initialTheme === 'dark' ? 'dark' : 'light'
   const fixedTheme = options.workbench ? null : researchHtmlFixedTheme(html)
   const runtimeFont = options.notoFont === 'runtime'
