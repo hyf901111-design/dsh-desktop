@@ -639,7 +639,7 @@
         "featureName": "完善笔记原位混合生成与结果确认",
         "branch": "codex/feat/notes-react-runtime-20261028",
         "baseCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
-        "tipCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
+        "tipCommit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
         "commits": [
           {
             "commit": "e444a389c8bc11153ab8657806a5389c15a48fc3",
@@ -661,6 +661,13 @@
               "44f5195f57aecc8ab4d5c3c77aaacb44cbaedee1"
             ],
             "subject": "保留笔记未完成结果的待确认状态"
+          },
+          {
+            "commit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
+            "parents": [
+              "922bceb003352b503da789dbe39fc7e6c0f511a4"
+            ],
+            "subject": "前移金融组件测试的不可变源码准备"
           }
         ],
         "files": [
@@ -677,15 +684,60 @@
             "path": "src/preload/notes/style.css"
           },
           {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
             "status": "A",
             "path": "test/notes-inline-capability-bridge-browser.test.ts"
           },
           {
             "status": "M",
             "path": "test/notes-inline-result-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-additions.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--config",
+              "/tmp/sherlock-fixture-prepare-20261029/feature/vitest.config.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Feature最终源码字节等价与DOM无副作用/fresh Window、VM factory、registry、workspace、localStorage隔离2项通过。 Node=v24.9.0；log=/tmp/sherlock-fixture-prepare-20261029/final-helper-proof.log；proof=/tmp/sherlock-fixture-prepare-20261029/verification.json SHA256=610f62a25fee18a3851eb81847112eb3db1095c05b5e8b2f3926d53de6d8eb7a；测试前后HEAD4200、source SHA不变。 timeoutMs为此卡声明的外层整组执行上限；proof未单列外层运行deadline，原Vitest单测5000ms及默认hook未变。",
+            "verifiedCommit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
+            "completedAt": "2026-10-29T03:33:23.355480+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-widget-empty.test.js",
+              "test/workbench-refresh-state.test.js",
+              "-t",
+              "shows a configuration state|treats an empty quote response|retains previous valid index quotes|publishes real builtin|keeps a completed builtin failure",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=verbose"
+            ],
+            "outcome": "passed",
+            "summary": "只登记实际精确selector5项通过（另4项未选）；不是两文件全过。 Node=v24.9.0；log=/tmp/sherlock-fixture-prepare-20261029/final-helper-selectors.log；proof=/tmp/sherlock-fixture-prepare-20261029/verification.json SHA256=610f62a25fee18a3851eb81847112eb3db1095c05b5e8b2f3926d53de6d8eb7a；测试前后HEAD4200、source SHA不变。 timeoutMs为此卡声明的外层整组执行上限；proof未单列外层运行deadline，原Vitest单测5000ms及默认hook未变。",
+            "verifiedCommit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
+            "completedAt": "2026-10-29T03:33:34.418535+00:00",
+            "timeoutMs": 120000
+          },
           {
             "argv": [
               "npx",
@@ -699,9 +751,9 @@
               "--reporter=verbose"
             ],
             "outcome": "passed",
-            "summary": "真实Main桥4项：transport UUID与模型call id不同仍正确定位，前后顺序/完整Undo/失败child/partial正文点击均通过。 Node=v24.9.0；最终测试源码SHA与922提交相同；log=/tmp/sherlock-notes-partial-review-20261029/browser-green.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05。",
-            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
-            "completedAt": "2026-10-29T02:37:43.352069+00:00",
+            "summary": "最终postcommit真实Main桥4项通过，含异构transport/model请求ID、原位前后顺序、失败child及partial不自动确认。 Node=v24.9.0；log=/tmp/sherlock-fixture-prepare-20261029/final-notes-bridge.log；proof=/tmp/sherlock-fixture-prepare-20261029/verification.json SHA256=610f62a25fee18a3851eb81847112eb3db1095c05b5e8b2f3926d53de6d8eb7a；测试前后HEAD4200、source SHA不变。 timeoutMs为此卡声明的外层整组执行上限；proof未单列外层运行deadline，原Vitest单测5000ms及默认hook未变。",
+            "verifiedCommit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
+            "completedAt": "2026-10-29T03:35:37.318878+00:00",
             "timeoutMs": 120000
           },
           {
@@ -718,9 +770,9 @@
               "--reporter=verbose"
             ],
             "outcome": "passed",
-            "summary": "原结果浏览器39项与真实保留菜单12项共51项在最终提交同字节冻结树重新通过，含真实点击、caret/人工内容、单行partial及浅深四边绘制/More/导出/iframe保留。 Node=v24.9.0；最终测试源码SHA与922提交相同；log=/tmp/sherlock-notes-partial-review-20261029/result-and-retained.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05。",
-            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
-            "completedAt": "2026-10-29T02:41:54.205241+00:00",
+            "summary": "最终postcommit原结果39+真实保留菜单12共51项通过，含真鼠标/caret/Undo/partial/四边paint；不是补签922旧跑。 Node=v24.9.0；log=/tmp/sherlock-fixture-prepare-20261029/final-notes-ui.log；proof=/tmp/sherlock-fixture-prepare-20261029/verification.json SHA256=610f62a25fee18a3851eb81847112eb3db1095c05b5e8b2f3926d53de6d8eb7a；测试前后HEAD4200、source SHA不变。 timeoutMs为此卡声明的外层整组执行上限；proof未单列外层运行deadline，原Vitest单测5000ms及默认hook未变。",
+            "verifiedCommit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
+            "completedAt": "2026-10-29T03:39:00.687200+00:00",
             "timeoutMs": 300000
           },
           {
@@ -736,9 +788,9 @@
               "--reporter=verbose"
             ],
             "outcome": "passed",
-            "summary": "原非法bridge守卫6项通过，未放松owner/request/effect/取消等原权验。 Node=v24.9.0；最终测试源码SHA与922提交相同；log=/tmp/sherlock-notes-partial-review-20261029/bridge-guards.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05。 完成状态于证据precommitAt核实，未另记单命令结束时间。",
-            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
-            "completedAt": "2026-10-29T02:43:22.840104+00:00",
+            "summary": "最终postcommit原非法bridge6项通过，权验/效果/取消守卫保留。 Node=v24.9.0；log=/tmp/sherlock-fixture-prepare-20261029/final-notes-guards.log；proof=/tmp/sherlock-fixture-prepare-20261029/verification.json SHA256=610f62a25fee18a3851eb81847112eb3db1095c05b5e8b2f3926d53de6d8eb7a；测试前后HEAD4200、source SHA不变。 timeoutMs为此卡声明的外层整组执行上限；proof未单列外层运行deadline，原Vitest单测5000ms及默认hook未变。",
+            "verifiedCommit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
+            "completedAt": "2026-10-29T03:35:12.065033+00:00",
             "timeoutMs": 120000
           },
           {
@@ -752,9 +804,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "Node24 TypeScript检查通过。 Node=v24.9.0；最终测试源码SHA与922提交相同；log=/tmp/sherlock-notes-partial-review-20261029/typecheck.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05。 完成状态于证据precommitAt核实，未另记单命令结束时间。",
-            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
-            "completedAt": "2026-10-29T02:43:22.840104+00:00",
+            "summary": "最终postcommit Node24 TypeScript检查0。 Node=v24.9.0；log=/tmp/sherlock-fixture-prepare-20261029/final-typecheck.log；proof=/tmp/sherlock-fixture-prepare-20261029/verification.json SHA256=610f62a25fee18a3851eb81847112eb3db1095c05b5e8b2f3926d53de6d8eb7a；测试前后HEAD4200、source SHA不变。 timeoutMs为此卡声明的外层整组执行上限；proof未单列外层运行deadline，原Vitest单测5000ms及默认hook未变。",
+            "verifiedCommit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
+            "completedAt": "2026-10-29T03:35:23.246479+00:00",
             "timeoutMs": 120000
           },
           {
@@ -764,15 +816,15 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "差异检查0；完成状态于最终源码冻结证据precommitAt核实。log=/tmp/sherlock-notes-partial-review-20261029/diff-check.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05",
-            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
-            "completedAt": "2026-10-29T02:43:22.840104+00:00",
+            "summary": "最终postcommit差异检查0。 Node=v24.9.0；log=/tmp/sherlock-fixture-prepare-20261029/final-diff.log；proof=/tmp/sherlock-fixture-prepare-20261029/verification.json SHA256=610f62a25fee18a3851eb81847112eb3db1095c05b5e8b2f3926d53de6d8eb7a；测试前后HEAD4200、source SHA不变。 timeoutMs为此卡声明的外层整组执行上限；proof未单列外层运行deadline，原Vitest单测5000ms及默认hook未变。",
+            "verifiedCommit": "4200ac9bfa1997e0e4128d749d859fbea182976e",
+            "completedAt": "2026-10-29T03:35:23.975336+00:00",
             "timeoutMs": 10000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离headless Chromium真实鼠标/键盘、真实Main CapabilityBridge与生产Notes渲染链验证：最终同字节Main4+结果39+真实菜单12+非法bridge6共61项通过，无pageerror；结果可原位确认/Undo并保存重开，caret与人工内容保留。e444界面证据/tmp/sherlock-notes-click-away-20261029/verification.json仍保留，composer/style/result测试三路径与e444逐byte相同，最终51项重新跑过含截图四边像素绘制：浅814/814/356/356、深484/484/354/354；组件外层透明、单线贴边，partial保持48px单行且错误真实持久化。此处仅隔离headless UI验证，不代表签名Native或真实模型同prompt已验收。"
+          "summary": "最终4200 postcommit隔离headless Chromium真实鼠标/键盘与生产Notes链fresh验证：真实Main桥4+结果39+保留菜单12+非法bridge6共61项通过，前后HEAD及源码SHA全4200一致，不补签922旧跑；另helper精确selectors5与Feature源码字节/DOM/freshVM隔离2项共7通过。e444界面证据仍保留，style/composer/result测试与e444同bytes；最终51含实际四边paint、尺寸/More/输入/单行partial/caret/Undo。此处仅隔离headless与临时Store/fixture保存重开，不代表签名Native或真实模型同prompt已验收。"
         },
         "acceptanceCriteria": [
           "真实Main桥独立生成transport UUID时，混合正文依当前请求实际receipt.effect.blockId寻找已创建组件；保持success/effect/current request/Yjs identity/canUndo/unfinished守卫，正文按before/after原位插入，不重放成功创建、不丢上下文或人工正文。",
@@ -780,15 +832,20 @@
           "failed、running、draft、停止后部分结果以及成功child但parent requiresReply均保留真实待确认/Undo，不被click-away冒充完成；已有真实错误优先，中性partial错误使用原持久化字段，单行反馈不额外渲染红色错误行。",
           "普通段落为整段半透明蓝背景且无底部下划线；research组件外层透明无shadow，真实组件单层贴边轻蓝线、原尺寸margin与正常选中边框保持，菜单/输入继续可用。",
           "最终集成签名新包仍须由Root复跑用户原短句和原混合请求，并验证真实正文+组件、确认/撤销、菜单、保存重开；该最终tip的签名Native同prompt验收目前未完成，不能以本卡headless结果替代。",
-          "既有签名包短句成功与原混合请求partial保护失败的诊断/旧历史保留；不恢复用户主动删除的旧内容，不把历史失败改记成功，不修改共享SDK资产或真实用户数据。"
+          "既有签名包短句成功与原混合请求partial保护失败的诊断/旧历史保留；不恢复用户主动删除的旧内容，不把历史失败改记成功，不修改共享SDK资产或真实用户数据。",
+          "测试harness仅把不可变源码准备提取为prepareFinancialClientSource并在beforeAll预热；保留每fixture fresh Window/VM/factory/registry/workspace、全部原测试body与5000ms deadline、默认hook timeout，不缓存DOM或放宽断言。",
+          "官方CLI三方合并必须保留integration已有home-guide-workbench-native/stripHomeGuideWorkbenchNative与home-workbench-client/stripHomeWorkbenchClient（在presentation-native之前）；保留真实financialClientFixture async body/finally dispose和watch.height==quote.height、默认initial600、内容Arrange202三条高度断言，不用feature旧bareVM/560整文件覆盖。"
         ],
         "risks": [
-          "本卡只覆盖b4严格后继的3提交/5路径；Root尚未在最终签名新包完成真实模型同prompt验收。",
+          "本卡覆盖b4严格后继的4提交/7路径；Root尚未在最终签名新包完成真实模型同prompt验收。",
           "既有签名包的短句请求已成功，原混合请求曾因semantic call id与transport UUID错配触发保护并保留partial；这些是旧包诊断事实，不是922新包已验证成功。",
           "模型结果使用隔离fixture回放；真实Main桥、生产Notes编辑器/渲染器/保存队列与鼠标操作实际执行，保存重开在隔离fixture或临时Store中验证，不宣称本轮调用真实模型或操作共享客户端。",
-          "批次其它9个feature、全15条integration gates（含Voice）保持原状；本卡只供官方refresh→preflight→merge，不手改manifest或复用旧merged证据。"
+          "批次其它9个feature、全15条integration gates（含Voice）保持原状；本卡只供官方refresh→preflight→merge，不手改manifest或复用旧merged证据。",
+          "Feature既有两条失败明确保留：旧Grid裸VM金融补丁htmlFitStates锚点缺失、独立WorkbenchChrome缺workbenchSmartCreateTarget；当前feature broad diagnostic为12过/2失败，精确922同名基线也相同失败。对照/tmp/sherlock-fixture-prepare-20261029/feature-focused.log 与 baseline922.log，不能冒称Feature原Grid5全部通过。",
+          "临时integration投影7/7（原真实Grid5+source/isolation2）仅为补充证据，见/tmp/sherlock-fixture-prepare-20261029/integration/test.log；不登记为本feature全5通过，不替代正式merge15 gates。",
+          "原5000ms timeout、官方失败/profile/重复原条件运行日志完整保留，见最终proof.diagnosticHistory；本修复解决不可变16MB源码准备侵占单测试预算，不声称产品性能或实际模型时延提升。"
         ],
-        "generatedAt": "2026-10-29T02:47:47.705Z"
+        "generatedAt": "2026-10-29T03:44:05.468Z"
       }
     },
     {
