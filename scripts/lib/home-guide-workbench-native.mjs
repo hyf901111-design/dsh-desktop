@@ -128,7 +128,18 @@ function NativeHomeWorkbenchPortal({sessionId,subagentPanel=false,researchWorksp
   const phase=(t,p,stage)=>{const node=panelNode(t,p),w=t.resource.workspace;if(!node||node.generationStatus==='completed')return;const status=stage>=p.begin?'running':'queued';HomeWorkbenchGenerationStages.set(node.id,{role:p.role,stage,parent:p.parent});w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===node.id?{...n,generationStatus:status,...status==='running'?{generationStartedAt:n.generationStatus==='running'?(n.generationStartedAt??Date.now()):Date.now()}:{}}:n))}
   const completePanel=async(t,p)=>{
    const w=t.resource.workspace,node=panelNode(t,p);if(node?.generationStatus==='completed')return
-   if(p.reused){const source=panelNode(t,{tab:'overview',role:'watchlist'});if(source?.containerSpec?.widget!=='watchlist')throw Error('自选组件尚未就绪。');w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===node.id?{...n,containerSpec:structuredClone(source.containerSpec),generationStatus:'completed',generationCompletedAt:Date.now(),generationLastSeq:1}:n));layout(t,p.tab);return}
+   if(p.reused){
+    const source=panelNode(t,{tab:'overview',role:'watchlist'})
+    if(source?.containerSpec?.widget!=='watchlist')throw Error('自选组件尚未就绪。')
+    const spec=structuredClone(source.containerSpec),completedAt=Date.now()
+    w.setArtifacts(w.getSnapshot().artifacts.map(n=>{
+     if(n.id!==node.id)return n
+     // Match native successful hydration without inventing a generation task
+     // for this reused view. Pending-factory errors are no longer applicable.
+     const{generationError:_error,refreshError:_refreshError,generationEvents:_events,generationPartialText:_partial,...completed}=n
+     return{...completed,title:spec.title,excerpt:JSON.stringify(spec),containerSpec:spec,generationStatus:'completed',generationCompletedAt:completedAt,lastSuccessfulAt:completedAt,generationLastSeq:1}
+    }));layout(t,p.tab);return
+   }
    const{task}=await rpc(t,'panel',{tab:p.tab,role:p.role,nodeId:nodeId(p.tab,p.role)});await playing(t)
    w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===node.id?{...n,generationStatus:'queued'}:n))
    const nav=w.getSnapshot().artifacts.find(n=>n.containerSpec?.type==='board-tabs')
