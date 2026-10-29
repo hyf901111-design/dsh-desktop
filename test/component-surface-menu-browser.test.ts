@@ -47,6 +47,31 @@ async function open({full=true,query=true,readOnly=false}={}){
  await page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await page.waitForTimeout(30);await page.evaluate(()=>(window as any).probe.canvas=[])
  return{page,errors,close:()=>context.close()}
 }
+it.each(['note','conversation'])('renders the theme action with a real stroke icon rather than the host fallback: %s',async host=>{
+ const f=await open();try{
+  await f.page.locator('#'+host).getByRole('button',{name:'组件更多操作',exact:true}).click()
+  const icon=await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).evaluate((button:HTMLElement)=>{const svg=button.querySelector('svg');return svg?{fill:svg.getAttribute('fill'),stroke:svg.getAttribute('stroke'),rects:svg.querySelectorAll('rect').length,circles:svg.querySelectorAll('circle').length,paths:svg.querySelectorAll('path').length,width:svg.getBoundingClientRect().width}:null})
+  expect(icon).not.toBeNull();expect(icon).toMatchObject({fill:'none',stroke:'currentColor',rects:0});expect(icon!.circles).toBeGreaterThan(0);expect(icon!.paths).toBeGreaterThan(0);expect(icon!.width).toBeGreaterThanOrEqual(14)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it.each(['note','conversation'])('keeps left-opening theme labels on one line with production CSS in light and dark: %s',async host=>{
+ const f=await open();try{
+  await f.page.locator('#'+host).evaluate((root:HTMLElement)=>Object.assign(((root.closest('.en-root')||root) as HTMLElement).style,{position:'absolute',right:'12px',top:'200px',width:'500px'}))
+  for(const dark of [false,true]){
+   await f.page.evaluate((dark:boolean)=>document.body.toggleAttribute('data-ds-dark-theme',dark),dark)
+   await f.page.locator('#'+host).getByRole('button',{name:'组件更多操作',exact:true}).click()
+   await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).hover()
+   const menu=f.page.getByRole('menu',{name:'组件模式',exact:true});await menu.waitFor()
+   const geometry=await menu.evaluate((sub:HTMLElement)=>{const main=document.querySelector('[role=menu][aria-label="组件更多操作"]')!.getBoundingClientRect(),box=sub.getBoundingClientRect();return{width:box.width,minWidth:parseFloat(getComputedStyle(sub).minWidth),left:box.left,right:box.right,mainLeft:main.left,rows:[...sub.querySelectorAll('[role=menuitemradio]')].map(row=>{const label=row.querySelector('span')!,range=document.createRange();range.selectNodeContents(label);return{text:label.textContent,whiteSpace:getComputedStyle(label).whiteSpace,textHeight:range.getBoundingClientRect().height,lineHeight:parseFloat(getComputedStyle(label).lineHeight),clipped:row.scrollWidth>row.clientWidth}})}})
+   expect(geometry.minWidth).toBeGreaterThanOrEqual(160);expect(geometry.width).toBeGreaterThanOrEqual(160);expect(geometry.width).toBeLessThanOrEqual(190);expect(geometry.left).toBeGreaterThanOrEqual(8);expect(geometry.right).toBeLessThanOrEqual(geometry.mainLeft-3)
+   expect(geometry.rows.map((row:{text:string})=>row.text)).toEqual(['浅色模式','深色模式','易方达模式','彭博模式'])
+   for(const row of geometry.rows){expect(row.whiteSpace).toBe('nowrap');expect(row.textHeight).toBeLessThanOrEqual(row.lineHeight*1.2);expect(row.clipped).toBe(false)}
+   await f.page.keyboard.press('Escape')
+  }
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
 it('keeps both menu levels interactive, then closes the whole domain on outside click and Escape',async()=>{
  const f=await open();try{
   await f.page.locator('#note .en-component-more').click()
