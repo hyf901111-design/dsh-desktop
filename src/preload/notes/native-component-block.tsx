@@ -18,6 +18,8 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
  const host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),interaction=useNoteComponentInteraction(),{root,selected}=interaction
  useNotePresentation(root,node,context.dark)
  const [ready,setReady]=useState(false),[error,setError]=useState(''),[refresh,setRefresh]=useState(0)
+ const menuEpoch=useRef(0),menuPending=useRef(false)
+ const closeMenu=()=>{menuEpoch.current++;menuPending.current=false;setMenu(null)}
  const [menu,setMenu]=useState<HTMLElement|null>(null),[capabilities,setCapabilities]=useState<any>({}),[renaming,setRenaming]=useState<{title:string;spec:string}>(),[dataOpen,setDataOpen]=useState(false),[notice,setNotice]=useState('')
  const reading=SurfaceUi.useReading(root)
  const [height,setHeight]=useState(Math.max(160,Math.min(2400,generation?220:(node.height||362)-34)))
@@ -34,7 +36,7 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
   if(value.id!==expected.id)throw Error(t('笔记组件身份已变化。'))
   return{ctx,value,input:{sessionId:ctx.sessionId,blockId:block.id,nodeId:value.id,expectedPayload:current.props.payload}}
  }
- const openMenu=async(trigger:HTMLElement)=>{try{let target=await menuTarget(false),value:any;try{value=await target.ctx.bridge.request('component-menu-capabilities',target.input)}catch(error){if(!target.ctx.editor.isEditable||capabilities.rename===false)throw error;target=await menuTarget();value=await target.ctx.bridge.request('component-menu-capabilities',target.input)}setCapabilities(value||{});setMenu(trigger)}catch(error){setCapabilities({copy:false,saveLibrary:false,exportContent:false,rename:false});setNotice((error as Error).message);setMenu(trigger)}}
+ const openMenu=async(trigger:HTMLElement)=>{if(menu||menuPending.current){closeMenu();return}const ticket=++menuEpoch.current,owner=SurfaceUi.captureMenuOwner(trigger);menuPending.current=true;const current=()=>ticket===menuEpoch.current&&owner.current();try{let target=await menuTarget(false),value:any;try{value=await target.ctx.bridge.request('component-menu-capabilities',target.input)}catch(error){if(!current())return;if(!target.ctx.editor.isEditable||capabilities.rename===false)throw error;target=await menuTarget();value=await target.ctx.bridge.request('component-menu-capabilities',target.input)}if(current()){setCapabilities(value||{});setMenu(trigger)}}catch(error){if(current()){setCapabilities({copy:false,saveLibrary:false,exportContent:false,rename:false});setNotice((error as Error).message);setMenu(trigger)}}finally{owner.dispose();if(ticket===menuEpoch.current)menuPending.current=false}}
  const copy=async()=>{const target=await menuTarget(),result=await target.ctx.bridge.request('component-copy',target.input);if(result?.ok!==true)throw Error(result?.error||t('组件未复制，请重试。'));setNotice(t('已复制到剪贴板，可粘贴到笔记或研究。'))}
  const library=async()=>{const target=await menuTarget();if(!target.ctx.editor.isEditable)throw Error(t('笔记当前不可编辑。'));const result=await target.ctx.bridge.request('component-library-save',target.input);if(typeof result?.id!=='string'||!result.id)throw Error(t('组件库未返回保存确认。'));window.dispatchEvent(new CustomEvent('ework-component-library-changed'));window.dispatchEvent(new CustomEvent('ework-component-library-saved',{detail:{sessionId:target.ctx.sessionId}}));setNotice(t('已添加至组件库。'))}
  const exportContent=async(format:string)=>{const target=await menuTarget(),adapter=(root.current as any)?.__eworkNoteMenu;if(adapter?.instanceId!==instance.current||typeof adapter.exportContent!=='function'||adapter.spec!==JSON.stringify(target.value.containerSpec))throw Error(t('请等待当前组件内容加载完成后重试。'));const result=await adapter.exportContent(format,(request:any)=>{if(!root.current?.isConnected||!noteEditorVisible(root.current)||target.ctx.editor.getBlock(block.id)?.props.payload!==target.input.expectedPayload)throw Error(t('组件已变化，请重新导出。'));const {kind,format,content,base64}=request;return target.ctx.bridge.request('component-export',{...target.input,kind,format,...kind==='text'?{content}:{base64}})});if(result?.status==='saved')setNotice(t('已导出组件。'));return result}
@@ -140,7 +142,7 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
   <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>{!ready?<div className="en-component-empty" role="status">{t(error)||t("正在读取组件…")}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label={t("选中组件并操作内容")} onClick={interaction.select}/>:null}</div>
   {error&&ready?<div className="en-component-error" role="alert">{t(error)}</div>:null}
   {notice?<div className="en-component-notice" role="status">{notice}</div>:null}
-  {menu?<SurfaceUi.Menu surface="notes" trigger={menu} actions={menuActions} onClose={()=>setMenu(null)}/>:null}
+  {menu?<SurfaceUi.Menu surface="notes" trigger={menu} actions={menuActions} onClose={closeMenu}/>:null}
   {renaming?<SurfaceUi.Rename title={renaming.title} onRename={rename} onClose={()=>setRenaming(undefined)}/>:null}
   {dataOpen?<SurfaceUi.Data title={node.displayName||node.title} provenance={node.provenance||{}} onClose={()=>setDataOpen(false)}/>:null}
   {reading.control}

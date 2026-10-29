@@ -13,6 +13,8 @@ beforeAll(async()=>{
  const fixture:Plugin={name:'component-surface-menu-fixture',resolveId:id=>id===entry?entry:undefined,load:id=>id===entry?`
  import React,{useState} from 'react';import * as JSX from 'react/jsx-runtime';import * as DOM from 'react-dom';import {createRoot} from 'react-dom/client';
  import {NativeComponentBlock} from ${JSON.stringify(resolve('src/preload/notes/native-component-block.tsx'))};
+ import {WorkspaceSurfaceHost} from ${JSON.stringify(resolve('src/preload/workspace-surface-host.ts'))};
+ window.createSurfaceHost=()=>{const center=document.createElement('main');center.className='pI_x6G_centerCol';document.body.append(center);for(const selector of ['[data-srb-session-header]','#conversation','#canvas'])center.append(document.querySelector(selector));const host=new WorkspaceSurfaceHost(document);host.register('notes',document.querySelector('.en-root'));for(const name of ['scheduled','integrations']){const panel=document.createElement('section');panel.textContent=name;host.register(name,panel)}window.surfaceHost=host;host.open('notes')};
  import {financialWidgetDefaults} from ${JSON.stringify(resolve('packages/dsh-research-task-runtime/financial-widget-contract.js'))};
  import noteStyles from ${JSON.stringify(resolve('src/preload/notes/style.css')+'?inline')};import researchStyles from ${JSON.stringify(resolve('scripts/lib/research-grid-workbench.css')+'?inline')};
  const factories=new Map();window.__ModuleLoader__={load:d=>factories.set(d.id,d.factory)};new Function(${JSON.stringify(source)})();class Service{};const noop=()=>null,primitives=new Proxy({},{get:()=>noop});
@@ -22,11 +24,11 @@ beforeAll(async()=>{
  const symbol={market:'SZ',code:'000001',name:'合成验收证券'},spec={...financialWidgetDefaults('quote'),symbols:[symbol]},node={id:'same-node',title:'菜单验收行情',kind:'generated-container',noteLibrary:true,height:440,containerSpec:spec};
  const query=async(input,host)=>{window.probe.queries.push({host,...input});return input.action==='search'?{symbols:[symbol]}:input.action==='history'?{bars:[],source:'合成来源'}:{quotes:[{...symbol,price:100,asOf:'2026-10-28',source:'合成来源'}],source:'合成来源',receivedAt:'2026-10-28T13:00:00Z'}};
  let conversation={id:node.id,sessionId:'same-session',revision:1,node:structuredClone(node)};
- const bridge={read:async()=>structuredClone(conversation),...(window.fixtureFull?{exportContent:async()=>({status:'saved'}),rename:async input=>{conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,title:input.title,displayName:input.title}};return structuredClone(conversation)},copy:async input=>{window.probe.copied.push(input);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input);return{id:'library-item'}},updateNativeSpec:async input=>{window.probe.conversation.push(input);conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,containerSpec:input.spec}};return structuredClone(conversation)}}:{}),...(window.fixtureQuery?{queryNative:async input=>query(input.query,'conversation')}:{})};
+ const bridge={read:async()=>{if(window.deferMenuRead)await new Promise(resolve=>window.releaseMenuRead=resolve);return structuredClone(conversation)},...(window.fixtureFull?{exportContent:async()=>({status:'saved'}),rename:async input=>{conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,title:input.title,displayName:input.title}};return structuredClone(conversation)},copy:async input=>{window.probe.copied.push(input);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input);return{id:'library-item'}},updateNativeSpec:async input=>{window.probe.conversation.push(input);conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,containerSpec:input.spec}};return structuredClone(conversation)}}:{}),...(window.fixtureQuery?{queryNative:async input=>query(input.query,'conversation')}:{})};
  window.dshDesktop={conversationComponents:bridge,financialWidget:{request:input=>query(input,'notes')},componentData:{request:async(sessionId,input)=>{window.probe.canvas.push({sessionId,...input});return input.action==='list'?[]:{}},setVisible:async()=>{}}};
  let block={id:'note-block',type:'research',props:{payload:JSON.stringify(node)}},setBlock;
  const editor={isEditable:!window.fixtureReadOnly,getBlock:()=>block,removeBlocks:()=>{},updateBlock:(_id,value)=>{block={...block,props:{...block.props,...value.props}};window.probe.notes.push(JSON.parse(block.props.payload));setBlock(block)}};
- function Note(){const [current,update]=useState(block);setBlock=update;return React.createElement(NativeComponentBlock,{block:current,node:JSON.parse(current.props.payload),context:{editor,bridge:{request:async method=>method==='component-menu-capabilities'?{copy:window.fixtureFull,saveLibrary:window.fixtureFull&&!window.fixtureReadOnly,exportContent:window.fixtureFull,rename:window.fixtureFull&&!window.fixtureReadOnly}:{}},persistComponentActions:async()=>{},sessionId:'same-session',dark:false}})}
+ function Note(){const [current,update]=useState(block);setBlock=update;return React.createElement(NativeComponentBlock,{block:current,node:JSON.parse(current.props.payload),context:{editor,bridge:{request:async method=>{if(method==='component-menu-capabilities'&&window.deferNoteMenu)await new Promise(resolve=>window.releaseNoteMenu=resolve);return method==='component-menu-capabilities'?{copy:window.fixtureFull,saveLibrary:window.fixtureFull&&!window.fixtureReadOnly,exportContent:window.fixtureFull,rename:window.fixtureFull&&!window.fixtureReadOnly}:{}}},persistComponentActions:async()=>{},sessionId:'same-session',dark:false}})}
  createRoot(document.querySelector('#note')).render(React.createElement(Note));createRoot(document.querySelector('#note-portals')).render(React.createElement(library.__NoteViews,{sessionId:'same-session',active:true}));
  createRoot(document.querySelector('#conversation')).render(React.createElement(library.__ConversationCard,{sessionId:'same-session',manifest:{componentId:node.id,sessionId:'same-session'}}));
  createRoot(document.querySelector('#settings-controller')).render(React.createElement(library.__DataSettings,{sessionId:'same-session',canvasRoot:{current:document.querySelector('#canvas')}}));
@@ -39,11 +41,82 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 async function open({full=true,query=true,readOnly=false}={}){
  const context=await browser.newContext({viewport:{width:1150,height:1000}}),page=await context.newPage(),errors:string[]=[];page.setDefaultTimeout(5000);page.on('pageerror',(error:Error)=>errors.push(error.message))
- await page.route('http://127.0.0.1/surface-menu',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body><section class="en-root" data-dark="false" style="position:relative;width:500px;height:500px"><div id="note"></div></section><div id="note-portals"></div><div id="conversation" style="width:500px"></div><section id="canvas" data-research-canvas><div data-research-node-id="same-node"><button id="canvas-trigger">研究数据设置</button></div></section><div id="settings-controller"></div></body></html>'}))
+ await page.route('http://127.0.0.1/surface-menu',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body><header data-srb-session-header data-ework-notes-session="same-session"><button data-conversation-view-id="notes" aria-selected="true">笔记页签</button><button data-conversation-view-id="research" aria-selected="false">研究页签</button><button data-conversation-view-id="conversation" aria-selected="false">对话页签</button></header><section class="en-root" data-note-editor-session="same-session" data-note-editor-active="true" data-dark="false" style="position:relative;width:500px;height:500px"><div id="note"></div></section><div id="note-portals"></div><div id="conversation" style="width:500px"></div><section id="canvas" data-research-canvas><div data-research-node-id="same-node"><button id="canvas-trigger">研究数据设置</button></div></section><div id="settings-controller"></div></body></html>'}))
  await page.goto('http://127.0.0.1/surface-menu');await page.evaluate((value:{full:boolean;query:boolean;readOnly:boolean})=>Object.assign(window,{fixtureFull:value.full,fixtureQuery:value.query,fixtureReadOnly:value.readOnly}),{full,query,readOnly});await page.addScriptTag({content:'var exports={};\n'+script});await page.locator('#note [data-financial-widget]').waitFor();await page.locator('#conversation [data-financial-widget]').waitFor()
  await page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await page.waitForTimeout(30);await page.evaluate(()=>(window as any).probe.canvas=[])
  return{page,errors,close:()=>context.close()}
 }
+it('keeps both menu levels interactive, then closes the whole domain on outside click and Escape',async()=>{
+ const f=await open();try{
+  await f.page.locator('#note .en-component-more').click()
+  await f.page.getByRole('menuitem',{name:'导出',exact:true}).hover()
+  await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(2)
+  await f.page.getByRole('menuitem',{name:'SVG',exact:true}).focus()
+  await f.page.keyboard.press('ArrowLeft')
+  await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(1)
+  await f.page.keyboard.press('Escape')
+  await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(0)
+  await f.page.locator('#note .en-component-more').click()
+  await f.page.locator('#canvas-trigger').click()
+  await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(0)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it.each(['hidden','inert','display','visibility','inactive','session','tab','settings','remove'])('removes the retained Notes menu portal when its owner changes: %s',async reason=>{
+ const f=await open();try{
+  await f.page.locator('#note .en-component-more').click()
+  await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(1)
+  await f.page.evaluate((reason:string)=>{
+   const owner=document.querySelector<HTMLElement>('.en-root')!
+   if(reason==='hidden')owner.hidden=true
+   if(reason==='inert')owner.inert=true
+   if(reason==='display')owner.style.display='none'
+   if(reason==='visibility')owner.style.visibility='hidden'
+   if(reason==='inactive')owner.dataset.noteEditorActive='false'
+   if(reason==='session')document.querySelector<HTMLElement>('[data-ework-notes-session]')!.dataset.eworkNotesSession='other-session'
+   if(reason==='tab'){document.querySelector('[data-conversation-view-id=notes]')!.setAttribute('aria-selected','false');document.querySelector('[data-conversation-view-id=research]')!.setAttribute('aria-selected','true')}
+   if(reason==='settings')document.body.dataset.settingsOpen='true'
+   if(reason==='remove')owner.remove()
+  },reason)
+  await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(0)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},12000)
+it('closes a Notes menu when a real component iframe receives the click',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>{const frame=document.createElement('iframe');frame.id='menu-iframe';frame.srcdoc='<button>内嵌内容</button>';frame.style.cssText='position:fixed;left:900px;top:50px;width:180px;height:70px';document.querySelector('#note .en-native-component-host')!.append(frame)})
+  await f.page.locator('#note .en-component-more').click()
+  await f.page.frameLocator('#menu-iframe').getByRole('button',{name:'内嵌内容'}).click()
+  await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(0)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},12000)
+it('closes the menu through the real WorkspaceSurfaceHost while retaining the Notes component DOM',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>{(window as any).createSurfaceHost();(window as any).retainedComponent=document.querySelector('#note .en-research')})
+  for(const next of ['integrations','scheduled','conversation']){
+   await f.page.evaluate(()=>(window as any).surfaceHost.open('notes'))
+   await f.page.locator('#note .en-component-more').click()
+   await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(1)
+   await f.page.evaluate((next:string)=>{if(next==='conversation')(window as any).surfaceHost.revealConversation();else (window as any).surfaceHost.open(next)},next)
+   await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(0)
+   expect(await f.page.evaluate(()=>(window as any).retainedComponent===document.querySelector('#note .en-research'))).toBe(true)
+  }
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it.each(['notes','conversation'])('does not reopen an old %s menu after its async read crosses a programmatic tab switch',async host=>{
+ const f=await open();try{
+  await f.page.evaluate((host:string)=>{if(host==='notes')(window as any).deferNoteMenu=true;else (window as any).deferMenuRead=true},host)
+  await f.page.locator(host==='notes'?'#note .en-component-more':'#conversation [data-conversation-action=more]').click()
+  await expect.poll(()=>f.page.evaluate((host:string)=>typeof (window as any)[host==='notes'?'releaseNoteMenu':'releaseMenuRead'],host)).toBe('function')
+  await f.page.evaluate(()=>{document.querySelector('[data-conversation-view-id=notes]')!.setAttribute('aria-selected','false');document.querySelector('[data-conversation-view-id=research]')!.setAttribute('aria-selected','true')})
+  await f.page.evaluate((host:string)=>(window as any)[host==='notes'?'releaseNoteMenu':'releaseMenuRead'](),host)
+  await f.page.waitForTimeout(120)
+  expect(await f.page.locator('body [data-component-menu-surface]').count()).toBe(0)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
 it('hides unsupported operations in the real conversation More menu and financial settings while retaining available refresh',async()=>{
  const f=await open({full:false});try{
   const card=f.page.locator('#conversation');await card.getByRole('button',{name:'组件更多操作',exact:true}).click();const menu=f.page.getByRole('menu',{name:'组件更多操作',exact:true})
