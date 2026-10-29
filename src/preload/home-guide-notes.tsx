@@ -9,10 +9,11 @@ import {createHomeNotesNativeBridge,type HomeNotesNativeBridge} from './home-gui
 import {HOME_NOTES_CHART_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 import {noteUiText as t} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {HomeGuidePointerFrame} from './home-guide-pointer'
+import type {HomeGuideMountOptions} from './home-guides'
 
 export type HomeNotesGuideStep='write'|'note-chart-compose'|'note-chart-review'|'note-chart-apply'|'note-write-middle'|'note-slash-quote'|'note-quote-configure'|'note-write-tail'|'growth-evidence'|'challenge'|'review'|'select'|'optimize'|'replace'|'consensus-select'|'consensus-evidence'|'consensus-optimize'|'consensus-replace'|'note-task-compose'|'note-task-review'|'note-task-apply'|'note-select-paragraph'|'note-rewrite'|'note-rewrite-apply'|'note-return-top'
 export type HomeNotesGuide={runStep(step:HomeNotesGuideStep):Promise<void>;flush():Promise<void>;dispose():void}
-type Options={signal:AbortSignal;sessionId?:string;runId?:string;cwd?:string;fresh?:boolean;persistence?:NotesBridge;native?:HomeNotesNativeBridge;onStatus?(text:string):void;waitUntilPlaying?():Promise<void>;wait?(ms:number,signal?:AbortSignal):Promise<void>}
+type Options={kind?:HomeGuideMountOptions['kind'];signal:AbortSignal;sessionId?:string;runId?:string;cwd?:string;fresh?:boolean;persistence?:NotesBridge;native?:HomeNotesNativeBridge;onStatus?(text:string):void;waitUntilPlaying?():Promise<void>;wait?(ms:number,signal?:AbortSignal):Promise<void>}
 /** Real editor and comments; only its prepared session persists, with local demo AI responses. */
 export async function mountHomeNotesGuide(document:Document,host:HTMLElement,options:Options):Promise<HomeNotesGuide>{
  if(options.persistence&&(!options.sessionId||typeof options.fresh!=='boolean'))throw Error('请先准备独立的教程笔记会话。')
@@ -23,7 +24,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  const bridge=createHomeNotesGuideBridge(sessionId,signal,()=>playing(),options.persistence?{bridge:options.persistence,fresh:options.fresh!}:undefined,ms=>wait(ms),useNative?{generate:async input=>{if(!native)throw Error('原生笔记输入区尚未就绪。');return native.generate(input)},stop:async requestId=>{await native?.stop(requestId)}}:undefined),container=document.createElement('div')
  container.className='en-editor-host';container.style.height='100%';host.append(container)
  const root=createRoot(container)
- let editor:NotesGuideEditorApi|undefined,disposed=false,completed=0,busy=false,selectedThread='',expected='',finalFlush:Promise<void>|undefined
+ let editor:NotesGuideEditorApi|undefined,disposed=false,failed=false,completed=0,busy=false,selectedThread='',expected='',finalFlush:Promise<void>|undefined
  const abortError=()=>signal.reason||new DOMException('演示已结束。','AbortError')
  const assert=()=>{if(disposed||signal.aborted||!host.isConnected)throw abortError()}
  const delay=(ms:number,clockSignal=signal)=>new Promise<void>((resolve,reject)=>{
@@ -215,9 +216,22 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  }
  const slashQuote=async()=>{
   await playing();nativeReady();await emptyTail('guide-note-quote-anchor');editor!.typeSlash();expected=fingerprint()
-  const list=await until(()=>{nativeReady();unchanged();const body=query<HTMLElement>('.bn-editor'),id=body?.getAttribute('aria-controls'),menu=id?document.getElementById(id):undefined;return body?.getAttribute('aria-expanded')==='true'&&menu?.getAttribute('role')==='listbox'&&menu.getAttribute('aria-label')===t('笔记斜杠菜单')?menu:undefined})
+  const menuEditor=query<HTMLElement>('.bn-editor')
+  const list=await until(()=>{nativeReady();unchanged();const body=query<HTMLElement>('.bn-editor'),id=body?.getAttribute('aria-controls'),menu=id?document.getElementById(id):undefined;return body===menuEditor&&body?.getAttribute('aria-expanded')==='true'&&menu?.getAttribute('role')==='listbox'&&menu.getAttribute('aria-label')===t('笔记斜杠菜单')?menu:undefined})
   const key=async(key:string)=>{await playing();unchanged();query<HTMLElement>('.bn-editor')!.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));await frame()}
-  const choose=async(menu:HTMLElement,label:string)=>{for(let attempt=0;attempt<45;attempt++){const items=[...menu.querySelectorAll<HTMLElement>(':scope > [role="option"]')];if(!items.some(item=>item.textContent===label))throw Error('组件库菜单已变化。');if(items.find(item=>item.getAttribute('aria-selected')==='true')?.textContent===label){await key('Enter');return}await key('ArrowDown')}throw Error('组件库菜单未就绪。')}
+  const itemsFor=(menu:HTMLElement,label:string)=>{
+   nativeReady();unchanged();const body=query<HTMLElement>('.bn-editor')
+   if(body!==menuEditor||body?.getAttribute('aria-expanded')!=='true'||body.getAttribute('aria-controls')!==list.id||document.getElementById(list.id)!==list||!list.isConnected||menu!==list&&!list.contains(menu))throw Error('组件库菜单已变化。')
+   const items=[...menu.querySelectorAll<HTMLElement>(':scope > [role="option"]')]
+   if(items.some(item=>item.textContent===t('组件库暂不可用，重新打开重试')))throw Error(t('组件库暂不可用，重新打开重试'))
+   return items
+  }
+  const choose=async(menu:HTMLElement,label:string)=>{
+   // The real native menu is accessible before its async library-list IPC has
+   // returned. Wait for this same owned menu's choices, not only its shell.
+   await until(()=>itemsFor(menu,label).some(item=>item.textContent===label))
+   for(let attempt=0;attempt<45;attempt++){const items=itemsFor(menu,label);if(!items.some(item=>item.textContent===label))throw Error('组件库菜单已变化。');if(items.find(item=>item.getAttribute('aria-selected')==='true')?.textContent===label){await key('Enter');return}await key('ArrowDown')}throw Error('组件库菜单未就绪。')
+  }
   await choose(list,t('组件库'));const library=await until(()=>list.querySelector<HTMLElement>('[role="listbox"][aria-label="'+t('组件库')+'"]'));await choose(library,t('行情面板'))
   await until(()=>editor!.snapshot().blocks.some(block=>{try{return block.type==='research'&&JSON.parse(block.props.payload).containerSpec?.widget==='quote'}catch{return false}}))
   await frame();expected=fingerprint();await flush()
@@ -385,6 +399,13 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   await flush()
  }
  const steps=[write,chartCompose,chartReview,chartApply,()=>typeBlocks(HOME_NOTES_GUIDE_WRITING_STAGES[1]!),slashQuote,configureQuote,()=>typeBlocks(HOME_NOTES_GUIDE_WRITING_STAGES[2]!),challenge,review,select,growthEvidence,optimize,replace,selectConsensus,evidenceConsensus,optimize,replaceConsensus,selectParagraph,rewrite,rewriteApply,taskCompose,taskReview,taskApply,returnTop]
- return {async runStep(step){assert();const index=(['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-return-top'] as const).indexOf(step);if(busy||index<0||index!==completed)throw Error('演示步骤顺序已变化，请重新播放。');busy=true
-   try{await steps[index]!();assert();completed++}catch(error){dispose();throw error}finally{busy=false}},flush,dispose}
+ return {async runStep(step){assert();if(failed)throw abortError();const index=(['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-return-top'] as const).indexOf(step);if(busy||index<0||index!==completed)throw Error('演示步骤顺序已变化，请重新播放。');busy=true
+   try{await steps[index]!();assert();completed++}catch(error){
+    failed=true
+    // The real shell preloads the saved normal editor before releasing this
+    // view. Keep partial content visible during that owned error handoff.
+    const handoff=options.kind==='note'&&!!options.persistence&&useNative&&!disposed&&!signal.aborted&&!options.signal.aborted&&host.isConnected&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===options.runId
+    if(!handoff)dispose()
+    throw error
+   }finally{busy=false}},flush,dispose}
 }
