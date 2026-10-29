@@ -34,7 +34,7 @@ beforeAll(async()=>{
  const headerState={account:{user:{userId:'self'}},favorites:[],boards:[]},headerPage={workspaceFor:id=>registry.for(id),getState:()=>headerState,subscribe:()=>()=>{},version:()=>0,getView:()=>null,isResearch:()=>true,showError:error=>{throw error},favorite:async()=>{}};
  const render=(next=sessionId)=>{sessionId=next;root.render(React.createElement(bundle.ResearchCanvas,{sessionId,t:x=>x,researchWorkspaces:registry,selectionGeneration:{disabled:false,generate:async()=>({taskId:'fixture-task'})},actions:{}}));headerRoot?.render(React.createElement(ResearchBoardHeader,{page:headerPage,sessionId,active:true}))};
  const text=(id,x=180,y=170)=>({id,kind:'pasted-text',messageId:'fixture-message',title:'研究文字 '+id,excerpt:'可阅读的研究证据 '+id,x,y,width:320,height:220,sizeMode:'manual'});
- bundle.__registerPreviewHost(registry);window.fixture={bundle,registry,workspace,render,text,renderNoteCalendar:(owner,node)=>{const host=document.createElement('div');host.dataset.noteDocument='';document.body.append(host);createRoot(host).render(React.createElement(bundle.__PreviewCalendar,{sessionId:owner,node}));return host}};document.querySelector('#preview-toggle').onclick=()=>workspace().setPreviewMode(!workspace().getPreviewMode());render();`
+ bundle.__registerPreviewHost(registry);window.fixture={bundle,registry,workspace,render,text,setHeaderState:value=>{Object.assign(headerState,value);render()},renderNoteCalendar:(owner,node)=>{const host=document.createElement('div');host.dataset.noteDocument='';document.body.append(host);createRoot(host).render(React.createElement(bundle.__PreviewCalendar,{sessionId:owner,node}));return host}};document.querySelector('#preview-toggle').onclick=()=>workspace().setPreviewMode(!workspace().getPreviewMode());render();`
  script=(await build({stdin:{contents:entry,resolveDir:process.cwd()},bundle:true,write:false,format:'iife',platform:'browser',loader:{'.css':'empty'},define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent'})).outputFiles[0].text
  const pw=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await (pw.chromium||pw.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -410,25 +410,28 @@ it('allows an existing queued generation to finish after entering preview withou
 },20000)
 
 
-it('keeps the current mode pill readable and compact in light and dark headers',async()=>{
+it.each(['workspace','listed-board'])('shows a quiet borderless mode pill after the right actions in four themes (%s)',async view=>{
  const {page,close,errors}=await fixture({header:true})
  try{
-  const pill=page.locator('[data-research-preview-toggle]');await pill.waitFor()
-  for(const dark of [false,true]){
-   await page.evaluate(dark=>document.body.toggleAttribute('data-ds-dark-theme',dark),dark)
+  await page.evaluate(view=>window.fixture.setHeaderState({favorites:view==='listed-board'?[{favoriteId:'real-favorite',sessionId:'preview-board',pinned:true}]:[],boards:[]}),view)
+  const header=page.locator('#header'),pill=header.locator('[data-research-preview-toggle]'),collaboration=header.locator('[aria-label="创建协作"]');await pill.waitFor()
+  expect(await header.locator('.srb-favorite-button').count()).toBe(view==='workspace'?1:0)
+  for(const theme of ['light','dark','enterprise','openterminal']){
+   await page.evaluate(theme=>{document.body.toggleAttribute('data-ds-dark-theme',['dark','openterminal'].includes(theme));window.fixture.workspace().setWorkbenchStyle(theme,{scope:'board'})},theme)
    for(const mode of ['编辑模式','预览模式']){
-    expect(await pill.textContent()).toBe(mode)
-    expect(await pill.locator('[data-research-preview-switch]').count()).toBe(1)
-    const box=await pill.evaluate(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,scroll:el.scrollWidth,client:el.clientWidth,color:getComputedStyle(el).color}))
-    expect(box.height).toBe(30);expect(box.width).toBeGreaterThanOrEqual(96);expect(box.width).toBeLessThanOrEqual(120);expect(box.scroll).toBeLessThanOrEqual(box.client);expect(box.color).not.toBe('rgba(0, 0, 0, 0)')
-    if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await page.locator('#header').screenshot({path:process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE+'/'+(dark?'dark':'light')+'-'+(mode==='编辑模式'?'edit':'preview')+'.png'})
+    expect(await pill.textContent()).toBe(mode);expect(await pill.locator('[data-research-preview-switch]').count()).toBe(1)
+    const box=await pill.evaluate(el=>{const s=getComputedStyle(el);return{left:el.getBoundingClientRect().left,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,scroll:el.scrollWidth,client:el.clientWidth,color:s.color,border:s.borderTopWidth,borderStyle:s.borderTopStyle,radius:parseFloat(s.borderTopLeftRadius),background:s.backgroundColor}})
+    expect(box.height).toBe(30);expect(box.width).toBeGreaterThanOrEqual(96);expect(box.width).toBeLessThanOrEqual(112);expect(box.scroll).toBeLessThanOrEqual(box.client);expect(box.border).toBe('0px');expect(box.borderStyle).toBe('none');expect(box.radius).toBeGreaterThanOrEqual(15);expect(box.background).not.toBe('rgba(0, 0, 0, 0)');expect(box.color).not.toBe('rgba(0, 0, 0, 0)')
+    expect(box.left).toBeGreaterThanOrEqual((await collaboration.boundingBox()).x+(await collaboration.boundingBox()).width)
+    if(mode==='编辑模式')expect(await pill.locator('[data-research-preview-glyph="pencil-line"]').count()).toBe(1)
+    if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await header.screenshot({path:process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE+'/'+view+'-'+theme+'-'+(mode==='编辑模式'?'edit':'preview')+'.png'})
     const target=mode==='编辑模式'?'预览模式':'编辑模式';expect(await pill.getAttribute('aria-label')).toBe('切换到'+target);expect(await pill.getAttribute('title')).toBe('当前为'+mode+'，点击切换到'+target)
     await pill.click();await expect.poll(()=>pill.textContent()).toBe(target)
    }
   }
   expect(errors).toEqual([])
  }finally{await close()}
-},20000)
+},30000)
 
 it('hides only preview canvas selection and connection decoration while preserving links and selected watchlist rows in every theme',async()=>{
  const {page,close,errors}=await fixture()

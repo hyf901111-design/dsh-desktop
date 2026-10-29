@@ -1813,10 +1813,10 @@ function ResearchBoardPreviewToggle({page,sessionId}:{page:ResearchBoardsPage;se
     'aria-label':preview?'切换到编辑模式':'切换到预览模式','aria-pressed':preview,
     title:'当前为'+currentMode+'，点击切换到'+targetMode,
     onClick:()=>{try{workspace.setPreviewMode(!workspace.getPreviewMode())}catch(error){page.showError(error)}}
-  },h('svg',{'aria-hidden':true,'data-research-preview-icon':preview?'preview':'edit',width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.6,strokeLinecap:'round',strokeLinejoin:'round'},
+  },h('svg',{'aria-hidden':true,'data-research-preview-icon':preview?'preview':'edit','data-research-preview-glyph':preview?'eye':'pencil-line',width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.4,strokeLinecap:'round',strokeLinejoin:'round'},
     preview
       ?h(React.Fragment,null,h('path',{d:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z'}),h('circle',{cx:12,cy:12,r:3}))
-      :h(React.Fragment,null,h('path',{d:'M12 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7'}),h('path',{d:'m14 5 5 5M10 14l-1 5 5-1 7-7a3.5 3.5 0 0 0-5-5z'}))
+      :h(React.Fragment,null,h('path',{d:'M16 3a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4Z'}),h('path',{d:'m14 5 3 3M12 20h8'}))
   ),h('span',{'data-research-preview-label':'',children:currentMode}),h('svg',{'aria-hidden':true,'data-research-preview-switch':'',width:12,height:12,viewBox:'0 0 20 20',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M3 6h14m-3-3 3 3-3 3M17 14H3m3-3-3 3 3 3'})))
 }
 export function ResearchBoardHeader({
@@ -1837,11 +1837,10 @@ export function ResearchBoardHeader({
   const v = currentBoard(page, sessionId),
     f = s.favorites.find((f) => f.sessionId === sessionId)
   const dedicatedBoard = v?.board.sharingState === 'ownerOnly' && v.permissions.read
-  const pinned = dedicatedBoard ? s.boards.some(board => board.boardId === v.boardId && board.pinned) : !!f && f.pinned !== false
+  const inBoardArea = boardOnlySession(s, sessionId) || (!!v && s.boards.some(board => board.boardId === v.boardId && board.pinned === true))
   return h(
     'div',
-    { className: 'srb-actions', 'data-srb-board-bound': !!(v || f) },
-    h(ResearchBoardPreviewToggle,{page,sessionId}),
+    { className: 'srb-actions', 'data-srb-board-bound': !!(v || f || inBoardArea) },
     v && !dedicatedBoard
       ? h(
           React.Fragment,
@@ -1860,15 +1859,15 @@ export function ResearchBoardHeader({
             ),
           h(ResearchBoardPresence, { page, sessionId })
         )
-      : h(
+      : !inBoardArea && h(
           'button',
           {
-            'aria-label': pinned ? '已创建至看板区' : '创建至看板区',
-            title: pinned ? '已创建至看板区' : '创建至看板区',
-            'aria-pressed': pinned,
+            'aria-label': '创建至看板区',
+            title: '创建至看板区',
+            'aria-pressed': false,
             className: 'srb-favorite-button',
             onClick: safely(page, async () => {
-              if (pinned) return
+              if (inBoardArea) return
               if (dedicatedBoard) await page.call('board.pin', { boardId: v.boardId })
               else await page.favorite(sessionId)
             })
@@ -1888,7 +1887,8 @@ export function ResearchBoardHeader({
             if (v) addBoardCollaborator(page, v.boardId, sessionId)
             else shareFavorite(page, await page.collaborationSource(sessionId))
           })
-        }, boardIcon('people'))
+        }, boardIcon('people')),
+    h(ResearchBoardPreviewToggle,{page,sessionId})
   )
 }
 export function ResearchBoardPresence({
