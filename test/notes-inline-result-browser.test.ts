@@ -5,6 +5,7 @@ import {writeFileSync} from 'node:fs'
 import {build,type Plugin} from 'vite'
 import {resolveConfig} from 'electron-vite'
 import {notesResidentProductionSource} from './helpers/notes-resident-production-source.mjs'
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 
 let browser:any,script=''
 const entry='\0notes-inline-result-fixture',evidence=process.env.SHERLOCK_NOTES_RESULT_EVIDENCE
@@ -52,6 +53,54 @@ async function capabilityReceipt(page:any,id:string){
  return page.evaluate((id:string)=>({requestId:id,capability:'notes.components.create',...(window as any).replies.find((reply:any)=>reply.requestId===id&&reply.result).result}),id)
 }
 const resultTable={id:'retry-table',kind:'generated-container',noteLibrary:true,title:'合成重试表',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'合成重试表',columns:['项目','值'],rows:[['甲',0],['乙',-2]]}}
+const mixedProse='本次仅核对用户提供的三条演示数据。\n\n这些演示值不代表真实行情。'
+const interactiveMixedNode={id:'mixed-chart',kind:'generated-container',noteLibrary:true,title:'用户提供的交互演示图',generationStatus:'completed',containerSpec:JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'line',title:'用户提供的交互演示图',unit:'演示值',asOf:'仅用户提供演示数据，无真实行情',labels:['10月1日','10月2日','10月3日'],series:[{name:'演示值',values:[10,20,15]}]}))!)}
+async function mixedChild(page:any,parent:any,id='mixed-chart-call',node:any=interactiveMixedNode){
+ const child=await childCapability(page,parent,id,'仅用用户提供的10月1日10、10月2日20、10月3日15创建可交互演示组件，不修改旧内容')
+ await page.evaluate(({requestId,node}:any)=>(window as any).jobs[requestId].resolve({kind:'component',node}),{requestId:child.requestId,node})
+ return capabilityReceipt(page,id)
+}
+it.each(['before-components','after-components'])('places mixed prose in actual $0 order around two real components and undoes only this request',async inlineOrder=>{
+ const f=await open();try{
+  await f.page.route('**/fonts/NotoSansSC.woff2',(route:any)=>route.fulfill({contentType:'font/woff2',path:resolve('build/fonts/NotoSansSC.woff2')}))
+  await launch(f.page,inlineOrder==='before-components'?'先写两句演示数据总结，再插入交互图和表格':'先插入交互图和表格，随后附两句演示数据总结')
+  const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input),first=await mixedChild(f.page,parent),second=await mixedChild(f.page,parent,'mixed-table-call',resultTable)
+  await f.page.evaluate(({id,receipts,inlineOrder,markdown}:any)=>(window as any).jobs[id].resolve({kind:'text',markdown,inlineOrder,capabilityReceipts:receipts}),{id:parent.requestId,receipts:[first,second],inlineOrder,markdown:mixedProse})
+  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor()
+  const ordered=await f.page.evaluate(()=>(window as any).editor.document.map((block:any)=>block.type==='research'?'component':block.content?.map((part:any)=>part.text||'').join('')))
+  expect(ordered).toEqual(inlineOrder==='before-components'?['已有前段','本次仅核对用户提供的三条演示数据。','这些演示值不代表真实行情。','component','component','用户自己写的市场观察段落']:['已有前段','component','component','本次仅核对用户提供的三条演示数据。','这些演示值不代表真实行情。','用户自己写的市场观察段落'])
+  const identities=await f.page.evaluate(()=>{const w=window as any,visit=(type:any,id:string):string|undefined=>{if(type.getAttribute?.('id')===id)return type._item.id.client+':'+type._item.id.clock;for(const child of type.toArray?.()||[]){const found=visit(child,id);if(found)return found}},value=[...w.noteDoc.getMap('note-inline-proposals').values()][0] as any;return value.changes.filter((change:any)=>change.after?.type==='research').map((change:any)=>({expected:change.identity,actual:visit(w.noteDoc.getXmlFragment('note'),change.id)}))})
+  for(const identity of identities)expect(identity.actual).toBe(identity.expected)
+  const chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview');await chart.locator('svg').press('End');await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月3日')
+  await f.page.evaluate(()=>(window as any).editor.updateBlock('after',{content:'人工尾段必须保留'}));await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click()
+  await expect.poll(()=>f.page.locator('.en-native-component').count()).toBe(0);expect(await f.page.evaluate(()=>(window as any).editor.document.map((block:any)=>block.id))).toEqual(['before','anchor','after']);expect(await f.page.locator('.bn-editor').textContent()).toContain('人工尾段必须保留');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},25000)
+
+it.each(['edit-component','replace-component-id','remove-anchor','cancel'])('does not insert late mixed prose after $0 invalidates its request-owned placement',async kind=>{
+ const f=await open();try{
+  await launch(f.page,'先写总结，再创建交互图组件');const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input),receipt=await mixedChild(f.page,parent)
+  await f.page.evaluate(({kind,blockId}:any)=>{const e=(window as any).editor,b=e.getBlock(blockId);if(kind==='edit-component')e.updateBlock(blockId,{props:{payload:JSON.stringify({...JSON.parse(b.props.payload),displayName:'用户手动改名'})}});if(kind==='replace-component-id'){e.removeBlocks([blockId]);e.insertBlocks([{...b,id:blockId}],'anchor','before')}if(kind==='remove-anchor')e.removeBlocks(['anchor'])},{kind,blockId:receipt.blockId})
+  if(kind==='cancel')await f.page.getByRole('button',{name:'停止',exact:true}).click()
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'text',markdown:'本次迟到正文不可误插。',inlineOrder:'before-components',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt})
+  if(kind!=='cancel')await expect.poll(()=>f.page.locator('.en-space-ai [role="alert"]').textContent()).toMatch(/变化|删除/)
+  expect(await f.page.locator('.bn-editor').textContent()).not.toContain('本次迟到正文不可误插');expect(await f.page.locator('.en-native-component').count()).toBe(1);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+
+it('preserves text typed into the original anchor while placing mixed prose before its own component',async()=>{
+ const f=await open();try{
+  await launch(f.page,'先写总结再创建演示图');const parent=await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).input),receipt=await mixedChild(f.page,parent)
+  await f.page.evaluate(()=>(window as any).editor.updateBlock('anchor',{content:'生成期间用户在原空行输入的文字'}))
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'text',markdown:'本次原位总结。',inlineOrder:'before-components',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt})
+  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor();expect(await f.page.evaluate(()=>(window as any).editor.document.map((block:any)=>block.type==='research'?'component':block.content?.map((part:any)=>part.text||'').join('')))).toEqual(['已有前段','本次原位总结。','component','生成期间用户在原空行输入的文字','用户自己写的市场观察段落'])
+  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();expect(await f.page.locator('.bn-block-outer[data-id="anchor"]').textContent()).toContain('生成期间用户在原空行输入的文字');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
+
+it('ignores a stray component-order hint for a normal text-only response',async()=>{
+ const f=await open();try{await generate(f.page,{kind:'text',markdown:'普通文字仍应直接写入。',inlineOrder:'before-components'});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();expect(await f.page.locator('.bn-editor').textContent()).toContain('普通文字仍应直接写入。');expect(f.errors).toEqual([])}finally{await f.context.close()}
+},20000)
 it.each([{count:1000,characters:4,action:'undo'},{count:1200,characters:81,action:'confirm'}])('keeps complete long review for $count paragraphs through save/reopen and $action',async({count,characters,action})=>{
  const f=await open();try{
   const markdown=Array.from({length:count},(_,i)=>'文'.repeat(characters-String(i).length)+i).join('\n\n');expect(markdown.length).toBeLessThanOrEqual(100000)
@@ -243,7 +292,11 @@ it('counts only the real successful artifact in mixed child outcomes and preserv
   const retry=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').at(-1) as any).input),child=await childCapability(f.page,retry,'mixed-retry','重试第二张未完成表')
   expect(await f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='research').length)).toBe(2)
   await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:child.requestId,node:resultTable});const retried=await capabilityReceipt(f.page,'mixed-retry');await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'缺少的表已完成',capabilityReceipts:[receipt]}),{id:retry.requestId,receipt:retried});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click()
-  await f.page.locator('.bn-block-outer[data-id="'+completed+'"] .bn-block-content').click();await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0)
+  const completedContent=f.page.locator('.bn-block-outer[data-id="'+completed+'"] .bn-block-content')
+  if(evidence){await f.page.screenshot({path:evidence+'/mixed-retry-before-center.png',fullPage:true});await f.page.evaluate(()=>document.addEventListener('pointerdown',event=>{const element=(event.target as Element),path=event.composedPath().filter((node:any)=>node instanceof Element).slice(0,8).map((node:any)=>({tag:node.tagName,classes:node.getAttribute('class'),role:node.getAttribute('role'),block:node.getAttribute('data-id')}));(window as any).mixedRetryPointer={target:{tag:element.tagName,classes:element.getAttribute('class'),label:element.getAttribute('aria-label')},path}},{capture:true,once:true}))}
+  await completedContent.click()
+  if(evidence){writeFileSync(evidence+'/mixed-retry-pointer.json',JSON.stringify(await f.page.evaluate(()=>(window as any).mixedRetryPointer),null,2));await f.page.screenshot({path:evidence+'/mixed-retry-after-center.png',fullPage:true})}
+  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0)
   expect(await f.page.evaluate((id:string)=>!!(window as any).editor.getBlock(id),completed)).toBe(false);expect(await f.page.evaluate((id:string)=>JSON.parse((window as any).editor.getBlock(id).props.payload).containerSpec.rows,bad)).toEqual([['甲',0],['乙',-2]]);expect(await f.page.locator('.bn-editor').innerText()).toContain('用户保留的混合结果后段');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 },20000)

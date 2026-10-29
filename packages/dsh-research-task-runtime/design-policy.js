@@ -7,6 +7,7 @@ export const DESIGN_POLICY_ERROR = 'COMPONENT_DESIGN_POLICY_REQUIRED'
 export const COMPONENT_SURFACE_STYLE_RULES = `【组件宿主样式规则】
 本规则只约束组件外观，不改变纯文字任务或Notes输出协议。
 真实mode决定宿主。对话模式：1px框/8px圆角；标题min34px、padding5px 10px、600 12px/16px；普通正文14px/1.65、padding12px 14px。
+对话卡按内容适配高度，HTML自然排版；不强设整卡/视口高，保留可读图形与用户明确尺寸。
 研究与笔记模式：完成卡4px圆角、无默认边框，标题栏34px、左右10px、gap6px；普通600、financial700 12px/16px。笔记继承Research，保留已存尺寸/对齐/主题，无独立样式入口；标题操作20×24px，金融控件24px，不套HTML业务控件28px。
 笔记与对话无连接端口/拖拽连线，仅Research可用。外框、标题栏、图标与动作由宿主提供，不重画或添假按钮。只交数据或必要HTML内容，不重复JSON title题名/卡壳；保留分节标题、筛选、用户业务布局。字体/主题/中性控件用--sherlock-*，不重定义token；业务色保留语义，窄列按renderer/profile重排或滚动，不缩字裁数据。
 生成/加载/停止/失败跟真实请求，保留需求/有效内容；未配置提供真实选择，无记录显空态，行情缺失/失败可重试，不造进度/成功。来源、原数据时点、获取时间、保存时间分开；创建不等于取数。原稿实例尺寸不覆盖宿主。`

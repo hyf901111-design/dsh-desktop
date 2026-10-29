@@ -4,15 +4,18 @@ import { financialWidgetSpec } from '../../../packages/dsh-research-task-runtime
 import type { ConversationComponentStore } from '../state/conversation-components';
 import type { ResearchCanvasClipboard } from '../state/research-canvas-clipboard';
 import type { ComponentLibraryStore } from '../state/component-library';
+import { saveResearchCanvasExport, type ResearchCanvasExportDependencies } from '../state/research-canvas-export';
 export type ConversationComponentUiService = ConversationComponentsBridge;
 type Options = {
     store: ConversationComponentStore;
     owner(): string;
     canReadSession(sessionId: string): boolean;
+    canWriteSession?(sessionId: string): boolean;
     currentVisibleContext(): ConversationComponentVisibleContext | undefined;
     nativeQuery(query: JsonObject): Promise<JsonObject>;
     clipboard(): ResearchCanvasClipboard | undefined;
     library(): ComponentLibraryStore | undefined;
+    exportFiles?: Pick<ResearchCanvasExportDependencies, 'showSaveDialog' | 'writeFile'>;
 };
 const obj = (v: unknown): v is Record<string, any> => Boolean(v && typeof v === 'object' && !Array.isArray(v));
 function keys(value: unknown, required: string[], optional: string[] = []): asserts value is Record<string, any> { if (!obj(value) || required.some(k => !Object.hasOwn(value, k)) || Object.keys(value).some(k => ![...required, ...optional].includes(k)))
@@ -65,7 +68,7 @@ export function createConversationComponentService(options: Options): Conversati
             throw Error('对话组件宿主会话已变化，操作已取消。'); } }; }
     const service: ConversationComponentCapabilityAdapter & ConversationComponentUiService = {
         async create(args, identity, signal, requestId) {
-            const current = () => !signal.aborted && identity.current() && identity.mode === 'conversation' && options.owner() === identity.ownerAccountId && options.canReadSession(identity.sessionId);
+            const current = () => !signal.aborted && identity.current() && identity.mode === 'conversation' && options.owner() === identity.ownerAccountId && options.canReadSession(identity.sessionId) && options.canWriteSession?.(identity.sessionId) !== false;
             if (!current())
                 throw Error('对话组件宿主身份已失效或操作已取消。');
             // No post-save abort check: an atomic write already happened and must be acknowledged honestly.
@@ -80,18 +83,46 @@ export function createConversationComponentService(options: Options): Conversati
             if (!allowed()) throw Error('对话组件回执恢复的账户身份已变化。');
             return saved;
         },
-        async read(input) { target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input); return visible(input.sessionId).readOnly === true ? {...view, readOnly: true} : view; },
+        async read(input) {
+            target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input), context = visible(input.sessionId), readOnly = context.readOnly === true || options.canWriteSession?.(input.sessionId) === false, editable = context.mode === 'conversation' && !readOnly;
+            return {...view, ...(readOnly ? {readOnly:true} : {}), menuCapabilities:{copy:!!options.clipboard(), saveLibrary:editable && !!options.library(), exportContent:context.mode === 'conversation' && !!options.exportFiles, rename:editable}};
+        },
+        async rename(input) {
+            target(input, ['expectedRevision', 'title']); revision(input.expectedRevision);
+            const l = lease(input.sessionId), writable = () => { try { const context = visible(input.sessionId); return l.current() && context.mode === 'conversation' && context.readOnly !== true && options.canWriteSession?.(input.sessionId) !== false; } catch { return false; } };
+            if (!writable()) throw Error('当前对话组件不可编辑。');
+            const result = await options.store.rename(l.owner, input, writable); l.check(); return result;
+        },
+        async exportContent(input) {
+            target(input, ['expectedRevision', 'kind', 'format', input.kind === 'text' ? 'content' : 'base64']); revision(input.expectedRevision);
+            if (input.kind !== 'text' && input.kind !== 'binary' || input.kind === 'text' && input.format !== 'svg' || input.kind === 'binary' && !['png','jpg'].includes(input.format)) throw Error('组件导出格式无效。');
+            const l = lease(input.sessionId), view = options.store.read(l.owner, input), files = options.exportFiles;
+            const check = () => { l.check(); if (visible(input.sessionId).mode !== 'conversation' || options.store.read(l.owner,input).revision !== input.expectedRevision) throw Error('组件或宿主已变化，导出已取消。'); };
+            if (!files) throw Error('组件导出暂不可用。'); check();
+            const suggestedName = String(view.node.displayName || view.node.title || '组件').slice(0,120);
+            const request = input.kind === 'text' ? {kind:'text' as const,format:'svg' as const,content:input.content,suggestedName} : {kind:'binary' as const,format:input.format,base64:input.base64,suggestedName};
+            return saveResearchCanvasExport(request, {
+                showSaveDialog: async value => { check(); return files.showSaveDialog(value); },
+                writeFile: async (...args) => { check(); return files.writeFile(...args); },
+                copyFile: async () => { throw Error('此入口不复制源文件。'); }, resolveExportSource: async () => null
+            });
+        },
         async commitHtmlInteraction(input) {
             const kind = (input as any)?.kind;
             target(input, kind === 'journal' ? ['expectedRevision', 'htmlVersion', 'kind', 'event'] : kind === 'shared' ? ['expectedRevision', 'htmlVersion', 'kind', 'revision', 'state'] : ['invalid-kind']);
             revision(input.expectedRevision);
-            const sessionId = input.sessionId, captured = {...visible(sessionId)}, writable = () => { try { const now = visible(sessionId); return now.ownerAccountId === captured.ownerAccountId && now.generation === captured.generation && now.mode === 'conversation' && now.readOnly !== true; } catch { return false; } };
+            const sessionId = input.sessionId, captured = {...visible(sessionId)}, writable = () => { try { const now = visible(sessionId); return now.ownerAccountId === captured.ownerAccountId && now.generation === captured.generation && now.mode === 'conversation' && now.readOnly !== true && options.canWriteSession?.(sessionId) !== false; } catch { return false; } };
             if (captured.mode !== 'conversation' || captured.readOnly === true || !writable()) throw Error('当前对话组件不可编辑或宿主身份已变化。');
             const saved = await options.store.commitHtmlInteraction(captured.ownerAccountId, input, writable);
             if (!writable()) throw Error('对话组件宿主会话已变化，保存确认已取消。');
             return saved;
         },
-        async updateNativeSpec(input) { target(input, ['expectedRevision', 'spec']); revision(input.expectedRevision); const l = lease(input.sessionId); return options.store.updateNativeSpec(l.owner, input, l.current); },
+        async updateNativeSpec(input) {
+            target(input, ['expectedRevision', 'spec']); revision(input.expectedRevision); const l = lease(input.sessionId);
+            const writable = () => { try { const context = visible(input.sessionId); return l.current() && context.mode === 'conversation' && context.readOnly !== true && options.canWriteSession?.(input.sessionId) !== false; } catch { return false; } };
+            if (!writable()) throw Error('当前对话组件不可编辑。');
+            return options.store.updateNativeSpec(l.owner, input, writable);
+        },
         async queryNative(input) {
             target(input, ['expectedRevision', 'query']);
             revision(input.expectedRevision);
@@ -126,9 +157,13 @@ export function createConversationComponentService(options: Options): Conversati
             return options.store.readNativeSnapshot(l.owner, input, input.expectedRevision, query);
         },
         async copy(input) { target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input), clipboard = options.clipboard(); if (!clipboard)
-            throw Error('组件剪贴板暂不可用。'); l.check(); return clipboard.copy({ sessionId: input.sessionId, nodes: [detachConversationComponentNode(view.node)] }); },
+            throw Error('组件剪贴板暂不可用。');
+            const current=()=>l.current()&&options.store.read(l.owner,input).revision===view.revision;
+            l.check();const result=await clipboard.copy({sessionId:input.sessionId,nodes:[detachConversationComponentNode(view.node)]},current);if(!current())throw Error('组件或宿主已变化，复制已取消。');return result; },
         async saveLibrary(input) { target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input), library = options.library(); if (!library)
-            throw Error('组件库暂不可用。'); l.check(); return library.add(detachConversationComponentNode(view.node), undefined, l.owner); },
+            throw Error('组件库暂不可用。');
+            const writable=()=>{try{const context=visible(input.sessionId);return l.current()&&context.mode==='conversation'&&context.readOnly!==true&&options.canWriteSession?.(input.sessionId)!==false&&options.store.read(l.owner,input).revision===view.revision;}catch{return false;}};
+            if(!writable())throw Error('当前对话组件不可编辑。');const saved=await library.add(detachConversationComponentNode(view.node),undefined,l.owner,writable);if(!writable())throw Error('组件或宿主已变化，保存确认已取消。');return saved; },
         async reference(input) { target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input); return { version: 1, kind: 'conversation-component', sessionId: input.sessionId, componentId: view.id, revision: view.revision, title: String(view.node.title || '组件').slice(0, 120) }; },
         async resolveReference(input) {
             keys(input, ['sessionId', 'reference']);

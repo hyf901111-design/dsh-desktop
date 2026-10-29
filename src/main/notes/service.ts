@@ -25,15 +25,19 @@ import { findNoteComponent, noteLibraryItems, noteLibraryNode, noteLibrarySpec }
 import {prepareNoteReferences} from './reference-context'
 import type {ResearchContextSource} from '../state/research-context-bridge'
 import { pickNoteFiles } from './file-picker'
+import {createNoteComponentActions} from './component-actions'
+import type {ResearchCanvasExportDependencies} from '../state/research-canvas-export'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string; onDocumentAdapter?(adapter:NoteDocumentAdapter):void;
   runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; canWrite?(sessionId:string):boolean; canvasAvailable?(sessionId:string):boolean; inspectCanvas?(sessionId:string,signal:AbortSignal,args?:{ids?:string[]}):Promise<unknown>; resetZoom?():Promise<void>;windowAction?(action:string,args:any):Promise<unknown>; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any,control?:{signal?:AbortSignal;guardId?:string}):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
+  exportFiles?:Pick<ResearchCanvasExportDependencies,'showSaveDialog'|'writeFile'>;
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   const capabilityBridge=new NotesCapabilityBridge(value=>{const window=options.getWindow();if(!window||window.isDestroyed())throw Error('笔记窗口不可用。');(window.webContents as any).send('notes:capability-action',value)})
   const documentAdapter=new NotesDocumentCapabilityAdapter({owner:options.owner,window:options.getWindow,canRead:options.canRead,canWrite:sessionId=>options.canWrite?.(sessionId)??true,bridge:capabilityBridge,componentData:!!options.componentData,notify:value=>{const window=options.getWindow();if(window&&!window.isDestroyed())(window.webContents as any).send('notes:capability-action',value)},prepare:(context,sessionId,signal,current)=>prepareNoteReferences(context,{sessionId,owner:options.owner(),files:options.files,captureSources:options.captureSources,signal,current})})
   options.onDocumentAdapter?.(documentAdapter)
+  const componentActions=createNoteComponentActions({store,owner:options.owner,canRead:options.canRead,canWrite:sessionId=>options.canWrite?.(sessionId)??true,getWindow:options.getWindow,documentIdentity:sessionId=>documentAdapter.identity(sessionId),clipboard:options.clipboard,library:options.library,exportFiles:options.exportFiles})
   const dataJobs=new Map<string,{owner:string;sessionId:string;controller:AbortController}>()
   const capabilityResults=new Map<string,{fingerprint:string;result:any}>()
   const generations=new Map<string,{owner:string;sessionId:string;cardLocal:boolean}>()
@@ -43,6 +47,10 @@ export function installNotesService(options: {
     const owner = options.owner(), session = input.sessionId
     if (method !== 'load' && method !== 'conversation-load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
     switch (method) {
+      case 'component-menu-capabilities':
+      case 'component-copy':
+      case 'component-library-save':
+      case 'component-export': return componentActions(method,input)
       case 'capability-reply': return capabilityBridge.respond(input,owner)
       case 'capability-ready': return documentAdapter.ready(input,owner)
       case 'library-list': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryItems(options.library()!)

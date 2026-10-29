@@ -249,15 +249,18 @@ export class ResearchCanvasClipboard {
       return { available: boundedText(this.options.clipboard.readText()).length > 0 }
     } catch { return { available: false } }
   }
-  copy(value: unknown): Promise<{ ok: boolean; error?: string }> {
+  copy(value: unknown, guard:()=>boolean=()=>true): Promise<{ ok: boolean; error?: string }> {
     return this.serial(async () => {
       const created: string[] = []
+      const check=()=>{if(!guard())throw Error('组件操作已取消，宿主身份或权限已变化。')}
       try {
+        check()
         const input = record(value)
         if (!exactKeys(input, ['sessionId', 'nodes']) || !boundedId(input.sessionId) || !Array.isArray(input.nodes) || input.nodes.length === 0 || input.nodes.length > MAX_FILES) throw new Error('一次最多复制 100 个组件。')
         const nodes = input.nodes.map(sanitizeNode)
         if (new Set(nodes.map((node) => node.id)).size !== nodes.length || Buffer.byteLength(JSON.stringify(nodes)) > MAX_SNAPSHOT) throw new Error('组件内容过大或标识重复。')
         await this.ensureStore()
+        check()
         let total = 0
         for (const [i, node] of nodes.entries()) if (node.kind === 'file') {
           const raw = record(input.nodes[i]); let source: { path: string; name: string } | null
@@ -272,9 +275,10 @@ export class ResearchCanvasClipboard {
         const snapshotId = newId(); const target = path.join(this.root, 'snapshots', `${snapshotId}.json`)
         const snapshot = { version: 1, nodes }
         if (Buffer.byteLength(JSON.stringify(snapshot)) > MAX_SNAPSHOT) throw new Error('组件快照不能超过 2 MiB。')
-        await this.atomicJson(target, snapshot); created.push(target)
+        check();await this.atomicJson(target, snapshot); created.push(target)
         const text = nodes.map((node) => String(node.excerpt || node.title || node.name || 'EWork Odyssey 组件')).join('\n\n').slice(0, MAX_TEXT)
         // A single Electron write preserves both the opaque HTML envelope and text fallback.
+        check()
         this.options.clipboard.write({ text, html: `<meta name="sherlock-research-clipboard" content="${snapshotId}"><span>${text.replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[char]!)}</span>` })
         return { ok: true }
       } catch (error) {

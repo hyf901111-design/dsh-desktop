@@ -22,11 +22,11 @@ beforeAll(async()=>{
  const symbol={market:'SZ',code:'000001',name:'合成验收证券'},spec={...financialWidgetDefaults('quote'),symbols:[symbol]},node={id:'same-node',title:'菜单验收行情',kind:'generated-container',noteLibrary:true,height:440,containerSpec:spec};
  const query=async(input,host)=>{window.probe.queries.push({host,...input});return input.action==='search'?{symbols:[symbol]}:input.action==='history'?{bars:[],source:'合成来源'}:{quotes:[{...symbol,price:100,asOf:'2026-10-28',source:'合成来源'}],source:'合成来源',receivedAt:'2026-10-28T13:00:00Z'}};
  let conversation={id:node.id,sessionId:'same-session',revision:1,node:structuredClone(node)};
- const bridge={read:async()=>structuredClone(conversation),...(window.fixtureFull?{copy:async input=>{window.probe.copied.push(input);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input);return{id:'library-item'}},updateNativeSpec:async input=>{window.probe.conversation.push(input);conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,containerSpec:input.spec}};return structuredClone(conversation)}}:{}),...(window.fixtureQuery?{queryNative:async input=>query(input.query,'conversation')}:{})};
+ const bridge={read:async()=>structuredClone(conversation),...(window.fixtureFull?{exportContent:async()=>({status:'saved'}),rename:async input=>{conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,title:input.title,displayName:input.title}};return structuredClone(conversation)},copy:async input=>{window.probe.copied.push(input);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input);return{id:'library-item'}},updateNativeSpec:async input=>{window.probe.conversation.push(input);conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,containerSpec:input.spec}};return structuredClone(conversation)}}:{}),...(window.fixtureQuery?{queryNative:async input=>query(input.query,'conversation')}:{})};
  window.dshDesktop={conversationComponents:bridge,financialWidget:{request:input=>query(input,'notes')},componentData:{request:async(sessionId,input)=>{window.probe.canvas.push({sessionId,...input});return input.action==='list'?[]:{}},setVisible:async()=>{}}};
  let block={id:'note-block',type:'research',props:{payload:JSON.stringify(node)}},setBlock;
  const editor={isEditable:!window.fixtureReadOnly,getBlock:()=>block,removeBlocks:()=>{},updateBlock:(_id,value)=>{block={...block,props:{...block.props,...value.props}};window.probe.notes.push(JSON.parse(block.props.payload));setBlock(block)}};
- function Note(){const [current,update]=useState(block);setBlock=update;return React.createElement(NativeComponentBlock,{block:current,node:JSON.parse(current.props.payload),context:{editor,bridge:{request:async()=>({})},sessionId:'same-session',dark:false}})}
+ function Note(){const [current,update]=useState(block);setBlock=update;return React.createElement(NativeComponentBlock,{block:current,node:JSON.parse(current.props.payload),context:{editor,bridge:{request:async method=>method==='component-menu-capabilities'?{copy:window.fixtureFull,saveLibrary:window.fixtureFull&&!window.fixtureReadOnly,exportContent:window.fixtureFull,rename:window.fixtureFull&&!window.fixtureReadOnly}:{}},persistComponentActions:async()=>{},sessionId:'same-session',dark:false}})}
  createRoot(document.querySelector('#note')).render(React.createElement(Note));createRoot(document.querySelector('#note-portals')).render(React.createElement(library.__NoteViews,{sessionId:'same-session',active:true}));
  createRoot(document.querySelector('#conversation')).render(React.createElement(library.__ConversationCard,{sessionId:'same-session',manifest:{componentId:node.id,sessionId:'same-session'}}));
  createRoot(document.querySelector('#settings-controller')).render(React.createElement(library.__DataSettings,{sessionId:'same-session',canvasRoot:{current:document.querySelector('#canvas')}}));
@@ -46,9 +46,9 @@ async function open({full=true,query=true,readOnly=false}={}){
 }
 it('hides unsupported operations in the real conversation More menu and financial settings while retaining available refresh',async()=>{
  const f=await open({full:false});try{
-  const card=f.page.locator('#conversation');await card.getByRole('button',{name:'组件更多操作',exact:true}).click();const menu=card.getByRole('menu',{name:'组件更多操作',exact:true})
-  expect(await menu.getByRole('menuitem').allTextContents()).toEqual(['数据源与更新']);expect(await card.getByRole('button',{name:'引用到对话',exact:true}).count()).toBe(0)
-  await menu.getByRole('menuitem',{name:'数据源与更新',exact:true}).click();const dialog=f.page.getByRole('dialog',{name:'组件数据与自动更新'})
+  const card=f.page.locator('#conversation');await card.getByRole('button',{name:'组件更多操作',exact:true}).click();const menu=f.page.getByRole('menu',{name:'组件更多操作',exact:true})
+  expect(await menu.getByRole('menuitem').allTextContents()).toEqual(['放大阅读','数据源与自动更新']);expect(await card.getByRole('button',{name:'引用到对话',exact:true}).count()).toBe(0)
+  await menu.getByRole('menuitem',{name:'数据源与自动更新',exact:true}).click();const dialog=f.page.getByRole('dialog',{name:'组件数据与自动更新'})
   await dialog.waitFor();expect(await dialog.locator('select').count()).toBe(0);expect(await dialog.getByRole('button').allTextContents()).toEqual(['×','立即更新'])
   const before=await f.page.evaluate(()=>(window as any).probe.queries.length);await dialog.getByRole('button',{name:'立即更新',exact:true}).click();await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.queries.length)).toBeGreaterThan(before)
   expect(await f.page.evaluate(()=>(window as any).probe.conversation.length)).toBe(0);expect(f.errors).toEqual([])
@@ -57,8 +57,8 @@ it('hides unsupported operations in the real conversation More menu and financia
 it('hides refresh when no real conversation query bridge exists and keeps supported copy and save actions',async()=>{
  const f=await open({query:false});try{
   const card=f.page.locator('#conversation');expect(await card.getByRole('button',{name:'刷新组件',exact:true}).count()).toBe(0)
-  await card.getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await card.getByRole('menuitem',{name:'复制',exact:true}).count()).toBe(1);await card.getByRole('menuitem',{name:'复制',exact:true}).click()
-  await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.copied.length)).toBe(1);await card.getByRole('button',{name:'组件更多操作',exact:true}).click();await card.getByRole('menuitem',{name:'保存到组件库',exact:true}).click();await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.saved.length)).toBe(1)
+  await card.getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await f.page.getByRole('menuitem',{name:'复制组件',exact:true}).count()).toBe(1);await f.page.getByRole('menuitem',{name:'复制组件',exact:true}).click()
+  await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.copied.length)).toBe(1);await card.getByRole('button',{name:'组件更多操作',exact:true}).click();await f.page.getByRole('menuitem',{name:'添加至组件库',exact:true}).click();await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.saved.length)).toBe(1)
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
@@ -70,7 +70,7 @@ it('shows read-only note provenance without presenting settings that cannot be s
 },15000)
 it('keeps the real conversation provider, timing, pause and manual refresh controls when both host adapters exist',async()=>{
  const f=await open();try{
-  const card=f.page.locator('#conversation');await card.getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await card.getByRole('menuitem').allTextContents()).toEqual(['复制','保存到组件库','数据源与更新']);await card.getByRole('menuitem',{name:'数据源与更新',exact:true}).click()
+  const card=f.page.locator('#conversation');await card.getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await f.page.getByRole('menuitem').allTextContents()).toEqual(['放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新']);await f.page.getByRole('menuitem',{name:'数据源与自动更新',exact:true}).click()
   const dialog=f.page.getByRole('dialog',{name:'组件数据与自动更新'});await dialog.waitFor();expect(await dialog.locator('select').count()).toBe(2)
   await dialog.getByRole('combobox',{name:'数据源',exact:true}).selectOption('backup');await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.conversation.at(-1)?.spec.dataSource)).toBe('backup')
   await dialog.getByRole('combobox',{name:'更新频率',exact:true}).selectOption('5');await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.conversation.at(-1)?.spec.refreshMinutes)).toBe(5)
@@ -92,3 +92,12 @@ it('routes settings only to the exact surface and mounted owner when all hosts s
   await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.canvas.length)).toBe(1);expect(await f.page.getByRole('dialog').count()).toBe(1);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
+it('retains the executable Research reading, clipboard, naming, library and export entries in both surface menus',async()=>{
+ const f=await open();try{
+  await f.page.locator('#conversation').getByRole('button',{name:'组件更多操作',exact:true}).click();const menu=f.page.getByRole('menu',{name:'组件更多操作',exact:true})
+  expect(await menu.getByRole('menuitem').allTextContents()).toEqual(['放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新'])
+  await f.page.keyboard.press('Escape');expect(await f.page.locator('#note').getByRole('button',{name:'组件更多操作',exact:true}).count()).toBe(1)
+  await f.page.locator('#note').getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await f.page.getByRole('menu',{name:'组件更多操作',exact:true}).getByRole('menuitem').allTextContents()).toEqual(['放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新']);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)

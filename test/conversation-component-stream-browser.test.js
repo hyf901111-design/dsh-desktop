@@ -87,7 +87,7 @@ it.each(['reduce','no-preference'])('renders real ready cards between native pub
   expect(await f.page.locator('[data-chat-flow]').innerText()).not.toContain('private internal plan');expect(await f.page.locator('[data-chat-flow]').innerText()).not.toContain('private second plan')
   const card=f.page.locator('[data-conversation-component-id="a"]');expect(await card.locator('header button').first().getAttribute('data-conversation-action')).toBe('reference')
   await card.getByRole('button',{name:'引用到对话',exact:true}).click();expect(await f.page.evaluate(()=>JSON.parse(window.probe.referenced[0].ref).componentId)).toBe('a')
-  await card.getByRole('button',{name:'组件更多操作',exact:true}).click();await card.getByRole('menuitem',{name:'复制',exact:true}).click();expect(await f.page.evaluate(()=>window.probe.copied)).toEqual(['a'])
+  await card.getByRole('button',{name:'组件更多操作',exact:true}).click();await f.page.getByRole('menuitem',{name:'复制组件',exact:true}).click();expect(await f.page.evaluate(()=>window.probe.copied)).toEqual(['a'])
   await f.page.evaluate(()=>window.probe.dispose());await f.page.reload();await f.boot();await f.page.locator('[data-conversation-component-id="b"]').waitFor()
   expect(await presentation(f)).toEqual(expected);expect(await f.page.locator('[data-conversation-component-id]').count()).toBe(2);expect(f.errors).toEqual([])
  }finally{await f.close()}

@@ -193,9 +193,9 @@ export function useWorkbenchSettings({triggerRef,sessionId,node,disabled,editing
     return()=>{if(trigger.__eworkWorkbenchSettings===actions)delete trigger.__eworkWorkbenchSettings}
   },[triggerRef,sessionId,node,disabled,editingPrompt,onEdit,onRefresh,onSetRefresh,onProvenance,onFrameAction,onOpenBrowser])
 }
-export async function exportWorkbenchContent(card,node,format) {
+export async function exportWorkbenchContent(card,node,format,adapters={}) {
   if(!['svg','png','jpg'].includes(format)||!card)throw Error('组件当前不可导出')
-  const doc=card.ownerDocument,view=doc.defaultView,body=card.querySelector('[data-research-preview-body]')||card.querySelector('[data-research-native-web]')
+  const doc=card.ownerDocument,view=doc.defaultView,body=adapters.body||card.querySelector('[data-research-preview-body]')||card.querySelector('[data-research-native-web]')
   if(!body)throw Error('请等待组件内容加载完成')
   const frame=body.querySelector('iframe[data-research-html-artifact]')
   let svg
@@ -223,7 +223,7 @@ export async function exportWorkbenchContent(card,node,format) {
     context.drawImage(image,0,0,canvas.width,canvas.height)
     request={kind:'binary',format,suggestedName,base64:canvas.toDataURL(format==='jpg'?'image/jpeg':'image/png',.94).split(',')[1]}
   }
-  const save=view.dshDesktop?.researchCanvasExport?.save;if(!save)throw Error('当前客户端不支持导出')
+  const save=adapters.save||view.dshDesktop?.researchCanvasExport?.save;if(!save)throw Error('当前客户端不支持导出')
   const result=await save(request);if(result?.status==='error')throw Error(result.message||'保存失败，请重试')
   return result
 }

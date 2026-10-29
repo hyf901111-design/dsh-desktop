@@ -1475,13 +1475,20 @@ async function bootstrap(): Promise<void> {
     },
   }) })
   const noteNativeMenu = new NoteNativeMenu({getWindow:()=>mainWindow,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession})
+  const componentExportFiles={
+    showSaveDialog:async(options:Record<string,unknown>)=>{
+      const window=mainWindow
+      return !window||window.isDestroyed()?{canceled:true}:dialog.showSaveDialog(window,options as SaveDialogOptions)
+    },
+    writeFile:researchCanvasExportFileOperations().writeFile
+  }
   app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow, onDocumentAdapter:adapter=>{notesDocumentAdapter=adapter},
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
     canRead:canReadNoteSession,canWrite:sessionId=>!researchBoardsService?.isSharedSession(sessionId),canvasAvailable:sessionId=>canvasActions.isAvailable(sessionId),inspectCanvas:(sessionId,signal,args)=>canvasActions.execute({sessionId,method:'inspect',args:args??{}},signal),resetZoom:()=>executeDesktopMenuCommand('zoom-reset'),windowAction:clientWindowAction,nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,
     componentData:{request:(sessionId,args,control)=>{if(!noteComponentDataService)throw Error('组件数据刷新服务暂不可用。');return noteComponentDataService.request(sessionId,args,control)},visible:(sessionId,active)=>noteComponentDataService?.engine.setVisible(sessionId,active),reply:value=>noteComponentActions.respond(value)},
     captureSources:(sessionId,sources)=>{if(!researchContextBridge)throw Error('笔记资料服务暂不可用。');return researchContextBridge.captureSources(sessionId,sources)},
-    files:noteFiles
+    files:noteFiles,exportFiles:componentExportFiles
   }))
   try {
     integrationService = await IntegrationService.open({
@@ -1578,9 +1585,10 @@ async function bootstrap(): Promise<void> {
   conversationComponentsService=createConversationComponentService({
     store:conversationComponentStore,owner:()=>integrationOwner()||'local',
     canReadSession:id=>!isScheduledSession(id)&&canReadNoteSession(id),
+    canWriteSession:id=>!researchBoardsService?.isSharedSession(id),
     currentVisibleContext:()=>clientCapabilities.currentVisibleContext(),
     nativeQuery:query=>financialWidgetData.query(query),
-    clipboard:()=>researchClipboardService,library:()=>noteComponentLibrary
+    clipboard:()=>researchClipboardService,library:()=>noteComponentLibrary,exportFiles:componentExportFiles
   })
   app.once('before-quit',installConversationComponentHandlers({ipcMain,getWindow:()=>mainWindow,service:conversationComponentsService}))
   await installCalendarService({shared:researchBoardsService?new SharedCalendarStore(researchBoardsService):undefined,getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>{

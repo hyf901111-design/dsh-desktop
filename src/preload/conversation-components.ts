@@ -2,6 +2,8 @@ import type { ConversationComponentsBridge } from '../../packages/dsh-research-t
 export function createConversationComponentsBridge(invoke: (channel: string, ...args: unknown[]) => Promise<unknown>): ConversationComponentsBridge {
     const bridge: ConversationComponentsBridge = {
         read: input => invoke('conversation-components:read', input) as ReturnType<ConversationComponentsBridge['read']>,
+        rename: input => invoke('conversation-components:rename', input) as ReturnType<NonNullable<ConversationComponentsBridge['rename']>>,
+        exportContent: input => invoke('conversation-components:exportContent', input) as ReturnType<NonNullable<ConversationComponentsBridge['exportContent']>>,
         commitHtmlInteraction: input => invoke('conversation-components:commitHtmlInteraction', input) as ReturnType<NonNullable<ConversationComponentsBridge['commitHtmlInteraction']>>,
         updateNativeSpec: input => invoke('conversation-components:updateNativeSpec', input) as ReturnType<ConversationComponentsBridge['updateNativeSpec']>,
         queryNative: input => invoke('conversation-components:queryNative', input) as ReturnType<ConversationComponentsBridge['queryNative']>,

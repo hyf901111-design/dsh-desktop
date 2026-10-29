@@ -46,19 +46,38 @@ export function noteInlineAnchorBlock(editor:any,anchor:NoteInsertionAnchor,docu
  return block
 }
 
+/** The identity belongs to the Yjs block, never its reusable public ID. */
+export function noteInlineBlockIdentity(editor:any,blockId:string):string|undefined{
+ const binding=ySyncPluginKey.getState(editor._tiptapEditor.state)?.binding
+ const visit=(type:any):string|undefined=>{
+  if(type instanceof Y.XmlElement&&type.getAttribute('id')===blockId){const item=type._item;return item?item.id.client+':'+item.id.clock:undefined}
+  for(const child of type.toArray?.()??[]){const found=visit(child);if(found)return found}
+ }
+ return binding?visit(binding.type):undefined
+}
+
 /** Component placeholders retain the anchor; completed prose can consume it. */
-export function insertNoteInlineBlocks(editor:any,anchor:NoteInsertionAnchor,documentId:string,blocks:any[],complete=false){
+export function insertNoteInlineBlocks(editor:any,anchor:NoteInsertionAnchor,documentId:string,blocks:any[],complete=false,before?:{blockId:string;identity:string}){
  const block=noteInlineAnchorBlock(editor,anchor,documentId)
+ if(before&&(!before.identity||editor.getBlock(before.blockId)?.type!=='research'||noteInlineBlockIdentity(editor,before.blockId)!==before.identity))throw Error('本次组件已变化，原需求已保留，请重新生成正文。')
  if(!blocks.length)throw Error('生成未返回可插入内容，请重试。')
  const state=editor._tiptapEditor.state,undo=state.plugins.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(state)?.undoManager
  undo?.stopCapturing()
  let created:any[]=[]
- editor.transact(()=>{
-  // Do not remove text, inline nodes, or child blocks typed while awaiting AI.
-  const empty=Array.isArray(block.content)&&block.content.length===0&&!block.children?.length
-  if(complete&&empty)created=editor.replaceBlocks([block.id],blocks).insertedBlocks
-  else created=editor.insertBlocks(blocks,block.id,'before')
- })
- undo?.stopCapturing()
- return created
+ try{
+  if(before){
+   // Keep these two local PM edits in the same proposal/history group, but
+   // synchronize them separately: one disjoint replacement spanning existing
+   // components can cause y-prosemirror to recreate their untouched Y items.
+   created=editor.insertBlocks(blocks,before.blockId,'before')
+   const original=noteInlineAnchorBlock(editor,anchor,documentId)
+   if(complete&&Array.isArray(original.content)&&!original.content.length&&!original.children?.length)editor.removeBlocks([original.id])
+  }else editor.transact(()=>{
+   // Do not remove text, inline nodes, or child blocks typed while awaiting AI.
+   const empty=Array.isArray(block.content)&&block.content.length===0&&!block.children?.length
+   if(complete&&empty)created=editor.replaceBlocks([block.id],blocks).insertedBlocks
+   else created=editor.insertBlocks(blocks,block.id,'before')
+  })
+  return created
+ }finally{undo?.stopCapturing()}
 }

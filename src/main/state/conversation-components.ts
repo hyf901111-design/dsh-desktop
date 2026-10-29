@@ -105,7 +105,7 @@ export class ConversationComponentStore {
                 if (!object(value) || Object.keys(value).some(k => !['id', 'ownerAccountId', 'sessionId', 'turnId', 'requestId', 'fingerprint', 'windowGeneration', 'authorityId', 'authoritySeq', 'revision', 'node', 'readableText', 'provenance', 'createdAt', 'updatedAt', 'observations'].includes(k)) || !['id', 'ownerAccountId', 'sessionId', 'turnId', 'requestId', 'windowGeneration'].every(k => id(value[k])) || typeof value.fingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(value.fingerprint) || !Number.isSafeInteger(value.revision) || value.revision < 1 || !timestamp(value.createdAt) || !timestamp(value.updatedAt) || value.authorityId !== undefined && !id(value.authorityId) || value.authoritySeq !== undefined && (!Number.isSafeInteger(value.authoritySeq) || value.authoritySeq < 0) || typeof value.readableText !== 'string' || Buffer.byteLength(value.readableText) > 1024 * 1024 || !validProvenance(value.provenance) || !object(value.node) || value.node.id !== value.id || value.node.kind !== 'generated-container' || value.node.x !== 0 || value.node.y !== 0 || value.node.generationStatus !== 'completed' || !parseResearchContainerSpec(value.node.containerSpec) || !object(value.observations))
                     throw Error('对话组件条目无效');
                 const nodeType = value.node.containerSpec.type;
-                if (Object.keys(value.node).some(k => !['id', 'kind', 'x', 'y', 'width', 'height', 'title', 'containerSpec', 'generationStatus', 'refreshMinutes', 'config'].includes(k)) || !validHtmlConfig(value.node) || ![value.node.width, value.node.height].every(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= 1e6) || typeof value.node.title !== 'string' || !value.node.title.trim() || value.node.title.length > 120 || value.node.refreshMinutes !== 0)
+                if (Object.keys(value.node).some(k => !['id', 'kind', 'x', 'y', 'width', 'height', 'title', 'displayName', 'containerSpec', 'generationStatus', 'refreshMinutes', 'config'].includes(k)) || !validHtmlConfig(value.node) || ![value.node.width, value.node.height].every(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= 1e6) || typeof value.node.title !== 'string' || !value.node.title.trim() || value.node.title.length > 120 || value.node.displayName !== undefined && value.node.displayName !== value.node.title || value.node.refreshMinutes !== 0)
                     throw Error('对话组件节点结构无效');
                 if (!['financial-widget', 'chart', 'table', 'kpi', 'markdown', 'html', 'mind-map', 'summary'].includes(nodeType))
                     throw Error('对话组件类型无效');
@@ -225,6 +225,20 @@ export class ConversationComponentStore {
         if (item.fingerprint !== fingerprint)
             throw Error('同一对话组件请求内容冲突。');
         return receipt(item);
+    }
+    rename(owner: string, input: ConversationComponentTarget & {expectedRevision:number;title:string}, guard: Guard = noGuard): Promise<ConversationComponentView> {
+        if (typeof input.title !== 'string' || !input.title.trim() || input.title.trim().length > 120 || /[\u0000-\u001f\u007f]/.test(input.title)) throw Error('组件名称需为 1–120 个字符，不能包含控制字符。');
+        const title = input.title.trim();
+        return this.mutate(items => {
+            const item = this.find(owner, input, items);
+            if (item.revision !== input.expectedRevision) throw Error('对话组件版本已变化，请重新读取。');
+            if (item.node.title === title && item.node.displayName === title) return publicView(item);
+            const previous = item.revision;
+            item.node = {...item.node, title, displayName:title}; item.revision++; item.updatedAt = Date.now();
+            // A display-name edit does not invalidate already persisted native data.
+            for (const entry of Object.values(item.observations)) if (entry.specRevision === previous) entry.specRevision = item.revision;
+            return publicView(item);
+        }, guard);
     }
     updateNativeSpec(owner: string, input: ConversationNativeSpecUpdate, guard: Guard = noGuard): Promise<ConversationComponentView> {
         return this.mutate(items => { const item = this.find(owner, input, items), old = financialWidgetSpec(item.node.containerSpec), next = financialWidgetSpec(input.spec); if (!old || !next || old.widget !== next.widget || next.linkedSourceId !== undefined || next.linkedWatchlistId !== undefined)

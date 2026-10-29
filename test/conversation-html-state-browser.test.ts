@@ -81,3 +81,16 @@ it('does not claim a held or failed Conversation save, restores durable state an
   expect(config(f)?.sharedComponentState).toBeUndefined();expect(Object.keys(config(f)?.interactionState?.events??{})).not.toHaveLength(0);expect(await f.page.evaluate(()=>(window as any).canvasCalls)).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
+it('keeps the same iframe document and textbox focus through sequential saved input and content-width changes',async()=>{
+ const f=await fixture();try{
+  const input=f.frame.getByRole('textbox',{name:'备注',exact:true});await input.focus()
+  await f.page.locator('iframe[data-research-html-artifact]').evaluate((element:HTMLIFrameElement)=>{(window as any).originalConversationFrame=element})
+  await f.frame.locator('body').evaluate((element:HTMLElement)=>{element.dataset.inputIdentity='original'})
+  let text=''
+  for(const character of ['a','b','c']){text+=character;await input.press(character);await expect.poll(()=>config(f)?.sharedComponentState?.state?.memo).toBe(text);expect(await input.evaluate((element:HTMLElement)=>element.ownerDocument.activeElement===element)).toBe(true)}
+  await f.page.locator('#card').evaluate((element:HTMLElement)=>{element.style.width='320px'})
+  await input.press('d');await expect.poll(()=>config(f)?.sharedComponentState?.state?.memo).toBe('abcd')
+  expect(await input.evaluate((element:HTMLElement)=>element.ownerDocument.activeElement===element)).toBe(true);expect(await f.frame.locator('body').getAttribute('data-input-identity')).toBe('original')
+  expect(await f.page.evaluate(()=>(window as any).originalConversationFrame===document.querySelector('iframe[data-research-html-artifact]'))).toBe(true);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},30000)
