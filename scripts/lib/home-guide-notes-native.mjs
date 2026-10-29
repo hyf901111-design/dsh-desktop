@@ -1,3 +1,17 @@
+/** Reveal only within the same real conversation pane; keep document and composer still. */
+export async function revealHomeNotesGuideSummary({document,window,button,input,check,until,valid}){
+ check()
+ const panel=button.closest('[data-research-conversation-panel]'),scroll=button.closest('.sRp_messages')||button.closest('[data-conversation-scroll]'),composer=panel?.querySelector('[data-research-composer-host]')
+ if(!panel||panel.dataset.researchActive==='false'||!scroll||!panel.contains(scroll)||!composer?.contains(input))throw Error('笔记总结所在的对话面板已变化。')
+ const clip=()=>{const area=scroll.getBoundingClientRect(),dock=composer.getBoundingClientRect();return{top:Math.max(0,area.top),bottom:Math.min(window.innerHeight,area.bottom,dock.height>0?dock.top:area.bottom)}}
+ // Aim for breathing room, but a fully visible final row may reach scrollMax.
+ const area=clip(),box=button.getBoundingClientRect(),shift=box.bottom>area.bottom-8?box.bottom-area.bottom+8:box.top<area.top+8?box.top-area.top-8:0
+ if(shift)scroll.scrollTo({top:scroll.scrollTop+shift,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})
+ let last,stable=0
+ await until(()=>{check();if(button.closest('.sRp_messages')!==scroll&&button.closest('[data-conversation-scroll]')!==scroll||composer!==panel.querySelector('[data-research-composer-host]')||!composer.contains(input))throw Error('笔记总结所在的对话面板已变化。');const box=button.getBoundingClientRect(),area=clip();if(box.top<area.top-1||box.bottom>area.bottom+1){stable=0;return}stable=last&&Math.abs(last.top-box.top)<1?stable+1:0;last=box;if(stable<2)return;valid(button);return true})
+ return button
+}
+
 /** Serialized into the native conversation module; dependencies stay in that module. */
 export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,researchSidebar}){
  react.useEffect(()=>{
@@ -19,7 +33,7 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
   }
   const delay=(ticket,ms)=>new Promise((resolve,reject)=>{const clean=()=>{clearTimeout(timer);ticket.abort.signal.removeEventListener('abort',stop)},stop=()=>{clean();reject(changed())},timer=setTimeout(()=>{clean();resolve()},ms);ticket.abort.signal.addEventListener('abort',stop,{once:true});if(ticket.abort.signal.aborted)stop()})
   const playing=async ticket=>{for(;;){check(ticket);if(ticket.playing&&!document.hidden)return;await delay(ticket,35)}}
-  const until=async(ticket,read,play=true)=>{let budget=8000,last=performance.now();for(;;){if(play)await playing(ticket);check(ticket);const value=read();if(value)return value;await delay(ticket,30);const now=performance.now();if(!play||ticket.playing&&!document.hidden)budget-=Math.min(80,now-last);last=now;if(budget<=0)throw Error('原生笔记输入框尚未就绪。')}}
+  const until=async(ticket,read,play=true,timeout=8000)=>{let budget=timeout,last=performance.now();for(;;){if(play)await playing(ticket);check(ticket);const value=read();if(value)return value;await delay(ticket,30);const now=performance.now();if(!play||ticket.playing&&!document.hidden)budget-=Math.min(80,now-last);last=now;if(budget<=0)throw Error('原生笔记输入框尚未就绪。')}}
   const valid=(ticket,target)=>{
    check(ticket);if(!target?.isConnected||target.ownerDocument!==document||target.disabled||target.readOnly||target.closest('[hidden],[inert],[data-odyssey-subagent-panel]'))throw changed()
    const box=target.getBoundingClientRect();let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(innerWidth,box.right),bottom=Math.min(innerHeight,box.bottom)
@@ -46,7 +60,7 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
   }
   const dispose=()=>{const ticket=owned;if(!ticket)return;owned=null;ticket.abort.abort();if(ticket.detail.fresh)void fetch('/sherlock/home-guide/notes',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},keepalive:true,body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId})}).catch(()=>{})}
   const type=async(ticket,stage)=>{
-   if(ticket.typing||!ticket.detail.fresh||!['note','selection'].includes(stage)||ticket.sent.has(stage)||stage==='selection'&&!ticket.sent.has('note'))throw Error('笔记示例步骤顺序已变化。')
+   if(ticket.typing||!ticket.detail.fresh||!['note','selection'].includes(stage)||ticket.sent.has(stage)||stage==='selection'&&(!ticket.chartReady||!ticket.quoteConfigured)||stage==='note'&&!ticket.sent.has('selection'))throw Error('笔记示例步骤顺序已变化。')
    ticket.typing=true
    try{
     await playing(ticket)
@@ -84,8 +98,48 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result
     const consume=line=>{if(!line.trim())return;const value=JSON.parse(line);check(ticket);if(value.type==='error')throw Error(value.message);if(value.type==='result')result=value.result;else if(value.type==='progress')document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:{sessionId,requestId:input.requestId,...value.progress}}))}
     for(;;){const chunk=await reader.read();if(chunk.done)break;buffer+=decoder.decode(chunk.value,{stream:true});let end;while((end=buffer.indexOf('\n'))>=0){consume(buffer.slice(0,end));buffer=buffer.slice(end+1)}}
-    buffer+=decoder.decode();consume(buffer);check(ticket);if(result?.kind!=='text'||typeof result.markdown!=='string')throw Error('笔记示例结果未完成。');return result
+    buffer+=decoder.decode();consume(buffer);check(ticket);if(input.prompt===ticket.prepared.prompts.chart){if(result?.kind!=='component'||result.node?.id!=='home-note-chart-'+ticket.detail.runId||result.node.containerSpec?.type!=='html')throw Error('笔记示例图表未完成。');ticket.chartReady=true}else if(input.prompt===ticket.prepared.prompts.note){if(result?.kind!=='conversation'||typeof result.markdown!=='string')throw Error('笔记总结回复未完成。');ticket.summary={requestId:input.requestId,markdown:result.markdown}}else if(result?.kind!=='text'||typeof result.markdown!=='string')throw Error('笔记示例结果未完成。');return result
    }finally{controller.abort();ticket.abort.signal.removeEventListener('abort',stop);ticket.jobs.delete(input.requestId)}
+  }
+  const configureQuote=async ticket=>{
+   check(ticket);if(!ticket.detail.fresh||!ticket.chartReady||ticket.quoteConfigured||ticket.configuringQuote||ticket.sent.size)throw Error('笔记行情步骤顺序已变化。')
+   ticket.configuringQuote=true
+   try{
+    const root=await until(ticket,()=>{const rows=[...ticket.host.querySelectorAll('[data-financial-widget="quote"]')];if(rows.length>1)throw changed();return rows[0]})
+    const owner=root.closest('[data-research-node-id]'),input=owner?.querySelector('input[role="combobox"][aria-label="搜索个股代码或名字"]')
+    if(!owner||!ticket.host.contains(owner))throw changed()
+    if(!input||input.value.trim())throw Error('行情标的已被修改，已保留当前配置。')
+    await cue(ticket,input,'搜索笔记相关个股中际旭创300308');input.focus({preventScroll:true})
+    const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set
+    let expected=''
+    for(const character of '300308'){await playing(ticket);valid(ticket,input);if(input.value!==expected)throw Error('行情搜索已变化，已保留用户输入。');expected+=character;setter.call(input,expected);input.dispatchEvent(new Event('input',{bubbles:true}));await delay(ticket,120)}
+    const matching=()=>{check(ticket);if(!ticket.host.contains(owner)||root.closest('[data-research-node-id]')!==owner||!owner.contains(input))throw changed();const id=input.getAttribute('aria-controls'),popups=[...document.querySelectorAll('[role="listbox"][aria-label="匹配标的"]')].filter(node=>node.id===id);if(!id||popups.length!==1)return;const rows=[...popups[0].querySelectorAll('button[role="option"]')].filter(row=>row.querySelector('strong')?.textContent==='中际旭创'&&[...row.querySelectorAll('small')].some(s=>s.textContent==='300308')&&row.querySelector('small')?.textContent==='SZ');if(rows.length>1)throw changed();return rows[0]}
+    const option=await until(ticket,matching)
+    await cue(ticket,option,'选择中际旭创（300308.SZ）');if(input.value!==expected||matching()!==option)throw changed();option.click()
+    await until(ticket,()=>{check(ticket);if(!root.isConnected||!ticket.host.contains(root))throw changed();const footer=root.querySelector('.ew-financial-footer'),price=root.querySelector('.ew-quote-price-line strong')?.textContent||'',source=footer?.querySelector('.ew-financial-source-time')?.textContent||'',title=footer?.querySelector('.ew-financial-provenance')?.title||'';return root.textContent.includes('中际旭创')&&/\d/.test(price)&&root.querySelector('[data-financial-chart] svg')&&source&&!/未取得|正在刷新/.test(source)&&title.includes('最近获取：')},true,25000)
+    ticket.quoteConfigured=true
+   }catch(error){check(ticket);throw Error('个股行情尚未完整取得，已保留实际状态，请检查来源后重播。')}
+   finally{ticket.configuringQuote=false}
+  }
+  const summary=async(ticket,append)=>{
+   check(ticket);if(!ticket.detail.fresh||!ticket.summary||!ticket.sent.has('note')||ticket.summary.appended||ticket.appendingSummary)throw Error('笔记总结步骤顺序已变化。')
+   const current=()=>{check(ticket);const rows=[...document.querySelectorAll('[data-note-task]')].filter(row=>row.dataset.noteTask===ticket.summary.requestId&&row.dataset.phase==='replied'&&!row.closest('[data-odyssey-subagent-panel]'));if(rows.length!==1)return;const row=rows[0],label=typeof workbenchText==='function'?workbenchText('添加到笔记'):'添加到笔记',button=[...row.querySelectorAll('button')].find(node=>node.getAttribute('aria-label')===label);if(!button||!ticket.summary.markdown.split('\n\n').every(part=>row.textContent.includes(part)))return;return button}
+   const button=await until(ticket,current),input=inputFor(ticket)
+   await revealHomeNotesGuideSummary({document,window,button,input,check:()=>{check(ticket);if(current()!==button||inputFor(ticket)!==input)throw changed()},until:read=>until(ticket,read),valid:target=>valid(ticket,target)})
+   if(!append){await cue(ticket,button,'阅读右侧研究总结，正文尚未插入');return{requestId:ticket.summary.requestId}}
+   ticket.appendingSummary=true
+   try{
+    await cue(ticket,button,'将这条总结回复添加到笔记末尾');if(current()!==button)throw changed()
+    const requestId=crypto.randomUUID();let tail
+    const receiveTail=event=>{const value=event.detail;if(value?.sessionId===sessionId&&value.runId===ticket.detail.runId&&value.requestId===requestId)tail=value}
+    window.addEventListener('sherlock:home-guide-notes-tail-reply',receiveTail)
+    try{window.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-tail-check',{detail:{sessionId,runId:ticket.detail.runId,requestId,generationRequestId:ticket.summary.requestId}}))}finally{window.removeEventListener('sherlock:home-guide-notes-tail-reply',receiveTail)}
+    check(ticket);if(tail?.ok!==true)throw Error('笔记末尾光标已变化，已保留用户当前操作。')
+    let response,actionId;const capture=event=>{const value=event.detail;if(value?.sessionId===sessionId&&value.messageId==='ework-note:'+ticket.summary.requestId&&value.text===ticket.summary.markdown)actionId=value.actionId},receive=event=>{if(event.detail?.sessionId===sessionId&&actionId&&event.detail.actionId===actionId)response=event.detail}
+    document.addEventListener('sherlock:notes-add-reply',capture,true);document.addEventListener('sherlock:notes-add-reply-ack',receive)
+    try{button.click()}finally{document.removeEventListener('sherlock:notes-add-reply',capture,true);document.removeEventListener('sherlock:notes-add-reply-ack',receive)}
+    if(response?.ok!==true)throw Error(response?.message||'总结未添加，正文已保留。');ticket.summary.appended=true
+   }finally{ticket.appendingSummary=false}
   }
   const execute=async detail=>{
    if(detail.command==='dispose'){if(owned?.detail.runId===detail.runId)dispose();return}
@@ -98,6 +152,9 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
    const ticket=owned;if(!ticket||ticket.detail.runId!==detail.runId||ticket.detail.hostId!==detail.hostId)throw changed();check(ticket)
    if(detail.command==='type')return type(ticket,detail.stage)
    if(detail.command==='generate')return generate(ticket,detail.input)
+   if(detail.command==='configure-quote')return configureQuote(ticket)
+   if(detail.command==='review-summary')return summary(ticket,false)
+   if(detail.command==='append-summary')return summary(ticket,true)
    if(detail.command==='stop'){ticket.jobs.get(detail.generationRequestId)?.abort();return}
    throw Error('不支持的笔记示例命令。')
   }

@@ -3,14 +3,14 @@ import {createRoot} from 'react-dom/client'
 import {NotesApp,type NotesGuideEditorApi,type NotesGuideBinding} from './notes/editor'
 import {noteText} from '../shared/workspace-notes'
 import type {NotesBridge} from '../shared/workspace-notes'
-import {HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_GUIDE_TITLE,HOME_NOTES_CONSENSUS_REPLACEMENT,createHomeNotesGuideBridge} from './home-guide-notes-data'
+import {HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_GUIDE_WRITING_STAGES,HOME_NOTES_GUIDE_TITLE,HOME_NOTES_CONSENSUS_REPLACEMENT,createHomeNotesGuideBridge} from './home-guide-notes-data'
 import {returnHomeNotesToTop} from './home-guide-notes-scroll'
 import {createHomeNotesNativeBridge,type HomeNotesNativeBridge} from './home-guide-notes-native'
-import {HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
+import {HOME_NOTES_CHART_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 import {noteUiText as t} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {HomeGuidePointerFrame} from './home-guide-pointer'
 
-export type HomeNotesGuideStep='write'|'challenge'|'review'|'select'|'optimize'|'replace'|'consensus-select'|'consensus-evidence'|'consensus-optimize'|'consensus-replace'|'note-task-compose'|'note-task-review'|'note-task-apply'|'note-select-paragraph'|'note-rewrite'|'note-rewrite-apply'|'note-return-top'
+export type HomeNotesGuideStep='write'|'note-chart-compose'|'note-chart-review'|'note-chart-apply'|'note-write-middle'|'note-slash-quote'|'note-quote-configure'|'note-write-tail'|'growth-evidence'|'challenge'|'review'|'select'|'optimize'|'replace'|'consensus-select'|'consensus-evidence'|'consensus-optimize'|'consensus-replace'|'note-task-compose'|'note-task-review'|'note-task-apply'|'note-select-paragraph'|'note-rewrite'|'note-rewrite-apply'|'note-return-top'
 export type HomeNotesGuide={runStep(step:HomeNotesGuideStep):Promise<void>;flush():Promise<void>;dispose():void}
 type Options={signal:AbortSignal;sessionId?:string;runId?:string;cwd?:string;fresh?:boolean;persistence?:NotesBridge;native?:HomeNotesNativeBridge;onStatus?(text:string):void;waitUntilPlaying?():Promise<void>;wait?(ms:number,signal?:AbortSignal):Promise<void>}
 /** Real editor and comments; only its prepared session persists, with local demo AI responses. */
@@ -134,10 +134,35 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  catch(error){dispose();throw error}
  const scrollBehavior=():ScrollBehavior=>document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'
  const scrollTo=(element:HTMLElement,onlyIfNeeded=false)=>{const scroll=query('.en-document-scroll');if(scroll){const rect=element.getBoundingClientRect(),area=scroll.getBoundingClientRect();if(onlyIfNeeded&&rect.top>=area.top+40&&rect.bottom<=area.bottom-50)return;scroll.scrollTo({top:scroll.scrollTop+rect.top-area.top-Math.max(70,area.height*.18),behavior:scrollBehavior()})}}
+ const typeBlocks=async(blocks:typeof HOME_NOTES_GUIDE_BLOCKS)=>{
+  const reduced=document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const focusText=(blockId:string)=>{
+   const block=query<HTMLElement>('[data-id="'+blockId+'"] .bn-inline-content');if(!block)return
+   block.closest<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true})
+   const range=document.createRange();range.selectNodeContents(block);range.collapse(false);const selection=document.defaultView?.getSelection();selection?.removeAllRanges();selection?.addRange(range)
+  }
+  for(let index=0;index<blocks.length;index++){
+   await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
+   const block=blocks[index]!
+   if(!editor!.snapshot().blocks.some(item=>item.id===block.id)){editor!.appendBlock({...block,content:''});expected=fingerprint();await frame()}
+   const rendered=query<HTMLElement>('[data-id="'+block.id+'"]');if(rendered)scrollTo(rendered,true)
+   const stride=reduced?block.content.length:block.type==='heading'?4:8
+   for(let offset=stride;offset<block.content.length+stride;offset+=stride){
+    await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
+    editor!.updateText(block.id,block.content.slice(0,Math.min(offset,block.content.length)));expected=fingerprint();focusText(block.id)
+    const written=block.content.slice(0,Math.min(offset,block.content.length))
+    await wait(reduced?20:/[。；！？]$/.test(written)?180:95)
+   }
+   // Let a paragraph settle before one deliberate scroll; never restart smooth
+   // scrolling on every streamed token.
+   await wait(reduced?20:block.type==='heading'?140:220)
+  }
+  await flush()
+ }
  const write=async()=>{
   if(options.fresh===false)throw Error('此笔记已保留；重播时请创建新的教程副本。')
   await playing();options.onStatus?.('写入研究摘要，并保留可核验的研究假设')
-  const blocks=HOME_NOTES_GUIDE_BLOCKS,first=blocks[0]!,title=await until(()=>query<HTMLInputElement>('.en-title'))
+  const blocks=HOME_NOTES_GUIDE_WRITING_STAGES[0]!,first=blocks[0]!,title=await until(()=>query<HTMLInputElement>('.en-title'))
   await click(title,'填写笔记标题')
   const reduced=document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches
   const titleStride=reduced?HOME_NOTES_GUIDE_TITLE.length:3
@@ -153,30 +178,56 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   }
   const body=await until(()=>query<HTMLElement>('.bn-editor'))
   await click(body,'写入研究笔记')
-  const focusText=(blockId:string)=>{
-   const block=query<HTMLElement>('[data-id="'+blockId+'"] .bn-inline-content');if(!block)return
-   block.closest<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true})
-   const range=document.createRange();range.selectNodeContents(block);range.collapse(false);const selection=document.defaultView?.getSelection();selection?.removeAllRanges();selection?.addRange(range)
-  }
-  for(let index=0;index<blocks.length;index++){
-   await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
-   const block=blocks[index]!
-   if(index){editor!.appendBlock({...block,content:''});expected=fingerprint();await frame()}
-   const rendered=query<HTMLElement>('[data-id="'+block.id+'"]');if(rendered)scrollTo(rendered,true)
-   const stride=reduced?block.content.length:block.type==='heading'?4:8
-   for(let offset=stride;offset<block.content.length+stride;offset+=stride){
-    await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
-    editor!.updateText(block.id,block.content.slice(0,Math.min(offset,block.content.length)));expected=fingerprint();focusText(block.id)
-    const written=block.content.slice(0,Math.min(offset,block.content.length))
-    await wait(reduced?20:/[。；！？]$/.test(written)?180:95)
-   }
-   // Let a paragraph settle before one deliberate scroll; never restart smooth
-   // scrolling on every streamed token.
-   await wait(reduced?20:block.type==='heading'?140:220)
-  }
+  await typeBlocks(blocks)
   const growth=query<HTMLElement>('[data-id="guide-note-growth"]');if(growth)scrollTo(growth)
   await wait(reduced?34:450)
   await flush()
+ }
+ const emptyTail=async(id:string)=>{
+  unchanged();editor!.appendBlock({id,type:'paragraph',content:''});expected=fingerprint();await frame()
+  const row=await until(()=>query<HTMLElement>('[data-id="'+id+'"] .bn-inline-content'));scrollTo(row,true);let previous:{top:number;left:number}|undefined,stable=0
+  const box=await until(()=>{unchanged();const box=row.getBoundingClientRect(),area=query<HTMLElement>('.en-document-scroll')!.getBoundingClientRect();if(box.top<area.top+12||box.bottom>area.bottom-12){stable=0;previous=undefined;return}stable=previous&&Math.abs(previous.top-box.top)<1&&Math.abs(previous.left-box.left)<1?stable+1:0;previous=box;return stable>=2?box:undefined})
+  // PM observes attributes inside editable text nodes. Keep pointer tokens on
+  // an external position anchor, then click the still-current original line.
+  const anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(box.left+3)+'px;top:'+(box.top+Math.max(2,box.height/2))+'px';document.body.append(anchor)
+  try{await point(anchor,'在全新空白行继续');unchanged();validTarget(row,true);row.click();editor!.prepareNative()}finally{anchor.remove()}
+  return row
+ }
+ const chartCompose=async()=>{
+  await playing();nativeReady();await emptyTail('guide-note-chart-anchor')
+  const body=await until(()=>query<HTMLElement>('.bn-editor'));body.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true,cancelable:true}))
+  const input=await until(()=>query<HTMLTextAreaElement>('.en-space-ai textarea[aria-label="'+t('行内 AI 需求')+'"]'))
+  const documentId=query<HTMLElement>('.en-document')?.dataset.noteDocumentId
+  if(!documentId||input.closest('.en-document')?.getAttribute('data-note-document-id')!==documentId)throw Error('行内 AI 插入位置已变化。')
+  await click(input,'使用空格功能在此处生成收入图表')
+  const setter=Object.getOwnPropertyDescriptor(document.defaultView!.HTMLTextAreaElement.prototype,'value')!.set!
+  for(let offset=4;offset<HOME_NOTES_CHART_PROMPT.length+4;offset+=4){await playing();unchanged();validTarget(input,true);setter.call(input,HOME_NOTES_CHART_PROMPT.slice(0,offset));input.dispatchEvent(new Event('input',{bubbles:true}));await wait(70)}
+  await click(await until(()=>query<HTMLButtonElement>('.en-space-ai-send:not(:disabled)')),'生成季度收入与年度增速专业图表')
+ }
+ const chartReview=async()=>{
+  await until(()=>query<HTMLButtonElement>('.en-space-ai[data-review] button[aria-label="'+t('确认本次 AI 生成')+'"]'),90000)
+  if(editor!.snapshot().blocks.filter(block=>block.type==='research').length!==1)throw Error('图表生成位置已变化。')
+  expected=fingerprint();await flush()
+ }
+ const chartApply=async()=>{
+  unchanged();await click(await until(()=>query<HTMLButtonElement>('.en-space-ai[data-review] button[aria-label="'+t('确认本次 AI 生成')+'"]:not(:disabled)')),'确认这张季度收入演示图表')
+  await until(()=>!query('.en-space-ai[data-review]'));await frame();expected=fingerprint();await flush()
+ }
+ const slashQuote=async()=>{
+  await playing();nativeReady();await emptyTail('guide-note-quote-anchor');editor!.typeSlash();expected=fingerprint()
+  const list=await until(()=>{nativeReady();unchanged();const body=query<HTMLElement>('.bn-editor'),id=body?.getAttribute('aria-controls'),menu=id?document.getElementById(id):undefined;return body?.getAttribute('aria-expanded')==='true'&&menu?.getAttribute('role')==='listbox'&&menu.getAttribute('aria-label')===t('笔记斜杠菜单')?menu:undefined})
+  const key=async(key:string)=>{await playing();unchanged();query<HTMLElement>('.bn-editor')!.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));await frame()}
+  const choose=async(menu:HTMLElement,label:string)=>{for(let attempt=0;attempt<45;attempt++){const items=[...menu.querySelectorAll<HTMLElement>(':scope > [role="option"]')];if(!items.some(item=>item.textContent===label))throw Error('组件库菜单已变化。');if(items.find(item=>item.getAttribute('aria-selected')==='true')?.textContent===label){await key('Enter');return}await key('ArrowDown')}throw Error('组件库菜单未就绪。')}
+  await choose(list,t('组件库'));const library=await until(()=>list.querySelector<HTMLElement>('[role="listbox"][aria-label="'+t('组件库')+'"]'));await choose(library,t('行情面板'))
+  await until(()=>editor!.snapshot().blocks.some(block=>{try{return block.type==='research'&&JSON.parse(block.props.payload).containerSpec?.widget==='quote'}catch{return false}}))
+  await frame();expected=fingerprint();await flush()
+ }
+ const configureQuote=async()=>{await playing();unchanged();await nativeReady().configureQuote();await frame();expected=fingerprint();await flush()}
+ const growthEvidence=async()=>{
+  await playing();unchanged();const selector=await selectedCard(),button=await until(()=>[...host.querySelectorAll<HTMLButtonElement>(selector+' button')].find(node=>node.textContent===t('查看依据')))
+  await click(button,'查看收入原文与增长率计算依据')
+  const panel=await until(()=>[...document.querySelectorAll<HTMLElement>('[data-notes-challenge-panel]')].find(node=>node.textContent?.includes('120亿元')&&node.textContent?.includes('132亿元')))
+  await point(panel,'核对120至132的年度收入与10%计算','move');await wait(1000);await flush()
  }
  const challenge=async()=>{
   await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
@@ -196,8 +247,8 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   options.onStatus?.('严格检查逐项核对文字、计算与观点依据')
   const trigger=await until(()=>toolQuery<HTMLButtonElement>('.en-challenge-trigger'))
   if(trigger.getAttribute('aria-expanded')==='true')await click(trigger,'确认严格模式并开始检查')
-  await until(()=>new Set([...host.querySelectorAll<HTMLElement>('.bn-editor [data-bn-thread-id]')].map(node=>node.dataset.bnThreadId)).size>=4,10000)
-  expected=fingerprint();options.onStatus?.('发现错字、收入增速矛盾与推理前提缺失');await flush()
+  await until(()=>new Set([...host.querySelectorAll<HTMLElement>('.bn-editor [data-bn-thread-id]')].map(node=>node.dataset.bnThreadId)).size===3,10000)
+  expected=fingerprint();options.onStatus?.('发现增速计算、盈利推理和预测口径三处专业问题');await flush()
  }
  const select=async()=>{
   options.onStatus?.('点击收入增速标记，查看核对依据')
@@ -266,7 +317,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  const replaceConsensus=async()=>{
   const selector=await selectedCard(),apply=await until(()=>query<HTMLButtonElement>(selector+' .en-challenge-replace:not(:disabled)'))
   await click(apply,'统一年度与单位，保留样本覆盖边界')
-  await until(()=>noteText(editor!.snapshot().blocks.find(block=>block.id==='guide-note-consensus')?.content)===HOME_NOTES_CONSENSUS_REPLACEMENT)
+  await until(()=>noteText(editor!.snapshot().blocks.find(block=>block.id==='guide-note-consensus')?.content).startsWith(HOME_NOTES_CONSENSUS_REPLACEMENT))
   await frame();expected=fingerprint();await until(()=>editor!.reviewReady(),10000);await flush()
  }
  const rewriteButton=()=>{assert();return [...document.querySelectorAll<HTMLButtonElement>('.en-ai-format')].find(button=>{try{validTarget(button,true);return true}catch{return false}})}
@@ -274,12 +325,21 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const error=query('.en-error');if(error)throw Error(error.textContent||'笔记生成未完成。')
   return [...host.querySelectorAll<HTMLButtonElement>('.en-preview button')].find(button=>button.textContent===t(replace?'替换所选':'添加至正文'))
  },90000)
- const taskCompose=async()=>{await playing();unchanged();editor!.prepareNative();await nativeReady().type('note')}
- const taskReview=async()=>{await preview();unchanged();await playing()}
+ let summaryTail:(()=>boolean)|undefined,summaryBefore='',summaryRequestId=''
+ const summaryUnchanged=()=>{unchanged();if(!summaryTail?.())throw Error('笔记末尾光标已变化，已保留用户当前操作。')}
+ const taskCompose=async()=>{await playing();unchanged();await emptyTail('guide-note-summary-anchor');summaryTail=editor!.prepareNative();summaryBefore=fingerprint();await nativeReady().type('note')}
+ const taskReview=async()=>{summaryRequestId=await nativeReady().reviewSummary();summaryUnchanged();if(text().includes(HOME_NOTES_TASK_RESULT)||fingerprint()!==summaryBefore)throw Error('总结尚未确认，正文不应提前插入。');await playing()}
  const taskApply=async()=>{
-  const apply=await preview();unchanged();await click(apply,'把研究摘要添加至正文')
-  await until(()=>text().includes(HOME_NOTES_TASK_RESULT.split('\n\n')[1]!));await frame();expected=fingerprint();await flush()
+  summaryUnchanged();const before=editor!.snapshot().blocks.filter(block=>block.type==='research'||noteText(block.content).trim())
+  const verify=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.runId!==options.runId||value.sessionId!==sessionId||value.generationRequestId!==summaryRequestId||typeof value.requestId!=='string')return;let ok=false;try{summaryUnchanged();ok=true}catch{}document.defaultView!.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-tail-reply',{detail:{runId:options.runId,sessionId,requestId:value.requestId,ok}}))}
+  document.defaultView!.addEventListener('sherlock:home-guide-notes-tail-check',verify)
+  try{await nativeReady().appendSummary()}finally{document.defaultView!.removeEventListener('sherlock:home-guide-notes-tail-check',verify)}
+  await until(()=>editor!.snapshot().blocks.some(block=>{try{const node=JSON.parse(block.props.payload);return block.type==='research'&&node.noteReply===true&&node.messageId==='ework-note:'+summaryRequestId&&node.excerpt===HOME_NOTES_TASK_RESULT}catch{return false}}));await frame()
+  const after=editor!.snapshot().blocks.filter(block=>block.type==='research'||noteText(block.content).trim())
+  if(after.length!==before.length+1||JSON.stringify(after.slice(0,-1))!==JSON.stringify(before))throw Error('总结添加位置已变化，现有笔记已保留。')
+  expected=fingerprint();await flush()
  }
+
  const selectParagraph=async()=>{
   await playing();nativeReady();unchanged()
   const paragraph=await until(()=>query<HTMLElement>('[data-id="guide-note-logic"] .bn-inline-content'))
@@ -324,7 +384,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   assert();unchanged();if(query('.en-document-scroll')!==area||query('.bn-editor')!==sameEditor)throw Error('笔记视图已变化，未继续交接。')
   await flush()
  }
- const steps=[write,challenge,review,select,optimize,replace,selectConsensus,evidenceConsensus,optimize,replaceConsensus,taskCompose,taskReview,taskApply,selectParagraph,rewrite,rewriteApply,returnTop]
- return {async runStep(step){assert();const index=(['write','challenge','review','select','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-task-compose','note-task-review','note-task-apply','note-select-paragraph','note-rewrite','note-rewrite-apply','note-return-top'] as const).indexOf(step);if(busy||index<0||index!==completed)throw Error('演示步骤顺序已变化，请重新播放。');busy=true
+ const steps=[write,chartCompose,chartReview,chartApply,()=>typeBlocks(HOME_NOTES_GUIDE_WRITING_STAGES[1]!),slashQuote,configureQuote,()=>typeBlocks(HOME_NOTES_GUIDE_WRITING_STAGES[2]!),challenge,review,select,growthEvidence,optimize,replace,selectConsensus,evidenceConsensus,optimize,replaceConsensus,selectParagraph,rewrite,rewriteApply,taskCompose,taskReview,taskApply,returnTop]
+ return {async runStep(step){assert();const index=(['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-return-top'] as const).indexOf(step);if(busy||index<0||index!==completed)throw Error('演示步骤顺序已变化，请重新播放。');busy=true
    try{await steps[index]!();assert();completed++}catch(error){dispose();throw error}finally{busy=false}},flush,dispose}
 }

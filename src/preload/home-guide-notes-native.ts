@@ -1,7 +1,7 @@
 import type {NoteAiResult} from '../shared/workspace-notes'
 
 export type HomeNotesNativeOptions={sessionId:string;runId:string;cwd:string;fresh:boolean;signal:AbortSignal;wait?(ms:number,signal?:AbortSignal):Promise<void>}
-export type HomeNotesNativeBridge={type(stage:'note'|'selection'):Promise<void>;generate(input:any):Promise<NoteAiResult>;stop(requestId:string):Promise<void>;dispose():void}
+export type HomeNotesNativeBridge={type(stage:'note'|'selection'):Promise<void>;configureQuote():Promise<void>;reviewSummary():Promise<string>;appendSummary():Promise<void>;generate(input:any):Promise<NoteAiResult>;stop(requestId:string):Promise<void>;dispose():void}
 /** The native portal owns the actual Notes input. No DOM nodes cross worlds. */
 export async function createHomeNotesNativeBridge(document:Document,host:HTMLElement,options:HomeNotesNativeOptions):Promise<HomeNotesNativeBridge>{
  const win=document.defaultView!,temporary=!host.id,hostId=host.id||'home-notes-native-'+win.crypto.randomUUID()
@@ -33,6 +33,6 @@ export async function createHomeNotesNativeBridge(document:Document,host:HTMLEle
  options.signal.addEventListener('abort',dispose,{once:true})
  try{
   await exchange('mount',{cwd:options.cwd,fresh:options.fresh})
-  return{type:async stage=>{await exchange('type',{stage})},generate:input=>exchange('generate',{input}),stop:async requestId=>{await exchange('stop',{generationRequestId:requestId})},dispose}
+  return{type:async stage=>{await exchange('type',{stage})},configureQuote:async()=>{await exchange('configure-quote')},reviewSummary:async()=>{return(await exchange('review-summary')).requestId},appendSummary:async()=>{await exchange('append-summary')},generate:input=>exchange('generate',{input}),stop:async requestId=>{await exchange('stop',{generationRequestId:requestId})},dispose}
  }catch(error){dispose();throw error}
 }

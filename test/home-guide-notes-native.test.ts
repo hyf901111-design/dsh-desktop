@@ -14,10 +14,10 @@ function fixture(){
 }
 test('uses correlated pure data commands for the real native note input and generation',async()=>{
  const f=fixture(),bridge=await createHomeNotesNativeBridge(document,f.host,f.options);releases.push(bridge.dispose)
- await bridge.type('note');f.setAnswer(detail=>f.reply(detail,{kind:'text',markdown:'研究摘要'}))
+ await bridge.configureQuote();await bridge.type('note');f.setAnswer(detail=>f.reply(detail,{kind:'text',markdown:'研究摘要'}))
  expect(await bridge.generate({sessionId:'note-session',requestId:'generation-1',prompt:'需求'})).toEqual({kind:'text',markdown:'研究摘要'})
- expect(f.requests.map(value=>value.command)).toEqual(['mount','type','generate'])
- expect(f.requests[1]).toMatchObject({stage:'note',sessionId:'note-session',runId:'note-run',hostId:'note-native-host'})
+ expect(f.requests.map(value=>value.command)).toEqual(['mount','configure-quote','type','generate'])
+ expect(f.requests[2]).toMatchObject({stage:'note',sessionId:'note-session',runId:'note-run',hostId:'note-native-host'})
  expect(JSON.parse(JSON.stringify(f.requests))).toEqual(f.requests)
  bridge.dispose();bridge.dispose();expect(f.requests.filter(value=>value.command==='dispose')).toHaveLength(1)
 })
