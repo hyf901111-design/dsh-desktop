@@ -28,13 +28,15 @@ beforeAll(async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },90000)
 afterAll(async()=>browser?.close())
-async function fixture({readOnly=false,noCommit=false}={}){
+async function fixture({readOnly=false,noCommit=false,componentTheme='',globalDark=false,slowFrames=false}={}){
  const directory=await mkdtemp(join(tmpdir(),'conversation-html-state-')),file=join(directory,'cards.json'),html=await readFile('test/fixtures/conversation-local-counter.html','utf8')
  let store=new ConversationComponentStore(file),owner='owner',generation='window-a',mode='ok';await store.load()
  let service:any;const makeService=()=>createConversationComponentService({store,owner:()=>owner,canReadSession:session=>session==='conversation-html',currentVisibleContext:()=>({ownerAccountId:owner,sessionId:'conversation-html',mode:'conversation',generation,readOnly}),nativeQuery:async()=>{throw Error('Unexpected financial query')},clipboard:()=>undefined,library:()=>undefined})
  service=makeService();const receipt=await service.create({title:'对话本地计数与备注',artifact:{version:1,type:'html',html}},{ownerAccountId:owner,sessionId:'conversation-html',turnId:'1',mode:'conversation',windowGeneration:generation,current:()=>true},new AbortController().signal,'initial-counter'),target={sessionId:'conversation-html',componentId:receipt.effect.componentId}
+ if(componentTheme)await service.setTheme({...target,expectedRevision:store.read('owner',target).revision,theme:componentTheme})
  const requests:any[]=[],releases:Array<()=>void>=[],context=await browser.newContext({viewport:{width:1000,height:850}}),page=await context.newPage(),errors:string[]=[];page.setDefaultTimeout(5000);page.on('pageerror',(error:Error)=>errors.push(error.message))
- await page.route('http://127.0.0.1/conversation-html',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body><main id="card" style="width:656px"></main></body></html>'}))
+ if(slowFrames)await context.addInitScript(()=>{if(window!==parent){const end=performance.now()+80;while(performance.now()<end){/* Delay real iframe parsing, not the production sender. */}}})
+ await page.route('http://127.0.0.1/conversation-html',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body'+(globalDark?' data-ds-dark-theme':'')+'><main id="card" style="width:656px"></main></body></html>'}))
  await page.route('http://127.0.0.1/fonts/NotoSansSC.woff2',(route:any)=>route.fulfill({contentType:'font/woff2',path:resolve('build/fonts/NotoSansSC.woff2')}))
  await page.route('http://127.0.0.1/conversation-html-api',async(route:any)=>{
   const value=route.request().postDataJSON(),method=value.channel.replace('conversation-components:','');requests.push({method,input:value.input})
@@ -47,6 +49,29 @@ async function fixture({readOnly=false,noCommit=false}={}){
  return{page,frame,errors,requests,view:()=>store.read('owner',target),mode:(value:string)=>{mode=value},release:()=>{for(const next of releases.splice(0))next()},changeOwner:()=>{owner='other';generation='window-b'},reopen:async()=>{store=new ConversationComponentStore(file);await store.load();service=makeService();await page.evaluate(()=>{const w=window as any;w.cardRoot.unmount();w.cardRoot=w.mountCard()})},close:async()=>{await context.close();await rm(directory,{recursive:true,force:true})}}
 }
 const config=(f:any)=>f.view().node.config as any
+it('restores saved local Light through dark cold mount, delayed iframe load and global broadcasts without resetting Conversation state',async()=>{
+ const f=await fixture({componentTheme:'light',globalDark:true,slowFrames:true});try{
+  const check=async()=>{await expect.poll(()=>f.frame.locator('html').getAttribute('data-workbench-style')).toBe('light');await expect.poll(()=>f.frame.locator('html').getAttribute('data-workbench-control-theme')).toBe('light');expect(await f.frame.locator('html').getAttribute('data-sherlock-theme')).toBe('light');await expect.poll(()=>f.frame.locator('body').evaluate((body:HTMLElement)=>getComputedStyle(body).backgroundColor)).toBe('rgb(255, 255, 255)')}
+  expect(f.view().node.componentTheme).toBe('light');expect(await f.page.locator('[data-conversation-component-id]').getAttribute('data-workbench-style')).toBe('light');await check()
+  for(let i=0;i<3;i++)await f.frame.getByRole('button',{name:'增加计数',exact:true}).click()
+  await f.frame.getByRole('textbox',{name:'备注',exact:true}).fill('冷重开后保留计数3与完整备注')
+  await expect.poll(()=>config(f)?.sharedComponentState?.state?.memo).toBe('冷重开后保留计数3与完整备注')
+  for(const reopened of [false,true]){
+   if(reopened){await f.reopen();await expect.poll(()=>f.frame.locator('#count').textContent()).toBe('3');await check()}
+   await f.frame.locator('body').evaluate((body:HTMLElement)=>body.dataset.themeIdentity='same-live-frame')
+   const outer=await(await f.page.locator('iframe[data-research-html-artifact]').elementHandle()).contentFrame()
+   await outer.evaluate(()=>{(window as any).themeMessages=[];addEventListener('message',event=>{if(event.source===parent&&event.data?.type==='sherlock-workbench-style')(window as any).themeMessages.push(event.data)})})
+   for(const dark of [false,true,false,true]){
+    const before=await outer.evaluate(()=>(window as any).themeMessages.length)
+    await f.page.evaluate((value:boolean)=>document.body.toggleAttribute('data-ds-dark-theme',value),dark)
+    await expect.poll(()=>outer.evaluate(()=>(window as any).themeMessages.length)).toBeGreaterThan(before)
+    expect(await outer.evaluate(()=>(window as any).themeMessages.at(-1))).toMatchObject({mode:'light',controlTheme:'light'})
+    await check();expect(await f.frame.locator('body').getAttribute('data-theme-identity')).toBe('same-live-frame');expect(await f.frame.locator('#count').textContent()).toBe('3');expect(await f.frame.getByRole('textbox',{name:'备注',exact:true}).inputValue()).toBe('冷重开后保留计数3与完整备注')
+   }
+  }
+  expect(f.requests.filter(row=>row.method==='setTheme')).toEqual([]);expect(await f.page.evaluate(()=>(window as any).canvasCalls)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},35000)
 it('switches all four modes on the current Conversation component without replacing its live iframe and restores mode with saved interactions',async()=>{
  const f=await fixture();try{
   for(let i=0;i<3;i++)await f.frame.getByRole('button',{name:'增加计数',exact:true}).click()
