@@ -1,3 +1,4 @@
+import {patchHomeWorkbenchProgress,stripHomeWorkbenchProgress} from './home-workbench-progress.mjs'
 import {HOME_WORKBENCH_STUDY_DATA} from '../../packages/dsh-research-task-runtime/home-workbench-study-contract.js'
 import {homeWorkbenchStudyDefinitions,homeWorkbenchStudyCss} from './home-workbench-study.mjs'
 
@@ -42,10 +43,10 @@ export function stripHomeWorkbenchClient(source){
  }
  for(const[id]of patches)source=source.replace(new RegExp('/\\* hwb:'+id+':start \\*/[\\s\\S]*?/\\* hwb:'+id+':end \\*/','g'),'')
  source=source.replace('new Set(["research-study",','new Set([')
- return source
+ return stripHomeWorkbenchProgress(source)
 }
 export function patchHomeWorkbenchClient(source){
- source=stripHomeWorkbenchClient(source)
+ source=patchHomeWorkbenchProgress(stripHomeWorkbenchClient(source))
  const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
  const one=(a,b)=>{const re=new RegExp('^[ \t]*'+a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gm'),hits=[...source.matchAll(re)];if(hits.length!==1)throw Error('Workbench client anchor drifted: '+a.slice(0,80)+' ('+hits.length+')');const at=hits[0].index+hits[0][0].length-a.length;source=source.slice(0,at)+b+source.slice(at+a.length)}
  const style=`if(typeof document!=="undefined"){let style=document.getElementById("ework-home-workbench-style");if(!style){style=document.createElement("style");style.id="ework-home-workbench-style";document.head.append(style)}style.textContent=${JSON.stringify(homeWorkbenchStudyCss())};}`
