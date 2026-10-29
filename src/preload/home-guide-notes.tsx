@@ -3,10 +3,10 @@ import {createRoot} from 'react-dom/client'
 import {NotesApp,type NotesGuideEditorApi,type NotesGuideBinding} from './notes/editor'
 import {noteText} from '../shared/workspace-notes'
 import type {NotesBridge} from '../shared/workspace-notes'
-import {HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_GUIDE_WRITING_STAGES,HOME_NOTES_GUIDE_TITLE,HOME_NOTES_CONSENSUS_REPLACEMENT,createHomeNotesGuideBridge} from './home-guide-notes-data'
+import {HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_GUIDE_WRITING_STAGES,HOME_NOTES_GUIDE_TITLE,HOME_NOTES_GROWTH_REPLACEMENT,HOME_NOTES_CONSENSUS_REPLACEMENT,createHomeNotesGuideBridge} from './home-guide-notes-data'
 import {returnHomeNotesToTop} from './home-guide-notes-scroll'
 import {createHomeNotesNativeBridge,type HomeNotesNativeBridge} from './home-guide-notes-native'
-import {HOME_NOTES_CHART_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
+import {HOME_NOTES_CHART_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT,HOME_NOTES_REPORT_SOURCES} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 import {noteUiText as t} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {HomeGuidePointerFrame} from './home-guide-pointer'
 import type {HomeGuideMountOptions} from './home-guides'
@@ -237,12 +237,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   await frame();expected=fingerprint();await flush()
  }
  const configureQuote=async()=>{await playing();unchanged();await nativeReady().configureQuote();await frame();expected=fingerprint();await flush()}
- const growthEvidence=async()=>{
-  await playing();unchanged();const selector=await selectedCard(),button=await until(()=>[...host.querySelectorAll<HTMLButtonElement>(selector+' button')].find(node=>node.textContent===t('查看依据')))
-  await click(button,'查看收入原文与增长率计算依据')
-  const panel=await until(()=>[...document.querySelectorAll<HTMLElement>('[data-notes-challenge-panel]')].find(node=>node.textContent?.includes('120亿元')&&node.textContent?.includes('132亿元')))
-  await point(panel,'核对120至132的年度收入与10%计算','move');await wait(1000);await flush()
- }
+ const growthEvidence=async()=>readReportEvidence('同比增长14.29%','核对季度收入原值与同比、环比基期')
  const challenge=async()=>{
   await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
   options.onStatus?.('打开 AI随航，选择严格模式检查全文')
@@ -262,7 +257,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const trigger=await until(()=>toolQuery<HTMLButtonElement>('.en-challenge-trigger'))
   if(trigger.getAttribute('aria-expanded')==='true')await click(trigger,'确认严格模式并开始检查')
   await until(()=>new Set([...host.querySelectorAll<HTMLElement>('.bn-editor [data-bn-thread-id]')].map(node=>node.dataset.bnThreadId)).size===3,10000)
-  expected=fingerprint();options.onStatus?.('发现增速计算、盈利推理和预测口径三处专业问题');await flush()
+  expected=fingerprint();options.onStatus?.('发现季度比较基期、年化预测标签和估值论证三处专业问题');await flush()
  }
  const select=async()=>{
   options.onStatus?.('点击收入增速标记，查看核对依据')
@@ -295,42 +290,43 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const apply=await until(()=>query<HTMLButtonElement>(selector+' .en-challenge-replace:not(:disabled)'))
   options.onStatus?.('把核对后的完整句替换回原文，保留修订记录')
   await click(apply,'替换到原文')
-  await until(()=>text().includes('同比增长10%')&&!text().includes('同比增长20%'))
+  await until(()=>noteText(editor!.snapshot().blocks.find(block=>block.id==='guide-note-growth')?.content).startsWith(HOME_NOTES_GROWTH_REPLACEMENT))
   await frame();expected=fingerprint()
   // The native scheduler rechecks the corrected paragraph against the same
   // local demo bridge. Persist its current coverage before ordinary Notes
   // remounts, so revisiting an untouched example does not request a live model.
   await until(()=>editor!.reviewReady(),10000);await flush()
-  options.onStatus?.('增速已统一为 10%，这篇笔记和挑战记录已保留')
+  options.onStatus?.('已核对 Q2 环比14.29%与同比174.57%，笔记和依据已保留')
  }
  const nativeReady=()=>{assert();if(!native||document.documentElement.dataset.homeGuidePointerRun!==options.runId)throw Error('原生笔记输入区已变化，请重新播放。');return native}
  const unchanged=()=>{if(fingerprint()!==expected)throw Error('演示笔记已被编辑，较新内容已保留。')}
  const selectConsensus=async()=>{
-  await playing();unchanged();options.onStatus?.('核对三家演示样本的预测年度与计量单位')
+  await playing();unchanged();options.onStatus?.('核对半年盈利年化与市场一致预期的区别')
   const mark=await until(()=>query<HTMLElement>('[data-id="guide-note-consensus"] [data-bn-thread-id]'))
-  selectedThread=mark.dataset.bnThreadId||'';scrollTo(mark);await wait(550);await click(mark,'查看一致预期的口径问题')
+  selectedThread=mark.dataset.bnThreadId||'';scrollTo(mark);await wait(550);await click(mark,'查看年化盈利的标签问题')
   await until(()=>query('.en-challenge-card[data-thread-id="'+CSS.escape(selectedThread)+'"]'))
  }
- const evidenceConsensus=async()=>{
+ const readReportEvidence=async(quote:string,label:string)=>{
   await playing();unchanged();const selector=await selectedCard()
   const button=await until(()=>[...host.querySelectorAll<HTMLButtonElement>(selector+' button')].find(node=>node.textContent===t('查看依据')))
-  await click(button,'查看三家预测的原生依据')
-  const labels=['甲证券 · 2026E盈利预测','乙证券 · 2026E盈利预测','丙证券 · 2027E盈利预测']
+  await click(button,label)
+  const labels=HOME_NOTES_REPORT_SOURCES.map(source=>source.label)
   const panel=await until(()=>[...document.querySelectorAll<HTMLElement>('[data-notes-challenge-panel]')].find(node=>{
-   try{validTarget(node,true);return labels.every(label=>node.textContent?.includes(label))&&node.textContent?.includes('一致预期均值为18.3亿元')}catch{return false}
+   try{validTarget(node,true);return labels.every(label=>node.textContent?.includes(label))&&node.querySelector('blockquote')?.textContent?.includes(quote)}catch{return false}
   }))
   for(const label of labels){
    await playing();unchanged();const heading=[...panel.querySelectorAll<HTMLElement>('article h4')].find(node=>node.textContent===label)
-   if(!heading)throw Error('券商预测依据已变化。')
+   if(!heading)throw Error('公司原始披露依据已变化。')
    const article=heading.closest('article')!,area=panel.getBoundingClientRect(),box=article.getBoundingClientRect()
    if(box.top<area.top+12||box.bottom>area.bottom-12){panel.scrollTo({top:panel.scrollTop+box.bottom-area.bottom+16,behavior:scrollBehavior()});await wait(500)}
    await point(heading,'核对'+label,'move');await wait(900)
   }
   await flush()
  }
+ const evidenceConsensus=async()=>readReportEvidence('暂将这一数值记为市场一致预期','核对公司原始披露与273.02亿元的年化计算')
  const replaceConsensus=async()=>{
   const selector=await selectedCard(),apply=await until(()=>query<HTMLButtonElement>(selector+' .en-challenge-replace:not(:disabled)'))
-  await click(apply,'统一年度与单位，保留样本覆盖边界')
+  await click(apply,'把机械年化与公司指引、市场一致预期分开')
   await until(()=>noteText(editor!.snapshot().blocks.find(block=>block.id==='guide-note-consensus')?.content).startsWith(HOME_NOTES_CONSENSUS_REPLACEMENT))
   await frame();expected=fingerprint();await until(()=>editor!.reviewReady(),10000);await flush()
  }
