@@ -6,25 +6,24 @@ import {HOME_NOTES_GUIDE_SELECTION} from '../../packages/dsh-research-task-runti
 
 export const HOME_NOTES_GUIDE_TITLE='AI算力产业链：从订单增长到利润兑现'
 export const HOME_NOTES_CONSENSUS_REPLACEMENT='统一年度与单位后，甲、乙两家机构的2026E归母净利润预测分别为16.8亿元和17.2亿元，样本均值为17.0亿元；丙证券21.0亿元属于2027E，不计入本期。两家样本不能代表市场整体一致预期，也不足以单独支持上调基准情景，仍需补齐覆盖机构、发布时间与盈利兑现证据。'
-export const HOME_NOTES_GUIDE_BLOCKS=[
- {id:'guide-note-intro',type:'paragraph',content:'研究摘要｜本篇使用虚构公司与演示数据，展示如何把行业线索转化为可检验的研究假设。观察重点是订单、收入确认与利润兑现之间的时差，而非仅凭行业热度推导投资结论。'},
- {id:'guide-note-heading1',type:'heading',props:{level:2},content:'一、需求扩张与收入确认'},
- {id:'guide-note-growth',type:'paragraph',content:'根据演示数据，样本公司2025年收入为120亿元，2026年预计收入为132亿元，同比增长20%。新增订单主要来自推理集群与存量机房改造，但交付排期、客户验收和供电条件仍可能影响确认节奏，应把订单余额与当期收入分开观察。'},
- {id:'guide-note-typo',type:'paragraph',content:'供给端的关键变化是产能利用率的边际改膳。先进封装、互联网络与电力基础设施共同决定交付能力，单一环节扩产并不等于整条产业链约束已消除；后续需要交叉验证设备交期、在制品规模与库存周转天数。'},
- {id:'guide-note-heading2',type:'heading',props:{level:2},content:'二、盈利弹性与证据链'},
- {id:'guide-note-logic',type:'paragraph',content:HOME_NOTES_GUIDE_SELECTION},
- {id:'guide-note-evidence',type:'paragraph',content:'下一步验证分为三层：先核对订单口径与重复统计，再比较收入增长和经营现金流，最后检查资本开支能否形成合理回报。若收入增加但应收款持续攀升，需重新评估增长质量；若毛利改善来自一次性补贴，也应从持续盈利中剔除。'},
- {id:'guide-note-heading-consensus',type:'heading',props:{level:2},content:'三、券商一致预期与口径核验'},
- {id:'guide-note-consensus-source',type:'paragraph',content:'券商预测截面（截至2026-10-21，以下为演示样本）：甲证券10月20日预测2026E归母净利润16.8亿元；乙证券10月21日预测2026E归母净利润1.72十亿元；丙证券10月21日预测2027E归母净利润21.0亿元。各机构盈利定义均为归母净利润，预测年度和原表单位需要逐项统一。'},
- {id:'guide-note-consensus',type:'paragraph',content:'汇总三家券商预测截面，2026年归母净利润的一致预期均值为18.3亿元，预测口径一致，可据此上调基准情景。'},
- {id:'guide-note-heading3',type:'heading',props:{level:2},content:'四、跟踪指标与反证条件'},
- {id:'guide-note-risks',type:'paragraph',content:'核心跟踪指标包括在手订单转化率、交付周期、毛利率、经营现金流与客户集中度。若两期订单转化率连续下降，或现金回款明显落后于收入，应降低对增长兑现速度的判断。所有预测保留基准、乐观与审慎三种情景，并明确每项结论所依赖的证据与失效条件。对估值的讨论应落在可持续自由现金流上，区分行业景气带来的短期溢价与企业竞争优势，避免以单季度高增长外推长期表现。每次更新保留原始假设与修订原因，形成可以回溯的判断记录。'}
+/** Five authored paragraphs are typed around the two actual inserted components. */
+export const HOME_NOTES_GUIDE_WRITING_STAGES=[
+ [
+  {id:'guide-note-intro',type:'paragraph',content:'研究摘要｜以中际旭创（300308.SZ）作为算力产业链的个股观察标的，关注光互联需求如何传导到交付、收入确认与现金回款。以下公司收入和券商预测均为虚构情景演示数据，不代表中际旭创的真实财报，也不是任何真实机构的投资观点；后续行情面板单独展示实际证券行情、来源和时间，不能用股价涨跌反证这些情景假设。研究首先区分观察对象、演示口径与真实披露，再讨论增长质量和验证路径。'},
+  {id:'guide-note-growth',type:'paragraph',content:'根据演示数据，样本公司2025年收入为120亿元，2026年预计收入为132亿元，同比增长20%。两年的Q1至Q4情景收入分别为26、28、30、36亿元与28、30、34、40亿元，年度口径均为四季合计。新增订单主要来自推理集群与存量机房改造，但交付排期、客户验收和供电条件可能改变季度确认节奏，应把订单余额与当期收入分开观察，并用季度结构与年度合计交叉检查增速，而非仅观察最后一季的高点。'}
+ ],
+ [{id:'guide-note-logic',type:'paragraph',content:HOME_NOTES_GUIDE_SELECTION}],
+ [
+  {id:'guide-note-consensus-source',type:'paragraph',content:'券商预测截面（截至2026-10-21，以下为演示样本）：甲证券10月20日预测2026E归母净利润16.8亿元；乙证券10月21日预测2026E归母净利润1.72十亿元；丙证券10月21日预测2027E归母净利润21.0亿元。三者盈利定义均为归母净利润，必须逐项核对预测年度、原表单位和报告日期。跟踪上还应对照订单转化率、经营现金流与客户集中度，明确每个结论依赖的证据及失效条件。'},
+  {id:'guide-note-consensus',type:'paragraph',content:'汇总三家券商预测截面，2026年归母净利润的一致预期均值为18.3亿元，预测口径一致，可据此上调基准情景。后续保留基准、乐观与审慎三种情景；若收入增长而应收款持续攀升、现金回款落后于收入，或毛利改善来自一次性补贴，应重新评估增长质量，不能以行业热度替代企业层面的盈利兑现证据。'}
+ ]
 ]
+export const HOME_NOTES_GUIDE_BLOCKS=HOME_NOTES_GUIDE_WRITING_STAGES.flat()
+
 const issues:ChallengeIssue[]=[
  {blockId:'guide-note-growth',quote:'同比增长20%',category:'contradiction',message:'收入由120亿元增长到132亿元，增幅应为10%，与正文的20%不一致。请统一计算口径。',evidence:[{kind:'note',label:'演示数据计算',blockId:'guide-note-growth',quote:'2025年收入为120亿元，2026年预计收入为132亿元',data:{prior:120,current:132,growthPercent:10}}]},
- {blockId:'guide-note-typo',quote:'边际改膳',category:'typo',message:'“改膳”应为“改善”，建议修正错别字。',evidence:[{kind:'note',label:'同段文字',blockId:'guide-note-typo',quote:'产能利用率的边际改膳'}]},
  {blockId:'guide-note-logic',quote:'订单同比增长即可保证全年净利润翻倍',category:'logic',message:'订单增长不能直接推出净利润翻倍。收入确认、价格、毛利率和费用率都可能改变结果，建议把确定性表述改为有条件的判断。',evidence:[{kind:'note',label:'后文列出的前提',blockId:'guide-note-logic',quote:'产品价格稳定、费用率不变且新增产能立即满产'}]},
- {blockId:'guide-note-consensus',quote:'一致预期均值为18.3亿元，预测口径一致',category:'research',message:'这里混用了2026E与2027E，并遗漏了十亿元到亿元的换算。先查看三家预测来源，再用同年度、同指标、同单位的有效样本计算；两家样本不能直接称作市场整体一致预期。',evidence:[
+ {blockId:'guide-note-consensus',quote:'一致预期均值为18.3亿元，预测口径一致',category:'research',message:'这里混入2027E预测，且未逐项核对原表单位便认定口径一致。先查看三家预测来源，再用同年度、同指标、同单位的有效样本计算；两家样本不能直接称作市场整体一致预期。',evidence:[
   {kind:'consensus',label:'甲证券 · 2026E盈利预测',quote:'2026E归母净利润16.8亿元',data:{'资料性质':'券商预测截面 · 演示样本','报告日期':'2026-10-20','预测年度':'2026E','指标':'归母净利润','原表数值':'16.8亿元','统一口径':'16.8亿元'}},
   {kind:'consensus',label:'乙证券 · 2026E盈利预测',quote:'2026E归母净利润1.72十亿元',data:{'资料性质':'券商预测截面 · 演示样本','报告日期':'2026-10-21','预测年度':'2026E','指标':'归母净利润','原表数值':'1.72十亿元','统一口径':'17.2亿元'}},
   {kind:'consensus',label:'丙证券 · 2027E盈利预测',quote:'2027E归母净利润21.0亿元',data:{'资料性质':'券商预测截面 · 演示样本','报告日期':'2026-10-21','预测年度':'2027E','指标':'归母净利润','原表数值':'21.0亿元','本期处理':'年度不一致，排除出2026E样本'}}
@@ -33,7 +32,7 @@ const issues:ChallengeIssue[]=[
 /** Predetermined findings travel through the same review/replacement contract as a normal note. */
 export function homeNotesGuideChallengeResult(request:ChallengeRequest):ChallengeResult{
  const current=issues.filter(issue=>request.blocks.some(block=>block.id===issue.blockId&&block.text.includes(issue.quote)))
- const base:ChallengeResult={version:1,issues:structuredClone(current),coveredBlockIds:request.blocks.map(block=>block.id),completeBlockIds:request.blocks.map(block=>block.id),checks:[{kind:'review',status:'completed',detail:'已核对错字、收入增速与推理前提。'},{kind:'consensus',status:'completed',detail:'核对笔记所附三条预测截面的年度、归母口径与单位；有效两家样本均值为17.0亿元，不代表市场整体一致预期。'}]}
+ const base:ChallengeResult={version:1,issues:structuredClone(current),coveredBlockIds:request.blocks.map(block=>block.id),completeBlockIds:request.blocks.map(block=>block.id),checks:[{kind:'review',status:'completed',detail:'已核对收入增速、盈利推理前提与预测口径。'},{kind:'consensus',status:'completed',detail:'核对笔记所附三条预测截面的年度、归母口径与单位；有效两家样本均值为17.0亿元，不代表市场整体一致预期。'}]}
  if(request.action==='review')return base
  const issue=current.find(item=>item.blockId===request.thread?.blockId&&item.quote===request.thread?.quote)
  const target=issue&&request.blocks.find(block=>block.id===issue.blockId),scope=target&&issue&&challengeReplacementScope(target.text,issue.quote)
@@ -69,7 +68,9 @@ export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,b
     return {status:'saved',saved:structuredClone(saved)}
    }
    if(method==='engage')return persistence?persistence.bridge.request('engage',input):{ok:true}
-   if(method==='conversation-state'&&native&&persistence)return persistence.bridge.request(method,input)
+   if(native&&persistence&&['conversation-state','menu-sync','menu-close','library-list','library-read','component-render','reply-render','component-menu-capabilities'].includes(method)){
+    const result=await persistence.bridge.request(method,input);assert(input);return result
+   }
    if(method==='stop'&&native){jobs.get(input.requestId)?.cancel();await native.stop(input.requestId);return {ok:true}}
    if(method==='generate'&&native){
     if(typeof input.requestId!=='string'||!input.requestId||typeof input.prompt!=='string'||!input.prompt.trim()||jobs.has(input.requestId))throw Error('演示笔记生成请求无效。')

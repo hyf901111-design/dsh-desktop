@@ -1,3 +1,4 @@
+import {esbuildRawSource} from './helpers/esbuild-raw-source.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
 import {readFile,mkdtemp,rm,mkdir,writeFile} from 'node:fs/promises'
@@ -15,7 +16,7 @@ import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 
 let browser,script,css
 beforeAll(async()=>{
- const output=await build({entryPoints:['test/fixtures/home-note-handoff-browser.tsx'],bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[
+ const output=await build({entryPoints:['test/fixtures/home-note-handoff-browser.tsx'],bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[esbuildRawSource(),
   {name:'handoff-only-scenes',setup(b){b.onLoad({filter:/src\/preload\/home-guides\.ts$/},async args=>{const source=await readFile(args.path,'utf8'),ast=parse(source,{sourceType:'module',plugins:['typescript']}),examples=ast.program.body.flatMap(node=>node.type==='VariableDeclaration'?node.declarations:[]).find(node=>node.id.name==='EXAMPLES'),note=examples.init.properties.find(node=>node.key.name==='note'),steps=note.value.properties.find(node=>node.key.name==='steps').value;return{loader:'ts',resolveDir:dirname(args.path),contents:source.slice(0,steps.start)+JSON.stringify([['fixture-saved','已保存笔记','交接夹具，不运行AI演员',0],['fixture-top','回到顶部','验证真实交接',0]])+source.slice(steps.end)}})}},
   homeGuidePlaybackFixture(),
   {name:'inline-styles',setup(b){b.onResolve({filter:/\.css\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/, ''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>{const source=await readFile(args.path,'utf8');if(!source.includes('@import'))return{contents:source,loader:'text'};const bundled=await build({entryPoints:[args.path],conditions:['browser','import','style'],bundle:true,write:false,outfile:'note.css',logLevel:'silent',loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}});return{contents:bundled.outputFiles.find(file=>file.path.endsWith('.css')).text,loader:'text'}})}}

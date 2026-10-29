@@ -1,3 +1,4 @@
+import {esbuildRawSource} from './helpers/esbuild-raw-source.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
@@ -6,6 +7,33 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 const selectionOutput=process.env.SHERLOCK_NOTE_SELECTION_OUTPUT_DIR||mkdtempSync(join(tmpdir(),'home-note-selection-'));mkdirSync(selectionOutput,{recursive:true})
 let browser,script,css
+it('expires its read-only native tail lease after caret movement, a document edit, another run or disposal',async()=>{
+ const{context,page}=await fixture();try{
+  expect(await page.evaluate(()=>{window.tail=window.noteApi.prepareNative();return window.tail()})).toBe(true)
+  await page.locator('[data-id="intro"] .bn-inline-content').click()
+  expect(await page.evaluate(()=>window.tail())).toBe(false)
+  expect(await page.evaluate(()=>{window.tail=window.noteApi.prepareNative();return window.tail()})).toBe(true)
+  await page.evaluate(()=>window.noteApi.updateText('intro','用户刚修改的内容必须保留。'))
+  expect(await page.evaluate(()=>window.tail())).toBe(false)
+  await page.evaluate(()=>{window.tail=window.noteApi.prepareNative();document.documentElement.dataset.homeGuidePointerRun='another-run'})
+  expect(await page.evaluate(()=>window.tail())).toBe(false)
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='native-note-run';window.tail=window.noteApi.prepareNative();window.noteRoot.unmount()})
+  expect(await page.evaluate(()=>{try{window.tail();return false}catch(error){return error.name==='AbortError'}})).toBe(true)
+ }finally{await context.close()}
+},15000)
+it('opens the actual slash suggestion from an owned empty paragraph and rejects a nonempty or expired editor',async()=>{
+ const{context,page}=await fixture();try{
+  await page.evaluate(()=>{window.noteApi.appendBlock({id:'slash-tail',type:'paragraph',content:''});window.noteApi.prepareNative();window.noteApi.typeSlash()})
+  await expect.poll(()=>page.locator('[data-id="slash-tail"] .bn-inline-content').textContent()).toBe('/')
+  await expect.poll(()=>page.getByRole('listbox',{name:'笔记斜杠菜单'}).count()).toBe(1)
+  await page.keyboard.press('Escape')
+  expect(await page.evaluate(()=>{try{window.noteApi.typeSlash();return false}catch{return true}})).toBe(true)
+  await page.evaluate(()=>{window.noteApi.appendBlock({id:'empty-again',type:'paragraph',content:''});window.noteApi.prepareNative();document.documentElement.dataset.homeGuidePointerRun='foreign-run'})
+  expect(await page.evaluate(()=>{try{window.noteApi.typeSlash();return false}catch{return true}})).toBe(true)
+  await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='native-note-run';window.oldApi=window.noteApi;window.noteRoot.unmount()})
+  expect(await page.evaluate(()=>{try{window.oldApi.typeSlash();return false}catch{return true}})).toBe(true)
+ }finally{await context.close()}
+},15000)
 beforeAll(async()=>{
  const built=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import React from'react';import{createRoot}from'react-dom/client';import{NotesApp}from'./src/preload/notes/editor';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';
@@ -18,7 +46,7 @@ beforeAll(async()=>{
  window.submitNative=(prompt='请整理专业研究摘要。',sessionId='native-note-session')=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId,prompt,images:[],submissionId:window.requests.length,admission:{draft:prompt,draftRev:1,imageIds:[]}}}));
  window.selectionPoint=offset=>{const root=document.querySelector('[data-id="logic"] .bn-inline-content'),walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;while(node=walk.nextNode()){if(offset<node.length){const range=document.createRange();range.setStart(node,offset);range.setEnd(node,Math.min(node.length,offset+1));const box=range.getBoundingClientRect();return{x:box.left+Math.min(1,box.width/4),y:box.top+box.height/2}}offset-=node.length}throw Error('selection point missing')};
  window.dragSelection=()=>{const text=document.querySelector('[data-id="logic"] .bn-inline-content').textContent,range=document.createRange();range.selectNodeContents(document.querySelector('[data-id="logic"] .bn-inline-content'));const boxes=[...range.getClientRects()].filter(r=>r.width&&r.height),start=boxes[0],end=boxes.at(-1),anchor=point=>{const node=document.createElement('span');node.style.cssText='position:fixed;width:2px;height:2px;left:'+point.x+'px;top:'+point.y+'px';document.body.append(node);return node},from=anchor({x:start.left,y:start.top+start.height/2}),to=anchor({x:end.right-2,y:end.top+end.height/2});let lease,gate;window.selectionSamples=[];window.selectionAbort=new AbortController();window.selectionPause=()=>gate=new Promise(resolve=>window.selectionResume=()=>{gate=undefined;resolve()});window.selectionPointer=createHomeGuidePointer(document,{runId:'native-note-run',signal:window.selectionAbort.signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>gate||Promise.resolve()});window.selectionAction=window.selectionPointer.perform({target:to,fromTarget:from,action:'drag',onFrame:frame=>{if(frame.phase==='pressed')lease=window.noteApi.beginParagraphSelection('logic',text);if(lease&&['pressed','dragging','released'].includes(frame.phase)){lease.updateAt(frame);window.selectionSamples.push({...frame,text:getSelection().toString(),rects:[...getSelection().getRangeAt(0).getClientRects()].filter(r=>r.width>0).length})}}}).then(()=>{lease.finish();window.selectionDone=true},error=>{lease?.cancel();window.selectionError=error.message}).finally(()=>{from.remove();to.remove();window.selectionPointer.dispose()})};
- `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}})
+ `},plugins:[esbuildRawSource()],bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}})
  script=built.outputFiles.find(file=>file.path.endsWith('.js')).text;css=built.outputFiles.find(file=>file.path.endsWith('.css'))?.text||''
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -91,11 +119,13 @@ it('does not surface a late generation after its run has been cancelled',async()
 it('extends a real multi-line Chinese and emoji selection with the painted drag before release',async()=>{
  const{context,page,errors}=await fixture();try{
   expect(await page.evaluate(()=>typeof window.noteApi.beginParagraphSelection)).toBe('function')
-  await page.setViewportSize({width:760,height:900})
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.setViewportSize({width:760,height:900})
   const text='订单增长📈不能保证利润翻倍，仍需验证产品价格与回款。研究员👩🏽‍💻需要逐季核验现金流，观察毛利率、合同负债与风险信号。'
   await page.evaluate(text=>{window.noteApi.setDocument('研究笔记',[{id:'intro',type:'paragraph',content:'原文摘要必须保留。'},{id:'logic',type:'paragraph',content:[{type:'text',text:text.slice(0,8),styles:{bold:true}},{type:'text',text:text.slice(8),styles:{}}]}])},text)
-  await page.locator('[data-id="logic"] .bn-inline-content').scrollIntoViewIfNeeded();await page.evaluate(()=>window.dragSelection())
-  await expect.poll(()=>page.evaluate(()=>window.selectionSamples.filter(row=>row.phase==='dragging'&&row.text.length>0&&row.text.length<document.querySelector('[data-id="logic"] .bn-inline-content').textContent.length).length)).toBeGreaterThan(2)
+  await page.locator('.bn-editor').focus();await page.locator('[data-id="logic"] .bn-inline-content').scrollIntoViewIfNeeded()
+  await page.evaluate(async expected=>{await document.fonts.ready;let previous='',stable=0;window.selectionPreparation=[];for(let count=0;count<120;count++){const element=document.querySelector('[data-id="logic"] .bn-inline-content'),box=element.getBoundingClientRect(),value=JSON.stringify([box.left,box.top,box.width,box.height]);window.selectionPreparation.push({value,text:element.textContent});stable=element.textContent===expected&&value===previous?stable+1:0;previous=value;if(stable>=5)return;await new Promise(requestAnimationFrame)}throw Error('拖选段落字体或几何尚未稳定')},text)
+  await page.evaluate(()=>window.dragSelection())
+  try{await expect.poll(()=>page.evaluate(()=>window.selectionSamples.filter(row=>row.phase==='dragging'&&row.text.length>0&&row.text.length<document.querySelector('[data-id="logic"] .bn-inline-content').textContent.length).length),{timeout:2500}).toBeGreaterThan(2)}catch(error){writeFileSync(join(selectionOutput,'selection-failure.json'),JSON.stringify(await page.evaluate(()=>({samples:window.selectionSamples,error:window.selectionError,done:window.selectionDone,focused:document.hasFocus(),reduced:matchMedia('(prefers-reduced-motion: reduce)').matches})),null,2));throw error}
   await page.evaluate(()=>{window.selectionPause()});await page.waitForTimeout(80);const paused=await page.evaluate(()=>({count:window.selectionSamples.length,text:getSelection().toString()}));await page.waitForTimeout(200);expect(await page.evaluate(()=>({count:window.selectionSamples.length,text:getSelection().toString()}))).toEqual(paused)
   await page.screenshot({path:join(selectionOutput,'selection-multiline-partial-1.png')})
   await page.evaluate(()=>window.selectionResume());await page.waitForFunction(({first,total})=>getSelection().toString().length>Math.max(first+4,total*.45)&&getSelection().toString().length<total,{first:paused.text.length,total:text.length});await page.evaluate(()=>{window.selectionPause()});await page.waitForTimeout(60);await page.screenshot({path:join(selectionOutput,'selection-multiline-partial-2.png')})

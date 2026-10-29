@@ -7,10 +7,24 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import * as Y from 'yjs'
 import {NotesStore} from '../src/main/notes/store'
+import * as guideData from '../src/preload/home-guide-notes-data'
+import * as guideContract from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 
 const sessionId='home-guide-notes-contract'
 const review=()=>({sessionId,requestId:'review-1',action:'review' as const,level:3 as const,title:HOME_NOTES_GUIDE_TITLE,blocks:challengeDocumentBlocks(HOME_NOTES_GUIDE_BLOCKS)})
 describe('homepage note example data and isolated bridge',()=>{
+ it('delegates actual slash/library/render requests only after native demo admission through the original bridge',async()=>{
+  const signal=new AbortController(),original={request:vi.fn(async method=>method==='load'?{saved:{title:'',blocks:[],yjs:'',revision:0,updatedAt:0}}:{ok:true}),draft:vi.fn()},native={generate:vi.fn(),stop:vi.fn()}
+  const bridge=createHomeNotesGuideBridge(sessionId,signal.signal,undefined,{bridge:original as any,fresh:true},undefined,native as any)
+  await expect(bridge.request('library-list',{sessionId})).rejects.toThrow('先读取')
+  await bridge.request('load',{sessionId})
+  for(const method of ['menu-sync','menu-close','library-list','library-read','component-render','component-menu-capabilities'])expect(await bridge.request(method,{sessionId})).toEqual({ok:true})
+  await expect(bridge.request('library-read',{sessionId:'other'})).rejects.toThrow('不匹配')
+  await expect(bridge.request('export',{sessionId})).rejects.toThrow('不支持')
+  const plain=createHomeNotesGuideBridge(sessionId,new AbortController().signal,undefined,{bridge:original as any,fresh:true});await plain.request('load',{sessionId})
+  await expect(plain.request('library-read',{sessionId})).rejects.toThrow('不支持')
+  signal.abort();await expect(bridge.request('library-list',{sessionId})).rejects.toMatchObject({name:'AbortError'})
+ })
  it('shows broker forecast sources and corrects mixed years, units and sample coverage',()=>{
   const request=review(),issue=homeNotesGuideChallengeResult(request).issues.find(item=>item.blockId==='guide-note-consensus')
   expect(issue).toBeDefined()
@@ -26,17 +40,27 @@ describe('homepage note example data and isolated bridge',()=>{
   expect(result.reply?.replacement).not.toContain('18.3亿元')
   expect((16.8+1.72*10)/2).toBe(17)
  })
- it('provides a substantial research note with explicit example data and four anchored issue types including broker consensus',()=>{
+ it('provides five staged research paragraphs with three professional findings and separates example numbers from the observed security',()=>{
   const request=review(),text=request.blocks.map(block=>block.text).join(''),result=homeNotesGuideChallengeResult(request)
-  expect(text.length).toBeGreaterThanOrEqual(650);expect(text.length).toBeLessThan(1050);expect(text).toContain('演示数据')
-  expect(new Set(result.issues.map(issue=>issue.category))).toEqual(new Set(['typo','contradiction','logic','research']))
+  expect(text.length).toBeGreaterThanOrEqual(650);expect(text.length).toBeLessThan(1300);expect(text).toContain('演示数据')
+  expect((guideData as any).HOME_NOTES_GUIDE_WRITING_STAGES.map((items:any[])=>items.map(item=>item.id))).toEqual([['guide-note-intro','guide-note-growth'],['guide-note-logic'],['guide-note-consensus-source','guide-note-consensus']])
+  expect(HOME_NOTES_GUIDE_BLOCKS).toHaveLength(5);expect(result.issues).toHaveLength(3)
+  expect(new Set(result.issues.map(issue=>issue.category))).toEqual(new Set(['contradiction','logic','research']))
+  expect(text).toContain('300308');expect(text).toContain('不代表中际旭创的真实财报')
   for(const issue of result.issues)expect(request.blocks.find(block=>block.id===issue.blockId)?.text).toContain(issue.quote)
   expect(result.completeBlockIds).toEqual(request.blocks.map(block=>block.id))
+ })
+ it('gives the inline chart explicit quarterly example data with reconcilable annual totals and units',()=>{
+  const spec=(guideContract as any).HOME_NOTES_CHART_SPEC
+  expect(spec).toMatchObject({variant:'bar',unit:'亿元',labels:['Q1','Q2','Q3','Q4']})
+  expect(spec.series.map((series:any)=>series.values.reduce((a:number,b:number)=>a+b,0))).toEqual([120,132])
+  expect(spec.note).toContain('（132－120）÷120＝10%');expect(spec.note).toContain('演示样本')
+  expect((guideContract as any).HOME_NOTES_GUIDE_STOCK).toEqual({code:'300308',market:'SZ',name:'中际旭创'})
  })
  it('does not invent anchors when a paragraph was edited or omitted',()=>{
   const request=review();request.blocks=request.blocks.filter(block=>block.id!=='guide-note-logic').map(block=>block.id==='guide-note-growth'?{...block,text:'已修订的收入增速。'}:block)
   const result=homeNotesGuideChallengeResult(request)
-  expect(result.issues.map(issue=>issue.category)).toEqual(['typo','research'])
+  expect(result.issues.map(issue=>issue.category)).toEqual(['research'])
   expect(result.coveredBlockIds).toEqual(request.blocks.map(block=>block.id))
  })
  it('optimizes the entire anchored sentence through the native replacement contract',()=>{
@@ -93,7 +117,7 @@ describe('homepage note example data and isolated bridge',()=>{
   let settled=false
   const first=bridge.request('challenge',review()).then(value=>{settled=true;return value})
   await vi.waitFor(()=>expect(pauses).toEqual([2000]))
-  expect(settled).toBe(false);releases.shift()!();expect((await first).issues).toHaveLength(4)
+  expect(settled).toBe(false);releases.shift()!();expect((await first).issues).toHaveLength(3)
   const request=review(),issue=homeNotesGuideChallengeResult(request).issues[0]!
   const next=bridge.request('challenge',{...request,requestId:'optimize-clock',action:'optimize',thread:{...issue,messages:[]}})
   await vi.waitFor(()=>expect(pauses).toEqual([2000,1700]))

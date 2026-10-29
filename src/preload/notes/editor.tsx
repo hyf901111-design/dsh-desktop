@@ -63,7 +63,8 @@ export type NotesGuideEditorApi = {
   setDocument(title:string,blocks:any[]):void
   appendBlock(block:any):void
   updateText(blockId:string,text:string):void
-  prepareNative():void
+  prepareNative():()=>boolean
+  typeSlash():void
   selectParagraph(blockId:string,expectedText:string):void
   beginParagraphSelection(blockId:string,expectedText:string):NoteGuideSelection
 }
@@ -822,7 +823,15 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       setDocument:(nextTitle,blocks)=>{assert();titleRef.current=nextTitle;setTitle(nextTitle);editor.replaceBlocks(editor.document,blocks);changed()},
       appendBlock:block=>{assert();editor.insertBlocks([block],editor.document.at(-1),'after')},
       updateText:(blockId,text)=>{assert();if(!editor.getBlock(blockId))throw Error('演示段落已变化。');editor.updateBlock(blockId,{content:text})},
-      prepareNative:()=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError');clearSelection();const last=editor.document.at(-1);if(last)editor.setTextCursorPosition(last.id,'end')},
+      prepareNative:()=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError');clearSelection();const last=editor.document.at(-1);if(last)editor.setTextCursorPosition(last.id,'end');const state=editor._tiptapEditor.state,doc=state.doc,from=state.selection.from,to=state.selection.to;return()=>{assert();const current=editor._tiptapEditor.state;return!!props.guide?.native&&nativeCurrent()&&editor.document.at(-1)?.id===last?.id&&current.doc===doc&&current.selection.empty&&current.selection.$from.parentOffset===current.selection.$from.parent.content.size&&current.selection.from===from&&current.selection.to===to}},
+      typeSlash:()=>{
+        assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')
+        const last=editor.document.at(-1),view=editor._tiptapEditor.view,{selection}=view.state
+        if(!editor.isEditable||view.composing||last?.type!=='paragraph'||noteText(last.content)!==''||last.children?.length||editor.getTextCursorPosition().block.id!==last.id||!selection.empty||selection.$from.parent.type.name!=='paragraph'||selection.$from.parent.content.size!==0||selection.$from.parentOffset!==0)throw Error('演示插入行已变化。')
+        // Use the same PM text-input hook as a physical slash. Plain block
+        // updates cannot activate the original SuggestionMenu extension.
+        if(!view.someProp('handleTextInput',(handler:any)=>handler(view,selection.from,selection.to,'/')))throw Error('斜杠命令未启动，请重新播放。')
+      },
       beginParagraphSelection:(blockId,expectedText)=>{
         const current=()=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')}
         current();const block=editor.getBlock(blockId),element=scroll.current?.querySelector<HTMLElement>('[data-id="'+CSS.escape(blockId)+'"] .bn-inline-content')

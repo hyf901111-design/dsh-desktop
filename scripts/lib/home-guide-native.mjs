@@ -1,9 +1,10 @@
-import {NativeHomeNotesGuidePortal as NotesGuidePortalDefinition} from './home-guide-notes-native.mjs'
+import {NativeHomeNotesGuidePortal as NotesGuidePortalDefinition,revealHomeNotesGuideSummary as NotesGuideSummaryDefinition} from './home-guide-notes-native.mjs'
 import {HOME_BOARD_SMART_PATH as boardSmartPathDefinition, HOME_BOARD_SMART_PROMPT as boardSmartPromptDefinition} from '../../packages/dsh-research-task-runtime/home-board-smart-contract.js'
 const homeGuideNativeSmartPath = boardSmartPathDefinition
 const homeGuideNativeSmartPrompt = boardSmartPromptDefinition
 // Keep serialized references local when the test loader rewrites ESM imports.
 const NativeHomeNotesGuidePortal = NotesGuidePortalDefinition
+const revealHomeNotesGuideSummary = NotesGuideSummaryDefinition
 const START = '/* odyssey:home-guide-native:start:v1 */'
 const END = '/* odyssey:home-guide-native:end:v1 */'
 const RESIDENT_V1 = '/* odyssey:home-guide-resident-isolation:v1 */'
@@ -932,7 +933,7 @@ export function stripHomeGuideNative(source) {
 /** Add an isolated native React portal without replacing any conversation child. */
 export function patchHomeGuideNative(source) {
   if (source.includes(START)) source = stripHomeGuideNative(source)
-  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\nconst homeGuideNativePreviewOwnerListeners = new WeakMap();\n' + [homeGuideNativePreviewOwner,subscribeHomeGuideNativePreviewOwner,createHomeGuideNativeOwnedResource,homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, useHomeGuideNativeCompleteDraft, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
+  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\nconst homeGuideNativePreviewOwnerListeners = new WeakMap();\n' + [homeGuideNativePreviewOwner,subscribeHomeGuideNativePreviewOwner,createHomeGuideNativeOwnedResource,homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, useHomeGuideNativeCompleteDraft, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, revealHomeNotesGuideSummary, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
   if (source.includes(START)) {
     const first = source.indexOf(START), end = source.indexOf(END, first)
     if (end < 0 || source.indexOf(START, first + START.length) >= 0 || !source.includes('function HomeGuideNativeOriginalConversationRoot(')) throw Error('Home guide native refresh anchor drifted')

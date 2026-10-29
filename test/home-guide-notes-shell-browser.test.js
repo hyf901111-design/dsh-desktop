@@ -1,3 +1,6 @@
+import {homeNoteComponentsSource} from './fixtures/home-note-components.js'
+import {noteLibraryItems,noteLibraryNode} from '../src/main/notes/component-library'
+import {esbuildRawSource} from './helpers/esbuild-raw-source.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
 import {readFile} from 'node:fs/promises'
@@ -16,7 +19,9 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountHomeGuides}from'./src/preload/home-guides';import{mountHomeNotesGuide}from'./src/preload/home-guide-notes';import{mountNotes}from'./src/preload/notes/mount';import{WorkspaceSurfaceHost}from'./src/preload/workspace-surface-host';
  ${challengeSidebar}
- import{HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT}from'./packages/dsh-research-task-runtime/home-notes-guide-contract.js';
+ ${homeNoteComponentsSource()}
+ import{homeNotesGuideChart}from'./packages/dsh-research-task-runtime/home-notes-guide-artifacts.js';
+ import{HOME_NOTES_CHART_PROMPT,HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT}from'./packages/dsh-research-task-runtime/home-notes-guide-contract.js';
  window.noteLoads=[];window.originalInput=document.querySelector('#original-draft');window.originalInput.focus();window.originalInput.setSelectionRange(1,3);
  window.guideCueHistory=[];window.addEventListener('sherlock:home-guide-cue',event=>{const detail=event.detail,target=detail.target??[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===detail.targetToken);window.guideCueHistory.push({label:detail.label,tag:target?.tagName,className:target?.className});});
  const bridge={request:async(method,input)=>{if(method==='load')window.noteLoads.push(input.sessionId);if(method==='save'&&window.deferNoteSave)await new Promise(resolve=>setTimeout(resolve,200));return window.noteStorageRequest(method,input)},draft:input=>window.noteStorageRequest('draft',input)};
@@ -26,15 +31,16 @@ beforeAll(async()=>{
  // NotesApp captures references, generates, previews, applies and persists.
  window.noteNativeTasks=[];
  const nativeFor=options=>{let disposed=false,submission=0;const jobs=new Map();return{
+  configureQuote:()=>window.configureFixtureQuote(),reviewSummary:()=>window.reviewFixtureSummary(),appendSummary:()=>window.appendFixtureSummary(options.runId,options.sessionId),
   async type(stage){if(disposed||options.signal.aborted)throw new DOMException('cancelled','AbortError');const submissionId=++submission;let accepted=false;const receive=event=>{if(event.detail?.sessionId===options.sessionId&&event.detail.submissionId===submissionId)accepted=true};document.addEventListener('sherlock:notes-submit-accepted',receive);try{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:options.sessionId,submissionId,prompt:stage==='note'?HOME_NOTES_TASK_PROMPT:HOME_NOTES_REWRITE_PROMPT,images:[]}}))}finally{document.removeEventListener('sherlock:notes-submit-accepted',receive)}if(!accepted)throw Error('真实笔记编辑器未接受示例任务')},
-  async generate(input){const controller=new AbortController();jobs.set(input.requestId,controller);try{window.noteNativeTasks.push({sessionId:input.sessionId,scope:input.context.scope,selection:input.selection,markdown:input.markdown});await options.wait(1800,AbortSignal.any([controller.signal,options.signal]));if(disposed)throw new DOMException('cancelled','AbortError');if(input.prompt===HOME_NOTES_TASK_PROMPT&&input.context.scope==='note'&&!input.selection&&input.markdown.includes('同比增长10%'))return{kind:'text',markdown:HOME_NOTES_TASK_RESULT};if(input.prompt===HOME_NOTES_REWRITE_PROMPT&&input.context.scope==='selection'&&!input.markdown&&input.selection===HOME_NOTES_GUIDE_SELECTION)return{kind:'text',markdown:HOME_NOTES_REWRITE_RESULT};throw Error('示例引用范围不匹配')}finally{jobs.delete(input.requestId)}},
+  async generate(input){const controller=new AbortController();jobs.set(input.requestId,controller);try{window.noteNativeTasks.push({prompt:input.prompt,sessionId:input.sessionId,scope:input.context.scope,selection:input.selection,markdown:input.markdown});await options.wait(1800,AbortSignal.any([controller.signal,options.signal]));if(disposed)throw new DOMException('cancelled','AbortError');if(input.prompt===HOME_NOTES_CHART_PROMPT)return homeNotesGuideChart(options.runId);if(input.prompt===HOME_NOTES_TASK_PROMPT&&input.context.scope==='note'&&!input.selection&&input.markdown.includes('同比增长10%'))return{kind:'conversation',markdown:HOME_NOTES_TASK_RESULT};if(input.prompt===HOME_NOTES_REWRITE_PROMPT&&input.context.scope==='selection'&&!input.markdown&&input.selection===HOME_NOTES_GUIDE_SELECTION)return{kind:'text',markdown:HOME_NOTES_REWRITE_RESULT};throw Error('示例引用范围不匹配')}finally{jobs.delete(input.requestId)}},
   async stop(id){jobs.get(id)?.abort()},dispose(){disposed=true;for(const job of jobs.values())job.abort();jobs.clear()}
  }};
  const chooseView=view=>{for(const tab of document.querySelectorAll('[data-conversation-view-id]'))tab.setAttribute('aria-selected',String(tab.dataset.conversationViewId===view));document.querySelector('[data-ework-note-view]')?.remove();const id=document.querySelector('[data-ework-notes-session]').dataset.eworkNotesSession;if(view==='notes'){const anchor=document.createElement('div');anchor.dataset.eworkNoteView=id;document.querySelector('#resident-body').append(anchor);document.dispatchEvent(new CustomEvent('sherlock:notes-open',{detail:{sessionId:id}}))}else document.dispatchEvent(new CustomEvent('sherlock:notes-close',{detail:{sessionId:id}}));};
  for(const tab of document.querySelectorAll('[data-conversation-view-id]'))tab.addEventListener('click',()=>chooseView(tab.dataset.conversationViewId));
  window.addEventListener('sherlock:home-guide-session-request',event=>{const value=event.detail;let session;if(value.command==='prepare'){const fresh=!window.latestExample||value.replay===true;if(fresh)window.latestExample={sessionId:'example-note-'+(++window.sessionCount),cwd:'/example-notes',title:'笔记教程副本'};session={...window.latestExample,fresh};}else{session={...window.latestExample};const header=document.querySelector('[data-ework-notes-session]'),view=header.querySelector('[aria-selected=true]').dataset.conversationViewId;header.dataset.eworkNotesSession=session.sessionId;header.querySelector('[data-en-challenge-tools]').dataset.enChallengeTools=session.sessionId;chooseView(view);window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed'));}window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:value.requestId,ok:true,...session}}));});
  window.guides=mountHomeGuides(document,{beforeOpen:session=>window.nativeNotes.prepareGuide(session.sessionId),revealConversation:()=>workspaceHost.revealConversation(),mountNotes:(doc,host,options)=>mountHomeNotesGuide(doc,host,{...options,persistence:bridge,native:nativeFor(options)}),mountPresentation:async()=>({runStep:async()=>{},dispose:()=>{}})});
- `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[homeGuidePlaybackFixture(),{name:'inline-styles',setup(b){b.onResolve({filter:/\.css\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/,''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>{const contents=await readFile(args.path,'utf8');if(!contents.includes('@import'))return{contents,loader:'text'};const compiled=await build({entryPoints:[args.path],conditions:['browser','import','style'],bundle:true,write:false,outfile:'notes.css',logLevel:'silent',loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}});return{contents:compiled.outputFiles.find(file=>file.path.endsWith('.css')).text,loader:'text'}})}}]})
+ `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[esbuildRawSource(),homeGuidePlaybackFixture(),{name:'inline-styles',setup(b){b.onResolve({filter:/\.css\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/,''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>{const contents=await readFile(args.path,'utf8');if(!contents.includes('@import'))return{contents,loader:'text'};const compiled=await build({entryPoints:[args.path],conditions:['browser','import','style'],bundle:true,write:false,outfile:'notes.css',logLevel:'silent',loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}});return{contents:compiled.outputFiles.find(file=>file.path.endsWith('.css')).text,loader:'text'}})}}]})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text;css=output.outputFiles.find(file=>file.path.endsWith('.css'))?.text||''
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -44,9 +50,9 @@ async function fixture(paneWidth=600,{isolated=false,deferEngage=false}={}){
  const directory=mkdtempSync(join(tmpdir(),'home-guide-note-shell-')),store=new NotesStore(directory),requests=[]
  let releaseEngage;const engageGate=deferEngage?new Promise(resolve=>releaseEngage=resolve):Promise.resolve()
  const context=await browser.newContext({viewport:{width:paneWidth+480,height:752}}),page=await context.newPage(),errors=[],logs=[];page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(['warning','error'].includes(message.type()))logs.push(message.text()+' '+JSON.stringify(message.location()))})
- await page.exposeFunction('noteStorageRequest',async(method,input)=>{requests.push({method,sessionId:input.sessionId});if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);if(method==='engage')await engageGate;if(method==='challenge')throw Error('教程不应请求真实模型');return{ok:true}})
- await page.route('http://127.0.0.1/notes-guide-shell',route=>route.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content"><title>首页笔记教程集成验收</title><style>body{margin:0;font-family:system-ui}.pI_x6G_centerCol{position:absolute;left:88px;top:10px;width:${paneWidth}px;bottom:10px;border-radius:12px;overflow:hidden;background:#eee}.wSkVaW_root{height:100%;position:relative}.wSkVaW_header{height:44px;display:flex;align-items:center;padding-inline:12px}.wSkVaW_header button{height:30px;border:0;border-radius:7px;padding:0 14px;background:transparent}.wSkVaW_header button[aria-selected=true]{background:#ddd}#original-draft{position:absolute;top:250px;left:20px;width:calc(100% - 50px)}[data-srb-tabs]{display:flex}.en-root{z-index:45}</style><div class="pI_x6G_centerCol"><div class="wSkVaW_root"><header class="wSkVaW_header" data-srb-session-header data-ework-notes-session="original-session"><div data-srb-tabs role="tablist"><button role="tab" data-conversation-view-id="chat" aria-selected="true">对话</button><button role="tab" data-conversation-view-id="research" aria-selected="false">研究</button><button role="tab" data-conversation-view-id="notes" aria-selected="false">笔记</button></div><div data-en-challenge-tools="original-session"></div></header><div id="resident-body" style="height:calc(100% - 44px)"><textarea id="original-draft">用户原有提示词与技能标签</textarea></div></div></div>`}))
- await page.route('http://127.0.0.1/sherlock-research.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg"/>'}));await page.goto('http://127.0.0.1/notes-guide-shell');if(css)await page.addStyleTag({content:css})
+ await page.exposeFunction('noteStorageRequest',async(method,input)=>{if(method==='library-list')return noteLibraryItems({list:()=>[]});if(method==='library-read')return noteLibraryNode({list:()=>[]},input.id,'owner');requests.push({method,sessionId:input.sessionId});if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);if(method==='engage')await engageGate;if(method==='challenge')throw Error('教程不应请求真实模型');return{ok:true}})
+ await page.route('http://127.0.0.1/notes-guide-shell',route=>route.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content"><title>首页笔记教程集成验收</title><style>body{margin:0;width:100vw;height:100vh;overflow:hidden;font-family:system-ui}.pI_x6G_centerCol{position:absolute;left:88px;top:10px;width:${paneWidth}px;bottom:10px;border-radius:12px;overflow:hidden;background:#eee}.wSkVaW_root{height:100%;position:relative}.wSkVaW_header{height:44px;display:flex;align-items:center;padding-inline:12px}.wSkVaW_header button{height:30px;border:0;border-radius:7px;padding:0 14px;background:transparent}.wSkVaW_header button[aria-selected=true]{background:#ddd}#original-draft{position:absolute;top:250px;left:20px;width:calc(100% - 50px)}[data-srb-tabs]{display:flex}.en-root{z-index:45}</style><div class="pI_x6G_centerCol"><div class="wSkVaW_root"><header class="wSkVaW_header" data-srb-session-header data-ework-notes-session="original-session"><div data-srb-tabs role="tablist"><button role="tab" data-conversation-view-id="chat" aria-selected="true">对话</button><button role="tab" data-conversation-view-id="research" aria-selected="false">研究</button><button role="tab" data-conversation-view-id="notes" aria-selected="false">笔记</button></div><div data-en-challenge-tools="original-session"></div></header><div id="resident-body" style="height:calc(100% - 44px)"><textarea id="original-draft">用户原有提示词与技能标签</textarea></div></div></div>`}))
+ await page.route('http://127.0.0.1/sherlock-research.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg"/>'}));await page.route('http://127.0.0.1/fonts/NotoSansSC.woff2',route=>route.fulfill({path:'build/fonts/NotoSansSC.woff2',contentType:'font/woff2'}));await page.goto('http://127.0.0.1/notes-guide-shell');if(css)await page.addStyleTag({content:css})
  let evaluate=fn=>page.evaluate(fn)
  if(isolated){
   await page.addScriptTag({content:nativeSessionScript})
@@ -60,7 +66,7 @@ async function fixture(paneWidth=600,{isolated=false,deferEngage=false}={}){
 // Real public "next" actions skip reading holds in this focused test; adapters
 // retain their actual stream, native scheduler and UI-stability waits.
 async function complete(page,evaluate=fn=>page.evaluate(fn)){
- const deadline=Date.now()+65000;let capturedPopover=false
+ const deadline=Date.now()+110000;let capturedPopover=false
  while(Date.now()<deadline){
   if(await page.locator('[data-home-guide]').count()===0)return
   const phase=await page.locator('[data-home-guide]').getAttribute('data-phase');if(phase==='completed'){await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);return}
@@ -80,7 +86,7 @@ it('creates a new native session after an isolated Notes walkthrough without los
   expect(await evaluate(()=>typeof window.nativeSessionProbe)).toBe('undefined')
   await evaluate(()=>window.guides.start('note'));await complete(page,evaluate)
   const saved=store.load('owner','example-note-1'),tasks=await evaluate(()=>window.noteNativeTasks)
-  expect(tasks.map(task=>task.scope)).toEqual(['note','selection'])
+  expect(tasks.map(task=>task.scope)).toEqual(['note','selection','note'])
   expect(JSON.stringify(saved.saved.blocks)).toContain('同比增长10%')
   expect(JSON.stringify(saved.saved.blocks)).toContain('不能直接推导全年净利润翻倍')
   await page.getByRole('tab',{name:'对话'}).click()
@@ -105,7 +111,7 @@ it('creates a new native session after an isolated Notes walkthrough without los
   expect(store.load('owner','example-note-1')).toEqual(saved)
   expect(f.errors).toEqual([]);expect(f.logs).toEqual([])
  }finally{await f.dispose()}
-},75000)
+},130000)
 it('keeps replayed and interrupted Notes copies while native New Chat leaves them without a late guide selection',async()=>{
  const f=await fixture(600,{isolated:true}),{page,evaluate,store}=f;try{
   const write=async()=>{await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('研究摘要')}
@@ -157,13 +163,13 @@ for(const width of [600,700])it(`saves and reopens the native note without clipp
   expect(await page.locator('[data-home-guide]').count()).toBe(0)
   await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
   expect(store.load('owner','example-note-1').saved.yjs.length).toBeGreaterThan(1000);expect(requests.some(item=>item.sessionId==='original-session')).toBe(false);expect(requests.some(item=>item.method==='challenge')).toBe(false)
-  expect(await page.evaluate(()=>window.noteNativeTasks.map(task=>task.scope))).toEqual(['note','selection'])
+  expect(await page.evaluate(()=>window.noteNativeTasks.map(task=>task.scope))).toEqual(['note','selection','note'])
   expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('不能直接推导全年净利润翻倍')
-  expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('样本公司收入由120亿元增至132亿元')
+  expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('120亿元增至132亿元')
   await page.evaluate(()=>window.guides.start('note'));expect(await page.locator('[data-home-guide]').count()).toBe(0);await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
   expect(errors).toEqual([]);expect(logs).toEqual([])
  }finally{await f.dispose()}
-},75000)
+},130000)
 it('pauses readable writing and replays into a new session while preserving the first partial result',async()=>{
  const f=await fixture(),{page,store,errors}=f;try{
   await startWriting(page);await page.evaluate(()=>window.__testHomeGuideTimeline.pause());await page.waitForTimeout(180);const paused=await page.locator('[data-home-guide] .bn-editor').innerText();await page.waitForTimeout(350);expect(await page.locator('[data-home-guide] .bn-editor').innerText()).toBe(paused)
@@ -220,4 +226,4 @@ it('keeps strict review alive during a long pause and then preserves the finishe
   await page.evaluate(()=>window.__testHomeGuideTimeline.play());await complete(page);expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('同比增长10%')
   expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([]);expect(logs).toEqual([])
  }finally{await f.dispose()}
-},65000)
+},130000)
