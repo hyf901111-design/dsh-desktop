@@ -85,3 +85,20 @@ it.each([
  const html=(change as (html:string)=>string)(pointerNative);expect(html).not.toBe(pointerNative)
  expect(noteChartNavigationAllowed(html,routedClick(html,'details > summary'))).toBe(false)
 })
+
+it('recognizes the captured fixed host read-only disclosure against every original model value',()=>{
+ expect(noteChartNavigationAllowed(native,routedClick(native,'details > summary'))).toBe(true)
+})
+it.each([
+ ['changed value',(html:string)=>html.replace('<td>20</td>','<td>200</td>')],
+ ['editable cell',(html:string)=>html.replace('<td>20</td>','<td><input value="20"></td>')],
+ ['linked cell',(html:string)=>html.replace('<td>20</td>','<td><a href="#business">20</a></td>')],
+ ['contenteditable',(html:string)=>html.replace('<table>','<table contenteditable="true">')],
+ ['unknown summary',(html:string)=>html.replace('<summary>查看全部数据</summary>','<summary>修改演示值</summary>')],
+ ['wrong profile heading',(html:string)=>html.replace('<th>日期</th>','<th>分类</th>')],
+ ['duplicate disclosure',(html:string)=>html.replace('</details>','</details><details><summary>查看全部数据</summary></details>')],
+ ['unknown table wrapper',(html:string)=>html.replace('<table>','<div class="data-scroll"><table>').replace('</table>','</table></div>')]
+])('rejects a %s in the fixed host disclosure',(_label,change)=>{
+ const html=(change as (html:string)=>string)(native);expect(html).not.toBe(native)
+ expect(noteChartNavigationAllowed(html,routedClick(html,'details > summary'))).toBe(false)
+})
