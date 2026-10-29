@@ -2601,20 +2601,40 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记演示斜杠菜单异步就绪与失败安全交接",
+        "featureName": "笔记演示改用中际旭创真实财报与专业研究核验",
         "branch": "codex/feat/notes-demo-flow-20261029",
-        "baseCommit": "b52057a11ffc7972228ac1159591ebdf3d39a0cb",
-        "tipCommit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
+        "baseCommit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
+        "tipCommit": "194df7e3473e02756632d971a794da77959d8d61",
         "commits": [
           {
-            "commit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
+            "commit": "194df7e3473e02756632d971a794da77959d8d61",
             "parents": [
-              "b52057a11ffc7972228ac1159591ebdf3d39a0cb"
+              "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225"
             ],
-            "subject": "修复：等待笔记演示斜杠菜单加载并安全恢复失败笔记"
+            "subject": "优化：以中际旭创真实财报重做笔记演示内容"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-artifacts.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes-data.ts"
+          },
           {
             "status": "M",
             "path": "src/preload/home-guide-notes.tsx"
@@ -2629,7 +2649,19 @@
           },
           {
             "status": "M",
+            "path": "test/home-guide-notes-data.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/home-guide-notes-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-notes-host.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-notes-runtime.test.js"
           }
         ],
         "checks": [
@@ -2642,343 +2674,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "同冻结65e提交的tsconfig.node检查通过，argv及120000ms预算复用原Gate14。",
-            "verifiedCommit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
-            "completedAt": "2026-10-29T14:06:49.128173+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-browser.test.js",
-              "-t",
-              "async original slash|async slash",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "实际NotesApp/NativeSlashMenu的3/3通过：400ms原library-list延迟后仍走原Arrow/Enter/library-read；加载中cancel及编辑器aria-controls关系更换拒绝，均不插行情组件。",
-            "verifiedCommit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
-            "completedAt": "2026-10-29T14:07:17.065677+00:00",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-shell-browser.test.js",
-              "-t",
-              "failed original slash|failed Notes handoff",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "实际Guide shell的3/3通过：原library-list拒绝后partial图表/正文连续可见，flush并经原finishGuide转普通Note；deferred交接取消及A-B-A不晚开旧会话。",
-            "verifiedCommit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
-            "completedAt": "2026-10-29T14:08:06.608070+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-browser.test.js",
-              "-t",
-              "checks three actual evidence cards",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "真实25步main完整正例1/1通过（同文件其余27未选），保留三依据/两替换/划段改写/右侧摘要三态与普通重开导出。argv/90000ms预算与b520卡相同以去重。",
-            "verifiedCommit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
-            "completedAt": "2026-10-29T14:08:46.792641+00:00",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-shell-browser.test.js",
-              "-t",
-              "saves and reopens the native note without clipping a 600px",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "600px真实Guide shell完整25步及普通Note重开1/1通过（同文件其余13未选），此次fixture调用与真实preload/index一致的prepareHandoff。argv/180000ms预算与b520卡相同以去重。",
-            "verifiedCommit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
-            "completedAt": "2026-10-29T14:10:07.193591+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-handoff-browser.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "原handoff4/4通过：正常preload交接无空白帧、取消/identity reset/A-B-A不重新打开过期Note。",
-            "verifiedCommit": "65e3b9daa9c7ed4da0dee7c7d380a58fa00a2225",
-            "completedAt": "2026-10-29T14:10:17.892852+00:00",
-            "timeoutMs": 90000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "65e clean-tip真实NotesApp/原NativeSlashMenu/公开Guide调度器browser聚焦12/12通过，并核连续可见帧与普通重开。Root在旧b543 Native已独立证实36631b83退出重开后5节点partial和专业图完整保留，故原空白来自残余Guide壳。65e尚未由本feature构建或替换共享客户端，完整Native25步验收仍由Root集成后执行。"
-        },
-        "acceptanceCriteria": [
-          "斜杠仍通过原PM输入、原NativeSlashMenu和组件库Arrow/Enter/library-read，等待真实异步library-list后的选项，不直接插入或修改普通Notes生成权限。",
-          "等待前后校验同run、同editor节点、同aria-controls原菜单/子菜单及笔记fingerprint；取消、菜单关系变化与library拒绝不得继续插入。",
-          "只有shell显式kind=note、native+persistence、当前pointer owner及非AbortError的步骤失败暂留partial编辑器，失败不completed++且不可重执行；standalone、取消和过期owner仍原dispose。",
-          "完成与错误交接共同走原flush→prepareHandoff/finishGuide→close释放链，异步边界复验active run、generation token、signal、selected session和resident连接；保存/预加载失败保留原视图与fault，不清dirty。",
-          "保留原取消/会话切换/A-B-A/identity reset保护；partial正文和图表不丢失、无空白帧，完整25步与600px成功流程不回归。"
-        ],
-        "risks": [
-          "本卡仅修菜单异步竞态与失败交接，未改正文、图表数字、证券、评论依据或摘要；用户最新要求的真实专业研究内容待基于65e的独立后继，不把当前虚构样本称作真实披露。",
-          "65e未操作共享Native/SDK/用户数据，正式完整Native25步仍待Root统一后继包验收；普通Native市场行情仍依赖原供应商，不能以browser合成行情fixture代替真实来源验收。"
-        ],
-        "generatedAt": "2026-10-29T14:13:55.097672+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-        "verificationCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "test/home-workbench-client.test.js",
-              "test/home-workbench-contract.test.js",
-              "test/home-workbench-runtime.test.js",
-              "test/home-workbench-native.test.js",
-              "test/home-workbench-workspace.test.js",
-              "test/home-workbench-actor.test.js",
-              "test/home-workbench-study-contract.test.js",
-              "test/home-workbench-study-render.test.js",
-              "test/home-workbench-study-integration.test.js",
-              "test/home-workbench-saved-provider.test.js",
-              "test/home-guide-workbench.test.ts",
-              "test/research-grid-arrange-tabs.test.js",
-              "test/financial-connection-row-routing.test.js",
-              "test/home-workbench-browser.test.js",
-              "test/home-guide-operations-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/home-workbench-client.test.js test/home-workbench-contract.test.js test/home-workbench-runtime.test.js test/home-workbench-native.test.js test/home-workbench-workspace.test.js test/home-workbench-actor.test.js test/home-workbench-study-contract.test.js test/home-workbench-study-render.test.js test/home-workbench-study-integration.test.js test/home-workbench-saved-provider.test.js test/home-guide-workbench.test.ts test/research-grid-arrange-tabs.test.js test/financial-connection-row-routing.test.js test/home-workbench-browser.test.js test/home-guide-operations-entry.test.ts",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
+            "summary": "同冻结提交的tsconfig.node检查通过，沿原Gate14的argv与120000ms预算。",
+            "verifiedCommit": "194df7e3473e02756632d971a794da77959d8d61",
+            "completedAt": "2026-10-29T15:10:39.478900+00:00",
             "timeoutMs": 120000
           },
           {
@@ -2996,9 +2694,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-data.test.ts test/home-notes-runtime.test.js test/home-notes-host.test.js test/home-guide-notes-native.test.ts test/home-guide-notes-portal.test.js test/home-guide-notes-scroll.test.ts --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
+            "summary": "同冻结提交42条原协议、来源元值计算、run/session/取消及普通路径隔离检查全通过。",
+            "verifiedCommit": "194df7e3473e02756632d971a794da77959d8d61",
+            "completedAt": "2026-10-29T15:11:12.763634+00:00",
             "timeoutMs": 120000
           },
           {
@@ -3013,9 +2711,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-browser.test.js -t checks three actual evidence cards --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
+            "summary": "同冻结提交真实25步主流程通过；4柱及金额、同比/环比、3份原始依据、改写、右侧公开添加、保存重开导出与回顶均验。",
+            "verifiedCommit": "194df7e3473e02756632d971a794da77959d8d61",
+            "completedAt": "2026-10-29T15:11:58.692206+00:00",
             "timeoutMs": 90000
           },
           {
@@ -3030,28 +2728,30 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-shell-browser.test.js -t saves and reopens the native note without clipping a 600px --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
+            "summary": "同冻结提交600px真实Shell完整演示、公开回复追加、完成后普通Notes保存重开通过。",
+            "verifiedCommit": "194df7e3473e02756632d971a794da77959d8d61",
+            "completedAt": "2026-10-29T15:13:25.406118+00:00",
             "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-native-editor.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-native-editor.test.js --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "3a726c6f6e0dde7505b9e5a8df252862f0629313",
-            "completedAt": "2026-10-29T14:24:35.414Z",
-            "timeoutMs": 90000
           }
         ],
-        "recordedAt": "2026-10-29T14:24:35.414Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实浏览器NotesApp与600px Shell在冻结194df7e完整运行25步；实际4柱/公开查看依据/评论原位替换/选段改写/右侧公开添加到笔记/普通重开及导出已验证。最终打包Native由Root统一构建后验收，本feature未构建或操作共享客户端。"
+        },
+        "acceptanceCriteria": [
+          "固定2026-08-24资料截点，五段按2+1+2逐段键入；原始事实来自2025年报、2026一季报及2026中报，来源URL/页码/披露日可核对。",
+          "标准分组柱图展示2025/2026 Q1/Q2四柱及零基线；金额二位亿元展示，明确累计差额、尾差与按元原值核算的同比174.57%/环比14.29%。",
+          "正常斜杠菜单与组件库插入300308.SZ行情；行情保留实际来源与时点，独立于固定财报复盘口径。",
+          "严格AI随航识别同比/环比、机械年化标签、盈利与估值推理三处问题；两数据气泡均实际点击查看依据并原位替换，逻辑段真实划段改写。",
+          "右侧先显示完整总结，正文此时尚无摘要；只经该真回复添加到笔记按钮追加一次，完成后自然回到顶部。",
+          "原run/session/sender/admission/顺序/取消/dirty/tail/ack及异步Slash就绪、失败partial安全交接保护保持，不更改普通生成或可信图表运行时。"
+        ],
+        "risks": [
+          "最终集成打包Native完整25步/暂停继续/保存重开尚待Root统一新包验收。",
+          "固定财报复盘截至2026-08-24；行情来自正常实时提供方，离线或无数据沿原逻辑如实显示，不补造价格。",
+          "浏览器右侧挑战fixture存在视觉重叠限制，不把它等同于真实Native外观验收；实际原报告依据、选择与追加逻辑已断言。"
+        ],
+        "generatedAt": "2026-10-29T15:15:24.002593+00:00"
       }
     }
   ],
