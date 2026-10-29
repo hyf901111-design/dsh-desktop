@@ -23,19 +23,51 @@ function NativeHomeWorkbenchPortal({sessionId,subagentPanel=false,researchWorksp
  react.useEffect(()=>{
   if(!sessionId||subagentPanel||window.top!==window)return
   let stopped=false,owned=null,latestPlayback=null
-  const requests=new Map(),released=new Map(),changed=()=>new DOMException('工作台演示或当前会话已变化。','AbortError')
+  const requests=new Map(),released=new Map(),changed=reason=>new DOMException('工作台演示或当前会话已变化。'+(reason?' ['+reason+']':''),'AbortError')
   const reply=(d,ok,message)=>{if(!stopped||d.command==='flush')window.dispatchEvent(new CustomEvent('sherlock:home-guide-workbench-reply',{detail:{requestId:d.requestId,runId:d.runId,sessionId,ok,...message?{message}:{}}}))}
-  const hostFor=d=>{const host=document.getElementById(d.hostId),guide=host?.closest('[data-home-guide]'),center=guide?.closest('.pI_x6G_centerCol'),header=[...(center?.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')??[])].find(el=>!el.closest('[data-odyssey-subagent-panel]')),saved=HomeWorkbenchNativeDeps?.getHomeGuideSession?.(sessionId);if(!host?.isConnected||guide?.dataset.homeGuide!==d.runId||!header||header.dataset.eworkNotesSession!==sessionId||saved?.kind!=='workbench'||saved.cwd!==d.cwd)throw changed();return host}
-  const check=t=>{if(stopped||owned!==t||t.controller.signal.aborted||t.resource.owner!==t||hostFor(t.detail)!==t.host)throw changed()}
+  const hostFor=d=>{
+   const host=document.getElementById(d.hostId)
+   if(!host?.isConnected)throw changed('HWB_HOST_MISSING')
+   const guide=host.closest('[data-home-guide]')
+   if(!guide)throw changed('HWB_RUN_MISSING')
+   if(guide.dataset.homeGuide!==d.runId)throw changed('HWB_RUN_MISMATCH')
+   const center=guide.closest('.pI_x6G_centerCol'),header=[...(center?.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')??[])].find(el=>!el.closest('[data-odyssey-subagent-panel]'))
+   if(!header)throw changed('HWB_HEADER_MISSING')
+   if(header.dataset.eworkNotesSession!==sessionId)throw changed('HWB_SESSION_MISMATCH')
+   if(typeof HomeWorkbenchNativeDeps?.getHomeGuideSession!=='function')throw changed('HWB_DEPS_UNAVAILABLE')
+   const saved=HomeWorkbenchNativeDeps.getHomeGuideSession(sessionId)
+   if(!saved)throw changed('HWB_REGISTRATION_UNAVAILABLE')
+   if(saved.kind!=='workbench')throw changed('HWB_REGISTRATION_KIND_MISMATCH')
+   if(saved.cwd!==d.cwd)throw changed('HWB_DIRECTORY_MISMATCH')
+   return host
+  }
+  const check=t=>{
+   if(stopped)throw changed('HWB_PORTAL_STOPPED')
+   if(owned!==t)throw changed('HWB_RUN_OWNER_MISMATCH')
+   if(t.controller.signal.aborted)throw changed('HWB_RUN_ABORTED')
+   if(t.resource.owner!==t)throw changed('HWB_WORKSPACE_OWNER_MISMATCH')
+   if(hostFor(t.detail)!==t.host)throw changed('HWB_HOST_REPLACED')
+  }
   const rpc=async(t,action,extra={})=>{check(t);const response=await fetch('/sherlock/home-guide/workbench',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action,sessionId,runId:t.detail.runId,...extra}),signal:t.controller.signal}),result=await response.json();check(t);if(!response.ok||!result.ok)throw Error(result.message||'工作台回看暂未就绪。');return result}
   const delay=(t,ms)=>new Promise((resolve,reject)=>{const end=error=>{clearTimeout(timer);t.controller.signal.removeEventListener('abort',abort);error?reject(error):resolve()},abort=()=>end(changed()),timer=setTimeout(()=>end(),ms);t.controller.signal.addEventListener('abort',abort,{once:true})})
   const playing=async t=>{for(;;){check(t);if(t.playing&&!document.hidden)return;await delay(t,30)}}
   const hold=async(t,ms)=>{let left=ms,last=performance.now();while(left>0){await delay(t,25);check(t);const now=performance.now();if(t.playing&&!document.hidden)left-=Math.min(60,now-last);last=now}}
-  const waitFor=async(t,fn,active=true)=>{for(let i=0;i<240;i++){if(active)await playing(t);check(t);if(fn())return;await delay(t,25)}throw Error('原生研究画布尚未就绪，请重试。')}
+  const waitFor=async(t,fn,active=true,message='原生研究画布尚未就绪，请重试。')=>{for(let i=0;i<240;i++){if(active)await playing(t);check(t);const value=fn();if(value)return value;await delay(t,25)}throw Error(message)}
   const save=t=>{check(t);if(t.resource.workspace.persist()!==true)throw Error('工作台暂未保存，请重试。')}
   const nodeId=(tab,role)=>'hwb:'+sessionId+':'+tab+':'+role
   const panelNode=(t,p)=>t.resource.workspace.getSnapshot().artifacts.find(n=>n.id===nodeId(p.tab,p.role))
-  const inputFor=t=>[...t.host.closest('.pI_x6G_centerCol').querySelectorAll('textarea[data-odyssey-file-reference-session]')].find(n=>n.dataset.odysseyFileReferenceSession===sessionId&&!n.closest('[data-odyssey-subagent-panel]'))
+  const inputFor=t=>{
+   check(t)
+   // The native sidebar portals to body, outside both the center and frame.
+   // Resolve its session-owned composer, never an arbitrary document textarea.
+   const inputs=[...document.querySelectorAll('.t8lSSG_panel textarea[data-odyssey-file-reference-session]')].filter(input=>{
+    if(input.dataset.odysseyFileReferenceSession!==sessionId||!input.isConnected||input.disabled||input.readOnly||input.getAttribute('aria-disabled')==='true'||input.closest('[data-odyssey-subagent-panel],[inert],[hidden],[aria-hidden="true"],.t8lSSG_panelHidden'))return false
+    for(let node=input;node;node=node.parentElement){const style=window.getComputedStyle(node);if(node.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')return false}
+    return true
+   })
+   return inputs.length===1?inputs[0]:undefined
+  }
+  const readyInput=(t,active=true)=>waitFor(t,()=>inputFor(t),active,'右侧输入框尚未就绪，请重试。')
   const cue=async(t,target,label,action='click')=>{
    await playing(t);if(!target?.isConnected||target.disabled||target.closest('[inert]'))throw changed()
    const requestId=crypto.randomUUID(),runId=t.detail.runId,token=runId+':'+requestId+':target',targetToken=token,marker=document.documentElement.dataset.homeGuidePointerRun
@@ -65,8 +97,8 @@ function NativeHomeWorkbenchPortal({sessionId,subagentPanel=false,researchWorksp
   }
 
   const typeTo=async(t,length)=>{
-   const input=inputFor(t);if(!input)throw Error('右侧输入框尚未就绪。');const chars=[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(HomeWorkbenchPrompt)].map(p=>p.segment),backdrop=input.closest('.uV2eYG_root')?.querySelector('[data-input-backdrop]'),paint=backdrop&&typeof createAssistantTextPaint==='function'?createAssistantTextPaint(backdrop,{epoch:1,live:true},'composer'):null
-   try{for(let i=t.typedCount;i<length;i++){await playing(t);const s=t.shell.snapshot;if(s.draft!==t.draft||s.draftRev!==t.revision||s.imageIds?.length||s.occurrences?.length)throw Error('输入内容已变化，自动填写已停止并保留草稿。');t.draft+=chars[i];t.shell.setDraft(t.draft);t.revision=t.shell.snapshot.draftRev;t.typedCount=i+1;await waitFor(t,()=>input.value===t.draft);input.focus();input.setSelectionRange(input.value.length,input.value.length);t.shell.track(t.draft,t.draft.length);paint?.update();await hold(t,/[，。！？]$/.test(chars[i])?220:52)}}finally{paint?.dispose()}
+   const input=await readyInput(t),chars=[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(HomeWorkbenchPrompt)].map(p=>p.segment),backdrop=input.closest('.uV2eYG_root')?.querySelector('[data-input-backdrop]'),paint=backdrop&&typeof createAssistantTextPaint==='function'?createAssistantTextPaint(backdrop,{epoch:1,live:true},'composer'):null
+   try{for(let i=t.typedCount;i<length;i++){await playing(t);if(inputFor(t)!==input)throw changed();const s=t.shell.snapshot;if(s.draft!==t.draft||s.draftRev!==t.revision||s.imageIds?.length||s.occurrences?.length)throw Error('输入内容已变化，自动填写已停止并保留草稿。');t.draft+=chars[i];t.shell.setDraft(t.draft);t.revision=t.shell.snapshot.draftRev;t.typedCount=i+1;await waitFor(t,()=>input.value===t.draft);if(inputFor(t)!==input)throw changed();input.focus();input.setSelectionRange(input.value.length,input.value.length);t.shell.track(t.draft,t.draft.length);paint?.update();await hold(t,/[，。！？]$/.test(chars[i])?220:52)}}finally{paint?.dispose()}
   }
   const layout=(t,tab)=>{
    const w=t.resource.workspace,s=w.getSnapshot(),m=createResearchGrid().metrics(s.canvasSize.availableWidth||s.canvasSize.width),cells=new Map(homeWorkbenchReplayCells(tab,m,sessionId).map(cell=>[cell.id,cell]))
@@ -112,11 +144,11 @@ function NativeHomeWorkbenchPortal({sessionId,subagentPanel=false,researchWorksp
     if(resource.owner||!shell||d.fresh!==true||shell.snapshot.draft||shell.snapshot.imageIds?.length||shell.snapshot.occurrences?.length||resource.workspace.getSnapshot().artifacts.length)throw Error('请使用独立的空白研究示例。')
     const t={detail:{...d},host,resource,provider:{...resource.provider,runId:d.runId},shell,controller:new AbortController(),playing:latestPlayback?.runId===d.runId&&latestPlayback.playing===true,animations:[],typedCount:0,draft:'',revision:shell.snapshot.draftRev,index:-1,complete:false};owned=t;resource.owner=t
     HomePresentationSubmissions?.watch({sessionId,session:HomeWorkbenchNativeDeps.sessions?.binding?.(sessionId)?.session,signal:t.controller.signal,current:()=>check(t)})
-    await rpc(t,'prepare',{fresh:true,cwd:d.cwd});await rpc(t,'playback',{playing:t.playing&&!document.hidden});check(t);resource.workspace.setViewport({x:0,y:0,scale:1});setEntry(t);await waitFor(t,()=>!!host.querySelector('[data-research-canvas]'),false);return
+    await rpc(t,'prepare',{fresh:true,cwd:d.cwd});await rpc(t,'playback',{playing:t.playing&&!document.hidden});check(t);resource.workspace.setViewport({x:0,y:0,scale:1});setEntry(t);await waitFor(t,()=>!!host.querySelector('[data-research-canvas]'),false);await readyInput(t,false);return
    }
    const t=owned;if(!t||t.detail.runId!==d.runId||t.detail.hostId!==d.hostId)throw changed();check(t)
    const index=HomeWorkbenchSteps.findIndex(s=>s.id===d.command);if(index<0||index>t.index+1)throw Error('工作台步骤顺序已变化。');if(index<=t.index)return;await playing(t)
-   if(index===0){const input=inputFor(t);await cue(t,input,'输入研究需求');input.focus()}
+   if(index===0){const input=await readyInput(t);await cue(t,input,'输入研究需求');if(inputFor(t)!==input)throw changed();input.focus()}
    if(index===1)await typeTo(t,32)
    if(index===2){await typeTo(t,[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(HomeWorkbenchPrompt)].length);await cue(t,inputFor(t)?.closest('.uV2eYG_root')?.querySelector('button.uV2eYG_primary'),'准备发送研究需求','move')}
    if(index===3){const unchanged=()=>t.shell.snapshot.draft===HomeWorkbenchPrompt&&t.shell.snapshot.draftRev===t.revision&&!t.shell.snapshot.imageIds?.length&&!t.shell.snapshot.occurrences?.length;if(!unchanged())throw Error('需求已编辑，演示已停止并保留草稿。');const button=inputFor(t)?.closest('.uV2eYG_root')?.querySelector('button.uV2eYG_primary');await cue(t,button,'发送研究需求');if(!unchanged())throw changed();button.click();await waitFor(t,()=>t.shell.snapshot.draft==='');await rpc(t,'checkpoint',{stage:'accepted'});odysseyCreationFinish(sessionId)}
