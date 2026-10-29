@@ -140,6 +140,19 @@ it.each(['notes','conversation'] as const)('contains keyboard focus in real %s s
  }finally{await f.close()}
 },45000)
 
+it('separates the native selection guard from real controls when reopening a pending Notes result',async()=>{
+ const f=await open('notes','table');try{
+  await f.page.evaluate(()=>{const w=window as any,e=w.retainedEditor,p=w.retainedProposals,b=e.getBlock('component'),node=JSON.parse(b.props.payload);p.begin('retained-selection-result','测试宿主选择遮罩和真实控件',{blockId:'anchor'});p.run(()=>e.updateBlock(b,{props:{payload:JSON.stringify({...node,title:'待确认的真实表格'})}}));p.finish('retained-selection-result',false,'已生成1个组件','component')})
+  await expect.poll(()=>f.card.locator(':scope > header').textContent()).toContain('待确认的真实表格');await f.page.evaluate(()=>(window as any).flushRetained())
+  await f.card.getByRole('button',{name:'选中组件并操作内容',exact:true}).waitFor();await f.page.evaluate(()=>document.addEventListener('pointerdown',event=>{(window as any).retainedSelectionPointer={classes:(event.target as Element).getAttribute('class'),label:(event.target as Element).getAttribute('aria-label')}},{capture:true,once:true}))
+  await f.page.locator('.bn-block-outer[data-id="component"] .bn-block-content').click()
+  expect(await f.page.evaluate(()=>(window as any).retainedSelectionPointer)).toMatchObject({classes:'en-component-scroll-guard',label:'选中组件并操作内容'})
+  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).press('Escape');await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0)
+  await menu(f);expect(await f.page.locator('.en-space-ai').count()).toBe(0);await f.page.keyboard.press('Escape')
+  const search=f.card.getByPlaceholder('搜索表格');await search.click();await search.fill('真实记录 01');expect(await search.inputValue()).toBe('真实记录 01');expect(await f.page.locator('.en-space-ai').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},45000)
+
 it('marks a real BlockNote/Yjs AI result dirty after manual menu rename and preserves it through proposal undo and disk reopen',async()=>{
  const f=await open('notes');try{
   await f.page.evaluate(()=>{const w=window as any,e=w.retainedEditor,p=w.retainedProposals,b=e.getBlock('component'),node=JSON.parse(b.props.payload);p.begin('retained-owned-result','测试已有AI结果的人工重命名',{blockId:'anchor'});p.run(()=>e.updateBlock(b,{props:{payload:JSON.stringify({...node,title:'AI生成的初始名称'})}}));p.finish('retained-owned-result',false,'已生成1个组件','component')})
