@@ -252,6 +252,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const [inlineDraft,setInlineDraft]=useState<NoteInlineAiDraft>(),inlineDraftRef=useRef<NoteInlineAiDraft>(),inlinePrompt=useRef(''),inlineRequest=useRef<{requestId:string;anchor:NoteInsertionAnchor}>(),composing=useRef(false)
   inlineDraftRef.current=inlineDraft
+  const reviewedProposal=useRef<string>(),reviewActions=useRef<{show(value:NoteInlineProposal):void;confirm(id:string):void}>(),automaticSettlements=useRef<Promise<unknown>>(Promise.resolve()),settlementTask=useRef<Promise<unknown>>(Promise.resolve())
   const capabilityFingerprint=useRef(''),capabilityCards=useRef(new Map<string,string>()),capabilityReservations=useRef(new Map<string,string>())
   const inlineCreations=useRef(new Map<string,{blockId:string;identity:string}>())
   const [proposalVersion,setProposalVersion]=useState(0),proposalRestore=useRef(false),settlingProposal=useRef('')
@@ -277,10 +278,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }
   const showProposal=(value:NoteInlineProposal,busy=false)=>{
     const state=inlineProposalState(value)
-    if(!busy&&value.state==='ready'&&state.onlyFailed){inlinePrompt.current=value.prompt;setInlineDraft(previous=>previous&&(previous.review?.id===value.id||inlineRequest.current?.requestId===value.id)?{...previous,prompt:value.prompt,review:undefined,error:state.error,reply:undefined}:{anchor:{...value.anchor,documentId:client.current},prompt:value.prompt,error:state.error});return}
+    if(!busy&&value.state==='ready'&&state.onlyFailed){reviewedProposal.current=undefined;inlinePrompt.current=value.prompt;setInlineDraft(previous=>previous&&(previous.review?.id===value.id||inlineRequest.current?.requestId===value.id)?{...previous,prompt:value.prompt,review:undefined,error:state.error,reply:undefined}:{anchor:{...value.anchor,documentId:client.current},prompt:value.prompt,error:state.error});return}
     const owned=new Set((busy?value.changes:state.changes).filter(change=>change.after).map(change=>change.id)),ids=editor.document.filter((block:any)=>owned.has(block.id)).map((block:any)=>block.id),anchor=ids[0]||[value.anchor?.blockId,...value.changes.flatMap(change=>[change.next,change.previous])].find(id=>id&&editor.getBlock(id))||editor.document[0]?.id
     if(!anchor)return
-    const review={id:value.id,summary:state.summary,blockIds:ids,anchorBlockId:anchor,anchorIsResult:!!ids[0],busy,canUndo:editor.isEditable&&proposals.canUndo(value.id)},error=busy?undefined:state.failed.length?state.error:value.error
+    reviewedProposal.current=value.id
+    const review={id:value.id,summary:state.summary,blockIds:ids,anchorBlockId:anchor,anchorIsResult:!!ids[0],busy:busy||!!settlingProposal.current,canUndo:editor.isEditable&&proposals.canUndo(value.id)},error=busy?undefined:state.failed.length?state.error:value.error
     setInlineDraft(previous=>previous&&(previous.review?.id===value.id||inlineRequest.current?.requestId===value.id)?{...previous,review,error,reply:undefined}:{anchor:{...value.anchor,documentId:client.current},prompt:value.prompt,review,error})
   }
   useEffect(()=>{
@@ -290,7 +292,38 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const current=inlineDraftRef.current?.review,live=inlineRequest.current?.requestId,value=values.find(item=>item.id===(live||current?.id))
     if(value&&(value.state==='ready'||value.changes.some(change=>change.after)))showProposal(value,value.state==='running'||settlingProposal.current===value.id)
   },[proposalVersion,proposals,editor])
-  useEffect(()=>{const open=(event:Event)=>{const element=event.target as HTMLElement,target=element.closest?.<HTMLElement>('[data-en-inline-proposal-id]'),control=element.closest?.('button,input,textarea,select,a,summary,label,[role="button"],[role="menuitem"],[role="menuitemcheckbox"],[role="menuitemradio"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="spinbutton"],[role="combobox"],[role="textbox"],[role="tab"],[role="option"],[role="separator"]');if(control&&target?.contains(control)&&!control.matches('button.en-component-scroll-guard'))return;if(request.current||settlingProposal.current||inlineDraftRef.current&&!inlineDraftRef.current.review&&inlineDraftRef.current.prompt.trim()||!target||!scroll.current?.contains(target))return;const value=proposals.list().find(item=>item.id===target.dataset.enInlineProposalId);if(value)showProposal(value)};document.addEventListener('pointerdown',open);return()=>{document.removeEventListener('pointerdown',open);proposals.dispose()}},[proposals,editor])
+  useEffect(()=>{
+    let gesture:{blockId:string;proposalId?:string;from?:string;documentId:string;epoch:number}|undefined
+    const frames=new Set<number>()
+    const hit=(event:Event)=>{
+      const path=event.composedPath().filter(node=>node instanceof Element) as HTMLElement[],outer=path.find(node=>node.matches('.bn-block-outer[data-id]'))
+      if(!outer||!scroll.current?.contains(outer)||!outer.closest('.bn-editor')||!path.some(node=>node.matches('.bn-block-content')))return
+      const control=path.slice(0,path.indexOf(outer)).find(node=>node.matches('button,input,textarea,select,a,summary,label,[role="button"],[role="menuitem"],[role="menuitemcheckbox"],[role="menuitemradio"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="spinbutton"],[role="combobox"],[role="textbox"],[role="tab"],[role="option"],[role="separator"]'))
+      if(control&&!control.matches('button.en-component-scroll-guard'))return
+      return{blockId:outer.dataset.id!,proposalId:path.find(node=>node.hasAttribute('data-en-inline-proposal-id'))?.dataset.enInlineProposalId}
+    }
+    const down=(event:PointerEvent)=>{gesture=undefined;if(event.button!==0||event.isPrimary===false)return;const target=hit(event);if(target)gesture={...target,from:inlineDraftRef.current?.review?.id||(!inlineDraftRef.current?reviewedProposal.current:undefined),documentId:client.current,epoch:epoch.current}}
+    const cancel=()=>{gesture=undefined}
+    const click=(event:MouseEvent)=>{
+      const target=hit(event),previous=gesture;gesture=undefined
+      if(!target||!previous||event.button!==0||event.detail===0||target.blockId!==previous.blockId||previous.documentId!==client.current||previous.epoch!==epoch.current||request.current||inlineDraftRef.current&&!inlineDraftRef.current.review&&inlineDraftRef.current.prompt.trim())return
+      // A native empty-paragraph click can precede ProseMirror's selectionchange.
+      // Adopt that exact browser selection before review decorations dispatch.
+      const view=editor._tiptapEditor.view,native=view.dom.ownerDocument.getSelection()
+      if((previous.from||target.proposalId)&&editor.isEditable&&native?.anchorNode&&native.focusNode&&view.dom.contains(native.anchorNode)&&view.dom.contains(native.focusNode)&&view.dom.contains(view.dom.ownerDocument.activeElement)&&native.focusNode.parentElement?.closest('.bn-block-outer')?.getAttribute('data-id')===target.blockId){
+        try{const from=view.posAtDOM(native.anchorNode,native.anchorOffset),to=view.posAtDOM(native.focusNode,native.focusOffset);if(view.state.doc.resolve(from).parent.inlineContent&&view.state.doc.resolve(to).parent.inlineContent&&(view.state.selection.anchor!==from||view.state.selection.head!==to))editor._tiptapEditor.commands.setTextSelection({from,to})}catch{}
+      }
+      const frame=requestAnimationFrame(()=>{
+        frames.delete(frame)
+        if(disposed.current||!editorActive()||previous.documentId!==client.current||previous.epoch!==epoch.current||request.current)return
+        const next=target.proposalId&&proposals.list().find(value=>value.id===target.proposalId)
+        if(next)reviewActions.current?.show(next)
+        if(previous.from&&previous.from!==target.proposalId&&(next||!target.proposalId&&editor.getBlock(target.blockId)?.type==='paragraph'))reviewActions.current?.confirm(previous.from)
+      });frames.add(frame)
+    }
+    document.addEventListener('pointerdown',down,true);document.addEventListener('pointercancel',cancel,true);document.addEventListener('click',click)
+    return()=>{document.removeEventListener('pointerdown',down,true);document.removeEventListener('pointercancel',cancel,true);document.removeEventListener('click',click);for(const frame of frames)cancelAnimationFrame(frame);proposals.dispose()}
+  },[proposals,editor])
   const dataRefreshGuard=useRef(createNoteDataRefreshGuard())
   const externalCapabilities=useRef<ReturnType<typeof createExternalNoteCapabilityLease>>()
   const [externalBusy,setExternalBusy]=useState(false)
@@ -655,16 +688,25 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const inlineCommands=useRef({cancel:cancelInlineAi});inlineCommands.current={cancel:cancelInlineAi}
   useEffect(()=>{if(props.active===false)inlineCommands.current.cancel()},[props.active])
   const inlineComponents=useInlineComponentGeneration({sessionId:props.sessionId,bridge:props.bridge,editor:aiComponentEditor,current:()=>!disposed.current&&!props.recovery&&editorActive(),persist:persistConfirmed,changed,update:(id,patch)=>componentOwned(id)?proposals.run(()=>updateSystemComponent(id,patch)):updateSystemComponent(id,patch)})
-  const settleInlineProposal=async(undo:boolean)=>{
-    const id=inlineDraftRef.current?.review?.id,value=id&&proposals.list().find(item=>item.id===id)
+  const settleInlineProposal=(undo:boolean,boundId?:string,passive=false)=>{
+   const run=async()=>{
+    const id=boundId||inlineDraftRef.current?.review?.id,value=id&&proposals.list().find(item=>item.id===id)
     if(!value||!editorActive()||!editor.isEditable||!nativeCurrent()||props.recovery||request.current||settlingProposal.current)return
-    settlingProposal.current=value.id;proposals.setError(value.id,'');showProposal({...value,error:''},true);let restore=value
+    const state=inlineProposalState(value)
+    if(passive&&(value.state!=='ready'||!value.resultKind||value.error||state.failed.length||!state.shown.some(change=>!!editor.getBlock(change.id))||externalCapabilities.current?.pending()))return
+    settlingProposal.current=value.id;proposals.setError(value.id,'');if(!passive)showProposal({...value,error:''},true);else setInlineDraft(draft=>draft?.review?.id===value.id?{...draft,review:{...draft.review,busy:true}}:draft);let restore=value
+    const persist=async()=>{try{await persistConfirmed()}catch(error){if(!passive||disposed.current||!editorActive()||!nativeCurrent())throw error;await persistConfirmed()}}
     try{
-      if(undo){const result=proposals.undo(value.id);changed();await persistConfirmed();if(!result.complete){const current=proposals.list().find(item=>item.id===value.id);if(current)showProposal(current);return}}
-      restore=proposals.list().find(item=>item.id===value.id)||value;proposals.confirm(value.id);changed();await persistConfirmed();setInlineDraft(undefined);inlinePrompt.current=undo?value.prompt:''
+      if(undo){const result=proposals.undo(value.id);changed();await persist();if(!result.complete)return}
+      restore=proposals.list().find(item=>item.id===value.id)||value;proposals.confirm(value.id);changed();await persist()
+      if(reviewedProposal.current===value.id){if(inlineDraftRef.current?.review?.id===value.id)inlinePrompt.current=undo?value.prompt:'';reviewedProposal.current=undefined}
+      setInlineDraft(draft=>draft?.review?.id===value.id?undefined:draft)
       if(value.resultKind==='text'||value.resultKind==='component')publishTask(value.id,undo?'discarded':'accepted')
-    }catch(error){if(!proposals.list().some(item=>item.id===value.id))proposals.restore(restore);proposals.setError(value.id,(error as Error).message);changed();const current=proposals.list().find(item=>item.id===value.id);if(current)showProposal(current);setInlineDraft(draft=>draft?{...draft,error:(error as Error).message}:draft)}finally{settlingProposal.current='';const current=proposals.list().find(item=>item.id===value.id);if(current)showProposal(current)}
+    }catch(error){if(!proposals.list().some(item=>item.id===value.id))proposals.restore(restore);proposals.setError(value.id,(error as Error).message);changed();setInlineDraft(draft=>draft?.review?.id===value.id?{...draft,error:(error as Error).message}:draft)}finally{settlingProposal.current='';setInlineDraft(draft=>draft?.review?{...draft,review:{...draft.review,busy:proposals.list().find(item=>item.id===draft.review!.id)?.state==='running',canUndo:editor.isEditable&&proposals.canUndo(draft.review.id)}}:draft)}
+   }
+   const result=run();settlementTask.current=result;return result
   }
+  reviewActions.current={show:showProposal,confirm:id=>{automaticSettlements.current=automaticSettlements.current.catch(()=>{}).then(async()=>{await settlementTask.current.catch(()=>{});if(!disposed.current)await settleInlineProposal(false,id,true)}).catch(error=>{if(!disposed.current&&editorActive())setError((error as Error).message)})}}
   useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key!=='Escape'||event.defaultPrevented||event.isComposing||request.current||!inlineDraftRef.current?.review||!scroll.current?.contains(event.target as Node))return;event.preventDefault();setInlineDraft(undefined)};document.addEventListener('keydown',escape);return()=>document.removeEventListener('keydown',escape)},[])
   const apply = async (replace: boolean) => {
     if (!preview||!nativeCurrent()) return
