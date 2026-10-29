@@ -1,10 +1,13 @@
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
-import {expect,it} from 'vitest'
+import {beforeAll,expect,it} from 'vitest'
 import {createResearchGrid} from '../packages/dsh-research-task-runtime/research-grid.js'
 import {financialWidgetDefaults,financialWidgetDimensions} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 import {patchFinancialWidgetClient} from '../scripts/lib/financial-widget-client.mjs'
 import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
+import {prepareFinancialClientSource} from './helpers/financial-widget-client-fixture.js'
+
+beforeAll(()=>prepareFinancialClientSource({refreshState:true}))
 
 it('fills the remaining row width before creating a new row without moving existing cards',()=>{
  const grid=createResearchGrid(),before=[{id:'watch',x:0,y:0,w:14,h:23}],saved=structuredClone(before)
