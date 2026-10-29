@@ -636,161 +636,30 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记空格生成套层兼容、真实文字降级与纯需求输入",
+        "featureName": "隔离需求输入法状态并恢复后续空格生成",
         "branch": "codex/feat/notes-react-runtime-20261028",
-        "baseCommit": "9b72ed700f0beb01020a2664d194b8ee0de8e1e3",
-        "tipCommit": "462bddd2a26b1ebf3ee2e212bab7a61f5cec0a1c",
+        "baseCommit": "462bddd2a26b1ebf3ee2e212bab7a61f5cec0a1c",
+        "tipCommit": "dc41a3bab4c0468a4738edba4a04a46eab973a41",
         "commits": [
           {
-            "commit": "2e50163408e9996e0b3c831dbe90e2f0676def25",
+            "commit": "dc41a3bab4c0468a4738edba4a04a46eab973a41",
             "parents": [
-              "9b72ed700f0beb01020a2664d194b8ee0de8e1e3"
+              "462bddd2a26b1ebf3ee2e212bab7a61f5cec0a1c"
             ],
-            "subject": "兼容笔记生成套层并提供有界文字降级"
-          },
-          {
-            "commit": "bdc1efcc5d6f97d20bfc4f28b1dd37e7b88eda68",
-            "parents": [
-              "2e50163408e9996e0b3c831dbe90e2f0676def25"
-            ],
-            "subject": "保持空格需求框纯输入并安全处理文字降级结果"
-          },
-          {
-            "commit": "462bddd2a26b1ebf3ee2e212bab7a61f5cec0a1c",
-            "parents": [
-              "bdc1efcc5d6f97d20bfc4f28b1dd37e7b88eda68"
-            ],
-            "subject": "守住文字降级的正文边界与混合结果定位"
+            "subject": "避免输入框输入法状态阻断后续笔记空格生成"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-ai.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/notes-generation-route.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-session.js"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/service.ts"
-          },
           {
             "status": "M",
             "path": "src/preload/notes/editor.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/notes/inline-ai-composer.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/workspace-notes.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/notes-native-capabilities-wrapper.json"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-client-capability-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-current-wire-recovery.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/notes-inline-ai-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-inline-capability-bridge-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-inline-result-browser.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-native-wrapper-recovery.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-output-compatibility.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-text-fallback.test.js"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-ai-reasoning-route.test.js",
-              "test/notes-stream-failure.test.js",
-              "test/notes-current-wire-recovery.test.js",
-              "test/notes-ai.test.js",
-              "test/notes-output-compatibility.test.js",
-              "test/notes-ai-admission.test.js",
-              "test/notes-service.test.ts",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-inline-component-generation.test.ts",
-              "test/notes-native-wrapper-recovery.test.js",
-              "test/notes-text-fallback.test.js",
-              "test/notes-session.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "296 passed; exit0; log=/tmp/sherlock-notes-wrapper-fallback-20261029/backend-release.log; SHA256=da5751742b5e8ba1bbb81df771be2ebcc87b3197cfe32989524a322b9275f380; source584+protectedAssets11 before/after equal; proof=/tmp/sherlock-notes-wrapper-fallback-20261029/verification-checks-release.json",
-            "verifiedCommit": "462bddd2a26b1ebf3ee2e212bab7a61f5cec0a1c",
-            "completedAt": "2026-10-29T14:45:18.445010+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "direct check passed; exit0; log=/tmp/sherlock-notes-wrapper-fallback-20261029/typecheck-release.log; SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; source584+protectedAssets11 before/after equal; proof=/tmp/sherlock-notes-wrapper-fallback-20261029/verification-checks-release.json",
-            "verifiedCommit": "462bddd2a26b1ebf3ee2e212bab7a61f5cec0a1c",
-            "completedAt": "2026-10-29T14:45:27.112456+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "direct check passed; exit0; log=/tmp/sherlock-notes-wrapper-fallback-20261029/diff-release.log; SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; source584+protectedAssets11 before/after equal; proof=/tmp/sherlock-notes-wrapper-fallback-20261029/verification-checks-release.json",
-            "verifiedCommit": "462bddd2a26b1ebf3ee2e212bab7a61f5cec0a1c",
-            "completedAt": "2026-10-29T14:45:27.294543+00:00",
-            "timeoutMs": 10000
-          },
           {
             "argv": [
               "npx",
@@ -799,345 +668,82 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/notes-inline-ai-browser.test.ts",
-              "test/notes-inline-result-browser.test.ts",
-              "test/notes-inline-capability-bridge-browser.test.ts",
               "--maxWorkers=1",
               "--fileParallelism=false",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "100 passed; exit0; log=/tmp/sherlock-notes-wrapper-fallback-20261029/ui-release.log; SHA256=b6511014e3f4be49bc8cc20fdd475fd430db27080109c294339b2cf13505e6d8; source584+protectedAssets11 before/after equal; proof=/tmp/sherlock-notes-wrapper-fallback-20261029/verification-checks-release.json",
-            "verifiedCommit": "462bddd2a26b1ebf3ee2e212bab7a61f5cec0a1c",
-            "completedAt": "2026-10-29T14:50:10.964809+00:00",
-            "timeoutMs": 600000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "同精确tip隔离真实production-bundle三文件100/100：真实Main能力bridge22含transportUUID不同model-callID、失败/不可用安全slot清理、输入框无报错/问答、真实有用文字蓝proposal/保存重开/Undo/Confirm/clickaway，mixed/人工改/ABA/外来/旧slot复用/取消/readonly/锚点删除重建/保存失败保护；原inline30+result48完整重跑。未操作或声称签名Native包完成。"
-        },
-        "acceptanceCriteria": [
-          "297235db实际同nonce capabilities套层在原最多一次格式恢复边界，仅immutable batch的ID/capability/参数/顺序完全一致时规范化，沿原host/executor执行；跨nonce/新增未知键/改参/换目标/已处理调用均不新增或重放。",
-          "正常纯文本、Markdown、普通代码围栏、明确展示JSON及business数据保留；已知document/body纯正文别名直接提取；raw和text.markdown双层whole-known错误/动作壳不进入正文，不扫描Markdown内部JSON。",
-          "仅格式恢复耗尽无动作、或真实failed/unavailable create后允许内部一次无工具内容生成；只用原instruction/引用/笔记/真实receipts，输出可用正文，不伪称组件成功，不增加格式/动作执行轮。",
-          "内容降级使用本请求最初已验证provider/model/reasoningEffort私有快照；scope绑定request/instruction/document/owner，仅同请求content-only复用，end/finally/既有610秒lease清理，不采纳renderer传入的mode或route。",
-          "存在真实succeeded create的正文仍要求可信原inlineOrder/hint、原call依赖及editor当前request成功卡Yidentity/fingerprint即时复验；缺order不猜位置，保留安全pending正文及真实partial，不送editor、不增加fallback轮。",
-          "输入框仅需求输入+发送；processing/review继续原单行；降级结果在原位下方蓝标，以已生成文字/部分组件未生成等真实摘要呈现；纯owned失败卡只有同request/Yidentity/完整fingerprint未变才安全清理。",
-          "纯safe-clean且无mixed成功组件沿原clickaway确认；mixed/手改/ABA/旧资源/位置失效/savefail保留保护。原passive guard未弱化，failed receipts仍在result/history，网络失败缓存真实partial避免同request再建组件。",
-          "同tip实际backend12文件296/296 + production-browser3文件100/100，TC/diff exit0；4组前后clean且584source/11protectedAssets一致；独立只读复审3反例闭合无阻塞。"
-        ],
-        "risks": [
-          "此卡仅base9b72后3个中文提交17路径；不吸收Demo、Research、Conversation、SDK/客户端/依赖/manifest或用户数据变更。",
-          "新签名Native真实GLM-5.3-Flash Max及297235db原需求仍待Root正式集成换包验收，隔离浏览器通过不等同Native完成；未解释或冒称修复所有上游420ms空流原因。",
-          "真实网络/abort/length/error或没有完整安全正文时不能假Ready；包含成功组件但未知顺序时保留partial及pending正文，不猜顺序/改旧块/自动重跑。",
-          "原bdc第一次最终UI组因独立复审阻断而主动SIGINT exit130，已保留verification-checks.json/ui-final.log；本卡只引用新462同tip完整100绿，不覆盖原RED或中断记录。"
-        ],
-        "generatedAt": "2026-10-29T14:51:20.183299+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-        "verificationCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "test/home-workbench-client.test.js",
-              "test/home-workbench-contract.test.js",
-              "test/home-workbench-runtime.test.js",
-              "test/home-workbench-native.test.js",
-              "test/home-workbench-workspace.test.js",
-              "test/home-workbench-actor.test.js",
-              "test/home-workbench-study-contract.test.js",
-              "test/home-workbench-study-render.test.js",
-              "test/home-workbench-study-integration.test.js",
-              "test/home-workbench-saved-provider.test.js",
-              "test/home-guide-workbench.test.ts",
-              "test/research-grid-arrange-tabs.test.js",
-              "test/financial-connection-row-routing.test.js",
-              "test/home-workbench-browser.test.js",
-              "test/home-guide-operations-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/home-workbench-client.test.js test/home-workbench-contract.test.js test/home-workbench-runtime.test.js test/home-workbench-native.test.js test/home-workbench-workspace.test.js test/home-workbench-actor.test.js test/home-workbench-study-contract.test.js test/home-workbench-study-render.test.js test/home-workbench-study-integration.test.js test/home-workbench-saved-provider.test.js test/home-guide-workbench.test.ts test/research-grid-arrange-tabs.test.js test/financial-connection-row-routing.test.js test/home-workbench-browser.test.js test/home-guide-operations-entry.test.ts",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
+            "summary": "33 passed; 0 unselected; exit0; log=/tmp/sherlock-notes-body-ime-20261030/inline-final.log; SHA256=cae368f9eadcb7613089627029f4d44b111bd12b352523144cd5ae63b68c8f82; proof=/tmp/sherlock-notes-body-ime-20261030/verification.json; clean before/after 577 source files and 9 existing protected SDK asset byte-equal (legacy absent candidates recorded as null)",
+            "verifiedCommit": "dc41a3bab4c0468a4738edba4a04a46eab973a41",
+            "completedAt": "2026-10-29T17:09:23.259015+00:00",
             "timeoutMs": 240000
           },
           {
             "argv": [
-              "./node_modules/node/bin/node",
+              "npx",
+              "--no-install",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-inline-result-browser.test.ts",
+              "-t",
+              "undoes only this generated result|confirms rich content below|preserves corrected pending metadata|undoes the sole generated paragraph",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "6 passed; 42 unselected; exit0; log=/tmp/sherlock-notes-body-ime-20261030/review-final.log; SHA256=2703cfd17e6f00a147acd447c085e658a0ded53adc7a6755433ca9218852543c; proof=/tmp/sherlock-notes-body-ime-20261030/verification.json; clean before/after 577 source files and 9 existing protected SDK asset byte-equal (legacy absent candidates recorded as null)",
+            "verifiedCommit": "dc41a3bab4c0468a4738edba4a04a46eab973a41",
+            "completedAt": "2026-10-29T17:09:53.396638+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "node",
               "node_modules/typescript/bin/tsc",
               "--noEmit",
               "-p",
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
+            "summary": "0 passed; 0 unselected; exit0; log=/tmp/sherlock-notes-body-ime-20261030/typecheck-final.log; SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; proof=/tmp/sherlock-notes-body-ime-20261030/verification.json; clean before/after 577 source files and 9 existing protected SDK asset byte-equal (legacy absent candidates recorded as null)",
+            "verifiedCommit": "dc41a3bab4c0468a4738edba4a04a46eab973a41",
+            "completedAt": "2026-10-29T17:10:02.477879+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-data.test.ts",
-              "test/home-notes-runtime.test.js",
-              "test/home-notes-host.test.js",
-              "test/home-guide-notes-native.test.ts",
-              "test/home-guide-notes-portal.test.js",
-              "test/home-guide-notes-scroll.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
+              "git",
+              "diff",
+              "--check"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-data.test.ts test/home-notes-runtime.test.js test/home-notes-host.test.js test/home-guide-notes-native.test.ts test/home-guide-notes-portal.test.js test/home-guide-notes-scroll.test.ts --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-browser.test.js",
-              "-t",
-              "checks three actual evidence cards",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-browser.test.js -t checks three actual evidence cards --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-shell-browser.test.js",
-              "-t",
-              "saves and reopens the native note without clipping a 600px",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-shell-browser.test.js -t saves and reopens the native note without clipping a 600px --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-native-editor.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-native-editor.test.js --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "e0a7288683e5f29d2e5595259f49f6a794ce94a9",
-            "completedAt": "2026-10-29T14:57:14.774Z",
-            "timeoutMs": 90000
+            "summary": "0 passed; 0 unselected; exit0; log=/tmp/sherlock-notes-body-ime-20261030/diff-final.log; SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; proof=/tmp/sherlock-notes-body-ime-20261030/verification.json; clean before/after 577 source files and 9 existing protected SDK asset byte-equal (legacy absent candidates recorded as null)",
+            "verifiedCommit": "dc41a3bab4c0468a4738edba4a04a46eab973a41",
+            "completedAt": "2026-10-29T17:10:02.649705+00:00",
+            "timeoutMs": 10000
           }
         ],
-        "recordedAt": "2026-10-29T14:57:14.774Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "同tip production-bundle隔离browser33完整+6直接review=39通过：trusted IME→程序value→click-only发送→真实延迟保存→Confirm或Undo→鼠标定位真实空段→Space再次打开；正常正文IME、非空/只读/IME Enter/取消/失败/原位/保存重开及直接审阅错误恢复均保持。实际签名Native第二轮Space仍由Root换包后重测，未冒称通过。"
+        },
+        "acceptanceCriteria": [
+          "只有真正可编辑PM正文中的compositionstart能够置正文IME guard；排除需求textarea、原生input/textarea/button/select与contenteditable=false区。",
+          "compositionend原清理、原整条Space捕获条件及noteInlineAiTrigger键码/isComposing/view.composing、owner/session/current/readonly、请求/settle/ABA保护不动；反向移除该唯一start过滤后editor与462逐byte相等。",
+          "真实CDP trusted compositionstart/input、程序替换值和click-only发送造成textarea卸载无compositionend的Confirm/Undo回归在旧462先2 RED；无IME/正文IME控制保持，最小过滤后3 GREEN，未人为写composition ref或绕过生产提交。",
+          "新回归使用真实Notes/React/BlockNote和原生成/审阅流程，延迟生成Promise及hold/release保存Promise；在PM selection empty/offset0/content.size0及原前后段保留条件下，后续Space开启输入且不插入空格。",
+          "同精确tip完整inline33+直接review6通过，TC/diff0，source/实际存在的SDK资产前后hash等值，工作树clean；只改editor和直接browser测试两路径。"
+        ],
+        "risks": [
+          "旧a1b Native第二轮Space失败状态保留：本修复依据独立生产可达RED，不声称已捕获旧Native的每个事件，也不声称新签名包已通过。Root须正式合并/构建后真实重测。",
+          "不改SDK、客户端、共享assets、模型/route、backend协议/ledger/composer/style、用户Note或manifest；不运行不相关全套。",
+          "临时probe先前End/Return导致PM非空(size2)的失败日志已单列保留为fixture前置条件失败，不计产品RED；正式RED与绿色回归都明确验证实际空段。"
+        ],
+        "generatedAt": "2026-10-29T17:11:02.615773+00:00"
       }
     },
     {
