@@ -127,3 +127,17 @@ it('keeps the original SDK code and structured HTTP status when the formatter ca
  const f=context(()=>{throw new LlmError(message,'INVALID_REQUEST',{status:422})})
  const{diag}=await rejection(f,'INVALID_REQUEST',422);expect(diag.failure).toEqual({code:'INVALID_REQUEST',status:422,providerCode:'invalid_request_error',parameter:'top_p'})
 })
+
+for(const recovery of [false,true]){
+ it.each(['finish','throw'])('retains actual SDK STREAM_CLOSED facts for %s without accepting incomplete output, recovery='+recovery,async mode=>{
+  const failure=new LlmError(secret,'STREAM_CLOSED')
+  const f=context(async function*(options,index){
+   if(recovery&&index===1){yield{type:'text-delta',text:'{"kind":"unknown"}'};yield{type:'finish',reason:{kind:'stop'}};return}
+   yield{type:'reasoning-delta',index:0,text:secret};yield{type:'text-delta',index:1,text}
+   if(mode==='throw')throw failure
+   yield{type:'finish',reason:{kind:'error',failure:failure.failure}}
+  })
+  const{diag,error}=await rejection(f,'STREAM_CLOSED',undefined,recovery)
+  expect(diag.failure).toEqual({code:'STREAM_CLOSED'});expect(error.message).toContain('模型响应流未完整结束');expect(diag.publicText).toBe(text)
+ })
+}
