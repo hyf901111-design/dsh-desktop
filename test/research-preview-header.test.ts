@@ -37,18 +37,18 @@ async function fixture({legacy=false}={}){
  return {win,host,page,workspaces,workspaceFor,disk,errors,toggle,click,render,setDiskUnavailable:()=>{diskUnavailable=true}}
 }
 
-it('puts one eye toggle before the existing header actions and changes to a pencil in preview',async()=>{
+it('shows the current mode icon and text plus switch arrows before the existing header actions',async()=>{
  const f=await fixture(),buttons=[...f.host.querySelectorAll('button')]
  expect(f.toggle()).not.toBeNull();expect(buttons[0]).toBe(f.toggle())
  expect(buttons[1]!.getAttribute('aria-label')).toBe('创建至看板区')
  expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到预览模式')
- expect(f.toggle()!.getAttribute('aria-pressed')).toBe('false');expect(f.toggle()!.title).toBe('编辑模式')
- expect(f.toggle()!.querySelector('[data-research-preview-icon="preview"]')).not.toBeNull()
+ expect(f.toggle()!.getAttribute('aria-pressed')).toBe('false');expect(f.toggle()!.title).toBe('当前为编辑模式，点击切换到预览模式');expect(f.toggle()!.textContent).toBe('编辑模式');expect(f.toggle()!.querySelector('[data-research-preview-switch]')).not.toBeNull()
+ expect(f.toggle()!.querySelector('[data-research-preview-icon="edit"]')).not.toBeNull()
  await f.click()
  expect(f.workspaceFor('a').getPreviewMode()).toBe(true)
  expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到编辑模式')
- expect(f.toggle()!.getAttribute('aria-pressed')).toBe('true');expect(f.toggle()!.title).toBe('预览模式')
- expect(f.toggle()!.querySelector('[data-research-preview-icon="edit"]')).not.toBeNull()
+ expect(f.toggle()!.getAttribute('aria-pressed')).toBe('true');expect(f.toggle()!.title).toBe('当前为预览模式，点击切换到编辑模式');expect(f.toggle()!.textContent).toBe('预览模式')
+ expect(f.toggle()!.querySelector('[data-research-preview-icon="preview"]')).not.toBeNull()
  await f.click();expect(f.workspaceFor('a').getPreviewMode()).toBe(false)
  expect(f.errors).toEqual([])
 })

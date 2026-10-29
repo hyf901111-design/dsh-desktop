@@ -130,6 +130,9 @@ body [data-ework-grid] button.odyssey-data-stamp:not(:disabled),body [data-ework
  /* Grid columns can end between pixels. A 2px solid edge retains an opaque
     blue core at fractional boundaries and matches the ports/resize handles. */
  body [data-ework-grid] [data-research-node-id][data-selected=true]{outline:2px solid #249bfa!important;outline-offset:0!important}
+ /* Keep preview selection for component input and context, without its canvas frame. */
+ body [data-research-canvas][data-ework-grid][data-research-preview-mode=preview] [data-research-node-id][data-selected=true]{outline:0!important}
+ body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal][data-research-preview-mode=preview] [data-research-node-id][data-selected=true]{border-color:var(--grid-border,#303030)!important}
  body [data-ework-grid]:is([data-grid-operation=move],[data-grid-operation=resize]) [data-research-node-id][data-grid-active]{outline:0!important}
  body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]::after{display:none!important}
 }
@@ -207,7 +210,11 @@ body :is([data-workbench-arrange-menu],[data-workbench-theme-menu]).ew-arrange-m
 body .ew-arrange-menu .ew-arrange-check{flex:none;opacity:0}
 body .ew-arrange-menu [aria-checked=true] .ew-arrange-check{opacity:1}
 
-/* Preview keeps connection geometry and component hit targets; only edit handles disappear. */
+/* Hide only preview canvas adornments; keep real selection, links and inner controls. */
+body [data-research-canvas][data-ework-grid][data-research-preview-mode=preview] [data-research-node-id]>.ew-grid-chrome-host>.ew-grid-selection-ring{display:none!important}
+body [data-research-canvas][data-ework-grid][data-research-preview-mode=preview]>svg.ew-financial-connections{display:none!important}
+body [data-research-canvas][data-ework-grid][data-research-preview-mode=preview] [data-board-tabs-nav]>[data-financial-connection-stem]{display:none!important}
+body [data-research-canvas][data-ework-grid][data-research-preview-mode=preview] [data-board-tabs-nav] button[data-financial-connection-target]:not([data-tab-accept]):not([data-tab-target]){border-color:transparent!important}
 body [data-research-preview-mode=preview] [data-workbench-drag-handle]{cursor:default!important}
 body [data-research-preview-mode=preview] [data-financial-port]{visibility:hidden!important;pointer-events:none!important}
 body [data-ework-toolbar] button:disabled{opacity:.35!important;cursor:default!important}

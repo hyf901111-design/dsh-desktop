@@ -1,5 +1,5 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
-import {readFile} from 'node:fs/promises'
+import {readFile,mkdir} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {createRequire} from 'node:module'
 import {build} from 'esbuild'
@@ -23,27 +23,29 @@ beforeAll(async()=>{
  if(callbackStart<0||callbackEnd<0)throw Error('Real canvas subscription callback missing')
  const callback=source.slice(callbackStart,callbackEnd+10)
  source=source.replace('exports.ResearchCanvas = ResearchCanvas;', 'exports.__PreviewCalendar=CalendarTool;exports.__registerPreviewHost=researchWorkspaces=>window.dshDesktop.researchCanvasActions.subscribe('+callback+');exports.ResearchCanvas = ResearchCanvas;')
- const entry=`import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
+ const entry=`import {ResearchBoardHeader} from './src/preload/research-boards-ui.ts';import {installBoardUiStyles} from './src/preload/research-board-dialogs.ts';import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
  let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};window.__copies=[];window.__library=[];window.__dataRequests=[];
  window.dshDesktop={researchCanvasActions:{subscribe:handler=>{window.__trustedCanvasHandler=handler;return()=>{}}},researchBoards:{isSharedSession:id=>id.startsWith('shared-')},researchClipboard:{copy:async value=>{window.__copies.push(value);return {ok:true}},read:async()=>({kind:'text',text:'unexpected pasted component'}),inspect:async()=>({available:true})},componentLibrary:{request:async value=>{window.__library.push(value);return value.action==='list'?[]:{ok:true}}},financialWidget:{request:async value=>{window.__dataRequests.push(value);return value.action==='search'?{symbols:[{code:'MSFT',market:'US',name:'微软'}]}:{quotes:[],news:[],announcements:[],bars:[],source:'fixture',receivedAt:Date.now()}}}};
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
  (0,eval)(${JSON.stringify(source)});
  const bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?ReactDom:id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>React.createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake);
- const registry=new bundle.ResearchWorkspaceRegistry(localStorage),root=createRoot(document.getElementById('host'));let sessionId='preview-board';
+ const registry=new bundle.ResearchWorkspaceRegistry(localStorage),root=createRoot(document.getElementById('host')),headerHost=document.getElementById('header'),headerRoot=headerHost?createRoot(headerHost):null;if(headerHost)installBoardUiStyles(document);let sessionId='preview-board';
  const workspace=()=>registry.for(sessionId);
- const render=(next=sessionId)=>{sessionId=next;root.render(React.createElement(bundle.ResearchCanvas,{sessionId,t:x=>x,researchWorkspaces:registry,selectionGeneration:{disabled:false,generate:async()=>({taskId:'fixture-task'})},actions:{}}))};
+ const headerState={account:{user:{userId:'self'}},favorites:[],boards:[]},headerPage={workspaceFor:id=>registry.for(id),getState:()=>headerState,subscribe:()=>()=>{},version:()=>0,getView:()=>null,isResearch:()=>true,showError:error=>{throw error},favorite:async()=>{}};
+ const render=(next=sessionId)=>{sessionId=next;root.render(React.createElement(bundle.ResearchCanvas,{sessionId,t:x=>x,researchWorkspaces:registry,selectionGeneration:{disabled:false,generate:async()=>({taskId:'fixture-task'})},actions:{}}));headerRoot?.render(React.createElement(ResearchBoardHeader,{page:headerPage,sessionId,active:true}))};
  const text=(id,x=180,y=170)=>({id,kind:'pasted-text',messageId:'fixture-message',title:'研究文字 '+id,excerpt:'可阅读的研究证据 '+id,x,y,width:320,height:220,sizeMode:'manual'});
  bundle.__registerPreviewHost(registry);window.fixture={bundle,registry,workspace,render,text,renderNoteCalendar:(owner,node)=>{const host=document.createElement('div');host.dataset.noteDocument='';document.body.append(host);createRoot(host).render(React.createElement(bundle.__PreviewCalendar,{sessionId:owner,node}));return host}};document.querySelector('#preview-toggle').onclick=()=>workspace().setPreviewMode(!workspace().getPreviewMode());render();`
- script=(await build({stdin:{contents:entry,resolveDir:process.cwd()},bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent'})).outputFiles[0].text
+ script=(await build({stdin:{contents:entry,resolveDir:process.cwd()},bundle:true,write:false,format:'iife',platform:'browser',loader:{'.css':'empty'},define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent'})).outputFiles[0].text
  const pw=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await (pw.chromium||pw.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
+ if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await mkdir(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE,{recursive:true})
 },30000)
 afterAll(async()=>browser?.close())
 
-async function fixture(){
+async function fixture({header=false}={}){
  const context=await browser.newContext({viewport:{width:1200,height:850},reducedMotion:'reduce'}),page=await context.newPage(),errors=[]
  page.setDefaultTimeout(5000);page.on('pageerror',error=>errors.push(error.message))
- await page.route('https://research-preview.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\nhtml,body{margin:0}#host{height:800px;width:100vw}[data-research-canvas]{height:740px!important}#preview-toggle{position:fixed;top:0;right:0;z-index:10000}</style><div id="host"></div><button id="preview-toggle">fixture preview toggle</button>`}))
+ await page.route('https://research-preview.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\nhtml,body{margin:0}#host{height:800px;width:100vw}[data-research-canvas]{height:740px!important}#preview-toggle{position:fixed;top:0;right:0;z-index:10000}</style>${header?'<div id="header" style="position:fixed;top:0;left:0;z-index:1000"></div>':''}<div id="host"></div><button id="preview-toggle">fixture preview toggle</button>`}))
  await page.goto('https://research-preview.test/');await page.addScriptTag({content:script});await page.waitForSelector('[data-ework-toolbar]')
  return {page,errors,close:()=>context.close()}
 }
@@ -406,3 +408,50 @@ it('allows an existing queued generation to finish after entering preview withou
   expect(result.attached).toBe(true);expect(result.applied).toBe(true);expect(result.extra).toBeNull();expect(result.node.generationStatus).toBe('completed');expect(result.node.containerSpec.content).toBe('真实完成结果');expect(result.count).toBe(1);expect(errors).toEqual([])
  }finally{await close()}
 },20000)
+
+
+it('keeps the current mode pill readable and compact in light and dark headers',async()=>{
+ const {page,close,errors}=await fixture({header:true})
+ try{
+  const pill=page.locator('[data-research-preview-toggle]');await pill.waitFor()
+  for(const dark of [false,true]){
+   await page.evaluate(dark=>document.body.toggleAttribute('data-ds-dark-theme',dark),dark)
+   for(const mode of ['编辑模式','预览模式']){
+    expect(await pill.textContent()).toBe(mode)
+    expect(await pill.locator('[data-research-preview-switch]').count()).toBe(1)
+    const box=await pill.evaluate(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,scroll:el.scrollWidth,client:el.clientWidth,color:getComputedStyle(el).color}))
+    expect(box.height).toBe(30);expect(box.width).toBeGreaterThanOrEqual(96);expect(box.width).toBeLessThanOrEqual(120);expect(box.scroll).toBeLessThanOrEqual(box.client);expect(box.color).not.toBe('rgba(0, 0, 0, 0)')
+    if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await page.locator('#header').screenshot({path:process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE+'/'+(dark?'dark':'light')+'-'+(mode==='编辑模式'?'edit':'preview')+'.png'})
+    const target=mode==='编辑模式'?'预览模式':'编辑模式';expect(await pill.getAttribute('aria-label')).toBe('切换到'+target);expect(await pill.getAttribute('title')).toBe('当前为'+mode+'，点击切换到'+target)
+    await pill.click();await expect.poll(()=>pill.textContent()).toBe(target)
+   }
+  }
+  expect(errors).toEqual([])
+ }finally{await close()}
+},20000)
+
+it('hides only preview canvas selection and connection decoration while preserving links and selected watchlist rows in every theme',async()=>{
+ const {page,close,errors}=await fixture()
+ try{
+  const ids=await page.evaluate(()=>{
+   const w=window.fixture.workspace(),tabs=w.createBoardTabs().containerSpec.tabs,watch=w.createFinancialWidget('watchlist');w.selectBoardTab(tabs[1].id);const quote=w.createFinancialWidget('quote')
+   w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===watch.id?{...n,containerSpec:{...n.containerSpec,symbols:[{code:'AAPL',market:'US',name:'苹果'},{code:'MSFT',market:'US',name:'微软'}],selectedSymbol:'US:AAPL'}}:n.id===quote.id?{...n,containerSpec:{...n.containerSpec,linkedWatchlistId:watch.id}}:n));w.selectBoardTab(tabs[0].id);w.updateSelection([watch.id],'replace');return{watch:watch.id,quote:quote.id}
+  })
+  const canvas=page.locator('[data-research-canvas]'),card=page.locator('[data-research-node-id="'+ids.watch+'"]'),svg=canvas.locator(':scope > svg.ew-financial-connections'),stem=canvas.locator('[data-board-tabs-nav] > [data-financial-connection-stem]'),target=canvas.locator('[data-financial-connection-target]'),row=card.locator('[data-stock-code="AAPL"]')
+  await expect.poll(()=>svg.locator('[data-financial-link="'+ids.quote+'"]').count()).toBe(1);await stem.waitFor();expect(await target.count()).toBe(1)
+  for(const mode of ['light','dark','enterprise','openterminal']){
+   await page.evaluate(mode=>window.fixture.workspace().setWorkbenchStyle(mode,{scope:'board'}),mode)
+   await expect.poll(()=>canvas.getAttribute('data-workbench-style')).toBe(mode)
+   const selected=await page.evaluate(()=>window.fixture.workspace().getSnapshot().selection),rowBefore=await row.evaluate(el=>({selected:el.getAttribute('aria-selected'),background:getComputedStyle(el).backgroundColor,shadow:getComputedStyle(el).boxShadow}))
+   expect(rowBefore.selected).toBe('true');expect(await svg.isVisible()).toBe(true)
+   await page.evaluate(()=>window.fixture.workspace().setPreviewMode(true))
+   await expect.poll(()=>card.evaluate(el=>getComputedStyle(el).outlineStyle)).toBe('none');expect(await svg.isVisible()).toBe(false);expect(await stem.isVisible()).toBe(false);expect(await card.locator(':scope > .ew-grid-chrome-host > .ew-grid-selection-ring').isVisible()).toBe(false)
+   await expect.poll(()=>target.evaluate(el=>getComputedStyle(el).borderTopColor)).toBe('rgba(0, 0, 0, 0)')
+   if(mode==='openterminal'){await expect.poll(()=>card.evaluate(el=>getComputedStyle(el).borderTopColor)).toBe('rgb(48, 48, 48)');expect(await card.evaluate(el=>getComputedStyle(el).borderTopWidth)).toBe('1px')}
+   expect(await row.evaluate(el=>({selected:el.getAttribute('aria-selected'),background:getComputedStyle(el).backgroundColor,shadow:getComputedStyle(el).boxShadow}))).toEqual(rowBefore)
+   expect(await page.evaluate(()=>window.fixture.workspace().getSnapshot().selection)).toEqual(selected);expect(await page.evaluate(id=>window.fixture.workspace().getSnapshot().artifacts.find(n=>n.id===id).containerSpec.linkedWatchlistId,ids.quote)).toBe(ids.watch)
+   await page.evaluate(()=>window.fixture.workspace().setPreviewMode(false));expect(await svg.isVisible()).toBe(true);expect(await stem.isVisible()).toBe(true)
+  }
+  await page.evaluate(()=>window.fixture.workspace().setPreviewMode(true));await card.locator('[data-stock-code="MSFT"]').click();await expect.poll(()=>page.evaluate(id=>window.fixture.workspace().getSnapshot().artifacts.find(n=>n.id===id).containerSpec.symbols[0]?.code,ids.quote)).toBe('MSFT');expect(errors).toEqual([])
+ }finally{await close()}
+},25000)
