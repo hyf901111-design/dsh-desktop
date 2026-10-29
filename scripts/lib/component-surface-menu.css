@@ -5,3 +5,5 @@
 [data-component-reading=true].ew-conversation-component>.ew-conversation-component-body{max-height:calc(100dvh - 150px)}[data-component-reading=true].en-native-component .en-native-component-host{height:calc(100dvh - 135px)!important}[data-component-reading=true].en-native-component .en-component-scroll-guard,[data-component-reading=true].en-native-component .en-component-close,[data-component-reading=true].en-native-component [role=separator]{visibility:hidden}
 
 .ew-component-surface-menu .ew-component-theme-check{margin-left:auto;min-width:14px;text-align:right;color:var(--fw-accent,#249bfa)}
+
+.ew-component-surface-menu.ew-component-theme-menu{width:168px;min-width:168px}.ew-component-theme-menu [role=menuitemradio]{white-space:nowrap}
