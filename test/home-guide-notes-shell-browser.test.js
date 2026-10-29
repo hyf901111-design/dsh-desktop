@@ -172,12 +172,13 @@ for(const width of [600,700])it(`saves and reopens the native note without clipp
 },130000)
 it('hands a failed original slash library back to ordinary Notes with the partial chart intact',async()=>{
  const f=await fixture(),{page,store,errors}=f;try{
-  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>{window.failGuideLibrary=true;window.errorHandoffFrames=[];window.captureErrorHandoff=true;let fault=false;const sample=()=>{fault||=document.querySelector('[data-home-guide]')?.dataset.phase==='error';if(fault)window.errorHandoffFrames.push({guide:!!document.querySelector('[data-home-guide] .bn-editor')?.textContent?.trim(),normal:document.body.dataset.workspaceSurface==='notes'&&!!document.querySelector('[data-note-editor-session="example-note-1"] .bn-editor')?.textContent?.trim()});if(window.captureErrorHandoff)requestAnimationFrame(sample)};requestAnimationFrame(sample);void window.guides.start('note')})
+  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>{window.failGuideLibrary=true;window.errorHandoffFrames=[];window.endingOwners=[];window.addEventListener('sherlock:home-guide-playback',event=>{if(event.detail.ending)window.endingOwners.push({runId:event.detail.runId,token:document.documentElement.dataset.homeGuidePointerRun})});window.captureErrorHandoff=true;let fault=false;const sample=()=>{fault||=document.querySelector('[data-home-guide]')?.dataset.phase==='error';if(fault)window.errorHandoffFrames.push({guide:!!document.querySelector('[data-home-guide] .bn-editor')?.textContent?.trim(),normal:document.body.dataset.workspaceSurface==='notes'&&!!document.querySelector('[data-note-editor-session="example-note-1"] .bn-editor')?.textContent?.trim()});if(window.captureErrorHandoff)requestAnimationFrame(sample)};requestAnimationFrame(sample);void window.guides.start('note')})
   await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').count(),{timeout:45000}).toBe(1)
   expect(await page.locator('[data-home-guide]').count()).toBe(0)
   expect(await page.locator('[data-note-editor-session="example-note-1"] .en-title').inputValue()).toContain('中际旭创2026中报复盘')
   const saved=store.load('owner','example-note-1').saved;expect(saved.blocks.filter(block=>block.type==='research')).toHaveLength(1)
   expect(await page.evaluate(()=>window.guideHandoffCalls)).toEqual([{sessionId:'example-note-1',aborted:false}]);expect(await page.evaluate(()=>window.guideHandoffReleases)).toEqual(['example-note-1'])
+  const owners=await page.evaluate(()=>window.endingOwners);expect(owners).toHaveLength(1);expect(owners[0].token).toBe(owners[0].runId)
   const frames=await page.evaluate(()=>{window.captureErrorHandoff=false;return window.errorHandoffFrames});expect(frames.length).toBeGreaterThan(0);expect(frames.filter(frame=>!frame.guide&&!frame.normal)).toEqual([]);expect(errors).toEqual([])
  }finally{await f.dispose()}
 },55000)

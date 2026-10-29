@@ -58,7 +58,7 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
    const response=await fetch('/sherlock/home-guide/notes',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},signal,body:JSON.stringify({action,sessionId,runId:ticket.detail.runId,...extra})})
    const result=await response.json();check(ticket);if(!response.ok||!result.ok)throw Error(result.message||'笔记示例任务未完成。');return result
   }
-  const dispose=()=>{const ticket=owned;if(!ticket)return;owned=null;ticket.abort.abort();if(ticket.detail.fresh)void fetch('/sherlock/home-guide/notes',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},keepalive:true,body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId})}).catch(()=>{})}
+  const dispose=()=>{const ticket=owned;if(!ticket||ticket.disposing)return;ticket.disposing=true;for(const requestId of [...ticket.pendingRequests]){document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId,requestId}}))}ticket.pendingRequests.clear();owned=null;ticket.abort.abort();if(ticket.detail.fresh)void fetch('/sherlock/home-guide/notes',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},keepalive:true,body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId})}).catch(()=>{})}
   const type=async(ticket,stage)=>{
    if(ticket.typing||!ticket.detail.fresh||!['note','selection'].includes(stage)||ticket.sent.has(stage)||stage==='selection'&&(!ticket.chartReady||!ticket.quoteConfigured)||stage==='note'&&!ticket.sent.has('selection'))throw Error('笔记示例步骤顺序已变化。')
    ticket.typing=true
@@ -86,11 +86,17 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
     const submission=record.submission+1;let accepted=false
     const receive=event=>{if(event.detail?.sessionId===sessionId&&event.detail.submissionId===submission)accepted=true}
     document.addEventListener('sherlock:notes-submit-accepted',receive)
-    try{button.click();await until(ticket,()=>accepted);ticket.sent.add(stage)}finally{document.removeEventListener('sherlock:notes-submit-accepted',receive)}
+    if(stage==='note')ticket.noteAdmission=submission
+    ticket.submitting={stage,prompt,requests:new Set()}
+    try{button.click();await until(ticket,()=>accepted);if(ticket.submitting.requests.size!==1)throw Error('笔记请求归属尚未确认。');if(stage==='note')ticket.noteRequestId=[...ticket.submitting.requests][0];ticket.sent.add(stage)}finally{document.removeEventListener('sherlock:notes-submit-accepted',receive);ticket.submitting=undefined;if(stage==='note'&&!accepted)ticket.noteAdmission=undefined}
    }finally{ticket.typing=false}
   }
   const generate=async(ticket,input)=>{
    check(ticket);if(!ticket.detail.fresh||input?.sessionId!==sessionId||typeof input.requestId!=='string'||ticket.jobs.has(input.requestId))throw Error('笔记生成请求无效。')
+   const note=input.prompt===ticket.prepared.prompts.note
+   if(note&&(!ticket.noteAdmission||ticket.noteGeneration||ticket.noteRequestId&&ticket.noteRequestId!==input.requestId||ticket.submitting&&ticket.submitting.stage!=='note'))throw Error('笔记总结步骤顺序已变化。')
+   const noteGeneration=note?ticket.noteGeneration={requestId:input.requestId,state:'pending'}:undefined
+   ticket.pendingRequests.add(input.requestId)
    const controller=new AbortController(),stop=()=>controller.abort();ticket.jobs.set(input.requestId,controller);ticket.abort.signal.addEventListener('abort',stop,{once:true})
    try{
     const response=await fetch('/sherlock/home-guide/notes',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},signal:controller.signal,body:JSON.stringify({action:'generate',sessionId,runId:ticket.detail.runId,input})})
@@ -98,7 +104,8 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result
     const consume=line=>{if(!line.trim())return;const value=JSON.parse(line);check(ticket);if(value.type==='error')throw Error(value.message);if(value.type==='result')result=value.result;else if(value.type==='progress')document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:{sessionId,requestId:input.requestId,...value.progress}}))}
     for(;;){const chunk=await reader.read();if(chunk.done)break;buffer+=decoder.decode(chunk.value,{stream:true});let end;while((end=buffer.indexOf('\n'))>=0){consume(buffer.slice(0,end));buffer=buffer.slice(end+1)}}
-    buffer+=decoder.decode();consume(buffer);check(ticket);if(input.prompt===ticket.prepared.prompts.chart){if(result?.kind!=='component'||result.node?.id!=='home-note-chart-'+ticket.detail.runId||result.node.containerSpec?.type!=='html')throw Error('笔记示例图表未完成。');ticket.chartReady=true}else if(input.prompt===ticket.prepared.prompts.note){if(result?.kind!=='conversation'||typeof result.markdown!=='string')throw Error('笔记总结回复未完成。');ticket.summary={requestId:input.requestId,markdown:result.markdown}}else if(result?.kind!=='text'||typeof result.markdown!=='string')throw Error('笔记示例结果未完成。');return result
+    buffer+=decoder.decode();consume(buffer);check(ticket);if(input.prompt===ticket.prepared.prompts.chart){if(result?.kind!=='component'||result.node?.id!=='home-note-chart-'+ticket.detail.runId||result.node.containerSpec?.type!=='html')throw Error('笔记示例图表未完成。');ticket.chartReady=true}else if(note){if(result?.kind!=='conversation'||typeof result.markdown!=='string')throw Error('笔记总结回复未完成。');ticket.summary={requestId:input.requestId,markdown:result.markdown};noteGeneration.state='ready'}else if(result?.kind!=='text'||typeof result.markdown!=='string')throw Error('笔记示例结果未完成。');return result
+   }catch(error){if(noteGeneration){noteGeneration.state='failed';noteGeneration.error=error.message||'笔记总结未完成。'}throw error
    }finally{controller.abort();ticket.abort.signal.removeEventListener('abort',stop);ticket.jobs.delete(input.requestId)}
   }
   const configureQuote=async ticket=>{
@@ -122,8 +129,12 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
    finally{ticket.configuringQuote=false}
   }
   const summary=async(ticket,append)=>{
-   check(ticket);if(!ticket.detail.fresh||!ticket.summary||!ticket.sent.has('note')||ticket.summary.appended||ticket.appendingSummary)throw Error('笔记总结步骤顺序已变化。')
-   const current=()=>{check(ticket);const rows=[...document.querySelectorAll('[data-note-task]')].filter(row=>row.dataset.noteTask===ticket.summary.requestId&&row.dataset.phase==='replied'&&!row.closest('[data-odyssey-subagent-panel]'));if(rows.length!==1)return;const row=rows[0],label=typeof workbenchText==='function'?workbenchText('添加到笔记'):'添加到笔记',button=[...row.querySelectorAll('button')].find(node=>node.getAttribute('aria-label')===label);if(!button||!ticket.summary.markdown.split('\n\n').every(part=>row.textContent.includes(part)))return;return button}
+   check(ticket);if(!ticket.detail.fresh||!ticket.noteAdmission||!ticket.sent.has('note')||ticket.summary?.appended||ticket.appendingSummary)throw Error('笔记总结步骤顺序已变化。')
+   // Native submit acknowledgement precedes Markdown capture and the streamed
+   // result. Wait for this admission's one semantic request, never another job.
+   let requestId
+   const ready=await until(ticket,()=>{const job=ticket.noteGeneration;if(!job)return;if(ticket.noteRequestId!==job.requestId||requestId&&requestId!==job.requestId)throw changed();requestId=job.requestId;if(job.state==='failed')throw Error(job.error);if(job.state!=='ready'||!ticket.summary)return;if(ticket.summary.requestId!==requestId)throw changed();return ticket.summary},true,20000)
+   const current=()=>{check(ticket);if(ticket.summary!==ready||ticket.noteGeneration?.requestId!==ready.requestId)throw changed();const rows=[...document.querySelectorAll('[data-note-task]')].filter(row=>row.dataset.noteTask===ready.requestId&&row.dataset.phase==='replied'&&!row.closest('[data-odyssey-subagent-panel]'));if(rows.length!==1)return;const row=rows[0],label=typeof workbenchText==='function'?workbenchText('添加到笔记'):'添加到笔记',button=[...row.querySelectorAll('button')].find(node=>node.getAttribute('aria-label')===label);if(!button||!ready.markdown.split('\n\n').every(part=>row.textContent.includes(part)))return;return button}
    const button=await until(ticket,current),input=inputFor(ticket)
    await revealHomeNotesGuideSummary({document,window,button,input,check:()=>{check(ticket);if(current()!==button||inputFor(ticket)!==input)throw changed()},until:read=>until(ticket,read),valid:target=>valid(ticket,target)})
    if(!append){await cue(ticket,button,'阅读右侧研究总结，正文尚未插入');return{requestId:ticket.summary.requestId}}
@@ -145,7 +156,7 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
    if(detail.command==='dispose'){if(owned?.detail.runId===detail.runId)dispose();return}
    if(detail.command==='mount'){
     const host=hostFor(detail);if(owned?.detail.runId===detail.runId&&owned.host===host)return
-    dispose();const ticket={detail,host,abort:new AbortController(),playing:false,sent:new Set(),jobs:new Map(),typing:false};owned=ticket
+    dispose();const ticket={detail,host,abort:new AbortController(),playing:false,sent:new Set(),jobs:new Map(),pendingRequests:new Set(),typing:false};owned=ticket
     if(detail.fresh)ticket.prepared=await rpc(ticket,'prepare',{cwd:detail.cwd,fresh:true})
     await until(ticket,()=>recordFor(ticket)?.ready&&inputFor(ticket),false);return
    }
@@ -162,16 +173,17 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
    const detail=event.detail
    if(detail?.sessionId!==sessionId||!['requestId','sessionId','runId','hostId'].every(key=>typeof detail[key]==='string'&&/^[\w:-]{1,128}$/.test(detail[key])))return
    const signature=JSON.stringify(detail),old=requests.get(detail.requestId)
-   const reply=(ok,result,message)=>{if(!closed)window.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-native-reply',{detail:{requestId:detail.requestId,sessionId,runId:detail.runId,ok,result,message}}))}
+   const reply=(ok,result,message,cancelled=false)=>{if(!closed)window.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-native-reply',{detail:{requestId:detail.requestId,sessionId,runId:detail.runId,ok,result,message,...cancelled?{cancelled:true}:{}}}))}
    if(old&&old.signature!==signature){reply(false,undefined,'请求标识已用于其他操作。');return}
    const promise=old?.promise||execute(detail);requests.set(detail.requestId,{signature,promise});if(requests.size>128)requests.delete(requests.keys().next().value)
-   void promise.then(result=>reply(true,result),error=>reply(false,undefined,error.message||'笔记示例已停止。'))
+   void promise.then(result=>reply(true,result),error=>reply(false,undefined,error.message||'笔记示例已停止。',detail.command==='stop'&&error.name==='AbortError'))
   }
-  const playback=event=>{const value=event.detail,ticket=owned;if(ticket&&value?.sessionId===sessionId&&value.runId===ticket.detail.runId){ticket.playing=value.playing===true;if(ticket.detail.fresh)void rpc(ticket,'playback',{playing:ticket.playing}).catch(()=>{})}}
+  const taskState=event=>{const value=event.detail,ticket=owned;if(!ticket||value?.sessionId!==sessionId||typeof value.requestId!=='string')return;try{check(ticket)}catch{return}if(value.phase==='preparing'&&ticket.submitting?.prompt===value.prompt){ticket.submitting.requests.add(value.requestId);ticket.pendingRequests.add(value.requestId)}if(['ready','replied','accepted','discarded','failed','stopped'].includes(value.phase))ticket.pendingRequests.delete(value.requestId)}
+  const playback=event=>{const value=event.detail,ticket=owned;if(ticket&&value?.sessionId===sessionId&&value.runId===ticket.detail.runId){if(value.ending===true){dispose();return}ticket.playing=value.playing===true;if(ticket.detail.fresh)void rpc(ticket,'playback',{playing:ticket.playing}).catch(()=>{})}}
   const reset=()=>dispose(),observer=new MutationObserver(()=>{if(owned)try{check(owned)}catch{dispose()}})
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ework-notes-session','data-home-guide']})
-  window.addEventListener('sherlock:home-guide-notes-native-request',receive);window.addEventListener('sherlock:home-guide-playback',playback);window.addEventListener('sherlock:home-action-context-changed',reset);document.addEventListener('sherlock:notes-reset',reset)
-  return()=>{dispose();closed=true;observer.disconnect();window.removeEventListener('sherlock:home-guide-notes-native-request',receive);window.removeEventListener('sherlock:home-guide-playback',playback);window.removeEventListener('sherlock:home-action-context-changed',reset);document.removeEventListener('sherlock:notes-reset',reset)}
+  window.addEventListener('sherlock:home-guide-notes-native-request',receive);window.addEventListener('sherlock:home-guide-playback',playback);window.addEventListener('sherlock:home-action-context-changed',reset);document.addEventListener('sherlock:notes-reset',reset);document.addEventListener('sherlock:notes-task-state',taskState)
+  return()=>{dispose();closed=true;observer.disconnect();window.removeEventListener('sherlock:home-guide-notes-native-request',receive);window.removeEventListener('sherlock:home-guide-playback',playback);window.removeEventListener('sherlock:home-action-context-changed',reset);document.removeEventListener('sherlock:notes-reset',reset);document.removeEventListener('sherlock:notes-task-state',taskState)}
  },[sessionId,subagentPanel,researchSidebar])
  return null
 }

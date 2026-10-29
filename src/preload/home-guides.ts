@@ -124,13 +124,13 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  let active:Run|undefined
  const selected=()=>[...document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol [data-srb-session-header][data-ework-notes-session]')].find(node=>!node.closest('[data-odyssey-subagent-panel]'))?.dataset.eworkNotesSession
  const releaseTransition=()=>{if(transition&&document.documentElement.dataset.homeGuideTransition===transition){delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession}transition=undefined}
- const playback=(run:Run,playing:boolean)=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:run.id,sessionId:run.sessionId,playing}}))
+ const playback=(run:Run,playing:boolean,ending=false)=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:run.id,sessionId:run.sessionId,playing,...ending?{ending:true}:{}}}))
  const hideCue=()=>active?.pointer?.hide()
  const notices=new Set<HTMLElement>()
  const saveFailure=(message:string)=>{const notice=document.createElement('div');notice.className='odyssey-home-guide-save-error';notice.setAttribute('role','alert');const text=document.createElement('span');text.textContent='示例保存未完成：'+message;const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='关闭';dismiss.addEventListener('click',()=>{notices.delete(notice);notice.remove()});notice.append(text,dismiss);notices.add(notice);document.body.append(notice)}
  const close=(restoreFocus=true,alreadySaved=false):Promise<void>=>{
   const run=active;if(!run)return closing
-  active=undefined;run.timeline?.dispose();run.pointer?.dispose();playback(run,false)
+  active=undefined;run.timeline?.dispose();run.pointer?.dispose();playback(run,false,true)
   if(document.documentElement.dataset.homeGuidePointerRun===run.id)delete document.documentElement.dataset.homeGuidePointerRun
   const finish=()=>{
    try{

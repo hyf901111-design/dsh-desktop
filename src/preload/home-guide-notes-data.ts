@@ -75,7 +75,7 @@ export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,b
    if(native&&persistence&&['conversation-state','menu-sync','menu-close','library-list','library-read','component-render','reply-render','component-menu-capabilities'].includes(method)){
     const result=await persistence.bridge.request(method,input);assert(input);return result
    }
-   if(method==='stop'&&native){jobs.get(input.requestId)?.cancel();await native.stop(input.requestId);return {ok:true}}
+   if(method==='stop'&&native){jobs.get(input.requestId)?.cancel();try{await native.stop(input.requestId)}catch(error){if((error as Error)?.name!=='AbortError')throw error}return {ok:true}}
    if(method==='generate'&&native){
     if(typeof input.requestId!=='string'||!input.requestId||typeof input.prompt!=='string'||!input.prompt.trim()||jobs.has(input.requestId))throw Error('演示笔记生成请求无效。')
     const result=await new Promise<any>((resolve,reject)=>{
