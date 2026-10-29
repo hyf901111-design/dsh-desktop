@@ -63,6 +63,37 @@ async function opened(frame:any):Promise<boolean>{return frame.locator('details'
 async function interactionAcks(page:any):Promise<any[]>{return page.evaluate(()=>(window as any).noteAcks.filter((entry:any)=>entry.requestId?.includes(':interaction:')))}
 
 async function semanticState(page:any):Promise<any>{return page.evaluate(()=>JSON.parse((window as any).noteSaved.blocks.find((block:any)=>block.id==='chart').props.payload).config?.sharedComponentState)}
+it('switches four Notes component modes without remounting the iframe, changing its neighbor or losing the saved memo on reopen',async()=>{
+ const f=await fixture();try{
+  await select(f.page)
+  await f.frame.getByText('查看全部数据',{exact:true}).click()
+  await f.frame.locator('#accept-note').fill('切换模式仍保留的笔记备注')
+  await expect.poll(async()=>(await semanticState(f.page))?.state?.note).toBe('切换模式仍保留的笔记备注')
+  await f.frame.locator('body').evaluate((element:HTMLElement)=>element.dataset.modeIdentity='original')
+  await f.page.evaluate(()=>{const w=window as any;w.modeFrame=document.querySelector('iframe[data-research-html-artifact]');const node=JSON.parse(w.noteEditor.getBlock('chart').props.payload);w.noteEditor.insertBlocks([{id:'neighbor',type:'research',props:{payload:JSON.stringify({...node,id:'other-component',title:'独立相邻组件',noteSize:{width:400,height:160}})}}],w.noteEditor.getBlock('tail'),'after')})
+  const current=f.page.locator('[data-note-research-block=chart]')
+  for(const[mode,label]of[['light','浅色模式'],['dark','深色模式'],['enterprise','易方达模式'],['openterminal','彭博模式']]){
+   await current.locator('.en-component-more').click()
+   await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).hover()
+   await f.page.getByRole('menuitemradio',{name:label,exact:true}).click()
+   await expect.poll(()=>current.getAttribute('data-workbench-style')).toBe(mode)
+   await expect.poll(()=>f.page.evaluate(()=>JSON.parse((window as any).noteSaved.blocks.find((block:any)=>block.id==='chart').props.payload).notePresentation?.theme)).toBe(mode)
+   expect(await f.page.evaluate(()=>document.querySelector('[data-note-research-block=chart] iframe[data-research-html-artifact]')===(window as any).modeFrame)).toBe(true)
+   const frame=current.frameLocator('iframe[data-research-html-artifact]').frameLocator('#preview')
+   expect(await frame.locator('body').getAttribute('data-mode-identity')).toBe('original')
+   expect(await frame.locator('#accept-note').inputValue()).toBe('切换模式仍保留的笔记备注')
+   expect(await frame.locator('details').evaluate((element:HTMLDetailsElement)=>element.open)).toBe(true)
+   expect(await f.page.evaluate(()=>JSON.parse((window as any).noteEditor.getBlock('neighbor').props.payload).notePresentation)).toBeUndefined()
+   expect(await f.page.locator('[data-note-research-block=neighbor]').getAttribute('data-workbench-style')).toBe('light')
+  }
+  await f.page.evaluate(async()=>{const w=window as any;await w.flushNote();w.notesRoot.unmount();w.notesRoot=w.createNoteRoot()})
+  const reopened=f.page.locator('[data-note-research-block=chart]'),frame=reopened.frameLocator('iframe[data-research-html-artifact]').frameLocator('#preview')
+  await expect.poll(()=>reopened.getAttribute('data-workbench-style')).toBe('openterminal')
+  await expect.poll(()=>frame.locator('#accept-note').inputValue()).toBe('切换模式仍保留的笔记备注')
+  expect(await frame.locator('details').evaluate((element:HTMLDetailsElement)=>element.open)).toBe(true)
+  expect(await f.page.evaluate(()=>document.body.hasAttribute('data-ds-dark-theme'))).toBe(false);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},40000)
 it('keeps the common Notes iframe borderless without Research CSS while preserving journal, memo and document identity',async()=>{
  const f=await fixture();try{
   await select(f.page);await f.frame.getByText('查看全部数据',{exact:true}).click();await expect.poll(()=>opened(f.frame)).toBe(true)

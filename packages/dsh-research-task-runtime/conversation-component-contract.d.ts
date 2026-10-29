@@ -56,8 +56,10 @@ export type ConversationComponentCreateReceipt = {
 
 // IPC DTO：这些字段只定位当前用户有权访问的实例，不能赋予新身份。
 export type ConversationComponentTarget = {sessionId:string; componentId:string};
-export type ConversationComponentMenuCapabilities = {copy:boolean; saveLibrary:boolean; exportContent:boolean; rename:boolean};
+export type ConversationComponentTheme = 'light'|'dark'|'enterprise'|'openterminal';
+export type ConversationComponentMenuCapabilities = {copy:boolean; saveLibrary:boolean; exportContent:boolean; rename:boolean; theme?:boolean};
 export type ConversationComponentRename = ConversationComponentTarget & {expectedRevision:number; title:string};
+export type ConversationComponentThemeUpdate = ConversationComponentTarget & {expectedRevision:number; theme:ConversationComponentTheme};
 export type ConversationComponentExport = ConversationComponentTarget & {expectedRevision:number} & (
   {kind:'text'; format:'svg'; content:string} |
   {kind:'binary'; format:'png'|'jpg'; base64:string}
@@ -106,6 +108,7 @@ export type ConversationComponentVisibleContext = {
 export interface ConversationComponentsBridge {
   read(target:ConversationComponentTarget): Promise<ConversationComponentView>;
   rename?(input:ConversationComponentRename): Promise<ConversationComponentView>;
+  setTheme?(input:ConversationComponentThemeUpdate): Promise<ConversationComponentView>;
   exportContent?(input:ConversationComponentExport): Promise<ConversationComponentExportResult>;
   /** Acknowledges only a persisted HTML interaction in the current host lease. */
   commitHtmlInteraction?(input:ConversationHtmlInteractionUpdate): Promise<ConversationComponentView>;

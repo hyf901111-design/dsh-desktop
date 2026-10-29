@@ -38,7 +38,7 @@ async function fixture({readOnly=false,noCommit=false}={}){
  await page.route('http://127.0.0.1/fonts/NotoSansSC.woff2',(route:any)=>route.fulfill({contentType:'font/woff2',path:resolve('build/fonts/NotoSansSC.woff2')}))
  await page.route('http://127.0.0.1/conversation-html-api',async(route:any)=>{
   const value=route.request().postDataJSON(),method=value.channel.replace('conversation-components:','');requests.push({method,input:value.input})
-  try{if(method==='commitHtmlInteraction'){if(mode==='hold')await new Promise<void>(resolve=>releases.push(resolve));if(mode==='fail')throw Error('合成保存失败')}
+  try{if(method==='setTheme'&&mode==='hold-theme')await new Promise<void>(resolve=>releases.push(resolve));if(method==='commitHtmlInteraction'){if(mode==='hold')await new Promise<void>(resolve=>releases.push(resolve));if(mode==='fail')throw Error('合成保存失败')}
    const result=await service[method](value.input);await route.fulfill({contentType:'application/json',body:JSON.stringify({result})})
   }catch(error){await route.fulfill({contentType:'application/json',body:JSON.stringify({error:(error as Error).message})})}
  })
@@ -47,6 +47,79 @@ async function fixture({readOnly=false,noCommit=false}={}){
  return{page,frame,errors,requests,view:()=>store.read('owner',target),mode:(value:string)=>{mode=value},release:()=>{for(const next of releases.splice(0))next()},changeOwner:()=>{owner='other';generation='window-b'},reopen:async()=>{store=new ConversationComponentStore(file);await store.load();service=makeService();await page.evaluate(()=>{const w=window as any;w.cardRoot.unmount();w.cardRoot=w.mountCard()})},close:async()=>{await context.close();await rm(directory,{recursive:true,force:true})}}
 }
 const config=(f:any)=>f.view().node.config as any
+it('switches all four modes on the current Conversation component without replacing its live iframe and restores mode with saved interactions',async()=>{
+ const f=await fixture();try{
+  for(let i=0;i<3;i++)await f.frame.getByRole('button',{name:'增加计数',exact:true}).click()
+  await f.frame.getByRole('textbox',{name:'备注',exact:true}).fill('切换模式后保留的对话备注')
+  await expect.poll(()=>config(f)?.sharedComponentState?.state?.memo).toBe('切换模式后保留的对话备注')
+  await f.frame.locator('body').evaluate((element:HTMLElement)=>element.dataset.modeIdentity='original')
+  await f.page.evaluate(()=>(window as any).modeFrame=document.querySelector('iframe[data-research-html-artifact]'))
+  for(const[mode,label]of[['light','浅色模式'],['dark','深色模式'],['enterprise','易方达模式'],['openterminal','彭博模式']]){
+   await f.page.getByRole('button',{name:'组件更多操作',exact:true}).click()
+   await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).hover()
+   await f.page.getByRole('menuitemradio',{name:label,exact:true}).click()
+   await expect.poll(()=>f.view().node.componentTheme).toBe(mode)
+   await expect.poll(()=>f.page.locator('[data-conversation-component-id]').getAttribute('data-workbench-style')).toBe(mode)
+   await expect.poll(()=>f.frame.locator('html').getAttribute('data-workbench-style')).toBe(mode)
+   expect(await f.page.evaluate(()=>document.querySelector('iframe[data-research-html-artifact]')===(window as any).modeFrame)).toBe(true)
+   expect(await f.frame.locator('body').getAttribute('data-mode-identity')).toBe('original')
+   expect(await f.frame.locator('#count').textContent()).toBe('3')
+   expect(await f.frame.getByRole('textbox',{name:'备注',exact:true}).inputValue()).toBe('切换模式后保留的对话备注')
+   expect(await f.page.locator('[data-component-menu-surface]').count()).toBe(0)
+  }
+  await f.frame.getByRole('button',{name:'增加计数',exact:true}).click();await expect.poll(()=>config(f)?.sharedComponentState?.state?.count).toBe(4)
+  await f.reopen();await expect.poll(()=>f.page.locator('[data-conversation-component-id]').getAttribute('data-workbench-style')).toBe('openterminal')
+  await expect.poll(()=>f.frame.locator('#count').textContent()).toBe('4')
+  expect(await f.frame.getByRole('textbox',{name:'备注',exact:true}).inputValue()).toBe('切换模式后保留的对话备注')
+  expect(await f.page.evaluate(()=>document.body.hasAttribute('data-ds-dark-theme'))).toBe(false)
+  expect(await f.page.evaluate(()=>(window as any).canvasCalls)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},35000)
+it('keeps a later menu open when an earlier authorized theme response finishes after outside dismissal',async()=>{
+ const f=await fixture();try{
+  f.mode('hold-theme')
+  await f.page.getByRole('button',{name:'组件更多操作',exact:true}).click();await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).hover();await f.page.getByRole('menuitemradio',{name:'深色模式',exact:true}).click()
+  await expect.poll(()=>f.requests.filter(row=>row.method==='setTheme').length).toBe(1)
+  await f.page.mouse.click(950,800);await expect.poll(()=>f.page.locator('[data-component-menu-surface]').count()).toBe(0)
+  await f.page.getByRole('button',{name:'组件更多操作',exact:true}).click();await expect.poll(()=>f.page.locator('[data-component-menu-surface]').count()).toBe(1)
+  f.mode('ok');f.release();await expect.poll(()=>f.view().node.componentTheme).toBe('dark')
+  await expect.poll(()=>f.page.locator('[data-conversation-component-id]').getAttribute('data-workbench-style')).toBe('dark')
+  expect(await f.page.locator('[data-component-menu-surface]').count()).toBe(1)
+  await f.page.keyboard.press('Escape');expect(f.errors).toEqual([])
+ }finally{f.release();await f.close()}
+},20000)
+it('shows a disabled mode submenu for an actual read-only Conversation component',async()=>{
+ const f=await fixture({readOnly:true});try{
+  await f.page.getByRole('button',{name:'组件更多操作',exact:true}).click()
+  const item=f.page.getByRole('menuitem',{name:'模式切换',exact:true});expect(await item.isDisabled()).toBe(true)
+  await item.hover();expect(await f.page.getByRole('menuitemradio').count()).toBe(0)
+  expect(f.view().node.componentTheme).toBeUndefined();expect(f.requests.filter(row=>row.method==='setTheme')).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('settles an existing HTML interaction before writing a theme revision and preserves both after reopen',async()=>{
+ const f=await fixture();try{
+  f.mode('hold');await f.frame.getByRole('button',{name:'增加计数',exact:true}).click()
+  await expect.poll(()=>f.requests.filter(row=>row.method==='commitHtmlInteraction').length).toBe(1)
+  await f.page.getByRole('button',{name:'组件更多操作',exact:true}).click();await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).hover();await f.page.getByRole('menuitemradio',{name:'深色模式',exact:true}).click()
+  await f.page.waitForTimeout(100);expect(f.requests.filter(row=>row.method==='setTheme')).toHaveLength(0)
+  f.mode('ok');f.release();await expect.poll(()=>f.view().node.componentTheme).toBe('dark')
+  await expect.poll(()=>config(f)?.sharedComponentState?.state?.count).toBe(1)
+  await f.reopen();await expect.poll(()=>f.frame.locator('#count').textContent()).toBe('1')
+  expect(f.view().node.componentTheme).toBe('dark');expect(f.errors).toEqual([])
+ }finally{f.release();await f.close()}
+},25000)
+it('queues a later HTML interaction behind an authorized in-flight theme without clearing dirty content',async()=>{
+ const f=await fixture();try{
+  f.mode('hold-theme')
+  await f.page.getByRole('button',{name:'组件更多操作',exact:true}).click();await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).hover();await f.page.getByRole('menuitemradio',{name:'深色模式',exact:true}).click()
+  await expect.poll(()=>f.requests.filter(row=>row.method==='setTheme').length).toBe(1)
+  await f.frame.getByRole('button',{name:'增加计数',exact:true}).click()
+  await f.page.waitForTimeout(100);expect(f.requests.filter(row=>row.method==='commitHtmlInteraction')).toHaveLength(0)
+  f.mode('ok');f.release();await expect.poll(()=>config(f)?.sharedComponentState?.state?.count).toBe(1)
+  expect(f.view().node.componentTheme).toBe('dark');await f.reopen();await expect.poll(()=>f.frame.locator('#count').textContent()).toBe('1')
+  expect(f.view().node.componentTheme).toBe('dark');expect(f.errors).toEqual([])
+ }finally{f.release();await f.close()}
+},25000)
 it('keeps the common Conversation iframe borderless without Research CSS and preserves live counter, memo and focus',async()=>{
  const f=await fixture();try{
   for(let i=0;i<3;i++)await f.frame.getByRole('button',{name:'增加计数',exact:true}).click()

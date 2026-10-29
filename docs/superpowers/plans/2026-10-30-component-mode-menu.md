@@ -4,7 +4,7 @@
 
 **Goal:** Chat/Notes 的当前组件 More 可切换既有四模式，菜单在离开所属组件/板块时可靠关闭。
 
-**Architecture:** 共享 SurfaceUi.Menu 保持主菜单与 submenu 为同一域，监听真实 owner 身份、可见性及 iframe/window 焦点。Notes 复用 notePresentation；Chat 以 owner/revision 事务保存组件主题，迁移 observation revision，不修改内容或全局看板主题。主题仅更新 palette 与既有 iframe 消息，不重建组件内容。
+**Architecture:** 共享 SurfaceUi.Menu 保持主菜单与 submenu 为同一域，监听真实 owner 身份、可见性及 iframe/window 焦点。Notes 复用 notePresentation；Chat 以 owner/revision 事务保存组件主题，迁移 observation revision，不修改内容或全局看板主题。Chat 样式事务与既有 HTML journal 同队列，禁止越过未保存或失败的交互。主题仅更新 palette 与既有 iframe 消息，不重建组件内容。
 
 **Tech Stack:** React、TypeScript、既有 SDK 源码 patch/serializer、Vitest 与隔离 Chromium。
 
@@ -33,8 +33,10 @@
 
 ## Task 2: 当前组件四模式与持久化
 
-- [ ] 在 conversation store/service/IPC 直接 tests 补组件隔离、reopen、快照保留及 stale/readonly/owner 拒绝 RED。
-- [ ] 在 packages/dsh-research-task-runtime/conversation-component-contract.d.ts、src/preload/conversation-components.ts、src/main/conversation-components/{ipc,service}.ts、src/main/state/conversation-components.ts 增加有限的 theme 写入，复用 rename 的 revision/observation 迁移。
-- [ ] 在共享 factory/serializer、scripts/lib/conversation-components.mjs、src/preload/notes/native-component-block.tsx 接四主题 submenu；Notes 复用原 presentation，保持 iframe identity 与 dirty 语义。
-- [ ] 在实际 Chat/Notes production browser fixture 验证四模式、两个组件隔离、保存重开、iframe 状态不丢及菜单关闭规则。
+- [x] 在 conversation store/service/IPC 直接 tests 补组件隔离、reopen、快照保留及 stale/readonly/owner 拒绝 RED。
+- [x] 在 packages/dsh-research-task-runtime/conversation-component-contract.d.ts、src/preload/conversation-components.ts、src/main/conversation-components/{ipc,service}.ts、src/main/state/conversation-components.ts 增加有限的 theme 写入，复用 rename 的 revision/observation 迁移。
+- [x] 在共享 factory/serializer、scripts/lib/conversation-components.mjs、src/preload/notes/native-component-block.tsx 接四主题 submenu；Notes 复用原 presentation，保持 iframe identity 与 dirty 语义。
+- [x] 在实际 Chat/Notes production browser fixture 验证四模式、两个组件隔离、保存重开、iframe 状态不丢及菜单关闭规则。
 - [ ] 跑直接 tests、TC/diff 后中文提交；冻结 tip 再 fresh 同范围，保留 RED/GREEN 与 source/protected-asset hashes，生成以 df2 为 base 的官方 handoff 候选。
+
+冻结后的最终验证与交接结果记录在外部官方卡，不再回写源计划，以保持 verifiedCommit 固定。

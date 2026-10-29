@@ -20,15 +20,16 @@ beforeAll(async()=>{
  const factories=new Map();window.__ModuleLoader__={load:d=>factories.set(d.id,d.factory)};new Function(${JSON.stringify(source)})();class Service{};const noop=()=>null,primitives=new Proxy({},{get:()=>noop});
  const library=factories.get('@deepseek-ai/dsh-client-ui-conversation')(id=>id==='react'?React:id==='react/jsx-runtime'?JSX:id==='react-dom'?DOM:id==='@deepseek-ai/cordis'?{Service}:primitives);
  const style=document.createElement('style');style.textContent=researchStyles+'\\n'+noteStyles;document.head.append(style);
- window.probe={queries:[],notes:[],conversation:[],canvas:[],copied:[],saved:[]};
+ window.probe={queries:[],notes:[],conversation:[],canvas:[],copied:[],saved:[],themes:[]};
  const symbol={market:'SZ',code:'000001',name:'合成验收证券'},spec={...financialWidgetDefaults('quote'),symbols:[symbol]},node={id:'same-node',title:'菜单验收行情',kind:'generated-container',noteLibrary:true,height:440,containerSpec:spec};
  const query=async(input,host)=>{window.probe.queries.push({host,...input});return input.action==='search'?{symbols:[symbol]}:input.action==='history'?{bars:[],source:'合成来源'}:{quotes:[{...symbol,price:100,asOf:'2026-10-28',source:'合成来源'}],source:'合成来源',receivedAt:'2026-10-28T13:00:00Z'}};
  let conversation={id:node.id,sessionId:'same-session',revision:1,node:structuredClone(node)};
- const bridge={read:async()=>{if(window.deferMenuRead)await new Promise(resolve=>window.releaseMenuRead=resolve);return structuredClone(conversation)},...(window.fixtureFull?{exportContent:async()=>({status:'saved'}),rename:async input=>{conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,title:input.title,displayName:input.title}};return structuredClone(conversation)},copy:async input=>{window.probe.copied.push(input);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input);return{id:'library-item'}},updateNativeSpec:async input=>{window.probe.conversation.push(input);conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,containerSpec:input.spec}};return structuredClone(conversation)}}:{}),...(window.fixtureQuery?{queryNative:async input=>query(input.query,'conversation')}:{})};
+ const bridge={read:async()=>{if(window.deferMenuRead)await new Promise(resolve=>window.releaseMenuRead=resolve);return structuredClone(conversation)},...(window.fixtureFull?{setTheme:async input=>{window.probe.themes.push(input);conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,componentTheme:input.theme}};return structuredClone(conversation)},exportContent:async()=>({status:'saved'}),rename:async input=>{conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,title:input.title,displayName:input.title}};return structuredClone(conversation)},copy:async input=>{window.probe.copied.push(input);return{ok:true}},saveLibrary:async input=>{window.probe.saved.push(input);return{id:'library-item'}},updateNativeSpec:async input=>{window.probe.conversation.push(input);conversation={...conversation,revision:conversation.revision+1,node:{...conversation.node,containerSpec:input.spec}};return structuredClone(conversation)}}:{}),...(window.fixtureQuery?{queryNative:async input=>query(input.query,'conversation')}:{})};
  window.dshDesktop={conversationComponents:bridge,financialWidget:{request:input=>query(input,'notes')},componentData:{request:async(sessionId,input)=>{window.probe.canvas.push({sessionId,...input});return input.action==='list'?[]:{}},setVisible:async()=>{}}};
  let block={id:'note-block',type:'research',props:{payload:JSON.stringify(node)}},setBlock;
  const editor={isEditable:!window.fixtureReadOnly,getBlock:()=>block,removeBlocks:()=>{},updateBlock:(_id,value)=>{block={...block,props:{...block.props,...value.props}};window.probe.notes.push(JSON.parse(block.props.payload));setBlock(block)}};
- function Note(){const [current,update]=useState(block);setBlock=update;return React.createElement(NativeComponentBlock,{block:current,node:JSON.parse(current.props.payload),context:{editor,bridge:{request:async method=>{if(method==='component-menu-capabilities'&&window.deferNoteMenu)await new Promise(resolve=>window.releaseNoteMenu=resolve);return method==='component-menu-capabilities'?{copy:window.fixtureFull,saveLibrary:window.fixtureFull&&!window.fixtureReadOnly,exportContent:window.fixtureFull,rename:window.fixtureFull&&!window.fixtureReadOnly}:{}}},persistComponentActions:async()=>{},sessionId:'same-session',dark:false}})}
+ window.surfaceEditor=editor;
+ function Note(){const [current,update]=useState(block);setBlock=update;return React.createElement(NativeComponentBlock,{block:current,node:JSON.parse(current.props.payload),context:{editor,bridge:{request:async method=>{if(method==='component-menu-capabilities'&&window.deferNoteMenu)await new Promise(resolve=>window.releaseNoteMenu=resolve);return method==='component-menu-capabilities'?{copy:window.fixtureFull,saveLibrary:window.fixtureFull&&!window.fixtureReadOnly,exportContent:window.fixtureFull,rename:window.fixtureFull&&!window.fixtureReadOnly}:{}}},persistComponentActions:async()=>{if(window.holdThemePersist)await new Promise(resolve=>window.releaseThemePersist=resolve)},sessionId:'same-session',dark:false}})}
  createRoot(document.querySelector('#note')).render(React.createElement(Note));createRoot(document.querySelector('#note-portals')).render(React.createElement(library.__NoteViews,{sessionId:'same-session',active:true}));
  createRoot(document.querySelector('#conversation')).render(React.createElement(library.__ConversationCard,{sessionId:'same-session',manifest:{componentId:node.id,sessionId:'same-session'}}));
  createRoot(document.querySelector('#settings-controller')).render(React.createElement(library.__DataSettings,{sessionId:'same-session',canvasRoot:{current:document.querySelector('#canvas')}}));
@@ -41,7 +42,7 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 async function open({full=true,query=true,readOnly=false}={}){
  const context=await browser.newContext({viewport:{width:1150,height:1000}}),page=await context.newPage(),errors:string[]=[];page.setDefaultTimeout(5000);page.on('pageerror',(error:Error)=>errors.push(error.message))
- await page.route('http://127.0.0.1/surface-menu',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body><header data-srb-session-header data-ework-notes-session="same-session"><button data-conversation-view-id="notes" aria-selected="true">笔记页签</button><button data-conversation-view-id="research" aria-selected="false">研究页签</button><button data-conversation-view-id="conversation" aria-selected="false">对话页签</button></header><section class="en-root" data-note-editor-session="same-session" data-note-editor-active="true" data-dark="false" style="position:relative;width:500px;height:500px"><div id="note"></div></section><div id="note-portals"></div><div id="conversation" style="width:500px"></div><section id="canvas" data-research-canvas><div data-research-node-id="same-node"><button id="canvas-trigger">研究数据设置</button></div></section><div id="settings-controller"></div></body></html>'}))
+ await page.route('http://127.0.0.1/surface-menu',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body data-odyssey-page="conversation"><header data-srb-session-header data-ework-notes-session="same-session"><button data-conversation-view-id="notes" aria-selected="true">笔记页签</button><button data-conversation-view-id="research" aria-selected="false">研究页签</button><button data-conversation-view-id="conversation" aria-selected="false">对话页签</button></header><section class="en-root" data-note-editor-session="same-session" data-note-editor-active="true" data-dark="false" style="position:relative;width:500px;height:500px"><div id="note"></div></section><div id="note-portals"></div><div id="conversation" style="width:500px"></div><section id="canvas" data-research-canvas><div data-research-node-id="same-node"><button id="canvas-trigger">研究数据设置</button></div></section><div id="settings-controller"></div></body></html>'}))
  await page.goto('http://127.0.0.1/surface-menu');await page.evaluate((value:{full:boolean;query:boolean;readOnly:boolean})=>Object.assign(window,{fixtureFull:value.full,fixtureQuery:value.query,fixtureReadOnly:value.readOnly}),{full,query,readOnly});await page.addScriptTag({content:'var exports={};\n'+script});await page.locator('#note [data-financial-widget]').waitFor();await page.locator('#conversation [data-financial-widget]').waitFor()
  await page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await page.waitForTimeout(30);await page.evaluate(()=>(window as any).probe.canvas=[])
  return{page,errors,close:()=>context.close()}
@@ -62,7 +63,42 @@ it('keeps both menu levels interactive, then closes the whole domain on outside 
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
-it.each(['hidden','inert','display','visibility','inactive','session','tab','settings','remove'])('removes the retained Notes menu portal when its owner changes: %s',async reason=>{
+it.each(['before-choice','during-persist'])('refuses a Notes theme write when permission is revoked after opening the submenu: %s',async phase=>{
+ const f=await open();try{
+  await f.page.locator('#note .en-component-more').click()
+  await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).hover()
+  const before=await f.page.evaluate(()=>(window as any).surfaceEditor.getBlock('note-block').props.payload)
+  await f.page.evaluate((phase:string)=>{const w=window as any;if(phase==='before-choice')w.surfaceEditor.isEditable=false;else w.holdThemePersist=true},phase)
+  await f.page.getByRole('menuitemradio',{name:'深色模式',exact:true}).click()
+  if(phase==='during-persist'){
+   await expect.poll(()=>f.page.evaluate(()=>typeof (window as any).releaseThemePersist)).toBe('function')
+   await f.page.evaluate(()=>{const w=window as any;w.surfaceEditor.isEditable=false;w.releaseThemePersist()})
+  }
+  await f.page.waitForTimeout(100)
+  expect(await f.page.evaluate(()=>(window as any).surfaceEditor.getBlock('note-block').props.payload)).toBe(before)
+  expect(await f.page.locator('#note .en-research').getAttribute('data-workbench-style')).toBe('light')
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('applies the four actual financial palettes to only the chosen component and retains the mode after refresh',async()=>{
+ const f=await open();try{
+  for(const host of ['conversation','notes'])for(const[mode,label,bg]of[['light','浅色模式','rgb(255, 255, 255)'],['dark','深色模式','rgb(21, 21, 24)'],['enterprise','易方达模式','rgb(255, 255, 255)'],['openterminal','彭博模式','rgb(10, 10, 10)']]){
+   const root=f.page.locator(host==='notes'?'#note .en-research':'#conversation [data-conversation-component-id]')
+   await root.locator(host==='notes'?'.en-component-more':'[data-conversation-action=more]').click()
+   await f.page.getByRole('menuitem',{name:'模式切换',exact:true}).hover()
+   await f.page.getByRole('menuitemradio',{name:label,exact:true}).click()
+   await expect.poll(()=>root.getAttribute('data-workbench-style')).toBe(mode)
+   await expect.poll(()=>root.locator('[data-financial-widget]').evaluate((element:HTMLElement)=>getComputedStyle(element).backgroundColor)).toBe(bg)
+   const other=f.page.locator(host==='notes'?'#conversation [data-conversation-component-id]':'#note .en-research')
+   expect(await other.getAttribute('data-workbench-style')).toBe(host==='notes'?'openterminal':'light')
+   expect(await f.page.evaluate(()=>document.body.hasAttribute('data-ds-dark-theme'))).toBe(false)
+  }
+  await f.page.locator('#conversation').getByRole('button',{name:'刷新组件',exact:true}).click()
+  expect(await f.page.locator('#conversation [data-conversation-component-id]').getAttribute('data-workbench-style')).toBe('openterminal')
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},25000)
+it.each(['hidden','inert','display','visibility','inactive','session','tab','page','settings','remove'])('removes the retained Notes menu portal when its owner changes: %s',async reason=>{
  const f=await open();try{
   await f.page.locator('#note .en-component-more').click()
   await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(1)
@@ -75,6 +111,7 @@ it.each(['hidden','inert','display','visibility','inactive','session','tab','set
    if(reason==='inactive')owner.dataset.noteEditorActive='false'
    if(reason==='session')document.querySelector<HTMLElement>('[data-ework-notes-session]')!.dataset.eworkNotesSession='other-session'
    if(reason==='tab'){document.querySelector('[data-conversation-view-id=notes]')!.setAttribute('aria-selected','false');document.querySelector('[data-conversation-view-id=research]')!.setAttribute('aria-selected','true')}
+   if(reason==='page')document.body.dataset.odysseyPage='home'
    if(reason==='settings')document.body.dataset.settingsOpen='true'
    if(reason==='remove')owner.remove()
   },reason)
@@ -88,6 +125,7 @@ it('closes a Notes menu when a real component iframe receives the click',async()
   await f.page.locator('#note .en-component-more').click()
   await f.page.frameLocator('#menu-iframe').getByRole('button',{name:'内嵌内容'}).click()
   await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').count()).toBe(0)
+  expect(await f.page.evaluate(()=>document.activeElement===document.querySelector('#menu-iframe'))).toBe(true)
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },12000)
@@ -117,6 +155,21 @@ it.each(['notes','conversation'])('does not reopen an old %s menu after its asyn
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+it.each(['notes','conversation'])('does not let a delayed %s menu replace another component menu in the same session',async host=>{
+ const f=await open();try{
+  await f.page.evaluate((host:string)=>{if(host==='notes')(window as any).deferNoteMenu=true;else (window as any).deferMenuRead=true},host)
+  await f.page.locator(host==='notes'?'#note .en-component-more':'#conversation [data-conversation-action=more]').click()
+  await expect.poll(()=>f.page.evaluate((host:string)=>typeof (window as any)[host==='notes'?'releaseNoteMenu':'releaseMenuRead'],host)).toBe('function')
+  await f.page.locator(host==='notes'?'#conversation [data-conversation-action=more]':'#note .en-component-more').click()
+  const other=host==='notes'?'conversation':'notes'
+  await expect.poll(()=>f.page.locator('body [data-component-menu-surface]').getAttribute('data-component-menu-surface')).toBe(other)
+  await f.page.evaluate((host:string)=>(window as any)[host==='notes'?'releaseNoteMenu':'releaseMenuRead'](),host)
+  await f.page.waitForTimeout(120)
+  expect(await f.page.locator('body [data-component-menu-surface]').count()).toBe(1)
+  expect(await f.page.locator('body [data-component-menu-surface]').getAttribute('data-component-menu-surface')).toBe(other)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
 it('hides unsupported operations in the real conversation More menu and financial settings while retaining available refresh',async()=>{
  const f=await open({full:false});try{
   const card=f.page.locator('#conversation');await card.getByRole('button',{name:'组件更多操作',exact:true}).click();const menu=f.page.getByRole('menu',{name:'组件更多操作',exact:true})
@@ -143,7 +196,7 @@ it('shows read-only note provenance without presenting settings that cannot be s
 },15000)
 it('keeps the real conversation provider, timing, pause and manual refresh controls when both host adapters exist',async()=>{
  const f=await open();try{
-  const card=f.page.locator('#conversation');await card.getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await f.page.getByRole('menuitem').allTextContents()).toEqual(['放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新']);await f.page.getByRole('menuitem',{name:'数据源与自动更新',exact:true}).click()
+  const card=f.page.locator('#conversation');await card.getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await f.page.getByRole('menuitem').allTextContents()).toEqual(['模式切换›','放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新']);await f.page.getByRole('menuitem',{name:'数据源与自动更新',exact:true}).click()
   const dialog=f.page.getByRole('dialog',{name:'组件数据与自动更新'});await dialog.waitFor();expect(await dialog.locator('select').count()).toBe(2)
   await dialog.getByRole('combobox',{name:'数据源',exact:true}).selectOption('backup');await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.conversation.at(-1)?.spec.dataSource)).toBe('backup')
   await dialog.getByRole('combobox',{name:'更新频率',exact:true}).selectOption('5');await expect.poll(()=>f.page.evaluate(()=>(window as any).probe.conversation.at(-1)?.spec.refreshMinutes)).toBe(5)
@@ -169,8 +222,8 @@ it('routes settings only to the exact surface and mounted owner when all hosts s
 it('retains the executable Research reading, clipboard, naming, library and export entries in both surface menus',async()=>{
  const f=await open();try{
   await f.page.locator('#conversation').getByRole('button',{name:'组件更多操作',exact:true}).click();const menu=f.page.getByRole('menu',{name:'组件更多操作',exact:true})
-  expect(await menu.getByRole('menuitem').allTextContents()).toEqual(['放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新'])
+  expect(await menu.getByRole('menuitem').allTextContents()).toEqual(['模式切换›','放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新'])
   await f.page.keyboard.press('Escape');expect(await f.page.locator('#note').getByRole('button',{name:'组件更多操作',exact:true}).count()).toBe(1)
-  await f.page.locator('#note').getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await f.page.getByRole('menu',{name:'组件更多操作',exact:true}).getByRole('menuitem').allTextContents()).toEqual(['放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新']);expect(f.errors).toEqual([])
+  await f.page.locator('#note').getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await f.page.getByRole('menu',{name:'组件更多操作',exact:true}).getByRole('menuitem').allTextContents()).toEqual(['模式切换›','放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新']);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)

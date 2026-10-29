@@ -3,6 +3,7 @@ export function createConversationComponentsBridge(invoke: (channel: string, ...
     const bridge: ConversationComponentsBridge = {
         read: input => invoke('conversation-components:read', input) as ReturnType<ConversationComponentsBridge['read']>,
         rename: input => invoke('conversation-components:rename', input) as ReturnType<NonNullable<ConversationComponentsBridge['rename']>>,
+        setTheme: input => invoke('conversation-components:setTheme', input) as ReturnType<NonNullable<ConversationComponentsBridge['setTheme']>>,
         exportContent: input => invoke('conversation-components:exportContent', input) as ReturnType<NonNullable<ConversationComponentsBridge['exportContent']>>,
         commitHtmlInteraction: input => invoke('conversation-components:commitHtmlInteraction', input) as ReturnType<NonNullable<ConversationComponentsBridge['commitHtmlInteraction']>>,
         updateNativeSpec: input => invoke('conversation-components:updateNativeSpec', input) as ReturnType<ConversationComponentsBridge['updateNativeSpec']>,

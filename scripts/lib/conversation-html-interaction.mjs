@@ -28,5 +28,12 @@ export function createConversationHtmlInteraction({bridge,sessionId,componentId,
  }
  const journal=createJournal(initial?.interactionState,(version,event)=>enqueue('journal',version,{event}))
  const shared=createShared(initial?.sharedComponentState,(version,revision,state)=>enqueue('shared',version,{revision,state}))
- return{bridge:journal,sharedBridge:shared,observe(config){journal.observe(config?.interactionState);shared.observe(config?.sharedComponentState)},dispose(){closed=true;journal.dispose();shared.dispose()}}
+ return{bridge:journal,sharedBridge:shared,
+  commitPresentation(write){
+   // A theme also advances the component revision. Keep it in the existing
+   // queue so neither side overtakes an unacknowledged HTML interaction.
+   const result=queue.then(async()=>{target();if(failed)throw Error('组件交互尚未保存，请先保存后再切换模式。');return write()})
+   queue=result.catch(()=>{});return result
+  },
+  observe(config){journal.observe(config?.interactionState);shared.observe(config?.sharedComponentState)},dispose(){closed=true;journal.dispose();shared.dispose()}}
 }
