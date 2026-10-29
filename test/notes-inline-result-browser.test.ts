@@ -109,6 +109,17 @@ it.each([false,true])('keeps actual canonical chart mouse entry and point clicks
   await undo.click();await expect.poll(()=>f.page.locator('.en-native-component').count()).toBe(0);expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['before','anchor','after']);expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 },30000)
+it('keeps captured fixed host chart mouse entry and full-data disclosure undoable after reopen',async()=>{
+ const f=await open();try{
+  await generate(f.page,{kind:'component',node:capturedNavigationNode});const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview');await undo.waitFor()
+  await f.page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await chart.locator('svg').click({position:{x:2,y:2}});await chart.locator('svg').press('ArrowRight');await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月2日');expect(await undo.isEnabled()).toBe(true)
+  await chart.getByText('查看全部数据',{exact:true}).click();await expect.poll(()=>f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return Object.values(JSON.parse(block.props.payload).config?.interactionState?.events??{}).some((event:any)=>event.tag==='SUMMARY'&&event.type==='click')})).toBe(true);expect(await undo.isEnabled()).toBe(true)
+  const journal=await f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return JSON.parse(block.props.payload).config.interactionState});expect(Object.keys(journal.events)).toHaveLength(3)
+  await f.page.evaluate(()=>(window as any).fixture.flush());await f.page.evaluate(()=>(window as any).fixture.reopen());await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月2日');expect(await chart.locator('details').getAttribute('open')).not.toBeNull();expect(await undo.isEnabled()).toBe(true)
+  expect(await f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return JSON.parse(block.props.payload).config.interactionState})).toEqual(journal)
+  await undo.click();await expect.poll(()=>f.page.locator('.en-native-component').count()).toBe(0);expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['before','anchor','after']);expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},25000)
 it('rolls back a failed actual canonical SVG click save without dirtying the pending result',async()=>{
  const f=await open();try{
   await generate(f.page,{kind:'component',node:pointerNavigationNode});const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview');await undo.waitFor();await f.page.evaluate(()=>(window as any).fixture.flush())
