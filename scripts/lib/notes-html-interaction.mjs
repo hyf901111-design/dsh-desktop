@@ -1,4 +1,5 @@
 import {parse} from '@babel/parser'
+import {parseWorkbenchRestore,serializeWorkbenchRestore} from './workbench-restore-codec.mjs'
 import {sharedComponentRuntime} from '../../packages/dsh-research-task-runtime/shared-component-runtime.js'
 import {RESEARCH_HTML_INTERACTION_RUNTIME} from '../../packages/dsh-research-task-runtime/html-artifact.js'
 /** State snapshots are published only after the Notes persister acknowledges. */
@@ -120,14 +121,15 @@ export function patchNotesHtmlInteraction(source,noteViewSource){
  if(recordStart>=0){
   const recordEnd=source.indexOf(' */',recordStart+tag.length)
   if(recordEnd<0)throw Error('Notes HTML restore record incomplete')
-  const changes=JSON.parse(source.slice(recordStart+tag.length,recordEnd))
-  if(!Array.isArray(changes)||changes.some(entry=>!Array.isArray(entry)||entry.length!==2||entry.some(value=>typeof value!=='string')))throw Error('Notes HTML restore record invalid')
+  const record=source.slice(recordStart+tag.length,recordEnd),changes=parseWorkbenchRestore(record)
   const entries=changes.filter(([before,after])=>before.trimStart().startsWith('function ResearchHtmlArtifact(')&&after.trimStart().startsWith('function ResearchHtmlArtifact('))
   if(entries.length!==1)throw Error('Notes HTML restore record missing or ambiguous')
+  if((entries[0][2]??1)!==1)throw Error('Notes HTML restore renderer must be unique')
   const entry=entries[0],nextAfter=patchNoteHtmlRenderer(entry[1])
   if(previousRenderer.trimEnd()!==entry[1].trimEnd()&&previousRenderer.trimEnd()!==nextAfter.trimEnd())throw Error('Notes HTML restore record changed')
   entry[0]=patchNoteHtmlRenderer(entry[0]);entry[1]=nextAfter
-  edits.push({start:recordStart+tag.length,end:recordEnd,text:JSON.stringify(changes).replaceAll('*/','*\\/')})
+  // Preserve legacy records for older independent restore consumers.
+  edits.push({start:recordStart+tag.length,end:recordEnd,text:record.trimStart().startsWith('[')?JSON.stringify(changes).replaceAll('*/','*\\/'):serializeWorkbenchRestore(changes)})
  }
 
  if(!functions.some(node=>node.id.name==='createNoteHtmlInteractionBridge')){
