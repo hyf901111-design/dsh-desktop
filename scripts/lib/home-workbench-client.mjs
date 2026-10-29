@@ -27,7 +27,7 @@ const patches=[
  ['sink','const htmlFitStates = new Map();',`homeWorkbenchStudySinks.set(sessionId,(nodeId,expected,next)=>{
   if(!collaborationCanWrite())return false;
   const node=snapshot.artifacts.find(n=>n.id===nodeId),spec=parseHomeWorkbenchStudySpec(next);
-  if(node?.containerSpec?.type!=='research-study'||JSON.stringify(node.containerSpec)!==JSON.stringify(expected)||!spec||spec.role!==expected.role)return false;
+  if(node?.containerSpec?.type!=='research-study'||JSON.stringify(node.containerSpec)!==JSON.stringify(expected)||!spec||spec.studyRole!==expected.studyRole)return false;
   return commitUpdate({artifacts:synchronizeHomeWorkbenchStudies(snapshot.artifacts.map(n=>n.id===nodeId?{...n,containerSpec:spec}:n),nodeId)},true)!==false;
  });\n`],
  ['sync','const commitUpdate = (patch, persist = true) => {','\nif(patch.artifacts)patch={...patch,artifacts:synchronizeHomeWorkbenchStudies(patch.artifacts)};\n','after'],

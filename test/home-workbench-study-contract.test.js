@@ -10,12 +10,12 @@ const model=(a,id)=>homeWorkbenchStudyModel(get(a,id))
 describe('第五用例真实研究合同',()=>{
  it('严格校验证券、角色、参数及依赖，拒绝不合法快照字段',()=>{
   const value=homeWorkbenchStudySpec('valuation','600519')
-  expect(parseHomeWorkbenchStudySpec(value)).toMatchObject({type:'research-study',security:'600519'})
+  expect(parseHomeWorkbenchStudySpec(value)).toMatchObject({type:'research-study',studyRole:'valuation',security:'600519'})
   expect(parseHomeWorkbenchStudySpec({...value,security:'fake'})).toBeNull()
   expect(parseHomeWorkbenchStudySpec({...value,html:'<script/>'})).toBeNull()
   expect(parseHomeWorkbenchStudySpec({...value,scenarios:{'600519':{pe:1000,epsChange:0}}})).toBeNull()
   expect(parseHomeWorkbenchStudySpec({...value,linkedSourceId:'\n'})).toBeNull()
-  expect(parseHomeWorkbenchStudySpec({...value,role:'peers',linkedSourceId:'w1'})).toBeNull()
+  expect(parseHomeWorkbenchStudySpec({...value,studyRole:'peers',linkedSourceId:'w1'})).toBeNull()
  })
  it('任一页签自选驱动相关公司的全部内容，固定同业与资讯不参与联动',()=>{
   let a=graph();const fixed=a.slice(-2);a[1].containerSpec.selectedSymbol='SZ:000858'

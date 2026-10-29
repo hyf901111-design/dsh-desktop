@@ -3,6 +3,7 @@ import {parseDerivedSpec} from '../../../packages/dsh-research-task-runtime/deri
 import {parseYoutubeSpec} from '../../../packages/dsh-research-task-runtime/youtube-template-contract.js'
 import {parseIframeSpec} from '../../../packages/dsh-research-task-runtime/iframe-template-contract.js'
 import {financialWidgetSpec} from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js'
+import {parseHomeWorkbenchStudySpec} from '../../../packages/dsh-research-task-runtime/home-workbench-study-contract.js'
 import {detachConversationComponentNode,type JsonObject} from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js'
 import { createHash, randomBytes } from 'node:crypto'
 import { parseResearchHtmlArtifact, RESEARCH_HTML_LIMIT_ERROR } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
@@ -93,7 +94,14 @@ function sanitizeNode(value: unknown): ClipboardNode {
   if (input.kind === 'web-link') { output.url = publicUrl(input.url); output.titleMode = ['custom', 'manual'].includes(String(input.titleMode)) ? 'custom' : 'auto' }
   if (input.containerSpec !== undefined) {
     const spec = record(input.containerSpec)
-    if (spec.type === 'financial-widget') {
+    if (spec.type === 'research-study') {
+      const study = parseHomeWorkbenchStudySpec(spec)
+      if (study === null) throw new Error('研究组件配置无效。')
+      // The copied snapshot keeps the effective company/report/parameters, but
+      // cannot retain a dependency on a node in the originating board.
+      delete study.linkedSourceId
+      output.containerSpec = study
+    } else if (spec.type === 'financial-widget') {
       const financial = financialWidgetSpec(spec)
       if (financial === null) throw new Error('金融组件配置无效。')
       // Freeze the effective linked-news query using the single cross-surface contract.
@@ -153,7 +161,7 @@ function sanitizeNode(value: unknown): ClipboardNode {
     })
   }
   if (input.kind === 'file' && opaque(input.assetId)) output.assetId = input.assetId
-  if ((output.containerSpec as RecordValue | undefined)?.type === 'financial-widget') {
+  if (['financial-widget', 'research-study'].includes(String((output.containerSpec as RecordValue | undefined)?.type))) {
     for (const key of ['messageId', 'sourceNodeIds', 'generationSources', 'creationMode']) delete output[key]
   }
   return output

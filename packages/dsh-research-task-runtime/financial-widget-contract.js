@@ -45,7 +45,7 @@ export function financialLinkSourceId(spec){
  return spec?.widget==='quote'?spec.linkedWatchlistId:['news','announcements'].includes(spec?.widget)?spec.linkedSourceId:undefined
 }
 export function financialCanLink(source,target){
- if(target?.type==='research-study'){if(['peers','news'].includes(target.role))return false;if(['reader','analysis'].includes(target.role))return source?.type==='research-study'&&source.role==='directory';if(target.role==='matrix')return source?.type==='research-study'&&source.role==='valuation';return source?.type==='financial-widget'&&source.widget==='watchlist'}
+ if(target?.type==='research-study'){if(['peers','news'].includes(target.studyRole))return false;if(['reader','analysis'].includes(target.studyRole))return source?.type==='research-study'&&source.studyRole==='directory';if(target.studyRole==='matrix')return source?.type==='research-study'&&source.studyRole==='valuation';return source?.type==='financial-widget'&&source.widget==='watchlist'}
  return source?.type==='financial-widget'&&target?.type==='financial-widget'&&(source.widget==='watchlist'&&['quote','news','announcements'].includes(target.widget)||source.widget==='quote'&&['news','announcements'].includes(target.widget))
 }
 export function financialNewsQuery(spec){

@@ -8,9 +8,9 @@ export const HOME_WORKBENCH_STUDY_COPY=copy
 // These pure functions are also serialized into the trusted native canvas.
 export function parseHomeWorkbenchStudySpec(value){
  const codes=['600519','000858','000568'],roles=['disclosure','performance','peers','valuation','matrix','dividend','cashflow','directory','reader','analysis','news']
- if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','role','title','security','reportKind','scenarios','performancePeriods','linkedSourceId'].includes(k)))return null
- if(value.version!==1||value.type!=='research-study'||!roles.includes(value.role)||value.security!==null&&!codes.includes(value.security)||typeof value.title!=='string'||!value.title.trim()||value.title.length>160||/[\x00-\x1f]/.test(value.title)||!['annual','quarter','dividend'].includes(value.reportKind))return null
- if(value.linkedSourceId!==undefined&&(typeof value.linkedSourceId!=='string'||!/^[-\w:.]{1,200}$/.test(value.linkedSourceId)||['peers','news'].includes(value.role)))return null
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','studyRole','title','security','reportKind','scenarios','performancePeriods','linkedSourceId'].includes(k)))return null
+ if(value.version!==1||value.type!=='research-study'||!roles.includes(value.studyRole)||value.security!==null&&!codes.includes(value.security)||typeof value.title!=='string'||!value.title.trim()||value.title.length>160||/[\x00-\x1f]/.test(value.title)||!['annual','quarter','dividend'].includes(value.reportKind))return null
+ if(value.linkedSourceId!==undefined&&(typeof value.linkedSourceId!=='string'||!/^[-\w:.]{1,200}$/.test(value.linkedSourceId)||['peers','news'].includes(value.studyRole)))return null
  const scenarios=value.scenarios,periods=value.performancePeriods
  if(!scenarios||typeof scenarios!=='object'||Array.isArray(scenarios)||Object.keys(scenarios).some(k=>!codes.includes(k))||!periods||typeof periods!=='object'||Array.isArray(periods)||Object.keys(periods).some(k=>!codes.includes(k)))return null
  for(const code of codes){const s=scenarios[code];if(!s||Object.keys(s).length!==2||!['snapshot',20,25].includes(s.pe)||![-5,0,5].includes(s.epsChange)||!['quarter','annual'].includes(periods[code]))return null}
@@ -22,15 +22,15 @@ export function homeWorkbenchStudyTitle(role,security,reportKind='annual'){
 }
 export function homeWorkbenchStudySpec(role,security='600519',options={}){
  const code=typeof security==='string'?security.replace(/^(SH|SZ):/,''):security
- return parseHomeWorkbenchStudySpec({version:1,type:'research-study',role,security:code,reportKind:'annual',scenarios:{'600519':{pe:20,epsChange:0},'000858':{pe:20,epsChange:0},'000568':{pe:20,epsChange:0}},performancePeriods:{'600519':'quarter','000858':'quarter','000568':'quarter'},...options,title:options.title||homeWorkbenchStudyTitle(role,code,options.reportKind)})
+ return parseHomeWorkbenchStudySpec({version:1,type:'research-study',studyRole:role,security:code,reportKind:'annual',scenarios:{'600519':{pe:20,epsChange:0},'000858':{pe:20,epsChange:0},'000568':{pe:20,epsChange:0}},performancePeriods:{'600519':'quarter','000858':'quarter','000568':'quarter'},...options,title:options.title||homeWorkbenchStudyTitle(role,code,options.reportKind)})
 }
 export function homeWorkbenchStudyCanLink(source,target){
- if(target?.type!=='research-study'||['peers','news'].includes(target.role))return false
- if(['reader','analysis'].includes(target.role))return source?.type==='research-study'&&source.role==='directory'
- if(target.role==='matrix')return source?.type==='research-study'&&source.role==='valuation'
+ if(target?.type!=='research-study'||['peers','news'].includes(target.studyRole))return false
+ if(['reader','analysis'].includes(target.studyRole))return source?.type==='research-study'&&source.studyRole==='directory'
+ if(target.studyRole==='matrix')return source?.type==='research-study'&&source.studyRole==='valuation'
  return source?.type==='financial-widget'&&source.widget==='watchlist'
 }
-export function homeWorkbenchStudyHasOutput(spec){return spec?.type==='research-study'&&['directory','valuation'].includes(spec.role)}
+export function homeWorkbenchStudyHasOutput(spec){return spec?.type==='research-study'&&['directory','valuation'].includes(spec.studyRole)}
 export function synchronizeHomeWorkbenchStudies(artifacts,changedNodeId){
  if(!Array.isArray(artifacts))return artifacts
  const byId=new Map(artifacts.map(n=>[n.id,n])),studies=artifacts.filter(n=>parseHomeWorkbenchStudySpec(n.containerSpec))
@@ -45,7 +45,7 @@ export function synchronizeHomeWorkbenchStudies(artifacts,changedNodeId){
  const resolve=id=>{
   if(resolved.has(id))return resolved.get(id)
   const n=byId.get(id),s=parseHomeWorkbenchStudySpec(n?.containerSpec)
-  if(!s||['peers','news'].includes(s.role))return n
+  if(!s||['peers','news'].includes(s.studyRole))return n
   if(visiting.has(id))return {...n,containerSpec:{...s,security:null}}
   visiting.add(id)
   let next=s
@@ -55,9 +55,9 @@ export function synchronizeHomeWorkbenchStudies(artifacts,changedNodeId){
    else if(ps.type==='financial-widget'){
     const symbols=Array.isArray(ps.symbols)?ps.symbols:[],selected=symbols.find(sy=>sy.market+':'+sy.code===ps.selectedSymbol)??symbols[0],valid=HOME_WORKBENCH_STUDY_DATA.companies.find(c=>c.id===selected?.code&&c.exchange===selected?.market)
     next={...s,security:valid?selected.code:null}
-   }else next={...s,security:ps.security,...(['reader','analysis'].includes(s.role)?{reportKind:ps.reportKind}:{}),...(s.role==='matrix'?{scenarios:structuredClone(ps.scenarios)}:{})}
+   }else next={...s,security:ps.security,...(['reader','analysis'].includes(s.studyRole)?{reportKind:ps.reportKind}:{}),...(s.studyRole==='matrix'?{scenarios:structuredClone(ps.scenarios)}:{})}
   }
-  const title=homeWorkbenchStudyTitle(next.role,next.security,next.reportKind);next={...next,title}
+  const title=homeWorkbenchStudyTitle(next.studyRole,next.security,next.reportKind);next={...next,title}
   visiting.delete(id)
   const result=JSON.stringify(next)===JSON.stringify(n.containerSpec)&&n.title===title?n:{...n,title,excerpt:title,containerSpec:next};resolved.set(id,result);return result
  }

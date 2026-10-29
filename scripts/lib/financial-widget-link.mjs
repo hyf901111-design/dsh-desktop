@@ -1,5 +1,5 @@
 export function FinancialConnectionPort({node,side,readOnly}){
- const study=node.containerSpec.type==='research-study',role=node.containerSpec.role,description=study?(side==='output'?role==='directory'?'输出选中报告':'输出估值参数':role==='matrix'?'接收估值参数':['reader','analysis'].includes(role)?'接收选中报告':'接收选中个股'):null;
+ const study=node.containerSpec.type==='research-study',role=node.containerSpec.studyRole,description=study?(side==='output'?role==='directory'?'输出选中报告':'输出估值参数':role==='matrix'?'接收估值参数':['reader','analysis'].includes(role)?'接收选中报告':'接收选中个股'):null;
  const connected=side==='input'&&Boolean(financialLinkSourceId(node.containerSpec)),feed=['news','announcements'].includes(node.containerSpec.widget)
  return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port','data-financial-port':side,'data-financial-port-node':node.id,'data-connected':connected||undefined,disabled:readOnly,'aria-label':description||(side==='output'?'输出选中个股':node.containerSpec.widget==='announcements'?'接收个股相关公告':feed?'接收个股相关新闻':'接收自选个股'),title:side==='output'?'拖到左侧节点连接 · 拖到空白处断开':connected?'拖到右侧节点改接 · 拖到空白处断开':'拖到右侧节点连接',children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
 }

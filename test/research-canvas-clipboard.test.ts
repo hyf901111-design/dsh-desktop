@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { homeWorkbenchStudySpec } from '../packages/dsh-research-task-runtime/home-workbench-study-contract.js'
 import { FileResearchPreviewAuthorizationStorage, ResearchFilePreviewRegistry } from '../src/main/state/research-file-preview'
 import { ResearchCanvasClipboard, RESEARCH_CLIPBOARD_FORMAT, registerResearchClipboardHandlers } from '../src/main/state/research-canvas-clipboard'
 
@@ -43,6 +44,24 @@ async function source(f: Awaited<ReturnType<typeof fixture>>, name = 'report.pdf
 afterEach(async () => { await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))) })
 
 describe('durable research clipboard', () => {
+  it('copies study snapshots with effective selections but no link to the original board', async () => {
+    const f = await fixture()
+    const spec = homeWorkbenchStudySpec('matrix', '000568', { linkedSourceId: 'old-valuation' })!
+    spec.scenarios['000568'] = { pe: 25, epsChange: -5 }
+    const node = { id: 'study', kind: 'generated-container', title: spec.title, x: 0, y: 0, containerSpec: spec, generationStatus: 'completed', sourceNodeIds: ['old-valuation'], creationMode: 'selection', messageId: 'old-message' }
+    expect(await f.service.copy({ sessionId: 'source', nodes: [node] })).toEqual({ ok: true })
+    const result = await new ResearchCanvasClipboard(f.options).read()
+    expect(result).toMatchObject({ kind: 'components', nodes: [{ containerSpec: { type: 'research-study', security: '000568', scenarios: { '000568': { pe: 25, epsChange: -5 } } } }] })
+    if (result.kind !== 'components') throw Error('Expected component snapshot')
+    expect(result.nodes[0]!.containerSpec).not.toHaveProperty('linkedSourceId')
+    expect(result.nodes[0]).not.toHaveProperty('sourceNodeIds')
+    expect(result.nodes[0]).not.toHaveProperty('messageId')
+    expect(node.containerSpec.linkedSourceId).toBe('old-valuation')
+    expect((await f.service.copy({ sessionId: 'source', nodes: [{ ...node, containerSpec: { ...spec, script: 'secret' } }] })).ok).toBe(false)
+    const unavailable = homeWorkbenchStudySpec('reader', null)!
+    expect(await f.service.copy({ sessionId: 'source', nodes: [{ ...node, containerSpec: unavailable }] })).toEqual({ ok: true })
+    expect(await f.service.read()).toMatchObject({ kind: 'components', nodes: [{ containerSpec: { security: null } }] })
+  })
   it('copies derived presets with full original and result independently, preserving zero and missing reasons',async()=>{
     const f=await fixture()
     for(const type of ['summary','mind-map']){
