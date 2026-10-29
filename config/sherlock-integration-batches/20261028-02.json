@@ -2445,6 +2445,220 @@
         ],
         "recordedAt": "2026-10-29T04:34:48.118Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记演示完整原位生成、专业核验与总结追加流程",
+        "branch": "codex/feat/notes-demo-flow-20261029",
+        "baseCommit": "85509bf4155cd9d83bc976a9eb702e4fa9f47de5",
+        "tipCommit": "b52057a11ffc7972228ac1159591ebdf3d39a0cb",
+        "commits": [
+          {
+            "commit": "b52057a11ffc7972228ac1159591ebdf3d39a0cb",
+            "parents": [
+              "85509bf4155cd9d83bc976a9eb702e4fa9f47de5"
+            ],
+            "subject": "功能：完善笔记演示的原位图表行情与核验总结流程"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-artifacts.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-notes-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes-native.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/home-note-components.js"
+          },
+          {
+            "status": "A",
+            "path": "test/helpers/esbuild-raw-source.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-data.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-handoff-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-native-editor.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-native.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-portal.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-notes-host.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-notes-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "冻结提交上 tsconfig.node TypeScript 检查通过；与原集成 Gate14 参数和120000ms预算完全一致。",
+            "verifiedCommit": "b52057a11ffc7972228ac1159591ebdf3d39a0cb",
+            "completedAt": "2026-10-29T12:20:47.873686+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-notes-data.test.ts",
+              "test/home-notes-runtime.test.js",
+              "test/home-notes-host.test.js",
+              "test/home-guide-notes-native.test.ts",
+              "test/home-guide-notes-portal.test.js",
+              "test/home-guide-notes-scroll.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "6个直接受影响文件共41/41通过；含严格阶段、semantic requestId、原ACL委托、真实popup归属/同名干扰、tail lease失效、公开按钮原ACK及取消/重复拒绝。",
+            "verifiedCommit": "b52057a11ffc7972228ac1159591ebdf3d39a0cb",
+            "completedAt": "2026-10-29T12:21:21.981945+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-notes-browser.test.js",
+              "-t",
+              "checks three actual evidence cards",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "真实 NotesApp 25步主流程1/1通过，文件其余24条本次未选；Space图表/Slash证券菜单/三问题依据及替换/真实划段改写/摘要插入前三态/clip负例/普通重开与导出/平滑回顶通过。",
+            "verifiedCommit": "b52057a11ffc7972228ac1159591ebdf3d39a0cb",
+            "completedAt": "2026-10-29T12:22:03.008035+00:00",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-notes-shell-browser.test.js",
+              "-t",
+              "saves and reopens the native note without clipping a 600px",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "真实引导调度器600px窄屏完整25步播放、正文和2组件及末尾回复保存重开1/1通过，文件其余10条本次未选。",
+            "verifiedCommit": "b52057a11ffc7972228ac1159591ebdf3d39a0cb",
+            "completedAt": "2026-10-29T12:23:24.105271+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-notes-native-editor.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "原生编辑器14/14通过；PM斜杠真菜单、run与空行保护、tail lease的光标/正文/取消失效、跨行中文emoji连续选区与完整字素、Pause/Stop/ownership断言保留。",
+            "verifiedCommit": "b52057a11ffc7972228ac1159591ebdf3d39a0cb",
+            "completedAt": "2026-10-29T12:23:39.119658+00:00",
+            "timeoutMs": 90000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在冻结b520提交的真实NotesApp/原Native菜单/常驻组件渲染器/右侧真实公开回复动作browser中完成25步及600px窄屏流程，已人工查看专业8柱图、默认弧线头像和摘要卡；真实客户端仍运行855旧包，统一新包Native外观与真实300308行情验收由Root集成后执行。"
+        },
+        "acceptanceCriteria": [
+          "正文严格2段→空格生成专业图并确认→1段→原斜杠菜单与组件库插入行情看板且可见搜索选择300308.SZ→2段；不能一次塞最终文档。",
+          "三条专业评论覆盖收入增速、利润推理、预测口径；通过原评论气泡与查看依据核对10%及统一2026E/亿元后的两家均值17.0，替换其中两处，再真实划段改写第三处。",
+          "虚构季度样本120/132、2026E预测样本和来源日期明确，真实中际旭创市场行情独立标明原供应商和获取时点，不编造实际披露或离线价格。",
+          "右侧先生成真实conversation回复且正文未插摘要，再点击该semantic回复原公开添加到笔记动作，在同run/session/尾段lease和原ACK校验后只追加一次可持久化assistant-result；dispose后普通NotesApp重开与导出含完整摘要。",
+          "最后同一编辑器自然平滑回顶；保留Focus暂停/恢复、Stop取消、阶段越序/重复/错误run/session/用户编辑保护，普通用户Notes请求与原ACL不放宽。"
+        ],
+        "risks": [
+          "真实Native客户端尚未由本feature构建或替换；需Root统一集成构建后在真实包验收25步、原供应商行情可用性、样式和最终回顶。",
+          "standalone browser仅隔离外部UI primitive/字体/头像/测试行情服务；右侧依据与摘要的fixture排版有重叠限制，因此不将该PNG当Native外观通过；生产行情走原服务，离线应明确停止而非补造价格。",
+          "先前完整actor组为moving-tree 56/57通过，唯一旧selection默认1s采样预算按明确遥测修为该poll2500ms且所有原断言保留；同冻结tip已补fresh14/14。其余旧Focus/Handoff/700长流程保留前轮绿证据，此次不声称全部长组同tip重复运行。"
+        ],
+        "generatedAt": "2026-10-29T12:27:47.605905+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2616,6 +2830,59 @@
         "tsconfig.node.json"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-notes-data.test.ts",
+        "test/home-notes-runtime.test.js",
+        "test/home-notes-host.test.js",
+        "test/home-guide-notes-native.test.ts",
+        "test/home-guide-notes-portal.test.js",
+        "test/home-guide-notes-scroll.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-notes-browser.test.js",
+        "-t",
+        "checks three actual evidence cards",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 90000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-notes-shell-browser.test.js",
+        "-t",
+        "saves and reopens the native note without clipping a 600px",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-notes-native-editor.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 90000
     }
   ],
   "mainSynchronizations": []
