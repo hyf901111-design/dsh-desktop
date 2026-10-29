@@ -1,5 +1,6 @@
 export const HOME_WORKBENCH_PATH='/sherlock/home-guide/workbench'
 export const HOME_WORKBENCH_EVENT='home-guide/workbench'
+export const HOME_WORKBENCH_PURPOSE='frozen-research-workbench-replay'
 export const HOME_WORKBENCH_PROMPT='帮我搭一个白酒龙头研究工作台。比较茅台、五粮液和泸州老窖的股价、业绩、估值与分红，关联年报和最新公告。能切换公司、查看K线细节，并调整估值参数。'
 export const HOME_WORKBENCH_AS_OF='2026-04-30'
 export const HOME_WORKBENCH_TABS=Object.freeze([{id:'overview',name:'行情与业绩'},{id:'valuation',name:'估值与回报'},{id:'documents',name:'公告与关注'}])
@@ -29,5 +30,9 @@ const stages=[
 ]
 export const HOME_WORKBENCH_STEPS=Object.freeze(stages.map(([title,hold,result],i)=>Object.freeze({id:'wb-'+String(i).padStart(2,'0'),title,hold,result})))
 export function homeWorkbenchNodeId(sessionId,tab,role){return 'hwb:'+sessionId+':'+tab+':'+role}
+export function homeWorkbenchPlanReceipt(sessionId,runId,turn){
+ if(![sessionId,runId].every(value=>typeof value==='string'&&/^[\w:-]{1,128}$/.test(value))||!Number.isSafeInteger(turn)||turn<1)throw Error('工作台计划回执标识无效。')
+ return {version:1,kind:'plan',purpose:HOME_WORKBENCH_PURPOSE,runId,turn,plans:HOME_WORKBENCH_TABS.map(tab=>({id:'hwb:'+sessionId+':'+tab.id,count:HOME_WORKBENCH_PANELS.filter(panel=>panel.tab===tab.id).length}))}
+}
 export function homeWorkbenchStage(command){return HOME_WORKBENCH_STEPS.findIndex(step=>step.id===command)}
 export function homeWorkbenchPanelState(panel,stage){return stage>=panel.complete?'completed':stage>=panel.begin?'running':'queued'}

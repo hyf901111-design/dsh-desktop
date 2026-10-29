@@ -1,4 +1,10 @@
 import {expect,it} from 'vitest'
 import {HOME_WORKBENCH_PANELS as panels,HOME_WORKBENCH_STEPS as steps,homeWorkbenchPanelState as state,homeWorkbenchNodeId} from '../packages/dsh-research-task-runtime/home-workbench-contract.js'
+import * as contract from '../packages/dsh-research-task-runtime/home-workbench-contract.js'
 it('has 25 sequential stages and 13 tasks in 15 native component instances',()=>{expect(steps.map(s=>s.id)).toEqual(Array.from({length:25},(_,i)=>'wb-'+String(i).padStart(2,'0')));expect(panels).toHaveLength(15);expect(panels.filter(p=>!p.reused)).toHaveLength(13);expect(new Set(panels.map(p=>homeWorkbenchNodeId('session',p.tab,p.role))).size).toBe(15)})
 it('starts independent tasks in parallel, while children wait only for their real input',()=>{for(const p of panels.filter(p=>p.parent)){const parent=panels.find(a=>a.tab===p.tab&&a.role===p.parent);expect(p.begin).toBeGreaterThanOrEqual(parent.complete)}expect(state(panels.find(p=>p.role==='peers'),8)).toBe('running');expect(state(panels.find(p=>p.role==='quote'),8)).toBe('queued');expect(state(panels.find(p=>p.role==='quote'),10)).toBe('running');expect(state(panels.find(p=>p.role==='quote'),11)).toBe('completed');expect(panels.filter(p=>['dividend','cashflow','valuation'].includes(p.role)).every(p=>p.begin===15)).toBe(true);expect(panels.find(p=>p.role==='analysis').begin).toBe(panels.find(p=>p.role==='reader').begin);expect(panels.filter(p=>['peers','news'].includes(p.role)).every(p=>!p.parent)).toBe(true)})
+it('binds the fixed 15-instance plan to a validated replay run and real positive turn',()=>{
+ expect(typeof contract.homeWorkbenchPlanReceipt).toBe('function')
+ expect(contract.homeWorkbenchPlanReceipt('demo','run-a',2)).toEqual({version:1,kind:'plan',purpose:'frozen-research-workbench-replay',runId:'run-a',turn:2,plans:[{id:'hwb:demo:overview',count:5},{id:'hwb:demo:valuation',count:5},{id:'hwb:demo:documents',count:5}]})
+ for(const args of [['','run-a',1],['foreign/session','run-a',1],['demo','',1],['demo','run-a',0],['demo','run-a',1.5]])expect(()=>contract.homeWorkbenchPlanReceipt(...args)).toThrow('回执')
+})
