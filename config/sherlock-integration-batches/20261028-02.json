@@ -2123,85 +2123,36 @@
         "schemaVersion": 1,
         "featureName": "第五个首页用例：自由搭建真实研究工作台",
         "branch": "codex/feat/workbench-case-replay-20261029",
-        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
-        "tipCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
+        "baseCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
+        "tipCommit": "aa78983011ca7c4623afa2970e76492ae0447ff0",
         "commits": [
           {
-            "commit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
+            "commit": "a5e0c4b07ad7769b9bcc3974dd6bc1a9066b1b2c",
             "parents": [
-              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+              "f3ffaf90387206ebbe6633fb698346e4725b267f"
             ],
-            "subject": "新增自由搭建工作台演示及真实研究组件联动"
+            "subject": "修复自由搭建用例会话保存与恢复校验"
+          },
+          {
+            "commit": "aa78983011ca7c4623afa2970e76492ae0447ff0",
+            "parents": [
+              "a5e0c4b07ad7769b9bcc3974dd6bc1a9066b1b2c"
+            ],
+            "subject": "补齐研究组件的原生上下文复制与协作持久化"
           }
         ],
         "files": [
-          {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-10-29-workbench-case-replay-implementation.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-10-29-workbench-case-replay.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/assets/home-workbench/README.md"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/assets/home-workbench/professional-copy.json"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/assets/home-workbench/research-data.json"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/assets/home-workbench/research-expansion.json"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/home-workbench-contract.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/home-workbench-contract.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/home-workbench-runtime.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/home-workbench-study-contract.d.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/home-workbench-study-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/financial-widget-client.mjs"
           },
           {
             "status": "M",
@@ -2209,239 +2160,55 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/home-guide-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/home-guide-session-catalog.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/home-guide-workbench-native.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/home-workbench-client.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/home-workbench-study.css"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/home-workbench-study.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
+            "path": "src/main/state/research-canvas-clipboard.ts"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-guide-workbench.ts"
+            "path": "src/main/state/research-canvas-storage.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guides.css"
+            "path": "src/main/state/research-context-bridge.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guides.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-operations-assets.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-operations-carousel.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-operations.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-pptx-mode.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-subagent-continuable-composer.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-subagent-panel-destination.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-subagent-panel.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/financial-connection-row-routing.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/home-workbench-runtime.js"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/strip-workbench-replay.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/helpers/financial-widget-client-fixture.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-entry-handoff-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-native-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-native.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-notes-portal.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-operations-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-presentation-patch.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-presentation-shell-browser.test.js"
+            "path": "test/component-library-store.test.ts"
           },
           {
             "status": "M",
             "path": "test/home-guide-session.test.ts"
           },
           {
-            "status": "A",
-            "path": "test/home-guide-workbench.test.ts"
-          },
-          {
             "status": "M",
-            "path": "test/home-guides.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-operations-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/home-workbench-actor.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/home-workbench-browser.test.js"
           },
           {
-            "status": "A",
-            "path": "test/home-workbench-client.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/home-workbench-contract.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/home-workbench-native.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/home-workbench-runtime.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/home-workbench-saved-provider.test.js"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "test/home-workbench-study-contract.test.js"
           },
           {
             "status": "A",
-            "path": "test/home-workbench-study-integration.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/home-workbench-study-render.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/home-workbench-workspace.test.js"
+            "path": "test/home-workbench-study-sharing.test.js"
           },
           {
             "status": "M",
-            "path": "test/input-deliverable-preview-patch.test.js"
+            "path": "test/research-canvas-clipboard.test.ts"
           },
           {
             "status": "M",
-            "path": "test/notes-command-scope.test.js"
+            "path": "test/research-canvas-storage.test.ts"
           },
           {
             "status": "M",
-            "path": "test/notes-native-drop.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-native-send-preview.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-skill-menu-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pptx-annotation-profile-install.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-creation-progress.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-grid-arrange-tabs.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-planning-feedback.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench-feedback.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/subagent-avatars-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/subagent-avatars.test.js"
+            "path": "test/research-context-bridge.test.ts"
           }
         ],
         "checks": [
@@ -2451,10 +2218,10 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "完整前端补丁可重复应用",
-            "verifiedCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
-            "completedAt": "2026-10-28T23:16:33.363Z",
-            "timeoutMs": 120000
+            "summary": "前端补丁可重复应用",
+            "verifiedCommit": "aa78983011ca7c4623afa2970e76492ae0447ff0",
+            "completedAt": "2026-10-29T00:16:00.296876Z",
+            "timeoutMs": 240000
           },
           {
             "argv": [
@@ -2476,12 +2243,18 @@
               "test/research-grid-arrange-tabs.test.js",
               "test/financial-connection-row-routing.test.js",
               "test/home-workbench-browser.test.js",
-              "test/home-guide-operations-entry.test.ts"
+              "test/home-guide-operations-entry.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/research-context-bridge.test.ts",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-library-store.test.ts",
+              "test/home-workbench-study-sharing.test.js"
             ],
             "outcome": "passed",
-            "summary": "新工作台及直接相关入口、依赖、布局、历史数据和真实浏览器路径通过",
-            "verifiedCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
-            "completedAt": "2026-10-28T23:17:36.176Z",
+            "summary": "工作台与真实主进程持久化上下文复制共享路径聚焦验证",
+            "verifiedCommit": "aa78983011ca7c4623afa2970e76492ae0447ff0",
+            "completedAt": "2026-10-29T00:17:08.040431Z",
             "timeoutMs": 240000
           },
           {
@@ -2493,15 +2266,15 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "项目声明的类型检查通过",
-            "verifiedCommit": "f3ffaf90387206ebbe6633fb698346e4725b267f",
-            "completedAt": "2026-10-28T23:17:44.342Z",
-            "timeoutMs": 120000
+            "summary": "项目类型检查",
+            "verifiedCommit": "aa78983011ca7c4623afa2970e76492ae0447ff0",
+            "completedAt": "2026-10-29T00:17:16.089992Z",
+            "timeoutMs": 240000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Chromium 完整25阶段、原生输入、动画暂停、三页签切换、四主题、报告/参数更新与保存恢复通过；相邻跨行连线各3000点无穿卡。截图 /tmp/home-workbench-browser-20261029/。"
+          "summary": "真实Chromium完整25阶段及交互恢复通过；原生包实际点击发现并修复主进程会话白名单遗漏，待新版包完整可见复验。"
         },
         "acceptanceCriteria": [
           "首页第五张自由搭建卡自动演绎，保留原四快捷入口",
@@ -2514,243 +2287,7 @@
           "旧board教程1080×640高度门禁回归项仍拒绝过矮研究区；该分支与canonical main字节相同，未在本次改动。其余旧夹具22文件298项及原生浏览器8项通过。",
           "共享客户端尚待本次集成构建后的可见验收；用户接受前不晋升main。"
         ],
-        "generatedAt": "2026-10-28T23:17:44.342Z"
-      },
-      "merged": {
-        "mergeCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-        "verificationCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "test/home-workbench-client.test.js",
-              "test/home-workbench-contract.test.js",
-              "test/home-workbench-runtime.test.js",
-              "test/home-workbench-native.test.js",
-              "test/home-workbench-workspace.test.js",
-              "test/home-workbench-actor.test.js",
-              "test/home-workbench-study-contract.test.js",
-              "test/home-workbench-study-render.test.js",
-              "test/home-workbench-study-integration.test.js",
-              "test/home-workbench-saved-provider.test.js",
-              "test/home-guide-workbench.test.ts",
-              "test/research-grid-arrange-tabs.test.js",
-              "test/financial-connection-row-routing.test.js",
-              "test/home-workbench-browser.test.js",
-              "test/home-guide-operations-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/home-workbench-client.test.js test/home-workbench-contract.test.js test/home-workbench-runtime.test.js test/home-workbench-native.test.js test/home-workbench-workspace.test.js test/home-workbench-actor.test.js test/home-workbench-study-contract.test.js test/home-workbench-study-render.test.js test/home-workbench-study-integration.test.js test/home-workbench-saved-provider.test.js test/home-guide-workbench.test.ts test/research-grid-arrange-tabs.test.js test/financial-connection-row-routing.test.js test/home-workbench-browser.test.js test/home-guide-operations-entry.test.ts",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "a16e0abf6175bd1b0405ee95c8caadf561ece91c",
-            "completedAt": "2026-10-28T23:40:51.587Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-28T23:40:51.587Z"
+        "generatedAt": "2026-10-29T00:17:16.090040Z"
       }
     }
   ],
