@@ -26,4 +26,6 @@
 
 可复验入口：`test/home-workbench-browser.test.js`；聚焦逻辑位于 `test/home-workbench-*.test.js`、`test/home-guide-workbench.test.ts`、`test/research-grid-arrange-tabs.test.js`。仅执行本次改动相关检查，不运行全功能测试。
 
+原生输入框在右侧面板的 body portal 中，不在中央画布或主 frame 内。演示按当前会话标识定位唯一可编辑的原生右侧输入框，等待其挂载及解除禁用后才开始打字；输入期间继续核对归属与草稿版本。`test/home-workbench-input-surface.test.js` 覆盖实际 portal 结构、延迟挂载、异会话、子代理、隐藏/只读/inert、重复输入框和等待期间切换会话；浏览器全流程使用同样的独立右侧面板结构。
+
 本地测试包按多会话手册在集成 worktree 构建，使用 `./script/build_and_run.sh --verify`，跳过公证、上传和版本变更。最终共享客户端的可见验收和精确提交记录保存在本次集成交接卡与批次清单中；用户接受前不晋升 main。
