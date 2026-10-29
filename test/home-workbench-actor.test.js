@@ -21,6 +21,16 @@ it('executes all 25 native actor stages through the real workspace and keeps all
  source=source.replace('let left=ms,last=performance.now();','let left=Math.min(ms,1),last=performance.now();').replace('exports.NativeHomeWorkbenchPortal = NativeHomeWorkbenchPortal;','exports.NativeHomeWorkbenchPortal = NativeHomeWorkbenchPortal;exports.__setWorkbenchDeps=value=>HomeWorkbenchNativeDeps=value;exports.__setPage=value=>sherlockBoardsAdapter=value;')
  runInNewContext(source,{window:win,document:doc,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),matchMedia:win.matchMedia,performance:win.performance,fetch:fetcher,structuredClone,AbortController,TextDecoder,TextEncoder,crypto,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),native=descriptor.factory(id=>['react','react/jsx-runtime','react-dom'].includes(id)?require(id):fake),registry=new native.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('demo'),entry={kind:'workbench',sessionId:'demo',cwd:'/examples/workbench',title:'白酒龙头研究工作台（演示案例）'}
+ const pendingReused=new Map(),applyWorkbench=workspace.applyWorkbench.bind(workspace)
+ workspace.applyWorkbench=plan=>{
+  const result=applyWorkbench(plan)
+  const reused=workspace.getSnapshot().artifacts.filter(node=>HOME_WORKBENCH_PANELS.some(panel=>panel.reused&&node.id==='hwb:demo:'+panel.tab+':'+panel.role)&&node.generationStatus==='queued'&&!pendingReused.has(node.id))
+  for(const node of reused)pendingReused.set(node.id,{generationError:node.generationError,excerpt:node.excerpt})
+  // The native pending factory already carries generationError. Exercise the
+  // same terminal cleanup contract with a retained failed-refresh message too.
+  if(reused.length)workspace.setArtifacts(workspace.getSnapshot().artifacts.map(node=>reused.some(pending=>pending.id===node.id)?{...node,refreshError:'历史刷新失败'}:node))
+  return result
+ }
  native.__setPage(new Proxy({getState:()=>({account:{status:'ready',user:{userId:'test-owner'}},favorites:[],boards:[],notifications:{}}),getHomeGuideSession:id=>id==='demo'?entry:undefined,homeGuideSessionsReady:()=>true,version:()=>0,subscribe:()=>()=>{}},{get:(target,key)=>target[key]??(()=>undefined)}))
  const shell={snapshot:{draft:'',draftRev:0,occurrences:[],imageIds:[]},setDraft(text){this.snapshot={...this.snapshot,draft:text,draftRev:this.snapshot.draftRev+1};doc.querySelector('textarea').value=text},track(){}}
  native.__setWorkbenchDeps({getHomeGuideSession:()=>entry,inputHub:{shell:()=>shell},sessions:{binding:()=>({})}});doc.querySelector('button.uV2eYG_primary').addEventListener('click',()=>shell.setDraft(''))
@@ -29,7 +39,18 @@ it('executes all 25 native actor stages through the real workspace and keeps all
  try{
   await React.act(async()=>root.render(React.createElement(native.NativeHomeWorkbenchPortal,{sessionId:'demo',researchWorkspaces:registry})))
   await React.act(async()=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:'demo',runId:'run-a',playing:true}})))
-  await command('mount');for(let i=0;i<25;i++)await command('wb-'+String(i).padStart(2,'0'))
+  await command('mount');for(let i=0;i<25;i++){
+   await command('wb-'+String(i).padStart(2,'0'))
+   if(i===15||i===20){const id='hwb:demo:'+(i===15?'valuation':'documents')+':watchlist',node=workspace.getSnapshot().artifacts.find(node=>node.id===id)
+    expect(pendingReused.get(id)).toEqual({generationError:'任务未启动，请重试。',excerpt:'正在准备任务…'})
+    expect(node.generationStatus).toBe('completed');expect(node.generationError).toBeUndefined();expect(node.refreshError).toBeUndefined()
+    expect(node.generationEvents).toBeUndefined();expect(node.generationPartialText).toBeUndefined();expect(node.generationTaskId).toBeUndefined()
+    expect(JSON.parse(node.excerpt)).toEqual(node.containerSpec);expect(node.lastSuccessfulAt).toBe(node.generationCompletedAt)
+   }
+  }
   const nodes=workspace.getSnapshot().artifacts,nav=nodes.find(n=>n.containerSpec?.type==='board-tabs');expect(nodes).toHaveLength(16);expect(nodes.every(n=>n.generationStatus==='completed')).toBe(true);expect(nav.containerSpec.tabs.map(tab=>tab.nodeIds.length)).toEqual([5,5,5]);expect(requests.filter(r=>r.action==='panel')).toHaveLength(13);expect(doc.querySelectorAll('[data-board-tab]')).toHaveLength(3);expect(doc.querySelector('textarea').value).toBe('');await command('flush');await command('dispose');expect(workspace.getSnapshot().artifacts).toHaveLength(16);expect(workspace.getSnapshot().artifacts.every(n=>n.generationStatus==='completed')).toBe(true)
+  const restored=new native.ResearchWorkspaceRegistry(win.localStorage).for('demo').getSnapshot().artifacts
+  expect(pendingReused.size).toBe(2)
+  for(const node of restored.filter(node=>pendingReused.has(node.id))){expect(node.generationError).toBeUndefined();expect(node.refreshError).toBeUndefined();expect(JSON.parse(node.excerpt)).toEqual(node.containerSpec)}
  }finally{await React.act(async()=>root.unmount());await win.happyDOM.abort();for(const[k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]}
 },30000)
