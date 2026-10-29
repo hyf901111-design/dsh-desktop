@@ -2,7 +2,7 @@
 // Only finite SDK/provider codes, numeric HTTP status and allowed parameter
 // names enter public diagnostics. Formatter text is inspected only transiently.
 // Provider messages, request IDs, causes, headers and bodies are never rendered.
-const codes=new Set(['AUTH','FORBIDDEN','RATE_LIMIT','QUOTA','INVALID_REQUEST','CONTEXT_WINDOW_EXCEEDED','EMPTY_RESPONSE','INVALID_CREDENTIAL','MISSING_CREDENTIAL','TIMEOUT','TRANSPORT','PI_AI_ERROR','NO_ADAPTER','NO_MODEL','UNKNOWN_MODEL','INVALID_MODEL_CONTEXT','INVALID_MODEL_INFO','INVALID_MODEL_MAX_TOKENS','INVALID_MODEL_REASONING','UNSUPPORTED_REASONING_EFFORT','INVALID_PREPARED_CALL','INVALID_ADAPTER','INVARIANT','UNKNOWN','ABORTED','ECONNRESET','ECONNREFUSED','ENOTFOUND','EAI_AGAIN','ETIMEDOUT','UND_ERR_CONNECT_TIMEOUT','UND_ERR_SOCKET','SERVER'])
+const codes=new Set(['AUTH','FORBIDDEN','RATE_LIMIT','QUOTA','INVALID_REQUEST','CONTEXT_WINDOW_EXCEEDED','EMPTY_RESPONSE','INVALID_CREDENTIAL','MISSING_CREDENTIAL','TIMEOUT','TRANSPORT','STREAM_CLOSED','PI_AI_ERROR','NO_ADAPTER','NO_MODEL','UNKNOWN_MODEL','INVALID_MODEL_CONTEXT','INVALID_MODEL_INFO','INVALID_MODEL_MAX_TOKENS','INVALID_MODEL_REASONING','UNSUPPORTED_REASONING_EFFORT','INVALID_PREPARED_CALL','INVALID_ADAPTER','INVARIANT','UNKNOWN','ABORTED','ECONNRESET','ECONNREFUSED','ENOTFOUND','EAI_AGAIN','ETIMEDOUT','UND_ERR_CONNECT_TIMEOUT','UND_ERR_SOCKET','SERVER'])
 const kinds=new Set(['stop','error','aborted','max-tokens','tool-calls'])
 const own=(value,key)=>{try{const d=value&&Object.getOwnPropertyDescriptor(value,key);return d&&'value'in d?d.value:undefined}catch{return}}
 const providerCodes=new Set(['invalid_request_error','insufficient_quota','invalid_api_key','model_not_found','unsupported_parameter','rate_limit_exceeded','context_length_exceeded','billing_hard_limit_reached','authentication_error','permission_error','overloaded_error'])
@@ -54,7 +54,7 @@ export function noteFinishFailure(reason,finished,hasToolCall){
  if(finish==='tool-calls'||hasToolCall)return{finish,failure:{code:'UNEXPECTED_TOOL_CALL'}}
  return finish==='stop'?{finish}:{finish,failure:{code:'INCOMPLETE_STREAM'}}
 }
-const messages={AUTH:'模型服务鉴权失败',FORBIDDEN:'模型服务拒绝了本次请求',RATE_LIMIT:'模型服务暂时限流',QUOTA:'模型服务额度不足',INVALID_REQUEST:'模型服务未接受本次请求参数',CONTEXT_WINDOW_EXCEEDED:'本次内容超出模型上下文范围',EMPTY_RESPONSE:'模型服务未返回内容',INVALID_CREDENTIAL:'模型服务凭证不可用',MISSING_CREDENTIAL:'模型服务缺少凭证',TIMEOUT:'模型服务响应超时',TRANSPORT:'与模型服务的连接中断',UNSUPPORTED_REASONING_EFFORT:'模型服务不支持本次推理等级',MAX_TOKENS:'模型输出达到本次长度上限，生成尚未完成',ABORTED:'生成已取消',UNEXPECTED_TOOL_CALL:'模型返回了当前生成路径不支持的工具调用',INCOMPLETE_STREAM:'模型响应未完整结束',INVARIANT:'模型响应协议异常'}
+const messages={AUTH:'模型服务鉴权失败',FORBIDDEN:'模型服务拒绝了本次请求',RATE_LIMIT:'模型服务暂时限流',QUOTA:'模型服务额度不足',INVALID_REQUEST:'模型服务未接受本次请求参数',CONTEXT_WINDOW_EXCEEDED:'本次内容超出模型上下文范围',EMPTY_RESPONSE:'模型服务未返回内容',INVALID_CREDENTIAL:'模型服务凭证不可用',MISSING_CREDENTIAL:'模型服务缺少凭证',TIMEOUT:'模型服务响应超时',TRANSPORT:'与模型服务的连接中断',STREAM_CLOSED:'模型响应流未完整结束',UNSUPPORTED_REASONING_EFFORT:'模型服务不支持本次推理等级',MAX_TOKENS:'模型输出达到本次长度上限，生成尚未完成',ABORTED:'生成已取消',UNEXPECTED_TOOL_CALL:'模型返回了当前生成路径不支持的工具调用',INCOMPLETE_STREAM:'模型响应未完整结束',INVARIANT:'模型响应协议异常'}
 export function noteFailureError(snapshot,purpose){
  const {code,status,providerCode,parameter}=snapshot.failure,phase=purpose==='workspace-note-format-recovery'?'格式恢复':'主生成'
  const error=new Error(`${messages[code]||'模型服务生成失败'}（${code}${status===undefined?'':'；HTTP '+status}${providerCode===undefined?'':'；服务码 '+providerCode}${parameter===undefined?'':'；参数 '+parameter}；${phase}）。本次模型输出未写入，原需求已保留。`)
