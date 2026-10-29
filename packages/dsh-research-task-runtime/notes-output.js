@@ -1,6 +1,6 @@
 const wholeJsonFence=/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/iu
 const currentTransport=(item,wireToken)=>typeof wireToken==='string'&&wireToken.length>0&&item&&typeof item==='object'&&!Array.isArray(item)&&item.wireToken===wireToken
-const combinedEnvelope=item=>item&&typeof item==='object'&&!Array.isArray(item)&&Object.keys(item).every(key=>['wireToken','text','capabilities'].includes(key))&&['text','conversation'].includes(item.text?.kind)&&item.capabilities?.kind==='capabilities'
+const combinedEnvelope=item=>item&&typeof item==='object'&&!Array.isArray(item)&&Object.keys(item).every(key=>['wireToken','text','capabilities'].includes(key))&&(item.text===undefined||['text','conversation'].includes(item.text?.kind))&&item.capabilities?.kind==='capabilities'
 
 /** Inspect only the whole output, never JSON embedded in prose or Markdown. */
 export function currentNoteTransport(text,wireToken){
@@ -10,11 +10,11 @@ export function currentNoteTransport(text,wireToken){
 }
 
 /** Parse only a whole private envelope. Markdown and code are never scanned. */
-export function parseNotePublicOutput(text,{hasReceipts=false,recovery=false,wireToken}={}){
+export function parseNotePublicOutput(text,{hasReceipts=false,recovery=false,wireToken,displayCode=false}={}){
  if(typeof text!=='string'||text.length>100000)return
  const value=text.trim();if(!value)return
  const known=['text','conversation','component','capabilities'],fields=['markdown','text','content']
- const envelope=item=>item&&typeof item==='object'&&!Array.isArray(item)&&(known.includes(item.kind)||combinedEnvelope(item)||Object.keys(item).length===1&&fields.includes(Object.keys(item)[0]))
+ const envelope=item=>item&&typeof item==='object'&&!Array.isArray(item)&&(known.includes(item.kind)||combinedEnvelope(item)||item.capabilities?.kind==='capabilities'||Object.keys(item).length===1&&fields.includes(Object.keys(item)[0]))
  // A whole JSON fence can be either a wrapped private reply or the JSON/code
  // the user asked for. Let the single recovery round use the original intent.
  const fence=wholeJsonFence.exec(value)
@@ -27,6 +27,9 @@ export function parseNotePublicOutput(text,{hasReceipts=false,recovery=false,wir
   // is missing or combines several replies. It can never take literal fallback.
   if(currentTransport(item,wireToken)&&!['component','capabilities'].includes(item.kind))return
   const keys=Object.keys(item)
+  // A whole text-only document wrapper has no operation authority. Preserve
+  // its complete body instead of asking the model to rewrite good prose.
+  if(['document','markdown'].includes(item.kind)&&keys.length===2){const key=keys.find(key=>['body',...fields].includes(key));if(key&&typeof item[key]==='string')return{kind:'text',markdown:displayCode?value:item[key].trim()}}
   if(!keys.length||keys.length===1&&['message','reply','summary'].includes(keys[0]))return
   if(envelope(item)&&item.kind===undefined)return
   if(typeof item.kind==='string'){

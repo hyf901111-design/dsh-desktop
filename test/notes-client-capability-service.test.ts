@@ -8,24 +8,25 @@ import {createNoteCapabilityActions} from '../src/preload/notes/client-capabilit
 import {exportNoteWithSnapshots} from '../src/preload/notes/component-snapshots'
 vi.mock('electron',()=>({BrowserWindow:class{},dialog:{showSaveDialog:async()=>({canceled:true})}}))
 const roots:string[]=[];afterEach(()=>{for(const r of roots.splice(0))rmSync(r,{recursive:true,force:true});vi.unstubAllGlobals()})
-function harness(options:{cancelAt?:'placeholder'|'applied'|'saved'|'settle';cancelExportReply?:boolean;selected?:string[]}={}){
+function harness(options:{cancelAt?:'placeholder'|'applied'|'saved'|'settle';cancelExportReply?:boolean;selected?:string[];inline?:boolean;failCreate?:boolean|'unavailable'}={}){
  const root=mkdtempSync(join(tmpdir(),'note-client-capabilities-'));roots.push(root)
- let owner='alice',visible=true,generation='job',handler:any,revision=0,calls=0
+ let owner='alice',visible=true,writable=true,generation='job',handler:any,revision=0,calls=0
  const actions:any[]=[],history:any[]=[],requests:any[]=[],progress:any[]=[],content:any={title:'实际笔记',yjs:'',blocks:[{id:'p',type:'paragraph',content:[{type:'text',text:'保留正文',styles:{bold:true}}]},{id:'r',type:'research',props:{payload:JSON.stringify({id:'n',noteSize:{width:390},containerSpec:{version:1,type:'markdown',title:'数据',content:'实际组件'}})}}]}
  const editor={isEditable:true,get document(){return content.blocks},getBlock(id:string){return content.blocks.find((b:any)=>b.id===id)},updateBlock(id:string,p:any){Object.assign(this.getBlock(id).props,p.props)},transact(f:()=>void){f()}}
  const window:any={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:2},send:(channel:string,value:any)=>{if(channel==='notes:progress')progress.push(value);if(channel==='notes:capability-action'){actions.push(value);queueMicrotask(()=>{void renderer(value).then(async result=>{if(options.cancelExportReply&&value.action==='notes.export'&&result?.status==='succeeded')await call('stop',{requestId:generation});if(!value.cancel)return call('capability-reply',{requestId:value.requestId,result})}).catch(error=>call('capability-reply',{requestId:value.requestId,error:error.message}))})}}}}
  const event={sender:window.webContents,senderFrame:window.webContents.mainFrame},call=(method:string,input:any={})=>handler(event,method,{sessionId:'note',owner,...input})
- const challenge={level:0,commentsExpanded:true,phase:'paused'},bridge:any={request:call},renderer=createNoteCapabilityActions({editor,snapshot:()=>content,current:()=>visible,generationId:()=>generation,documentId:'doc',selectedBlockIds:()=>options.selected??[],challenge:()=>({configure:(settings:any)=>Object.assign(challenge,settings),getConfiguration:()=>({...challenge}) as any}),createComponent:async(_args,current,_requestId,report)=>{
+ const challenge={level:0,commentsExpanded:true,phase:'paused'},bridge:any={request:call},renderer=createNoteCapabilityActions({editor,anchoredCreate:()=>options.inline===true,snapshot:()=>content,current:()=>visible,generationId:()=>generation,documentId:'doc',selectedBlockIds:()=>options.selected??[],challenge:()=>({configure:(settings:any)=>Object.assign(challenge,settings),getConfiguration:()=>({...challenge}) as any}),createComponent:async(_args,current,_requestId,report)=>{
   const node={id:'created',type:'research',props:{payload:JSON.stringify({id:'created-node',generationStatus:'draft'})}};content.blocks.push(node);await report({state:'placeholder',blockId:node.id})
   if(!current())return {status:'cancelled',blockId:node.id}
+  if(options.failCreate){node.props.payload=JSON.stringify({id:'created-node',generationStatus:'failed',generationError:'组件执行未完成'});return {status:options.failCreate==='unavailable'?'unavailable':'failed',blockId:node.id}}
   node.props.payload=JSON.stringify({id:'created-node',generationStatus:'completed',containerSpec:{version:1,type:'table',title:'真实结果',columns:['值'],rows:[[42]]}});await report({state:'applied',blockId:node.id})
   return {status:'succeeded',blockId:node.id}
  },reportEffect:async(requestId,effect)=>{await call('capability-reply',{requestId,effect});if(options.cancelAt===effect.state)await call('stop',{requestId:generation})},persist:async()=>{const r=await call('save',{revision,content,clientId:'client'});if(r.status!=='saved')throw Error('冲突');revision=r.saved.revision},exportNote:(args,current)=>exportNoteWithSnapshots({snapshot:()=>content,bridge,sessionId:'note',...args,current}),settle:async()=>{if(options.cancelAt==='settle')await call('stop',{requestId:generation})}})
  const inspectCanvas=vi.fn(async()=>({revision:'r1',nodes:[{id:'canvas-one',title:'研究画布'}]})),resetZoom=vi.fn(async()=>{})
- const dispose=installNotesService({ipcMain:{handle:(_c:string,f:any)=>{handler=f},removeHandler:()=>{}},getWindow:()=>window,root,owner:()=>owner,runtimeUrl:()=> 'http://127.0.0.1:9999',canRead:()=>true,canWrite:()=>true,clipboard:()=>undefined,inspectCanvas,resetZoom})
+ const dispose=installNotesService({ipcMain:{handle:(_c:string,f:any)=>{handler=f},removeHandler:()=>{}},getWindow:()=>window,root,owner:()=>owner,runtimeUrl:()=> 'http://127.0.0.1:9999',canRead:()=>true,canWrite:()=>writable,clipboard:()=>undefined,inspectCanvas,resetZoom})
  const generate=(prompt:string)=>call('generate',{requestId:generation,mode:'write',prompt,markdown:'原文',selection:'',title:'实际笔记',context:{scope:'note',components:[]},capabilityContext:{documentId:'doc',selectedBlockIds:options.selected??[]}})
  const wire=(next:(body:any)=>any)=>vi.stubGlobal('fetch',async(url:any,options:any)=>{const b=JSON.parse(options.body);if(String(url).endsWith('/session')){history.push(b);return new Response('{"ok":true}')};calls++;requests.push(b);return new Response(JSON.stringify({type:'result',result:await next(b)})+'\n')})
- return{root,call,generate,wire,actions,history,requests,progress,content,challenge,inspectCanvas,resetZoom,dispose,calls:()=>calls,hide:()=>{visible=false},account:()=>{owner='bob'},setGeneration:(id:string)=>{generation=id}}
+ return{root,call,generate,wire,actions,history,requests,progress,content,challenge,inspectCanvas,resetZoom,dispose,calls:()=>calls,hide:()=>{visible=false},account:()=>{owner='bob'},readonly:()=>{writable=false},setGeneration:(id:string)=>{generation=id}}
 }
 it('composes style, real local export, canvas inspect and shared UI command through host-validated calls',async()=>{
  const h=harness(),path=join(h.root,'receipt.md'),calls=[{requestId:'style',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise',titleBar:false}},{requestId:'export',capability:'notes.export',arguments:{format:'md',path}},{requestId:'canvas',capability:'canvas.inspect',arguments:{}},{requestId:'zoom',capability:'ui.zoom.reset',arguments:{}}]
@@ -196,5 +197,38 @@ it.each(['create','inspect'])('preserves a remaining reply through the actual se
   try{let status;await route({method:'POST',body:sync},{writeHead:(value:any)=>{status=value},end:()=>{}});expect(status).toBe(200)}finally{dispose()}
   const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header)),row=noteConversationRows(replay)[0]
   expect(row).toMatchObject({prompt:'保留原始需求',phase:'replied',result:{kind:'conversation',requiresReply:true,markdown:result.markdown}});expect(row.result.capabilityReceipts).toHaveLength(1)
+ }finally{h.dispose()}
+})
+
+const inlineCreateInstruction='只用演示数据10、20、15插入图表，不改已有正文。'
+const inlineInput={requestId:'job',mode:'write',prompt:inlineCreateInstruction,markdown:'保留正文',selection:'',title:'实际笔记',entryPoint:'inline',insertionAnchor:{documentId:'doc',blockId:'p',position:{}},context:{scope:'note',components:[]},capabilityContext:{documentId:'doc',selectedBlockIds:[]}}
+it.each(['failed','unavailable'] as const)('uses one internal text-only continuation after a genuine %s inline child without repeating its creation',async status=>{
+ const h=harness({inline:true,failCreate:status==='unavailable'?'unavailable':true}),fallback='演示值依次为10、20、15，先上升后回落；这些数字不代表真实行情。'
+ h.wire(body=>body.completionMode==='text-only'?{kind:'text',markdown:fallback,textFallback:true}:{kind:'capabilities',calls:[{requestId:'create-once',capability:'notes.components.create',arguments:{prompt:inlineCreateInstruction}}]})
+ try{
+  const result=await h.call('generate',inlineInput)
+  expect(result).toMatchObject({kind:'text',markdown:fallback,textFallback:true,capabilityReceipts:[{requestId:'create-once',status,effect:{state:'placeholder',blockId:'created'}}]})
+  expect(h.actions.filter(x=>x.action==='notes.components.create')).toHaveLength(1)
+  expect(h.requests).toHaveLength(2);expect(h.requests[1]).toMatchObject({completionMode:'text-only',prompt:inlineCreateInstruction,entryPoint:'inline',clientCapabilities:[]})
+  expect(h.content.blocks[0].content[0].text).toBe('保留正文');expect(JSON.parse(h.content.blocks[1].props.payload).containerSpec.content).toBe('实际组件')
+ }finally{h.dispose()}
+})
+it.each(['stop','owner','readonly','session'])('does not deliver a text fallback after a late %s change',async change=>{
+ const h=harness({inline:true,failCreate:true})
+ h.wire(async body=>{if(body.completionMode==='text-only'){if(change==='stop')await h.call('stop',{requestId:'job'});else if(change==='owner')h.account();else if(change==='session')h.setGeneration('new-generation');else h.readonly();return{kind:'text',markdown:'不能投递的迟到正文',textFallback:true}}return{kind:'capabilities',calls:[{requestId:'create-once',capability:'notes.components.create',arguments:{prompt:inlineCreateInstruction}}]}})
+ try{await expect(h.call('generate',inlineInput)).rejects.toThrow();expect(h.actions.filter(x=>x.action==='notes.components.create')).toHaveLength(1);expect(JSON.stringify(h.content)).not.toContain('迟到正文')}finally{h.dispose()}
+})
+it('ignores a renderer-supplied internal completion flag on normal inline writing',async()=>{
+ const h=harness({inline:true});h.wire(()=>({kind:'text',markdown:'正常正文'}))
+ try{expect(await h.call('generate',{...inlineInput,completionMode:'text-only'})).toMatchObject({kind:'text',markdown:'正常正文'});expect(h.requests).toHaveLength(1);expect(h.requests[0]).not.toHaveProperty('completionMode')}finally{h.dispose()}
+})
+it('keeps real failed receipts and never repeats their action when the one text continuation has a network failure',async()=>{
+ const h=harness({inline:true,failCreate:true})
+ h.wire(body=>{if(body.completionMode==='text-only')throw Error('synthetic text network outage');return{kind:'capabilities',calls:[{requestId:'create-once',capability:'notes.components.create',arguments:{prompt:inlineCreateInstruction}}]}})
+ try{
+  await expect(h.call('generate',inlineInput)).rejects.toThrow('synthetic text network outage')
+  expect(await h.call('generate',inlineInput)).toMatchObject({kind:'conversation',requiresReply:true,capabilityReceipts:[{requestId:'create-once',status:'failed'}]})
+  expect(h.actions.filter(x=>x.action==='notes.components.create')).toHaveLength(1);expect(h.requests).toHaveLength(2)
+  expect(h.history.find(x=>x.action==='conversation-capabilities').receipts).toMatchObject([{requestId:'create-once',status:'failed',effect:{state:'placeholder',blockId:'created'}}])
  }finally{h.dispose()}
 })

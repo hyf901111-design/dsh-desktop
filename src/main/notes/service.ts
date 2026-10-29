@@ -2,6 +2,7 @@ import { randomUUID, createHash } from 'node:crypto'
 import {createClientCapabilityHost} from '../../../packages/dsh-research-task-runtime/client-capability-host.js'
 import type {ClientCapabilityContext,CapabilityReceipt} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {runClientCapabilityLoop} from '../../../packages/dsh-research-task-runtime/client-capability-loop.js'
+import {capabilityReceiptText} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {NotesCapabilityBridge} from './capability-bridge'
 import {createNoteDataRevisionHandler} from './data-revisions'
 import {createNoteCapabilityHandlers} from './capability-handlers'
@@ -178,7 +179,15 @@ export function installNotesService(options: {
             ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
           }})
           const {registry,executor}=host,receipts:CapabilityReceipt[]=[]
-          const result=await runClientCapabilityLoop({signal,preserveRemainingReply:true,execute:call=>executor.execute(call,clientContext!,signal),onReceipts:items=>{
+          const generateResult=async(clientReceipts:CapabilityReceipt[],textOnly=false)=>{
+            const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint==='inline'?{insertionAnchor:input.insertionAnchor}:{},...cardLocal&&typeof input.sourceInstruction==='string'&&input.sourceInstruction.length<=8000?{sourceInstruction:input.sourceInstruction}:{},...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},...clientContext?{clientCapabilities:textOnly?[]:registry.catalog(clientContext),clientContext,clientReceipts}:{},...textOnly?{completionMode:'text-only'}:{},stream:true }) })
+            if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
+            return readNoteGenerationStream(response,progress=>{
+              if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}
+              ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,...progress})
+            })
+          }
+          let result=await runClientCapabilityLoop({signal,preserveRemainingReply:true,execute:call=>executor.execute(call,clientContext!,signal),onReceipts:items=>{
             receipts.push(...items)
             // Only validated host receipts may become visible action progress.
             // Read results stay in the model context, outside the conversation UI.
@@ -186,22 +195,32 @@ export function installNotesService(options: {
               const capabilityProgress=receipts.map(({requestId,capability,status,message,path,effect})=>({requestId,capability,status,...message===undefined?{}:{message},...path===undefined?{}:{path},...effect===undefined?{}:{effect}}))
               ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,capabilityProgress})
             }
-          },generate:async clientReceipts=>{
-            const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint==='inline'?{insertionAnchor:input.insertionAnchor}:{},...cardLocal&&typeof input.sourceInstruction==='string'&&input.sourceInstruction.length<=8000?{sourceInstruction:input.sourceInstruction}:{},...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},...clientContext?{clientCapabilities:registry.catalog(clientContext),clientContext,clientReceipts}:{},stream:true }) })
-            if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
-            return readNoteGenerationStream(response,progress=>{
-              if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}
-              ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,...progress})
-            })
-          }})
-          if(receipts.length){
-            capabilityResults.set(cacheKey,{fingerprint,result})
-            if(options.owner()===owner&&options.canRead(session)){
-              const receiptUrl=new URL('/sherlock/notes/session',base)
-              const recorded=await fetch(receiptUrl,{method:'POST',headers:{'content-type':'application/json',origin:receiptUrl.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities',requestId:input.requestId,...result?.kind==='conversation'&&result.requiresReply===true?{remainingReply:{markdown:result.markdown}}:{},receipts})}).catch(()=>undefined)
-              if(!recorded?.ok)result.markdown=result.kind==='conversation'?result.markdown+'\n操作回执暂未写入会话历史。':result.markdown
+          },generate:generateResult})
+          const retainResult=async()=>{
+            if(receipts.length){
+              capabilityResults.set(cacheKey,{fingerprint,result})
+              if(options.owner()===owner&&options.canRead(session)){
+                const receiptUrl=new URL('/sherlock/notes/session',base)
+                const recorded=await fetch(receiptUrl,{method:'POST',headers:{'content-type':'application/json',origin:receiptUrl.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities',requestId:input.requestId,...result?.kind==='conversation'&&result.requiresReply===true?{remainingReply:{markdown:result.markdown}}:{},receipts})}).catch(()=>undefined)
+                if(!recorded?.ok)result.markdown=result.kind==='conversation'?result.markdown+'\n操作回执暂未写入会话历史。':result.markdown
+              }
             }
           }
+          if(input.entryPoint==='inline'&&result?.kind==='conversation'&&receipts.some(receipt=>receipt.capability==='notes.components.create'&&['failed','unavailable'].includes(receipt.status))){
+            // Once a real action has settled, even a failed text continuation
+            // must not make an identical delivery execute that action again.
+            capabilityResults.set(cacheKey,{fingerprint,result})
+            try{
+              const assertFallbackCurrent=()=>{signal.throwIfAborted();if(!current()||options.canWrite?.(session)===false)throw Error('笔记状态已变化，本次文字未插入。')}
+              const checkAnchor=async()=>{assertFallbackCurrent();const value=await renderer('context',{});if(value?.status!=='succeeded')throw Error('笔记插入位置已变化。');assertFallbackCurrent()}
+              await checkAnchor()
+              const fallback=await generateResult(receipts,true)
+              await checkAnchor()
+              if(fallback?.kind!=='text'||fallback.textFallback!==true||typeof fallback.markdown!=='string'||!fallback.markdown.trim()||fallback.markdown.length>100000)throw Error('本次没有取得完整可用正文，原需求已保留。')
+              result={kind:'text',markdown:fallback.markdown,textFallback:true,...['before-components','after-components'].includes(fallback.inlineOrder)?{inlineOrder:fallback.inlineOrder}:{},capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}
+            }catch(error){await retainResult();throw error}
+          }
+          await retainResult()
           if (options.owner() !== owner) throw Error('账号已变化，请重新生成。')
           return result
         } finally {

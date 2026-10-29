@@ -30,7 +30,7 @@ it('keeps an ordinary complete JSON document that is not a private envelope',asy
  expect(await generateNoteSuggestion(ctx,input)).toMatchObject({kind:'text',markdown:text});expect(calls).toHaveLength(1)
 })
 it('recovers an unknown envelope once with the selected model and no client tools or replayed writes',async()=>{
- const raw='{"kind":"document","body":"用户真正需要的段落"}',{ctx,calls}=context([raw,'{"kind":"text","markdown":"用户真正需要的段落"}'])
+ const raw='{"kind":"vendor-document","body":"用户真正需要的段落"}',{ctx,calls}=context([raw,'{"kind":"text","markdown":"用户真正需要的段落"}'])
  expect(await generateNoteSuggestion(ctx,input)).toMatchObject({kind:'text',markdown:'用户真正需要的段落'});expect(calls).toHaveLength(2)
  expect(calls[1]).toMatchObject({provider:'selected-provider',model:'selected-model'});expect(calls[1].tools).toBeUndefined();expect(calls[1].system).toContain('格式')
  expect(JSON.parse(calls[1].messages[1].content[0].text).publicOutput).toBe(raw);expect(JSON.stringify(calls[1].messages)).toContain('写一段文字')
@@ -58,7 +58,7 @@ it('retains a new answer after a read-only query receipt',async()=>{
 })
 it('never promotes invalid structured components or recovery tool requests into plain document text',async()=>{
  const {ctx,calls}=context(['{"kind":"component","artifact":{"type":"unknown"}}','{"kind":"capabilities","calls":[{"requestId":"new-write","capability":"notes.components.create","arguments":{"prompt":"未知写入"}}]}'])
- await expect(generateNoteSuggestion(ctx,input)).rejects.toThrow();expect(calls).toHaveLength(2)
+ await expect(generateNoteSuggestion(ctx,input)).rejects.toThrow();expect(calls).toHaveLength(3);expect(calls[2].purpose).toBe('workspace-note-text-fallback')
 })
 it('honors cancellation during the single formatting recovery',async()=>{
  const controller=new AbortController(),{ctx,calls}=context(['{"kind":"unknown"}',async function*(options){controller.abort();options.signal.throwIfAborted()}])
