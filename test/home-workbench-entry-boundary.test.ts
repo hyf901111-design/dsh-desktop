@@ -100,7 +100,9 @@ async function fixture() {
   const sessions = new runtime.SessionRuntime(clientCtx, wire, {})
   const workspaces = new runtime.WorkspaceRuntime(clientCtx, wire, sessions)
   const actorSource = await readFile('scripts/lib/home-guide-workbench-native.mjs', 'utf8')
-  const effect = runInNewContext(actorSource.match(/^const EFFECT=(.+)$/m)![1])
+  const effectSource = actorSource.match(/^const EFFECT=(.+)$/m)?.[1]
+  if (typeof effectSource !== 'string') throw Error('Native workbench dependency effect is not declared')
+  const effect = runInNewContext(effectSource)
   const native = await load('dsh-client-ui-conversation', {
     react, 'react/jsx-runtime': require('react/jsx-runtime'), 'react-dom': require('react-dom'),
     '@deepseek-ai/cordis': cordis, '@deepseek-ai/dsh-client-runtime/client': runtime
