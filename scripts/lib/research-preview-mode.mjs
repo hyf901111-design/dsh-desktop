@@ -109,7 +109,11 @@ export function installResearchPreviewMode(change,changeAll,read) {
  change('"data-canvas-tool":sharedReadOnly?"select":canvasTool,','"data-canvas-tool":structureReadOnly?"select":canvasTool,"data-research-preview-mode":previewMode?"preview":"edit","data-research-preview-session":sessionId,')
  for(const anchor of ['onDropCapture: event => {if(sharedReadOnly)','onPasteCapture: event => {if(sharedReadOnly)'])change(anchor,anchor.replace('sharedReadOnly','structureReadOnly'))
  change('useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef:canvasToolRef,selectTool:selectCanvasTool,readOnly:sharedReadOnly});','useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef:canvasToolRef,selectTool:selectCanvasTool,readOnly:structureReadOnly});\nreact.useEffect(()=>workspace.subscribePreviewCancel(()=>{selectCanvasTool("select");setLinkPopoverOpen(false);setEditingNodeId(null);setEditingContentNodeId(null);setContextMenu(null);closeSelectedCreate();}),[workspace,closeSelectedCreate]);')
- change('(FinancialConnections,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly})','(FinancialConnections,{rootRef,workspace,sessionId,snapshot,readOnly:structureReadOnly})')
+ // Preserve the producer's research-surface boundary; older resident bundles
+ // emit the same call without that explicit scope. Unknown/mixed shapes fail.
+ const connectionCalls=['(FinancialConnections,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly})',"(FinancialConnections,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly,surface:'research'})"].filter(call=>read().includes(call))
+ if(connectionCalls.length!==1)throw Error('Preview financial connection call missing or ambiguous')
+ change(connectionCalls[0],connectionCalls[0].replace('readOnly:sharedReadOnly','readOnly:structureReadOnly'))
  // The toolbar wrapper clones creation buttons with disabled; library owns its
  // own subscription because its internal menus can already be open on a switch.
  const library='function FinancialLibrary({rootRef,workspace,sessionId}){'
