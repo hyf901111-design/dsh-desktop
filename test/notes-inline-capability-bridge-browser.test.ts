@@ -80,7 +80,7 @@ async function startCapability(f:Awaited<ReturnType<typeof open>>,parent:any,mod
 }
 
 async function snapshot(page:any){
- return page.evaluate(()=>{const w=window as any;return{blocks:w.editor.document.map((block:any)=>({id:block.id,type:block.type,text:block.content?.map((part:any)=>part.text||'').join(''),status:block.type==='research'?JSON.parse(block.props.payload).generationStatus:undefined})),proposals:[...w.noteDoc.getMap('note-inline-proposals').values()].map((value:any)=>({id:value.id,state:value.state,error:value.error,summary:value.summary}))}})
+ return page.evaluate(()=>{const w=window as any;return{blocks:w.editor.document.map((block:any)=>({id:block.id,type:block.type,text:block.content?.map((part:any)=>part.text||'').join(''),status:block.type==='research'?JSON.parse(block.props.payload).generationStatus:undefined})),proposals:[...w.noteDoc.getMap('note-inline-proposals').values()].map((value:any)=>({id:value.id,state:value.state,resultKind:value.resultKind,error:value.error,summary:value.summary}))}})
 }
 function record(name:string,value:any){if(evidence){mkdirSync(evidence,{recursive:true});writeFileSync(resolve(evidence,name+'.json'),JSON.stringify(value,null,2)+'\n')}}
 
@@ -126,5 +126,33 @@ it('returns a genuine failed child receipt across the Main bridge without markin
   const actual=await snapshot(f.page);record('main-bridge-failed-child',{transportRequestId:call.transport.requestId,modelCallId,receipt,actual,pageErrors:f.errors})
   expect(actual.blocks.filter((block:any)=>block.type==='research').map((block:any)=>block.status)).toEqual(['failed','failed'])
   expect(actual.blocks.find((block:any)=>block.id==='upper')?.text).toBe('上方保留段落');expect(actual.blocks.find((block:any)=>block.id==='lower')?.text).toBe('下方保留段落');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('keeps a successful child pending when its parent still requires a reply and a real paragraph click follows',async()=>{
+ const f=await open();try{
+  const parent=await launch(f.page),call=await startCapability(f,parent,'req-demo-table-partial-parent')
+  await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:call.child.requestId,node:tableNode})
+  const receipt=await call.receipt;expect(receipt.status).toBe('succeeded');expect(receipt.effect?.state).toBe('saved')
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'正文尚未完成。',requiresReply:true,capabilityReceipts:[receipt]}),{id:parent.requestId,receipt})
+  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor()
+  const before=await snapshot(f.page),partial=before.proposals.find((value:any)=>value.id===parent.requestId)
+  expect(partial?.resultKind).toBe('conversation')
+  expect(partial?.summary).toContain('未完成')
+  expect(await f.page.locator('.en-space-ai .en-space-ai-message,.en-space-ai [role="alert"]').count()).toBe(0)
+  await f.page.locator('.bn-block-outer[data-id="lower"] .bn-inline-content').click();await f.page.keyboard.type('【继续编辑】')
+  // Let the actual click handler and its queued passive settlement both run.
+  // No synthetic dispatch or immediate negative assertion can skip that frame.
+  await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  const after=await snapshot(f.page)
+  record('main-bridge-partial-parent',{transportRequestId:call.transport.requestId,modelCallId:receipt.requestId,receipt,before,after,pageErrors:f.errors})
+  expect(after.proposals.some((value:any)=>value.id===parent.requestId)).toBe(true)
+  expect(after.proposals.find((value:any)=>value.id===parent.requestId)?.error).toBeTruthy()
+  expect(await f.page.locator('.en-inline-ai-pending').count()).toBe(1)
+  expect(after.blocks.find((block:any)=>block.id===receipt.blockId)?.status).toBe('completed')
+  expect(after.blocks.find((block:any)=>block.id==='lower')?.text).toContain('【继续编辑】')
+  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click()
+  await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.map((block:any)=>block.id))).toEqual(['upper','old-failed','anchor','lower'])
+  expect(await f.page.locator('.bn-block-outer[data-id="lower"]').textContent()).toContain('【继续编辑】');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)

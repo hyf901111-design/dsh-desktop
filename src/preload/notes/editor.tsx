@@ -272,6 +272,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const finishInlineProposal=(id:string,partial=false,summary='',kind?:string,error?:string)=>{
     const current=proposals.list().find(value=>value.id===id),state=current&&inlineProposalState(current)
     if(state?.failed.length){partial=true;summary=state.summary;error=error||state.error}
+    if(partial&&!error)error=t('本次操作未完成，内容已保留。')
     const value=proposals.finish(id,partial,summary,kind)
     if(value&&error){proposals.setError(id,error);value.error=error}
     return value
