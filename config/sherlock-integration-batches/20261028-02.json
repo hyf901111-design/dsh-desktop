@@ -2978,6 +2978,202 @@
         ],
         "recordedAt": "2026-10-29T18:32:29.217Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话笔记组件独立四模式与更多菜单生命周期",
+        "branch": "codex/feat/component-mode-menu-20261030",
+        "baseCommit": "df2e8a79b951b4e9e3de6232b19934dd91d87d09",
+        "tipCommit": "8c317debff70fbfa5055e75b2bc2571db91cea4b",
+        "commits": [
+          {
+            "commit": "6c0c92093bf229160e5b945b68c97acfcf53eaf1",
+            "parents": [
+              "df2e8a79b951b4e9e3de6232b19934dd91d87d09"
+            ],
+            "subject": "修复组件更多菜单跨板块残留与异步重开"
+          },
+          {
+            "commit": "8c317debff70fbfa5055e75b2bc2571db91cea4b",
+            "parents": [
+              "6c0c92093bf229160e5b945b68c97acfcf53eaf1"
+            ],
+            "subject": "为对话和笔记组件增加独立四模式切换"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-30-component-mode-menu.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-surface-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-surface-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-surface-ui.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-surface-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-html-interaction.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/conversation-components/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/conversation-components/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/conversation-components.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/conversation-components.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-component-block.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/component-surface-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-export.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-ipc.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-store.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-html-interaction.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-html-state-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-html-shared-state-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/component-surface-menu-browser.test.ts",
+              "test/component-surface-ui-serializer.test.js",
+              "test/conversation-html-state-browser.test.ts",
+              "test/notes-html-shared-state-browser.test.ts",
+              "test/conversation-html-interaction.test.js",
+              "test/notes-component-presentation.test.ts",
+              "test/conversation-component-store.test.ts",
+              "test/conversation-component-service.test.ts",
+              "test/conversation-component-ipc.test.ts",
+              "test/conversation-component-export.test.ts",
+              "test/conversation-component-renderer.test.js",
+              "test/conversation-components-policy.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=verbose"
+            ],
+            "outcome": "passed",
+            "summary": "12份直接影响文件307/307，134.48秒；log=/tmp/sherlock-component-mode-menu-20261030/final-focused.log sha256=10cc438facc4e3c3064666270ca66d55ddf405c14dce9fc231d2390d198b130f",
+            "verifiedCommit": "8c317debff70fbfa5055e75b2bc2571db91cea4b",
+            "completedAt": "2026-10-29T19:42:51.612603+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "退出码0；log=/tmp/sherlock-component-mode-menu-20261030/final-typecheck.log sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "8c317debff70fbfa5055e75b2bc2571db91cea4b",
+            "completedAt": "2026-10-29T19:43:00.885926+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "退出码0；log=/tmp/sherlock-component-mode-menu-20261030/final-diff.log sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "8c317debff70fbfa5055e75b2bc2571db91cea4b",
+            "completedAt": "2026-10-29T19:43:01.199760+00:00",
+            "timeoutMs": 20000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "df2e8a79b951b4e9e3de6232b19934dd91d87d09",
+              "HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "退出码0；log=/tmp/sherlock-component-mode-menu-20261030/final-range-diff.log sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "8c317debff70fbfa5055e75b2bc2571db91cea4b",
+            "completedAt": "2026-10-29T19:45:30.008533+00:00",
+            "timeoutMs": 20000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "仅隔离production Chromium：真实Chat service/store与Notes editor/Yjs桥边界，四模式/实例隔离/保存重开/原iframe与counter3、memo、披露状态保留；真实financial四palette；outside、iframe焦点、Escape、retained WorkspaceSurfaceHost、板块/session/owner、异步A/B与readonly竞态；HTML前后保存排队和失败dirty守卫。Native/最终包由Root验收。"
+        },
+        "acceptanceCriteria": [
+          "More包含模式切换二级菜单，现有四主题仅作用当前组件并保存重开。",
+          "主菜单和submenu同域；outside/iframe/Escape/导航/功能页/模式/session/owner隐藏或卸载均关闭，不抢外部焦点。",
+          "异步旧菜单不得复活盖过新菜单；合法主题动作不被自己的菜单关闭取消。",
+          "保留现有iframe、HTML journal/shared state、原生行情快照和refresh；不放宽ACL、revision、owner或dirty守卫。"
+        ],
+        "risks": [
+          "未构建、未操作Native或共享客户端；共享SDK/manifest未改。Root需最终三方集成、完整installer和包内真实UI验收。",
+          "Notes隔离browser使用真实editor/Yjs与fixture持久化快照边界；真实打包磁盘保存/重开由Root最终验收。",
+          "保护资产11个存在文件前后逐字相同；2个历史legacy候选路径不存在，未伪造为已校验文件。"
+        ],
+        "generatedAt": "2026-10-29T19:45:30.008533+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3202,6 +3398,47 @@
         "--fileParallelism=false"
       ],
       "timeoutMs": 90000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/component-surface-menu-browser.test.ts",
+        "test/component-surface-ui-serializer.test.js",
+        "test/conversation-html-state-browser.test.ts",
+        "test/notes-html-shared-state-browser.test.ts",
+        "test/conversation-html-interaction.test.js",
+        "test/notes-component-presentation.test.ts",
+        "test/conversation-component-store.test.ts",
+        "test/conversation-component-service.test.ts",
+        "test/conversation-component-ipc.test.ts",
+        "test/conversation-component-export.test.ts",
+        "test/conversation-component-renderer.test.js",
+        "test/conversation-components-policy.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=verbose"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 20000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "df2e8a79b951b4e9e3de6232b19934dd91d87d09",
+        "HEAD"
+      ],
+      "timeoutMs": 20000
     }
   ],
   "mainSynchronizations": []
