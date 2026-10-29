@@ -63,6 +63,19 @@ async function opened(frame:any):Promise<boolean>{return frame.locator('details'
 async function interactionAcks(page:any):Promise<any[]>{return page.evaluate(()=>(window as any).noteAcks.filter((entry:any)=>entry.requestId?.includes(':interaction:')))}
 
 async function semanticState(page:any):Promise<any>{return page.evaluate(()=>JSON.parse((window as any).noteSaved.blocks.find((block:any)=>block.id==='chart').props.payload).config?.sharedComponentState)}
+it('keeps the common Notes iframe borderless without Research CSS while preserving journal, memo and document identity',async()=>{
+ const f=await fixture();try{
+  await select(f.page);await f.frame.getByText('查看全部数据',{exact:true}).click();await expect.poll(()=>opened(f.frame)).toBe(true)
+  const input=f.frame.locator('#accept-note');await input.fill('无外部边框依赖的笔记备注');await expect.poll(async()=>(await semanticState(f.page))?.state?.note).toBe('无外部边框依赖的笔记备注');await f.page.evaluate(()=>(window as any).flushNote())
+  const journal=await savedEvents(f.page);expect(journal.length).toBeGreaterThan(0);await input.focus();await f.frame.locator('body').evaluate((element:HTMLElement)=>element.dataset.frameIdentity='original')
+  const original=await f.page.evaluate(()=>{const frame=document.querySelector('iframe[data-research-html-artifact]')!;(window as any).originalBorderFrame=frame;return{srcdoc:frame.getAttribute('srcdoc'),sandbox:frame.getAttribute('sandbox')}})
+  await f.page.evaluate(()=>{for(const style of document.querySelectorAll('style'))if(style.getAttribute('data-plugin-css')?.includes('ResearchCanvas.module.css'))style.remove()})
+  const geometry=await f.page.locator('iframe[data-research-html-artifact]').evaluate((element:HTMLIFrameElement)=>{const style=getComputedStyle(element);return{widths:[style.borderTopWidth,style.borderRightWidth,style.borderBottomWidth,style.borderLeftWidth],styles:[style.borderTopStyle,style.borderRightStyle,style.borderBottomStyle,style.borderLeftStyle],delta:element.getBoundingClientRect().width-element.clientWidth,same:element===(window as any).originalBorderFrame,srcdoc:element.getAttribute('srcdoc'),sandbox:element.getAttribute('sandbox'),inline:element.style.border}})
+  expect(geometry.widths).toEqual(['0px','0px','0px','0px']);expect(geometry.styles).toEqual(['none','none','none','none']);expect(geometry.delta).toBe(0);expect(geometry.inline).toBe('0px');expect(geometry.same).toBe(true);expect(geometry.srcdoc).toBe(original.srcdoc);expect(geometry.sandbox).toBe(original.sandbox)
+  expect(await f.frame.locator('body').getAttribute('data-frame-identity')).toBe('original');expect(await input.evaluate((element:HTMLTextAreaElement)=>element.ownerDocument.activeElement===element)).toBe(true);expect(await savedEvents(f.page)).toEqual(journal)
+  await f.page.evaluate(()=>{const w=window as any;w.notesRoot.unmount();w.notesRoot=w.createNoteRoot()});await f.page.locator('.en-title').waitFor();await expect.poll(()=>input.inputValue()).toBe('无外部边框依赖的笔记备注');await expect.poll(()=>opened(f.frame)).toBe(true);expect(await savedEvents(f.page)).toEqual(journal);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},30000)
 it('saves guarded-register offline demo state and native disclosure together and restores both after reopening Notes',async()=>{
  const f=await fixture();try{
   await select(f.page);expect(await opened(f.frame)).toBe(false)
