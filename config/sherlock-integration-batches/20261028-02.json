@@ -636,270 +636,30 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记原位混合生成与模型错误诊断、对话组件高度和组件菜单",
+        "featureName": "补全笔记模型流提前关闭的安全诊断",
         "branch": "codex/feat/notes-react-runtime-20261028",
-        "baseCommit": "f8c63db1fe476d97cef34536b5ffb43b4cce460a",
-        "tipCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
+        "baseCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
+        "tipCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
         "commits": [
           {
-            "commit": "82be467a33f553108f8a8f63e2dd1f4a6c0035ed",
+            "commit": "b4d631385b9ed84acdac528c174640fe041469d7",
             "parents": [
-              "f8c63db1fe476d97cef34536b5ffb43b4cce460a"
+              "5e173f19ae618e6f5366c8d089a9ff810fc914a3"
             ],
-            "subject": "按实际内容适配对话组件高度并保持输入焦点"
-          },
-          {
-            "commit": "750509e185ed4e9d687ff04fda06a956efc689be",
-            "parents": [
-              "82be467a33f553108f8a8f63e2dd1f4a6c0035ed"
-            ],
-            "subject": "补充对话组件自适应高度生成规则与聚焦证据"
-          },
-          {
-            "commit": "2eb6a3183a3110f56b535a85474f6314e8873a94",
-            "parents": [
-              "750509e185ed4e9d687ff04fda06a956efc689be"
-            ],
-            "subject": "保留笔记混合生成正文并按原位顺序插入真实组件"
-          },
-          {
-            "commit": "5d46fdae27012feda499da6948610f0eae71752b",
-            "parents": [
-              "2eb6a3183a3110f56b535a85474f6314e8873a94"
-            ],
-            "subject": "保留笔记模型流的安全错误码并拒绝不完整结果"
-          },
-          {
-            "commit": "ee57e2dac7685d92e5765e48c36be30674dff08a",
-            "parents": [
-              "5d46fdae27012feda499da6948610f0eae71752b"
-            ],
-            "subject": "从已知模型错误格式中提取有限安全诊断字段"
-          },
-          {
-            "commit": "87d3bdedcadf83df3be20feb085aa8deee3eb964",
-            "parents": [
-              "ee57e2dac7685d92e5765e48c36be30674dff08a"
-            ],
-            "subject": "让笔记正文生成沿用会话选择的推理等级"
-          },
-          {
-            "commit": "f8e5aaef53ede18897efab41cc7ff49304437f52",
-            "parents": [
-              "87d3bdedcadf83df3be20feb085aa8deee3eb964"
-            ],
-            "subject": "补齐对话与笔记组件菜单及真实保存导出能力"
-          },
-          {
-            "commit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "parents": [
-              "f8e5aaef53ede18897efab41cc7ff49304437f52"
-            ],
-            "subject": "修复笔记组件选择遮罩阻断结果撤销入口"
+            "subject": "保留笔记模型流提前结束的真实错误码"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/notes-ai-generation-rules.md"
-          },
-          {
-            "status": "M",
-            "path": "docs/research-component-design-contract.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/verification/2026-10-29-conversation-height.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-component-contract.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/design-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-ai.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-output.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/notes-stream-failure.js"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/component-surface-menu.css"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/component-surface-menu.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/component-surface-ui.d.mts"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/component-surface-ui.mjs"
-          },
-          {
             "status": "M",
-            "path": "scripts/lib/conversation-components.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/conversation-components.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-components.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/conversation-components/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/conversation-components/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/notes/component-actions.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/component-library.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/conversation-components.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-clipboard.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/conversation-components.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/inline-ai.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/native-component-block.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/workspace-notes.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-surface-menu-browser.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/component-surface-retained-actions-browser.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/component-surface-ui-serializer.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/conversation-component-export.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/conversation-component-height-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-component-interaction.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-component-ipc.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-component-stream-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-html-state-browser.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-ai-reasoning-route.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-component-actions.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-current-wire-recovery.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-inline-result-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-native-components.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-service.test.ts"
-          },
-          {
-            "status": "A",
             "path": "test/notes-stream-failure.test.js"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-inline-ai-browser.test.ts",
-              "test/notes-inline-proposals.test.ts",
-              "test/notes-inline-proposals-pm.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "54项通过，测试源与最终提交字节一致；/tmp/sherlock-notes-guard-final-20261029/browser-ledger-rest.log",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
-          },
           {
             "argv": [
               "npx",
@@ -920,137 +680,22 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "238项通过，测试源与最终提交字节一致；/tmp/sherlock-notes-guard-final-20261029/backend.log",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
+            "summary": "当前精确两路径诊断修复验证通过，Node24、9文件242项、TC与差异检查；证据/tmp/sherlock-notes-stream-closed-20261029。",
+            "verifiedCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
+            "completedAt": "2026-10-29T00:59:57.121567+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
-              "npx",
-              "--offline",
-              "--yes",
-              "node@24",
-              "./node_modules/vitest/vitest.mjs",
+              "npm",
               "run",
-              "test/notes-inline-result-browser.test.ts",
-              "test/component-surface-retained-actions-browser.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
+              "typecheck"
             ],
             "outcome": "passed",
-            "summary": "真实选择层、菜单控件、混合重试与确认撤销回归通过；未改原断言；/tmp/sherlock-notes-selection-guard-20261029/final-browser.log",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "--offline",
-              "--yes",
-              "node@24",
-              "./node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "真实选择层、菜单控件、混合重试与确认撤销回归通过；未改原断言；/tmp/sherlock-notes-selection-guard-20261029/typecheck.log",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "--offline",
-              "--yes",
-              "node@24",
-              "./node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-surface-ui-serializer.test.js",
-              "test/component-surface-menu-browser.test.ts",
-              "test/conversation-component-height-browser.test.ts",
-              "test/conversation-html-state-browser.test.ts",
-              "test/notes-native-components.test.js",
-              "test/conversation-component-interaction.test.js",
-              "test/conversation-component-renderer.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "干净最终提交7文件51项通过，覆盖内容高度、HTML状态、菜单与共享渲染兼容；/tmp/sherlock-final-handoff-checks-20261029/ui51.log",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/conversation-component-export.test.ts",
-              "test/notes-component-actions.test.ts",
-              "test/conversation-component-ipc.test.ts",
-              "test/conversation-component-service.test.ts",
-              "test/conversation-component-store.test.ts",
-              "test/conversation-component-html-state.test.ts",
-              "test/notes-service.test.ts",
-              "test/research-canvas-export.test.ts",
-              "test/component-library-store.test.ts",
-              "test/research-canvas-clipboard.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "menuBackend 165项通过，最终提交fresh执行；/tmp/sherlock-final-handoff-checks-20261029/menu-backend.log",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/conversation-components-policy.test.js",
-              "test/bundled-component-skill.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "originalGenerationPolicy179 179项通过，最终提交fresh执行；/tmp/sherlock-final-handoff-checks-20261029/original-generation-policy179.log",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/conversation-component-stream-browser.test.js",
-              "test/research-canvas-export.test.ts",
-              "test/workbench-export.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "streamAndResearchExport 30项通过，最终提交fresh执行；/tmp/sherlock-final-handoff-checks-20261029/stream-research-export.log",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
+            "summary": "当前精确两路径诊断修复验证通过，Node24、9文件242项、TC与差异检查；证据/tmp/sherlock-notes-stream-closed-20261029。",
+            "verifiedCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
+            "completedAt": "2026-10-29T00:59:57.121567+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -1059,266 +704,27 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "当前干净工作区差异检查通过；",
-            "verifiedCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-            "completedAt": "2026-10-29T00:29:31.815809+00:00",
-            "timeoutMs": 240000
+            "summary": "当前精确两路径诊断修复验证通过，Node24、9文件242项、TC与差异检查；证据/tmp/sherlock-notes-stream-closed-20261029。",
+            "verifiedCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
+            "completedAt": "2026-10-29T00:59:57.121567+00:00",
+            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "生产渲染器与真实主服务/存储/桥接隔离浏览器通过，覆盖高度、菜单、同DOM阅读、真实导出、保存重开、蓝标确认撤销及手动编辑保护。真实GLM原请求「这一段文字」及混合正文表格仍待Root换入签名客户端现场验收，不能据此宣称真实模型失败已修好。"
+          "outcome": "not-applicable",
+          "summary": "只变更已知SDK错误码传播和公共错误文本，不改UI布局/菜单/高度/生成成功判定；除两路径外所有tracked blobs与已集成5e字节相同。整轮签名客户端真实GLM请求仍由Root后续验收。"
         },
         "acceptanceCriteria": [
-          "用原GLM-5.3-Flash和Max在签名客户端重测「这一段文字」，实际插入可确认内容；失败则按安全错误码继续修复真实原因，不改用户模型或凭据规避。",
-          "混合需求在原位先插正文再插10/20/15三行表格，不暴露内部JSON，不造数据；确认/撤销及部分失败重试不丢人工修改、不重复成功组件。",
-          "对话组件内容高度合理，宽窄图表和长内容可读；动态HTML不重建iframe或丢输入焦点；counter=3和原memo保存重开保持。",
-          "对话和笔记组件提供可用的放大阅读、真实复制、重命名、组件库、导出、数据源操作；无连接点和Canvas专属不可用菜单；蓝标内容点击可恢复审阅，业务控件不挪动。",
-          "仅干净集成工作区构建本地1.4.3，完整包核验与真实界面验收，保留原数据与其他已授权功能；不公证、不发布、不推送、不accept/promote。"
+          "SDK真实STREAM_CLOSED在主生成与格式恢复的finish/throw路径保留机器码，并以准确公共文本显示；不传播原始服务消息、凭据、请求标识、响应体。",
+          "原有终止信号、输出完整性、路由、推理等级、重试及成功判定全部保持，提前关闭不写入为成功。",
+          "构建后的原真实GLM-5.3-Flash/Max短句与混合内容请求仍须实际验收，本卡不冒充原420ms根因已确定或真实生成已修复。"
         ],
         "risks": [
-          "旧420ms finish=error未保留SDK原因，不能追溯原始服务码；新诊断和推理等级传递只是定位基础，真实生成待验收。",
-          "额外Research设计/工作台89组当前87/2；独立完整基线f8c63db复现85/4，当前两个旧标题与详情折叠失败在基线同样存在。未改断言，保留/tmp/sherlock-generation-baseline-20261029及/tmp/sherlock-final-handoff-checks-20261029证据。",
-          "旧installed clipboard探索32/12保留，不声明通过。存储容量/块数限制保留；混合组顺序不声称任意多段交错。",
-          "签名客户端现场验收仍待换包；其他任务正在构建共享客户端，Root不覆盖其操作。"
+          "仅修复确定的错误码丢失，不证明旧420ms错误就是STREAM_CLOSED。",
+          "原位生成、组件菜单/高度及额外基线失败的既有证据保留于前序handoff与当前集成历史，本卡不替代或重写。",
+          "共享客户端由其他已授权任务验收，Root未操作或替换客户端；等待统一新包。"
         ],
-        "generatedAt": "2026-10-29T00:29:31.815809+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-        "verificationCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "test/home-workbench-client.test.js",
-              "test/home-workbench-contract.test.js",
-              "test/home-workbench-runtime.test.js",
-              "test/home-workbench-native.test.js",
-              "test/home-workbench-workspace.test.js",
-              "test/home-workbench-actor.test.js",
-              "test/home-workbench-study-contract.test.js",
-              "test/home-workbench-study-render.test.js",
-              "test/home-workbench-study-integration.test.js",
-              "test/home-workbench-saved-provider.test.js",
-              "test/home-guide-workbench.test.ts",
-              "test/research-grid-arrange-tabs.test.js",
-              "test/financial-connection-row-routing.test.js",
-              "test/home-workbench-browser.test.js",
-              "test/home-guide-operations-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/home-workbench-client.test.js test/home-workbench-contract.test.js test/home-workbench-runtime.test.js test/home-workbench-native.test.js test/home-workbench-workspace.test.js test/home-workbench-actor.test.js test/home-workbench-study-contract.test.js test/home-workbench-study-render.test.js test/home-workbench-study-integration.test.js test/home-workbench-saved-provider.test.js test/home-guide-workbench.test.ts test/research-grid-arrange-tabs.test.js test/financial-connection-row-routing.test.js test/home-workbench-browser.test.js test/home-guide-operations-entry.test.ts",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "6f9bfadfc9c6a63c92579c83262c15b0dd417f63",
-            "completedAt": "2026-10-29T00:44:30.908Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-29T00:44:30.908Z"
+        "generatedAt": "2026-10-29T00:59:57.121567+00:00"
       }
     },
     {
