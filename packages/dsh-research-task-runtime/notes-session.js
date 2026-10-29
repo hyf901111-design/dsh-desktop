@@ -1,3 +1,4 @@
+import {releaseNoteGenerationRoute} from './notes-generation-route.js'
 import {capabilityReceiptText} from './client-capabilities.js'
 export const NOTE_SESSION_EVENT = 'workspace-note/edited'
 export const NOTE_CONVERSATION_EVENT = 'workspace-note/conversation'
@@ -11,7 +12,7 @@ export function setNoteCapabilityRunning(session,requestId,running){
  const leases=capabilityLeases.get(session)||new Map();capabilityLeases.set(session,leases)
  clearTimeout(leases.get(requestId));leases.delete(requestId)
  setNoteConversationRunning(session,requestId,running)
- if(running){const timer=setTimeout(()=>{leases.delete(requestId);setNoteConversationRunning(session,requestId,false)},610000);timer.unref?.();leases.set(requestId,timer)}
+ if(running){const timer=setTimeout(()=>{leases.delete(requestId);setNoteConversationRunning(session,requestId,false);releaseNoteGenerationRoute(session,requestId)},610000);timer.unref?.();leases.set(requestId,timer)}else releaseNoteGenerationRoute(session,requestId)
 }
 export function noteConversationRows(session){
  const rows=new Map()

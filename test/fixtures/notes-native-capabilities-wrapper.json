@@ -1,0 +1,33 @@
+{
+  "prompt": "在此处插入一个标准折线图组件，标题“鼠标键盘撤销验收”。只使用我提供的演示数据：10月1日=10，10月2日=20，10月3日=15。图中注明演示数据，使用标准折线图模板；不联网，不查询行情，不修改任何已有段落和组件，只插入这一个图表。",
+  "main": {
+    "wireToken": "fixture-current-wire",
+    "capabilities": {
+      "kind": "capabilities",
+      "calls": [
+        {
+          "requestId": "req-6f379c4a-notes-undo-chart-01",
+          "capability": "notes.components.create",
+          "arguments": {
+            "prompt": "创建一个标准折线图研究组件，标题「鼠标键盘撤销验收」，使用标准折线图模板（chart.line）。仅使用用户明确提供的三条演示数据：10月1日=10，10月2日=20，10月3日=15。图中明确标注「演示数据，非真实行情」；不联网、不查询任何行情来源。只创建这一个折线图组件，不修改笔记任何已有段落和组件。"
+          }
+        }
+      ]
+    }
+  },
+  "recovery": {
+    "wireToken": "fixture-current-wire",
+    "capabilities": {
+      "kind": "capabilities",
+      "calls": [
+        {
+          "requestId": "req-6f379c4a-notes-undo-chart-01",
+          "capability": "notes.components.create",
+          "arguments": {
+            "prompt": "创建一个标准折线图研究组件，标题「鼠标键盘撤销验收」，使用标准折线图模板（chart.line）。仅使用用户明确提供的三条演示数据：10月1日=10，10月2日=20，10月3日=15。图中明确标注「演示数据，非真实行情」；不联网、不查询任何行情来源。只创建这一个折线图组件，不修改笔记任何已有段落和组件。"
+          }
+        }
+      ]
+    }
+  }
+}

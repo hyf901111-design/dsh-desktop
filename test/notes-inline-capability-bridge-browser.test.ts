@@ -27,15 +27,15 @@ beforeAll(async()=>{
  const factories=new Map();window.__ModuleLoader__={load:d=>factories.set(d.id,d.factory)};new Function(${JSON.stringify(source)})();class Service{};const noop=()=>null,primitives=new Proxy({},{get:()=>noop});
  const library=factories.get('@deepseek-ai/dsh-client-ui-conversation')(id=>id==='react'?React:id==='react/jsx-runtime'?JSX:id==='react-dom'?DOM:id==='@deepseek-ai/cordis'?{Service}:primitives);
  createRoot(document.querySelector('#portals')).render(React.createElement(library.__NoteViews,{sessionId:${JSON.stringify(sessionId)},active:true}));
- window.calls=[];window.jobs={};window.replies=[];const bridge={request:async(method,input)=>{
+ window.calls=[];window.jobs={};window.replies=[];window.tasks=[];document.addEventListener('sherlock:notes-task-state',event=>window.tasks.push(event.detail));const bridge={request:async(method,input)=>{
   window.calls.push({method,input});
   if(method==='load')return{owner:${JSON.stringify(owner)},saved:window.saved,draft:window.pendingDraft};
-  if(method==='save'){window.pendingDraft=undefined;window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}};
+  if(method==='save'){if(window.failSaves)throw Error('合成保存失败，待确认内容必须保留');window.pendingDraft=undefined;window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}};
   if(method==='generate')return new Promise((resolve,reject)=>window.jobs[input.requestId]={input,resolve,reject});
   if(method==='capability-reply'){window.replies.push(input);return window.mainCapabilityReply(input)};
   if(method==='library-list')return[];return{}
  },draft:async input=>{window.pendingDraft={...input.content,baseRevision:input.revision,clientId:input.clientId,updatedAt:Date.now()}}};
- const host=new WorkspaceSurfaceHost(document);const mounted=mountNotes(document,bridge,host);window.fixture={flush:()=>mounted.flushCurrent()};
+ const host=new WorkspaceSurfaceHost(document);let mounted=mountNotes(document,bridge,host);window.fixture={flush:()=>mounted.flushCurrent(),reopen:()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)}};
  `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor;window.noteDoc=doc; const slashMenu = useMemo')}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
  script=(Array.isArray(output)?output:[output]).flatMap(item=>'output'in item?item.output:[]).filter(chunk=>chunk.type==='chunk').map(chunk=>chunk.code).join('\n')
@@ -73,7 +73,7 @@ async function startCapability(f:Awaited<ReturnType<typeof open>>,parent:any,mod
  const receipt=host.executor.execute({requestId:modelCallId,capability:'notes.components.create',arguments:{prompt:'创建两列表格：日期、演示值；10月1日10、10月2日20、10月3日15。仅用这些演示数据。'}},context,controller.signal)
  await expect.poll(()=>f.page.evaluate((previous:string[])=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='component'&&!previous.includes(job.input.requestId)).length,previous)).toBe(1)
  const child=await f.page.evaluate((previous:string[])=>(Object.values((window as any).jobs).find((job:any)=>job.input.entryPoint==='component'&&!previous.includes(job.input.requestId)) as any).input,previous)
- const transport=f.sent.find(value=>value.action==='notes.components.create')
+ const transport=[...f.sent].reverse().find(value=>value.action==='notes.components.create'&&value.generationId===parent.requestId)
  expect(transport.requestId).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/)
  expect(transport.requestId).not.toBe(modelCallId);expect(transport.generationId).toBe(parent.requestId)
  return{receipt,child,transport}
@@ -121,7 +121,7 @@ it('returns a genuine failed child receipt across the Main bridge without markin
   expect(receipt.requestId).toBe(modelCallId);expect(receipt.requestId).not.toBe(call.transport.requestId);expect(receipt.status).toBe('failed');expect(receipt.effect?.state).toBe('placeholder')
   await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'已完成',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt})
   const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.waitFor();expect(await input.inputValue()).toBe(prompt)
-  expect(await f.page.locator('.en-space-ai-message').innerText()).toContain('没有有效表格')
+  expect(await f.page.locator('.en-space-ai-message,.en-space-ai [role="alert"]').count()).toBe(0);expect(await f.page.locator('.en-space-ai').innerText()).not.toContain('没有有效表格')
   expect(await f.page.locator('.en-space-ai-result-actions,.en-inline-ai-pending').count()).toBe(0)
   const actual=await snapshot(f.page);record('main-bridge-failed-child',{transportRequestId:call.transport.requestId,modelCallId,receipt,actual,pageErrors:f.errors})
   expect(actual.blocks.filter((block:any)=>block.type==='research').map((block:any)=>block.status)).toEqual(['failed','failed'])
@@ -156,3 +156,111 @@ it('keeps a successful child pending when its parent still requires a reply and 
   expect(await f.page.locator('.bn-block-outer[data-id="lower"]').textContent()).toContain('【继续编辑】');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
+
+
+it('keeps the demand box input-only through failure with no visual or accessible error space',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>{const e=(window as any).editor;e.focus();e.setTextCursorPosition('anchor','start')});await f.page.keyboard.press('Space')
+  const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.fill(prompt)
+  const before=await f.page.locator('.en-space-ai').boundingBox();await input.press('Enter')
+  await f.page.getByRole('button',{name:'停止',exact:true}).waitFor();expect(await f.page.locator('.en-space-ai textarea').count()).toBe(0)
+  await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).reject(Error('不应出现在输入框的内部诊断')))
+  await input.waitFor();expect(await input.inputValue()).toBe(prompt)
+  expect(await f.page.locator('.en-space-ai [role="alert"],.en-space-ai-message,.en-space-ai-summary,.en-space-ai .en-error').count()).toBe(0)
+  const accessible=await f.page.locator('.en-space-ai').ariaSnapshot();expect(accessible).not.toContain('内部诊断');expect(accessible).not.toContain('alert')
+  const after=await f.page.locator('.en-space-ai').boundingBox();expect(Math.abs(after.height-before.height)).toBeLessThanOrEqual(1)
+  expect(await f.page.locator('.en-space-ai textarea,.en-space-ai button').count()).toBe(2);expect(await f.page.evaluate(()=>(window as any).tasks.some((task:any)=>task.phase==='failed'&&task.error?.includes('内部诊断')))).toBe(true);record('input-only-failure',{accessible,before,after,pageErrors:f.errors});if(evidence)await f.page.screenshot({path:resolve(evidence,'input-only-failure.png')});expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})
+
+it.each(['owned','confirmed','clickaway','mixed','mixed-modified','modified','aba','foreign','reused','cancelled','readonly','deleted-anchor','recreated-anchor','ordinary-text','successful-receipt'])('places useful fallback prose below the demand and protects %s failed slots through the real Main bridge',async variant=>{
+ const f=await open();try{
+  let parent=await launch(f.page),call=await startCapability(f,parent,'req-fallback-'+variant)
+  if(variant==='reused'){
+   await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('原请求失败，但旧占位必须保留')),call.child.requestId)
+   const prior=await call.receipt
+   await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'conversation',markdown:'组件未完成',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt:prior})
+   await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter');await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').length)).toBe(2)
+   parent=await f.page.evaluate(()=>(Object.values((window as any).jobs).filter((job:any)=>job.input.entryPoint==='inline').at(-1) as any).input)
+   call=await startCapability(f,parent,'req-fallback-reused-second')
+  }
+  await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('真实子组件失败，回退文字')),call.child.requestId)
+  const receipt=await call.receipt;expect(receipt.status).toBe('failed');expect(receipt.effect?.state).toBe('placeholder')
+  if(!receipt.effect||!('blockId'in receipt.effect))throw Error('Expected genuine failed create effect')
+  const blockId=receipt.effect.blockId,original=await f.page.evaluate((id:string)=>(window as any).editor.getBlock(id),blockId)
+  if(variant==='modified')await f.page.evaluate((id:string)=>{const e=(window as any).editor,b=e.getBlock(id),node=JSON.parse(b.props.payload);e.updateBlock(id,{props:{payload:JSON.stringify({...node,title:'用户改过的失败卡，必须保留'})}})},blockId)
+  if(variant==='aba')await f.page.evaluate((block:any)=>{const e=(window as any).editor;e.removeBlocks([block.id]);e.insertBlocks([block],'anchor','before')},original)
+  if(variant==='cancelled')await f.page.getByRole('button',{name:'停止',exact:true}).click()
+  if(variant==='readonly')await f.page.evaluate(()=>(window as any).editor.isEditable=false)
+  if(['deleted-anchor','recreated-anchor'].includes(variant))await f.page.evaluate((recreate:boolean)=>{const e=(window as any).editor,b=e.getBlock('anchor');e.removeBlocks(['anchor']);if(recreate)e.insertBlocks([b],'lower','before')},variant==='recreated-anchor')
+  const expectedBefore=await f.page.evaluate((id:string)=>JSON.stringify((window as any).editor.getBlock(id)),blockId)
+  let successful:any
+  if(['mixed','mixed-modified'].includes(variant)){
+   const second=await startCapability(f,parent,'req-fallback-mixed-success')
+   await f.page.evaluate(({id,node}:any)=>(window as any).jobs[id].resolve({kind:'component',node}),{id:second.child.requestId,node:tableNode})
+   successful=await second.receipt;expect(successful.status).toBe('succeeded')
+   if(variant==='mixed-modified')await f.page.evaluate((id:string)=>{const e=(window as any).editor,b=e.getBlock(id),node=JSON.parse(b.props.payload);e.updateBlock(id,{props:{payload:JSON.stringify({...node,title:'人工修改的成功卡必须保留'})}})},successful.blockId)
+  }
+  const actualReceipt=variant==='foreign'?{...receipt,blockId:'old-failed',effect:{...receipt.effect,blockId:'old-failed'}}:variant==='successful-receipt'?{...receipt,status:'succeeded'}:receipt
+  await f.page.evaluate(({id,receipts,flag,mixed}:any)=>(window as any).jobs[id].resolve({kind:'text',markdown:'### 可核验的文字结果\n\n用户数据10、20、15的平均值为15；这些演示值不代表真实行情。',...flag?{textFallback:true}:{},...mixed?{inlineOrder:'before-components'}:{},capabilityReceipts:receipts}),{id:parent.requestId,receipts:[actualReceipt,...successful?[successful]:[]],flag:variant!=='ordinary-text',mixed:['mixed','mixed-modified'].includes(variant)})
+  if(['cancelled','readonly','deleted-anchor','recreated-anchor','mixed-modified'].includes(variant)){
+   await expect.poll(()=>f.page.locator('.en-space-ai .en-ai-loading').count()).toBe(0)
+   await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+   expect(await f.page.locator('.bn-editor').innerText()).not.toContain('可核验的文字结果');expect(await f.page.evaluate((id:string)=>JSON.stringify((window as any).editor.getBlock(id)),blockId)).toBe(expectedBefore)
+  }else{
+   await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();expect(await f.page.locator('.bn-editor').innerText()).toContain('用户数据10、20、15的平均值为15')
+   expect(await f.page.locator('.en-inline-ai-pending').count()).toBeGreaterThanOrEqual(2);expect(await f.page.locator('.en-space-ai textarea').count()).toBe(0)
+   expect(await f.page.locator('.en-space-ai [role="alert"],.en-space-ai-message').count()).toBe(0);expect(await f.page.locator('.en-space-ai').innerText()).not.toContain('平均值为15')
+   if(['owned','confirmed','clickaway','mixed'].includes(variant)){
+    expect(await f.page.evaluate((id:string)=>(window as any).editor.getBlock(id),blockId)).toBeUndefined()
+    expect(await f.page.locator('.en-space-ai-summary').innerText()).toBe(variant==='mixed'?'已生成文字，部分组件未生成':'已生成文字，组件未生成')
+    const actual=await snapshot(f.page);if(variant==='mixed')expect(actual.proposals.find((p:any)=>p.id===parent.requestId)?.error).toContain('真实子组件失败');else expect(actual.proposals.find((p:any)=>p.id===parent.requestId)?.error).toBeFalsy();expect(await f.page.evaluate((id:string)=>(window as any).tasks.find((task:any)=>task.requestId===id&&task.phase==='ready')?.result.capabilityReceipts.find((receipt:any)=>receipt.status==='failed')?.message,parent.requestId)).toContain('真实子组件失败');record('fallback-'+variant,{receipt,successful,actual,pageErrors:f.errors});if(evidence)await f.page.screenshot({path:resolve(evidence,'fallback-'+variant+'.png')})
+    if(variant==='mixed'){await f.page.locator('.bn-block-outer[data-id="lower"] .bn-inline-content').click();await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));expect(await f.page.evaluate((id:string)=>(window as any).noteDoc.getMap('note-inline-proposals').has(id),parent.requestId)).toBe(true);expect(await f.page.evaluate((id:string)=>(window as any).tasks.some((task:any)=>task.requestId===id&&task.phase==='accepted'),parent.requestId)).toBe(false)}
+    await f.page.evaluate(async()=>{const w=window as any;await w.fixture.flush();w.fixture.reopen()});await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor()
+    expect(await f.page.locator('.en-space-ai-summary').innerText()).toBe(variant==='mixed'?'已生成文字，部分组件未生成':'已生成文字，组件未生成');expect(await f.page.locator('.en-inline-ai-pending').count()).toBeGreaterThanOrEqual(2)
+
+    if(variant==='confirmed'||variant==='clickaway'){
+     if(variant==='clickaway')await f.page.locator('.bn-block-outer[data-id="lower"] .bn-inline-content').click();else await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.en-space-ai,.en-inline-ai-pending').count()).toBe(0);expect(await f.page.locator('.bn-editor').innerText()).toContain('可核验的文字结果')
+    }else{await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['upper','old-failed','anchor','lower'])}
+    expect(await f.page.evaluate(({id,phase}:any)=>(window as any).tasks.some((task:any)=>task.requestId===id&&task.phase===phase),{id:parent.requestId,phase:['confirmed','clickaway'].includes(variant)?'accepted':'discarded'})).toBe(true)
+   }else{
+    expect(await f.page.evaluate((id:string)=>JSON.stringify((window as any).editor.getBlock(id)),blockId)).toBe(expectedBefore)
+    if(variant!=='ordinary-text')expect(await f.page.locator('.en-space-ai-summary').innerText()).toBe('已生成文字，组件未生成；原组件内容已保留')
+    if(['modified','aba'].includes(variant)){await f.page.locator('.bn-block-outer[data-id="lower"] .bn-inline-content').click();await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));expect(await f.page.evaluate((id:string)=>(window as any).noteDoc.getMap('note-inline-proposals').has(id),parent.requestId)).toBe(true);expect(await f.page.evaluate((id:string)=>(window as any).tasks.some((task:any)=>task.requestId===id&&task.phase==='accepted'),parent.requestId)).toBe(false);await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();expect(await f.page.evaluate((id:string)=>JSON.stringify((window as any).editor.getBlock(id)),blockId)).toBe(expectedBefore)}
+   }
+  }
+  expect(await f.page.evaluate(()=>JSON.parse((window as any).editor.getBlock('old-failed').props.payload))).toEqual(previousFailed);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+
+it('shows only generated prose for a trusted format-only fallback with no failed create receipt',async()=>{
+ const f=await open();try{
+  const parent=await launch(f.page)
+  await f.page.evaluate((id:string)=>(window as any).jobs[id].resolve({kind:'text',textFallback:true,markdown:'用户数据仅能支持这段有用的来源核验正文。',capabilityReceipts:[]}),parent.requestId)
+  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();expect(await f.page.locator('.en-space-ai-summary').innerText()).toBe('已生成文字')
+  expect(await f.page.locator('.bn-editor').innerText()).toContain('有用的来源核验正文');expect(await f.page.locator('.en-inline-ai-pending').count()).toBe(1)
+  expect((await snapshot(f.page)).proposals.find((value:any)=>value.id===parent.requestId)?.error).toBeFalsy()
+  await f.page.locator('.bn-block-outer[data-id="lower"] .bn-inline-content').click();await expect.poll(()=>f.page.locator('.en-space-ai,.en-inline-ai-pending').count()).toBe(0)
+  expect(await f.page.evaluate((id:string)=>(window as any).tasks.some((task:any)=>task.requestId===id&&task.phase==='accepted'),parent.requestId)).toBe(true)
+  expect(await f.page.evaluate(()=>JSON.parse((window as any).editor.getBlock('old-failed').props.payload))).toEqual(previousFailed);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})
+
+
+it('keeps a save-failed pure fallback pending on clickaway and confirms only after an explicit successful retry',async()=>{
+ const f=await open();try{
+  const parent=await launch(f.page),call=await startCapability(f,parent,'req-save-failed-pure-fallback')
+  await f.page.evaluate((id:string)=>(window as any).jobs[id].reject(Error('真实子组件失败')),call.child.requestId);const receipt=await call.receipt;expect(receipt.status).toBe('failed')
+  await f.page.evaluate(({id,receipt}:any)=>(window as any).jobs[id].resolve({kind:'text',textFallback:true,markdown:'这段文字需要真实保存后才可完成确认。',capabilityReceipts:[receipt]}),{id:parent.requestId,receipt})
+  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();await f.page.evaluate(()=>(window as any).failSaves=true)
+  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click()
+  await expect.poll(()=>f.page.evaluate((id:string)=>(window as any).noteDoc.getMap('note-inline-proposals').get(id)?.error,parent.requestId)).toContain('尚未保存')
+  await f.page.evaluate(()=>(window as any).failSaves=false);await f.page.locator('.bn-block-outer[data-id="lower"] .bn-inline-content').click();await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  expect(await f.page.evaluate((id:string)=>(window as any).noteDoc.getMap('note-inline-proposals').has(id),parent.requestId)).toBe(true)
+  expect(await f.page.evaluate((id:string)=>(window as any).tasks.some((task:any)=>task.requestId===id&&task.phase==='accepted'),parent.requestId)).toBe(false)
+  expect(await f.page.locator('.en-inline-ai-pending').count()).toBe(1);expect(await f.page.locator('.en-space-ai [role="alert"]').count()).toBe(0)
+  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.en-space-ai,.en-inline-ai-pending').count()).toBe(0)
+  expect(await f.page.evaluate((id:string)=>(window as any).tasks.some((task:any)=>task.requestId===id&&task.phase==='accepted'),parent.requestId)).toBe(true);expect(await f.page.locator('.bn-editor').innerText()).toContain('真实保存后才可完成确认');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+})

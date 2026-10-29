@@ -48,8 +48,8 @@ it('recovers the real mixed shape as complete prose and a Markdown table instead
  expect(JSON.parse(f.calls[1].messages[1].content[0].text)).toMatchObject({instruction,publicOutput:expect.stringContaining('notes.components.create')})
 })
 
-it('fails a still-invalid single recovery without exposing the private transport as ready document content',async()=>{
- const f=context([combined,combined]);await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(2)
+it('fails an unusable recovery and its one text fallback without exposing private transport as document content',async()=>{
+ const f=context([combined,combined]);await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(3);expect(f.calls[2].purpose).toBe('workspace-note-text-fallback')
  const failure=noteConversationRows(f.session).at(-1);expect(failure).toMatchObject({phase:'failed',prompt:instruction})
  expect(f.session.events.some(event=>event.type==='workspace-note/conversation'&&event.data.phase==='ready')).toBe(false)
 })
@@ -57,7 +57,7 @@ it('fails a still-invalid single recovery without exposing the private transport
 it('does not accept the current transport merely wrapped in recovered text for an ordinary document request',async()=>{
  let raw
  const f=context([options=>{raw=JSON.stringify(combined(options));return raw},()=>({kind:'text',markdown:raw})])
- await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(2)
+ await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(3);expect(f.calls[2].purpose).toBe('workspace-note-text-fallback')
 })
 
 it('keeps business JSON and explicitly displayed mixed examples intact without executing their calls',async()=>{
@@ -170,13 +170,13 @@ it.each([
  ['unavailable capability',value=>({...value,capabilities:{kind:'capabilities',calls:[{...call,capability:'unknown.write'}]}})]
  ,['extra unvalidated arguments',value=>({...value,capabilities:{kind:'capabilities',calls:[{...call,arguments:{...call.arguments,command:'write-arbitrary-target'}}]}})]
 ])('does not authorize recovery operations from %s',async(_name,change)=>{
- const f=context([options=>change(combined(options)),actual({kind:'capabilities',calls:[call]})]);await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(2)
+ const f=context([options=>change(combined(options)),actual({kind:'capabilities',calls:[call]})]);await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(3);expect(f.calls[2].purpose).toBe('workspace-note-text-fallback')
 })
 
 it('cannot turn an unmarked example into execution by adding the current nonce only during recovery',async()=>{
  let issued
  const f=context([options=>{issued=token(options);const value=combined(options);delete value.wireToken;return value},()=>({kind:'capabilities',wireToken:issued,calls:[call]})])
- await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(2)
+ await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(3);expect(f.calls[2].purpose).toBe('workspace-note-text-fallback')
 })
 
 it('does not reorder two original operations during recovery',async()=>{
@@ -212,5 +212,5 @@ it.each([
  ['arguments',value=>({...value,calls:[{...call,arguments:{prompt:'改写其它旧正文'}}]})],
  ['extra operation',value=>({...value,calls:[call,{...call,requestId:'extra-write'}]})]
 ])('rejects a recovery that changes the original batch %s',async(_name,change)=>{
- const f=context([combined,actual(change({kind:'capabilities',calls:[call]}))]);await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(2)
+ const f=context([combined,actual(change({kind:'capabilities',calls:[call]}))]);await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow('原需求已保留');expect(f.calls).toHaveLength(3);expect(f.calls[2].purpose).toBe('workspace-note-text-fallback')
 })

@@ -267,12 +267,12 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const failed=value.changes.filter(change=>change.after?.type==='research'&&(unfinishedInlineComponent(change.after)||unfinishedInlineComponent(editor.getBlock(change.id))))
     const failures=new Set(failed.map(change=>change.id)),changes=value.changes.filter(change=>!failures.has(change.id)),shown=changes.filter(change=>change.after),components=shown.filter(change=>change.after?.type==='research').length,text=shown.length-components
     const error=value.error||failed.map(change=>inlineComponentNode(editor.getBlock(change.id)||change.after).generationError||inlineComponentNode(change.after).generationError).filter(Boolean).join('；').slice(0,1000)||t('组件生成未返回有效内容，请重试。')
-    const summary=failed.length?(shown.length?'已保留'+[text?text+'项内容':'',components?components+'个组件':''].filter(Boolean).join('、')+'，部分未完成':error):value.summary
+    const summary=failed.length?(value.resultKind==='text-fallback'?value.summary:shown.length?'已保留'+[text?text+'项内容':'',components?components+'个组件':''].filter(Boolean).join('、')+'，部分未完成':error):value.summary
     return{failed,changes,shown,summary,error,onlyFailed:failed.length>0&&!shown.length}
   }
   const finishInlineProposal=(id:string,partial=false,summary='',kind?:string,error?:string)=>{
     const current=proposals.list().find(value=>value.id===id),state=current&&inlineProposalState(current)
-    if(state?.failed.length){partial=true;summary=state.summary;error=error||state.error}
+    if(state?.failed.length){partial=true;if(kind!=='text-fallback')summary=state.summary;error=error||state.error}
     if(partial&&!error)error=t('本次操作未完成，内容已保留。')
     const value=proposals.finish(id,partial,summary,kind)
     if(value&&error){proposals.setError(id,error);value.error=error}
@@ -623,6 +623,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           publishTask(requestId,'replied',{result})
         }else{
           const blocks=result.kind==='component'?[{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}]:editor.tryParseMarkdownToBlocks(result.markdown)
+          const textFallback=result.kind==='text'&&'textFallback'in result&&result.textFallback===true
           let before:{blockId:string;identity:string}|undefined
           if(result.kind==='text'&&result.inlineOrder){
             const receipts=result.capabilityReceipts?.filter(receipt=>receipt.capability==='notes.components.create'&&receipt.status==='succeeded')||[]
@@ -640,9 +641,30 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
               }
             }
           }
+          if(textFallback&&blocks.length&&proposals.active()===requestId){
+            // Only this request's unchanged failed creations may disappear.
+            // Receipt IDs differ across the Main bridge; block identity and the
+            // proposal journal, never a model call ID, establish ownership.
+            const proposal=proposals.list().find(value=>value.id===requestId)
+            const failed=new Set(result.capabilityReceipts?.flatMap(receipt=>{
+              const effect=receipt.effect,blockId=effect&&'blockId'in effect?effect.blockId:undefined
+              return receipt.capability==='notes.components.create'&&['failed','unavailable'].includes(receipt.status)&&effect?.state==='placeholder'&&typeof blockId==='string'&&(!receipt.blockId||receipt.blockId===blockId)?[blockId]:[]
+            })||[])
+            const removable=proposal?.changes.filter(change=>{
+              const position=inlineCreations.current.get(change.id),block=editor.getBlock(change.id),node=inlineComponentNode(block)
+              return change.before===null&&change.after?.type==='research'&&block?.type==='research'&&failed.has(change.id)&&position?.blockId===change.id&&noteInlineBlockIdentity(editor,change.id)===position.identity&&node.noteDraft==='smart'&&!node.containerSpec&&node.generationStatus==='failed'&&!inlineComponents.isGenerating(change.id)&&proposals.canUndoBlock(requestId,change.id)
+            }).map(change=>change.id)||[]
+            if(removable.length)proposals.run(()=>editor.removeBlocks(removable))
+          }
           const inserted=proposals.run(()=>insertNoteInlineBlocks(editor,inlineTarget,client.current,blocks,true,before))
           if(result.kind==='component')completedBlock=inserted[0]?.id||''
-          publishTask(requestId,'ready',{result});inlineCompletion={partial:false,summary:'',kind:result.kind};changed()
+          const proposal=textFallback?proposals.list().find(value=>value.id===requestId):undefined,state=proposal&&inlineProposalState(proposal)
+          const failure=textFallback&&result.capabilityReceipts?.find(receipt=>receipt.capability==='notes.components.create'&&['failed','unavailable'].includes(receipt.status))
+          const completed=textFallback&&result.capabilityReceipts?.some(receipt=>{const effect=receipt.effect,blockId=effect&&'blockId'in effect?effect.blockId:undefined;return receipt.capability==='notes.components.create'&&receipt.status==='succeeded'&&!!blockId&&state?.shown.some(change=>change.id===blockId&&change.after?.type==='research'&&editor.getBlock(blockId)?.type==='research')})
+          // A safely resolved prose-only fallback follows normal review. Keep
+          // failed receipts in the result/history; unresolved or mixed work stays partial.
+          const fallbackError=failure&&(state?.failed.length||completed)?(proposal?.error||(state?.failed.length?state.error:failure.message?.slice(0,1000))||t('组件未生成，已保留文字结果')):undefined
+          publishTask(requestId,'ready',{result});inlineCompletion={partial:false,summary:textFallback?'已生成文字'+(failure||state?.failed.length?'，'+(completed?'部分组件':'组件')+'未生成':'')+(state?.failed.length?'；原组件内容已保留':''):'',kind:textFallback?'text-fallback':result.kind,error:fallbackError};changed()
         }
       }else if(draftBlockId&&result.kind==='conversation'){
         const previous=JSON.parse(editor.getBlock(pending).props.payload);editor.updateBlock(pending,{props:{payload:JSON.stringify({...previous,generationStatus:'draft',generationDetail:result.markdown})}});publishTask(requestId,'replied',{result})
@@ -703,7 +725,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       restore=proposals.list().find(item=>item.id===value.id)||value;proposals.confirm(value.id);changed();await persist()
       if(reviewedProposal.current===value.id){if(inlineDraftRef.current?.review?.id===value.id)inlinePrompt.current=undo?value.prompt:'';reviewedProposal.current=undefined}
       setInlineDraft(draft=>draft?.review?.id===value.id?undefined:draft)
-      if(value.resultKind==='text'||value.resultKind==='component')publishTask(value.id,undo?'discarded':'accepted')
+      if(value.resultKind==='text'||value.resultKind==='text-fallback'||value.resultKind==='component')publishTask(value.id,undo?'discarded':'accepted')
     }catch(error){if(!proposals.list().some(item=>item.id===value.id))proposals.restore(restore);proposals.setError(value.id,(error as Error).message);changed();setInlineDraft(draft=>draft?.review?.id===value.id?{...draft,error:(error as Error).message}:draft)}finally{settlingProposal.current='';setInlineDraft(draft=>draft?.review?{...draft,review:{...draft.review,busy:proposals.list().find(item=>item.id===draft.review!.id)?.state==='running',canUndo:editor.isEditable&&proposals.canUndo(draft.review.id)}}:draft)}
    }
    const result=run();settlementTask.current=result;return result

@@ -22,7 +22,7 @@ export function canApplySuggestion(captured: { documentId: string; fingerprint: 
 }
 type NoteCapabilityResult = {capabilitySummary?:string;capabilityReceipts?:CapabilityReceipt[]}
 export type NoteInlineOrder='before-components'|'after-components'
-export type NoteDocumentResult = ({ kind: 'text'; markdown: string;inlineOrder?:NoteInlineOrder } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & NoteCapabilityResult
+export type NoteDocumentResult = ({ kind: 'text'; markdown: string;inlineOrder?:NoteInlineOrder;textFallback?:true } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & NoteCapabilityResult
 export type NoteAiResult = NoteDocumentResult | ({ kind: 'conversation'; markdown: string;requiresReply?:boolean } & NoteCapabilityResult)
 export type NoteInsertionAnchor = {documentId:string;blockId:string;position:Record<string,any>}
 
