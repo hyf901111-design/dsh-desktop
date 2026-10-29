@@ -23,13 +23,13 @@ async function fixture({files=true,clipboard=true,library=true}={}){
 }
 
 it('reports real menu adapters and allows read-only copy/export while refusing library writes',async()=>{
- const f=await fixture();expect((await f.service.read(f.target)).menuCapabilities).toEqual({copy:true,saveLibrary:true,exportContent:true,rename:true})
+ const f=await fixture();expect((await f.service.read(f.target)).menuCapabilities).toEqual({copy:true,saveLibrary:true,exportContent:true,rename:true,theme:true})
  f.setVisible({ownerAccountId:'owner',sessionId:'session',mode:'conversation',generation:'window',readOnly:true})
- expect((await f.service.read(f.target)).menuCapabilities).toEqual({copy:true,saveLibrary:false,exportContent:true,rename:false})
+ expect((await f.service.read(f.target)).menuCapabilities).toEqual({copy:true,saveLibrary:false,exportContent:true,rename:false,theme:false})
  expect(await f.service.copy(f.target)).toEqual({ok:true});await expect(f.service.saveLibrary(f.target)).rejects.toThrow(/编辑|只读|不可用/);expect(f.templates.list()).toEqual([])
  await expect(f.service.updateNativeSpec({...f.target,expectedRevision:1,spec:{...(f.store.read('owner',f.target).node.containerSpec as any),period:'1w'}})).rejects.toThrow(/编辑|只读|不可用/)
  expect(await f.service.exportContent(f.packet())).toEqual({status:'saved'});expect(await readFile(join(f.root,'selected.svg'),'utf8')).toBe(svg)
- const missing=await fixture({files:false,clipboard:false,library:false});expect((await missing.service.read(missing.target)).menuCapabilities).toEqual({copy:false,saveLibrary:false,exportContent:false,rename:true})
+ const missing=await fixture({files:false,clipboard:false,library:false});expect((await missing.service.read(missing.target)).menuCapabilities).toEqual({copy:false,saveLibrary:false,exportContent:false,rename:true,theme:true})
 })
 
 it.each(['svg','png','jpg'])('saves a genuine bounded %s through the existing native export writer with the host title',async format=>{

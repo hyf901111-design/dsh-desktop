@@ -1,5 +1,5 @@
 import {afterEach,expect,it,vi} from 'vitest'
-import {mkdtemp,rm} from 'node:fs/promises'
+import {mkdtemp,readFile,rm} from 'node:fs/promises'
 import {join} from 'node:path'
 import {tmpdir} from 'node:os'
 import {ConversationComponentStore} from '../src/main/state/conversation-components'
@@ -11,12 +11,12 @@ const table={artifact:{version:1,type:'table',title:'模拟表格',columns:['名
 const native=()=>({artifact:{...financialWidgetDefaults('quote')!,title:'模拟行情',symbols:[{code:'AAPL',market:'US',name:'模拟标的'}]}} as any)
 async function fixture(){
  const dir=await mkdtemp(join(tmpdir(),'conversation-service-'));dirs.push(dir);const store=new ConversationComponentStore(join(dir,'components.json'));await store.load()
- let owner='owner',visible:any={ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g'},current=true
+ let owner='owner',visible:any={ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g'},current=true,writable=true
  const nativeQuery=vi.fn(async(q:any):Promise<any>=>q.action==='quotes'?{source:'模拟报价来源',receivedAt:'2026-10-24T01:00:00Z',quotes:[{...q.symbols[0],price:17,asOf:'2026-10-23'}]}:{source:'模拟历史来源',receivedAt:'2026-10-24T01:01:00Z',bars:[{date:'2026-10-22',close:16},{date:'2026-10-23',close:17}]}),copy=vi.fn(async(_input:unknown)=>({ok:true})),add=vi.fn(async(_node:unknown,_recipe?:unknown,_owner?:string)=>({id:'library-id',name:'模拟行情'}))
- const service=createConversationComponentService({store,owner:()=>owner,canReadSession:s=>s==='s',currentVisibleContext:()=>visible,nativeQuery,clipboard:()=>({copy} as any),library:()=>({add} as any)})
+ const service=createConversationComponentService({store,owner:()=>owner,canReadSession:s=>s==='s',canWriteSession:()=>writable,currentVisibleContext:()=>visible,nativeQuery,clipboard:()=>({copy} as any),library:()=>({add} as any)})
  const identity={ownerAccountId:'owner',sessionId:'s',turnId:'t',mode:'conversation' as const,windowGeneration:'g',current:()=>current}
  const create=async(args=table)=>{const r=await service.create(args,identity,new AbortController().signal,'r');return {sessionId:'s',componentId:r.effect.componentId}}
- return {directory:dir,store,service,nativeQuery,copy,add,identity,create,setOwner:(v:string)=>owner=v,setVisible:(v:any)=>visible=v,setCurrent:(v:boolean)=>current=v}
+ return {directory:dir,store,service,nativeQuery,copy,add,identity,create,setOwner:(v:string)=>owner=v,setVisible:(v:any)=>visible=v,setCurrent:(v:boolean)=>current=v,setWritable:(v:boolean)=>writable=v}
 }
 it('uses the real host identity, refuses cancellation, and returns a saved receipt if cancellation comes after rename',async()=>{
  const f=await fixture(),abort=new AbortController();abort.abort();await expect(f.service.create(table,f.identity,abort.signal,'r')).rejects.toThrow(/取消|失效/)
@@ -89,4 +89,36 @@ it('never returns native snapshots for a different revision, source, symbol, que
  expect(await f.service.readNativeSnapshot!({...t,expectedRevision:1,query:{action:'history',symbols:spec.symbols,source:'default',period:'1d',adjustment:'none'}})).toBeNull()
  await f.service.updateNativeSpec({...t,expectedRevision:1,spec:{...spec,symbols:[{code:'MSFT',market:'US',name:'新证券'}]}});expect(await f.service.readNativeSnapshot!({...t,expectedRevision:2,query:{...query,symbols:[{code:'MSFT',market:'US',name:'新证券'}]}})).toBeNull()
  f.setOwner('other');await expect(f.service.readNativeSnapshot!({...t,expectedRevision:2,query})).rejects.toThrow()
+})
+it('advertises theme editing with rename permission and retains native observations through a theme edit and refresh',async()=>{
+ const f=await fixture(),t=await f.create(native()),view=await f.service.read(t),spec=view.node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:'default'}
+ expect(view.menuCapabilities).toMatchObject({rename:true,theme:true});expect(typeof f.service.setTheme).toBe('function');await f.service.queryNative({...t,expectedRevision:1,query});const before=f.store.details('owner',t)
+ expect(await f.service.setTheme!({...t,expectedRevision:1,theme:'openterminal'})).toMatchObject({revision:2,node:{componentTheme:'openterminal'},provenance:before.provenance});expect(await f.service.readNativeSnapshot!({...t,expectedRevision:2,query})).toMatchObject({specRevision:2,result:{quotes:[{price:17}]}})
+ await f.service.queryNative({...t,expectedRevision:2,query:{...query,refresh:true}});expect((await f.service.read(t)).node.componentTheme).toBe('openterminal');expect(f.store.details('owner',t).readableText).toBe(before.readableText)
+ for(const context of [{mode:'notes'},{mode:'research'},{readOnly:true}]){f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g',...context});expect((await f.service.read(t)).menuCapabilities).toMatchObject({rename:false,theme:false})}
+ f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g'});f.setWritable(false);expect((await f.service.read(t)).menuCapabilities).toMatchObject({rename:false,theme:false})
+})
+it('rejects malformed theme requests before mutation and enforces expected revision',async()=>{
+ const f=await fixture(),t=await f.create(),file=join(f.directory,'components.json'),bytes=await readFile(file,'utf8'),valid={...t,expectedRevision:1,theme:'light' as const}
+ expect(typeof f.service.setTheme).toBe('function')
+ for(const input of [null,[],{...valid,theme:'system'},{...valid,theme:null},{...valid,theme:1},{...valid,expectedRevision:0},{...valid,node:{}},{...valid,ownerAccountId:'forged'},(({theme:_,...rest})=>rest)(valid)])await expect(f.service.setTheme!(input as any)).rejects.toThrow()
+ await expect(f.service.setTheme!({...valid,expectedRevision:2})).rejects.toThrow(/版本/);expect(await readFile(file,'utf8')).toBe(bytes)
+})
+it.each(['owner','session','mode','readonly','permission'] as const)('rejects theme writes outside the writable visible conversation: %s',async change=>{
+ const f=await fixture(),t=await f.create(),file=join(f.directory,'components.json'),bytes=await readFile(file,'utf8')
+ expect(typeof f.service.setTheme).toBe('function')
+ if(change==='owner')f.setOwner('other');if(change==='session')f.setVisible({ownerAccountId:'owner',sessionId:'other',mode:'conversation',generation:'g'});if(change==='mode')f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'research',generation:'g'});if(change==='readonly')f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g',readOnly:true});if(change==='permission')f.setWritable(false)
+ await expect(f.service.setTheme!({...t,expectedRevision:1,theme:'dark'})).rejects.toThrow();expect(await readFile(file,'utf8')).toBe(bytes)
+})
+it.each(['owner','generation','mode','readonly','permission'] as const)('cancels a queued theme mutation when its host guard changes: %s',async change=>{
+ const f=await fixture(),t=await f.create(),file=join(f.directory,'components.json'),bytes=await readFile(file,'utf8')
+ expect(typeof f.service.setTheme).toBe('function')
+ const pending=f.service.setTheme!({...t,expectedRevision:1,theme:'dark'})
+ if(change==='owner')f.setOwner('other');if(change==='generation')f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'next'});if(change==='mode')f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'notes',generation:'g'});if(change==='readonly')f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g',readOnly:true});if(change==='permission')f.setWritable(false)
+ await expect(pending).rejects.toThrow();expect(await readFile(file,'utf8')).toBe(bytes);expect(f.store.read('owner',t).revision).toBe(1)
+})
+it.each(['generation','readonly','permission'] as const)('does not acknowledge theme editing after its host confirmation changes: %s',async change=>{
+ const f=await fixture(),t=await f.create();expect(typeof f.service.setTheme).toBe('function');const original=f.store.setTheme.bind(f.store)
+ vi.spyOn(f.store,'setTheme').mockImplementation(async(...args)=>{const saved=await original(...args);if(change==='generation')f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'next'});if(change==='readonly')f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g',readOnly:true});if(change==='permission')f.setWritable(false);return saved})
+ await expect(f.service.setTheme!({...t,expectedRevision:1,theme:'dark'})).rejects.toThrow();expect(f.store.read('owner',t)).toMatchObject({revision:2,node:{componentTheme:'dark'}})
 })

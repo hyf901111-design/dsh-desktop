@@ -13,6 +13,13 @@ it('never calls a rejected queued readonly admission saved',async()=>{
  expect(await f.host.sharedBridge.commit('v',1,{count:1})).toBeUndefined()
  expect(f.statuses.some(value=>value.value==='saved')).toBe(false);expect(f.statuses.at(-1).value).toBe('error')
 })
+it('does not write presentation over a failed HTML interaction or a departed owner',async()=>{
+ const f=fixture();f.set({...f.get(),readOnly:true});await f.host.sharedBridge.commit('v',1,{count:1});f.set({...f.get(),readOnly:false})
+ await expect(f.host.commitPresentation(async()=>{f.set({...f.get(),node:{...f.get().node,componentTheme:'dark'}})})).rejects.toThrow('交互尚未保存')
+ expect(f.get().node.componentTheme).toBeUndefined()
+ const other=fixture();other.leave();await expect(other.host.commitPresentation(async()=>{other.set({...other.get(),node:{...other.get().node,componentTheme:'dark'}})})).rejects.toThrow('已变化')
+ expect(other.get().node.componentTheme).toBeUndefined()
+})
 it.each(['newer','readonly','session'])('does not ACK or replace a newer/locked Conversation view after an old save returns: %s',async kind=>{
  const f=fixture(),pending=f.host.sharedBridge.commit('v',1,{count:1});await Promise.resolve();await Promise.resolve()
  if(kind==='newer')f.set(f.saved(3,2))

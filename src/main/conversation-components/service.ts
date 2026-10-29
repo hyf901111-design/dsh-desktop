@@ -85,13 +85,22 @@ export function createConversationComponentService(options: Options): Conversati
         },
         async read(input) {
             target(input); const l = lease(input.sessionId), view = options.store.read(l.owner, input), context = visible(input.sessionId), readOnly = context.readOnly === true || options.canWriteSession?.(input.sessionId) === false, editable = context.mode === 'conversation' && !readOnly;
-            return {...view, ...(readOnly ? {readOnly:true} : {}), menuCapabilities:{copy:!!options.clipboard(), saveLibrary:editable && !!options.library(), exportContent:context.mode === 'conversation' && !!options.exportFiles, rename:editable}};
+            return {...view, ...(readOnly ? {readOnly:true} : {}), menuCapabilities:{copy:!!options.clipboard(), saveLibrary:editable && !!options.library(), exportContent:context.mode === 'conversation' && !!options.exportFiles, rename:editable, theme:editable}};
         },
         async rename(input) {
             target(input, ['expectedRevision', 'title']); revision(input.expectedRevision);
             const l = lease(input.sessionId), writable = () => { try { const context = visible(input.sessionId); return l.current() && context.mode === 'conversation' && context.readOnly !== true && options.canWriteSession?.(input.sessionId) !== false; } catch { return false; } };
             if (!writable()) throw Error('当前对话组件不可编辑。');
             const result = await options.store.rename(l.owner, input, writable); l.check(); return result;
+        },
+        async setTheme(input) {
+            target(input, ['expectedRevision', 'theme']); revision(input.expectedRevision);
+            if (typeof input.theme !== 'string' || !['light', 'dark', 'enterprise', 'openterminal'].includes(input.theme)) throw Error('对话组件主题参数无效。');
+            const captured = {...input}, l = lease(captured.sessionId), writable = () => { try { const context = visible(captured.sessionId); return l.current() && context.mode === 'conversation' && context.readOnly !== true && options.canWriteSession?.(captured.sessionId) !== false; } catch { return false; } };
+            if (!writable()) throw Error('当前对话组件不可编辑。');
+            const result = await options.store.setTheme(l.owner, captured, writable); l.check();
+            if (!writable()) throw Error('当前对话组件不可编辑。');
+            return result;
         },
         async exportContent(input) {
             target(input, ['expectedRevision', 'kind', 'format', input.kind === 'text' ? 'content' : 'base64']); revision(input.expectedRevision);

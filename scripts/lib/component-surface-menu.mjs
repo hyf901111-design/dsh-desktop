@@ -12,7 +12,10 @@ export function patchComponentSurfaceMenu(source){
  const module=readFileSync(new URL('./component-surface-ui.mjs',import.meta.url),'utf8'),functions=parse(module,{sourceType:'module'}).program.body.filter(node=>node.type==='ExportNamedDeclaration'&&node.declaration?.type==='FunctionDeclaration'&&node.declaration.id?.name==='createComponentSurfaceUi').map(node=>node.declaration)
  if(functions.length!==1)throw Error('Surface menu factory missing or ambiguous')
  const factory=module.slice(functions[0].start,functions[0].end)
- const code=marker+'\n'+factory+'\nconst eworkComponentSurfaceUi=createComponentSurfaceUi({React:react,createPortal:react_dom.createPortal,Icon:WorkbenchIcon,css:'+JSON.stringify(readFileSync(new URL('./component-surface-menu.css',import.meta.url),'utf8'))+'});\n'+end+'\n'
+ const palettes=readFileSync(new URL('../../packages/dsh-research-task-runtime/workbench-style.js',import.meta.url),'utf8'),paletteNodes=parse(palettes,{sourceType:'module'}).program.body.filter(node=>node.type==='ExportNamedDeclaration'&&node.declaration?.type==='FunctionDeclaration'&&node.declaration.id?.name==='workbenchStylePalette').map(node=>node.declaration)
+ if(paletteNodes.length!==1)throw Error('Component palette missing or ambiguous')
+ const palette=palettes.slice(paletteNodes[0].start,paletteNodes[0].end).replace('function workbenchStylePalette(','function(')
+ const code=marker+'\n'+factory+'\nconst eworkComponentSurfaceUi=createComponentSurfaceUi({React:react,createPortal:react_dom.createPortal,Icon:WorkbenchIcon,palette:'+palette+',css:'+JSON.stringify(readFileSync(new URL('./component-surface-menu.css',import.meta.url),'utf8'))+'});\n'+end+'\n'
  source=stripComponentSurfaceMenu(source)
  const conversation=['/* ework:conversation-components:v1 */','/* ework:conversation-components:v2 */'].map(marker=>source.indexOf(marker)).filter(index=>index>=0),anchor=conversation.length?Math.min(...conversation):source.indexOf('const ExecutionStatusGroup =')
  if(anchor<0)throw Error('Surface menu host anchor missing')

@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { canonicalConversationComponentInput, normalizeConversationComponentArtifact } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
-import type { ConversationComponentCreateArguments, ConversationComponentCreateReceipt, ConversationComponentExecutionIdentity, ConversationComponentProvenance, ConversationComponentTarget, ConversationComponentView, ConversationHtmlInteractionUpdate, ConversationNativeSpecUpdate, ConversationNativeSnapshot, JsonObject } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
+import type { ConversationComponentCreateArguments, ConversationComponentCreateReceipt, ConversationComponentExecutionIdentity, ConversationComponentProvenance, ConversationComponentTarget, ConversationComponentTheme, ConversationComponentThemeUpdate, ConversationComponentView, ConversationHtmlInteractionUpdate, ConversationNativeSpecUpdate, ConversationNativeSnapshot, JsonObject } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
 import { financialWidgetSpec } from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js';
 import { parseResearchContainerSpec } from '../../../packages/dsh-research-task-runtime/artifact-validator.js';
 import {researchInteractionVersion,validResearchInteractionEvent,validResearchInteractionState} from '../../../packages/dsh-research-task-runtime/html-artifact.js';
@@ -12,6 +12,7 @@ const clone = <T>(value: T): T => structuredClone(value);
 const id = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0 && value.length <= 256 && !/[\u0000-\u001f]/.test(value);
 const object = (value: unknown): value is Record<string, any> => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 const timestamp = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
+const validComponentTheme = (value: unknown): value is ConversationComponentTheme => typeof value === 'string' && ['light', 'dark', 'enterprise', 'openterminal'].includes(value);
 const stableJson = (value: unknown) => JSON.stringify(value, (_key, item) => object(item) ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
 function validHtmlConfig(node: Record<string, any>): boolean {
     if (node.config === undefined) return true;
@@ -105,7 +106,7 @@ export class ConversationComponentStore {
                 if (!object(value) || Object.keys(value).some(k => !['id', 'ownerAccountId', 'sessionId', 'turnId', 'requestId', 'fingerprint', 'windowGeneration', 'authorityId', 'authoritySeq', 'revision', 'node', 'readableText', 'provenance', 'createdAt', 'updatedAt', 'observations'].includes(k)) || !['id', 'ownerAccountId', 'sessionId', 'turnId', 'requestId', 'windowGeneration'].every(k => id(value[k])) || typeof value.fingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(value.fingerprint) || !Number.isSafeInteger(value.revision) || value.revision < 1 || !timestamp(value.createdAt) || !timestamp(value.updatedAt) || value.authorityId !== undefined && !id(value.authorityId) || value.authoritySeq !== undefined && (!Number.isSafeInteger(value.authoritySeq) || value.authoritySeq < 0) || typeof value.readableText !== 'string' || Buffer.byteLength(value.readableText) > 1024 * 1024 || !validProvenance(value.provenance) || !object(value.node) || value.node.id !== value.id || value.node.kind !== 'generated-container' || value.node.x !== 0 || value.node.y !== 0 || value.node.generationStatus !== 'completed' || !parseResearchContainerSpec(value.node.containerSpec) || !object(value.observations))
                     throw Error('对话组件条目无效');
                 const nodeType = value.node.containerSpec.type;
-                if (Object.keys(value.node).some(k => !['id', 'kind', 'x', 'y', 'width', 'height', 'title', 'displayName', 'containerSpec', 'generationStatus', 'refreshMinutes', 'config'].includes(k)) || !validHtmlConfig(value.node) || ![value.node.width, value.node.height].every(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= 1e6) || typeof value.node.title !== 'string' || !value.node.title.trim() || value.node.title.length > 120 || value.node.displayName !== undefined && value.node.displayName !== value.node.title || value.node.refreshMinutes !== 0)
+                if (Object.keys(value.node).some(k => !['id', 'kind', 'x', 'y', 'width', 'height', 'title', 'displayName', 'containerSpec', 'generationStatus', 'refreshMinutes', 'config', 'componentTheme'].includes(k)) || Object.hasOwn(value.node, 'componentTheme') && !validComponentTheme(value.node.componentTheme) || !validHtmlConfig(value.node) || ![value.node.width, value.node.height].every(n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n <= 1e6) || typeof value.node.title !== 'string' || !value.node.title.trim() || value.node.title.length > 120 || value.node.displayName !== undefined && value.node.displayName !== value.node.title || value.node.refreshMinutes !== 0)
                     throw Error('对话组件节点结构无效');
                 if (!['financial-widget', 'chart', 'table', 'kpi', 'markdown', 'html', 'mind-map', 'summary'].includes(nodeType))
                     throw Error('对话组件类型无效');
@@ -236,6 +237,21 @@ export class ConversationComponentStore {
             const previous = item.revision;
             item.node = {...item.node, title, displayName:title}; item.revision++; item.updatedAt = Date.now();
             // A display-name edit does not invalidate already persisted native data.
+            for (const entry of Object.values(item.observations)) if (entry.specRevision === previous) entry.specRevision = item.revision;
+            return publicView(item);
+        }, guard);
+    }
+    async setTheme(owner: string, input: ConversationComponentThemeUpdate, guard: Guard = noGuard): Promise<ConversationComponentView> {
+        const fields = ['sessionId', 'componentId', 'expectedRevision', 'theme'];
+        if (!id(owner) || !object(input) || fields.some(key => !Object.hasOwn(input, key)) || Object.keys(input).some(key => !fields.includes(key)) || !id(input.sessionId) || !id(input.componentId) || !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1 || !validComponentTheme(input.theme)) throw Error('对话组件主题参数无效。');
+        const captured = clone(input);
+        return this.mutate(items => {
+            const item = this.find(owner, captured, items);
+            if (item.revision !== captured.expectedRevision) throw Error('对话组件版本已变化，请重新读取。');
+            if (item.node.componentTheme === captured.theme) return publicView(item);
+            const previous = item.revision;
+            item.node = {...item.node, componentTheme:captured.theme}; item.revision++; item.updatedAt = Date.now();
+            // Presentation changes preserve the saved data and its original fetch time.
             for (const entry of Object.values(item.observations)) if (entry.specRevision === previous) entry.specRevision = item.revision;
             return publicView(item);
         }, guard);

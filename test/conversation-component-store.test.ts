@@ -4,6 +4,7 @@ import {join} from 'node:path'
 import {tmpdir} from 'node:os'
 import {ConversationComponentStore} from '../src/main/state/conversation-components'
 import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
+import {researchInteractionVersion} from '../packages/dsh-research-task-runtime/html-artifact.js'
 const dirs:string[]=[]
 afterEach(async()=>{await Promise.all(dirs.splice(0).map(d=>rm(d,{recursive:true,force:true})))})
 const args=()=>({artifact:{version:1,type:'table',title:'模拟表格',columns:['名称','数量'],rows:[['模拟',17]]}} as any)
@@ -79,4 +80,35 @@ it('recovers only the original committed receipt without creating or rewriting a
 })
 it('waits for an existing in-flight mutation then reports absence when the original write was cancelled before commit',async()=>{
  const {file,store}=await fixture();let current=true;const original=identity({current:()=>current}),pending=store.create(args(),original,'r');current=false;const confirmation=store.recover(args(),original,'r');await expect(pending).rejects.toThrow(/取消|失效/);expect(await confirmation).toBeUndefined();await expect(readFile(file,'utf8')).rejects.toThrow()
+})
+it('persists an isolated component theme across native refresh and reopen without changing saved content or observations',async()=>{
+ const {file,store}=await fixture(),spec={...financialWidgetDefaults('quote')!,symbols:[{code:'AAPL',market:'US',name:'模拟标的'}]},a=target(await store.create({artifact:spec as any},identity(),'native')),b=target(await store.create(args(),identity(),'other'))
+ expect(typeof store.setTheme).toBe('function')
+ const query={action:'quotes',symbols:spec.symbols,source:'default'},result={source:'模拟来源',receivedAt:'2026-10-24T01:00:00Z',quotes:[{code:'AAPL',market:'US',price:17,asOf:'2026-10-23'}]}
+ await store.observe('owner',a,1,query,result);const before=store.details('owner',a),other=store.read('owner',b),changed=await store.setTheme('owner',{...a,expectedRevision:1,theme:'enterprise'})
+ expect(changed).toMatchObject({revision:2,node:{componentTheme:'enterprise'},createdAt:before.createdAt,provenance:before.provenance});expect(changed.node).toEqual({...before.node,componentTheme:'enterprise'})
+ expect(store.details('owner',a)).toMatchObject({readableText:before.readableText,observations:{quotes:{...before.observations.quotes,specRevision:2}}});expect(store.read('owner',b)).toEqual(other)
+ const bytes=await readFile(file,'utf8');expect(await store.setTheme('owner',{...a,expectedRevision:2,theme:'enterprise'})).toEqual(changed);expect(await readFile(file,'utf8')).toBe(bytes)
+ await store.observe('owner',a,2,query,{...result,receivedAt:'2026-10-24T02:00:00Z',quotes:[{code:'AAPL',market:'US',price:18,asOf:'2026-10-23'}]})
+ const restart=new ConversationComponentStore(file);await restart.load();expect(restart.read('owner',a)).toMatchObject({revision:2,node:{componentTheme:'enterprise'},provenance:{fetchedAt:Date.parse('2026-10-24T02:00:00Z')}});expect(restart.readNativeSnapshot('owner',a,2,query)).toMatchObject({specRevision:2,result:{quotes:[{price:18}]}});expect(restart.read('owner',b)).toEqual(other)
+})
+it('preserves HTML journal and shared configuration when setting a theme',async()=>{
+ const {file,store}=await fixture(),html='<details><summary>明细</summary><p>模拟数据</p></details>',t=target(await store.create({artifact:{version:1,type:'html',title:'模拟 HTML',html}},identity(),'html')),htmlVersion=researchInteractionVersion(html),event={id:'open-details',clock:1,targetRoute:[0,0],tag:'SUMMARY',type:'click'}
+ await store.commitHtmlInteraction('owner',{...t,expectedRevision:1,htmlVersion,kind:'shared',revision:1,state:{note:'保留备注',selected:2}});await store.commitHtmlInteraction('owner',{...t,expectedRevision:2,htmlVersion,kind:'journal',event});const before=store.details('owner',t)
+ const changed=await store.setTheme('owner',{...t,expectedRevision:3,theme:'dark'});expect(changed).toMatchObject({revision:4,node:{componentTheme:'dark',config:before.node.config}});expect(changed.node.containerSpec).toEqual(before.node.containerSpec);expect(store.details('owner',t).readableText).toBe(before.readableText)
+ const restart=new ConversationComponentStore(file);await restart.load();expect(restart.read('owner',t)).toEqual(changed)
+})
+it('validates the exact theme DTO and rejects stale owners, revisions and queued guards without writing',async()=>{
+ const {file,store}=await fixture(),t=target(await store.create(args(),identity(),'r')),bytes=await readFile(file,'utf8'),valid={...t,expectedRevision:1,theme:'dark' as const}
+ expect(typeof store.setTheme).toBe('function')
+ for(const input of [null,[],{...valid,theme:'system'},{...valid,theme:null},{...valid,theme:1},{...valid,theme:'Dark'},{...valid,theme:'dark '},{...valid,expectedRevision:0},{...valid,expectedRevision:1.5},{...valid,sessionId:''},{...valid,componentId:''},{...valid,ownerAccountId:'forged'},(({theme:_,...rest})=>rest)(valid)])await expect(store.setTheme('owner',input as any)).rejects.toThrow()
+ await expect(store.setTheme('other',valid)).rejects.toThrow();await expect(store.setTheme('owner',{...valid,expectedRevision:2})).rejects.toThrow(/版本/)
+ let current=true;const pending=store.setTheme('owner',valid,()=>current);current=false;await expect(pending).rejects.toThrow(/失效|取消/);expect(await readFile(file,'utf8')).toBe(bytes);expect(store.read('owner',t).revision).toBe(1)
+ const captured={...valid};const saved=store.setTheme('owner',captured);captured.theme='light' as any;expect((await saved).node.componentTheme).toBe('dark')
+})
+it('accepts only the four persisted component themes and still loads legacy nodes without a theme',async()=>{
+ const {file,store}=await fixture(),t=target(await store.create(args(),identity(),'r')),legacy=JSON.parse(await readFile(file,'utf8'))
+ for(const theme of ['light','dark','enterprise','openterminal']){const state=structuredClone(legacy);state.items[0].node.componentTheme=theme;await writeFile(file,JSON.stringify(state));const restart=new ConversationComponentStore(file);await restart.load();expect(restart.read('owner',t).node.componentTheme).toBe(theme)}
+ for(const theme of ['system','',null,1,[],{}]){const state=structuredClone(legacy);state.items[0].node.componentTheme=theme;const bytes=JSON.stringify(state);await writeFile(file,bytes);const restart=new ConversationComponentStore(file);await expect(restart.load()).rejects.toThrow(/原文件已保留/);expect(await readFile(file,'utf8')).toBe(bytes)}
+ await writeFile(file,JSON.stringify(legacy));const restart=new ConversationComponentStore(file);await restart.load();expect(restart.read('owner',t).node).not.toHaveProperty('componentTheme')
 })
