@@ -1809,17 +1809,18 @@ function ResearchBoardPreviewToggle({page,sessionId}:{page:ResearchBoardsPage;se
   const subscribeLock=React.useCallback((listener:()=>void)=>workspace?.subscribePreviewModeLock?.(listener)??(()=>{}),[workspace])
   const readLock=React.useCallback(()=>workspace?.getPreviewModeLocked?.()===true,[workspace])
   const locked=React.useSyncExternalStore(subscribeLock,readLock,readLock)
+  const currentMode=preview?'预览模式':'编辑模式',targetMode=preview?'编辑模式':'预览模式'
   if(!workspace?.getPreviewMode||!workspace?.setPreviewMode)return null
   return h('button',{
     type:'button',className:'srb-preview-toggle','data-research-preview-toggle':'',
     'aria-label':preview?'切换到编辑模式':'切换到预览模式','aria-pressed':preview,
-    title:locked?'工作台演示进行中，结束后可切换模式':preview?'预览模式':'编辑模式',disabled:locked,
+    title:locked?'工作台演示进行中，结束后可切换模式':'当前为'+currentMode+'，点击切换到'+targetMode,disabled:locked,
     onClick:()=>{try{workspace.setPreviewMode(!workspace.getPreviewMode())}catch(error){page.showError(error)}}
-  },h('svg',{'aria-hidden':true,'data-research-preview-icon':preview?'edit':'preview',width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.6,strokeLinecap:'round',strokeLinejoin:'round'},
+  },h('svg',{'aria-hidden':true,'data-research-preview-icon':preview?'preview':'edit',width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.6,strokeLinecap:'round',strokeLinejoin:'round'},
     preview
-      ?h('path',{d:'m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15l-1 6z'})
-      :h(React.Fragment,null,h('path',{d:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z'}),h('circle',{cx:12,cy:12,r:3}))
-  ))
+      ?h(React.Fragment,null,h('path',{d:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z'}),h('circle',{cx:12,cy:12,r:3}))
+      :h(React.Fragment,null,h('path',{d:'M12 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7'}),h('path',{d:'m14 5 5 5M10 14l-1 5 5-1 7-7a3.5 3.5 0 0 0-5-5z'}))
+  ),h('span',{'data-research-preview-label':'',children:currentMode}),h('svg',{'aria-hidden':true,'data-research-preview-switch':'',width:12,height:12,viewBox:'0 0 20 20',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M3 6h14m-3-3 3 3-3 3M17 14H3m3-3-3 3 3 3'})))
 }
 export function ResearchBoardHeader({
   page,
