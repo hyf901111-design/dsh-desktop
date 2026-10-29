@@ -1,12 +1,12 @@
 import {renderCartesianChart} from './cartesian-chart-artifact.js'
 import {financialWidgetSpec} from './financial-widget-contract.js'
-import {HOME_NOTES_CHART_SPEC,HOME_NOTES_CHART_PROMPT,HOME_NOTES_GUIDE_STOCK} from './home-notes-guide-contract.js'
+import {HOME_NOTES_CHART_SPEC,HOME_NOTES_CHART_PROMPT,HOME_NOTES_GUIDE_STOCK,HOME_NOTES_REPORT_SOURCES} from './home-notes-guide-contract.js'
 
 /** Recorded demo output still uses the ordinary chart renderer and Notes proposal. */
 export function homeNotesGuideChart(runId){
  const containerSpec=renderCartesianChart(HOME_NOTES_CHART_SPEC)
  if(!containerSpec)throw Error('演示图表模板不可用。')
- return{kind:'component',node:{id:'home-note-chart-'+runId,kind:'generated-container',title:HOME_NOTES_CHART_SPEC.title,containerSpec,noteLibrary:true,generationStatus:'completed',width:720,height:450,sourceText:HOME_NOTES_CHART_PROMPT}}
+ return{kind:'component',node:{id:'home-note-chart-'+runId,kind:'generated-container',title:HOME_NOTES_CHART_SPEC.title,containerSpec,noteLibrary:true,generationStatus:'completed',width:720,height:450,sourceText:HOME_NOTES_CHART_PROMPT+'\n'+HOME_NOTES_REPORT_SOURCES.map(source=>source.label+'\n'+source.url).join('\n')}}
 }
 
 /** The last task may cite only this chart and the genuinely configured native quote. */

@@ -1,4 +1,7 @@
 export const HOME_NOTES_TASK_PROMPT:string
+export const HOME_NOTES_RESEARCH_AS_OF:string
+export const HOME_NOTES_RESEARCH_FACTS:Record<'r25q1'|'r25q2'|'r26q1'|'r26h1'|'p26h1'|'ocf26h1'|'ocf25h1',string>
+export const HOME_NOTES_REPORT_SOURCES:Array<{label:string;publishedAt:string;period:string;pages:number[];url:string}>
 export const HOME_NOTES_CHART_PROMPT:string
 export const HOME_NOTES_GUIDE_STOCK:{code:string;market:string;name:string}
 export const HOME_NOTES_CHART_SPEC:{version:number;type:string;variant:string;title:string;subtitle:string;unit:string;labels:string[];series:Array<{name:string;values:number[]}>;asOf:string;note:string}

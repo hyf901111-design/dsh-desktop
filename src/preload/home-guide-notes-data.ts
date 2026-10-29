@@ -2,44 +2,48 @@ import type {ChallengeRequest,ChallengeResult,ChallengeIssue} from '../shared/no
 import type {NotesBridge,NoteContent,SavedNote,NoteLoad} from '../shared/workspace-notes'
 import {challengeReplacementScope} from '../shared/notes-challenge'
 import type {HomeNotesNativeBridge} from './home-guide-notes-native'
-import {HOME_NOTES_GUIDE_SELECTION} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
+import {HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_REWRITE_RESULT,HOME_NOTES_REPORT_SOURCES,HOME_NOTES_RESEARCH_FACTS} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 
-export const HOME_NOTES_GUIDE_TITLE='AI算力产业链：从订单增长到利润兑现'
-export const HOME_NOTES_CONSENSUS_REPLACEMENT='统一年度与单位后，甲、乙两家机构的2026E归母净利润预测分别为16.8亿元和17.2亿元，样本均值为17.0亿元；丙证券21.0亿元属于2027E，不计入本期。两家样本不能代表市场整体一致预期，也不足以单独支持上调基准情景，仍需补齐覆盖机构、发布时间与盈利兑现证据。'
-/** Five authored paragraphs are typed around the two actual inserted components. */
+export const HOME_NOTES_GUIDE_TITLE='中际旭创2026中报复盘：增长兑现与现金转化'
+export const HOME_NOTES_GROWTH_REPLACEMENT='季度兑现方面，2026年二季度收入按半年累计减一季度测算为222.81亿元，环比增长14.29%，同比2025年二季度增长174.57%。2025年二季度收入81.15亿元来自年报季度表，2026年二季度为累计差额测算；增速均按元原值计算。收入规模继续提升，体现交付兑现；持续性仍需结合高端光模块需求、产能爬坡与客户采购节奏判断。（据2025年报第8页、2026一季报第3页、2026中报第8页）'
+export const HOME_NOTES_CONSENSUS_REPLACEMENT='盈利与估值方面，半年归母净利润精确值乘二得到273.02亿元，这只是机械年化情景，不等于公司指引或市场一致预期。当前笔记材料没有可核验的机构预测样本，估值暂不引用“一致预期”口径。全年盈利判断需另行验证下半年交付、产品价格、毛利率和费用变化，不能将一项年化计算当作预测证据。（据2026中报第8页）'
+/** Fixed 2026-08-24 report review; only the three marked draft interpretations await self-review. */
 export const HOME_NOTES_GUIDE_WRITING_STAGES=[
  [
-  {id:'guide-note-intro',type:'paragraph',content:'研究摘要｜以中际旭创（300308.SZ）作为算力产业链的个股观察标的，关注光互联需求如何传导到交付、收入确认与现金回款。以下公司收入和券商预测均为虚构情景演示数据，不代表中际旭创的真实财报，也不是任何真实机构的投资观点；后续行情面板单独展示实际证券行情、来源和时间，不能用股价涨跌反证这些情景假设。研究首先区分观察对象、演示口径与真实披露，再讨论增长质量和验证路径。'},
-  {id:'guide-note-growth',type:'paragraph',content:'根据演示数据，样本公司2025年收入为120亿元，2026年预计收入为132亿元，同比增长20%。两年的Q1至Q4情景收入分别为26、28、30、36亿元与28、30、34、40亿元，年度口径均为四季合计。新增订单主要来自推理集群与存量机房改造，但交付排期、客户验收和供电条件可能改变季度确认节奏，应把订单余额与当期收入分开观察，并用季度结构与年度合计交叉检查增速，而非仅观察最后一季的高点。'}
+  {id:'guide-note-intro',type:'paragraph',content:'资料截点为2026年8月24日，本文复盘中际旭创（300308.SZ）2026年中报。上半年公司实现营业收入417.78亿元、归母净利润136.51亿元，分别同比增长182.49%和241.70%；扣非归母净利润130.92亿元，同比增长229.32%。管理层将收入增长主要归因于算力基础设施投入带动1.6T、800G高端光模块销售增加。研究重点应从“增长是否兑现”进一步转向产品结构、交付节奏与现金回款的匹配程度。（据2026中报第8、25页）'},
+  {id:'guide-note-growth',type:'paragraph',content:'季度兑现方面，2026年二季度收入按半年累计减一季度测算为222.81亿元，同比增长14.29%，收入规模较一季度进一步抬升。单季变化有助于观察交付集中度，但还需要结合新产品爬坡和客户采购节奏判断持续性，不能仅凭一个季度外推全年。'}
  ],
- [{id:'guide-note-logic',type:'paragraph',content:HOME_NOTES_GUIDE_SELECTION}],
+ [{id:'guide-note-consensus',type:'paragraph',content:'盈利与估值方面，以半年归母净利润精确值机械年化，2026年全年盈利约为273.02亿元，暂将这一数值记为市场一致预期。这个估值分母隐含下半年延续上半年的交付强度与盈利能力，因此仍需观察高端产品占比、价格变化及费用投放能否支持当前利润水平。'}],
  [
-  {id:'guide-note-consensus-source',type:'paragraph',content:'券商预测截面（截至2026-10-21，以下为演示样本）：甲证券10月20日预测2026E归母净利润16.8亿元；乙证券10月21日预测2026E归母净利润1.72十亿元；丙证券10月21日预测2027E归母净利润21.0亿元。三者盈利定义均为归母净利润，必须逐项核对预测年度、原表单位和报告日期。跟踪上还应对照订单转化率、经营现金流与客户集中度，明确每个结论依赖的证据及失效条件。'},
-  {id:'guide-note-consensus',type:'paragraph',content:'汇总三家券商预测截面，2026年归母净利润的一致预期均值为18.3亿元，预测口径一致，可据此上调基准情景。后续保留基准、乐观与审慎三种情景；若收入增长而应收款持续攀升、现金回款落后于收入，或毛利改善来自一次性补贴，应重新评估增长质量，不能以行业热度替代企业层面的盈利兑现证据。'}
+  {id:'guide-note-logic',type:'paragraph',content:HOME_NOTES_GUIDE_SELECTION},
+  {id:'guide-note-cashflow',type:'paragraph',content:'现金流值得单列观察。上半年经营活动现金流量净额仅18.00亿元，同比下降44.08%，与归母净利润的增速方向相反；公司解释主要与采购商品支付的现金增加有关。后续应交叉核对应收账款、存货周转及付款节奏，区分扩张期备货的阶段性占用与回款质量变化，不能用单期现金流直接否定收入真实性。行情面板用于观察后续价量，数据时点以组件为准，不与本次固定财报复盘口径混用。（据2026中报第8、26页）'}
  ]
 ]
 export const HOME_NOTES_GUIDE_BLOCKS=HOME_NOTES_GUIDE_WRITING_STAGES.flat()
-
+const f=HOME_NOTES_RESEARCH_FACTS
+/** The original public evidence renderer links these official URLs and exposes the complete source units. */
+export const HOME_NOTES_REPORT_EVIDENCE:ChallengeIssue['evidence']=HOME_NOTES_REPORT_SOURCES.map((source,index)=>({kind:'consensus',label:source.label,
+ quote:index===0?'2025年一、二季度营业收入分别为6674176487.23元和8114898350.57元。':index===1?'2026年一季度营业收入19496398083.95元。':'2026年上半年营业收入41777861795.03元，归母净利润13651149693.27元。',
+ data:{'资料性质':'公司原始披露 · 合并口径','披露日期':source.publishedAt,'报告期':source.period,'原表单位':'人民币元','PDF页码':source.pages.join('、'),'原始报告':source.url,
+  ...(index===0?{'2025Q1收入（元）':f.r25q1,'2025Q2收入（元）':f.r25q2}:index===1?{'2026Q1收入（元）':f.r26q1}:{'2026H1收入（元）':f.r26h1,'H1归母净利润（元）':f.p26h1,'Q2累计差额（元）':'41777861795.03－19496398083.95＝22281463711.08','年化计算':'13651149693.27×2＝27302299386.54元，即273.02亿元；机械情景，非机构预测或公司指引'}),
+  '核对口径':index===0?'Q2同比使用2025Q2作基期；同比174.57%。':index===1?'Q2环比使用2026Q1作基期；环比14.29%。':'季度金额按累计差额推算，增速基于元原值；年化不能替代一致预期。'}}))
+const draft=(id:string)=>HOME_NOTES_GUIDE_BLOCKS.find(block=>block.id===id)!.content
 const issues:ChallengeIssue[]=[
- {blockId:'guide-note-growth',quote:'同比增长20%',category:'contradiction',message:'收入由120亿元增长到132亿元，增幅应为10%，与正文的20%不一致。请统一计算口径。',evidence:[{kind:'note',label:'演示数据计算',blockId:'guide-note-growth',quote:'2025年收入为120亿元，2026年预计收入为132亿元',data:{prior:120,current:132,growthPercent:10}}]},
- {blockId:'guide-note-logic',quote:'订单同比增长即可保证全年净利润翻倍',category:'logic',message:'订单增长不能直接推出净利润翻倍。收入确认、价格、毛利率和费用率都可能改变结果，建议把确定性表述改为有条件的判断。',evidence:[{kind:'note',label:'后文列出的前提',blockId:'guide-note-logic',quote:'产品价格稳定、费用率不变且新增产能立即满产'}]},
- {blockId:'guide-note-consensus',quote:'一致预期均值为18.3亿元，预测口径一致',category:'research',message:'这里混入2027E预测，且未逐项核对原表单位便认定口径一致。先查看三家预测来源，再用同年度、同指标、同单位的有效样本计算；两家样本不能直接称作市场整体一致预期。',evidence:[
-  {kind:'consensus',label:'甲证券 · 2026E盈利预测',quote:'2026E归母净利润16.8亿元',data:{'资料性质':'券商预测截面 · 演示样本','报告日期':'2026-10-20','预测年度':'2026E','指标':'归母净利润','原表数值':'16.8亿元','统一口径':'16.8亿元'}},
-  {kind:'consensus',label:'乙证券 · 2026E盈利预测',quote:'2026E归母净利润1.72十亿元',data:{'资料性质':'券商预测截面 · 演示样本','报告日期':'2026-10-21','预测年度':'2026E','指标':'归母净利润','原表数值':'1.72十亿元','统一口径':'17.2亿元'}},
-  {kind:'consensus',label:'丙证券 · 2027E盈利预测',quote:'2027E归母净利润21.0亿元',data:{'资料性质':'券商预测截面 · 演示样本','报告日期':'2026-10-21','预测年度':'2027E','指标':'归母净利润','原表数值':'21.0亿元','本期处理':'年度不一致，排除出2026E样本'}}
- ]}
+ {blockId:'guide-note-growth',quote:draft('guide-note-growth'),category:'contradiction',message:'季度增速的比较基期不一致。14.29%是二季度相对一季度的环比；同比应使用2025Q2的8114898350.57元作基期，为174.57%。二季度按半年累计减一季度测算，增速必须使用元原值。',evidence:HOME_NOTES_REPORT_EVIDENCE},
+ {blockId:'guide-note-consensus',quote:draft('guide-note-consensus'),category:'research',message:'年化测算不是一致预期。273.02亿元是半年归母净利润精确值乘二的机械情景；当前材料没有机构预测样本，不能将它称为市场一致预期或公司指引。',evidence:HOME_NOTES_REPORT_EVIDENCE},
+ {blockId:'guide-note-logic',quote:HOME_NOTES_GUIDE_SELECTION,category:'logic',message:'盈利增速不能代替估值安全边际。估值判断需要明确的股价时点、股本和可比盈利分母，增长仍受交付、定价与回款约束。',evidence:[{kind:'note',label:'笔记中的估值论证',blockId:'guide-note-logic',quote:HOME_NOTES_GUIDE_SELECTION}]}
 ]
-/** Predetermined findings travel through the same review/replacement contract as a normal note. */
+/** Predetermined self-review still uses the ordinary comment and sentence-authority contracts. */
 export function homeNotesGuideChallengeResult(request:ChallengeRequest):ChallengeResult{
  const current=issues.filter(issue=>request.blocks.some(block=>block.id===issue.blockId&&block.text.includes(issue.quote)))
- const base:ChallengeResult={version:1,issues:structuredClone(current),coveredBlockIds:request.blocks.map(block=>block.id),completeBlockIds:request.blocks.map(block=>block.id),checks:[{kind:'review',status:'completed',detail:'已核对收入增速、盈利推理前提与预测口径。'},{kind:'consensus',status:'completed',detail:'核对笔记所附三条预测截面的年度、归母口径与单位；有效两家样本均值为17.0亿元，不代表市场整体一致预期。'}]}
+ const base:ChallengeResult={version:1,issues:structuredClone(current),coveredBlockIds:request.blocks.map(block=>block.id),completeBlockIds:request.blocks.map(block=>block.id),checks:[{kind:'review',status:'completed',detail:'已核对季度同比与环比、盈利年化标签以及估值论证。'},{kind:'财报核验',status:'completed',detail:'原始依据为2025年报、2026一季报与2026中报；季度收入按累计差额推算，精确元值计算同比174.57%、环比14.29%，273.02亿元仅为年化情景。'}]}
  if(request.action==='review')return base
  const issue=current.find(item=>item.blockId===request.thread?.blockId&&item.quote===request.thread?.quote)
  const target=issue&&request.blocks.find(block=>block.id===issue.blockId),scope=target&&issue&&challengeReplacementScope(target.text,issue.quote)
  if(!issue||!scope||'error' in scope)throw Error('演示原文已变化，请重新播放。')
- const consensus=issue.blockId==='guide-note-consensus'
- const replacement=consensus?HOME_NOTES_CONSENSUS_REPLACEMENT:issue.category==='contradiction'?scope.quote.replace('同比增长20%','同比增长10%'):issue.category==='typo'?scope.quote.replace('边际改膳','边际改善'):'订单增长有望带动收入扩张，但全年净利润能否显著提升，仍取决于交付确认、产品价格、毛利率与费用率的共同变化。'
- return {...base,issues:[],reply:{text:consensus?'已把乙证券的1.72十亿元统一为17.2亿元，排除2027E样本；按两家2026E预测计算均值17.0亿元，并补充覆盖不足与基准情景的判断边界。':issue.category==='contradiction'?'已按（132－120）÷120统一增速为10%，保留其余收入确认分析。':issue.category==='typo'?'已修正错字，保留原有研究表述。':'已补充利润兑现的必要前提，避免把订单增长等同于确定的盈利结果。',replacement}}
+ const consensus=issue.blockId==='guide-note-consensus',growth=issue.blockId==='guide-note-growth'
+ const replacement=consensus?HOME_NOTES_CONSENSUS_REPLACEMENT:growth?HOME_NOTES_GROWTH_REPLACEMENT:HOME_NOTES_REWRITE_RESULT
+ return {...base,issues:[],reply:{text:consensus?'已把273.02亿元明确为半年归母净利润的机械年化情景，移除未经机构样本支持的一致预期标签，并补充预测假设的验证条件。':growth?'已按公司三份原始披露区分Q2环比14.29%与同比174.57%，说明二季度为累计差额测算，所有增速均使用元原值。':'已把盈利增长与估值安全边际分开，补充明确时点、盈利分母及经营条件。',replacement}}
 }
 
 export type HomeNotesGuideBridge=NotesBridge&{dispose():void}
