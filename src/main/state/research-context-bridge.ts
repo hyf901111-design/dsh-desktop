@@ -43,6 +43,12 @@ function exact(value: unknown, keys: string[]): Node {
   if (Object.keys(input).length !== keys.length || keys.some((key) => !id(input[key]))) throw new Error('资料参数无效。')
   return input
 }
+function publicCanvasAction(value: unknown): Node {
+  const input = record(value)
+  if (Object.keys(input).length !== 3 || !Object.hasOwn(input, 'args') || !id(input.sessionId) || !id(input.method)) throw new Error('画布参数无效。')
+  record(input.args)
+  return { sessionId: input.sessionId, method: input.method, args: input.args }
+}
 function publicUrl(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.length > 8192) return undefined
   try {
@@ -190,7 +196,7 @@ export class ResearchContextBridge {
           const close=()=>{if(!res.writableEnded)abort()}
           req.on('aborted',abort);res.on('close',close)
           if(req.aborted||res.destroyed)abort()
-          try { const action=req.url==='/client-capabilities'?this.options.clientCapability:this.options.canvasAction;if(!action)throw Error('客户端操作服务不可用。');return send(200,await action(raw,controller.signal)) }
+          try { const action=req.url==='/client-capabilities'?this.options.clientCapability:this.options.canvasAction;if(!action)throw Error('客户端操作服务不可用。');const input=req.url==='/canvas-actions'?publicCanvasAction(raw):raw;return send(200,await action(input,controller.signal)) }
           catch(error){if(!res.destroyed)return send(400,{error:error instanceof Error?error.message:'画布操作失败。'})}
           finally{req.off('aborted',abort);res.off('close',close)}
           return

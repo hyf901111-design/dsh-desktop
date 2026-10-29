@@ -39,6 +39,13 @@ export function useComponentPptxMode(target, active = true) {
 
 export function PptxComponentEditorHost({ Component, readOnly = false, fileInfo, ...props }) {
   const h = react.createElement, host = react.useRef(null), current = react.useRef({ state: null, controls: null }), [state, setState] = react.useState(null)
+  const [boardPreview,setBoardPreview]=react.useState(false)
+  react.useLayoutEffect(()=>{
+    const canvas=host.current?.closest('[data-research-canvas]');if(!canvas)return
+    const sync=()=>setBoardPreview(canvas.getAttribute('data-research-preview-mode')==='preview')
+    sync();const observer=new canvas.ownerDocument.defaultView.MutationObserver(sync);observer.observe(canvas,{attributes:true,attributeFilter:['data-research-preview-mode']});return()=>observer.disconnect()
+  },[])
+  readOnly=readOnly||boardPreview
   const publish = () => {
     const element = host.current
     if (!element) return

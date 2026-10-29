@@ -98,7 +98,7 @@ export function WorkbenchTitle({title,systemTitle=false}){
   const ref=react.useRef(null);react.useEffect(()=>installWorkbenchTitle(ref.current),[title]);
   return react_jsx_runtime.jsx('span',{ref,className:'ew-grid-title',title,tabIndex:0,'data-ui-system-title':systemTitle||undefined,'data-ui-preserve':systemTitle?undefined:true,children:react_jsx_runtime.jsx('span',{className:'ew-grid-title-copy',children:title})});
 }
-export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand,onReload,titleExtra,createSourceCount=0}) {
+export function WorkbenchChrome({node,sessionId,selected,readOnly,previewMode=false,expanded=false,onAsk,onMore,onRemove,onExpand,onReload,titleExtra,createSourceCount=0}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
   const [busy,setBusy]=react.useState(false),[error,setError]=react.useState(''),[now,setNow]=react.useState(Date.now()),[tip,setTip]=react.useState(null)
   // A later automatic success also clears a previous header-click failure.
@@ -150,7 +150,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
       node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='news'&&react_jsx_runtime.jsx(FinancialNewsSearch,{node,sessionId,readOnly}),
       onAsk&&button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
-      button('close','移除组件',()=>onRemove(node),{disabled:readOnly})
+      (!previewMode||expanded)&&button('close',expanded?'关闭阅读':'移除组件',()=>onRemove(node),{disabled:expanded?false:readOnly})
     ]}),
     selected&&react_jsx_runtime.jsx('span',{className:'ew-grid-selection-ring','aria-hidden':true}),
     tip&&react_dom.createPortal(react_jsx_runtime.jsxs('span',{role:'tooltip',className:'ew-grid-tooltip',style:{display:'flex',left:Math.max(8,tip.left),top:tip.top},children:tip.kind==='refresh'?[react_jsx_runtime.jsx('span',{children:error||time.relative}),react_jsx_runtime.jsx('time',{children:time.absolute})]:[react_jsx_runtime.jsx('span',{children:'将组件加入右侧会话上下文，基于其内容进行问答'})]}),document.body)
@@ -233,6 +233,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const cancelLeave=()=>{clearTimeout(leaveTimer.current);leaveTimer.current=null}
   const leave=()=>{cancelLeave();leaveTimer.current=setTimeout(()=>setDetail(null),200)}
   const card=()=>target.root?(target.root.isConnected?target.root:null):document.querySelector('[data-research-node-id="'+CSS.escape(target.node.id)+'"]')
+  const previewMode=workspace.getPreviewMode?.()===true
   const pptx=useComponentPptxMode(card())
   const webLink=target.node.kind==='web-link'
   const settings=card()?.querySelector('[data-research-container-more]')?.__eworkWorkbenchSettings
@@ -248,9 +249,9 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const choose=action=>{onClose();action?.()}
   const saveLibrary=async()=>{if(saving||readOnly)return;setSaving(true);setSaveError('');try{await customLibraryRequest({action:'save',sessionId:target.sessionId,nodeId:target.node.id});window.dispatchEvent(new CustomEvent('ework-component-library-changed'));window.dispatchEvent(new CustomEvent('ework-component-library-saved',{detail:{sessionId:target.sessionId}}));onClose()}catch(e){setSaveError(customLibraryError(e))}finally{setSaving(false)}}
   const exportAs=async format=>{if(exporting)return;cancelLeave();setExporting(true);setExportError('');try{await exportWorkbenchContent(card(),target.node,format);onClose()}catch(e){setExportError(e?.message||'导出失败，请重试')}finally{setExporting(false)}}
-  const row=(icon,label,action,disabled=readOnly,attributes={})=>jsxs('button',{...attributes,type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
-  const separator=key=>jsx('div',{className:'ew-grid-divider',role:'separator'},key)
-  const flyout=(kind,icon,label,trigger,disabled=false)=>jsxs('button',{ref:trigger,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
+  const row=(icon,label,action,disabled=readOnly,attributes={})=>previewMode&&!['expand','duplicate','data'].includes(icon)&&label!=='刷新行情与资讯'?null:jsxs('button',{...attributes,type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
+  const separator=key=>previewMode?null:jsx('div',{className:'ew-grid-divider',role:'separator'},key)
+  const flyout=(kind,icon,label,trigger,disabled=false)=>previewMode&&kind!=='export'?null:jsxs('button',{ref:trigger,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
   const style={left:Math.max(8,Math.min(window.innerWidth-214,target.left)),top:Math.max(8,Math.min(window.innerHeight-(webLink?560:target.node.creationMode==='selection'?486:420),target.top)),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
   return react_dom.createPortal(jsxs(react.Fragment,{children:[jsxs('div',{ref,className:'ew-grid-menu',role:'menu','aria-label':'组件更多操作',style,onMouseLeave:leave,children:[
     row('expand','放大阅读',()=>card()?.querySelector('[data-research-container-expand]')?.click(),false),
@@ -259,9 +260,9 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     webLink&&row('zoom-reset','重置页面大小',()=>controlWorkbenchWebZoom(card(),0),false,{'data-workbench-web-zoom':'reset'}),
     webLink&&row('refresh','刷新',()=>card()?.querySelector('[data-workbench-refresh="'+CSS.escape(target.node.id)+'"]')?.click(),false,{'data-workbench-web-refresh':''}),
     separator('view'),
-    row('duplicate','复制组件',()=>{workspace.copySelectedNodes().then(()=>workspace.pasteClipboardNodes(null)).catch(error=>console.error(error))}),
+    row('duplicate','复制组件',()=>{workspace.copySelectedNodes().then(()=>previewMode?true:workspace.pasteClipboardNodes(null)).catch(error=>console.error(error))}),
     row('rename','重命名',()=>onLegacy(target.node,target.event,'rename')),
-    !readOnly&&pptx?.editable&&row('edit',pptx.mode==='edit'?'关闭编辑模式':'编辑',()=>pptx.toggleMode(),pptx.modeBusy,{'data-component-pptx-menu':target.node.id}),
+    !previewMode&&!readOnly&&pptx?.editable&&row('edit',pptx.mode==='edit'?'关闭编辑模式':'编辑',()=>pptx.toggleMode(),pptx.modeBusy,{'data-component-pptx-menu':target.node.id}),
     canSaveCustomComponent(target.node)&&jsxs('button',{type:'button',role:'menuitem','data-workbench-save-library':target.node.id,disabled:readOnly||saving||target.node.generationStatus!=='completed',onMouseEnter:leave,onClick:saveLibrary,children:[jsx(WorkbenchIcon,{name:'library-add'}),jsx('span',{children:saving?workbenchText('保存中…'):workbenchText('添加至组件库')})]}),
     saveError&&jsx('span',{role:'alert','data-library-save-error':'',children:saveError}),
     target.node.creationMode==='selection'&&row('rename','编辑需求',()=>onEditSelected?.(target.node),readOnly||RESEARCH_ACTIVE_GENERATION_STATUSES.has(target.node.generationStatus),{'data-workbench-edit-selected-create':target.node.id}),
@@ -305,9 +306,9 @@ export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readO
   },[snapshot.files,snapshot.artifacts,snapshot.selection,rootRef])
   const planningNodes=workspace.getWorkbenchPlanningNodes(),selectedPlanning=planningNodes.filter(n=>snapshot.selection.selectedNodeIds.includes(n.id)&&rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"][data-research-creation-planning]:not([data-research-creation-planning=dealing])'))
   const corner=workspace.getWorkbenchStyle?.()==='openterminal'
-  const resizable=readOnly?[]:[...hosts.filter(n=>!n.expanded&&!n.blocked&&(corner||snapshot.selection.selectedNodeIds.includes(n.node.id))).map(n=>n.node),...selectedPlanning]
+  const resizable=readOnly||workspace.getPreviewMode?.()?[]:[...hosts.filter(n=>!n.expanded&&!n.blocked&&(corner||snapshot.selection.selectedNodeIds.includes(n.node.id))).map(n=>n.node),...selectedPlanning]
   const visibleHeight=rootRef.current?.clientHeight||snapshot.canvasSize.visibleHeight||0,contentBottom=Math.max(0,...[...snapshot.files,...snapshot.artifacts,...planningNodes].map(n=>n.y+n.height/2)),resizeBottom=visibleHeight>0&&contentBottom<=visibleHeight?visibleHeight:Infinity
-  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(CalendarSessionReminders,{rootRef,workspace,sessionId}),...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,createSourceCount:workbenchCreateSourceCount(node,[...snapshot.files,...snapshot.artifacts]),selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,root:e.currentTarget.closest('[data-research-node-id]'),event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000,bottom:resizeBottom,corner}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected,onConfigureIndices:setIndicesId}),indicesNode&&react_jsx_runtime.jsx(FinancialIndicesSettings,{node:indicesNode,sessionId,rootRef,readOnly,onClose:closeIndices},'indices-settings:'+indicesId)]})
+  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(CalendarSessionReminders,{rootRef,workspace,sessionId}),...hosts.map(({node,host,expanded})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,expanded,previewMode:workspace.getPreviewMode?.()===true,createSourceCount:workbenchCreateSourceCount(node,[...snapshot.files,...snapshot.artifacts]),selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,root:e.currentTarget.closest('[data-research-node-id]'),event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000,bottom:resizeBottom,corner}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected,onConfigureIndices:setIndicesId}),indicesNode&&react_jsx_runtime.jsx(FinancialIndicesSettings,{node:indicesNode,sessionId,rootRef,readOnly,onClose:closeIndices},'indices-settings:'+indicesId)]})
 }
 export function WorkbenchResizeControls({nodes,width,bottom=Infinity,corner=false}) {
   const gap=createResearchGrid().metrics(width).gap
@@ -342,7 +343,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     card.style.setProperty('--grid-float-left',Math.max(12+origin.width/2,Math.min(width()-12-origin.width/2,origin.x+p.x-op.start.x))+'px')
     card.style.setProperty('--grid-float-top',Math.max(12+origin.height/2,origin.y+p.y-op.start.y)+'px')
   }
-  const paint=()=>{frame=0;if(!pending||!op)return;workspace.applyWorkbenchCells(pending,false);const visible=workspace.getWorkbenchVisibleCells();show(op.kind==='draw'?op.target:visible.find(c=>c.id===op.cell.id));groupPreviews.forEach(({id,element})=>show(visible.find(c=>c.id===id),element));pending=null}
+  const paint=()=>{frame=0;if(workspace.getPreviewMode?.()){finish(false);return}if(!pending||!op)return;workspace.applyWorkbenchCells(pending,false);const visible=workspace.getWorkbenchVisibleCells();show(op.kind==='draw'?op.target:visible.find(c=>c.id===op.cell.id));groupPreviews.forEach(({id,element})=>show(visible.find(c=>c.id===id),element));pending=null}
   const show=(c,element=preview)=>{if(!c)return;const m=grid.metrics(width()),n=grid.project([{id:c.id}], [c], width())[0];Object.assign(element.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});element.style.setProperty('--grid-gap',m.gap+'px');element.hidden=false}
   const update=(e,releasing=false)=>{
     if(!op)return
@@ -407,7 +408,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(e.button!==0||e.target?.closest?.('[data-research-global-toolbar],[role=menu],[role=dialog],.ew-grid-menu'))return
     const handle=e.target?.closest?.('[data-workbench-drag-handle]'),resize=e.target?.closest?.('[data-workbench-resize]'),card=e.target?.closest?.('[data-research-node-id]')||(resize&&root.querySelector('[data-research-node-id="'+CSS.escape(resize.getAttribute('data-workbench-resize'))+'"]'))
     const draw=toolRef.current==='component'&&!resize
-    if(readOnly||!draw&&(!handle&&!resize)||e.target?.closest?.('input,textarea,button,a,select,[contenteditable=true]')&&!resize)return
+    if(readOnly||workspace.getPreviewMode?.()||!draw&&(!handle&&!resize)||e.target?.closest?.('input,textarea,button,a,select,[contenteditable=true]')&&!resize)return
     if(card?.hasAttribute('data-research-geometry-blocked')||card?.hasAttribute('open'))return
     const current=workspace.getSnapshot(),canonicalBefore=workspace.getWorkbenchCells(),before=workspace.getWorkbenchVisibleCells(),id=(resize||handle)?.getAttribute(resize?'data-workbench-resize':'data-workbench-drag-handle')
     if(!draw&&!before.some(c=>c.id===id))return
@@ -433,7 +434,8 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   // Follow the active pointer across the window until release; capture loss
   // alone is not cancellation. Escape, pointercancel and window blur still undo.
   root.addEventListener('pointerdown',down,true);root.addEventListener('click',click,true);view.addEventListener('pointermove',move,true);view.addEventListener('pointerup',up,true);view.addEventListener('pointercancel',cancel,true);view.addEventListener('blur',blur);view.addEventListener('keydown',key,true);view.addEventListener('keyup',keyUp,true)
-  return()=>{finish(false);preview.remove();root.removeAttribute('data-grid-multiselect');root.removeEventListener('pointerdown',down,true);root.removeEventListener('click',click,true);view.removeEventListener('pointermove',move,true);view.removeEventListener('pointerup',up,true);view.removeEventListener('pointercancel',cancel,true);view.removeEventListener('blur',blur);view.removeEventListener('keydown',key,true);view.removeEventListener('keyup',keyUp,true)}
+  const offPreview=workspace.subscribePreviewCancel?.(()=>finish(false));
+  return()=>{offPreview?.();finish(false);preview.remove();root.removeAttribute('data-grid-multiselect');root.removeEventListener('pointerdown',down,true);root.removeEventListener('click',click,true);view.removeEventListener('pointermove',move,true);view.removeEventListener('pointerup',up,true);view.removeEventListener('pointercancel',cancel,true);view.removeEventListener('blur',blur);view.removeEventListener('keydown',key,true);view.removeEventListener('keyup',keyUp,true)}
 }
 export function WorkbenchContextMenu({canvasRoot,point,onClose,className,style,children,...props}) {
   const ref=react.useRef(null)
@@ -477,7 +479,16 @@ export function WorkbenchDownloadMenu({canvasRoot,onClose,onMouseEnter,onMouseLe
   },[canvasRoot])
   return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx('span',{ref:anchor,'aria-hidden':true,style:{display:'block',height:0}}),react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref:popup,className:className+' ew-grid-download-menu',onMouseEnter,onMouseLeave,onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)]})
 }
+export function workbenchPreviewToolbarChildren(children,previewMode) {
+ return react.Children.map(children,child=>{
+  if(!previewMode||!react.isValidElement(child))return child
+  const disabled=child.props['data-research-global-container']!==undefined||child.props['data-research-global-link']!==undefined||child.type===ResearchVoiceControl
+  const nested=child.props.children===undefined?{}:{children:workbenchPreviewToolbarChildren(child.props.children,previewMode)}
+  return react.cloneElement(child,{...nested,...(disabled?{disabled:true}:{})})
+ })
+}
 export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {
+  const previewMode=react.useSyncExternalStore(workspace?.subscribePreviewMode||(()=>()=>{}),workspace?.getPreviewMode||(()=>false),workspace?.getPreviewMode||(()=>false))
   const [bounds,setBounds]=react.useState(null)
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
@@ -488,7 +499,7 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
     window.addEventListener('resize',measure)
     return()=>{observer.disconnect();panelObserver.disconnect();window.removeEventListener('resize',measure);if(bottomOffset===20)root.removeAttribute('data-workbench-toolbar-space')}
   },[rootRef,availableWidth,bottomOffset])
-  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(children),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children}),document.body)
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(workbenchPreviewToolbarChildren(children,previewMode)),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
@@ -638,7 +649,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   root.__eworkContentFit?.finish()
   const before=workspace.getSnapshot(),oldNodes=[...before.files,...before.artifacts],oldCache=new Map(root.__eworkContentMeasurements),view=root.ownerDocument.defaultView
   measured.__workbenchDeferred=true
-  if(!workspace.organizeCanvas(measured,mode))return false
+  if(!workspace.organizeCanvas(measured,mode,typeof researchPreviewArrangeToken==='undefined'?undefined:researchPreviewArrangeToken))return false
   const grid=createResearchGrid(),width=before.canvasSize.availableWidth||before.canvasSize.width||800,m=grid.metrics(width)
   const arranged=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]
   const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html'&&!researchCandleTemplate(n)&&!root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] [data-sherlock-market-native]')).map(n=>{
@@ -686,7 +697,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
       const target=expected.get(c.id),previous=cells.find(old=>old.id===c.id)
       if(target&&previous&&c.w!==previous.w){target.width=Math.round(target.width+(c.w-previous.w)*m.step);complete=false}
     }
-    if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
+    if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false,typeof researchPreviewArrangeToken==='undefined'?undefined:researchPreviewArrangeToken)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
     if(complete&&nativeReady){view.clearTimeout(settle);settle=view.setTimeout(finish,240)}
   }
   const task={refit,finish,ids:arranged.map(n=>n.id)};root.__eworkContentFit=task

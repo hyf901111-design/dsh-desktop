@@ -206,3 +206,8 @@ body :is([data-workbench-arrange-menu],[data-workbench-theme-menu]).ew-arrange-m
 body :is([data-workbench-arrange-menu],[data-workbench-theme-menu]).ew-arrange-menu>button[role=menuitemradio]:is([data-arrange-mode],[data-workbench-style-option]):is(:hover,:focus-visible){background:#139dff!important;color:#fff!important;outline:0}
 body .ew-arrange-menu .ew-arrange-check{flex:none;opacity:0}
 body .ew-arrange-menu [aria-checked=true] .ew-arrange-check{opacity:1}
+
+/* Preview keeps connection geometry and component hit targets; only edit handles disappear. */
+body [data-research-preview-mode=preview] [data-workbench-drag-handle]{cursor:default!important}
+body [data-research-preview-mode=preview] [data-financial-port]{visibility:hidden!important;pointer-events:none!important}
+body [data-ework-toolbar] button:disabled{opacity:.35!important;cursor:default!important}

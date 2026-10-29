@@ -305,7 +305,7 @@ export function patchFinancialWidgetClient(source){
  once("if (spec.type === 'html') return researchHtmlText(spec.html) || spec.title;","if(spec.type==='financial-widget')return [spec.title,...spec.symbols.map(s=>s.name+' '+s.code)].join('\\n');\nif (spec.type === 'html') return researchHtmlText(spec.html) || spec.title;")
  const body='function ResearchContainerBody({ node, sessionId, visible, officePreview, onHtmlSize, preserveHeading = false }) {'
  const nativeBody="if(node.containerSpec.type==='financial-widget')return react_jsx_runtime.jsx(FinancialWidget,{node,sessionId,visible});",snapshotBody="const candleSnapshot=financialCandlestickSnapshot(node.containerSpec);if(candleSnapshot)return react_jsx_runtime.jsx(FinancialCandlestickSnapshot,{model:candleSnapshot});"
- source=source.replaceAll(nativeBody,'').replaceAll(snapshotBody,'');
+ source=source.replaceAll(nativeBody+'\n','').replaceAll(nativeBody,'').replaceAll(snapshotBody+'\n','').replaceAll(snapshotBody,'');
  once(body,body+'\n'+nativeBody+'\n'+snapshotBody)
  // Other component patches share this anchor. Reconcile our registrations as
  // one block rather than appending them every time postinstall runs.

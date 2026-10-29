@@ -1,3 +1,4 @@
+import {serializeWorkbenchRestore,parseWorkbenchRestore} from './workbench-restore-codec.mjs'
 /** Completed note replies use the same durable feedback and branch services as chat. */
 export function noteReplyText(row) {
  const result=row?.result
@@ -50,11 +51,11 @@ export function patchNoteAssistantDestination(source) {
  source=source.slice(0,start)+next+source.slice(end)
  const restoreTag='/* EWORK_GRID_RESTORE ',restoreStart=source.indexOf(restoreTag)
  if(restoreStart>=0){
-  const restoreEnd=source.lastIndexOf(' */'),changes=JSON.parse(source.slice(restoreStart+restoreTag.length,restoreEnd))
+  const restoreEnd=source.lastIndexOf(' */'),changes=parseWorkbenchRestore(source.slice(restoreStart+restoreTag.length,restoreEnd))
   const entries=changes.filter(([,replacement])=>replacement===old.trimEnd())
   if(entries.length!==1)throw Error('无法同步助手回复的工作台恢复记录。')
   entries[0][0]=noteAssistantDestinationFunction(entries[0][0]).trimEnd();entries[0][1]=next.trimEnd()
-  source=source.slice(0,restoreStart+restoreTag.length)+JSON.stringify(changes).replaceAll('*/','*\\/')+source.slice(restoreEnd)
+  source=source.slice(0,restoreStart+restoreTag.length)+serializeWorkbenchRestore(changes)+source.slice(restoreEnd)
  }
  const inject='inject: (sessionId) => ({ workspace: researchWorkspaces.for(sessionId) })'
  if(source.split(inject).length!==2)throw Error('无法定位助手回复会话来源。')

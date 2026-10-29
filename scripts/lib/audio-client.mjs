@@ -68,6 +68,9 @@ export function patchAudioClient(source){
  const types=/const RESEARCH_CONTAINER_TYPES = (?:\/\* @__PURE__ \*\/ )?new Set\(\[[^\]]+\]/;if(!source.match(types))throw Error('Audio native types missing');if(!source.match(types)[0].includes('"audio"'))source=source.replace(types,s=>s.replace('new Set([','new Set(["audio", '))
  if(!source.includes('if (value.type === "audio") return researchAudioSpec(value);'))once('if (value.type === "web") {','if (value.type === "audio") return researchAudioSpec(value);\n\t\t\tif (value.type === "web") {')
  if(!source.includes("if (spec.type === 'audio') return [spec.title"))once("if (spec.type === 'html') return researchHtmlText(spec.html) || spec.title;","if (spec.type === 'audio') return [spec.title,spec.source,spec.date,spec.description,spec.transcript||'未提供音频转写，不能仅凭网址概括音频内容。'].filter(Boolean).join('\\n');\n\t\t\tif (spec.type === 'html') return researchHtmlText(spec.html) || spec.title;")
+ // Reconcile registrations before adding the canonical callback; earlier installs
+ // interleaved this sink with the attachment registration at the same anchor.
+ source=source.replace(/researchAudioSinks\.set\(sessionId,\(nodeId,expectedUrl,spec\)=>\{[\s\S]*?\n \}\);\n/g,'')
  once('const htmlFitStates = new Map();',`researchAudioSinks.set(sessionId,(nodeId,expectedUrl,spec)=>{
   if(!collaborationCanWrite())return false;
   const node=snapshot.artifacts.find(n=>n.id===nodeId),next=researchAudioSpec(spec);
