@@ -636,27 +636,53 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补全笔记模型流提前关闭的安全诊断",
+        "featureName": "完善笔记原位混合生成与结果确认",
         "branch": "codex/feat/notes-react-runtime-20261028",
-        "baseCommit": "5e173f19ae618e6f5366c8d089a9ff810fc914a3",
-        "tipCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
+        "baseCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
+        "tipCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
         "commits": [
           {
-            "commit": "b4d631385b9ed84acdac528c174640fe041469d7",
+            "commit": "e444a389c8bc11153ab8657806a5389c15a48fc3",
             "parents": [
-              "5e173f19ae618e6f5366c8d089a9ff810fc914a3"
+              "b4d631385b9ed84acdac528c174640fe041469d7"
             ],
-            "subject": "保留笔记模型流提前结束的真实错误码"
+            "subject": "优化笔记行内结果点击确认与蓝标样式"
+          },
+          {
+            "commit": "44f5195f57aecc8ab4d5c3c77aaacb44cbaedee1",
+            "parents": [
+              "e444a389c8bc11153ab8657806a5389c15a48fc3"
+            ],
+            "subject": "修复笔记混合生成的组件收据定位"
+          },
+          {
+            "commit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
+            "parents": [
+              "44f5195f57aecc8ab4d5c3c77aaacb44cbaedee1"
+            ],
+            "subject": "保留笔记未完成结果的待确认状态"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-stream-failure.js"
+            "path": "src/preload/notes/editor.tsx"
           },
           {
             "status": "M",
-            "path": "test/notes-stream-failure.test.js"
+            "path": "src/preload/notes/inline-ai-composer.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/style.css"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-inline-capability-bridge-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-inline-result-browser.test.ts"
           }
         ],
         "checks": [
@@ -667,300 +693,102 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/notes-ai-reasoning-route.test.js",
-              "test/notes-stream-failure.test.js",
-              "test/notes-current-wire-recovery.test.js",
-              "test/notes-ai.test.js",
-              "test/notes-output-compatibility.test.js",
-              "test/notes-ai-admission.test.js",
-              "test/notes-service.test.ts",
-              "test/notes-client-capability-service.test.ts",
-              "test/notes-inline-component-generation.test.ts",
+              "test/notes-inline-capability-bridge-browser.test.ts",
               "--maxWorkers=1",
-              "--fileParallelism=false"
+              "--fileParallelism=false",
+              "--reporter=verbose"
             ],
             "outcome": "passed",
-            "summary": "当前精确两路径诊断修复验证通过，Node24、9文件242项、TC与差异检查；证据/tmp/sherlock-notes-stream-closed-20261029。",
-            "verifiedCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
-            "completedAt": "2026-10-29T00:59:57.121567+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "当前精确两路径诊断修复验证通过，Node24、9文件242项、TC与差异检查；证据/tmp/sherlock-notes-stream-closed-20261029。",
-            "verifiedCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
-            "completedAt": "2026-10-29T00:59:57.121567+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "当前精确两路径诊断修复验证通过，Node24、9文件242项、TC与差异检查；证据/tmp/sherlock-notes-stream-closed-20261029。",
-            "verifiedCommit": "b4d631385b9ed84acdac528c174640fe041469d7",
-            "completedAt": "2026-10-29T00:59:57.121567+00:00",
-            "timeoutMs": 180000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "只变更已知SDK错误码传播和公共错误文本，不改UI布局/菜单/高度/生成成功判定；除两路径外所有tracked blobs与已集成5e字节相同。整轮签名客户端真实GLM请求仍由Root后续验收。"
-        },
-        "acceptanceCriteria": [
-          "SDK真实STREAM_CLOSED在主生成与格式恢复的finish/throw路径保留机器码，并以准确公共文本显示；不传播原始服务消息、凭据、请求标识、响应体。",
-          "原有终止信号、输出完整性、路由、推理等级、重试及成功判定全部保持，提前关闭不写入为成功。",
-          "构建后的原真实GLM-5.3-Flash/Max短句与混合内容请求仍须实际验收，本卡不冒充原420ms根因已确定或真实生成已修复。"
-        ],
-        "risks": [
-          "仅修复确定的错误码丢失，不证明旧420ms错误就是STREAM_CLOSED。",
-          "原位生成、组件菜单/高度及额外基线失败的既有证据保留于前序handoff与当前集成历史，本卡不替代或重写。",
-          "共享客户端由其他已授权任务验收，Root未操作或替换客户端；等待统一新包。"
-        ],
-        "generatedAt": "2026-10-29T00:59:57.121567+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c396352444c0cd7901f92f08203826890bde7738",
-        "verificationCommit": "c396352444c0cd7901f92f08203826890bde7738",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
+            "summary": "真实Main桥4项：transport UUID与模型call id不同仍正确定位，前后顺序/完整Undo/失败child/partial正文点击均通过。 Node=v24.9.0；最终测试源码SHA与922提交相同；log=/tmp/sherlock-notes-partial-review-20261029/browser-green.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05。",
+            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
+            "completedAt": "2026-10-29T02:37:43.352069+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
+              "npx",
+              "--no-install",
+              "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/notes-inline-result-browser.test.ts",
+              "test/component-surface-retained-actions-browser.test.ts",
               "--maxWorkers=1",
-              "test/home-workbench-client.test.js",
-              "test/home-workbench-contract.test.js",
-              "test/home-workbench-runtime.test.js",
-              "test/home-workbench-native.test.js",
-              "test/home-workbench-workspace.test.js",
-              "test/home-workbench-actor.test.js",
-              "test/home-workbench-study-contract.test.js",
-              "test/home-workbench-study-render.test.js",
-              "test/home-workbench-study-integration.test.js",
-              "test/home-workbench-saved-provider.test.js",
-              "test/home-guide-workbench.test.ts",
-              "test/research-grid-arrange-tabs.test.js",
-              "test/financial-connection-row-routing.test.js",
-              "test/home-workbench-browser.test.js",
-              "test/home-guide-operations-entry.test.ts"
+              "--fileParallelism=false",
+              "--reporter=verbose"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/home-workbench-client.test.js test/home-workbench-contract.test.js test/home-workbench-runtime.test.js test/home-workbench-native.test.js test/home-workbench-workspace.test.js test/home-workbench-actor.test.js test/home-workbench-study-contract.test.js test/home-workbench-study-render.test.js test/home-workbench-study-integration.test.js test/home-workbench-saved-provider.test.js test/home-guide-workbench.test.ts test/research-grid-arrange-tabs.test.js test/financial-connection-row-routing.test.js test/home-workbench-browser.test.js test/home-guide-operations-entry.test.ts",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
-            "timeoutMs": 240000
+            "summary": "原结果浏览器39项与真实保留菜单12项共51项在最终提交同字节冻结树重新通过，含真实点击、caret/人工内容、单行partial及浅深四边绘制/More/导出/iframe保留。 Node=v24.9.0；最终测试源码SHA与922提交相同；log=/tmp/sherlock-notes-partial-review-20261029/result-and-retained.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05。",
+            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
+            "completedAt": "2026-10-29T02:41:54.205241+00:00",
+            "timeoutMs": 300000
           },
           {
             "argv": [
-              "./node_modules/node/bin/node",
+              "npx",
+              "--no-install",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-client-capability-bridge.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=verbose"
+            ],
+            "outcome": "passed",
+            "summary": "原非法bridge守卫6项通过，未放松owner/request/effect/取消等原权验。 Node=v24.9.0；最终测试源码SHA与922提交相同；log=/tmp/sherlock-notes-partial-review-20261029/bridge-guards.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05。 完成状态于证据precommitAt核实，未另记单命令结束时间。",
+            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
+            "completedAt": "2026-10-29T02:43:22.840104+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "node",
               "node_modules/typescript/bin/tsc",
               "--noEmit",
               "-p",
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "c396352444c0cd7901f92f08203826890bde7738",
-            "completedAt": "2026-10-29T01:06:06.310Z",
+            "summary": "Node24 TypeScript检查通过。 Node=v24.9.0；最终测试源码SHA与922提交相同；log=/tmp/sherlock-notes-partial-review-20261029/typecheck.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05。 完成状态于证据precommitAt核实，未另记单命令结束时间。",
+            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
+            "completedAt": "2026-10-29T02:43:22.840104+00:00",
             "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查0；完成状态于最终源码冻结证据precommitAt核实。log=/tmp/sherlock-notes-partial-review-20261029/diff-check.log；proof=/tmp/sherlock-notes-partial-review-20261029/verification.json SHA256=07aa9ff9dc3a44e0bcb0d74bdb3e2f2c9d9ba6aaa0f3878bf950c55825176c05",
+            "verifiedCommit": "922bceb003352b503da789dbe39fc7e6c0f511a4",
+            "completedAt": "2026-10-29T02:43:22.840104+00:00",
+            "timeoutMs": 10000
           }
         ],
-        "recordedAt": "2026-10-29T01:06:06.310Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离headless Chromium真实鼠标/键盘、真实Main CapabilityBridge与生产Notes渲染链验证：最终同字节Main4+结果39+真实菜单12+非法bridge6共61项通过，无pageerror；结果可原位确认/Undo并保存重开，caret与人工内容保留。e444界面证据/tmp/sherlock-notes-click-away-20261029/verification.json仍保留，composer/style/result测试三路径与e444逐byte相同，最终51项重新跑过含截图四边像素绘制：浅814/814/356/356、深484/484/354/354；组件外层透明、单线贴边，partial保持48px单行且错误真实持久化。此处仅隔离headless UI验证，不代表签名Native或真实模型同prompt已验收。"
+        },
+        "acceptanceCriteria": [
+          "真实Main桥独立生成transport UUID时，混合正文依当前请求实际receipt.effect.blockId寻找已创建组件；保持success/effect/current request/Yjs identity/canUndo/unfinished守卫，正文按before/after原位插入，不重放成功创建、不丢上下文或人工正文。",
+          "已完成结果点击其它普通或空段落后才自动确认并持久化、去蓝；同一鼠标手势与caret/输入不跳位；结果自身、输入、More/menu、确认栏、标题与工具栏不误触，多proposal只确认离开的旧结果。",
+          "failed、running、draft、停止后部分结果以及成功child但parent requiresReply均保留真实待确认/Undo，不被click-away冒充完成；已有真实错误优先，中性partial错误使用原持久化字段，单行反馈不额外渲染红色错误行。",
+          "普通段落为整段半透明蓝背景且无底部下划线；research组件外层透明无shadow，真实组件单层贴边轻蓝线、原尺寸margin与正常选中边框保持，菜单/输入继续可用。",
+          "最终集成签名新包仍须由Root复跑用户原短句和原混合请求，并验证真实正文+组件、确认/撤销、菜单、保存重开；该最终tip的签名Native同prompt验收目前未完成，不能以本卡headless结果替代。",
+          "既有签名包短句成功与原混合请求partial保护失败的诊断/旧历史保留；不恢复用户主动删除的旧内容，不把历史失败改记成功，不修改共享SDK资产或真实用户数据。"
+        ],
+        "risks": [
+          "本卡只覆盖b4严格后继的3提交/5路径；Root尚未在最终签名新包完成真实模型同prompt验收。",
+          "既有签名包的短句请求已成功，原混合请求曾因semantic call id与transport UUID错配触发保护并保留partial；这些是旧包诊断事实，不是922新包已验证成功。",
+          "模型结果使用隔离fixture回放；真实Main桥、生产Notes编辑器/渲染器/保存队列与鼠标操作实际执行，保存重开在隔离fixture或临时Store中验证，不宣称本轮调用真实模型或操作共享客户端。",
+          "批次其它9个feature、全15条integration gates（含Voice）保持原状；本卡只供官方refresh→preflight→merge，不手改manifest或复用旧merged证据。"
+        ],
+        "generatedAt": "2026-10-29T02:47:47.705Z"
       }
     },
     {
