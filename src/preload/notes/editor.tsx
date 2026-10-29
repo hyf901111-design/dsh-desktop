@@ -449,7 +449,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           noteDraft:'smart',containerPrompt:args.prompt,generationStatus:'draft'
         })}}
         const created=retry?.block||(inline?proposals.run(()=>insertNoteInlineBlocks(editor,inline.anchor,client.current,[block])):editor.insertBlocks([block],editor.document.at(-1),'after'))[0]
-        if(inline){const identity=noteInlineBlockIdentity(editor,created.id);if(!identity)throw Error(t('本次组件位置尚未就绪，原需求已保留。'));inlineCreations.current.set(requestId,{blockId:created.id,identity})}
+        if(inline){const identity=noteInlineBlockIdentity(editor,created.id);if(!identity)throw Error(t('本次组件位置尚未就绪，原需求已保留。'));inlineCreations.current.set(created.id,{blockId:created.id,identity})}
         capabilityReservations.current.set(created.id,requestId)
         try{
           await report({state:'placeholder',blockId:created.id})
@@ -627,7 +627,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
             if(receipts.length){
               const proposal=proposals.list().find(value=>value.id===requestId),contains=(block:any,id:string):boolean=>!!block&&(block.id===id||block.children?.some((child:any)=>contains(child,id)))
               const owned=receipts.map(receipt=>{
-                const position=inlineCreations.current.get(receipt.requestId||''),effect=receipt.effect,blockId=effect&&'blockId'in effect?effect.blockId:undefined
+                const effect=receipt.effect,blockId=effect&&'blockId'in effect?effect.blockId:undefined,position=inlineCreations.current.get(blockId||'')
                 const change=position&&proposal?.changes.find(change=>contains(change.after,position.blockId))
                 if(!position||position.blockId!==blockId||!effect||!['applied','saved'].includes(effect.state)||noteInlineBlockIdentity(editor,position.blockId)!==position.identity||!change||!proposals.canUndoBlock(requestId,change.id)||unfinishedInlineComponent(editor.getBlock(position.blockId)))throw Error(t('本次组件已变化，原需求已保留，请重新生成正文。'))
                 return position
