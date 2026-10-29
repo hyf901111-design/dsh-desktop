@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { parseResearchHtmlArtifact, researchHtmlText } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
+import { homeWorkbenchStudyModel, parseHomeWorkbenchStudySpec } from '../../../packages/dsh-research-task-runtime/home-workbench-study-contract.js'
 import { stat } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type Server } from 'node:http'
 import { extname } from 'node:path'
@@ -52,6 +53,91 @@ function publicUrl(value: unknown): string | undefined {
     return url.href.slice(0, 2048)
   } catch { return undefined }
 }
+// Resolve the same frozen model as the visible study card. The declarative spec
+// contains selections, not report facts; serializing it alone loses the evidence.
+function studyText(value: unknown): string {
+  const spec = parseHomeWorkbenchStudySpec(value)
+  if (!spec) return ''
+  const model = homeWorkbenchStudyModel(spec)
+  if (!model.available) return ''
+  const { company, expansion, valuation, dividend, document: report } = model
+  const number = (value: number, digits = 2) => Number.isFinite(value) ? value.toFixed(digits) : '未提供'
+  const amount = (value: number) => number(value / 1e8)
+  const percent = (value: number) => number(value) + '%'
+  const change = (current: number, prior: number) => prior === 0 ? '不可比（上期为0）' : percent((current / prior - 1) * 100)
+  const table = (headers: string[], rows: unknown[][]) => [headers, ...rows].map(row => row.join(' | ')).join('\n')
+  const scope = ['peers', 'news'].includes(spec.studyRole) ? '白酒龙头固定三家公司' : `${company.name}（${company.id}）`
+  const lines = [`${scope} · 历史快照 ${model.snapshot}，非实时数据。`]
+  const distribution = () => {
+    lines.push(table(['分配事项', '每股/元', '状态', '实施/披露'], [
+      ['2025中期', number(company.interim, 3), '已实施', company.interimDate],
+      ['2025年度', number(company.final, 3), '年度预案尚未实施', company.reportDate],
+      ['年度合计（含预案）', number(dividend.combined, 3), '含尚未实施部分', model.snapshot]
+    ]), `年度分配/快照价 ${percent(dividend.annualYield)}；年度预案/快照价 ${percent(dividend.pendingYield)}；每股分配/EPS ${percent(dividend.payout)}。`, '全部金额为税前历史参考；已付中期分红不代表快照日买入后可取得，每股测算不替代公司公告总额口径。')
+  }
+  switch (spec.studyRole) {
+    case 'disclosure':
+      lines.push(table(['披露项目', '本期值', '同比'], [
+        ['2025营业收入/亿元', amount(company.revenue[2]), change(company.revenue[2], company.revenue[1])],
+        ['2025归母净利润/亿元', amount(company.profit[2]), change(company.profit[2], company.profit[1])],
+        ['2025基本EPS/元', number(company.eps, company.id === '000858' ? 4 : 2), change(company.eps, expansion.annualEpsPrev)],
+        ['2026Q1营业收入/亿元', amount(company.quartersRevenue[4]), percent(company.revYoy)],
+        ['2026Q1归母净利润/亿元', amount(company.quartersProfit[4]), percent(company.profitYoy)],
+        ['2026Q1经营现金流/亿元', amount(company.qCash), change(company.qCash, expansion.priorQCash)]
+      ]), '季度报告未经审计；EPS为年报基本每股收益。', company.note)
+      break
+    case 'performance': {
+      const period = model.performance
+      lines.push(period.period === 'quarter' ? '单季口径；2026Q1未经审计，单季数按披露数计算。' : '年度口径；2023—2025可比数据。', table(['亿元', ...period.labels], [
+        ['营业收入', ...period.revenue.map(amount)], ['归母净利润', ...period.profit.map(amount)]
+      ]), `2026Q1营收同比 ${percent(company.revYoy)}；归母同比 ${percent(company.profitYoy)}。`)
+      if (company.id === '000858') lines.push('2025单季及2026Q1同比使用会计差错更正后数据。')
+      break
+    }
+    case 'peers':
+      lines.push('固定三家公司，2025年度。', table(['公司', '营业收入/亿元', '归母净利润/亿元', '营收同比', '归母同比', '加权ROE', '经营现金/亿元', '现金/归母', 'PE（2025）'], model.peers.map((peer: any) => [peer.name, amount(peer.revenue[2]), amount(peer.profit[2]), change(peer.revenue[2], peer.revenue[1]), change(peer.profit[2], peer.profit[1]), percent(peer.roe), amount(peer.cash[2]), number(peer.cash[2] / peer.profit[2]) + '×', number(peer.close / peer.eps) + '×'])), 'PE=快照收盘价/年报基本EPS；五粮液季度口径已调整，现金流含合并范围影响。')
+      for (const peer of model.peers) lines.push(`${peer.name}年报：${peer.annual}`)
+      break
+    case 'valuation':
+    case 'matrix':
+      lines.push(`年报基本EPS ${number(company.eps, 4)}元；快照收盘价 ${number(company.close)}元。`, `所选PE ${number(valuation.pe)}×；EPS变化 ${percent(valuation.epsChange)}；测算EPS ${number(valuation.eps, 4)}元。`, `情景价格 ${number(valuation.price)}元；相对快照价 ${percent(valuation.upside)}。`, '测算=年报EPS×（1＋盈利变化）×PE；所选参数为情景假设，不是盈利预测或承诺回报。')
+      if (spec.studyRole === 'matrix') lines.push(table(['EPS变化', ...valuation.columns.map((pe: number) => number(pe) + '×')], valuation.changes.map((delta: number) => [percent(delta), ...valuation.columns.map((pe: number) => number(company.eps * (1 + delta / 100) * pe))])))
+      break
+    case 'dividend':
+      distribution()
+      break
+    case 'cashflow':
+      lines.push(table(['亿元', '2023', '2024', '2025'], [['归母净利润', ...company.profit.map(amount)], ['经营净现金流', ...company.cash.map(amount)]]), company.note)
+      break
+    case 'directory':
+      lines.push(`当前选择：${report.title}；${report.audit}。`, table(['报告', '披露日期', '状态', '原文'], [
+        ['2025年年度报告', company.reportDate, '已审计', company.annual],
+        ['2026年第一季度报告', company.quarterDate, '未经审计', company.quarter],
+        ['2025年度利润分配预案', company.reportDate, '预案 · 年报所载', company.annual + '#page=2']
+      ]), table(['研究主题', '原文依据', '页码', '原文'], expansion.anchors.map((anchor: any[]) => [anchor[0], anchor[1], 'P.' + anchor[3], (anchor[4] === 'quarter' ? company.quarter : company.annual) + '#page=' + anchor[3]])))
+      break
+    case 'reader': {
+      const quarterly = spec.reportKind === 'quarter'
+      lines.push(`${company.name} · ${report.title}`, `${report.date}披露 · ${report.audit} · ${report.period}口径；原文 ${report.url}`)
+      if (spec.reportKind === 'dividend') { distribution(); break }
+      lines.push(table(['指标与单位', quarterly ? '2026Q1' : '2025', quarterly ? (company.id === '000858' ? '2025Q1（更正后）' : '2025Q1') : '2024', '同比/变动'], model.reportRows.map((row: any[]) => [row[0], number(row[1], row[0].includes('EPS') && company.id === '000858' ? 4 : 2) + (row[0].includes('ROE') ? '%' : ''), number(row[2], row[0].includes('EPS') && company.id === '000858' ? 4 : 2) + (row[0].includes('ROE') ? '%' : ''), row[4] === 'pct' ? number(row[3]) + ' pct' : percent(row[3])])) )
+      if (!quarterly) for (const [heading, rows] of [['2025产品收入', expansion.products], ['2025销售模式', expansion.channels]] as [string, any[][]][]) {
+        const total = rows.reduce((sum, row) => sum + row[1], 0)
+        lines.push(heading, table(['分项', '收入/亿元', '占列示酒类收入', '同比'], rows.map(row => [row[0], amount(row[1]), total ? percent(row[1] / total * 100) : '未提供', percent(row[2])])) )
+      }
+      lines.push(quarterly ? expansion.qDetail : expansion.annualDetail, quarterly ? model.analysisNote : '分项占比按列示酒类收入测算；原文分项与主营收入口径以官方报告为准。')
+      break
+    }
+    case 'analysis':
+      lines.push(`当前依据：${company.name} · ${report.title}；${report.audit}。`, table(['分析维度', '报告披露事实', '分析结果与口径', '来源'], model.analysis.map((row: any) => [row.dimension, row.fact, row.researchMeaning, row.source.url + '#page=' + row.source.pages[0]])), model.analysisNote)
+      break
+    case 'news':
+      lines.push('固定三家样本 · 2026-04-17—04-30 · 含盘后披露。', table(['披露时间', '公司', '类型', '事件与披露事实', '来源', '原文'], model.news.map((row: any) => [row.date, row.company, row.tag, row.title, row.source, row.url])), '报道保留原始来源；财务事实与实施状态以公司公告核对。')
+      break
+  }
+  lines.push(`数据来源：公司公告；年报 ${company.annual}；一季报 ${company.quarter}。行情参照：腾讯证券 ${model.snapshot}不复权收盘快照。`)
+  return lines.filter(Boolean).join('\n')
+}
 // Only user-visible native fields enter evidence. Prompts, refresh errors,
 // arbitrary object keys and web container URLs are never treated as page text.
 function containerText(value: unknown): { text: string; truncated: boolean } {
@@ -70,6 +156,7 @@ function containerText(value: unknown): { text: string; truncated: boolean } {
   const spec = value as Node
   const heading = boundedText(spec.title, 512)
   let body = ''
+  if (spec.type === 'research-study') body = boundedText(studyText(spec))
   if (spec.type === 'html' && parseResearchHtmlArtifact(spec) !== null) body = boundedText(researchHtmlText(spec.html))
   if (spec.type === 'markdown' || spec.type === 'mind-map') body = boundedText(spec.content ?? spec.markdown)
   if (spec.type === 'table' && Array.isArray(spec.columns) && Array.isArray(spec.rows) && spec.rows.length) {

@@ -3,10 +3,19 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ComponentLibraryStore, installComponentLibrary } from '../src/main/state/component-library';
+import { homeWorkbenchStudySpec } from '../packages/dsh-research-task-runtime/home-workbench-study-contract.js';
 const dirs: string[] = [];
 afterEach(async () => { await Promise.all(dirs.splice(0).map(d => rm(d, { recursive: true, force: true }))); });
 const node = () => ({ id: 'original', messageId: 'message', kind: 'generated-container', title: '收入监控', displayName: '收入概览', excerpt: '原内容', x: 300, y: 400, width: 480, height: 320, sizeMode: 'manual', generationStatus: 'completed', containerSpec: { version: 1, type: 'table', title: '收入监控', columns: ['项目', '金额'], rows: [['销售', 120]] }, sourceNodeIds: ['source'], creationMode: 'selection', generationTaskId: 'old-task' });
 async function fixture() { const dir = await mkdtemp(join(tmpdir(), 'ework-library-')); dirs.push(dir); const file = join(dir, 'library.json'), store = new ComponentLibraryStore(file); await store.load(); return { file, store }; }
+it('研究组件模板保存与重启恢复保留标的和报告，移除原看板父节点依赖', async () => {
+    const { file, store } = await fixture(), spec = homeWorkbenchStudySpec('reader', '000858', { reportKind: 'quarter', linkedSourceId: 'old-directory' })!;
+    const original = { ...node(), title: spec.title, displayName: spec.title, containerSpec: spec }, entry = await store.add(original);
+    const reopened = new ComponentLibraryStore(file); await reopened.load();
+    expect(reopened.read(entry.id).node.containerSpec).toMatchObject({ type: 'research-study', security: '000858', reportKind: 'quarter' });
+    expect(reopened.read(entry.id).node.containerSpec).not.toHaveProperty('linkedSourceId');
+    expect(spec.linkedSourceId).toBe('old-directory');
+});
 it('保存独立快照，重复添加去重，重命名、重启恢复和删除不修改源组件', async () => {
     const { file, store } = await fixture(), original = node(), entry = await store.add(original);
     expect(store.list()).toEqual([{ id: entry.id, name: '收入概览' }]);

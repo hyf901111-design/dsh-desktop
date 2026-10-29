@@ -2,6 +2,7 @@ import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { homeWorkbenchStudySpec } from '../packages/dsh-research-task-runtime/home-workbench-study-contract.js'
 import { ResearchContextBridge, readStoredResearchCanvas, readActiveResearchCanvas, registerResearchContextHandlers } from '../src/main/state/research-context-bridge'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
 import { FileResearchPreviewAuthorizationStorage, ResearchFilePreviewRegistry } from '../src/main/state/research-file-preview'
@@ -45,6 +46,59 @@ async function fixture(options = {}) {
 }
 
 describe('trusted research canvas capture', () => {
+  it('captures the selected research study facts, parameters and report source for follow-up questions', async () => {
+    const f = await fixture()
+    const valuation = homeWorkbenchStudySpec('valuation', '600519')!
+    valuation.scenarios['600519'] = { pe: 25, epsChange: 5 }
+    const roles = ['disclosure', 'performance', 'peers', 'valuation', 'matrix', 'dividend', 'cashflow', 'directory', 'reader', 'analysis', 'news'] as const
+    const artifacts = roles.map(role => ({ id: role, kind: 'generated-container', title: role, generationStatus: 'completed', containerSpec: role === 'valuation' || role === 'matrix' ? { ...homeWorkbenchStudySpec(role, '600519')!, scenarios: valuation.scenarios } : homeWorkbenchStudySpec(role, '600519') }))
+    f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')
+    f.storage.setItem('sherlock.research.canvas.artifacts.v1:parent', JSON.stringify(artifacts))
+    const capture = await f.bridge.capture({ sessionId: 'parent' })
+    const { sources } = await (await f.snapshot({ sessionId: 'parent', captureId: capture.captureId })).json()
+    const byId = Object.fromEntries(sources.map((source: any) => [source.id, source]))
+    for (const role of roles) { expect(byId[role].status).toBe('ready'); expect(byId[role].text).toContain('2026-04-30') }
+    expect(byId.valuation.text).toContain('贵州茅台')
+    expect(byId.valuation.text).toContain('25.00')
+    expect(byId.valuation.text).toContain('5.00%')
+    expect(byId.valuation.text).toContain('1723.58')
+    expect(byId.valuation.text).toContain('情景假设')
+    expect(byId.matrix.text).toContain('EPS变化')
+    expect(byId.matrix.text).toContain('1723.58')
+    expect(byId.performance.text).toContain('539.09')
+    expect(byId.disclosure.text).toContain('269.10')
+    expect(byId.cashflow.text).toContain('924.64')
+    expect(byId.directory.text).toContain('2026年第一季度报告')
+    expect(byId.peers.text).toContain('五粮液')
+    expect(byId.reader.text).toContain('1688.38')
+    expect(byId.reader.text).toMatch(/https:\/\//)
+    expect(byId.dividend.text).toContain('尚未实施')
+    expect(byId.analysis.text).toContain('经营')
+    expect(byId.news.text).toContain('人民财讯')
+  })
+  it('freezes the selected study report and excludes unavailable or invalid study payloads', async () => {
+    const f = await fixture()
+    const nodes = [
+      { id: 'quarter', containerSpec: homeWorkbenchStudySpec('reader', '600519', { reportKind: 'quarter' }) },
+      { id: 'annual', containerSpec: homeWorkbenchStudySpec('reader', '000568') },
+      { id: 'missing', containerSpec: homeWorkbenchStudySpec('reader', null) },
+      { id: 'invalid', containerSpec: { ...homeWorkbenchStudySpec('analysis', '600519'), arbitrary: 'private-secret' } }
+    ].map(node => ({ ...node, kind: 'generated-container', title: node.id, generationStatus: 'completed', containerPrompt: 'private-prompt' }))
+    f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')
+    f.storage.setItem('sherlock.research.canvas.artifacts.v1:parent', JSON.stringify(nodes))
+    const capture = await f.bridge.capture({ sessionId: 'parent' })
+    f.storage.setItem('sherlock.research.canvas.artifacts.v1:parent', '[]')
+    const { sources } = await (await f.snapshot({ sessionId: 'parent', captureId: capture.captureId })).json()
+    expect(sources[0].text).toContain('2026年第一季度报告')
+    expect(sources[0].text).toContain('539.09')
+    expect(sources[0].text).toContain('未经审计')
+    expect(sources[0].text).not.toContain('2025产品收入')
+    expect(sources[1].text).toContain('泸州老窖')
+    expect(sources[1].text).toContain('257.31')
+    expect(sources[2].text).toBe('')
+    expect(sources[3].text).toBe('')
+    expect(JSON.stringify(sources)).not.toMatch(/private-secret|private-prompt/)
+  })
   it('exposes scheduled requests only through the authenticated session-bound local bridge',async()=>{
     const calls:unknown[]=[],f=await fixture({scheduledTask:async(value:unknown)=>{calls.push(value);return {status:'saved',taskId:'watch-1'}},canReadSession:(id:string)=>id==='parent'})
     const request={sessionId:'parent',action:'create',requestId:'message-1',humanRequest:'设置涨跌幅超过3%的定时提醒',symbols:['sh510310'],thresholdPercent:3}

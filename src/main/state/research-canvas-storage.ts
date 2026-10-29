@@ -64,7 +64,7 @@ function validHomeGuideRegistry(key: string, value: string): boolean {
     if (!record || Array.isArray(record) || Object.keys(record).sort().join(',') !== 'entries,scope,version' || record.version !== 1 || record.scope !== scope || !Array.isArray(record.entries) || record.entries.length > 100) return false
     const ids = new Set<string>()
     return record.entries.every((entry: any) => {
-      if (!entry || Array.isArray(entry) || Object.keys(entry).sort().join(',') !== 'createdAt,cwd,kind,sessionId,title' || !['board','note','ppt','report'].includes(entry.kind) || typeof entry.sessionId !== 'string' || !/^[a-zA-Z0-9:_-]{1,256}$/.test(entry.sessionId) || ids.has(entry.sessionId) || typeof entry.cwd !== 'string' || !path.isAbsolute(entry.cwd) || entry.cwd.length > 4096 || /[\x00-\x1f]/.test(entry.cwd) || typeof entry.title !== 'string' || !entry.title.trim() || entry.title.length > 256 || /[\x00-\x1f]/.test(entry.title) || !Number.isSafeInteger(entry.createdAt) || entry.createdAt <= 0) return false
+      if (!entry || Array.isArray(entry) || Object.keys(entry).sort().join(',') !== 'createdAt,cwd,kind,sessionId,title' || !['board','note','ppt','report','workbench'].includes(entry.kind) || typeof entry.sessionId !== 'string' || !/^[a-zA-Z0-9:_-]{1,256}$/.test(entry.sessionId) || ids.has(entry.sessionId) || typeof entry.cwd !== 'string' || !path.isAbsolute(entry.cwd) || entry.cwd.length > 4096 || /[\x00-\x1f]/.test(entry.cwd) || typeof entry.title !== 'string' || !entry.title.trim() || entry.title.length > 256 || /[\x00-\x1f]/.test(entry.title) || !Number.isSafeInteger(entry.createdAt) || entry.createdAt <= 0) return false
       ids.add(entry.sessionId); return true
     })
   } catch { return false }

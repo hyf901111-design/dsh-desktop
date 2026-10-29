@@ -24,14 +24,14 @@ afterEach(() => {
 })
 
 describe('desktop Research canvas storage', () => {
-  it('persists a report guide across reader restart while retaining its account boundary', () => {
+  it.each(['report','workbench'])('persists a %s guide across reader restart while retaining its account boundary', kind => {
     const directory = temporaryUserData(), key = 'sherlock.home-guide.sessions.v1:account%3Areport-owner'
-    const record = { version: 1, scope: 'account:report-owner', entries: [{ kind: 'report', sessionId: 'report-example', cwd: '/workspace/report-example', title: '研究报告示例', createdAt: 1 }] }
+    const record = { version: 1, scope: 'account:report-owner', entries: [{ kind, sessionId: 'report-example', cwd: '/workspace/report-example', title: '研究报告示例', createdAt: 1 }] }
     const storage = new ResearchCanvasStorage(directory), value = JSON.stringify(record)
     expect(storage.setItem(key, value)).toBe(true)
     expect(new ResearchCanvasStorage(directory).getItem(key)).toBe(value)
     expect(storage.setItem(key, JSON.stringify({ ...record, scope: 'account:another' }))).toBe(false)
-    expect(storage.setItem(key, JSON.stringify({ ...record, entries: [{ ...record.entries[0], kind: 'another-report' }] }))).toBe(false)
+    expect(storage.setItem(key, JSON.stringify({ ...record, entries: [{ ...record.entries[0], kind: 'unknown-guide' }] }))).toBe(false)
     expect(new ResearchCanvasStorage(directory).getItem(key)).toBe(value)
   })
   it('persists an account-scoped guide registry and rejects malformed or cross-scope records', () => {
