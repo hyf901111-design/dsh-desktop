@@ -2,6 +2,8 @@ import * as Y from 'yjs'
 import {createExtension} from '@blocknote/core'
 import {Plugin,PluginKey} from '@tiptap/pm/state'
 import {Decoration,DecorationSet} from '@tiptap/pm/view'
+import {noteChartNavigationAllowed} from './chart-navigation'
+import {researchInteractionVersion,validResearchInteractionState} from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 
 type Block=Record<string,any>&{id:string}
 type Change={id:string;before:Block|null;after:Block|null;identity?:string;previous?:string;next?:string;previousIdentity?:string;nextIdentity?:string;dirty?:boolean;group?:string}
@@ -103,6 +105,42 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
   return !entry.dirty&&(entry.after?!!block&&!!entry.identity&&fingerprint(block)===fingerprint(entry.after)&&currentIdentities.get(entry.id)===entry.identity:!block)
  }
  const canRevert=(entry:Change,changes:Change[],currentIdentities:Map<string,string>)=>matches(entry,currentIdentities)&&!(entry.before&&!entry.after&&entry.group&&changes.some(peer=>peer.group===entry.group&&!peer.before&&peer.after&&!matches(peer,currentIdentities)))
+ const writeHtmlInteraction=(input:any,expectedPayload:string,nextPayload:string,admission:{requestId?:string;identity?:string})=>{
+  inspect()
+  const originalBlock=editor.getBlock(input.blockId),nodeIdentity=identity(doc,input.blockId)
+  if(!originalBlock||originalBlock.type!=='research'||originalBlock.props?.payload!==expectedPayload)throw Error('笔记或组件已变化，本次交互未保存。')
+  const before=clone(originalBlock)
+  let navigation=false
+  try{
+   const original=JSON.parse(expectedPayload),next=JSON.parse(nextPayload),previous=original.config?.interactionState,state=next.config?.interactionState
+   const withoutJournal=(node:any)=>{const {interactionState,...config}=node.config??{};return{...node,config:Object.keys(config).length?config:undefined}}
+   const oldEvents=previous?.events??{},entries=state?.events??{},added=Object.keys(entries).filter(id=>!Object.hasOwn(oldEvents,id))
+   navigation=input.sharedState===undefined&&original.id===input.nodeId&&original.containerSpec?.type==='html'&&original.containerSpec.html===input.html&&input.version===researchInteractionVersion(input.html)&&noteChartNavigationAllowed(input.html,input.event)&&
+    (!previous||validResearchInteractionState(previous)&&previous.version===input.version)&&validResearchInteractionState(state)&&state.version===input.version&&added.length===1&&added[0]===input.event.id&&fingerprint(entries[input.event.id])===fingerprint(input.event)&&
+    Object.entries(oldEvents).every(([id,event])=>Object.hasOwn(entries,id)&&fingerprint(entries[id])===fingerprint(event))&&fingerprint(withoutJournal(original))===fingerprint(withoutJournal(next))
+  }catch{/* An unrecognized write keeps the ordinary permanent dirty guard. */}
+  const currentIdentities=identities(doc),owners=navigation&&admission.identity===nodeIdentity?list().filter(value=>value.id===admission.requestId&&value.state==='ready'&&value.changes.some(entry=>entry.id===input.blockId&&matches(entry,currentIdentities))):[],owner=owners.length===1?owners[0]:undefined
+  const apply=(from:Block,payload:string,rebase:boolean)=>{
+   const saved=owner&&read(owner.id),current=saved&&clone(saved),entry=current?.changes.find(entry=>entry.id===input.blockId),allowed=!!rebase&&!!nodeIdentity&&identity(doc,input.blockId)===nodeIdentity&&current?.state==='ready'&&!!entry&&!entry.dirty&&fingerprint(entry.after)===fingerprint(from)&&fingerprint(editor.getBlock(input.blockId))===fingerprint(from)
+   if(allowed)depth++
+   try{
+    editor.updateBlock(input.blockId,{props:{...from.props,payload}})
+    const after=editor.getBlock(input.blockId),expected={...from,props:{...from.props,payload}}
+    if(allowed&&identity(doc,input.blockId)===nodeIdentity&&fingerprint(after)===fingerprint(expected)&&fingerprint(read(owner!.id))===fingerprint(saved)){entry!.after=clone(after);write(current!)}
+   }finally{if(allowed){depth--;inspect();publish()}}
+  }
+  apply(before,nextPayload,!!owner)
+  return()=>{
+   const current=editor.getBlock(input.blockId)
+   // A failed save may reverse only this exact write on the original Y node.
+   if(!nodeIdentity||identity(doc,input.blockId)!==nodeIdentity||current?.type!=='research'||current.props?.payload!==nextPayload)return
+   apply(clone(current),expectedPayload,!!owner)
+  }
+ }
+ const captureHtmlInteraction=(input:any)=>{
+  inspect();const currentIdentities=identities(doc),owners=list().filter(value=>value.state==='ready'&&value.changes.some(entry=>entry.id===input.blockId&&matches(entry,currentIdentities))),admission={requestId:owners.length===1?owners[0]!.id:undefined,identity:currentIdentities.get(input.blockId)}
+  return(expectedPayload:string,nextPayload:string)=>writeHtmlInteraction(input,expectedPayload,nextPayload,admission)
+ }
  const undo=(id:string)=>{
   inspect();const value=list().find(record=>record.id===id);if(!value)throw Error('本次生成记录已变化。')
   const currentIdentities=identities(doc),allowed=new Set(value.changes.filter(entry=>canRevert(entry,value.changes,currentIdentities)).map(entry=>entry.id)),remaining:Change[]=[],restored=new Map<string,string|undefined>(),automatic=new Map<string,string|undefined>(),deleted=new Map(value.changes.filter(entry=>entry.before&&!entry.after).map(entry=>[entry.id,entry])),undoManager=editor._tiptapEditor?.state?.plugins?.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(editor._tiptapEditor.state)?.undoManager;undoManager?.stopCapturing();depth++
@@ -139,7 +177,7 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
   publish();return{complete:!remaining.length,retained:remaining.length}
  }
  const confirm=(id:string)=>{if(!records.has(id))throw Error('本次生成记录已变化。');records.delete(id);publish()}
- return{list,begin,run,proxy,finish,undo,confirm,setError:(id:string,error:string)=>{const value=read(id);if(value)write({...value,error:error.slice(0,1000)})},restore:(value:NoteInlineProposal)=>{write(clone(value));inspect()},active:()=>active,has:(id:string)=>!!read(active||'')?.changes.some(entry=>entry.id===id),canUndoBlock:(id:string,blockId:string)=>{const value=list().find(item=>item.id===id),entry=value?.changes.find(item=>item.id===blockId);return !!value&&!!entry&&canRevert(entry,value.changes,identities(doc))},canUndo:(id:string)=>{const value=list().find(value=>value.id===id),currentIdentities=identities(doc);return value?.changes.some(entry=>canRevert(entry,value.changes,currentIdentities))??false},dispose(){disposed=true;off();records.unobserve(publish)}}
+ return{list,begin,run,proxy,finish,undo,confirm,captureHtmlInteraction,setError:(id:string,error:string)=>{const value=read(id);if(value)write({...value,error:error.slice(0,1000)})},restore:(value:NoteInlineProposal)=>{write(clone(value));inspect()},active:()=>active,has:(id:string)=>!!read(active||'')?.changes.some(entry=>entry.id===id),canUndoBlock:(id:string,blockId:string)=>{const value=list().find(item=>item.id===id),entry=value?.changes.find(item=>item.id===blockId);return !!value&&!!entry&&canRevert(entry,value.changes,identities(doc))},canUndo:(id:string)=>{const value=list().find(value=>value.id===id),currentIdentities=identities(doc);return value?.changes.some(entry=>canRevert(entry,value.changes,currentIdentities))??false},dispose(){disposed=true;off();records.unobserve(publish)}}
 }
 
 const markKey=new PluginKey('note-inline-ai-proposal')

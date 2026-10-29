@@ -6,6 +6,7 @@ export function researchHtmlText(html: unknown): string
 export function validResearchInteractionEvent(value: unknown): boolean
 export function validResearchInteractionState(value: unknown): boolean
 export function researchInteractionVersion(html: string): string
+export function researchHtmlDisplayHtml(html:string,workbench?:boolean):string
 export const RESEARCH_HTML_INTERACTION_RUNTIME: string
 export function buildResearchHtmlPreview(html: string, title?: string, initialTheme?: 'light' | 'dark', options?: {notoFont?: 'runtime' | 'embedded'; workbench?: boolean}): string
 

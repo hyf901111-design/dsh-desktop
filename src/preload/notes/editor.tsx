@@ -380,7 +380,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   },[props.saveBinding])
   const htmlAccess=useRef<{active():boolean;persist():Promise<void>}>({active:()=>false,persist:async()=>{}})
   htmlAccess.current={active:()=>!disposed.current&&!props.recovery&&editorActive(),persist:persistConfirmed}
-  const htmlInteractions=useMemo(()=>createNoteHtmlInteraction({editor,current:()=>htmlAccess.current.active(),persist:()=>htmlAccess.current.persist()}),[editor])
+  const htmlInteractions=useMemo(()=>createNoteHtmlInteraction({editor,current:()=>htmlAccess.current.active(),persist:()=>htmlAccess.current.persist(),captureWrite:proposals.captureHtmlInteraction}),[editor,proposals])
   const systemMutation=useRef(false)
   const updateSystemComponent=(blockId:string,node:Record<string,any>,value?:any)=>{
     const ticket=value?.method==='apply'?dataRefreshGuard.current.before(snapshot(),blockId,node.id):undefined

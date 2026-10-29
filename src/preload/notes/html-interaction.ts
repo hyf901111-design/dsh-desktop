@@ -2,7 +2,8 @@ import {researchInteractionVersion,validResearchInteractionEvent,validResearchIn
 import {componentData} from '../../../packages/dsh-research-collaboration/component-state.js'
 
 type Editor={isEditable:boolean;getBlock(id:string):any;updateBlock(id:string,value:any):unknown}
-type Options={editor:Editor;current():boolean;persist():Promise<unknown>}
+type Write=(expectedPayload:string,nextPayload:string)=>()=>void
+type Options={editor:Editor;current():boolean;persist():Promise<unknown>;captureWrite?(input:Input):Write}
 type Input={blockId:string;nodeId:string;html:string;version:string;event?:any;sharedState?:{revision:number;state:any}}
 export type NoteHtmlInteractionState={version:string;events:Record<string,any>}
 const record=(value:any):value is Record<string,any>=>!!value&&typeof value==='object'&&!Array.isArray(value)
@@ -12,9 +13,9 @@ const eventFingerprint=(value:Record<string,any>)=>JSON.stringify(Object.fromEnt
 const changed=()=>Error('笔记或组件已变化，本次交互未保存。')
 
 /** Persist only the journal of one exact Notes HTML block, never a canvas node. */
-export function createNoteHtmlInteraction({editor,current,persist}:Options){
+export function createNoteHtmlInteraction({editor,current,persist,captureWrite}:Options){
  let queue:Promise<unknown>=Promise.resolve()
- const perform=async(input:Input,guard:()=>boolean):Promise<any>=>{
+ const perform=async(input:Input,guard:()=>boolean,write?:Write):Promise<any>=>{
   const target=()=>{
    if(!current()||!guard())throw changed()
    if(!editor.isEditable)throw Error('笔记当前不可编辑。')
@@ -47,11 +48,12 @@ export function createNoteHtmlInteraction({editor,current,persist}:Options){
    next={version:input.version,events:existing?events:{...events,[input.event.id]:input.event}}
    if(!validResearchInteractionState(next))throw Error('组件交互记录已满，当前操作未保存。')
   }
-  let writtenPayload:string|undefined,durable=false
+  let writtenPayload:string|undefined,durable=false,rollback:(()=>void)|undefined
   try{
    if(!existing){
     writtenPayload=JSON.stringify({...original.node,config:{...original.node.config,[field]:next}})
-    editor.updateBlock(input.blockId,{props:{payload:writtenPayload}})
+    if(write)rollback=write(original.payload,writtenPayload)
+    else editor.updateBlock(input.blockId,{props:{payload:writtenPayload}})
    }
    // A duplicate may be an earlier unconfirmed write. It also needs a durable
    // save before the iframe may clear its pending event.
@@ -66,14 +68,14 @@ export function createNoteHtmlInteraction({editor,current,persist}:Options){
      const latest=editor.getBlock(input.blockId)
      // Only undo this operation's exact payload. Newer edits (including a new
      // HTML component) belong to their author and must never be overwritten.
-     if(latest?.type==='research'&&latest.props?.payload===writtenPayload)editor.updateBlock(input.blockId,{props:{payload:original.payload}})
+     if(latest?.type==='research'&&latest.props?.payload===writtenPayload){if(rollback)rollback();else editor.updateBlock(input.blockId,{props:{payload:original.payload}})}
     }catch{/* A disposed editor cannot accept rollback; preserve the original failure. */}
    }
    throw error
   }
  }
  return {commit(input:Input,guard:()=>boolean=()=>true):Promise<any>{
-  let captured:Input
+  let captured:Input,write:Write|undefined
   try{
    if(!input||!validId(input.blockId)||!validId(input.nodeId)||typeof input.html!=='string'||typeof input.version!=='string'||!input.version.trim()||input.version.length>80)throw Error('组件交互参数无效。')
    if(input.sharedState!==undefined){
@@ -84,8 +86,9 @@ export function createNoteHtmlInteraction({editor,current,persist}:Options){
     captured={blockId:input.blockId,nodeId:input.nodeId,html:input.html,version:input.version,event:clone(input.event)}
     if(!validResearchInteractionEvent(captured.event))throw Error('组件交互参数无效。')
    }
+   write=captureWrite?.(captured)
   }catch(error){return Promise.reject(error)}
-  const result=queue.then(()=>perform(captured,guard))
+  const result=queue.then(()=>perform(captured,guard,write))
   queue=result.then(()=>undefined,()=>undefined)
   return result
  }}
