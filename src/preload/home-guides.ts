@@ -245,6 +245,12 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    if(!adapter)throw Error('工作台演示尚未就绪，请重试。')
    if(active!==run||controller.signal.aborted){adapter.dispose();throw aborted()}run.adapter=adapter;ensure()
    if(session.fresh===false){await close(false,true);return}
+   const handoffSaved=async()=>{
+    const current=()=>{ensure();if(token!==generation||!root.isConnected||!resident.isConnected||!center.contains(resident))throw aborted()}
+    current();await (adapter.flush?.()??Promise.resolve());current()
+    const handoff=await adapters.prepareHandoff?.({...session,kind},controller.signal);current()
+    if(handoff)run.handoff=handoff;await close(false,true)
+   }
    const scenes:readonly Scene[]=definition.steps
    run.timeline=createHomeGuideTimeline({steps:scenes.map(([id,,,hold])=>({id,hold})),run:async step=>{
     ensure();await adapter.runStep(step);ensure()
@@ -255,10 +261,10 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    },onChange:state=>{
     if(active!==run||state.phase==='disposed')return
     playback(run,state.phase==='playing');root.dataset.phase=state.phase
-    if(state.phase==='completed'){hideCue();void (adapter.flush?.()??Promise.resolve()).then(async()=>{ensure();const handoff=await adapters.prepareHandoff?.({...session,kind},controller.signal);ensure();if(handoff)run.handoff=handoff;await close(false,true)}).catch(error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
+    if(state.phase==='completed'){hideCue();void handoffSaved().catch(error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
     else if(state.holding){status.textContent=scenes[state.index]?.[2]||''}
     else if(state.index===0)status.textContent=definition.intro
-   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。')}})
+   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。');if(kind==='note'&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===run.id)void handoffSaved().catch(error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}})
    run.timeline.play();visibility()
   }catch(error){if(active!==run||controller.signal.aborted)throw error;playback(run,false);fault(error instanceof Error?error.message:'示例尚未就绪，请重试。')}
  }
