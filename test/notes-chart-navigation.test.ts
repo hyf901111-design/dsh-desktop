@@ -3,6 +3,7 @@ import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {execFileSync} from 'node:child_process'
+import {researchHtmlDisplayHtml} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {noteChartNavigationAllowed} from '../src/preload/notes/chart-navigation'
 
 const native=readFileSync(resolve('test/fixtures/notes-native-chart-navigation.html'),'utf8')
@@ -28,4 +29,59 @@ it('also verifies the canonical host cartesian runtime without trusting a templa
  const html=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{renderCartesianChart}from'./packages/dsh-research-task-runtime/cartesian-chart-artifact.js';process.stdout.write(renderCartesianChart(JSON.parse(readFileSync(0,'utf8'))).html)"],{input:JSON.stringify({version:1,type:'chart',variant:'line',title:'合成图',unit:'演示值',labels:['10月1日','10月2日'],series:[{name:'演示数据',values:[10,20]}]}),encoding:'utf8'})
  expect(noteChartNavigationAllowed(html,{...event,targetRoute:[1,2]})).toBe(true)
  expect(noteChartNavigationAllowed(html.replace('select(i);});','spec.series[0].values[0]++;select(i);});'),{...event,targetRoute:[1,2]})).toBe(false)
+})
+
+const pointerNative=readFileSync(resolve('test/fixtures/notes-native-chart-point-navigation.html'),'utf8')
+const pointerEvents=Object.values(JSON.parse(readFileSync(resolve('test/fixtures/notes-native-chart-point-journal.json'),'utf8')).interactionState.events) as any[]
+it('recognizes the actual canonical SVG click then Arrow journal and the exact read-only data disclosure click',()=>{
+ expect(pointerEvents.map(event=>[event.tag,event.type,event.targetRoute])).toEqual([['SVG','click',[2,2]],['SVG','keydown',[2,2]],['SUMMARY','click',[3,0]]])
+ // HappyDOM moves the nested source STYLE into head; Chromium preserves it in body.
+ // The production-browser regression below checks the captured [2,2] events verbatim.
+ const route=routedClick(pointerNative,'svg').targetRoute
+ expect(noteChartNavigationAllowed(pointerNative,{...pointerEvents[0],targetRoute:route})).toBe(true)
+ expect(noteChartNavigationAllowed(pointerNative,{...pointerEvents[1],targetRoute:route})).toBe(true)
+ expect(noteChartNavigationAllowed(pointerNative,routedClick(pointerNative,'details > summary'))).toBe(true)
+})
+
+const pointClick=pointerEvents[0]
+const routedClick=(html:string,selector:string)=>{
+ const document=new DOMParser().parseFromString('<!doctype html><html><head></head><body>'+researchHtmlDisplayHtml(html,true)+'</body></html>','text/html'),target=document.querySelector(selector)!,targetRoute:number[]=[]
+ for(let node=target;node!==document.body;node=node.parentElement!)targetRoute.unshift([...node.parentElement!.children].indexOf(node))
+ return {...pointClick,targetRoute,tag:target.tagName.toUpperCase()}
+}
+it('allows a real canonical point hit but refuses external controls and forged target tags',()=>{
+ const hit=routedClick(pointerNative,'rect.hit[data-point="2"]')
+ expect(noteChartNavigationAllowed(pointerNative,hit)).toBe(true)
+ expect(noteChartNavigationAllowed(pointerNative,{...hit,tag:'SVG'})).toBe(false)
+ const legend=routedClick(pointerNative,'[data-chart-series]')
+ expect(noteChartNavigationAllowed(pointerNative,legend)).toBe(false)
+})
+it.each([{key:'ArrowRight'},{value:'memo'},{checked:true},{x:undefined,y:undefined},{x:-.1},{y:1.1},{x:Infinity},{y:'private'},{extra:'private'}])('refuses a mixed or invalid point click: %j',extra=>{
+ expect(noteChartNavigationAllowed(pointerNative,{...pointClick,...extra})).toBe(false)
+})
+it.each(['a','button','label','summary','span role="button"','div contenteditable="true"','g data-chart-series="0"'])('refuses a chart root nested in an interactive %s',wrapper=>{
+ const tag=wrapper.split(' ')[0],html=pointerNative.replace('<svg class="template-chart"','<'+wrapper+'><svg class="template-chart"').replace('</svg>','</svg></'+tag+'>')
+ expect(noteChartNavigationAllowed(html,routedClick(html,'svg'))).toBe(false)
+})
+it.each(['<foreignObject><input id="business-edit"/></foreignObject>','<use href="#business"/>','<set attributeName="width" to="10" begin="click"/>','<animate attributeName="width" from="0" to="10" begin="click"/>','<a href="#business"><circle cx="10" cy="10" r="5"/></a>'])('refuses active SVG content next to an otherwise authoritative chart runtime: %s',content=>{
+ const html=pointerNative.replace('</svg>',content+'</svg>')
+ expect(noteChartNavigationAllowed(html,routedClick(html,'svg'))).toBe(false)
+})
+it('refuses arbitrary point handlers even with a copied canonical model and chart marker',()=>{
+ const html=pointerNative.replace('select(Number(el.dataset.point));','spec.series[0].values[0]++;select(Number(el.dataset.point));')
+ expect(html).not.toBe(pointerNative);expect(noteChartNavigationAllowed(html,pointClick)).toBe(false)
+})
+
+it.each([
+ ['changed value',(html:string)=>html.replace('<td>20</td>','<td>200</td>')],
+ ['editable cell',(html:string)=>html.replace('<td>20</td>','<td><input value="20"></td>')],
+ ['linked cell',(html:string)=>html.replace('<td>20</td>','<td><a href="#business">20</a></td>')],
+ ['contenteditable',(html:string)=>html.replace('<table>','<table contenteditable="true">')],
+ ['arbitrary summary',(html:string)=>html.replace('<summary>查看完整数据</summary>','<summary>修改数据</summary>')],
+ ['delegated legend handler',(html:string)=>html.replace('<summary>','<summary data-chart-series="0">')],
+ ['duplicate disclosure',(html:string)=>html.replace('</details>','</details><details><summary>查看完整数据</summary></details>')],
+ ['extra row',(html:string)=>html.replace('</tbody>','<tr><td>额外业务</td><td>9</td></tr></tbody>')]
+])('does not grant read-only disclosure to a %s',(_label,change)=>{
+ const html=(change as (html:string)=>string)(pointerNative);expect(html).not.toBe(pointerNative)
+ expect(noteChartNavigationAllowed(html,routedClick(html,'details > summary'))).toBe(false)
 })

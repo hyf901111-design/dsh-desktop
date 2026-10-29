@@ -87,6 +87,37 @@ it.each([{name:'captured-native',node:capturedNavigationNode},{name:'canonical',
   expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 },25000)
+const observedPointerEvents=Object.values(JSON.parse(readFileSync(resolve('test/fixtures/notes-native-chart-point-journal.json'),'utf8')).interactionState.events)
+const pointerNavigationNode={...interactiveMixedNode,title:'浏览撤销验收',containerSpec:{version:1,type:'html',title:'浏览撤销验收',html:readFileSync(resolve('test/fixtures/notes-native-chart-point-navigation.html'),'utf8')}}
+it.each([false,true])('keeps actual canonical chart mouse entry and point clicks undoable through Arrow navigation and reopen, dark=%s',async dark=>{
+ const f=await open(dark,dark?640:1100);try{
+  await generate(f.page,{kind:'component',node:pointerNavigationNode},'仅插入用户提供的三条演示数据普通折线图')
+  const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview')
+  await undo.waitFor();await chart.locator('svg').waitFor();await f.page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();expect(await undo.isEnabled()).toBe(true)
+  await chart.locator('svg').click({position:{x:2,y:2}})
+  await expect.poll(()=>f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return Object.values(JSON.parse(block.props.payload).config?.interactionState?.events??{}).some((event:any)=>event.tag==='SVG'&&event.type==='click'&&typeof event.x==='number'&&typeof event.y==='number')})).toBe(true)
+  expect(await undo.isEnabled()).toBe(true)
+  await chart.locator('svg').press('ArrowRight');await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月2日');expect(await undo.isEnabled()).toBe(true)
+  await chart.locator('details > summary').click();await expect.poll(()=>chart.locator('details').getAttribute('open')).not.toBeNull();await expect.poll(()=>f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return Object.values(JSON.parse(block.props.payload).config?.interactionState?.events??{}).some((event:any)=>event.tag==='SUMMARY'&&event.type==='click')})).toBe(true);expect(await undo.isEnabled()).toBe(true)
+  await chart.locator('rect.hit[data-point="2"]').click();await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月3日')
+  await expect.poll(()=>f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return Object.values(JSON.parse(block.props.payload).config?.interactionState?.events??{}).some((event:any)=>event.tag==='RECT'&&event.type==='click')})).toBe(true)
+  expect(await undo.isEnabled()).toBe(true);await chart.locator('svg').press('ArrowLeft');await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月2日')
+  expect(await f.page.evaluate(({html,events}:any)=>events.map((event:any)=>(window as any).navigationAllowed(html,event)),{html:pointerNavigationNode.containerSpec.html,events:observedPointerEvents})).toEqual([true,true,true])
+  const journal=await f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return JSON.parse(block.props.payload).config.interactionState});expect(Object.keys(journal.events)).toHaveLength(5)
+  await f.page.evaluate(()=>(window as any).fixture.flush());await f.page.evaluate(()=>(window as any).fixture.reopen());await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain('10月2日');expect(await undo.isEnabled()).toBe(true);expect(await chart.locator('details').getAttribute('open')).not.toBeNull()
+  expect(await f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return JSON.parse(block.props.payload).config.interactionState})).toEqual(journal)
+  await undo.click();await expect.poll(()=>f.page.locator('.en-native-component').count()).toBe(0);expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['before','anchor','after']);expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},30000)
+it('rolls back a failed actual canonical SVG click save without dirtying the pending result',async()=>{
+ const f=await open();try{
+  await generate(f.page,{kind:'component',node:pointerNavigationNode});const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview');await undo.waitFor();await f.page.evaluate(()=>(window as any).fixture.flush())
+  await f.page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await f.page.evaluate(()=>{const w=window as any;w.chartAcks=[];w.failSaves=true;document.addEventListener('sherlock:notes-component-ack',(event:any)=>w.chartAcks.push(event.detail))})
+  await chart.locator('svg').click({position:{x:2,y:2}});await expect.poll(()=>f.page.evaluate(()=>(window as any).chartAcks.some((ack:any)=>ack.requestId.includes(':interaction:')&&ack.ok===false))).toBe(true)
+  expect(await undo.isEnabled()).toBe(true);expect(await f.page.evaluate(()=>{const block=(window as any).editor.document.find((b:any)=>b.type==='research');return JSON.parse(block.props.payload).config?.interactionState})).toBeUndefined()
+  await f.page.evaluate(async()=>{const w=window as any;w.failSaves=false;await w.fixture.flush()});await undo.click();await expect.poll(()=>f.page.locator('.en-native-component').count()).toBe(0);expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},20000)
 it('keeps a real HTML memo edit protected instead of rebasing it as chart navigation',async()=>{
  const f=await open();try{
   const node={...capturedNavigationNode,containerSpec:{...capturedNavigationNode.containerSpec,html:capturedNavigationNode.containerSpec.html+'<label>备注<textarea aria-label="人工备注"></textarea></label>'}}

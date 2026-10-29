@@ -13,9 +13,32 @@ const functionSource=(source:string,name:string,next?:string)=>{
 }
 const fixed=functionSource(fixedSource,'fixedChartRuntime'),cartesian=functionSource(cartesianSource,'cartesianChartRuntime','renderCartesianChart'),geometry=functionSource(cartesianSource,'cartesianChartSvg','cartesianChartRuntime')
 
+const interactive='a,button,label,input,select,textarea,[contenteditable],[role="button"],[role="menuitem"],[data-chart-series]'
+const passiveSvg=new Set(['SVG','G','PATH','RECT','CIRCLE','ELLIPSE','LINE','POLYGON','POLYLINE','TEXT','TSPAN','TITLE','DESC','DEFS','CLIPPATH','MASK','LINEARGRADIENT','RADIALGRADIENT','STOP'])
+
+// The canonical disclosure contains only the complete immutable chart model.
+// Its exact table structure has no editable controls or delegated commands.
+const readOnlyDataDisclosure=(body:HTMLElement,target:Element|undefined,model:any)=>{
+ const shape=(node:Element|undefined,tag:string,attrs:Record<string,string>={})=>!!node&&node.namespaceURI==='http://www.w3.org/1999/xhtml'&&node.tagName===tag&&node.attributes.length===Object.keys(attrs).length&&Object.entries(attrs).every(([key,value])=>node.getAttribute(key)===value)
+ const leaf=(node:Element|undefined,tag:string,value:unknown)=>shape(node,tag)&&!node!.children.length&&node!.textContent===String(value).replace(/\r\n?/g,'\n').replace(/\0/g,'\ufffd')
+ const disclosures=body.querySelectorAll('details'),details=disclosures[0]
+ if(disclosures.length!==1||!shape(details,'DETAILS')||details!.parentElement!==body||details!.children.length!==2||details!.closest(interactive+',summary'))return false
+ const [summary,scroll]=[...details!.children]
+ if(target!==summary||!leaf(summary,'SUMMARY','查看完整数据')||!shape(scroll,'DIV',{class:'data-scroll'})||scroll!.children.length!==1)return false
+ const table=scroll!.children[0]
+ if(!shape(table,'TABLE')||table!.children.length!==2)return false
+ const [head,rows]=[...table!.children]
+ if(!shape(head,'THEAD')||head!.children.length!==1||!shape(rows,'TBODY')||rows!.children.length!==model.labels.length)return false
+ const headings=head!.children[0],names=['分类',...model.series.map((series:any)=>series.name+(model.unit?' ('+model.unit+')':''))]
+ if(!shape(headings,'TR')||headings!.children.length!==names.length||![...headings!.children].every((cell,index)=>leaf(cell,'TH',names[index])))return false
+ return [...rows!.children].every((row,index)=>shape(row,'TR')&&row.children.length===names.length&&[...row.children].every((cell,column)=>leaf(cell,'TD',column?model.series[column-1].values[index]:model.labels[index])))
+}
+
 /** Verify the complete host program and exact target; an SVG/marker is not authority. */
 export function noteChartNavigationAllowed(html:string,event:any):boolean{
- if(!validResearchInteractionEvent(event)||event.tag!=='SVG'||event.type!=='keydown'||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)||Object.keys(event).some(key=>!['id','clock','targetRoute','tag','type','key'].includes(key)))return false
+ const pointer=event?.type==='click',fields=pointer?['id','clock','targetRoute','tag','type','x','y']:['id','clock','targetRoute','tag','type','key']
+ if(!validResearchInteractionEvent(event)||Object.keys(event).some(key=>!fields.includes(key)))return false
+ if(pointer?typeof event.x!=='number'||typeof event.y!=='number':event.tag!=='SVG'||event.type!=='keydown'||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return false
  try{
   const parse=(content:string)=>new DOMParser().parseFromString('<!doctype html><html><head></head><body>'+content+'</body></html>','text/html')
   const document=parse(html),elements=[...document.querySelectorAll('*')]
@@ -25,11 +48,19 @@ export function noteChartNavigationAllowed(html:string,event:any):boolean{
   const script=scripts[0]!.textContent??'',programs=[{runtime:fixed,suffix:');',fixed:true},{runtime:geometry?cartesian:undefined,suffix:','+geometry+');',fixed:false}]
   const program=programs.find(({runtime,suffix})=>runtime&&script.startsWith('('+runtime+')(')&&script.endsWith(suffix))
   if(!program)return false
-  if(program.fixed&&!['ArrowLeft','ArrowRight'].includes(event.key))return false
+  if(!pointer&&program.fixed&&!['ArrowLeft','ArrowRight'].includes(event.key))return false
   const model=JSON.parse(script.slice(('('+program.runtime+')(').length,-program.suffix.length))
   if(chartDataIssue(model)||program.fixed&&!['line','bar'].includes(model.variant))return false
   // Resolve against the exact display projection embedded by the sandbox.
   const display=parse(researchHtmlDisplayHtml(html,true)),target=event.targetRoute.reduce((node:Element|undefined,index:number)=>node?.children[index],display.body),svgs=[...display.querySelectorAll('svg')]
-  return svgs.length===1&&target===svgs[0]&&(program.fixed||(attr(target!,'class')??'').split(/\s+/).includes('template-chart'))
+  const svg=svgs[0]
+  if(svgs.length!==1||!svg||!program.fixed&&!(attr(svg,'class')??'').split(/\s+/).includes('template-chart'))return false
+  if(!pointer)return target===svg
+  // Only passive geometry inside this exact host chart can locate a point.
+  // Legend handlers also bind data-chart-series on non-button elements.
+  if(![svg,...svg.querySelectorAll('*')].every(node=>node.namespaceURI==='http://www.w3.org/2000/svg'&&passiveSvg.has(node.tagName.toUpperCase())))return false
+  if(event.tag==='SUMMARY')return !program.fixed&&readOnlyDataDisclosure(display.body,target,model)
+  return !!target&&target.namespaceURI==='http://www.w3.org/2000/svg'&&target.tagName.toUpperCase()===event.tag&&target.closest('svg')===svg&&
+   !target.closest(interactive+',summary')
  }catch{return false}
 }
