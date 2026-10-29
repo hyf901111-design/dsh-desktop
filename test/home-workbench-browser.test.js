@@ -49,6 +49,7 @@ async function verifyGenerationReceipt(page,stage){
  await expect.poll(()=>card.innerText(),{message:stage+' must count all three tabs'}).toContain(expected+'/15')
  expect(await card.getAttribute('data-research-workbench-progress')).toBe(expected===15?'completed':'running')
  expect(await card.getByRole('button',{name:'重试',exact:true}).count()).toBe(0)
+ if(expected===15){const text=await card.innerText();expect(text).toContain('固定历史快照 · 不接入实时更新');expect(text).not.toContain('刷新状态待确认');expect(text).not.toContain('仅手动刷新');expect(text).not.toContain('最近刷新成功')}
 }
 async function verifyGutterRoute(page,targetId){
  const selector='[data-financial-link="'+targetId+'"] .ew-financial-connection-line'

@@ -51,7 +51,8 @@ export function homeWorkbenchProgressState(plans,snapshot,english,state){
  const fraction=state.completed+'/'+state.planned
  const title=complete?say('组件已生成 · '+fraction,'Components generated · '+fraction):ended?say('组件生成已停止 · '+fraction+' 已生成','Generation stopped · '+fraction+' generated'):paused?say('组件生成已暂停 · '+fraction+' 已生成','Generation paused · '+fraction+' generated'):phase==='inactive'?say('组件状态等待更新 · '+fraction,'Awaiting component status · '+fraction):phase==='unknown'?say('组件状态待确认 · '+fraction,'Component status needs verification · '+fraction):phase==='partial'?say('组件生成已结束 · '+fraction+' 已生成','Generation ended · '+fraction+' generated'):say('组件生成中 · 已生成 '+fraction,'Generating components · '+fraction+' generated')
  const detail=[say('已生成 '+state.completed,state.completed+' generated'),state.pending?say((ended?'已停止 ':'进行中 ')+state.pending,state.pending+(ended?' stopped':' in progress')):'',unplaced?say((ended?'未开始 ':finished?'当前画布缺少 ':'待放置 ')+unplaced,unplaced+(ended?' not started':finished?' absent from the current canvas':' awaiting placement')):'',state.failed?say('未完成 '+state.failed,state.failed+' failed'):'',state.cancelled?say('已停止 '+state.cancelled,state.cancelled+' stopped'):'',state.unknown?say('待确认 '+state.unknown,state.unknown+' unverified'):''].filter(Boolean).join(' · ')
- return {...state,phase,title,detail,unplaced}
+ const refreshLines=state.completed>0?[say('固定历史快照 · 不接入实时更新','Fixed historical snapshot · No live updates')]:[]
+ return {...state,phase,title,detail,unplaced,refreshLines,refreshHistory:'',refreshDetail:refreshLines.join('')}
 }
 export function homeWorkbenchGenerating(plans,current,state,retrying){
  return isHomeWorkbenchReceipt(plans)?current?.active!==false&&state.phase==='running':current?.active!==false&&state.pending>0||retrying

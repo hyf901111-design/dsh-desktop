@@ -21,6 +21,13 @@ it('keeps all fifteen planned instances visible until actual component hydration
  expect(progress(p,snapshot(15))).toMatchObject({phase:'completed',completed:15,total:15})
  const pending=snapshot(15);pending.nodes[14].status='running';expect(progress(p,pending)).toMatchObject({phase:'running',completed:14,pending:1})
 })
+it('labels only typed demo receipts as frozen historical snapshots after a real component completes',()=>{
+ const staleRefresh={refreshLines:['刷新状态待确认 11','仅手动刷新，最近刷新成功 4'],refreshHistory:'上次观察：',refreshDetail:'上次观察：刷新状态待确认 11'}
+ for(const count of [1,5,15]){const p=plans(),state=homeWorkbenchProgressState(p,snapshot(count),false,{...workbenchProgressState(p,snapshot(count)),...staleRefresh});expect(state.refreshLines).toEqual(['固定历史快照 · 不接入实时更新']);expect(state.refreshHistory).toBe('');expect(state.refreshDetail).toBe('固定历史快照 · 不接入实时更新')}
+ const p=plans(),empty=homeWorkbenchProgressState(p,snapshot(0),false,{...workbenchProgressState(p,snapshot(0)),...staleRefresh});expect(empty.refreshLines).toEqual([]);expect(empty.refreshDetail).toBe('')
+ const ordinary=[{id:'normal-plan',count:15}],normal={...workbenchProgressState(ordinary,snapshot(15)),...staleRefresh};expect(homeWorkbenchProgressState(ordinary,snapshot(15),false,normal)).toBe(normal)
+ expect(homeWorkbenchProgressState(p,snapshot(15),true,workbenchProgressState(p,snapshot(15),true)).refreshLines).toEqual(['Fixed historical snapshot · No live updates'])
+})
 it('pause and cancellation preserve truthful counts without generic model retry or false completion',()=>{
  const paused=plans().map(p=>({...p,replay:{...p.replay,phase:'paused'}})),stopped=plans().map(p=>({...p,replay:{...p.replay,phase:'stopped'}}))
  expect(progress(paused,snapshot(5))).toMatchObject({phase:'paused',completed:5,unplaced:10})
