@@ -101,6 +101,11 @@ it('never activates a different native sidebar session while restoring the note 
  expect(await f.command('type',{stage:'selection'})).toMatchObject({ok:false})
  expect(f.submissions).toEqual([]);expect(f.record.shell.snapshot.draft).toBe('');expect(JSON.stringify(f.sidebar.getSnapshot())).toBe(before)
 })
+it('marks only a rejected Stop as cancelled when its native owner has changed',async()=>{
+ const f=fixture();await f.mount();f.doc.querySelector('[data-srb-session-header]').dataset.eworkNotesSession='different-session'
+ expect(await f.command('stop',{generationRequestId:'old-own-request'})).toMatchObject({ok:false,cancelled:true})
+ const changed=await f.command('configure-quote');expect(changed).toMatchObject({ok:false});expect(changed.cancelled).toBeUndefined()
+})
 
 it('uses only the quote input aria-controls popup despite another matching symbol popup',async()=>{
  const f=fixture({foreignPopup:true});await f.mount()

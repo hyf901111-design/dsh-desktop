@@ -173,10 +173,10 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
    const detail=event.detail
    if(detail?.sessionId!==sessionId||!['requestId','sessionId','runId','hostId'].every(key=>typeof detail[key]==='string'&&/^[\w:-]{1,128}$/.test(detail[key])))return
    const signature=JSON.stringify(detail),old=requests.get(detail.requestId)
-   const reply=(ok,result,message)=>{if(!closed)window.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-native-reply',{detail:{requestId:detail.requestId,sessionId,runId:detail.runId,ok,result,message}}))}
+   const reply=(ok,result,message,cancelled=false)=>{if(!closed)window.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-native-reply',{detail:{requestId:detail.requestId,sessionId,runId:detail.runId,ok,result,message,...cancelled?{cancelled:true}:{}}}))}
    if(old&&old.signature!==signature){reply(false,undefined,'请求标识已用于其他操作。');return}
    const promise=old?.promise||execute(detail);requests.set(detail.requestId,{signature,promise});if(requests.size>128)requests.delete(requests.keys().next().value)
-   void promise.then(result=>reply(true,result),error=>reply(false,undefined,error.message||'笔记示例已停止。'))
+   void promise.then(result=>reply(true,result),error=>reply(false,undefined,error.message||'笔记示例已停止。',detail.command==='stop'&&error.name==='AbortError'))
   }
   const taskState=event=>{const value=event.detail,ticket=owned;if(!ticket||value?.sessionId!==sessionId||typeof value.requestId!=='string')return;try{check(ticket)}catch{return}if(value.phase==='preparing'&&ticket.submitting?.prompt===value.prompt){ticket.submitting.requests.add(value.requestId);ticket.pendingRequests.add(value.requestId)}if(['ready','replied','accepted','discarded','failed','stopped'].includes(value.phase))ticket.pendingRequests.delete(value.requestId)}
   const playback=event=>{const value=event.detail,ticket=owned;if(ticket&&value?.sessionId===sessionId&&value.runId===ticket.detail.runId){if(value.ending===true){dispose();return}ticket.playing=value.playing===true;if(ticket.detail.fresh)void rpc(ticket,'playback',{playing:ticket.playing}).catch(()=>{})}}

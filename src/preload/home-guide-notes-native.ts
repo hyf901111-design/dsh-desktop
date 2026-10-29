@@ -22,7 +22,7 @@ export async function createHomeNotesNativeBridge(document:Document,host:HTMLEle
    let timer:ReturnType<typeof setTimeout>|undefined
    const clean=()=>{if(timer!==undefined)clearTimeout(timer);clock.abort();pending.delete(cancel);win.removeEventListener('sherlock:home-guide-notes-native-reply',receive)}
    const cancel=()=>{clean();reject(aborted())}
-   const receive=(event:Event)=>{const result=(event as CustomEvent).detail;if(result?.requestId!==input.requestId||result.runId!==options.runId||result.sessionId!==options.sessionId)return;clean();result.ok===true?resolve(result.result):reject(Error(result.message||'笔记示例任务尚未就绪。'))}
+   const receive=(event:Event)=>{const result=(event as CustomEvent).detail;if(result?.requestId!==input.requestId||result.runId!==options.runId||result.sessionId!==options.sessionId)return;clean();result.ok===true?resolve(result.result):reject(input.command==='stop'&&result.cancelled===true?aborted():Error(result.message||'笔记示例任务尚未就绪。'))}
    pending.add(cancel);win.addEventListener('sherlock:home-guide-notes-native-reply',receive)
    const expire=()=>{clean();reject(Error('笔记示例任务未及时确认，请重试。'))},budget=command==='mount'?12000:90000
    if(options.wait)void options.wait(budget,clock.signal).then(expire,()=>{})

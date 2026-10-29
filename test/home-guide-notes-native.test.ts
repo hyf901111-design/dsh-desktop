@@ -50,3 +50,12 @@ test('settles an own Stop when synchronous disposal cancels its actual native ac
  const failed=createHomeNotesGuideBridge('note-session',new AbortController().signal,undefined,undefined,undefined,{generate:async()=>({kind:'text',markdown:''}),stop:async()=>{throw Error('真实停止失败')}})
  await expect(failed.request('stop',{sessionId:'note-session',requestId:'own-summary'})).rejects.toThrow('真实停止失败');failed.dispose()
 })
+test('preserves cancellation only for a native Stop rejection that arrives before delayed disposal',async()=>{
+ const f=fixture(),native=await createHomeNotesNativeBridge(document,f.host,f.options);releases.push(native.dispose)
+ const bridge=createHomeNotesGuideBridge('note-session',f.scope.signal,undefined,undefined,undefined,native);releases.push(bridge.dispose)
+ let cancelled=true;f.setAnswer(detail=>{setTimeout(()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-native-reply',{detail:{requestId:detail.requestId,runId:detail.runId,sessionId:detail.sessionId,ok:false,message:'真实停止回复',cancelled}})),0)})
+ await expect(bridge.request('stop',{sessionId:'note-session',requestId:'own-summary'})).resolves.toEqual({ok:true})
+ cancelled=false;await expect(bridge.request('stop',{sessionId:'note-session',requestId:'own-summary'})).rejects.toThrow('真实停止回复')
+ cancelled=true;await expect(native.type('selection')).rejects.toMatchObject({name:'Error',message:'真实停止回复'})
+ native.dispose()
+})
