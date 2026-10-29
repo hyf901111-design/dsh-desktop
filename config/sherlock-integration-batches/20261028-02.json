@@ -1207,99 +1207,21 @@
         "schemaVersion": 1,
         "featureName": "研究看板预览与编辑模式",
         "branch": "codex/feat/research-theme-menu-20261028",
-        "baseCommit": "fe414cfbcab9cee3a663ed7f14af4b89c5db5a6b",
-        "tipCommit": "7dab4a396afc266e538e2f475bd80ed9297c17cd",
+        "baseCommit": "7dab4a396afc266e538e2f475bd80ed9297c17cd",
+        "tipCommit": "acb4dc3994243f8bc140900324e527738f5cb319",
         "commits": [
           {
-            "commit": "880c8aa71e3f596cc907c01a06db3e9edf5f1b92",
+            "commit": "acb4dc3994243f8bc140900324e527738f5cb319",
             "parents": [
-              "fe414cfbcab9cee3a663ed7f14af4b89c5db5a6b"
+              "7dab4a396afc266e538e2f475bd80ed9297c17cd"
             ],
-            "subject": "新增研究顶栏预览编辑切换入口及会话状态验证"
-          },
-          {
-            "commit": "aa585cf3a6aff080fbf3d344a7501324e76dc16d",
-            "parents": [
-              "880c8aa71e3f596cc907c01a06db3e9edf5f1b92"
-            ],
-            "subject": "新增研究看板预览模式并隔离结构编辑与组件使用"
-          },
-          {
-            "commit": "7dab4a396afc266e538e2f475bd80ed9297c17cd",
-            "parents": [
-              "aa585cf3a6aff080fbf3d344a7501324e76dc16d"
-            ],
-            "subject": "修复研究预览安装对金融连线作用域参数的兼容"
+            "subject": "优化研究预览模式标识并隐藏画布选中框与连线"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-10-29-research-preview-mode.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/verification/2026-10-29-research-preview-mode.md"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/attachment-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/audio-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/board-tabs-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/board-tabs-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/calendar-tool-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-pptx-mode.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/financial-widget-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-reply-actions.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
             "status": "M",
             "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/research-preview-mode.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/workbench-restore-codec.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-storage.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-context-bridge.ts"
           },
           {
             "status": "M",
@@ -1311,31 +1233,11 @@
           },
           {
             "status": "M",
-            "path": "test/component-pptx-mode.test.ts"
-          },
-          {
-            "status": "A",
             "path": "test/research-preview-header.test.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/research-preview-mode-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-preview-patch-compat.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-preview-state.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-preview-transport.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-restore-codec.test.js"
           }
         ],
         "checks": [
@@ -1344,47 +1246,19 @@
               "node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-preview-mode-browser.test.js",
-              "test/research-preview-state.test.ts",
               "test/research-preview-header.test.ts",
-              "test/research-preview-transport.test.ts",
-              "test/component-pptx-mode.test.ts",
-              "test/research-canvas-storage.test.ts",
-              "test/workbench-restore-codec.test.js",
+              "test/research-preview-mode-browser.test.js",
               "test/research-preview-patch-compat.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-context-bridge.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "冻结新tip10文件99项，含current/legacy financial-call真实producer shape、精确strip/再patch字节幂等及preview交互；日志 /tmp/sherlock-research-preview-surface-handoff-20261029/core.log SHA256 e6fa9a95cfea6c439edae4240ae36cccdc1d05fb3cd8ac595ae568dd167f7e47",
-            "verifiedCommit": "7dab4a396afc266e538e2f475bd80ed9297c17cd",
-            "completedAt": "2026-10-29T05:11:13.470713+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
               "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-theme-browser.test.js",
+              "test/openterminal-dark-controls.test.js",
               "--maxWorkers=1",
               "--fileParallelism=false",
-              "--testTimeout=15000",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "冻结新tip7文件69项主题、页签、深色控件与排列回归；日志 /tmp/sherlock-research-preview-surface-handoff-20261029/related.log SHA256 c8f847fe40f884eb897e816c9fe8fd5b903f35783fae3e07a01266902e9dea63",
-            "verifiedCommit": "7dab4a396afc266e538e2f475bd80ed9297c17cd",
-            "completedAt": "2026-10-29T05:10:53.253162+00:00",
+            "summary": "clean冻结acb4实际运行5文件44项全部通过；含四主题外框/跨页连线可视隐藏、OT普通1px边、自选高亮与切公司联动、浅深色模式pill、相关strict strip/byteeq；前后HEAD/status/5路径hash/SDK hash一致；/tmp/sherlock-preview-visual-successor-20261029/fresh-acb4/focused.log SHA256 55319a9dd4e43f9803d01ea55b89e33f9613353cf44da67adc776e5e31cc37ab",
+            "verifiedCommit": "acb4dc3994243f8bc140900324e527738f5cb319",
+            "completedAt": "2026-10-29T07:06:10.534412+00:00",
             "timeoutMs": 180000
           },
           {
@@ -1396,9 +1270,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "冻结新tip TypeScript检查通过；日志 /tmp/sherlock-research-preview-surface-handoff-20261029/typecheck.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "7dab4a396afc266e538e2f475bd80ed9297c17cd",
-            "completedAt": "2026-10-29T05:10:13.621044+00:00",
+            "summary": "clean冻结acb4实际TypeScript检查通过；前后HEAD/status/5路径hash/SDK hash一致；/tmp/sherlock-preview-visual-successor-20261029/fresh-acb4/typecheck.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "acb4dc3994243f8bc140900324e527738f5cb319",
+            "completedAt": "2026-10-29T07:04:56.943058+00:00",
             "timeoutMs": 180000
           },
           {
@@ -1406,271 +1280,31 @@
               "git",
               "diff",
               "--check",
-              "fe414cfbcab9cee3a663ed7f14af4b89c5db5a6b..HEAD"
+              "7dab4a396afc266e538e2f475bd80ed9297c17cd..HEAD"
             ],
             "outcome": "passed",
-            "summary": "fe414到冻结新tip的diff --check通过；日志 /tmp/sherlock-research-preview-surface-handoff-20261029/diff.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "7dab4a396afc266e538e2f475bd80ed9297c17cd",
-            "completedAt": "2026-10-29T05:10:13.821132+00:00",
-            "timeoutMs": 180000
+            "summary": "clean冻结acb4实际base7dab..HEAD差异检查通过；前后HEAD/status/5路径hash/SDK hash一致；/tmp/sherlock-preview-visual-successor-20261029/fresh-acb4/diff.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "acb4dc3994243f8bc140900324e527738f5cb319",
+            "completedAt": "2026-10-29T07:04:48.661291+00:00",
+            "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "新tip上的production ResearchCanvas headless UI、顶栏与PPT交互通过；Root14f真实producer graph块只读重放与新call形状一致。最新Root全链完整installer两遍和签名包主界面验收待Root执行。证据 /tmp/sherlock-research-preview-surface-handoff-20261029/verification.json"
+          "summary": "clean冻结acb4实际production ResearchCanvas与真实Header headless交互通过，相关5文件44项；每项执行前后HEAD/status/hash一致，4张fresh浅深色模式pill截图。/tmp/sherlock-preview-visual-successor-20261029/verification.json"
         },
         "acceptanceCriteria": [
-          "顶栏首个icon切换preview/edit，每个看板本地保存且默认编辑",
-          "preview限制结构写入、manual内容编辑、快捷键、导入、页签设置与AI写入；ACL不升权",
-          "保留独立组件搜索/参数、上游证券联动、主题、切页、原生整理、受信宿主数据刷新、库/导出/纯复制及阅读关闭",
-          "linked接收端会隐式断线的输入readonly且明确提示上游切换，不影响独立组件搜索",
-          "拖动与连线草稿切换取消、异步copy/paste不偷写；已存在占位仍可完成；Notes surface隔离",
-          "临时完整patch两次source byte identical、旧/新restore codec兼容且原SDK SHA不变",
-          "兼容legacy与当前surface:research金融连线调用，仅改变readOnly并保留scope；未知/混合/重复形状严格拒绝"
+          "顶栏始终显示当前模式eye/square-pen图标与预览模式/编辑模式文字，并有双向切换箭头；aria目标标签保持",
+          "preview仅隐藏画布选中框与普通/创建来源连接SVG及页签stem/提示边；selection/link真实数据保留",
+          "OpenTerminal仅取消selected边色，保留普通1px #303030边界；自选行高亮/切公司联动/内部焦点行为保持",
+          "仅5路径视觉后继，Root三方保留b58 owner锁/disabled/锁定tooltip与现有日历fixture兼容"
         ],
         "risks": [
-          "共享原生签名包和实际客户端最终验收待集成owner执行，本feature未构建或替换共享客户端。",
-          "notes-reply-actions.mjs只改变codec import/读/写，三方合并须保留集成中较新的Notes业务实现。",
-          "Audio/Attachment/Calendar唯一化基线已证实为既有累加，修复限定callback/dispatch与金融dispatch尾随换行；此前失败和非幂等证据全部保留。",
-          "本轮只修预览installer的current FinancialConnections anchor；Root当前Notes第三恢复记录reader与首delimiter保护不从旧base覆盖。必须在合并树执行真实最新Notes/preview全链两遍安装与交互回归。"
+          "feature以7dab为base，不包含Root在b58的owner与日历兼容代码。三方合并header时必须保留全部owner hooks/disabled与锁定tooltip；正常tooltip改为当前+目标。",
+          "三方合并browser fixture须保留Root真实WorkspaceSurfaceHost、Note宿主元数据、calendar内部request export及stripConversationGridOverlays准备，同时保留本轮可选真实header挂载。",
+          "真实共享客户端可视验收由Root完成，本轮未构建/替换客户端。"
         ],
-        "generatedAt": "2026-10-29T05:12:40.196588+00:00"
-      },
-      "merged": {
-        "mergeCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-        "verificationCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "test/home-workbench-client.test.js",
-              "test/home-workbench-contract.test.js",
-              "test/home-workbench-runtime.test.js",
-              "test/home-workbench-native.test.js",
-              "test/home-workbench-workspace.test.js",
-              "test/home-workbench-actor.test.js",
-              "test/home-workbench-study-contract.test.js",
-              "test/home-workbench-study-render.test.js",
-              "test/home-workbench-study-integration.test.js",
-              "test/home-workbench-saved-provider.test.js",
-              "test/home-guide-workbench.test.ts",
-              "test/research-grid-arrange-tabs.test.js",
-              "test/financial-connection-row-routing.test.js",
-              "test/home-workbench-browser.test.js",
-              "test/home-guide-operations-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/home-workbench-client.test.js test/home-workbench-contract.test.js test/home-workbench-runtime.test.js test/home-workbench-native.test.js test/home-workbench-workspace.test.js test/home-workbench-actor.test.js test/home-workbench-study-contract.test.js test/home-workbench-study-render.test.js test/home-workbench-study-integration.test.js test/home-workbench-saved-provider.test.js test/home-guide-workbench.test.ts test/research-grid-arrange-tabs.test.js test/financial-connection-row-routing.test.js test/home-workbench-browser.test.js test/home-guide-operations-entry.test.ts",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "dd154b05bff55c76942c876a0ce86a6bc3ffce82",
-            "completedAt": "2026-10-29T06:03:18.770Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-29T06:03:18.770Z"
+        "generatedAt": "2026-10-29T07:07:21.035696+00:00"
       }
     },
     {
