@@ -1,0 +1,42 @@
+{
+  "interactionState": {
+    "version": "template:chart.line:22a-20260930",
+    "events": {
+      "0d2993ec-a4bf-4072-8245-1d6431fbce98": {
+        "id": "0d2993ec-a4bf-4072-8245-1d6431fbce98",
+        "clock": 1,
+        "targetRoute": [
+          2,
+          2
+        ],
+        "tag": "SVG",
+        "type": "click",
+        "x": 0.49958102919280584,
+        "y": 0.5000779312596381
+      },
+      "6b6244bd-b9c4-4f30-9528-8857085271ea": {
+        "id": "6b6244bd-b9c4-4f30-9528-8857085271ea",
+        "clock": 2,
+        "targetRoute": [
+          2,
+          2
+        ],
+        "tag": "SVG",
+        "type": "keydown",
+        "key": "ArrowRight"
+      },
+      "00ee8e4e-c8d3-407a-acf9-31cd68e99cfd": {
+        "id": "00ee8e4e-c8d3-407a-acf9-31cd68e99cfd",
+        "clock": 3,
+        "targetRoute": [
+          3,
+          0
+        ],
+        "tag": "SUMMARY",
+        "type": "click",
+        "x": 0.06244895224829078,
+        "y": 0.41890137602843147
+      }
+    }
+  }
+}
