@@ -45,7 +45,9 @@ it.each(['cancelled','pending','succeeded'])('does not admit the internal failed
 })
 it.each([
  {kind:'capabilities',calls:[{requestId:'untrusted',capability:'notes.components.create',arguments:{prompt:'new operation'}}]},
- {wireToken:'foreign',capabilities:{kind:'capabilities',calls:[{requestId:'untrusted',capability:'notes.components.create',arguments:{prompt:'new operation'}}]},commands:[{command:'write'}]}
+ {wireToken:'foreign',capabilities:{kind:'capabilities',calls:[{requestId:'untrusted',capability:'notes.components.create',arguments:{prompt:'new operation'}}]},commands:[{command:'write'}]},
+ {error:'provider returned invalid output',message:'请重试'},
+ {kind:'text',markdown:JSON.stringify({kind:'capabilities',calls:[{requestId:'leaked',capability:'notes.components.create',arguments:{prompt:'create'}}]})}
 ])('never offers a private action shell as text when the bounded fallback itself is still unusable: %j',async shell=>{
  const f=fixture([{kind:'unknown'},{kind:'unknown'},shell])
  await expect(generateNoteSuggestion(f.ctx,input)).rejects.toThrow();expect(f.calls).toHaveLength(3);expect(noteConversationRows(f.session).at(-1)).toMatchObject({phase:'failed'})
@@ -73,4 +75,20 @@ it.each(['instruction','document','owner','request'])('does not consume the priv
  const before=f.session.events.length
  await expect(generateNoteSuggestion(f.ctx,changed)).rejects.toThrow();expect(f.calls).toHaveLength(1);expect(f.session.events).toHaveLength(before)
  expect(await generateNoteSuggestion(f.ctx,continuation)).toMatchObject({kind:'text',markdown,textFallback:true});expect(f.models).toHaveBeenCalledOnce()
+})
+
+it.each([
+ '正文中的接口示例：\n\n```json\n{"kind":"capabilities","calls":[{"name":"example"}]}\n```',
+ '{"error":0,"amount":10,"source":"用户提供"}'
+])('preserves ordinary Markdown examples and business JSON while checking fallback content: %s',async body=>{
+ const f=fixture([{kind:'unknown'},{kind:'unknown'},body]);expect(await generateNoteSuggestion(f.ctx,input)).toMatchObject({kind:'text',markdown:body,textFallback:true});expect(f.calls).toHaveLength(3)
+})
+it.each([undefined,'before-components','after-components'])('keeps the original trusted placement guard for mixed successful/failed creates, hint=%s',async inlineOrder=>{
+ const first={requestId:'first-create',capability:'notes.components.create',arguments:{prompt:instruction}},second={...first,requestId:'second-create'},f=fixture([options=>({kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(options.system)[1],calls:[first,second],...inlineOrder?{inlineOrder}:{}}),markdown])
+ const original={...input,clientCapabilities:[{id:first.capability,available:true,parameters:createClientCapabilityRegistry().get(first.capability).parameters}]}
+ expect(await generateNoteSuggestion(f.ctx,original)).toMatchObject({kind:'capabilities',calls:[first,second]})
+ const continuation={...input,completionMode:'text-only',clientReceipts:[{requestId:first.requestId,capability:first.capability,status:'succeeded',effect:{state:'saved',blockId:'successful-owned'}},{requestId:second.requestId,capability:second.capability,status:'failed',effect:{state:'placeholder',blockId:'failed-owned'}}]}
+ if(inlineOrder)expect(await generateNoteSuggestion(f.ctx,continuation)).toMatchObject({kind:'text',markdown,textFallback:true,inlineOrder})
+ else {expect(await generateNoteSuggestion(f.ctx,continuation)).toMatchObject({kind:'conversation',requiresReply:true});const row=noteConversationRows(f.session).at(-1);expect(row.result?.textFallback).not.toBe(true);expect(row.pendingInlineContent).toMatchObject({kind:'text',markdown});expect(row.pendingInlineContent.calls).toHaveLength(2)}
+ expect(f.calls.map(x=>x.purpose)).toEqual(['workspace-note','workspace-note-text-fallback']);expect(f.models).toHaveBeenCalledOnce()
 })

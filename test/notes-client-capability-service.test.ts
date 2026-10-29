@@ -232,3 +232,9 @@ it('keeps real failed receipts and never repeats their action when the one text 
   expect(h.history.find(x=>x.action==='conversation-capabilities').receipts).toMatchObject([{requestId:'create-once',status:'failed',effect:{state:'placeholder',blockId:'created'}}])
  }finally{h.dispose()}
 })
+
+it('keeps the original truthful partial when its content-only continuation cannot establish mixed placement',async()=>{
+ const h=harness({inline:true,failCreate:true})
+ h.wire(body=>body.completionMode==='text-only'?{kind:'conversation',markdown:'',requiresReply:true}:{kind:'capabilities',calls:[{requestId:'create-once',capability:'notes.components.create',arguments:{prompt:inlineCreateInstruction}}]})
+ try{const result=await h.call('generate',inlineInput);expect(result).toMatchObject({kind:'conversation',requiresReply:true,capabilityReceipts:[{requestId:'create-once',status:'failed'}]});expect(result).not.toHaveProperty('textFallback');expect(h.actions.filter(x=>x.action==='notes.components.create')).toHaveLength(1);expect(h.requests).toHaveLength(2)}finally{h.dispose()}
+})

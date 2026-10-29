@@ -9,6 +9,18 @@ export function currentNoteTransport(text,wireToken){
  try{const item=JSON.parse(fence?fence[1]:value);return currentTransport(item,wireToken)?item:undefined}catch{}
 }
 
+/** Check the whole content-only result, never JSON examples embedded in prose. */
+export function noteNonContentEnvelope(text){
+ if(typeof text!=='string'||text.length>100000)return false
+ const value=text.trim(),fence=wholeJsonFence.exec(value)
+ try{
+  const item=JSON.parse(fence?fence[1]:value)
+  if(!item||typeof item!=='object'||Array.isArray(item))return false
+  const keys=Object.keys(item),error=typeof item.error==='string'||item.error&&typeof item.error==='object'
+  return ['capabilities','component'].includes(item.kind)||item.capabilities?.kind==='capabilities'||Array.isArray(item.calls)&&item.calls.some(call=>typeof call?.capability==='string')||!!error&&keys.every(key=>['error','message','code','status','type','param'].includes(key))
+ }catch{return false}
+}
+
 /** Parse only a whole private envelope. Markdown and code are never scanned. */
 export function parseNotePublicOutput(text,{hasReceipts=false,recovery=false,wireToken,displayCode=false}={}){
  if(typeof text!=='string'||text.length>100000)return

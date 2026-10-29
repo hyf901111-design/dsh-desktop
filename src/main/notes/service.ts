@@ -216,8 +216,10 @@ export function installNotesService(options: {
               await checkAnchor()
               const fallback=await generateResult(receipts,true)
               await checkAnchor()
-              if(fallback?.kind!=='text'||fallback.textFallback!==true||typeof fallback.markdown!=='string'||!fallback.markdown.trim()||fallback.markdown.length>100000)throw Error('本次没有取得完整可用正文，原需求已保留。')
-              result={kind:'text',markdown:fallback.markdown,textFallback:true,...['before-components','after-components'].includes(fallback.inlineOrder)?{inlineOrder:fallback.inlineOrder}:{},capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}
+              if(fallback?.kind!=='conversation'||fallback.requiresReply!==true){
+                if(fallback?.kind!=='text'||fallback.textFallback!==true||typeof fallback.markdown!=='string'||!fallback.markdown.trim()||fallback.markdown.length>100000)throw Error('本次没有取得完整可用正文，原需求已保留。')
+                result={kind:'text',markdown:fallback.markdown,textFallback:true,...['before-components','after-components'].includes(fallback.inlineOrder)?{inlineOrder:fallback.inlineOrder}:{},capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}
+              }
             }catch(error){await retainResult();throw error}
           }
           await retainResult()
