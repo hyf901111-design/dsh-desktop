@@ -3,7 +3,10 @@ import { afterEach, expect, it, vi } from 'vitest'
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => Object.fromEntries(['StateDot','Modal','Button','IconTrashOutline16','Menu','IconPlusOutline16','IconEllipsisOutline16','IconSearchOutline16','IconFolderOpenOutline16','IconEditOutline16','IconTriangleRightFill14'].map(name => [name, () => null])))
 import { createResearchBoardsPage } from '../src/preload/research-boards-ui'
 import {Session} from '@deepseek-ai/dsh-session'
-import {readFileSync} from 'node:fs'
+import {readFileSync,mkdtempSync,rmSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {ResearchCanvasStorage} from '../src/main/state/research-canvas-storage'
 import {runInNewContext} from 'node:vm'
 import ts from 'typescript'
 
@@ -14,7 +17,7 @@ const nativeDisplayTitle=runInNewContext([...titleFunctions.values()].join('\n')
 const cleanup: Array<() => void> = []
 afterEach(() => cleanup.splice(0).reverse().forEach(stop => stop()))
 function store<T>(value: T) { const listeners = new Set<() => void>(); return { getSnapshot: () => value, subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, set(next: T) { value = next; listeners.forEach(fn => fn()) } } }
-async function fixture({ disk = new Map<string, string>(), byId = {} as Record<string, any>, createGate = Promise.resolve() } = {}) {
+async function fixture({ disk = new Map<string, string>(), byId = {} as Record<string, any>, createGate = Promise.resolve(), storage = undefined as Pick<ResearchCanvasStorage,'getItem'|'setItem'> | undefined } = {}) {
   const oldEvent = globalThis.Event, oldDocument = globalThis.document
   const win = new Window({ url: 'http://localhost:43210' }), requests: any[] = [], opened: string[] = [], archived: string[] = [],nativeSessions=new Map<string,any>()
   const list = store<{ current: string; byId: Record<string, any> }>({ current: 'original', byId: { original: { id: 'original', title: '我的研究', cwd: '/workspace' }, ...byId } })
@@ -23,7 +26,7 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   const canvases = new Map<string, any>()
   const workspaces = { list: store({ items: [] as any[] }), create: async ({path}: {path:string}) => { requests.push(['workspace.create',path]); const existing=workspaces.list.getSnapshot().items.find(item=>item.path===path);if(existing)return existing;const item={workspaceId:'workspace:'+path,path,sessionIds:[]};workspaces.list.set({items:[...workspaces.list.getSnapshot().items,item]});return item }, api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: '/workspace' } } }) }, sessions: {create:async(input:any)=>{requests.push(['workspace.attach',input]);workspaces.list.set({items:workspaces.list.getSnapshot().items.map(item=>item.workspaceId===input.workspaceId?{...item,sessionIds:[input.sessionId]}:item)});return {result:{ok:true,value:{sessionId:input.sessionId}}}}} }, archiveSession: async (id: string) => { archived.push(id) } }
   const sessions = { list, open(id: string) { opened.push(id); list.set({ ...list.getSnapshot(), current: id }) }, async create({ cwd }: any) { requests.push(['create', cwd]); await createGate; const id = 'guide-' + (++sequence); nativeSessions.set(id,Session.create(id as Parameters<typeof Session.create>[0])); list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { id, cwd, blank: true } } }); return id }, binding(id: string) { return { session: { getSnapshot: () => list.getSnapshot().byId[id], projections:{faceOf:()=>({getSnapshot:()=>nativeSessions.has(id)?nativeSessions.get(id).events.findLast((event:any)=>event.type==='session/title')?.data.title:list.getSnapshot().byId[id]?.title})}, subscribe: () => () => {}, rename: async (title: string) => {nativeSessions.get(id)?.append('session/title',{title,source:{kind:'user'}});list.set({ ...list.getSnapshot(), byId: { ...list.getSnapshot().byId, [id]: { ...list.getSnapshot().byId[id], title, displayTitle: title } } });return{ok:true,value:{title,seq:1}}} } } } }
-  ;(win as any).dshDesktop = { researchCanvasStorage: { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
+  ;(win as any).dshDesktop = { researchCanvasStorage: storage ?? { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
   globalThis.Event = win.Event as unknown as typeof Event
   globalThis.document = win.document as unknown as Document
   const page = createResearchBoardsPage({ document: win.document as unknown as Document, sessions, workspaces, inputHub: { shells: new Map() }, researchWorkspaces: { for(id: string) { if (!canvases.has(id)) canvases.set(id, { getSnapshot: () => ({ files: [], artifacts: [] }), subscribe: () => () => {}, persist: () => true }); return canvases.get(id) } }, bridge: { isSharedSession: () => false, getSnapshot: async () => state, subscribe: (fn: (event: any) => void) => { emit = fn; return () => {} }, invoke: async (action: string, input: any) => { requests.push([action, input]); if (action === 'local.directory' && input.mode === 'reserve') return { ok: true, value: { directoryId: 'd-' + requests.length, path: '/workspace/examples/' + requests.length } }; if (action === 'favorite.add') { const item = { ...input.identity, favoriteId: 'f-' + requests.length, dedicated: true }; state.favorites.push(item); return { ok: true, value: item } } return { ok: true, value: null } } } } as any)
@@ -156,16 +159,23 @@ it('keeps a registered same-owner example when its current directory is selected
  f.setOwner('other');await expect(f.page.associateProject(ppt.sessionId,'::board-directory')).rejects.toThrow()
 })
 
-it('registers the workbench replay as an independent persistent research board',async()=>{
- const f=await fixture(),first=await f.reply(f.send('workbench','prepare',{replay:true}))
+it('registers the workbench replay through real main storage and reopens it after a cold reader restart',async()=>{
+ const directory=mkdtempSync(join(tmpdir(),'home-guide-main-storage-'))
+ cleanup.push(()=>rmSync(directory,{recursive:true,force:true}))
+ const f=await fixture({storage:new ResearchCanvasStorage(directory)}),first=await f.reply(f.send('workbench','prepare',{replay:true}))
  expect(first).toMatchObject({ok:true,title:'白酒龙头研究工作台（演示案例）',fresh:true})
  expect(f.sessions.list.getSnapshot().byId[first.sessionId].title).toBe('新研究')
  expect(f.requests.filter(item=>item[0]==='favorite.add')).toEqual([['favorite.add',expect.objectContaining({dedicated:true,identity:expect.objectContaining({sessionId:first.sessionId,title:first.title})})]])
  expect((await f.reply(f.send('workbench','open',{sessionId:first.sessionId}))).ok).toBe(true)
  expect(f.opened).toEqual([first.sessionId])
+ expect(await f.reply(f.send('workbench','activate-title',{sessionId:first.sessionId}))).toMatchObject({ok:true})
+ expect(f.sessions.list.getSnapshot().byId[first.sessionId].title).toBe(first.title)
  const next=await f.reply(f.send('workbench','prepare',{replay:true}))
  expect(next.sessionId).not.toBe(first.sessionId);expect(next.cwd).not.toBe(first.cwd)
- const reopened=await fixture({disk:f.disk,byId:f.sessions.list.getSnapshot().byId})
+ const reopened=await fixture({storage:new ResearchCanvasStorage(directory),byId:f.sessions.list.getSnapshot().byId})
  expect(await reopened.reply(reopened.send('workbench'))).toMatchObject({ok:true,sessionId:next.sessionId,fresh:false})
+ expect(reopened.requests.filter(item=>item[0]==='create')).toHaveLength(0)
+ expect(await reopened.reply(reopened.send('workbench','open',{sessionId:next.sessionId}))).toMatchObject({ok:true,sessionId:next.sessionId})
+ expect(reopened.opened).toEqual([next.sessionId])
  reopened.setOwner('different');expect((await reopened.reply(reopened.send('workbench','open',{sessionId:next.sessionId}))).ok).toBe(false)
 })
