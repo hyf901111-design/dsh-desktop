@@ -2550,7 +2550,7 @@
         "featureName": "修复笔记演示标记命中、随航拖动同步与行情失败换源",
         "branch": "codex/feat/notes-demo-flow-20261029",
         "baseCommit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
-        "tipCommit": "398015433f07bb265a21cccf24591af593383b57",
+        "tipCommit": "bd0e5b98b46bab078519b888564edc62805e5a16",
         "commits": [
           {
             "commit": "398015433f07bb265a21cccf24591af593383b57",
@@ -2558,6 +2558,13 @@
               "9bed68b200d91d3ca945edefdf686dc1b20d966b"
             ],
             "subject": "修复笔记演示改写按钮与原生输入预填需求不一致"
+          },
+          {
+            "commit": "bd0e5b98b46bab078519b888564edc62805e5a16",
+            "parents": [
+              "398015433f07bb265a21cccf24591af593383b57"
+            ],
+            "subject": "测试：统一笔记演示真实改写按钮夹具的共享需求"
           }
         ],
         "files": [
@@ -2576,6 +2583,10 @@
           {
             "status": "M",
             "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-native-editor.test.js"
           }
         ],
         "checks": [
@@ -2584,16 +2595,31 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-notes-browser.test.js",
-              "-t",
-              "real NotesApp rewrite button|mismatched user draft after|checks three actual evidence cards",
+              "test/home-guide-notes-native-editor.test.js",
               "--maxWorkers=1",
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "冻结tip真实Chromium3/3通过：实际NotesApp改写按钮→NativePortal→SDK shell单次发送且选区正确；普通笔记原预填不变；非匹配用户草稿拒绝；原25步三份依据/总结预览插入/保存导出重开回归。",
-            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
-            "completedAt": "2026-10-30T18:07:14.906948+00:00",
+            "summary": "冻结tip真实NotesApp native-editor完整文件20/20通过，旧按钮预填及submit fixture均用共享HOME常量并校验生成prompt。",
+            "verifiedCommit": "bd0e5b98b46bab078519b888564edc62805e5a16",
+            "completedAt": "2026-10-30T19:02:58.240529+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-notes-browser.test.js",
+              "-t",
+              "real NotesApp rewrite button|mismatched user draft after",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "冻结tip实际NotesApp按钮→NativePortal→实际SDK shell组合2/2通过，普通笔记原预填保持、非匹配用户草稿拒绝保留。",
+            "verifiedCommit": "bd0e5b98b46bab078519b888564edc62805e5a16",
+            "completedAt": "2026-10-30T19:03:40.886955+00:00",
             "timeoutMs": 180000
           },
           {
@@ -2608,9 +2634,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "冻结tip NativePortal3/3聚焦通过：已有exact预填单发、用户草稿变化拒绝、occurrence拒绝保持。",
-            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
-            "completedAt": "2026-10-30T18:05:51.128023+00:00",
+            "summary": "冻结tip NativePortal3/3聚焦通过：exact预填仅发一次、用户草稿变化拒绝、occurrence拒绝保持。",
+            "verifiedCommit": "bd0e5b98b46bab078519b888564edc62805e5a16",
+            "completedAt": "2026-10-30T19:02:47.924708+00:00",
             "timeoutMs": 120000
           },
           {
@@ -2623,8 +2649,8 @@
             ],
             "outcome": "passed",
             "summary": "冻结tip Node TypeScript通过。",
-            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
-            "completedAt": "2026-10-30T18:05:52.481932+00:00",
+            "verifiedCommit": "bd0e5b98b46bab078519b888564edc62805e5a16",
+            "completedAt": "2026-10-30T19:02:50.026424+00:00",
             "timeoutMs": 120000
           },
           {
@@ -2635,9 +2661,9 @@
               "9bed68b200d91d3ca945edefdf686dc1b20d966b..HEAD"
             ],
             "outcome": "passed",
-            "summary": "9bed严格后继diff check通过。",
-            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
-            "completedAt": "2026-10-30T18:07:14.924195+00:00",
+            "summary": "base9bed到冻结tip diff check通过。",
+            "verifiedCommit": "bd0e5b98b46bab078519b888564edc62805e5a16",
+            "completedAt": "2026-10-30T19:03:40.910375+00:00",
             "timeoutMs": 120000
           },
           {
@@ -2649,29 +2675,28 @@
             ],
             "outcome": "passed",
             "summary": "冻结tip工作树无未提交改动。",
-            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
-            "completedAt": "2026-10-30T18:07:14.940418+00:00",
+            "verifiedCommit": "bd0e5b98b46bab078519b888564edc62805e5a16",
+            "completedAt": "2026-10-30T19:03:40.927425+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际NotesApp浮动按钮与实际NativePortal/SDK shell在Chromium组合通过，普通笔记真实按钮原默认也通过；外部Host、行情与InputBar表现层是明确夹具，不冒充签名包Native验收。"
+          "summary": "冻结tip native-editor20与真实NotesApp按钮/原Portal/SDK shell组合2、Portal3聚焦均通过。保留普通笔记真实按钮原预填覆盖；Host/行情/InputBar表现层边界明确，签名客户端完整演示待Root验收。"
         },
         "acceptanceCriteria": [
-          "base9bed68b200d91d3ca945edefdf686dc1b20d966b到tip398015433f07bb265a21cccf24591af593383b57严格单中文提交，只有4路径；产品仅editor.tsx import与预填条件两处。",
-          "guide.native真实改写按钮复用共享HOME_NOTES_REWRITE_PROMPT，与Portal和演示运行时一致，不再拒绝自身预填。",
-          "普通笔记仍用原通用改写预填与本地化；没有改变ordinary笔记改写逻辑。",
-          "Portal exact draft与record/draftRev/image/occurrence/选区及单请求归属保护保持，非匹配用户草稿原样保留且不发送。",
-          "真正组合实际NotesApp浮动按钮、原NativePortal、实际SDK SessionInputShell和原draft adapter，断言发一次、selection范围正确、替换预览出现，不以特制预填代替真实按钮。",
-          "原25步、三份依据、两处优化、整段改写、总结主区pending→preview→插入、保存导出重开保持。"
+          "完整卡base9bed→bd0必须同时保留398共享预填生产修复和bd0旧直接fixture修正，两中文提交；不混其他tip。",
+          "398产品仅editor.tsx两处：guide.native复用HOME_NOTES_REWRITE_PROMPT，普通笔记原通用本地化预填保持。",
+          "bd0严格test-only后继仅test/home-guide-notes-native-editor.test.js：共享HOME import、实际按钮exact预填断言、submit参数和生成prompt断言，产品与CAS无新改动。",
+          "原Portal exact draft、record/draftRev/image/occurrence、选区和请求归属保护保持；非匹配用户草稿不发送且原样保留。",
+          "实际NotesApp按钮→原draft事件adapter→实际SDK shell→原NativePortal组合成功，非特制预填替代按钮；普通笔记原文案由真实按钮点击覆盖。"
         ],
         "risks": [
-          "签名包真实完整演示仍由Root官方集成后构建验收；feature未操作App、SDK、integration、manifest或任何真实用户会话。",
-          "Browser外部Host/行情响应与InputBar表现层为测试边界；NativePortal和SDK输入状态机、实际NotesApp按钮/选区/生成/预览/保存路径为真实实现。",
-          "现场e9c日志已确定第19步native-input-changed，无paused/cancelled/guard-rejected；共享常量修复针对已证提示词不一致，不宣称覆盖无证据的其他停止原因。"
+          "功能树未操作共享App、SDK、integration、manifest、真实session，也未构建/发布；真实签名客户端完整演示仍由Root官方集成后验收。",
+          "本轮仅重跑指定native-editor20、组合Browser2、Portal3、TC；原完整25步已在398通过，本次test-only增量未重复整套。",
+          "完整refresh卡由正式生成器以base9bed生成，scoped398→bd0卡仅用于test-only独立review，不应用于尚未成功merge的full feature refresh。"
         ],
-        "generatedAt": "2026-10-30T18:09:38.888908+00:00"
+        "generatedAt": "2026-10-30T19:05:15.637458+00:00"
       }
     },
     {
