@@ -36,8 +36,8 @@ async function open(){
  const root=mkdtempSync(resolve(tmpdir(),'notes-native-operations-')),store=new NotesStore(root);store.save('fixture','native-fixture',0,{title:'原生操作验收',blocks:[{id:'before',type:'paragraph',content:'保留前段'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后段'}],yjs:''},'seed')
  const context=await browser.newContext({viewport:{width:1200,height:900}}),page=await context.newPage(),errors:string[]=[]
  const main=new NotesCapabilityBridge(value=>{void page.evaluate((input:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:input})),value)})
- let session=Session.create('native-fixture' as any);let runtimeHandler:any;const historyPath=resolve(root,'sdk-session.json')
- const disposeRuntime=registerNoteSessions({sessions:{get:(id:string)=>id==='native-fixture'?session:undefined,flush:async(current:any)=>{writeFileSync(historyPath,JSON.stringify({header:current.header,events:current.events}));return true}},sessionTitle:{rename:(current:any,title:string)=>{current.append('session/title',{title});return{title}}},webServer:{register:(route:any)=>{runtimeHandler=route.handler;return()=>{}}}},{isTrustedRequest:()=>true,readJsonBody:async(req:any)=>req.body})
+ let session=Session.create('native-fixture' as any);let runtimeHandler:any,historyWritable=true;const historyPath=resolve(root,'sdk-session.json')
+ const disposeRuntime=registerNoteSessions({sessions:{get:(id:string)=>id==='native-fixture'?session:undefined,flush:async(current:any)=>{if(!historyWritable)return false;writeFileSync(historyPath,JSON.stringify({header:current.header,events:current.events}));return true}},sessionTitle:{rename:(current:any,title:string)=>{current.append('session/title',{title});return{title}}},webServer:{register:(route:any)=>{runtimeHandler=route.handler;return()=>{}}}},{isTrustedRequest:()=>true,readJsonBody:async(req:any)=>req.body})
  const server=createServer(async(req,res)=>{try{let body='';for await(const chunk of req)body+=chunk;await runtimeHandler({method:req.method,body:JSON.parse(body)},res)}catch(error){res.writeHead(500);res.end(JSON.stringify({error:String(error)}))}});await new Promise<void>(done=>server.listen(0,'127.0.0.1',done))
  let handler:any,writable=true
  const hostWindow={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:2},send:(channel:string,input:any)=>{if(channel==='notes:capability-action')void page.evaluate((input:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:input})),input)}}}
@@ -48,7 +48,7 @@ async function open(){
  page.on('pageerror',(error:Error)=>errors.push(error.message))
  await page.route('https://native-note.test/**',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><body data-workspace-surface="notes"><header data-ework-notes-session="native-fixture"></header><section class="en-root"><div id="root" class="en-editor-host"></div></section></body>'}));await page.goto('https://native-note.test/');await page.addScriptTag({content:'var exports={};\n'+script});await page.locator('.bn-editor').waitFor()
  await page.evaluate(()=>{const w=window as any;w.editor.replaceBlocks(w.editor.document,w.saved.blocks);w.editor.focus();w.editor.setTextCursorPosition('anchor','start')})
- return{page,context,errors,store,main,session,host,history:()=>noteConversationRows(session),restartHistory:()=>{const value=JSON.parse(readFileSync(historyPath,'utf8'));session=Session.fromRestore('native-fixture' as any,value.events,value.header)},async close(){main.dispose();disposeService();disposeRuntime();await new Promise<void>(done=>server.close(()=>done()));await context.close();rmSync(root,{recursive:true,force:true})}}
+ return{page,context,errors,store,main,session,host,setHistoryWritable:(value:boolean)=>{historyWritable=value},history:()=>noteConversationRows(session),restartHistory:()=>{const value=JSON.parse(readFileSync(historyPath,'utf8'));session=Session.fromRestore('native-fixture' as any,value.events,value.header)},async close(){main.dispose();disposeService();disposeRuntime();await new Promise<void>(done=>server.close(()=>done()));await context.close();rmSync(root,{recursive:true,force:true})}}
 }
 it.each([{entry:'space',size:8},{entry:'sidebar',size:8},{entry:'space',size:3},{entry:'sidebar',size:3}])('creates a directly editable native $size by $size table without a model or child through $entry',async({entry,size})=>{
  const f=await open();try{
@@ -282,5 +282,15 @@ it('keeps an actual failed native save as applied-only durable history while pre
   await expect.poll(()=>f.history()[0]?.phase).toBe('failed');expect(f.history()[0].result.capabilityReceipts[0]).toMatchObject({status:'failed',effect:{state:'applied'}});expect(await f.page.locator('.bn-editor table').count()).toBe(1)
   f.restartHistory();expect((await f.host('conversation-load',{})).rows[0]).toMatchObject({phase:'failed',prompt:'创建一个3乘3的表格',result:{capabilityReceipts:[{status:'failed',effect:{state:'applied'}}]}})
   await f.page.evaluate(()=>(window as any).failSave=false);await f.page.locator('.bn-editor td p').first().click();await f.page.keyboard.type('失败后保留人工编辑');await f.page.keyboard.press('Meta+s');await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('失败后保留人工编辑');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+it('settles a failed initial history flush and safely retries without a stuck preparing row or duplicate table',async()=>{
+ const f=await open();try{
+  f.setHistoryWritable(false);await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.fill('创建一个3乘3的表格');await input.press('Enter')
+  await expect.poll(()=>f.history()[0]?.phase).toBe('failed');await input.waitFor();expect(await f.page.locator('.bn-editor table').count()).toBe(0)
+  const original=await f.page.evaluate(()=>(window as any).calls.find((row:any)=>row.method==='native-table').input);f.setHistoryWritable(true)
+  expect(await f.host('native-table',original)).toMatchObject({phase:'failed',receipt:{status:'failed'}});f.restartHistory();expect(f.history()[0].phase).toBe('failed');expect(await f.page.locator('.bn-editor table').count()).toBe(0)
+  await input.press('Enter');await expect.poll(()=>f.history()[1]?.phase).toBe('ready');expect(f.history().map((row:any)=>row.phase)).toEqual(['failed','ready']);expect(await f.page.locator('.bn-editor table').count()).toBe(1);expect(await f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.method==='generate').length)).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)

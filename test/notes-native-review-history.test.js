@@ -52,9 +52,10 @@ it('refuses an invented native completion or an applied-only ready claim and kee
 it('waits for real session flush and allows a same-request retry to persist an acknowledged checkpoint',async()=>{
  const f=await nativeFixture();try{
   f.flush(false);expect((await f.call({action:'conversation-native-begin',prompt:'创建一个3乘3的表格',title:'原生笔记'})).status).toBe(503)
-  f.flush(true);expect((await f.call({action:'conversation-native-begin',prompt:'创建一个3乘3的表格',title:'原生笔记'})).status).toBe(200)
+  f.flush(true);const retried=await f.call({action:'conversation-native-begin',prompt:'创建一个3乘3的表格',title:'原生笔记'});expect(retried.status).toBe(200);expect(retried.value.row.phase).toBe('failed');expect(retried.value.row.result.capabilityReceipts[0]).not.toHaveProperty('effect');f.restart();expect(f.rows()[0].phase).toBe('failed')
   expect((await f.call({action:'conversation-native-begin',prompt:'其他需求',title:'原生笔记'})).status).toBe(503)
-  f.flush(false);expect((await f.call({action:'conversation-native-end',phase:'ready',receipt:nativeReceipt})).status).toBe(503)
-  f.flush(true);expect((await f.call({action:'conversation-native-end',phase:'ready',receipt:nativeReceipt})).status).toBe(200);f.restart();expect(f.rows()[0].phase).toBe('ready')
+  await f.call({requestId:'new-request',action:'conversation-native-begin',prompt:'创建一个3乘3的表格',title:'原生笔记'});const nextReceipt={...nativeReceipt,effect:{...nativeReceipt.effect,actionId:'new-request'}}
+  f.flush(false);expect((await f.call({requestId:'new-request',action:'conversation-native-end',phase:'ready',receipt:nextReceipt})).status).toBe(503)
+  f.flush(true);expect((await f.call({requestId:'new-request',action:'conversation-native-end',phase:'ready',receipt:nextReceipt})).status).toBe(200);f.restart();expect(f.rows()[1].phase).toBe('ready')
  }finally{f.dispose()}
 })

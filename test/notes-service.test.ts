@@ -178,3 +178,10 @@ it('does not repeat an already durable native request after the Main response ca
  await s.call('capability-ready',{documentId:'document',active:true})
  expect(await s.call('native-table',{requestId:'native-one',documentId:'document',anchorId:'anchor',prompt:prior.prompt,title:'原生笔记'})).toMatchObject({phase:'accepted',result:prior.result});expect(send).toHaveBeenCalledOnce();expect(s.progress).toEqual([]);s.dispose()
 })
+
+it('settles a recovered preparing native admission as a real failed history row instead of caching a nonterminal response',async()=>{
+ const requests:any[]=[],s=service('http://127.0.0.1:9999');vi.stubGlobal('fetch',async(_url:any,options:any)=>{const input=JSON.parse(options.body);requests.push(input);return new Response(JSON.stringify(input.action==='conversation-native-begin'?{ok:true,row:{requestId:'native-retry',nativeOperation:'table',phase:'preparing',prompt:'创建一个3乘3的表格'}}:{ok:true,phase:input.phase,result:{kind:'conversation',markdown:input.receipt.message,capabilityReceipts:[input.receipt]}}))})
+ await s.call('capability-ready',{documentId:'document',active:true});const input={requestId:'native-retry',documentId:'document',anchorId:'anchor',prompt:'创建一个3乘3的表格',title:'原生笔记'}
+ expect(await s.call('native-table',input)).toMatchObject({phase:'failed',receipt:{status:'failed'}});expect(requests.map(row=>row.action)).toEqual(['conversation-native-begin','conversation-native-end']);expect(requests[1].phase).toBe('failed');expect(s.progress).toEqual([])
+ expect(await s.call('native-table',input)).toMatchObject({phase:'failed'});expect(requests).toHaveLength(2);s.dispose()
+})

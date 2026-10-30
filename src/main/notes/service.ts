@@ -173,6 +173,7 @@ export function installNotesService(options: {
         let begun=false,receipt:any
         try{
           const admission=await history('conversation-native-begin',{prompt:input.prompt,title:input.title});begun=true
+          if(admission.row&&!['ready','failed','stopped','accepted','discarded'].includes(admission.row.phase))throw Error('原生笔记准备尚未完成，本次未执行，请重试。')
           if(admission.row){const row=admission.row,receipt=row.result?.capabilityReceipts?.[0]??{status:'cancelled',requestId:input.requestId,capability:'notes.blocks.apply',message:'本次原生笔记请求已结束，原内容已保留。'},result={receipt,result:row.result??{kind:'conversation',markdown:receipt.message,capabilityReceipts:[receipt]},phase:row.phase};capabilityResults.set(cacheKey,{fingerprint,result});return result}
           if(!current())throw Error('本次原生笔记操作已取消。')
           const read=await capabilityBridge.request('notes.blocks.read',{scope:'note'},context,input.requestId,controller.signal,current)

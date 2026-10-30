@@ -92,7 +92,16 @@ export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
           engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title})
           setNoteConversationRunning(session,input.requestId,true)
           const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt,nativeOperation:'table'})
-          if(await ctx.sessions.flush(session)!==true)throw Error('原生笔记会话记录尚未保存。')
+          try{if(await ctx.sessions.flush(session)!==true)throw Error('原生笔记会话记录尚未保存。')}
+          catch(error){
+            // Preparing did not become durable and no document operation was
+            // admitted. End its in-memory lease; a same-ID retry only persists
+            // this honest failure, never replays a perpetual preparing result.
+            setNoteConversationRunning(session,input.requestId,false)
+            const message='原生笔记准备记录尚未保存，本次未执行。',receipt={requestId:input.requestId,capability:'notes.blocks.apply',status:'failed',message}
+            recordNoteConversation(session,{requestId:input.requestId,phase:'failed',result:{kind:'conversation',markdown:message,capabilityReceipts:[receipt]},error:message,finishedAt:Date.now()})
+            throw error
+          }
           return send(200,{ok:true,...metadata})
         }
         const receipt=input.receipt,effect=receipt?.effect
