@@ -2549,72 +2549,33 @@
         "schemaVersion": 1,
         "featureName": "修复笔记演示标记命中、随航拖动同步与行情失败换源",
         "branch": "codex/feat/notes-demo-flow-20261029",
-        "baseCommit": "3674d0e3a860a715ed36593c0e603e6556d1b8a9",
-        "tipCommit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
+        "baseCommit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
+        "tipCommit": "398015433f07bb265a21cccf24591af593383b57",
         "commits": [
           {
-            "commit": "6f3380e164cc91d4871afdf3811e56845c83741b",
+            "commit": "398015433f07bb265a21cccf24591af593383b57",
             "parents": [
-              "3674d0e3a860a715ed36593c0e603e6556d1b8a9"
+              "9bed68b200d91d3ca945edefdf686dc1b20d966b"
             ],
-            "subject": "诊断：持久记录笔记演示步骤与暂停取消原因"
-          },
-          {
-            "commit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
-            "parents": [
-              "6f3380e164cc91d4871afdf3811e56845c83741b"
-            ],
-            "subject": "诊断：区分笔记演示原生草稿保护的拒绝原因"
+            "subject": "修复笔记演示改写按钮与原生输入预填需求不一致"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "docs/superpowers/specs/2026-10-30-notes-guide-diagnostics.md"
+            "path": "docs/verification/2026-10-31-notes-demo-rewrite-prefill.md"
           },
           {
             "status": "M",
-            "path": "scripts/lib/home-guide-notes-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/generation-delivery-log.ts"
+            "path": "src/preload/notes/editor.tsx"
           },
           {
             "status": "A",
-            "path": "src/main/state/notes-guide-diagnostics.ts"
+            "path": "test/fixtures/home-note-rewrite-portal-browser.js"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-notes.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-guides.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/notes-guide-diagnostics.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/notes-guide-diagnostics.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-notes-portal.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guides.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-guide-diagnostics.test.ts"
+            "path": "test/home-guide-notes-browser.test.js"
           }
         ],
         "checks": [
@@ -2623,17 +2584,17 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/notes-guide-diagnostics.test.ts",
-              "test/generation-delivery-log.test.ts",
-              "test/home-guides.test.ts",
+              "test/home-guide-notes-browser.test.js",
+              "-t",
+              "real NotesApp rewrite button|mismatched user draft after|checks three actual evidence cards",
               "--maxWorkers=1",
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "冻结tip3个直接相关测试文件59/59通过：可信来源/schema/文件边界/rotation、timeline start/end/fail及失焦暂停恢复和取消。",
-            "verifiedCommit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
-            "completedAt": "2026-10-30T15:22:52.176099+00:00",
-            "timeoutMs": 120000
+            "summary": "冻结tip真实Chromium3/3通过：实际NotesApp改写按钮→NativePortal→SDK shell单次发送且选区正确；普通笔记原预填不变；非匹配用户草稿拒绝；原25步三份依据/总结预览插入/保存导出重开回归。",
+            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
+            "completedAt": "2026-10-30T18:07:14.906948+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -2647,9 +2608,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "冻结tip真实SDK Portal3/3聚焦通过：预填仅发一次、用户草稿变化拒绝且不泄露、occurrence拒绝仅记白名单reason和数量。",
-            "verifiedCommit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
-            "completedAt": "2026-10-30T15:22:57.934752+00:00",
+            "summary": "冻结tip NativePortal3/3聚焦通过：已有exact预填单发、用户草稿变化拒绝、occurrence拒绝保持。",
+            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
+            "completedAt": "2026-10-30T18:05:51.128023+00:00",
             "timeoutMs": 120000
           },
           {
@@ -2662,8 +2623,8 @@
             ],
             "outcome": "passed",
             "summary": "冻结tip Node TypeScript通过。",
-            "verifiedCommit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
-            "completedAt": "2026-10-30T15:22:58.851734+00:00",
+            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
+            "completedAt": "2026-10-30T18:05:52.481932+00:00",
             "timeoutMs": 120000
           },
           {
@@ -2671,12 +2632,12 @@
               "git",
               "diff",
               "--check",
-              "3674d0e3a860a715ed36593c0e603e6556d1b8a9..HEAD"
+              "9bed68b200d91d3ca945edefdf686dc1b20d966b..HEAD"
             ],
             "outcome": "passed",
-            "summary": "3674到冻结tip的diff check通过。",
-            "verifiedCommit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
-            "completedAt": "2026-10-30T15:22:58.871177+00:00",
+            "summary": "9bed严格后继diff check通过。",
+            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
+            "completedAt": "2026-10-30T18:07:14.924195+00:00",
             "timeoutMs": 120000
           },
           {
@@ -2688,779 +2649,29 @@
             ],
             "outcome": "passed",
             "summary": "冻结tip工作树无未提交改动。",
-            "verifiedCommit": "9bed68b200d91d3ca945edefdf686dc1b20d966b",
-            "completedAt": "2026-10-30T15:22:58.886570+00:00",
+            "verifiedCommit": "398015433f07bb265a21cccf24591af593383b57",
+            "completedAt": "2026-10-30T18:07:14.940418+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "本次3674严格后继仅加入内部持久元数据诊断及去除raw warning，不改变用户界面或播放语义；59+3聚焦与TC通过，未操作共享App。原Native演示selection-send停止仍待集成后的真实日志验收，不标记已修复或通过。"
+          "outcome": "passed",
+          "summary": "实际NotesApp浮动按钮与实际NativePortal/SDK shell在Chromium组合通过，普通笔记真实按钮原默认也通过；外部Host、行情与InputBar表现层是明确夹具，不冒充签名包Native验收。"
         },
         "acceptanceCriteria": [
-          "严格3674d0e3a860a715ed36593c0e603e6556d1b8a9后继，仅两个中文诊断提交；原演示行为、真实指针/滑块/黄标命中、CAS保护保持。",
-          "多行AI黄标指针必须命中可见文字client rect；相同坐标detail=1发原click，controller字位anchor与气泡位置相符；被遮挡时不可假开泡。",
-          "随航原控件按同视觉帧的真实pointer事件更新preview，up一次提交，cancel回滚；原鼠标capture及keyboard保持。",
-          "行动前先揭示并等待滚动稳定；首段不再额外点击整个editor；连续段落不增加点击。",
-          "真实行情失败时点击同组件footer、原来源selector切备用来源；正常同owner内容重挂载可继续，外国owner/会话变化仍拒绝；备用也失败不伪造数据。",
-          "保留三份原始报告标题和一次14.29%环比公式核对；移除重复三次公式和多余停顿。",
-          "指针仍在原slash/skill菜单上层；多个视觉指针不互相raise导致微任务饥饿。",
-          "预填改写需求先等当前真实发送按钮就绪，仅发一次；run/session/focus/用户草稿、选区/ABA/cancel/saveACK保护不放宽。",
-          "Main仅接收可信主窗口info的notes-guide-step闭合schema，复用有界metadata异步写入，每文件512KiB、两文件、队列64。",
-          "仅记录run/session/25步/phase/固定reason/标准errorName和0–1000附件数量，不记录正文、提示词、草稿、URL、引用ID或error.message。",
-          "真实timeline步骤start/end/fail、pause/resume/cancel原因、handoff阶段持久保存；Native CAS拒绝区分record/draft/revision/image/occurrence，仍保持原保护和错误消息。"
+          "base9bed68b200d91d3ca945edefdf686dc1b20d966b到tip398015433f07bb265a21cccf24591af593383b57严格单中文提交，只有4路径；产品仅editor.tsx import与预填条件两处。",
+          "guide.native真实改写按钮复用共享HOME_NOTES_REWRITE_PROMPT，与Portal和演示运行时一致，不再拒绝自身预填。",
+          "普通笔记仍用原通用改写预填与本地化；没有改变ordinary笔记改写逻辑。",
+          "Portal exact draft与record/draftRev/image/occurrence/选区及单请求归属保护保持，非匹配用户草稿原样保留且不发送。",
+          "真正组合实际NotesApp浮动按钮、原NativePortal、实际SDK SessionInputShell和原draft adapter，断言发一次、selection范围正确、替换预览出现，不以特制预填代替真实按钮。",
+          "原25步、三份依据、两处优化、整段改写、总结主区pending→preview→插入、保存导出重开保持。"
         ],
         "risks": [
-          "本次不是演示停止修复；Root已证前段失焦暂停，但后段selection-send独立真实停止尚未抓到具体原因，不作推断。",
-          "相同feature原80d..3674历史范围已由先前卡验证；此卡刷新到严格后继9bed，当前仅重跑直接受诊断影响的59+3，不重新宣称完整Native25步已通过。",
-          "Root需在集成签名包检查app logs中的notes-guide.jsonl，定位step-fail或guard-rejected及具体取消原因。",
-          "功能worktree未构建、替换共享客户端，未改SDK、integration、会话/NotesStore、线上配置或版本。"
+          "签名包真实完整演示仍由Root官方集成后构建验收；feature未操作App、SDK、integration、manifest或任何真实用户会话。",
+          "Browser外部Host/行情响应与InputBar表现层为测试边界；NativePortal和SDK输入状态机、实际NotesApp按钮/选区/生成/预览/保存路径为真实实现。",
+          "现场e9c日志已确定第19步native-input-changed，无paused/cancelled/guard-rejected；共享常量修复针对已证提示词不一致，不宣称覆盖无证据的其他停止原因。"
         ],
-        "generatedAt": "2026-10-30T15:27:46.198367+00:00"
-      },
-      "merged": {
-        "mergeCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-        "verificationCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/power-settings.test.ts",
-              "test/power-settings-ui.test.ts",
-              "test/power-lid-guard.test.ts",
-              "test/power-settings-ipc.test.ts",
-              "test/ipc-trust.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/research-grid-additions.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/financial-widget-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/power-settings.test.ts test/power-settings-ui.test.ts test/power-lid-guard.test.ts test/power-settings-ipc.test.ts test/ipc-trust.test.ts test/figma-settings-layout.test.ts test/research-grid-additions.test.js test/financial-widget-layout.test.js test/financial-widget-contract.test.js",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/figma-auth-layout.test.ts",
-              "test/memory-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/figma-auth-layout.test.ts test/memory-view.test.ts",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/plugin-back-sticky-browser.test.js",
-              "test/integration-menu-layout.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/integration-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/plugin-back-sticky-browser.test.js test/integration-menu-layout.test.ts test/workspace-surface-host.test.ts test/figma-scrollbars.test.ts test/integration-view.test.ts",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/notes-preload-runtime.test.ts",
-              "test/preload-editor-singleton.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/notes-preload-runtime.test.ts test/preload-editor-singleton.test.ts",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-voice.test.ts",
-              "test/composer-voice.test.js",
-              "test/composer-voice-patch.test.js",
-              "test/composer-voice-browser.test.js",
-              "test/composer-submit-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-voice.test.ts test/composer-voice.test.js test/composer-voice-patch.test.js test/composer-voice-browser.test.js test/composer-submit-policy.test.js",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/workbench-theme-menu-browser.test.js",
-              "test/openterminal-dark-controls.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/research-arrange-modes.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/workbench-theme-menu-browser.test.js test/openterminal-dark-controls.test.js test/workbench-style.test.js test/workbench-openterminal.test.js test/research-arrange-modes.test.js --reporter=dot",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/board-tabs-client.test.js",
-              "test/board-tabs-connection-client.test.js",
-              "test/board-tabs-contract.test.js",
-              "test/board-tabs-drop-focus-browser.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-connection-client.test.js test/board-tabs-contract.test.js test/board-tabs-drop-focus-browser.test.js --reporter=dot",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/subagent-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars-browser.test.js",
-              "test/subagent-task-tree-avatars.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/subagent-avatars-browser.test.js test/subagent-task-tree-avatars-browser.test.js test/subagent-task-tree-avatars.test.js --reporter=dot",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "test/home-workbench-client.test.js",
-              "test/home-workbench-contract.test.js",
-              "test/home-workbench-runtime.test.js",
-              "test/home-workbench-native.test.js",
-              "test/home-workbench-workspace.test.js",
-              "test/home-workbench-actor.test.js",
-              "test/home-workbench-study-contract.test.js",
-              "test/home-workbench-study-render.test.js",
-              "test/home-workbench-study-integration.test.js",
-              "test/home-workbench-saved-provider.test.js",
-              "test/home-guide-workbench.test.ts",
-              "test/research-grid-arrange-tabs.test.js",
-              "test/financial-connection-row-routing.test.js",
-              "test/home-workbench-browser.test.js",
-              "test/home-guide-operations-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/home-workbench-client.test.js test/home-workbench-contract.test.js test/home-workbench-runtime.test.js test/home-workbench-native.test.js test/home-workbench-workspace.test.js test/home-workbench-actor.test.js test/home-workbench-study-contract.test.js test/home-workbench-study-render.test.js test/home-workbench-study-integration.test.js test/home-workbench-saved-provider.test.js test/home-guide-workbench.test.ts test/research-grid-arrange-tabs.test.js test/financial-connection-row-routing.test.js test/home-workbench-browser.test.js test/home-guide-operations-entry.test.ts",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-data.test.ts",
-              "test/home-notes-runtime.test.js",
-              "test/home-notes-host.test.js",
-              "test/home-guide-notes-native.test.ts",
-              "test/home-guide-notes-portal.test.js",
-              "test/home-guide-notes-scroll.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-data.test.ts test/home-notes-runtime.test.js test/home-notes-host.test.js test/home-guide-notes-native.test.ts test/home-guide-notes-portal.test.js test/home-guide-notes-scroll.test.ts --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-browser.test.js",
-              "-t",
-              "checks three actual evidence cards",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-browser.test.js -t checks three actual evidence cards --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-shell-browser.test.js",
-              "-t",
-              "saves and reopens the native note without clipping a 600px",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-shell-browser.test.js -t saves and reopens the native note without clipping a 600px --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-native-editor.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/home-guide-notes-native-editor.test.js --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-surface-menu-browser.test.ts",
-              "test/component-surface-ui-serializer.test.js",
-              "test/conversation-html-state-browser.test.ts",
-              "test/notes-html-shared-state-browser.test.ts",
-              "test/conversation-html-interaction.test.js",
-              "test/notes-component-presentation.test.ts",
-              "test/conversation-component-store.test.ts",
-              "test/conversation-component-service.test.ts",
-              "test/conversation-component-ipc.test.ts",
-              "test/conversation-component-export.test.ts",
-              "test/conversation-component-renderer.test.js",
-              "test/conversation-components-policy.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=verbose"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/component-surface-menu-browser.test.ts test/component-surface-ui-serializer.test.js test/conversation-html-state-browser.test.ts test/notes-html-shared-state-browser.test.ts test/conversation-html-interaction.test.js test/notes-component-presentation.test.ts test/conversation-component-store.test.ts test/conversation-component-service.test.ts test/conversation-component-ipc.test.ts test/conversation-component-export.test.ts test/conversation-component-renderer.test.js test/conversation-components-policy.test.js --maxWorkers=1 --fileParallelism=false --reporter=verbose",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 20000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "df2e8a79b951b4e9e3de6232b19934dd91d87d09",
-              "HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check df2e8a79b951b4e9e3de6232b19934dd91d87d09 HEAD",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 20000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/html-trusted-types-validation.test.js",
-              "test/shared-component-validation.test.js",
-              "test/conversation-component-html-validation.test.js",
-              "test/conversation-component-contract.test.js",
-              "test/conversation-component-store.test.ts",
-              "test/conversation-component-service.test.ts",
-              "test/conversation-components-policy.test.js",
-              "test/generated-chart-geometry.test.js",
-              "test/research-design-policy.test.js",
-              "test/bundled-component-skill.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/html-trusted-types-validation.test.js test/shared-component-validation.test.js test/conversation-component-html-validation.test.js test/conversation-component-contract.test.js test/conversation-component-store.test.ts test/conversation-component-service.test.ts test/conversation-components-policy.test.js test/generated-chart-geometry.test.js test/research-design-policy.test.js test/bundled-component-skill.test.js --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/html-trusted-types-browser.test.ts",
-              "test/component-shared-state-browser.test.js",
-              "test/notes-html-shared-runtime.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/html-trusted-types-browser.test.ts test/component-shared-state-browser.test.js test/notes-html-shared-runtime.test.js --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "44bec2f5749442ed29804d3e7e32ce5fb5ffae84",
-              "db64384d3dd940e968e12b154c6305d2e22b3ed7"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 44bec2f5749442ed29804d3e7e32ce5fb5ffae84 db64384d3dd940e968e12b154c6305d2e22b3ed7",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 10000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-click-autosize.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-grid-additions.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx --no-install node node_modules/vitest/vitest.mjs run test/research-click-autosize.test.js test/research-grid-workbench.test.js test/research-grid-additions.test.js --maxWorkers=1 --fileParallelism=false --reporter=dot",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "--no-install",
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx --no-install node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "44bec2f5749442ed29804d3e7e32ce5fb5ffae84..11a58d47e0e726395dce6eea541c80d402262aca"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 44bec2f5749442ed29804d3e7e32ce5fb5ffae84..11a58d47e0e726395dce6eea541c80d402262aca",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 10000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-empty-conversation.test.js",
-              "test/notes-sidebar.test.js",
-              "test/research-resident-conversation.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-empty-conversation.test.js test/notes-sidebar.test.js test/research-resident-conversation.test.ts --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6",
-              "74f5831b7051190133344cd5bf0d7e47e3fc0238"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check e3cec1ad40cb70b0bb7101eb0d10acc146d33da6 74f5831b7051190133344cd5bf0d7e47e3fc0238",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 10000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 10000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-component-header-browser.test.ts",
-              "test/notes-component-interaction.test.tsx",
-              "test/notes-inline-files.test.tsx",
-              "test/notes-component-actions.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-component-header-browser.test.ts test/notes-component-interaction.test.tsx test/notes-inline-files.test.tsx test/notes-component-actions.test.ts --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6",
-              "3f532514775da7af34206eb2bc8d194392e5bb8b"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check e3cec1ad40cb70b0bb7101eb0d10acc146d33da6 3f532514775da7af34206eb2bc8d194392e5bb8b",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 10000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-native-table-browser.test.ts",
-              "test/notes-native-table-layout.test.ts",
-              "test/notes-component-header-browser.test.ts",
-              "test/notes-component-interaction.test.tsx",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-native-table-browser.test.ts test/notes-native-table-layout.test.ts test/notes-component-header-browser.test.ts test/notes-component-interaction.test.tsx --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
-              "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 31b3de76ee5c0d05787ef3d7008ec697717ca3e9 4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-activity.test.js",
-              "test/notes-concise-progress-browser.test.js",
-              "test/conversation-response-progress.test.js",
-              "test/conversation-response-progress-browser.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-activity.test.js test/notes-concise-progress-browser.test.js test/conversation-response-progress.test.js test/conversation-response-progress-browser.test.js --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "0589bc5d724d2900764c9c15ec6e689419371500",
-              "b8e2790abc61aed06801ecf87fec80ed03d12515"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 0589bc5d724d2900764c9c15ec6e689419371500 b8e2790abc61aed06801ecf87fec80ed03d12515",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-native-capability-contract.test.ts",
-              "test/notes-native-capability-bridge.test.ts",
-              "test/notes-native-operations.test.ts",
-              "test/notes-native-planning.test.js",
-              "test/notes-native-review-history.test.js",
-              "test/client-capabilities.test.js",
-              "test/notes-document-capability-adapter.test.ts",
-              "test/notes-service.test.ts",
-              "test/notes-inline-proposals.test.ts",
-              "test/notes-inline-proposals-pm.test.ts",
-              "test/notes-client-capability-actions.test.ts",
-              "test/notes-client-capability-bridge.test.ts",
-              "test/notes-capability-handlers.test.ts",
-              "test/notes-external-capability-lease.test.ts",
-              "test/notes-native-table-layout.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-native-capability-contract.test.ts test/notes-native-capability-bridge.test.ts test/notes-native-operations.test.ts test/notes-native-planning.test.js test/notes-native-review-history.test.js test/client-capabilities.test.js test/notes-document-capability-adapter.test.ts test/notes-service.test.ts test/notes-inline-proposals.test.ts test/notes-inline-proposals-pm.test.ts test/notes-client-capability-actions.test.ts test/notes-client-capability-bridge.test.ts test/notes-capability-handlers.test.ts test/notes-external-capability-lease.test.ts test/notes-native-table-layout.test.ts --reporter=dot",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-native-operations-browser.test.ts",
-              "test/notes-preload-runtime.test.ts",
-              "test/notes-native-table-browser.test.ts",
-              "test/notes-component-header-browser.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-native-operations-browser.test.ts test/notes-preload-runtime.test.ts test/notes-native-table-browser.test.ts test/notes-component-header-browser.test.ts --maxWorkers=1 --fileParallelism=false --reporter=dot",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "c88a3fbfd913a413e9892119e1d21d5d004ad08a",
-              "HEAD",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff c88a3fbfd913a413e9892119e1d21d5d004ad08a HEAD --check",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/explore-menu-browser.test.ts",
-              "test/explore-search.test.ts",
-              "test/home-guide-operations-entry.test.ts",
-              "test/home-operations-navigation.test.ts",
-              "test/home-theme-controls.test.ts",
-              "test/home-theme-controller.test.ts",
-              "test/home-theme-preferences.test.ts",
-              "test/home-operations-actions.test.ts",
-              "test/sidebar-session-search.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/explore-menu-browser.test.ts test/explore-search.test.ts test/home-guide-operations-entry.test.ts test/home-operations-navigation.test.ts test/home-theme-controls.test.ts test/home-theme-controller.test.ts test/home-theme-preferences.test.ts test/home-operations-actions.test.ts test/sidebar-session-search.test.ts --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-native-table-browser.test.ts",
-              "test/notes-native-table-layout.test.ts",
-              "test/notes-native-operations.test.ts",
-              "test/notes-native-operations-browser.test.ts",
-              "test/notes-component-header-browser.test.ts",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-native-table-browser.test.ts test/notes-native-table-layout.test.ts test/notes-native-operations.test.ts test/notes-native-operations-browser.test.ts test/notes-component-header-browser.test.ts --maxWorkers=1 --fileParallelism=false",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "335c90728093725644a4df1735d4f50bbb58c3b1",
-              "43d50580cf904f96f48ca3704ad0d8d1026ed55e"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 335c90728093725644a4df1735d4f50bbb58c3b1 43d50580cf904f96f48ca3704ad0d8d1026ed55e",
-            "verifiedCommit": "17ddf0142cfecf4ac70e9e73eddb4f9c85546375",
-            "completedAt": "2026-10-30T15:40:08.255Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-30T15:40:08.255Z"
+        "generatedAt": "2026-10-30T18:09:38.888908+00:00"
       }
     },
     {
