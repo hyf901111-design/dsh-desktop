@@ -9543,6 +9543,132 @@
         ],
         "recordedAt": "2026-10-30T13:11:15.278Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记原生表格边缘操作与自然尺寸",
+        "branch": "codex/feat/notes-table-feishu-20261030",
+        "baseCommit": "335c90728093725644a4df1735d4f50bbb58c3b1",
+        "tipCommit": "43d50580cf904f96f48ca3704ad0d8d1026ed55e",
+        "commits": [
+          {
+            "commit": "43d50580cf904f96f48ca3704ad0d8d1026ed55e",
+            "parents": [
+              "335c90728093725644a4df1735d4f50bbb58c3b1"
+            ],
+            "subject": "优化：改进笔记原生表格边缘操作与自然尺寸"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-30-native-note-table-edges.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-table-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-table-layout.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-native-table-browser.test.ts",
+              "test/notes-native-table-layout.test.ts",
+              "test/notes-native-operations.test.ts",
+              "test/notes-native-operations-browser.test.ts",
+              "test/notes-component-header-browser.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "82/82聚焦通过（Table Browser19/Core Browser25/Header Browser7/layout9/nativeops22），日志 /tmp/sherlock-notes-table-feishu-20261030/frozen-43d50580c/focused.log",
+            "verifiedCommit": "43d50580cf904f96f48ca3704ad0d8d1026ed55e",
+            "completedAt": "2026-10-30T13:34:18.915535+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip TypeScript noEmit通过。",
+            "verifiedCommit": "43d50580cf904f96f48ca3704ad0d8d1026ed55e",
+            "completedAt": "2026-10-30T13:34:27.633857+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "335c90728093725644a4df1735d4f50bbb58c3b1",
+              "43d50580cf904f96f48ca3704ad0d8d1026ed55e"
+            ],
+            "outcome": "passed",
+            "summary": "精确base..feature差异检查通过。",
+            "verifiedCommit": "43d50580cf904f96f48ca3704ad0d8d1026ed55e",
+            "completedAt": "2026-10-30T13:34:27.775676+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "源码工作树干净且差异检查通过。",
+            "verifiedCommit": "43d50580cf904f96f48ca3704ad0d8d1026ed55e",
+            "completedAt": "2026-10-30T13:34:27.916600+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "冻结同tip 19实际Table Browser、25原生操作Browser、7组件顶栏Browser通过；旧14 Table场景语义全部保留，新增薄边缘真实整行/列选区、图标无冗余字、自然300px空表、表头/删除Undo、实时10px尺寸热区、双击适应和暗色菜单；已看冻结截图。独立review无P1/P2。源/guard/SDK哈希完整绑定。证据 /tmp/sherlock-notes-table-feishu-20261030/frozen-43d50580c/evidence-index.json SHA256 203db7b357d3b1f371b52c1a421fb7457e9ed17dd0f2c13c5b94cd2e56cc881e。未构建或操作共享Native客户端。"
+        },
+        "acceptanceCriteria": [
+          "表格操作仅显示左上图标、行列边缘条和尺寸边缘，不显示行/列编号、尺寸摘要或可编辑占位说明。",
+          "整行/整列真实原生蓝选区；保留原生行列命令、单列拖宽、行拖动、键盘和中文编辑。",
+          "小空表默认每列100px，8列按正文fit；保存的完整列宽不被自动改写，多列只在表格内横滚。",
+          "右侧10px尺寸热区实时跟随预览，松手一次保存，取消回退；双击/Home适应正文，菜单均分/数值尺寸、表头和删除Undo可用。",
+          "菜单使用真实笔记暗浅主题/top layer，外点/Escape/模式/active retirement关闭；save/reopen和真实Yjs Undo保持精确范围。"
+        ],
+        "risks": [
+          "共享签名包和Native验收由Root执行；此功能没有构建App或改共享SDK。",
+          "已有超宽表保持用户保存尺寸，用户可双击右边缘或菜单适应正文；列数很多达到原生35px下限时使用局部横滚。",
+          "默认空表小列宽及Slash适配变更被限制在Notes自然尺寸helper；研究组件/行情组件/Main协议与生成流程不变。"
+        ],
+        "generatedAt": "2026-10-30T13:36:33.030434+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -10075,6 +10201,31 @@
         "test/sidebar-session-search.test.ts",
         "--maxWorkers=1",
         "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-native-table-browser.test.ts",
+        "test/notes-native-table-layout.test.ts",
+        "test/notes-native-operations.test.ts",
+        "test/notes-native-operations-browser.test.ts",
+        "test/notes-component-header-browser.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "335c90728093725644a4df1735d4f50bbb58c3b1",
+        "43d50580cf904f96f48ca3704ad0d8d1026ed55e"
       ],
       "timeoutMs": 120000
     }
