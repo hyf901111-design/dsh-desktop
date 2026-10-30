@@ -8628,7 +8628,7 @@
         "featureName": "全局探索菜单与持续流动入口",
         "branch": "codex/feat/explore-menu-20261030",
         "baseCommit": "0589bc5d724d2900764c9c15ec6e689419371500",
-        "tipCommit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
+        "tipCommit": "3b605cefba8bc9592114ffb1dcf1106cb81b558f",
         "commits": [
           {
             "commit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
@@ -8636,6 +8636,13 @@
               "0589bc5d724d2900764c9c15ec6e689419371500"
             ],
             "subject": "功能：实现全局探索菜单与持续流动入口"
+          },
+          {
+            "commit": "3b605cefba8bc9592114ffb1dcf1106cb81b558f",
+            "parents": [
+              "cf3ec195eb0665c685a8eca1ca606824cf63291e"
+            ],
+            "subject": "修复：统一探索账户事件的文档窗口上下文"
           }
         ],
         "files": [
@@ -8741,6 +8748,10 @@
           },
           {
             "status": "M",
+            "path": "test/figma-auth-layout.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/fixtures/home-guide-entry-handoff-browser.tsx"
           },
           {
@@ -8762,22 +8773,17 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/figma-auth-layout.test.ts",
+              "test/memory-view.test.ts",
               "test/explore-menu-browser.test.ts",
-              "test/explore-search.test.ts",
-              "test/home-guide-operations-entry.test.ts",
-              "test/home-operations-navigation.test.ts",
-              "test/home-theme-controls.test.ts",
-              "test/home-theme-controller.test.ts",
-              "test/home-theme-preferences.test.ts",
-              "test/home-operations-actions.test.ts",
-              "test/sidebar-session-search.test.ts",
+              "test/sidebar-account-rail-browser.test.js",
               "--maxWorkers=1",
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "121/121；冻结 tip 上通过，日志 /tmp/sherlock-explore-menu-20261030/frozen-focused.log",
-            "verifiedCommit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
-            "completedAt": "2026-10-30T12:12:50.851185Z",
+            "summary": "冻结tip 56/56通过：原auth 3断言保留并补2类realm回归，memory官方gate、Explore18及account rail4；日志 /tmp/sherlock-explore-auth-successor-20261030/frozen-focused.log",
+            "verifiedCommit": "3b605cefba8bc9592114ffb1dcf1106cb81b558f",
+            "completedAt": "2026-10-30T12:56:35.336929Z",
             "timeoutMs": 120000
           },
           {
@@ -8789,9 +8795,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "TypeScript noEmit通过；冻结 tip 日志 /tmp/sherlock-explore-menu-20261030/frozen-typecheck.log",
-            "verifiedCommit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
-            "completedAt": "2026-10-30T12:12:50.851185Z",
+            "summary": "TypeScript noEmit通过；日志 /tmp/sherlock-explore-auth-successor-20261030/frozen-typecheck.log",
+            "verifiedCommit": "3b605cefba8bc9592114ffb1dcf1106cb81b558f",
+            "completedAt": "2026-10-30T12:56:35.336929Z",
             "timeoutMs": 120000
           },
           {
@@ -8801,29 +8807,30 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "无空白/补丁错误，源码工作树干净。",
-            "verifiedCommit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
-            "completedAt": "2026-10-30T12:12:50.851185Z",
+            "summary": "无补丁空白错误；strict successor parent精确cf3，源码工作树clean。",
+            "verifiedCommit": "3b605cefba8bc9592114ffb1dcf1106cb81b558f",
+            "completedAt": "2026-10-30T12:56:35.336929Z",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "18/18真实DOM Explore Browser（暗浅主题、窄屏、原账户/主题/快速动作owner、搜索和取消/owner边界、非hover材质PNG两帧）通过并已看图；真实Native bundle SessionRuntime/NotesApp/NotesStore入口11项与账户rail4项通过；旧首页Browser原156项完整保留且通过。证据 /tmp/sherlock-explore-menu-20261030/。未构建或操作共享Native客户端，Root仍须打包验收。"
+          "summary": "冻结successor的Explore 18项真实DOM Browser及原account rail4项通过，原auth邀请ID/登录注册/模型入口3项断言保留、新guest/account两个非全局Document回归通过；继承cf3已通过的原首页156项和Native bundle SessionRuntime/NotesApp/NotesStore entry11项，未重复重Browser。基线A/B和诊断见 /tmp/sherlock-explore-auth-successor-20261030/。未操作或构建共享Native App，Native最终验收仍由Root执行。"
         },
         "acceptanceCriteria": [
           "展开/折叠侧栏常驻探索入口，三相位渐变非hover持续流动，尊重reduced motion。",
           "全窗模糊自然开合，背景/X/Escape退出与焦点恢复；旧首页下滑运营区在生产入口移除。",
           "快速开始4个原生动作、5类演示、原主题与壁纸owner持久化、真实账户/设置/登出接入。",
           "四分类真实标题搜索；支持关键词、无结果、键盘、清空/收起，任何关闭/收起/owner变化取消旧异步导航。",
-          "打开探索前调用公开guide.reset(false)，停止演示指针且保留已写笔记和session；新演示先dismiss浮层再调用原Native controller。"
+          "打开探索前调用公开guide.reset(false)，停止演示指针且保留已写笔记和session；新演示先dismiss浮层再调用原Native controller。",
+          "账户事件使用目标document.defaultView创建并派发，非全局Document登录/账户/探索入口不会被跨realm事件中断；原auth断言完整保留。"
         ],
         "risks": [
           "共享打包Native客户端验收由Root执行，本feature没有替换App或操作共享SDK。",
           "搜索沿现有sidebar标题索引，笔记类别沿现有session持久化notes视图；没有建立第二套会话/笔记索引。",
           "index.ts、research-boards-ui.ts及原entry fixture与同期Core/Demo可能有集成上下文重叠，需保留双方已验证内容；79旧case语义映射见spec文档。"
         ],
-        "generatedAt": "2026-10-30T12:12:50.851185Z"
+        "generatedAt": "2026-10-30T12:56:35.336929Z"
       }
     }
   ],
