@@ -1,0 +1,26 @@
+<style>
+.research-checklist{padding:12px;color:var(--sherlock-text);background:var(--sherlock-surface);font-family:var(--sherlock-font-sans);font-size:14px;line-height:1.65}
+.research-checklist label{display:flex;align-items:center;gap:8px;padding:5px 0}
+.research-checklist input{accent-color:var(--sherlock-control-primary)}
+.research-checklist p{margin:8px 0 0;color:var(--sherlock-muted)}
+</style>
+<section class="research-checklist" aria-label="对话组件交互验收">
+  <label><input type="checkbox" data-check="0" disabled>核对数据时点</label>
+  <label><input type="checkbox" data-check="1" disabled>检查统计口径</label>
+  <label><input type="checkbox" data-check="2" disabled>复核风险假设</label>
+  <p>已完成 <output id="completed">0</output>/3</p>
+</section>
+<script>
+const checks=Array.from(document.querySelectorAll('[data-check]'));
+const completed=document.getElementById('completed');
+const shared=window.sherlockShared.register({
+  initialState:{checked:[false,false,false]},
+  reduce:(state,action)=>action.type==='check'&&Number.isInteger(action.index)&&action.index>=0&&action.index<3
+    ?{checked:state.checked.map((value,index)=>index===action.index?!!action.checked:value)}:state,
+  render:(state,context)=>{
+    checks.forEach((input,index)=>{input.checked=state.checked[index];input.disabled=context.readOnly||!context.connected;});
+    completed.textContent=String(state.checked.filter(Boolean).length);
+  }
+});
+checks.forEach((input,index)=>{input.onclick=()=>shared.dispatch({type:'check',index,checked:input.checked});});
+</script>

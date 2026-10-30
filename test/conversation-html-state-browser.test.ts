@@ -28,11 +28,11 @@ beforeAll(async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },90000)
 afterAll(async()=>browser?.close())
-async function fixture({readOnly=false,noCommit=false,componentTheme='',globalDark=false,slowFrames=false}={}){
- const directory=await mkdtemp(join(tmpdir(),'conversation-html-state-')),file=join(directory,'cards.json'),html=await readFile('test/fixtures/conversation-local-counter.html','utf8')
+async function fixture({readOnly=false,noCommit=false,componentTheme='',globalDark=false,slowFrames=false,checklist=false}={}){
+ const directory=await mkdtemp(join(tmpdir(),'conversation-html-state-')),file=join(directory,'cards.json'),html=await readFile(checklist?'test/fixtures/conversation-research-checklist.html':'test/fixtures/conversation-local-counter.html','utf8')
  let store=new ConversationComponentStore(file),owner='owner',generation='window-a',mode='ok';await store.load()
  let service:any;const makeService=()=>createConversationComponentService({store,owner:()=>owner,canReadSession:session=>session==='conversation-html',currentVisibleContext:()=>({ownerAccountId:owner,sessionId:'conversation-html',mode:'conversation',generation,readOnly}),nativeQuery:async()=>{throw Error('Unexpected financial query')},clipboard:()=>undefined,library:()=>undefined})
- service=makeService();const receipt=await service.create({title:'对话本地计数与备注',artifact:{version:1,type:'html',html}},{ownerAccountId:owner,sessionId:'conversation-html',turnId:'1',mode:'conversation',windowGeneration:generation,current:()=>true},new AbortController().signal,'initial-counter'),target={sessionId:'conversation-html',componentId:receipt.effect.componentId}
+ service=makeService();const receipt=await service.create({title:checklist?'对话组件交互验收':'对话本地计数与备注',artifact:{version:1,type:'html',html}},{ownerAccountId:owner,sessionId:'conversation-html',turnId:'1',mode:'conversation',windowGeneration:generation,current:()=>true},new AbortController().signal,'initial-counter'),target={sessionId:'conversation-html',componentId:receipt.effect.componentId}
  if(componentTheme)await service.setTheme({...target,expectedRevision:store.read('owner',target).revision,theme:componentTheme})
  const requests:any[]=[],releases:Array<()=>void>=[],context=await browser.newContext({viewport:{width:1000,height:850}}),page=await context.newPage(),errors:string[]=[];page.setDefaultTimeout(5000);page.on('pageerror',(error:Error)=>errors.push(error.message))
  if(slowFrames)await context.addInitScript(()=>{if(window!==parent){const end=performance.now()+80;while(performance.now()<end){/* Delay real iframe parsing, not the production sender. */}}})
@@ -45,10 +45,36 @@ async function fixture({readOnly=false,noCommit=false,componentTheme='',globalDa
   }catch(error){await route.fulfill({contentType:'application/json',body:JSON.stringify({error:(error as Error).message})})}
  })
  await page.goto('http://127.0.0.1/conversation-html');await page.evaluate(({value,noCommit}:any)=>{(window as any).fixtureManifest=value;(window as any).fixtureNoCommit=noCommit},{value:receipt.data.renderManifest,noCommit});await page.addScriptTag({content:'var exports={};\n'+script})
- const frame=page.frameLocator('iframe[data-research-html-artifact]').frameLocator('#preview');await frame.getByRole('button',{name:'增加计数',exact:true}).waitFor()
+ const frame=page.frameLocator('iframe[data-research-html-artifact]').frameLocator('#preview');await(checklist?frame.getByRole('checkbox',{name:'核对数据时点',exact:true}):frame.getByRole('button',{name:'增加计数',exact:true})).waitFor()
  return{page,frame,errors,requests,view:()=>store.read('owner',target),mode:(value:string)=>{mode=value},release:()=>{for(const next of releases.splice(0))next()},changeOwner:()=>{owner='other';generation='window-b'},reopen:async()=>{store=new ConversationComponentStore(file);await store.load();service=makeService();await page.evaluate(()=>{const w=window as any;w.cardRoot.unmount();w.cardRoot=w.mountCard()})},close:async()=>{await context.close();await rm(directory,{recursive:true,force:true})}}
 }
 const config=(f:any)=>f.view().node.config as any
+it('shows every requested checklist item and initial count before any JavaScript runs',async()=>{
+ const context=await browser.newContext({javaScriptEnabled:false}),page=await context.newPage();try{
+  await page.setContent(await readFile('test/fixtures/conversation-research-checklist.html','utf8'))
+  expect(await page.getByRole('checkbox').count()).toBe(3)
+  for(const name of ['核对数据时点','检查统计口径','复核风险假设'])expect(await page.getByRole('checkbox',{name,exact:true}).isVisible()).toBe(true)
+  expect(await page.locator('#completed').textContent()).toBe('0');expect(await page.getByText('已完成 0/3',{exact:true}).isVisible()).toBe(true)
+ }finally{await context.close()}
+})
+it('saves a progressively enhanced research checklist through the real Conversation host and restores only the checked items after cold reopen',async()=>{
+ const f=await fixture({checklist:true});try{
+  const checks=['核对数据时点','检查统计口径','复核风险假设'].map(name=>f.frame.getByRole('checkbox',{name,exact:true}))
+  await expect.poll(()=>checks[0].isEnabled()).toBe(true)
+  for(const[index,checked,state]of [[0,true,[true,false,false]],[2,true,[true,false,true]],[0,false,[false,false,true]]] as const){
+   await checks[index].setChecked(checked)
+   await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([...state])
+   expect(await f.frame.locator('#completed').textContent()).toBe(String(state.filter(Boolean).length))
+  }
+  await expect.poll(()=>f.page.getByText('交互已保存',{exact:true}).count()).toBeGreaterThan(0)
+  const revision=f.view().revision;await f.reopen()
+  await expect.poll(()=>f.frame.locator('#completed').textContent()).toBe('1')
+  for(const[index,check]of checks.entries())expect(await check.isChecked()).toBe(index===2)
+  expect(f.view().revision).toBe(revision);expect(config(f).sharedComponentState.state.checked).toEqual([false,false,true]);expect(f.requests.filter(row=>row.method==='commitHtmlInteraction')).toHaveLength(3)
+  expect(await f.page.evaluate(()=>(window as any).canvasCalls)).toEqual([]);expect(f.errors).toEqual([])
+  if(process.env.SHERLOCK_CHECKLIST_SCREENSHOT)await f.page.screenshot({path:process.env.SHERLOCK_CHECKLIST_SCREENSHOT})
+ }finally{await f.close()}
+},30000)
 it('restores saved local Light through dark cold mount, delayed iframe load and global broadcasts without resetting Conversation state',async()=>{
  const f=await fixture({componentTheme:'light',globalDark:true,slowFrames:true});try{
   const check=async()=>{await expect.poll(()=>f.frame.locator('html').getAttribute('data-workbench-style')).toBe('light');await expect.poll(()=>f.frame.locator('html').getAttribute('data-workbench-control-theme')).toBe('light');expect(await f.frame.locator('html').getAttribute('data-sherlock-theme')).toBe('light');await expect.poll(()=>f.frame.locator('body').evaluate((body:HTMLElement)=>getComputedStyle(body).backgroundColor)).toBe('rgb(255, 255, 255)')}
