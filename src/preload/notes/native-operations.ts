@@ -2,7 +2,7 @@ import {blockToNode,nodeToBlock} from '@blocknote/core'
 import type {CapabilityNativeBlockOperation} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {captureNoteInlineAnchor,noteInlineBlockIdentities} from './inline-ai'
 import {noteCapabilityFingerprint} from './data-refresh-guard'
-import {chooseNativeTableColumnWidths} from './native-table-layout'
+import {chooseNativeTableColumnWidths,initialNativeTableColumnWidths} from './native-table-layout'
 import type {NoteContent} from '../../shared/workspace-notes'
 
 const copy=<T,>(value:T):T=>JSON.parse(JSON.stringify(value))
@@ -10,7 +10,7 @@ const fingerprint=(value:any)=>JSON.stringify(value)
 const nativeTypes=new Set(['paragraph','heading','bulletListItem','numberedListItem','checkListItem','quote','codeBlock','table','divider','toggleListItem'])
 export {nativeBlankTableIntent} from '../../shared/notes-native-intent'
 export function nativeBlankTable(rows:number,columns:number,availableWidth:number){
- return{type:'table',content:{type:'tableContent',headerRows:0,columnWidths:chooseNativeTableColumnWidths(columns,availableWidth),rows:Array.from({length:rows},()=>({cells:Array.from({length:columns},()=> '')}))}}
+ return{type:'table',content:{type:'tableContent',headerRows:0,columnWidths:initialNativeTableColumnWidths(columns,availableWidth),rows:Array.from({length:rows},()=>({cells:Array.from({length:columns},()=> '')}))}}
 }
 type Journal={list():any[];begin(id:string,prompt:string,anchor:any):void;run<T>(fn:()=>T):T;runFor<T>(id:string,fn:()=>T,movedIds?:readonly string[],dependent?:boolean):T;undo(id:string):{complete:boolean;retained:number};confirm(id:string):void;setError(id:string,error:string):void;restore(value:any):void}
 type Options={editor:any;documentId:string;current():boolean;snapshot():NoteContent;selected():string[];journal:Journal;prompt():string;persist():Promise<void>;changed():void;ready(id:string,summary:string,partial?:boolean,visible?:boolean):void;settled?(id:string):void;availableWidth():number;report?(requestId:string,effect:any):Promise<unknown>}

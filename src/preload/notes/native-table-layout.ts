@@ -6,6 +6,11 @@ export function chooseNativeTableColumnWidths(columnCount:number,availableWidth:
  return Array.from({length:columnCount},(_,index)=>base+(index<remainder?1:0))
 }
 
+/** Empty tables start compact; larger ones still fit the real note width. */
+export function initialNativeTableColumnWidths(columnCount:number,availableWidth:number):number[]{
+ return chooseNativeTableColumnWidths(columnCount,Math.min(availableWidth,columnCount*100))
+}
+
 /** Scale the whole table while keeping column proportions and the native 35px floor. */
 export function resizeNativeTableColumnWidths(widths:readonly number[],requestedWidth:number):number[]{
  if(!widths.length||widths.some(width=>!Number.isFinite(width)||width<=0)||!Number.isFinite(requestedWidth)||requestedWidth<=0)throw new RangeError('表格宽度无效。')

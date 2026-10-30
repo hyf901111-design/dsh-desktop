@@ -4,10 +4,10 @@ import {getNodeById} from '@blocknote/core'
 import {TableHandlesExtension} from '@blocknote/core/extensions'
 import {TableHandle,TableHandlesController,useBlockNoteEditor,useEditorState,useExtensionState,type TableHandleProps} from '@blocknote/react'
 import {Selection} from 'prosemirror-state'
-import {TableMap,addRowBefore,addRowAfter,addColumnBefore,addColumnAfter,deleteRow,deleteColumn,moveTableRow,moveTableColumn} from 'prosemirror-tables'
+import {CellSelection,TableMap,addRowBefore,addRowAfter,addColumnBefore,addColumnAfter,deleteRow,deleteColumn,moveTableRow,moveTableColumn} from 'prosemirror-tables'
 import type {Node as PMNode} from 'prosemirror-model'
 import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
-import {chooseNativeTableColumnWidths,resizeNativeTableColumnWidths} from './native-table-layout'
+import {chooseNativeTableColumnWidths,resizeNativeTableColumnWidths,initialNativeTableColumnWidths} from './native-table-layout'
 import {noteEditorVisible} from './editor-visibility'
 import nativeTableStyles from './native-table.css?inline'
 
@@ -29,7 +29,23 @@ const tableElement=(editor:any,id:string)=>editor.domElement?.querySelector('[da
 const availableWidth=(table:HTMLTableElement)=>{const wrapper=table.closest<HTMLElement>('.tableWrapper')!,style=getComputedStyle(wrapper);return wrapper.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-2}
 const complete=(widths:any,count:number)=>Array.isArray(widths)&&widths.length===count&&widths.every(width=>Number.isFinite(width)&&width>0)
 const stopCapture=(editor:any)=>editor.prosemirrorState.plugins.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(editor.prosemirrorState)?.undoManager?.stopCapturing()
-function LabeledTableHandle(props:TableHandleProps){return <TableHandle {...props}><span className="en-native-table-grip">{t(props.orientation==='row'?'行':'列')} ⋮</span></TableHandle>}
+function EdgeTableHandle(props:TableHandleProps){
+ const editor:any=useBlockNoteEditor(),hover=useExtensionState(TableHandlesExtension),table=hover?.block&&tableElement(editor,hover.block.id),cell=table?.rows[hover?.rowIndex??0]?.cells[hover?.colIndex??0],rect=cell?.getBoundingClientRect(),row=props.orientation==='row'
+ const snapshot=hover?.block&&getNodeById(hover.block.id,editor.prosemirrorState.doc)?.node.firstChild
+ const current=()=>!!snapshot&&snapshot.type.spec.tableRole==='table'&&editor.isEditable&&noteEditorVisible(editor.domElement)&&(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')&&getNodeById(hover!.block.id,editor.prosemirrorState.doc)?.node.firstChild===snapshot
+ const guard=(event:React.SyntheticEvent)=>{if(current())return true;event.preventDefault();event.stopPropagation();return false}
+ const selected=useEditorState({editor,selector:()=>{const selection=editor.prosemirrorState.selection,current=selectedTable(editor);return selection instanceof CellSelection&&current?.id===hover?.block?.id&&(row?selection.isRowSelection()&&current?.row===hover?.rowIndex:selection.isColSelection()&&current?.col===hover?.colIndex)}})
+ const select=(event:React.MouseEvent)=>{
+  if(!guard(event)||!hover?.block)return
+  const state=editor.prosemirrorState,info=getNodeById(hover.block.id,state.doc),node=info?.node.firstChild;if(!info||!node)return
+  const map=TableMap.get(node),start=info.posBeforeNode+2,index=row?hover.rowIndex:0,col=row?0:hover.colIndex
+  if(index===undefined||col===undefined)return
+  const from=state.doc.resolve(start+map.map[index*map.width+col]!),to=state.doc.resolve(start+map.map[row?index*map.width+map.width-1:(map.height-1)*map.width+col]!)
+  editor.prosemirrorView.dispatch(state.tr.setSelection(row?CellSelection.rowSelection(from,to):CellSelection.colSelection(from,to)))
+ }
+ return <div className={'en-native-table-edge en-native-table-edge-'+props.orientation} data-selected={selected||undefined} style={{width:row?10:rect?.width??32,height:row?rect?.height??40:10}} onPointerDownCapture={guard} onDragStartCapture={guard} onClickCapture={select} aria-label={t(row?'行操作':'列操作')}><TableHandle {...props}><span className="en-native-table-a11y">{t(row?'行操作':'列操作')}</span><svg viewBox="0 0 18 8" width="18" height="8" aria-hidden="true"><circle cx="5" cy="4" r="1"/><circle cx="9" cy="4" r="1"/><circle cx="13" cy="4" r="1"/></svg></TableHandle></div>
+}
+function TableIcon(){return <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="2"/><path d="M2.5 8h15M8 8v9M2.5 12.5h15"/></svg>}
 
 /** Fit newly inserted tables before the caller captures its document snapshot. */
 export function withNativeTableSizing<T>(editor:any,insert:()=>T):T{
@@ -45,7 +61,7 @@ export function withNativeTableSizing<T>(editor:any,insert:()=>T):T{
    // The real wrapper is preferred. Before the node view mounts, reserve its
    // native 9px handle gutter, 22px add-column gutter and table border.
    const width=table?availableWidth(table):editor.domElement.clientWidth-32
-   if(width>0)editor.updateBlock(block.id,{content:{...block.content,columnWidths:chooseNativeTableColumnWidths(count,width)}})
+   if(width>0)editor.updateBlock(block.id,{content:{...block.content,columnWidths:initialNativeTableColumnWidths(count,width)}})
   })
   return result
  })
@@ -55,9 +71,9 @@ export function withNativeTableSizing<T>(editor:any,insert:()=>T):T{
 export function NativeTableControls({active=true,sessionId}:{active?:boolean;sessionId:string}){
  const editor:any=useBlockNoteEditor(),hover=useExtensionState(TableHandlesExtension),target=useEditorState({editor,selector:()=>selectedTable(editor),equalityFn:(a,b)=>a?.node===b?.node&&a?.row===b?.row&&a?.col===b?.col&&a?.id===b?.id})
  const [handleEpoch,setHandleEpoch]=useState(0),[enabled,setEnabled]=useState(active)
- const [menu,setMenu]=useState<Menu>(),[position,setPosition]=useState<{left:number;top:number;right:number;bottom:number}>(),[widthText,setWidthText]=useState('')
+ const [menu,setMenu]=useState<Menu>(),[position,setPosition]=useState<{left:number;top:number;tableTop:number;right:number;bottom:number}>(),[widthText,setWidthText]=useState('')
  const layer=useMemo(()=>{const node=document.createElement('div');node.className='en-native-table-layer';node.setAttribute('popover','manual');node.dataset.noteTableSession=sessionId;return node},[sessionId])
- const nativeDragView=useRef<any>(),live=useRef(false),latest=useRef({active,target}),menuLease=useRef<Target>(),trigger=useRef<HTMLButtonElement>(),drag=useRef<{id:number;startX:number;startWidth:number;next:number;target:Target;restore:()=>void;button:HTMLButtonElement}>()
+ const nativeDragView=useRef<any>(),live=useRef(false),latest=useRef({active,target}),positionUpdate=useRef(()=>{}),menuLease=useRef<Target>(),trigger=useRef<HTMLButtonElement>(),drag=useRef<{id:number;startX:number;startWidth:number;maxWidth:number;next:number;target:Target;restore:()=>void;button:HTMLButtonElement}>()
  latest.current={active,target}
  const allowed=()=>live.current&&latest.current.active&&editor.isEditable&&noteEditorVisible(editor.domElement)&&(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')
  const owns=(value:Target|undefined)=>!!value&&allowed()&&getNodeById(value.id,editor.prosemirrorState.doc)?.node.firstChild===value.node
@@ -78,7 +94,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
   extension.store.setState(undefined)
  }
  const finishDrag=(commit:boolean)=>{
-  const gesture=drag.current;if(!gesture)return;drag.current=undefined;gesture.restore()
+  const gesture=drag.current;if(!gesture)return;drag.current=undefined;gesture.restore();if(live.current)positionUpdate.current()
   if(gesture.button.hasPointerCapture(gesture.id))gesture.button.releasePointerCapture(gesture.id)
   if(commit&&owns(gesture.target)&&gesture.next!==gesture.startWidth)writeWidths(gesture.target,resizeNativeTableColumnWidths(widthsFor(gesture.target),gesture.next))
  }
@@ -128,13 +144,13 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
    const rect=table.getBoundingClientRect(),viewport=scroll.getBoundingClientRect()
    if(rect.bottom<=viewport.top||rect.top>=viewport.bottom){setPosition(undefined);close();return}
    const wrapper=table.closest<HTMLElement>('.tableWrapper')!.getBoundingClientRect()
-   setPosition({left:Math.max(8,Math.min(wrapper.left,window.innerWidth-280)),top:Math.max(viewport.top+6,rect.top-38),right:Math.min(rect.right,wrapper.right-12,window.innerWidth-12),bottom:Math.max(viewport.top+45,Math.min(rect.bottom,viewport.bottom-12))})
+   setPosition({left:Math.max(8,Math.min(rect.left-34,window.innerWidth-240)),top:Math.max(viewport.top+6,rect.top-30),tableTop:Math.max(viewport.top+6,rect.top),right:Math.min(rect.right,wrapper.right-12,window.innerWidth-20),bottom:Math.max(viewport.top+45,Math.min(rect.bottom,viewport.bottom-12))})
   }
   const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(update)}
-  update();window.addEventListener('resize',schedule);window.addEventListener('scroll',schedule,true)
+  positionUpdate.current=update;update();window.addEventListener('resize',schedule);window.addEventListener('scroll',schedule,true)
   const observer=new ResizeObserver(schedule);if(editor.domElement)observer.observe(editor.domElement)
   const mutation=new MutationObserver(()=>{finishDrag(false);retireNativeUi();close();setHandleEpoch(epoch=>epoch+1);setEnabled(allowed());if(!allowed()){setPosition(undefined);if(layer.matches(':popover-open'))layer.hidePopover()}else schedule()});mutation.observe(document.body,{attributes:true,attributeOldValue:true,attributeFilter:['data-workspace-surface']})
-  return()=>{cancelAnimationFrame(frame);window.removeEventListener('resize',schedule);window.removeEventListener('scroll',schedule,true);observer.disconnect();mutation.disconnect()}
+  return()=>{if(positionUpdate.current===update)positionUpdate.current=()=>{};cancelAnimationFrame(frame);window.removeEventListener('resize',schedule);window.removeEventListener('scroll',schedule,true);observer.disconnect();mutation.disconnect()}
  },[editor,layer,target?.id,target?.node,active])
  useLayoutEffect(()=>{
   const show=allowed()&&!!(position||hover?.show)
@@ -152,10 +168,11 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
    if(!owns(gesture.target)){finishDrag(false);return}
    // Screen deltas are converted back to layout pixels when the note is scaled.
    const table=tableElement(editor,gesture.target.id)!,scale=table.getBoundingClientRect().width/table.offsetWidth||1
-   gesture.next=Math.max(gesture.target.columns*35,Math.round(gesture.startWidth+(event.clientX-gesture.startX)/scale))
+   gesture.next=Math.max(gesture.target.columns*35,Math.min(gesture.maxWidth,Math.round(gesture.startWidth+(event.clientX-gesture.startX)/scale)))
    const widths=resizeNativeTableColumnWidths(widthsFor(gesture.target),gesture.next)
    table.querySelectorAll<HTMLTableColElement>('colgroup col').forEach((col,i)=>{col.style.width=widths[i]+'px'})
    table.style.setProperty('width',gesture.next+'px','important');table.style.minWidth='';table.style.setProperty('--default-cell-min-width','35px')
+   positionUpdate.current()
   }
   const up=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(true)},cancel=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(false)},blur=()=>{finishDrag(false);retireNativeUi();close();setHandleEpoch(epoch=>epoch+1)}
   document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',key,true);window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel);window.addEventListener('blur',blur)
@@ -177,29 +194,28 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
  }
  const run=(command:Command)=>{const value=menuLease.current;if(!owns(value))return close();stopCapture(editor);editor.exec((state:any,dispatch:any,view:any)=>command(state,dispatch,view));stopCapture(editor);close();restoreEditor()}
  const changeWidth=(kind:'fit'|'equal')=>{const value=menuLease.current;if(!owns(value))return close();const table=tableElement(editor,value!.id)!;writeWidths(value!,chooseNativeTableColumnWidths(value!.columns,kind==='fit'?availableWidth(table):widthsFor(value!).reduce((a,b)=>a+b,0)));close()}
+ const toggleHeader=(kind:'headerRows'|'headerCols')=>{const value=menuLease.current;if(!owns(value))return close();const block=editor.getBlock(value!.id);stopCapture(editor);editor.updateBlock(value!.id,{content:{...block.content,[kind]:block.content[kind]?0:1}});stopCapture(editor);close();restoreEditor()}
+ const removeTable=()=>{const value=menuLease.current;if(!owns(value))return close();stopCapture(editor);editor.removeBlocks([value!.id]);stopCapture(editor);close();restoreEditor()}
  const startDrag=(event:React.PointerEvent<HTMLButtonElement>)=>{
   if(event.button!==0||!owns(target)||drag.current)return
   event.preventDefault();event.stopPropagation();close()
   const table=tableElement(editor,target!.id)!,cols=[...table.querySelectorAll('colgroup col')],style=table.getAttribute('style'),colStyles=cols.map(col=>col.getAttribute('style')),startWidth=widthsFor(target!).reduce((a,b)=>a+b,0)
-  drag.current={id:event.pointerId,startX:event.clientX,startWidth,next:startWidth,target:target!,button:event.currentTarget,restore:()=>{if(style===null)table.removeAttribute('style');else table.setAttribute('style',style);cols.forEach((col,i)=>{if(colStyles[i]===null)col.removeAttribute('style');else col.setAttribute('style',colStyles[i]!)})}}
+  drag.current={id:event.pointerId,startX:event.clientX,startWidth,maxWidth:Math.max(startWidth,availableWidth(table)),next:startWidth,target:target!,button:event.currentTarget,restore:()=>{if(style===null)table.removeAttribute('style');else table.setAttribute('style',style);cols.forEach((col,i)=>{if(colStyles[i]===null)col.removeAttribute('style');else col.setAttribute('style',colStyles[i]!)})}}
   event.currentTarget.setPointerCapture(event.pointerId)
  }
  const menuKeyboard=(event:React.KeyboardEvent)=>{
   if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return
   event.preventDefault();const items=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')],index=items.indexOf(document.activeElement as HTMLButtonElement),next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus()
  }
- return <><style>{nativeTableStyles}</style>{active&&enabled?<TableHandlesController key={handleEpoch} portalElement={layer} tableHandle={LabeledTableHandle}/>:null}{position&&target&&allowed()?createPortal(<>
+ return <><style>{nativeTableStyles}</style>{active&&enabled?<TableHandlesController key={handleEpoch} portalElement={layer} tableHandle={EdgeTableHandle}/>:null}{position&&target&&allowed()?createPortal(<>
   <div className="en-native-table-toolbar" role="toolbar" aria-label={t('原生表格操作')} style={{left:position.left,top:position.top}} onPointerDown={event=>{if((event.target as HTMLElement).closest('button'))event.preventDefault();event.stopPropagation()}}>
-   <button aria-label={t('表格操作')} aria-expanded={menu==='table'} onClick={event=>openMenu('table',event)}>{t('表格')} ▾</button>
-   <button aria-label={t('行操作')} aria-expanded={menu==='row'} onClick={event=>openMenu('row',event)}>{t('行')} {target.row+1} ▾</button>
-   <button aria-label={t('列操作')} aria-expanded={menu==='column'} onClick={event=>openMenu('column',event)}>{t('列')} {target.col+1} ▾</button>
-   <span>{target.rows} × {target.columns}</span>
+   <button aria-label={t('表格操作')} aria-expanded={!!menu} onClick={event=>openMenu('table',event)}><TableIcon/><svg viewBox="0 0 8 8" width="8" height="8" aria-hidden="true" fill="currentColor"><circle cx="2" cy="2" r=".7"/><circle cx="6" cy="2" r=".7"/><circle cx="2" cy="6" r=".7"/><circle cx="6" cy="6" r=".7"/></svg></button>
    {menu?<div className="en-native-table-menu" role="menu" aria-label={t(menu==='table'?'表格操作':menu==='row'?'行操作':'列操作')} onKeyDown={menuKeyboard}>
-    {menu==='table'?<><button role="menuitem" onClick={()=>changeWidth('fit')}>{t('适应正文')}</button><button role="menuitem" onClick={()=>changeWidth('equal')}>{t('平均分列')}</button><label>{t('表格宽度')} <input aria-label={t('表格宽度')} type="number" min={target.columns*35} max={100000} value={widthText} onChange={event=>setWidthText(event.target.value)} onKeyDown={event=>{event.stopPropagation();if(event.key==='Enter'){const width=Number(widthText),value=menuLease.current;if(owns(value)&&Number.isFinite(width)&&width>=value!.columns*35&&width<=100000){writeWidths(value!,resizeNativeTableColumnWidths(widthsFor(value!),width));close()}}}}/> px</label></>:menu==='row'?<>
+    {menu==='table'?<><button role="menuitemcheckbox" aria-checked={!!editor.getBlock(target.id)?.content.headerRows} onClick={()=>toggleHeader('headerRows')}>{t('标题行')}<span aria-hidden="true">{editor.getBlock(target.id)?.content.headerRows?'✓':''}</span></button><button role="menuitemcheckbox" aria-checked={!!editor.getBlock(target.id)?.content.headerCols} onClick={()=>toggleHeader('headerCols')}>{t('标题列')}<span aria-hidden="true">{editor.getBlock(target.id)?.content.headerCols?'✓':''}</span></button><hr/><button role="menuitem" onClick={()=>changeWidth('fit')}>{t('适应正文')}</button><button role="menuitem" onClick={()=>changeWidth('equal')}>{t('均分列宽')}</button><label>{t('表格宽度')} <input aria-label={t('表格宽度')} type="number" min={target.columns*35} max={100000} value={widthText} onChange={event=>setWidthText(event.target.value)} onKeyDown={event=>{event.stopPropagation();if(event.key==='Enter'){const width=Number(widthText),value=menuLease.current;if(owns(value)&&Number.isFinite(width)&&width>=value!.columns*35&&width<=100000){writeWidths(value!,resizeNativeTableColumnWidths(widthsFor(value!),width));close()}}}}/> px</label><hr/><button role="menuitem" aria-label={t('行操作')} onClick={()=>setMenu('row')}>{t('当前行')}<span aria-hidden="true">›</span></button><button role="menuitem" aria-label={t('列操作')} onClick={()=>setMenu('column')}>{t('当前列')}<span aria-hidden="true">›</span></button><hr/><button role="menuitem" onClick={removeTable}>{t('删除表格')}</button></>:menu==='row'?<>
      <button role="menuitem" onClick={()=>run(addRowBefore)}>{t('在上方插入行')}</button><button role="menuitem" onClick={()=>run(addRowAfter)}>{t('在下方插入行')}</button><button role="menuitem" disabled={target.row===0} onClick={()=>run(moveTableRow({from:target.row,to:target.row-1}))}>{t('上移此行')}</button><button role="menuitem" disabled={target.row===target.rows-1} onClick={()=>run(moveTableRow({from:target.row,to:target.row+1}))}>{t('下移此行')}</button><button role="menuitem" disabled={target.rows===1} onClick={()=>run(deleteRow)}>{t('删除此行')}</button>
     </>:<><button role="menuitem" onClick={()=>run(addColumnBefore)}>{t('在左侧插入列')}</button><button role="menuitem" onClick={()=>run(addColumnAfter)}>{t('在右侧插入列')}</button><button role="menuitem" disabled={target.col===0} onClick={()=>run(moveTableColumn({from:target.col,to:target.col-1}))}>{t('左移此列')}</button><button role="menuitem" disabled={target.col===target.columns-1} onClick={()=>run(moveTableColumn({from:target.col,to:target.col+1}))}>{t('右移此列')}</button><button role="menuitem" disabled={target.columns===1} onClick={()=>run(deleteColumn)}>{t('删除此列')}</button></>}
    </div>:null}
   </div>
-  <button className="en-native-table-width-handle" role="separator" aria-label={t('调整表格整体宽度')} aria-orientation="vertical" title={t('拖动调整整体宽度；方向键微调，Shift加速')} tabIndex={0} style={{left:position.right-5,top:position.bottom-30}} onPointerDown={startDrag} onLostPointerCapture={()=>finishDrag(false)} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home'].includes(event.key)||!owns(target))return;event.preventDefault();event.stopPropagation();const widths=widthsFor(target),table=tableElement(editor,target.id)!;writeWidths(target,event.key==='Home'?chooseNativeTableColumnWidths(target.columns,availableWidth(table)):resizeNativeTableColumnWidths(widths,widths.reduce((a,b)=>a+b,0)+(event.key==='ArrowRight'?1:-1)*(event.shiftKey?40:8)),false)}}>⋮</button>
+  <button className="en-native-table-width-handle" role="separator" aria-label={t('调整表格整体宽度')} aria-orientation="vertical" tabIndex={0} style={{left:position.right+2,top:position.tableTop,height:Math.max(30,position.bottom-position.tableTop)}} onPointerDown={startDrag} onDoubleClick={event=>{event.preventDefault();event.stopPropagation();if(owns(target))writeWidths(target,chooseNativeTableColumnWidths(target.columns,availableWidth(tableElement(editor,target.id)!)))}} onLostPointerCapture={()=>finishDrag(false)} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home'].includes(event.key)||!owns(target))return;event.preventDefault();event.stopPropagation();const widths=widthsFor(target),table=tableElement(editor,target.id)!;writeWidths(target,event.key==='Home'?chooseNativeTableColumnWidths(target.columns,availableWidth(table)):resizeNativeTableColumnWidths(widths,widths.reduce((a,b)=>a+b,0)+(event.key==='ArrowRight'?1:-1)*(event.shiftKey?40:8)),false)}}><svg viewBox="0 0 8 16" width="8" height="16" aria-hidden="true"><path d="M3 3v10M5 3v10" stroke="currentColor" strokeWidth="1"/></svg></button>
  </>,layer):null}</>
 }
