@@ -69,7 +69,7 @@ export function patchResearchGridWorkbench(source){
   change('ComponentDataStatusBar,{sessionId:componentDataSessionId,node}','ComponentDataStatusBar,{sessionId:componentDataSessionId,node,workbench:true}')
   change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':'', 'data-research-generation-stage': presentation.stage,")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
-  change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);')
+  change(anchor,anchor+'\nconst implicitGenerationResizes=new Set();const workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);')
   change('const canvasActions = canvasWorkspaceActions({\n        snapshot:()=>snapshot,',`const canvasActions = canvasWorkspaceActions({
         snapshot:()=>snapshot,
         presentation:()=>({workbenchStyle:workbenchStyleState.get()||readResearchComponentTheme()}),
@@ -81,9 +81,21 @@ export function patchResearchGridWorkbench(source){
   change('frame?.contentWindow?.postMessage({ type: \"sherlock-theme\", colorScheme: readResearchComponentTheme(frame.ownerDocument) }, \"*\");','sendWorkbenchFramePresentation(frame);')
   // Explicitly drawn frames retain their size across generation and hydration.
   // This is distinct from automatic voice/selection cards' readable task size.
-  change('...(selectedCreate ? { creationMode: "selection" } : {}),','...(selectedCreate ? { creationMode: "selection" } : {}),\n...(value.preserveGenerationSize===true?{preserveGenerationSize:true}:{}),')
+  change('...(selectedCreate ? { creationMode: "selection" } : {}),','...(selectedCreate ? { creationMode: "selection" } : {}),\n...(typeof value.preserveGenerationSize==="boolean"?{preserveGenerationSize:value.preserveGenerationSize}:{}),')
+  // Only a newly click-created implicit frame opts into one completed-content fit.
+  // Grid projection remains manual; absent/true markers retain all legacy sizes.
+  change("if(node?.sizeMode==='manual'||spec===null)return null;\n  const {width,height}=researchOptimalDimensions({...node,containerSpec:spec});\n  return {width,height};", "if((node?.sizeMode==='manual'&&node.preserveGenerationSize!==false)||spec===null)return null;\n  const content=node.preserveGenerationSize===false?{...node,width:0,height:0,containerSizePreset:undefined,size:undefined,sizeMode:'auto'}:node;\n  const {width,height}=researchOptimalDimensions({...content,containerSpec:spec});\n  return {width,height,...(node.preserveGenerationSize===false?{preserveGenerationSize:true}:{})};")
+  // Explicit geometry edits take ownership before a pending result can fit it.
+  change('const next = geometry.sizeMode === "auto" ? researchGenerationSizedNode(node, geometry, snapshot) : { ...node, ...geometry };', 'const next = geometry.sizeMode === "auto" ? researchGenerationSizedNode(node, geometry, snapshot) : { ...node, ...geometry };\nif(node.preserveGenerationSize===false&&geometry.sizeMode!=="auto"&&(Number.isFinite(geometry.width)&&geometry.width!==node.width||Number.isFinite(geometry.height)&&geometry.height!==node.height))next.preserveGenerationSize=true;')
+  change('const next = {...n,x:g.x,y:g.y,width:g.width,height:g.height};', 'const next = {...n,x:g.x,y:g.y,width:g.width,height:g.height};\nif(n.preserveGenerationSize===false&&(Math.abs(g.width-n.width)>.5||Math.abs(g.height-n.height)>.5))implicitGenerationResizes.add(n.id);')
+  change('const geometry = researchContainerFinalGeometry(next, spec);','const geometry = implicitGenerationResizes.has(next.id)&&next.preserveGenerationSize===false?null:researchContainerFinalGeometry(next, spec);')
+  change('this.applyPointerGeometry(nodes);\n                  pendingHistoryTransaction = null;',`this.applyPointerGeometry(nodes);
+                  const cancelled=new Set(implicitGenerationResizes);implicitGenerationResizes.clear();
+                  const artifacts=snapshot.artifacts.map(n=>cancelled.has(n.id)&&n.preserveGenerationSize===false&&n.generationStatus==='completed'&&n.containerSpec?researchGenerationSizedNode(n,researchContainerFinalGeometry(n,n.containerSpec),snapshot):n);
+                  if(collaborationCanWrite()&&artifacts.some((n,i)=>n!==snapshot.artifacts[i]))update({artifacts},false);
+                  pendingHistoryTransaction = null;`)
   change('const persistSnapshot = () => {','const persistSnapshot = () => {\nif(!workbenchGrid.save())return false;')
-  change('persist() { finalizeHistoryTransaction(); persistSnapshot(); if(collaborationGesture){collaborationGesture=false;sherlockBoardsAdapter?.finishGesture(sessionId);} },','persist() { finalizeHistoryTransaction(); const durable=persistSnapshot(); if(collaborationGesture){collaborationGesture=false;sherlockBoardsAdapter?.finishGesture(sessionId);} return durable; },')
+  change('persist() { finalizeHistoryTransaction(); persistSnapshot(); if(collaborationGesture){collaborationGesture=false;sherlockBoardsAdapter?.finishGesture(sessionId);} },','persist() { if(implicitGenerationResizes.size){const canWrite=collaborationCanWrite();const artifacts=snapshot.artifacts.map(n=>implicitGenerationResizes.has(n.id)&&n.preserveGenerationSize===false?{...n,preserveGenerationSize:true}:n);implicitGenerationResizes.clear();if(canWrite)update({artifacts},false);}finalizeHistoryTransaction(); const durable=persistSnapshot(); if(collaborationGesture){collaborationGesture=false;sherlockBoardsAdapter?.finishGesture(sessionId);} return durable; },')
   // Planning participates in local selection and geometry, but is not a
   // document node. Persist only selection belonging to durable components.
   change('setSelection(selection) { update({ selection: parseResearchCanvasSelection(JSON.stringify(selection), snapshot.files, snapshot.artifacts) }, true); },','setSelection(selection) { update({ selection: parseResearchCanvasSelection(JSON.stringify(selection), snapshot.files, [...snapshot.artifacts,...workbenchGrid.planningNodes()]) }, true); },')
