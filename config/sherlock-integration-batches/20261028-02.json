@@ -10507,6 +10507,129 @@
         ],
         "recordedAt": "2026-10-30T13:41:24.830Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话检查清单首屏生成规则与精准拒绝提示",
+        "branch": "codex/feat/conversation-checklist-first-paint-20261031",
+        "baseCommit": "854ec096e4b0c29ddcda781e980b7ba73de256da",
+        "tipCommit": "4879a75b595eeafe952e1d7a17a2d5c1efc1c0f1",
+        "commits": [
+          {
+            "commit": "4879a75b595eeafe952e1d7a17a2d5c1efc1c0f1",
+            "parents": [
+              "854ec096e4b0c29ddcda781e980b7ba73de256da"
+            ],
+            "subject": "修复对话组件首屏空壳的生成规则与精准拒绝提示"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-31-conversation-checklist-first-paint-design.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-component-first-paint.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-html-state-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/conversation-checklist-empty-first-paint.json"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/conversation-research-checklist.html"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-component-first-paint.test.js",
+              "test/conversation-component-html-validation.test.js",
+              "test/conversation-component-contract.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/conversation-component-html-state.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "5文件244/244聚焦通过，含真实三份空壳artifact拒绝原因、SVG/canvas、合同/策略和HTML状态IPC/磁盘恢复。",
+            "verifiedCommit": "4879a75b595eeafe952e1d7a17a2d5c1efc1c0f1",
+            "completedAt": "2026-10-30T16:39:44.400895+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-html-state-browser.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "受影响真实Browser文件15/15通过；禁JS首屏、生产Conversation卡片勾选/计数/实际服务与Store保存、冷重开不重复写入及原13项回归。",
+            "verifiedCommit": "4879a75b595eeafe952e1d7a17a2d5c1efc1c0f1",
+            "completedAt": "2026-10-30T16:40:25.515822+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript通过。",
+            "verifiedCommit": "4879a75b595eeafe952e1d7a17a2d5c1efc1c0f1",
+            "completedAt": "2026-10-30T16:39:51.428068+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "854ec096e4b0c29ddcda781e980b7ba73de256da..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "严格base至tip差分空白检查通过。",
+            "verifiedCommit": "4879a75b595eeafe952e1d7a17a2d5c1efc1c0f1",
+            "completedAt": "2026-10-30T16:39:42.608966+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium禁JS显示三项及0/3；生产Conversation卡片经实际preload bridge、测试HTTP传输、实际service/磁盘Store，依次勾选第一/第三项、取消第一项，冷重开仅第三项与1/3保留，无新增写入、Canvas写入或pageerror。未构建/操作共享Native App。"
+        },
+        "acceptanceCriteria": [
+          "真实三份合成JS-only空壳继续拒绝，返回明确首屏空正文原因及定向修复说明，不放宽schema/首屏/CSP/共享状态守卫。",
+          "生成规则明确初始真实标签、数值和控件，JS渐进增强；同因定向修复一次仍失败不继续盲重试。",
+          "静态首屏清单禁JS可读，实际勾选与计数保存，冷重开状态不丢失且不重新写入。",
+          "保留原生/结构化组件、SVG/canvas例外、既有只读/失效身份/保存失败与状态协议回归。",
+          "严格7路径独立中文提交，fixture仅含合成artifact，没有真实账户、会话、请求或调用标识。"
+        ],
+        "risks": [
+          "本次未测在线模型修复后的耗时或成功率；同因重试约束为生成规则，不是新增全局硬次数阈值。新签名Native包验收由Root集成后执行。",
+          "另发现既有onchange复选框与原生click journal重复回放问题；实际调试日志已保留，本次只用onclick渐进增强范式及生成规则，未修改或迁移共享runtime/旧组件。"
+        ],
+        "generatedAt": "2026-10-30T16:44:12.058506+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -11066,6 +11189,47 @@
         "43d50580cf904f96f48ca3704ad0d8d1026ed55e"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-component-first-paint.test.js",
+        "test/conversation-component-html-validation.test.js",
+        "test/conversation-component-contract.test.js",
+        "test/conversation-components-policy.test.js",
+        "test/conversation-component-html-state.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-html-state-browser.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "854ec096e4b0c29ddcda781e980b7ba73de256da..HEAD"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
