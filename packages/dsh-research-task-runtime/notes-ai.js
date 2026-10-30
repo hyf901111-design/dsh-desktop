@@ -38,28 +38,58 @@ function recoverableNoteCalls(transport,catalog,receipts){
 // primary operation reply. Admit only that exact current batch, never a mixed
 // reply, code example, explicit foreign marker or a format-recovery invention.
 // The host executor still owns current-document permission, revisions and ACKs.
-function containsLiteralNoteBatch(source,fingerprint,depth=0){
- if(depth>16)return false
- if(source&&typeof source==='object'){
-  if(source.kind==='capabilities'&&JSON.stringify(immutableJson(source.calls))===fingerprint)return true
-  return Object.values(source).some(value=>containsLiteralNoteBatch(value,fingerprint,depth+1))
- }
- if(typeof source!=='string'||!source.includes('capabilities'))return false
- // Inspect complete JSON values in source material only to reject echoes. No
- // extracted source object ever becomes a candidate for operation execution.
- for(let start=source.indexOf('{');start>=0;start=source.indexOf('{',start+1)){
-  let nesting=0,quoted=false,escaped=false,closed=false
-  for(let end=start;end<source.length;end++){
-   const char=source[end]
-   if(quoted){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"')quoted=false;continue}
-   if(char==='"')quoted=true;else if(char==='{')nesting++;else if(char==='}'&&!--nesting){
-    try{if(containsLiteralNoteBatch(JSON.parse(source.slice(start,end+1)),fingerprint,depth+1))return true}catch{}
-    start=end;closed=true;break
+export function containsLiteralNoteBatch(source,fingerprint){
+ const exhausted=Symbol('note-source-scan-budget')
+ try{
+  const expected=JSON.parse(fingerprint),size=typeof source==='string'?source.length:JSON.stringify(source).length
+  let remaining=65536+size*8
+  const spend=amount=>{remaining-=amount;if(remaining<0)throw exhausted}
+  const same=value=>{
+   const pairs=[[value,expected]]
+   while(pairs.length){
+    spend(1);const[a,b]=pairs.pop()
+    if(typeof a==='string'&&typeof b==='string'){spend(Math.min(a.length,b.length));if(a!==b)return false;continue}
+    if(a===b)continue
+    if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false
+    const keys=Object.keys(a),wanted=Object.keys(b);spend(keys.length+wanted.length)
+    if(keys.length!==wanted.length)return false
+    for(const key of wanted){if(!Object.hasOwn(a,key))return false;pairs.push([a[key],b[key]])}
+   }
+   return true
+  }
+  const pending=[source]
+  while(pending.length){
+   spend(1);const value=pending.pop()
+   if(value&&typeof value==='object'){
+    if(value.kind==='capabilities'&&same(value.calls))return true
+    const values=Object.values(value);spend(values.length);for(const child of values)pending.push(child);continue
+   }
+   if(typeof value!=='string')continue
+   // Each object/string opener is independent: malformed preceding braces or
+   // quotes must not hide a later complete JSON value. Source values are only
+   // rejected as echoes; none of these candidates gains execution authority.
+   spend(value.length)
+   for(let start=0;start<value.length;start++){
+    const opener=value[start];if(opener!=='{'&&opener!=='"')continue
+    if(opener==='{'){let next=start+1;while(next<value.length&&/\s/u.test(value[next])){spend(1);next++}if(value[next]!=='"')continue}
+    let nesting=0,quoted=opener==='"',escaped=false,end=start+(quoted?1:0)
+    for(;end<value.length;end++){
+     spend(1);const char=value[end]
+     if(quoted){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"'){quoted=false;if(opener==='"')break}continue}
+     if(char==='"')quoted=true;else if(char==='{')nesting++;else if(char==='}'&&!--nesting)break
+    }
+    if(end===value.length)continue
+    spend(end-start+1)
+    try{pending.push(JSON.parse(value.slice(start,end+1)))}catch{}
    }
   }
-  if(!closed)break
+  return false
+ }catch{
+  // Total lexical, parse-input and comparison work shares a linear budget.
+  // Ambiguous over-budget material cannot authorize the missing-marker path;
+  // normal nonce-bound generation and host permission checks are unchanged.
+  return true
  }
- return false
 }
 function unmarkedPrimaryNoteCalls(value,catalog,sources){
  if(!plain(value)||value.kind!=='capabilities'||Object.hasOwn(value,'wireToken')||Object.keys(value).some(key=>!['kind','calls','inlineOrder'].includes(key))||value.inlineOrder!==undefined&&!['before-components','after-components'].includes(value.inlineOrder)||!Array.isArray(value.calls)||!value.calls.length||value.calls.length>8||JSON.stringify(value).length>64000)return
