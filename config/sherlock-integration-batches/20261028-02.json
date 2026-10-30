@@ -4848,6 +4848,112 @@
         ],
         "recordedAt": "2026-10-30T00:46:44.419Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复研究空对话欢迎被容器子任务误隐藏",
+        "branch": "codex/feat/research-component-welcome-20261030",
+        "baseCommit": "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6",
+        "tipCommit": "74f5831b7051190133344cd5bf0d7e47e3fc0238",
+        "commits": [
+          {
+            "commit": "74f5831b7051190133344cd5bf0d7e47e3fc0238",
+            "parents": [
+              "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6"
+            ],
+            "subject": "修复：容器生成时保留研究空对话欢迎"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-conversation-vacancy.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-empty-conversation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-sidebar.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-empty-conversation.test.js",
+              "test/notes-sidebar.test.js",
+              "test/research-resident-conversation.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip的36条直接相关检查通过：真实Browser ConversationRoot/registry/Sidebar状态27例，Notes侧栏与resident边界9例。",
+            "verifiedCommit": "74f5831b7051190133344cd5bf0d7e47e3fc0238",
+            "completedAt": "2026-10-30T02:05:33.678102+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip tsconfig.node TypeScript检查通过。",
+            "verifiedCommit": "74f5831b7051190133344cd5bf0d7e47e3fc0238",
+            "completedAt": "2026-10-30T02:05:43.014490+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6",
+              "74f5831b7051190133344cd5bf0d7e47e3fc0238"
+            ],
+            "outcome": "passed",
+            "summary": "精确e3cec1ad..74f5831b范围diff --check通过。",
+            "verifiedCommit": "74f5831b7051190133344cd5bf0d7e47e3fc0238",
+            "completedAt": "2026-10-30T02:05:43.149099+00:00",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "冻结工作树diff --check通过且git status干净。",
+            "verifiedCommit": "74f5831b7051190133344cd5bf0d7e47e3fc0238",
+            "completedAt": "2026-10-30T02:05:43.283763+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离Chromium中使用生产ConversationRoot、真实ResearchWorkspaceRegistry及真实SidebarCoordinator/SidebarStore/service：queued/running先RED欢迎0应1，修复后欢迎保持同DOM通过completed/failed/cancelled，主对话消息/running仍显示；用户主动选任务标签后各阶段不抢回。任务页内容与Canvas视图原语为夹具边界，未操作或构建共享Native，Root负责实际用户路径验收。"
+        },
+        "acceptanceCriteria": [
+          "仅Research视图的空对话欢迎忽略Canvas容器自身queued/running；容器的进度继续留在原画布位置，完成、失败或取消不再卸载/重挂欢迎节点与输入框。",
+          "Chat/Notes原生成遮挡、planning/stopping、原生消息/running/pending/queue、笔记任务、canvas tasks、shared历史以及open/loading/error等原空内容门禁保留。",
+          "用户已经选择的任务页保持，修复不改Sidebar焦点/生成路由/provider/model/effort/用户卡或已存组件。",
+          "已有v1安装条件可升级到受Research上下文限制的新条件，保留无artifacts的首次启动安全检查，重复patch字节稳定。"
+        ],
+        "risks": [
+          "共享打包Native以及用户当前智能容器中的实际路径由Root最终验收；功能树未启动/替换应用或操作用户卡。",
+          "Browser中的Canvas和任务页内容是测试原语；生产ConversationRoot、registry及侧栏状态/协调器为真实实现，未运行真实模型生成。"
+        ],
+        "generatedAt": "2026-10-30T02:07:00.875485+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5191,6 +5297,37 @@
         "diff",
         "--check",
         "44bec2f5749442ed29804d3e7e32ce5fb5ffae84..11a58d47e0e726395dce6eea541c80d402262aca"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-empty-conversation.test.js",
+        "test/notes-sidebar.test.js",
+        "test/research-resident-conversation.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6",
+        "74f5831b7051190133344cd5bf0d7e47e3fc0238"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
       ],
       "timeoutMs": 10000
     }
