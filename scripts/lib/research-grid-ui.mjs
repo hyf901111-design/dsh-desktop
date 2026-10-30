@@ -348,6 +348,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const update=(e,releasing=false)=>{
     if(!op)return
     const sample=op.lastSample,p=releasing&&sample?{x:sample.point.x+e.clientX-op.lastClient.x,y:sample.point.y+e.clientY-op.lastClient.y}:point(e),m=releasing&&sample?sample.metrics:grid.metrics(width());let target
+    if(op.kind==='draw'&&Math.hypot(e.clientX-op.startClient.x,e.clientY-op.startClient.y)>4)op.drawn=true
     op.lastClient={x:e.clientX,y:e.clientY}
     op.lastSample={point:p,metrics:m}
     if(op.kind==='draw')target=grid.draw(op.start,p,m)
@@ -384,7 +385,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(commit&&op.kind==='draw'){
       workspace.applyWorkbenchCells(op.canonicalBefore,false)
       const n=grid.project([{id:'__draft__'}],[op.target],width())[0]
-      const node=workspace.createContainerDraft({x:n.x,y:n.y,width:n.width,height:n.height,sizeMode:'manual',preserveGenerationSize:true})
+      const node=workspace.createContainerDraft({x:n.x,y:n.y,width:n.width,height:n.height,sizeMode:'manual',preserveGenerationSize:op.drawn===true})
       if(node)workspace.applyWorkbenchCells(grid.place(op.canonicalBefore,{...op.target,id:node.id},node.id),false)
       workspace.persist();selectTool('select')
     }else if(commit){workspace.applyWorkbenchCells(committed,false);workspace.persist()}
@@ -415,7 +416,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     e.preventDefault();e.stopImmediatePropagation();root.focus({preventScroll:true});root.setPointerCapture?.(e.pointerId)
     if(id&&!current.selection.selectedNodeIds.includes(id))workspace.updateSelection([id],'replace')
     const selectedIds=resize&&resize.getAttribute('data-workbench-resize-axis')!=='xy'&&current.selection.selectedNodeIds.includes(id)?current.selection.selectedNodeIds.filter(selected=>{const element=root.querySelector('[data-research-node-id="'+CSS.escape(selected)+'"]');return element&&!element.hasAttribute('data-research-geometry-blocked')&&!element.hasAttribute('open')}):[id]
-    op={kind:draw?'draw':resize?'resize':'move',axis:resize?.getAttribute('data-workbench-resize-axis'),selectedIds,pointerId:e.pointerId,start:point(e),width:width(),before,canonicalBefore,cell:before.find(c=>c.id===id),geometry:[...current.files,...current.artifacts,...workspace.getWorkbenchPlanningNodes()]}
+    op={kind:draw?'draw':resize?'resize':'move',axis:resize?.getAttribute('data-workbench-resize-axis'),selectedIds,pointerId:e.pointerId,start:point(e),startClient:{x:e.clientX,y:e.clientY},width:width(),before,canonicalBefore,cell:before.find(c=>c.id===id),geometry:[...current.files,...current.artifacts,...workspace.getWorkbenchPlanningNodes()]}
     if(!draw&&!op.cell){op=null;return}
     root.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e
     if(resize)for(const selected of selectedIds){if(selected===id)continue;root.querySelector('[data-research-node-id="'+CSS.escape(selected)+'"]')?.setAttribute('data-grid-active','');const element=document.createElement('div');element.className='ew-grid-placeholder';element.hidden=true;root.appendChild(element);groupPreviews.push({id:selected,element})}
