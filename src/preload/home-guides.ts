@@ -1,4 +1,6 @@
 import styles from './home-guides.css?raw'
+import {emitNotesGuideDiagnostic} from './notes-guide-diagnostics'
+import {NOTES_GUIDE_STEPS,notesGuideFailureReason,type NotesGuideDiagnosticPhase,type NotesGuideDiagnosticReason} from '../shared/notes-guide-diagnostics'
 import { HOME_WORKBENCH_STEPS } from '../../packages/dsh-research-task-runtime/home-workbench-contract.js'
 import { createHomeGuideTimeline, type GuideTimeline } from './home-guide-timeline'
 import {createHomeGuidePointer, type HomeGuidePointerAction} from './home-guide-pointer'
@@ -120,17 +122,24 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  const win=document.defaultView!,style=document.createElement('style');style.id='odyssey-home-guide-style';style.textContent=styles;document.head.append(style)
  let disposed=false,generation=0,ownedNavigation=0,preparing:{controller:AbortController;source?:string;target?:string}|undefined,closing=Promise.resolve()
  let transition:string|undefined
- type Run={id:string;kind:HomeGuideKind;sessionId:string;abort:AbortController;root:HTMLElement;resident:HTMLElement;center:HTMLElement;content:HTMLElement;adapter?:HomeGuideAdapter;timeline?:GuideTimeline;hiddenPause?:boolean;pointer?:ReturnType<typeof createHomeGuidePointer>;handoff?:()=>void;cleanup():void;status:HTMLElement}
+ type Run={id:string;kind:HomeGuideKind;sessionId:string;abort:AbortController;root:HTMLElement;resident:HTMLElement;center:HTMLElement;content:HTMLElement;adapter?:HomeGuideAdapter;timeline?:GuideTimeline;hiddenPause?:boolean;pointer?:ReturnType<typeof createHomeGuidePointer>;handoff?:()=>void;cleanup():void;status:HTMLElement;diagnosticPhase?:string;pauseReason?:NotesGuideDiagnosticReason;resumeReason?:NotesGuideDiagnosticReason}
  let active:Run|undefined
+ const diagnostic=(run:Run,phase:NotesGuideDiagnosticPhase,reason:NotesGuideDiagnosticReason,step?:string,error?:unknown)=>{
+  if(run.kind!=='note')return
+  try{const index=run.timeline?.snapshot().index??0,current=step??EXAMPLES.note.steps[Math.min(index,EXAMPLES.note.steps.length-1)]?.[0];if(!NOTES_GUIDE_STEPS.includes(current as any))return
+   const name=(error as {name?:unknown})?.name,errorName=error===undefined?undefined:name==='AbortError'||name==='TimeoutError'?name:'Error'
+   emitNotesGuideDiagnostic({runId:run.id,sessionId:run.sessionId,step:current as typeof NOTES_GUIDE_STEPS[number],phase,reason,...errorName?{errorName}:{}})
+  }catch{}
+ }
  const selected=()=>[...document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol [data-srb-session-header][data-ework-notes-session]')].find(node=>!node.closest('[data-odyssey-subagent-panel]'))?.dataset.eworkNotesSession
  const releaseTransition=()=>{if(transition&&document.documentElement.dataset.homeGuideTransition===transition){delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession}transition=undefined}
  const playback=(run:Run,playing:boolean,ending=false)=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:run.id,sessionId:run.sessionId,playing,...ending?{ending:true}:{}}}))
  const hideCue=()=>active?.pointer?.hide()
  const notices=new Set<HTMLElement>()
  const saveFailure=(message:string)=>{const notice=document.createElement('div');notice.className='odyssey-home-guide-save-error';notice.setAttribute('role','alert');const text=document.createElement('span');text.textContent='示例保存未完成：'+message;const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='关闭';dismiss.addEventListener('click',()=>{notices.delete(notice);notice.remove()});notice.append(text,dismiss);notices.add(notice);document.body.append(notice)}
- const close=(restoreFocus=true,alreadySaved=false):Promise<void>=>{
+ const close=(restoreFocus=true,alreadySaved=false,reason:NotesGuideDiagnosticReason='closed'):Promise<void>=>{
   const run=active;if(!run)return closing
-  active=undefined;run.timeline?.dispose();run.pointer?.dispose();playback(run,false,true)
+  if(reason!=='handoff')diagnostic(run,'cancelled',reason);active=undefined;run.timeline?.dispose();run.pointer?.dispose();playback(run,false,true)
   if(document.documentElement.dataset.homeGuidePointerRun===run.id)delete document.documentElement.dataset.homeGuidePointerRun
   const finish=()=>{
    try{
@@ -149,7 +158,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  const start=async(kind:HomeGuideKind,input:{replay?:boolean;entry?:HomeOperationActionContext}={})=>{
   if(disposed||input.entry?.signal.aborted)throw aborted();if(!(kind in EXAMPLES))throw Error('暂不支持此教程。')
   const token=++generation;preparing?.controller.abort();preparing=undefined
-  await close(false);releaseTransition();if(disposed||token!==generation)throw aborted()
+  await close(false,false,'restart');releaseTransition();if(disposed||token!==generation)throw aborted()
   const controller=new win.AbortController(),pending={controller,source:selected(),target:undefined as string|undefined};preparing=pending
   let entryPointer:ReturnType<typeof createHomeGuidePointer>|undefined,mountedOptions:HomeGuideMountOptions|undefined,checkDraft:(()=>void)|undefined,clearEntry=()=>{},clearTakeover=()=>{}
   const id=win.crypto.randomUUID()
@@ -219,7 +228,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const content=document.createElement('div');content.id='odyssey-home-guide-content-'+id;content.className='odyssey-home-guide-content'+(kind==='note'?' en-root':'');content.dataset.homeGuideContent='';if(kind==='note')content.dataset.homeGuideNotes='';content.dataset.dark=String(document.body.hasAttribute('data-ds-dark-theme'))
   const notice=document.createElement('div');notice.className='odyssey-home-guide-fault';notice.hidden=true;notice.setAttribute('role','alert')
   const status=document.createElement('p');status.className='odyssey-home-guide-status';status.textContent='正在打开已保存的示例…'
-  const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='×';dismiss.setAttribute('aria-label','关闭示例');dismiss.addEventListener('click',()=>{void close()})
+  const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='×';dismiss.setAttribute('aria-label','关闭示例');dismiss.addEventListener('click',()=>{void close(true,false,'dismiss')})
   notice.append(status,dismiss);root.append(content,notice)
   const fault=(message:string)=>{root.dataset.phase='error';notice.hidden=false;status.textContent=message}
   const blocked=new Map<HTMLElement,boolean>()
@@ -229,7 +238,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   blockResident();center.append(root);releaseTransition();playback(run,false)
   const position=()=>{if(!root.isConnected)return;const bounds=center.getBoundingClientRect(),chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header')?.getBoundingClientRect(),top=Math.max(bounds.top,chrome?.bottom??bounds.top+44);root.style.left=bounds.left+'px';root.style.top=top+'px';root.style.width=bounds.width+'px';root.style.height=Math.max(1,bounds.bottom-top)+'px'}
   const resize=new win.ResizeObserver(position);resize.observe(center);const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');if(chrome)resize.observe(chrome);win.addEventListener('resize',position);position()
-  const context=new win.MutationObserver(()=>{if(active!==run)return;if(selected()!==run.sessionId||!resident.isConnected||document.querySelector('.VOzbGW_overlay')||document.body.hasAttribute('data-workspace-surface'))void close(false);else blockResident()})
+  const context=new win.MutationObserver(()=>{if(active!==run)return;const reason=selected()!==run.sessionId?'owner-changed':!resident.isConnected?'source-removed':document.querySelector('.VOzbGW_overlay')?'settings-opened':document.body.hasAttribute('data-workspace-surface')?'surface-changed':undefined;if(reason)void close(false,false,reason);else blockResident()})
   context.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ework-notes-session','data-workspace-surface']})
   run.cleanup=()=>{resize.disconnect();context.disconnect();win.removeEventListener('resize',position);for(const[body,inert]of blocked)body.inert=inert}
   const guideTab=(kind==='board'||kind==='workbench')?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+guideTab+'"]')
@@ -247,33 +256,43 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    if(session.fresh===false){await close(false,true);return}
    const handoffSaved=async()=>{
     const current=()=>{ensure();if(token!==generation||!root.isConnected||!resident.isConnected||!center.contains(resident))throw aborted()}
-    current();await (adapter.flush?.()??Promise.resolve());current()
+    current();diagnostic(run,'handoff-start','handoff');await (adapter.flush?.()??Promise.resolve());current()
     const handoff=await adapters.prepareHandoff?.({...session,kind},controller.signal);current()
-    if(handoff)run.handoff=handoff;await close(false,true)
+    if(handoff)run.handoff=handoff;diagnostic(run,'handoff-end','handoff');await close(false,true,'handoff')
    }
    const scenes:readonly Scene[]=definition.steps
    run.timeline=createHomeGuideTimeline({steps:scenes.map(([id,,,hold])=>({id,hold})),run:async step=>{
-    ensure();await adapter.runStep(step);ensure()
-    if(kind==='workbench'&&step==='wb-03'||kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
-     await options.waitUntilPlaying();ensure()
-     await exchangeSession(document,{kind,command:'activate-title',sessionId:run.sessionId},controller.signal);ensure()
-    }
+    ensure();diagnostic(run,'step-start','playback',step)
+    try{
+     await adapter.runStep(step);ensure()
+     if(kind==='workbench'&&step==='wb-03'||kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
+      await options.waitUntilPlaying();ensure()
+      await exchangeSession(document,{kind,command:'activate-title',sessionId:run.sessionId},controller.signal);ensure()
+     }
+     diagnostic(run,'step-end','step-complete',step)
+    }catch(error){diagnostic(run,'step-fail',notesGuideFailureReason(error),step,error);throw error}
    },onChange:state=>{
     if(active!==run||state.phase==='disposed')return
+    if(run.diagnosticPhase!==state.phase){
+     if(state.phase==='paused')diagnostic(run,'paused',run.pauseReason??'timeline-paused')
+     else if(state.phase==='playing')diagnostic(run,'resumed',run.resumeReason??'playback')
+     else if(state.phase==='completed')diagnostic(run,'completed','step-complete')
+     run.diagnosticPhase=state.phase;run.pauseReason=undefined;run.resumeReason=undefined
+    }
     playback(run,state.phase==='playing');root.dataset.phase=state.phase
-    if(state.phase==='completed'){hideCue();void handoffSaved().catch(error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
+    if(state.phase==='completed'){hideCue();void handoffSaved().catch(error=>{diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error);if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
     else if(state.holding){status.textContent=scenes[state.index]?.[2]||''}
     else if(state.index===0)status.textContent=definition.intro
-   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。');if(kind==='note'&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===run.id)void handoffSaved().catch(error=>{if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}})
+   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。');if(kind==='note'&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===run.id)void handoffSaved().catch(error=>{diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error);if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}})
    run.timeline.play();visibility()
   }catch(error){if(active!==run||controller.signal.aborted)throw error;playback(run,false);fault(error instanceof Error?error.message:'示例尚未就绪，请重试。')}
  }
- const changed=()=>{if(preparing){const current=selected();if(current===preparing.source||current===preparing.target)return;preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&selected()!==active.sessionId)void close(false)}
- const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target||target.matches('[data-dsh-sidebar-root] button.hHd-Xa_toggle'))return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false)}
- const escape=(event:KeyboardEvent)=>{if((active||preparing)&&event.key==='Escape'){event.preventDefault();if(preparing){generation++;preparing.controller.abort();preparing=undefined;releaseTransition()}void close()}}
+ const changed=()=>{if(preparing){const current=selected();if(current===preparing.source||current===preparing.target)return;preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&selected()!==active.sessionId)void close(false,false,'owner-changed')}
+ const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target||target.matches('[data-dsh-sidebar-root] button.hHd-Xa_toggle'))return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false,false,'navigation')}
+ const escape=(event:KeyboardEvent)=>{if((active||preparing)&&event.key==='Escape'){event.preventDefault();if(preparing){generation++;preparing.controller.abort();preparing=undefined;releaseTransition()}void close(true,false,'escape')}}
  // The native note reviewer also pauses on window blur. Its actor must share
  // that gate so background time cannot consume a foreground review budget.
- const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden||(run.kind==='note'||run.kind==='workbench')&&!document.hasFocus()){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.timeline.play()}}
+ const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden||(run.kind==='note'||run.kind==='workbench')&&!document.hasFocus()){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.pauseReason=document.hidden?'document-hidden':'window-blur';run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.resumeReason='foreground-restored';run.timeline.play()}}
  const cueTarget=(value:any,key:'target'|'fromTarget')=>{
   const token=value?.[key+'Token']
   if(token===undefined)return value?.[key]
@@ -298,5 +317,5 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  }
  win.addEventListener('sherlock:home-action-context-changed',changed);win.addEventListener('sherlock:skill-menu-reset',changed);win.addEventListener('sherlock:home-guide-cue',showCue)
  document.addEventListener('keydown',escape,true);document.addEventListener('click',navigate,true);document.addEventListener('visibilitychange',visibility);win.addEventListener('blur',visibility);win.addEventListener('focus',visibility)
- return{start,reset:(restoreFocus=true)=>{generation++;preparing?.controller.abort();preparing=undefined;releaseTransition();return close(restoreFocus)},dispose:async()=>{if(disposed)return;disposed=true;generation++;preparing?.controller.abort();preparing=undefined;await close(false);releaseTransition();win.removeEventListener('sherlock:home-action-context-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',changed);win.removeEventListener('sherlock:home-guide-cue',showCue);document.removeEventListener('keydown',escape,true);document.removeEventListener('click',navigate,true);document.removeEventListener('visibilitychange',visibility);win.removeEventListener('blur',visibility);win.removeEventListener('focus',visibility);for(const notice of notices)notice.remove();notices.clear();style.remove()}}
+ return{start,reset:(restoreFocus=true)=>{generation++;preparing?.controller.abort();preparing=undefined;releaseTransition();return close(restoreFocus,false,'reset')},dispose:async()=>{if(disposed)return;disposed=true;generation++;preparing?.controller.abort();preparing=undefined;await close(false,false,'disposed');releaseTransition();win.removeEventListener('sherlock:home-action-context-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',changed);win.removeEventListener('sherlock:home-guide-cue',showCue);document.removeEventListener('keydown',escape,true);document.removeEventListener('click',navigate,true);document.removeEventListener('visibilitychange',visibility);win.removeEventListener('blur',visibility);win.removeEventListener('focus',visibility);for(const notice of notices)notice.remove();notices.clear();style.remove()}}
 }

@@ -26,11 +26,16 @@ export function parseGenerationDeliveryMessage(message:string):DeliveryRecord|nu
 
 /** At most 64 queued lines and two 512 KiB files; never block task delivery. */
 export function createGenerationDeliveryLog(directory:string,{maxBytes=512*1024}={}) {
- const path=join(directory,'workbench-delivery.jsonl'),previous=join(directory,'workbench-delivery.previous.jsonl')
+ return createMetadataDiagnosticLog(directory,'workbench-delivery',parseGenerationDeliveryMessage,{maxBytes})
+}
+
+/** Shared bounded writer. Callers supply a closed metadata parser, never raw console text. */
+export function createMetadataDiagnosticLog<T extends object>(directory:string,name:string,parse:(message:string)=>T|null,{maxBytes=512*1024}={}) {
+ const path=join(directory,name+'.jsonl'),previous=join(directory,name+'.previous.jsonl')
  let chain=Promise.resolve(),queued=0,size:number|undefined
  return {
   write(message:string):boolean{
-   const value=parseGenerationDeliveryMessage(message)
+   const value=parse(message)
    if(!value||queued>=64)return false
    const line=JSON.stringify(value)+'\n';queued++
    chain=chain.then(async()=>{

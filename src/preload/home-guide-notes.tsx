@@ -1,5 +1,7 @@
 import {createHomeGuideNoteMenu} from './home-guide-note-menu'
 import React from 'react'
+import {emitNotesGuideDiagnostic} from './notes-guide-diagnostics'
+import {NOTES_GUIDE_STEPS} from '../shared/notes-guide-diagnostics'
 import {createRoot} from 'react-dom/client'
 import {flushSync} from 'react-dom'
 import {NotesApp,type NotesGuideEditorApi,type NotesGuideBinding} from './notes/editor'
@@ -135,7 +137,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   options.signal.removeEventListener('abort',dispose);native?.dispose();root.unmount();container.remove()
   void finalFlush.catch(()=>{}).finally(()=>{scope.abort(new DOMException('演示已结束。','AbortError'));bridge.dispose()})
  }
- const interrupted=(event:Event)=>{if((event.target as Element)?.closest?.('.bn-editor,.en-title,.en-challenge-reply'))dispose()}
+ const interrupted=(event:Event)=>{if((event.target as Element)?.closest?.('.bn-editor,.en-title,.en-challenge-reply')){if(options.runId)emitNotesGuideDiagnostic({runId:options.runId,sessionId,step:NOTES_GUIDE_STEPS[completed]??'write',phase:'cancelled',reason:'editor-input'});dispose()}}
  if(options.fresh!==false){host.addEventListener('beforeinput',interrupted,true);host.addEventListener('paste',interrupted,true);host.addEventListener('drop',interrupted,true)}
  options.signal.addEventListener('abort',dispose,{once:true})
  if(options.signal.aborted){dispose();throw abortError()}
@@ -426,7 +428,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  return {async runStep(step){assert();if(failed)throw abortError();const index=order.indexOf(step);if(busy||index<0||index!==completed)throw Error('演示步骤顺序已变化，请重新播放。');busy=true
    try{await steps[index]!();assert();completed++}catch(error){
     failed=true
-    console.warn('[notes-guide-step]',JSON.stringify({runId:options.runId,sessionId,step,errorName:(error as Error)?.name||'Error',message:(error as Error)?.message||'演示未完成'}))
+    // The outer timeline writes closed-schema metadata for this failure; never log note text or error messages.
     // The real shell preloads the saved normal editor before releasing this
     // view. Keep partial content visible during that owned error handoff.
     const handoff=options.kind==='note'&&!!options.persistence&&useNative&&!disposed&&!signal.aborted&&!options.signal.aborted&&host.isConnected&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===options.runId

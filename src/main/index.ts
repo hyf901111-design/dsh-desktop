@@ -45,6 +45,8 @@ import { ResearchWebSessionPersistence } from './state/research-web-session'
 import { registerResearchYoutubeNative } from './state/research-youtube-native'
 import { registerCanvasUseWeb } from './state/canvas-use-web'
 import {createGenerationDeliveryLog,GENERATION_DELIVERY_PREFIX} from './state/generation-delivery-log'
+import {createNotesGuideDiagnosticLog,recordNotesGuideConsoleMessage} from './state/notes-guide-diagnostics'
+import {NOTES_GUIDE_DIAGNOSTIC_PREFIX} from '../shared/notes-guide-diagnostics'
 import { copyResearchFile } from './state/research-owned-files'
 import {randomUUID} from 'node:crypto'
 import { ResearchBoardIntegration } from './research-board-integration'
@@ -640,7 +642,9 @@ function createWindow(): BrowserWindow {
     window.setTitle('')
   })
   const generationDeliveryLog=createGenerationDeliveryLog(app.getPath('logs'))
+  const notesGuideDiagnosticLog=createNotesGuideDiagnosticLog(app.getPath('logs'))
   window.webContents.on('console-message', (details) => {
+    if(details.level==='info'&&details.message.startsWith(NOTES_GUIDE_DIAGNOSTIC_PREFIX))recordNotesGuideConsoleMessage(notesGuideDiagnosticLog,details,isTrustedMainWindowEvent({sender:window.webContents,senderFrame:details.frame},window))
     if(details.level==='info'&&details.message.startsWith(GENERATION_DELIVERY_PREFIX)&&isTrustedMainWindowEvent({sender:window.webContents,senderFrame:details.frame},window))generationDeliveryLog.write(details.message)
     if (details.level !== 'error') return
     const sourceUrl = details.sourceId || window.webContents.getURL()
