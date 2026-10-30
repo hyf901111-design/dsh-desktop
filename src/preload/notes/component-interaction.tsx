@@ -9,11 +9,12 @@ export function useNoteComponentInteraction(){
   const doc=root.current?.ownerDocument||document
   const down=(event:PointerEvent)=>{
    const element=root.current,target=event.target as HTMLElement|null;if(!element)return
-   const action=target?.closest?.('button.en-component-more,button.en-component-close')
-   // Header actions must not select this card, clear another card's selection,
-   // or move the editor caret before their normal click handler runs.
-   if(event.button===0&&action?.closest('.en-research-header,.en-file-header')&&action.closest('.en-root')){
-    event.preventDefault();event.stopPropagation();return
+   const header=target?.closest('.en-research-header,.en-file-header'),control=target?.closest('button,input,textarea,select,a[href],[role="combobox"],[contenteditable="true"]')
+   // Operate header controls without changing the selected card or references.
+   // Searches retain native focus; More and Close retain the editor caret.
+   if(event.button===0&&header?.closest('.en-root')&&control&&header.contains(control)){
+    if(control.matches('button.en-component-more,button.en-component-close'))event.preventDefault()
+    event.stopPropagation();return
    }
    if(target&&element.contains(target)){
     if(event.button===0&&target.closest?.('.en-research-header,.en-file-header'))select(event.shiftKey||event.metaKey||event.ctrlKey)

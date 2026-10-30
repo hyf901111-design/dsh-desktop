@@ -52,14 +52,14 @@ it('selects a component from its header and keeps removal functional',async()=>{
  await f.event(f.component.querySelector('.en-component-close')!,'pointerdown');await f.event(f.component.querySelector('.en-component-close')!,'click')
  expect(f.editor.removeBlocks).toHaveBeenCalledWith(['block'])
 })
-it('selects portalled header controls before their own propagation stop, preserving menu and search input',async()=>{
+it('operates portalled header controls without selecting the component, preserving menu and search input',async()=>{
  const f=await fixture(),outlet=document.createElement('div');document.body.append(outlet);const root=createRoot(outlet),menu=vi.fn()
  await act(async()=>root.render(createPortal(<><button onPointerDown={e=>e.stopPropagation()} onClick={menu}>菜单</button><input aria-label="搜索"/></>,f.component.querySelector('.en-native-component-title')!)))
  cleanup.push(async()=>act(async()=>root.unmount()))
  const button=f.component.querySelector('.en-native-component-title button')!;await f.event(button,'pointerdown');await f.event(button,'click')
- expect(f.component.dataset.selected).toBe('true');expect(menu).toHaveBeenCalledOnce()
+ expect(f.component.dataset.selected).toBeUndefined();expect(menu).toHaveBeenCalledOnce()
  const input=f.component.querySelector('input')!;await f.event(input,'pointerdown');input.focus()
- expect(document.activeElement).toBe(input);expect(f.editor.removeBlocks).not.toHaveBeenCalled()
+ expect(document.activeElement).toBe(input);expect(f.component.dataset.selected).toBeUndefined();expect(f.editor.removeBlocks).not.toHaveBeenCalled()
 })
 it('resizes the note at the overlapping real PPT object handle without editing the object or deselecting',async()=>{
  const f=await fixture();await f.select();const p=ppt(f)

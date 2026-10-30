@@ -43,6 +43,11 @@ async function fixture(readOnly=false){
  return{context,page,errors,close:async()=>{await page.evaluate(()=>(window as any).headerObserver.disconnect());await context.close()}}
 }
 const card=(page:any,id='card-b')=>page.locator('[data-note-research-block="'+id+'"]')
+async function headerControls(page:any){
+ await page.evaluate(()=>{
+  const header=document.querySelector('[data-note-research-block="card-b"] .en-native-component-title')!,input=document.createElement('input'),refresh=document.createElement('button');input.type='search';input.setAttribute('role','combobox');input.setAttribute('aria-label','顶栏搜索验收');refresh.textContent='刷新验收';refresh.addEventListener('click',()=>{(window as any).headerRefreshes=((window as any).headerRefreshes||0)+1});header.append(input,refresh)
+ })
+}
 async function press(page:any,button:any){await button.scrollIntoViewIfNeeded();await button.hover();const box=await button.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down()}
 async function snapshot(page:any){return page.evaluate(()=>(window as any).headerSnapshot())}
 async function saveEvidence(page:any,name:string,value:any){if(!evidence)return;const{mkdir,writeFile}=await import('node:fs/promises');await mkdir(evidence,{recursive:true});await writeFile(resolve(evidence,name+'.json'),JSON.stringify(value,null,2)+'\n');await page.screenshot({path:resolve(evidence,name+'.png')})}
@@ -68,6 +73,28 @@ it('closes only its own block once without selecting it or disturbing the caret 
   await saveEvidence(f.page,'close-once',{before,pressed,after,trace,removals:await f.page.evaluate(()=>(window as any).headerTrace.removals)})
   expect(pressed.selection).toEqual(before.selection);expect(pressed.sameFocus).toBe(true);expect(pressed.selected).toEqual([]);expect(pressed.references).toEqual([]);expect(trace.references).toEqual([])
   expect(after.selection).toEqual(before.selection);expect(after.sameFocus).toBe(true);expect(after.blocks.map((block:any)=>block.id)).toEqual(['intro','card-a','tail']);expect(after.blocks).toEqual(before.blocks.filter((block:any)=>block.id!=='card-b'));expect(await f.page.evaluate(()=>(window as any).headerTrace.removals)).toEqual([['card-b']]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+it('focuses and types in header search directly without selecting a card or emitting a reference',async()=>{
+ const f=await fixture();try{
+  await headerControls(f.page);await f.page.evaluate(()=>(window as any).headerCaret());const before=await snapshot(f.page),search=card(f.page).getByRole('combobox',{name:'顶栏搜索验收'})
+  await search.click();await search.pressSequentially('300308');const after=await snapshot(f.page)
+  expect(await search.inputValue()).toBe('300308');expect(await search.evaluate((node:HTMLElement)=>node===document.activeElement)).toBe(true)
+  expect(after.selected).toEqual([]);expect(after.references).toEqual([]);expect(after.selection).toEqual(before.selection)
+  expect(await f.page.evaluate(()=>(window as any).headerTrace.references)).toEqual([])
+  await card(f.page).getByRole('button',{name:'刷新验收',exact:true}).click();expect(await f.page.evaluate(()=>(window as any).headerRefreshes)).toBe(1);expect((await snapshot(f.page)).selected).toEqual([])
+  await saveEvidence(f.page,'search-direct',{before,after});expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+it('preserves another selected card while focusing header search and still selects the title explicitly',async()=>{
+ const f=await fixture();try{
+  await headerControls(f.page);await card(f.page,'card-a').getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await expect.poll(async()=>(await snapshot(f.page)).selected).toEqual(['card-a'])
+  await f.page.evaluate(()=>{(window as any).headerTrace.references=[]});const before=await snapshot(f.page),search=card(f.page).getByRole('combobox',{name:'顶栏搜索验收'})
+  await search.click();await search.pressSequentially('MSFT');const after=await snapshot(f.page)
+  expect(after.selected).toEqual(['card-a']);expect(after.references).toEqual(['card-a']);expect(after.selection).toEqual(before.selection);expect(await search.inputValue()).toBe('MSFT');expect(await f.page.evaluate(()=>(window as any).headerTrace.references)).toEqual([])
+  await card(f.page).locator('.en-research-header strong').click();await expect.poll(async()=>(await snapshot(f.page)).selected).toEqual(['card-b']);expect((await snapshot(f.page)).references).toEqual(['card-b']);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
