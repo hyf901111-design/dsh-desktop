@@ -65,7 +65,13 @@ export function normalizeConversationComponentArtifact(args){
  if(['files','gallery','calendar-tool','web','iframe','audio','youtube'].includes(artifact.type))throw Error('该类型尚未适配对话组件授权。')
  if(artifact.type==='financial-widget'&&(Object.hasOwn(artifact,'linkedWatchlistId')||Object.hasOwn(artifact,'linkedSourceId')))throw Error('对话组件没有画布连接节点，请提供独立 symbols/query。')
  const output=acceptArtifactOutput(JSON.stringify(artifact))
- if(!output)throw Error('对话组件 artifact 无效，请提交已完成的现有组件结构。')
+ if(!output){
+  // Explain the existing first-paint gate without executing or repairing model
+  // HTML. Only a valid raw HTML spec can receive this specific diagnosis.
+  const raw=artifact.type==='html'?parseResearchContainerSpec(artifact):null
+  if(raw&&researchHtmlText(raw.html).length===0&&!/<(?:svg|canvas)\b/i.test(raw.html))throw Error('对话组件首屏正文内容为空，未创建或保存新组件。初始 HTML 必须直接包含用户要求的真实文字、初始数值和控件，不能只有空容器，再由脚本生成全部内容。请保留原有交互，用 JavaScript 渐进增强这些已有内容，并继续通过 window.sherlockShared 保存状态。修复初始 HTML 正文后用新 requestId 重试；不要只改样式、文档外壳或共享状态参数来重复提交，也不要用无关、隐藏或占位文字绕过。')
+  throw Error('对话组件 artifact 无效，请提交已完成的现有组件结构。')
+ }
  const parsed=parseResearchContainerSpec(JSON.parse(output))
  if(!parsed||!allowedTypes.has(parsed.type))throw Error('规范化后的类型不支持对话组件。')
  let containerSpec=detachedSpec(parsed)
