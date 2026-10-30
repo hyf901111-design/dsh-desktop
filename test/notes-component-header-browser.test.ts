@@ -11,7 +11,7 @@ let browser:any,script:string,css:string
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
   import React from 'react';import {createRoot} from 'react-dom/client';
-  import {NotesApp} from './src/preload/notes/editor';import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
+  import {NotesApp} from './src/preload/notes/editor';import '@blocknote/mantine/style.css';import './scripts/lib/research-grid-workbench.css';import './src/preload/notes/style.css';
   window.headerTrace={references:[],states:[],removals:[],requests:[],selectedChanges:[]};
   document.addEventListener('sherlock:notes-reference-component',event=>window.headerTrace.references.push(event.detail));
   document.addEventListener('sherlock:notes-reference-state',event=>{window.headerReferences=event.detail;window.headerTrace.states.push(event.detail)});
@@ -55,7 +55,8 @@ it('opens More on the first click without selecting the card or moving the retai
   await saveEvidence(f.page,'more-first-click',{before,pressed,after,trace})
   expect(pressed.selection).toEqual(before.selection);expect(pressed.sameFocus).toBe(true);expect(pressed.selected).toEqual([]);expect(pressed.references).toEqual([]);expect(trace.references).toEqual([]);expect(trace.selectedChanges).toEqual([])
   expect(after.selection).toEqual(before.selection);expect(after.selected).toEqual([]);expect(after.references).toEqual([])
-  expect(await f.page.getByRole('menu',{name:'组件更多操作',exact:true}).count()).toBe(1);expect(f.errors).toEqual([])
+  const menu=f.page.getByRole('menu',{name:'组件更多操作',exact:true}),copy=menu.locator('[data-component-menu-action="copy"]');expect(await menu.count()).toBe(1);expect(await copy.evaluate((node:HTMLElement)=>{const box=node.getBoundingClientRect();return node.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2))})).toBe(true)
+  await copy.click();await expect.poll(()=>menu.count()).toBe(0);expect(await f.page.evaluate(()=>(window as any).headerTrace.requests.filter((request:any)=>request.method==='component-copy').length)).toBe(1);expect((await snapshot(f.page)).selected).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
