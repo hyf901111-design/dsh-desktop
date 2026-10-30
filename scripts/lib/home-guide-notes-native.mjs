@@ -116,13 +116,13 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
     const owner=root.closest('[data-research-node-id]'),input=owner?.querySelector('input[role="combobox"][aria-label="搜索个股代码或名字"]')
     if(!owner||!ticket.host.contains(owner))throw changed()
     if(!input||input.value.trim())throw Error('行情标的已被修改，已保留当前配置。')
-    await cue(ticket,input,'搜索笔记相关个股中际旭创300308');input.focus({preventScroll:true})
+    await cue(ticket,input,'搜索微软（MSFT）');input.focus({preventScroll:true})
     const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set
     let expected=''
     for(const character of 'MSFT'){await playing(ticket);valid(ticket,input);if(input.value!==expected)throw Error('行情搜索已变化，已保留用户输入。');expected+=character;setter.call(input,expected);input.dispatchEvent(new Event('input',{bubbles:true}));await delay(ticket,120)}
     const matching=()=>{check(ticket);if(!ticket.host.contains(owner)||root.closest('[data-research-node-id]')!==owner||!owner.contains(input))throw changed();const id=input.getAttribute('aria-controls'),popups=[...document.querySelectorAll('[role="listbox"][aria-label="匹配标的"]')].filter(node=>node.id===id);if(!id||popups.length!==1)return;const rows=[...popups[0].querySelectorAll('button[role="option"]')].filter(row=>row.querySelector('strong')?.textContent==='微软'&&[...row.querySelectorAll('small')].some(s=>s.textContent==='MSFT')&&row.querySelector('small')?.textContent==='US');if(rows.length>1)throw changed();return rows[0]}
     const option=await until(ticket,matching)
-    await cue(ticket,option,'选择中际旭创（300308.SZ）');if(input.value!==expected||matching()!==option)throw changed();option.click()
+    await cue(ticket,option,'选择微软（MSFT.US）');if(input.value!==expected||matching()!==option)throw changed();option.click()
     await until(ticket,()=>{check(ticket);if(!root.isConnected||!ticket.host.contains(root))throw changed();const footer=root.querySelector('.ew-financial-footer'),price=root.querySelector('.ew-quote-price-line strong')?.textContent||'',source=footer?.querySelector('.ew-financial-source-time')?.textContent||'',title=footer?.querySelector('.ew-financial-provenance')?.title||'';return root.textContent.includes('微软')&&/\d/.test(price)&&root.querySelector('[data-financial-chart] svg')&&source&&!/未取得|正在刷新/.test(source)&&title.includes('最近获取：')},true,25000)
     ticket.quoteConfigured=true
    }catch(error){check(ticket);throw Error('个股行情尚未完整取得，已保留实际状态，请检查来源后重播。')}
