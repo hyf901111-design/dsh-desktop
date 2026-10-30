@@ -1,5 +1,6 @@
 import {describe,it,expect,vi} from 'vitest'
 import {registerWorkbenchExecutionPolicy,workbenchCreationRequest} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import {PANEL_COLOR_INSTRUCTION,designPolicyIssue} from '../packages/dsh-research-task-runtime/design-policy.js'
 const policy=await import('../packages/dsh-research-task-runtime/conversation-components-policy.js').catch(()=>null)
 const session=text=>({id:'s',header:{},events:[{type:'turn/start',data:{turn:'1'}},{type:'user/message',seq:2,data:{id:'human',source:{kind:'user'},content:[{type:'text',text}]}}]})
 const catalog=(s,mode,{callId='catalog-1',error=false,resultCallId=callId}={})=>s.events.push({type:'tool/call',data:{name:'client_capabilities',callId,arguments:'{}'}},{type:'tool/result',data:{message:{source:{kind:'tool',callId:resultCallId},content:[{type:'tool-result',isError:error,content:[{type:'text',text:JSON.stringify({mode,capabilities:[]})}]}]}}})
@@ -227,4 +228,18 @@ describe('conversation components follow the public explanation flow',()=>{
   const s=session('请生成一张预算表格组件');catalog(s,mode);const h=harness(s)
   try{expect(h.prompt()).not.toContain('多个组件按论述顺序逐个交付')}finally{h.dispose()}
  })
+})
+
+it.each([null,'conversation'])('provides the exact host color contract once before authoring C1, catalog=%s',async mode=>{
+ const s=session('做个能点击计数、顺便记备注的小组件。');if(mode)catalog(s,mode);const h=harness(s)
+ try{
+  const prompt=h.prompt();expect(prompt).toContain(PANEL_COLOR_INSTRUCTION);expect(prompt.split(PANEL_COLOR_INSTRUCTION)).toHaveLength(2)
+  expect(prompt).toContain('--sherlock-muted');expect(prompt).toContain('--sherlock-control-bg');expect(prompt).toContain('-on-primary（均写完整名称）');expect(prompt).toContain('不添加 #hex、rgb 或固定颜色备用值')
+  expect(await h.config()).toMatchObject({reasoningEffort:'high',maxTokens:16000});expect(h.startSubagent).not.toHaveBeenCalled()
+ }finally{h.dispose()}
+})
+it('retains the C1 color fallback gate while its documented text and primary roles pass',()=>{
+ // Minimal public CSS from Native C1's failed first artifact; no theme gate is relaxed.
+ expect(designPolicyIssue('<style>.cw-num{color:var(--sherlock-accent,#3562e3)}</style><div class="cw-num">0</div>')).toContain('不能硬编码界面颜色')
+ expect(designPolicyIssue('<style>.cw-num{color:var(--sherlock-text)}.cw-primary{color:var(--sherlock-control-on-primary)}</style><div class="cw-num">0</div><button class="cw-primary">+1</button>')).toBeNull()
 })
