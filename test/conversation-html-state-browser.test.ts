@@ -8,6 +8,7 @@ import {resolveConfig} from 'electron-vite'
 import {notesResidentProductionSource} from './helpers/notes-resident-production-source.mjs'
 import {ConversationComponentStore} from '../src/main/state/conversation-components'
 import {createConversationComponentService} from '../src/main/conversation-components/service'
+import {researchInteractionVersion} from '../packages/dsh-research-task-runtime/html-artifact.js'
 let browser:any,script=''
 const entry='\0conversation-html-state-fixture'
 beforeAll(async()=>{
@@ -28,11 +29,28 @@ beforeAll(async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },90000)
 afterAll(async()=>browser?.close())
-async function fixture({readOnly=false,noCommit=false,componentTheme='',globalDark=false,slowFrames=false,checklist=false}={}){
- const directory=await mkdtemp(join(tmpdir(),'conversation-html-state-')),file=join(directory,'cards.json'),html=await readFile(checklist?'test/fixtures/conversation-research-checklist.html':'test/fixtures/conversation-local-counter.html','utf8')
+async function fixture({readOnly=false,noCommit=false,componentTheme='',globalDark=false,slowFrames=false,checklist=false,checklistEvents='',legacyClicks=false,radioChecklist=false}={}){
+ const directory=await mkdtemp(join(tmpdir(),'conversation-html-state-')),file=join(directory,'cards.json')
+ let html=await readFile(checklist?'test/fixtures/conversation-research-checklist.html':'test/fixtures/conversation-local-counter.html','utf8')
+ if(checklistEvents){
+  html=html.replace('input.onclick=',checklistEvents==='all'?'input.onclick=input.oninput=input.onchange=':'input.onchange=')
+   .replace('</section>','<label><input id="native-check" type="checkbox">仅本地清单</label><output id="native-count">0</output></section>')
+   +'<script>let nativeChanges=0;document.getElementById("native-check").onchange=()=>document.getElementById("native-count").textContent=String(++nativeChanges);</script>'
+  if(checklistEvents==='microtask'||checklistEvents==='timer')html=html.replace("input.onchange=()=>shared.dispatch({type:'check',index,checked:input.checked});",`input.onchange=()=>{const action={type:'check',index,checked:input.checked};${checklistEvents==='timer'?'setTimeout':'queueMicrotask'}(()=>shared.dispatch(action));};`)
+ }
+ if(radioChecklist){
+  html=html.replaceAll('type="checkbox" data-check=','type="radio" name="shared-check" data-check=')
+   .replace('index===action.index?!!action.checked:value','index===action.index?!!action.checked:false')
+ }
  let store=new ConversationComponentStore(file),owner='owner',generation='window-a',mode='ok';await store.load()
  let service:any;const makeService=()=>createConversationComponentService({store,owner:()=>owner,canReadSession:session=>session==='conversation-html',currentVisibleContext:()=>({ownerAccountId:owner,sessionId:'conversation-html',mode:'conversation',generation,readOnly}),nativeQuery:async()=>{throw Error('Unexpected financial query')},clipboard:()=>undefined,library:()=>undefined})
  service=makeService();const receipt=await service.create({title:checklist?'对话组件交互验收':'对话本地计数与备注',artifact:{version:1,type:'html',html}},{ownerAccountId:owner,sessionId:'conversation-html',turnId:'1',mode:'conversation',windowGeneration:generation,current:()=>true},new AbortController().signal,'initial-counter'),target={sessionId:'conversation-html',componentId:receipt.effect.componentId}
+ if(legacyClicks){
+  const htmlVersion=researchInteractionVersion(html)
+  await service.commitHtmlInteraction({...target,expectedRevision:store.read(owner,target).revision,htmlVersion,kind:'shared',revision:3,state:{checked:[false,false,true]}})
+  for(const[clock,targetRoute]of[[1,[1,0,0]],[2,[1,2,0]],[3,[1,0,0]],[4,[1,4,0]]] as const)
+   await service.commitHtmlInteraction({...target,expectedRevision:store.read(owner,target).revision,htmlVersion,kind:'journal',event:{id:'legacy-check-'+clock,clock,targetRoute:[...targetRoute],tag:'INPUT',type:'click',x:0.5,y:0.5}})
+ }
  if(componentTheme)await service.setTheme({...target,expectedRevision:store.read('owner',target).revision,theme:componentTheme})
  const requests:any[]=[],releases:Array<()=>void>=[],context=await browser.newContext({viewport:{width:1000,height:850}}),page=await context.newPage(),errors:string[]=[];page.setDefaultTimeout(5000);page.on('pageerror',(error:Error)=>errors.push(error.message))
  if(slowFrames)await context.addInitScript(()=>{if(window!==parent){const end=performance.now()+80;while(performance.now()<end){/* Delay real iframe parsing, not the production sender. */}}})
@@ -45,7 +63,7 @@ async function fixture({readOnly=false,noCommit=false,componentTheme='',globalDa
   }catch(error){await route.fulfill({contentType:'application/json',body:JSON.stringify({error:(error as Error).message})})}
  })
  await page.goto('http://127.0.0.1/conversation-html');await page.evaluate(({value,noCommit}:any)=>{(window as any).fixtureManifest=value;(window as any).fixtureNoCommit=noCommit},{value:receipt.data.renderManifest,noCommit});await page.addScriptTag({content:'var exports={};\n'+script})
- const frame=page.frameLocator('iframe[data-research-html-artifact]').frameLocator('#preview');await(checklist?frame.getByRole('checkbox',{name:'核对数据时点',exact:true}):frame.getByRole('button',{name:'增加计数',exact:true})).waitFor()
+ const frame=page.frameLocator('iframe[data-research-html-artifact]').frameLocator('#preview');await(checklist?frame.getByRole(radioChecklist?'radio':'checkbox',{name:'核对数据时点',exact:true}):frame.getByRole('button',{name:'增加计数',exact:true})).waitFor()
  return{page,frame,errors,requests,view:()=>store.read('owner',target),mode:(value:string)=>{mode=value},release:()=>{for(const next of releases.splice(0))next()},changeOwner:()=>{owner='other';generation='window-b'},reopen:async()=>{store=new ConversationComponentStore(file);await store.load();service=makeService();await page.evaluate(()=>{const w=window as any;w.cardRoot.unmount();w.cardRoot=w.mountCard()})},close:async()=>{await context.close();await rm(directory,{recursive:true,force:true})}}
 }
 const config=(f:any)=>f.view().node.config as any
@@ -73,6 +91,73 @@ it('saves a progressively enhanced research checklist through the real Conversat
   expect(f.view().revision).toBe(revision);expect(config(f).sharedComponentState.state.checked).toEqual([false,false,true]);expect(f.requests.filter(row=>row.method==='commitHtmlInteraction')).toHaveLength(3)
   expect(await f.page.evaluate(()=>(window as any).canvasCalls)).toEqual([]);expect(f.errors).toEqual([])
   if(process.env.SHERLOCK_CHECKLIST_SCREENSHOT)await f.page.screenshot({path:process.env.SHERLOCK_CHECKLIST_SCREENSHOT})
+ }finally{await f.close()}
+},30000)
+it.each(['change','all'])('deduplicates one checkbox activation across %s handlers while preserving native-only controls after cold reopen',async checklistEvents=>{
+ const f=await fixture({checklist:true,checklistEvents});try{
+  const checks=['核对数据时点','检查统计口径','复核风险假设'].map(name=>f.frame.getByRole('checkbox',{name,exact:true}))
+  await expect.poll(()=>checks[0].isEnabled()).toBe(true)
+  await checks[0].check();await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([true,false,false])
+  await checks[2].focus();await checks[2].press('Space');await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([true,false,true])
+  await f.frame.getByText('核对数据时点',{exact:true}).click();await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([false,false,true])
+  await checks[0].check();await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([true,false,true])
+  await checks[0].uncheck();await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([false,false,true])
+  await f.frame.getByRole('checkbox',{name:'仅本地清单',exact:true}).check()
+  await expect.poll(()=>Object.values(config(f)?.interactionState?.events??{}).length).toBe(1)
+  await expect.poll(()=>f.requests.filter(row=>row.method==='commitHtmlInteraction'&&row.input.kind==='shared').length).toBe(5)
+  expect(await f.frame.locator('#native-count').textContent()).toBe('1')
+  const revision=f.view().revision,commits=f.requests.filter(row=>row.method==='commitHtmlInteraction').length
+  for(let i=0;i<2;i++){
+   await f.reopen();await expect.poll(()=>f.frame.locator('#completed').textContent()).toBe('1')
+   await expect.poll(()=>f.frame.locator('#native-count').textContent()).toBe('1')
+   for(const[index,check]of checks.entries())expect(await check.isChecked()).toBe(index===2)
+   expect(await f.frame.getByRole('checkbox',{name:'仅本地清单',exact:true}).isChecked()).toBe(true)
+   await f.page.waitForTimeout(150)
+   expect(f.view().revision).toBe(revision);expect(f.requests.filter(row=>row.method==='commitHtmlInteraction')).toHaveLength(commits)
+  }
+  expect(await f.page.evaluate(()=>(window as any).canvasCalls)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},30000)
+it.each(['change','all','microtask','timer'])('replays legacy mixed checkbox journals with %s handlers without new shared writes or losing saved state',async checklistEvents=>{
+ const f=await fixture({checklist:true,checklistEvents,legacyClicks:true});try{
+  const revision=f.view().revision
+  for(let i=0;i<2;i++){
+   if(i)await f.reopen()
+   await expect.poll(()=>f.frame.locator('#completed').textContent()).toBe('1')
+   await expect.poll(()=>f.frame.locator('#native-count').textContent()).toBe('1')
+   for(const[index,name]of ['核对数据时点','检查统计口径','复核风险假设','仅本地清单'].entries())
+    expect(await f.frame.getByRole('checkbox',{name,exact:true}).isChecked()).toBe(index>=2)
+   await f.page.waitForTimeout(150)
+   expect(f.view().revision).toBe(revision);expect(config(f).sharedComponentState).toMatchObject({revision:3,state:{checked:[false,false,true]}})
+   expect(Object.keys(config(f).interactionState.events)).toHaveLength(4)
+   expect(f.requests.filter(row=>row.method==='commitHtmlInteraction')).toHaveLength(0)
+  }
+  await f.frame.getByRole('checkbox',{name:'仅本地清单',exact:true}).uncheck()
+  await expect.poll(()=>Object.keys(config(f).interactionState.events).length).toBe(5)
+  await f.reopen();await expect.poll(()=>f.frame.locator('#native-count').textContent()).toBe('2')
+  expect(await f.frame.getByRole('checkbox',{name:'仅本地清单',exact:true}).isChecked()).toBe(false)
+  expect(config(f).sharedComponentState).toMatchObject({revision:3,state:{checked:[false,false,true]}})
+  expect(f.requests.filter(row=>row.method==='commitHtmlInteraction')).toHaveLength(1)
+  await f.frame.getByRole('checkbox',{name:'核对数据时点',exact:true}).check()
+  await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([true,false,true])
+  expect(config(f).sharedComponentState.revision).toBe(4)
+  expect(f.requests.filter(row=>row.method==='commitHtmlInteraction'&&row.input.kind==='shared')).toHaveLength(1)
+  expect(await f.page.evaluate(()=>(window as any).canvasCalls)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},30000)
+it('keeps radio arrow activation and repeated independent choices distinct from their input/change duplicates',async()=>{
+ const f=await fixture({checklist:true,checklistEvents:'all',radioChecklist:true});try{
+  const radios=['核对数据时点','检查统计口径','复核风险假设'].map(name=>f.frame.getByRole('radio',{name,exact:true}))
+  await expect.poll(()=>radios[0].isEnabled()).toBe(true)
+  await radios[0].check();await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([true,false,false])
+  await radios[0].press('ArrowDown');await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([false,true,false])
+  await radios[1].press('ArrowDown');await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([false,false,true])
+  await radios[0].check();await expect.poll(()=>config(f)?.sharedComponentState?.state?.checked).toEqual([true,false,false])
+  await expect.poll(()=>f.requests.filter(row=>row.method==='commitHtmlInteraction').length).toBe(4)
+  expect(config(f)?.interactionState).toBeUndefined()
+  const revision=f.view().revision;await f.reopen();await expect.poll(()=>radios[0].isChecked()).toBe(true)
+  await f.page.waitForTimeout(150);expect(f.view().revision).toBe(revision);expect(f.requests.filter(row=>row.method==='commitHtmlInteraction')).toHaveLength(4)
+  expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
 it('restores saved local Light through dark cold mount, delayed iframe load and global broadcasts without resetting Conversation state',async()=>{

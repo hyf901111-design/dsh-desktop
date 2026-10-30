@@ -838,12 +838,31 @@ export const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInt
     // in flight. A matching prefix is not an undo until that tail was accepted.
     if(!readOnly && events.length<applied.length && events.every((e,i)=>applied[i]===e.id) && applied.slice(events.length).every(id=>pending.has(id))){initialized=true;return;}
     if(applied.some((id,i)=>events[i]?.id!==id)){post('sherlock-interaction-reload');return;}
+    const tail=events.slice(applied.length);if(!tail.length){initialized=true;return;}
+    const replayToken={};if(semantic){semantic.replaying=true;semantic.replayToken=replayToken;}
     replaying=true;document.documentElement.setAttribute('data-sherlock-interaction-replaying','');
-    try {for(const e of events.slice(applied.length)){apply(e);applied.push(e.id);clock=Math.max(clock,e.clock);}} finally {document.documentElement.removeAttribute('data-sherlock-interaction-replaying');replaying=false;initialized=true;}
+    try {for(const e of tail){apply(e);applied.push(e.id);clock=Math.max(clock,e.clock);}} finally {
+      // Legacy journals may contain clicks already represented by shared state.
+      // Replay can restore native closures, but must finish with that saved state.
+      try{semantic?.restoreShared?.();}catch{}
+      document.documentElement.removeAttribute('data-sherlock-interaction-replaying');replaying=false;initialized=true;
+      // Include microtasks and zero-delay callbacks queued by these handlers.
+      // A later trusted activation supersedes this checkpoint immediately.
+      if(semantic)setTimeout(()=>{if(semantic.replayToken!==replayToken)return;try{semantic.restoreShared?.();}catch{}finally{semantic.replaying=false;semantic.replayToken=undefined;}},0);
+    }
   });
   for(const type of ['click','input','change','keydown']) document.addEventListener(type,event=>{
     if((!event.isTrusted && !authorizedEvents.has(event)) || replaying || document.documentElement.hasAttribute('data-sherlock-shared-state')&&!semantic?.notes)return;
-    if(semantic?.notes){semantic.current=event;setTimeout(()=>{if(semantic.current===event)semantic.current=undefined},0);}
+    if(semantic?.notes){
+      semantic.replaying=false;semantic.replayToken=undefined;
+      semantic.current=event;
+      const check=event.target instanceof Element&&event.target.matches('input[type=checkbox],input[type=radio]');
+      if(check&&type==='click'){
+        const activation={target:event.target,event,actions:new Map()};semantic.activation=activation;
+        setTimeout(()=>{if(semantic.activation===activation)semantic.activation=undefined;},0);
+      }else if(!check||semantic.activation?.target!==event.target||!['input','change'].includes(type))semantic.activation=undefined;
+      setTimeout(()=>{if(semantic.current===event)semantic.current=undefined},0);
+    }
     if(!initialized||readOnly){event.preventDefault();event.stopImmediatePropagation();return;}
     let el=event.target;
     if(!(el instanceof Element))return;

@@ -98,14 +98,40 @@ it('personal boards persist semantic state and restore without replaying actions
  const b=create(saved);expect(b.h.getState()).toEqual({count:2});b.h.dispatch({type:'increment'});expect(b.h.getState()).toEqual({count:3})
 })
 
-function localSdk(options, saved) {
+function localSdk(options, saved, semantic) {
  const w=new Window({settings:{disableJavaScriptEvaluation:true}}),out=[],parent={postMessage:m=>out.push(clone(m))}
- vm.runInNewContext('('+sharedComponentRuntime.toString()+')()', {window:w,document:w.document,parent,crypto:{randomUUID:()=>crypto.randomUUID()},TextEncoder,Date,CustomEvent:w.CustomEvent,addEventListener:w.addEventListener.bind(w),setInterval:()=>0,clearInterval:()=>{}})
+ vm.runInNewContext('('+sharedComponentRuntime.toString()+')(semantic)', {semantic,window:w,document:w.document,parent,crypto:{randomUUID:()=>crypto.randomUUID()},TextEncoder,Date,CustomEvent:w.CustomEvent,addEventListener:w.addEventListener.bind(w),setInterval:()=>0,clearInterval:()=>{}})
  const h=w.sherlockShared.register(options)
  const context=()=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-component-context',shared:false,readOnly:false,saved}}))
  context()
  return {w,out,h,context}
 }
+it('admits equal checkbox actions once across event phases but retains distinct actions and independent activations',()=>{
+ const target={},click={target},input={target},change={target},semantic={events:new WeakSet(),current:click,activation:{target,event:click,actions:new Map()}}
+ const sdk=localSdk({initialState:{count:0},reduce:s=>({count:s.count+1}),render:()=>{}},undefined,semantic)
+ expect(sdk.h.dispatch({type:'check',index:0})).toBe(true)
+ semantic.current=input;expect(sdk.h.dispatch({index:0,type:'check'})).toBe(true)
+ semantic.current=change;expect(sdk.h.dispatch({type:'check',index:0})).toBe(true)
+ expect(sdk.h.getState()).toEqual({count:1});expect(semantic.events.has(click)).toBe(true)
+ expect(sdk.h.dispatch({type:'audit'})).toBe(true);expect(sdk.h.dispatch({type:'audit'})).toBe(true)
+ expect(sdk.h.getState()).toEqual({count:3})
+ const next={target};semantic.current=next;semantic.activation={target,event:next,actions:new Map()}
+ expect(sdk.h.dispatch({type:'check',index:0})).toBe(true);expect(sdk.h.getState()).toEqual({count:4})
+ expect(sdk.out.filter(row=>row.message?.op==='localCommit')).toHaveLength(4)
+})
+it('does not cache failed admission or let a removable DOM marker bypass private replay protection',()=>{
+ const target={},click={target},semantic={events:new WeakSet(),current:click,activation:{target,event:click,actions:new Map()}}
+ let fail=true,displayed=0
+ const sdk=localSdk({initialState:{count:0},reduce:s=>{if(fail)throw Error('not admitted');return{count:s.count+1}},render:s=>{displayed=s.count}},undefined,semantic)
+ expect(sdk.h.dispatch({type:'check'})).toBe(false)
+ semantic.current={target};fail=false;expect(sdk.h.dispatch({type:'check'})).toBe(true);expect(sdk.h.getState()).toEqual({count:1})
+ semantic.replaying=true;sdk.w.document.documentElement.removeAttribute('data-sherlock-interaction-replaying')
+ expect(sdk.h.dispatch({type:'check'})).toBe(false);semantic.restoreShared()
+ expect(sdk.h.getState()).toEqual({count:1});expect(displayed).toBe(1)
+ expect(sdk.out.filter(row=>row.message?.op==='localCommit')).toHaveLength(1)
+ semantic.replaying=false;semantic.activation=undefined;semantic.current={target}
+ expect(sdk.h.dispatch({type:'check'})).toBe(true);expect(sdk.h.getState()).toEqual({count:2})
+})
 it('does not persist an operation whose rendered state fails and allows a later valid operation',()=>{
  let displayed=''
  const sdk=localSdk({initialState:{order:['B01','B02'],selected:null},reduce:(s,a)=>a.type==='brokenMove'?{...s,order:[null,'B01']}:{...s,selected:a.id},render:s=>{displayed=s.order.map(id=>({B01:'一',B02:'二'})[id].toString()).join('')}})
