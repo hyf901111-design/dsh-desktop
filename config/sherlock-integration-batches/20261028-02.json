@@ -4033,6 +4033,107 @@
         ],
         "recordedAt": "2026-10-30T00:34:08.285Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "单击新建研究组件首次完成适配阅读尺寸并保留手动框",
+        "branch": "codex/feat/research-click-autosize-20261030",
+        "baseCommit": "44bec2f5749442ed29804d3e7e32ce5fb5ffae84",
+        "tipCommit": "11a58d47e0e726395dce6eea541c80d402262aca",
+        "commits": [
+          {
+            "commit": "11a58d47e0e726395dce6eea541c80d402262aca",
+            "parents": [
+              "44bec2f5749442ed29804d3e7e32ce5fb5ffae84"
+            ],
+            "subject": "让单击创建的研究组件首次完成时适配内容尺寸"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/research-click-autosize.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-click-autosize.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-grid-additions.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "64 passed (3 files; new10 + existing54); log=/tmp/sherlock-research-click-autosize-20261030/focused-final.log; SHA256=79b68d10726813f8059257d09fd2966bbf1dad3eef03e1ef0c7153d933adc185; proof=/tmp/sherlock-research-click-autosize-20261030/verification.json; clean source/protected-assets and frozen color8305 before==after",
+            "verifiedCommit": "11a58d47e0e726395dce6eea541c80d402262aca",
+            "completedAt": "2026-10-30T00:24:31.196943+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "--no-install",
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "exit0; log=/tmp/sherlock-research-click-autosize-20261030/typecheck-final.log; SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; proof=/tmp/sherlock-research-click-autosize-20261030/verification.json; clean source/protected-assets and frozen color8305 before==after",
+            "verifiedCommit": "11a58d47e0e726395dce6eea541c80d402262aca",
+            "completedAt": "2026-10-30T00:24:39.944700+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "44bec2f5749442ed29804d3e7e32ce5fb5ffae84..11a58d47e0e726395dce6eea541c80d402262aca"
+            ],
+            "outcome": "passed",
+            "summary": "exit0; log=/tmp/sherlock-research-click-autosize-20261030/diff-final.log; SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; proof=/tmp/sherlock-research-click-autosize-20261030/verification.json; clean source/protected-assets and frozen color8305 before==after",
+            "verifiedCommit": "11a58d47e0e726395dce6eea541c80d402262aca",
+            "completedAt": "2026-10-30T00:24:40.177449+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离production resident serializer/React/真实网格指针入口和Workspace生命周期通过：toolbar component→单击创建335.10×236.5默认框→真实textarea提交→attach/applyGenerationInspection接受既有typed chart renderer结果→655.55×458.35→真实registry保存重开同尺寸；真drag、旧manual、pending显式尺寸改动、held-complete commit/cancel、owner readonly与纯位置移动控制均通过。此为VM/HappyDOM生产DOM fixture，不是签名Native或Chromium视觉验收；Root仍需新包真实复测初始裁切。"
+        },
+        "acceptanceCriteria": [
+          "只有新单击（手势位移<=4px）默认框显式保存preserveGenerationSize:false；真drag仍true，旧undefined和true节点完全沿原manual策略。没有新用户参数/依赖/尺寸常量或改旧卡。",
+          "false可经真实canonical serializer保存重开；首次有效完成才忽略隐式初始框，复用已有researchOptimalDimensions/Bento内容尺寸并消费true。后续刷新、重开和显式调整不再自动覆盖。",
+          "显式updateNodeGeometry手改立即锁true；指针预览使用workspace私有Set暂缓首次fit，提交时才消费true；取消清理lease，仍pending保留false，结果已完成则按当前内容执行一次fit，owner不可写时不fit或改marker。",
+          "实际用户尺寸优先：真drag/旧undefined manual/生成中真实pointer resize保持原框，结果在held resize到达也不覆盖；位置移动不锁尺寸，重复terminal inspection不二次改变。",
+          "完整Research preview guards、owner checks、Arrange算法、runtime生成、provider/model/effort、SDK/客户端、原用户数据和独立颜色8305源码不改；新增严格restore journal可重复patch逐byte相同。",
+          "同tip单worker3文件64、TC/range diff全0，Node24.9.0；检查前后源码/9个实际共享SDK资产及8305均哈希等值，工作树clean。"
+        ],
+        "risks": [
+          "Root旧44 Native实际R1初始360×250裁切是本次依据；fixture里默认尺寸335.10×236.5因1000px视区网格取整不同，未冒称重建Native旧几何或已完成新包验收。",
+          "布局变化只对新false默认框的一次有效结果发生；旧用户卡不迁移、不重生成、不改数据与模型等级。Root负责官方集成、新签名包和最终可视内容检查。",
+          "所有真实失败和装配日志保留：初始行为RED；review指出的两取消路径RED；一处字符串引号导致装配语法失败已修；新幂等测试最初重复执行冗余大字符串roundtrip导致5s超时，移除重复操作后仍完整验证patch内部restore→patch一次的字节幂等；未改任何原test body、timeout或断言。"
+        ],
+        "generatedAt": "2026-10-30T00:25:29.209563+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4339,6 +4440,43 @@
         "--check",
         "44bec2f5749442ed29804d3e7e32ce5fb5ffae84",
         "db64384d3dd940e968e12b154c6305d2e22b3ed7"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-click-autosize.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/research-grid-additions.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "--no-install",
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "44bec2f5749442ed29804d3e7e32ce5fb5ffae84..11a58d47e0e726395dce6eea541c80d402262aca"
       ],
       "timeoutMs": 10000
     }
