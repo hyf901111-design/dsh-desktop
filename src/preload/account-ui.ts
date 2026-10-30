@@ -27,6 +27,12 @@ export function mountAccountUi(
   boards?: ResearchBoardsBridge,
   options: {explore?:boolean} = {}
 ) {
+  // Account UI also mounts in non-global Documents. Events must belong to the
+  // same Window as their dispatch target, rather than the preload/host realm.
+  const dispatch = (name: string, detail?: unknown) => {
+    const view = document.defaultView
+    if (view) view.dispatchEvent(new view.CustomEvent(name, {detail}))
+  }
   const settingsBackground = createSettingsBackgroundController(document)
   installBoardUiStyles(document)
   const style = document.createElement('style')
@@ -149,7 +155,7 @@ export function mountAccountUi(
     }
     return avatar
   }
-  function publishAccountState(){document.defaultView?.dispatchEvent(new CustomEvent('sherlock:account-state',{detail:{accountId:user?.id??null,username:user?.username??'登录',authenticated:!!user,avatar:createAvatar()}}))}
+  function publishAccountState(){dispatch('sherlock:account-state',{accountId:user?.id??null,username:user?.username??'登录',authenticated:!!user,avatar:createAvatar()})}
   function updateTrigger() {
     if (!trigger) return
     trigger.replaceChildren()
@@ -238,7 +244,7 @@ export function mountAccountUi(
   }
   const panel = () => document.querySelector<HTMLElement>('.VOzbGW_panel')
   function open(account: boolean) {
-    document.defaultView?.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}))
+    dispatch('sherlock:explore-close',{restoreFocus:false})
     closeMenu()
     if (account)
       void invoke('me')
@@ -670,7 +676,7 @@ export function mountAccountUi(
     const original =
       document.querySelector<HTMLButtonElement>('.VOzbGW_trigger')
     if (original && !trigger?.isConnected) {
-      trigger = button('',()=>{if(options.explore)document.defaultView?.dispatchEvent(new CustomEvent('sherlock:explore-open'));else toggleAccountMenu(trigger!)},'sherlock-account-button')
+      trigger = button('',()=>{if(options.explore)dispatch('sherlock:explore-open');else toggleAccountMenu(trigger!)},'sherlock-account-button')
       trigger.setAttribute('aria-haspopup', options.explore?'dialog':'menu')
       trigger.setAttribute('aria-expanded', 'false')
       const controls = document.createElement('div')
