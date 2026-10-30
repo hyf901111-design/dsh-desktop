@@ -1,0 +1,4 @@
+{
+  "instruction": "把公司表格中中际旭创的股票代码改为300308，只修改这个单元格，其他表格、单元格和正文保持不变。",
+  "publicOutput": "{\"kind\":\"capabilities\",\"calls\":[{\"requestId\":\"read-company-table-300308\",\"capability\":\"notes.blocks.read\",\"arguments\":{\"scope\":\"note\"}}]}"
+}
