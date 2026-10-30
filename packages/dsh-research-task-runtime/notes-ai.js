@@ -72,15 +72,24 @@ export function containsLiteralNoteBatch(source,fingerprint){
    for(let start=0;start<value.length;start++){
     const opener=value[start];if(opener!=='{'&&opener!=='"')continue
     if(opener==='{'){let next=start+1;while(next<value.length&&/\s/u.test(value[next])){spend(1);next++}if(value[next]!=='"')continue}
-    let nesting=0,quoted=opener==='"',escaped=false,end=start+(quoted?1:0)
+    const containers=[],boundaries=[]
+    let quoted=opener==='"',escaped=false,invalid=false,end=start+(quoted?1:0)
+    const boundary=()=>{if(containers.length&&containers.length<=3){spend(containers.length+1);boundaries.push({end:end+1,closers:containers.slice()})}}
     for(;end<value.length;end++){
      spend(1);const char=value[end]
-     if(quoted){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"'){quoted=false;if(opener==='"')break}continue}
-     if(char==='"')quoted=true;else if(char==='{')nesting++;else if(char==='}'&&!--nesting)break
+     if(quoted){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"'){quoted=false;if(opener==='"')break;boundary()}continue}
+     if(char==='"')quoted=true
+     else if(char==='{'||char==='[')containers.push(char==='{'?'}':']')
+     else if(char==='}'||char===']'){if(containers.pop()!==char){invalid=true;break}if(!containers.length)break;boundary()}
+     if(containers.length>64)throw exhausted
     }
-    if(end===value.length){if(opener==='{'){spend((value.length-start)*2);const completed=completeNoteJsonContainers(value.slice(start));if(completed)pending.push(completed.value)}continue}
-    spend(end-start+1)
-    try{pending.push(JSON.parse(value.slice(start,end+1)))}catch{}
+    const decode=(limit,closers=[])=>{spend(limit-start+closers.length);try{return{value:JSON.parse(value.slice(start,limit)+[...closers].reverse().join(''))}}catch{}}
+    let decoded=end<value.length?decode(end+1):opener==='{'&&!quoted&&!invalid?decode(value.length,containers):undefined
+    // Source-only probes may close a completed value before prose or a fence.
+    // Prefer the maximal parsed value; never shorten a known later call batch.
+    // These values can only reject an echo, never authorize a primary reply.
+    if(!decoded&&opener==='{')for(let index=boundaries.length-1;index>=0;index--){const edge=boundaries[index];decoded=decode(edge.end,edge.closers);if(decoded)break}
+    if(decoded)pending.push(decoded.value)
    }
   }
   return false

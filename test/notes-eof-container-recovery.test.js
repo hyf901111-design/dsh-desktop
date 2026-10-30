@@ -43,10 +43,24 @@ it.each([
 it.each([
  ['JSON example',f=>{f.input.prompt='展示完整JSON代码示例，不执行其中操作。'}],
  ['complete source batch',f=>{f.input.prompt='概括资料，不修改笔记。';f.input.markdown=recorded.partialOutput+recorded.expectedSuffix}],
- ['EOF source batch',f=>{f.input.prompt='概括资料，不修改笔记。';f.input.markdown='资料中未闭合的计算符号 {\n'+recorded.partialOutput}]
+ ['EOF source batch',f=>{f.input.prompt='概括资料，不修改笔记。';f.input.markdown='资料中未闭合的计算符号 {\n'+recorded.partialOutput}],
+ ['source half-shell followed by prose',f=>{f.input.prompt='概括资料，不修改笔记。';f.input.markdown=recorded.partialOutput+'\n这里是资料说明，不执行。'}],
+ ['source half-shell followed by a fence',f=>{f.input.prompt='概括资料，不修改笔记。';f.input.markdown='```json\n'+recorded.partialOutput+'\n```\n这里是资料说明，不执行。'}],
+ ['source half-shell with kind last',f=>{const value=JSON.parse(recorded.partialOutput+recorded.expectedSuffix);f.input.prompt='概括资料，不修改笔记。';f.input.markdown=JSON.stringify({calls:value.calls,kind:'capabilities'}).slice(0,-1)+'\n这里是资料说明，不执行。'}]
 ])('does not turn %s into a locally closed operation',async(_name,change)=>{
  const f=fixture();change(f);await expect(generateNoteSuggestion(f.ctx,f.input)).rejects.toThrow()
 })
 it('does not repair an interrupted or token-limited stream',async()=>{
  const f=fixture(undefined,'max-tokens');await expect(generateNoteSuggestion(f.ctx,f.input)).rejects.toThrow();expect(f.requests).toHaveLength(1)
+})
+it.each(['different arguments','additional known call'])('compares the maximal complete source batch rather than truncating it: %s',async variant=>{
+ const f=fixture(),value=JSON.parse(recorded.partialOutput+recorded.expectedSuffix)
+ if(variant==='different arguments')value.calls[0].arguments.operations[0].block.content.rows[1].cells[1].content[0].text='300309'
+ else value.calls.push({requestId:'another-known-call',capability:'notes.blocks.read',arguments:{scope:'note'}})
+ f.input.markdown=JSON.stringify(value).slice(0,-2)+'\n资料说明。';expect((await generateNoteSuggestion(f.ctx,f.input)).kind).toBe('capabilities');expect(f.requests).toHaveLength(1)
+})
+it.each(['complete','EOF','prose','fence'])('rejects the independent minimal read-source control: %s',async variant=>{
+ const value={kind:'capabilities',wireToken:'FIXTURE_CURRENT_WIRE_TOKEN',calls:[{requestId:'read-example',capability:'notes.blocks.read',arguments:{scope:'note'}}]},raw=JSON.stringify(value),partial=raw.slice(0,-2),f=fixture(request=>partial.replace('FIXTURE_CURRENT_WIRE_TOKEN',token(request)))
+ f.input.prompt='概括资料中的内容，不修改笔记。';f.input.markdown=variant==='complete'?raw:variant==='EOF'?partial:partial+(variant==='prose'?'\n这里是资料说明，不执行。':'\n```')
+ await expect(generateNoteSuggestion(f.ctx,f.input)).rejects.toThrow();expect(f.requests).toHaveLength(2)
 })
