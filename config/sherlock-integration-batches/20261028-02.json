@@ -8621,6 +8621,210 @@
         ],
         "recordedAt": "2026-10-30T12:01:17.209Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "全局探索菜单与持续流动入口",
+        "branch": "codex/feat/explore-menu-20261030",
+        "baseCommit": "0589bc5d724d2900764c9c15ec6e689419371500",
+        "tipCommit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
+        "commits": [
+          {
+            "commit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
+            "parents": [
+              "0589bc5d724d2900764c9c15ec6e689419371500"
+            ],
+            "subject": "功能：实现全局探索菜单与持续流动入口"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-30-explore-menu-design.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-30-explore-menu-verification-map.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/board.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/chat.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/chevron.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/close.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/moon.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/notes.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/orb-0.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/orb-1.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/orb-2.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/search.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/settings.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-assets/sun.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-menu-actions.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-orb.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-search.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/explore-menu-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/explore-search.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-guide-entry-handoff-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-handoff-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-operations-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-navigation.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/explore-menu-browser.test.ts",
+              "test/explore-search.test.ts",
+              "test/home-guide-operations-entry.test.ts",
+              "test/home-operations-navigation.test.ts",
+              "test/home-theme-controls.test.ts",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-preferences.test.ts",
+              "test/home-operations-actions.test.ts",
+              "test/sidebar-session-search.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "121/121；冻结 tip 上通过，日志 /tmp/sherlock-explore-menu-20261030/frozen-focused.log",
+            "verifiedCommit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
+            "completedAt": "2026-10-30T12:12:50.851185Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript noEmit通过；冻结 tip 日志 /tmp/sherlock-explore-menu-20261030/frozen-typecheck.log",
+            "verifiedCommit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
+            "completedAt": "2026-10-30T12:12:50.851185Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "无空白/补丁错误，源码工作树干净。",
+            "verifiedCommit": "cf3ec195eb0665c685a8eca1ca606824cf63291e",
+            "completedAt": "2026-10-30T12:12:50.851185Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "18/18真实DOM Explore Browser（暗浅主题、窄屏、原账户/主题/快速动作owner、搜索和取消/owner边界、非hover材质PNG两帧）通过并已看图；真实Native bundle SessionRuntime/NotesApp/NotesStore入口11项与账户rail4项通过；旧首页Browser原156项完整保留且通过。证据 /tmp/sherlock-explore-menu-20261030/。未构建或操作共享Native客户端，Root仍须打包验收。"
+        },
+        "acceptanceCriteria": [
+          "展开/折叠侧栏常驻探索入口，三相位渐变非hover持续流动，尊重reduced motion。",
+          "全窗模糊自然开合，背景/X/Escape退出与焦点恢复；旧首页下滑运营区在生产入口移除。",
+          "快速开始4个原生动作、5类演示、原主题与壁纸owner持久化、真实账户/设置/登出接入。",
+          "四分类真实标题搜索；支持关键词、无结果、键盘、清空/收起，任何关闭/收起/owner变化取消旧异步导航。",
+          "打开探索前调用公开guide.reset(false)，停止演示指针且保留已写笔记和session；新演示先dismiss浮层再调用原Native controller。"
+        ],
+        "risks": [
+          "共享打包Native客户端验收由Root执行，本feature没有替换App或操作共享SDK。",
+          "搜索沿现有sidebar标题索引，笔记类别沿现有session持久化notes视图；没有建立第二套会话/笔记索引。",
+          "index.ts、research-boards-ui.ts及原entry fixture与同期Core/Demo可能有集成上下文重叠，需保留双方已验证内容；79旧case语义映射见spec文档。"
+        ],
+        "generatedAt": "2026-10-30T12:12:50.851185Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -9136,6 +9340,25 @@
         "--check"
       ],
       "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/explore-menu-browser.test.ts",
+        "test/explore-search.test.ts",
+        "test/home-guide-operations-entry.test.ts",
+        "test/home-operations-navigation.test.ts",
+        "test/home-theme-controls.test.ts",
+        "test/home-theme-controller.test.ts",
+        "test/home-theme-preferences.test.ts",
+        "test/home-operations-actions.test.ts",
+        "test/sidebar-session-search.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
