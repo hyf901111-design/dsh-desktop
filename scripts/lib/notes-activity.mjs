@@ -12,8 +12,11 @@ export function noteActivityLocaleHelpers(){
 export function createNotesActivityStore(doc) {
   const rows = new Map(), reveals=new Map(), listeners = new Set(), empty = []
   const notify = () => { for (const listener of listeners) listener() }
+  // Keep internal model reasoning out of the presentation store, including replay.
+  // Its durable owner and the real action receipts are unaffected.
+  const displayRow = value => { const {reasoning, ...row} = value; return row }
   const update = event => {
-    const next = event.detail
+    const next = event.detail && displayRow(event.detail)
     if (!next || typeof next.sessionId !== 'string' || typeof next.requestId !== 'string' ||
         !['preparing','generating','ready','replied','accepted','discarded','failed','stopped'].includes(next.phase)) return
     const history = rows.get(next.sessionId) || empty, old = history.find(row => row.requestId === next.requestId)
@@ -29,7 +32,7 @@ export function createNotesActivityStore(doc) {
   doc?.defaultView?.addEventListener('blur',background)
   doc?.addEventListener('visibilitychange',visibility)
   const reset = () => { rows.clear();reveals.clear(); notify() }
-  const history=event=>{const value=event.detail;if(typeof value?.sessionId!=='string'||!Array.isArray(value.rows))return;const merged=new Map((rows.get(value.sessionId)||[]).map(row=>[row.requestId,row]));for(const row of value.rows){const old=merged.get(row.requestId);merged.set(row.requestId,old&&(['preparing','generating'].includes(old.phase)&&['preparing','generating'].includes(row.phase)||old.finishedAt>row.finishedAt||['accepted','discarded'].includes(old.phase)&&row.phase==='ready')?{...row,...old}:{...old,...row})}rows.set(value.sessionId,[...merged.values()].sort((a,b)=>a.startedAt-b.startedAt));notify()}
+  const history=event=>{const value=event.detail;if(typeof value?.sessionId!=='string'||!Array.isArray(value.rows))return;const merged=new Map((rows.get(value.sessionId)||[]).map(row=>[row.requestId,row]));for(const persisted of value.rows){const row=displayRow(persisted);const old=merged.get(row.requestId);merged.set(row.requestId,old&&(['preparing','generating'].includes(old.phase)&&['preparing','generating'].includes(row.phase)||old.finishedAt>row.finishedAt||['accepted','discarded'].includes(old.phase)&&row.phase==='ready')?{...row,...old}:{...old,...row})}rows.set(value.sessionId,[...merged.values()].sort((a,b)=>a.startedAt-b.startedAt));notify()}
   doc?.addEventListener('sherlock:notes-task-state', update)
   doc?.addEventListener('sherlock:notes-reset', reset)
   doc?.addEventListener('sherlock:notes-history',history)
@@ -69,7 +72,7 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
       h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || noteUiText("根据附件撰写内容")}],noteReferences:row.references,imageLoader:loadImage,openFile,t}),
       pending&&!liveReceipts.length?h('div',{className:'en-task-feedback','data-note-feedback':'',role:'status','aria-live':'polite'},h('p',null,noteUiText("已收到，正在处理这条笔记指令。"))):null,
       liveReceipts.length?h('div',{className:'en-task-feedback','data-note-client-progress':'',role:'status','aria-live':'polite'},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(liveReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
-      h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
+      h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:eworkNoteUiError(row.error)}],streaming:false,t}) : null,
       finalReceipts.length?h('div',{'data-note-client-receipts':''},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(finalReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
       row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:conversation}],streaming:false,reveal,t}) : null,
@@ -142,19 +145,26 @@ export function patchNotesActivity(source) {
     if(source.split(status).length!==2)throw Error('笔记无法定位原生执行进度。')
     source=source.replace(status,'/* ework:notes-native-progress:v1 */ const status = entry.noteTask ? entry.noteTask.status : entry.canvasTask ?')
   }
-  if(!source.includes('/* ework:notes-shared-reasoning:v1 */')) {
-    const expandable='const expandable = !!entry.canvasTask || detailGroups.length > 0;'
-    const details='open && entry.canvasTask && react.createElement'
-    if(source.split(expandable).length!==2||source.split(details).length!==2)throw Error('笔记无法定位共用思考过程。')
-    source=source.replace(expandable,'/* ework:notes-shared-reasoning:v1 */ const expandable = !!entry.noteTask?.reasoning || !!entry.canvasTask || detailGroups.length > 0;')
-    source=source.replace(details,"open && entry.noteTask?.reasoning && react.createElement('div',{className:ChatView_module_css_default.executionDetails},react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:entry.noteTask.reasoning}],streaming:false,interrupted:false,t})), "+details)
+  // Migrate the previous Notes-only disclosure as well as a fresh SDK. Native
+  // chat/tool and canvas details keep their original behavior and content.
+  const concise='/* ework:notes-concise-progress:v1 */'
+  if(!source.includes(concise)) {
+    const original='const expandable = !!entry.canvasTask || detailGroups.length > 0;'
+    const previous='/* ework:notes-shared-reasoning:v1 */ const expandable = !!entry.noteTask?.reasoning || !!entry.canvasTask || detailGroups.length > 0;'
+    const rawDetails="open && entry.noteTask?.reasoning && react.createElement('div',{className:ChatView_module_css_default.executionDetails},react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:entry.noteTask.reasoning}],streaming:false,interrupted:false,t})), "
+    const anchor=source.includes(previous)?previous:original
+    if(source.split(anchor).length!==2)throw Error('笔记无法定位简洁执行进度。')
+    if(anchor===previous&&source.split(rawDetails).length!==2)throw Error('笔记无法移除旧思考过程。')
+    source=source.replace(anchor,concise+' const expandable = entry.noteTask ? false : !!entry.canvasTask || detailGroups.length > 0;')
+    if(anchor===previous)source=source.replace(rawDetails,'')
   }
   source=source.replace('const noteRows=useNotesConversationRows(sessionId);','/* ework:notes-history-ready:v1 */ const noteRows=useNotesConversationRows(sessionId,openState);')
   if(!source.includes('/* ework:notes-follow-stream:v1 */')){
     const signature='const followSig = `${openState}:${firstSeq}:${lastKey}:${order.length}:${running ? 1 : 0}:${lastSteeringId ?? ""}`;'
     if(source.split(signature).length!==2)throw Error('无法定位笔记会话滚动跟随。')
-    source=source.replace(signature,'/* ework:notes-follow-stream:v1 */ '+signature.slice(0,-2)+':${noteRows.map(row=>[row.requestId,row.phase,row.stage,row.outputChars,row.reasoning?.length].join(\",\")).join(\";\")}`;')
+    source=source.replace(signature,'/* ework:notes-follow-stream:v1 */ '+signature.slice(0,-2)+':${noteRows.map(row=>[row.requestId,row.phase,row.stage,row.outputChars].join(\",\")).join(\";\")}`;')
   }
+  source=source.replace('row.outputChars,row.reasoning?.length','row.outputChars')
   source=patchNoteReplyActionRow(patchNoteAssistantDestination(source))
   if(source.includes(next))return patchNoteConversationVacancy(patchNotesComponents(patchNotesFiles(source)))
   if (source.split(portal).length !== 2) throw Error('笔记无法定位原生对话过程区域。')

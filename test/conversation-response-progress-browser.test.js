@@ -7,9 +7,15 @@ const require=createRequire(import.meta.url),baseline=process.env.SHERLOCK_RESPO
 let browser,bundle,nativeSource,css
 const evidence=process.env.SHERLOCK_RESPONSE_PROGRESS_EVIDENCE||'/tmp/conversation-controls-20261027'
 beforeAll(async()=>{
- const raw=require('../scripts/lib/conversation-submission.mjs').stripConversationSubmission(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const raw=require('../scripts/lib/conversation-submission.mjs').stripConversationSubmission(await readFile(process.env.SHERLOCK_RESPONSE_PROGRESS_NATIVE_SOURCE||'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ // Match the production order: refresh Notes first, then install response clocks.
+ // Normalize both the older SDK and an already refreshed SDK to this contract.
+ const {patchNotesActivity}=require('../scripts/lib/notes-activity.mjs'),notes=patchNotesActivity(raw)
+ expect(patchNotesActivity(notes)===notes).toBe(true)
  const patch=baseline?source=>source:require('../scripts/lib/conversation-response-progress.mjs').patchConversationResponseProgress
- nativeSource=patch(raw).replace('exports.apply = apply;','exports.apply = apply;exports.__responseChat=ChatView;exports.__responseAssistant=AssistantNodeView;exports.__responseExecution=ExecutionStatusGroup;exports.__responseUseProgress=useConversationResponseProgress;exports.__responseShared=SharedResearchRequest;exports.__responseDictionaries={zh,en};exports.__responseBind=()=>{sherlockBoardsPage.PersonalResearchHistory=()=>null;sherlockBoardsAdapter=null};')
+ // Expose only the production functions this fixture mounts. The full installer
+ // reapplies unrelated outer guide/canvas exports after refreshing Notes.
+ nativeSource=patch(notes).replace(/^\s*exports\.\w+ = [^;\n]+;$/gm,'').replace('\n\t\treturn module.exports;','\n\t\texports.__responseChat=ChatView;exports.__responseAssistant=AssistantNodeView;exports.__responseExecution=ExecutionStatusGroup;exports.__responseUseProgress=useConversationResponseProgress;exports.__responseShared=SharedResearchRequest;exports.__responseDictionaries={zh,en};exports.__responseBind=()=>{sherlockBoardsPage.PersonalResearchHistory=()=>null;sherlockBoardsAdapter=null};return module.exports;')
  const output=await build({entryPoints:['test/fixtures/conversation-response-progress-browser.tsx'],bundle:true,platform:'browser',format:'iife',write:false,loader:{'.svg':'dataurl','.css':'empty'},define:{'process.env.NODE_ENV':'"development"'}});bundle=output.outputFiles[0].text
  const assets='node_modules/@deepseek-ai/dsh-web-frontend/dist/assets',names=(await readdir(assets)).filter(name=>/^index-.*\.css$/.test(name));css=(await Promise.all(names.map(name=>readFile(assets+'/'+name,'utf8')))).join('\n')+'\n'+(await Promise.all(['figma-reading','figma-refinements'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -52,9 +58,19 @@ it('keeps one continuous clock in the actual shared native multi-phase request',
   await page.evaluate(()=>window.responseFixture.shared());await page.clock.runFor(10);expect(errors).toEqual([]);await expect.poll(()=>page.locator('[data-shared-native-task]').count()).toBe(1);expect(await times(page)).toEqual(['· 用时 20秒']);await page.clock.runFor(2200);expect(await times(page)).toEqual(['· 用时 22秒']);await page.evaluate(()=>window.responseFixture.finish());await page.clock.runFor(10);const stopped=await times(page);await page.clock.runFor(2000);expect(await times(page)).toEqual(stopped);expect(errors).toEqual([])
  }finally{await page.close()}
 })
-it('retains independent native Notes and canvas task clocks and their original details',async()=>{
+it('retains independent Notes and canvas clocks with concise Notes and expandable canvas details',async()=>{
  const{page,errors}=await fixture();try{
-  await page.evaluate(()=>window.responseFixture.standalone());await page.clock.runFor(10);await expect.poll(()=>page.locator('[data-chat-anchor-key="note:1"]').count()).toBe(1);expect(await times(page)).toEqual(['· 用时 20秒','· 用时 20秒']);await page.clock.runFor(2100);expect(await times(page)).toEqual(['· 用时 22秒','· 用时 22秒']);await page.locator('[data-chat-anchor-key="note:1"] > button').click();await expect.poll(()=>page.locator('[data-chat-anchor-key="note:1"]').textContent()).toContain('笔记任务原始详情');expect(errors).toEqual([])
+  await page.evaluate(()=>window.responseFixture.standalone());await page.clock.runFor(10)
+  const note=page.locator('[data-chat-anchor-key="note:1"]'),canvas=page.locator('[data-chat-anchor-key="canvas:1"]'),noteButton=note.locator(':scope > button'),canvasButton=canvas.locator(':scope > button')
+  await expect.poll(()=>note.count()).toBe(1);expect(await times(page)).toEqual(['· 用时 20秒','· 用时 20秒'])
+  await page.clock.runFor(2100);expect(await times(page)).toEqual(['· 用时 22秒','· 用时 22秒'])
+  expect(await noteButton.isDisabled()).toBe(true);expect(await noteButton.getAttribute('aria-expanded')).toBeNull()
+  expect(await note.textContent()).toContain('正在整理笔记');expect((await note.textContent()).includes('笔记任务原始详情')).toBe(false)
+  expect(await canvasButton.isDisabled()).toBe(false);await canvasButton.click()
+  await expect.poll(()=>canvasButton.getAttribute('aria-expanded')).toBe('true');await expect.poll(()=>canvas.textContent()).toContain('画布任务原始详情')
+  await page.clock.runFor(2100);expect(await times(page)).toEqual(['· 用时 24秒','· 用时 24秒'])
+  expect((await note.textContent()).includes('笔记任务原始详情')).toBe(false)
+  await writeFile(evidence+'/standalone-concise-notes.json',JSON.stringify({notes:await note.innerText(),notesDisabled:await noteButton.isDisabled(),notesExpanded:await noteButton.getAttribute('aria-expanded'),canvas:await canvas.innerText(),canvasExpanded:await canvasButton.getAttribute('aria-expanded'),times:await times(page)},null,2));expect(errors).toEqual([])
  }finally{await page.close()}
 })
 

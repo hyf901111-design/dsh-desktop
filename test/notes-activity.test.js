@@ -44,14 +44,14 @@ it('keeps actual requests per session through generation, adoption and account r
   doc.dispatchEvent(new Event('sherlock:notes-reset'));expect(store.snapshot('a')).toEqual([]);expect(store.snapshot('b')).toEqual([])
   off();store.dispose();const count=seen.length;send('a','t','preparing');expect(seen).toHaveLength(count)
 })
-it('routes live reasoning through the shared native process disclosure and keeps explicit result feedback',async()=>{
+it('shows only a short note stage for live and replayed reasoning while preserving actual results',async()=>{
  const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs');globalThis.react=React
  const progress=[],markdown=[]
  const props={t:key=>key,UserBubble:()=>null,Progress:({entry})=>{progress.push(entry);return React.createElement('div',{'data-running':entry.running},entry.noteTask.status)},Markdown:({blocks})=>{markdown.push(blocks);return React.createElement('div',null,blocks.map(b=>b.text).join(''))}}
  renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:{requestId:'r',phase:'generating',stage:'thinking',reasoning:'process detail'}}))
- expect(progress[0]).toMatchObject({running:true,noteTask:{status:'正在思考',reasoning:'process detail'}});expect(markdown).toEqual([])
+ expect(progress[0]).toMatchObject({running:true,noteTask:{status:'正在思考'}});expect(progress[0].noteTask).not.toHaveProperty('reasoning');expect(markdown).toEqual([])
  const final=renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:{requestId:'r',phase:'accepted',reasoning:'process detail',result:{kind:'text',markdown:'正文内容'}}}))
- expect(final).toContain('已将以下内容写入笔记。');expect(final).toContain('正文内容');expect(markdown.flat().some(block=>block.kind==='reasoning')).toBe(false)
+ expect(final).toContain('已将以下内容写入笔记。');expect(final).toContain('正文内容');expect(progress.at(-1).noteTask).not.toHaveProperty('reasoning');expect(markdown.flat().some(block=>block.kind==='reasoning')).toBe(false);expect(final).not.toContain('process detail')
  delete globalThis.react
 })
 
@@ -100,4 +100,35 @@ it('shows completed host actions while the model is still thinking, keeps their 
    expect(restored).toContain(result.kind==='text'?'新文章预览':'预览组件')
   }
  }finally{store.dispose();vi.unstubAllGlobals()}
+})
+
+
+it('drops internal reasoning only from the Notes presentation store without changing event or persisted payloads',()=>{
+ const doc=new EventTarget(),store=createNotesActivityStore(doc)
+ const detail={sessionId:'s',requestId:'live',phase:'preparing',prompt:'创建表格',reasoning:'Let me analyze private wireToken instructions',stage:'thinking',outputChars:42}
+ doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail}))
+ expect(store.snapshot('s')[0]).not.toHaveProperty('reasoning')
+ expect(store.snapshot('s')[0]).toMatchObject({prompt:'创建表格',stage:'thinking',outputChars:42})
+ expect(detail.reasoning).toBe('Let me analyze private wireToken instructions')
+ const row={requestId:'old',phase:'failed',error:'TIMEOUT',reasoning:'old private protocol',startedAt:1,finishedAt:2}
+ doc.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId:'s',rows:[row]}}))
+ expect(store.snapshot('s').find(value=>value.requestId==='old')).toMatchObject({phase:'failed',error:'TIMEOUT'})
+ expect(store.snapshot('s').find(value=>value.requestId==='old')).not.toHaveProperty('reasoning')
+ expect(row.reasoning).toBe('old private protocol');store.dispose()
+})
+
+it('migrates the old Notes reasoning disclosure without changing canvas and native detail bodies',async()=>{
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const installed=patchNotesActivity(patchFigmaFinalConversation(source))
+ expect(installed.includes('/* ework:notes-concise-progress:v1 */')).toBe(true)
+ expect(installed.includes('const expandable = entry.noteTask ? false : !!entry.canvasTask || detailGroups.length > 0;')).toBe(true)
+ expect(installed.includes('text:entry.noteTask.reasoning')).toBe(false)
+ expect(installed.includes('row.outputChars,row.reasoning?.length')).toBe(false)
+ expect(installed.includes('open && entry.canvasTask && react.createElement')).toBe(true)
+ expect(patchNotesActivity(installed)).toBe(installed)
+ const original='const expandable = !!entry.canvasTask || detailGroups.length > 0;'
+ const previous='/* ework:notes-shared-reasoning:v1 */ const expandable = !!entry.noteTask?.reasoning || !!entry.canvasTask || detailGroups.length > 0;'
+ const details="open && entry.noteTask?.reasoning && react.createElement('div',{className:ChatView_module_css_default.executionDetails},react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:entry.noteTask.reasoning}],streaming:false,interrupted:false,t})), "
+ const fresh=source.replace(previous,original).replace(details,'')
+ expect(patchNotesActivity(patchFigmaFinalConversation(fresh))===installed).toBe(true)
 })
