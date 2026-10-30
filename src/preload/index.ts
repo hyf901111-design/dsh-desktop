@@ -39,8 +39,9 @@ import { mountHomeFlow } from './home-flow'
 import { mountHomeThemes, getHomeThemeController } from './home-themes'
 import {toggleHomeAppearance} from './home-theme-controls'
 import {mountPowerSettings} from './power-settings'
-import { mountHomeOperations } from './home-operations'
-import { mountHomeGuides, playHomeGuideFromOperations } from './home-guides'
+import { mountExploreMenu } from './explore-menu'
+import { playHomeGuideFromExplore } from './explore-menu-actions'
+import { mountHomeGuides } from './home-guides'
 import { mountHomeNotesGuide } from './home-guide-notes'
 import { mountHomePresentationGuide } from './home-guide-presentation'
 import { mountHomeWorkbenchGuide } from './home-guide-workbench'
@@ -180,7 +181,7 @@ function initializeUi(): void {
   mountUiLocalization(document)
   mountFloatingSurfaces(document)
   const boards = createResearchBoardsBridge(ipcRenderer)
-  mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards)
+  mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards, {explore:process.platform==='darwin'})
   const memoryListeners = new Set<() => void>()
   ipcRenderer.on('memory:changed', () => { for (const listener of memoryListeners) listener() })
   const memoryUi = mountMemoryUi(document, {
@@ -269,7 +270,7 @@ function initializeUi(): void {
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
   const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuide(session.sessionId), prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide,
     mountWorkbench: mountHomeWorkbenchGuide })
-  const disposeHomeOperations = process.platform === 'darwin' ? mountHomeOperations(document, { themeController: getHomeThemeController(document), onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample: (kind, context) => playHomeGuideFromOperations(homeGuides,kind,context) }) : () => {}
+  const disposeHomeOperations = process.platform === 'darwin' ? mountExploreMenu(document, { themeController: getHomeThemeController(document)!, onBeforeOpen:()=>{void homeGuides.reset(false)}, onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample:(kind, context)=>playHomeGuideFromExplore(homeGuides,kind,context) }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
@@ -278,7 +279,7 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create})
   scheduledView.mount()
-  const resetIntegrationIdentity = () => { sidebarNewNote.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
   window.addEventListener('unload', () => { sidebarNewNote.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })

@@ -23,7 +23,7 @@ const smootherStep = (value: number) => {
 }
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
 const EXAMPLE_KINDS: HomeOperationExample[] = [...CARDS, 'workbench']
-const COPY = {
+export const HOME_OPERATIONS_COPY = {
   zh: {
     demoIntro: '即将进入实例演示，\n演示过程不消耗费用',
     heading: '快速开始', wallpapers: '主题壁纸', light: '切换为浅色', dark: '切换为深色', down: '切换到快速开始', up: '返回输入区', pagination: '用例切换',
@@ -49,6 +49,7 @@ const COPY = {
     ]
   }
 } as const
+const COPY = HOME_OPERATIONS_COPY
 
 /** Owns homepage presentation; native action adapters retain session and draft state. */
 export function mountHomeOperations(doc: Document = document, options: Options = {}): () => void {
