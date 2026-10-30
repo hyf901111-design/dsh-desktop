@@ -14,9 +14,13 @@ it('admits only trusted main-frame closed metadata and rejects prose, draft, unk
  expect(recordNotesGuideConsoleMessage(log,{level:'warning',message:message(row)},true)).toBe(false)
  expect(recordNotesGuideConsoleMessage(log,{level:'info',message:message(row)},false)).toBe(false)
  expect(parseNotesGuideDiagnostic(prefix+'{')).toBeNull();expect(parseNotesGuideDiagnostic(prefix+'x'.repeat(769))).toBeNull()
+ expect(parseNotesGuideDiagnostic(message({...row,phase:'guard-rejected',reason:'composer-occurrences-present',imageCount:0,occurrenceCount:1}))).not.toBeNull()
+ for(const occurrenceCount of [-1,1001,1.5,'private'])expect(parseNotesGuideDiagnostic(message({...row,occurrenceCount}))).toBeNull()
  expect(rows).toEqual([JSON.stringify(row)])
  expect(notesGuideFailureReason(Error('演示选区未完成，请重新播放。'))).toBe('selection-changed')
  expect(notesGuideFailureReason(Error('private content'))).toBe('operation-failed')
+ expect(notesGuideFailureReason(Error('输入内容已变化，已保留用户草稿。'))).toBe('native-input-changed')
+ expect(notesGuideFailureReason(Error('原生笔记输入框尚未就绪。'))).toBe('target-not-ready')
 })
 
 it('persists only bounded sanitized metadata with rotation and never blocks playback on unavailable logs',async()=>{

@@ -9,15 +9,17 @@ import {patchHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
 import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 import {notesComposerSource} from '../scripts/lib/notes-composer.mjs'
 import {HOME_NOTES_CHART_PROMPT,HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_TASK_RESULT} from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
+import {parseNotesGuideDiagnostic} from '../src/shared/notes-guide-diagnostics'
 const require=createRequire(import.meta.url),releases=[]
 afterEach(async()=>{for(const off of releases.splice(0))await off()})
 function fixture({foreignPopup=false,deferSummary=false,quoteFailOnce=false,replaceQuoteRoot=false}={}){
- const win=new Window({url:'http://localhost:43210'}),doc=win.document,cleanups=[],fetches=[],cues=[],quoteCues=[],submissions=[],previews=[];let quoteSwitches=0,foreignClicks=0,summaryRead,summaryReads=0,summaryAborts=0
+ const win=new Window({url:'http://localhost:43210'}),doc=win.document,cleanups=[],fetches=[],cues=[],quoteCues=[],submissions=[],previews=[],diagnostics=[];let quoteSwitches=0,foreignClicks=0,summaryRead,summaryReads=0,summaryAborts=0
  doc.body.innerHTML='<main class="pI_x6G_centerCol"><header data-srb-session-header data-ework-notes-session="note-session"></header><section data-home-guide="note-run" data-kind="note"><div id="guide-host"></div></section><div data-ework-notes-composer-host="note-session"><div class="uV2eYG_root"><textarea></textarea><button class="uV2eYG_primary">发送</button></div></div></main>'
  doc.documentElement.dataset.homeGuidePointerRun='note-run'
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),modules=id=>['react','react/jsx-runtime','react-dom'].includes(id)?require(id):id==='@deepseek-ai/cordis'?{Service:class{}}:fake
  const visited=[];const portalReact={...require('react'),useEffect:start=>{const off=start();if(off)cleanups.push(off)},createElement:(component,props)=>{visited.push(component?.name||String(component));if(['ConversationRoot','NativeHomeNotesGuidePortal'].includes(component?.name))return component(props);return null}}
  const scope={window:win,document:doc,navigator:win.navigator,localStorage:win.localStorage,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLInputElement:win.HTMLInputElement,HTMLTextAreaElement:win.HTMLTextAreaElement,HTMLSelectElement:win.HTMLSelectElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,DOMException:win.DOMException,AbortController:win.AbortController,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),setTimeout:win.setTimeout.bind(win),clearTimeout:win.clearTimeout.bind(win),setInterval:win.setInterval.bind(win),clearInterval:win.clearInterval.bind(win),performance:win.performance,crypto:win.crypto,innerWidth:1024,innerHeight:768,TextDecoder,TextEncoder,structuredClone,queueMicrotask,console}
+ scope.console={...console,info:message=>diagnostics.push(message)}
  const load=path=>{let descriptor;win.__ModuleLoader__={load:value=>{descriptor=value}};runInNewContext(readFileSync(path,'utf8'),scope);return descriptor}
  const runtime=load('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js').factory(modules)
  const actualClientPath=process.env.SHERLOCK_TEST_NATIVE_CONVERSATION||'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',actualClient=patchHomeGuideNative(stripWorkbenchReplay(readFileSync(actualClientPath,'utf8'))).replace('exports.apply = apply;','exports.apply = apply;exports.__notesInputs=eworkNotesInputs;exports.__defaultSidebar=defaultResearchSidebar;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};')
@@ -55,7 +57,7 @@ function fixture({foreignPopup=false,deferSummary=false,quoteFailOnce=false,repl
  const paintNativeHost=()=>{const {sessionId:current,state}=sidebar.getSnapshot(),leaf=leaves(state.splits).find(node=>node.id===state.activePane)||leaves(state.splits)[0];input.closest('[data-ework-notes-composer-host]').style.display=current==='note-session'&&state.panelOpen&&leaf?.active==='sherlock-research-conversation'?'':'none'}
  releases.push(sidebar.subscribeState(paintNativeHost));paintNativeHost()
  const openEvidence=()=>sidebar.openTab({id:'notes-challenge:note-session',type:'sherlock-notes-challenge',title:'AI随航'},{sessionId:'note-session'})
- return{win,doc,record,previews,quoteCues,quoteSwitches:()=>quoteSwitches,foreignClicks:()=>foreignClicks,summaryReads:()=>summaryReads,summaryAborts:()=>summaryAborts,releaseSummary:error=>summaryRead?.(error),fetches,cues,submissions,command,mount,ack,sidebar,sidebarStore,openEvidence,coordinator,defaultSidebar:native.__defaultSidebar,setAutoAck:value=>{autoAck=value}}
+ return{win,doc,record,diagnostics,previews,quoteCues,quoteSwitches:()=>quoteSwitches,foreignClicks:()=>foreignClicks,summaryReads:()=>summaryReads,summaryAborts:()=>summaryAborts,releaseSummary:error=>summaryRead?.(error),fetches,cues,submissions,command,mount,ack,sidebar,sidebarStore,openEvidence,coordinator,defaultSidebar:native.__defaultSidebar,setAutoAck:value=>{autoAck=value}}
 }
 it.each([false,true])('recovers a failed quote through its real footer and alternate-source selector before continuing (remount=%s)',async replaceQuoteRoot=>{
  const f=fixture({quoteFailOnce:true,replaceQuoteRoot});await f.mount();expect(f.quoteSwitches()).toBe(1)
@@ -77,8 +79,14 @@ it('preserves a user draft changed while the native pointer acknowledgement is p
  const f=fixture();await f.mount();f.setAutoAck(false);const pending=f.command('type',{stage:'selection'})
  await vi.waitFor(()=>expect(f.cues).toHaveLength(1));f.record.shell.setDraft('用户刚输入的内容');f.ack(f.cues[0])
  expect(await pending).toMatchObject({ok:false});expect(f.record.shell.snapshot.draft).toBe('用户刚输入的内容');expect(f.submissions).toEqual([])
+ expect(f.diagnostics.map(parseNotesGuideDiagnostic)).toContainEqual(expect.objectContaining({phase:'guard-rejected',reason:'composer-draft-changed',imageCount:0,occurrenceCount:0}))
+ expect(f.diagnostics.join('')).not.toContain('用户刚输入的内容')
  expect(f.doc.querySelector('[data-home-guide-cue-target]')).toBeNull()
 })
+it('reports only counts when the actual native CAS rejects reference occurrences without sending or exposing reference data',async()=>{
+ const f=fixture();await f.mount();const original=f.record.shell.snapshot,spy=vi.spyOn(f.record.shell,'snapshot','get').mockImplementation(()=>({...original,occurrences:[{source:'private-source',id:'private-reference',offset:0}]}))
+ try{expect(await f.command('type',{stage:'selection'})).toMatchObject({ok:false,message:'输入内容已变化，已保留用户草稿。'});expect(f.submissions).toEqual([]);expect(f.diagnostics.map(parseNotesGuideDiagnostic)).toContainEqual(expect.objectContaining({step:'note-rewrite',phase:'guard-rejected',reason:'composer-occurrences-present',imageCount:0,occurrenceCount:1}));expect(f.diagnostics.join('')).not.toMatch(/private-source|private-reference/)}finally{spy.mockRestore()}
+},15000)
 it('cancels a pending cue when the original guide is disposed, without sending a note task',async()=>{
  const f=fixture();await f.mount();f.setAutoAck(false);const pending=f.command('type',{stage:'selection'})
  await vi.waitFor(()=>expect(f.cues).toHaveLength(1));await f.command('dispose')

@@ -79,7 +79,11 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
     }
     const record=await until(ticket,()=>{const value=recordFor(ticket);return value?.active&&value.ready&&!value.running&&!value.preparing&&inputFor(ticket)&&value}),input=inputFor(ticket),shell=record.shell,prompt=ticket.prepared.prompts[stage]
     let draft=shell.snapshot.draft,revision=shell.snapshot.draftRev
-    const cas=()=>{check(ticket);if(recordFor(ticket)!==record||shell.snapshot.draft!==draft||shell.snapshot.draftRev!==revision||shell.snapshot.imageIds.length||shell.snapshot.occurrences?.length)throw Error('输入内容已变化，已保留用户草稿。')}
+    const cas=()=>{check(ticket);const reason=recordFor(ticket)!==record?'composer-record-changed':shell.snapshot.draft!==draft?'composer-draft-changed':shell.snapshot.draftRev!==revision?'composer-revision-changed':shell.snapshot.imageIds.length?'composer-images-present':shell.snapshot.occurrences?.length?'composer-occurrences-present':undefined;if(reason){
+     // Closed metadata only; retain exactly the original CAS rejection and message.
+     try{console.info('[notes-guide-step] '+JSON.stringify({version:1,at:Date.now(),runId:ticket.detail.runId,sessionId,step:stage==='selection'?'note-rewrite':'note-task-compose',phase:'guard-rejected',reason,imageCount:Math.min(1000,shell.snapshot.imageIds.length),occurrenceCount:Math.min(1000,shell.snapshot.occurrences?.length||0)}))}catch{}
+     throw Error('输入内容已变化，已保留用户草稿。')
+    }}
     if(draft!==''&&!(stage==='selection'&&draft===prompt))throw Error('输入框已有草稿，已停止示例输入。')
     await cue(ticket,input,stage==='note'?'输入当前笔记优化任务':'查看选区改写需求');cas();input.focus({preventScroll:true})
     if(!draft)for(const character of Array.from(prompt)){await playing(ticket);cas();shell.setDraft(draft+character);draft=shell.snapshot.draft;revision=shell.snapshot.draftRev;await delay(ticket,65)}
