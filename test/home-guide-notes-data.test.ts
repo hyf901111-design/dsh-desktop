@@ -13,24 +13,13 @@ import * as guideContract from '../packages/dsh-research-task-runtime/home-notes
 const sessionId='home-guide-notes-contract'
 const review=()=>({sessionId,requestId:'review-1',action:'review' as const,level:3 as const,title:HOME_NOTES_GUIDE_TITLE,blocks:challengeDocumentBlocks(HOME_NOTES_GUIDE_BLOCKS)})
 describe('homepage note example data and isolated bridge',()=>{
- it('uses dated company primary reports and independently verifies raw-yuan quarter and annualization calculations',()=>{
-  const facts=(guideContract as any).HOME_NOTES_RESEARCH_FACTS,sources=(guideContract as any).HOME_NOTES_REPORT_SOURCES
-  expect((guideContract as any).HOME_NOTES_RESEARCH_AS_OF).toBe('2026-08-24')
-  expect(facts).toMatchObject({r25q1:'6674176487.23',r25q2:'8114898350.57',r26q1:'19496398083.95',r26h1:'41777861795.03',p26h1:'13651149693.27',ocf26h1:'1799674832.02',ocf25h1:'3218463287.30'})
-  const cents=(value:string)=>BigInt(value.replace('.','')),round=(n:bigint,d:bigint)=>n<0n?-((-n+d/2n)/d):(n+d/2n)/d
-  const q2=cents(facts.r26h1)-cents(facts.r26q1)
-  expect(q2).toBe(2228146371108n)
-  expect(round((q2-cents(facts.r26q1))*10000n,cents(facts.r26q1))).toBe(1429n)
-  expect(round((q2-cents(facts.r25q2))*10000n,cents(facts.r25q2))).toBe(17457n)
-  expect(round((cents(facts.r26h1)-cents(facts.r25q1)-cents(facts.r25q2))*10000n,cents(facts.r25q1)+cents(facts.r25q2))).toBe(18249n)
-  expect(round(cents(facts.p26h1)*2n,100000000n)).toBe(27302n)
-  expect(round((cents(facts.ocf26h1)-cents(facts.ocf25h1))*10000n,cents(facts.ocf25h1))).toBe(-4408n)
-  expect(sources.map((source:any)=>[source.publishedAt,source.pages,source.url])).toEqual([
-   ['2026-03-31',[8],'https://static.cninfo.com.cn/finalpage/2026-03-31/1225056459.PDF#page=8'],
-   ['2026-04-17',[3],'https://disc.static.szse.cn/download/disc/disk03/finalpage/2026-04-17/9d49a477-951e-4995-bba4-4acaf6c10aba.PDF#page=3'],
-   ['2026-08-22',[8,25,26],'https://static.cninfo.com.cn/finalpage/2026-08-22/1225491753.PDF#page=8']])
-  const actual=JSON.stringify([HOME_NOTES_GUIDE_TITLE,HOME_NOTES_GUIDE_BLOCKS,guideContract.HOME_NOTES_CHART_PROMPT,guideContract.HOME_NOTES_CHART_SPEC,guideContract.HOME_NOTES_TASK_RESULT,homeNotesGuideChallengeResult(review())])
-  for(const obsolete of ['120亿元','132亿元','2026E','甲证券','乙证券','丙证券','虚构情景','演示样本'])expect(actual).not.toContain(obsolete)
+ it('uses the official annual table with independently checked return arithmetic',()=>{
+  const facts=(guideContract as any).HOME_NOTES_RESEARCH_FACTS,sources=guideContract.HOME_NOTES_REPORT_SOURCES
+  expect(facts.values['微软']).toEqual([100,134.41,128.48,172.01,227.51,255.13])
+  expect(Number((255.13-215.89).toFixed(2))).toBe(39.24);expect(Number((255.13-254.97).toFixed(2))).toBe(.16)
+  expect((Math.pow(255.13/100,1/5)-1)*100).toBeCloseTo(20.601387912851,10)
+  expect(sources[0]!.url).toBe('https://www.microsoft.com/investor/reports/ar25/index.html')
+  expect(JSON.stringify(sources)).not.toMatch(/PDF|页码/)
  })
  it('delegates actual slash/library/render requests only after native demo admission through the original bridge',async()=>{
   const signal=new AbortController(),original={request:vi.fn(async method=>method==='load'?{saved:{title:'',blocks:[],yjs:'',revision:0,updatedAt:0}}:{ok:true}),draft:vi.fn()},native={generate:vi.fn(),stop:vi.fn()}
@@ -44,43 +33,40 @@ describe('homepage note example data and isolated bridge',()=>{
   await expect(plain.request('library-read',{sessionId})).rejects.toThrow('不支持')
   signal.abort();await expect(bridge.request('library-list',{sessionId})).rejects.toMatchObject({name:'AbortError'})
  })
- it('shows three original company reports and separates annualization from consensus forecasts',()=>{
-  const request=review(),issue=homeNotesGuideChallengeResult(request).issues.find(item=>item.blockId==='guide-note-consensus')!
-  expect(issue.evidence).toHaveLength(3)
-  const evidence=JSON.stringify(issue.evidence);expect(evidence).toContain('13651149693.27');expect(evidence).toContain('27302299386.54');expect(evidence).toContain('非机构预测')
-  for(const source of guideContract.HOME_NOTES_REPORT_SOURCES)expect(evidence).toContain(source.url)
-  const result=homeNotesGuideChallengeResult({...request,action:'optimize',thread:{...issue,messages:[]}})
-  expect(result.reply?.replacement).toContain('273.02亿元');expect(result.reply?.replacement).toContain('不等于公司指引或市场一致预期')
-  expect(result.reply?.replacement).toContain('没有可核验的机构预测样本')
+ it('shows the actual HTML source and compound formula for the small statistical correction',()=>{
+  const request=review(),issue=homeNotesGuideChallengeResult(request).issues.find(item=>item.blockId==='guide-note-growth')!
+  expect(issue.evidence).toHaveLength(1);expect(issue.quote).toBe('年化收益31.03%')
+  const evidence=JSON.stringify(issue.evidence);expect(evidence).toContain('(255.13/100)^(1/5)-1');expect(evidence).toContain('分红再投资')
+  expect(evidence).toContain(guideContract.HOME_NOTES_REPORT_SOURCES[0]!.url)
  })
- it('provides five staged report-review paragraphs with three professional self-review findings',()=>{
+ it('provides five personal paragraphs and three review scopes',()=>{
   const request=review(),text=request.blocks.map(block=>block.text).join(''),result=homeNotesGuideChallengeResult(request)
-  expect(text.length).toBeGreaterThanOrEqual(650);expect(text.length).toBeLessThan(1300);expect(text).toContain('2026年8月24日')
-  expect((guideData as any).HOME_NOTES_GUIDE_WRITING_STAGES.map((items:any[])=>items.map(item=>item.id))).toEqual([['guide-note-intro','guide-note-growth'],['guide-note-consensus'],['guide-note-logic','guide-note-cashflow']])
+  expect(text.length).toBeGreaterThan(450);expect(text.length).toBeLessThan(1000)
+  expect(guideData.HOME_NOTES_GUIDE_WRITING_STAGES.map(items=>items.length)).toEqual([2,1,2])
   expect(HOME_NOTES_GUIDE_BLOCKS).toHaveLength(5);expect(result.issues).toHaveLength(3)
-  expect(new Set(result.issues.map(issue=>issue.category))).toEqual(new Set(['contradiction','logic','research']))
-  expect(text).toContain('300308');expect(text).toContain('据2026中报第8、25页')
+  expect(new Set(result.issues.map(issue=>issue.category))).toEqual(new Set(['contradiction','logic','grammar']))
+  expect(text).toContain('今天先不追目标价');expect(text).toContain('NASDAQ Computer')
   for(const issue of result.issues)expect(request.blocks.find(block=>block.id===issue.blockId)?.text).toContain(issue.quote)
   expect(result.completeBlockIds).toEqual(request.blocks.map(block=>block.id))
  })
- it('gives the inline chart explicit quarterly example data with reconcilable annual totals and units',()=>{
-  const spec=(guideContract as any).HOME_NOTES_CHART_SPEC
-  expect(spec).toMatchObject({variant:'bar',unit:'亿元',labels:['Q1','Q2']})
-  expect(spec.series.map((series:any)=>series.values)).toEqual([[66.74,81.15],[194.96,222.81]])
-  expect(spec.note).toContain('同比174.57%、环比14.29%');expect(spec.note).toContain('合计可能有尾差');expect(spec.note).toContain('H1合计和增速按报告元原值计算')
-  expect((guideContract as any).HOME_NOTES_GUIDE_STOCK).toEqual({code:'300308',market:'SZ',name:'中际旭创'})
+ it('uses a three-series annual holding-return line with the real US symbol',()=>{
+  const spec=guideContract.HOME_NOTES_CHART_SPEC
+  expect(spec).toMatchObject({variant:'line',unit:'总回报指数',labels:['2020','2021','2022','2023','2024','2025']})
+  expect(spec.series.map(series=>series.values[0])).toEqual([100,100,100])
+  expect(spec.series.map(series=>series.values.at(-1))).toEqual([255.13,215.89,254.97])
+  expect(spec.note).toContain('非主动策略');expect(guideContract.HOME_NOTES_GUIDE_STOCK).toEqual({code:'MSFT',market:'US',name:'微软'})
  })
  it('does not invent anchors when a paragraph was edited or omitted',()=>{
   const request=review();request.blocks=request.blocks.filter(block=>block.id!=='guide-note-logic').map(block=>block.id==='guide-note-growth'?{...block,text:'已修订的收入增速。'}:block)
   const result=homeNotesGuideChallengeResult(request)
-  expect(result.issues.map(issue=>issue.category)).toEqual(['research'])
+  expect(result.issues.map(issue=>issue.category)).toEqual(['logic','grammar'])
   expect(result.coveredBlockIds).toEqual(request.blocks.map(block=>block.id))
  })
  it('optimizes the entire anchored sentence through the native replacement contract',()=>{
   const request=review(),result=homeNotesGuideChallengeResult(request),issue=result.issues.find(issue=>issue.category==='contradiction')!
   const optimized=homeNotesGuideChallengeResult({...request,action:'optimize',thread:{...issue,messages:[]}})
   const block=request.blocks.find(block=>block.id===issue.blockId)!,scope=challengeReplacementScope(block.text,issue.quote)
-  expect('error' in scope).toBe(false);expect(optimized.reply?.replacement).toContain('环比增长14.29%');expect(optimized.reply?.replacement).toContain('同比2025年二季度增长174.57%')
+  expect('error' in scope).toBe(false);expect(optimized.reply?.replacement).toContain('年化收益约20.60%');expect(optimized.reply?.replacement).not.toContain('31.03%')
   expect(challengeReplacementBody('error' in scope?'':scope.quote,optimized.reply!.replacement!)).not.toHaveProperty('error')
  })
  it('keeps revisions and drafts only in an isolated memory document',async()=>{

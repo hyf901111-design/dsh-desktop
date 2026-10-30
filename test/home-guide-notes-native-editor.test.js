@@ -7,6 +7,15 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 const selectionOutput=process.env.SHERLOCK_NOTE_SELECTION_OUTPUT_DIR||mkdtempSync(join(tmpdir(),'home-note-selection-'));mkdirSync(selectionOutput,{recursive:true})
 let browser,script,css
+it('selects only the unique sentence inside its unchanged paragraph and rejects ambiguous or stale text',async()=>{
+ const{context,page}=await fixture();try{
+  const text='前一句必须保持不变。后续将持续密切关注相关业务及各项指标的进一步变化情况。最后一句也必须保留。',sentence='后续将持续密切关注相关业务及各项指标的进一步变化情况。'
+  expect(await page.evaluate(({text,sentence})=>{window.noteApi.updateText('logic',text);window.noteApi.selectParagraph('logic',text,sentence);return getSelection().toString()},{text,sentence})).toBe(sentence)
+  expect(await page.evaluate(({text,sentence})=>{window.sentenceLease=window.noteApi.beginParagraphSelection('logic',text,sentence);window.sentenceLease.finish();return getSelection().toString()},{text,sentence})).toBe(sentence)
+  expect(await page.evaluate(({text,sentence})=>{window.noteApi.updateText('logic',text+sentence);try{window.noteApi.selectParagraph('logic',text+sentence,sentence);return'accepted'}catch(error){return error.message}},{text,sentence})).toContain('变化')
+  expect(await page.evaluate(({text,sentence})=>{try{window.noteApi.beginParagraphSelection('logic',text,sentence);return'accepted'}catch(error){return error.message}},{text,sentence})).toContain('变化')
+ }finally{await context.close()}
+},15000)
 it('expires its read-only native tail lease after caret movement, a document edit, another run or disposal',async()=>{
  const{context,page}=await fixture();try{
   expect(await page.evaluate(()=>{window.tail=window.noteApi.prepareNative();return window.tail()})).toBe(true)

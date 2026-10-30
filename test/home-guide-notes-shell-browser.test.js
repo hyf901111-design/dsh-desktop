@@ -33,7 +33,7 @@ beforeAll(async()=>{
  const nativeFor=options=>{let disposed=false,submission=0;const jobs=new Map();return{
   configureQuote:()=>window.configureFixtureQuote(),reviewSummary:()=>window.reviewFixtureSummary(),appendSummary:()=>window.appendFixtureSummary(options.runId,options.sessionId),
   async type(stage){if(disposed||options.signal.aborted)throw new DOMException('cancelled','AbortError');const submissionId=++submission;let accepted=false;const receive=event=>{if(event.detail?.sessionId===options.sessionId&&event.detail.submissionId===submissionId)accepted=true};document.addEventListener('sherlock:notes-submit-accepted',receive);try{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:options.sessionId,submissionId,prompt:stage==='note'?HOME_NOTES_TASK_PROMPT:HOME_NOTES_REWRITE_PROMPT,images:[]}}))}finally{document.removeEventListener('sherlock:notes-submit-accepted',receive)}if(!accepted)throw Error('真实笔记编辑器未接受示例任务')},
-  async generate(input){const controller=new AbortController();jobs.set(input.requestId,controller);try{window.noteNativeTasks.push({prompt:input.prompt,sessionId:input.sessionId,scope:input.context.scope,selection:input.selection,markdown:input.markdown});await options.wait(1800,AbortSignal.any([controller.signal,options.signal]));if(disposed)throw new DOMException('cancelled','AbortError');if(input.prompt===HOME_NOTES_CHART_PROMPT)return homeNotesGuideChart(options.runId);if(input.prompt===HOME_NOTES_TASK_PROMPT&&input.context.scope==='note'&&!input.selection&&input.markdown.includes('环比增长14.29%'))return{kind:'conversation',markdown:HOME_NOTES_TASK_RESULT};if(input.prompt===HOME_NOTES_REWRITE_PROMPT&&input.context.scope==='selection'&&!input.markdown&&input.selection===HOME_NOTES_GUIDE_SELECTION)return{kind:'text',markdown:HOME_NOTES_REWRITE_RESULT};throw Error('示例引用范围不匹配')}finally{jobs.delete(input.requestId)}},
+  async generate(input){const controller=new AbortController();jobs.set(input.requestId,controller);try{window.noteNativeTasks.push({prompt:input.prompt,sessionId:input.sessionId,scope:input.context.scope,selection:input.selection,markdown:input.markdown});await options.wait(1800,AbortSignal.any([controller.signal,options.signal]));if(disposed)throw new DOMException('cancelled','AbortError');if(input.prompt===HOME_NOTES_CHART_PROMPT)return homeNotesGuideChart(options.runId);if(input.prompt===HOME_NOTES_TASK_PROMPT&&input.context.scope==='note'&&!input.selection&&input.markdown.includes('年化收益约20.60%'))return{kind:'conversation',markdown:HOME_NOTES_TASK_RESULT};if(input.prompt===HOME_NOTES_REWRITE_PROMPT&&input.context.scope==='selection'&&!input.markdown&&input.selection===HOME_NOTES_GUIDE_SELECTION)return{kind:'text',markdown:HOME_NOTES_REWRITE_RESULT};throw Error('示例引用范围不匹配')}finally{jobs.delete(input.requestId)}},
   async stop(id){jobs.get(id)?.abort()},dispose(){disposed=true;for(const job of jobs.values())job.abort();jobs.clear()}
  }};
  const chooseView=view=>{for(const tab of document.querySelectorAll('[data-conversation-view-id]'))tab.setAttribute('aria-selected',String(tab.dataset.conversationViewId===view));document.querySelector('[data-ework-note-view]')?.remove();const id=document.querySelector('[data-ework-notes-session]').dataset.eworkNotesSession;if(view==='notes'){const anchor=document.createElement('div');anchor.dataset.eworkNoteView=id;document.querySelector('#resident-body').append(anchor);document.dispatchEvent(new CustomEvent('sherlock:notes-open',{detail:{sessionId:id}}))}else document.dispatchEvent(new CustomEvent('sherlock:notes-close',{detail:{sessionId:id}}));};
@@ -68,6 +68,7 @@ async function fixture(paneWidth=600,{isolated=false,deferEngage=false}={}){
 async function complete(page,evaluate=fn=>page.evaluate(fn)){
  const deadline=Date.now()+110000;let capturedPopover=false
  while(Date.now()<deadline){
+  const failure=await evaluate(()=>window.__testHomeGuideError);if(failure)throw Error(JSON.stringify(failure)+' '+JSON.stringify(await evaluate(()=>window.__testNoteSentenceGeometry))+' '+JSON.stringify(await evaluate(()=>window.guideCueHistory)))
   if(await page.locator('[data-home-guide]').count()===0)return
   const phase=await page.locator('[data-home-guide]').getAttribute('data-phase');if(phase==='completed'){await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);return}
   if(phase==='error')throw Error(await page.locator('.odyssey-home-guide-status').innerText()+' '+JSON.stringify(await evaluate(()=>window.guideCueHistory)))
@@ -87,8 +88,8 @@ it('creates a new native session after an isolated Notes walkthrough without los
   await evaluate(()=>window.guides.start('note'));await complete(page,evaluate)
   const saved=store.load('owner','example-note-1'),tasks=await evaluate(()=>window.noteNativeTasks)
   expect(tasks.map(task=>task.scope)).toEqual(['note','selection','note'])
-  expect(JSON.stringify(saved.saved.blocks)).toContain('环比增长14.29%')
-  expect(JSON.stringify(saved.saved.blocks)).toContain('盈利增长本身不能证明估值具有安全边际')
+  expect(JSON.stringify(saved.saved.blocks)).toContain('年化收益约20.60%')
+  expect(JSON.stringify(saved.saved.blocks)).toContain('下次复盘先核对云业务增长')
   await page.getByRole('tab',{name:'对话'}).click()
   const before=await page.evaluate(()=>window.nativeSessionProbe.snapshot())
   expect(before.current).toBe('example-note-1')
@@ -114,12 +115,12 @@ it('creates a new native session after an isolated Notes walkthrough without los
 },130000)
 it('keeps replayed and interrupted Notes copies while native New Chat leaves them without a late guide selection',async()=>{
  const f=await fixture(600,{isolated:true}),{page,evaluate,store}=f;try{
-  const write=async()=>{await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('资料截点')}
+  const write=async()=>{await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('观察窗口')}
   await evaluate(()=>window.guides.start('note'));await write()
   await evaluate(()=>window.guides.start('note',{replay:true}));await write()
   await page.getByRole('tab',{name:'对话'}).click();await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
   const copies=['example-note-1','example-note-2'].map(id=>store.load('owner',id))
-  for(const note of copies)expect(JSON.stringify(note.saved.blocks)).toContain('资料截点')
+  for(const note of copies)expect(JSON.stringify(note.saved.blocks)).toContain('观察窗口')
   const before=await page.evaluate(()=>window.nativeSessionProbe.snapshot())
   expect(before.retained).toEqual(['example-note-1','example-note-2'])
   await page.getByRole('button',{name:'新建对话',exact:true}).click()
@@ -140,7 +141,7 @@ it('does not reselect or emit a late edit after cancelling an isolated guide wit
   await expect.poll(()=>page.evaluate(()=>window.nativeSessionProbe.snapshot().created.length)).toBe(1)
   await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
   const before=await page.evaluate(()=>window.nativeSessionProbe.snapshot()),saved=store.load('owner','example-note-1')
-  expect(before.retained).toEqual(['example-note-1']);expect(saved.saved.title).toContain('中际旭创2026中报复盘')
+  expect(before.retained).toEqual(['example-note-1']);expect(saved.saved.title).toContain('微软｜持有回报复盘')
   f.releaseEngage();await page.waitForTimeout(200)
   expect(await page.evaluate(()=>window.nativeSessionProbe.snapshot())).toEqual(before)
   expect(store.load('owner','example-note-1')).toEqual(saved)
@@ -148,7 +149,7 @@ it('does not reselect or emit a late edit after cancelling an isolated guide wit
   expect(f.errors).toEqual([]);expect(f.logs).toEqual([])
  }finally{await f.dispose()}
 },15000)
-async function startWriting(page){await page.evaluate(()=>window.guides.start('note'));await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('资料截点')}
+async function startWriting(page){await page.evaluate(()=>window.guides.start('note'));await expect.poll(()=>page.locator('[data-home-guide] .bn-editor').innerText(),{timeout:6000}).toContain('观察窗口')}
 for(const width of [600,700])it(`saves and reopens the native note without clipping a ${width}px pane walkthrough`,async()=>{
  const f=await fixture(width),{page,errors,logs,store,requests}=f;try{
   await page.evaluate(()=>window.guides.start('note'))
@@ -157,16 +158,16 @@ for(const width of [600,700])it(`saves and reopens the native note without clipp
   await page.screenshot({path:'/tmp/home-guide-note-virtual-pointer-'+width+'-20261025.png'})
   expect(await page.locator('[data-home-guide]').evaluate(root=>{const box=root.getBoundingClientRect(),pane=document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(),footer=root.querySelector('.odyssey-home-guide-footer'),content=root.querySelector('[data-home-guide-content]').getBoundingClientRect();return box.left>=pane.left&&box.right<=pane.right+1&&box.bottom<=pane.bottom+1&&Math.abs(content.bottom-box.bottom)<1&&footer===null&&root.scrollWidth<=root.clientWidth})).toBe(true)
   await complete(page)
-  expect(await page.getByRole('tab',{name:'笔记'}).getAttribute('aria-selected')).toBe('true');expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('环比增长14.29%')
+  expect(await page.getByRole('tab',{name:'笔记'}).getAttribute('aria-selected')).toBe('true');expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('年化收益约20.60%')
   expect(await page.evaluate(()=>document.querySelector('#original-draft')===window.originalInput&&window.originalInput.value==='用户原有提示词与技能标签')).toBe(true)
   await page.screenshot({path:'/tmp/home-guide-notes-natural-shell-'+width+'-20261024.png'})
   expect(await page.locator('[data-home-guide]').count()).toBe(0)
-  await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('环比增长14.29%')
+  await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('年化收益约20.60%')
   expect(store.load('owner','example-note-1').saved.yjs.length).toBeGreaterThan(1000);expect(requests.some(item=>item.sessionId==='original-session')).toBe(false);expect(requests.some(item=>item.method==='challenge')).toBe(false)
   expect(await page.evaluate(()=>window.noteNativeTasks.map(task=>task.scope))).toEqual(['note','selection','note'])
-  expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('盈利增长本身不能证明估值具有安全边际')
-  expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('上半年收入417.78亿元')
-  await page.evaluate(()=>window.guides.start('note'));expect(await page.locator('[data-home-guide]').count()).toBe(0);await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('环比增长14.29%')
+  expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('下次复盘先核对云业务增长')
+  expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('微软五年含分红年化回报')
+  await page.evaluate(()=>window.guides.start('note'));expect(await page.locator('[data-home-guide]').count()).toBe(0);await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('年化收益约20.60%')
   expect(errors).toEqual([]);expect(logs).toEqual([])
  }finally{await f.dispose()}
 },130000)
@@ -175,7 +176,7 @@ it('hands a failed original slash library back to ordinary Notes with the partia
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>{window.failGuideLibrary=true;window.errorHandoffFrames=[];window.endingOwners=[];window.addEventListener('sherlock:home-guide-playback',event=>{if(event.detail.ending)window.endingOwners.push({runId:event.detail.runId,token:document.documentElement.dataset.homeGuidePointerRun})});window.captureErrorHandoff=true;let fault=false;const sample=()=>{fault||=document.querySelector('[data-home-guide]')?.dataset.phase==='error';if(fault)window.errorHandoffFrames.push({guide:!!document.querySelector('[data-home-guide] .bn-editor')?.textContent?.trim(),normal:document.body.dataset.workspaceSurface==='notes'&&!!document.querySelector('[data-note-editor-session="example-note-1"] .bn-editor')?.textContent?.trim()});if(window.captureErrorHandoff)requestAnimationFrame(sample)};requestAnimationFrame(sample);void window.guides.start('note')})
   await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').count(),{timeout:45000}).toBe(1)
   expect(await page.locator('[data-home-guide]').count()).toBe(0)
-  expect(await page.locator('[data-note-editor-session="example-note-1"] .en-title').inputValue()).toContain('中际旭创2026中报复盘')
+  expect(await page.locator('[data-note-editor-session="example-note-1"] .en-title').inputValue()).toContain('微软｜持有回报复盘')
   const saved=store.load('owner','example-note-1').saved;expect(saved.blocks.filter(block=>block.type==='research')).toHaveLength(1)
   expect(await page.evaluate(()=>window.guideHandoffCalls)).toEqual([{sessionId:'example-note-1',aborted:false}]);expect(await page.evaluate(()=>window.guideHandoffReleases)).toEqual(['example-note-1'])
   const owners=await page.evaluate(()=>window.endingOwners);expect(owners).toHaveLength(1);expect(owners[0].token).toBe(owners[0].runId)
@@ -197,22 +198,22 @@ it('pauses readable writing and replays into a new session while preserving the 
  const f=await fixture(),{page,store,errors}=f;try{
   await startWriting(page);await page.evaluate(()=>window.__testHomeGuideTimeline.pause());await page.waitForTimeout(180);const paused=await page.locator('[data-home-guide] .bn-editor').innerText();await page.waitForTimeout(350);expect(await page.locator('[data-home-guide] .bn-editor').innerText()).toBe(paused)
   await page.evaluate(()=>window.guides.start('note',{replay:true}));await expect.poll(()=>page.locator('[data-ework-notes-session]').getAttribute('data-ework-notes-session')).toBe('example-note-2')
-  expect(store.load('owner','example-note-1').saved.title).toContain('中际旭创2026中报复盘');expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('资料截点')
+  expect(store.load('owner','example-note-1').saved.title).toContain('微软｜持有回报复盘');expect(JSON.stringify(store.load('owner','example-note-1').saved.blocks)).toContain('观察窗口')
   await page.keyboard.press('Escape');await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([])
  }finally{await f.dispose()}
 },15000)
 it('preserves partial content and respects a user switching native tabs',async()=>{
  const f=await fixture(),{page,store,errors}=f;try{
   await startWriting(page);await page.getByRole('tab',{name:'对话'}).click();await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
-  expect(await page.getByRole('tab',{name:'对话'}).getAttribute('aria-selected')).toBe('true');expect(store.load('owner','example-note-1').saved.title).toContain('中际旭创2026中报复盘')
-  await page.getByRole('tab',{name:'笔记'}).click();await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('资料截点');expect(errors).toEqual([])
+  expect(await page.getByRole('tab',{name:'对话'}).getAttribute('aria-selected')).toBe('true');expect(store.load('owner','example-note-1').saved.title).toContain('微软｜持有回报复盘')
+  await page.getByRole('tab',{name:'笔记'}).click();await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('观察窗口');expect(errors).toEqual([])
  }finally{await f.dispose()}
 },15000)
 it('awaits a delayed final save before exposing the native Notes surface',async()=>{
  const f=await fixture(),{page,errors}=f;try{
   await startWriting(page);await page.evaluate(()=>window.deferNoteSave=true);await page.keyboard.press('Escape')
   expect(await page.locator('[data-home-guide]').count()).toBe(1);expect(await page.locator('[data-note-editor-session]').count()).toBe(0)
-  await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('资料截点');expect(errors).toEqual([])
+  await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);await expect.poll(()=>page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('观察窗口');expect(errors).toEqual([])
  }finally{await f.dispose()}
 },15000)
 it('flushes a native editor before handing over its session and reloads rather than reusing its old snapshot',async()=>{
@@ -246,7 +247,7 @@ it('keeps strict review alive during a long pause and then preserves the finishe
   expect(reachedStrict).toBe(true)
   await page.evaluate(()=>window.__testHomeGuideTimeline.pause());await page.waitForTimeout(11200)
   expect(await page.locator('[data-home-guide] .bn-editor').count()).toBe(1);expect(await page.locator('.odyssey-home-guide-status').innerText()).not.toContain('未就绪')
-  await page.evaluate(()=>window.__testHomeGuideTimeline.play());await complete(page);expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('环比增长14.29%')
+  await page.evaluate(()=>window.__testHomeGuideTimeline.play());await complete(page);expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('年化收益约20.60%')
   expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([]);expect(logs).toEqual([])
  }finally{await f.dispose()}
 },130000)

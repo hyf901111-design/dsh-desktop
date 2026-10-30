@@ -139,8 +139,8 @@ test('starts the first real scene immediately and keeps reading time after its a
  expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write'])
  expect(document.querySelector('[data-home-guide]')?.getAttribute('aria-label')).not.toContain('离线')
  expect(document.querySelector('[role=toolbar]')).toBeNull()
- await vi.advanceTimersByTimeAsync(1299);expect(f.runStep).toHaveBeenCalledTimes(1)
- await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge'])
+ await vi.advanceTimersByTimeAsync(1099);expect(f.runStep).toHaveBeenCalledTimes(1)
+ await vi.advanceTimersByTimeAsync(1);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','note-chart-compose'])
 })
 test('PPT keeps the real history and input usable instead of mounting a replacement page',async()=>{
  const f=fixture();await f.controller.start('ppt')
@@ -306,7 +306,7 @@ test('PPT assigns reading holds to the visible work without an introduction or b
 
 test('hands the saved scene back to the real client after completion',async()=>{
  vi.useFakeTimers();const f=fixture();await f.controller.start('note');await vi.advanceTimersByTimeAsync(50000)
- expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review','select','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-task-compose','note-task-review','note-task-apply','note-select-paragraph','note-rewrite','note-rewrite-apply','note-return-top']);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
+ expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-task-saved','note-return-top']);expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
  expect(document.querySelector('[data-home-guide]')).toBeNull();expect(document.querySelector('.odyssey-home-guide-pointer')).toBeNull();expect(f.text.parentElement?.inert).toBe(false)
 })
 test('keeps mount and completion save faults visible without playback controls',async()=>{
@@ -351,11 +351,11 @@ test('pauses a newly opened note before its first actor action when the native e
 test('preserves a note review readiness budget across window blur and resumes the same step on focus',async()=>{
  vi.useFakeTimers();const f=fixture();let reviewed=false
  f.runStep.mockImplementation(async step=>{if(step==='review'){await f.adapters.mountNotes.mock.calls[0]![2].wait(10000);reviewed=true}})
- await f.controller.start('note');await vi.advanceTimersByTimeAsync(2100);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review'])
+ await f.controller.start('note');await vi.advanceTimersByTimeAsync(11300);expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review'])
  await vi.advanceTimersByTimeAsync(500);focus(false);await vi.advanceTimersByTimeAsync(35000)
  expect(reviewed).toBe(false);expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('paused');expect(f.release).not.toHaveBeenCalled()
  focus(true);await vi.advanceTimersByTimeAsync(9499);expect(reviewed).toBe(false);await vi.advanceTimersByTimeAsync(1);expect(reviewed).toBe(true)
- expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing');expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','challenge','review'])
+ expect(document.querySelector<HTMLElement>('[data-home-guide]')?.dataset.phase).toBe('playing');expect(f.runStep.mock.calls.map(call=>call[0])).toEqual(['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review'])
  await f.controller.reset(false);focus(false);focus(true);await vi.advanceTimersByTimeAsync(35000);expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull()
 })
 

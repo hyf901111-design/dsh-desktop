@@ -9,13 +9,13 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {NotesStore} from '../src/main/notes/store'
 import {noteMarkdown} from '../src/main/notes/export'
-import {HOME_NOTES_GUIDE_TITLE,HOME_NOTES_CONSENSUS_REPLACEMENT} from '../src/preload/home-guide-notes-data'
+import {HOME_NOTES_GUIDE_TITLE,HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_CONSENSUS_REPLACEMENT} from '../src/preload/home-guide-notes-data'
 import {homeNoteChallengeSidebarSource} from './fixtures/home-note-challenge-sidebar.js'
 import {Session} from '@deepseek-ai/dsh-session'
 import {engageNoteSession} from '../packages/dsh-research-task-runtime/notes-session.js'
 const evidenceDir=process.env.SHERLOCK_NOTES_DEMO_EVIDENCE||'/tmp/sherlock-notes-demo-flow-20261029/browser';mkdirSync(evidenceDir,{recursive:true})
 const preReview=['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail']
-const throughCorrections=[...preReview,'challenge','review','select','growth-evidence','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-select-paragraph','note-rewrite','note-rewrite-apply']
+const throughCorrections=[...preReview,'challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace','note-select-paragraph','note-rewrite','note-rewrite-apply']
 const nonempty=blocks=>blocks.filter(block=>block.type==='research'||(Array.isArray(block.content)?block.content.map(part=>part.text||'').join(''):block.content||'').trim())
 let browser,script,css
 beforeAll(async()=>{
@@ -48,6 +48,13 @@ async function fixture(storage){
  await page.route('http://127.0.0.1/notes-guide',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content"><title>笔记用例教程</title><body data-workspace-surface="notes" style="margin:0;width:100vw;height:100vh;overflow:hidden"><div id="guide" class="en-root" data-home-guide-notes="" style="left:0;top:0;right:360px;bottom:0"></div>'}))
  await page.route('http://127.0.0.1/fonts/NotoSansSC.woff2',route=>route.fulfill({path:'build/fonts/NotoSansSC.woff2',contentType:'font/woff2'}));await page.goto('http://127.0.0.1/notes-guide');if(storage)await page.exposeFunction('noteStorageRequest',(method,input)=>method==='library-list'?noteLibraryItems({list:()=>[]}):method==='library-read'?noteLibraryNode({list:()=>[]},input.id,'owner'):storage(method,input));await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.evaluate(()=>window.readyGuide);const close=context.close.bind(context);context.close=async()=>{await close();rmSync(fallbackDirectory,{recursive:true,force:true})};return{context,page,errors,network,logs}
 }
+it('scrolls each paragraph into view and acknowledges a pointer click at its start before typing',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.guide.runStep('write'))
+  const cues=await page.evaluate(()=>window.guideCues.filter(cue=>cue.label==='在新段落开头落笔'))
+  expect(cues).toHaveLength(2);expect(cues.every(cue=>cue.connected&&cue.action==='click')).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},20000)
 it.each([false,true])('preserves native placeholder and custom title ownership while writing the real note (%s)',async custom=>{
  const directory=mkdtempSync(join(tmpdir(),'home-guide-title-')),store=new NotesStore(directory),session=Session.create('real-guide-session'),engaged=[]
  session.append('session/title',{title:custom?'用户自己的笔记名':'新笔记',source:{kind:'user'}})
@@ -60,7 +67,7 @@ it.each([false,true])('preserves native placeholder and custom title ownership w
   expect(engaged).toEqual([expect.objectContaining({title:HOME_NOTES_GUIDE_TITLE})])
   expect(session.events.findLast(event=>event.type==='session/title').data.title).toBe(custom?'用户自己的笔记名':'新笔记')
   expect(await page.locator('.en-title').inputValue()).toBe(HOME_NOTES_GUIDE_TITLE)
-  expect(await page.locator('.bn-editor').innerText()).toContain('同比增长14.29%');expect(errors).toEqual([])
+  expect(await page.locator('.bn-editor').innerText()).toContain('年化收益31.03%');expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },20000)
 it('waits for the async original slash menu choices before opening the actual quote library item',async()=>{
@@ -81,9 +88,10 @@ it.each(['cancel','changed-menu'])('does not select an async slash library item 
   await page.evaluate(()=>{window.nativeLibraryDelay=800;window.pendingSlash=window.guide.runStep('note-slash-quote').then(()=>({ok:true}),error=>({ok:false,name:error.name,message:error.message}))})
   await expect.poll(()=>page.getByRole('listbox',{name:'笔记斜杠菜单'}).count()).toBe(1)
   await expect.poll(()=>page.evaluate(()=>{const body=document.querySelector('#guide .bn-editor');return body?.getAttribute('aria-expanded')==='true'&&document.getElementById(body.getAttribute('aria-controls'))?.getAttribute('aria-label')==='笔记斜杠菜单'})).toBe(true)
-  // Let the actor capture this original menu while its library IPC remains
-  // pending, then invalidate that owned relationship rather than its opening.
-  await page.evaluate(()=>new Promise(resolve=>{let frames=0;const tick=()=>++frames===4?resolve():requestAnimationFrame(tick);requestAnimationFrame(tick)}))
+  // Observe the actor's actual owned option read, rather than guessing that
+  // four animation frames were enough under a cold browser load.
+  await page.evaluate(()=>{const body=document.querySelector('#guide .bn-editor'),menu=document.getElementById(body.getAttribute('aria-controls')),read=menu.querySelectorAll;menu.querySelectorAll=function(selector){if(selector===':scope > [role="option"]')window.guideSlashChoicesRead=true;return read.call(this,selector)}})
+  await expect.poll(()=>page.evaluate(()=>window.guideSlashChoicesRead)).toBe(true)
   await page.evaluate(action=>{if(action==='cancel')window.guide.dispose();else document.querySelector('#guide .bn-editor').setAttribute('aria-controls','another-editors-menu')},action)
   const result=await page.evaluate(()=>window.pendingSlash);expect(result.ok).toBe(false)
   if(action==='cancel')expect(result.name).toBe('AbortError');else expect(result.message).toContain('菜单已变化')
@@ -97,7 +105,7 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
-  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply']){
+  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-task-saved']){
    await page.evaluate(step=>window.guide.runStep(step),step)
    await page.evaluate(()=>window.guide.flush())
    const blocks=store.load('owner','real-guide-session').saved.blocks,parts=nonempty(blocks),components=blocks.filter(block=>block.type==='research')
@@ -105,15 +113,32 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
    if(step==='note-chart-review'){
     expect(await page.locator('.en-space-ai-avatar svg').count()).toBe(1);expect(await page.locator('.en-space-ai').innerText()).not.toContain('data:image')
     expect(parts).toHaveLength(3);expect(components).toHaveLength(1)
-    const captured=(await page.evaluate(()=>window.nativeGuideRequests))[0];expect(captured.entryPoint).toBe('inline');expect(captured.context).toEqual({scope:'note',components:[]});expect(captured.markdown).toContain('同比增长14.29%');expect(captured.markdown).not.toContain('暂将这一数值记为市场一致预期')
-    const chart=page.frameLocator('iframe[title="季度收入兑现：2025与2026上半年"]').frameLocator('iframe#preview');await expect.poll(()=>chart.locator('svg.template-chart').count()).toBe(1)
-    expect(await chart.locator('svg.template-chart g[data-series] rect[data-point]').count()).toBe(4);expect(await chart.locator('svg.template-chart text').allTextContents()).toContain('0');expect(await chart.locator('[data-chart-series]').allTextContents()).toEqual(['2025实际','2026实际']);expect(await chart.locator('figcaption').innerText()).toContain('同比174.57%、环比14.29%');expect(await chart.locator('table tbody tr').count()).toBe(2);expect(await chart.locator('table tbody td').allTextContents()).toEqual(['Q1','66.74','194.96','Q2','81.15','222.81'])
+    const captured=(await page.evaluate(()=>window.nativeGuideRequests))[0];expect(captured.entryPoint).toBe('inline');expect(captured.context).toEqual({scope:'note',components:[]});expect(captured.markdown).toContain('年化收益31.03%');expect(captured.markdown).not.toContain('暂将这一数值记为市场一致预期')
+    const chart=page.frameLocator('iframe[title="年度持有回报回测｜微软与基准"]').frameLocator('iframe#preview');await expect.poll(()=>chart.locator('svg.template-chart').count()).toBe(1)
+    expect(await chart.locator('svg.template-chart g[data-series] circle[data-point]').count()).toBe(18)
+    expect(await chart.locator('svg.template-chart path.plot-line').count()).toBe(3)
+    expect(await chart.locator('[data-chart-series]').allTextContents()).toEqual(['微软','标普500','NASDAQ Computer'])
+    expect(await chart.locator('figcaption').innerText()).toContain('非主动策略')
+    expect(await chart.locator('details').getAttribute('open')).toBeNull()
+    expect(await chart.locator('table tbody tr').count()).toBe(6)
+    expect(await chart.locator('table tbody td').allTextContents()).toEqual(['2020','100','100','100','2021','134.41','140.79','150.44','2022','128.48','125.85','117.59','2023','172.01','150.51','154.73','2024','227.51','187.47','223.97','2025','255.13','215.89','254.97'])
+    await chart.locator('svg.template-chart').focus();await chart.locator('svg.template-chart').press('End');expect(await chart.locator('.chart-readout').innerText()).toContain('255.13')
+    const geometry=[]
+    for(const width of [476,676]){
+     await page.locator('.en-native-component:has(iframe[title="年度持有回报回测｜微软与基准"])').evaluate((node,width)=>node.style.width=width+'px',width)
+     await expect.poll(()=>chart.locator('svg.template-chart').evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBeGreaterThan(width-64)
+     const frame=await chart.locator('body').evaluate(body=>({width:innerWidth,height:innerHeight,scrollWidth:body.scrollWidth,scrollHeight:body.scrollHeight,plot:document.querySelector('svg').getBoundingClientRect().height,content:document.querySelector('details').getBoundingClientRect().bottom}))
+     writeFileSync(join(evidenceDir,'chart-layout.json'),JSON.stringify([...geometry,{width,...frame}],null,2))
+     expect(frame.scrollWidth).toBeLessThanOrEqual(frame.width+1);expect(frame.plot).toBeGreaterThanOrEqual(160);expect(frame.plot).toBeLessThanOrEqual(240);expect(frame.scrollHeight).toBeLessThanOrEqual(frame.height+2);expect(frame.height-frame.content).toBeLessThan(85);geometry.push({width,...frame})
+    }
+    writeFileSync(join(evidenceDir,'chart-layout.json'),JSON.stringify(geometry,null,2))
+    await page.locator('.en-native-component:has(iframe[title="年度持有回报回测｜微软与基准"])').evaluate(node=>node.style.width='100%')
     await page.screenshot({path:join(evidenceDir,'space-chart.png')})
    }
    if(step==='note-write-middle'){expect(parts).toHaveLength(4);expect(components).toHaveLength(1)}
-   if(step==='note-quote-configure'){expect(components).toHaveLength(2);expect(JSON.parse(components[1].props.payload).containerSpec.symbols).toEqual([{code:'300308',market:'SZ',name:'中际旭创'}]);expect(await page.evaluate(()=>window.fixtureFinanceRequests.some(row=>row.action==='search'&&row.query==='300308'))).toBe(true)}
+   if(step==='note-quote-configure'){expect(components).toHaveLength(2);expect(JSON.parse(components[1].props.payload).containerSpec.symbols).toEqual([{code:'MSFT',market:'US',name:'微软'}]);expect(await page.evaluate(()=>window.fixtureFinanceRequests.some(row=>row.action==='search'&&row.query==='MSFT'))).toBe(true)}
    if(step==='note-write-tail'){expect(parts).toHaveLength(7);expect(parts.filter(block=>block.type==='paragraph')).toHaveLength(5)}
-   if(step==='note-task-compose'||step==='note-task-review'){expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain('研究结论｜2026年中报');if(step==='note-task-review'){expect(await page.locator('[data-note-task][data-phase="replied"]').innerText()).toContain('机械年化情景');expect(await page.locator('.en-preview').count()).toBe(0);const scroll=await page.evaluate(()=>window.fixtureSummaryScrollEvidence);expect(scroll.before.button).toBeGreaterThan(scroll.before.clip);expect(scroll.after.messages).toBeGreaterThan(scroll.before.messages);expect(scroll.after.outer).toBe(scroll.before.outer);expect(scroll.after.note).toBe(scroll.before.note);expect(scroll.after.button).toBeLessThanOrEqual(scroll.after.clip);writeFileSync(join(evidenceDir,'summary-scroll.json'),JSON.stringify(scroll,null,2));await page.screenshot({path:join(evidenceDir,'summary-ready-not-inserted.png')})}}
+   if(step==='note-task-compose'||step==='note-task-review'){expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain('微软五年含分红年化回报');if(step==='note-task-review'){expect(await page.locator('[data-note-result-preview]').count()).toBe(1);expect(await page.locator('[data-note-task][data-phase="replied"]').innerText()).toContain('科技行业对照');expect(await page.locator('.en-preview').count()).toBe(0);const scroll=await page.evaluate(()=>window.fixtureSummaryScrollEvidence);expect(scroll.before.button).toBeGreaterThan(scroll.before.clip);expect(scroll.after.messages).toBeGreaterThan(scroll.before.messages);expect(scroll.after.outer).toBe(scroll.before.outer);expect(scroll.after.note).toBe(scroll.before.note);expect(scroll.after.button).toBeLessThanOrEqual(scroll.after.clip);writeFileSync(join(evidenceDir,'summary-scroll.json'),JSON.stringify(scroll,null,2));await page.screenshot({path:join(evidenceDir,'summary-ready-not-inserted.png')})}}
    if(step==='note-task-review'){
     for(const clipped of ['composer','list']){
      await page.evaluate(clipped=>{const button=document.querySelector('[data-note-task] button[aria-label="添加到笔记"]'),messages=button.closest('.sRp_messages'),composer=button.closest('[data-research-conversation-panel]').querySelector('[data-research-composer-host]');window.visibilityStyles={button:button.style.cssText,messages:messages.style.cssText,composer:composer.style.cssText};window.fixtureVisibilityBudget=8;if(clipped==='composer'){messages.style.flex='0 0 auto';messages.style.height=messages.clientHeight+'px';composer.style.position='fixed';composer.style.top=button.getBoundingClientRect().top+14+'px'}else button.style.height=messages.clientHeight+50+'px'},clipped)
@@ -122,15 +147,18 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
      await page.evaluate(async()=>{const button=document.querySelector('[data-note-task] button[aria-label="添加到笔记"]'),messages=button.closest('.sRp_messages'),composer=button.closest('[data-research-conversation-panel]').querySelector('[data-research-composer-host]');button.style.cssText=window.visibilityStyles.button;messages.style.cssText=window.visibilityStyles.messages;composer.style.cssText=window.visibilityStyles.composer;window.fixtureVisibilityBudget=300;await window.reviewFixtureSummary()})
     }
    }
-   if(step==='note-task-apply'){expect(parts).toHaveLength(8);const reply=JSON.parse(parts.at(-1).props.payload);expect(reply).toMatchObject({kind:'assistant-result',noteReply:true,messageId:'ework-note:'+(await page.evaluate(()=>window.nativeGuideRequests))[2].requestId});expect(reply.excerpt).toContain('机械年化情景');writeFileSync(join(evidenceDir,'completed-blocks.json'),JSON.stringify(blocks,null,2));await page.screenshot({path:join(evidenceDir,'summary-added.png')})}
+   if(step==='note-task-apply'){expect(parts).toHaveLength(8);const reply=JSON.parse(parts.at(-1).props.payload);expect(reply).toMatchObject({kind:'assistant-result',noteReply:true,messageId:'ework-note:'+(await page.evaluate(()=>window.nativeGuideRequests))[2].requestId});expect(reply.excerpt).toContain('科技行业对照');writeFileSync(join(evidenceDir,'completed-blocks.json'),JSON.stringify(blocks,null,2));await page.screenshot({path:join(evidenceDir,'summary-added.png')})}
    if(step==='review')expect(await page.locator('.bn-editor [data-bn-thread-id]').evaluateAll(nodes=>new Set(nodes.map(node=>node.dataset.bnThreadId)).size)).toBe(3)
-   if(step==='growth-evidence'||step==='consensus-evidence'){
-    const panel=page.locator('[data-notes-challenge-panel]');expect(await panel.locator('article').count()).toBe(3)
-    expect(await panel.innerText()).toContain('2025年年度报告');expect(await panel.innerText()).toContain('2026年第一季度报告');expect(await panel.innerText()).toContain('2026年半年度报告');expect(await panel.innerText()).toContain('13651149693.27');expect(await panel.innerText()).toContain('非机构预测');expect(await panel.locator('article a').count()).toBe(3)
+   if(step==='growth-evidence'){
+    const panel=page.locator('[data-notes-challenge-panel]');expect(await panel.locator('article').count()).toBe(1)
+    expect(await panel.innerText()).toContain('STOCK PERFORMANCE');expect(await panel.innerText()).toContain('(255.13/100)^(1/5)-1');expect(await panel.innerText()).toContain('20.60%');expect(await panel.locator('article a').count()).toBe(1)
+    expect(await panel.locator('article a').getAttribute('href')).toBe('https://www.microsoft.com/investor/reports/ar25/index.html')
    }
    if(step==='consensus-replace')expect(await page.locator('[data-id="guide-note-consensus"] .bn-inline-content').innerText()).toContain(HOME_NOTES_CONSENSUS_REPLACEMENT)
+   if(step==='replace')expect(await page.locator('[data-id="guide-note-growth"] .bn-inline-content').innerText()).toBe(HOME_NOTES_GUIDE_BLOCKS[1].content.replace('年化收益31.03%','年化收益约20.60%'))
+   if(step==='note-rewrite-apply')expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toBe(HOME_NOTES_GUIDE_BLOCKS[4].content.replace('后续将持续密切关注相关业务及各项指标的进一步变化情况。','下次复盘先核对云业务增长、资本开支和现金回款，证据变了再调整判断。'))
   }
-  expect((await page.evaluate(()=>window.nativeGuideRequests))[2].markdown).toContain('不等于公司指引或市场一致预期')
+  expect((await page.evaluate(()=>window.nativeGuideRequests))[2].markdown).toContain('先拆开科技行业暴露')
   await page.emulateMedia({reducedMotion:'no-preference'})
   const start=await page.evaluate(()=>{window.beforeReturnEditor=document.querySelector('#guide .bn-editor');window.beforeReturnArea=document.querySelector('#guide .en-document-scroll');window.beforeReturnArea.scrollTop=window.beforeReturnArea.scrollHeight-window.beforeReturnArea.clientHeight;window.scrollSamples=[];window.recordNativeScroll=true;const sample=()=>{window.scrollSamples.push(window.beforeReturnArea.scrollTop);if(window.recordNativeScroll)requestAnimationFrame(sample)};requestAnimationFrame(sample);return window.beforeReturnArea.scrollTop})
   expect(start).toBeGreaterThan(200)
@@ -139,13 +167,13 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
   expect(finish.sameEditor).toBe(true);expect(finish.sameArea).toBe(true);expect(finish.top).toBe(0);expect(finish.samples.filter(value=>value>0&&value<start).length).toBeGreaterThan(6)
   await page.evaluate(()=>window.guide.flush())
   const saved=store.load('owner','real-guide-session'),body=JSON.stringify(saved.saved.blocks)
-  const exported=noteMarkdown(saved.saved);expect(exported).toContain('研究结论｜2026年中报显示');expect(exported).toContain('机械年化情景');writeFileSync(join(evidenceDir,'note-export.md'),exported)
-  expect(body).toContain('不等于公司指引或市场一致预期');expect(body).toContain('没有可核验的机构预测样本');expect(body).toContain('盈利增长本身不能证明估值具有安全边际');expect(saved.draft).toBeUndefined()
+  const exported=noteMarkdown(saved.saved);expect(exported).toContain('微软五年含分红年化回报');expect(exported).toContain('科技行业对照');writeFileSync(join(evidenceDir,'note-export.md'),exported)
+  expect(body).toContain('先拆开科技行业暴露');expect(body).toContain('只差0.16个百分点');expect(body).toContain('下次复盘先核对云业务增长');expect(saved.draft).toBeUndefined()
   expect(await page.locator('[data-en-replacement-id]').evaluateAll(nodes=>new Set(nodes.map(node=>node.dataset.enReplacementId)).size)).toBeGreaterThanOrEqual(2)
   await page.evaluate(()=>{window.guide.dispose();delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()})
   await expect.poll(()=>page.locator('[data-id="guide-note-consensus"] .bn-inline-content').innerText()).toContain(HOME_NOTES_CONSENSUS_REPLACEMENT)
   expect(await page.locator('[data-en-replacement-id]').evaluateAll(nodes=>new Set(nodes.map(node=>node.dataset.enReplacementId)).size)).toBeGreaterThanOrEqual(2)
-  expect(await page.locator('.en-research').last().innerText()).toContain('研究结论');expect(errors).toEqual([]);await page.screenshot({path:join(evidenceDir,'normal-note-reopened.png')});await page.evaluate(()=>window.nativeRoot.unmount())
+  expect(await page.locator('.en-research').last().innerText()).toContain('微软五年');expect(errors).toEqual([]);await page.screenshot({path:join(evidenceDir,'normal-note-reopened.png')});await page.evaluate(()=>window.nativeRoot.unmount())
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },60000)
 it('stops before the public summary action when the user moves the retained note caret',async()=>{
@@ -156,7 +184,7 @@ it('stops before the public summary action when the user moves the retained note
   await page.locator('[data-id="guide-note-intro"] .bn-inline-content').click()
   await expect(page.evaluate(()=>window.guide.runStep('note-task-apply'))).rejects.toThrow('光标已变化')
   await expect.poll(()=>page.locator('#guide .bn-editor').count()).toBe(0)
-  const saved=store.load('owner','real-guide-session');expect(nonempty(saved.saved.blocks)).toHaveLength(7);expect(JSON.stringify(saved.saved.blocks)).not.toContain('研究结论｜2026年中报');expect(errors).toEqual([])
+  const saved=store.load('owner','real-guide-session');expect(nonempty(saved.saved.blocks)).toHaveLength(7);expect(JSON.stringify(saved.saved.blocks)).not.toContain('微软五年含分红年化回报');expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },60000)
 it('opens the actual evidence action in English without relying on its Chinese button text',async()=>{
@@ -164,10 +192,10 @@ it('opens the actual evidence action in English without relying on its Chinese b
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(async()=>{document.documentElement.dataset.odysseyLocale='en';await window.startNativeGuide()})
-  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace','consensus-select'])await page.evaluate(step=>window.guide.runStep(step),step)
+  for(const step of [...preReview,'challenge','review','consensus-select','consensus-optimize','consensus-replace','select'])await page.evaluate(step=>window.guide.runStep(step),step)
   expect(await page.getByRole('button',{name:'View evidence',exact:true}).count()).toBeGreaterThan(0)
-  await page.evaluate(()=>window.guide.runStep('consensus-evidence'))
-  expect(await page.locator('[data-notes-challenge-panel] article').count()).toBe(3);expect(errors).toEqual([])
+  await page.evaluate(()=>window.guide.runStep('growth-evidence'))
+  expect(await page.locator('[data-notes-challenge-panel] article').count()).toBe(1);expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },20000)
 it('grows the actual editor selection during the JSON-token actor drag before its rewrite step',async()=>{
@@ -175,12 +203,12 @@ it('grows the actual editor selection during the JSON-token actor drag before it
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
-  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace'])await page.evaluate(step=>window.guide.runStep(step),step)
+  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
   await page.setViewportSize({width:1080,height:900});await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(()=>{window.recordNativeScroll=true;window.selectAction=window.guide.runStep('note-select-paragraph').then(()=>window.selectionComplete=true,error=>window.selectionFailure=error.message)})
   await expect.poll(()=>page.evaluate(()=>window.selectionFrames?.filter(row=>row.phase==='dragging'&&row.text.length>0).length||0),{timeout:5000,interval:30}).toBeGreaterThan(2)
   const mid=await page.evaluate(()=>({frames:window.selectionFrames,cue:window.selectionCue,complete:window.selectionComplete,requests:window.nativeGuideRequests.length}));expect(mid.complete).not.toBe(true);expect(mid.requests).toBe(1);expect(mid.cue.selection).toBe(true);expect(Object.values(mid.cue).every(value=>typeof value==='string'||value===true)).toBe(true)
   expect(await page.evaluate(()=>{const before=getSelection().toString();for(const detail of [{...window.selectionCue,runId:'foreign',x:1,y:1,phase:'dragging'},{...window.selectionCue,requestId:'foreign',x:1,y:1,phase:'dragging'}])window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail}));return getSelection().toString()===before})).toBe(true)
-  await page.evaluate(()=>window.selectAction);const final=await page.evaluate(()=>({frames:window.selectionFrames,selected:getSelection().toString(),failure:window.selectionFailure,complete:window.selectionComplete,text:document.querySelector('[data-id="guide-note-logic"] .bn-inline-content')?.textContent}));expect(final.failure).toBeUndefined();expect(final.complete).toBe(true);expect(final.selected).toBe(final.text);expect(new Set(final.frames.filter(row=>row.phase==='dragging').map(row=>row.text)).size).toBeGreaterThan(2);expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+  await page.evaluate(()=>window.selectAction);const final=await page.evaluate(()=>({frames:window.selectionFrames,selected:getSelection().toString(),failure:window.selectionFailure,complete:window.selectionComplete,text:'后续将持续密切关注相关业务及各项指标的进一步变化情况。'}));expect(final.failure).toBeUndefined();expect(final.complete).toBe(true);expect(final.selected).toBe(final.text);expect(new Set(final.frames.filter(row=>row.phase==='dragging').map(row=>row.text)).size).toBeGreaterThan(2);expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   expect(await page.evaluate(()=>{const before=getSelection().toString();window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail:{...window.selectionCue,x:0,y:0,phase:'pressed'}}));return getSelection().toString()===before})).toBe(true)
   await page.evaluate(()=>window.guide.runStep('note-rewrite'));expect((await page.evaluate(()=>window.nativeGuideRequests))[1].selection).toBe(final.text);expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
@@ -190,19 +218,19 @@ it('extends the saved native note with a research summary and an actual paragrap
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
-  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace','consensus-select','consensus-evidence','consensus-optimize','consensus-replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-return-top']){
+  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-task-saved','note-return-top']){
    await page.evaluate(step=>window.guide.runStep(step),step)
    if(step==='note-select-paragraph'){await page.evaluate(()=>{const next=document.createElement('button');next.textContent='下一步';next.id='native-note-next';document.body.append(next);next.click();next.focus()});await page.waitForTimeout(300)}
   }
   const requests=await page.evaluate(()=>window.nativeGuideRequests)
-  expect(requests).toHaveLength(3);expect(requests[0].entryPoint).toBe('inline');expect(requests[2].context.scope).toBe('note');expect(requests[2].selection).toBe('');expect(requests[2].context.components).toHaveLength(2);expect(requests[2].markdown).toContain('环比增长14.29%')
-  expect(requests[1].context.scope).toBe('selection');expect(requests[1].markdown).toBe('');expect(requests[1].selection).toContain('盈利高增足以支持当前估值')
-  expect(await page.locator('[data-id="guide-note-intro"] .bn-inline-content').innerText()).toContain('资料截点为2026年8月24日')
-  expect(await page.locator('[data-id="guide-note-logic"] .bn-inline-content').innerText()).toContain('盈利增长本身不能证明估值具有安全边际')
-  expect(await page.locator('.bn-editor').innerText()).toContain('资料截点');expect(await page.locator('.bn-editor').innerText()).toContain('环比增长14.29%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
+  expect(requests).toHaveLength(3);expect(requests[0].entryPoint).toBe('inline');expect(requests[2].context.scope).toBe('note');expect(requests[2].selection).toBe('');expect(requests[2].context.components).toHaveLength(2);expect(requests[2].markdown).toContain('年化收益约20.60%')
+  expect(requests[1].context.scope).toBe('selection');expect(requests[1].markdown).toBe('');expect(requests[1].selection).toBe('后续将持续密切关注相关业务及各项指标的进一步变化情况。')
+  expect(await page.locator('[data-id="guide-note-intro"] .bn-inline-content').innerText()).toContain('今天先不追目标价')
+  expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toContain('下次复盘先核对云业务增长')
+  expect(await page.locator('.bn-editor').innerText()).toContain('观察窗口');expect(await page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
   await page.evaluate(()=>window.guide.flush());await page.evaluate(()=>window.guide.dispose())
-  const saved=store.load('owner','real-guide-session');expect(JSON.stringify(saved.saved.blocks)).toContain('盈利增长本身不能证明估值具有安全边际');expect(JSON.stringify(saved.saved.blocks)).toContain('上半年收入417.78亿元');expect(saved.draft).toBeUndefined()
-  await page.evaluate(()=>{delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()});await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('盈利增长本身不能证明估值具有安全边际')
+  const saved=store.load('owner','real-guide-session');expect(JSON.stringify(saved.saved.blocks)).toContain('下次复盘先核对云业务增长');expect(JSON.stringify(saved.saved.blocks)).toContain('微软五年含分红年化回报');expect(saved.draft).toBeUndefined()
+  await page.evaluate(()=>{delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()});await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('下次复盘先核对云业务增长')
   expect(errors).toEqual([]);await page.evaluate(()=>window.nativeRoot.unmount())
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },35000)
@@ -267,8 +295,8 @@ it('completes the real note actor when every JSON-only target survives delayed a
  const{context,page,errors}=await fixture();try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide());await page.evaluate(()=>window.nativeAutoAck=false)
   await page.evaluate(()=>{window.addEventListener('sherlock:home-guide-cue',event=>{const cue=JSON.parse(JSON.stringify(event.detail));if(!cue.requestId)return;setTimeout(()=>{const target=window.cueTarget(cue.targetToken),from=cue.fromTargetToken?window.cueTarget(cue.fromTargetToken):null;window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected&&(!cue.fromTargetToken||!!from?.isConnected),message:'操作目标必须在移动期间保持存活'}}))},90)})})
-  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
-  expect(await page.locator('.bn-editor').innerText()).toContain('环比增长14.29%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
+  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
+  expect(await page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
   expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },30000)
@@ -302,7 +330,7 @@ it.each(['source','destination'])('checks the strict-slider drag %s again after 
 it('streams into the actual NotesApp, reviews in the real strict picker and applies the native optimization',async()=>{
  const{context,page,errors,network,logs}=await fixture();try{
   expect(await page.title()).toBe('笔记用例教程');await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide());await page.evaluate(()=>window.guide.runStep('write'))
-  expect(await page.locator('.en-title').inputValue()).toContain('中际旭创2026中报复盘');expect(await page.locator('.bn-editor').innerText()).toContain('同比增长14.29%')
+  expect(await page.locator('.en-title').inputValue()).toContain('微软｜持有回报复盘');expect(await page.locator('.bn-editor').innerText()).toContain('年化收益31.03%')
   for(const step of preReview.slice(1))await page.evaluate(step=>window.guide.runStep(step),step);await page.evaluate(()=>window.recordNativeScroll=true)
   await page.evaluate(()=>window.guide.runStep('challenge'))
   expect(await page.locator('.en-challenge-trigger').innerText()).toContain('严格');expect(await page.locator('.en-challenge-popover').count()).toBe(1)
@@ -313,14 +341,15 @@ it('streams into the actual NotesApp, reviews in the real strict picker and appl
   expect(await page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('true');expect(await page.locator('.bn-editor [data-bn-thread-id]').count()).toBe(0)
   await page.evaluate(()=>{window.guideGate=()=>Promise.resolve();for(const resume of window.noteResumes)resume()})
   await page.evaluate(()=>window.reviewStep);expect(await page.locator('.bn-editor [data-bn-thread-id]').count()).toBeGreaterThanOrEqual(3)
-  await page.evaluate(()=>window.guide.runStep('select'));expect(await page.locator('.en-challenge-card').innerText()).toContain('同比应使用2025Q2')
+  for(const step of ['consensus-select','consensus-optimize','consensus-replace'])await page.evaluate(step=>window.guide.runStep(step),step)
+  await page.evaluate(()=>window.guide.runStep('select'));expect(await page.locator('.en-challenge-card').innerText()).toContain('复合年化')
   await page.screenshot({path:'/tmp/home-guide-notes-strict-challenge-20261024.png'})
   await page.evaluate(()=>window.guide.runStep('growth-evidence'))
   await page.evaluate(()=>{window.optimizeStep=window.guide.runStep('optimize')})
   await expect.poll(()=>page.getByRole('progressbar',{name:'正在优化'}).count(),{timeout:4000}).toBe(1)
   expect(await page.locator('.en-challenge-replace').count()).toBe(0)
-  await page.evaluate(()=>window.optimizeStep);expect(await page.locator('.bn-editor').innerText()).toContain('同比增长14.29%');expect(await page.locator('.en-challenge-replace').count()).toBe(1)
-  await page.evaluate(()=>window.guide.runStep('replace'));expect(await page.locator('.bn-editor').innerText()).toContain('环比增长14.29%');expect(await page.locator('.bn-editor').innerText()).not.toContain('同比增长14.29%')
+  await page.evaluate(()=>window.optimizeStep);expect(await page.locator('.bn-editor').innerText()).toContain('年化收益31.03%');expect(await page.locator('.en-challenge-replace').count()).toBe(1)
+  await page.evaluate(()=>window.guide.runStep('replace'));expect(await page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%');expect(await page.locator('.bn-editor').innerText()).not.toContain('年化收益31.03%')
   expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0);expect(await page.locator('.en-error').count()).toBe(0)
   await page.screenshot({path:'/tmp/home-guide-notes-native-replacement-20261024.png'})
   await page.evaluate(()=>window.guide.dispose());expect(await page.locator('.bn-editor').count()).toBe(0);expect(errors).toEqual([]);expect(network.filter(url=>!url.startsWith('http://127.0.0.1/'))).toEqual([]);expect((await page.evaluate(()=>window.guideNativeEvents)).length).toBeGreaterThan(0);expect(logs).toEqual([])
@@ -331,13 +360,13 @@ it('keeps the saved Yjs note and native challenge discussion editable after the 
  const storage=async(method,input)=>{calls.push(method);if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft'){store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}};if(method==='challenge')throw Error('教程不能调用真实模型');return{ok:true}}
  const{context,page,errors,logs}=await fixture(storage);try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
-  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','select','growth-evidence','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
-  expect(await page.locator('.bn-editor').innerText()).toContain('环比增长14.29%')
+  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
+  expect(await page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%')
   await page.evaluate(()=>window.guide.flush());await page.evaluate(()=>window.guide.dispose());await expect.poll(()=>page.locator('.bn-editor').count()).toBe(0)
   const saved=store.load('owner','real-guide-session');expect(saved.saved.yjs.length).toBeGreaterThan(1000);expect(saved.draft).toBeUndefined();expect(calls).not.toContain('challenge')
   const cues=await page.evaluate(()=>window.guideCues);expect(cues.length).toBeGreaterThanOrEqual(5);expect(cues.every(cue=>cue.connected&&cue.runId==='notes-natural-run')).toBe(true)
-  await page.evaluate(()=>window.openSavedNativeNote());await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('环比增长14.29%')
-  expect(await page.locator('.en-challenge-grade').innerText()).toContain('严格');expect(await page.locator('.bn-editor [data-bn-thread-id]').count()).toBeGreaterThanOrEqual(2)
+  await page.evaluate(()=>window.openSavedNativeNote());await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%')
+  expect(await page.locator('.en-challenge-grade').innerText()).toContain('严格');expect(await page.locator('.bn-editor [data-bn-thread-id]').count()).toBeGreaterThanOrEqual(1)
   await page.waitForTimeout(3000);expect(calls).not.toContain('challenge')
   const paragraph=page.locator('[data-id="guide-note-intro"] .bn-inline-content');await paragraph.click();await page.keyboard.press('End');await page.keyboard.type(' 保留的补充观察。')
   await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('保留的补充观察')
@@ -351,7 +380,7 @@ it('confirms a partial note even when navigation has already hidden the guide su
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.evaluate(()=>window.startPersistentGuide(true));await page.evaluate(()=>{window.partialWrite=window.guide.runStep('write').catch(error=>error.name)})
-  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('资料截点')
+  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('观察窗口')
   await page.evaluate(()=>{window.guideGate=()=>new Promise(resolve=>window.resumeNoteGuide=resolve)});await page.waitForTimeout(130)
   await page.evaluate(async()=>{document.querySelector('#guide').style.display='none';await window.guide.flush();window.guide.dispose();window.resumeNoteGuide?.()})
   expect(await page.evaluate(()=>window.partialWrite)).toBe('AbortError');expect(store.load('owner','real-guide-session').saved.title).toBe(HOME_NOTES_GUIDE_TITLE);expect(store.load('owner','real-guide-session').draft).toBeUndefined();expect(errors).toEqual([])
@@ -367,7 +396,7 @@ it('aborts a partial stream without editor or challenge mutations after disposal
 it('pauses a streaming batch and cancels a paused gate without late content',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>{window.streamPending=window.guide.runStep('write').catch(error=>error.name)})
-  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('资料截点')
+  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('观察窗口')
   await page.evaluate(()=>{window.guideGate=()=>new Promise(resolve=>window.resumeNoteGuide=resolve)})
   await page.waitForTimeout(120);const paused=await page.locator('.bn-editor').innerText();await page.waitForTimeout(300)
   expect(await page.locator('.bn-editor').innerText()).toBe(paused)
