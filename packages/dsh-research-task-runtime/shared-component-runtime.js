@@ -16,6 +16,7 @@ export function sharedComponentRuntime(semantic) {
     config.render(clone(state), status())
     for (const listener of listeners) listener(clone(state), status())
   }
+  if(semantic)semantic.restoreShared=paint
   function operationError(message) {
     // Retain the interactive view and last valid state. Generated exception
     // text can contain source data, so only show a fixed host message.
@@ -97,18 +98,35 @@ export function sharedComponentRuntime(semantic) {
     getState: () => clone(state),
     getStatus: status,
     dispatch(action) {
+      // Restoring old native events must never create a fresh shared revision.
+      // The journal runtime repaints the authoritative shared snapshot afterwards.
+      if(semantic?.replaying||document.documentElement.hasAttribute('data-sherlock-interaction-replaying'))return false
       if (!connected || readOnly || stopped) return false
       if (!valid(action, 4096)) return false
-      if(semantic?.current)semantic.events.add(semantic.current)
+      const payload=clone(action)
+      let admitted=result=>result
+      if(semantic?.current){
+        const current=semantic.current,activation=semantic.activation
+        semantic.events.add(current)
+        if(activation?.target===current.target){
+          // Checkbox activation emits click, input and change synchronously.
+          // Consume their original click and admit the same action only once,
+          // while retaining distinct actions (or repeated calls in one handler).
+          semantic.events.add(activation.event)
+          const key=JSON.stringify(payload,(_key,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(key=>[key,value[key]])):value),previous=activation.actions.get(key)
+          if(previous&&previous!==current)return true
+          admitted=result=>{if(result===true&&!previous&&activation.actions.size<32)activation.actions.set(key,current);return result}
+        }
+      }
       if(local&&localAck&&waiting&&pending.length>=32)return operationError('交互保存繁忙，请等待当前操作保存后重试。')
       const inputId = uuid()
-      if (local) { pending.push({ id: inputId, payload: clone(action), userId: identity }); return localAck&&waiting?true:run() === true }
+      if (local) { pending.push({ id: inputId, payload, userId: identity }); return admitted(localAck&&waiting?true:run() === true) }
       else {
         if (outgoing.size >= 32) return false
-        const message = { op: 'input', inputId, sequence: ++inputSequence, payload: clone(action) }
+        const message = { op: 'input', inputId, sequence: ++inputSequence, payload }
         outgoing.set(message.sequence, message); post(message)
       }
-      return true
+      return admitted(true)
     },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn) },
     dispose() { stopped = true; connected = false; host = false; clearInterval(heartbeat); clearInterval(ticker); post({ op: 'leave' }); listeners.clear() }
