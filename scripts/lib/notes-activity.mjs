@@ -29,19 +29,12 @@ export function createNotesActivityStore(doc) {
   doc?.defaultView?.addEventListener('blur',background)
   doc?.addEventListener('visibilitychange',visibility)
   const reset = () => { rows.clear();reveals.clear(); notify() }
-  const preview=event=>{
-    const value=event.detail,history=rows.get(value?.sessionId),old=history?.find(row=>row.requestId===value?.requestId)
-    if(!old||typeof value.runId!=='string'||!value.runId)return
-    if(value.active===true?doc?.documentElement?.dataset.homeGuidePointerRun!==value.runId:old.homeGuidePreview!==value.runId)return
-    rows.set(value.sessionId,history.map(row=>row===old?{...row,homeGuidePreview:value.active===true?value.runId:undefined}:row));notify()
-  }
   const history=event=>{const value=event.detail;if(typeof value?.sessionId!=='string'||!Array.isArray(value.rows))return;const merged=new Map((rows.get(value.sessionId)||[]).map(row=>[row.requestId,row]));for(const row of value.rows){const old=merged.get(row.requestId);merged.set(row.requestId,old&&(['preparing','generating'].includes(old.phase)&&['preparing','generating'].includes(row.phase)||old.finishedAt>row.finishedAt||['accepted','discarded'].includes(old.phase)&&row.phase==='ready')?{...row,...old}:{...old,...row})}rows.set(value.sessionId,[...merged.values()].sort((a,b)=>a.startedAt-b.startedAt));notify()}
   doc?.addEventListener('sherlock:notes-task-state', update)
   doc?.addEventListener('sherlock:notes-reset', reset)
   doc?.addEventListener('sherlock:notes-history',history)
-  doc?.addEventListener('sherlock:home-guide-notes-summary-preview',preview)
   return { snapshot: id => rows.get(id) || empty,reveal:(sessionId,requestId)=>reveals.get(JSON.stringify([sessionId,requestId])), subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn) },
-    dispose: () => { doc?.defaultView?.removeEventListener('blur',background);doc?.removeEventListener('visibilitychange',visibility);doc?.removeEventListener('sherlock:notes-task-state', update); doc?.removeEventListener('sherlock:notes-reset', reset);doc?.removeEventListener('sherlock:notes-history',history);doc?.removeEventListener('sherlock:home-guide-notes-summary-preview',preview); reset(); listeners.clear() } }
+    dispose: () => { doc?.defaultView?.removeEventListener('blur',background);doc?.removeEventListener('visibilitychange',visibility);doc?.removeEventListener('sherlock:notes-task-state', update); doc?.removeEventListener('sherlock:notes-reset', reset);doc?.removeEventListener('sherlock:notes-history',history); reset(); listeners.clear() } }
 }
 
 export function useNotesConversationRows(sessionId,openState){
@@ -70,22 +63,19 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     const liveReceipts=Array.isArray(row.capabilityProgress)&&!row.result?.capabilityReceipts?.length?row.capabilityProgress:[]
     const finalReceipts=row.result?.kind!=='conversation'&&Array.isArray(row.result?.capabilityReceipts)?row.result.capabilityReceipts:[]
     const text=['text','conversation'].includes(row.result?.kind)?String(conversation||''):row.result?.kind==='component'?noteUiText("已生成组件：")+(row.result.node?.title||noteUiText("研究组件"))+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()
-    const preview=!!row.homeGuidePreview,previewReady=preview&&row.phase==='replied'&&row.result?.kind==='conversation'&&!!text.trim()
-    const addAction=settled?renderSlot?.('conversation.chat.assistant-actions',{messageId:'ework-note:'+row.requestId,text}):null
-    const progress=h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t})
     // Read the durable final-event position after generation; the preparing seq is only for row ordering.
     react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
       h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || noteUiText("根据附件撰写内容")}],noteReferences:row.references,imageLoader:loadImage,openFile,t}),
       pending&&!liveReceipts.length?h('div',{className:'en-task-feedback','data-note-feedback':'',role:'status','aria-live':'polite'},h('p',null,noteUiText("已收到，正在处理这条笔记指令。"))):null,
       liveReceipts.length?h('div',{className:'en-task-feedback','data-note-client-progress':'',role:'status','aria-live':'polite'},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(liveReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
-      preview&&pending?h('section',{className:'en-note-result-card','data-note-summary-pending':'',role:'status'},progress):progress,
+      h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:eworkNoteUiError(row.error)}],streaming:false,t}) : null,
       finalReceipts.length?h('div',{'data-note-client-receipts':''},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(finalReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
-      row.result?.kind==='conversation' ? previewReady?h('section',{className:'en-note-result-card','data-note-result-preview':row.requestId,'aria-label':noteUiText('内容预览')},h('header',null,noteUiText('内容预览')),h(Markdown,{blocks:[{kind:'text',text:conversation}],streaming:false,reveal,t}),h('footer',null,addAction)):h(Markdown,{blocks:[{kind:'text',text:conversation}],streaming:false,reveal,t}) : null,
+      row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:conversation}],streaming:false,reveal,t}) : null,
       row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:[feedback,row.result.markdown].filter(Boolean).join('\n\n')}],streaming:false,reveal,t})) : null,
       row.result?.kind==='component' ? h(Markdown,{blocks:[{kind:'text',text:(row.phase==='accepted'?noteUiText("已创建并写入笔记组件："):noteUiText("已生成组件："))+(row.result.node.title||noteUiText("研究组件"))+'。'}],streaming:false,reveal,t}) : null,
-      settled&&Actions?h(Actions,{text,time:row.finishedAt,clock:'end',onBranch:forkAt?()=>forkAt(row.completedSeq):undefined,branchUnavailable:branchUnavailable||!Number.isSafeInteger(row.completedSeq),extraActions:previewReady?null:addAction,className:'osXY9a_actions',t}):null)
+      settled&&Actions?h(Actions,{text,time:row.finishedAt,clock:'end',onBranch:forkAt?()=>forkAt(row.completedSeq):undefined,branchUnavailable:branchUnavailable||!Number.isSafeInteger(row.completedSeq),extraActions:renderSlot?.('conversation.chat.assistant-actions',{messageId:'ework-note:'+row.requestId,text}),className:'osXY9a_actions',t}):null)
 }
 export function EWorkNotesActivity(props){useNotesActivityLocale();const rows=useNotesConversationRows(props.sessionId);return react.createElement('div',{className:'en-task-history Md3f7G_column','aria-label':noteUiText('笔记任务过程')},rows.map(row=>react.createElement(EWorkNoteConversationRow,{...props,key:row.requestId,row})))}
 export function EWorkNotesConversation({sessionId,empty,children,t}){

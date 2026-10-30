@@ -18,9 +18,9 @@ export function createHomeGuidePointer(document:Document,options:Options){
  const beforeToggle=(event:Event)=>{
   const menu=event.target
   if(!topLayer||menu===element||(event as ToggleEvent).newState!=='open'||!(menu instanceof win.HTMLElement))return
-  // Expanded-command tagging follows showPopover synchronously; the microtask
-  // runs after that tagging and before paint, without moving/focusing the menu.
-  win.queueMicrotask(()=>{if(menu.isConnected&&menu.matches('[data-ework-expanded-command]:popover-open'))raiseLayer(true)})
+  // Manual menus may enter the top layer after the cursor. Reorder this
+  // non-interactive visual before paint, without moving or focusing the menu.
+  win.queueMicrotask(()=>{if(menu.isConnected&&menu.matches('[popover=manual]:popover-open'))raiseLayer(true)})
  }
  if(topLayer)document.addEventListener('beforetoggle',beforeToggle,true)
  type Connection={source:HTMLElement;target:HTMLElement;canvas:HTMLElement;guide:HTMLElement;svg:SVGSVGElement;path:SVGPathElement}

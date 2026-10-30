@@ -29,3 +29,11 @@ it('also verifies the canonical host cartesian runtime without trusting a templa
  expect(noteChartNavigationAllowed(html,{...event,targetRoute:[1,2]})).toBe(true)
  expect(noteChartNavigationAllowed(html.replace('select(i);});','spec.series[0].values[0]++;select(i);});'),{...event,targetRoute:[1,2]})).toBe(false)
 })
+it('recognizes only the exact optional precision program and still rejects modified data or formatter code',()=>{
+ const html=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{renderCartesianChart}from'./packages/dsh-research-task-runtime/cartesian-chart-artifact.js';process.stdout.write(renderCartesianChart(JSON.parse(readFileSync(0,'utf8'))).html)"],{input:JSON.stringify({version:1,type:'chart',variant:'line',title:'精度显示',unit:'演示值',axisDecimals:2,labels:['10月1日','10月2日'],series:[{name:'演示数据',values:[92.243,262.89]}]}),encoding:'utf8'})
+ const navigation={...event,targetRoute:[1,2]}
+ expect(noteChartNavigationAllowed(html,navigation)).toBe(true)
+ expect(noteChartNavigationAllowed(html.replace('maximumFractionDigits:digits','maximumFractionDigits:(spec.series[0].values[0]++,digits)'),navigation)).toBe(false)
+ expect(noteChartNavigationAllowed(html.replace('"axisDecimals":2','"axisDecimals":5'),navigation)).toBe(false)
+ expect(noteChartNavigationAllowed(html.replace('"axisDecimals":2,',''),navigation)).toBe(false)
+})

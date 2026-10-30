@@ -63,7 +63,9 @@ export type NotesGuideEditorApi = {
   setDocument(title:string,blocks:any[]):void
   appendBlock(block:any):void
   updateText(blockId:string,text:string):void
-  prepareNative():()=>boolean
+  prepareNative(mode?:'summary'):()=>boolean
+  typeParagraphBreak(blockId:string,expectedText:string,nextBlockId:string):void
+  paragraphStartPoint(blockId:string):{x:number;y:number}
   typeSlash():void
   selectParagraph(blockId:string,expectedText:string,selectedText?:string):void
   beginParagraphSelection(blockId:string,expectedText:string,selectedText?:string):NoteGuideSelection
@@ -251,6 +253,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
+  const [guideSummaryRequest,setGuideSummaryRequest]=useState(''),guideSummary=useRef<{lease():boolean;requestId?:string}>()
   const [inlineDraft,setInlineDraft]=useState<NoteInlineAiDraft>(),inlineDraftRef=useRef<NoteInlineAiDraft>(),inlinePrompt=useRef(''),inlineRequest=useRef<{requestId:string;anchor:NoteInsertionAnchor}>(),composing=useRef(false)
   inlineDraftRef.current=inlineDraft
   const reviewedProposal=useRef<string>(),reviewActions=useRef<{show(value:NoteInlineProposal):void;confirm(id:string):void}>(),automaticSettlements=useRef<Promise<unknown>>(Promise.resolve()),settlementTask=useRef<Promise<unknown>>(Promise.resolve())
@@ -563,6 +566,10 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     if(draftBlockId&&(!draftBlock||JSON.parse(draftBlock.props.payload).noteDraft!=='smart'))return
     const context:NoteReferenceContext=draftBlockId?{scope:'none',components:[]}:inlineTarget?{...references.capture(),range:undefined}:retry?.context||references.capture()
     const attempt = ++epoch.current, captured = { ...(retry?.captured || context.range || {...selection.current,text:'',from:0,to:0}) }, fingerprint = retry?.fingerprint || (context.range?pinnedSelection.current?.fingerprint:undefined) || JSON.stringify(editor.document), requestId = crypto.randomUUID()
+    if(props.guide?.native&&guideSummary.current&&!guideSummary.current.requestId){
+      if(!guideSummary.current.lease()){setError(t('笔记末尾光标已变化，已保留用户当前操作。'));return}
+      guideSummary.current.requestId=requestId;setGuideSummaryRequest(requestId)
+    }
     if(!retry&&context.range&&pinnedSelection.current){const range=editor.getExtension(NoteAiSelection)?.currentRange();Object.assign(captured,range?{...range,text:editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n')}:{from:0,to:0,text:''})}
     if(inlineTarget)Object.assign(captured,{text:'',from:0,to:0,cursor:inlineTarget.blockId})
     const targetPayloads=new Map(context.components.map(item=>[item.blockId,editor.getBlock(item.blockId)?.props.payload]))
@@ -713,6 +720,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const apply = async (replace: boolean) => {
     if (!preview||!nativeCurrent()) return
     if(props.guide?.native&&JSON.stringify(editor.document)!==preview.fingerprint){setError(t('笔记已变化，请重新生成建议，较新内容已保留。'));return}
+    if(guideSummary.current?.requestId===preview.requestId&&!guideSummary.current.lease()){setError(t('笔记末尾光标已变化，已保留用户当前操作。'));return}
     editor.focus()
     const blocks = preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
     const range=editor.getExtension(NoteAiSelection)?.currentRange()
@@ -721,8 +729,9 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     else { const reference = editor.getBlock(preview.cursor) || editor.getTextCursorPosition().block; editor.insertBlocks(blocks, reference, 'after') }
     setError('')
     publishTask(preview.requestId,'accepted'); setPreview(undefined); clearSelection(); changed()
+    if(guideSummary.current?.requestId===preview.requestId){guideSummary.current=undefined;setGuideSummaryRequest('')}
   }
-  const discardPreview=()=>{if(preview)publishTask(preview.requestId,'discarded');setPreview(undefined);clearSelection()}
+  const discardPreview=()=>{if(preview)publishTask(preview.requestId,'discarded');if(preview?.requestId===guideSummary.current?.requestId){guideSummary.current=undefined;setGuideSummaryRequest('')}setPreview(undefined);clearSelection()}
   const regenerate=()=>{const previous=lastRequest.current;if(!previous||request.current)return;if(preview)publishTask(preview.requestId,'discarded');const range=editor.getExtension(NoteAiSelection)?.currentRange();void generate(previous.prompt,previous.images,previous.admission,{...previous,captured:{...previous.captured,...(range||{from:0,to:0}),text:range?editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n'):''}})}
   const commands = useRef({generate,stop,exportNote:(_format?:string)=>{}});commands.current={generate,stop,exportNote:(format?:string)=>{void exportNote(format)}}
   useEffect(()=>{
@@ -823,7 +832,25 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       setDocument:(nextTitle,blocks)=>{assert();titleRef.current=nextTitle;setTitle(nextTitle);editor.replaceBlocks(editor.document,blocks);changed()},
       appendBlock:block=>{assert();editor.insertBlocks([block],editor.document.at(-1),'after')},
       updateText:(blockId,text)=>{assert();if(!editor.getBlock(blockId))throw Error('演示段落已变化。');editor.updateBlock(blockId,{content:text})},
-      prepareNative:()=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError');clearSelection();const last=editor.document.at(-1);if(last)editor.setTextCursorPosition(last.id,'end');const state=editor._tiptapEditor.state,doc=state.doc,from=state.selection.from,to=state.selection.to;return()=>{assert();const current=editor._tiptapEditor.state;return!!props.guide?.native&&nativeCurrent()&&editor.document.at(-1)?.id===last?.id&&current.doc===doc&&current.selection.empty&&current.selection.$from.parentOffset===current.selection.$from.parent.content.size&&current.selection.from===from&&current.selection.to===to}},
+      prepareNative:mode=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError');clearSelection();const last=editor.document.at(-1);if(last)editor.setTextCursorPosition(last.id,'end');const state=editor._tiptapEditor.state,doc=state.doc,from=state.selection.from,to=state.selection.to,lease=()=>{assert();const current=editor._tiptapEditor.state;return!!props.guide?.native&&nativeCurrent()&&editor.document.at(-1)?.id===last?.id&&current.doc===doc&&current.selection.empty&&current.selection.$from.parentOffset===current.selection.$from.parent.content.size&&current.selection.from===from&&current.selection.to===to};if(mode==='summary')guideSummary.current={lease};return lease},
+      paragraphStartPoint:blockId=>{
+        assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')
+        const view=editor._tiptapEditor.view,block=editor.getBlock(blockId),selection=view.state.selection
+        if(!editor.isEditable||view.composing||block?.type!=='paragraph'||noteText(block.content)!==''||editor.getTextCursorPosition().block.id!==blockId||!selection.empty||selection.$from.parentOffset!==0)throw Error('演示落笔位置已变化。')
+        const caret=view.coordsAtPos(selection.from);return{x:caret.left+1,y:(caret.top+caret.bottom)/2}
+      },
+      typeParagraphBreak:(blockId,expectedText,nextBlockId)=>{
+        assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')
+        const view=editor._tiptapEditor.view,before=editor.document,last=before.at(-1),selection=view.state.selection
+        if(!editor.isEditable||view.composing||request.current||last?.id!==blockId||last.type!=='paragraph'||noteText(last.content)!==expectedText||!expectedText.trim()||last.children?.length||typeof nextBlockId!=='string'||!nextBlockId||nextBlockId.length>256||editor.getBlock(nextBlockId)||editor.getTextCursorPosition().block.id!==blockId||!selection.empty||selection.$from.parent.type.name!=='paragraph'||selection.$from.parentOffset!==selection.$from.parent.content.size)throw Error('演示续写位置已变化。')
+        const event=new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,bubbles:true,cancelable:true})
+        if(!view.someProp('handleKeyDown',(handler:any)=>handler(view,event)))throw Error('回车换段未完成，请重新播放。')
+        const after=editor.document,next=after.at(-1)
+        if(after.length!==before.length+1||JSON.stringify(after.slice(0,-1))!==JSON.stringify(before)||next?.type!=='paragraph'||noteText(next.content)!==''||next.children?.length||editor.getTextCursorPosition().block.id!==next.id)throw Error('演示续写位置已变化。')
+        // The real Enter command creates its own id. Name only that new empty
+        // paragraph for this run; updateBlock deliberately does not change ids.
+        editor.transact((tr:any)=>tr.doc.descendants((node:any,pos:number)=>{if(node.attrs.id!==next.id)return;tr.setNodeMarkup(pos,undefined,{...node.attrs,id:nextBlockId});return false}));editor.setTextCursorPosition(nextBlockId,'start')
+      },
       typeSlash:()=>{
         assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')
         const last=editor.document.at(-1),view=editor._tiptapEditor.view,{selection}=view.state
@@ -853,8 +880,9 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   },[editor,props.guide])
   const editedDate=editedAt?noteEditDate(editedAt,document.documentElement.dataset.odysseyLocale):undefined
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
-  const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing&&!inlineDraft ? <NoteAiProcessing stop={stop}/> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
-      {preview ? <SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? t("创建的研究组件") : t("内容预览")}</strong><button aria-label={t("放弃建议")} onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>{t("替换所选")}</button> : null}<button onClick={() => apply(false)}>{t("添加至正文")}</button><button onClick={regenerate}>{t("重新撰写")}</button><button onClick={discardPreview}>{t("放弃")}</button></>}>
+  const guideSummaryPreview=preview?.requestId===guideSummaryRequest?preview:undefined,guideSummaryVisible=!!props.guide?.native&&!!guideSummaryRequest&&(writing&&request.current===guideSummaryRequest||!!guideSummaryPreview)
+  const suggestion=<>{guideSummaryVisible?<div data-note-preview-request-id={guideSummaryRequest} data-note-preview-state={guideSummaryPreview?'ready':'generating'}><SuggestionPanel header={<strong>{t(guideSummaryPreview?'内容预览':'正在回复')}</strong>} footer={guideSummaryPreview?<><button data-note-preview-apply={guideSummaryRequest} onClick={()=>apply(false)}>{t('插入笔记')}</button><button onClick={discardPreview}>{t('放弃')}</button></>:null}>{guideSummaryPreview?.result.kind==='text'?<MarkdownPreview markdown={guideSummaryPreview.result.markdown} dark={props.dark}/>:<NoteAiProcessing stop={stop} label="正在生成内容…"/>}</SuggestionPanel></div>:null}{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing&&!inlineDraft&&!guideSummaryVisible ? <NoteAiProcessing stop={stop}/> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
+      {preview&&!guideSummaryPreview ? <SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? t("创建的研究组件") : t("内容预览")}</strong><button aria-label={t("放弃建议")} onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>{t("替换所选")}</button> : null}<button onClick={() => apply(false)}>{t("添加至正文")}</button><button onClick={regenerate}>{t("重新撰写")}</button><button onClick={discardPreview}>{t("放弃")}</button></>}>
         {preview.result.capabilitySummary||preview.result.capabilityReceipts?.length?<div className="en-capability-receipts" role="status">{preview.result.capabilityReceipts?.length?capabilityReceiptText(preview.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):preview.result.capabilitySummary}</div>:null}
         {preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
       </SuggestionPanel> : null}</>

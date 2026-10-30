@@ -78,7 +78,8 @@ export function chartDataIssue(spec) {
   if(SPECIAL_CHART_VARIANTS.includes(spec?.variant))return specialChartDataIssue(spec);
   if (spec?.type !== 'chart' || !CHART_VARIANTS.includes(spec.variant)) return '未注册的图表变体';
   const string = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
-  const allowed = ['version','type','title','variant','labels','series','unit','asOf','subtitle','note'];
+  if(spec.axisDecimals!==undefined&&(!Number.isInteger(spec.axisDecimals)||spec.axisDecimals<0||spec.axisDecimals>4))return 'axisDecimals 必须为0–4的整数';
+  const allowed = ['version','type','title','variant','labels','series','unit','asOf','subtitle','note','axisDecimals'];
   if (spec.version !== 1 || !string(spec.title,256) || Object.keys(spec).some(k => !allowed.includes(k))) return '图表版本、标题或字段无效';
   for (const key of ['unit','asOf','subtitle','note']) if (spec[key] !== undefined && !string(spec[key], key === 'note' ? 2000 : 256)) return `${key} 无效`;
   if (!Array.isArray(spec.labels) || !spec.labels.length || spec.labels.length > 366 || !spec.labels.every(v => string(v,128))) return 'labels 必须为1–366个标签';

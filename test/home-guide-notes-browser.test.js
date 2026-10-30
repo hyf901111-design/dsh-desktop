@@ -1,15 +1,18 @@
+import {execFileSync} from 'node:child_process'
 import {homeNoteComponentsSource} from './fixtures/home-note-components.js'
 import {noteLibraryItems,noteLibraryNode} from '../src/main/notes/component-library'
 import {esbuildRawSource} from './helpers/esbuild-raw-source.mjs'
+import {notesChartNavigationCompatibilitySource} from './helpers/notes-chart-navigation-compatibility.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
 import {mkdtempSync,rmSync,readFileSync,mkdirSync,writeFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
-import {join} from 'node:path'
+import {join,dirname} from 'node:path'
 import {NotesStore} from '../src/main/notes/store'
 import {noteMarkdown} from '../src/main/notes/export'
 import {HOME_NOTES_GUIDE_TITLE,HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_CONSENSUS_REPLACEMENT} from '../src/preload/home-guide-notes-data'
+import {HOME_NOTES_CHART_SPEC,HOME_NOTES_TASK_RESULT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_REWRITE_RESULT} from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 import {homeNoteChallengeSidebarSource} from './fixtures/home-note-challenge-sidebar.js'
 import {Session} from '@deepseek-ai/dsh-session'
 import {engageNoteSession} from '../packages/dsh-research-task-runtime/notes-session.js'
@@ -18,7 +21,51 @@ const preReview=['write','note-chart-compose','note-chart-review','note-chart-ap
 const throughCorrections=[...preReview,'challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace','note-select-paragraph','note-rewrite','note-rewrite-apply']
 const nonempty=blocks=>blocks.filter(block=>block.type==='research'||(Array.isArray(block.content)?block.content.map(part=>part.text||'').join(''):block.content||'').trim())
 let browser,script,css
+it('fits the 243-day research chart at 476, 676 and 862px and reopens its saved dimensions',async()=>{
+ const directory=mkdtempSync(join(tmpdir(),'notes-daily-chart-fit-')),store=new NotesStore(directory),storage=async(method,input)=>method==='load'?store.load('owner',input.sessionId):method==='save'?store.save('owner',input.sessionId,input.revision,input.content,input.clientId):{ok:true}
+ const{context,page,errors}=await fixture(storage);try{
+  await page.setViewportSize({width:1500,height:1020});await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
+  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply'])await page.evaluate(step=>window.guide.runStep(step),step)
+  await page.locator('.en-document').evaluate(node=>node.style.maxWidth='1200px')
+  const title='中际旭创｜一年股价与基准表现',card=page.locator('.en-native-component:has(iframe[title="'+title+'"])'),chart=page.frameLocator('iframe[title="'+title+'"]').frameLocator('iframe#preview'),measurements=[]
+  await expect.poll(()=>chart.locator('svg.template-chart').count()).toBe(1)
+  expect(await chart.locator('path.plot-line').count()).toBe(2);expect(await chart.locator('table tbody tr').count()).toBe(243)
+  expect(await chart.locator('path.plot-line').first().evaluate(node=>getComputedStyle(node).strokeWidth)).toBe('1.4px')
+  for(const width of [476,676,862]){
+   await card.evaluate((node,width)=>node.style.width=width+'px',width)
+   await expect.poll(()=>card.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(width)
+   await expect.poll(()=>chart.locator('svg').evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBeGreaterThan(width-64)
+   const m=await chart.locator('body').evaluate(body=>{const read=document.querySelector('.chart-readout').getBoundingClientRect(),end=document.querySelector('details').getBoundingClientRect();return{width:innerWidth,height:innerHeight,scrollWidth:body.scrollWidth,scrollHeight:body.scrollHeight,bottomGap:innerHeight-end.bottom,plotHeight:document.querySelector('svg').getBoundingClientRect().height,bodyHeight:body.getBoundingClientRect().height,contentBottom:end.bottom,readoutHeight:read.height,detailsOpen:document.querySelector('details').open}})
+   measurements.push({width,...m});writeFileSync(join(evidenceDir,'daily-chart-fit-progress.json'),JSON.stringify(measurements,null,2));await card.screenshot({path:join(evidenceDir,'daily-chart-'+width+'.png')});expect(m.bottomGap).toBeLessThanOrEqual(24);expect(m.bottomGap).toBeGreaterThanOrEqual(0);expect(m.readoutHeight).toBeLessThanOrEqual(20);expect(m.scrollWidth).toBeLessThanOrEqual(m.width+1);expect(m.scrollHeight).toBeLessThanOrEqual(m.height+2);expect(m.detailsOpen).toBe(false)
+  }
+  await card.getByRole('button',{name:'选中组件并操作内容',exact:true}).click()
+  const semantic=blocks=>blocks.map(block=>{if(block.type!=='research')return block;const node=JSON.parse(block.props.payload);if(node.config){delete node.config.interactionState;if(!Object.keys(node.config).length)delete node.config}return{...block,props:{...block.props,payload:JSON.stringify(node)}}}),beforeViews=JSON.stringify(semantic(store.load('owner','real-guide-session').saved.blocks))
+  await chart.locator('rect.hit[data-point="80"]').click();await expect.poll(()=>chart.locator('.chart-readout').innerText()).toContain(HOME_NOTES_CHART_SPEC.labels[80])
+  await chart.locator('svg').press('ArrowRight');await expect.poll(()=>chart.locator('.chart-readout').innerText()).toContain(HOME_NOTES_CHART_SPEC.labels[81])
+  await chart.locator('summary').click();expect(await chart.locator('details').getAttribute('open')).not.toBeNull();expect(await chart.locator('tbody tr').count()).toBe(243);await chart.locator('summary').click()
+  await page.evaluate(()=>window.guide.flush());expect(JSON.stringify(semantic(store.load('owner','real-guide-session').saved.blocks))).toBe(beforeViews);expect(await page.locator('.en-component-error').count()).toBe(0)
+  const beforeHeight=await card.evaluate(node=>node.getBoundingClientRect().height)
+  await page.evaluate(()=>{window.guide.dispose();delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()});await expect.poll(()=>card.count()).toBe(1)
+  await page.locator('.en-document').evaluate(node=>node.style.maxWidth='1200px');await card.evaluate(node=>node.style.width='862px')
+  await expect.poll(()=>card.evaluate(node=>node.getBoundingClientRect().height)).toBeCloseTo(beforeHeight,0)
+  await card.locator('.en-native-component-heading strong').click();await card.getByRole('separator',{name:'调整组件高度',exact:true}).press('ArrowDown')
+  await expect.poll(()=>{const block=store.load('owner','real-guide-session').saved.blocks.find(b=>b.type==='research');return JSON.parse(block.props.payload).noteSize?.height}).toBeGreaterThan(306)
+  const savedHeight=JSON.parse(store.load('owner','real-guide-session').saved.blocks.find(b=>b.type==='research').props.payload).noteSize.height
+  expect(await card.locator('.en-native-component-host').evaluate(node=>node.offsetHeight)).toBe(savedHeight)
+  await page.evaluate(()=>{window.nativeRoot.unmount();window.openSavedNativeNote()});await expect.poll(()=>card.locator('.en-native-component-host').evaluate(node=>node.offsetHeight)).toBe(savedHeight)
+  expect(await card.evaluate(node=>node.offsetHeight-node.querySelector('.en-native-component-host').offsetHeight)).toBe(34)
+  writeFileSync(join(evidenceDir,'daily-chart-layout.json'),JSON.stringify({measurements,savedChart:JSON.parse(store.load('owner','real-guide-session').saved.blocks.find(b=>b.type==='research').props.payload)},null,2));await page.screenshot({path:join(evidenceDir,'daily-chart-862.png')});expect(errors).toEqual([])
+ }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
+},60000)
+it('keeps standalone chart data readable when scripts are disabled and draws the full curve when enabled',async()=>{
+ const node=JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',"import{homeNotesGuideChart}from'./packages/dsh-research-task-runtime/home-notes-guide-artifacts.js';process.stdout.write(JSON.stringify(homeNotesGuideChart('export').node))"],{encoding:'utf8'}))
+ for(const enabled of [false,true]){const context=await browser.newContext({javaScriptEnabled:enabled}),page=await context.newPage();try{await page.setContent(node.containerSpec.html)
+  if(enabled){await expect.poll(()=>page.locator('path.plot-line').count()).toBe(2);expect(await page.locator('details tbody tr').count()).toBe(243);expect(await page.locator('svg > text > title').count()).toBe(5)}
+  else{expect(await page.locator('[aria-label="静态数据回退"]').innerText()).toContain('不是完整曲线');expect(await page.locator('[aria-label="静态数据回退"] tbody tr').count()).toBe(2);expect(await page.locator('[aria-label="静态数据回退"]').innerText()).toContain('139.65114');expect(await page.locator('svg').isVisible()).toBe(false)}
+ }finally{await context.close()}}
+},10000)
 beforeAll(async()=>{
+ const productionChart=JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',"import{homeNotesGuideChart}from'./packages/dsh-research-task-runtime/home-notes-guide-artifacts.js';process.stdout.write(JSON.stringify(homeNotesGuideChart('fixture')))"],{encoding:'utf8'}))
  const challengeSidebar=await homeNoteChallengeSidebarSource()
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import{mountHomeNotesGuide}from'./src/preload/home-guide-notes';
@@ -28,16 +75,16 @@ beforeAll(async()=>{
  import'./src/preload/home-guides.css';import'./src/preload/figma-final-shell.css';
  ${challengeSidebar}
  ${homeNoteComponentsSource()}
- import{homeNotesGuideChart}from'./packages/dsh-research-task-runtime/home-notes-guide-artifacts.js';
+ const homeNotesGuideChart=runId=>{const result=structuredClone(${JSON.stringify(productionChart)});result.node.id='home-note-chart-'+runId;return result};
  import{HOME_NOTES_CHART_PROMPT,HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT}from'./packages/dsh-research-task-runtime/home-notes-guide-contract.js';
- window.guideNativeEvents=[];for(const name of ['notes-edited','notes-composer-state','notes-composer-draft','notes-task-state'])document.addEventListener('sherlock:'+name,()=>window.guideNativeEvents.push(name));window.mountAnotherGuide=signal=>mountHomeNotesGuide(document,document.querySelector('#guide'),{signal});window.abortGuide=new AbortController();window.guideStatuses=[];window.guideGate=()=>Promise.resolve();window.readyGuide=mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:window.abortGuide.signal,runId:'standalone-note-run',onStatus:text=>window.guideStatuses.push(text),waitUntilPlaying:()=>window.guideGate()}).then(api=>window.guide=api);
+ window.createHomeGuidePointer=createHomeGuidePointer;window.guideNativeEvents=[];for(const name of ['notes-edited','notes-composer-state','notes-composer-draft','notes-task-state'])document.addEventListener('sherlock:'+name,()=>window.guideNativeEvents.push(name));window.mountAnotherGuide=signal=>mountHomeNotesGuide(document,document.querySelector('#guide'),{signal});window.abortGuide=new AbortController();window.guideStatuses=[];window.guideGate=()=>Promise.resolve();window.readyGuide=mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:window.abortGuide.signal,runId:'standalone-note-run',onStatus:text=>window.guideStatuses.push(text),waitUntilPlaying:()=>window.guideGate()}).then(api=>window.guide=api);
  window.cueTarget=token=>typeof token==='string'?document.querySelector('[data-home-guide-cue-target="'+CSS.escape(token)+'"]'):null;
  window.guideCues=[];window.guidePointerPending=[];window.addEventListener('sherlock:home-guide-cue',event=>{const wire=event.detail,target=wire.target||window.cueTarget(wire.targetToken),fromTarget=wire.fromTarget||window.cueTarget(wire.fromTargetToken);window.guideCues.push({label:wire.label,connected:target?.isConnected===true,runId:wire.runId,requestId:wire.requestId,action:wire.action});if(wire.requestId)window.guidePointerPending.push({...wire,target,fromTarget,wire})});
  window.persistentBridge={request:async(method,input)=>{if(method==='library-list'&&window.nativeLibraryDelay)await new Promise(resolve=>setTimeout(resolve,window.nativeLibraryDelay));if(method==='save')window.lastGuideSaved=input.content;return window.noteStorageRequest(method,input)},draft:input=>window.noteStorageRequest('draft',input)};
  window.startPersistentGuide=async fresh=>{window.guide.dispose();await new Promise(resolve=>setTimeout(resolve,50));window.guide=await mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:new AbortController().signal,sessionId:'real-guide-session',runId:'notes-natural-run',fresh,persistence:window.persistentBridge});};
  window.openSavedNativeNote=()=>{window.nativeRoot=createRoot(document.querySelector('#guide'));window.nativeRoot.render(React.createElement(NotesApp,{sessionId:'real-guide-session',bridge:window.persistentBridge,dark:false,navigate:()=>{}}));};
- window.startNativeGuide=async()=>{window.guide.dispose();await new Promise(resolve=>setTimeout(resolve,50));document.documentElement.dataset.homeGuidePointerRun='notes-natural-run';window.nativeAutoAck=true;window.nativeGuideRequests=[];const native={configureQuote:()=>window.configureFixtureQuote(),reviewSummary:()=>window.reviewFixtureSummary(),appendSummary:()=>window.appendFixtureSummary('notes-natural-run','real-guide-session'),type:async stage=>{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'real-guide-session',prompt:stage==='note'?HOME_NOTES_TASK_PROMPT:HOME_NOTES_REWRITE_PROMPT,images:[],submissionId:window.nativeGuideRequests.length}}))},generate:async input=>{window.nativeGuideRequests.push({...input,snapshot:window.lastGuideSaved?.blocks});await new Promise(resolve=>setTimeout(resolve,80));return input.prompt===HOME_NOTES_CHART_PROMPT?homeNotesGuideChart('notes-natural-run'):{kind:input.selection?'text':'conversation',markdown:input.selection?HOME_NOTES_REWRITE_RESULT:HOME_NOTES_TASK_RESULT}},stop:async()=>{},dispose:()=>{window.nativeGuideDisposed=true}};window.guide=await mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:new AbortController().signal,sessionId:'real-guide-session',runId:'notes-natural-run',fresh:true,persistence:window.persistentBridge,native,waitUntilPlaying:()=>window.guideGate(),wait:async(ms,signal)=>{if(window.recordNativeScroll||signal)await new Promise((resolve,reject)=>{if(signal?.aborted){reject(new DOMException('cancelled','AbortError'));return}const stop=()=>{clearTimeout(timer);reject(new DOMException('cancelled','AbortError'))},timer=setTimeout(()=>{signal?.removeEventListener('abort',stop);resolve()},ms);signal?.addEventListener('abort',stop,{once:true})})}});window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(!cue.requestId)return;const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok,message}}));if(!cue.selection){if(window.nativeAutoAck!==false)reply(true);return}const wire=JSON.parse(JSON.stringify(cue));window.selectionCue=wire;window.selectionFrames=[];const pointer=createHomeGuidePointer(document,{runId:cue.runId,signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()});void pointer.perform({target:window.cueTarget(cue.targetToken),fromTarget:window.cueTarget(cue.fromTargetToken),action:'drag',onFrame:frame=>{const detail={runId:cue.runId,requestId:cue.requestId,...frame};window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail:JSON.parse(JSON.stringify(detail))}));window.selectionFrames.push({...frame,text:getSelection().toString()})}}).then(()=>reply(true),error=>reply(false,error.message)).finally(()=>pointer.dispose())});};
- `},plugins:[esbuildRawSource()],bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}})
+ window.startNativeGuide=async()=>{window.guide.dispose();await new Promise(resolve=>setTimeout(resolve,50));document.documentElement.dataset.homeGuidePointerRun='notes-natural-run';window.nativeAutoAck=true;window.nativeGuideRequests=[];const native={configureQuote:()=>window.configureFixtureQuote(),reviewSummary:()=>window.reviewFixtureSummary(),appendSummary:()=>window.appendFixtureSummary('notes-natural-run','real-guide-session'),type:async stage=>{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'real-guide-session',prompt:stage==='note'?HOME_NOTES_TASK_PROMPT:HOME_NOTES_REWRITE_PROMPT,images:[],submissionId:window.nativeGuideRequests.length}}))},generate:async input=>{window.nativeGuideRequests.push({...input,snapshot:window.lastGuideSaved?.blocks});await new Promise(resolve=>setTimeout(resolve,80));if(input.prompt===HOME_NOTES_TASK_PROMPT&&window.holdSummary)await new Promise(resolve=>window.releaseSummary=resolve);return input.prompt===HOME_NOTES_CHART_PROMPT?homeNotesGuideChart('notes-natural-run'):{kind:'text',markdown:input.selection?HOME_NOTES_REWRITE_RESULT:HOME_NOTES_TASK_RESULT}},stop:async()=>{},dispose:()=>{window.nativeGuideDisposed=true}};window.guide=await mountHomeNotesGuide(document,document.querySelector('#guide'),{signal:new AbortController().signal,sessionId:'real-guide-session',runId:'notes-natural-run',fresh:true,persistence:window.persistentBridge,native,waitUntilPlaying:()=>window.guideGate(),wait:async(ms,signal)=>{if(window.recordNativeScroll||signal)await new Promise((resolve,reject)=>{if(signal?.aborted){reject(new DOMException('cancelled','AbortError'));return}const stop=()=>{clearTimeout(timer);reject(new DOMException('cancelled','AbortError'))},timer=setTimeout(()=>{signal?.removeEventListener('abort',stop);resolve()},ms);signal?.addEventListener('abort',stop,{once:true})})}});window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(!cue.requestId)return;const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok,message}}));if(!cue.selection){if(window.nativeAutoAck!==false)reply(true);return}const wire=JSON.parse(JSON.stringify(cue));window.selectionCue=wire;window.selectionFrames=[];const pointer=createHomeGuidePointer(document,{runId:cue.runId,signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()});void pointer.perform({target:window.cueTarget(cue.targetToken),fromTarget:window.cueTarget(cue.fromTargetToken),action:'drag',onFrame:frame=>{const detail={runId:cue.runId,requestId:cue.requestId,...frame};window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail:JSON.parse(JSON.stringify(detail))}));window.selectionFrames.push({...frame,text:getSelection().toString()})}}).then(()=>reply(true),error=>reply(false,error.message)).finally(()=>pointer.dispose())});};
+ `},plugins:[{name:'accepted-9b-chart-guard-compatibility',setup(build){build.onLoad({filter:/[/\\]notes[/\\]chart-navigation\.ts$/},args=>({contents:notesChartNavigationCompatibilitySource(),loader:'ts',resolveDir:dirname(args.path)}))}},esbuildRawSource()],bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text;css=(output.outputFiles.find(file=>file.path.endsWith('.css'))?.text||'')+'\n'+readFileSync('scripts/lib/financial-widget.css','utf8')
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -51,8 +98,8 @@ async function fixture(storage){
 it('scrolls each paragraph into view and acknowledges a pointer click at its start before typing',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.guide.runStep('write'))
-  const cues=await page.evaluate(()=>window.guideCues.filter(cue=>cue.label==='在新段落开头落笔'))
-  expect(cues).toHaveLength(2);expect(cues.every(cue=>cue.connected&&cue.action==='click')).toBe(true);expect(errors).toEqual([])
+  const cues=await page.evaluate(()=>window.guideCues.filter(cue=>cue.label==='在首行文字光标处落笔'))
+  expect(cues).toHaveLength(1);expect(cues.every(cue=>cue.connected&&cue.action==='click')).toBe(true);expect(errors).toEqual([])
  }finally{await context.close()}
 },20000)
 it.each([false,true])('preserves native placeholder and custom title ownership while writing the real note (%s)',async custom=>{
@@ -67,9 +114,21 @@ it.each([false,true])('preserves native placeholder and custom title ownership w
   expect(engaged).toEqual([expect.objectContaining({title:HOME_NOTES_GUIDE_TITLE})])
   expect(session.events.findLast(event=>event.type==='session/title').data.title).toBe(custom?'用户自己的笔记名':'新笔记')
   expect(await page.locator('.en-title').inputValue()).toBe(HOME_NOTES_GUIDE_TITLE)
-  expect(await page.locator('.bn-editor').innerText()).toContain('年化收益31.03%');expect(errors).toEqual([])
+  expect(await page.locator('.bn-editor').innerText()).toContain('环比增长174.57%');expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },20000)
+it('moves the real pointer over the original library submenu and clicks its quote item above the menu surface',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide());for(const step of preReview.slice(0,5))await page.evaluate(step=>window.guide.runStep(step),step)
+  await page.evaluate(()=>{window.nativeAutoAck=false;window.menuPointer=createHomeGuidePointer(document,{runId:'notes-natural-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()});window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(!cue.requestId)return;const ack=()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}));if(!cue.label.includes('组件库')){ack();return}window.menuPointer.perform({target:window.cueTarget(cue.targetToken),action:cue.action}).then(async()=>{window.menuPointerReady=cue.label;await new Promise(resolve=>window.releaseMenuPointer=resolve);window.menuPointerReady='';ack()})});window.quoteStep=window.guide.runStep('note-slash-quote')})
+  await expect.poll(()=>page.evaluate(()=>window.menuPointerReady)).toBe('移动到组件库，展开二级菜单');expect(await page.locator('[data-home-guide-note-menu] .child-menu').count()).toBe(0);await page.evaluate(()=>window.releaseMenuPointer())
+  await expect.poll(()=>page.evaluate(()=>window.menuPointerReady)).toBe('在组件库二级菜单选择行情面板')
+  expect(await page.locator('[data-home-guide-note-menu] .child-menu a[aria-label="行情面板"]').count()).toBe(1)
+  expect(await page.locator('[data-home-guide-pointer]').evaluate(node=>({top:node.matches(':popover-open'),events:getComputedStyle(node).pointerEvents,hidden:node.hidden}))).toEqual({top:true,events:'none',hidden:false})
+  await page.screenshot({path:join(evidenceDir,'pointer-above-library-submenu.png')});await page.evaluate(()=>window.releaseMenuPointer());await page.evaluate(()=>window.quoteStep)
+  expect(await page.locator('[data-home-guide-note-menu]').count()).toBe(0);const blocks=await page.evaluate(()=>window.lastGuideSaved.blocks);expect(blocks.filter(b=>b.type==='research').map(b=>JSON.parse(b.props.payload)).some(n=>n.containerSpec?.widget==='quote')).toBe(true);expect(errors).toEqual([]);await page.evaluate(()=>window.menuPointer.dispose())
+ }finally{await context.close()}
+},30000)
 it('waits for the async original slash menu choices before opening the actual quote library item',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
@@ -85,14 +144,10 @@ it.each(['cancel','changed-menu'])('does not select an async slash library item 
  const{context,page,errors}=await fixture();try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
   for(const step of preReview.slice(0,5))await page.evaluate(step=>window.guide.runStep(step),step)
-  await page.evaluate(()=>{window.nativeLibraryDelay=800;window.pendingSlash=window.guide.runStep('note-slash-quote').then(()=>({ok:true}),error=>({ok:false,name:error.name,message:error.message}))})
-  await expect.poll(()=>page.getByRole('listbox',{name:'笔记斜杠菜单'}).count()).toBe(1)
-  await expect.poll(()=>page.evaluate(()=>{const body=document.querySelector('#guide .bn-editor');return body?.getAttribute('aria-expanded')==='true'&&document.getElementById(body.getAttribute('aria-controls'))?.getAttribute('aria-label')==='笔记斜杠菜单'})).toBe(true)
-  // Observe the actor's actual owned option read, rather than guessing that
-  // four animation frames were enough under a cold browser load.
-  await page.evaluate(()=>{const body=document.querySelector('#guide .bn-editor'),menu=document.getElementById(body.getAttribute('aria-controls')),read=menu.querySelectorAll;menu.querySelectorAll=function(selector){if(selector===':scope > [role="option"]')window.guideSlashChoicesRead=true;return read.call(this,selector)}})
+  await page.evaluate(()=>{window.nativeLibraryDelay=800;window.nativeAutoAck=false;window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(!cue.requestId)return;if(cue.label.includes('组件库')){window.pendingMenuCue=cue;window.guideSlashChoicesRead=true}else window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))});window.pendingSlash=window.guide.runStep('note-slash-quote').then(()=>({ok:true}),error=>({ok:false,name:error.name,message:error.message}))})
+  await expect.poll(()=>page.locator('[data-home-guide-note-menu] .root-menu [role="listbox"]').count()).toBe(1)
   await expect.poll(()=>page.evaluate(()=>window.guideSlashChoicesRead)).toBe(true)
-  await page.evaluate(action=>{if(action==='cancel')window.guide.dispose();else document.querySelector('#guide .bn-editor').setAttribute('aria-controls','another-editors-menu')},action)
+  await page.evaluate(action=>{if(action==='cancel')window.guide.dispose();else document.querySelector('#guide .bn-editor').setAttribute('aria-controls','another-editors-menu');const cue=window.pendingMenuCue;window.nativeAutoAck=true;window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))},action)
   const result=await page.evaluate(()=>window.pendingSlash);expect(result.ok).toBe(false)
   if(action==='cancel')expect(result.name).toBe('AbortError');else expect(result.message).toContain('菜单已变化')
   await page.waitForTimeout(850)
@@ -104,78 +159,60 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
  const directory=mkdtempSync(join(tmpdir(),'home-guide-note-consensus-')),store=new NotesStore(directory)
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
-  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
-  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-task-saved']){
-   await page.evaluate(step=>window.guide.runStep(step),step)
-   await page.evaluate(()=>window.guide.flush())
-   const blocks=store.load('owner','real-guide-session').saved.blocks,parts=nonempty(blocks),components=blocks.filter(block=>block.type==='research')
+  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>{window.holdSummary=true;return window.startNativeGuide()})
+  const snapshots=[]
+  for(const step of [...throughCorrections,'note-task-compose','note-task-review','note-task-apply','note-task-saved']){
+   await page.evaluate(step=>window.guide.runStep(step),step);await page.evaluate(()=>window.guide.flush())
+   const blocks=store.load('owner','real-guide-session').saved.blocks,parts=nonempty(blocks),components=blocks.filter(block=>block.type==='research');snapshots.push({step,blocks})
    if(step==='write'){expect(parts).toHaveLength(2);expect(components).toHaveLength(0)}
    if(step==='note-chart-review'){
-    expect(await page.locator('.en-space-ai-avatar svg').count()).toBe(1);expect(await page.locator('.en-space-ai').innerText()).not.toContain('data:image')
-    expect(parts).toHaveLength(3);expect(components).toHaveLength(1)
-    const captured=(await page.evaluate(()=>window.nativeGuideRequests))[0];expect(captured.entryPoint).toBe('inline');expect(captured.context).toEqual({scope:'note',components:[]});expect(captured.markdown).toContain('年化收益31.03%');expect(captured.markdown).not.toContain('暂将这一数值记为市场一致预期')
-    const chart=page.frameLocator('iframe[title="年度持有回报回测｜微软与基准"]').frameLocator('iframe#preview');await expect.poll(()=>chart.locator('svg.template-chart').count()).toBe(1)
-    expect(await chart.locator('svg.template-chart g[data-series] circle[data-point]').count()).toBe(18)
-    expect(await chart.locator('svg.template-chart path.plot-line').count()).toBe(3)
-    expect(await chart.locator('[data-chart-series]').allTextContents()).toEqual(['微软','标普500','NASDAQ Computer'])
-    expect(await chart.locator('figcaption').innerText()).toContain('非主动策略')
+    expect(parts).toHaveLength(3);expect(components).toHaveLength(1);expect(await page.locator('.en-space-ai-avatar svg').count()).toBe(1)
+    const captured=(await page.evaluate(()=>window.nativeGuideRequests))[0];expect(captured.entryPoint).toBe('inline');expect(captured.context).toEqual({scope:'note',components:[]});expect(captured.markdown).toContain('环比增长174.57%')
+    const chart=page.frameLocator('iframe[title="中际旭创｜一年股价与基准表现"]').frameLocator('iframe#preview');await expect.poll(()=>chart.locator('svg.template-chart').count()).toBe(1)
+    expect(await chart.locator('path.plot-line').count()).toBe(2);expect(await chart.locator('circle[data-point]').count()).toBe(486);expect(await chart.locator('table tbody tr').count()).toBe(243)
+    expect(await chart.locator('[data-chart-series]').allTextContents()).toEqual(HOME_NOTES_CHART_SPEC.series.map(s=>s.name));expect(await chart.locator('figcaption').innerText()).toContain('非含息收益')
     expect(await chart.locator('details').getAttribute('open')).toBeNull()
-    expect(await chart.locator('table tbody tr').count()).toBe(6)
-    expect(await chart.locator('table tbody td').allTextContents()).toEqual(['2020','100','100','100','2021','134.41','140.79','150.44','2022','128.48','125.85','117.59','2023','172.01','150.51','154.73','2024','227.51','187.47','223.97','2025','255.13','215.89','254.97'])
-    await chart.locator('svg.template-chart').focus();await chart.locator('svg.template-chart').press('End');expect(await chart.locator('.chart-readout').innerText()).toContain('255.13')
-    const geometry=[]
-    for(const width of [476,676]){
-     await page.locator('.en-native-component:has(iframe[title="年度持有回报回测｜微软与基准"])').evaluate((node,width)=>node.style.width=width+'px',width)
-     await expect.poll(()=>chart.locator('svg.template-chart').evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBeGreaterThan(width-64)
-     const frame=await chart.locator('body').evaluate(body=>({width:innerWidth,height:innerHeight,scrollWidth:body.scrollWidth,scrollHeight:body.scrollHeight,plot:document.querySelector('svg').getBoundingClientRect().height,content:document.querySelector('details').getBoundingClientRect().bottom}))
-     writeFileSync(join(evidenceDir,'chart-layout.json'),JSON.stringify([...geometry,{width,...frame}],null,2))
-     expect(frame.scrollWidth).toBeLessThanOrEqual(frame.width+1);expect(frame.plot).toBeGreaterThanOrEqual(160);expect(frame.plot).toBeLessThanOrEqual(240);expect(frame.scrollHeight).toBeLessThanOrEqual(frame.height+2);expect(frame.height-frame.content).toBeLessThan(85);geometry.push({width,...frame})
-    }
-    writeFileSync(join(evidenceDir,'chart-layout.json'),JSON.stringify(geometry,null,2))
-    await page.locator('.en-native-component:has(iframe[title="年度持有回报回测｜微软与基准"])').evaluate(node=>node.style.width='100%')
+    expect(await chart.locator('table tbody td').allTextContents()).toEqual(HOME_NOTES_CHART_SPEC.labels.flatMap((label,i)=>[label,...HOME_NOTES_CHART_SPEC.series.map(s=>String(s.values[i]))]))
     await page.screenshot({path:join(evidenceDir,'space-chart.png')})
    }
    if(step==='note-write-middle'){expect(parts).toHaveLength(4);expect(components).toHaveLength(1)}
-   if(step==='note-quote-configure'){expect(components).toHaveLength(2);expect(JSON.parse(components[1].props.payload).containerSpec.symbols).toEqual([{code:'MSFT',market:'US',name:'微软'}]);expect(await page.evaluate(()=>window.fixtureFinanceRequests.some(row=>row.action==='search'&&row.query==='MSFT'))).toBe(true)}
+   if(step==='note-quote-configure'){expect(components).toHaveLength(2);expect(JSON.parse(components[1].props.payload).containerSpec.symbols).toEqual([{code:'300308',market:'SZ',name:'中际旭创'}]);expect(await page.evaluate(()=>window.fixtureFinanceRequests.some(row=>row.action==='search'&&row.query==='300308'))).toBe(true)}
    if(step==='note-write-tail'){expect(parts).toHaveLength(7);expect(parts.filter(block=>block.type==='paragraph')).toHaveLength(5)}
-   if(step==='note-task-compose'||step==='note-task-review'){expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain('微软五年含分红年化回报');if(step==='note-task-review'){expect(await page.locator('[data-note-result-preview]').count()).toBe(1);expect(await page.locator('[data-note-task][data-phase="replied"]').innerText()).toContain('科技行业对照');expect(await page.locator('.en-preview').count()).toBe(0);const scroll=await page.evaluate(()=>window.fixtureSummaryScrollEvidence);expect(scroll.before.button).toBeGreaterThan(scroll.before.clip);expect(scroll.after.messages).toBeGreaterThan(scroll.before.messages);expect(scroll.after.outer).toBe(scroll.before.outer);expect(scroll.after.note).toBe(scroll.before.note);expect(scroll.after.button).toBeLessThanOrEqual(scroll.after.clip);writeFileSync(join(evidenceDir,'summary-scroll.json'),JSON.stringify(scroll,null,2));await page.screenshot({path:join(evidenceDir,'summary-ready-not-inserted.png')})}}
+   if(step==='review')expect(await page.locator('.bn-editor [data-bn-thread-id]').evaluateAll(nodes=>new Set(nodes.map(n=>n.dataset.bnThreadId)).size)).toBe(3)
+   if(step==='growth-evidence'){const panel=page.locator('[data-notes-challenge-panel]');expect(await panel.locator('article').count()).toBe(3);expect(await panel.innerText()).toContain('14.29%');expect(await panel.innerText()).toContain('环比计算');expect(await panel.locator('article a').count()).toBe(3)}
+   if(step==='consensus-replace')expect(await page.locator('[data-id="guide-note-consensus"] .bn-inline-content').innerText()).toBe(HOME_NOTES_CONSENSUS_REPLACEMENT)
+   if(step==='replace')expect(await page.locator('[data-id="guide-note-growth"] .bn-inline-content').innerText()).toBe(HOME_NOTES_GUIDE_BLOCKS[1].content.replace('环比增长174.57%','环比增长14.29%'))
+   if(step==='note-select-paragraph'){expect(await page.evaluate(()=>getSelection().toString())).toBe(HOME_NOTES_GUIDE_SELECTION);expect(await page.evaluate(()=>window.guideCues.some(row=>row.label==='先查看句内表达标记的 AI 评论'))).toBe(true)}
+   if(step==='note-rewrite-apply')expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toBe(HOME_NOTES_REWRITE_RESULT)
+   if(step==='note-task-compose'){
+    expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain(HOME_NOTES_TASK_RESULT)
+    await expect.poll(()=>page.locator('.en-main [data-note-preview-state="generating"] .en-preview').count()).toBe(1)
+    await page.evaluate(()=>window.summaryPendingCard=document.querySelector('.en-main [data-note-preview-request-id] .en-preview'))
+    await page.screenshot({path:join(evidenceDir,'summary-pending-main.png')});await expect.poll(()=>page.evaluate(()=>typeof window.releaseSummary)).toBe('function');await page.evaluate(()=>window.releaseSummary())
+   }
    if(step==='note-task-review'){
-    for(const clipped of ['composer','list']){
-     await page.evaluate(clipped=>{const button=document.querySelector('[data-note-task] button[aria-label="添加到笔记"]'),messages=button.closest('.sRp_messages'),composer=button.closest('[data-research-conversation-panel]').querySelector('[data-research-composer-host]');window.visibilityStyles={button:button.style.cssText,messages:messages.style.cssText,composer:composer.style.cssText};window.fixtureVisibilityBudget=8;if(clipped==='composer'){messages.style.flex='0 0 auto';messages.style.height=messages.clientHeight+'px';composer.style.position='fixed';composer.style.top=button.getBoundingClientRect().top+14+'px'}else button.style.height=messages.clientHeight+50+'px'},clipped)
-     await expect(page.evaluate(()=>window.reviewFixtureSummary())).rejects.toThrow('未滚入可见区')
-     expect(nonempty(store.load('owner','real-guide-session').saved.blocks)).toHaveLength(7)
-     await page.evaluate(async()=>{const button=document.querySelector('[data-note-task] button[aria-label="添加到笔记"]'),messages=button.closest('.sRp_messages'),composer=button.closest('[data-research-conversation-panel]').querySelector('[data-research-composer-host]');button.style.cssText=window.visibilityStyles.button;messages.style.cssText=window.visibilityStyles.messages;composer.style.cssText=window.visibilityStyles.composer;window.fixtureVisibilityBudget=300;await window.reviewFixtureSummary()})
-    }
+    expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain(HOME_NOTES_TASK_RESULT)
+    expect(await page.locator('.en-main [data-note-preview-state="ready"] .en-preview').count()).toBe(1);expect(await page.locator('[data-note-result-preview]').count()).toBe(0)
+    expect(await page.evaluate(()=>window.summaryPendingCard===document.querySelector('.en-main [data-note-preview-request-id] .en-preview'))).toBe(true)
+    expect(await page.locator('.en-main .en-preview').innerText()).toContain(HOME_NOTES_TASK_RESULT);await page.screenshot({path:join(evidenceDir,'summary-ready-not-inserted.png')})
    }
-   if(step==='note-task-apply'){expect(parts).toHaveLength(8);const reply=JSON.parse(parts.at(-1).props.payload);expect(reply).toMatchObject({kind:'assistant-result',noteReply:true,messageId:'ework-note:'+(await page.evaluate(()=>window.nativeGuideRequests))[2].requestId});expect(reply.excerpt).toContain('科技行业对照');writeFileSync(join(evidenceDir,'completed-blocks.json'),JSON.stringify(blocks,null,2));await page.screenshot({path:join(evidenceDir,'summary-added.png')})}
-   if(step==='review')expect(await page.locator('.bn-editor [data-bn-thread-id]').evaluateAll(nodes=>new Set(nodes.map(node=>node.dataset.bnThreadId)).size)).toBe(3)
-   if(step==='growth-evidence'){
-    const panel=page.locator('[data-notes-challenge-panel]');expect(await panel.locator('article').count()).toBe(1)
-    expect(await panel.innerText()).toContain('STOCK PERFORMANCE');expect(await panel.innerText()).toContain('(255.13/100)^(1/5)-1');expect(await panel.innerText()).toContain('20.60%');expect(await panel.locator('article a').count()).toBe(1)
-    expect(await panel.locator('article a').getAttribute('href')).toBe('https://www.microsoft.com/investor/reports/ar25/index.html')
-   }
-   if(step==='consensus-replace')expect(await page.locator('[data-id="guide-note-consensus"] .bn-inline-content').innerText()).toContain(HOME_NOTES_CONSENSUS_REPLACEMENT)
-   if(step==='replace')expect(await page.locator('[data-id="guide-note-growth"] .bn-inline-content').innerText()).toBe(HOME_NOTES_GUIDE_BLOCKS[1].content.replace('年化收益31.03%','年化收益约20.60%'))
-   if(step==='note-rewrite-apply')expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toBe(HOME_NOTES_GUIDE_BLOCKS[4].content.replace('后续将持续密切关注相关业务及各项指标的进一步变化情况。','下次复盘先核对云业务增长、资本开支和现金回款，证据变了再调整判断。'))
+   if(step==='note-task-apply'){expect(parts).toHaveLength(8);expect(parts.at(-1).type).toBe('paragraph');expect(parts.at(-1).content.map(p=>p.text||'').join('')).toBe(HOME_NOTES_TASK_RESULT);expect(components).toHaveLength(2);writeFileSync(join(evidenceDir,'completed-blocks.json'),JSON.stringify(blocks,null,2));await page.screenshot({path:join(evidenceDir,'summary-added.png')})}
   }
-  expect((await page.evaluate(()=>window.nativeGuideRequests))[2].markdown).toContain('先拆开科技行业暴露')
+  const requests=await page.evaluate(()=>window.nativeGuideRequests);expect(requests).toHaveLength(3);expect(requests[1].selection).toBe(HOME_NOTES_GUIDE_SELECTION);expect(requests[2].context.components).toHaveLength(2);expect(requests[2].markdown).toContain(HOME_NOTES_REWRITE_RESULT)
+  const chartReference=requests[2].context.components.find(c=>c.content.includes('data-note-chart-compact'));expect(chartReference).toBeDefined();const reference=JSON.parse(chartReference.content);expect(reference.spec.html).toContain('data-note-chart-compact');expect(reference.spec.html.length).toBeGreaterThan(20000);expect(chartReference.content.length).toBeLessThan(30000)
+  writeFileSync(join(evidenceDir,'actor-stages.json'),JSON.stringify(snapshots,null,2));writeFileSync(join(evidenceDir,'actor-requests.json'),JSON.stringify(requests,null,2))
+  const writing=await page.evaluate(()=>window.guideCues.filter(c=>c.label==='在首行文字光标处落笔'));expect(writing).toHaveLength(3)
   await page.emulateMedia({reducedMotion:'no-preference'})
-  const start=await page.evaluate(()=>{window.beforeReturnEditor=document.querySelector('#guide .bn-editor');window.beforeReturnArea=document.querySelector('#guide .en-document-scroll');window.beforeReturnArea.scrollTop=window.beforeReturnArea.scrollHeight-window.beforeReturnArea.clientHeight;window.scrollSamples=[];window.recordNativeScroll=true;const sample=()=>{window.scrollSamples.push(window.beforeReturnArea.scrollTop);if(window.recordNativeScroll)requestAnimationFrame(sample)};requestAnimationFrame(sample);return window.beforeReturnArea.scrollTop})
-  expect(start).toBeGreaterThan(200)
+  const start=await page.evaluate(()=>{window.beforeReturnEditor=document.querySelector('#guide .bn-editor');window.beforeReturnArea=document.querySelector('#guide .en-document-scroll');window.beforeReturnArea.scrollTop=window.beforeReturnArea.scrollHeight-window.beforeReturnArea.clientHeight;window.scrollSamples=[];window.recordNativeScroll=true;const sample=()=>{window.scrollSamples.push(window.beforeReturnArea.scrollTop);if(window.recordNativeScroll)requestAnimationFrame(sample)};requestAnimationFrame(sample);return window.beforeReturnArea.scrollTop});expect(start).toBeGreaterThan(200)
   await page.evaluate(()=>window.guide.runStep('note-return-top'))
-  const finish=await page.evaluate(()=>{window.recordNativeScroll=false;return{sameEditor:window.beforeReturnEditor===document.querySelector('#guide .bn-editor'),sameArea:window.beforeReturnArea===document.querySelector('#guide .en-document-scroll'),top:window.beforeReturnArea.scrollTop,samples:window.scrollSamples}})
-  expect(finish.sameEditor).toBe(true);expect(finish.sameArea).toBe(true);expect(finish.top).toBe(0);expect(finish.samples.filter(value=>value>0&&value<start).length).toBeGreaterThan(6)
-  await page.evaluate(()=>window.guide.flush())
-  const saved=store.load('owner','real-guide-session'),body=JSON.stringify(saved.saved.blocks)
-  const exported=noteMarkdown(saved.saved);expect(exported).toContain('微软五年含分红年化回报');expect(exported).toContain('科技行业对照');writeFileSync(join(evidenceDir,'note-export.md'),exported)
-  expect(body).toContain('先拆开科技行业暴露');expect(body).toContain('只差0.16个百分点');expect(body).toContain('下次复盘先核对云业务增长');expect(saved.draft).toBeUndefined()
-  expect(await page.locator('[data-en-replacement-id]').evaluateAll(nodes=>new Set(nodes.map(node=>node.dataset.enReplacementId)).size)).toBeGreaterThanOrEqual(2)
+  const finish=await page.evaluate(()=>{window.recordNativeScroll=false;return{sameEditor:window.beforeReturnEditor===document.querySelector('#guide .bn-editor'),sameArea:window.beforeReturnArea===document.querySelector('#guide .en-document-scroll'),top:window.beforeReturnArea.scrollTop,samples:window.scrollSamples}});expect(finish.sameEditor).toBe(true);expect(finish.sameArea).toBe(true);expect(finish.top).toBe(0);expect(finish.samples.filter(value=>value>0&&value<start).length).toBeGreaterThan(6)
+  await page.evaluate(()=>window.guide.flush());const saved=store.load('owner','real-guide-session'),exported=noteMarkdown(saved.saved);expect(exported).toContain(HOME_NOTES_TASK_RESULT);expect(exported.split(HOME_NOTES_TASK_RESULT)).toHaveLength(2);expect(saved.draft).toBeUndefined();writeFileSync(join(evidenceDir,'note-export.md'),exported)
+  expect(await page.locator('[data-en-replacement-id]').evaluateAll(nodes=>new Set(nodes.map(n=>n.dataset.enReplacementId)).size)).toBeGreaterThanOrEqual(2)
   await page.evaluate(()=>{window.guide.dispose();delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()})
-  await expect.poll(()=>page.locator('[data-id="guide-note-consensus"] .bn-inline-content').innerText()).toContain(HOME_NOTES_CONSENSUS_REPLACEMENT)
-  expect(await page.locator('[data-en-replacement-id]').evaluateAll(nodes=>new Set(nodes.map(node=>node.dataset.enReplacementId)).size)).toBeGreaterThanOrEqual(2)
-  expect(await page.locator('.en-research').last().innerText()).toContain('微软五年');expect(errors).toEqual([]);await page.screenshot({path:join(evidenceDir,'normal-note-reopened.png')});await page.evaluate(()=>window.nativeRoot.unmount())
+  await expect.poll(()=>page.locator('[data-id="guide-note-consensus"] .bn-inline-content').innerText()).toBe(HOME_NOTES_CONSENSUS_REPLACEMENT)
+  expect(await page.locator('.bn-editor').innerText()).toContain(HOME_NOTES_TASK_RESULT);expect(await page.locator('.en-native-component').count()).toBe(2);expect(await page.locator('[data-note-preview-request-id]').count()).toBe(0);expect(errors).toEqual([]);await page.screenshot({path:join(evidenceDir,'normal-note-reopened.png')});await page.evaluate(()=>window.nativeRoot.unmount())
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
-},60000)
+},70000)
 it('stops before the public summary action when the user moves the retained note caret',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'notes-summary-tail-')),store=new NotesStore(directory),storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
@@ -184,7 +221,7 @@ it('stops before the public summary action when the user moves the retained note
   await page.locator('[data-id="guide-note-intro"] .bn-inline-content').click()
   await expect(page.evaluate(()=>window.guide.runStep('note-task-apply'))).rejects.toThrow('光标已变化')
   await expect.poll(()=>page.locator('#guide .bn-editor').count()).toBe(0)
-  const saved=store.load('owner','real-guide-session');expect(nonempty(saved.saved.blocks)).toHaveLength(7);expect(JSON.stringify(saved.saved.blocks)).not.toContain('微软五年含分红年化回报');expect(errors).toEqual([])
+  const saved=store.load('owner','real-guide-session');expect(nonempty(saved.saved.blocks)).toHaveLength(7);expect(JSON.stringify(saved.saved.blocks)).not.toContain(HOME_NOTES_TASK_RESULT);expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },60000)
 it('opens the actual evidence action in English without relying on its Chinese button text',async()=>{
@@ -195,7 +232,7 @@ it('opens the actual evidence action in English without relying on its Chinese b
   for(const step of [...preReview,'challenge','review','consensus-select','consensus-optimize','consensus-replace','select'])await page.evaluate(step=>window.guide.runStep(step),step)
   expect(await page.getByRole('button',{name:'View evidence',exact:true}).count()).toBeGreaterThan(0)
   await page.evaluate(()=>window.guide.runStep('growth-evidence'))
-  expect(await page.locator('[data-notes-challenge-panel] article').count()).toBe(1);expect(errors).toEqual([])
+  expect(await page.locator('[data-notes-challenge-panel] article').count()).toBe(3);expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },20000)
 it('grows the actual editor selection during the JSON-token actor drag before its rewrite step',async()=>{
@@ -208,7 +245,7 @@ it('grows the actual editor selection during the JSON-token actor drag before it
   await expect.poll(()=>page.evaluate(()=>window.selectionFrames?.filter(row=>row.phase==='dragging'&&row.text.length>0).length||0),{timeout:5000,interval:30}).toBeGreaterThan(2)
   const mid=await page.evaluate(()=>({frames:window.selectionFrames,cue:window.selectionCue,complete:window.selectionComplete,requests:window.nativeGuideRequests.length}));expect(mid.complete).not.toBe(true);expect(mid.requests).toBe(1);expect(mid.cue.selection).toBe(true);expect(Object.values(mid.cue).every(value=>typeof value==='string'||value===true)).toBe(true)
   expect(await page.evaluate(()=>{const before=getSelection().toString();for(const detail of [{...window.selectionCue,runId:'foreign',x:1,y:1,phase:'dragging'},{...window.selectionCue,requestId:'foreign',x:1,y:1,phase:'dragging'}])window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail}));return getSelection().toString()===before})).toBe(true)
-  await page.evaluate(()=>window.selectAction);const final=await page.evaluate(()=>({frames:window.selectionFrames,selected:getSelection().toString(),failure:window.selectionFailure,complete:window.selectionComplete,text:'后续将持续密切关注相关业务及各项指标的进一步变化情况。'}));expect(final.failure).toBeUndefined();expect(final.complete).toBe(true);expect(final.selected).toBe(final.text);expect(new Set(final.frames.filter(row=>row.phase==='dragging').map(row=>row.text)).size).toBeGreaterThan(2);expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
+  await page.evaluate(()=>window.selectAction);const final=await page.evaluate(()=>({frames:window.selectionFrames,selected:getSelection().toString(),failure:window.selectionFailure,complete:window.selectionComplete,text:'接下来仍需把新增资本投入、营运资本占用与经营现金回款放在同一张检查清单中。后续将持续密切关注相关业务及各项指标的进一步变化情况。估值判断应保留情景边界，证据变化再调整结论。'}));expect(final.failure).toBeUndefined();expect(final.complete).toBe(true);expect(final.selected).toBe(final.text);expect(new Set(final.frames.filter(row=>row.phase==='dragging').map(row=>row.text)).size).toBeGreaterThan(2);expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   expect(await page.evaluate(()=>{const before=getSelection().toString();window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail:{...window.selectionCue,x:0,y:0,phase:'pressed'}}));return getSelection().toString()===before})).toBe(true)
   await page.evaluate(()=>window.guide.runStep('note-rewrite'));expect((await page.evaluate(()=>window.nativeGuideRequests))[1].selection).toBe(final.text);expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
@@ -223,14 +260,14 @@ it('extends the saved native note with a research summary and an actual paragrap
    if(step==='note-select-paragraph'){await page.evaluate(()=>{const next=document.createElement('button');next.textContent='下一步';next.id='native-note-next';document.body.append(next);next.click();next.focus()});await page.waitForTimeout(300)}
   }
   const requests=await page.evaluate(()=>window.nativeGuideRequests)
-  expect(requests).toHaveLength(3);expect(requests[0].entryPoint).toBe('inline');expect(requests[2].context.scope).toBe('note');expect(requests[2].selection).toBe('');expect(requests[2].context.components).toHaveLength(2);expect(requests[2].markdown).toContain('年化收益约20.60%')
-  expect(requests[1].context.scope).toBe('selection');expect(requests[1].markdown).toBe('');expect(requests[1].selection).toBe('后续将持续密切关注相关业务及各项指标的进一步变化情况。')
-  expect(await page.locator('[data-id="guide-note-intro"] .bn-inline-content').innerText()).toContain('今天先不追目标价')
-  expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toContain('下次复盘先核对云业务增长')
-  expect(await page.locator('.bn-editor').innerText()).toContain('观察窗口');expect(await page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
+  expect(requests).toHaveLength(3);expect(requests[0].entryPoint).toBe('inline');expect(requests[2].context.scope).toBe('note');expect(requests[2].selection).toBe('');expect(requests[2].context.components).toHaveLength(2);expect(requests[2].markdown).toContain('环比增长14.29%')
+  expect(requests[1].context.scope).toBe('selection');expect(requests[1].markdown).toBe('');expect(requests[1].selection).toBe(HOME_NOTES_GUIDE_SELECTION)
+  expect(await page.locator('[data-id="guide-note-intro"] .bn-inline-content').innerText()).toContain('复盘重点是增长兑现')
+  expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toContain(HOME_NOTES_REWRITE_RESULT)
+  expect(await page.locator('.bn-editor').innerText()).toContain('固定历史区间');expect(await page.locator('.bn-editor').innerText()).toContain('环比增长14.29%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
   await page.evaluate(()=>window.guide.flush());await page.evaluate(()=>window.guide.dispose())
-  const saved=store.load('owner','real-guide-session');expect(JSON.stringify(saved.saved.blocks)).toContain('下次复盘先核对云业务增长');expect(JSON.stringify(saved.saved.blocks)).toContain('微软五年含分红年化回报');expect(saved.draft).toBeUndefined()
-  await page.evaluate(()=>{delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()});await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('下次复盘先核对云业务增长')
+  const saved=store.load('owner','real-guide-session');expect(JSON.stringify(saved.saved.blocks)).toContain(HOME_NOTES_REWRITE_RESULT);expect(JSON.stringify(saved.saved.blocks)).toContain(HOME_NOTES_TASK_RESULT);expect(saved.draft).toBeUndefined()
+  await page.evaluate(()=>{delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()});await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain(HOME_NOTES_REWRITE_RESULT)
   expect(errors).toEqual([]);await page.evaluate(()=>window.nativeRoot.unmount())
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },35000)
@@ -296,7 +333,7 @@ it('completes the real note actor when every JSON-only target survives delayed a
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide());await page.evaluate(()=>window.nativeAutoAck=false)
   await page.evaluate(()=>{window.addEventListener('sherlock:home-guide-cue',event=>{const cue=JSON.parse(JSON.stringify(event.detail));if(!cue.requestId)return;setTimeout(()=>{const target=window.cueTarget(cue.targetToken),from=cue.fromTargetToken?window.cueTarget(cue.fromTargetToken):null;window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:!!target?.isConnected&&(!cue.fromTargetToken||!!from?.isConnected),message:'操作目标必须在移动期间保持存活'}}))},90)})})
   for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
-  expect(await page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
+  expect(await page.locator('.bn-editor').innerText()).toContain('环比增长14.29%');expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0)
   expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },30000)
@@ -330,7 +367,7 @@ it.each(['source','destination'])('checks the strict-slider drag %s again after 
 it('streams into the actual NotesApp, reviews in the real strict picker and applies the native optimization',async()=>{
  const{context,page,errors,network,logs}=await fixture();try{
   expect(await page.title()).toBe('笔记用例教程');await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide());await page.evaluate(()=>window.guide.runStep('write'))
-  expect(await page.locator('.en-title').inputValue()).toContain('微软｜持有回报复盘');expect(await page.locator('.bn-editor').innerText()).toContain('年化收益31.03%')
+  expect(await page.locator('.en-title').inputValue()).toContain('中际旭创｜增长兑现与估值复盘');expect(await page.locator('.bn-editor').innerText()).toContain('环比增长174.57%')
   for(const step of preReview.slice(1))await page.evaluate(step=>window.guide.runStep(step),step);await page.evaluate(()=>window.recordNativeScroll=true)
   await page.evaluate(()=>window.guide.runStep('challenge'))
   expect(await page.locator('.en-challenge-trigger').innerText()).toContain('严格');expect(await page.locator('.en-challenge-popover').count()).toBe(1)
@@ -348,8 +385,8 @@ it('streams into the actual NotesApp, reviews in the real strict picker and appl
   await page.evaluate(()=>{window.optimizeStep=window.guide.runStep('optimize')})
   await expect.poll(()=>page.getByRole('progressbar',{name:'正在优化'}).count(),{timeout:4000}).toBe(1)
   expect(await page.locator('.en-challenge-replace').count()).toBe(0)
-  await page.evaluate(()=>window.optimizeStep);expect(await page.locator('.bn-editor').innerText()).toContain('年化收益31.03%');expect(await page.locator('.en-challenge-replace').count()).toBe(1)
-  await page.evaluate(()=>window.guide.runStep('replace'));expect(await page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%');expect(await page.locator('.bn-editor').innerText()).not.toContain('年化收益31.03%')
+  await page.evaluate(()=>window.optimizeStep);expect(await page.locator('.bn-editor').innerText()).toContain('环比增长174.57%');expect(await page.locator('.en-challenge-replace').count()).toBe(1)
+  await page.evaluate(()=>window.guide.runStep('replace'));expect(await page.locator('.bn-editor').innerText()).toContain('环比增长14.29%');expect(await page.locator('.bn-editor').innerText()).not.toContain('环比增长174.57%')
   expect(await page.locator('[data-en-replacement-id]').count()).toBeGreaterThan(0);expect(await page.locator('.en-error').count()).toBe(0)
   await page.screenshot({path:'/tmp/home-guide-notes-native-replacement-20261024.png'})
   await page.evaluate(()=>window.guide.dispose());expect(await page.locator('.bn-editor').count()).toBe(0);expect(errors).toEqual([]);expect(network.filter(url=>!url.startsWith('http://127.0.0.1/'))).toEqual([]);expect((await page.evaluate(()=>window.guideNativeEvents)).length).toBeGreaterThan(0);expect(logs).toEqual([])
@@ -361,11 +398,11 @@ it('keeps the saved Yjs note and native challenge discussion editable after the 
  const{context,page,errors,logs}=await fixture(storage);try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
   for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
-  expect(await page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%')
+  expect(await page.locator('.bn-editor').innerText()).toContain('环比增长14.29%')
   await page.evaluate(()=>window.guide.flush());await page.evaluate(()=>window.guide.dispose());await expect.poll(()=>page.locator('.bn-editor').count()).toBe(0)
   const saved=store.load('owner','real-guide-session');expect(saved.saved.yjs.length).toBeGreaterThan(1000);expect(saved.draft).toBeUndefined();expect(calls).not.toContain('challenge')
   const cues=await page.evaluate(()=>window.guideCues);expect(cues.length).toBeGreaterThanOrEqual(5);expect(cues.every(cue=>cue.connected&&cue.runId==='notes-natural-run')).toBe(true)
-  await page.evaluate(()=>window.openSavedNativeNote());await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('年化收益约20.60%')
+  await page.evaluate(()=>window.openSavedNativeNote());await expect.poll(()=>page.locator('.bn-editor').innerText()).toContain('环比增长14.29%')
   expect(await page.locator('.en-challenge-grade').innerText()).toContain('严格');expect(await page.locator('.bn-editor [data-bn-thread-id]').count()).toBeGreaterThanOrEqual(1)
   await page.waitForTimeout(3000);expect(calls).not.toContain('challenge')
   const paragraph=page.locator('[data-id="guide-note-intro"] .bn-inline-content');await paragraph.click();await page.keyboard.press('End');await page.keyboard.type(' 保留的补充观察。')
@@ -380,7 +417,7 @@ it('confirms a partial note even when navigation has already hidden the guide su
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.evaluate(()=>window.startPersistentGuide(true));await page.evaluate(()=>{window.partialWrite=window.guide.runStep('write').catch(error=>error.name)})
-  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('观察窗口')
+  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('固定历史区间')
   await page.evaluate(()=>{window.guideGate=()=>new Promise(resolve=>window.resumeNoteGuide=resolve)});await page.waitForTimeout(130)
   await page.evaluate(async()=>{document.querySelector('#guide').style.display='none';await window.guide.flush();window.guide.dispose();window.resumeNoteGuide?.()})
   expect(await page.evaluate(()=>window.partialWrite)).toBe('AbortError');expect(store.load('owner','real-guide-session').saved.title).toBe(HOME_NOTES_GUIDE_TITLE);expect(store.load('owner','real-guide-session').draft).toBeUndefined();expect(errors).toEqual([])
@@ -396,7 +433,7 @@ it('aborts a partial stream without editor or challenge mutations after disposal
 it('pauses a streaming batch and cancels a paused gate without late content',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>{window.streamPending=window.guide.runStep('write').catch(error=>error.name)})
-  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('观察窗口')
+  await expect.poll(()=>page.locator('.bn-editor').innerText(),{timeout:5000}).toContain('固定历史区间')
   await page.evaluate(()=>{window.guideGate=()=>new Promise(resolve=>window.resumeNoteGuide=resolve)})
   await page.waitForTimeout(120);const paused=await page.locator('.bn-editor').innerText();await page.waitForTimeout(300)
   expect(await page.locator('.bn-editor').innerText()).toBe(paused)

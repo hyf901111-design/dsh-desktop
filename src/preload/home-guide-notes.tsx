@@ -1,3 +1,4 @@
+import {createHomeGuideNoteMenu} from './home-guide-note-menu'
 import React from 'react'
 import {createRoot} from 'react-dom/client'
 import {NotesApp,type NotesGuideEditorApi,type NotesGuideBinding} from './notes/editor'
@@ -21,7 +22,8 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  const useNative=options.fresh!==false&&(!!options.native||!!(options.persistence&&options.sessionId&&options.cwd&&options.runId&&document.documentElement.dataset.homeGuidePointerRun===options.runId))
  if(useNative&&!options.runId)throw Error('请先准备独立的教程播放标识。')
  let native=options.native
- const bridge=createHomeNotesGuideBridge(sessionId,signal,()=>playing(),options.persistence?{bridge:options.persistence,fresh:options.fresh!}:undefined,ms=>wait(ms),useNative?{generate:async input=>{if(!native)throw Error('原生笔记输入区尚未就绪。');return native.generate(input)},stop:async requestId=>{await native?.stop(requestId)}}:undefined),container=document.createElement('div')
+ const menu=useNative?createHomeGuideNoteMenu(document,{runId:options.runId!,sessionId,signal,current:()=>!disposed&&host.isConnected&&!signal.aborted}):undefined
+ const bridge=createHomeNotesGuideBridge(sessionId,signal,()=>playing(),options.persistence?{bridge:options.persistence,fresh:options.fresh!}:undefined,ms=>wait(ms),useNative?{generate:async input=>{if(!native)throw Error('原生笔记输入区尚未就绪。');return native.generate(input)},stop:async requestId=>{await native?.stop(requestId)}}:undefined,menu),container=document.createElement('div')
  container.className='en-editor-host';container.style.height='100%';host.append(container)
  const root=createRoot(container)
  let editor:NotesGuideEditorApi|undefined,disposed=false,failed=false,completed=0,busy=false,selectedThread='',expected='',finalFlush:Promise<void>|undefined
@@ -145,12 +147,13 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   for(let index=0;index<blocks.length;index++){
    await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
    const block=blocks[index]!
-   if(!editor!.snapshot().blocks.some(item=>item.id===block.id)){editor!.appendBlock({...block,content:''});expected=fingerprint();await frame()}
+   if(index>0){const previous=blocks[index-1]!;editor!.typeParagraphBreak(previous.id,previous.content,block.id);expected=fingerprint();await frame()}
+   else if(!editor!.snapshot().blocks.some(item=>item.id===block.id)){editor!.appendBlock({...block,content:''});expected=fingerprint();await frame()}
    const rendered=await until(()=>query<HTMLElement>('[data-id="'+block.id+'"] .bn-inline-content'));scrollTo(rendered,true)
    let previous:{top:number;left:number}|undefined,stable=0
    const box=await until(()=>{unchanged();const rect=rendered.getBoundingClientRect(),area=query<HTMLElement>('.en-document-scroll')!.getBoundingClientRect();if(rect.top<area.top+12||rect.bottom>area.bottom-12){stable=0;previous=undefined;return}stable=previous&&Math.abs(previous.top-rect.top)<1&&Math.abs(previous.left-rect.left)<1?stable+1:0;previous=rect;return stable>=2?rect:undefined})
-   const anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(box.left+2)+'px;top:'+(box.top+box.height/2)+'px';document.body.append(anchor)
-   try{await point(anchor,'在新段落开头落笔');unchanged();validTarget(rendered,true);rendered.click();rendered.closest<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true});const range=document.createRange();range.selectNodeContents(rendered);range.collapse(true);const selection=document.defaultView?.getSelection();selection?.removeAllRanges();selection?.addRange(range)}finally{anchor.remove()}
+   if(index===0){editor!.prepareNative();const caret=editor!.paragraphStartPoint(block.id),anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(caret.x-1)+'px;top:'+(caret.y-1)+'px';document.body.append(anchor)
+    try{await point(anchor,'在首行文字光标处落笔');unchanged();validTarget(rendered,true);rendered.click();rendered.closest<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true})}finally{anchor.remove()}}
    const stride=reduced?block.content.length:block.type==='heading'?4:8
    for(let offset=stride;offset<block.content.length+stride;offset+=stride){
     await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
@@ -204,7 +207,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const input=await until(()=>query<HTMLTextAreaElement>('.en-space-ai textarea[aria-label="'+t('行内 AI 需求')+'"]'))
   const documentId=query<HTMLElement>('.en-document')?.dataset.noteDocumentId
   if(!documentId||input.closest('.en-document')?.getAttribute('data-note-document-id')!==documentId)throw Error('行内 AI 插入位置已变化。')
-  await click(input,'使用空格功能画年度持有回报')
+  await click(input,'使用空格功能画一年股价与基准折线图')
   const setter=Object.getOwnPropertyDescriptor(document.defaultView!.HTMLTextAreaElement.prototype,'value')!.set!
   for(let offset=4;offset<HOME_NOTES_CHART_PROMPT.length+4;offset+=4){await playing();unchanged();validTarget(input,true);setter.call(input,HOME_NOTES_CHART_PROMPT.slice(0,offset));input.dispatchEvent(new Event('input',{bubbles:true}));await wait(70)}
   await click(await until(()=>query<HTMLButtonElement>('.en-space-ai-send:not(:disabled)')),'生成年度回报与基准折线图')
@@ -215,33 +218,28 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   expected=fingerprint();await flush()
  }
  const chartApply=async()=>{
-  unchanged();await click(await until(()=>query<HTMLButtonElement>('.en-space-ai[data-review] button[aria-label="'+t('确认本次 AI 生成')+'"]:not(:disabled)')),'确认年度持有回报图')
+  unchanged();await click(await until(()=>query<HTMLButtonElement>('.en-space-ai[data-review] button[aria-label="'+t('确认本次 AI 生成')+'"]:not(:disabled)')),'确认一年股价与基准对比图')
   await until(()=>!query('.en-space-ai[data-review]'));await frame();expected=fingerprint();await flush()
  }
  const slashQuote=async()=>{
   await playing();nativeReady();await emptyTail('guide-note-quote-anchor');editor!.typeSlash();expected=fingerprint()
   const menuEditor=query<HTMLElement>('.bn-editor')
   const list=await until(()=>{nativeReady();unchanged();const body=query<HTMLElement>('.bn-editor'),id=body?.getAttribute('aria-controls'),menu=id?document.getElementById(id):undefined;return body===menuEditor&&body?.getAttribute('aria-expanded')==='true'&&menu?.getAttribute('role')==='listbox'&&menu.getAttribute('aria-label')===t('笔记斜杠菜单')?menu:undefined})
-  const key=async(key:string)=>{await playing();unchanged();query<HTMLElement>('.bn-editor')!.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));await frame()}
-  const itemsFor=(menu:HTMLElement,label:string)=>{
-   nativeReady();unchanged();const body=query<HTMLElement>('.bn-editor')
-   if(body!==menuEditor||body?.getAttribute('aria-expanded')!=='true'||body.getAttribute('aria-controls')!==list.id||document.getElementById(list.id)!==list||!list.isConnected||menu!==list&&!list.contains(menu))throw Error('组件库菜单已变化。')
-   const items=[...menu.querySelectorAll<HTMLElement>(':scope > [role="option"]')]
-   if(items.some(item=>item.textContent===t('组件库暂不可用，重新打开重试')))throw Error(t('组件库暂不可用，重新打开重试'))
-   return items
+  const itemsFor=(surface:HTMLElement,child=false)=>{
+   nativeReady();unchanged();const body=query<HTMLElement>('.bn-editor'),owned=menu?.element()
+   if(body!==menuEditor||body?.getAttribute('aria-expanded')!=='true'||body.getAttribute('aria-controls')!==list.id||document.getElementById(list.id)!==list||owned!==surface||!surface.isConnected)throw Error('组件库菜单已变化。')
+   return [...surface.querySelectorAll<HTMLAnchorElement>(child?'.child-menu a[role="option"]':'.root-menu a[role="option"]')]
   }
-  const choose=async(menu:HTMLElement,label:string)=>{
-   // The real native menu is accessible before its async library-list IPC has
-   // returned. Wait for this same owned menu's choices, not only its shell.
-   await until(()=>itemsFor(menu,label).some(item=>item.textContent===label))
-   for(let attempt=0;attempt<45;attempt++){const items=itemsFor(menu,label);if(!items.some(item=>item.textContent===label))throw Error('组件库菜单已变化。');if(items.find(item=>item.getAttribute('aria-selected')==='true')?.textContent===label){await key('Enter');return}await key('ArrowDown')}throw Error('组件库菜单未就绪。')
-  }
-  await choose(list,t('组件库'));const library=await until(()=>list.querySelector<HTMLElement>('[role="listbox"][aria-label="'+t('组件库')+'"]'));await choose(library,t('行情面板'))
+  const surface=await until(()=>menu?.element()),parent=await until(()=>itemsFor(surface).find(item=>item.getAttribute('aria-label')===t('组件库')))
+  const parentRevision=surface.dataset.noteMenuRevision;await point(parent,'移动到组件库，展开二级菜单','move');itemsFor(surface)
+  parent.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'}))
+  const child=await until(()=>surface.dataset.noteMenuRevision!==parentRevision&&itemsFor(surface,true).find(item=>item.getAttribute('aria-label')===t('行情面板')))
+  await wait(500);await point(child,'在组件库二级菜单选择行情面板');if(!itemsFor(surface,true).includes(child))throw Error('组件库菜单已变化。');child.click()
   await until(()=>editor!.snapshot().blocks.some(block=>{try{return block.type==='research'&&JSON.parse(block.props.payload).containerSpec?.widget==='quote'}catch{return false}}))
   await frame();expected=fingerprint();await flush()
  }
  const configureQuote=async()=>{await playing();unchanged();await nativeReady().configureQuote();await frame();expected=fingerprint();await flush()}
- const growthEvidence=async()=>readReportEvidence('年化收益31.03%','核对年报原表和五年复合年化公式')
+ const growthEvidence=async()=>readReportEvidence('环比增长174.57%','核对公司原始报告和季度环比公式')
  const challenge=async()=>{
   await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
   options.onStatus?.('打开 AI随航，选择严格模式检查全文')
@@ -261,12 +259,12 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const trigger=await until(()=>toolQuery<HTMLButtonElement>('.en-challenge-trigger'))
   if(trigger.getAttribute('aria-expanded')==='true')await click(trigger,'确认严格模式并开始检查')
   await until(()=>new Set([...host.querySelectorAll<HTMLElement>('.bn-editor [data-bn-thread-id]')].map(node=>node.dataset.bnThreadId)).size===3,10000)
-  expected=fingerprint();options.onStatus?.('发现整段归因、一处年化统计和一句表达三处问题');await flush()
+  expected=fingerprint();options.onStatus?.('发现整段归因、一处环比统计和一句表达三处问题');await flush()
  }
  const select=async()=>{
-  options.onStatus?.('点击小段年化统计标记')
+  options.onStatus?.('点击小段季度环比统计标记')
   const mark=await until(()=>query<HTMLElement>('[data-id="guide-note-growth"] [data-bn-thread-id]'))
-  selectedThread=mark.dataset.bnThreadId||'';scrollTo(mark);await wait(550);await click(mark,'查看这处年化统计错误')
+  selectedThread=mark.dataset.bnThreadId||'';scrollTo(mark);await wait(550);await click(mark,'查看这处季度环比统计错误')
   await until(()=>query('.en-challenge-card[data-thread-id="'+CSS.escape(selectedThread)+'"]'))
  }
  const selectedCard=async()=>{
@@ -300,12 +298,12 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   // local demo bridge. Persist its current coverage before ordinary Notes
   // remounts, so revisiting an untouched example does not request a live model.
   await until(()=>editor!.reviewReady(),10000);await flush()
-  options.onStatus?.('年化已修正为20.60%，邻句与依据保留')
+  options.onStatus?.('环比已修正为14.29%，邻句与依据保留')
  }
  const nativeReady=()=>{assert();if(!native||document.documentElement.dataset.homeGuidePointerRun!==options.runId)throw Error('原生笔记输入区已变化，请重新播放。');return native}
  const unchanged=()=>{if(fingerprint()!==expected)throw Error('演示笔记已被编辑，较新内容已保留。')}
  const selectConsensus=async()=>{
-  await playing();unchanged();options.onStatus?.('先检查整段历史回报的归因')
+  await playing();unchanged();options.onStatus?.('先检查整段增长与估值判断')
   const mark=await until(()=>query<HTMLElement>('[data-id="guide-note-consensus"] [data-bn-thread-id]'))
   selectedThread=mark.dataset.bnThreadId||'';scrollTo(mark);await wait(550);await click(mark,'查看整段观点的逻辑评论')
   await until(()=>query('.en-challenge-card[data-thread-id="'+CSS.escape(selectedThread)+'"]'))
@@ -324,14 +322,14 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    const reveal=async(target:HTMLElement)=>{const area=panel.getBoundingClientRect(),box=target.getBoundingClientRect();if(box.top<area.top+12||box.bottom>area.bottom-12){panel.scrollTo({top:panel.scrollTop+box.top-area.top-24,behavior:scrollBehavior()});await wait(500)}validTarget(target,true)}
    await reveal(heading)
    await point(heading,'核对'+label,'move');await wait(900)
-   const formula=[...heading.closest('article')!.querySelectorAll('dt')].find(node=>node.textContent==='年化计算')?.nextElementSibling as HTMLElement|undefined
-   if(formula){await reveal(formula);await point(formula,'按五年复合公式核对20.60%','move');await wait(900)}
+   const formula=[...heading.closest('article')!.querySelectorAll('dt')].find(node=>node.textContent==='环比计算')?.nextElementSibling as HTMLElement|undefined
+   if(formula){await reveal(formula);await point(formula,'按报告元值核对季度环比14.29%','move');await wait(900)}
   }
   await flush()
  }
  const replaceConsensus=async()=>{
   const selector=await selectedCard(),apply=await until(()=>query<HTMLButtonElement>(selector+' .en-challenge-replace:not(:disabled)'))
-  await click(apply,'替换整段归因，保留行业对照和待验证问题')
+  await click(apply,'替换整段观点，保留财务事实并补上现金转化边界')
   await until(()=>noteText(editor!.snapshot().blocks.find(block=>block.id==='guide-note-consensus')?.content).startsWith(HOME_NOTES_CONSENSUS_REPLACEMENT))
   await frame();expected=fingerprint();await until(()=>editor!.reviewReady(),10000);await flush()
  }
@@ -342,14 +340,14 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  },90000)
  let summaryTail:(()=>boolean)|undefined,summaryBefore='',summaryRequestId=''
  const summaryUnchanged=()=>{unchanged();if(!summaryTail?.())throw Error('笔记末尾光标已变化，已保留用户当前操作。')}
- const taskCompose=async()=>{await playing();unchanged();await emptyTail('guide-note-summary-anchor');summaryTail=editor!.prepareNative();summaryBefore=fingerprint();await nativeReady().type('note')}
+ const taskCompose=async()=>{await playing();unchanged();await emptyTail('guide-note-summary-anchor');summaryTail=editor!.prepareNative('summary');summaryBefore=fingerprint();await nativeReady().type('note')}
  const taskReview=async()=>{summaryRequestId=await nativeReady().reviewSummary();summaryUnchanged();if(text().includes(HOME_NOTES_TASK_RESULT)||fingerprint()!==summaryBefore)throw Error('总结尚未确认，正文不应提前插入。');await playing()}
  const taskApply=async()=>{
   summaryUnchanged();const before=editor!.snapshot().blocks.filter(block=>block.type==='research'||noteText(block.content).trim())
   const verify=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.runId!==options.runId||value.sessionId!==sessionId||value.generationRequestId!==summaryRequestId||typeof value.requestId!=='string')return;let ok=false;try{summaryUnchanged();ok=true}catch{}document.defaultView!.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-tail-reply',{detail:{runId:options.runId,sessionId,requestId:value.requestId,ok}}))}
   document.defaultView!.addEventListener('sherlock:home-guide-notes-tail-check',verify)
   try{await nativeReady().appendSummary()}finally{document.defaultView!.removeEventListener('sherlock:home-guide-notes-tail-check',verify)}
-  await until(()=>editor!.snapshot().blocks.some(block=>{try{const node=JSON.parse(block.props.payload);return block.type==='research'&&node.noteReply===true&&node.messageId==='ework-note:'+summaryRequestId&&node.excerpt===HOME_NOTES_TASK_RESULT}catch{return false}}));await frame()
+  await until(()=>noteText(editor!.snapshot().blocks.at(-1)?.content)===HOME_NOTES_TASK_RESULT);await frame()
   const after=editor!.snapshot().blocks.filter(block=>block.type==='research'||noteText(block.content).trim())
   if(after.length!==before.length+1||JSON.stringify(after.slice(0,-1))!==JSON.stringify(before))throw Error('总结添加位置已变化，现有笔记已保留。')
   expected=fingerprint();await flush()
@@ -360,6 +358,11 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const original=HOME_NOTES_GUIDE_BLOCKS.find(block=>block.id==='guide-note-cashflow')!.content
   const paragraph=await until(()=>query<HTMLElement>('[data-id="guide-note-cashflow"] .bn-inline-content'))
   if(paragraph.textContent!==original)throw Error('演示段落已变化。')
+  const mark=await until(()=>query<HTMLElement>('[data-id="guide-note-cashflow"] [data-bn-thread-id]'))
+  const thread=mark.dataset.bnThreadId;scrollTo(mark);await wait(500);await click(mark,'先查看句内表达标记的 AI 评论')
+  const card=await until(()=>query<HTMLElement>('.en-challenge-card[data-thread-id="'+CSS.escape(thread||'')+'"]'))
+  await point(card,'阅读表达建议，再结合整段上下文改写','move');await wait(1100)
+  const close=card.querySelector<HTMLButtonElement>('.en-challenge-close');if(close)await click(close,'收起表达评论，返回正文');else await click(paragraph,'离开评论气泡，返回正文')
   scrollTo(paragraph);await wait(550)
   let previous:number[]|undefined,stable=0
   await until(()=>{unchanged();validTarget(paragraph,true);if(paragraph.textContent!==original)throw Error('演示段落已变化。');const box=paragraph.getBoundingClientRect(),next=[box.left,box.top,box.width,box.height,query<HTMLElement>('.en-document-scroll')!.scrollTop];stable=previous&&next.every((value,index)=>Math.abs(value-previous![index]!)<.5)?stable+1:0;previous=next;return stable>=3})
@@ -367,7 +370,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const points=endpoints(),anchors=points.map(point=>{const anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;background:transparent;left:'+point.x+'px;top:'+point.y+'px';document.body.append(anchor);return anchor})
   let selection:ReturnType<NotesGuideEditorApi['beginParagraphSelection']>|undefined,released=false,dragged=false
   try{
-   await point(anchors[1]!,'只选中这句空泛表达','drag',anchors[0],frame=>{
+   await point(anchors[1]!,'框选整个后续跟踪段落','drag',anchors[0],frame=>{
     unchanged()
     if(frame.phase==='pressed'){
      if(selection)throw Error('演示选区进度已变化。')
@@ -390,10 +393,10 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   // after they take focus, so the native floating toolbar can reopen normally.
   editor!.selectParagraph('guide-note-cashflow',HOME_NOTES_GUIDE_BLOCKS.find(block=>block.id==='guide-note-cashflow')!.content,HOME_NOTES_GUIDE_SELECTION)
   await until(rewriteButton);await frame();const button=await until(rewriteButton)
-  await click(button,'改写这一句表达');await nativeReady().type('selection');await preview(true);unchanged()
+  await click(button,'结合整段上下文改写');await nativeReady().type('selection');await preview(true);unchanged()
  }
  const rewriteApply=async()=>{
-  const apply=await preview(true);unchanged();await click(apply,'只替换所选句子，保留相邻内容')
+  const apply=await preview(true);unchanged();await click(apply,'替换所选整段，保留其它段落')
   await until(()=>text().includes(HOME_NOTES_REWRITE_RESULT));await frame();expected=fingerprint();await until(()=>editor!.reviewReady(),10000);await flush()
  }
  const returnTop=async()=>{
@@ -403,8 +406,9 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   await flush()
  }
  const taskSaved=async()=>{
-  unchanged();const last=editor!.snapshot().blocks.filter(block=>block.type==='research').at(-1)!,node=JSON.parse(last.props.payload)
-  await until(()=>query<HTMLElement>('[data-research-node-id="'+CSS.escape(node.id)+'"]')?.textContent?.includes(HOME_NOTES_TASK_RESULT),10000)
+  unchanged();const last=editor!.snapshot().blocks.filter(block=>block.type==='research'||noteText(block.content).trim()).at(-1)!
+  if(noteText(last.content)!==HOME_NOTES_TASK_RESULT)throw Error('总结尚未完整插入，现有内容已保留。')
+  await until(()=>query<HTMLElement>('[data-id="'+CSS.escape(last.id)+'"]')?.textContent?.includes(HOME_NOTES_TASK_RESULT),10000)
   await flush();await wait(650)
  }
  const order=['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace','note-select-paragraph','note-rewrite','note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-task-saved','note-return-top'] as const

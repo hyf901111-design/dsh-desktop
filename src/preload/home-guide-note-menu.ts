@@ -1,0 +1,39 @@
+import {validateNoteMenu,noteMenuPresentation,noteMenuDocumentHtml} from '../shared/note-menu-presentation'
+import type {NoteMenuState,NoteMenuEvent} from '../shared/notes-menu'
+/** The original native menu renderer, hosted in this guide's top layer only.
+ * NativeSlashMenu still owns every callback, revision and library admission. */
+export function createHomeGuideNoteMenu(document:Document,options:{runId:string;sessionId:string;signal:AbortSignal;current():boolean}){
+ const win=document.defaultView!,host=document.createElement('div'),ticket=crypto.randomUUID(),retired=new Set<string>()
+ host.dataset.homeGuideNoteMenu=options.runId;host.dataset.eworkExpandedCommand='';host.setAttribute('popover','manual');host.style.cssText='position:fixed;inset:auto;margin:0;padding:0;border:0;background:transparent;overflow:visible;pointer-events:auto'
+ const rawCss=noteMenuDocumentHtml.match(/<style>([\s\S]*?)<\/style>/)![1]!,css=rawCss.replace(/html,body/g,':scope').replace(/body\.dark/g,':scope.guide-menu-dark').replace(/body\.native-material/g,':scope.guide-native-material').replace(/\bbody\{/g,':scope{')
+ let state:NoteMenuState|undefined,closed=false,revoked=false
+ const moved=(records:MutationRecord[])=>{if(records.some(record=>record.attributeName==='data-home-guide-pointer-run'&&record.oldValue!==options.runId)||document.documentElement.dataset.homeGuidePointerRun!==options.runId)revoked=true}
+ const observer=new MutationObserver(records=>{moved(records);if(revoked)dispose()});observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-home-guide-pointer-run'],attributeOldValue:true})
+ const current=()=>{moved(observer.takeRecords());return !revoked&&!closed&&!options.signal.aborted&&options.current()&&document.documentElement.dataset.homeGuidePointerRun===options.runId}
+ const emit=(value:Omit<NoteMenuEvent,'owner'|'sessionId'|'menuId'|'revision'>)=>{if(!state||!current())return;document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{...value,owner:'home-guide:'+options.runId,sessionId:options.sessionId,menuId:state.menuId,revision:state.revision}}))}
+ const close=(menuId?:string,cancel=false)=>{if(!state||menuId&&state.menuId!==menuId)return;const previous=state;if(cancel)emit({action:'cancel'});retired.add(previous.menuId);state=undefined;if(host.matches(':popover-open'))host.hidePopover();host.remove();host.replaceChildren()}
+ const route=(link:HTMLAnchorElement,hover=false)=>{
+  if(!state||!current()||!host.contains(link))return
+  let value:URL;try{value=new URL(link.href)}catch{return}
+  const [,action,id]=value.pathname.split('/'),revision=Number(value.searchParams.get('revision')),parentId=value.searchParams.get('parent')||undefined
+  if(value.protocol!=='ework-note-menu:'||value.hostname!==ticket||revision!==state.revision)return
+  const parent=state.items.find(item=>item.id===parentId),item=parentId?parent?.children?.find(item=>item.id===id):state.items.find(item=>item.id===id)
+  if(!item||parentId&&state.submenu?.parentId!==parentId||!['open','select'].includes(action!))return
+  if(action==='open'&&item.children?.length&&!parentId){if(state.submenu?.parentId!==id)emit({action:'open',itemId:id});return}
+  if(!hover&&action==='select'&&!item.children){const detail={owner:'home-guide:'+options.runId,sessionId:options.sessionId,menuId:state.menuId,revision:state.revision,action:'select',itemId:id,...parentId?{parentId}:{}};close(state.menuId);document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail}))}
+ }
+ host.addEventListener('pointerdown',event=>event.preventDefault())
+ host.addEventListener('pointerover',event=>{const link=(event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-submenu]');if(link)route(link,true)})
+ host.addEventListener('click',event=>{event.preventDefault();const link=(event.target as HTMLElement).closest<HTMLAnchorElement>('a');if(link)route(link)})
+ const outside=(event:Event)=>{if(state&&!host.contains(event.target as Node))close(undefined,true)}
+ document.addEventListener('pointerdown',outside,true)
+ const blur=()=>{if(!document.hasFocus())close(undefined,true)},surface=(event:Event)=>{if((event as CustomEvent).detail?.surface!=='notes')close(undefined,true)}
+ win.addEventListener('blur',blur);document.addEventListener('sherlock:workspace-surface-change',surface)
+ const dispose=()=>{if(closed)return;close(undefined,true);closed=true;observer.disconnect();document.removeEventListener('pointerdown',outside,true);win.removeEventListener('blur',blur);document.removeEventListener('sherlock:workspace-surface-change',surface);options.signal.removeEventListener('abort',dispose)}
+ options.signal.addEventListener('abort',dispose,{once:true});if(options.signal.aborted)dispose()
+ return{sync(input:NoteMenuState){validateNoteMenu(input);if(!current()||input.sessionId!==options.sessionId||retired.has(input.menuId))throw new DOMException('演示菜单已结束。','AbortError');if(state&&(state.menuId!==input.menuId||input.revision<state.revision))throw Error('组件库菜单已变化。');state=input
+   const presentation=noteMenuPresentation(input,ticket,{height:win.innerHeight-24,width:win.innerWidth-24,shadowInset:0})
+   host.dataset.noteMenuId=input.menuId;host.dataset.noteMenuRevision=String(input.revision);host.className=(input.dark?'guide-menu-dark ':'')+'guide-native-material';host.innerHTML='<style>@scope ([data-home-guide-note-menu]){'+css+'}</style><main>'+presentation.html+'</main>'
+   const left=Math.max(8,Math.min(input.anchor.x,win.innerWidth-presentation.width-8)),top=Math.max(8,Math.min(input.anchor.y+input.anchor.height+6,win.innerHeight-presentation.height-8));for(const [key,value] of Object.entries({width:presentation.width+'px',height:presentation.height+'px',background:'transparent','box-shadow':'none','backdrop-filter':'none'}))host.style.setProperty(key,value,'important');host.style.left=left+'px';host.style.top=top+'px';if(!host.isConnected)document.body.append(host);if(!host.matches(':popover-open'))host.showPopover()
+  },close,dispose,element:()=>state&&current()?host:undefined}
+}
