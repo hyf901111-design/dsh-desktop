@@ -6288,6 +6288,160 @@
         ],
         "recordedAt": "2026-10-30T05:11:44.868Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "原生笔记表格合理列宽、整表尺寸与顶层行列菜单",
+        "branch": "codex/feat/notes-native-table-ui-20261030",
+        "baseCommit": "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
+        "tipCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
+        "commits": [
+          {
+            "commit": "2e24a72f919cf28be5862af93f65a3caaaba1247",
+            "parents": [
+              "31b3de76ee5c0d05787ef3d7008ec697717ca3e9"
+            ],
+            "subject": "功能：统一原生表格列宽计算并保留已有尺寸"
+          },
+          {
+            "commit": "81306999fd07a49b36ab39b233cab2ea10cbedad",
+            "parents": [
+              "2e24a72f919cf28be5862af93f65a3caaaba1247"
+            ],
+            "subject": "修复：补齐表格列宽计算的严格索引类型"
+          },
+          {
+            "commit": "efcd63237a10fc3244b955734ade06664ea61338",
+            "parents": [
+              "81306999fd07a49b36ab39b233cab2ea10cbedad"
+            ],
+            "subject": "功能：优化原生表格尺寸与顶层行列操作菜单"
+          },
+          {
+            "commit": "a2260c37bc77da98f9df9d8834b5973c9ed172d8",
+            "parents": [
+              "efcd63237a10fc3244b955734ade06664ea61338"
+            ],
+            "subject": "修复：原位表格列宽初始化并清理失效拖动"
+          },
+          {
+            "commit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
+            "parents": [
+              "a2260c37bc77da98f9df9d8834b5973c9ed172d8"
+            ],
+            "subject": "修复：释放原生表格菜单冻结并隔离拖动视图归属"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/native-table-layout.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/native-table.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/native-table.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-table-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-table-layout.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-native-table-browser.test.ts",
+              "test/notes-native-table-layout.test.ts",
+              "test/notes-component-header-browser.test.ts",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip直接相关36/36（table14/Header7/layout8/interaction7），未跑全套。",
+            "verifiedCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
+            "completedAt": "2026-10-30T07:22:50.189732+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "冻结同tip TypeScript通过。",
+            "verifiedCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
+            "completedAt": "2026-10-30T07:22:58.811263+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
+              "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03"
+            ],
+            "outcome": "passed",
+            "summary": "精确base31..feature差异检查通过。",
+            "verifiedCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
+            "completedAt": "2026-10-30T07:22:58.921289+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "冻结工作树差异检查通过且干净。",
+            "verifiedCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
+            "completedAt": "2026-10-30T07:22:59.029761+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "冻结同tip直接相关36/36（table14/Header7/layout8/component interaction7）。真实NotesApp/BlockNote/ProseMirror/Yjs/NotesStore；旧menuFrozen [2,1]→新hover[5,4]及原stock插行位置RED→GREEN，原位Slash、drag owner/readonly、保存重开均覆盖。非打包Native。证据 /tmp/sherlock-notes-native-table-ui-20261030/frozen-4e575cfe1/evidence-index.json SHA256 bf1b3193b408f7c090b5f3dfe68749981d4e1adcdc73832ca6be3536c153056e"
+        },
+        "acceptanceCriteria": [
+          "新表在同一插入事务中持久化columnWidths，正常8列适应正文；旧表已有宽度原样保留，小窗口局部横滚且不缩字号。",
+          "显式表格/行/列菜单、原生行列增删移动、单列拖宽和原HTML行拖动保留；整表适应正文/平均分列/宽度输入、拖动与键盘可操作。",
+          "尺寸拖动预览不写文档，取消/lost capture不保存，完成一次提交且一次Undo/Redo恢复；多格选择类型/位置保留。",
+          "菜单使用专属manual popover top layer并注册编辑器；短窗翻转/命中、键盘焦点、外点/Escape/模式ABA/active关闭清理。",
+          "真实NotesApp、BlockNote、Yjs及NotesStore完成合成表格编辑、保存和重开；不修改共享SDK、用户内容、生成路由或共享客户端。"
+        ],
+        "risks": [
+          "Chromium fixture uses actual NotesApp/BlockNote/ProseMirror/Yjs and NotesStore with synthetic content in a temporary directory. Window bridge and mounting boundary are fixtures; no packaged Native acceptance was performed.",
+          "14 table Browser tests plus7 existing Header Browser,8 pure layout and7 existing component interaction=36 passed; no full suite.",
+          "Final PNGs show active editing states; drag receipt and screenshots are tied to final same-tip focused run, not a Native recording.",
+          "New-table sizing is in the insertion transaction. Core factory independently consumes the exact shared helper bytes; combined two-entry generation acceptance belongs to Root integration.",
+          "Composition coverage uses DOM composition events plus real cell typing; physical macOS IME and the packaged app remain Root acceptance.",
+          "The original Slash callback test invokes the genuine BlockNote callback in the production sizing wrapper; it does not claim an Electron menu-window click.",
+          "旧notes-paragraph-indent.test.js缺少9b raw-loader，在base31归档和feature相同beforeAll失败；5case未执行，不计入本次GREEN，保留原日志供Root处理。",
+          "editor.tsx仅import、原生Slash table事务包装、tableHandles替换及控件挂载；Root与native-operations feature三方合并需同时保留各自hook、IME/文字兜底与完整9b。共享layout纯模块与core复用字节相同。"
+        ],
+        "generatedAt": "2026-10-30T07:25:16.728564+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -6688,6 +6842,30 @@
         "3f532514775da7af34206eb2bc8d194392e5bb8b"
       ],
       "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-native-table-browser.test.ts",
+        "test/notes-native-table-layout.test.ts",
+        "test/notes-component-header-browser.test.ts",
+        "test/notes-component-interaction.test.tsx",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
+        "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
