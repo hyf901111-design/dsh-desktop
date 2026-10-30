@@ -15,7 +15,7 @@
 
 ## 调整
 
-黄标目标使用可见的逐行 client rect，并在移动和执行前通过 `elementFromPoint` 核对实际文字命中；不直接打开评论或更改 selectedThread。动作等待本地滚动稳定，移除首段多余编辑区点击。连续段落仍使用原 Enter 路径。
+黄标目标使用可见的逐行 client rect，并在移动和执行前通过 `elementFromPoint` 核对实际文字命中；命中后以相同坐标、detail=1 发送原 click 事件，保留原 controller 的 clicked-character 分支；不直接打开评论或更改 selectedThread。动作等待本地滚动稳定，移除首段多余编辑区点击。连续段落仍使用原 Enter 路径。
 
 随航按同一视觉帧发到实际滑块的 pointerdown/move/up；仅演示的合成移动在控件内同步提交预览，不再拖完后发方向键。取消发送 pointercancel，原强度不提交。真实鼠标保持原 pointer capture 行为。
 
@@ -27,6 +27,8 @@
 
 ## 聚焦验证及边界
 
-新回归覆盖原生 Portal 的备用来源切换（含内容重挂载）、预填需求的延迟按钮；真实 NotesApp 的非 reduced-motion 滑块逐帧同步、实际黄标命中，以及原25步、主区总结卡片、保存重开。另复查原指针菜单 top-layer、真实鼠标拖动与键盘 picker、暂停/取消/ABA 等直接相关行为。
+新回归覆盖原生 Portal 的备用来源切换（含内容重挂载）、预填需求的延迟按钮；真实 NotesApp 的非 reduced-motion 滑块逐帧同步、实际黄标命中、controller 的同一字位锚点及气泡相对该 glyph 行的真实位置，以及原25步、主区总结卡片、保存重开。另复查原指针菜单 top-layer、真实鼠标拖动与键盘 picker、暂停/取消/ABA 等直接相关行为。
 
 冻结提交上的命令、逐项结果和 SHA256 由同目录任务交接 JSON 与 `/tmp/sherlock-notes-demo-interaction-20261030/` 记录。浏览器使用已声明的 Native/行情运输夹具；最终打包客户端的真实来源与自然完整回放仍需由集成任务验收，不能把分层浏览器检查等同于 Native 通过。
+
+直接相关的旧 picker 布局 Browser 夹具原本没有生产 `?raw` JavaScript 的文本 loader，无法编译当前图表读取路径；只接入现有 `esbuildRawSource()`，保持实际生产组件和原断言，未修改共享 loader 或产品行为。

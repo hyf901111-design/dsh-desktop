@@ -124,7 +124,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   await playing();validTarget(target,true);if(fromTarget)validTarget(fromTarget,true)
   if(tracked&&document.documentElement.dataset.homeGuidePointerRun!==options.runId)throw abortError()
  }
- const click=async(target:HTMLElement,label:string)=>{await point(target,label);homeGuideTargetPoint(document,target);target.click();if(!target.hasAttribute('data-bn-thread-id'))target.focus({preventScroll:true});await frame()}
+ const click=async(target:HTMLElement,label:string)=>{await point(target,label);const position=homeGuideTargetPoint(document,target);if(target.hasAttribute('data-bn-thread-id'))target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,detail:1,button:0,clientX:position.x,clientY:position.y,view:document.defaultView}));else{target.click();target.focus({preventScroll:true})}await frame()}
  const flush=()=>disposed?(finalFlush||Promise.resolve()):editor?.flush()||Promise.resolve()
  const dispose=()=>{
   if(disposed)return
