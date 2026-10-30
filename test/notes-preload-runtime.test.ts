@@ -10,7 +10,7 @@ import {resolveConfig} from 'electron-vite'
 const root = resolve('.')
 const entry = '\0notes-production-runtime-fixture'
 const peerRoot = mkdtempSync(resolve(tmpdir(), 'notes-react-peer-'))
-let browser: any, script = '', owners: string[] = [], yjsOwners: string[] = []
+let browser: any, script = '', owners: string[] = [], yjsOwners: string[] = [], tableOwners: string[] = []
 const evidence = process.env.SHERLOCK_NOTES_RUNTIME_EVIDENCE
 const source = `
 import {mountNotes} from ${JSON.stringify(resolve('src/preload/notes/mount.tsx'))};
@@ -39,19 +39,25 @@ beforeAll(async () => {
   mkdirSync(resolve(peerRoot, 'node_modules'), {recursive: true})
   cpSync(dirname(createRequire(import.meta.url).resolve('react/package.json')), resolve(peerRoot, 'node_modules/react'), {recursive: true})
   cpSync(dirname(createRequire(import.meta.url).resolve('yjs/package.json')), resolve(peerRoot, 'node_modules/yjs'), {recursive: true})
+  cpSync(dirname(dirname(createRequire(import.meta.url).resolve('prosemirror-tables'))), resolve(peerRoot, 'node_modules/prosemirror-tables'), {recursive: true})
+  for (const name of ['prosemirror-keymap', 'prosemirror-model', 'prosemirror-state', 'prosemirror-transform', 'prosemirror-view']) {
+    symlinkSync(dirname(dirname(createRequire(import.meta.url).resolve(name))), resolve(peerRoot, 'node_modules', name))
+  }
   symlinkSync(dirname(createRequire(import.meta.url).resolve('lib0/package.json')), resolve(peerRoot, 'node_modules/lib0'))
   const peer = resolve(peerRoot, 'peer.mjs')
-  writeFileSync(peer, "import React from 'react'; import * as Y from 'yjs'; export {Y}; export default React;\n")
+  writeFileSync(peer, "import React from 'react'; import * as Y from 'yjs'; import {CellSelection} from 'prosemirror-tables'; export {Y,CellSelection}; export default React;\n")
   const config = (await resolveConfig({configFile: resolve('electron.vite.config.ts'), logLevel: 'silent'}, 'build', 'production')).config!.preload!
   const probe: Plugin = {
     name: 'notes-production-runtime-fixture',
     resolveId(id) { if (id === entry) return entry },
-    load(id) { if (id === entry) return source + `\nimport peerReact, {Y as peerY} from ${JSON.stringify(peer)}; window.notesPeerReact=peerReact; window.notesPeerY=peerY;` },
+    load(id) { if (id === entry) return source + `\nimport peerReact, {Y as peerY,CellSelection as peerCellSelection} from ${JSON.stringify(peer)}; window.notesPeerReact=peerReact; window.notesPeerY=peerY; window.notesPeerCellSelection=peerCellSelection;` },
     generateBundle(_options, bundle) {
       owners = [...new Set(Object.values(bundle).flatMap(chunk => chunk.type === 'chunk'
         ? Object.keys(chunk.modules).filter(id => /\/react\/cjs\/react\.production\.min\.js$/u.test(id)) : []))]
       yjsOwners = [...new Set(Object.values(bundle).flatMap(chunk => chunk.type === 'chunk'
         ? Object.keys(chunk.modules).filter(id => /\/yjs\/dist\/yjs\.(?:mjs|cjs)$/u.test(id)) : []))]
+      tableOwners = [...new Set(Object.values(bundle).flatMap(chunk => chunk.type === 'chunk'
+        ? Object.keys(chunk.modules).filter(id => /\/prosemirror-tables\/dist\/index\.(?:js|cjs)$/u.test(id)) : []))]
     }
   }
   const output = await build({...config, root, configFile: false,
@@ -91,9 +97,10 @@ it.each(cases)('mounts, edits, saves and reopens $name notes through the product
     await page.addScriptTag({content: `var exports={};\n${script}`})
     await expect.poll(async () => errors.length || await page.locator('.en-title').count()).toBeGreaterThan(0)
     if (evidence) writeFileSync(resolve(evidence, `${initial.name}-errors.json`), JSON.stringify({owners, errors}, null, 2))
-    expect(errors, JSON.stringify({owners, errors})).toEqual([])
+    expect(errors, JSON.stringify({owners, tableOwners, errors})).toEqual([])
     expect(owners, 'one React dispatcher must own every bundled hook').toHaveLength(1)
     expect(yjsOwners, 'one Yjs constructor family must own editor transactions and saved snapshots').toHaveLength(1)
+    expect(tableOwners, 'one table-selection registry must own native table commands').toHaveLength(1)
     await page.locator('.bn-editor').waitFor()
     expect(await page.locator('.en-title').inputValue()).toBe(initial.title)
     // Existing collaborative notes carry a saved Yjs document. Create that

@@ -9,7 +9,8 @@ export default defineConfig({
   preload: {
     // Hooks, the renderer, collaborative constructors and sync plugin keys
     // must stay shared when reused dependencies resolve through another physical checkout.
-    resolve: { dedupe: ['react', 'react-dom', 'yjs', 'y-prosemirror', '@blocknote/core', '@blocknote/react', '@blocknote/mantine'] },
+    // CellSelection registers globally in Selection; two table modules crash at load.
+    resolve: { dedupe: ['react', 'react-dom', 'yjs', 'y-prosemirror', 'prosemirror-tables', '@blocknote/core', '@blocknote/react', '@blocknote/mantine'] },
     plugins: [preloadCustomElementsPlugin(),
       { name: 'sandbox-dom-ready', renderChunk: code => ({ code: wrapSandboxPreload(code), map: null }) }],
     ssr: { noExternal: true, resolve: { conditions: ['browser'] } },
