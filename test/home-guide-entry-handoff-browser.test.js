@@ -14,7 +14,7 @@ beforeAll(async()=>{
  runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  conversation=patchHomeGuideNative(stripWorkbenchReplay(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;exports.__createChatStore=createChatStore;')
  theme=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
- const result=await build({entryPoints:['test/fixtures/home-guide-entry-handoff-browser.tsx'],bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.svg':'dataurl','.woff':'dataurl','.woff2':'dataurl'},plugins:[homeGuidePlaybackFixture(),{name:'inline-css',setup(b){b.onResolve({filter:/\.css\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/, ''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>{const source=await readFile(args.path,'utf8');if(!source.includes('@import'))return{contents:source,loader:'text'};const bundled=await build({entryPoints:[args.path],bundle:true,conditions:['browser','import','style'],write:false,outfile:'note.css',logLevel:'silent',loader:{'.svg':'dataurl','.woff':'dataurl','.woff2':'dataurl'}});return{contents:bundled.outputFiles.find(file=>file.path.endsWith('.css')).text,loader:'text'}})}}]})
+ const result=await build({entryPoints:['test/fixtures/home-guide-entry-handoff-browser.tsx'],bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.svg':'dataurl','.woff':'dataurl','.woff2':'dataurl'},plugins:[homeGuidePlaybackFixture(),{name:'inline-js-source',setup(b){b.onResolve({filter:/\.js\?raw$/},args=>({path:join(args.resolveDir,args.path.slice(0,-4)),namespace:'inline-js-source'}));b.onLoad({filter:/.*/,namespace:'inline-js-source'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'inline-css',setup(b){b.onResolve({filter:/\.css\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/, ''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>{const source=await readFile(args.path,'utf8');if(!source.includes('@import'))return{contents:source,loader:'text'};const bundled=await build({entryPoints:[args.path],bundle:true,conditions:['browser','import','style'],write:false,outfile:'note.css',logLevel:'silent',loader:{'.svg':'dataurl','.woff':'dataurl','.woff2':'dataurl'}});return{contents:bundled.outputFiles.find(file=>file.path.endsWith('.css')).text,loader:'text'}})}}]})
  script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css=result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||''
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'});await mkdir(output,{recursive:true})
 },60000)
@@ -59,5 +59,30 @@ it('waits for a slow preparation before visibly pressing the real Notes tab, usi
   const result=await page.evaluate(()=>({prepared:window.entryProbe.prepared,actions:window.entryProbe.actions,frames:window.entryProbe.frames})),click=result.actions.find(action=>action.type==='tab-click')
   expect(result.frames.filter(frame=>frame.time>=result.prepared&&frame.time<=click.time&&frame.phase==='pressed').length).toBeGreaterThan(0)
   expect(new Set(result.frames.map(frame=>frame.pointer).filter(Boolean)).size).toBe(1);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+async function beginExplore(page,index){await page.getByRole('button',{name:'探索',exact:true}).click();await page.locator('.odyssey-explore-pages button').nth(index).click();await page.locator('.odyssey-explore-example').click()}
+for(const[kind,index,mode]of [['board',0,'research'],['note',1,'notes']])it('hands the global Explore '+kind+' entry to a retained native session without editing the source draft',async()=>{
+ const f=await fixture({explore:true}),{page}=f;try{
+  await beginExplore(page,index);await page.locator('[data-home-guide-kind="'+kind+'"]').waitFor({timeout:7000});if(kind==='note')await page.locator('[data-home-guide] .bn-editor').waitFor()
+  const value=await page.evaluate(()=>({frames:window.entryProbe.frames,source:window.entryProbe.shellFor('source').snapshot,selected:window.entryProbe.sessions.list.getSnapshot().current,commands:window.entryProbe.requests.map(row=>row.command)}))
+  expect(value.selected).toBe('example-'+kind);expect(value.commands).toEqual(['prepare','open']);expect(value.frames.filter(frame=>frame.id==='source'&&frame.mode===mode)).toEqual([]);expect(value.source.draft).toBe('原会话草稿和技能不得改变😀');expect(await page.locator('dialog.odyssey-explore[open]').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('stops an in-flight native guide preparation when the user opens Explore again',async()=>{
+ const f=await fixture({explore:true,holdPrepare:true}),{page}=f;try{
+  await beginExplore(page,1);await page.waitForFunction(()=>typeof window.entryProbe.releasePrepare==='function')
+  await page.getByRole('button',{name:'探索',exact:true}).click();await page.evaluate(()=>window.entryProbe.releasePrepare());await page.waitForTimeout(180)
+  expect(await page.evaluate(()=>window.entryProbe.sessions.list.getSnapshot().current)).toBe('source');expect(await page.evaluate(()=>window.entryProbe.requests.map(row=>row.command))).toEqual(['prepare']);expect(await page.locator('[data-home-guide-pointer]').count()).toBe(0);expect(await page.locator('dialog.odyssey-explore[open]').count()).toBe(1);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},18000)
+
+it('saves the real note and keeps its session when Explore takes over an active guide',async()=>{
+ const f=await fixture({explore:true}),{page}=f;try{
+  await beginExplore(page,1);const editor=page.locator('[data-home-guide] .bn-editor');await editor.waitFor();await editor.click();await page.keyboard.type('探索打开后必须保留这条研究笔记。')
+  await page.getByRole('button',{name:'探索',exact:true}).click();await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0)
+  expect(await page.locator('[data-home-guide-pointer]').count()).toBe(0);expect(await page.locator('dialog.odyssey-explore[open]').count()).toBe(1);expect(await page.evaluate(()=>window.entryProbe.sessions.list.getSnapshot().current)).toBe('example-note');expect(JSON.stringify(f.store.load('owner','example-note'))).toContain('探索打开后必须保留这条研究笔记。');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)

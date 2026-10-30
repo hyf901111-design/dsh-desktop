@@ -11,6 +11,7 @@ import { admitSharedDraft } from './shared-send-draft'
 import { promoteSidebarOrder } from './sidebar-manual-order'
 import {sidebarUsageSnapshot,sidebarUsageTimes,subscribeSidebarUsage} from '../../scripts/lib/sidebar-session-recency.mjs'
 import { sidebarSearchResults, showSidebarSessionSearch } from './sidebar-session-search'
+import { installExploreSearch } from './explore-search'
 import type {
   BoardView,
   Canvas,
@@ -1779,6 +1780,20 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
   }
   win.addEventListener('sherlock:home-guide-session-request', receiveHomeGuideSession)
+  cleanups.push(installExploreSearch(doc,{
+    results:query=>api.searchSessions(query).map(result=>{
+      let savedView:string|null=null
+      if(result.sessionId){
+        const key='ework.session.view.v1:'+result.sessionId
+        try{savedView=(win as any).dshDesktop?.researchCanvasStorage?.getItem(key)??win.localStorage.getItem(key)}catch{}
+      }
+      return{...result,kind:result.area==='boards'?'board' as const:savedView==='notes'?'note' as const:'session' as const,location:result.area==='boards'?'看板区':'工作区'}
+    }),
+    subscribe:api.subscribeSearch,
+    open:async result=>{if(result.boardId)await api.openBoard(result.boardId);else if(result.area==='boards')await api.openPersonal(result.sessionId!);else api.openSearchSession(result.sessionId!)},
+    cancelOpen:()=>{navigation++},
+    generation:()=>state.account.generation
+  }))
   cleanups.push(() => { win.removeEventListener('sherlock:home-guide-session-request', receiveHomeGuideSession); for (const waiter of guideReadyWaiters) waiter.reject(Error('示例页面已关闭。')); guideReadyWaiters.clear() })
   installBoardUiStyles(doc)
   if (deps.slots) mountBoardSlots(api, deps.slots, doc)

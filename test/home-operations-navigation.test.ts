@@ -211,7 +211,7 @@ it('cancels a native-tab wait on user navigation and never clicks another sessio
 it('adds an independently owned, idempotent top-frame navigation effect while preserving the skill installer', () => {
   const source = patchIntegrationSkillComposer('const composerBlocks = new ComposerBlockRegistry();')
   expect(source).toContain('/* sherlock:home-operations-navigation:v1 */')
-  expect(source).toContain('/* sherlock:integration-skill-composer:v1 */')
+  expect(source).toContain('/* sherlock:integration-skill-composer:v2 */')
   expect(patchIntegrationSkillComposer(source)).toBe(source)
   const homeDispose = vi.fn(), skillDispose = vi.fn(), effects: Array<undefined | (() => void)> = []
   const win: any = {}; win.top = win

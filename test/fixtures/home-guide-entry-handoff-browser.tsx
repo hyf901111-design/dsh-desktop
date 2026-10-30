@@ -6,6 +6,8 @@ import {createRoot} from 'react-dom/client'
 import * as cordis from '@deepseek-ai/cordis'
 import {mountHomeGuides,playHomeGuideFromOperations} from '../../src/preload/home-guides'
 import {mountHomeOperations} from '../../src/preload/home-operations'
+import {mountExploreMenu} from '../../src/preload/explore-menu'
+import {playHomeGuideFromExplore} from '../../src/preload/explore-menu-actions'
 import {mountNotes} from '../../src/preload/notes/mount'
 import {NotesApp} from '../../src/preload/notes/editor'
 import {WorkspaceSurfaceHost} from '../../src/preload/workspace-surface-host'
@@ -44,7 +46,11 @@ const guide=mountHomeGuides(document,{
  async mountNotes(_document,host,options){const root=createRoot(host);let api;root.render(<NotesApp sessionId={options.sessionId} bridge={bridge} dark={false} navigate={()=>{}} guide={{ready:value=>api=value}}/>);const deadline=performance.now()+5000;while(!api||!host.querySelector('.bn-editor')){if(performance.now()>deadline)throw Error('真实NotesApp尚未加载');await new Promise(resolve=>setTimeout(resolve,16))}probe.noteReady=performance.now();return{runStep:async()=>{await new Promise(resolve=>options.signal.addEventListener('abort',resolve,{once:true}))},flush:()=>api.flush(),dispose:()=>root.unmount()}},
  mountPresentation:async()=>({runStep:async()=>{},dispose(){}})
 })
-const operations=mountHomeOperations(document,{onExample:(kind,context)=>playHomeGuideFromOperations(guide,kind,context)})
+let operations:()=>void
+if(input.explore){
+ const trigger=document.createElement('button');trigger.textContent='探索';trigger.dataset.exploreTrigger='';trigger.style.cssText='position:fixed;left:8px;bottom:20px;z-index:1000';trigger.onclick=()=>window.dispatchEvent(new CustomEvent('sherlock:explore-open'));document.body.append(trigger)
+ operations=mountExploreMenu(document,{themeController:{getSelected:()=> 'default',select(){},getThumbnail:()=>null,subscribe:()=>()=>{}},onBeforeOpen:()=>{void guide.reset(false)},onToggleAppearance:async()=>{},onAction:async()=>{},onExample:(kind,context)=>playHomeGuideFromExplore(guide,kind,context)})
+}else operations=mountHomeOperations(document,{onExample:(kind,context)=>playHomeGuideFromOperations(guide,kind,context)})
 const receive=async event=>{const d=event.detail;probe.requests.push({command:d.command,kind:d.kind,time:performance.now(),sourceMode:storeFor('source').getSnapshot().view});let sessionId='example-'+d.kind
  if(d.command==='prepare'){probe.preparing=true;if(input.holdPrepare)await new Promise(resolve=>probe.releasePrepare=resolve);else await new Promise(resolve=>setTimeout(resolve,input.prepareDelay??650));if(input.failPrepare){window.dispatchEvent(new CustomEvent('sherlock:home-guide-session-reply',{detail:{requestId:d.requestId,ok:false,message:'真实准备失败'}}));return}await install(sessionId);probe.prepared=performance.now()}
  else{sessions.open(d.sessionId);probe.opened=performance.now()}
@@ -54,6 +60,6 @@ window.addEventListener('sherlock:home-guide-session-request',receive)
 // checks the real source→target session/mode handoff, not generated cards.
 let frame=0,disposed=false
 const sample=()=>{if(probe.started){const header=document.querySelector('[data-srb-session-header][data-ework-notes-session]'),root=document.querySelector('[data-home-guide]'),pointer=document.querySelector('[data-home-guide-pointer]');probe.frames.push({time:performance.now(),id:header?.dataset.eworkNotesSession,mode:header?.querySelector('[aria-selected=true]')?.dataset.conversationViewId,guide:!!root,guideKind:root?.dataset.kind,guideEditor:!!root?.querySelector('.bn-editor'),ordinaryEditor:!!document.querySelector('[data-workspace-surface=notes]:not([hidden]) .bn-editor'),pointer:pointer?.dataset.homeGuidePointer,phase:pointer?.dataset.state,transition:document.documentElement.dataset.homeGuideTransitionSession})}if(!disposed)frame=requestAnimationFrame(sample)};frame=requestAnimationFrame(sample)
-document.addEventListener('click',event=>{const target=event.target.closest('button');if(target?.matches('[data-odyssey-operations-open-example]')){probe.started=true;probe.startedAt=performance.now()}if(probe.started&&target?.matches('[data-srb-tabs] button'))probe.actions.push({type:'tab-click',view:target.dataset.conversationViewId,time:performance.now()})},true)
+document.addEventListener('click',event=>{const target=event.target.closest('button');if(target?.matches('[data-odyssey-operations-open-example],.odyssey-explore-example')){probe.started=true;probe.startedAt=performance.now()}if(probe.started&&target?.matches('[data-srb-tabs] button'))probe.actions.push({type:'tab-click',view:target.dataset.conversationViewId,time:performance.now()})},true)
 Object.assign(probe,{sessions,storeFor,shellFor,guide,async dispose(){disposed=true;cancelAnimationFrame(frame);operations();await guide.dispose();notes.dispose();workspace.dispose();root.unmount();for(const shell of shells.values())shell.dispose();cleanups.reverse().forEach(fn=>fn())}})
 const root=createRoot(document.querySelector('#native-root'));void(async()=>{await install('source');sessions.open('source');root.render(<App/>);document.documentElement.dataset.fixtureReady='true'})()

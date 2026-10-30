@@ -1,0 +1,37 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="R6 / Flow circle / Loop">
+<g clip-path="url(#clip0_0_8)">
+<rect width="40" height="40" rx="20" fill="#2A2A2A"/>
+<g id="Flow silver" filter="url(#filter0_f_0_8)">
+<circle cx="35.6" cy="13.6" r="19.6" fill="#BEBEBE"/>
+</g>
+<g id="Flow graphite" filter="url(#filter1_f_0_8)">
+<circle cx="39.2" cy="41.2" r="19.6" fill="#646464"/>
+</g>
+<g id="Flow black" filter="url(#filter2_f_0_8)">
+<circle cx="9.6" cy="25.2" r="19.6" fill="#181818"/>
+</g>
+</g>
+<rect x="0.25" y="0.25" width="39.5" height="39.5" rx="19.75" stroke="#D7D7D7" stroke-opacity="0.12" stroke-width="0.5"/>
+</g>
+<defs>
+<filter id="filter0_f_0_8" x="6.4" y="-15.6" width="58.4" height="58.4" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="4.8" result="effect1_foregroundBlur_0_8"/>
+</filter>
+<filter id="filter1_f_0_8" x="10" y="12" width="58.4" height="58.4" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="4.8" result="effect1_foregroundBlur_0_8"/>
+</filter>
+<filter id="filter2_f_0_8" x="-19.6" y="-4" width="58.4" height="58.4" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="4.8" result="effect1_foregroundBlur_0_8"/>
+</filter>
+<clipPath id="clip0_0_8">
+<rect width="40" height="40" rx="20" fill="white"/>
+</clipPath>
+</defs>
+</svg>

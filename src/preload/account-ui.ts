@@ -1,3 +1,4 @@
+import {createExploreOrb} from './explore-orb'
 import backArrow from './figma-settings-assets/back-arrow.svg?raw'
 import { publicIdLabel, installBoardUiStyles } from './research-board-dialogs'
 import type { ResearchBoardsBridge } from '../shared/research-boards'
@@ -23,7 +24,8 @@ type Reply = {
 export function mountAccountUi(
   document: Document,
   invoke: (action: string, input?: unknown) => Promise<Reply>,
-  boards?: ResearchBoardsBridge
+  boards?: ResearchBoardsBridge,
+  options: {explore?:boolean} = {}
 ) {
   const settingsBackground = createSettingsBackgroundController(document)
   installBoardUiStyles(document)
@@ -76,7 +78,8 @@ export function mountAccountUi(
   let user: Account | null = null,
     pendingAccount = false,
     menu: HTMLElement | undefined,
-    trigger: HTMLButtonElement | undefined
+    trigger: HTMLButtonElement | undefined,
+    menuAnchor: HTMLElement | undefined
   const errors: Record<string, string> = {
     LOGIN_REQUIRED: '登录已过期，请重新登录。',
     INVALID_CREDENTIALS: '用户名或密码不正确。',
@@ -101,9 +104,11 @@ export function mountAccountUi(
     return b
   }
   const closeMenu = () => {
+    if(menu?.matches(':popover-open'))menu.hidePopover()
     menu?.remove()
     menu = undefined
-    trigger?.setAttribute('aria-expanded', 'false')
+    menuAnchor?.setAttribute('aria-expanded','false');menuAnchor=undefined
+    if(!options.explore)trigger?.setAttribute('aria-expanded', 'false')
   }
   const menuButton = (
     label: string,
@@ -126,9 +131,7 @@ export function mountAccountUi(
     b.prepend(document.importNode(svg, true))
     return b
   }
-  function updateTrigger() {
-    if (!trigger) return
-    trigger.replaceChildren()
+  function createAvatar() {
     const avatar = document.createElement('i')
     avatar.className = 'sherlock-account-avatar'
     avatar.setAttribute('aria-hidden', 'true')
@@ -144,11 +147,19 @@ export function mountAccountUi(
       ).documentElement
       avatar.append(document.importNode(avatarSvg, true))
     }
-    const label = document.createElement('span')
-    if (user) label.dataset.uiPreserve = ''
-    label.textContent = user?.username ?? '登录'
-    trigger.append(avatar, label)
-    trigger.setAttribute('aria-label', `${label.textContent}，打开账户菜单`)
+    return avatar
+  }
+  function publishAccountState(){document.defaultView?.dispatchEvent(new CustomEvent('sherlock:account-state',{detail:{accountId:user?.id??null,username:user?.username??'登录',authenticated:!!user,avatar:createAvatar()}}))}
+  function updateTrigger() {
+    if (!trigger) return
+    trigger.replaceChildren()
+    const avatar=createAvatar(),label=document.createElement('span')
+    if(options.explore){
+      label.textContent=document.documentElement.dataset.odysseyLocale==='en'?'Explore':'探索'
+      trigger.dataset.exploreTrigger='';trigger.append(createExploreOrb(document),label);trigger.setAttribute('aria-label',label.textContent);publishAccountState();return
+    }
+    if(user)label.dataset.uiPreserve=''
+    label.textContent=user?.username??'登录';trigger.append(avatar,label);trigger.setAttribute('aria-label',`${label.textContent}，打开账户菜单`)
   }
   async function logout(source: HTMLButtonElement) {
     if (source.disabled) return
@@ -227,6 +238,7 @@ export function mountAccountUi(
   }
   const panel = () => document.querySelector<HTMLElement>('.VOzbGW_panel')
   function open(account: boolean) {
+    document.defaultView?.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}))
     closeMenu()
     if (account)
       void invoke('me')
@@ -614,13 +626,7 @@ export function mountAccountUi(
     target.click()
     target.focus()
   }
-  function reconcile() {
-    const original =
-      document.querySelector<HTMLButtonElement>('.VOzbGW_trigger')
-    if (original && !trigger?.isConnected) {
-      trigger = button(
-        '',
-        () => {
+  function toggleAccountMenu(anchor:HTMLElement){
           if (menu) {
             closeMenu()
             return
@@ -631,7 +637,7 @@ export function mountAccountUi(
           if(user) {
             const profile=button('',()=>open(true),'sherlock-account-menu-profile')
             profile.setAttribute('aria-label',user.username+'，查看账户信息')
-            const avatar=trigger!.querySelector('.sherlock-account-avatar')?.cloneNode(true)
+            const avatar=createAvatar()
             const identity=document.createElement('span'), name=document.createElement('strong'), id=document.createElement('small')
             identity.className='sherlock-account-menu-identity'
             name.textContent=user.username
@@ -652,16 +658,20 @@ export function mountAccountUi(
             menu.append(signOut)
           }
           for (const b of menu.querySelectorAll('button')) b.role = 'menuitem'
-          document.body.append(menu)
-          const rect = trigger!.getBoundingClientRect()
+          ;(anchor.closest('dialog')??document.body).append(menu)
+          const rect = anchor.getBoundingClientRect()
           menu.style.left = `${Math.max(8, Math.min(rect.left, document.documentElement.clientWidth - 260))}px`
-          menu.style.bottom = `${Math.max(8, document.documentElement.clientHeight - rect.top + 8)}px`
-          trigger!.setAttribute('aria-expanded', 'true')
+          if(options.explore&&anchor!==trigger){menu.style.top=`${rect.bottom+8}px`;menu.style.bottom='auto';menu.style.margin='0';menu.setAttribute('popover','manual');menu.showPopover()}
+          else menu.style.bottom = `${Math.max(8, document.documentElement.clientHeight - rect.top + 8)}px`
+          menuAnchor=anchor;anchor.setAttribute('aria-expanded', 'true')
           menu.querySelector('button')?.focus()
-        },
-        'sherlock-account-button'
-      )
-      trigger.setAttribute('aria-haspopup', 'menu')
+  }
+  function reconcile() {
+    const original =
+      document.querySelector<HTMLButtonElement>('.VOzbGW_trigger')
+    if (original && !trigger?.isConnected) {
+      trigger = button('',()=>{if(options.explore)document.defaultView?.dispatchEvent(new CustomEvent('sherlock:explore-open'));else toggleAccountMenu(trigger!)},'sherlock-account-button')
+      trigger.setAttribute('aria-haspopup', options.explore?'dialog':'menu')
       trigger.setAttribute('aria-expanded', 'false')
       const controls = document.createElement('div')
       controls.className = 'srb-account-controls'
@@ -739,7 +749,8 @@ export function mountAccountUi(
     if (
       menu &&
       !menu.contains(event.target as Node) &&
-      !trigger?.contains(event.target as Node)
+      !trigger?.contains(event.target as Node) &&
+      !menuAnchor?.contains(event.target as Node)
     )
       closeMenu()
   })
@@ -748,9 +759,11 @@ export function mountAccountUi(
     (event) => {
       if (!menu) return
       if (event.key === 'Escape') {
+        event.preventDefault()
         event.stopImmediatePropagation()
+        const anchor=menuAnchor??trigger
         closeMenu()
-        trigger?.focus()
+        anchor?.focus()
       } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
         event.preventDefault()
         const items = [...menu.querySelectorAll('button')]
@@ -767,6 +780,12 @@ export function mountAccountUi(
     },
     true
   )
+  const exploreAccount=(event:Event)=>{const anchor=(event as CustomEvent).detail?.anchor;if(options.explore&&anchor instanceof HTMLElement&&anchor.ownerDocument===document&&anchor.isConnected)toggleAccountMenu(anchor)}
+  const exploreSettings=()=>open(false),exploreClose=()=>closeMenu()
+  document.defaultView?.addEventListener('sherlock:account-menu-request',exploreAccount)
+  document.defaultView?.addEventListener('sherlock:account-state-request',publishAccountState)
+  document.defaultView?.addEventListener('sherlock:account-menu-close',exploreClose)
+  document.defaultView?.addEventListener('sherlock:settings-open',exploreSettings)
   const openFromBoards = () => open(true)
   document.defaultView?.addEventListener('sherlock:account-open', openFromBoards)
   const openModelSettings = () => {
@@ -777,6 +796,8 @@ export function mountAccountUi(
   document.defaultView?.addEventListener('sherlock:model-settings-open', openModelSettings)
   const observer = new MutationObserver(() => { settingsBackground.reconcile(); reconcile(); reconcileModelSettings() })
   observer.observe(document.documentElement, { childList: true, subtree: true })
+  const localeObserver = new MutationObserver(() => { if(options.explore) updateTrigger() })
+  localeObserver.observe(document.documentElement, {attributes:true,attributeFilter:['data-odyssey-locale']})
   settingsBackground.reconcile()
   reconcile()
   void invoke('me')
@@ -788,9 +809,14 @@ export function mountAccountUi(
   return () => {
     authDialog?.close()
     observer.disconnect()
+    localeObserver.disconnect()
     settingsBackground.dispose()
     closeMenu()
     style.remove()
+    document.defaultView?.removeEventListener('sherlock:account-menu-request',exploreAccount)
+    document.defaultView?.removeEventListener('sherlock:account-state-request',publishAccountState)
+    document.defaultView?.removeEventListener('sherlock:account-menu-close',exploreClose)
+    document.defaultView?.removeEventListener('sherlock:settings-open',exploreSettings)
     document.defaultView?.removeEventListener('sherlock:account-open', openFromBoards)
     document.defaultView?.removeEventListener('sherlock:model-settings-open', openModelSettings)
     trigger?.closest('.srb-account-controls')?.remove()
