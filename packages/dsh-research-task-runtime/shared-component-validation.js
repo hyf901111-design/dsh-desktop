@@ -1,5 +1,6 @@
 import { parse as parseHtml } from 'parse5'
 import { parse as parseScript } from '@babel/parser'
+import {trustedTypesScriptIssue} from './html-trusted-types-validation.js'
 
 export const SHARED_STATE_REPAIR = '共享状态验收未通过。若具体问题是脚本语法，先按行列修复语法，再检查共享接入；单/双引号字符串不得直接跨行。长来源正文保留在初始 HTML 文本节点，以 textContent 读取，脚本只保存筛选与展开状态，不重复内嵌长正文字符串。保留用户要求的交互和界面，把业务状态集中到 window.sherlockShared.register 的 initialState 中，提供 reduce 和 render；事件通过返回句柄 dispatch 提交操作，持续推进使用 tick/tickMs（至少100ms）。不能只加入接口名称或空注册，不得用各端独立 setInterval 推进，不得降级成静态说明、同屏双人或声称平台没有同步通道。'
 
@@ -95,6 +96,8 @@ export function sharedComponentIssue(html, { required = false } = {}) {
     if (key(node.callee.property) === 'createElement' && interactiveTags.has(node.arguments[0]?.value)) hasBusinessInteraction = true
     if (['window.sherlockShared.register','globalThis.sherlockShared.register','sherlockShared.register'].includes(path(node.callee))) registrations.push(node)
   })
+  const resolve = bindingResolver(nodes, parents), trustedTypes = trustedTypesScriptIssue(nodes, resolve)
+  if (trustedTypes) return trustedTypes
   // Hover, resize, and one-time rendering have no shared business state.
   if (!required && !hasBusinessInteraction) return undefined
   if (registrations.length !== 1) return '有脚本交互的组件必须实际注册一个共享状态容器；注释和文字中的接口名称不算接入。'
@@ -104,7 +107,7 @@ export function sharedComponentIssue(html, { required = false } = {}) {
   const props = new Map(config.properties.map(p => [key(p.key), p]))
   const fn = p => p?.type === 'ObjectMethod' || ['FunctionExpression','ArrowFunctionExpression','FunctionDeclaration'].includes(p?.value?.type) || (p?.value?.type === 'Identifier' && ['FunctionExpression','ArrowFunctionExpression','FunctionDeclaration'].includes(bindings.get(p.value.name)?.type))
   if (!props.has('initialState') || !fn(props.get('reduce')) || !fn(props.get('render'))) return '共享状态配置缺少可验证的 initialState、reduce 或 render。'
-  const resolve = bindingResolver(nodes, parents), registration = registrations[0]
+  const registration = registrations[0]
   const namespace = literalPath(registration.callee.object)
   if (!namespace || literalPath(registration.callee) !== namespace + '.register') return '共享状态注册必须使用可验证的真实宿主接口。'
   if (resolve(namespace.split('.')[0], registration)) return '共享状态注册必须使用真实宿主接口，不能由局部同名对象替代。'
