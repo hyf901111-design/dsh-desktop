@@ -7088,7 +7088,7 @@
         "featureName": "笔记任务简洁进度与历史内部过程隐藏",
         "branch": "codex/feat/notes-concise-progress-20261030",
         "baseCommit": "0589bc5d724d2900764c9c15ec6e689419371500",
-        "tipCommit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
+        "tipCommit": "c2d9169e55c1ad140b565d02fef63258a8c189fe",
         "commits": [
           {
             "commit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
@@ -7096,12 +7096,23 @@
               "0589bc5d724d2900764c9c15ec6e689419371500"
             ],
             "subject": "优化：笔记任务仅展示简洁阶段和结果并隐藏内部执行过程"
+          },
+          {
+            "commit": "c2d9169e55c1ad140b565d02fef63258a8c189fe",
+            "parents": [
+              "b8e2790abc61aed06801ecf87fec80ed03d12515"
+            ],
+            "subject": "测试：统一笔记进度夹具的生产补丁顺序与简洁展示契约"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-response-progress-browser.test.js"
           },
           {
             "status": "A",
@@ -7134,9 +7145,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "Notes store/SSR及真实原生进度组件，兼容普通对话和画布，直接相关24项。",
-            "verifiedCommit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
-            "completedAt": "2026-10-30T09:33:54.114059+00:00",
+            "summary": "冻结同tip24/24；显式当前Notes→response生产顺序，兼容旧/新SDK输入，Notes简洁展示和Chat/Canvas计时详情。",
+            "verifiedCommit": "c2d9169e55c1ad140b565d02fef63258a8c189fe",
+            "completedAt": "2026-10-30T11:20:16.773233+00:00",
             "timeoutMs": 120000
           },
           {
@@ -7148,9 +7159,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "TypeScript检查通过。",
-            "verifiedCommit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
-            "completedAt": "2026-10-30T09:34:03.230320+00:00",
+            "summary": "冻结同tip TypeScript通过。",
+            "verifiedCommit": "c2d9169e55c1ad140b565d02fef63258a8c189fe",
+            "completedAt": "2026-10-30T11:20:16.773420+00:00",
             "timeoutMs": 120000
           },
           {
@@ -7159,32 +7170,32 @@
               "diff",
               "--check",
               "0589bc5d724d2900764c9c15ec6e689419371500",
-              "b8e2790abc61aed06801ecf87fec80ed03d12515"
+              "c2d9169e55c1ad140b565d02fef63258a8c189fe"
             ],
             "outcome": "passed",
-            "summary": "精确base0589至冻结tip差异检查通过。",
-            "verifiedCommit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
-            "completedAt": "2026-10-30T09:34:03.251391+00:00",
+            "summary": "完整功能范围差异检查通过。",
+            "verifiedCommit": "c2d9169e55c1ad140b565d02fef63258a8c189fe",
+            "completedAt": "2026-10-30T11:20:16.773423+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "同冻结tip聚焦24/24：Notes store/SSR/旧注入迁移幂等、新任务与历史回放的真实原生进度Browser、普通对话与Canvas详情回归。未执行Native客户端。证据 /tmp/sherlock-notes-concise-progress-20261030/evidence-index.json SHA256 e61bcd5c013afccf73ba9a81d347ebaccb8ee5be35d3715f7bdfa4700b142d54"
+          "summary": "冻结同tip标准24/24，另用已经应用concise的集成SDK只读快照重复全部10个response Browser用例通过；旧契约production-patched RED→GREEN。Notes/Canvas独立计时20→22→24；Notes无详情入口或raw reasoning，Canvas原详情仍可展开。证据 /tmp/sherlock-notes-concise-progress-20261030/fix-native-response-contract/evidence-index.json SHA256 caae162748d66740e805f0538a0451e17d45757a0f6841f70225855c261595c2"
         },
         "acceptanceCriteria": [
-          "新生成和历史回放的 Notes 仅显示短阶段，不保留或展开内部模型reasoning。",
-          "Notes 原始请求、真实错误、停止状态、已完成操作回执和正式生成内容仍显示；不伪造成功。",
-          "移除旧安装的 Notes reasoning Markdown 注入，新的Notes过程不可展开；正常Chat工具/Canvas原详情保持。",
-          "Notes滚动跟随不再依赖内部reasoning长度；完整补丁二次安装幂等。"
+          "新生成和历史回放 Notes 仅显示短阶段，不展示内部 reasoning；请求、真实错误、停止与已完成操作回执保持。",
+          "Notes补丁迁移旧reasoning注入且幂等；Chat/Canvas原详情保留。",
+          "Response Browser夹具无论旧SDK或当前production-patched SDK，显式执行当前Notes→response生产顺序，不能再要求Notes展示原始reasoning。",
+          "Notes与Canvas独立计时保留，其他对话、共享请求、阶段箭头和计时租约断言不弱化。"
         ],
         "risks": [
-          "仅展示层删除reasoning，持久化日志与生成链保持原状；生成成功率和3×3/8×8原生快路径由Core feature负责。",
-          "Chromium fixture mounts actual Notes store, Notes row and native ExecutionStatusGroup but omits unrelated outer shell exports; Root integration installer and packaged Native acceptance remain required.",
-          "旧install-order2项缺HTML renderer与preview30项缺?raw loader，已在base0589归档及私有COW依赖复现；未执行的case不计入24项GREEN。",
-          "功能树未运行完整installer、未操作共享客户端；node_modules为私有COW副本且SDK文件inode不共享。"
+          "没有修改产品逻辑或SDK；本次后继只改test/conversation-response-progress-browser.test.js。",
+          "Browser fixture只暴露其挂载的真实原生函数，完整installer/打包Native验收仍由Root负责。",
+          "第一次handoff的旧24项在旧SDK上遗漏了相反的Notes断言；本轮已用真实production concise SDK快照复现RED并修正，不通过延长timeout或skip解决。",
+          "旧install-order2项缺HTML renderer、preview30项缺?raw loader仍按先前base0589复现记录，未计入GREEN。"
         ],
-        "generatedAt": "2026-10-30T09:37:06.145895+00:00"
+        "generatedAt": "2026-10-30T11:20:16.773476+00:00"
       }
     }
   ],
