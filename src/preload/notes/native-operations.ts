@@ -59,9 +59,10 @@ export function createNativeNoteOperations(options:Options){
   for(const[id,identity]of value.identities)if(actualIdentities.get(id)!==identity)throw Error('笔记块身份已变化。')
   return value
  }
- const normalize=(input:any,occupied:Set<string>,depth=0):any=>{
+ const normalize=(input:any,occupied:Set<string>,depth=0,existing?:any):any=>{
   const editor=options.editor
   if(depth>32||!only(input,['id','type','props','content','children'])||!nativeTypes.has(input.type??'paragraph')||!editor.schema.blockSchema[input.type??'paragraph'])throw Error('不支持的原生笔记块。')
+  if(input.type==='table'&&Array.isArray(input.content?.columnWidths)&&input.content.columnWidths.some((width:any)=>width!==null&&width!==undefined&&(typeof width!=='number'||!Number.isFinite(width)||width<=0)))throw Error('表格列宽无效。')
   const block={...copy(input),type:input.type??'paragraph',id:input.id??crypto.randomUUID()}
   if(typeof block.id!=='string'||!block.id||block.id.length>256||/[\u0000-\u001f\u007f]/u.test(block.id)||occupied.has(block.id))throw Error('笔记块标识重复或无效。');occupied.add(block.id)
   const props=block.props??{},schema=editor.schema.blockSchema[block.type].propSchema
@@ -81,10 +82,14 @@ export function createNativeNoteOperations(options:Options){
    if(!only(content,['type','rows','headerRows','headerCols','columnWidths'])||content.type!=='tableContent'||!Array.isArray(content.rows)||!content.rows.length||!content.rows[0]?.cells?.length||content.rows.some((row:any)=>!only(row,['cells'])||!Array.isArray(row.cells)||row.cells.length!==content.rows[0].cells.length))throw Error('表格行列结构无效。')
    for(const row of content.rows)for(const cell of row.cells){if(record(cell)){if(!only(cell,['type','content','props'])||cell.type!=='tableCell')throw Error('表格单元格无效。');inline(cell.content);const p=cell.props??{};if(!only(p,['backgroundColor','textColor','textAlignment','colspan','rowspan'])||Object.entries(p).some(([key,v])=>['colspan','rowspan'].includes(key)?v!==1:typeof v!=='string'))throw Error('不支持的表格单元格属性。')}else inline(cell)}
    for(const key of ['headerRows','headerCols'])if(content[key]!==undefined&&(!Number.isInteger(content[key])||content[key]<0||content[key]>(key==='headerRows'?content.rows.length:content.rows[0].cells.length)))throw Error('表格表头无效。')
-   if(content.columnWidths!==undefined&&(!Array.isArray(content.columnWidths)||content.columnWidths.length!==content.rows[0].cells.length||content.columnWidths.some((v:any)=>typeof v!=='number'||!Number.isFinite(v)||v<=0)))throw Error('表格列宽无效。')
-   content.columnWidths=chooseNativeTableColumnWidths(content.rows[0].cells.length,options.availableWidth(),content.columnWidths)
+   // JSON read receipts represent BlockNote's automatic (undefined) widths as
+   // null. A cell edit must round-trip those widths instead of rejecting the
+   // receipt or silently replacing native/manual sizing with fitted columns.
+   if(content.columnWidths===undefined&&existing?.type==='table'&&existing.content?.columnWidths?.length===content.rows[0].cells.length)content.columnWidths=copy(existing.content.columnWidths)
+   if(content.columnWidths!==undefined&&(!Array.isArray(content.columnWidths)||content.columnWidths.length!==content.rows[0].cells.length||content.columnWidths.some((v:any)=>v!==null&&(typeof v!=='number'||!Number.isFinite(v)||v<=0))))throw Error('表格列宽无效。')
+   content.columnWidths=existing?.type==='table'?content.columnWidths?.map((width:number|null)=>width??undefined):chooseNativeTableColumnWidths(content.rows[0].cells.length,options.availableWidth(),content.columnWidths)
   }else if(block.content!==undefined){inline(block.content)}
-  if(block.children!==undefined){if(!Array.isArray(block.children))throw Error('笔记层级无效。');block.children=block.children.map((child:any)=>normalize(child,occupied,depth+1))}
+  if(block.children!==undefined){if(!Array.isArray(block.children))throw Error('笔记层级无效。');block.children=block.children.map((child:any)=>normalize(child,occupied,depth+1,existing?.children?.find((old:any)=>old.id===child.id)))}
   const pm=blockToNode(block,editor._tiptapEditor.schema);pm.check()
   return nodeToBlock(pm,editor._tiptapEditor.state.doc)
  }
@@ -107,7 +112,7 @@ export function createNativeNoteOperations(options:Options){
     if(!only(operation,['op','blockId','block'])||!only(operation.block,['type','props','content','children'])||!Object.keys(operation.block).length)throw Error('更新参数无效。')
     const location=target(operation.blockId),old=location.block
     if(!nativeTypes.has(old.type))throw Error('研究组件和附件须使用其原有专用能力。')
-    const subtree=new Set(flatten([old]).map(row=>row.block.id)),occupied=new Set<string>(flatten(projected).filter(row=>!subtree.has(row.block.id)).map(row=>row.block.id)),block=normalize({...old,...copy(operation.block),props:{...old.props,...operation.block.props}},occupied)
+    const subtree=new Set(flatten([old]).map(row=>row.block.id)),occupied=new Set<string>(flatten(projected).filter(row=>!subtree.has(row.block.id)).map(row=>row.block.id)),block=normalize({...old,...operation.block,props:{...old.props,...operation.block.props}},occupied,0,old)
     location.siblings[location.index]=copy(block);for(const row of flatten([block])){allowed.add(row.block.id);changedIds.add(row.block.id)}
     plans.push(()=>editor.updateBlock(old.id,{type:block.type,props:block.props,content:block.content,children:block.children}))
    }else if(operation.op==='move'||operation.op==='remove'){
