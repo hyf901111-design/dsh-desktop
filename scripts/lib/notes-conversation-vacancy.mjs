@@ -39,14 +39,22 @@ export function patchNoteConversationVacancy(source){
  const marker='/* ework:notes-conversation-vacancy:v1 */'
  // The native no-session workspace has files/selection but no artifacts.
  const unsafe="researchWorkspaceSnapshot2.artifacts.some(node=>['queued','running'].includes(node.generationStatus))",safe="(researchWorkspaceSnapshot2.artifacts??[]).some(node=>['queued','running'].includes(node.generationStatus))"
- if(source.includes(marker))return source.replace(unsafe,safe)
+ const pending="const noteResearchPending=['planning','stopping'].includes(odysseyCreationIntents.get(sessionId)?.state)||"+safe+';'
+ // A container owns its progress on the canvas, not in an otherwise empty research conversation.
+ const scopedPending="const noteResearchPending=['planning','stopping'].includes(odysseyCreationIntents.get(sessionId)?.state)||(!research&&"+safe+');'
+ if(source.includes(marker)){
+  source=source.replace(unsafe,safe)
+  if(source.includes(pending))return source.replace(pending,scopedPending)
+  if(!source.includes(scopedPending))throw Error('无法刷新研究会话空内容判定。')
+  return source
+ }
  const start=source.indexOf('function ConversationRoot('),end=source.indexOf('//#region lib/types/client/skeleton/ConversationSession.js',start)
  if(start<0||end<0)throw Error('无法定位笔记会话欢迎布局。')
  let root=source.slice(start,end)
  const replace=(before,after)=>{if(root.split(before).length!==2)throw Error('无法定位笔记会话空内容判定：'+before.slice(0,70));root=root.replace(before,after)}
  replace('const settling =',`${marker}
  const notePresentationRows=useNotesConversationRows(sessionId,openState),{tasks:notePresentationTasks}=useCanvasTasks(sessionId);
- const noteResearchPending=['planning','stopping'].includes(odysseyCreationIntents.get(sessionId)?.state)||(researchWorkspaceSnapshot2.artifacts??[]).some(node=>['queued','running'].includes(node.generationStatus));
+ ${scopedPending}
  const conversationVacant=(openState==='open'||summaryBlank===true&&openState!=='error')&&noteConversationVacant(session,notePresentationRows,notePresentationTasks,noteResearchPending)&&!(sherlockShared(sessionId)&&((sherlockBoardsAdapter?.getView(sessionId)?.history?.length??0)+(sherlockBoardsAdapter?.getView(sessionId)?.messages?.length??0))>0);
  const settling =`)
  replace('const hero = (activeView == null || activeView === "chat") && (sessionId === void 0 || composerPhase === "blank" && (openState === "open" || summaryBlank === true));','const hero = (activeView == null || activeView === "chat") && (sessionId === void 0 || conversationVacant && (openState === "open" || summaryBlank === true));')
