@@ -261,3 +261,8 @@ body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu::before{content:
 .en-root .bn-block-outer.en-inline-ai-pending .bn-block-content:has(.en-research){outline:none!important}
 .en-root .bn-block-outer.en-inline-ai-pending .en-research:not([data-selected=true]){outline:1px solid #6ba5d4;outline-offset:0}
 .en-root[data-dark=true] .bn-block-outer.en-inline-ai-pending .en-research:not([data-selected=true]){outline-color:#6cb0d9}
+
+/* The existing task row becomes a preview; its public action keeps the original ACK route. */
+body[data-workspace-surface=notes] .en-note-result-card{min-width:0;padding:14px 16px;border:1px solid var(--odyssey-menu-border,var(--en-border));border-radius:12px;background:var(--odyssey-menu,var(--en-input));color:inherit}
+body[data-workspace-surface=notes] .en-note-result-card>header{font-size:12px;color:var(--odyssey-muted,var(--en-muted));margin-bottom:8px}
+body[data-workspace-surface=notes] .en-note-result-card>footer{display:flex;justify-content:flex-end;padding-top:10px}

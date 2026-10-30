@@ -48,7 +48,7 @@ import {useNoteChallenge,CHALLENGE_USER} from './challenge-controller'
 import {challengeDocumentBlocks} from './challenge-scheduler'
 import {restoreChallengeReviewState} from './challenge-review-state'
 import {noteEditorVisible} from './editor-visibility'
-import {beginNoteGuideSelection,type NoteGuideSelection} from './guide-selection'
+import {beginNoteGuideSelection,noteGuideTextRange,type NoteGuideSelection} from './guide-selection'
 import {ChallengeToolbar,ChallengeComments,ManualNoteThreads} from './challenge-ui'
 import {NoteReplacementPopover,NoteReplacementHighlights} from './replacement-review'
 import {noteInlineAiTrigger,captureNoteInlineAnchor,noteInlineAnchorBlock,noteInlineBlockIdentity,insertNoteInlineBlocks} from './inline-ai'
@@ -65,8 +65,8 @@ export type NotesGuideEditorApi = {
   updateText(blockId:string,text:string):void
   prepareNative():()=>boolean
   typeSlash():void
-  selectParagraph(blockId:string,expectedText:string):void
-  beginParagraphSelection(blockId:string,expectedText:string):NoteGuideSelection
+  selectParagraph(blockId:string,expectedText:string,selectedText?:string):void
+  beginParagraphSelection(blockId:string,expectedText:string,selectedText?:string):NoteGuideSelection
 }
 export type NotesGuideBinding = {native?:{runId:string};ready(api:NotesGuideEditorApi):void;dispose?(api:NotesGuideEditorApi):void}
 export type NotesSaveBinding = {ready(flush:()=>Promise<void>):void;dispose?(flush:()=>Promise<void>):void}
@@ -860,19 +860,19 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         // updates cannot activate the original SuggestionMenu extension.
         if(!view.someProp('handleTextInput',(handler:any)=>handler(view,selection.from,selection.to,'/')))throw Error('斜杠命令未启动，请重新播放。')
       },
-      beginParagraphSelection:(blockId,expectedText)=>{
+      beginParagraphSelection:(blockId,expectedText,selectedText)=>{
         const current=()=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')}
         current();const block=editor.getBlock(blockId),element=scroll.current?.querySelector<HTMLElement>('[data-id="'+CSS.escape(blockId)+'"] .bn-inline-content')
         if(!block||block.type!=='paragraph'||!expectedText.trim()||noteText(block.content)!==expectedText||!element)throw Error('演示段落已变化。')
-        return beginNoteGuideSelection(editor,element,expectedText,current)
+        return beginNoteGuideSelection(editor,element,expectedText,current,selectedText)
       },
-      selectParagraph:(blockId,expectedText)=>{
+      selectParagraph:(blockId,expectedText,selectedText)=>{
         assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')
         const block=editor.getBlock(blockId)
         if(!block||block.type!=='paragraph'||!expectedText.trim()||noteText(block.content)!==expectedText)throw Error('演示段落已变化。')
         editor.focus();editor.setTextCursorPosition(blockId,'start')
-        const from=editor._tiptapEditor.state.selection.from,to=from+expectedText.length
-        if(!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,{from,to})||editor._tiptapEditor.state.doc.textBetween(from,to,'\n')!==expectedText)throw Error('演示段落已变化。')
+        const excerpt=noteGuideTextRange(expectedText,selectedText),from=editor._tiptapEditor.state.selection.from+excerpt.start,to=from+excerpt.text.length
+        if(!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,{from,to})||editor._tiptapEditor.state.doc.textBetween(from,to,'\n')!==excerpt.text)throw Error('演示段落已变化。')
         editor._tiptapEditor.commands.setTextSelection({from,to})
       }
     }

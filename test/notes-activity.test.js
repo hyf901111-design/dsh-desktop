@@ -7,6 +7,23 @@ import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 import {patchFigmaFinalConversation} from '../scripts/lib/patch-figma-final-shell.mjs'
 import {capabilityReceiptText} from '../packages/dsh-research-task-runtime/client-capabilities.js'
 
+it('transitions only the owned summary row into a content preview and reuses its one public add action',async()=>{
+ const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs');globalThis.react=React
+ const doc=new EventTarget();doc.documentElement={dataset:{homeGuidePointerRun:'run'}};const store=createNotesActivityStore(doc)
+ const send=(phase,extra={})=>doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'s',requestId:'r',phase,...extra}}))
+ const mark=(runId,active)=>doc.dispatchEvent(new CustomEvent('sherlock:home-guide-notes-summary-preview',{detail:{sessionId:'s',requestId:'r',runId,active}}))
+ const props={sessionId:'s',t:key=>key,UserBubble:()=>null,Progress:()=>React.createElement('p',null,'真实执行状态'),Markdown:({blocks})=>React.createElement('p',null,blocks.map(b=>b.text).join('')),Actions:({extraActions})=>React.createElement('footer',null,extraActions),renderSlot:()=>React.createElement('button',{'aria-label':'添加到笔记'},'添加')}
+ const render=()=>renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:store.snapshot('s')[0]}))
+ try{
+  send('preparing',{prompt:'简短总结'});mark('foreign',true);expect(render()).not.toContain('data-note-result-preview')
+  mark('run',true);expect(render()).toContain('data-note-summary-pending');expect(render()).not.toContain('添加到笔记')
+  send('replied',{result:{kind:'conversation',markdown:'完整的短总结'}})
+  const html=render();expect(html).toContain('data-note-result-preview');expect(html).toContain('完整的短总结');expect(html.match(/aria-label="添加到笔记"/g)).toHaveLength(1)
+  mark('foreign',false);expect(render()).toContain('data-note-result-preview')
+  mark('run',false);expect(render()).not.toContain('data-note-result-preview');expect(render()).toContain('完整的短总结')
+ }finally{store.dispose();delete globalThis.react}
+})
+
 it('retains note reference chips when the production shell patch runs again during a rebuild',async()=>{
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const installed=patchNotesActivity(patchFigmaFinalConversation(source))
