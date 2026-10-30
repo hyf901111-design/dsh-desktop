@@ -34,7 +34,7 @@ function LabeledTableHandle(props:TableHandleProps){return <TableHandle {...prop
 /** Fit newly inserted tables before the caller captures its document snapshot. */
 export function withNativeTableSizing<T>(editor:any,insert:()=>T):T{
  const ids=new Set<string>(),visit=(blocks:any[],fn:(block:any)=>void)=>{for(const block of blocks){fn(block);if(block.children)visit(block.children,fn)}}
- visit(editor.document,block=>ids.add(block.id))
+ visit(editor.document,block=>{if(block.type==='table')ids.add(block.id)})
  return editor.transact(()=>{
   const result=insert()
   visit(editor.document,(block:any)=>{
@@ -63,6 +63,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
  const owns=(value:Target|undefined)=>!!value&&allowed()&&getNodeById(value.id,editor.prosemirrorState.doc)?.node.firstChild===value.node
  const close=(focus=false)=>{setMenu(undefined);menuLease.current=undefined;if(focus)trigger.current?.focus({preventScroll:true})}
  const restoreEditor=()=>editor.prosemirrorView.focus()
+ const retireNativeDrag=()=>{const extension=editor.getExtension(TableHandlesExtension);if(extension?.store.state?.draggingState)extension.dragEnd()}
  const finishDrag=(commit:boolean)=>{
   const gesture=drag.current;if(!gesture)return;drag.current=undefined;gesture.restore()
   if(gesture.button.hasPointerCapture(gesture.id))gesture.button.releasePointerCapture(gesture.id)
@@ -82,7 +83,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
  }
  useLayoutEffect(()=>{
   live.current=true;document.body.append(layer);editor.registerPortalElement(layer)
-  return()=>{live.current=false;finishDrag(false);editor.unregisterPortalElement(layer);if(layer.matches(':popover-open'))layer.hidePopover();layer.remove()}
+  return()=>{live.current=false;finishDrag(false);retireNativeDrag();editor.unregisterPortalElement(layer);if(layer.matches(':popover-open'))layer.hidePopover();layer.remove()}
  },[editor,layer])
  useLayoutEffect(()=>{
   const root=editor.domElement?.closest('.en-root');if(!root)return
@@ -104,6 +105,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
   let frame=0
   const update=()=>{
    const current=latest.current.target,table=current&&tableElement(editor,current.id),scroll=editor.domElement?.closest('.en-document-scroll') as HTMLElement|null
+   if(!allowed())retireNativeDrag()
    setEnabled(allowed())
    if(!allowed()||!table||!scroll){setPosition(undefined);close();return}
    const rect=table.getBoundingClientRect(),viewport=scroll.getBoundingClientRect()
@@ -114,7 +116,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
   const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(update)}
   update();window.addEventListener('resize',schedule);window.addEventListener('scroll',schedule,true)
   const observer=new ResizeObserver(schedule);if(editor.domElement)observer.observe(editor.domElement)
-  const mutation=new MutationObserver(()=>{finishDrag(false);close();setHandleEpoch(epoch=>epoch+1);setEnabled(allowed());if(!allowed()){setPosition(undefined);if(layer.matches(':popover-open'))layer.hidePopover()}else schedule()});mutation.observe(document.body,{attributes:true,attributeOldValue:true,attributeFilter:['data-workspace-surface']})
+  const mutation=new MutationObserver(()=>{finishDrag(false);retireNativeDrag();close();setHandleEpoch(epoch=>epoch+1);setEnabled(allowed());if(!allowed()){setPosition(undefined);if(layer.matches(':popover-open'))layer.hidePopover()}else schedule()});mutation.observe(document.body,{attributes:true,attributeOldValue:true,attributeFilter:['data-workspace-surface']})
   return()=>{cancelAnimationFrame(frame);window.removeEventListener('resize',schedule);window.removeEventListener('scroll',schedule,true);observer.disconnect();mutation.disconnect()}
  },[editor,layer,target?.id,target?.node,active])
  useLayoutEffect(()=>{
@@ -138,7 +140,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
    table.querySelectorAll<HTMLTableColElement>('colgroup col').forEach((col,i)=>{col.style.width=widths[i]+'px'})
    table.style.setProperty('width',gesture.next+'px','important');table.style.minWidth='';table.style.setProperty('--default-cell-min-width','35px')
   }
-  const up=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(true)},cancel=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(false)},blur=()=>{finishDrag(false);close()}
+  const up=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(true)},cancel=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(false)},blur=()=>{finishDrag(false);retireNativeDrag();close()}
   document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',key,true);window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel);window.addEventListener('blur',blur)
   return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',key,true);window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);window.removeEventListener('blur',blur)}
  },[editor,layer])
