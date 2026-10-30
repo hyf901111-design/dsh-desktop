@@ -9,7 +9,7 @@ function beforeNotes(loop){
 /* ework:note-reference-bubble:v1 */
 const showBubble = (noteReferences?.length ?? 0) > 0 || research.text !== "";
 /* ework:notes-native-progress:v1 */
-/* ework:notes-shared-reasoning:v1 */
+/* ework:notes-concise-progress:v1 */
 /* ework:notes-follow-stream:v1 */
 /* ework:note-reply-actions:v1 */
 /* ework:notes-native-files:v1 */
