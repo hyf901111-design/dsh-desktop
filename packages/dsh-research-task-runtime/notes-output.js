@@ -9,6 +9,25 @@ export function currentNoteTransport(text,wireToken){
  try{const item=JSON.parse(fence?fence[1]:value);return currentTransport(item,wireToken)?item:undefined}catch{}
 }
 
+/** Close only EOF containers after an already complete final container value.
+ * This is syntax recovery, never operation authority: callers still validate
+ * the current nonce, whole envelope, catalog, arguments and source intent. */
+export function completeNoteJsonContainers(text){
+ if(typeof text!=='string'||text.length>100000)return
+ const value=text.trim();if(value[0]!=='{'||!/[}\]]$/u.test(value))return
+ const closers=[];let quoted=false,escaped=false
+ for(let index=0;index<value.length;index++){
+  const char=value[index]
+  if(quoted){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"')quoted=false;continue}
+  if(char==='"')quoted=true
+  else if(char==='{'||char==='['){closers.push(char==='{'?'}':']');if(closers.length>64)return}
+  else if(char==='}'||char===']'){if(closers.pop()!==char||!closers.length&&index!==value.length-1)return}
+ }
+ if(quoted||escaped||!closers.length)return
+ const completed=value+closers.reverse().join('')
+ try{return{text:completed,value:JSON.parse(completed)}}catch{}
+}
+
 /** Check the whole content-only result, never JSON examples embedded in prose. */
 export function noteNonContentEnvelope(text){
  if(typeof text!=='string'||text.length>100000)return false
