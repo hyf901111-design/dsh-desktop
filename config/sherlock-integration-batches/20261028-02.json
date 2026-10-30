@@ -3484,6 +3484,142 @@
         ],
         "recordedAt": "2026-10-29T21:26:22.328Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "拒绝生成组件中确定不兼容Trusted Types的字符串DOM写入",
+        "branch": "codex/feat/component-trusted-types-20261030",
+        "baseCommit": "44bec2f5749442ed29804d3e7e32ce5fb5ffae84",
+        "tipCommit": "db64384d3dd940e968e12b154c6305d2e22b3ed7",
+        "commits": [
+          {
+            "commit": "db64384d3dd940e968e12b154c6305d2e22b3ed7",
+            "parents": [
+              "44bec2f5749442ed29804d3e7e32ce5fb5ffae84"
+            ],
+            "subject": "修复：拒绝组件沙箱不兼容的字符串HTML写入"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/html-trusted-types-validation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/trusted-types-line-chart.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/html-trusted-types-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/html-trusted-types-validation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/html-trusted-types-validation.test.js",
+              "test/shared-component-validation.test.js",
+              "test/conversation-component-html-validation.test.js",
+              "test/conversation-component-contract.test.js",
+              "test/conversation-component-store.test.ts",
+              "test/conversation-component-service.test.ts",
+              "test/conversation-components-policy.test.js",
+              "test/generated-chart-geometry.test.js",
+              "test/research-design-policy.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip的422条直接相关AST、合同、存储、服务、策略与既有设计检查通过。",
+            "verifiedCommit": "db64384d3dd940e968e12b154c6305d2e22b3ed7",
+            "completedAt": "2026-10-30T00:05:10.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/html-trusted-types-browser.test.ts",
+              "test/component-shared-state-browser.test.js",
+              "test/notes-html-shared-runtime.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip的11条真实嵌套Chromium/共享运行检查通过；自制安全DOM折线图可见、鼠标和Arrow看点、完整数据、真实service/store保存及重开恢复，保留CSP。",
+            "verifiedCommit": "db64384d3dd940e968e12b154c6305d2e22b3ed7",
+            "completedAt": "2026-10-30T00:05:09.308Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip tsconfig.node TypeScript检查通过。",
+            "verifiedCommit": "db64384d3dd940e968e12b154c6305d2e22b3ed7",
+            "completedAt": "2026-10-30T00:05:12.094Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "44bec2f5749442ed29804d3e7e32ce5fb5ffae84",
+              "db64384d3dd940e968e12b154c6305d2e22b3ed7"
+            ],
+            "outcome": "passed",
+            "summary": "精确44bec2f..db64384d3范围diff --check通过。",
+            "verifiedCommit": "db64384d3dd940e968e12b154c6305d2e22b3ed7",
+            "completedAt": "2026-10-30T00:05:03.007Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离真实Chromium嵌套生产buildResearchHtmlPreview沙箱验证：C2自有QA原artifact先复现TrustedHTML TypeError（仅/tmp证据，未写入仓库）；仓库自制DOM安全折线图验证可见性、10/20/15点值/几何、鼠标和Arrow/完整数据、真实Conversation service/store持久化与重开。未构建或操作共享客户端，不替代Root合包Native验收。"
+        },
+        "acceptanceCriteria": [
+          "新增raw HTML沿原共享脚本Babel AST验收，仅对可识别真实DOM接收者与确定字符串的innerHTML/outerHTML/insertAdjacentHTML/document.write/writeln拒绝保存，并给textContent/DOM方法的具体修复提示。",
+          "保留普通HTML模板字符串、textContent、普通对象同名属性、词法shadow及无法静态证明的值；不执行生成代码或放宽原沙箱CSP。",
+          "Conversation父生成指导及Research/Notes共享生成指导明确现有Trusted Types要求与安全DOM写法；原mode、权限、推理档、budget、已有图表及共享合同保持。",
+          "直接存储回归证明坏新artifact未保存、不改变已有卡；真实nested安全DOM图验证交互保存重开，无用户QA内容进入仓库。"
+        ],
+        "risks": [
+          "校验是保守的确定性兼容检查，不证明任意JavaScript正确，也不穷尽动态构造或间接调用的所有Trusted Types sink。",
+          "已保存的C2或其他旧卡不做迁移、批量重绘或篡改；坏旧文档仍受现有CSP限制。",
+          "同Conversation色彩指导8305c082存在同文件prefix的预期三方合并：保留TRUSTED_TYPES_COMPONENT_INSTRUCTION与PANEL_COLOR_INSTRUCTION各一次及原长文本。",
+          "共享客户端集成、最终打包与实际Native生成复测由Root执行；本功能树未写共享SDK或构建/替换应用。"
+        ],
+        "generatedAt": "2026-10-30T00:05:36.852Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -3749,6 +3885,49 @@
         "HEAD"
       ],
       "timeoutMs": 20000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/html-trusted-types-validation.test.js",
+        "test/shared-component-validation.test.js",
+        "test/conversation-component-html-validation.test.js",
+        "test/conversation-component-contract.test.js",
+        "test/conversation-component-store.test.ts",
+        "test/conversation-component-service.test.ts",
+        "test/conversation-components-policy.test.js",
+        "test/generated-chart-geometry.test.js",
+        "test/research-design-policy.test.js",
+        "test/bundled-component-skill.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/html-trusted-types-browser.test.ts",
+        "test/component-shared-state-browser.test.js",
+        "test/notes-html-shared-runtime.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 90000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "44bec2f5749442ed29804d3e7e32ce5fb5ffae84",
+        "db64384d3dd940e968e12b154c6305d2e22b3ed7"
+      ],
+      "timeoutMs": 10000
     }
   ],
   "mainSynchronizations": []
