@@ -6295,7 +6295,7 @@
         "featureName": "原生笔记表格合理列宽、整表尺寸与顶层行列菜单",
         "branch": "codex/feat/notes-native-table-ui-20261030",
         "baseCommit": "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
-        "tipCommit": "fc3d628b55870b81a894b2652d9b9ad8e606f1c6",
+        "tipCommit": "704742226f66c827f13d9044dc6ded0b137fccd4",
         "commits": [
           {
             "commit": "2e24a72f919cf28be5862af93f65a3caaaba1247",
@@ -6345,6 +6345,13 @@
               "834b4bcc4a4da5ba2c8fb2df95ef012afd360b25"
             ],
             "subject": "测试：让独立浏览器夹具按生产方式加载表格内联样式"
+          },
+          {
+            "commit": "704742226f66c827f13d9044dc6ded0b137fccd4",
+            "parents": [
+              "fc3d628b55870b81a894b2652d9b9ad8e606f1c6"
+            ],
+            "subject": "测试：在内联样式夹具中编译样式导入和字体资源"
           }
         ],
         "files": [
@@ -6402,8 +6409,8 @@
             ],
             "outcome": "passed",
             "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
-            "verifiedCommit": "fc3d628b55870b81a894b2652d9b9ad8e606f1c6",
-            "completedAt": "2026-10-30T09:49:21.184082+00:00",
+            "verifiedCommit": "704742226f66c827f13d9044dc6ded0b137fccd4",
+            "completedAt": "2026-10-30T10:22:56.289379+00:00",
             "timeoutMs": 180000
           },
           {
@@ -6419,8 +6426,25 @@
             ],
             "outcome": "passed",
             "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
-            "verifiedCommit": "fc3d628b55870b81a894b2652d9b9ad8e606f1c6",
-            "completedAt": "2026-10-30T09:50:02.797881+00:00",
+            "verifiedCommit": "704742226f66c827f13d9044dc6ded0b137fccd4",
+            "completedAt": "2026-10-30T10:23:38.337464+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-notes-shell-browser.test.js",
+              "-t",
+              "saves and reopens the native note without clipping a 600px",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
+            "verifiedCommit": "704742226f66c827f13d9044dc6ded0b137fccd4",
+            "completedAt": "2026-10-30T10:25:04.176323+00:00",
             "timeoutMs": 180000
           },
           {
@@ -6433,8 +6457,8 @@
             ],
             "outcome": "passed",
             "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
-            "verifiedCommit": "fc3d628b55870b81a894b2652d9b9ad8e606f1c6",
-            "completedAt": "2026-10-30T09:50:11.811953+00:00",
+            "verifiedCommit": "704742226f66c827f13d9044dc6ded0b137fccd4",
+            "completedAt": "2026-10-30T10:25:14.816707+00:00",
             "timeoutMs": 180000
           },
           {
@@ -6443,12 +6467,12 @@
               "diff",
               "--check",
               "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
-              "fc3d628b55870b81a894b2652d9b9ad8e606f1c6"
+              "704742226f66c827f13d9044dc6ded0b137fccd4"
             ],
             "outcome": "passed",
             "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
-            "verifiedCommit": "fc3d628b55870b81a894b2652d9b9ad8e606f1c6",
-            "completedAt": "2026-10-30T09:50:11.833651+00:00",
+            "verifiedCommit": "704742226f66c827f13d9044dc6ded0b137fccd4",
+            "completedAt": "2026-10-30T10:25:14.838231+00:00",
             "timeoutMs": 180000
           },
           {
@@ -6459,14 +6483,14 @@
             ],
             "outcome": "passed",
             "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
-            "verifiedCommit": "fc3d628b55870b81a894b2652d9b9ad8e606f1c6",
-            "completedAt": "2026-10-30T09:50:11.854583+00:00",
+            "verifiedCommit": "704742226f66c827f13d9044dc6ded0b137fccd4",
+            "completedAt": "2026-10-30T10:25:14.859532+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实NotesApp表格/Header/interaction及生产Vite preload40项+实际三份依据演示1项，41项通过。物理table单例和esbuild CSSinline与Vite契约修复。Native待Root。证据 /tmp/sherlock-notes-native-table-ui-20261030/frozen-fc3d628b5/checks.json"
+          "summary": "真实NotesApp表格/Header/interaction及生产Vite preload40项+实际三份依据演示1项+600px完整shell保存重开1项，42项通过。物理table单例和esbuild CSSinline与Vite契约修复。Native待Root。证据 /tmp/sherlock-notes-native-table-ui-20261030/frozen-704742226/checks.json"
         },
         "acceptanceCriteria": [
           "新表在同一插入事务中持久化columnWidths，正常8列适应正文；旧表已有宽度原样保留，小窗口局部横滚且不缩字号。",
@@ -6486,7 +6510,7 @@
           "editor.tsx仅import、原生Slash table事务包装、tableHandles替换及控件挂载；Root与native-operations feature三方合并需同时保留各自hook、IME/文字兜底与完整9b。共享layout纯模块与core复用字节相同。",
           "Root追加生产Vite singleton修复及3用例，真实集成gate先在4e57失败并官方中止，834后继必须重新集成验证。"
         ],
-        "generatedAt": "2026-10-30T09:50:11.855266+00:00"
+        "generatedAt": "2026-10-30T10:25:14.860286+00:00"
       }
     }
   ],
