@@ -41,7 +41,9 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
    if(right<=left||bottom<=top)throw changed()
   }
   const cue=async(ticket,target,label)=>{
-   await playing(ticket);valid(ticket,target);target.scrollIntoView?.({block:'nearest',inline:'nearest'})
+   await playing(ticket);check(ticket);if(!target?.isConnected||target.ownerDocument!==document)throw changed();target.scrollIntoView?.({block:'nearest',inline:'nearest'})
+   let previous,stable=0
+   await until(ticket,()=>{check(ticket);if(!target.isConnected)throw changed();try{valid(ticket,target)}catch{stable=0;previous=undefined;return}const box=target.getBoundingClientRect();stable=previous&&Math.abs(previous.top-box.top)<.5&&Math.abs(previous.left-box.left)<.5?stable+1:0;previous=box;return stable>=2})
    if(document.documentElement.dataset.homeGuidePointerRun!==ticket.detail.runId)throw changed()
    const requestId=crypto.randomUUID(),targetToken=ticket.detail.runId+':'+requestId+':target'
    await new Promise((resolve,reject)=>{
@@ -81,7 +83,7 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
     if(draft!==''&&!(stage==='selection'&&draft===prompt))throw Error('输入框已有草稿，已停止示例输入。')
     await cue(ticket,input,stage==='note'?'输入当前笔记优化任务':'查看选区改写需求');cas();input.focus({preventScroll:true})
     if(!draft)for(const character of Array.from(prompt)){await playing(ticket);cas();shell.setDraft(draft+character);draft=shell.snapshot.draft;revision=shell.snapshot.draftRev;await delay(ticket,65)}
-    const button=input.closest('.uV2eYG_root')?.querySelector('button.uV2eYG_primary')
+    const button=await until(ticket,()=>{cas();const target=input.closest('.uV2eYG_root')?.querySelector('button.uV2eYG_primary');return target?.isConnected&&!target.disabled?target:undefined})
     await cue(ticket,button,'发送笔记优化需求');cas()
     const submission=record.submission+1;let accepted=false
     const receive=event=>{if(event.detail?.sessionId===sessionId&&event.detail.submissionId===submission)accepted=true}
@@ -112,7 +114,7 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
    check(ticket);if(!ticket.detail.fresh||!ticket.chartReady||ticket.quoteConfigured||ticket.configuringQuote||ticket.sent.size)throw Error('笔记行情步骤顺序已变化。')
    ticket.configuringQuote=true
    try{
-    const root=await until(ticket,()=>{const rows=[...ticket.host.querySelectorAll('[data-financial-widget="quote"]')];if(rows.length>1)throw changed();return rows[0]})
+    let root=await until(ticket,()=>{const rows=[...ticket.host.querySelectorAll('[data-financial-widget="quote"]')];if(rows.length>1)throw changed();return rows[0]})
     const owner=root.closest('[data-research-node-id]'),input=owner?.querySelector('input[role="combobox"][aria-label="搜索个股代码或名字"]')
     if(!owner||!ticket.host.contains(owner))throw changed()
     if(!input||input.value.trim())throw Error('行情标的已被修改，已保留当前配置。')
@@ -123,7 +125,23 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
     const matching=()=>{check(ticket);if(!ticket.host.contains(owner)||root.closest('[data-research-node-id]')!==owner||!owner.contains(input))throw changed();const id=input.getAttribute('aria-controls'),popups=[...document.querySelectorAll('[role="listbox"][aria-label="匹配标的"]')].filter(node=>node.id===id);if(!id||popups.length!==1)return;const rows=[...popups[0].querySelectorAll('button[role="option"]')].filter(row=>row.querySelector('strong')?.textContent==='中际旭创'&&[...row.querySelectorAll('small')].some(s=>s.textContent==='300308')&&row.querySelector('small')?.textContent==='SZ');if(rows.length>1)throw changed();return rows[0]}
     const option=await until(ticket,matching)
     await cue(ticket,option,'选择中际旭创（300308.SZ）');if(input.value!==expected||matching()!==option)throw changed();option.click()
-    await until(ticket,()=>{check(ticket);if(!root.isConnected||!ticket.host.contains(root))throw changed();const footer=root.querySelector('.ew-financial-footer'),price=root.querySelector('.ew-quote-price-line strong')?.textContent||'',source=footer?.querySelector('.ew-financial-source-time')?.textContent||'',title=footer?.querySelector('.ew-financial-provenance')?.title||'';return root.textContent.includes('中际旭创')&&/\d/.test(price)&&root.querySelector('[data-financial-chart] svg')&&source&&!/未取得|正在刷新/.test(source)&&title.includes('最近获取：')},true,25000)
+    const quoteState=()=>{check(ticket);if(!owner.isConnected||!ticket.host.contains(owner))throw changed();const rows=[...owner.querySelectorAll('[data-financial-widget="quote"]')].filter(node=>node.closest('[data-research-node-id]')===owner);if(rows.length>1)throw changed();if(!rows.length)return;root=rows[0];const footer=root.querySelector('.ew-financial-footer'),price=root.querySelector('.ew-quote-price-line strong')?.textContent||'',source=footer?.querySelector('.ew-financial-source-time')?.textContent||'',title=footer?.querySelector('.ew-financial-provenance')?.title||'';if(root.textContent.includes('中际旭创')&&/\d/.test(price)&&root.querySelector('[data-financial-chart] svg')&&source&&!/未取得|正在刷新|失败/.test(source)&&title.includes('最近获取：'))return'ready';if(root.querySelector('.ew-financial-empty .ew-financial-retry'))return'failed'}
+    let state
+    try{state=await until(ticket,quoteState,true,25000)}catch(error){check(ticket);if(quoteState()==='ready')state='ready';else state='failed'}
+    if(state!=='ready'){
+     // Recover through the same footer and source selector the user can see.
+     // This changes the actual native widget binding; it never supplies data.
+     const footer=root.querySelector('.ew-financial-provenance');await cue(ticket,footer,'行情未载入，点击组件底部切换数据源');footer.click()
+     const dialog=await until(ticket,()=>{const rows=[...document.querySelectorAll('[role="dialog"][aria-label="组件数据与自动更新"][data-component-data-surface="notes"]')];return rows.length===1?rows[0]:undefined})
+     const select=await until(ticket,()=>dialog.querySelector('select[aria-label="数据源"]:not(:disabled)')),previous=select.value,next=[...select.options].find(option=>!option.disabled&&option.value!==previous)
+     if(!next)throw Error('暂时没有其他可用行情数据源。')
+     await cue(ticket,select,'改用'+next.textContent+'获取中际旭创行情');if(!dialog.isConnected||!select.isConnected||select.value!==previous||!ticket.host.contains(root))throw changed()
+     Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,next.value);select.dispatchEvent(new Event('change',{bubbles:true}))
+     await until(ticket,()=>select.isConnected&&select.value===next.value&&!select.disabled)
+     const close=dialog.querySelector('button[aria-label="关闭数据设置"]');await cue(ticket,close,'返回行情面板，核对新来源和获取时间');if(!dialog.isConnected)throw changed();close.click()
+     state=await until(ticket,quoteState,true,25000)
+    }
+    if(state!=='ready')throw Error('备用行情来源尚未完成加载。')
     ticket.quoteConfigured=true
    }catch(error){check(ticket);throw Error('个股行情尚未完整取得，已保留实际状态，请检查来源后重播。')}
    finally{ticket.configuringQuote=false}
