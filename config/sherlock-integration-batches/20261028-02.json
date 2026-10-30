@@ -7668,6 +7668,271 @@
         ],
         "recordedAt": "2026-10-30T11:24:34.433Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "交付：原生笔记统一操作与即时可编辑表格，保留已集成表格界面",
+        "branch": "codex/feat/notes-native-operations-delivery-20261030",
+        "baseCommit": "c88a3fbfd913a413e9892119e1d21d5d004ad08a",
+        "tipCommit": "a66a2514198fffa99a27db1f373e4c36717da6d1",
+        "commits": [
+          {
+            "commit": "980e7fec309fc36947b9739ce9d765b266304652",
+            "parents": [
+              "c88a3fbfd913a413e9892119e1d21d5d004ad08a"
+            ],
+            "subject": "设计：统一原生笔记操作与表格编辑验收方案"
+          },
+          {
+            "commit": "735435f724fc63b7fa28d02da9597136d80df042",
+            "parents": [
+              "980e7fec309fc36947b9739ce9d765b266304652"
+            ],
+            "subject": "功能：统一笔记原生内容操作并即时创建可编辑表格"
+          },
+          {
+            "commit": "e94b603606874904ee48b4c8e736639da003a49b",
+            "parents": [
+              "735435f724fc63b7fa28d02da9597136d80df042"
+            ],
+            "subject": "修复：原生笔记快路径保留取消归属与持久会话回执"
+          },
+          {
+            "commit": "1b744c557b1f42fbcb728f16b353f719bdeb97d4",
+            "parents": [
+              "e94b603606874904ee48b4c8e736639da003a49b"
+            ],
+            "subject": "测试：核验原生表格保存失败后的历史回执与人工编辑"
+          },
+          {
+            "commit": "a66a2514198fffa99a27db1f373e4c36717da6d1",
+            "parents": [
+              "1b744c557b1f42fbcb728f16b353f719bdeb97d4"
+            ],
+            "subject": "修复：结束原生笔记准备记录写盘失败后的悬挂状态"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-30-native-note-operations.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-30-native-note-operations-design.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capability-receipts.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-session.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/capability-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/capability-handlers.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/document-capability-adapter.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/client-capability-actions.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/external-capability-lease.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/inline-ai-proposals.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/inline-ai.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/native-operations.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/notes-native-intent.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capabilities.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-document-capability-adapter.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-inline-proposals.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-capability-bridge.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-capability-contract.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-operations-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-operations.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-planning.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-review-history.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-service.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-native-capability-contract.test.ts",
+              "test/notes-native-capability-bridge.test.ts",
+              "test/notes-native-operations.test.ts",
+              "test/notes-native-planning.test.js",
+              "test/notes-native-review-history.test.js",
+              "test/client-capabilities.test.js",
+              "test/notes-document-capability-adapter.test.ts",
+              "test/notes-service.test.ts",
+              "test/notes-inline-proposals.test.ts",
+              "test/notes-inline-proposals-pm.test.ts",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-client-capability-bridge.test.ts",
+              "test/notes-capability-handlers.test.ts",
+              "test/notes-external-capability-lease.test.ts",
+              "test/notes-native-table-layout.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "Core完整15组226/226通过。",
+            "verifiedCommit": "a66a2514198fffa99a27db1f373e4c36717da6d1",
+            "completedAt": "2026-10-30T11:56:02.271435+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-native-operations-browser.test.ts",
+              "test/notes-preload-runtime.test.ts",
+              "test/notes-native-table-browser.test.ts",
+              "test/notes-component-header-browser.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "Core生产NotesApp25+preload3+Table14+header7，共49/49真实Browser用例通过。",
+            "verifiedCommit": "a66a2514198fffa99a27db1f373e4c36717da6d1",
+            "completedAt": "2026-10-30T11:56:02.271435+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript通过。",
+            "verifiedCommit": "a66a2514198fffa99a27db1f373e4c36717da6d1",
+            "completedAt": "2026-10-30T11:56:02.271435+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "c88a3fbfd913a413e9892119e1d21d5d004ad08a",
+              "HEAD",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确delivery范围空白检查通过。",
+            "verifiedCommit": "a66a2514198fffa99a27db1f373e4c36717da6d1",
+            "completedAt": "2026-10-30T11:56:02.271435+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "工作树空白检查通过。",
+            "verifiedCommit": "a66a2514198fffa99a27db1f373e4c36717da6d1",
+            "completedAt": "2026-10-30T11:56:02.271435+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "精确deliverytip的生产NotesApp/Main/SDK/NotesStore与Table/Header真实Browser49例通过；未替换共享Native客户端，后续由Root验收。"
+        },
+        "acceptanceCriteria": [
+          "从精确c88基线只交付五项已审Core新提交；已集成的两helper patch不重复进入范围。",
+          "29个Core源路径字节完全相同，editor仅叠加已集成Table四项接线且机械剥离后完全等于已审Core。",
+          "完整Core226及Core28+Table/header21真实Browser均通过，SDK隔离且无外链。",
+          "保留3×3/8×8零模型原生快路径、精确读改移删/撤销和已审取消/持久历史边界。"
+        ],
+        "risks": [
+          "Native签名客户端和完整自然演示仍由Root集成后验收；本交付未构建或操作共享App。",
+          "原31..ba40审查及两轮修复证据保留，delivery是精确源交付，不是治理门禁豁免。",
+          "Root后续Demo367/探索功能不属于本delivery范围，应在各自已授权集成流程处理。"
+        ],
+        "generatedAt": "2026-10-30T11:56:02.271435+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -8116,6 +8381,73 @@
         "b8e2790abc61aed06801ecf87fec80ed03d12515"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-native-capability-contract.test.ts",
+        "test/notes-native-capability-bridge.test.ts",
+        "test/notes-native-operations.test.ts",
+        "test/notes-native-planning.test.js",
+        "test/notes-native-review-history.test.js",
+        "test/client-capabilities.test.js",
+        "test/notes-document-capability-adapter.test.ts",
+        "test/notes-service.test.ts",
+        "test/notes-inline-proposals.test.ts",
+        "test/notes-inline-proposals-pm.test.ts",
+        "test/notes-client-capability-actions.test.ts",
+        "test/notes-client-capability-bridge.test.ts",
+        "test/notes-capability-handlers.test.ts",
+        "test/notes-external-capability-lease.test.ts",
+        "test/notes-native-table-layout.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-native-operations-browser.test.ts",
+        "test/notes-preload-runtime.test.ts",
+        "test/notes-native-table-browser.test.ts",
+        "test/notes-component-header-browser.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "c88a3fbfd913a413e9892119e1d21d5d004ad08a",
+        "HEAD",
+        "--check"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 240000
     }
   ],
   "mainSynchronizations": []
