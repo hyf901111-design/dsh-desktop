@@ -7081,6 +7081,111 @@
         ],
         "recordedAt": "2026-10-30T10:28:10.389Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记任务简洁进度与历史内部过程隐藏",
+        "branch": "codex/feat/notes-concise-progress-20261030",
+        "baseCommit": "0589bc5d724d2900764c9c15ec6e689419371500",
+        "tipCommit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
+        "commits": [
+          {
+            "commit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
+            "parents": [
+              "0589bc5d724d2900764c9c15ec6e689419371500"
+            ],
+            "subject": "优化：笔记任务仅展示简洁阶段和结果并隐藏内部执行过程"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/notes-concise-progress-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-activity.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-concise-progress-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-install-order.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-activity.test.js",
+              "test/notes-concise-progress-browser.test.js",
+              "test/conversation-response-progress.test.js",
+              "test/conversation-response-progress-browser.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "Notes store/SSR及真实原生进度组件，兼容普通对话和画布，直接相关24项。",
+            "verifiedCommit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
+            "completedAt": "2026-10-30T09:33:54.114059+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript检查通过。",
+            "verifiedCommit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
+            "completedAt": "2026-10-30T09:34:03.230320+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "0589bc5d724d2900764c9c15ec6e689419371500",
+              "b8e2790abc61aed06801ecf87fec80ed03d12515"
+            ],
+            "outcome": "passed",
+            "summary": "精确base0589至冻结tip差异检查通过。",
+            "verifiedCommit": "b8e2790abc61aed06801ecf87fec80ed03d12515",
+            "completedAt": "2026-10-30T09:34:03.251391+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "同冻结tip聚焦24/24：Notes store/SSR/旧注入迁移幂等、新任务与历史回放的真实原生进度Browser、普通对话与Canvas详情回归。未执行Native客户端。证据 /tmp/sherlock-notes-concise-progress-20261030/evidence-index.json SHA256 e61bcd5c013afccf73ba9a81d347ebaccb8ee5be35d3715f7bdfa4700b142d54"
+        },
+        "acceptanceCriteria": [
+          "新生成和历史回放的 Notes 仅显示短阶段，不保留或展开内部模型reasoning。",
+          "Notes 原始请求、真实错误、停止状态、已完成操作回执和正式生成内容仍显示；不伪造成功。",
+          "移除旧安装的 Notes reasoning Markdown 注入，新的Notes过程不可展开；正常Chat工具/Canvas原详情保持。",
+          "Notes滚动跟随不再依赖内部reasoning长度；完整补丁二次安装幂等。"
+        ],
+        "risks": [
+          "仅展示层删除reasoning，持久化日志与生成链保持原状；生成成功率和3×3/8×8原生快路径由Core feature负责。",
+          "Chromium fixture mounts actual Notes store, Notes row and native ExecutionStatusGroup but omits unrelated outer shell exports; Root integration installer and packaged Native acceptance remain required.",
+          "旧install-order2项缺HTML renderer与preview30项缺?raw loader，已在base0589归档及私有COW依赖复现；未执行的case不计入24项GREEN。",
+          "功能树未运行完整installer、未操作共享客户端；node_modules为私有COW副本且SDK文件inode不共享。"
+        ],
+        "generatedAt": "2026-10-30T09:37:06.145895+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -7503,6 +7608,30 @@
         "--check",
         "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
         "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-activity.test.js",
+        "test/notes-concise-progress-browser.test.js",
+        "test/conversation-response-progress.test.js",
+        "test/conversation-response-progress-browser.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "0589bc5d724d2900764c9c15ec6e689419371500",
+        "b8e2790abc61aed06801ecf87fec80ed03d12515"
       ],
       "timeoutMs": 120000
     }
