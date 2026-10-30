@@ -9,7 +9,7 @@ import type {Node as PMNode} from 'prosemirror-model'
 import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import {chooseNativeTableColumnWidths,resizeNativeTableColumnWidths} from './native-table-layout'
 import {noteEditorVisible} from './editor-visibility'
-import './native-table.css'
+import nativeTableStyles from './native-table.css?inline'
 
 type Target={id:string;node:PMNode;row:number;col:number;columns:number;rows:number}
 type Menu='table'|'row'|'column'
@@ -57,13 +57,26 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
  const [handleEpoch,setHandleEpoch]=useState(0),[enabled,setEnabled]=useState(active)
  const [menu,setMenu]=useState<Menu>(),[position,setPosition]=useState<{left:number;top:number;right:number;bottom:number}>(),[widthText,setWidthText]=useState('')
  const layer=useMemo(()=>{const node=document.createElement('div');node.className='en-native-table-layer';node.setAttribute('popover','manual');node.dataset.noteTableSession=sessionId;return node},[sessionId])
- const live=useRef(false),latest=useRef({active,target}),menuLease=useRef<Target>(),trigger=useRef<HTMLButtonElement>(),drag=useRef<{id:number;startX:number;startWidth:number;next:number;target:Target;restore:()=>void;button:HTMLButtonElement}>()
+ const nativeDragView=useRef<any>(),live=useRef(false),latest=useRef({active,target}),menuLease=useRef<Target>(),trigger=useRef<HTMLButtonElement>(),drag=useRef<{id:number;startX:number;startWidth:number;next:number;target:Target;restore:()=>void;button:HTMLButtonElement}>()
  latest.current={active,target}
  const allowed=()=>live.current&&latest.current.active&&editor.isEditable&&noteEditorVisible(editor.domElement)&&(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')
  const owns=(value:Target|undefined)=>!!value&&allowed()&&getNodeById(value.id,editor.prosemirrorState.doc)?.node.firstChild===value.node
  const close=(focus=false)=>{setMenu(undefined);menuLease.current=undefined;if(focus)trigger.current?.focus({preventScroll:true})}
  const restoreEditor=()=>editor.prosemirrorView.focus()
- const retireNativeDrag=()=>{const extension=editor.getExtension(TableHandlesExtension);if(extension?.store.state?.draggingState)extension.dragEnd()}
+ const retireNativeDrag=()=>{
+  const extension=editor.getExtension(TableHandlesExtension);if(!extension?.store.state?.draggingState)return
+  // Editable changes remount ProseMirror. Its old view is already destroyed,
+  // but the extension store can still hold that view's drag snapshot.
+  if(nativeDragView.current&&nativeDragView.current!==editor.prosemirrorView)extension.store.setState(undefined)
+  else extension.dragEnd()
+ }
+ const retireNativeUi=()=>{
+  const extension=editor.getExtension(TableHandlesExtension)
+  retireNativeDrag();extension.unfreezeHandles();extension.hideHandlesIfNotFrozen()
+  // The old view's store can survive an editable remount; no retired handle
+  // may become actionable again before the current view emits a fresh hover.
+  extension.store.setState(undefined)
+ }
  const finishDrag=(commit:boolean)=>{
   const gesture=drag.current;if(!gesture)return;drag.current=undefined;gesture.restore()
   if(gesture.button.hasPointerCapture(gesture.id))gesture.button.releasePointerCapture(gesture.id)
@@ -81,9 +94,13 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
   editor.transact((tr:any)=>{editor.updateBlock(value.id,{content:{...block.content,columnWidths:widths}});tr.setSelection(Selection.fromJSON(tr.doc,selection.toJSON()))})
   stopCapture(editor);if(focusEditor)restoreEditor()
  }
+ useLayoutEffect(()=>editor.getExtension(TableHandlesExtension).store.subscribe(({currentVal}:any)=>{
+  if(!currentVal?.draggingState)nativeDragView.current=undefined
+  else nativeDragView.current??=editor.prosemirrorView
+ }),[editor])
  useLayoutEffect(()=>{
   live.current=true;document.body.append(layer);editor.registerPortalElement(layer)
-  return()=>{live.current=false;finishDrag(false);retireNativeDrag();editor.unregisterPortalElement(layer);if(layer.matches(':popover-open'))layer.hidePopover();layer.remove()}
+  return()=>{live.current=false;finishDrag(false);retireNativeUi();editor.unregisterPortalElement(layer);if(layer.matches(':popover-open'))layer.hidePopover();layer.remove()}
  },[editor,layer])
  useLayoutEffect(()=>{
   const root=editor.domElement?.closest('.en-root');if(!root)return
@@ -100,12 +117,12 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
   })
   sync();const observer=new MutationObserver(sync);observer.observe(editor.domElement,{subtree:true,childList:true,attributes:true,attributeFilter:['style']})
   return()=>observer.disconnect()
- },[editor])
+ },[editor,active])
  useLayoutEffect(()=>{
   let frame=0
   const update=()=>{
    const current=latest.current.target,table=current&&tableElement(editor,current.id),scroll=editor.domElement?.closest('.en-document-scroll') as HTMLElement|null
-   if(!allowed())retireNativeDrag()
+   if(!allowed())retireNativeUi()
    setEnabled(allowed())
    if(!allowed()||!table||!scroll){setPosition(undefined);close();return}
    const rect=table.getBoundingClientRect(),viewport=scroll.getBoundingClientRect()
@@ -116,7 +133,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
   const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(update)}
   update();window.addEventListener('resize',schedule);window.addEventListener('scroll',schedule,true)
   const observer=new ResizeObserver(schedule);if(editor.domElement)observer.observe(editor.domElement)
-  const mutation=new MutationObserver(()=>{finishDrag(false);retireNativeDrag();close();setHandleEpoch(epoch=>epoch+1);setEnabled(allowed());if(!allowed()){setPosition(undefined);if(layer.matches(':popover-open'))layer.hidePopover()}else schedule()});mutation.observe(document.body,{attributes:true,attributeOldValue:true,attributeFilter:['data-workspace-surface']})
+  const mutation=new MutationObserver(()=>{finishDrag(false);retireNativeUi();close();setHandleEpoch(epoch=>epoch+1);setEnabled(allowed());if(!allowed()){setPosition(undefined);if(layer.matches(':popover-open'))layer.hidePopover()}else schedule()});mutation.observe(document.body,{attributes:true,attributeOldValue:true,attributeFilter:['data-workspace-surface']})
   return()=>{cancelAnimationFrame(frame);window.removeEventListener('resize',schedule);window.removeEventListener('scroll',schedule,true);observer.disconnect();mutation.disconnect()}
  },[editor,layer,target?.id,target?.node,active])
  useLayoutEffect(()=>{
@@ -140,7 +157,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
    table.querySelectorAll<HTMLTableColElement>('colgroup col').forEach((col,i)=>{col.style.width=widths[i]+'px'})
    table.style.setProperty('width',gesture.next+'px','important');table.style.minWidth='';table.style.setProperty('--default-cell-min-width','35px')
   }
-  const up=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(true)},cancel=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(false)},blur=()=>{finishDrag(false);retireNativeDrag();close()}
+  const up=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(true)},cancel=(event:PointerEvent)=>{if(drag.current?.id===event.pointerId)finishDrag(false)},blur=()=>{finishDrag(false);retireNativeUi();close();setHandleEpoch(epoch=>epoch+1)}
   document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',key,true);window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel);window.addEventListener('blur',blur)
   return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',key,true);window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);window.removeEventListener('blur',blur)}
  },[editor,layer])
@@ -171,7 +188,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
   if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return
   event.preventDefault();const items=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')],index=items.indexOf(document.activeElement as HTMLButtonElement),next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus()
  }
- return <>{active&&enabled?<TableHandlesController key={handleEpoch} portalElement={layer} tableHandle={LabeledTableHandle}/>:null}{position&&target&&allowed()?createPortal(<>
+ return <><style>{nativeTableStyles}</style>{active&&enabled?<TableHandlesController key={handleEpoch} portalElement={layer} tableHandle={LabeledTableHandle}/>:null}{position&&target&&allowed()?createPortal(<>
   <div className="en-native-table-toolbar" role="toolbar" aria-label={t('原生表格操作')} style={{left:position.left,top:position.top}} onPointerDown={event=>{if((event.target as HTMLElement).closest('button'))event.preventDefault();event.stopPropagation()}}>
    <button aria-label={t('表格操作')} aria-expanded={menu==='table'} onClick={event=>openMenu('table',event)}>{t('表格')} ▾</button>
    <button aria-label={t('行操作')} aria-expanded={menu==='row'} onClick={event=>openMenu('row',event)}>{t('行')} {target.row+1} ▾</button>
