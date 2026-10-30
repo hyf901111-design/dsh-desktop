@@ -88,6 +88,13 @@ export function createNativeNoteOperations(options:Options){
   const pm=blockToNode(block,editor._tiptapEditor.schema);pm.check()
   return nodeToBlock(pm,editor._tiptapEditor.state.doc)
  }
+ // Only insertion receives a new empty table's natural size. Updates may refer
+ // to an earlier insert in this same planned batch, before editor dispatch.
+ const normalizeInsertion=(input:any,occupied:Set<string>)=>{
+  const block=normalize(input,occupied)
+  if(block.type==='table'&&input.content.columnWidths===undefined&&block.content.rows.every((row:any)=>row.cells.every((cell:any)=>{const value=record(cell)?cell.content:cell;return value===''||Array.isArray(value)&&value.every((item:any)=>item?.type==='text'&&item.text==='')})))block.content.columnWidths=initialNativeTableColumnWidths(block.content.rows[0].cells.length,options.availableWidth())
+  return block
+ }
  const apply=async(args:any,generationId:string,requestId:string,current:()=>boolean=()=>true,advance:()=>void=()=>{},prompt=options.prompt())=>{
   const snapshot=admitted(args?.revision,generationId,current),editor=options.editor,operations=args.operations as CapabilityNativeBlockOperation[]
   if(!only(args,['revision','operations'])||!Array.isArray(operations)||!operations.length||operations.length>1000)throw Error('原生操作批次无效。')
@@ -98,7 +105,7 @@ export function createNativeNoteOperations(options:Options){
   for(const operation of operations){
    if(operation.op==='insert'){
     if(!only(operation,['op','blocks','anchor','consumeEmpty'])||!Array.isArray(operation.blocks)||!operation.blocks.length||operation.consumeEmpty!==undefined&&typeof operation.consumeEmpty!=='boolean')throw Error('插入参数无效。')
-    const location=anchor(operation.anchor),occupied=new Set<string>(flatten(projected).map(row=>row.block.id)),blocks=operation.blocks.map(block=>normalize(block,occupied)),reference=location.block
+    const location=anchor(operation.anchor),occupied=new Set<string>(flatten(projected).map(row=>row.block.id)),blocks=operation.blocks.map(block=>normalizeInsertion(block,occupied)),reference=location.block
     const consume=operation.consumeEmpty===true&&reference.type==='paragraph'&&!reference.content?.length&&!reference.children?.length
     location.siblings.splice(location.index+(consume?0:operation.anchor.placement==='after'?1:0),consume?1:0,...copy(blocks))
     for(const row of flatten(blocks)){allowed.add(row.block.id);changedIds.add(row.block.id)}if(consume)changedIds.add(reference.id)

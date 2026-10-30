@@ -616,7 +616,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         // A stopped or superseded request may retain honest applied/saved facts
         // in its journal/history, but cannot commit input or reopen old UI.
         if(disposed.current||epoch.current!==attempt||request.current!==requestId||!editorActive()||!nativeCurrent())return
-        const {receipt,result,phase}=outcome,summary=`已创建${emptyTable.rows}行${emptyTable.columns}列原生表格`
+        const {receipt,result,phase}=outcome,summary=t('已插入表格')
         const value=finishInlineProposal(requestId,receipt.status!=='succeeded',summary,'native-operations',receipt.status==='succeeded'?undefined:receipt.message)
         if(value)showProposal(value);changed();publishTask(requestId,phase,{result,...phase==='failed'?{error:receipt.message}:{}});if(receipt.status==='succeeded')commitNativeDraft(admission);return
       }
