@@ -1,6 +1,7 @@
 import {createHomeGuideNoteMenu} from './home-guide-note-menu'
 import React from 'react'
 import {createRoot} from 'react-dom/client'
+import {flushSync} from 'react-dom'
 import {NotesApp,type NotesGuideEditorApi,type NotesGuideBinding} from './notes/editor'
 import {noteText} from '../shared/workspace-notes'
 import type {NotesBridge} from '../shared/workspace-notes'
@@ -9,11 +10,12 @@ import {returnHomeNotesToTop} from './home-guide-notes-scroll'
 import {createHomeNotesNativeBridge,type HomeNotesNativeBridge} from './home-guide-notes-native'
 import {HOME_NOTES_CHART_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT,HOME_NOTES_REPORT_SOURCES} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 import {noteUiText as t} from '../../packages/dsh-research-task-runtime/notes-locale.js'
-import type {HomeGuidePointerFrame} from './home-guide-pointer'
+import {homeGuideTargetPoint,type HomeGuidePointerFrame} from './home-guide-pointer'
 import type {HomeGuideMountOptions} from './home-guides'
 
 export type HomeNotesGuideStep='write'|'note-chart-compose'|'note-chart-review'|'note-chart-apply'|'note-write-middle'|'note-slash-quote'|'note-quote-configure'|'note-write-tail'|'growth-evidence'|'challenge'|'review'|'select'|'optimize'|'replace'|'consensus-select'|'consensus-optimize'|'consensus-replace'|'note-task-compose'|'note-task-review'|'note-task-apply'|'note-select-paragraph'|'note-rewrite'|'note-rewrite-apply'|'note-task-saved'|'note-return-top'
 export type HomeNotesGuide={runStep(step:HomeNotesGuideStep):Promise<void>;flush():Promise<void>;dispose():void}
+type PointLike={x:number;y:number}
 type Options={kind?:HomeGuideMountOptions['kind'];signal:AbortSignal;sessionId?:string;runId?:string;cwd?:string;fresh?:boolean;persistence?:NotesBridge;native?:HomeNotesNativeBridge;onStatus?(text:string):void;waitUntilPlaying?():Promise<void>;wait?(ms:number,signal?:AbortSignal):Promise<void>}
 /** Real editor and comments; only its prepared session persists, with local demo AI responses. */
 export async function mountHomeNotesGuide(document:Document,host:HTMLElement,options:Options):Promise<HomeNotesGuide>{
@@ -83,6 +85,12 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  }
  const point=async(target:HTMLElement,label:string,action:'move'|'click'|'drag'='click',fromTarget?:HTMLElement,onProgress?:(frame:HomeGuidePointerFrame)=>void)=>{
   await playing();validTarget(target);if(fromTarget)validTarget(fromTarget)
+  if(!fromTarget){
+   const scroll=target.closest<HTMLElement>('.en-document-scroll'),box=target.getBoundingClientRect(),area=scroll?.getBoundingClientRect()
+   if(scroll&&area&&(box.top<area.top+20||box.bottom>area.bottom-20))scroll.scrollTo({top:scroll.scrollTop+box.top-area.top-Math.max(36,area.height*.15),behavior:scrollBehavior()})
+   let last:PointLike|undefined,stable=0
+   await until(()=>{validTarget(target);let next:PointLike;try{validTarget(target,true);next=homeGuideTargetPoint(document,target)}catch{stable=0;last=undefined;return}stable=last&&Math.hypot(next.x-last.x,next.y-last.y)<.5?stable+1:0;last=next;return stable>=2})
+  }
   const win=document.defaultView!,pointerRun=document.documentElement.dataset.homeGuidePointerRun
   if(pointerRun&&pointerRun!==options.runId)throw abortError()
   const tracked=!!options.runId&&pointerRun===options.runId
@@ -116,7 +124,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   await playing();validTarget(target,true);if(fromTarget)validTarget(fromTarget,true)
   if(tracked&&document.documentElement.dataset.homeGuidePointerRun!==options.runId)throw abortError()
  }
- const click=async(target:HTMLElement,label:string)=>{await point(target,label);target.click();target.focus({preventScroll:true});await frame()}
+ const click=async(target:HTMLElement,label:string)=>{await point(target,label);const position=homeGuideTargetPoint(document,target);if(target.hasAttribute('data-bn-thread-id'))target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,detail:1,button:0,clientX:position.x,clientY:position.y,view:document.defaultView}));else{target.click();target.focus({preventScroll:true})}await frame()}
  const flush=()=>disposed?(finalFlush||Promise.resolve()):editor?.flush()||Promise.resolve()
  const dispose=()=>{
   if(disposed)return
@@ -169,7 +177,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  }
  const write=async()=>{
   if(options.fresh===false)throw Error('此笔记已保留；重播时请创建新的教程副本。')
-  await playing();options.onStatus?.('先记下自己的观察与待核算问题')
+  await playing();options.onStatus?.('先记录观察窗口与待核算数字')
   const blocks=HOME_NOTES_GUIDE_WRITING_STAGES[0]!,first=blocks[0]!,title=await until(()=>query<HTMLInputElement>('.en-title'))
   await click(title,'填写笔记标题')
   const reduced=document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -184,8 +192,6 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    document.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId}}))
    await bridge.request('engage',{sessionId,title:HOME_NOTES_GUIDE_TITLE,locale:document.documentElement.dataset.odysseyLocale})
   }
-  const body=await until(()=>query<HTMLElement>('.bn-editor'))
-  await click(body,'写入研究笔记')
   await typeBlocks(blocks)
   const growth=query<HTMLElement>('[data-id="guide-note-growth"]');if(growth)scrollTo(growth)
   await wait(reduced?34:450)
@@ -210,7 +216,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   await click(input,'使用空格功能画一年股价与基准折线图')
   const setter=Object.getOwnPropertyDescriptor(document.defaultView!.HTMLTextAreaElement.prototype,'value')!.set!
   for(let offset=4;offset<HOME_NOTES_CHART_PROMPT.length+4;offset+=4){await playing();unchanged();validTarget(input,true);setter.call(input,HOME_NOTES_CHART_PROMPT.slice(0,offset));input.dispatchEvent(new Event('input',{bubbles:true}));await wait(70)}
-  await click(await until(()=>query<HTMLButtonElement>('.en-space-ai-send:not(:disabled)')),'生成年度回报与基准折线图')
+  await click(await until(()=>query<HTMLButtonElement>('.en-space-ai-send:not(:disabled)')),'生成一年股价与基准折线图')
  }
  const chartReview=async()=>{
   await until(()=>query<HTMLButtonElement>('.en-space-ai[data-review] button[aria-label="'+t('确认本次 AI 生成')+'"]'),90000)
@@ -247,11 +253,16 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const slider=await until(()=>document.querySelector<HTMLElement>('.en-challenge-popover [role="slider"]'))
   const stop=await until(()=>document.querySelector<HTMLElement>('.en-challenge-popover .en-challenge-stop:nth-of-type(4)'))
   const thumb=await until(()=>document.querySelector<HTMLElement>('.en-challenge-popover .en-challenge-thumb'))
-  await point(stop,'选择严格模式','drag',thumb)
-  // Real picker keyboard handlers update the visible slider and keep review
-  // paused until the user-facing choice has been shown and the picker closes.
-  slider.focus({preventScroll:true})
-  for(let i=0;i<4&&slider.getAttribute('aria-valuenow')!=='3';i++){await playing();validTarget(slider);const value=Number(slider.getAttribute('aria-valuenow'));if(!Number.isInteger(value)||value<0||value>4)throw Error('挑战强度控件已变化。');slider.dispatchEvent(new KeyboardEvent('keydown',{key:value<3?'ArrowRight':'ArrowLeft',bubbles:true}));await frame()}
+  const pointerId=71;let down=false,released=false
+  try{await point(stop,'选择严格模式','drag',thumb,frame=>{
+   if(frame.phase==='idle')return
+   if(!slider.isConnected||!slider.contains(stop)||!slider.contains(thumb)||released)throw Error('挑战强度控件已变化。')
+   const send=(type:string)=>flushSync(()=>{slider.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId,pointerType:'mouse',isPrimary:true,buttons:type==='pointerup'?0:1,clientX:frame.x,clientY:frame.y}))})
+   if(frame.phase==='pressed'){if(down)throw Error('挑战强度控件已变化。');down=true;send('pointerdown')}
+   else if(frame.phase==='dragging'){if(!down)throw Error('挑战强度控件已变化。');send('pointermove')}
+   else if(frame.phase==='released'){if(!down)throw Error('挑战强度控件已变化。');send('pointerup');released=true}
+  })}finally{if(down&&!released&&slider.isConnected)slider.dispatchEvent(new PointerEvent('pointercancel',{bubbles:true,pointerId,pointerType:'mouse'}))}
+  if(!down||!released)throw Error('挑战强度拖动尚未完成。')
   await until(()=>toolQuery('.en-challenge-grade')?.textContent?.includes(t('严格')))
  }
  const review=async()=>{
@@ -270,7 +281,6 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  const selectedCard=async()=>{
   // The public "next" control is an outside click for a narrow native comment
   // popup. Let that transition finish, then reopen through its real text mark.
-  await wait(240)
   const selector='.en-challenge-card[data-thread-id="'+CSS.escape(selectedThread)+'"]'
   if(!query(selector)){
    const mark=await until(()=>query<HTMLElement>('[data-bn-thread-id="'+CSS.escape(selectedThread)+'"]'))
@@ -321,9 +331,9 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    if(!heading)throw Error('年报原始表依据已变化。')
    const reveal=async(target:HTMLElement)=>{const area=panel.getBoundingClientRect(),box=target.getBoundingClientRect();if(box.top<area.top+12||box.bottom>area.bottom-12){panel.scrollTo({top:panel.scrollTop+box.top-area.top-24,behavior:scrollBehavior()});await wait(500)}validTarget(target,true)}
    await reveal(heading)
-   await point(heading,'核对'+label,'move');await wait(900)
+   await point(heading,'核对'+label,'move');await wait(300)
    const formula=[...heading.closest('article')!.querySelectorAll('dt')].find(node=>node.textContent==='环比计算')?.nextElementSibling as HTMLElement|undefined
-   if(formula){await reveal(formula);await point(formula,'按报告元值核对季度环比14.29%','move');await wait(900)}
+   if(formula&&label===labels[labels.length-1]){await reveal(formula);await point(formula,'按报告元值核对季度环比14.29%','move');await wait(600)}
   }
   await flush()
  }
@@ -416,6 +426,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  return {async runStep(step){assert();if(failed)throw abortError();const index=order.indexOf(step);if(busy||index<0||index!==completed)throw Error('演示步骤顺序已变化，请重新播放。');busy=true
    try{await steps[index]!();assert();completed++}catch(error){
     failed=true
+    console.warn('[notes-guide-step]',JSON.stringify({runId:options.runId,sessionId,step,errorName:(error as Error)?.name||'Error',message:(error as Error)?.message||'演示未完成'}))
     // The real shell preloads the saved normal editor before releasing this
     // view. Keep partial content visible during that owned error handoff.
     const handoff=options.kind==='note'&&!!options.persistence&&useNative&&!disposed&&!signal.aborted&&!options.signal.aborted&&host.isConnected&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===options.runId

@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import {afterEach,expect,test,vi} from 'vitest'
 import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
-import {createHomeGuidePointer} from '../src/preload/home-guide-pointer'
+import {createHomeGuidePointer,homeGuideTargetPoint} from '../src/preload/home-guide-pointer'
 const releases:Array<()=>void>=[]
 afterEach(()=>{for(const release of releases.splice(0))release();document.body.innerHTML='';delete document.documentElement.dataset.homeGuidePointerRun;vi.useRealTimers()})
 function fixture(){
@@ -22,6 +22,14 @@ function financialFixture(){
  port(f.source,'watchlist-node','output','watchlist');port(f.target,'quote-node','input','quote');guide.append(canvas);document.body.append(guide)
  return{...f,guide,canvas,line:()=>document.querySelector<SVGSVGElement>('[data-home-guide-connection="run"]')}
 }
+test('targets the visible text fragment of a wrapped AI mark rather than its empty union center',()=>{
+ const f=fixture(),mark=document.createElement('span');mark.dataset.bnThreadId='one';document.body.append(mark)
+ const rect=(left:number,top:number,right:number,bottom:number)=>({left,top,right,bottom,width:right-left,height:bottom-top,x:left,y:top,toJSON:()=>({})})
+ mark.getBoundingClientRect=()=>rect(100,100,400,160)
+ mark.getClientRects=()=>[rect(100,100,400,120),rect(100,140,125,160)] as unknown as DOMRectList
+ const hit=vi.spyOn(document,'elementFromPoint').mockImplementation((x,y)=>y<120?mark:document.body)
+ try{expect(homeGuideTargetPoint(document,mark)).toEqual({x:112,y:110});expect(homeGuideTargetPoint(document,mark)).not.toEqual({x:250,y:130});hit.mockReturnValue(document.body);expect(()=>homeGuideTargetPoint(document,mark)).toThrow('文字标记')}finally{hit.mockRestore();mark.remove()}
+})
 test('publishes each optional drag frame after painting the same native pointer position',async()=>{
  const f=fixture(),frames:Array<{x:number;y:number;phase:string}>=[]
  const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source,onFrame:frame=>{

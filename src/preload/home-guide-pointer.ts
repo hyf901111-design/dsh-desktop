@@ -3,6 +3,31 @@ export type HomeGuidePointerAction={target:HTMLElement;action?:'move'|'click'|'d
 type Point={x:number;y:number}
 type Options={runId:string;signal:AbortSignal;initialPosition?:Point;wait(ms:number):Promise<void>;waitUntilPlaying():Promise<void>}
 
+export function homeGuideTargetPoint(document:Document,target:HTMLElement):Point{
+ const win=document.defaultView!
+  if(!target?.isConnected||target.ownerDocument!==document||(target as HTMLButtonElement).disabled||target.getAttribute('aria-disabled')==='true'||target.closest('[hidden],[inert]')||['hidden','collapse'].includes(win.getComputedStyle(target).visibility))throw Error('操作目标不可用，请重新打开。')
+  const box=target.getBoundingClientRect();let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(win.innerWidth,box.right),bottom=Math.min(win.innerHeight,box.bottom)
+  for(let node:HTMLElement|null=target;node;node=node.parentElement){
+   const style=win.getComputedStyle(node)
+   if(node.hidden||node.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')throw Error('操作目标不可用，请重新打开。')
+   if(node!==target){const clip=node.getBoundingClientRect();if(/hidden|auto|scroll|clip/.test(style.overflowX||style.overflow)){left=Math.max(left,clip.left);right=Math.min(right,clip.right)}if(/hidden|auto|scroll|clip/.test(style.overflowY||style.overflow)){top=Math.max(top,clip.top);bottom=Math.min(bottom,clip.bottom)}}
+  }
+  if(right<=left||bottom<=top)throw Error('操作目标不可用，请先滚动到目标。')
+  if(target.hasAttribute('data-bn-thread-id')){
+   // An inline mark can wrap over multiple lines. Its union rectangle includes
+   // unmarked whitespace, so aim at a visible text fragment, never the union.
+   for(const rect of target.getClientRects()){
+    const a=Math.max(left,rect.left),b=Math.min(right,rect.right),c=Math.max(top,rect.top),d=Math.min(bottom,rect.bottom)
+    if(b<=a||d<=c)continue
+    const result={x:a+Math.min(12,(b-a)/2),y:(c+d)/2},hit=document.elementFromPoint(result.x,result.y)
+    if(hit&&(hit===target||target.contains(hit)))return result
+   }
+   throw Error('文字标记尚未完整显示，请先滚动到标记。')
+  }
+  const text=target.matches('textarea,input:not([type=button]):not([type=checkbox]),[contenteditable=true]')
+  return text?{x:left+Math.min(22,(right-left)/3),y:top+Math.min(18,(bottom-top)/3)}:{x:(left+right)/2,y:(top+bottom)/2}
+ }
+
 /** A visual actor only. The owning scenario performs its real action after acknowledgement. */
 export function createHomeGuidePointer(document:Document,options:Options){
  const win=document.defaultView!,element=document.createElement('div');element.className='odyssey-home-guide-pointer';element.dataset.homeGuidePointer=options.runId;element.setAttribute('aria-hidden','true');element.hidden=true
@@ -17,7 +42,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  const raiseLayer=(reorder=false)=>{if(!topLayer||closed||!element.isConnected||element.hidden)return;if(reorder)hideLayer();if(!element.matches(':popover-open'))element.showPopover()}
  const beforeToggle=(event:Event)=>{
   const menu=event.target
-  if(!topLayer||menu===element||(event as ToggleEvent).newState!=='open'||!(menu instanceof win.HTMLElement))return
+  if(!topLayer||menu===element||(event as ToggleEvent).newState!=='open'||!(menu instanceof win.HTMLElement)||menu.hasAttribute('data-home-guide-pointer'))return
   // Manual menus may enter the top layer after the cursor. Reorder this
   // non-interactive visual before paint, without moving or focusing the menu.
   win.queueMicrotask(()=>{if(menu.isConnected&&menu.matches('[popover=manual]:popover-open'))raiseLayer(true)})
@@ -36,18 +61,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  const ensure=()=>{if(closed||options.signal.aborted)throw aborted()}
  const gate=async()=>{ensure();await Promise.race([options.waitUntilPlaying(),interrupted]);ensure()}
  const wait=async(ms:number)=>{await gate();await Promise.race([options.wait(ms),interrupted]);await gate()}
- const point=(target:HTMLElement):Point=>{
-  if(!target?.isConnected||target.ownerDocument!==document||(target as HTMLButtonElement).disabled||target.getAttribute('aria-disabled')==='true'||target.closest('[hidden],[inert]')||['hidden','collapse'].includes(win.getComputedStyle(target).visibility))throw Error('操作目标不可用，请重新打开。')
-  const box=target.getBoundingClientRect();let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(win.innerWidth,box.right),bottom=Math.min(win.innerHeight,box.bottom)
-  for(let node:HTMLElement|null=target;node;node=node.parentElement){
-   const style=win.getComputedStyle(node)
-   if(node.hidden||node.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')throw Error('操作目标不可用，请重新打开。')
-   if(node!==target){const clip=node.getBoundingClientRect();if(/hidden|auto|scroll|clip/.test(style.overflowX||style.overflow)){left=Math.max(left,clip.left);right=Math.min(right,clip.right)}if(/hidden|auto|scroll|clip/.test(style.overflowY||style.overflow)){top=Math.max(top,clip.top);bottom=Math.min(bottom,clip.bottom)}}
-  }
-  if(right<=left||bottom<=top)throw Error('操作目标不可用，请先滚动到目标。')
-  const text=target.matches('textarea,input:not([type=button]):not([type=checkbox]),[contenteditable=true]')
-  return text?{x:left+Math.min(22,(right-left)/3),y:top+Math.min(18,(bottom-top)/3)}:{x:(left+right)/2,y:(top+bottom)/2}
- }
+ const point=(target:HTMLElement):Point=>homeGuideTargetPoint(document,target)
  const ownedPort=(port:HTMLElement,side:string)=>port.dataset.financialPort===side&&!!port.dataset.financialPortNode&&port.closest<HTMLElement>('[data-research-node-id]')?.dataset.researchNodeId===port.dataset.financialPortNode&&!!port.closest('[data-financial-widget]')
  const beginConnection=(source:HTMLElement,target:HTMLElement)=>{
   const canvas=source.closest<HTMLElement>('[data-research-canvas]'),guide=canvas?.closest<HTMLElement>('[data-home-guide]')
