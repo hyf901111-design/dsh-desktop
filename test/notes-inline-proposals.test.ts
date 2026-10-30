@@ -23,6 +23,32 @@ function fixture(initial:any[],doc=new Y.Doc()){
  const ledger=createNoteInlineProposals({editor,doc}),anchor={documentId:'doc',blockId:'anchor',position:{}}
  return{editor,doc,ledger,anchor,ai:ledger.proxy(),start:()=>ledger.begin('request','写一段文字',anchor)}
 }
+it('records a native pure move and restores its original position without touching other human text',()=>{
+ const f=fixture(['A','B','C','D'].map(id=>paragraph(id,id)));f.start()
+ const move=()=>{const b=clone(f.editor.getBlock('B'));f.editor.removeBlocks(['B']);f.editor.insertBlocks([b],'D','after')}
+ ;(f.ledger.run as any)(move,['B']);const value=f.ledger.finish('request')
+ expect(value?.changes).toHaveLength(1);expect(f.editor.document.map((b:any)=>b.id)).toEqual(['A','C','D','B'])
+ f.editor.updateBlock('A',{content:paragraph('A','人工更新保留').content})
+ expect(f.ledger.undo('request').complete).toBe(true);expect(f.editor.document.map((b:any)=>b.id)).toEqual(['A','B','C','D']);expect(f.editor.getBlock('A').content[0].text).toBe('人工更新保留')
+})
+it('keeps a move owned when the same request later inserts adjacent native/text content',()=>{
+ const f=fixture(['A','B','C','D'].map(id=>paragraph(id,id)));f.start();const b=clone(f.editor.getBlock('B'))
+ f.ledger.runFor('request',()=>{f.editor.removeBlocks(['B']);f.editor.insertBlocks([b],'D','after')},['B'],true)
+ f.ai.insertBlocks([paragraph('new','同请求后续正文')],'B','before');f.ledger.finish('request')
+ expect(f.ledger.canUndo('request')).toBe(true);expect(f.ledger.undo('request').complete).toBe(true);expect(f.editor.document.map((block:any)=>block.id)).toEqual(['A','B','C','D'])
+})
+it('retains a moved block when both original neighbours were independently rebuilt',()=>{
+ const f=fixture(['A','B','C','D'].map(id=>paragraph(id,id)));f.start();const b=clone(f.editor.getBlock('B'))
+ f.ledger.runFor('request',()=>{f.editor.removeBlocks(['B']);f.editor.insertBlocks([b],'D','after')},['B'],true);f.ledger.finish('request')
+ f.editor.replaceBlocks(['A'],[paragraph('A','新A')]);f.editor.replaceBlocks(['C'],[paragraph('C','新C')])
+ const before=clone(f.editor.document);expect(f.ledger.canUndo('request')).toBe(false);expect(f.ledger.undo('request').complete).toBe(false);expect(f.editor.document).toEqual(before)
+})
+it('never reverts a moved block after a later human relocation or same-id rebuild',()=>{
+ const f=fixture(['A','B','C','D'].map(id=>paragraph(id,id)));f.start();const b=clone(f.editor.getBlock('B'))
+ ;(f.ledger.run as any)(()=>{f.editor.removeBlocks(['B']);f.editor.insertBlocks([b],'D','after')},['B']);f.ledger.finish('request')
+ f.editor.removeBlocks(['B']);f.editor.insertBlocks([b],'A','before')
+ expect(f.ledger.undo('request').complete).toBe(false);expect(f.editor.document[0].id).toBe('B')
+})
 it('undoes only its own unchanged inserted blocks and restores the original blank while preserving other human edits',()=>{
  const f=fixture([paragraph('before','原市场段'),paragraph('anchor'),paragraph('after','后段')]);f.start();f.ai.replaceBlocks(['anchor'],[paragraph('generated','AI段落')]);f.ledger.finish('request');f.editor.updateBlock('before',{content:paragraph('b','用户后来市场观察').content})
  expect(f.ledger.undo('request')).toEqual({complete:true,retained:0});expect(f.editor.document.map((b:any)=>b.id)).toEqual(['before','anchor','after']);expect(f.editor.getBlock('before').content[0].text).toBe('用户后来市场观察');f.ledger.confirm('request');expect(f.ledger.list()).toEqual([])

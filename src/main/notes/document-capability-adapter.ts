@@ -26,12 +26,12 @@ export class NotesDocumentCapabilityAdapter implements NoteDocumentAdapter{
   const documentId=this.identity(input.sessionId);if(!documentId)throw Error('当前笔记编辑器尚未就绪，请稍后重新读取能力目录。')
   const generationId='harness:'+randomUUID(),controller=new AbortController()
   const current=()=>!controller.signal.aborted&&input.current()&&this.options.owner()===owner&&this.options.window()===window&&this.identity(input.sessionId)===documentId
-  let context:ClientCapabilityContext={owner,sessionId:input.sessionId,documentId,mode:'notes',editable:this.options.canWrite(input.sessionId),selectedBlockIds:[],selectedParagraphIds:[]}
+  let context:ClientCapabilityContext={owner,sessionId:input.sessionId,documentId,mode:'notes',editable:this.options.canWrite(input.sessionId),selectedBlockIds:[],selectedParagraphIds:[],selectedNativeBlockIds:[]}
   const dispose=()=>{controller.abort();try{this.options.notify({sessionId:context.sessionId,owner,generationId,documentId,release:true})}catch{}}
   try{
   const captured=await this.options.bridge.request('context.acquire',{},context,generationId,input.signal,current)
-  if(!current()||captured?.status!=='succeeded'||captured.context?.documentId!==documentId||!ids(captured.context.selectedBlockIds)||!ids(captured.context.selectedParagraphIds))throw Error('笔记文档上下文未确认，请重新读取能力目录。')
-  context={...context,selectedBlockIds:captured.context.selectedBlockIds,selectedParagraphIds:captured.context.selectedParagraphIds}
+  if(!current()||captured?.status!=='succeeded'||captured.context?.documentId!==documentId||!ids(captured.context.selectedBlockIds)||!ids(captured.context.selectedParagraphIds)||captured.context.selectedNativeBlockIds!==undefined&&!ids(captured.context.selectedNativeBlockIds))throw Error('笔记文档上下文未确认，请重新读取能力目录。')
+  context={...context,selectedBlockIds:captured.context.selectedBlockIds,selectedParagraphIds:captured.context.selectedParagraphIds,selectedNativeBlockIds:[...(captured.context.selectedNativeBlockIds??[])]}
   const references=await this.options.prepare(captured.requestContext?.context,input.sessionId,input.signal,current)
   if(!current())throw Error('当前会话已变化。')
   const renderer=(action:any,args:any)=>{

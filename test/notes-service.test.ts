@@ -148,3 +148,40 @@ it('reads binding statuses from the Notes engine under read permission without r
  const rows=[{nodeId:'note-node',status:'error'}],request=vi.fn(async()=>rows),s=service(undefined,{canWrite:()=>false,componentData:{request}})
  try{expect(await s.call('component-data-status')).toEqual({owner:'alice',rows});expect(request).toHaveBeenCalledWith('session',{action:'list'});s.deny();await expect(s.call('component-data-status')).rejects.toThrow();expect(request).toHaveBeenCalledOnce()}finally{s.dispose()}
 })
+it.each([true,false])('returns actual native edit permission with the existing trusted document readiness acknowledgement (writable=%s)',async editable=>{
+ const s=service(undefined,{canWrite:()=>editable})
+ try{expect(await s.call('capability-ready',{documentId:'native-doc',active:true})).toEqual({ok:true,editable})}finally{s.dispose()}
+})
+
+it('rejects unready, stale, read-only or non-empty-table native shortcut requests before any model or write',async()=>{
+ let writable=true;const s=service('http://127.0.0.1:9999',{canWrite:()=>writable}),send=vi.fn();vi.stubGlobal('fetch',send)
+ const input={requestId:'native-one',documentId:'document',anchorId:'anchor',prompt:'创建一个3乘3的表格',title:'原生笔记'}
+ await expect(s.call('native-table',input)).rejects.toThrow('过期')
+ await s.call('capability-ready',{documentId:'document',active:true})
+ await expect(s.call('native-table',{...input,documentId:'foreign'})).rejects.toThrow('过期');writable=false;await expect(s.call('native-table',input)).rejects.toThrow('不可编辑');writable=true
+ await expect(s.call('native-table',{...input,prompt:'创建一个3乘3的表格，填入收入数据'})).rejects.toThrow('过期')
+ await expect(s.call('native-table',{...input,effect:{state:'saved'}})).rejects.toThrow('过期');expect(send).not.toHaveBeenCalled();expect(s.progress).toEqual([]);s.dispose()
+})
+it('never accepts a renderer saved flag without a matching actual native table in NotesStore',async()=>{
+ const s=service('http://127.0.0.1:9999');vi.stubGlobal('fetch',async(_url:any,options:any)=>{const input=JSON.parse(options.body);return new Response(JSON.stringify(input.action==='conversation-native-end'?{ok:true,phase:input.phase,result:{kind:'conversation',markdown:input.receipt.message,capabilityReceipts:[input.receipt]}}:{ok:true}))})
+ await s.call('capability-ready',{documentId:'document',active:true})
+ const pending=s.call('native-table',{requestId:'native-one',documentId:'document',anchorId:'anchor',prompt:'创建一个3乘3的表格',title:'原生笔记'})
+ await vi.waitFor(()=>expect(s.progress.filter(row=>row.value.action==='notes.blocks.read')).toHaveLength(1));const read=s.progress.find(row=>row.value.action==='notes.blocks.read').value
+ await s.call('capability-reply',{requestId:read.requestId,result:{status:'succeeded',data:{revision:'revision',blocks:[{block:{id:'anchor',type:'paragraph'}}]}}})
+ await vi.waitFor(()=>expect(s.progress.filter(row=>row.value.action==='notes.blocks.apply')).toHaveLength(1));const apply=s.progress.find(row=>row.value.action==='notes.blocks.apply').value
+ await s.call('capability-reply',{requestId:apply.requestId,result:{status:'succeeded',effect:{kind:'native-blocks',state:'saved',actionId:'native-one',changedBlockIds:['invented-table'],revision:'saved-revision'}}})
+ expect(await pending).toMatchObject({phase:'failed',receipt:{status:'failed',message:expect.stringContaining('尚未确认')}});s.dispose()
+})
+it('does not repeat an already durable native request after the Main response cache is gone',async()=>{
+ const prior={requestId:'native-one',phase:'accepted',nativeOperation:'table',prompt:'创建一个3乘3的表格',result:{kind:'conversation',markdown:'已保存原生笔记内容。',capabilityReceipts:[{status:'succeeded',capability:'notes.blocks.apply',effect:{kind:'native-blocks',state:'saved',actionId:'native-one',changedBlockIds:['old-table'],revision:'saved'}}]}}
+ const s=service('http://127.0.0.1:9999'),send=vi.fn(async()=>new Response(JSON.stringify({ok:true,row:prior})));vi.stubGlobal('fetch',send)
+ await s.call('capability-ready',{documentId:'document',active:true})
+ expect(await s.call('native-table',{requestId:'native-one',documentId:'document',anchorId:'anchor',prompt:prior.prompt,title:'原生笔记'})).toMatchObject({phase:'accepted',result:prior.result});expect(send).toHaveBeenCalledOnce();expect(s.progress).toEqual([]);s.dispose()
+})
+
+it('settles a recovered preparing native admission as a real failed history row instead of caching a nonterminal response',async()=>{
+ const requests:any[]=[],s=service('http://127.0.0.1:9999');vi.stubGlobal('fetch',async(_url:any,options:any)=>{const input=JSON.parse(options.body);requests.push(input);return new Response(JSON.stringify(input.action==='conversation-native-begin'?{ok:true,row:{requestId:'native-retry',nativeOperation:'table',phase:'preparing',prompt:'创建一个3乘3的表格'}}:{ok:true,phase:input.phase,result:{kind:'conversation',markdown:input.receipt.message,capabilityReceipts:[input.receipt]}}))})
+ await s.call('capability-ready',{documentId:'document',active:true});const input={requestId:'native-retry',documentId:'document',anchorId:'anchor',prompt:'创建一个3乘3的表格',title:'原生笔记'}
+ expect(await s.call('native-table',input)).toMatchObject({phase:'failed',receipt:{status:'failed'}});expect(requests.map(row=>row.action)).toEqual(['conversation-native-begin','conversation-native-end']);expect(requests[1].phase).toBe('failed');expect(s.progress).toEqual([])
+ expect(await s.call('native-table',input)).toMatchObject({phase:'failed'});expect(requests).toHaveLength(2);s.dispose()
+})

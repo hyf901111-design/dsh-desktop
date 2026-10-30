@@ -56,6 +56,14 @@ export function noteInlineBlockIdentity(editor:any,blockId:string):string|undefi
  return binding?visit(binding.type):undefined
 }
 
+/** One traversal for a revision covering many native blocks. */
+export function noteInlineBlockIdentities(editor:any):Map<string,string>{
+ const binding=ySyncPluginKey.getState(editor._tiptapEditor.state)?.binding,result=new Map<string,string>()
+ const visit=(type:any)=>{if(type instanceof Y.XmlElement){const id=type.getAttribute('id'),item=type._item;if(typeof id==='string'&&item&&!result.has(id))result.set(id,item.id.client+':'+item.id.clock)}for(const child of type.toArray?.()??[])visit(child)}
+ if(binding)visit(binding.type)
+ return result
+}
+
 /** Component placeholders retain the anchor; completed prose can consume it. */
 export function insertNoteInlineBlocks(editor:any,anchor:NoteInsertionAnchor,documentId:string,blocks:any[],complete=false,before?:{blockId:string;identity:string}){
  const block=noteInlineAnchorBlock(editor,anchor,documentId)

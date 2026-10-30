@@ -25,6 +25,7 @@ import {NoteCreationBlock} from './creation-block'
 import {NativeTableControls,withNativeTableSizing} from './native-table'
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import {useNoteComponentInteraction} from './component-interaction'
+import {createNativeNoteOperations,nativeBlankTableIntent,selectedNativeNoteBlocks} from './native-operations'
 import { NativeSlashMenu } from './native-slash-menu'
 import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
@@ -384,6 +385,15 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     save();await saveQueue.current
     if(lastWritten.current!==JSON.stringify(snapshot()))throw Error('笔记尚未保存，较新内容已保留为草稿。')
   }
+  const nativeOperations=useMemo(()=>createNativeNoteOperations({editor,documentId:client.current,journal:proposals,
+    current:()=>!disposed.current&&!props.recovery&&editorActive()&&nativeCurrent(),snapshot:()=>snapshot(),
+    selected:()=>selectedNativeNoteBlocks(editor,references.capture(false).range),prompt:()=>lastRequest.current?.prompt||'原生笔记操作',
+    persist:()=>persistConfirmed(),changed:()=>changed(),
+    availableWidth:()=>Math.max(35,(scroll.current?.querySelector<HTMLElement>('.bn-editor')?.clientWidth||820)-31),
+    report:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect}),
+    settled:id=>{if(reviewedProposal.current===id){reviewedProposal.current=undefined;setInlineDraft(draft=>draft?.review?.id===id?undefined:draft)}},
+    ready:(id,summary,partial=false,visible=true)=>{if(request.current===id)return;const value=finishInlineProposal(id,partial,summary,'native-operations');if(value&&visible)showProposal(value);changed()}
+  }),[editor,proposals,props.sessionId,props.recovery,props.bridge])
   useEffect(()=>{
     if(!props.saveBinding)return
     const flush=()=>persistConfirmed();props.saveBinding.ready(flush)
@@ -439,7 +449,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const dataCapability=createNoteDataCapability({editor:aiActionEditor,refreshGuard:dataRefreshGuard.current,selected:()=>{const captured=references.capture();return captured.scope==='selection'?captured.components.filter(item=>item.type==='research').map(item=>item.blockId):[]},request:(method,args)=>props.bridge.request(method,{sessionId:props.sessionId,...args}),persist:persistConfirmed,report:(requestId,effect)=>props.bridge.request('capability-reply',{sessionId:props.sessionId,requestId,effect})})
     noteDataCapability.current=dataCapability
     const sharedActions={
-      editor:aiActionEditor,snapshot,documentId:client.current,
+      editor:aiActionEditor,snapshot,documentId:client.current,nativeOperations,
       challenge:()=>challengeController.current,dataCapability,
       refreshGuard:dataRefreshGuard.current,
       selectedBlockIds:()=>{
@@ -489,7 +499,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const current=()=>live&&!disposed.current&&!props.recovery&&editor.isEditable&&editorActive()
     const handler=createNoteCapabilityActions({...sharedActions,initialFingerprint:()=>capabilityFingerprint.current,generationId:()=>request.current,current,anchoredCreate:(generationId:string)=>{const inline=inlineRequest.current;if(!inline||inline.requestId!==generationId)return false;noteInlineAnchorBlock(editor,inline.anchor,client.current);return true}})
     const external=createExternalNoteCapabilityLease({sessionId:props.sessionId,documentId:client.current,current,busy:()=>!!request.current||exportPending.current||!!importing.current.size||noteResearchBlocks(editor.document).some(block=>inlineComponents.isGenerating(block.id)&&![...capabilityCards.current.values()].includes(block.id)),snapshot,
-      capture:async()=>{const context=references.capture(),range=context.range;return{selectedBlockIds:sharedActions.selectedBlockIds(),selectedParagraphIds:sharedActions.selectedParagraphIds(),requestContext:{images:[],title:titleRef.current,markdown:context.scope==='note'?await editor.blocksToMarkdownLossy(editor.document):'',selection:range?.text||'',context:{scope:context.scope,components:context.components}}}},
+      capture:async()=>{const context=references.capture(),range=context.range;return{selectedBlockIds:sharedActions.selectedBlockIds(),selectedParagraphIds:sharedActions.selectedParagraphIds(),selectedNativeBlockIds:selectedNativeNoteBlocks(editor,range),requestContext:{images:[],title:titleRef.current,markdown:context.scope==='note'?await editor.blocksToMarkdownLossy(editor.document):'',selection:range?.text||'',context:{scope:context.scope,components:context.components}}}},
       begin:id=>dataRefreshGuard.current.begin(id,snapshot()),
       create:lease=>createNoteCapabilityActions({...sharedActions,...lease}),
       retaining:value=>{setExternalBusy(value);publishComposer({running:value||!!request.current});document.dispatchEvent(new CustomEvent('sherlock:notes-capability-activity',{detail:{sessionId:props.sessionId,instanceId:props.activityId,retaining:value}}))}
@@ -551,7 +561,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const setNativeDraft = (text?: string, focus=false) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))}
   const commitNativeDraft = (admission?:ComposerAdmission) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))}
   const rollbackNativeDraft = (admission?:ComposerAdmission) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-rollback',{detail:{sessionId:props.sessionId,admission}}))}
-  const publishTask = (requestId:string,phase:string,value:Record<string,unknown>={}) => {if(!nativeCurrent())return;document.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:props.sessionId,requestId,phase,...value}}));if(['accepted','discarded'].includes(phase))void props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId,phase}).catch(()=>{})}
+  const publishTask = (requestId:string,phase:string,value:Record<string,unknown>={},persist=true) => {if(!nativeCurrent())return;document.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:props.sessionId,requestId,phase,...value}}));if(persist&&['accepted','discarded'].includes(phase))void props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId,phase}).catch(()=>{})}
   const lastRequest=useRef<{prompt:string;images:any[];admission?:ComposerAdmission;captured:typeof selection.current;fingerprint:string;context:NoteReferenceContext;draftBlockId?:string}>()
   const generatingBlock = useRef('')
   const activeGeneration=useRef<{requestId:string;blockId:string;expected:string}>()
@@ -591,6 +601,25 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     request.current = requestId;setWriting(true); publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
     try {
+      const emptyTable=!component&&nativeBlankTableIntent(prompt,images)
+      if(emptyTable){
+        const anchorId=inlineTarget?.blockId||captured.cursor||editor.getTextCursorPosition().block.id
+        if(!noteInlineBlockIdentity(editor,anchorId)&&editor.document.length===1&&editor.document[0].type==='paragraph'&&!editor.document[0].content?.length)captureNoteInlineAnchor(editor,client.current,anchorId)
+        const identity=noteInlineBlockIdentity(editor,anchorId)
+        if(!identity)throw Error(t('原插入位置已删除或变化，请在空白行重新启用 AI。'))
+        const permission=await props.bridge.request('capability-ready',{sessionId:props.sessionId,documentId:client.current,active:true})
+        if(permission?.editable!==true)throw Error(t('当前笔记不可编辑。'))
+        if(disposed.current||epoch.current!==attempt||request.current!==requestId||!editorActive()||!nativeCurrent()||noteInlineBlockIdentity(editor,anchorId)!==identity)throw Error(t('原插入位置已删除或变化，请在空白行重新启用 AI。'))
+        if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
+        capabilityFingerprint.current=noteCapabilityFingerprint(snapshot());dataRefreshGuard.current.begin(requestId,snapshot())
+        const outcome=await props.bridge.request('native-table',{sessionId:props.sessionId,requestId,documentId:client.current,prompt,anchorId,title:titleRef.current})
+        // A stopped or superseded request may retain honest applied/saved facts
+        // in its journal/history, but cannot commit input or reopen old UI.
+        if(disposed.current||epoch.current!==attempt||request.current!==requestId||!editorActive()||!nativeCurrent())return
+        const {receipt,result,phase}=outcome,summary=`已创建${emptyTable.rows}行${emptyTable.columns}列原生表格`
+        const value=finishInlineProposal(requestId,receipt.status!=='succeeded',summary,'native-operations',receipt.status==='succeeded'?undefined:receipt.message)
+        if(value)showProposal(value);changed();publishTask(requestId,phase,{result,...phase==='failed'?{error:receipt.message}:{}});if(receipt.status==='succeeded')commitNativeDraft(admission);return
+      }
       const markdown = context.scope==='note'?await editor.blocksToMarkdownLossy(editor.document):''
       if(draftBlockId){
         pending=draftBlockId;generatingBlock.current=pending
@@ -606,7 +635,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       capabilityFingerprint.current=noteCapabilityFingerprint(snapshot())
       dataRefreshGuard.current.begin(requestId,snapshot())
       if(inlineTarget)proposals.begin(requestId,prompt,inlineTarget)
-      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, ...inlineTarget?{entryPoint:'inline',insertionAnchor:inlineTarget}:{}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
+      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedNativeBlockIds:selectedNativeNoteBlocks(editor,context.range),selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, ...inlineTarget?{entryPoint:'inline',insertionAnchor:inlineTarget}:{}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt||!nativeCurrent()||inlineTarget&&(!editorActive()||inlineRequest.current?.requestId!==requestId)) return
       if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
       if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
@@ -630,10 +659,10 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       }else if(inlineTarget){
         if(result.kind==='conversation'){
           const proposal=proposals.list().find(value=>value.id===requestId),state=proposal&&inlineProposalState(proposal),changes=state?.changes.length||0
-          const external=result.capabilityReceipts?.some(receipt=>receipt.status==='succeeded'&&(receipt.path||receipt.effect&&('path'in receipt.effect||'kind'in receipt.effect&&(receipt.effect.kind==='challenge'||receipt.effect.kind==='data'))||receipt.capability?.startsWith('ui.')))
+          const external=result.capabilityReceipts?.some(receipt=>receipt.status==='succeeded'&&(receipt.path||receipt.effect&&('path'in receipt.effect||'kind'in receipt.effect&&(receipt.effect.kind==='challenge'||receipt.effect.kind==='data'||receipt.effect.kind==='native-blocks'))||receipt.capability?.startsWith('ui.')))
           const partial=!!result.requiresReply||!!state?.failed.length||!!result.capabilityReceipts?.some(receipt=>receipt.status!=='succeeded')
           const summary=state?.failed.length?state.summary:changes?(partial?'本次操作未完成，内容已保留':''):external?result.capabilitySummary?.split('\n').slice(0,2).join('；')||'':''
-          inlineCompletion={partial,summary,kind:result.kind,error:state?.failed.length?state.error:!changes&&!external?result.capabilitySummary||'尚未生成可插入内容，原需求已保留，可重试。':undefined}
+          inlineCompletion={partial,summary,kind:result.capabilityReceipts?.some(receipt=>receipt.capability==='notes.blocks.apply')?'native-operations':result.kind,error:state?.failed.length?state.error:!changes&&!external?result.capabilitySummary||'尚未生成可插入内容，原需求已保留，可重试。':undefined}
           publishTask(requestId,'replied',{result})
         }else{
           const blocks=result.kind==='component'?[{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}]:editor.tryParseMarkdownToBlocks(result.markdown)
@@ -695,6 +724,10 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         }
         else { publishTask(requestId,'ready',{result}); setPreview({requestId,...noteSuggestionPreview(result, { ...captured, fingerprint, cursor: captured.cursor || editor.getTextCursorPosition().block.id })}) }
       }
+      if(!inlineTarget&&proposals.list().some(value=>value.id===requestId&&value.changes.length)&&result.capabilityReceipts?.some(receipt=>receipt.capability==='notes.blocks.apply')){
+        const partial=result.kind==='conversation'&&!!result.requiresReply||result.capabilityReceipts.some(receipt=>receipt.status!=='succeeded')
+        const value=finishInlineProposal(requestId,partial,partial?'本次操作未完成，内容已保留':'已更新原生笔记内容','native-operations');if(value)showProposal(value);changed()
+      }
       if(completedBlock&&result.kind==='component'&&result.sourceResult?.status==='verified'){
         // Persist the generated block before binding the same research refresh engine to it.
         const payload=editor.getBlock(completedBlock)?.props.payload
@@ -715,7 +748,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       if (!disposed.current && epoch.current === attempt) {
         const message = (e as Error).name === 'AbortError' ? t("生成已停止，可调整需求后重试。") : noteGenerationError(e)
         if (pending && currentGeneration()) editor.updateBlock(pending, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(pending).props.payload),generationStatus:'failed',generationError:message}) } })
-        rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); if(inlineTarget){const value=finishInlineProposal(requestId,true,'',undefined,message);if(value){showProposal(value);changed()}else setInlineDraft(draft=>draft?{...draft,review:undefined,error:message}:draft)}else setError(message)
+        rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); if(inlineTarget){const value=finishInlineProposal(requestId,true,'',undefined,message);if(value){showProposal(value);changed()}else setInlineDraft(draft=>draft?{...draft,review:undefined,error:message}:draft)}else {const value=proposals.list().some(value=>value.id===requestId&&value.changes.length)&&finishInlineProposal(requestId,true,'本次操作未完成，内容已保留','native-operations',message);if(value){showProposal(value);changed()}else setError(message)}
       }
     } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); request.current = '';inlineRequest.current=undefined; publishComposer({running:false}); generatingBlock.current = '';activeGeneration.current=undefined;challengeScheduleSync.current?.() } }
   }
@@ -737,9 +770,10 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     try{
       if(undo){const result=proposals.undo(value.id);changed();await persist();if(!result.complete)return}
       restore=proposals.list().find(item=>item.id===value.id)||value;proposals.confirm(value.id);changed();await persist()
+      if(value.resultKind==='native-operations')await props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId:value.id,phase:undo?'discarded':'accepted'})
       if(reviewedProposal.current===value.id){if(inlineDraftRef.current?.review?.id===value.id)inlinePrompt.current=undo?value.prompt:'';reviewedProposal.current=undefined}
       setInlineDraft(draft=>draft?.review?.id===value.id?undefined:draft)
-      if(value.resultKind==='text'||value.resultKind==='text-fallback'||value.resultKind==='component')publishTask(value.id,undo?'discarded':'accepted')
+      if(value.resultKind==='text'||value.resultKind==='text-fallback'||value.resultKind==='component'||value.resultKind==='native-operations')publishTask(value.id,undo?'discarded':'accepted',{},value.resultKind!=='native-operations')
     }catch(error){if(!proposals.list().some(item=>item.id===value.id))proposals.restore(restore);proposals.setError(value.id,(error as Error).message);changed();setInlineDraft(draft=>draft?.review?.id===value.id?{...draft,error:(error as Error).message}:draft)}finally{settlingProposal.current='';setInlineDraft(draft=>draft?.review?{...draft,review:{...draft.review,busy:proposals.list().find(item=>item.id===draft.review!.id)?.state==='running',canUndo:editor.isEditable&&proposals.canUndo(draft.review.id)}}:draft)}
    }
    const result=run();settlementTask.current=result;return result
