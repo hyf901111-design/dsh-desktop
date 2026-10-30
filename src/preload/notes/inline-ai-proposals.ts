@@ -6,7 +6,7 @@ import {noteChartNavigationAllowed} from './chart-navigation'
 import {researchInteractionVersion,validResearchInteractionState} from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 
 type Block=Record<string,any>&{id:string}
-type Change={id:string;before:Block|null;after:Block|null;identity?:string;previous?:string;next?:string;previousIdentity?:string;nextIdentity?:string;dirty?:boolean;group?:string}
+type Change={id:string;before:Block|null;after:Block|null;identity?:string;previous?:string;next?:string;previousIdentity?:string;nextIdentity?:string;dirty?:boolean;group?:string;dependency?:string;moved?:boolean;afterParent?:string;afterParentIdentity?:string;afterPrevious?:string;afterNext?:string;afterPreviousIdentity?:string;afterNextIdentity?:string}
 export type NoteInlineProposal={id:string;prompt:string;createdAt:number;anchor:any;state:'running'|'ready';summary:string;changes:Change[];resultKind?:string;error?:string}
 type StoredProposal=NoteInlineProposal&{changeEncoding?:{version:1;length:number;chunks:string[]}}
 const CHANGE_CHUNK=64*1024
@@ -54,35 +54,64 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
  const list=():NoteInlineProposal[]=>[...records.values()].map(materialized).filter((value):value is NoteInlineProposal=>!!value).map(value=>clone({...value,...value.state==='running'&&value.id!==active?{state:'ready',summary:value.changes.length?'已停止，已保留本次生成内容':'生成已停止'}:{}} as NoteInlineProposal))
  const publish=()=>{if(!disposed)onChange()}
  const currentBlocks=()=>new Map<string,Block>((editor.document as Block[]).map(block=>[block.id,clone(block)]))
+ const treePositions=(blocks:Block[],parentId?:string,result=new Map<string,{block:Block;siblings:Block[];index:number;parentId?:string}>())=>{blocks.forEach((block,index)=>{result.set(block.id,{block,siblings:blocks,index,parentId});treePositions(block.children??[],block.id,result)});return result}
+ const samePlacement=(entry:Change,currentIdentities:Map<string,string>)=>{
+  if(!entry.moved)return true
+  const at=treePositions(editor.document).get(entry.id)
+  return !!at&&at.parentId===entry.afterParent&&(!entry.afterParent||currentIdentities.get(entry.afterParent)===entry.afterParentIdentity)&&at.siblings[at.index-1]?.id===entry.afterPrevious&&at.siblings[at.index+1]?.id===entry.afterNext&&(!entry.afterPrevious||currentIdentities.get(entry.afterPrevious)===entry.afterPreviousIdentity)&&(!entry.afterNext||currentIdentities.get(entry.afterNext)===entry.afterNextIdentity)
+ }
  const inspect=()=>{
   if(depth||disposed)return
   const blocks=currentBlocks(),currentIdentities=identities(doc)
   for(const value of list()){
    let changed=false
    for(const item of value.changes)if(!item.dirty){
-    const block=blocks.get(item.id),same=item.after?block&&!!item.identity&&fingerprint(block)===fingerprint(item.after)&&currentIdentities.get(item.id)===item.identity:!block
+    const block=item.moved?editor.getBlock(item.id):blocks.get(item.id),same=item.after?block&&!!item.identity&&fingerprint(block)===fingerprint(item.after)&&currentIdentities.get(item.id)===item.identity&&samePlacement(item,currentIdentities):!block
     if(!same){item.dirty=true;changed=true}
    }
    if(changed)write(value)
   }
  }
  const off=editor.onChange(inspect);records.observe(publish)
- const run=<T,>(mutation:()=>T):T=>{
+ const run=<T,>(mutation:()=>T,movedIds:readonly string[]=[],dependent=false):T=>{
   if(!active||depth||!records.has(active))return mutation()
   inspect();const current=read(active);if(!current)throw Error('本次生成的审阅记录不可用，原需求已保留。')
-  const value=clone(current),before=currentBlocks(),order=[...before.keys()],positions=new Map(order.map((id,index)=>[id,index])),beforeIdentities=identities(doc),group=crypto.randomUUID()
+  const value=clone(current),before=currentBlocks(),beforeTree=treePositions([...before.values()]),order=[...before.keys()],positions=new Map(order.map((id,index)=>[id,index])),beforeIdentities=identities(doc),group=crypto.randomUUID()
   // Fail a known unavailable journal before applying the document mutation.
   write(value);depth++
   try{return mutation()}finally{
-   const after=currentBlocks(),afterIdentities=identities(doc),byId=new Map(value.changes.map(change=>[change.id,change]))
+   const after=currentBlocks(),afterTree=treePositions([...after.values()]),afterIdentities=identities(doc),afterOrder=[...after.keys()],byId=new Map(value.changes.map(change=>[change.id,change]))
    for(const id of new Set([...before.keys(),...after.keys()])){
     const previous=before.get(id),next=after.get(id)
-    if(fingerprint(previous??null)===fingerprint(next??null))continue
+    const oldPosition=beforeTree.get(id),position=afterTree.get(id),moved=!!oldPosition&&!!position&&movedIds.includes(id)&&(oldPosition.parentId!==position.parentId||oldPosition.index!==position.index)
+    if(fingerprint(previous??null)===fingerprint(next??null)&&!moved)continue
     const index=positions.get(id)??-1,entry=byId.get(id)??{id,group,before:previous??null,after:null,previous:order[index-1],next:order[index+1],previousIdentity:beforeIdentities.get(order[index-1]!),nextIdentity:beforeIdentities.get(order[index+1]!)}
-    entry.after=next??null;entry.identity=next?afterIdentities.get(id):undefined;byId.set(id,entry)
+    entry.after=next??(moved?position!.block:null);entry.identity=entry.after?afterIdentities.get(id):undefined
+    if(dependent)entry.dependency=value.id
+    if(moved){const{siblings,index,parentId}=position!;Object.assign(entry,{moved:true,afterParent:parentId,afterParentIdentity:parentId?afterIdentities.get(parentId):undefined,afterPrevious:siblings[index-1]?.id,afterNext:siblings[index+1]?.id,afterPreviousIdentity:afterIdentities.get(siblings[index-1]?.id!),afterNextIdentity:afterIdentities.get(siblings[index+1]?.id!)})}
+    byId.set(id,entry)
+   }
+   for(const entry of byId.values()){
+    const prior=current.changes.find(change=>change.id===entry.id),beforePosition=beforeTree.get(entry.id),afterPosition=afterTree.get(entry.id)
+    if(entry.moved&&prior&&!prior.dirty&&beforePosition&&beforeIdentities.get(entry.id)===prior.identity&&fingerprint(beforePosition.block)===fingerprint(prior.after)){
+     entry.after=afterPosition?.block??null;entry.identity=afterPosition?afterIdentities.get(entry.id):undefined
+     if(afterPosition){const{siblings,index,parentId}=afterPosition;Object.assign(entry,{afterParent:parentId,afterParentIdentity:parentId?afterIdentities.get(parentId):undefined,afterPrevious:siblings[index-1]?.id,afterNext:siblings[index+1]?.id,afterPreviousIdentity:afterIdentities.get(siblings[index-1]?.id!),afterNextIdentity:afterIdentities.get(siblings[index+1]?.id!)})}
+    }
+   }
+   if(dependent||[...byId.values()].some(entry=>entry.moved)){
+    // y-prosemirror may reuse an unchanged neighbour's Y element for a
+    // different position while applying one native batch. Bind restoration to
+    // the exact post-transaction identity only when its entire value survived
+    // this synchronous, owned mutation unchanged. Later ABA remains rejected.
+    for(const entry of byId.values())for(const side of ['previous','next'] as const){const id=entry[side];if(id&&before.has(id)&&after.has(id)&&beforeIdentities.get(id)===entry[side==='previous'?'previousIdentity':'nextIdentity']&&fingerprint(before.get(id))===fingerprint(after.get(id)))entry[side==='previous'?'previousIdentity':'nextIdentity']=afterIdentities.get(id)}
    }
    value.changes=[...byId.values()];try{write(value)}finally{depth--;publish()}
   }
+ }
+ const runFor=<T,>(id:string,mutation:()=>T,movedIds:readonly string[]=[],dependent=false):T=>{
+  if(!records.has(id))throw Error('本次原生操作记录已变化。')
+  const previous=active;active=id
+  try{return run(mutation,movedIds,dependent)}finally{active=previous}
  }
  const proxy=(owns:(_method:string,_args:any[])=>boolean=()=>true)=>new Proxy(editor,{get(target,key){
   const value=Reflect.get(target,key,target)
@@ -102,9 +131,27 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
  }
  const matches=(entry:Change,currentIdentities:Map<string,string>)=>{
   const block=editor.getBlock(entry.id)
-  return !entry.dirty&&(entry.after?!!block&&!!entry.identity&&fingerprint(block)===fingerprint(entry.after)&&currentIdentities.get(entry.id)===entry.identity:!block)
+  return !entry.dirty&&(entry.after?!!block&&!!entry.identity&&fingerprint(block)===fingerprint(entry.after)&&currentIdentities.get(entry.id)===entry.identity&&samePlacement(entry,currentIdentities):!block)
  }
- const canRevert=(entry:Change,changes:Change[],currentIdentities:Map<string,string>)=>matches(entry,currentIdentities)&&!(entry.before&&!entry.after&&entry.group&&changes.some(peer=>peer.group===entry.group&&!peer.before&&peer.after&&!matches(peer,currentIdentities)))
+ const positionAvailable=(entry:Change,changes:Change[],currentIdentities:Map<string,string>)=>{
+  if(!entry.moved)return true
+  const byId=new Map(changes.map(change=>[change.id,change]))
+  const stable=(value:Change,side:'previous'|'next',seen=new Set<string>()):boolean=>{
+   const id=value[side];if(!id||seen.has(id))return false;seen.add(id)
+   const peer=byId.get(id),block=editor.getBlock(id)
+   if(peer?.moved&&matches(peer,currentIdentities)||!block&&peer?.before&&!peer.after&&matches(peer,currentIdentities))return stable(peer!,side,seen)
+   if(peer&&!peer.before&&matches(peer,currentIdentities))return false
+   const expected=side==='previous'?value.previousIdentity:value.nextIdentity
+   return !!block&&!!expected&&currentIdentities.get(id)===expected
+  }
+  if(stable(entry,'previous')||stable(entry,'next'))return true
+  const deleted=new Map(changes.filter(change=>change.before&&(!change.after||change.moved)).map(change=>[change.id,change])),heads=[...deleted.values()].filter(change=>!change.previous),seen=new Set<string>()
+  let cursor=heads.length===1?heads[0]:undefined,last:Change|undefined
+  while(cursor&&matches(cursor,currentIdentities)&&!seen.has(cursor.id)){seen.add(cursor.id);last=cursor;cursor=cursor.next?deleted.get(cursor.next):undefined}
+  return deleted.size>0&&seen.size===deleted.size&&!!last&&!last.next&&!cursor&&(editor.document as Block[]).every(block=>{const change=byId.get(block.id);return !!change&&(!change.before||change.moved)&&matches(change,currentIdentities)})
+ }
+ const safe=(entry:Change,changes:Change[],currentIdentities:Map<string,string>)=>matches(entry,currentIdentities)&&positionAvailable(entry,changes,currentIdentities)
+ const canRevert=(entry:Change,changes:Change[],currentIdentities:Map<string,string>)=>safe(entry,changes,currentIdentities)&&(!entry.dependency||!changes.some(peer=>peer.dependency===entry.dependency&&!safe(peer,changes,currentIdentities)))&&!(entry.before&&!entry.after&&entry.group&&changes.some(peer=>peer.group===entry.group&&!peer.before&&peer.after&&!matches(peer,currentIdentities)))
  const writeHtmlInteraction=(input:any,expectedPayload:string,nextPayload:string,admission:{requestId?:string;identity?:string})=>{
   inspect()
   const originalBlock=editor.getBlock(input.blockId),nodeIdentity=identity(doc,input.blockId)
@@ -143,7 +190,7 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
  }
  const undo=(id:string)=>{
   inspect();const value=list().find(record=>record.id===id);if(!value)throw Error('本次生成记录已变化。')
-  const currentIdentities=identities(doc),allowed=new Set(value.changes.filter(entry=>canRevert(entry,value.changes,currentIdentities)).map(entry=>entry.id)),remaining:Change[]=[],restored=new Map<string,string|undefined>(),automatic=new Map<string,string|undefined>(),deleted=new Map(value.changes.filter(entry=>entry.before&&!entry.after).map(entry=>[entry.id,entry])),undoManager=editor._tiptapEditor?.state?.plugins?.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(editor._tiptapEditor.state)?.undoManager;undoManager?.stopCapturing();depth++
+  const currentIdentities=identities(doc),allowed=new Set(value.changes.filter(entry=>canRevert(entry,value.changes,currentIdentities)).map(entry=>entry.id)),remaining:Change[]=[],restored=new Map<string,string|undefined>(),automatic=new Map<string,string|undefined>(),deleted=new Map(value.changes.filter(entry=>entry.before&&(!entry.after||entry.moved)).map(entry=>[entry.id,entry])),undoManager=editor._tiptapEditor?.state?.plugins?.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(editor._tiptapEditor.state)?.undoManager;undoManager?.stopCapturing();depth++
   const neighbour=(entry:Change,side:'previous'|'next',seen=new Set<string>()):any=>{const id=entry[side];if(!id||seen.has(id))return;seen.add(id);const block=editor.getBlock(id),expected=side==='next'?entry.nextIdentity:entry.previousIdentity;if(block)return(!!expected&&identity(doc,id)===expected||restored.has(id)&&fingerprint(block)===fingerprint(deleted.get(id)?.before))?block:undefined;const prior=deleted.get(id);return prior&&allowed.has(id)?neighbour(prior,side,seen):undefined}
   const reachesBoundary=(entry:Change,side:'previous'|'next',seen=new Set<string>()):boolean=>{const id=entry[side];if(!id)return true;if(seen.has(id)||editor.getBlock(id))return false;seen.add(id);const prior=deleted.get(id);return !!prior&&allowed.has(id)&&reachesBoundary(prior,side,seen)}
   // Replacing the complete owned result with its real before sequence avoids
@@ -152,19 +199,19 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
   let cursor=heads.length===1?heads[0]:undefined
   while(cursor&&allowed.has(cursor.id)&&!seen.has(cursor.id)){seen.add(cursor.id);beforeChain.push(cursor);cursor=cursor.next?deleted.get(cursor.next):undefined}
   const completeBefore=beforeChain.length===deleted.size&&beforeChain.length>0&&!beforeChain.at(-1)!.next
-  const currentIds=(editor.document as Block[]).map(block=>block.id),created=new Map(value.changes.filter(entry=>!entry.before&&entry.after).map(entry=>[entry.id,entry]))
+  const currentIds=(editor.document as Block[]).map(block=>block.id),created=new Map(value.changes.filter(entry=>(!entry.before||entry.moved)&&entry.after).map(entry=>[entry.id,entry]))
   if(completeBefore&&currentIds.length&&currentIds.every(id=>created.has(id)&&allowed.has(id))){
    try{editor.replaceBlocks(currentIds,beforeChain.map(entry=>entry.before!))}finally{depth--;undoManager?.stopCapturing()}
    value.changes=[];value.summary='已撤销本次生成，正在保存';write(value);publish();return{complete:true,retained:0}
   }
   try{editor.transact(()=>{
    // Remove creations first so a removed blank anchor can be restored safely.
-   const removed=value.changes.filter(entry=>allowed.has(entry.id)&&!entry.before&&editor.getBlock(entry.id)).map(entry=>entry.id)
+   const removed=value.changes.filter(entry=>allowed.has(entry.id)&&(!entry.before||entry.moved)&&editor.getBlock(entry.id)).map(entry=>entry.id)
    if(removed.length){const beforeIds=new Set(editor.document.map((block:any)=>block.id));editor.removeBlocks(removed);for(const block of editor.document)if(!beforeIds.has(block.id)&&empty(block))automatic.set(block.id,identity(doc,block.id))}
    for(const entry of [...value.changes].sort((a,b)=>Number(!!a.before)-Number(!!b.before))){
     if(!allowed.has(entry.id)){remaining.push(entry);continue}
     if(!entry.before)continue
-    if(entry.after){const{type,props,content,children}=entry.before;editor.updateBlock(entry.id,{type,props,content,children});continue}
+    if(entry.after&&!entry.moved){const{type,props,content,children}=entry.before;editor.updateBlock(entry.id,{type,props,content,children});continue}
     const next=neighbour(entry,'next'),previous=neighbour(entry,'previous')
     if(next)editor.insertBlocks([entry.before],next.id,'before')
     else if(previous)editor.insertBlocks([entry.before],previous.id,'after')
@@ -177,7 +224,7 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
   publish();return{complete:!remaining.length,retained:remaining.length}
  }
  const confirm=(id:string)=>{if(!records.has(id))throw Error('本次生成记录已变化。');records.delete(id);publish()}
- return{list,begin,run,proxy,finish,undo,confirm,captureHtmlInteraction,setError:(id:string,error:string)=>{const value=read(id);if(value)write({...value,error:error.slice(0,1000)})},restore:(value:NoteInlineProposal)=>{write(clone(value));inspect()},active:()=>active,has:(id:string)=>!!read(active||'')?.changes.some(entry=>entry.id===id),canUndoBlock:(id:string,blockId:string)=>{const value=list().find(item=>item.id===id),entry=value?.changes.find(item=>item.id===blockId);return !!value&&!!entry&&canRevert(entry,value.changes,identities(doc))},canUndo:(id:string)=>{const value=list().find(value=>value.id===id),currentIdentities=identities(doc);return value?.changes.some(entry=>canRevert(entry,value.changes,currentIdentities))??false},dispose(){disposed=true;off();records.unobserve(publish)}}
+ return{list,begin,run,runFor,proxy,finish,undo,confirm,captureHtmlInteraction,setError:(id:string,error:string)=>{const value=read(id);if(value)write({...value,error:error.slice(0,1000)})},restore:(value:NoteInlineProposal)=>{write(clone(value));inspect()},active:()=>active,has:(id:string)=>!!read(active||'')?.changes.some(entry=>entry.id===id),canUndoBlock:(id:string,blockId:string)=>{const value=list().find(item=>item.id===id),entry=value?.changes.find(item=>item.id===blockId);return !!value&&!!entry&&canRevert(entry,value.changes,identities(doc))},canUndo:(id:string)=>{const value=list().find(value=>value.id===id),currentIdentities=identities(doc);return value?.changes.some(entry=>canRevert(entry,value.changes,currentIdentities))??false},dispose(){disposed=true;off();records.unobserve(publish)}}
 }
 
 const markKey=new PluginKey('note-inline-ai-proposal')

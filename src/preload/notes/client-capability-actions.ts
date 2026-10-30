@@ -1,5 +1,5 @@
 import {noteCapabilityReceiptMessage} from '../../../packages/dsh-research-task-runtime/client-capability-receipts.js'
-import type {CapabilityStyleEffect,CapabilityCreateEffect,CapabilityDataEffect,CapabilityChallengeConfiguration,CapabilityChallengeEffect,ClientCapabilityArguments} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
+import type {CapabilityStyleEffect,CapabilityCreateEffect,CapabilityDataEffect,CapabilityNativeBlocksEffect,CapabilityChallengeConfiguration,CapabilityChallengeEffect,ClientCapabilityArguments} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {NoteContent} from '../../shared/workspace-notes'
 import {changeNoteAlignment,noteAlignmentBlocks} from './block-alignment'
@@ -16,7 +16,7 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;anchoredCreate?(generationId:string):boolean;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];componentWidth?(blockId:string):number;dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;anchoredCreate?(generationId:string):boolean;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];componentWidth?(blockId:string):number;nativeOperations?:{execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect|CapabilityNativeBlocksEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>(),activeData=new Set<string>()
  const advanceFingerprint=(next:string)=>{options.refreshGuard?.advanceOwn(generation,fingerprint,next);fingerprint=next}
@@ -35,6 +35,12 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
   const anchored=(input.action==='context'||input.action==='notes.components.create')&&options.anchoredCreate?.(input.generationId)===true
   if(!anchored&&(input.action==='notes.components.data'?!dataCurrent():noteCapabilityFingerprint(options.snapshot())!==fingerprint))throw Error(t('笔记内容已变化，请重新发送请求，较新修改已保留。'))
   if(input.action==='context')return {status:'succeeded'}
+  if(['notes.blocks.read','notes.blocks.apply','notes.blocks.undo'].includes(input.action)){
+   if(!options.nativeOperations)throw Error('原生笔记操作暂不可用。')
+   const{sourceInstruction,...args}=input.args??{}
+   if(sourceInstruction!==undefined&&(input.action!=='notes.blocks.apply'||typeof sourceInstruction!=='string'||sourceInstruction.length>8000))throw Error('原生笔记请求上下文无效。')
+   return options.nativeOperations.execute({...input,args,sourceInstruction},current,()=>advanceFingerprint(noteCapabilityFingerprint(options.snapshot())))
+  }
   if(input.action==='notes.components.data'){
    if(!options.dataCapability)throw Error('组件数据刷新服务暂不可用。')
    activeData.add(input.requestId)

@@ -4,7 +4,7 @@ import type {NoteContent} from '../../shared/workspace-notes'
 type Lease={generationId:string;fingerprint:string;context:any;cancelled:boolean;pending:Set<string>;handler:((input:any)=>Promise<any>)&{dispose():void}}
 /** A Harness turn owns a separate lease. It never impersonates the local Notes
  * composer request, and it cannot recapture a changed document mid-operation. */
-export function createExternalNoteCapabilityLease(options:{sessionId:string;documentId:string;current():boolean;busy():boolean;snapshot():NoteContent;capture():Promise<{selectedBlockIds:string[];selectedParagraphIds:string[];requestContext:any}>;begin(id:string):void;create(lease:{generationId():string;initialFingerprint():string;current():boolean}):Lease['handler'];retaining(value:boolean):void}){
+export function createExternalNoteCapabilityLease(options:{sessionId:string;documentId:string;current():boolean;busy():boolean;snapshot():NoteContent;capture():Promise<{selectedBlockIds:string[];selectedParagraphIds:string[];selectedNativeBlockIds?:string[];requestContext:any}>;begin(id:string):void;create(lease:{generationId():string;initialFingerprint():string;current():boolean}):Lease['handler'];retaining(value:boolean):void}){
  let lease:Lease|undefined,acquiring:{requestId:string;generationId:string;cancelled:boolean}|undefined
  const usable=(value:Lease)=>lease===value&&!value.cancelled&&options.current()&&!options.busy()
  const clear=(value:Lease)=>{if(value.pending.size)return;value.handler.dispose();if(lease===value)lease=undefined}
@@ -30,7 +30,7 @@ export function createExternalNoteCapabilityLease(options:{sessionId:string;docu
      const value={generationId:input.generationId,fingerprint,context:captured,cancelled:false,pending:new Set<string>()} as Lease
      value.handler=options.create({generationId:()=>usable(value)?value.generationId:'',initialFingerprint:()=>value.fingerprint,current:()=>usable(value)})
      lease=value;options.begin(value.generationId)
-     return{status:'succeeded',context:{documentId:options.documentId,selectedBlockIds:captured.selectedBlockIds,selectedParagraphIds:captured.selectedParagraphIds},requestContext:captured.requestContext}
+     return{status:'succeeded',context:{documentId:options.documentId,selectedBlockIds:captured.selectedBlockIds,selectedParagraphIds:captured.selectedParagraphIds,selectedNativeBlockIds:captured.selectedNativeBlockIds??[]},requestContext:captured.requestContext}
     }finally{if(acquiring===capture)acquiring=undefined}
    }
    const value=lease

@@ -148,3 +148,7 @@ it('reads binding statuses from the Notes engine under read permission without r
  const rows=[{nodeId:'note-node',status:'error'}],request=vi.fn(async()=>rows),s=service(undefined,{canWrite:()=>false,componentData:{request}})
  try{expect(await s.call('component-data-status')).toEqual({owner:'alice',rows});expect(request).toHaveBeenCalledWith('session',{action:'list'});s.deny();await expect(s.call('component-data-status')).rejects.toThrow();expect(request).toHaveBeenCalledOnce()}finally{s.dispose()}
 })
+it.each([true,false])('returns actual native edit permission with the existing trusted document readiness acknowledgement (writable=%s)',async editable=>{
+ const s=service(undefined,{canWrite:()=>editable})
+ try{expect(await s.call('capability-ready',{documentId:'native-doc',active:true})).toEqual({ok:true,editable})}finally{s.dispose()}
+})

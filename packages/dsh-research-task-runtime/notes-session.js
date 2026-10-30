@@ -73,6 +73,8 @@ export function engageNoteSession(ctx, input) {
   return { ok: true, title: session.events.findLast(e => e.type === 'session/title')?.data.title || '', automatic }
 }
 
+const nativeDocumentReceipt=(receipts,requestId)=>Array.isArray(receipts)&&receipts.some(receipt=>receipt.capability==='notes.blocks.apply'&&receipt.effect?.kind==='native-blocks'&&receipt.effect.actionId===requestId&&['applied','saved'].includes(receipt.effect.state)&&Array.isArray(receipt.effect.changedBlockIds)&&receipt.effect.changedBlockIds.length>0&&receipt.effect.changedBlockIds.every(id=>typeof id==='string'&&id.length>0&&id.length<=256))===true
+
 export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
   const disposeContext=registerNoteConversationContext(ctx)
   const disposeRoute=ctx.webServer.register({ kind: 'exact', path: '/sherlock/notes/session', handler: async (req, res) => {
@@ -88,9 +90,9 @@ export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
         const session=ctx.sessions.get(input.sessionId),receipts=input.receipts
         if(!session||!noteConversationRows(session).some(row=>row.requestId===input.requestId)||!Array.isArray(receipts)||!receipts.length||receipts.length>16||JSON.stringify(receipts).length>300000||receipts.some(r=>!['succeeded','failed','cancelled','pending','unavailable'].includes(r?.status)||typeof r.capability!=='string'))throw Error('客户端操作回执无效。')
         const previous=noteConversationRows(session).find(row=>row.requestId===input.requestId)
-        const documentResult=['text','component'].includes(previous?.result?.kind)
+        const documentResult=['text','component'].includes(previous?.result?.kind)||nativeDocumentReceipt(receipts,input.requestId)
         const remaining=input.remainingReply,reply=remaining&&typeof remaining.markdown==='string'&&remaining.markdown.trim()&&remaining.markdown.length<=100000?{kind:'conversation',markdown:remaining.markdown,requiresReply:true}:previous?.result?.kind==='conversation'&&previous.result.requiresReply===true?previous.result:undefined
-        const result=documentResult?{...previous.result,capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}:reply?{...reply,capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}:{kind:'conversation',markdown:capabilityReceiptText(receipts),capabilityReceipts:receipts}
+        const result=documentResult?{...(previous.result??{kind:'conversation',markdown:capabilityReceiptText(receipts)}),capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}:reply?{...reply,capabilityReceipts:receipts,capabilitySummary:capabilityReceiptText(receipts)}:{kind:'conversation',markdown:capabilityReceiptText(receipts),capabilityReceipts:receipts}
         const phase=documentResult?['accepted','discarded'].includes(previous.phase)?previous.phase:'ready':'replied'
         recordNoteConversation(session,{requestId:input.requestId,phase,result,finishedAt:Date.now()});setNoteCapabilityRunning(session,input.requestId,false)
         return send(200,{ok:true})
@@ -98,7 +100,7 @@ export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
       if(input.action==='conversation-load'||input.action==='conversation-state'){
         const session=ctx.sessions.get(input.sessionId);if(!session)throw Error('笔记会话不可用。')
         if(input.action==='conversation-state'){
-          if(!['accepted','discarded'].includes(input.phase)||!noteConversationRows(session).some(row=>row.requestId===input.requestId&&row.result?.kind!=='conversation'))throw Error('笔记会话记录不可用。')
+          if(!['accepted','discarded'].includes(input.phase)||!noteConversationRows(session).some(row=>row.requestId===input.requestId&&(row.result?.kind!=='conversation'||nativeDocumentReceipt(row.result?.capabilityReceipts,row.requestId))))throw Error('笔记会话记录不可用。')
           recordNoteConversation(session,{requestId:input.requestId,phase:input.phase,finishedAt:Date.now()})
         }
         return send(200,{rows:noteConversationRows(session)})

@@ -4,7 +4,24 @@ export {noteCapabilityReceiptMessage,capabilityReceiptText} from './client-capab
 const object=(properties,required=[])=>({type:'object',properties,required,additionalProperties:false})
 const identity=c=>JSON.stringify([c?.owner,c?.sessionId,c?.documentId,c?.mode])
 const statuses=new Set(['succeeded','pending','cancelled','failed','unavailable'])
+const nativeId={type:'string',minLength:1,maxLength:256}
+const nativeIds={type:'array',minItems:1,maxItems:1000,uniqueItems:true,items:nativeId}
+const nativeAnchor=object({blockId:nativeId,placement:{type:'string',enum:['before','after']}},['blockId','placement'])
+// The visible editor validates native payloads, scope and Yjs identity. This
+// registry validates only the bounded semantic operation envelope.
+const nativeBlockFields={type:{type:'string',minLength:1,maxLength:64},props:{type:'object',additionalProperties:true},content:{anyOf:[{type:'string'},{type:'array',maxItems:10000},{type:'object',additionalProperties:true}]},children:{type:'array',maxItems:10000,items:{type:'object'}}}
+const nativePartialBlock={...object({id:nativeId,...nativeBlockFields}),minProperties:1}
+const nativeOperations={type:'array',minItems:1,maxItems:1000,items:{oneOf:[
+ object({op:{const:'insert'},blocks:{type:'array',minItems:1,maxItems:10000,items:nativePartialBlock},anchor:nativeAnchor,consumeEmpty:{type:'boolean'}},['op','blocks','anchor']),
+ object({op:{const:'update'},blockId:nativeId,block:{...object(nativeBlockFields),minProperties:1}},['op','blockId','block']),
+ object({op:{const:'move'},blockIds:nativeIds,anchor:nativeAnchor},['op','blockIds','anchor']),
+ object({op:{const:'remove'},blockIds:nativeIds},['op','blockIds'])
+]}}
+const nativeCapabilities=new Set(['notes.blocks.read','notes.blocks.apply','notes.blocks.undo'])
 const definitions=[
+ {id:'notes.blocks.read',description:'读取当前可见笔记授权范围内的原生段落、表格、列表和代码块，返回真实块ID、父级、顺序与revision。scope=note读取当前笔记授权范围，scope=selected只读取当前选区；ids只能来自当前授权范围。修改或撤销前先读取，不猜测其他笔记目标。',parameters:object({scope:{type:'string',enum:['note','selected']},ids:nativeIds},['scope']),handler:'readNoteBlocks',notes:true,maxCallBytes:1500000},
+ {id:'notes.blocks.apply',description:'使用notes.blocks.read的真实revision，在当前笔记一次执行原生insert/update/move/remove批次并保存。普通正文、表格、列表和代码优先使用此能力；研究组件、附件及任意HTML不通过此能力创建。insert须指定真实anchor与before/after；consumeEmpty仅消费仍为空的同一锚点。update只更新指定块，move保留内容并移动真实blockIds，remove仅删除明确目标。失效范围、锚点、Yjs身份或修订必须重新读取，不改成文末。仅按宿主真实applied/saved回执说明结果。',parameters:object({revision:nativeId,operations:nativeOperations},['revision','operations']),handler:'applyNoteBlocks',notes:true,write:true,maxCallBytes:1500000},
+ {id:'notes.blocks.undo',description:'使用当前notes.blocks.read的revision及原生apply真实回执actionId，精确撤销该次仍归属本操作的修改、插入、移动或删除并保存。保留后续人工编辑，不以全局键盘撤销替代，不猜测actionId。',parameters:object({revision:nativeId,actionId:nativeId},['revision','actionId']),handler:'undoNoteBlocks',notes:true,write:true,maxCallBytes:1500000},
  {id:'conversation.components.create',description:'主智能体直接提交已完成的 version:1 artifact 或原生 financial-widget spec，在当前对话回复中保存独立原生组件；不接受 prompt/recipe，不默认子智能体，不创建隐藏画布，不导航。仅接受规范化后的 financial-widget/chart/table/kpi/markdown/html/mind-map/summary；market/fund/news/reports/timeline/gantt/calendar/operations 等现有结构模板经宿主受限 HTML renderer 接受。原生仅 watchlist/quote/indices/news/announcements，股票与ETF优先 quote 配置，不填价格或OHLC；场外基金走实际 fund 数据与既有模板。files/gallery/calendar-tool/web/iframe/audio/youtube 尚无对话授权 adapter，明确拒绝。对话没有链接节点，拒绝 linkedWatchlistId/linkedSourceId，提供独立 symbols/query。输入JSON UTF-8最多1MiB；source仅保留已提供来源、时间和缺失，不宣称模型来源已核验。宿主写盘后才返回 saved effect 和 ready manifest。artifact必须含version/type/title，不是仅传HTML文本。HTML示例：{artifact:{version:1,type:"html",title:"计数与备注",html:"完整HTML/CSS/JS"}}；表格示例：{artifact:{version:1,type:"table",title:"明细",columns:["项目","值"],rows:[["甲",1]]}}。',parameters:{...object({artifact:{type:'object',properties:{version:{const:1},type:{type:'string',minLength:1},title:{type:'string',minLength:1,maxLength:256,description:'组件标题，位于artifact内部；仅缺失时可由已验证的顶层title补齐。'}},required:['version','type'],additionalProperties:true},title:{type:'string',minLength:1,maxLength:120}},['artifact']),anyOf:[{type:'object',properties:{artifact:{type:'object',properties:{title:{type:'string'}},required:['title']}}},{type:'object',properties:{title:{type:'string'}},required:['title']}] },handler:'createConversationComponent',conversation:true,write:true,maxCallBytes:1500000},
  {id:'notes.components.create',description:'使用现有组件生成引擎在当前笔记末尾创建真实研究组件，显示实时进度并保存。prompt 必须包含用户要求、明确提供的数据和来源约束；数据缺失时不编造。等待创建完成回执后才能修改样式或导出，失败或待补充信息时停止后续操作。',parameters:object({prompt:{type:'string',minLength:1,maxLength:8000}},['prompt']),handler:'createComponent',notes:true,write:true},
  {id:'notes.export',description:'导出当前笔记为 PDF、Word 或 Markdown。包含当前已保存组件外观，不支持仅本次导出临时覆盖外观。path 为用户明确指定的绝对本地路径；未指定时打开原生保存对话框。先完成用户明确要求保存的样式变更再导出。',parameters:object({format:{type:'string',enum:['pdf','docx','md']},path:{type:'string',minLength:1,maxLength:4096}},['format']),handler:'exportNote',notes:true},
@@ -61,6 +78,7 @@ export function createCapabilityExecutor(registry,current){
  return {async execute(call,context,signal){
   const receipt=(status,message)=>({requestId:call?.requestId,capability:call?.capability,status,message})
   if(!call||typeof call.requestId!=='string'||!call.requestId||call.requestId.length>256||typeof call.capability!=='string'||JSON.stringify(call).length>(registry.get(call.capability)?.maxCallBytes??16000))return receipt('failed','客户端调用格式无效。')
+  if(nativeCapabilities.has(call.capability)&&new TextEncoder().encode(JSON.stringify(call)).byteLength>1500000)return receipt('failed','客户端调用格式无效。')
   if(signal?.aborted)return receipt('cancelled','已取消，未继续执行。')
   if(identity(context)!==identity(current()))return receipt('unavailable','账号、会话或文档已变化，请重新发送请求。')
   const fingerprint=JSON.stringify([identity(context),call.capability,call.capability==='conversation.components.create'?canonicalConversationComponentInput(call.arguments):call.arguments]),old=receipts.get(call.requestId)
