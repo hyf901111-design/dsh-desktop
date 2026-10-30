@@ -11566,6 +11566,139 @@
         ],
         "recordedAt": "2026-10-30T16:55:03.872Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复：共享清单冷重开重复回放覆盖勾选状态",
+        "branch": "codex/feat/conversation-checklist-replay-20261031",
+        "baseCommit": "0d86bbc886cc479fc7a35078761c438d475620b7",
+        "tipCommit": "f971fab46cde014c7e71a0069547a1c0d5c27181",
+        "commits": [
+          {
+            "commit": "f971fab46cde014c7e71a0069547a1c0d5c27181",
+            "parents": [
+              "0d86bbc886cc479fc7a35078761c438d475620b7"
+            ],
+            "subject": "修复共享清单冷重开重复回放覆盖勾选状态"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/verification/2026-10-31-conversation-checklist-replay.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-shared-state.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-html-state-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-html-state-browser.test.ts",
+              "test/notes-html-interaction-browser.test.ts",
+              "test/notes-html-shared-state-browser.test.ts",
+              "test/component-shared-state-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "33/33生产Browser通过：Conversation22、Notes原生HTML4、Notes共享5、共享SDK2；新增7例覆盖真实事件/磁盘Store冷重开/旧混合journal/紧随异步恢复/恢复后的真人操作。",
+            "verifiedCommit": "f971fab46cde014c7e71a0069547a1c0d5c27181",
+            "completedAt": "2026-10-30T18:44:30.390488+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/component-shared-state.test.js",
+              "test/conversation-html-interaction.test.js",
+              "test/notes-html-interaction.test.ts",
+              "test/notes-html-shared-state.test.ts",
+              "test/notes-html-interaction-bridge.test.js",
+              "test/conversation-components-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "242/242相关后端与SDK单测通过；动作键序、独立激活、失败admission重试及私有replay标志验证。",
+            "verifiedCommit": "f971fab46cde014c7e71a0069547a1c0d5c27181",
+            "completedAt": "2026-10-30T18:44:30.390488+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript检查通过。",
+            "verifiedCommit": "f971fab46cde014c7e71a0069547a1c0d5c27181",
+            "completedAt": "2026-10-30T18:44:30.390488+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "0d86bbc886cc479fc7a35078761c438d475620b7..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "精确0d86新feature范围检查通过，5路径，无Core交付分支混入。",
+            "verifiedCommit": "f971fab46cde014c7e71a0069547a1c0d5c27181",
+            "completedAt": "2026-10-30T18:44:30.390488+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "工作树干净且无空白错误。",
+            "verifiedCommit": "f971fab46cde014c7e71a0069547a1c0d5c27181",
+            "completedAt": "2026-10-30T18:44:30.390488+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "精确f971源码的生产Conversation preload/bridge/service/真实磁盘Store，以及Notes组件Browser合计33例通过；未构建或操作共享App，不宣称新签名客户端Native旧记录已验收。"
+        },
+        "acceptanceCriteria": [
+          "同一checkbox/radio一次click/input/change关联，语义相同动作仅接纳一次，保留独立点击、不同控件、不同动作及同handler调用；失败admission不伪造成功。",
+          "真实onchange及三事件共享清单保持正确勾选，鼠标label、Space与radio方向键和连续重复选择均正常保存。",
+          "旧三个共享click与一个原生click混合日志冷重开两次，无新shared写/修订，权威共享[F,F,T]、普通checkbox状态及闭包保留。",
+          "回放私有标志保护同步、微任务与零延时回调，批末按保存共享状态重绘；真实后续操作可立即写入，不靠全局timer/Promise包装。",
+          "非shared原生控件恢复、保存失败、只读、账号隔离、主题与Notes共享/普通HTML交互均继续通过。"
+        ],
+        "risks": [
+          "仅保证同步恢复栈、紧随其后的微任务/零延时恢复检查点；任意延迟timer、未决Promise或多层异步因果跟踪不在此轮契约内，需要另行设计来源API，不能声称已覆盖。",
+          "生产Browser使用真实bridge/service/临时磁盘Store，旧onchange seed恢复证据不等于已在签名App中验证旧业务记录；Root需正式集成后做新清单Native勾选/退出重开与包字节parity验收。",
+          "扩查component-interaction-state/research-html-theme共5个旧断言失败，在精确0d86独立baseline完全复现5/5，证据已保留，不计本feature绿色门禁，未修改无关样式/renderer断言。",
+          "未修改共享SDK/App/integration/manifest，未构建、推送或发布；Core e95交付分支保持冻结。"
+        ],
+        "generatedAt": "2026-10-30T18:44:30.390488+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -12166,6 +12299,41 @@
         "854ec096e4b0c29ddcda781e980b7ba73de256da..HEAD"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-html-state-browser.test.ts",
+        "test/notes-html-interaction-browser.test.ts",
+        "test/notes-html-shared-state-browser.test.ts",
+        "test/component-shared-state-browser.test.js"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/component-shared-state.test.js",
+        "test/conversation-html-interaction.test.js",
+        "test/notes-html-interaction.test.ts",
+        "test/notes-html-shared-state.test.ts",
+        "test/notes-html-interaction-bridge.test.js",
+        "test/conversation-components-policy.test.js"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "0d86bbc886cc479fc7a35078761c438d475620b7..HEAD"
+      ],
+      "timeoutMs": 240000
     }
   ],
   "mainSynchronizations": []
