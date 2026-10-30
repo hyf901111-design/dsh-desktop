@@ -14,7 +14,7 @@ async function fixture(title='AI 护航研究笔记示例（演示案例）'){
  const session=Session.create('note-session',undefined,{version:0,id:'note-session',createdAt:Date.now(),cwd}),agent={id:session.id,session,status:'idle'}
  const runtime=createHomeNotesRuntime({sessions:{get:id=>id===session.id?session:undefined},agents:{get:id=>id===session.id?agent:undefined}},{env:{DSH_HOME:root}})
  releases.push(async()=>{await runtime.dispose();await rm(root,{recursive:true,force:true})})
- const run={sessionId:session.id,runId:'note-run',cwd,fresh:true},input={sessionId:session.id,requestId:'task-1',prompt:HOME_NOTES_CHART_PROMPT,entryPoint:'inline',insertionAnchor:{documentId:'note-client',blockId:'chart-anchor',position:{item:{client:1,clock:2}}},title:'研究笔记',markdown:'2020年6月底至2025年6月底，100变成255.13，累计155.13%。',selection:'',context:{scope:'note',components:[]},images:[],mode:'write'}
+ const run={sessionId:session.id,runId:'note-run',cwd,fresh:true},input={sessionId:session.id,requestId:'task-1',prompt:HOME_NOTES_CHART_PROMPT,entryPoint:'inline',insertionAnchor:{documentId:'note-client',blockId:'chart-anchor',position:{item:{client:1,clock:2}}},title:'研究笔记',markdown:'增长兑现与估值，2025年10月23日至2026年10月23日；二季度222.81亿元、环比增长174.57%。',selection:'',context:{scope:'note',components:[]},images:[],mode:'write'}
  return{root,cwd,session,agent,runtime,run,input}
 }
 it.each(['AI 护航研究笔记示例','AI 护航研究笔记示例 · 练习副本','AI 护航研究笔记示例（演示案例）','AI 护航研究笔记示例 · 练习副本（演示案例）'])('prepares the registered native note session titled %s',async title=>{
@@ -30,17 +30,17 @@ it('refuses a renamed note session before recording a task',async()=>{
 it('records chart, selected rewrite and appended summary as three genuine native note tasks and restores their ready/adopted history without creating agent turns',async()=>{
  const f=await fixture();await f.runtime.prepare(f.run);await f.runtime.playback({...f.run,playing:true});vi.useFakeTimers()
  const progress=[],first=f.runtime.generate({...f.run,input:f.input},undefined,value=>progress.push(value));await vi.advanceTimersByTimeAsync(20000)
- expect(await first).toMatchObject({kind:'component',node:{id:'home-note-chart-note-run',kind:'generated-container',containerSpec:{type:'html'}}});expect((await first).node.containerSpec.html).toContain('含分红再投资');expect(await f.runtime.generate({...f.run,input:f.input})).toEqual(await first)
+ expect(await first).toMatchObject({kind:'component',node:{id:'home-note-chart-note-run',kind:'generated-container',containerSpec:{type:'html'}}});expect((await first).node.containerSpec.html).toContain('非含息收益');expect(await f.runtime.generate({...f.run,input:f.input})).toEqual(await first)
  expect(noteConversationRows(f.session)).toHaveLength(1);expect(progress.some(value=>value.stage==='thinking')).toBe(true);expect(progress.some(value=>value.stage==='writing'&&value.outputChars>0)).toBe(true)
  recordNoteConversation(f.session,{requestId:'task-1',phase:'accepted',finishedAt:Date.now()})
  const second=f.runtime.generate({...f.run,input:{...f.input,entryPoint:undefined,insertionAnchor:undefined,requestId:'task-2',prompt:HOME_NOTES_REWRITE_PROMPT,title:'',markdown:'',selection:HOME_NOTES_GUIDE_SELECTION,context:{scope:'selection',components:[]}}});await vi.advanceTimersByTimeAsync(20000)
  expect(await second).toEqual({kind:'text',markdown:HOME_NOTES_REWRITE_RESULT})
  recordNoteConversation(f.session,{requestId:'task-2',phase:'accepted',finishedAt:Date.now()})
- const refs=[{blockId:'chart-block',type:'research',title:'情景图表',content:JSON.stringify({spec:(await first).node.containerSpec})},{blockId:'quote-block',type:'research',title:'行情面板',content:JSON.stringify({spec:{version:1,type:'financial-widget',widget:'quote',title:'行情面板',symbols:[{code:'MSFT',market:'US',name:'微软'}],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:''}})}]
- const summary={...f.input,requestId:'task-3',entryPoint:undefined,insertionAnchor:undefined,prompt:HOME_NOTES_TASK_PROMPT,markdown:'年化收益约20.60%；行业只差0.16个百分点，先拆开科技行业暴露。下次复盘先核对云业务增长。不把现在的报价塞回历史曲线。',context:{scope:'note',components:refs}}
+ const refs=[{blockId:'chart-block',type:'research',title:'情景图表',content:JSON.stringify({spec:(await first).node.containerSpec})},{blockId:'quote-block',type:'research',title:'行情面板',content:JSON.stringify({spec:{version:1,type:'financial-widget',widget:'quote',title:'行情面板',symbols:[{code:'300308',market:'SZ',name:'中际旭创'}],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:''}})}]
+ const summary={...f.input,requestId:'task-3',entryPoint:undefined,insertionAnchor:undefined,prompt:HOME_NOTES_TASK_PROMPT,markdown:'环比增长14.29%；经营现金流净额18.00亿元，同比下降44.08%。不把单期业绩或历史涨幅当作确定性依据。沪深300同期下跌10.88%。',context:{scope:'note',components:refs}}
  await expect(f.runtime.generate({...f.run,input:{...summary,context:{...summary.context,components:refs.slice(0,1)}}})).rejects.toThrow('引用内容')
  const third=f.runtime.generate({...f.run,input:summary});await vi.advanceTimersByTimeAsync(20000)
- expect(await third).toEqual({kind:'conversation',markdown:HOME_NOTES_TASK_RESULT})
+ expect(await third).toEqual({kind:'text',markdown:HOME_NOTES_TASK_RESULT})
  const path=join(f.root,'history.json');await writeFile(path,JSON.stringify({header:f.session.header,events:f.session.events}));const disk=JSON.parse(await readFile(path,'utf8')),restored=Session.fromRestore('note-session',disk.events,disk.header)
  expect(noteConversationRows(restored).map(row=>row.phase)).toEqual(['accepted','accepted','ready'])
  expect(noteConversationRows(restored)[1].references).toEqual([{blockId:'text-selection',type:'text',title:HOME_NOTES_GUIDE_SELECTION}])

@@ -7,6 +7,58 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 const selectionOutput=process.env.SHERLOCK_NOTE_SELECTION_OUTPUT_DIR||mkdtempSync(join(tmpdir(),'home-note-selection-'));mkdirSync(selectionOutput,{recursive:true})
 let browser,script,css
+it('measures the first-line native caret for an empty writing paragraph without changing its document',async()=>{
+ const{context,page}=await fixture();try{
+  expect(await page.evaluate(()=>typeof window.noteApi.paragraphStartPoint)).toBe('function')
+  await page.evaluate(()=>{window.noteApi.appendBlock({id:'new-paragraph',type:'paragraph',content:''});window.noteApi.prepareNative()})
+  const measure=await page.evaluate(()=>{const before=JSON.stringify(window.noteApi.snapshot().blocks),point=window.noteApi.paragraphStartPoint('new-paragraph'),r=document.querySelector('[data-id="new-paragraph"] .bn-inline-content').getBoundingClientRect();return{point,box:{left:r.left,top:r.top,right:r.right,bottom:r.bottom},unchanged:before===JSON.stringify(window.noteApi.snapshot().blocks)}})
+  expect(measure.unchanged).toBe(true);expect(measure.point.x).toBeGreaterThanOrEqual(measure.box.left);expect(measure.point.x).toBeLessThan(measure.box.left+5);expect(measure.point.y).toBeGreaterThan(measure.box.top+4);expect(measure.point.y).toBeLessThan(measure.box.bottom-3)
+  await page.evaluate(()=>window.noteApi.updateText('new-paragraph','用户已经键入'))
+  expect(await page.evaluate(()=>{try{window.noteApi.paragraphStartPoint('new-paragraph');return'accepted'}catch(error){return error.message}})).toContain('变化')
+ }finally{await context.close()}
+},15000)
+it('keeps the admitted summary in one main pending-to-preview card and appends only after its original apply ACK',async()=>{
+ const{context,page,errors}=await fixture();try{
+  const before=await page.evaluate(()=>window.noteApi.snapshot().blocks)
+  await page.evaluate(()=>{window.replyAdds=0;document.addEventListener('sherlock:notes-add-reply',()=>window.replyAdds++);window.noteApi.prepareNative('summary');window.submitNative('总结这篇笔记，先预览。')})
+  await expect.poll(()=>page.evaluate(()=>window.results.length)).toBe(1)
+  const card=page.locator('.en-main [data-note-preview-request-id] .en-preview')
+  await expect.poll(()=>card.count()).toBe(1)
+  await page.evaluate(()=>window.originalSummaryCard=document.querySelector('[data-note-preview-request-id] .en-preview'))
+  expect(await page.evaluate(()=>window.noteApi.snapshot().blocks)).toEqual(before)
+  await page.evaluate(()=>window.results[0].resolve({kind:'text',markdown:'业绩增长需要结合现金转化与估值条件核验。'}))
+  await expect.poll(()=>card.textContent()).toContain('业绩增长需要结合现金转化与估值条件核验。')
+  expect(await page.evaluate(()=>document.querySelector('[data-note-preview-request-id] .en-preview')===window.originalSummaryCard)).toBe(true)
+  expect(await page.evaluate(()=>window.noteApi.snapshot().blocks)).toEqual(before)
+  await card.getByRole('button',{name:'插入笔记',exact:true}).click();await page.evaluate(()=>window.noteApi.flush())
+  const after=await page.evaluate(()=>window.noteApi.snapshot().blocks)
+  expect(after.slice(0,before.length)).toEqual(before);expect(after.length).toBe(before.length+1);expect(after.at(-1).content.map(x=>x.text||'').join('')).toBe('业绩增长需要结合现金转化与估值条件核验。')
+  expect(await page.evaluate(()=>window.events.filter(e=>e.name==='notes-task-state'&&e.detail.phase==='accepted').length)).toBe(1);expect(await page.evaluate(()=>window.replyAdds)).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('continues a native writing run with the real Enter handler and keeps the first paragraph intact',async()=>{
+ const{context,page,errors}=await fixture();try{
+  expect(await page.evaluate(()=>typeof window.noteApi.typeParagraphBreak)).toBe('function')
+  const before=await page.evaluate(()=>window.noteApi.snapshot().blocks)
+  await page.evaluate(()=>{window.noteApi.prepareNative();window.noteApi.typeParagraphBreak('logic','订单增长不能保证利润翻倍，仍需验证产品价格和回款。','continued')})
+  const after=await page.evaluate(()=>window.noteApi.snapshot().blocks)
+  expect(after.slice(0,-1)).toEqual(before);expect(after.at(-1)).toMatchObject({id:'continued',type:'paragraph',content:[]})
+  await page.evaluate(()=>window.noteApi.updateText('continued','随后用回车继续记录，不再次点击段落。'))
+  expect(await page.evaluate(()=>window.noteApi.snapshot().blocks.at(-1).content.map(x=>x.text||'').join(''))).toBe('随后用回车继续记录，不再次点击段落。');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('rejects stale text, moved carets, duplicate ids and other runs before a native Enter changes the note',async()=>{
+ const{context,page}=await fixture();try{
+  expect(await page.evaluate(()=>typeof window.noteApi.typeParagraphBreak)).toBe('function')
+  const attempt=()=>page.evaluate(()=>{try{window.noteApi.typeParagraphBreak('logic','订单增长不能保证利润翻倍，仍需验证产品价格和回款。','continued');return'accepted'}catch(error){return error.name+':'+error.message}})
+  await page.evaluate(()=>window.noteApi.prepareNative());await page.locator('[data-id="intro"] .bn-inline-content').click();expect(await attempt()).toContain('变化')
+  await page.evaluate(()=>{window.noteApi.prepareNative();window.noteApi.updateText('logic','用户已经改写的尾段。')});expect(await attempt()).toContain('变化')
+  await page.evaluate(()=>{window.noteApi.updateText('logic','订单增长不能保证利润翻倍，仍需验证产品价格和回款。');window.noteApi.prepareNative()})
+  expect(await page.evaluate(()=>{try{window.noteApi.typeParagraphBreak('logic','订单增长不能保证利润翻倍，仍需验证产品价格和回款。','intro');return'accepted'}catch(error){return error.message}})).toContain('变化')
+  await page.evaluate(()=>document.documentElement.dataset.homeGuidePointerRun='other-run');expect(await attempt()).toContain('AbortError')
+  expect(await page.evaluate(()=>window.noteApi.snapshot().blocks.length)).toBe(2)
+ }finally{await context.close()}
+},15000)
 it('selects only the unique sentence inside its unchanged paragraph and rejects ambiguous or stale text',async()=>{
  const{context,page}=await fixture();try{
   const text='前一句必须保持不变。后续将持续密切关注相关业务及各项指标的进一步变化情况。最后一句也必须保留。',sentence='后续将持续密切关注相关业务及各项指标的进一步变化情况。'

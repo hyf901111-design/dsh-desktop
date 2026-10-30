@@ -4,13 +4,14 @@ import {expect,it,vi} from 'vitest'
 import {presentationHostFixture} from './fixtures/home-presentation-host.js'
 import {HOME_NOTES_PATH} from '../packages/dsh-research-task-runtime/home-notes-runtime.js'
 import {HOME_NOTES_CHART_PROMPT} from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
+import {HOME_NOTES_GUIDE_WRITING_STAGES} from '../src/preload/home-guide-notes-data'
 import {noteConversationRows} from '../packages/dsh-research-task-runtime/notes-session.js'
 async function fixture(){
  const f=await presentationHostFixture(),origin='http://127.0.0.1:'+f.ctx.webServer.port
  await writeFile(join(f.home,'research-board-directories.json'),JSON.stringify({note:{sessionId:'demo',path:f.cwd,title:'AI 护航研究笔记示例'}}))
  const run={sessionId:'demo',runId:'native-note-run',cwd:f.cwd,fresh:true}
  const post=(action,extra={},control={})=>fetch(origin+HOME_NOTES_PATH,{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({...run,action,...extra}),...control})
- const input={sessionId:'demo',requestId:'native-note-request',prompt:HOME_NOTES_CHART_PROMPT,entryPoint:'inline',insertionAnchor:{documentId:'client',blockId:'chart-line',position:{item:{client:1,clock:2}}},title:'研究笔记',markdown:'观察窗口固定在2020年6月底到2025年6月底，微软从100变成255.13，累计回报155.13%，分红再投资。',selection:'',context:{scope:'note',components:[]},images:[],mode:'write'}
+ const input={sessionId:'demo',requestId:'native-note-request',prompt:HOME_NOTES_CHART_PROMPT,entryPoint:'inline',insertionAnchor:{documentId:'client',blockId:'chart-line',position:{item:{client:1,clock:2}}},title:'研究笔记',markdown:HOME_NOTES_GUIDE_WRITING_STAGES[0].map(block=>block.content).join('\n'),selection:'',context:{scope:'note',components:[]},images:[],mode:'write'}
  return{...f,origin,run,post,input}
 }
 it('uses the real registered Host route and JSONL note history without changing the ordinary model or PPT assets',async()=>{

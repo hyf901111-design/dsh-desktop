@@ -1,3 +1,4 @@
+import {hydrateCompactChartNavigationDisplay} from './chart-navigation-display'
 import fixedSource from '../../../packages/dsh-research-task-runtime/fixed-chart-runtime.js?raw'
 import cartesianSource from '../../../packages/dsh-research-task-runtime/cartesian-chart-artifact.js?raw'
 import {chartDataIssue} from '../../../packages/dsh-research-task-runtime/chart-template-contract.js'
@@ -11,7 +12,7 @@ const functionSource=(source:string,name:string,next?:string)=>{
  if(start<0||source.indexOf(prefix,start+prefix.length)>=0||end<start||boundary&&source.indexOf(boundary,end+boundary.length)>=0)return undefined
  return source.slice(start+'export '.length,end).trim()
 }
-const fixed=functionSource(fixedSource,'fixedChartRuntime'),cartesian=functionSource(cartesianSource,'cartesianChartRuntime','renderCartesianChart'),geometry=functionSource(cartesianSource,'cartesianChartSvg','cartesianChartRuntime')
+const fixed=functionSource(fixedSource,'fixedChartRuntime'),cartesian=functionSource(cartesianSource,'cartesianChartRuntime','renderCartesianChart'),geometry=functionSource(cartesianSource,'cartesianChartSvg','cartesianChartRuntime'),precision=functionSource(cartesianSource,'cartesianChartAxisPrecision')
 
 const interactive='a,button,label,input,select,textarea,[contenteditable],[role="button"],[role="menuitem"],[data-chart-series]'
 const passiveSvg=new Set(['SVG','G','PATH','RECT','CIRCLE','ELLIPSE','LINE','POLYGON','POLYLINE','TEXT','TSPAN','TITLE','DESC','DEFS','CLIPPATH','MASK','LINEARGRADIENT','RADIALGRADIENT','STOP'])
@@ -46,14 +47,16 @@ export function noteChartNavigationAllowed(html:string,event:any):boolean{
   if(elements.some(node=>['iframe','frame','object','embed'].includes(node.localName)||[...node.attributes].some(item=>/^on/i.test(item.name))))return false
   const scripts=elements.filter(node=>node.localName==='script'&&attr(node,'type')!=='application/json')
   if(scripts.length!==1||attr(scripts[0]!,'src')!==undefined)return false
-  const script=scripts[0]!.textContent??'',programs=[{runtime:fixed,suffix:');',fixed:true},{runtime:geometry?cartesian:undefined,suffix:','+geometry+');',fixed:false}]
+  const script=scripts[0]!.textContent??'',programs=[{runtime:fixed,suffix:');',fixed:true},{runtime:geometry?cartesian:undefined,suffix:','+geometry+');',fixed:false},{runtime:geometry&&precision?cartesian:undefined,suffix:',('+precision+')('+geometry+'));',fixed:false,precise:true}]
   const program=programs.find(({runtime,suffix})=>runtime&&script.startsWith('('+runtime+')(')&&script.endsWith(suffix))
   if(!program)return false
   if(!pointer&&program.fixed&&!['ArrowLeft','ArrowRight'].includes(event.key))return false
   const model=JSON.parse(script.slice(('('+program.runtime+')(').length,-program.suffix.length))
-  if(chartDataIssue(model)||program.fixed&&!['line','bar'].includes(model.variant))return false
+  if(!!program.precise!==(model.axisDecimals!==undefined)||chartDataIssue(model)||program.fixed&&!['line','bar'].includes(model.variant))return false
   // Resolve against the exact display projection embedded by the sandbox.
-  const display=parse(researchHtmlDisplayHtml(html,true)),target=event.targetRoute.reduce((node:Element|undefined,index:number)=>node?.children[index],display.body),svgs=[...display.querySelectorAll('svg')]
+  const display=parse(researchHtmlDisplayHtml(html,true))
+  if(!hydrateCompactChartNavigationDisplay(display,model,!!program.precise,attr(document.body,'data-note-chart-compact')))return false
+  const target=event.targetRoute.reduce((node:Element|undefined,index:number)=>node?.children[index],display.body),svgs=[...display.querySelectorAll('svg')]
   const svg=svgs[0]
   if(svgs.length!==1||!svg||!program.fixed&&!(attr(svg,'class')??'').split(/\s+/).includes('template-chart'))return false
   if(!pointer)return target===svg

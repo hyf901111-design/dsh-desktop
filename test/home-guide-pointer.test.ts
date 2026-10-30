@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs'
 // @vitest-environment happy-dom
 import {afterEach,expect,test,vi} from 'vitest'
 import {build} from 'esbuild'
@@ -169,3 +170,15 @@ test('renders a visible intermediate SVG curve in a browser and keeps it still d
   await page.evaluate(()=>{(window as any).drag()});await page.clock.runFor(600);expect(await page.locator('[data-home-guide-connection]').count()).toBe(1);await page.evaluate(()=>(window as any).abort.abort());await page.evaluate(()=>(window as any).action);expect(await page.locator('[data-home-guide-connection]').count()).toBe(0);expect(await page.evaluate(()=>(window as any).error)).toBe('AbortError')
  }finally{await browser.close()}
 },20000)
+test('raises its non-interactive cursor after any newly opened manual popover, including component menus',async()=>{
+ const prototype=HTMLElement.prototype,show=Object.getOwnPropertyDescriptor(prototype,'showPopover'),hide=Object.getOwnPropertyDescriptor(prototype,'hidePopover'),matches=prototype.matches,open=new Set<Element>(),order:Element[]=[]
+ Object.defineProperty(prototype,'showPopover',{configurable:true,value:function(){open.add(this);order.push(this)}});Object.defineProperty(prototype,'hidePopover',{configurable:true,value:function(){open.delete(this)}})
+ prototype.matches=function(selector:string){if(selector.includes(':popover-open'))return open.has(this)&&(!selector.replace(':popover-open','')||matches.call(this,selector.replace(':popover-open','')));return matches.call(this,selector)}
+ const f=fixture();try{
+  const style=document.createElement('style');style.textContent=readFileSync('src/preload/home-guides.css','utf8');document.body.append(style)
+  const action=f.pointer.perform({target:f.target});await vi.runAllTimersAsync();await action
+  const cursor=document.querySelector<HTMLElement>('[data-home-guide-pointer]')!,menu=document.createElement('div');menu.setAttribute('popover','manual');document.body.append(menu);menu.showPopover()
+  const event=new Event('beforetoggle',{bubbles:true});Object.defineProperty(event,'newState',{value:'open'});menu.dispatchEvent(event);await vi.runAllTimersAsync()
+  expect(order.at(-1)).toBe(cursor);expect(cursor.style.pointerEvents||getComputedStyle(cursor).pointerEvents).not.toBe('auto');f.pointer.dispose();expect(open.has(cursor)).toBe(false)
+ }finally{prototype.matches=matches;show?Object.defineProperty(prototype,'showPopover',show):delete(prototype as any).showPopover;hide?Object.defineProperty(prototype,'hidePopover',hide):delete(prototype as any).hidePopover}
+})

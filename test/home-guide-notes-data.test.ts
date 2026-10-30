@@ -13,13 +13,13 @@ import * as guideContract from '../packages/dsh-research-task-runtime/home-notes
 const sessionId='home-guide-notes-contract'
 const review=()=>({sessionId,requestId:'review-1',action:'review' as const,level:3 as const,title:HOME_NOTES_GUIDE_TITLE,blocks:challengeDocumentBlocks(HOME_NOTES_GUIDE_BLOCKS)})
 describe('homepage note example data and isolated bridge',()=>{
- it('uses the official annual table with independently checked return arithmetic',()=>{
-  const facts=(guideContract as any).HOME_NOTES_RESEARCH_FACTS,sources=guideContract.HOME_NOTES_REPORT_SOURCES
-  expect(facts.values['微软']).toEqual([100,134.41,128.48,172.01,227.51,255.13])
-  expect(Number((255.13-215.89).toFixed(2))).toBe(39.24);expect(Number((255.13-254.97).toFixed(2))).toBe(.16)
-  expect((Math.pow(255.13/100,1/5)-1)*100).toBeCloseTo(20.601387912851,10)
-  expect(sources[0]!.url).toBe('https://www.microsoft.com/investor/reports/ar25/index.html')
-  expect(JSON.stringify(sources)).not.toMatch(/PDF|页码/)
+ it('keeps actual daily prices separate from the three primary financial reports and quarter arithmetic',()=>{
+  const facts=guideContract.HOME_NOTES_RESEARCH_FACTS,sources=guideContract.HOME_NOTES_REPORT_SOURCES
+  expect(facts.period).toHaveLength(243);expect(Object.values(facts.values).map(values=>values[0])).toEqual([100,100])
+  const quarter=4177786179503n-1949639808395n
+  expect(quarter.toString()).toBe('2228146371108');expect((Number(quarter)/1949639808395-1)*100).toBeCloseTo(14.285026,5)
+  expect(sources).toHaveLength(3);expect(sources.every(source=>/^https:\/\//.test(source.url)&&/\.PDF$/i.test(source.url))).toBe(true)
+  expect(sources.map(source=>source.section).join(' ')).toContain('第26页')
  })
  it('delegates actual slash/library/render requests only after native demo admission through the original bridge',async()=>{
   const signal=new AbortController(),original={request:vi.fn(async method=>method==='load'?{saved:{title:'',blocks:[],yjs:'',revision:0,updatedAt:0}}:{ok:true}),draft:vi.fn()},native={generate:vi.fn(),stop:vi.fn()}
@@ -33,10 +33,10 @@ describe('homepage note example data and isolated bridge',()=>{
   await expect(plain.request('library-read',{sessionId})).rejects.toThrow('不支持')
   signal.abort();await expect(bridge.request('library-list',{sessionId})).rejects.toMatchObject({name:'AbortError'})
  })
- it('shows the actual HTML source and compound formula for the small statistical correction',()=>{
+ it('shows the actual primary report sources and quarter formula for the small statistical correction',()=>{
   const request=review(),issue=homeNotesGuideChallengeResult(request).issues.find(item=>item.blockId==='guide-note-growth')!
-  expect(issue.evidence).toHaveLength(1);expect(issue.quote).toBe('年化收益31.03%')
-  const evidence=JSON.stringify(issue.evidence);expect(evidence).toContain('(255.13/100)^(1/5)-1');expect(evidence).toContain('分红再投资')
+  expect(issue.evidence).toHaveLength(3);expect(issue.quote).toBe('环比增长174.57%')
+  const evidence=JSON.stringify(issue.evidence);expect(evidence).toContain('22281463711.08 / 19496398083.95');expect(evidence).toContain('14.29%')
   expect(evidence).toContain(guideContract.HOME_NOTES_REPORT_SOURCES[0]!.url)
  })
  it('provides five personal paragraphs and three review scopes',()=>{
@@ -45,16 +45,15 @@ describe('homepage note example data and isolated bridge',()=>{
   expect(guideData.HOME_NOTES_GUIDE_WRITING_STAGES.map(items=>items.length)).toEqual([2,1,2])
   expect(HOME_NOTES_GUIDE_BLOCKS).toHaveLength(5);expect(result.issues).toHaveLength(3)
   expect(new Set(result.issues.map(issue=>issue.category))).toEqual(new Set(['contradiction','logic','grammar']))
-  expect(text).toContain('今天先不追目标价');expect(text).toContain('NASDAQ Computer')
+  expect(text).toContain('增长兑现与估值');expect(text).toContain('沪深300')
   for(const issue of result.issues)expect(request.blocks.find(block=>block.id===issue.blockId)?.text).toContain(issue.quote)
   expect(result.completeBlockIds).toEqual(request.blocks.map(block=>block.id))
  })
- it('uses a three-series annual holding-return line with the real US symbol',()=>{
+ it('uses a two-series real daily price chart with the original A-share symbol',()=>{
   const spec=guideContract.HOME_NOTES_CHART_SPEC
-  expect(spec).toMatchObject({variant:'line',unit:'总回报指数',labels:['2020','2021','2022','2023','2024','2025']})
-  expect(spec.series.map(series=>series.values[0])).toEqual([100,100,100])
-  expect(spec.series.map(series=>series.values.at(-1))).toEqual([255.13,215.89,254.97])
-  expect(spec.note).toContain('非主动策略');expect(guideContract.HOME_NOTES_GUIDE_STOCK).toEqual({code:'MSFT',market:'US',name:'微软'})
+  expect(spec).toMatchObject({variant:'line',unit:'起点=100',axisDecimals:2});expect(spec.labels).toHaveLength(243)
+  expect(spec.series.map(series=>series.values[0])).toEqual([100,100]);expect(spec.series.map(series=>series.values.at(-1))).toEqual([139.65114,89.123469])
+  expect(spec.note).toContain('非含息');expect(guideContract.HOME_NOTES_GUIDE_STOCK).toEqual({code:'300308',market:'SZ',name:'中际旭创'})
  })
  it('does not invent anchors when a paragraph was edited or omitted',()=>{
   const request=review();request.blocks=request.blocks.filter(block=>block.id!=='guide-note-logic').map(block=>block.id==='guide-note-growth'?{...block,text:'已修订的收入增速。'}:block)
@@ -66,7 +65,7 @@ describe('homepage note example data and isolated bridge',()=>{
   const request=review(),result=homeNotesGuideChallengeResult(request),issue=result.issues.find(issue=>issue.category==='contradiction')!
   const optimized=homeNotesGuideChallengeResult({...request,action:'optimize',thread:{...issue,messages:[]}})
   const block=request.blocks.find(block=>block.id===issue.blockId)!,scope=challengeReplacementScope(block.text,issue.quote)
-  expect('error' in scope).toBe(false);expect(optimized.reply?.replacement).toContain('年化收益约20.60%');expect(optimized.reply?.replacement).not.toContain('31.03%')
+  expect('error' in scope).toBe(false);expect(optimized.reply?.replacement).toContain('环比增长14.29%');expect(optimized.reply?.replacement).not.toContain('环比增长174.57%')
   expect(challengeReplacementBody('error' in scope?'':scope.quote,optimized.reply!.replacement!)).not.toHaveProperty('error')
  })
  it('keeps revisions and drafts only in an isolated memory document',async()=>{

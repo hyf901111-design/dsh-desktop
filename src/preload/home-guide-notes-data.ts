@@ -2,41 +2,41 @@ import type {ChallengeRequest,ChallengeResult,ChallengeIssue} from '../shared/no
 import type {NotesBridge,NoteContent,SavedNote,NoteLoad} from '../shared/workspace-notes'
 import {challengeReplacementScope} from '../shared/notes-challenge'
 import type {HomeNotesNativeBridge} from './home-guide-notes-native'
-import {HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_REWRITE_RESULT,HOME_NOTES_REPORT_SOURCES,HOME_NOTES_RESEARCH_FACTS} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
-export const HOME_NOTES_GUIDE_TITLE="微软｜持有回报复盘"
-export const HOME_NOTES_GROWTH_REPLACEMENT="粗算下来，100变成255.13，五年累计回报155.13%，对应年化收益约20.60%。"
-export const HOME_NOTES_CONSENSUS_REPLACEMENT="微软这五年比标普多出39.24个百分点，但和NASDAQ Computer的累计回报只差0.16个百分点，暂时不能把超额都归为个股判断。下一步先拆开科技行业暴露、估值变化和经营兑现，再决定这段回报里哪些可能重复。"
-export const HOME_NOTES_GUIDE_WRITING_STAGES=[[{"id":"guide-note-intro","type":"paragraph","content":"今天先不追目标价，想把微软这几年的持有回报重新算一遍。我把观察窗口固定在2020年6月底到2025年6月底：先看收益从哪里来，再想这段经历能不能外推。图里的基准统一从100起步，分红按年报口径再投入。"},{"id":"guide-note-growth","type":"paragraph","content":"粗算下来，100变成255.13，五年累计回报155.13%，对应年化收益31.03%。这个数我先记在这里，稍后回原表重算。对照组除了标普500，也放上NASDAQ Computer，免得把一轮科技股行情都算成自己的判断。"}],[{"id":"guide-note-consensus","type":"paragraph","content":"微软这五年比标普多出39.24个百分点，我倾向于把这部分超额都归到公司护城河和自己的选股判断上。既然历史持有已经跑赢，之后主要盯经营兑现就够了，行业风格和估值变化可以先放到次要位置。"}],[{"id":"guide-note-logic","type":"paragraph","content":"行情面板单独放在这里，只用来核对最近的价格和交易节奏，不把现在的报价塞回历史曲线。年度采样看不见年内跌得多深，尤其截至2022年6月的那段持有体验，不能被一张向上的净值图抹平；日频回撤和成本留到下一步补。"},{"id":"guide-note-cashflow","type":"paragraph","content":"这次先不急着改仓位，我还想弄清新增投入何时变成现金回报、当前估值又预支了多少增长。后续将持续密切关注相关业务及各项指标的进一步变化情况。先把要查的东西记清楚，比急着给结论更有用。"}]]
+import {HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_STYLE_ISSUE,HOME_NOTES_REWRITE_RESULT,HOME_NOTES_REPORT_SOURCES,HOME_NOTES_RESEARCH_FACTS} from '../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
+export const HOME_NOTES_GUIDE_TITLE="中际旭创｜增长兑现与估值复盘"
+export const HOME_NOTES_GROWTH_REPLACEMENT="二季度收入由半年累计数减去一季度测算为222.81亿元，同比增长174.57%、环比增长14.29%。"
+export const HOME_NOTES_CONSENSUS_REPLACEMENT="上半年收入417.78亿元、归母净利润136.51亿元，但经营现金流净额18.00亿元、同比下降44.08%，利润扩张与当期现金回笼并不同步。公司解释主要是采购商品支付的现金增加。后续需结合营运资本、回款和估值情景复核，不能仅凭盈利增长认定现金质量改善或估值安全。"
+export const HOME_NOTES_GUIDE_WRITING_STAGES=[[{"id":"guide-note-intro","type":"paragraph","content":"复盘重点是增长兑现与估值之间的关系。以2026年中报为经营观察基础，并将2025年10月23日至2026年10月23日的股价与沪深300价格指数统一归一为100。历史价格比较与财务统计分开处理，避免用当前报价替代历史样本。"},{"id":"guide-note-growth","type":"paragraph","content":"二季度收入由半年累计数减去一季度测算为222.81亿元，同比增长174.57%、环比增长174.57%。收入规模继续提高，但季度数据需要与累计口径逐项衔接，不能把单季增幅直接外推全年。"}],[{"id":"guide-note-consensus","type":"paragraph","content":"上半年收入417.78亿元、归母净利润136.51亿元，经营规模继续扩张。盈利与股价共同上行，说明估值已有充分安全边际，新增投入也已转化为同等质量的现金回报。后续主要观察收入与利润即可，现金流和估值敏感性可以适当降低权重。"}],[{"id":"guide-note-logic","type":"paragraph","content":"一年窗口内，中际旭创前复权收盘价由438.686元升至612.630元，价格收益39.65%；沪深300同期下跌10.88%，简单收益差为50.53个百分点。该差值仅描述固定历史区间，未计分红再投资和交易成本，不代表未来收益或主动策略超额。"},{"id":"guide-note-cashflow","type":"paragraph","content":"接下来仍需把新增资本投入、营运资本占用与经营现金回款放在同一张检查清单中。后续将持续密切关注相关业务及各项指标的进一步变化情况。估值判断应保留情景边界，证据变化再调整结论。"}]]
 export const HOME_NOTES_GUIDE_BLOCKS=HOME_NOTES_GUIDE_WRITING_STAGES.flat()
 /** The source is the official HTML table; no PDF or page number is invented. */
-export const HOME_NOTES_REPORT_EVIDENCE:ChallengeIssue['evidence']=HOME_NOTES_REPORT_SOURCES.map(source=>({kind:'consensus',label:source.label,quote:'2020-06-30投入100，包含分红再投资；2025-06-30微软255.13、标普500为215.89、NASDAQ Computer为254.97。',data:{'原始年报':source.url,'表格':source.section,'观察区间':source.period,'原表单位':'累计总回报指数，起点100','原始年度净值':HOME_NOTES_RESEARCH_FACTS.values,'年化计算':'(255.13/100)^(1/5)-1 ≈ 20.60%','累计回报':'255.13/100-1＝155.13%','基准对照':'累计回报差：标普500 +39.24个百分点；NASDAQ Computer +0.16个百分点','口径':'含分红再投资，每年6月末采样；不是主动策略收益，也不是日频最大回撤。'}}))
+export const HOME_NOTES_REPORT_EVIDENCE:ChallengeIssue['evidence']=HOME_NOTES_REPORT_SOURCES.map(source=>({kind:'consensus',label:source.label,quote:'按报告元值核算：2026H1收入41777861795.03元，Q1收入19496398083.95元；2025Q2收入8114898350.57元。',data:{'原始报告':source.url,'表格与页码':source.section,'报告期间':source.period,'原始单位':'元；展示金额按亿元四舍五入','二季度收入差额':'41777861795.03 - 19496398083.95 = 22281463711.08元 ≈ 222.81亿元','同比计算':'(22281463711.08 / 8114898350.57 - 1) × 100 = 174.57%','环比计算':'(22281463711.08 / 19496398083.95 - 1) × 100 = 14.29%','现金流核对':'2026H1经营现金流净额1799674832.02元，约18.00亿元，同比-44.08%；半年报第26页解释采购支付现金增加','统计边界':'单季收入为已披露累计数差额测算；与价格曲线独立，不是预测或机构一致预期。'}}))
 const draft=(id:string)=>HOME_NOTES_GUIDE_BLOCKS.find(block=>block.id===id)!.content
 const issues:ChallengeIssue[]=[
- {blockId:'guide-note-consensus',quote:draft('guide-note-consensus'),category:'logic',message:'跑赢标普不能直接归为个股判断。科技行业对照的累计回报几乎相同，应先区分行业暴露、估值变化与经营兑现。',evidence:HOME_NOTES_REPORT_EVIDENCE},
- {blockId:'guide-note-growth',quote:'年化收益31.03%',category:'contradiction',message:'累计回报直接除以5是简单平均，不是复合年化。原表100到255.13跨5年，复合年化约20.60%。',evidence:HOME_NOTES_REPORT_EVIDENCE},
- {blockId:'guide-note-cashflow',quote:HOME_NOTES_GUIDE_SELECTION,category:'grammar',message:'这句表达重复且没有落到具体观察项。可写清下次先核对什么、依据变化后如何调整判断。',evidence:[{kind:'note',label:'待细化的后续观察',blockId:'guide-note-cashflow',quote:HOME_NOTES_GUIDE_SELECTION}]}
+ {blockId:'guide-note-consensus',quote:draft('guide-note-consensus'),category:'logic',message:'盈利扩张不能直接推出估值安全或现金质量同步改善。半年报经营现金流同比下降44.08%，需结合采购支出、营运资本和回款检验增长兑现。',evidence:HOME_NOTES_REPORT_EVIDENCE},
+ {blockId:'guide-note-growth',quote:'环比增长174.57%',category:'contradiction',message:'这里把同比174.57%写成了环比。按半年减一季度得到二季度收入，再与一季度比较，环比应约14.29%；请核对原始报告元值。',evidence:HOME_NOTES_REPORT_EVIDENCE},
+ {blockId:'guide-note-cashflow',quote:HOME_NOTES_STYLE_ISSUE,category:'grammar',message:'这句表达重复且没有落到具体观察项。可写清下次先核对什么、依据变化后如何调整判断。',evidence:[{kind:'note',label:'待细化的后续观察',blockId:'guide-note-cashflow',quote:HOME_NOTES_STYLE_ISSUE}]}
 ]
 /** Local replay uses the original comment and sentence replacement authority. */
 export function homeNotesGuideChallengeResult(request:ChallengeRequest):ChallengeResult{
  const current=issues.filter(issue=>request.blocks.some(block=>block.id===issue.blockId&&block.text.includes(issue.quote)))
- const base:ChallengeResult={version:1,issues:structuredClone(current),coveredBlockIds:request.blocks.map(block=>block.id),completeBlockIds:request.blocks.map(block=>block.id),checks:[{kind:'review',status:'completed',detail:'已检查整段归因、复合年化计算和一句后续观察的表达。'}]}
+ const base:ChallengeResult={version:1,issues:structuredClone(current),coveredBlockIds:request.blocks.map(block=>block.id),completeBlockIds:request.blocks.map(block=>block.id),checks:[{kind:'review',status:'completed',detail:'已检查整段估值与现金转化推理、季度环比计算和一句后续观察的表达。'}]}
  if(request.action==='review')return base
  const issue=current.find(item=>item.blockId===request.thread?.blockId&&item.quote===request.thread?.quote)
  const target=issue&&request.blocks.find(block=>block.id===issue.blockId),scope=target&&issue&&challengeReplacementScope(target.text,issue.quote)
  if(!issue||!scope||'error' in scope)throw Error('演示原文已变化，请重新播放。')
  const logic=issue.category==='logic',statistic=issue.category==='contradiction'
- const replacement=logic?HOME_NOTES_CONSENSUS_REPLACEMENT:statistic?scope.quote.replace('年化收益31.03%','年化收益约20.60%'):HOME_NOTES_REWRITE_RESULT
- return {...base,issues:[],reply:{text:logic?'已保留跑赢标普的事实，补上科技行业对照，区分历史收益与可重复的个股判断。':statistic?'已核对微软年报原表及分红再投口径，按五年复合公式重算为约20.60%，只修正这处统计。':'已去除空泛重复，改成下一次复盘可执行的核对事项。',replacement}}
+ const replacement=logic?HOME_NOTES_CONSENSUS_REPLACEMENT:statistic?scope.quote.replace('环比增长174.57%','环比增长14.29%'):HOME_NOTES_REWRITE_RESULT
+ return {...base,issues:[],reply:{text:logic?'已保留收入和盈利事实，补上经营现金流证据，区分增长兑现、现金转化和估值判断。':statistic?'已核对三份原始报告的元值，用单季收入差额重新计算环比约14.29%，仅修正此处统计。':'已去除空泛重复，改成下一次复盘可执行的核对事项。',replacement}}
 }
 
 export type HomeNotesGuideBridge=NotesBridge&{dispose():void}
 /** Only this prepared session reaches storage; challenge responses stay local. */
-export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,beforeReply?:()=>Promise<void>,persistence?:{bridge:NotesBridge;fresh:boolean},replyWait?:(ms:number)=>Promise<void>,native?:Pick<HomeNotesNativeBridge,'generate'|'stop'>):HomeNotesGuideBridge{
+export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,beforeReply?:()=>Promise<void>,persistence?:{bridge:NotesBridge;fresh:boolean},replyWait?:(ms:number)=>Promise<void>,native?:Pick<HomeNotesNativeBridge,'generate'|'stop'>,menu?:{sync(input:any):void;close(id?:string):void;dispose():void}):HomeNotesGuideBridge{
  let closed=false,saved:SavedNote={title:'',blocks:[],yjs:'',revision:0,updatedAt:Date.now()}
  let admitted=!persistence
  const jobs=new Map<string,{cancel:()=>void}>()
  const assert=(input:{sessionId?:string})=>{if(closed||signal.aborted)throw signal.reason||new DOMException('演示已结束。','AbortError');if(input?.sessionId!==sessionId)throw Error('演示笔记会话不匹配。')}
- const dispose=()=>{if(closed)return;closed=true;for(const job of jobs.values())job.cancel();jobs.clear();signal.removeEventListener('abort',dispose)}
+ const dispose=()=>{if(closed)return;closed=true;menu?.dispose();for(const job of jobs.values())job.cancel();jobs.clear();signal.removeEventListener('abort',dispose)}
  signal.addEventListener('abort',dispose,{once:true})
  return {
   async request(method,input){
@@ -55,6 +55,8 @@ export function createHomeNotesGuideBridge(sessionId:string,signal:AbortSignal,b
     return {status:'saved',saved:structuredClone(saved)}
    }
    if(method==='engage')return persistence?persistence.bridge.request('engage',input):{ok:true}
+   if(native&&menu&&method==='menu-sync'){menu.sync(input);return{ok:true}}
+   if(native&&menu&&method==='menu-close'){menu.close(input.menuId);return{ok:true}}
    if(native&&persistence&&['conversation-state','menu-sync','menu-close','library-list','library-read','component-render','reply-render','component-menu-capabilities'].includes(method)){
     const result=await persistence.bridge.request(method,input);assert(input);return result
    }

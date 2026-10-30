@@ -1,3 +1,5 @@
+// @ts-expect-error Test-only pre-integration compatibility helper.
+import {notesChartNavigationCompatibilitySource} from './helpers/notes-chart-navigation-compatibility.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {resolve} from 'node:path'
 import {pathToFileURL} from 'node:url'
@@ -24,7 +26,7 @@ beforeAll(async()=>{
  window.calls=[];window.jobs={};window.replies=[];const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{owner:'result-fixture',saved:window.saved,draft:window.pendingDraft};if(method==='save'){if(window.holdSaves)await new Promise(resolve=>(window.saveWaiters??=[]).push(resolve));if(window.failSaves)throw Error('合成保存确认失败');window.pendingDraft=undefined;window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}}if(method==='component-data'&&input.action==='bind-generated'&&window.holdBinding)return new Promise(resolve=>window.finishBinding=resolve);if(method==='generate')return new Promise((resolve,reject)=>window.jobs[input.requestId]={input,resolve,reject});if(method==='library-list')return[];if(method==='capability-reply'){window.replies.push(input);if(window.holdPlaceholder&&input.effect?.state==='placeholder')return new Promise(resolve=>window.releasePlaceholder=resolve)}return{}},draft:async input=>{window.pendingDraft={...input.content,baseRevision:input.revision,clientId:input.clientId,updatedAt:Date.now()}}};window.proposalDraft=()=>{if(!window.pendingDraft)return[];const doc=new Y.Doc;Y.applyUpdate(doc,Uint8Array.from(atob(window.pendingDraft.yjs),c=>c.charCodeAt(0)));return [...doc.getMap('note-inline-proposals').values()]};
  const host=new WorkspaceSurfaceHost(document);let mounted=mountNotes(document,bridge,host);window.fixture={flush:()=>mounted.flushCurrent(),reopen:()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)}};
  `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor;window.noteDoc=doc; const slashMenu = useMemo')}}
- const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
+ const output=await build({...config,configFile:false,plugins:[{name:'accepted-9b-guard-compatibility',enforce:'pre',load:id=>id.endsWith('/preload/notes/chart-navigation.ts')?notesChartNavigationCompatibilitySource():undefined},...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
  script=(Array.isArray(output)?output:[output]).flatMap(item=>'output'in item?item.output:[]).filter(chunk=>chunk.type==='chunk').map(chunk=>chunk.code).join('\n')
  if(evidence){const modules=(Array.isArray(output)?output:[output]).flatMap(item=>'output'in item?item.output:[]).filter(chunk=>chunk.type==='chunk').flatMap((chunk:any)=>Object.entries(chunk.modules??{}).map(([id,value]:any)=>({id,renderedLength:value.renderedLength})));writeFileSync(resolve(evidence,'bundle-modules.json'),JSON.stringify({bytes:new TextEncoder().encode(script).length,parserModules:modules.filter(row=>row.id.includes('@babel/parser')),parse5Modules:modules.filter(row=>row.id.includes('parse5')),navigationModules:modules.filter(row=>/chart-navigation|fixed-chart-runtime|cartesian-chart-artifact\.js\?raw/.test(row.id))},null,2))}
  const {chromium}=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -33,6 +35,7 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 async function open(dark=false,width=1100,empty=false){
  const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors:string[]=[];page.setDefaultTimeout(4000);page.on('pageerror',(error:Error)=>errors.push(error.message))
+ await page.route('**/fonts/NotoSansSC.woff2',(route:any)=>route.fulfill({path:resolve('build/fonts/NotoSansSC.woff2'),contentType:'font/woff2'}))
  await page.route('http://127.0.0.1/inline-result',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body><header data-ework-notes-session="inline-result"></header><div data-ework-note-view="inline-result"></div><div id="portals"></div></body></html>'}));await page.goto('http://127.0.0.1/inline-result')
  await page.evaluate(({dark,empty}:any)=>{(window as any).saved={title:empty?'':'原位结果确认',blocks:empty?[]:[{id:'before',type:'paragraph',content:'已有前段'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'用户自己写的市场观察段落'}],yjs:'',revision:0};if(dark)document.body.dataset.dsDarkTheme='true'},{dark,empty})
  await page.addScriptTag({content:'var exports={};\n'+script});await page.locator('.en-title').waitFor();await page.evaluate(()=>{const w=window as any;if(w.saved.blocks.length)w.editor.replaceBlocks(w.editor.document,w.saved.blocks)});return{context,page,errors}
@@ -129,6 +132,26 @@ it('rolls back a failed actual canonical SVG click save without dirtying the pen
   await f.page.evaluate(async()=>{const w=window as any;w.failSaves=false;await w.fixture.flush()});await undo.click();await expect.poll(()=>f.page.locator('.en-native-component').count()).toBe(0);expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 },20000)
+it('keeps compact daily chart first, middle and last points undoable at three actual widths through disclosure and reopen',async()=>{
+ const node=JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',"import{homeNotesGuideChart}from'./packages/dsh-research-task-runtime/home-notes-guide-artifacts.js';process.stdout.write(JSON.stringify(homeNotesGuideChart('pending-daily').node))"],{encoding:'utf8'})),f=await open(false,1500)
+ try{
+  await generate(f.page,{kind:'component',node},'插入中际旭创与沪深300的真实一年历史价格图')
+  const undo=f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}),card=f.page.locator('.en-native-component'),chart=f.page.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe#preview')
+  await undo.waitFor();await chart.locator('svg').waitFor();await f.page.locator('.en-document').evaluate((node:HTMLElement)=>node.style.maxWidth='1200px');await f.page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click()
+  const dates=await chart.locator('table tbody tr td:first-child').allTextContents();expect(dates).toHaveLength(243)
+  for(const width of [476,676,862]){
+   await card.evaluate((node:HTMLElement,width:number)=>node.style.width=width+'px',width);await expect.poll(()=>card.evaluate((node:HTMLElement)=>Math.round(node.getBoundingClientRect().width))).toBe(width)
+   await expect.poll(()=>chart.locator('svg').evaluate((node:HTMLElement)=>Math.round(node.getBoundingClientRect().width))).toBeGreaterThan(width-64)
+   expect(await chart.locator('svg > text > title').count()).toBe(5)
+   for(const index of [0,80,242]){await chart.locator('rect.hit[data-point="'+index+'"]').click();await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain(dates[index]);await expect.poll(()=>undo.isEnabled()).toBe(true)}
+   await chart.locator('svg').press('ArrowLeft');await expect.poll(()=>chart.locator('.chart-readout').textContent()).toContain(dates[241])
+   await chart.locator('summary').click();expect(await chart.locator('details').getAttribute('open')).not.toBeNull();expect(await chart.locator('tbody tr').count()).toBe(243);await chart.locator('summary').click()
+   await f.page.evaluate(()=>(window as any).fixture.flush());await expect.poll(()=>undo.isEnabled()).toBe(true);expect(await f.page.locator('.en-component-error').count()).toBe(0)
+  }
+  await f.page.evaluate(()=>(window as any).fixture.reopen());await undo.waitFor();await chart.locator('svg').waitFor();await expect.poll(()=>undo.isEnabled()).toBe(true);await undo.click();await expect.poll(()=>card.count()).toBe(0)
+  expect(await f.page.locator('.bn-editor').textContent()).toContain('用户后来补写的市场观察，必须保留');expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+},45000)
 it('keeps a real HTML memo edit protected instead of rebasing it as chart navigation',async()=>{
  const f=await open();try{
   const node={...capturedNavigationNode,containerSpec:{...capturedNavigationNode.containerSpec,html:capturedNavigationNode.containerSpec.html+'<label>备注<textarea aria-label="人工备注"></textarea></label>'}}

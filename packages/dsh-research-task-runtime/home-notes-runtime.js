@@ -40,9 +40,9 @@ export function createHomeNotesRuntime(ctx,{env=process.env}={}){
    if(!value||value.sessionId!==run.sessionId||!id(value.requestId)||value.mode!=='write'||typeof value.markdown!=='string'||value.markdown.length>100000||typeof value.selection!=='string'||!Array.isArray(value.context?.components)||value.context.components.length>2||value.images!==undefined&&(!Array.isArray(value.images)||value.images.length)||JSON.stringify(value).length>180000)throw Error('笔记示例生成请求无效。')
    const stage=value.prompt===HOME_NOTES_CHART_PROMPT?0:value.prompt===HOME_NOTES_REWRITE_PROMPT?1:value.prompt===HOME_NOTES_TASK_PROMPT?2:-1
    const anchor=value.insertionAnchor,inline=stage===0&&value.entryPoint==='inline'&&anchor&&id(anchor.documentId)&&id(anchor.blockId)&&anchor.position&&typeof anchor.position==='object'&&!Array.isArray(anchor.position)&&JSON.stringify(anchor.position).length<2048
-   const valid=stage===0?inline&&value.context.scope==='note'&&value.context.components.length===0&&value.selection===''&&['2020年6月底','2025年6月底','255.13','155.13%'].every(marker=>value.markdown.includes(marker))
+   const valid=stage===0?inline&&value.context.scope==='note'&&value.context.components.length===0&&value.selection===''&&['增长兑现与估值','2025年10月23日','2026年10月23日','222.81','环比增长174.57%'].every(marker=>value.markdown.includes(marker))
     :stage===1?value.entryPoint===undefined&&value.insertionAnchor===undefined&&value.context.scope==='selection'&&value.context.components.length===0&&value.markdown===''&&value.selection.trim()===HOME_NOTES_GUIDE_SELECTION
-    :stage===2?value.entryPoint===undefined&&value.insertionAnchor===undefined&&value.context.scope==='note'&&value.selection===''&&['年化收益约20.60%','只差0.16个百分点','先拆开科技行业暴露','下次复盘先核对云业务增长','不把现在的报价塞回历史曲线'].every(marker=>value.markdown.includes(marker))&&homeNotesGuideSummaryReferences(value.context.components):false
+    :stage===2?value.entryPoint===undefined&&value.insertionAnchor===undefined&&value.context.scope==='note'&&value.selection===''&&['环比增长14.29%','现金流净额18.00亿元','同比下降44.08%','不把单期业绩或历史涨幅当作确定性依据','沪深300同期下跌10.88%'].every(marker=>value.markdown.includes(marker))&&homeNotesGuideSummaryReferences(value.context.components):false
    if(!valid)throw Error('示例需求或引用内容已变化，请重新播放。')
    const fingerprint=createHash('sha256').update(JSON.stringify(value)).digest('hex'),old=run.requests.get(value.requestId)
    if(old){if(old.fingerprint!==fingerprint)throw Error('请求标识已用于其他内容。');return old.promise}
@@ -56,7 +56,7 @@ export function createHomeNotesRuntime(ctx,{env=process.env}={}){
      const metadata=recordNoteConversation(run.agent.session,{requestId:value.requestId,phase:'preparing',prompt:value.prompt,references:noteMessageReferences(value.context,value.selection),homeGuide:{runId:run.runId,localPresetOnly:true,provider:'home-notes-script'}});started=true
      const report=(stage,outputChars)=>progress({stage,reasoning:'',outputChars,...metadata})
      report('thinking',0);await wait(run,1800,signal)
-     const result=stage===0?homeNotesGuideChart(run.runId):{kind:stage===2?'conversation':'text',markdown:stage===1?HOME_NOTES_REWRITE_RESULT:HOME_NOTES_TASK_RESULT},characters=Array.from(result.kind!=='component'?result.markdown:result.node.title+' · 年度持有回报与行业基准已核对')
+     const result=stage===0?homeNotesGuideChart(run.runId):{kind:'text',markdown:stage===1?HOME_NOTES_REWRITE_RESULT:HOME_NOTES_TASK_RESULT},characters=Array.from(result.kind!=='component'?result.markdown:result.node.title+' · 一年股价与沪深300价格基准已核对')
      for(let count=3;count<characters.length+3;count+=3){await active(run,signal);report('writing',Math.min(count,characters.length));await wait(run,45,signal)}
      signal.throwIfAborted();current(run)
      recordNoteConversation(run.agent.session,{requestId:value.requestId,phase:'ready',result,outputChars:characters.length,finishedAt:Date.now()});ready=true;run.next++;return result
