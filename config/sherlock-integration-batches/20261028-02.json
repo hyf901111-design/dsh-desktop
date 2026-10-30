@@ -5459,6 +5459,116 @@
         ],
         "recordedAt": "2026-10-30T02:17:16.423Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记组件更多与关闭按钮直接执行且保留编辑选中状态",
+        "branch": "codex/feat/notes-component-header-actions-20261030",
+        "baseCommit": "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6",
+        "tipCommit": "3f532514775da7af34206eb2bc8d194392e5bb8b",
+        "commits": [
+          {
+            "commit": "a5ac2636496c4ac7a547d981fff9e2b8c26b3692",
+            "parents": [
+              "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6"
+            ],
+            "subject": "修复笔记组件更多与关闭按钮先选中卡片的问题"
+          },
+          {
+            "commit": "3f532514775da7af34206eb2bc8d194392e5bb8b",
+            "parents": [
+              "a5ac2636496c4ac7a547d981fff9e2b8c26b3692"
+            ],
+            "subject": "补齐组件按钮回归的真实菜单样式与可点击验证"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/notes/component-interaction.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-component-header-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-component-header-browser.test.ts",
+              "test/notes-component-interaction.test.tsx",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-component-actions.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip的45条直接相关检查通过：真实NotesApp/BlockNote/Native NodeView Browser5、原组件交互/附件引用/owner actions40。",
+            "verifiedCommit": "3f532514775da7af34206eb2bc8d194392e5bb8b",
+            "completedAt": "2026-10-30T02:52:10.979381+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "同冻结tip tsconfig.node TypeScript通过。",
+            "verifiedCommit": "3f532514775da7af34206eb2bc8d194392e5bb8b",
+            "completedAt": "2026-10-30T02:52:21.951717+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6",
+              "3f532514775da7af34206eb2bc8d194392e5bb8b"
+            ],
+            "outcome": "passed",
+            "summary": "精确e3c..3f532两文件范围diff --check通过。",
+            "verifiedCommit": "3f532514775da7af34206eb2bc8d194392e5bb8b",
+            "completedAt": "2026-10-30T02:52:22.093960+00:00",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "冻结工作树diff --check通过且git status干净。",
+            "verifiedCommit": "3f532514775da7af34206eb2bc8d194392e5bb8b",
+            "completedAt": "2026-10-30T02:52:22.232501+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实NotesApp/BlockNote/Native NodeView隔离Chromium先复现header capture导致ref选中与焦点变化RED，修复后5场景GREEN；首击菜单可见/命中/真实复制、Close准确一次/邻块原样、保留既有选中卡、body选择、outside/mode/keyboard及readonly覆盖。实际组件内部渲染与IPC为夹具边界，Root负责最终打包Native验收。证据索引 /tmp/sherlock-notes-component-header-actions-20261030/frozen-3f5325147/evidence-index.json SHA256 d4171f4cf2b9134f1a8ff66e251c37bbca0f8e2a81fbda1896b2d2e627f3985a"
+        },
+        "acceptanceCriteria": [
+          "仅Notes研究/文件header的更多/关闭按钮主按下不触发组件选择、引用或原编辑焦点默认移动，继续执行既有click动作。",
+          "原已选组件不因操作另一张卡按钮被替换；组件body/标题选择、键盘操作、menu outside/模式切换关闭保持。",
+          "Close继续调用原editor.removeBlocks只删自身一次；只读按钮保护和现有owner/能力校验不变。",
+          "不改editor.tsx、NativeComponentBlock handler、V3摘要/生成路由/effort、共享SDK、用户数据或共享客户端。"
+        ],
+        "risks": [
+          "隔离Browser验证了真实编辑器/NodeView/menu交互，但未构建或操作共享Native；Root负责整合后实际客户端验收。",
+          "菜单按原机制异步校验capabilities并获得键盘焦点；本修复去除冗余选中/引用，不宣称整体耗时基准。"
+        ],
+        "generatedAt": "2026-10-30T02:52:46.094222+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5833,6 +5943,30 @@
         "git",
         "diff",
         "--check"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-component-header-browser.test.ts",
+        "test/notes-component-interaction.test.tsx",
+        "test/notes-inline-files.test.tsx",
+        "test/notes-component-actions.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "e3cec1ad40cb70b0bb7101eb0d10acc146d33da6",
+        "3f532514775da7af34206eb2bc8d194392e5bb8b"
       ],
       "timeoutMs": 10000
     }
