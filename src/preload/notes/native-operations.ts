@@ -8,17 +8,7 @@ import type {NoteContent} from '../../shared/workspace-notes'
 const copy=<T,>(value:T):T=>JSON.parse(JSON.stringify(value))
 const fingerprint=(value:any)=>JSON.stringify(value)
 const nativeTypes=new Set(['paragraph','heading','bulletListItem','numberedListItem','checkListItem','quote','codeBlock','table','divider','toggleListItem'])
-/** A whole, unambiguous empty structure instruction only. Other prose stays on
- * the normal planning path; dimensions never erase a filling/data requirement. */
-export function nativeBlankTableIntent(prompt:string,images:readonly unknown[]=[]):{rows:number;columns:number}|undefined{
- if(images.length)return
- const text=prompt.trim(),match=text.match(/^(?:请(?:你|帮我)?|帮我|麻烦(?:你)?(?:帮我)?)?\s*(?:创建|新建|生成|添加|插入|做)(?:一[个张])?\s*(?:(?:原生|可编辑|空白|空)(?:的)?\s*)*(\d+)\s*(?:乘(?:以)?|[×xX*])\s*(\d+)\s*(?:的)?\s*(?:(?:原生|可编辑|空白|空)(?:的)?\s*)*表格\s*(?:吧|(?:[,，]\s*)?谢谢)?[。.!！]?$/u)
- const rows=Number(match?.[1]),columns=Number(match?.[2])
- // Bound allocation by the existing document byte budget, not an artificial
- // smaller table dimension. Exact complete-note capacity is checked on apply.
- if(!match||!Number.isSafeInteger(rows)||!Number.isSafeInteger(columns)||rows<1||columns<1||rows*columns>Math.floor(4*1024*1024/3))return
- return{rows,columns}
-}
+export {nativeBlankTableIntent} from '../../shared/notes-native-intent'
 export function nativeBlankTable(rows:number,columns:number,availableWidth:number){
  return{type:'table',content:{type:'tableContent',headerRows:0,columnWidths:chooseNativeTableColumnWidths(columns,availableWidth),rows:Array.from({length:rows},()=>({cells:Array.from({length:columns},()=> '')}))}}
 }
@@ -153,7 +143,7 @@ export function createNativeNoteOperations(options:Options){
   const receipt=(status:string,message:string)=>({status,effect,changedBlockIds:effect.changedBlockIds,data:{actionId:effect.actionId,revision:effect.revision},message})
   try{
    await options.report?.(requestId,effect);check()
-   await options.persist();check();effect={...effect,state:'saved'};await options.report?.(requestId,effect);check()
+   await options.persist();if(!unchanged())throw Error('笔记已有较新编辑，本次修改和人工内容已保留。');effect={...effect,state:'saved'};await options.report?.(requestId,effect);check()
    if(options.current())options.ready(effect.actionId,summary,false,current());return receipt('succeeded','已保存原生笔记内容。')
   }catch(error){const message=(error as Error).message;options.journal.setError(effect.actionId,message);options.changed();if(options.current())options.ready(effect.actionId,summary+'，部分未完成',true,current());return receipt(options.current()&&current()?'failed':'cancelled',message)}
  }

@@ -1,4 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto'
+import {nativeBlankTableIntent} from '../../shared/notes-native-intent'
 import {createClientCapabilityHost} from '../../../packages/dsh-research-task-runtime/client-capability-host.js'
 import type {ClientCapabilityContext,CapabilityReceipt} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {runClientCapabilityLoop} from '../../../packages/dsh-research-task-runtime/client-capability-loop.js'
@@ -152,6 +153,52 @@ export function installNotesService(options: {
         else if (spec.type === 'markdown') html = '<article style="white-space:pre-wrap;line-height:1.8">' + String(spec.content ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!)) + '</article>'
         return { html, document:html?buildResearchHtmlPreview(html,spec.title,input.dark?'dark':'light',{workbench:true}):'',title:spec.title }
       }
+      case 'native-table': {
+        const dimensions=typeof input.prompt==='string'&&nativeBlankTableIntent(input.prompt)
+        if(Object.keys(input).some(key=>!['owner','sessionId','requestId','documentId','prompt','anchorId','title'].includes(key))||!dimensions||input.prompt.length>8000||typeof input.requestId!=='string'||!input.requestId||input.requestId.length>128||typeof input.documentId!=='string'||input.documentId.length>128||typeof input.anchorId!=='string'||!input.anchorId||input.anchorId.length>256||typeof input.title!=='string'||input.title.length>1000||options.canWrite?.(session)===false||documentAdapter.identity(session)!==input.documentId)throw Error('原生笔记请求已过期或不可编辑。')
+        const cacheKey=JSON.stringify([owner,session,'native-table',input.requestId]),fingerprint=createHash('sha256').update(JSON.stringify(input)).digest('hex'),cached=capabilityResults.get(cacheKey)
+        if(cached){if(cached.fingerprint!==fingerprint)throw Error('请求标识已用于不同原生操作。');return cached.result}
+        if(capabilityResults.size>=512)throw Error('本次客户端会话的操作回执已满，请重新启动客户端。')
+        if(active.has(input.requestId)||[...generations.entries()].some(([id,job])=>!job.cardLocal&&!active.get(id)?.signal.aborted))throw Error('请等待当前笔记操作结束。')
+        const base=options.runtimeUrl();if(!base)throw Error('笔记会话服务尚未就绪。')
+        const controller=new AbortController(),window=options.getWindow(),job={owner,sessionId:session,cardLocal:false}
+        active.set(input.requestId,controller);generations.set(input.requestId,job)
+        const current=()=>!controller.signal.aborted&&active.get(input.requestId)===controller&&options.owner()===owner&&options.getWindow()===window&&!!window&&!window.isDestroyed()&&options.canRead(session)&&options.canWrite?.(session)!==false&&documentAdapter.identity(session)===input.documentId
+        const context:ClientCapabilityContext={owner,sessionId:session,documentId:input.documentId,mode:'notes',editable:true,selectedBlockIds:[],selectedParagraphIds:[],selectedNativeBlockIds:[]}
+        const history=async(action:string,value:any)=>{
+          if(options.owner()!==owner||!options.canRead(session))throw Error('账号或笔记会话已变化。')
+          const url=new URL('/sherlock/notes/session',base),response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,requestId:input.requestId,action,...value})}),result=await response.json()
+          if(!response.ok)throw Error(result.error||'原生笔记会话暂未保存。');return result
+        }
+        let begun=false,receipt:any
+        try{
+          const admission=await history('conversation-native-begin',{prompt:input.prompt,title:input.title});begun=true
+          if(admission.row){const row=admission.row,receipt=row.result?.capabilityReceipts?.[0]??{status:'cancelled',requestId:input.requestId,capability:'notes.blocks.apply',message:'本次原生笔记请求已结束，原内容已保留。'},result={receipt,result:row.result??{kind:'conversation',markdown:receipt.message,capabilityReceipts:[receipt]},phase:row.phase};capabilityResults.set(cacheKey,{fingerprint,result});return result}
+          if(!current())throw Error('本次原生笔记操作已取消。')
+          const read=await capabilityBridge.request('notes.blocks.read',{scope:'note'},context,input.requestId,controller.signal,current)
+          if(!current()||read?.status!=='succeeded'||!read.data?.blocks?.some((row:any)=>row.block.id===input.anchorId))throw Error('原插入位置已变化，笔记内容已保留。')
+          const {rows,columns}=dimensions
+          const table={type:'table',content:{type:'tableContent',headerRows:0,rows:Array.from({length:rows},()=>({cells:Array.from({length:columns},()=> '')}))}}
+          receipt=await capabilityBridge.request('notes.blocks.apply',{revision:read.data.revision,operations:[{op:'insert',anchor:{blockId:input.anchorId,placement:'before'},consumeEmpty:true,blocks:[table]}]},context,input.requestId,controller.signal,current)
+          // Saved is accepted only through this request's bridge and an actual
+          // NotesStore checkpoint containing its native table, never a UI flag.
+          if(receipt?.effect?.state==='saved'){
+            const flatten=(blocks:any[]):any[]=>blocks.flatMap(block=>[block,...flatten(block.children??[])]),saved=flatten(store.load(owner,session).saved.blocks)
+            if(!saved.some(block=>receipt.effect.changedBlockIds.includes(block.id)&&!read.data.blocks.some((row:any)=>row.block.id===block.id)&&receipt.effect.changedBlockIds.every((id:string)=>id===block.id||id===input.anchorId)&&block.type==='table'&&block.content?.rows?.length===rows&&block.content.rows.every((row:any)=>row.cells?.length===columns)))receipt={status:'failed',message:'本次表格保存尚未确认，已保留当前笔记。'}
+          }
+          if(!current())receipt={...receipt,status:'cancelled'}
+          receipt={...receipt,requestId:input.requestId,capability:'notes.blocks.apply'}
+          const phase=receipt.status==='succeeded'?'ready':receipt.status==='cancelled'?'stopped':'failed'
+          let recorded=await history('conversation-native-end',{phase,receipt})
+          if(!current()&&recorded.phase==='ready'){receipt={...receipt,status:'cancelled'};recorded=await history('conversation-native-end',{phase:'stopped',receipt})}
+          const result={receipt,result:recorded.result,phase:recorded.phase};capabilityResults.set(cacheKey,{fingerprint,result});return result
+        }catch(error){
+          receipt={...receipt,status:current()?'failed':'cancelled',requestId:input.requestId,capability:'notes.blocks.apply',message:(error as Error).message}
+          const phase=receipt.status==='cancelled'?'stopped':'failed'
+          if(begun){const recorded=await history('conversation-native-end',{phase,receipt});const result={receipt,result:recorded.result,phase:recorded.phase};capabilityResults.set(cacheKey,{fingerprint,result});return result}
+          throw error
+        }finally{if(active.get(input.requestId)===controller)active.delete(input.requestId);if(generations.get(input.requestId)===job)generations.delete(input.requestId)}
+      }
       case 'generate': {
         for(const job of challenges.values())if(job.owner===owner&&job.sessionId===session)job.controller.abort()
         const cardLocal=input.mode==='component'&&input.entryPoint==='component'
@@ -159,7 +206,7 @@ export function installNotesService(options: {
         const cacheKey=JSON.stringify([owner,session,input.requestId]),fingerprint=createHash('sha256').update(JSON.stringify(input)).digest('hex'),cached=capabilityResults.get(cacheKey)
         if(cached){if(cached.fingerprint!==fingerprint)throw Error('请求标识已用于不同生成请求。');return cached.result}
         if(capabilityResults.size>=512)throw Error('本次客户端会话的操作回执已满，请重新启动客户端。')
-        if (typeof input.requestId !== 'string' || !input.requestId || input.requestId.length > 128 || active.has(input.requestId) || [...generations.values()].filter(job=>job.cardLocal===cardLocal).length >= (cardLocal?3:1)) throw Error('请等待当前笔记生成完成。')
+        if (typeof input.requestId !== 'string' || !input.requestId || input.requestId.length > 128 || active.has(input.requestId) || [...generations.entries()].filter(([id,job])=>job.cardLocal===cardLocal&&!active.get(id)?.signal.aborted).length >= (cardLocal?3:1)) throw Error('请等待当前笔记生成完成。')
         const base = options.runtimeUrl(); if (!base) throw Error('模型服务尚未就绪，请稍后重试。')
         const url = new URL('/sherlock/notes/generate', base), controller = new AbortController()
         active.set(input.requestId, controller)

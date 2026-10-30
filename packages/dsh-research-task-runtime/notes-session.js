@@ -82,6 +82,27 @@ export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
     if (req.method !== 'POST' || !isTrustedRequest(req, true)) return send(403, { error: 'Request rejected' })
     try {
       const input=await readJsonBody(req)
+      if(input.action==='conversation-native-begin'||input.action==='conversation-native-end'){
+        const session=ctx.sessions.get(input.sessionId)
+        if(!session||typeof input.requestId!=='string'||!input.requestId||input.requestId.length>128)throw Error('原生笔记会话记录无效。')
+        const previous=noteConversationRows(session).find(row=>row.requestId===input.requestId)
+        if(input.action==='conversation-native-begin'){
+          if(typeof input.prompt!=='string'||!input.prompt.trim()||input.prompt.length>8000||typeof input.title!=='string'||input.title.length>1000)throw Error('原生笔记需求无效。')
+          if(previous){if(previous.nativeOperation!=='table'||previous.prompt!==input.prompt)throw Error('请求标识已用于其他笔记任务。');if(await ctx.sessions.flush(session)!==true)throw Error('原生笔记会话记录尚未保存。');return send(200,{ok:true,row:previous})}
+          engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title})
+          setNoteConversationRunning(session,input.requestId,true)
+          const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt,nativeOperation:'table'})
+          if(await ctx.sessions.flush(session)!==true)throw Error('原生笔记会话记录尚未保存。')
+          return send(200,{ok:true,...metadata})
+        }
+        const receipt=input.receipt,effect=receipt?.effect
+        if(!previous||previous.nativeOperation!=='table'||!['ready','stopped','failed'].includes(input.phase)||!receipt||!['succeeded','failed','cancelled'].includes(receipt.status)||receipt.capability!=='notes.blocks.apply'||typeof receipt.message!=='string'||receipt.message.length>3000||effect!==undefined&&(effect.kind!=='native-blocks'||effect.actionId!==input.requestId||!['applied','saved'].includes(effect.state)||typeof effect.revision!=='string'||!effect.revision||!Array.isArray(effect.changedBlockIds)||!effect.changedBlockIds.length||effect.changedBlockIds.some(id=>typeof id!=='string'||!id||id.length>256))||input.phase==='ready'&&(receipt.status!=='succeeded'||effect?.state!=='saved'))throw Error('原生笔记操作回执无效。')
+        const phase=['accepted','discarded','stopped'].includes(previous.phase)?previous.phase:input.phase
+        const result={kind:'conversation',markdown:receipt.message,capabilityReceipts:[receipt]}
+        recordNoteConversation(session,{requestId:input.requestId,phase,result,...phase==='failed'?{error:receipt.message}:{},finishedAt:Date.now()});setNoteConversationRunning(session,input.requestId,false)
+        if(await ctx.sessions.flush(session)!==true)throw Error('原生笔记操作记录尚未保存。')
+        return send(200,{ok:true,result,phase})
+      }
       if(input.action==='conversation-capabilities-end'){
         const session=ctx.sessions.get(input.sessionId);if(session)setNoteCapabilityRunning(session,input.requestId,false)
         return send(200,{ok:true})
@@ -102,6 +123,7 @@ export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
         if(input.action==='conversation-state'){
           if(!['accepted','discarded'].includes(input.phase)||!noteConversationRows(session).some(row=>row.requestId===input.requestId&&(row.result?.kind!=='conversation'||nativeDocumentReceipt(row.result?.capabilityReceipts,row.requestId))))throw Error('笔记会话记录不可用。')
           recordNoteConversation(session,{requestId:input.requestId,phase:input.phase,finishedAt:Date.now()})
+          if(noteConversationRows(session).find(row=>row.requestId===input.requestId)?.nativeOperation==='table'&&await ctx.sessions.flush(session)!==true)throw Error('原生笔记确认记录尚未保存。')
         }
         return send(200,{rows:noteConversationRows(session)})
       }
