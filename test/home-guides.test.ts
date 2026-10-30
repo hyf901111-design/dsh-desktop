@@ -392,3 +392,22 @@ test('opens a saved workbench directly without mounting a fresh-only actor or re
  expect(f.header.parentElement?.hasAttribute('data-home-guide-resident')).toBe(false)
  expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(0)
 })
+
+test('records actual note step start/end/fail without retaining error text or composer content',async()=>{
+ vi.useFakeTimers();const rows:string[]=[],info=vi.spyOn(console,'info').mockImplementation(value=>{rows.push(value)})
+ try{const f=fixture();f.runStep.mockImplementation(async step=>{if(step==='note-chart-compose')throw Error('private model output / note draft')})
+  await f.controller.start('note',{replay:true});await vi.advanceTimersByTimeAsync(2000)
+  const logs=rows.filter(row=>row.startsWith('[notes-guide-step] ')).map(row=>JSON.parse(row.slice('[notes-guide-step] '.length)))
+  expect(logs).toEqual(expect.arrayContaining([expect.objectContaining({step:'write',phase:'step-start'}),expect.objectContaining({step:'write',phase:'step-end'}),expect.objectContaining({step:'note-chart-compose',phase:'step-start'}),expect.objectContaining({step:'note-chart-compose',phase:'step-fail',reason:'operation-failed',errorName:'Error'})]))
+  expect(rows.join('\n')).not.toContain('private');expect(rows.join('\n')).not.toContain('原有草稿')
+ }finally{info.mockRestore()}
+})
+
+test('records a real window-blur pause, foreground resume and reset cancellation at the current note step',async()=>{
+ vi.useFakeTimers();const rows:string[]=[],info=vi.spyOn(console,'info').mockImplementation(value=>{rows.push(value)})
+ try{const f=fixture();await f.controller.start('note',{replay:true});await vi.advanceTimersByTimeAsync(10)
+  focus(false);await vi.advanceTimersByTimeAsync(100);focus(true);await vi.advanceTimersByTimeAsync(10);await f.controller.reset(false)
+  const logs=rows.filter(row=>row.startsWith('[notes-guide-step] ')).map(row=>JSON.parse(row.slice('[notes-guide-step] '.length)))
+  expect(logs).toEqual(expect.arrayContaining([expect.objectContaining({step:'write',phase:'paused',reason:'window-blur'}),expect.objectContaining({step:'write',phase:'resumed',reason:'foreground-restored'}),expect.objectContaining({step:'write',phase:'cancelled',reason:'reset'})]))
+ }finally{info.mockRestore()}
+})
