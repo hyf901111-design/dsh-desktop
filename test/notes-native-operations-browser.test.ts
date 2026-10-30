@@ -6,6 +6,7 @@ import {registerNoteSessions,noteConversationRows} from '../packages/dsh-researc
 // @ts-expect-error runtime module is JavaScript and has no declaration file.
 import {registerNotesAi} from '../packages/dsh-research-task-runtime/notes-ai.js'
 import recordedCrud from './fixtures/notes-native-crud-missing-token.json'
+import recordedEof from './fixtures/notes-native-crud-eof-containers.json'
 import {installNotesService} from '../src/main/notes/service'
 vi.mock('electron',()=>({BrowserWindow:class{},dialog:{showSaveDialog:async()=>({canceled:true})}}))
 import {dirname,resolve} from 'node:path'
@@ -73,7 +74,7 @@ async function parentRequest(page:any){
  await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((x:any)=>x.method==='generate').length)).toBe(count+1)
  return page.evaluate(()=>(window as any).calls.filter((x:any)=>x.method==='generate').at(-1).input)
 }
-it.each(['automatic','mixed-manual'])('replays the recorded missing-token sidebar response through Main with %s widths and saves only the requested company cell, with exact Undo',async widthMode=>{
+it.each(['automatic','mixed-manual'].flatMap(widthMode=>['missing-token','eof-containers'].map(protocol=>({widthMode,protocol}))))('replays the recorded $protocol sidebar response through Main with $widthMode widths and saves only the requested company cell, with exact Undo',async({widthMode,protocol})=>{
  const f=await open(request=>{
   const payload=JSON.parse(request.messages[0].content.find((part:any)=>part.type==='text').text),receipts=payload.clientReceipts
   if(!receipts.length)return recordedCrud.publicOutput
@@ -81,7 +82,9 @@ it.each(['automatic','mixed-manual'])('replays the recorded missing-token sideba
    expect(receipts[0]).toMatchObject({capability:'notes.blocks.read',status:'succeeded'})
    const read=receipts[0].data,company=read.blocks.find((row:any)=>row.block.id==='company-table').block,content=structuredClone(company.content)
    content.rows[1].cells[1].content[0].text='300308'
-   return{kind:'capabilities',calls:[{requestId:'update-company-code-300308',capability:'notes.blocks.apply',arguments:{revision:read.revision,operations:[{op:'update',blockId:company.id,block:{content}}]}}]}
+   const call={requestId:'update-company-code-300308',capability:'notes.blocks.apply',arguments:{revision:read.revision,operations:[{op:'update',blockId:company.id,block:{type:company.type,content}}]}}
+   if(protocol==='eof-containers'){const value=JSON.parse(recordedEof.partialOutput+recordedEof.expectedSuffix);value.wireToken=/wireToken=([a-f0-9-]+)/u.exec(request.system)![1];value.calls=[call];return JSON.stringify(value).slice(0,-recordedEof.expectedSuffix.length)}
+   return{kind:'capabilities',calls:[call]}
   }
   expect(receipts[1]).toMatchObject({capability:'notes.blocks.apply',status:'succeeded',effect:{kind:'native-blocks',state:'saved',changedBlockIds:['company-table']}})
   return{kind:'conversation',markdown:''}
@@ -99,7 +102,7 @@ it.each(['automatic','mixed-manual'])('replays the recorded missing-token sideba
   const row=f.history().at(-1);expect(row.prompt).toBe(recordedCrud.instruction);expect(row.result.capabilityReceipts).toMatchObject([{capability:'notes.blocks.read',status:'succeeded'},{capability:'notes.blocks.apply',status:'succeeded',effect:{state:'saved',changedBlockIds:['company-table']}}])
   await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.store.load('fixture','native-fixture').saved.blocks).toEqual(before)
   await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor table').first().waitFor();expect(await f.page.evaluate(()=>JSON.parse(JSON.stringify((window as any).editor.document)))).toEqual(before);expect(f.errors).toEqual([])
-  metrics.push({entry:'sidebar-recorded-crud',widthMode,modelRounds:f.modelRequests.length,formatRecoveryRounds:f.modelRequests.filter(request=>request.purpose==='workspace-note-format-recovery').length,changedCells:1,unchangedOtherBlocks:true,saved:true,undoRestored:true})
+  metrics.push({entry:'sidebar-recorded-crud',widthMode,protocol,modelRounds:f.modelRequests.length,formatRecoveryRounds:f.modelRequests.filter(request=>request.purpose==='workspace-note-format-recovery').length,changedCells:1,unchangedOtherBlocks:true,saved:true,undoRestored:true})
  }finally{await f.close()}
 },20000)
 it('rejects invalid native table widths atomically while accepting only real automatic placeholders',async()=>{

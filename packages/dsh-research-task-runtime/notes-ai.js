@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import Ajv from 'ajv'
 import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { acceptArtifactOutput } from './artifact-output.js'
-import {currentNoteTransport,parseNotePublicOutput,noteNonContentEnvelope} from './notes-output.js'
+import {completeNoteJsonContainers,currentNoteTransport,parseNotePublicOutput,noteNonContentEnvelope} from './notes-output.js'
 import { engageNoteSession,noteConversationRows,recordNoteConversation,sharedNoteConversationContext,setNoteConversationRunning,setNoteCapabilityRunning } from './notes-session.js'
 import {loadNoteReferenceContent} from './notes-reference-content.js'
 import {noteMessageReferences} from './notes-message-references.js'
@@ -78,7 +78,7 @@ export function containsLiteralNoteBatch(source,fingerprint){
      if(quoted){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"'){quoted=false;if(opener==='"')break}continue}
      if(char==='"')quoted=true;else if(char==='{')nesting++;else if(char==='}'&&!--nesting)break
     }
-    if(end===value.length)continue
+    if(end===value.length){if(opener==='{'){spend((value.length-start)*2);const completed=completeNoteJsonContainers(value.slice(start));if(completed)pending.push(completed.value)}continue}
     spend(end-start+1)
     try{pending.push(JSON.parse(value.slice(start,end+1)))}catch{}
    }
@@ -214,7 +214,15 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
   const displayCode=/(?:json|代码|code|schema).{0,20}(?:示例|样例|example|snippet)|(?:示例|样例|example|snippet).{0,20}(?:json|代码|code|schema)|(?:给出|展示|输出|提供|写出|写|write|show|return|output)\s*(?:一[段个份]?)?\s*(?:json|代码|code|schema)/iu.test(input.prompt)
   let result=parseNotePublicOutput(publicText,{hasReceipts:capabilityReceipts.length>0,wireToken,displayCode})
   const literalOperation=displayCode||/(?:解释|解读|展示|引用|说明|explain|describe|quote).{0,20}(?:json|schema|代码[示样]例|code\b)|(?:json|schema|代码[示样]例|code\b).{0,20}(?:含义|格式|示例)/iu.test(input.prompt)
-  const unmarkedCalls=!literalOperation&&unmarkedPrimaryNoteCalls(result,capabilityCatalog,[input.prompt,title,document,selection,selectedReferences,conversation])
+  const literalSources=[input.prompt,title,document,selection,selectedReferences,conversation]
+  if(!result&&!literalOperation){
+   const completed=completeNoteJsonContainers(publicText),candidate=completed?.value
+   if(candidate?.kind==='capabilities'&&candidate.wireToken===wireToken){
+    const{wireToken:marker,...batch}=candidate,calls=unmarkedPrimaryNoteCalls(batch,capabilityCatalog,literalSources)
+    if(calls)result={...candidate,calls}
+   }
+  }
+  const unmarkedCalls=!literalOperation&&unmarkedPrimaryNoteCalls(result,capabilityCatalog,literalSources)
   const sourceTransport=currentNoteTransport(publicText,wireToken),operationRecovery=recoverableNoteCalls(sourceTransport,capabilityCatalog,capabilityReceipts)
   const sameRecoveryCalls=value=>{
    if(!operationRecovery?.calls.length||value?.kind!=='capabilities'||value.wireToken!==undefined&&value.wireToken!==wireToken)return false
