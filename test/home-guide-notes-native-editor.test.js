@@ -5,6 +5,7 @@ import {pathToFileURL} from 'node:url'
 import {writeFileSync,mkdirSync,mkdtempSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
+import {HOME_NOTES_REWRITE_PROMPT} from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 const selectionOutput=process.env.SHERLOCK_NOTE_SELECTION_OUTPUT_DIR||mkdtempSync(join(tmpdir(),'home-note-selection-'));mkdirSync(selectionOutput,{recursive:true})
 let browser,script,css
 it('measures the first-line native caret for an empty writing paragraph without changing its document',async()=>{
@@ -140,10 +141,10 @@ it('uses the real paragraph selection and AI rewrite control before replacing on
   // The tutorial's visual pointer acknowledges a target, then its actor calls
   // that native button once; it never synthesizes an OS pointer drag.
   await page.getByRole('button',{name:'AI 改写',exact:true}).evaluate(button=>{button.click();button.focus({preventScroll:true})})
-  expect(await page.evaluate(()=>window.events.findLast(event=>event.name==='notes-composer-draft').detail.text)).toContain('改写选中文字')
-  await page.evaluate(()=>window.submitNative('改写选中文字，保留原意并让表达更清晰。'))
+  expect(await page.evaluate(()=>window.events.findLast(event=>event.name==='notes-composer-draft').detail.text)).toBe(HOME_NOTES_REWRITE_PROMPT)
+  await page.evaluate(prompt=>window.submitNative(prompt),HOME_NOTES_REWRITE_PROMPT)
   await expect.poll(()=>page.evaluate(()=>window.results.length)).toBe(1)
-  expect(await page.evaluate(()=>window.results[0].input)).toMatchObject({selection:'订单增长不能保证利润翻倍，仍需验证产品价格和回款。',markdown:'',context:{scope:'selection',components:[]}})
+  expect(await page.evaluate(()=>window.results[0].input)).toMatchObject({prompt:HOME_NOTES_REWRITE_PROMPT,selection:'订单增长不能保证利润翻倍，仍需验证产品价格和回款。',markdown:'',context:{scope:'selection',components:[]}})
   await page.evaluate(()=>window.results[0].resolve({kind:'text',markdown:'订单增长为收入扩张提供线索，利润兑现仍取决于价格、毛利率与回款质量。'}))
   await page.getByRole('button',{name:'替换所选',exact:true}).click();await page.evaluate(()=>window.noteApi.flush())
   expect(await page.locator('[data-id="intro"] .bn-inline-content').innerText()).toBe('原文摘要必须保留。')
