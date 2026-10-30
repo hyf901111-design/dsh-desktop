@@ -275,3 +275,12 @@ it('does not restore a stopped request over a new native task or later manual te
   expect(result.phases.filter((row:any)=>row.requestId===old.requestId).map((row:any)=>row.phase)).toEqual(['preparing','stopped']);expect(result.phases.filter((row:any)=>row.requestId===fresh.requestId).map((row:any)=>row.phase)).toEqual(['preparing','ready']);expect(result.commits).toHaveLength(1);expect(JSON.stringify(result.blocks)).toContain('停止后的人工正文');expect(result.blocks.filter((block:any)=>block.type==='table')).toHaveLength(2);expect(result.calls.filter((row:any)=>row.method==='generate')).toHaveLength(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
+it('keeps an actual failed native save as applied-only durable history while preserving its editable table',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>(window as any).failSave=true);await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.fill('创建一个3乘3的表格');await input.press('Enter')
+  await expect.poll(()=>f.history()[0]?.phase).toBe('failed');expect(f.history()[0].result.capabilityReceipts[0]).toMatchObject({status:'failed',effect:{state:'applied'}});expect(await f.page.locator('.bn-editor table').count()).toBe(1)
+  f.restartHistory();expect((await f.host('conversation-load',{})).rows[0]).toMatchObject({phase:'failed',prompt:'创建一个3乘3的表格',result:{capabilityReceipts:[{status:'failed',effect:{state:'applied'}}]}})
+  await f.page.evaluate(()=>(window as any).failSave=false);await f.page.locator('.bn-editor td p').first().click();await f.page.keyboard.type('失败后保留人工编辑');await f.page.keyboard.press('Meta+s');await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('失败后保留人工编辑');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
