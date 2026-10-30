@@ -6295,7 +6295,7 @@
         "featureName": "原生笔记表格合理列宽、整表尺寸与顶层行列菜单",
         "branch": "codex/feat/notes-native-table-ui-20261030",
         "baseCommit": "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
-        "tipCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
+        "tipCommit": "834b4bcc4a4da5ba2c8fb2df95ef012afd360b25",
         "commits": [
           {
             "commit": "2e24a72f919cf28be5862af93f65a3caaaba1247",
@@ -6331,9 +6331,20 @@
               "a2260c37bc77da98f9df9d8834b5973c9ed172d8"
             ],
             "subject": "修复：释放原生表格菜单冻结并隔离拖动视图归属"
+          },
+          {
+            "commit": "834b4bcc4a4da5ba2c8fb2df95ef012afd360b25",
+            "parents": [
+              "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03"
+            ],
+            "subject": "修复：统一生产预加载表格选择器并覆盖重复依赖回归"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "electron.vite.config.ts"
+          },
           {
             "status": "M",
             "path": "src/preload/notes/editor.tsx"
@@ -6357,6 +6368,10 @@
           {
             "status": "A",
             "path": "test/notes-native-table-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-preload-runtime.test.ts"
           }
         ],
         "checks": [
@@ -6369,14 +6384,16 @@
               "test/notes-native-table-layout.test.ts",
               "test/notes-component-header-browser.test.ts",
               "test/notes-component-interaction.test.tsx",
+              "test/notes-preload-runtime.test.ts",
+              "test/preload-editor-singleton.test.ts",
               "--maxWorkers=1",
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "同冻结tip直接相关36/36（table14/Header7/layout8/interaction7），未跑全套。",
-            "verifiedCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
-            "completedAt": "2026-10-30T07:22:50.189732+00:00",
-            "timeoutMs": 120000
+            "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
+            "verifiedCommit": "834b4bcc4a4da5ba2c8fb2df95ef012afd360b25",
+            "completedAt": "2026-10-30T09:08:11.011753+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -6387,10 +6404,10 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "冻结同tip TypeScript通过。",
-            "verifiedCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
-            "completedAt": "2026-10-30T07:22:58.811263+00:00",
-            "timeoutMs": 120000
+            "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
+            "verifiedCommit": "834b4bcc4a4da5ba2c8fb2df95ef012afd360b25",
+            "completedAt": "2026-10-30T09:08:19.252045+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -6398,13 +6415,13 @@
               "diff",
               "--check",
               "31b3de76ee5c0d05787ef3d7008ec697717ca3e9",
-              "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03"
+              "834b4bcc4a4da5ba2c8fb2df95ef012afd360b25"
             ],
             "outcome": "passed",
-            "summary": "精确base31..feature差异检查通过。",
-            "verifiedCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
-            "completedAt": "2026-10-30T07:22:58.921289+00:00",
-            "timeoutMs": 120000
+            "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
+            "verifiedCommit": "834b4bcc4a4da5ba2c8fb2df95ef012afd360b25",
+            "completedAt": "2026-10-30T09:08:19.273274+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -6413,15 +6430,15 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "冻结工作树差异检查通过且干净。",
-            "verifiedCommit": "4e575cfe1ef6dcde6b26416a3d6777dc1de0ed03",
-            "completedAt": "2026-10-30T07:22:59.029761+00:00",
-            "timeoutMs": 120000
+            "summary": "冻结同tip直接相关聚焦验证，通过；不运行全套",
+            "verifiedCommit": "834b4bcc4a4da5ba2c8fb2df95ef012afd360b25",
+            "completedAt": "2026-10-30T09:08:19.294178+00:00",
+            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "冻结同tip直接相关36/36（table14/Header7/layout8/component interaction7）。真实NotesApp/BlockNote/ProseMirror/Yjs/NotesStore；旧menuFrozen [2,1]→新hover[5,4]及原stock插行位置RED→GREEN，原位Slash、drag owner/readonly、保存重开均覆盖。非打包Native。证据 /tmp/sherlock-notes-native-table-ui-20261030/frozen-4e575cfe1/evidence-index.json SHA256 bf1b3193b408f7c090b5f3dfe68749981d4e1adcdc73832ca6be3536c153056e"
+          "summary": "真实NotesApp表格/Header/interaction及生产Vite preload全链，共40项。新外部物理table依赖复现Duplicate cell后由配置dedupe修复。原14table边界仍通过，Native待Root。证据 /tmp/sherlock-notes-native-table-ui-20261030/frozen-834b4bcc4/checks.json"
         },
         "acceptanceCriteria": [
           "新表在同一插入事务中持久化columnWidths，正常8列适应正文；旧表已有宽度原样保留，小窗口局部横滚且不缩字号。",
@@ -6438,9 +6455,10 @@
           "Composition coverage uses DOM composition events plus real cell typing; physical macOS IME and the packaged app remain Root acceptance.",
           "The original Slash callback test invokes the genuine BlockNote callback in the production sizing wrapper; it does not claim an Electron menu-window click.",
           "旧notes-paragraph-indent.test.js缺少9b raw-loader，在base31归档和feature相同beforeAll失败；5case未执行，不计入本次GREEN，保留原日志供Root处理。",
-          "editor.tsx仅import、原生Slash table事务包装、tableHandles替换及控件挂载；Root与native-operations feature三方合并需同时保留各自hook、IME/文字兜底与完整9b。共享layout纯模块与core复用字节相同。"
+          "editor.tsx仅import、原生Slash table事务包装、tableHandles替换及控件挂载；Root与native-operations feature三方合并需同时保留各自hook、IME/文字兜底与完整9b。共享layout纯模块与core复用字节相同。",
+          "Root追加生产Vite singleton修复及3用例，真实集成gate先在4e57失败并官方中止，834后继必须重新集成验证。"
         ],
-        "generatedAt": "2026-10-30T07:25:16.728564+00:00"
+        "generatedAt": "2026-10-30T09:13:21.956292+00:00"
       }
     }
   ],
