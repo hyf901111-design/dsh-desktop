@@ -23,3 +23,9 @@ it('only resumes after an explicit click through the native input actions withou
  expect(continueUnfinishedTask({inputActions,input:plain,todos,running:false})).toBe(true)
  expect(calls).toHaveLength(2);expect(calls[0][1]).toContain('不扩大任务范围');expect(calls[0][1]).toContain('渲染核验并交付');expect(calls[0][1]).not.toContain('读取资料');expect(calls[1]).toEqual(['submit'])
 })
+it('releases a synchronous submission failure without clearing or replacing its retained draft',()=>{
+ let draft=''
+ const inputActions={setDraft:text=>{draft=text},submit:()=>{throw Error('executor unavailable')}},input={phase:'plain',draft:'',imageIds:[],occurrences:[]},todos=[{content:'核验并交付',status:'pending'}]
+ expect(continueUnfinishedTask({inputActions,input,todos,running:false})).toBe(false)
+ expect(draft).toContain('核验并交付')
+})

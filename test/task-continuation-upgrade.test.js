@@ -37,7 +37,19 @@ it('upgrades an already installed v1 runtime and produces identical bytes on a s
   expect(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')===ui).toBe(true)
  }finally{await rm(root,{recursive:true,force:true})}
 })
-it('fails closed on a truncated existing runtime or drifted v2 install rather than claiming it is current',async()=>{
+it('upgrades an older continuation marker and dock once without duplicating the helper or losing original schemas',async()=>{
+ const runtime=legacyTaskProgressSource(await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8')).replace('/* sherlock:task-progress-sync:v1 */','/* sherlock:task-progress-sync:v1 */\n/* sherlock:task-progress-continuation:v2 */')
+ const upgraded=patchTaskProgressRuntime(runtime)
+ expect(upgraded).toContain('/* sherlock:task-progress-continuation:v3 */')
+ expect(upgraded).not.toContain('state.reconciled = true')
+ expect(patchTaskProgressRuntime(upgraded)).toBe(upgraded)
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),oldDock=patchTaskProgressClient(source).replace('/* sherlock:task-progress-resume:v3 */','/* sherlock:task-progress-resume:v2 */').replace('clicked=react.useRef(null)','clicked=react.useRef(false)')
+ const client=patchTaskProgressClient(oldDock)
+ expect(client).toContain('/* sherlock:task-progress-resume:v3 */');expect(client).toContain('input.draftRev!==clicked.current.revision')
+ expect(client.match(/function continueUnfinishedTask\(/g)).toHaveLength(1)
+ expect(patchTaskProgressClient(client)).toBe(client)
+})
+it('fails closed on a truncated existing runtime or drifted current install rather than claiming it is current',async()=>{
  const original=await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8')
  expect(()=>patchTaskProgressRuntime(original.replace('installTaskProgressSync(ctx);',''))).toThrow('installation is incomplete')
  const current=patchTaskProgressRuntime(original)

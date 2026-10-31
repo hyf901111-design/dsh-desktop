@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest'
+import { it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { installTaskProgressSync, patchTaskProgressRuntime } from '../scripts/lib/task-progress-runtime.mjs'
 
@@ -74,6 +74,25 @@ it('patches the real todo entry idempotently with existing projection behavior p
  const next=patchTaskProgressRuntime(source)
  expect(patchTaskProgressRuntime(next)).toBe(next)
  expect(next).toContain('installTaskProgressSync(ctx)')
- expect(next).toContain('/* sherlock:task-progress-continuation:v2 */')
+ expect(next).toContain('/* sherlock:task-progress-continuation:v3 */')
  expect(next).toContain('if (event.type === "todo/write") return event.data.todos;')
+})
+it('does not turn three unchanged background observation timeouts into progress or repeated model continuations',async()=>{
+ vi.useFakeTimers()
+ const hooks={},listeners=new Map(),controller=new AbortController(),events=[],steered=[]
+ const agent={id:'owner',session:{events},steer:message=>steered.push(message)}
+ const jobs={list:()=>[{id:'job-1',ownerSession:'owner',startedAt:101,status:'running'}],onJobsChanged:fn=>{listeners.set('job',fn);return()=>listeners.delete('job')}}
+ installTaskProgressSync({get:key=>key==='jobs'?jobs:null,on:(name,fn)=>{hooks[name]=fn;return()=>delete hooks[name]}})
+ const append=(type,data,time=100)=>events.push({type,data,time})
+ append('turn/start',{turn:1});append('step/start',{step:1});append('user/message',{id:'human',source:{kind:'user'}});append('todo/write',{todos:[{content:'核验并交付',status:'pending'}]});append('assistant/chunk',{chunk:{type:'finish',reason:{kind:'stop'}}})
+ try{
+  await hooks['agent/turn-stopping']({agent,turn:1,signal:controller.signal})
+  expect(steered).toHaveLength(1)
+  append('step/start',{step:2});append('assistant/chunk',{chunk:{type:'finish',reason:{kind:'stop'}}})
+  let resolved=false;const wait=hooks['agent/turn-stopping']({agent,turn:1,signal:controller.signal}).then(()=>resolved=true)
+  await vi.advanceTimersByTimeAsync(90000)
+  expect(resolved).toBe(false);expect(steered).toHaveLength(1);expect(listeners.size).toBe(1)
+  controller.abort();await wait
+  expect(steered).toHaveLength(1);expect(listeners.size).toBe(0)
+ }finally{vi.useRealTimers()}
 })

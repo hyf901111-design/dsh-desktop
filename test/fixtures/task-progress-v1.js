@@ -50,5 +50,5 @@ export function installTaskProgressSync(ctx) {
 export function legacyTaskProgressSource(source) {
  const node=parse(source,{sourceType:"module"}).program.body.find(node=>node.type==="FunctionDeclaration"&&node.id?.name==="installTaskProgressSync")
  if(!node)throw Error("Expected an installed task progress runtime")
- return (source.slice(0,node.start)+installTaskProgressSync.toString()+source.slice(node.end)).replace("/* sherlock:task-progress-continuation:v2 */\n", "")
+ return (source.slice(0,node.start)+installTaskProgressSync.toString()+source.slice(node.end)).replace(/\/\* sherlock:task-progress-continuation:v[23] \*\/\n/g, "")
 }
