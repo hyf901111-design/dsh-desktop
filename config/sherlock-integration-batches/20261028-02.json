@@ -13796,6 +13796,312 @@
         ],
         "recordedAt": "2026-10-31T10:31:09.150Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话消息顺序与后台任务真实完成可靠性组合修复",
+        "branch": "codex/feat/chat-reliability-20261031",
+        "baseCommit": "ebb21112c751b342e060aa570e94699730b1b26f",
+        "tipCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+        "commits": [
+          {
+            "commit": "5ddb208b7b3e938f66ad6eb78db080f6252b49eb",
+            "parents": [
+              "ebb21112c751b342e060aa570e94699730b1b26f"
+            ],
+            "subject": "修复用户消息与同轮执行过程和回复的显示顺序"
+          },
+          {
+            "commit": "744a138bff9d6d675b548a3ea0e7df20536fea66",
+            "parents": [
+              "ebb21112c751b342e060aa570e94699730b1b26f"
+            ],
+            "subject": "修复多步骤任务提前结束并保留未完成任务继续入口"
+          },
+          {
+            "commit": "654df7c91dab23f256a66d0e3d50b960968f8ce3",
+            "parents": [
+              "744a138bff9d6d675b548a3ea0e7df20536fea66"
+            ],
+            "subject": "修复任务续跑将变化的失败结果误算执行进展"
+          },
+          {
+            "commit": "c7559bef61a5c6af8dae14d9cfaf78b1763fb63a",
+            "parents": [
+              "654df7c91dab23f256a66d0e3d50b960968f8ce3"
+            ],
+            "subject": "保持后台任务等待并修复未完成任务继续入口重试"
+          },
+          {
+            "commit": "68e7cce494be5c7ea61284e9bd3d9b5bace3bc6c",
+            "parents": [
+              "5ddb208b7b3e938f66ad6eb78db080f6252b49eb",
+              "c7559bef61a5c6af8dae14d9cfaf78b1763fb63a"
+            ],
+            "subject": "合并对话消息顺序与后台任务可靠性修复"
+          },
+          {
+            "commit": "8cba044bfd51091c50b8131f7b37e4f5d3bb640a",
+            "parents": [
+              "68e7cce494be5c7ea61284e9bd3d9b5bace3bc6c"
+            ],
+            "subject": "补充续跑后台任务与消息展示顺序的真实日志交叉验收"
+          },
+          {
+            "commit": "f7b8005c44ba8303d8144cee7229715371fbe278",
+            "parents": [
+              "8cba044bfd51091c50b8131f7b37e4f5d3bb640a"
+            ],
+            "subject": "按实际安装器加载运行时补丁以校验已安装源码字节"
+          },
+          {
+            "commit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "parents": [
+              "f7b8005c44ba8303d8144cee7229715371fbe278"
+            ],
+            "subject": "核验真实待接收请求与后台任务日志的组合边界"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-turn-order.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-progress-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-progress-runtime.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-turn-order-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-turn-order.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/conversation-turn-order-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
+          },
+          {
+            "status": "C084",
+            "path": "test/fixtures/task-progress-v1.js",
+            "previousPath": "scripts/lib/task-progress-runtime.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/task-continuation-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/task-continuation-sdk.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/task-continuation-upgrade.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-progress-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-progress-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确组合tip完整installer通过；作者连续两遍、3237 SDK文件全字节幂等，见installer-final-pass1/2.log和combined-sdk-inventory-final.json",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/conversation-turn-order.test.js",
+              "test/conversation-turn-order-browser.test.js",
+              "test/conversation-submission-flow.test.js",
+              "test/notes-activity.test.js",
+              "test/conversation-history-page.test.js",
+              "test/conversation-history-page-browser.test.js",
+              "test/conversation-response-progress-browser.test.js",
+              "test/task-progress-runtime.test.js",
+              "test/task-progress-client.test.js",
+              "test/task-continuation-sdk.test.js",
+              "test/task-continuation-browser.test.js",
+              "test/task-continuation-upgrade.test.js",
+              "test/tool-recovery-guidance.test.js",
+              "test/profile-runtime-patches.test.js",
+              "test/figma-task-progress.test.ts",
+              "test/figma-task-compact.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "组合97/97通过：原order50与continuation46，加actualAgentLoop续跑/等待/late job持久journal经实际SessionRuntime与compact的交叉1例；exact-tip-focused-final.log",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/conversation-submission-browser.test.js",
+              "-t",
+              "durable Host file-context prelude"
+            ],
+            "outcome": "passed",
+            "summary": "真实Host turn/start+durable附件plugin上下文、human仍pending：完整ChatView用户在所有execution前，durable receipt后单条去重；1/1通过，21其他例明确跳过；exact-tip-pending-final.log",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确组合tip TypeScript noEmit通过；exact-tip-typecheck-final.log",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/lib/conversation-turn-order.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确生产脚本语法通过",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/lib/notes-activity.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确生产脚本语法通过",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/lib/task-progress-runtime.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确生产脚本语法通过",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/lib/task-progress-client.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确生产脚本语法通过",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确生产脚本语法通过",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "ebb21112c751b342e060aa570e94699730b1b26f..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "组合范围无空白错误，工作树干净",
+            "verifiedCommit": "2ea6f0e256437aa5b9e7982fc851765e705e9572",
+            "completedAt": "2026-10-31T10:35:32.879874+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "精确组合tip实际SDK/Host/SessionRuntime/完整ChatView暗浅主题、TodoDock和原生SessionInputShell浏览器均通过；另实际Host待接收附件上下文边界1例通过。没有构建、替换或启动共享App，最终Native由Root同包验收。"
+        },
+        "acceptanceCriteria": [
+          "同一明确原生turn的前置附件/技能上下文创建执行group时，首条真实user必须先于该组处理过程和回复显示。",
+          "同turn后续真实human及steering各自形成展示边界，既有早期回复不被拉到后续请求之后，task-progress插件notice不是用户消息。",
+          "跨turn历史、消息原文、seq、时间戳、后端队列与模型执行状态不改变，不改写持久journal。",
+          "混入笔记任务记录时只插入新记录，原生flow相对顺序不再整体sort；无笔记记录直接复用原生flow。",
+          "通过实际SDK流式append、prepend、历史replace/resync和实际Host持久历史测试；保留原pending用户交接、附件和重复回执去重。",
+          "完整SDK补丁installer在私有COW依赖连续两遍稳定，严格逆向和重复/漂移检测有效。",
+          "有当前human授权及未完成清单的普通text final需继续同轮实际工作，进展不能被辅助脚本/中途说明替代；只有完成既有目标后才completed。",
+          "真实成功工具结果及首次完成项可重置无进展计数，重复回调、同内容读取、仅改写pending列表和assistant承诺不会；不自动执行或重复工具。",
+          "连续无可验证进展时以原生pre-step reject落盘blocked，保留未完成清单及明确通知，不伪标completed；有显式继续入口且不覆盖未发草稿/附件。",
+          "单次可恢复工具失败允许模型有界恢复和替代路径；明确权限deny或用户/调用取消不会自动重试被拒操作；工具concludesTurn、错误、截断及真实完成不复活。",
+          "新human steering必须先由模型解释并重新写清单绑定当前scope，不能让旧清单跨新目标自动继续；重启/历史load不自行触发旧任务。",
+          "已打v1运行时和原始fresh入口均可升级，第二次字节幂等；保留todo schema/projection、现有todo参数恢复、profile同步入口和原始错误。",
+          "当前 human 后真实同 owner job 在 running 时，先给模型继续独立工作及检查 ready 的机会，再保留事件等待状态；同一观察超时不能充当进展或反复请求模型；完成后由 job_output 正常消费。",
+          "旧 daemon 不自动纳入新任务；当前 human 轮真实 job_output 引用同 owner 旧 job 后可重新绑定；User Stop 和新 human 立即撤销旧等待，late job notice 不能自行重启已明确停止工作。",
+          "实际原生输入 Shell 可能拒绝 submit 且从未进入 running；继续按钮须保留草稿并在用户清空后允许重试，同帧重复点击不能重复发送，同步异常也释放本次 click 锁。",
+          "保留5ddb和744/654/c755完整作者历史；5份生产文件逐字等于两侧已独立PASS作者提交，不含Core、integration/tooling/manifest新历史或源码。",
+          "真实续跑、后台job等待、交付与User Stop后late job路径产生的持久journal通过同一当前native assembler和compact；始终只有一条真实human，插件通知不增加用户气泡。",
+          "Native pending submission在前置附件context先到时先于所有execution，真实human回执出现后去重；不改写journal或伪造step/start。"
+        ],
+        "risks": [
+          "本卡只组合当前聊天已授权并分别独立PASS的消息排序与未完成任务续跑修复；原两项handoff、原RED与旧744/654证据保留，不改变其refs。",
+          "生产5文件保持exact作者blob；额外组合改动限4份测试：真实journal与pending admission交叉，以及用Node createRequire保持installer Function.toString字节避免Vitest加分号造成误报；未放宽生产漂移guard。",
+          "实际SDK在preStep返回后同步append step/start及所有messages，所以actual pending gate是turn/start+plugin上下文；未人为制造异步step/start窗口。现有submission-flow覆盖native新turn执行组先到的投影边界。",
+          "未做全功能测试、未构建/替换共享客户端或发布；仍须Root官方串行整批保留门禁、最终包Todo运行时逐份parity和Native多轮附件/真实任务/用户停止/重开验收。",
+          "原notes-install-order最小HTML fixture及原figma-task-objective-projection既有baseline失败证据保留，未纳入98 PASS数字，也未放宽生产guard。"
+        ],
+        "generatedAt": "2026-10-31T10:35:32.879874+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -14514,6 +14820,95 @@
         "HEAD"
       ],
       "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/conversation-turn-order.test.js",
+        "test/conversation-turn-order-browser.test.js",
+        "test/conversation-submission-flow.test.js",
+        "test/notes-activity.test.js",
+        "test/conversation-history-page.test.js",
+        "test/conversation-history-page-browser.test.js",
+        "test/conversation-response-progress-browser.test.js",
+        "test/task-progress-runtime.test.js",
+        "test/task-progress-client.test.js",
+        "test/task-continuation-sdk.test.js",
+        "test/task-continuation-browser.test.js",
+        "test/task-continuation-upgrade.test.js",
+        "test/tool-recovery-guidance.test.js",
+        "test/profile-runtime-patches.test.js",
+        "test/figma-task-progress.test.ts",
+        "test/figma-task-compact.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/conversation-submission-browser.test.js",
+        "-t",
+        "durable Host file-context prelude"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "scripts/lib/conversation-turn-order.mjs"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "scripts/lib/notes-activity.mjs"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "scripts/lib/task-progress-runtime.mjs"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "scripts/lib/task-progress-client.mjs"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "ebb21112c751b342e060aa570e94699730b1b26f..HEAD"
+      ],
+      "timeoutMs": 10000
     }
   ],
   "mainSynchronizations": []
